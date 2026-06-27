@@ -7,6 +7,10 @@ export async function loadDashboard(configPath) {
   }
 
   const dashboard = await configResponse.json();
+  return loadDashboardConfig(dashboard);
+}
+
+export async function loadDashboardConfig(dashboard) {
   const loadedData = {};
 
   for (const [sourceId, sourcePath] of Object.entries(dashboard.dataSources ?? {})) {

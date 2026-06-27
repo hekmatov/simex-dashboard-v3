@@ -1,3 +1,5 @@
+import React from "react";
+
 const LAYOUT_CLASS = {
   "single-column": "layout-grid layout-single",
   "two-column": "layout-grid layout-two-column",

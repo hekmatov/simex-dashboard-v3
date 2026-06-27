@@ -31,6 +31,17 @@ export function buildEchartsOption(chart, data) {
     smooth: item.smooth ?? false,
   }));
 
+  const valueAxis = {
+    type: "value",
+    min: chart.yScale === "auto" ? undefined : 0,
+    axisLabel: { color: DEFAULT_TEXT_COLOR },
+  };
+  const categoryAxis = {
+    type: "category",
+    data: labels,
+    axisLabel: { color: DEFAULT_TEXT_COLOR },
+  };
+
   return {
     title: {
       text: chart.title,
@@ -51,12 +62,8 @@ export function buildEchartsOption(chart, data) {
       right: 0,
     },
     grid: DEFAULT_GRID,
-    xAxis: isHorizontal
-      ? { type: "value", axisLabel: { color: DEFAULT_TEXT_COLOR } }
-      : { type: "category", data: labels, axisLabel: { color: DEFAULT_TEXT_COLOR } },
-    yAxis: isHorizontal
-      ? { type: "category", data: labels, axisLabel: { color: DEFAULT_TEXT_COLOR } }
-      : { type: "value", axisLabel: { color: DEFAULT_TEXT_COLOR } },
+    xAxis: isHorizontal ? valueAxis : categoryAxis,
+    yAxis: isHorizontal ? categoryAxis : valueAxis,
     series: isHorizontal
       ? series.map((item) => ({
           ...item,

@@ -19,6 +19,7 @@
       "x": "date",
       "size": "standard",
       "legend": true,
+      "yScale": "zero",
       "series": [
         {
           "name": "Daily new cases",
@@ -39,6 +40,7 @@
       "dataSource": "biomedical_cases",
       "x": "date",
       "legend": true,
+      "yScale": "zero",
       "series": [
         {
           "name": "Confirmed cases",
@@ -56,6 +58,7 @@
       "dataSource": "r_values",
       "x": "date",
       "legend": false,
+      "yScale": "auto",
       "series": [
         {
           "name": "R-value",
@@ -72,6 +75,7 @@
       "dataSource": "province_cases",
       "x": "province",
       "legend": false,
+      "yScale": "zero",
       "series": [
         {
           "name": "Cumulative cases",
