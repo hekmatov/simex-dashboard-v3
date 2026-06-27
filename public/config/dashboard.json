@@ -1,0 +1,84 @@
+{
+  "programLabel": "Pandemic & Disaster Preparedness Center",
+  "title": "SimEx Dashboard V2",
+  "description": "Static, config-driven prototype for simulation exercise briefings.",
+  "scenarioLabel": "Day 2 Simulation",
+  "lastUpdated": "2026-06-27",
+  "layout": "two-by-two",
+  "dataSources": {
+    "biomedical_cases": "data/biomedical_cases.csv",
+    "r_values": "data/r_values.csv",
+    "province_cases": "data/province_cases.csv"
+  },
+  "charts": [
+    {
+      "id": "new_cases",
+      "title": "New cases over time",
+      "type": "bar",
+      "dataSource": "biomedical_cases",
+      "x": "date",
+      "size": "standard",
+      "legend": true,
+      "series": [
+        {
+          "name": "Daily new cases",
+          "y": "daily_new_cases",
+          "color": "#043BCB"
+        },
+        {
+          "name": "Cumulative cases",
+          "y": "cumulative_cases",
+          "color": "#00FFA6"
+        }
+      ]
+    },
+    {
+      "id": "confirmed_cases",
+      "title": "Confirmed cases over time",
+      "type": "line",
+      "dataSource": "biomedical_cases",
+      "x": "date",
+      "legend": true,
+      "series": [
+        {
+          "name": "Confirmed cases",
+          "y": "confirmed_cases",
+          "color": "#4496D1",
+          "lineWidth": 3,
+          "smooth": true
+        }
+      ]
+    },
+    {
+      "id": "r_values",
+      "title": "R-values over time",
+      "type": "line",
+      "dataSource": "r_values",
+      "x": "date",
+      "legend": false,
+      "series": [
+        {
+          "name": "R-value",
+          "y": "r_value",
+          "color": "#8F1D2C",
+          "lineWidth": 3
+        }
+      ]
+    },
+    {
+      "id": "province_cases",
+      "title": "Province comparison",
+      "type": "horizontalBar",
+      "dataSource": "province_cases",
+      "x": "province",
+      "legend": false,
+      "series": [
+        {
+          "name": "Cumulative cases",
+          "y": "cumulative_cases",
+          "color": "#7FDEC1"
+        }
+      ]
+    }
+  ]
+}
