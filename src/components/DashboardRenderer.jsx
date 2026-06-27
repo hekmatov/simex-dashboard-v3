@@ -73,25 +73,31 @@ export default function DashboardRenderer({
         )}
       </section>
 
-      <LayoutGrid layout={dashboard.layout}>
-        {dashboard.charts.map((chart) => (
-          <ChartPanel
-            key={chart.id}
-            chart={chart}
-            data={dashboard.loadedData[chart.dataSource]}
-            editMode={editMode}
-            onEdit={() => setSelectedChartId(chart.id)}
-          />
-        ))}
-      </LayoutGrid>
+      <section
+        className={`dashboard-workspace ${
+          editMode && selectedChart ? "dashboard-workspace-with-settings" : ""
+        }`}
+      >
+        <LayoutGrid layout={dashboard.layout}>
+          {dashboard.charts.map((chart) => (
+            <ChartPanel
+              key={chart.id}
+              chart={chart}
+              data={dashboard.loadedData[chart.dataSource]}
+              editMode={editMode}
+              onEdit={() => setSelectedChartId(chart.id)}
+            />
+          ))}
+        </LayoutGrid>
 
-      {editMode && selectedChart && (
-        <ChartSettingsPanel
-          chart={selectedChart}
-          onClose={() => setSelectedChartId(null)}
-          onChange={(updates) => onChartChange(selectedChart.id, updates)}
-        />
-      )}
+        {editMode && selectedChart && (
+          <ChartSettingsPanel
+            chart={selectedChart}
+            onClose={() => setSelectedChartId(null)}
+            onChange={(updates) => onChartChange(selectedChart.id, updates)}
+          />
+        )}
+      </section>
     </main>
   );
 }

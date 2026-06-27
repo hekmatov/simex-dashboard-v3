@@ -81,6 +81,17 @@ h1 {
   gap: 16px;
 }
 
+.dashboard-workspace {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dashboard-workspace-with-settings {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+
 .dashboard-toolbar {
   align-items: center;
   background: #f8fbff;
@@ -119,7 +130,7 @@ label {
   display: grid;
   font-size: 13px;
   font-weight: 700;
-  gap: 5px;
+  gap: 3px;
 }
 
 input,
@@ -127,8 +138,8 @@ select {
   border: 1px solid rgb(8 34 74 / 20%);
   border-radius: 6px;
   color: #08224a;
-  min-height: 36px;
-  padding: 6px 8px;
+  min-height: 32px;
+  padding: 5px 8px;
 }
 
 .layout-single {
@@ -187,31 +198,38 @@ select {
 
 .settings-panel {
   background: white;
-  border-left: 1px solid rgb(8 34 74 / 14%);
-  box-shadow: -18px 0 36px rgb(8 34 74 / 16%);
+  border: 1px solid rgb(8 34 74 / 14%);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgb(8 34 74 / 12%);
   display: grid;
-  gap: 14px;
-  max-width: min(420px, 100vw);
-  min-height: 100vh;
+  gap: 8px;
+  max-height: calc(100vh - 48px);
   overflow: auto;
-  padding: 18px;
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 380px;
-  z-index: 20;
+  padding: 12px;
+  position: sticky;
+  top: 16px;
+  width: 100%;
 }
 
 .settings-panel-header {
   align-items: start;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   justify-content: space-between;
 }
 
 .settings-panel h2,
 .settings-panel h3 {
   margin: 0;
+}
+
+.settings-panel h2 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.settings-panel h3 {
+  font-size: 14px;
 }
 
 .checkbox-row {
@@ -227,13 +245,13 @@ select {
 .settings-series-list,
 .settings-series {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .settings-series {
   background: #f8fbff;
   border-radius: 8px;
-  padding: 12px;
+  padding: 8px;
 }
 
 @media (max-width: 900px) {
@@ -247,8 +265,14 @@ select {
 
   .layout-two-column,
   .layout-two-by-two,
-  .layout-focus-plus-grid {
+  .layout-focus-plus-grid,
+  .dashboard-workspace-with-settings {
     grid-template-columns: 1fr;
+  }
+
+  .settings-panel {
+    max-height: none;
+    position: static;
   }
 
   .chart-size-wide,
