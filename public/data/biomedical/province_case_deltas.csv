@@ -1,0 +1,13 @@
+date,province,Infected_total,lat,lon,Cumulative cases,Previous cumulative cases,Case delta,Comparison date,Comparison label,Is first snapshot
+2027-02-21,Drenthe,0,52.9928,6.5642,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Flevoland,0,52.5185,5.4714,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Friesland,0,53.2012,5.7999,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Gelderland,0,51.9851,5.8987,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Groningen,0,53.2194,6.5665,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Limburg,0,50.8514,5.69,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Noord-Brabant,0,51.6978,5.3037,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Noord-Holland,1,52.3874,4.6462,1,1,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Overijssel,0,52.5168,6.083,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Utrecht,0,52.0907,5.1214,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Zeeland,0,51.4988,3.6109,0,0,0,2027-02-21,21 Feb 2027,True
+2027-02-21,Zuid-Holland,1,52.0705,4.3007,1,1,0,2027-02-21,21 Feb 2027,True

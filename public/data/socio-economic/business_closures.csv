@@ -1,0 +1,23 @@
+Sector_id,Closures,Year,Code,Sector
+1,2.8,2026-4,HOR,Horeca
+2,1.8,2026-4,REC,Recreatie en Cultuur
+3,2.2,2026-4,DET,Detailhandel niet essentieel
+4,1.5,2026-4,LCH,Luchtvaart & Toerisme
+5,2.0,2026-4,EVE,Evenementen Sector
+6,0.5,2026-4,ZOR,Zorg Sector
+7,1.2,2026-4,LOG,Logistiek
+8,0.9,2026-4,LAN,Landbouw en Voedsel
+9,1.6,2026-4,BOU,Bouwsector
+10,1.8,2026-4,ITD,IT en Digitale Dienstverlening
+11,1.1,2026-4,SUP,Supermarkten en E-commerce
+1,1.4,2027-4,HOR,Horeca
+2,0.8,2027-4,REC,Recreatie en Cultuur
+3,1.7,2027-4,DET,Detailhandel niet essentieel
+4,0.8,2027-4,LCH,Luchtvaart & Toerisme
+5,1.2,2027-4,EVE,Evenementen Sector
+6,0.3,2027-4,ZOR,Zorg Sector
+7,1.0,2027-4,LOG,Logistiek
+8,0.8,2027-4,LAN,Landbouw en Voedsel
+9,1.4,2027-4,BOU,Bouwsector
+10,1.8,2027-4,ITD,IT en Digitale Dienstverlening
+11,1.1,2027-4,SUP,Supermarkten en E-commerce

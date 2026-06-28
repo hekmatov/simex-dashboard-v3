@@ -1,0 +1,3 @@
+id,title,value,color
+current_icu_occupancy,Current ICU Occupancy,77.0,#00A676
+current_hospital_occupancy,Current Hospital Occupancy,80.3,#8F1D2C

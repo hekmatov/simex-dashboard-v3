@@ -1,35 +1,87 @@
-const SUPPORTED_CHART_TYPES = new Set([
+﻿const SUPPORTED_PANEL_TYPES = new Set([
   "bar",
   "line",
   "area",
   "horizontalBar",
+  "groupedBar",
+  "stackedBar",
+  "mixed",
+  "gauge",
+  "mapScatter",
+  "kpi",
   "table",
+  "deltaList",
 ]);
 
-export function validateChartConfig(chart, data) {
-  if (!SUPPORTED_CHART_TYPES.has(chart.type)) {
-    return `Unsupported chart type "${chart.type}".`;
+export function validatePanelConfig(panel, data, geoData) {
+  if (!SUPPORTED_PANEL_TYPES.has(panel.type)) {
+    return `Unsupported panel type "${panel.type}".`;
+  }
+
+  if (panel.type === "kpi" && panel.items?.length) {
+    return null;
   }
 
   if (!Array.isArray(data)) {
-    return `Data source "${chart.dataSource}" was not loaded.`;
+    return `Data source "${panel.dataSource}" was not loaded.`;
   }
 
   if (data.length === 0) {
-    return `Data source "${chart.dataSource}" is empty.`;
+    return `Data source "${panel.dataSource}" has no rows after filtering.`;
   }
 
   const columns = new Set(Object.keys(data[0]));
 
-  if (!columns.has(chart.x)) {
-    return `Column "${chart.x}" was not found in "${chart.dataSource}".`;
+  if (panel.type === "table" || panel.type === "deltaList") {
+    return validateFields(panel, columns);
   }
 
-  for (const series of chart.series ?? []) {
+  if (panel.type === "gauge") {
+    return columns.has(panel.valueField)
+      ? null
+      : `Gauge value column "${panel.valueField}" was not found.`;
+  }
+
+  if (panel.type === "mapScatter") {
+    if (!geoData) {
+      return `GeoJSON source "${panel.geoSource}" was not loaded.`;
+    }
+    for (const field of [panel.nameField, panel.latField, panel.lonField, panel.valueField]) {
+      if (!columns.has(field)) {
+        return `Map column "${field}" was not found in "${panel.dataSource}".`;
+      }
+    }
+    return null;
+  }
+
+  if (!columns.has(panel.x)) {
+    return `Column "${panel.x}" was not found in "${panel.dataSource}".`;
+  }
+
+  if (panel.seriesFrom) {
+    for (const field of [panel.seriesFrom.nameField, panel.seriesFrom.valueField]) {
+      if (!columns.has(field)) {
+        return `Series column "${field}" was not found in "${panel.dataSource}".`;
+      }
+    }
+    return null;
+  }
+
+  for (const series of panel.series ?? []) {
     if (!columns.has(series.y)) {
-      return `Column "${series.y}" was not found in "${chart.dataSource}".`;
+      return `Column "${series.y}" was not found in "${panel.dataSource}".`;
     }
   }
 
+  return null;
+}
+
+function validateFields(panel, columns) {
+  const fields = panel.type === "table" ? panel.columns ?? [] : Object.values(panel.fields ?? {});
+  for (const field of fields) {
+    if (field && !columns.has(field)) {
+      return `Column "${field}" was not found in "${panel.dataSource}".`;
+    }
+  }
   return null;
 }

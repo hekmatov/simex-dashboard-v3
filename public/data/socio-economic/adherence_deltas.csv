@@ -1,0 +1,73 @@
+date,date_value,Month Label,Question key,Question,Answer group,Age group,Behaviour type,Percentage,Previous percentage,Percentage delta,Comparison date,Comparison label,Is first snapshot,selected_date
+2027-03-15,2027-03-15,15 Mar 2027,1,Social Distancing,Agreement,All,adherence,82.0,82.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,1,Social Distancing,Neutral,All,adherence,7.0,7.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,1,Social Distancing,Disagreement,All,adherence,11.0,11.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,2,Quarantaine measures,Agreement,All,adherence,78.0,78.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,2,Quarantaine measures,Neutral,All,adherence,8.0,8.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,2,Quarantaine measures,Disagreement,All,adherence,14.0,14.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,3,Closure of hospitality venues and non-essential stores,Agreement,All,adherence,84.0,84.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,3,Closure of hospitality venues and non-essential stores,Neutral,All,adherence,6.0,6.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,3,Closure of hospitality venues and non-essential stores,Disagreement,All,adherence,10.0,10.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,4,Closure of Schools and Universities,Agreement,All,adherence,73.0,73.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,4,Closure of Schools and Universities,Neutral,All,adherence,8.0,8.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,4,Closure of Schools and Universities,Disagreement,All,adherence,19.0,19.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,5,Ban on public gatherings,Agreement,All,adherence,79.0,79.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,5,Ban on public gatherings,Neutral,All,adherence,7.0,7.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,5,Ban on public gatherings,Disagreement,All,adherence,14.0,14.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,6,Travel restrictions,Agreement,All,adherence,80.0,80.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,6,Travel restrictions,Neutral,All,adherence,7.0,7.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-15,2027-03-15,15 Mar 2027,6,Travel restrictions,Disagreement,All,adherence,13.0,13.0,0.0,2027-03-15,15 Mar 2027,True,2027-03-15
+2027-03-29,2027-03-29,29 Mar 2027,1,Social Distancing,Agreement,All,adherence,86.0,82.0,4.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,1,Social Distancing,Neutral,All,adherence,5.0,7.0,-2.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,1,Social Distancing,Disagreement,All,adherence,9.0,11.0,-2.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,2,Quarantaine measures,Agreement,All,adherence,83.0,78.0,5.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,2,Quarantaine measures,Neutral,All,adherence,6.0,8.0,-2.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,2,Quarantaine measures,Disagreement,All,adherence,11.0,14.0,-3.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,3,Closure of hospitality venues and non-essential stores,Agreement,All,adherence,81.0,84.0,-3.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,3,Closure of hospitality venues and non-essential stores,Neutral,All,adherence,7.0,6.0,1.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,3,Closure of hospitality venues and non-essential stores,Disagreement,All,adherence,12.0,10.0,2.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,4,Closure of Schools and Universities,Agreement,All,adherence,70.0,73.0,-3.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,4,Closure of Schools and Universities,Neutral,All,adherence,8.0,8.0,0.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,4,Closure of Schools and Universities,Disagreement,All,adherence,22.0,19.0,3.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,5,Ban on public gatherings,Agreement,All,adherence,76.0,79.0,-3.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,5,Ban on public gatherings,Neutral,All,adherence,7.0,7.0,0.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,5,Ban on public gatherings,Disagreement,All,adherence,17.0,14.0,3.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,6,Travel restrictions,Agreement,All,adherence,78.0,80.0,-2.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,6,Travel restrictions,Neutral,All,adherence,7.0,7.0,0.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-03-29,2027-03-29,29 Mar 2027,6,Travel restrictions,Disagreement,All,adherence,15.0,13.0,2.0,2027-03-15,15 Mar 2027,False,2027-03-29
+2027-04-12,2027-04-12,12 Apr 2027,1,Social Distancing,Agreement,All,adherence,84.0,86.0,-2.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,1,Social Distancing,Neutral,All,adherence,6.0,5.0,1.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,1,Social Distancing,Disagreement,All,adherence,10.0,9.0,1.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,2,Quarantaine measures,Agreement,All,adherence,80.0,83.0,-3.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,2,Quarantaine measures,Neutral,All,adherence,7.0,6.0,1.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,2,Quarantaine measures,Disagreement,All,adherence,13.0,11.0,2.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,3,Closure of hospitality venues and non-essential stores,Agreement,All,adherence,78.0,81.0,-3.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,3,Closure of hospitality venues and non-essential stores,Neutral,All,adherence,7.0,7.0,0.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,3,Closure of hospitality venues and non-essential stores,Disagreement,All,adherence,15.0,12.0,3.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,4,Closure of Schools and Universities,Agreement,All,adherence,67.0,70.0,-3.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,4,Closure of Schools and Universities,Neutral,All,adherence,8.0,8.0,0.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,4,Closure of Schools and Universities,Disagreement,All,adherence,25.0,22.0,3.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,5,Ban on public gatherings,Agreement,All,adherence,74.0,76.0,-2.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,5,Ban on public gatherings,Neutral,All,adherence,7.0,7.0,0.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,5,Ban on public gatherings,Disagreement,All,adherence,19.0,17.0,2.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,6,Travel restrictions,Agreement,All,adherence,75.0,78.0,-3.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,6,Travel restrictions,Neutral,All,adherence,8.0,7.0,1.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-12,2027-04-12,12 Apr 2027,6,Travel restrictions,Disagreement,All,adherence,17.0,15.0,2.0,2027-03-29,29 Mar 2027,False,2027-04-12
+2027-04-26,2027-04-26,26 Apr 2027,1,Social Distancing,Agreement,All,adherence,75.0,84.0,-9.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,1,Social Distancing,Neutral,All,adherence,8.0,6.0,2.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,1,Social Distancing,Disagreement,All,adherence,17.0,10.0,7.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,2,Quarantaine measures,Agreement,All,adherence,72.0,80.0,-8.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,2,Quarantaine measures,Neutral,All,adherence,9.0,7.0,2.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,2,Quarantaine measures,Disagreement,All,adherence,19.0,13.0,6.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,3,Closure of hospitality venues and non-essential stores,Agreement,All,adherence,67.0,78.0,-11.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,3,Closure of hospitality venues and non-essential stores,Neutral,All,adherence,9.0,7.0,2.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,3,Closure of hospitality venues and non-essential stores,Disagreement,All,adherence,24.0,15.0,9.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,4,Closure of Schools and Universities,Agreement,All,adherence,55.0,67.0,-12.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,4,Closure of Schools and Universities,Neutral,All,adherence,10.0,8.0,2.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,4,Closure of Schools and Universities,Disagreement,All,adherence,35.0,25.0,10.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,5,Ban on public gatherings,Agreement,All,adherence,64.0,74.0,-10.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,5,Ban on public gatherings,Neutral,All,adherence,9.0,7.0,2.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,5,Ban on public gatherings,Disagreement,All,adherence,27.0,19.0,8.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,6,Travel restrictions,Agreement,All,adherence,68.0,75.0,-7.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,6,Travel restrictions,Neutral,All,adherence,9.0,8.0,1.0,2027-04-12,12 Apr 2027,False,2027-04-26
+2027-04-26,2027-04-26,26 Apr 2027,6,Travel restrictions,Disagreement,All,adherence,23.0,17.0,6.0,2027-04-12,12 Apr 2027,False,2027-04-26
