@@ -26,8 +26,9 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
     return buildMapOption(panel, data, geoData, scale);
   }
 
-  const isHorizontal = panel.type === "horizontalBar";
-  const useDateAxis = panel.xAxisMode === "date" && !isHorizontal;
+  const isHorizontal = panel.type === "horizontalBar" || panel.type === "horizontalStackedBar";
+  const xAxisIsDate = panel.xAxisMode === "date" || isDateLikeField(panel.x);
+  const useDateAxis = xAxisIsDate && !isHorizontal;
   const sortedData = sortRowsForAxis(data, panel.x, useDateAxis);
   const labels = uniqueValues(sortedData.map((row) => row[panel.x]));
   const colors = panelColors(panel);
@@ -37,20 +38,25 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
   const valueAxis = {
     type: "value",
     min: panel.yScale === "auto" ? undefined : 0,
-    axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: scaled(12, scale) },
-    nameTextStyle: { color: DEFAULT_TEXT_COLOR, fontSize: scaled(12, scale) },
+    axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "axis", 12, scale) },
+    nameTextStyle: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "axis", 12, scale) },
     splitLine: { lineStyle: { color: "rgba(8, 34, 74, 0.08)" } },
   };
   const categoryAxis = {
     type: useDateAxis ? "time" : "category",
     data: useDateAxis ? undefined : isHorizontal ? [...labels].reverse() : labels,
-    axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: scaled(12, scale) },
+    axisLabel: {
+      color: DEFAULT_TEXT_COLOR,
+      fontSize: fontSize(panel, "axis", 12, scale),
+      interval: useDateAxis ? undefined : 0,
+      hideOverlap: useDateAxis ? undefined : false,
+    },
     axisTick: { alignWithLabel: true },
   };
 
   return {
     color: colors,
-    title: chartTitle(panel.title, scale),
+    title: chartTitle(panel, scale),
     tooltip: {
       trigger: "axis",
       valueFormatter: formatTooltipValue,
@@ -60,7 +66,7 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
       top: scaled(34, scale),
       right: 0,
       type: "scroll",
-      textStyle: { color: DEFAULT_TEXT_COLOR, fontSize: scaled(12, scale) },
+      textStyle: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "legend", 12, scale) },
     },
     grid: scaledGrid(scale),
     xAxis: isHorizontal ? valueAxis : categoryAxis,
@@ -102,7 +108,7 @@ function buildSeries(panel, data, labels, colors, useDateAxis, scale) {
       },
       areaStyle: panel.type === "area" ? { opacity: 0.18 } : undefined,
       smooth: item.smooth ?? false,
-      stack: panel.type === "stackedBar" ? "total" : undefined,
+      stack: isStackedPanel(panel.type) ? "total" : undefined,
     };
   });
 }
@@ -127,7 +133,7 @@ function buildSeriesFromLongData(panel, data, labels, colors, useDateAxis, scale
     itemStyle: { color: colors[index % colors.length] },
     lineStyle: { color: colors[index % colors.length], width: scaled(3, scale) },
     areaStyle: panel.type === "area" ? { opacity: 0.18 } : undefined,
-    stack: panel.type === "stackedBar" ? "total" : undefined,
+    stack: isStackedPanel(panel.type) ? "total" : undefined,
   }));
 }
 
@@ -137,7 +143,7 @@ function buildGaugeOption(panel, data, scale) {
   const color = row[panel.colorField] ?? panel.color ?? panelColors(panel)[0];
 
   return {
-    title: chartTitle(panel.title, scale),
+    title: chartTitle(panel, scale),
     series: [
       {
         type: "gauge",
@@ -148,18 +154,18 @@ function buildGaugeOption(panel, data, scale) {
         axisLine: { lineStyle: { width: scaled(16, scale), color: [[1, "#DDEAF5"]] } },
         axisTick: { show: false },
         splitLine: { length: scaled(10, scale), lineStyle: { color: DEFAULT_TEXT_COLOR } },
-        axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: scaled(12, scale) },
+        axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "gaugeAxis", 12, scale) },
         pointer: { itemStyle: { color } },
         detail: {
           valueAnimation: true,
           formatter: "{value}%",
           color: DEFAULT_TEXT_COLOR,
-          fontSize: scaled(28, scale),
+          fontSize: fontSize(panel, "gaugeValue", 28, scale),
           offsetCenter: [0, "62%"],
         },
         title: {
           color: DEFAULT_TEXT_COLOR,
-          fontSize: scaled(13, scale),
+          fontSize: fontSize(panel, "gaugeLabel", 13, scale),
           offsetCenter: [0, "86%"],
         },
         data: [{ value, name: row[panel.labelField] ?? panel.title }],
@@ -179,7 +185,7 @@ function buildMapOption(panel, data, geoData, scale) {
   const pointScale = panel.pointScale ?? 1;
 
   return {
-    title: chartTitle(panel.title, scale),
+    title: chartTitle(panel, scale),
     tooltip: {
       trigger: "item",
       formatter: (params) => {
@@ -195,22 +201,23 @@ function buildMapOption(panel, data, geoData, scale) {
       layoutCenter: ["50%", "56%"],
       layoutSize: "92%",
       itemStyle: {
-        color: "#E5EEF7",
-        borderColor: "#8EA9BF",
-        borderWidth: 1,
+        color: "#EEF5F9",
+        borderColor: "#6F8DA3",
+        borderWidth: scaled(1.2, scale),
       },
       emphasis: {
-        label: { show: true, color: DEFAULT_TEXT_COLOR, fontSize: scaled(12, scale) },
-        itemStyle: { color: "#D5E6F5" },
+        label: { show: true, color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "mapLabel", 12, scale) },
+        itemStyle: { color: "#D5E6F5", borderColor: "#2456A6" },
       },
     },
     visualMap: {
       min: 0,
       max: maxValue,
       left: 0,
-      bottom: 0,
+      bottom: scaled(22, scale),
       text: ["High", "Low"],
       calculable: true,
+      textStyle: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "legend", 12, scale) },
       inRange: { color: [colors[0], colors[colors.length - 1]] },
     },
     series: [
@@ -220,10 +227,10 @@ function buildMapOption(panel, data, geoData, scale) {
         coordinateSystem: "geo",
         symbolSize: (value) => (10 + (toNumber(value[2]) / maxValue) * 34) * pointScale * scale,
         itemStyle: {
-          color: colors[colors.length - 1],
-          opacity: 0.82,
-          borderColor: "white",
-          borderWidth: 1,
+          color: (params) => caseMapColor(toNumber(params.value?.[2]), maxValue),
+          opacity: 0.72,
+          borderColor: "#F8FBFF",
+          borderWidth: scaled(2, scale),
         },
         data: data.map((row) => ({
           name: row[panel.nameField],
@@ -236,6 +243,17 @@ function buildMapOption(panel, data, geoData, scale) {
       },
     ],
   };
+}
+
+function caseMapColor(value, maxValue) {
+  const intensity = maxValue ? value / maxValue : 0;
+  if (intensity >= 0.7) {
+    return "#043BCB";
+  }
+  if (intensity >= 0.4) {
+    return "#2456A6";
+  }
+  return "#007C89";
 }
 
 function normalizeGeoJson(geoData) {
@@ -255,13 +273,13 @@ function normalizeGeoJson(geoData) {
   };
 }
 
-function chartTitle(text, scale = 1) {
+function chartTitle(panel, scale = 1) {
   return {
-    text,
+    text: panel.title,
     left: 0,
     textStyle: {
       color: DEFAULT_TEXT_COLOR,
-      fontSize: scaled(17, scale),
+      fontSize: fontSize(panel, "title", 17, scale),
       fontWeight: 700,
     },
   };
@@ -271,13 +289,22 @@ function seriesType(panelType, itemType) {
   if (itemType) {
     return itemType;
   }
-  if (["bar", "groupedBar", "stackedBar", "horizontalBar"].includes(panelType)) {
+  if (["bar", "groupedBar", "stackedBar", "horizontalBar", "horizontalStackedBar"].includes(panelType)) {
     return "bar";
   }
   if (panelType === "area") {
     return "line";
   }
   return panelType === "mixed" ? "line" : panelType;
+}
+
+function isStackedPanel(panelType) {
+  return panelType === "stackedBar" || panelType === "horizontalStackedBar";
+}
+
+function isDateLikeField(field) {
+  const normalized = String(field ?? "").toLowerCase();
+  return normalized.includes("date") || normalized.includes("snapshot");
 }
 
 function referenceLineConfig(referenceLines) {
@@ -292,6 +319,11 @@ function referenceLineConfig(referenceLines) {
 }
 
 
+function fontSize(panel, key, baseSize, scale) {
+  const customSize = Number(panel.fontSizes?.[key]);
+  const resolvedBase = Number.isFinite(customSize) ? customSize : baseSize;
+  return scaled(resolvedBase, scale);
+}
 function scaled(value, scale) {
   return Math.round(value * scale);
 }

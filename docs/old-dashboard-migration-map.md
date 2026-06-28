@@ -136,3 +136,55 @@ Fullscreen chart rendering scales titles, axis text, line weights, gauge details
 Each chart can now manage its own date selection in edit mode. Open a panel's settings and use the controls in this order: title, data source, panel type, then date range. The date range control lists every unique value from the detected date-like column in that panel's data source, with select all and deselect all buttons.
 
 For chart rendering, page or section date filters no longer silently restrict panels that use date-like columns. This keeps each chart independent: a panel shows all available dates by default, and only narrows when its own date checklist is saved.
+
+## Biomedical Docker data refresh
+
+The local `pdpcDashApp` folder may contain older short biomedical workbooks. During the V2 migration, the fuller biomedical case and R-value data were recovered from the running original Docker dashboard container:
+
+```powershell
+docker run --rm --pull=always -p 0.0.0.0:8081:8080 --name pdpc-dashboard-original sree2712/pdpc-dashboard:latest
+```
+
+Container source files:
+
+```text
+/app/data/biomedical/cases_mortality/Cases.xlsx
+/app/data/biomedical/cases_mortality/r_values.xlsx
+```
+
+The refreshed V2 files are:
+
+```text
+public/data/biomedical/cases.csv
+public/data/biomedical/province_cases.csv
+public/data/biomedical/province_cases_latest.csv
+public/data/biomedical/province_case_deltas.csv
+public/data/biomedical/r_values.csv
+```
+
+Current expected ranges:
+
+- `cases.csv`: 177 rows, `2027-02-20` to `2027-08-15`.
+- `r_values.csv`: 177 rows, `2027-02-20` to `2027-08-15`.
+- `province_cases.csv`: 36 rows, three province snapshots from `2027-02-21` to `2027-08-15`.
+- `province_cases_latest.csv`: 12 rows for `2027-08-15`.
+
+Do not rerun the generic old-dashboard exporter against the local short `pdpcDashApp` data unless those source workbooks have first been updated, because that can overwrite the fuller V2 biomedical CSVs with the old short February slice.
+
+## Date-range edit behavior
+
+Panel-level date selection now switches automatically based on the selected data source:
+
+- Five or fewer unique dates: show a checkbox list with select all and deselect all.
+- More than five unique dates: show `From` and `To` date fields plus an expandable calendar view.
+
+The calendar view highlights available dates, greys out unavailable dates, and highlights the active selected range. Saved range selections are stored on the panel as:
+
+```json
+{
+  "column": "date",
+  "mode": "range",
+  "start": "2027-02-20",
+  "end": "2027-08-15"
+}
+```

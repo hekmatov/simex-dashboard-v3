@@ -130,9 +130,15 @@ function PanelActionButtons({ editMode, onEdit, onRemove, onFullScreen }) {
 }
 
 function PanelBody({ panel, data, geoData, fullScreen = false }) {
-  const renderContext = fullScreen
-    ? { fullScreen: true, scale: fullscreenScaleForPanel(panel) }
-    : { fullScreen: false, scale: 1 };
+  const containerRef = React.useRef(null);
+  const chartRef = React.useRef(null);
+  const dimensions = useElementDimensions(containerRef);
+  const renderContext = chartRenderContext(panel, fullScreen, dimensions);
+
+  React.useEffect(() => {
+    chartRef.current?.getEchartsInstance?.().resize();
+  }, [dimensions.width, dimensions.height, fullScreen, panel.size]);
+
   if (panel.type === "kpi") {
     return <KpiPanel panel={panel} data={data} />;
   }
@@ -143,15 +149,64 @@ function PanelBody({ panel, data, geoData, fullScreen = false }) {
     return <DeltaListPanel panel={panel} data={data} />;
   }
   if (!NON_ECHART_TYPES.has(panel.type)) {
+    const isMapPanel = panel.type === "mapScatter";
     return (
-      <ReactECharts
-        option={buildEchartsOption(panel, data, geoData, renderContext)}
+      <div
+        ref={containerRef}
         className={fullScreen ? "chart-canvas chart-canvas-fullscreen" : "chart-canvas"}
-        notMerge
-      />
+      >
+        <ReactECharts
+          ref={chartRef}
+          option={buildEchartsOption(panel, data, geoData, renderContext)}
+          className="chart-canvas-inner"
+          style={{ height: "100%", width: "100%" }}
+          notMerge
+        />
+        {isMapPanel && <MapAttribution />}
+      </div>
     );
   }
   return null;
+}
+
+function MapAttribution() {
+  return (
+    <div className="map-attribution" aria-label="Map attribution">
+      <a href="https://leafletjs.com/" target="_blank" rel="noreferrer">Leaflet</a>
+      <span>|</span>
+      <span>©</span>
+      <a href="https://openstreetmap.org/" target="_blank" rel="noreferrer">OpenStreetMap</a>
+      <span>contributors, Province boundaries: PDOK/Kadaster</span>
+    </div>
+  );
+}
+
+function useElementDimensions(ref) {
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+
+    function measure() {
+      const rect = element.getBoundingClientRect();
+      setDimensions({ width: Math.round(rect.width), height: Math.round(rect.height) });
+    }
+
+    measure();
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(element);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [ref]);
+
+  return dimensions;
 }
 
 function KpiPanel({ panel, data }) {
@@ -267,17 +322,42 @@ function applyPanelFilters(data, panel, filters, filterDefinitions, filterValues
 
 function applyPanelDateSelection(data, panel) {
   const selection = panel.dateSelection;
-  if (!selection?.column || !Array.isArray(selection.values)) {
+  if (!selection?.column) {
     return data;
   }
 
-  const allowed = new Set(selection.values.map(String));
-  return data.filter((row) => allowed.has(String(row[selection.column])));
+  if (selection.mode === "range") {
+    const start = String(selection.start ?? "");
+    const end = String(selection.end ?? "");
+    if (!start || !end) {
+      return data;
+    }
+    return data.filter((row) => {
+      const value = String(row[selection.column] ?? "");
+      return compareDateishValues(value, start) >= 0 && compareDateishValues(value, end) <= 0;
+    });
+  }
+
+  if (Array.isArray(selection.values)) {
+    const allowed = new Set(selection.values.map(String));
+    return data.filter((row) => allowed.has(String(row[selection.column])));
+  }
+
+  return data;
 }
 
 function isDateLikeColumn(column) {
   const normalized = String(column ?? "").toLowerCase();
   return normalized.includes("date") || normalized.includes("snapshot");
+}
+
+function compareDateishValues(a, b) {
+  const dateA = Date.parse(a);
+  const dateB = Date.parse(b);
+  if (!Number.isNaN(dateA) && !Number.isNaN(dateB)) {
+    return dateA - dateB;
+  }
+  return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
 
 function formatValue(value) {
@@ -291,13 +371,25 @@ function normalizePanelSize(size) {
   return size === "standard" || !size ? "normal" : size;
 }
 
-function fullscreenScaleForPanel(panel) {
-  const scales = {
-    half: 1.75,
-    normal: 1.5,
-    wide: 1.34,
-    tall: 1.28,
-    large: 1.16,
+function chartRenderContext(panel, fullScreen, dimensions) {
+  const panelSize = normalizePanelSize(panel.size);
+  const fallbackHeight = fullScreen ? 760 : panelSize === "tall" || panelSize === "large" ? 744 : 380;
+  const fallbackWidth = fullScreen ? 1180 : panelSize === "half" ? 320 : panelSize === "wide" || panelSize === "large" ? 1040 : 520;
+  const height = dimensions.height || fallbackHeight;
+  const width = dimensions.width || fallbackWidth;
+  const heightScale = height / 380;
+  const widthScale = width / 520;
+  const contextScale = fullScreen
+    ? Math.max(1.8, Math.min(2.65, 1 + (heightScale - 1) * 0.62 + (widthScale - 1) * 0.22))
+    : Math.max(0.94, Math.min(1.65, 1 + (heightScale - 1) * 0.36 + (widthScale - 1) * 0.12));
+
+  return {
+    fullScreen,
+    height,
+    width,
+    heightScale,
+    widthScale,
+    panelSize,
+    scale: contextScale,
   };
-  return scales[normalizePanelSize(panel.size)] ?? 1.4;
 }

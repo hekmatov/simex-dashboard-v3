@@ -328,3 +328,40 @@ Result: passed, with only normal Windows line-ending notices.
 6. Decide which edit controls should persist only locally and which should be exported as official scenario config.
 7. Add a maintainer data-preparation guide for converting future scenario data into `public/data` CSV/JSON/GeoJSON files.
 8. Consider code splitting later if the ECharts/Vite bundle-size warning becomes a deployment issue.
+
+## Update: fuller biomedical case data and date range picker
+
+A later data check found that the local old-dashboard Excel files only contained a short February slice, while the original Docker dashboard image contained fuller biomedical data. The V2 static biomedical files were refreshed from the running Docker container.
+
+Important refreshed ranges:
+
+- Confirmed cumulative cases: `177` daily rows, `2027-02-20` to `2027-08-15`.
+- Estimated R values: `177` daily rows, `2027-02-20` to `2027-08-15`.
+- Province case snapshots: `36` rows, three snapshots from `2027-02-21` to `2027-08-15`.
+- Latest province snapshot: `12` rows for `2027-08-15`.
+
+The per-panel date editor now switches automatically:
+
+- Up to five unique dates: checkbox list.
+- More than five unique dates: `From` and `To` date fields with an expandable calendar where unavailable dates are greyed out.
+
+This matters most for the Biomedical page charts:
+
+- `bio_confirmed_cases`
+- `bio_r_values`
+- `bio_region_comparison`
+- `bio_new_cases_deaths`
+
+## Update: chart scaling and font controls
+
+Chart rendering now scales text and line weights based on panel context:
+
+- Normal panels use the base chart font sizes.
+- Tall and large panels apply a larger automatic scale so the extra vertical space is used better.
+- Fullscreen panels apply a stronger scale so titles, axis labels, legends, gauge text, map labels, and line weights grow with the larger view.
+
+Each editable ECharts panel now has a `Text size` section in the panel settings drawer. The controls use minus and plus buttons and store base font sizes on the panel as `fontSizes` values. These base values are still multiplied by the automatic panel/fullscreen scale at render time.
+
+### Update: measured vertical chart scaling
+
+Chart scaling now measures the actual rendered chart container with `ResizeObserver` and passes width/height-derived scale into ECharts. This avoids the old failure mode where CSS made a panel taller but ECharts kept behaving like the chart was still a short 380px canvas. Fullscreen charts now call ECharts `resize()` after dimension changes and use the measured fullscreen height when scaling fonts, grid spacing, and line weights.

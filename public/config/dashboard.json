@@ -107,8 +107,8 @@
               "type": "dateRange",
               "label": "Case date range",
               "column": "date",
-              "defaultStart": "2027-02-11",
-              "defaultEnd": "2027-02-20"
+              "defaultStart": "2027-02-20",
+              "defaultEnd": "2027-08-15"
             }
           ],
           "panels": [
@@ -288,7 +288,7 @@
               "label": "Healthcare date range",
               "column": "date",
               "defaultStart": "2027-02-11",
-              "defaultEnd": "2027-02-20"
+              "defaultEnd": "2027-08-15"
             }
           ],
           "panels": [

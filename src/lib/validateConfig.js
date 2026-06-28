@@ -3,6 +3,7 @@
   "line",
   "area",
   "horizontalBar",
+  "horizontalStackedBar",
   "groupedBar",
   "stackedBar",
   "mixed",

@@ -3,7 +3,7 @@
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
-const STORAGE_KEY = "simex-dashboard-v2-config-pages-v1";
+const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
 
 export default function App() {
   const [dashboard, setDashboard] = useState(null);

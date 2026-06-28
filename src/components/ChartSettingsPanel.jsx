@@ -1,10 +1,11 @@
-ï»¿import React from "react";
+import React from "react";
 
 const CHART_TYPES = [
   { value: "bar", label: "Bar" },
   { value: "line", label: "Line" },
   { value: "area", label: "Area" },
   { value: "horizontalBar", label: "Horizontal bar" },
+  { value: "horizontalStackedBar", label: "Horizontal stacked bar" },
   { value: "groupedBar", label: "Grouped bar" },
   { value: "stackedBar", label: "Stacked bar" },
   { value: "mixed", label: "Mixed bar/line" },
@@ -29,6 +30,7 @@ const AXIS_PANEL_TYPES = new Set([
   "line",
   "area",
   "horizontalBar",
+  "horizontalStackedBar",
   "groupedBar",
   "stackedBar",
   "mixed",
@@ -38,10 +40,34 @@ const SERIES_PANEL_TYPES = new Set([
   "line",
   "area",
   "horizontalBar",
+  "horizontalStackedBar",
   "groupedBar",
   "stackedBar",
   "mixed",
 ]);
+
+const ECHART_PANEL_TYPES = new Set([
+  "bar",
+  "line",
+  "area",
+  "horizontalBar",
+  "horizontalStackedBar",
+  "groupedBar",
+  "stackedBar",
+  "mixed",
+  "gauge",
+  "mapScatter",
+]);
+
+const FONT_CONTROL_DEFINITIONS = {
+  title: { label: "Chart title", defaultValue: 17 },
+  axis: { label: "Axis labels", defaultValue: 12 },
+  legend: { label: "Legend / scale labels", defaultValue: 12 },
+  gaugeValue: { label: "Gauge value", defaultValue: 28 },
+  gaugeLabel: { label: "Gauge label", defaultValue: 13 },
+  gaugeAxis: { label: "Gauge axis labels", defaultValue: 12 },
+  mapLabel: { label: "Map hover labels", defaultValue: 12 },
+};
 
 export default function ChartSettingsPanel({
   panel,
@@ -53,9 +79,9 @@ export default function ChartSettingsPanel({
   onRemove,
 }) {
   const editableSeries = panel.series ?? [];
+  const fontControls = fontControlsForPanel(panel.type);
   const inferredDateColumn = inferDateColumn(dataColumns, panel);
   const dateOptions = collectDateOptions(dataRows, inferredDateColumn);
-  const selectedDates = selectedDateValues(panel, inferredDateColumn, dateOptions);
 
   function updateSeries(index, updates) {
     onChange({
@@ -79,6 +105,17 @@ export default function ChartSettingsPanel({
       fields: {
         ...(panel.fields ?? {}),
         ...updates,
+      },
+    });
+  }
+
+  function updateFontSize(key, delta, defaultValue) {
+    const currentValue = Number(panel.fontSizes?.[key] ?? defaultValue);
+    const nextValue = clamp(currentValue + delta, 8, 48);
+    onChange({
+      fontSizes: {
+        ...(panel.fontSizes ?? {}),
+        [key]: nextValue,
       },
     });
   }
@@ -139,14 +176,8 @@ export default function ChartSettingsPanel({
         <DateSelectionControl
           column={inferredDateColumn}
           options={dateOptions}
-          selectedValues={selectedDates}
-          onChange={(values) =>
-            onChange({
-              dateSelection: inferredDateColumn
-                ? { column: inferredDateColumn, values }
-                : undefined,
-            })
-          }
+          selection={panel.dateSelection}
+          onChange={(dateSelection) => onChange({ dateSelection })}
         />
 
         <label>
@@ -196,6 +227,21 @@ export default function ChartSettingsPanel({
               <option value="auto">Automatic</option>
             </select>
           </label>
+        </section>
+      )}
+
+      {fontControls.length > 0 && (
+        <section className="settings-section settings-font-list">
+          <h3>Text size</h3>
+          {fontControls.map((control) => (
+            <FontSizeControl
+              key={control.key}
+              label={control.label}
+              value={Number(panel.fontSizes?.[control.key] ?? control.defaultValue)}
+              onDecrease={() => updateFontSize(control.key, -1, control.defaultValue)}
+              onIncrease={() => updateFontSize(control.key, 1, control.defaultValue)}
+            />
+          ))}
         </section>
       )}
 
@@ -450,7 +496,7 @@ export default function ChartSettingsPanel({
   );
 }
 
-function DateSelectionControl({ column, options, selectedValues, onChange }) {
+function DateSelectionControl({ column, options, selection, onChange }) {
   if (!column || options.length === 0) {
     return (
       <div className="date-checklist-control">
@@ -460,6 +506,28 @@ function DateSelectionControl({ column, options, selectedValues, onChange }) {
     );
   }
 
+  if (options.length <= 5) {
+    return (
+      <DateChecklistControl
+        column={column}
+        options={options}
+        selectedValues={selectedDateValues(selection, column, options)}
+        onChange={(values) => onChange({ column, mode: "list", values })}
+      />
+    );
+  }
+
+  return (
+    <DateRangeControl
+      column={column}
+      options={options}
+      range={selectedDateRange(selection, column, options)}
+      onChange={(range) => onChange({ column, mode: "range", ...range })}
+    />
+  );
+}
+
+function DateChecklistControl({ column, options, selectedValues, onChange }) {
   const selectedSet = new Set(selectedValues.map(String));
 
   function toggleDate(option, checked) {
@@ -502,6 +570,134 @@ function DateSelectionControl({ column, options, selectedValues, onChange }) {
   );
 }
 
+function DateRangeControl({ column, options, range, onChange }) {
+  const [activeEdge, setActiveEdge] = React.useState("start");
+  const minDate = options[0];
+  const maxDate = options[options.length - 1];
+  const available = new Set(options.map(String));
+
+  function commitRange(nextRange) {
+    const start = coerceAvailableDate(nextRange.start, options, "start");
+    const end = coerceAvailableDate(nextRange.end, options, "end");
+    if (compareDateishValues(start, end) > 0) {
+      onChange({ start: end, end });
+      return;
+    }
+    onChange({ start, end });
+  }
+
+  function pickDate(date) {
+    if (!available.has(date)) {
+      return;
+    }
+    if (activeEdge === "start") {
+      commitRange({ start: date, end: range.end });
+      setActiveEdge("end");
+    } else {
+      commitRange({ start: range.start, end: date });
+      setActiveEdge("start");
+    }
+  }
+
+  return (
+    <div className="date-checklist-control date-range-control">
+      <div className="date-checklist-header">
+        <span className="settings-field-label">Date range</span>
+        <small>{column} · {options.length} dates</small>
+      </div>
+      <div className="date-range-fields">
+        <label>
+          From
+          <input
+            type="date"
+            value={range.start}
+            min={minDate}
+            max={maxDate}
+            onChange={(event) => commitRange({ start: event.target.value, end: range.end })}
+          />
+        </label>
+        <label>
+          To
+          <input
+            type="date"
+            value={range.end}
+            min={minDate}
+            max={maxDate}
+            onChange={(event) => commitRange({ start: range.start, end: event.target.value })}
+          />
+        </label>
+      </div>
+      <div className="date-checklist-actions">
+        <button type="button" className="secondary" onClick={() => commitRange({ start: minDate, end: maxDate })}>
+          Full range
+        </button>
+        <button type="button" className="secondary" onClick={() => setActiveEdge(activeEdge === "start" ? "end" : "start")}>
+          Picking {activeEdge === "start" ? "from" : "to"}
+        </button>
+      </div>
+      <details className="date-calendar-details">
+        <summary>Open date calendar</summary>
+        <div className="date-calendar-grid">
+          {buildCalendarMonths(options).map((month) => (
+            <section className="date-calendar-month" key={month.key}>
+              <h4>{month.label}</h4>
+              <div className="date-calendar-weekdays" aria-hidden="true">
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+                  <span key={`${day}-${index}`}>{day}</span>
+                ))}
+              </div>
+              <div className="date-calendar-days">
+                {month.days.map((day) => {
+                  if (!day.date) {
+                    return <span className="date-calendar-spacer" key={day.key} />;
+                  }
+                  const availableDay = available.has(day.date);
+                  const inRange = compareDateishValues(day.date, range.start) >= 0 && compareDateishValues(day.date, range.end) <= 0;
+                  const isEdge = day.date === range.start || day.date === range.end;
+                  return (
+                    <button
+                      type="button"
+                      key={day.date}
+                      className={[
+                        "date-calendar-day",
+                        availableDay ? "available" : "unavailable",
+                        inRange ? "in-range" : "",
+                        isEdge ? "range-edge" : "",
+                      ].filter(Boolean).join(" ")}
+                      disabled={!availableDay}
+                      onClick={() => pickDate(day.date)}
+                      title={availableDay ? day.date : `${day.date} unavailable`}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      </details>
+      <p className="settings-note">Dates outside the data source range are blocked. Grey calendar days are not present in the selected data source.</p>
+    </div>
+  );
+}
+
+function FontSizeControl({ label, value, onDecrease, onIncrease }) {
+  return (
+    <div className="font-size-row">
+      <span>{label}</span>
+      <div className="font-size-controls">
+        <button type="button" className="secondary" onClick={onDecrease} aria-label={`Decrease ${label} font size`}>
+          -
+        </button>
+        <output>{value}px</output>
+        <button type="button" className="secondary" onClick={onIncrease} aria-label={`Increase ${label} font size`}>
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
 function ColumnOptions({ columns }) {
   return (
     <>
@@ -550,12 +746,78 @@ function collectDateOptions(rows, column) {
   return [...new Set(values)].sort(compareDateishValues);
 }
 
-function selectedDateValues(panel, column, options) {
-  const saved = panel.dateSelection;
-  if (saved?.column === column && Array.isArray(saved.values)) {
-    return saved.values.map(String);
+function selectedDateValues(selection, column, options) {
+  if (selection?.column === column && Array.isArray(selection.values)) {
+    return selection.values.map(String);
   }
   return options;
+}
+
+function selectedDateRange(selection, column, options) {
+  const fallback = { start: options[0], end: options[options.length - 1] };
+  if (selection?.column !== column) {
+    return fallback;
+  }
+  if (selection.mode === "range") {
+    return {
+      start: coerceAvailableDate(selection.start, options, "start"),
+      end: coerceAvailableDate(selection.end, options, "end"),
+    };
+  }
+  if (Array.isArray(selection.values) && selection.values.length > 0) {
+    const savedValues = selection.values.map(String).sort(compareDateishValues);
+    return {
+      start: coerceAvailableDate(savedValues[0], options, "start"),
+      end: coerceAvailableDate(savedValues[savedValues.length - 1], options, "end"),
+    };
+  }
+  return fallback;
+}
+
+function coerceAvailableDate(value, options, edge) {
+  if (!value) {
+    return edge === "start" ? options[0] : options[options.length - 1];
+  }
+  if (options.includes(value)) {
+    return value;
+  }
+  const sorted = [...options].sort(compareDateishValues);
+  if (edge === "start") {
+    return sorted.find((candidate) => compareDateishValues(candidate, value) >= 0) ?? sorted[sorted.length - 1];
+  }
+  return [...sorted].reverse().find((candidate) => compareDateishValues(candidate, value) <= 0) ?? sorted[0];
+}
+
+function buildCalendarMonths(options) {
+  const dates = options.map((value) => new Date(`${value}T00:00:00`)).filter((date) => !Number.isNaN(date.getTime()));
+  if (dates.length === 0) {
+    return [];
+  }
+  const first = new Date(dates[0].getFullYear(), dates[0].getMonth(), 1);
+  const last = new Date(dates[dates.length - 1].getFullYear(), dates[dates.length - 1].getMonth(), 1);
+  const months = [];
+  for (let cursor = new Date(first); cursor <= last; cursor.setMonth(cursor.getMonth() + 1)) {
+    months.push(buildCalendarMonth(cursor));
+  }
+  return months;
+}
+
+function buildCalendarMonth(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const label = monthDate.toLocaleString(undefined, { month: "short", year: "numeric" });
+  const firstDay = new Date(year, month, 1);
+  const leadingDays = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = [];
+  for (let index = 0; index < leadingDays; index += 1) {
+    days.push({ key: `blank-${year}-${month}-${index}`, date: "" });
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    days.push({ key: date, date, label: day });
+  }
+  return { key: `${year}-${month}`, label, days };
 }
 
 function inferDateColumn(columns, panel) {
@@ -591,6 +853,28 @@ function compareDateishValues(a, b) {
   return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
 
+function fontControlsForPanel(type) {
+  if (!ECHART_PANEL_TYPES.has(type)) {
+    return [];
+  }
+
+  const keys = ["title"];
+  if (AXIS_PANEL_TYPES.has(type)) {
+    keys.push("axis", "legend");
+  }
+  if (type === "gauge") {
+    keys.push("gaugeValue", "gaugeLabel", "gaugeAxis");
+  }
+  if (type === "mapScatter") {
+    keys.push("legend", "mapLabel");
+  }
+
+  return keys.map((key) => ({ key, ...FONT_CONTROL_DEFINITIONS[key] }));
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
 function supportsColorScheme(type) {
   return type !== "kpi" && type !== "table" && type !== "deltaList";
 }
