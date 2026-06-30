@@ -1,6 +1,6 @@
-:root {
+﻿:root {
   color: #08224a;
-  background: #edf5fb;
+  background: #f7f9fc;
   font-family:
     Inter, Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif;
 }
@@ -10,50 +10,75 @@
 }
 
 body {
+  background: #f7f9fc;
   margin: 0;
 }
 
 body::before {
-  background: url("/assets/pdpc-mark-watermark.png") no-repeat right -120px top 20px / 520px auto;
-  content: "";
+  display: none;
+}
+
+#vanta-background {
   inset: 0;
-  opacity: 0.55;
   pointer-events: none;
   position: fixed;
   z-index: 0;
 }
-
 .app-shell {
+  margin: 0 auto;
+  max-width: 1500px;
   min-height: 100vh;
   padding: 24px;
   position: relative;
+  width: 100%;
   z-index: 1;
+}
+
+.background-editor-shell {
+  align-items: start;
+  display: grid;
+  min-height: 100vh;
+  padding-top: 32px;
+}
+
+.background-editor-bar {
+  align-items: end;
+  backdrop-filter: blur(18px);
+  background: rgb(8 34 74 / 82%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 20px;
+  box-shadow: 0 18px 44px rgb(8 34 74 / 20%);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 14px;
+}
+
+.background-editor-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .dashboard-header {
   align-items: flex-start;
-  background: #043bcb;
-  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgb(4 59 203 / 96%) 0%, rgb(0 124 137 / 92%) 56%, rgb(8 34 74 / 96%) 100%);
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 24px;
+  box-shadow: 0 22px 52px rgb(8 34 74 / 18%);
   color: white;
   display: flex;
   gap: 24px;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   overflow: hidden;
-  padding: 24px;
+  padding: 26px;
   position: relative;
 }
 
 .dashboard-header::after {
-  background: url("/assets/pdpc-mark-watermark.png") no-repeat center / contain;
-  content: "";
-  height: 440px;
-  opacity: 0.5;
-  pointer-events: none;
-  position: absolute;
-  right: 280px;
-  top: -150px;
-  width: 440px;
+  display: none;
 }
 
 .dashboard-brand-block {
@@ -68,7 +93,7 @@ body::before {
 .pdpc-header-mark {
   background: rgb(255 255 255 / 92%);
   border: 1px solid rgb(255 255 255 / 42%);
-  border-radius: 10px;
+  border-radius: 18px;
   box-shadow: 0 10px 24px rgb(8 34 74 / 20%);
   filter: none;
   height: 92px;
@@ -120,8 +145,9 @@ h1 {
 
 .dashboard-meta div,
 .header-edit-card {
-  background: rgb(255 255 255 / 12%);
-  border-radius: 6px;
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 16px;
   padding: 10px 12px;
 }
 
@@ -137,6 +163,26 @@ h1 {
   margin: 0;
 }
 
+.dashboard-meta input,
+.header-text-edit-fields input {
+  background: rgb(255 255 255 / 92%);
+  border-color: rgb(255 255 255 / 34%);
+  color: #08224a;
+  min-width: 0;
+  width: 100%;
+}
+
+.header-text-edit-fields {
+  display: grid;
+  gap: 8px;
+  min-width: min(720px, 52vw);
+}
+
+.header-text-edit-fields input[aria-label="Page title"] {
+  font-size: 28px;
+  font-weight: 800;
+}
+
 .header-edit-card {
   display: grid;
   min-width: 44px;
@@ -145,9 +191,11 @@ h1 {
 
 .header-edit-card.collapsed {
   align-items: center;
+  background: transparent;
+  border: 0;
   justify-items: center;
-  padding: 8px;
-  width: 48px;
+  padding: 0;
+  width: 36px;
 }
 
 .header-edit-card.expanded {
@@ -156,9 +204,10 @@ h1 {
 
 .header-edit-icon-button {
   align-items: center;
-  background: white;
-  border-radius: 6px;
-  color: #043bcb;
+  background: rgb(255 255 255 / 18%);
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+  color: white;
   display: inline-flex;
   height: 32px;
   justify-content: center;
@@ -180,7 +229,7 @@ h1 {
 
 .edit-sliders-icon::before,
 .edit-sliders-icon::after {
-  background: white;
+  background: #043bcb;
   border: 2px solid currentColor;
   border-radius: 999px;
   content: "";
@@ -219,6 +268,18 @@ h1 {
   width: 100%;
 }
 
+.header-edit-card.collapsed .header-edit-icon-button {
+  background: transparent;
+  border-color: transparent;
+  color: white;
+  width: 32px;
+}
+
+.header-edit-card.collapsed .header-edit-icon-button:hover {
+  background: rgb(255 255 255 / 18%);
+  border-color: rgb(255 255 255 / 24%);
+}
+
 .header-edit-card button.secondary {
   background: rgb(255 255 255 / 18%);
   color: white;
@@ -227,6 +288,12 @@ h1 {
 .header-edit-controls {
   display: grid;
   gap: 8px;
+}
+
+.tab-edit-controls {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
 }
 
 .header-edit-controls label {
@@ -248,9 +315,10 @@ h1 {
 
 .page-tabs {
   align-items: center;
-  background: #f8fbff;
+  background: rgb(248 251 255 / 88%);
   border: 1px solid rgb(8 34 74 / 10%);
-  border-radius: 8px;
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgb(8 34 74 / 8%);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -326,18 +394,43 @@ h1 {
 
 button,
 select,
-input {
+input,
+textarea {
   font: inherit;
+}
+
+.page-tab-edit {
+  align-items: center;
+  background: #edf5fb;
+  border-radius: 14px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: auto minmax(120px, 180px);
+  padding: 6px;
+}
+
+.page-tab-edit.active {
+  background: #dcecff;
+}
+
+.page-tab-edit button {
+  min-height: 32px;
+  padding: 6px 10px;
 }
 
 button {
   background: #043bcb;
   border: 0;
-  border-radius: 6px;
+  border-radius: 12px;
   color: white;
   cursor: pointer;
   font-weight: 700;
   padding: 9px 12px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 button.secondary {
@@ -358,12 +451,17 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   border: 1px solid rgb(8 34 74 / 20%);
-  border-radius: 6px;
+  border-radius: 10px;
   color: #08224a;
   min-height: 32px;
   padding: 5px 8px;
+}
+
+textarea {
+  resize: vertical;
 }
 
 .layout-single {
@@ -382,12 +480,12 @@ select {
 
 .chart-panel,
 .status-panel {
-  background: #f8fbff;
-  border: 1px solid rgb(8 34 74 / 10%);
-  border-radius: 8px;
-  box-shadow: 0 10px 28px rgb(8 34 74 / 8%);
+  background: #f5f8fb;
+  border: 1px solid rgb(8 34 74 / 11%);
+  border-radius: 20px;
+  box-shadow: 0 16px 42px rgb(8 34 74 / 10%);
   min-height: 360px;
-  padding: 16px;
+  padding: 18px;
   position: relative;
 }
 
@@ -438,7 +536,12 @@ select {
 }
 
 .chart-canvas {
+  background: #eaf1f6;
+  border: 1px solid rgb(8 34 74 / 7%);
+  border-radius: 16px;
   height: 380px;
+  overflow: hidden;
+  padding: 0;
   width: 100%;
 }
 
@@ -478,7 +581,7 @@ select {
 .delta-card {
   background: white;
   border: 1px solid rgb(8 34 74 / 10%);
-  border-radius: 6px;
+  border-radius: 14px;
   display: grid;
   gap: 4px;
   padding: 12px;
@@ -543,8 +646,8 @@ th {
 .settings-panel {
   background: white;
   border: 1px solid rgb(8 34 74 / 14%);
-  border-radius: 8px;
-  box-shadow: 0 12px 30px rgb(8 34 74 / 12%);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgb(8 34 74 / 16%);
   display: grid;
   gap: 8px;
   max-height: calc(100vh - 48px);
@@ -595,7 +698,7 @@ th {
 .settings-series {
   background: #e8f1f9;
   border: 1px solid rgb(8 34 74 / 16%);
-  border-radius: 8px;
+  border-radius: 14px;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
   padding: 10px;
 }
@@ -714,10 +817,29 @@ th {
   cursor: grab;
 }
 
+.chart-panel-map.chart-panel-editable {
+  cursor: grab;
+}
+
 .chart-panel-editable:active {
   cursor: grabbing;
 }
 
+.chart-panel-map.chart-panel-editable:active {
+  cursor: grabbing;
+}
+
+.chart-panel-map .tile-map-panel {
+  cursor: grab;
+}
+
+.chart-panel-selected {
+  background: #f0f7ff;
+  border-color: #043bcb;
+  box-shadow:
+    0 0 0 3px rgb(4 59 203 / 20%),
+    0 18px 46px rgb(8 34 74 / 16%);
+}
 .chart-panel-dragging {
   opacity: 0.48;
   transform: scale(0.985);
@@ -734,8 +856,8 @@ th {
   display: flex;
   gap: 6px;
   position: absolute;
-  right: 12px;
-  top: 12px;
+  right: 28px;
+  top: 28px;
   z-index: 3;
 }
 
@@ -750,13 +872,71 @@ th {
 
 .chart-icon-button {
   align-items: center;
-  background: #edf5fb;
+  background: rgb(255 255 255 / 86%);
   color: #08224a;
   display: inline-flex;
   height: 28px;
   justify-content: center;
   padding: 0;
   width: 28px;
+}
+
+.chart-fullscreen-button {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease;
+}
+
+.chart-panel:hover .chart-fullscreen-button,
+.chart-panel-editable .chart-fullscreen-button,
+.fullscreen-panel .chart-fullscreen-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chart-info-control {
+  display: inline-flex;
+  position: relative;
+}
+
+.chart-info-button {
+  background: #5b9bd5;
+  color: white;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.chart-info-tooltip {
+  background: #08224a;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgb(8 34 74 / 22%);
+  color: white;
+  font-size: 12px;
+  left: 50%;
+  line-height: 1.35;
+  max-width: 260px;
+  min-width: 190px;
+  opacity: 0;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  transform: translateX(-50%) translateY(-4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  z-index: 8;
+}
+
+.chart-info-control:hover .chart-info-tooltip,
+.chart-info-control:focus-within .chart-info-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .fullscreen-icon {
@@ -796,7 +976,7 @@ button.danger {
 
 .fullscreen-panel {
   background: #f8fbff;
-  border-radius: 8px;
+  border-radius: 22px;
   display: grid;
   min-height: 0;
   padding: 18px;
@@ -812,6 +992,11 @@ button.danger {
 
 .chart-canvas-fullscreen {
   height: calc(100vh - 92px);
+}
+
+.chart-canvas-multi {
+  height: 100%;
+  min-height: 0;
 }
 
 .fullscreen-error {
@@ -859,10 +1044,16 @@ button.danger {
 .date-checklist-control {
   background: #f3f7fb;
   border: 1px solid rgb(8 34 74 / 12%);
-  border-radius: 8px;
+  border-radius: 14px;
   display: grid;
   gap: 8px;
   padding: 10px;
+}
+
+.settings-button-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
 }
 
 .date-checklist-header {
@@ -897,7 +1088,7 @@ button.danger {
 .date-checklist {
   background: white;
   border: 1px solid rgb(8 34 74 / 10%);
-  border-radius: 6px;
+  border-radius: 12px;
   display: grid;
   gap: 4px;
   max-height: 180px;
@@ -1073,30 +1264,523 @@ button.danger {
   position: relative;
 }
 
-.map-attribution {
-  align-items: center;
-  background: rgb(255 255 255 / 88%);
-  border: 1px solid rgb(8 34 74 / 12%);
+.tile-map-panel {
+  background: #dcecf2;
+  cursor: grab;
+  border-radius: 12px;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+  width: 100%;
+}
+
+.tile-map-panel:active {
+  cursor: grabbing;
+}
+
+.tile-map-tiles,
+.tile-map-overlay {
+  display: block;
+  height: 100%;
+  inset: 0;
+  position: absolute;
+  width: 100%;
+  will-change: transform;
+}
+
+.tile-map-title {
+  background: rgb(248 251 255 / 88%);
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 10px;
+  color: #08224a;
+  font-size: 17px;
+  font-weight: 800;
+  left: 52px;
+  max-width: calc(100% - 96px);
+  padding: 6px 10px;
+  position: absolute;
+  top: 10px;
+  z-index: 4;
+}
+
+.tile-map-tiles img {
+  height: 256px;
+  image-rendering: auto;
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  width: 256px;
+}
+
+.tile-map-boundaries path {
+  fill: rgb(255 255 255 / 0%);
+  shape-rendering: geometricprecision;
+  stroke: #ed2e38;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.tile-map-point circle {
+  fill: rgb(4 59 203 / 62%);
+  stroke: rgb(255 255 255 / 88%);
+  stroke-width: 2.4;
+}
+
+.tile-map-controls {
+  background: white;
+  border: 1px solid rgb(8 34 74 / 18%);
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgb(8 34 74 / 16%);
+  display: grid;
+  left: 10px;
+  overflow: hidden;
+  position: absolute;
+  top: 10px;
+  z-index: 4;
+}
+
+.tile-map-controls button {
+  background: white;
+  border-radius: 0;
+  color: #08224a;
+  font-size: 22px;
+  line-height: 1;
+  min-height: 30px;
+  padding: 0;
+  width: 30px;
+}
+
+.tile-map-controls button + button {
+  border-top: 1px solid rgb(8 34 74 / 18%);
+}
+
+.tile-map-controls button[title="Reset map view"] {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tile-map-credit {
+  background: rgb(255 255 255 / 72%);
   border-radius: 4px;
   bottom: 6px;
   color: #405367;
+  font-size: 10px;
+  padding: 2px 5px;
+  position: absolute;
+  right: 6px;
+  z-index: 4;
+}
+
+.settings-tabs {
+  background: #edf4f9;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.settings-tabs button {
+  border-radius: 10px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 6px 8px;
+}
+
+.settings-tabs button.active {
+  background: #08224a;
+  color: white;
+}
+
+.settings-tab-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-collapsible-section {
+  background: #f7fbff;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 14px;
+  padding: 0;
+}
+
+.settings-section-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #08224a;
+  display: flex;
+  font-weight: 800;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.settings-section-body {
+  border-top: 1px solid rgb(8 34 74 / 8%);
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.settings-button-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+
+.settings-danger-zone {
+  background: #fff7f7;
+  border: 1px solid rgb(143 29 44 / 14%);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.settings-series-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.settings-series-header > div {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-series-header button {
+  min-height: 30px;
+  padding: 5px 8px;
+}
+
+.font-control-list {
+  display: grid;
+  gap: 8px;
+}
+
+.font-size-control {
+  align-items: center;
+  background: white;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.font-size-control > div {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: 30px 34px 30px;
+  text-align: center;
+}
+
+.font-size-control button {
+  min-height: 28px;
+  padding: 4px 0;
+}
+
+.date-range-control .date-range-fields {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 760px) {
+  .settings-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .date-range-control .date-range-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.vanta-settings-panel {
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.background-editor-bar .vanta-settings-panel {
+  background: transparent;
+  border: 0;
+  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  padding: 0;
+}
+
+.vanta-settings-panel label {
+  color: white;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vanta-settings-panel input {
+  width: 100%;
+}
+
+.range-setting {
+  grid-template-columns: 1fr auto;
+}
+
+.range-setting input {
+  grid-column: 1 / -1;
+}
+
+.range-setting output {
+  color: white;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.section-title-block {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+}
+
+.section-edit-field {
+  display: grid;
+  gap: 5px;
+  max-width: 720px;
+}
+
+.section-edit-field span {
+  color: #49627a;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.section-edit-field input {
+  background: rgb(255 255 255 / 82%);
+  border: 1px solid rgb(8 34 74 / 14%);
+  border-radius: 10px;
+  color: #08224a;
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.tile-map-panel,
+.tile-map-panel * {
+  user-select: none;
+}
+
+.header-edit-floating-button {
+  align-items: center;
+  background: rgb(255 255 255 / 18%);
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 999px;
+  bottom: 18px;
+  color: white;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  min-width: 34px;
+  padding: 0 12px;
+  position: absolute;
+  right: 22px;
+  z-index: 2;
+}
+
+.edit-command-banner {
+  align-items: center;
+  background: rgb(248 251 255 / 94%);
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgb(8 34 74 / 8%);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.multi-select-banner {
+  align-items: center;
+  background: rgb(248 251 255 / 96%);
+  border: 1px solid rgb(0 166 118 / 20%);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgb(8 34 74 / 8%);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+}
+
+.edit-command-title h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.edit-command-banner .header-edit-controls {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  font-size: 10px;
-  gap: 4px;
-  left: 6px;
-  line-height: 1.2;
-  max-width: calc(100% - 12px);
-  padding: 3px 6px;
+  gap: 8px;
+}
+
+.edit-command-banner .tab-edit-controls {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.chart-panel-multi-selected {
+  border-color: #00a676;
+  box-shadow:
+    0 0 0 3px rgb(0 166 118 / 24%),
+    0 18px 46px rgb(8 34 74 / 16%);
+}
+
+.multi-fullscreen-panel {
+  background: #f8fbff;
+  border-radius: 22px;
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  padding: 18px;
+  position: relative;
+}
+
+.multi-fullscreen-controls {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.multi-fullscreen-controls button {
+  min-height: 32px;
+  padding: 6px 10px;
+}
+
+.multi-fullscreen-grid {
+  display: grid;
+  gap: 12px;
+  height: calc(100vh - 112px);
+  min-height: 0;
+}
+
+.multi-fullscreen-cell {
+  background: #eaf1f6;
+  border: 1px solid rgb(8 34 74 / 8%);
+  border-radius: 16px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  position: relative;
+}
+
+.multi-cell-controls {
+  align-items: center;
+  background: rgb(248 251 255 / 88%);
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 999px;
+  display: flex;
+  gap: 6px;
+  padding: 4px 6px;
   position: absolute;
-  z-index: 3;
+  right: 12px;
+  top: 12px;
+  z-index: 5;
 }
 
-.map-attribution a {
-  color: #2456a6;
-  text-decoration: none;
+.multi-cell-controls strong {
+  color: #08224a;
+  font-size: 12px;
+  min-width: 18px;
+  text-align: center;
 }
 
-.map-attribution a:hover {
-  text-decoration: underline;
+.multi-cell-controls button {
+  font-size: 11px;
+  min-height: 24px;
+  padding: 3px 7px;
 }
+
+.multi-count-2.layout-sideBySide,
+.multi-count-3.layout-leftFocus,
+.multi-count-3.layout-rightFocus,
+.multi-count-4.layout-grid2x2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.multi-count-2.layout-overUnder {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.multi-count-3.layout-topFocus,
+.multi-count-3.layout-bottomFocus,
+.multi-count-3.layout-leftFocus,
+.multi-count-3.layout-rightFocus,
+.multi-count-4.layout-grid2x2 {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.multi-count-3.layout-topFocus {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.multi-count-3.layout-topFocus .multi-cell-1,
+.multi-count-3.layout-bottomFocus .multi-cell-3 {
+  grid-column: 1 / -1;
+}
+
+.multi-count-3.layout-bottomFocus {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.multi-count-3.layout-leftFocus .multi-cell-1 {
+  grid-row: 1 / -1;
+}
+
+.multi-count-3.layout-rightFocus .multi-cell-1 {
+  grid-column: 2;
+  grid-row: 1 / -1;
+}
+
+.image-panel-content {
+  display: grid;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.image-panel-frame {
+  background: #eaf1f6;
+  border: 1px solid rgb(8 34 74 / 8%);
+  border-radius: 14px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.image-panel-content img {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  transition: transform 140ms ease;
+  width: 100%;
+}
+
+.image-panel-fullscreen {
+  min-height: calc(100vh - 120px);
+}
+
+

@@ -20,9 +20,42 @@ const COLOR_SCHEMES = [
   { value: "manual", label: "Manual series colors" },
   { value: "pdpc", label: "PDPC mixed" },
   { value: "redGreen5", label: "Likert red to green" },
+  { value: "likertInfographic5", label: "Likert infographic" },
   { value: "blueYellow5", label: "Likert blue to yellow" },
   { value: "cool", label: "Cool blues/teals" },
   { value: "warm", label: "Warm alert" },
+];
+
+const LEGEND_POSITIONS = [
+  { value: "top", label: "Top" },
+  { value: "right", label: "Right" },
+  { value: "bottom", label: "Bottom" },
+  { value: "left", label: "Left" },
+  { value: "insideTopLeft", label: "Inside top-left" },
+  { value: "insideTopRight", label: "Inside top-right" },
+  { value: "insideBottomLeft", label: "Inside bottom-left" },
+  { value: "insideBottomRight", label: "Inside bottom-right" },
+];
+
+const SERIES_TYPE_OPTIONS = [
+  { value: "bar", label: "Bar" },
+  { value: "line", label: "Line" },
+];
+
+const LINE_STYLE_OPTIONS = [
+  { value: "solid", label: "Solid" },
+  { value: "dashed", label: "Dashed" },
+  { value: "dotted", label: "Dotted" },
+  { value: "shadow", label: "Shadowed" },
+];
+
+const MARKER_STYLE_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "circle", label: "Circle" },
+  { value: "emptyCircle", label: "Open circle" },
+  { value: "rect", label: "Square" },
+  { value: "diamond", label: "Diamond" },
+  { value: "triangle", label: "Triangle" },
 ];
 
 const AXIS_PANEL_TYPES = new Set([
@@ -82,6 +115,7 @@ export default function ChartSettingsPanel({
   const fontControls = fontControlsForPanel(panel.type);
   const inferredDateColumn = inferDateColumn(dataColumns, panel);
   const dateOptions = collectDateOptions(dataRows, inferredDateColumn);
+  const dataSourcePath = panel.dataSource ? dataSources?.[panel.dataSource] : "";
 
   function updateSeries(index, updates) {
     onChange({
@@ -143,6 +177,16 @@ export default function ChartSettingsPanel({
         </label>
 
         <label>
+          Information source
+          <textarea
+            rows={3}
+            value={panel.infoSource ?? ""}
+            placeholder={`Source: ${panel.dataSource ?? "dashboard configuration"}`}
+            onChange={(event) => onChange({ infoSource: event.target.value })}
+          />
+        </label>
+
+        <label>
           Data source
           <select
             value={panel.dataSource ?? ""}
@@ -158,6 +202,20 @@ export default function ChartSettingsPanel({
             ))}
           </select>
         </label>
+
+        <div className="settings-button-row">
+          <button
+            type="button"
+            className="secondary"
+            disabled={!dataSourcePath}
+            onClick={() => openDataSourceTable(panel.title, dataSourcePath, dataRows)}
+          >
+            View source CSV
+          </button>
+        </div>
+        <p className="settings-note">
+          Shows the currently loaded CSV rows in a read-only table so you can inspect the source data without opening a local app.
+        </p>
 
         <label>
           Panel type
@@ -227,6 +285,44 @@ export default function ChartSettingsPanel({
               <option value="auto">Automatic</option>
             </select>
           </label>
+          {(panel.xAxisMode ?? "category") !== "date" && (
+            <>
+              <label>
+                Category order
+                <select
+                  value={panel.categoryOrder ?? "csv"}
+                  onChange={(event) => onChange({ categoryOrder: event.target.value })}
+                >
+                  <option value="csv">Order of appearance in CSV</option>
+                  <option value="alphabetical">Alphabetical</option>
+                  <option value="valueColumn">By selected value column</option>
+                </select>
+              </label>
+              {panel.categoryOrder === "valueColumn" && (
+                <>
+                  <label>
+                    Sort value column
+                    <select
+                      value={panel.categorySortColumn ?? ""}
+                      onChange={(event) => onChange({ categorySortColumn: event.target.value })}
+                    >
+                      <ColumnOptions columns={dataColumns} />
+                    </select>
+                  </label>
+                  <label>
+                    Sort direction
+                    <select
+                      value={panel.categorySortDirection ?? "desc"}
+                      onChange={(event) => onChange({ categorySortDirection: event.target.value })}
+                    >
+                      <option value="desc">Highest first</option>
+                      <option value="asc">Lowest first</option>
+                    </select>
+                  </label>
+                </>
+              )}
+            </>
+          )}
         </section>
       )}
 
@@ -270,6 +366,12 @@ export default function ChartSettingsPanel({
             Reverse scheme
           </label>
           <ColorSchemePreview scheme={panel.colorScheme} reverse={panel.reverseColorScheme} />
+        </section>
+      )}
+
+      {supportsLegend(panel.type) && (
+        <section className="settings-section">
+          <h3>Legend</h3>
           <label className="checkbox-row">
             <input
               type="checkbox"
@@ -277,6 +379,46 @@ export default function ChartSettingsPanel({
               onChange={(event) => onChange({ legend: event.target.checked })}
             />
             Show legend
+          </label>
+          <label>
+            Position
+            <select
+              value={panel.legendPosition ?? defaultLegendPosition(panel.type)}
+              onChange={(event) => onChange({ legendPosition: event.target.value })}
+            >
+              {LEGEND_POSITIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Symbol size
+            <input
+              type="number"
+              min="8"
+              max="36"
+              value={panel.legendSize ?? 14}
+              onChange={(event) => onChange({ legendSize: Number(event.target.value) })}
+            />
+          </label>
+          <label>
+            Font size
+            <input
+              type="number"
+              min="8"
+              max="28"
+              value={panel.fontSizes?.legend ?? 12}
+              onChange={(event) =>
+                onChange({
+                  fontSizes: {
+                    ...(panel.fontSizes ?? {}),
+                    legend: Number(event.target.value),
+                  },
+                })
+              }
+            />
           </label>
         </section>
       )}
@@ -286,6 +428,21 @@ export default function ChartSettingsPanel({
           <h3>Series</h3>
           {editableSeries.map((series, index) => (
             <div className="settings-series" key={`${panel.id}-${series.y}-${index}`}>
+              {panel.type === "mixed" && (
+                <label>
+                  Series type
+                  <select
+                    value={series.type ?? "line"}
+                    onChange={(event) => updateSeries(index, { type: event.target.value })}
+                  >
+                    {SERIES_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label>
                 Name
                 <input
@@ -315,18 +472,56 @@ export default function ChartSettingsPanel({
                 />
               </label>
               {isLineLike(panel.type, series.type) && (
-                <label>
-                  Line width
-                  <input
-                    type="number"
-                    min="1"
-                    max="8"
-                    value={series.lineWidth ?? 3}
-                    onChange={(event) =>
-                      updateSeries(index, { lineWidth: Number(event.target.value) })
-                    }
-                  />
-                </label>
+                <>
+                  <label>
+                    Line width
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      value={series.lineWidth ?? 3}
+                      onChange={(event) =>
+                        updateSeries(index, { lineWidth: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Line style
+                    <select
+                      value={series.lineStyle ?? "solid"}
+                      onChange={(event) => updateSeries(index, { lineStyle: event.target.value })}
+                    >
+                      {LINE_STYLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {series.lineStyle === "shadow" && (
+                    <label>
+                      Shadow color
+                      <input
+                        type="color"
+                        value={series.shadowColor ?? "#4F6F8C"}
+                        onChange={(event) => updateSeries(index, { shadowColor: event.target.value })}
+                      />
+                    </label>
+                  )}
+                  <label>
+                    Marker
+                    <select
+                      value={series.markerStyle ?? "none"}
+                      onChange={(event) => updateSeries(index, { markerStyle: event.target.value })}
+                    >
+                      {MARKER_STYLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
               )}
             </div>
           ))}
@@ -386,6 +581,50 @@ export default function ChartSettingsPanel({
               onChange={(event) => onChange({ max: Number(event.target.value) })}
             />
           </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={panel.redZone?.enabled ?? false}
+              onChange={(event) =>
+                onChange({ redZone: { ...(panel.redZone ?? {}), enabled: event.target.checked } })
+              }
+            />
+            Show red zone
+          </label>
+          {panel.redZone?.enabled && (
+            <>
+              <label>
+                Red zone lower bound
+                <input
+                  type="number"
+                  value={panel.redZone?.lower ?? 75}
+                  onChange={(event) =>
+                    onChange({ redZone: { ...(panel.redZone ?? {}), lower: Number(event.target.value) } })
+                  }
+                />
+              </label>
+              <label>
+                Red zone upper bound
+                <input
+                  type="number"
+                  value={panel.redZone?.upper ?? panel.max ?? 100}
+                  onChange={(event) =>
+                    onChange({ redZone: { ...(panel.redZone ?? {}), upper: Number(event.target.value) } })
+                  }
+                />
+              </label>
+              <label>
+                Red zone color
+                <input
+                  type="color"
+                  value={panel.redZone?.color ?? "#D71920"}
+                  onChange={(event) =>
+                    onChange({ redZone: { ...(panel.redZone ?? {}), color: event.target.value } })
+                  }
+                />
+              </label>
+            </>
+          )}
         </section>
       )}
 
@@ -419,6 +658,26 @@ export default function ChartSettingsPanel({
               step="0.25"
               value={panel.pointScale ?? 1}
               onChange={(event) => onChange({ pointScale: Number(event.target.value) })}
+            />
+          </label>
+          <label>
+            Boundary horizontal offset
+            <input
+              type="number"
+              min="-40"
+              max="40"
+              value={panel.boundaryOffsetX ?? 0}
+              onChange={(event) => onChange({ boundaryOffsetX: Number(event.target.value) })}
+            />
+          </label>
+          <label>
+            Boundary vertical offset
+            <input
+              type="number"
+              min="-40"
+              max="40"
+              value={panel.boundaryOffsetY ?? 0}
+              onChange={(event) => onChange({ boundaryOffsetY: Number(event.target.value) })}
             />
           </label>
         </section>
@@ -727,6 +986,7 @@ function previewColors(scheme, reverse) {
     manual: ["#043BCB", "#00A676", "#4496D1", "#8F1D2C", "#7FDEC1"],
     pdpc: ["#043BCB", "#00A676", "#4496D1", "#2456A6", "#007C89"],
     redGreen5: ["#8F1D2C", "#E16B5A", "#F3D37A", "#7FDEC1", "#00A676"],
+    likertInfographic5: ["#43A047", "#AEBB2E", "#F6A21A", "#F47C20", "#D71920"],
     blueYellow5: ["#08224A", "#043BCB", "#4496D1", "#F3D37A", "#C98700"],
     cool: ["#08224A", "#2456A6", "#4496D1", "#007C89", "#7FDEC1"],
     warm: ["#8F1D2C", "#C98700", "#F3D37A", "#E16B5A", "#08224A"],
@@ -877,6 +1137,97 @@ function clamp(value, min, max) {
 }
 function supportsColorScheme(type) {
   return type !== "kpi" && type !== "table" && type !== "deltaList";
+}
+
+function supportsLegend(type) {
+  return type !== "kpi" && type !== "table" && type !== "deltaList";
+}
+
+function defaultLegendPosition(type) {
+  return "top";
+}
+
+function openDataSourceTable(title, path, rows) {
+  if (!path) {
+    return;
+  }
+  const tableRows = Array.isArray(rows) ? rows : [];
+  const columns = collectColumns(tableRows);
+  const popup = window.open("", "_blank", "width=1120,height=760");
+  if (!popup) {
+    return;
+  }
+
+  const safeTitle = escapeHtml(`${title || "Chart"} source CSV`);
+  const safePath = escapeHtml(path);
+  const tableMarkup = columns.length
+    ? renderCsvTable(tableRows, columns)
+    : '<p class="empty-state">No rows are currently loaded for this data source.</p>';
+
+  popup.document.open();
+  popup.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${safeTitle}</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; }
+    body { background: #f5f8fc; color: #08224a; margin: 0; padding: 22px; }
+    header { margin-bottom: 16px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    p { color: #52677d; font-size: 13px; margin: 0; }
+    .table-wrap { background: white; border: 1px solid rgba(8, 34, 74, 0.12); border-radius: 12px; max-height: calc(100vh - 120px); overflow: auto; }
+    table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+    th, td { border-bottom: 1px solid rgba(8, 34, 74, 0.08); border-right: 1px solid rgba(8, 34, 74, 0.06); max-width: 280px; padding: 7px 9px; text-align: left; white-space: nowrap; }
+    th { background: #eaf1f6; font-weight: 700; position: sticky; top: 0; z-index: 1; }
+    td { color: #20364d; }
+    .empty-state { background: white; border-radius: 12px; padding: 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>${safeTitle}</h1>
+    <p>${safePath} · ${tableRows.length} loaded row${tableRows.length === 1 ? "" : "s"}</p>
+  </header>
+  <div class="table-wrap">${tableMarkup}</div>
+</body>
+</html>`);
+  popup.document.close();
+}
+
+function collectColumns(rows) {
+  const columns = [];
+  const seen = new Set();
+  rows.forEach((row) => {
+    Object.keys(row ?? {}).forEach((column) => {
+      if (!seen.has(column)) {
+        seen.add(column);
+        columns.push(column);
+      }
+    });
+  });
+  return columns;
+}
+
+function renderCsvTable(rows, columns) {
+  const header = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+  const body = rows
+    .map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(row?.[column])}</td>`).join("")}</tr>`)
+    .join("");
+  return `<table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => {
+    const replacements = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return replacements[character];
+  });
 }
 
 function isLineLike(panelType, seriesType) {

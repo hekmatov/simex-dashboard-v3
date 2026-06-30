@@ -4,6 +4,23 @@ import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
+const DEFAULT_VANTA_BACKGROUND = {
+  backgroundColor: "#f7f9fc",
+  networkColor: "#f1a1ad",
+  mouseControls: false,
+  touchControls: false,
+  points: 6,
+  maxDistance: 17,
+  spacing: 18,
+  speed: 0.45,
+};
+
+const VANTA_LIMITS = {
+  points: [3, 18],
+  maxDistance: [8, 32],
+  spacing: [10, 34],
+  speed: [0.1, 2],
+};
 
 export default function App() {
   const [dashboard, setDashboard] = useState(null);
@@ -12,11 +29,19 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [editSessionStartConfig, setEditSessionStartConfig] = useState(null);
 
+  const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
+  const vantaSettingsKey = JSON.stringify(vantaSettings);
+
+  useEffect(() => {
+    const vantaEffect = initializeVantaBackground(vantaSettings);
+    return () => vantaEffect?.destroy?.();
+  }, [vantaSettingsKey]);
+
   useEffect(() => {
     loadDashboard("/config/dashboard.json")
       .then((loadedDashboard) => {
         const config = stripRuntimeFields(loadedDashboard);
-        const savedConfig = loadSavedConfig() ?? config;
+        const savedConfig = sanitizeDashboardConfig(loadSavedConfig() ?? config);
 
         setDefaultConfig(config);
         return loadDashboardConfig(savedConfig);
@@ -26,8 +51,9 @@ export default function App() {
   }, []);
 
   function updateDashboardConfig(nextConfig) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextConfig, null, 2));
-    loadDashboardConfig(nextConfig)
+    const safeConfig = sanitizeDashboardConfig(nextConfig);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(safeConfig, null, 2));
+    loadDashboardConfig(safeConfig)
       .then((loadedDashboard) => {
         setError(null);
         setDashboard(loadedDashboard);
@@ -35,16 +61,46 @@ export default function App() {
       .catch((loadError) => setError(loadError));
   }
 
-  function updatePageLayout(pageId, layout) {
-    updateDashboardConfig(updatePageInConfig(stripRuntimeFields(dashboard), pageId, (page) => ({
-      ...page,
-      layout,
-      sections: page.sections.map((section) => ({ ...section, layout })),
-    })));
-  }
-
   function updatePanel(panelId, updates) {
     updateDashboardConfig(updatePanelInConfig(stripRuntimeFields(dashboard), panelId, updates));
+  }
+
+  function updateSection(pageId, sectionId, updates) {
+    updateDashboardConfig(updateSectionInConfig(stripRuntimeFields(dashboard), pageId, sectionId, updates));
+  }
+
+  function updatePage(pageId, updates) {
+    updateDashboardConfig(updatePageInConfig(stripRuntimeFields(dashboard), pageId, (page) => ({ ...page, ...updates })));
+  }
+
+  function updateDashboardFields(updates) {
+    updateDashboardConfig({
+      ...stripRuntimeFields(dashboard),
+      ...updates,
+    });
+  }
+
+  function insertSection(pageId, sectionId, panelId, section) {
+    updateDashboardConfig(insertSectionAtPanelInConfig(stripRuntimeFields(dashboard), pageId, sectionId, panelId, section));
+  }
+
+  function updateVantaBackground(updates) {
+    const config = stripRuntimeFields(dashboard);
+    updateDashboardConfig({
+      ...config,
+      vantaBackground: sanitizeVantaSettings({
+        ...(config.vantaBackground ?? {}),
+        ...updates,
+      }),
+    });
+  }
+
+  function addPage(page) {
+    updateDashboardConfig(addPageToConfig(stripRuntimeFields(dashboard), page));
+  }
+
+  function removePage(pageId) {
+    updateDashboardConfig(removePageFromConfig(stripRuntimeFields(dashboard), pageId));
   }
 
   function addPanel(pageId, sectionId) {
@@ -150,8 +206,14 @@ export default function App() {
       dashboard={dashboard}
       editMode={editMode}
       onToggleEditMode={toggleEditMode}
-      onPageLayoutChange={updatePageLayout}
+      onPageAdd={addPage}
+      onPageRemove={removePage}
+      onPageChange={updatePage}
+      onDashboardChange={updateDashboardFields}
       onPanelChange={updatePanel}
+      onSectionChange={updateSection}
+      onSectionInsert={insertSection}
+      onVantaBackgroundChange={updateVantaBackground}
       onPanelAdd={addPanel}
       onPanelRemove={removePanel}
       onPanelReorder={reorderPanel}
@@ -160,6 +222,43 @@ export default function App() {
       onResetEditSession={cancelEditSession}
     />
   );
+}
+
+function sanitizeDashboardConfig(config) {
+  if (!config) {
+    return config;
+  }
+  return {
+    ...config,
+    vantaBackground: sanitizeVantaSettings(config.vantaBackground),
+  };
+}
+
+function sanitizeVantaSettings(settings) {
+  const merged = { ...DEFAULT_VANTA_BACKGROUND, ...(settings ?? {}) };
+  return {
+    backgroundColor: normalizeHexColor(merged.backgroundColor, DEFAULT_VANTA_BACKGROUND.backgroundColor),
+    networkColor: normalizeHexColor(merged.networkColor, DEFAULT_VANTA_BACKGROUND.networkColor),
+    mouseControls: Boolean(merged.mouseControls),
+    touchControls: Boolean(merged.touchControls),
+    points: clampNumber(merged.points, ...VANTA_LIMITS.points),
+    maxDistance: clampNumber(merged.maxDistance, ...VANTA_LIMITS.maxDistance),
+    spacing: clampNumber(merged.spacing, ...VANTA_LIMITS.spacing),
+    speed: clampNumber(merged.speed, ...VANTA_LIMITS.speed),
+  };
+}
+
+function clampNumber(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return min;
+  }
+  return Math.min(Math.max(number, min), max);
+}
+
+function normalizeHexColor(value, fallback) {
+  const color = String(value ?? "");
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
 }
 
 function loadSavedConfig() {
@@ -182,6 +281,41 @@ function updatePageInConfig(config, pageId, updater) {
   };
 }
 
+function updateSectionInConfig(config, pageId, sectionId, updates) {
+  return updatePageInConfig(config, pageId, (page) => ({
+    ...page,
+    sections: page.sections.map((section) =>
+      section.id === sectionId ? { ...section, ...updates } : section,
+    ),
+  }));
+}
+
+function insertSectionAtPanelInConfig(config, pageId, sectionId, panelId, newSection) {
+  return updatePageInConfig(config, pageId, (page) => ({
+    ...page,
+    sections: page.sections.flatMap((section) => {
+      if (section.id !== sectionId) {
+        return [section];
+      }
+      const startIndex = section.panels.findIndex((panel) => panel.id === panelId);
+      if (startIndex <= 0) {
+        return [{ ...section, title: newSection.title, description: newSection.description }];
+      }
+      return [
+        { ...section, panels: section.panels.slice(0, startIndex) },
+        {
+          id: newSection.id,
+          title: newSection.title,
+          description: newSection.description,
+          layout: section.layout,
+          filters: section.filters,
+          panels: section.panels.slice(startIndex),
+        },
+      ];
+    }),
+  }));
+}
+
 function updatePanelInConfig(config, panelId, updates) {
   return {
     ...config,
@@ -194,6 +328,24 @@ function updatePanelInConfig(config, panelId, updates) {
         ),
       })),
     })),
+  };
+}
+
+function addPageToConfig(config, page) {
+  return {
+    ...config,
+    pages: [...config.pages, page],
+  };
+}
+
+function removePageFromConfig(config, pageId) {
+  if ((config.pages ?? []).length <= 1) {
+    return config;
+  }
+
+  return {
+    ...config,
+    pages: config.pages.filter((page) => page.id !== pageId),
   };
 }
 
@@ -285,6 +437,18 @@ function createPanelFromSection(section, config) {
   };
 }
 
+function createImagePanel() {
+  return {
+    id: `new_image_panel_${Date.now()}`,
+    title: "New image",
+    type: "image",
+    size: "normal",
+    imageSrc: "",
+    imageFit: "contain",
+    infoSource: "Uploaded image",
+  };
+}
+
 function looksLikeDateColumn(column) {
   return String(column ?? "").toLowerCase().includes("date");
 }
@@ -296,3 +460,54 @@ function dateStamp() {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}${month}${day}`;
 }
+
+function initializeVantaBackground(settings = DEFAULT_VANTA_BACKGROUND) {
+  const element = document.getElementById("vanta-background");
+  if (!element || !window.VANTA?.NET || !window.THREE) {
+    return null;
+  }
+  const mergedSettings = sanitizeVantaSettings(settings);
+  const effect = window.VANTA.NET({
+    el: element,
+    mouseControls: mergedSettings.mouseControls,
+    touchControls: mergedSettings.touchControls,
+    gyroControls: false,
+    minHeight: 200.0,
+    minWidth: 200.0,
+    scale: 1.0,
+    scaleMobile: 1.0,
+    color: hexToNumber(mergedSettings.networkColor),
+    backgroundColor: hexToNumber(mergedSettings.backgroundColor),
+    points: Number(mergedSettings.points ?? DEFAULT_VANTA_BACKGROUND.points),
+    maxDistance: Number(mergedSettings.maxDistance ?? DEFAULT_VANTA_BACKGROUND.maxDistance),
+    spacing: Number(mergedSettings.spacing ?? DEFAULT_VANTA_BACKGROUND.spacing),
+    speed: Number(mergedSettings.speed ?? DEFAULT_VANTA_BACKGROUND.speed),
+  });
+  applyVantaNetSpeed(effect, Number(mergedSettings.speed ?? DEFAULT_VANTA_BACKGROUND.speed));
+  window.setTimeout(() => applyVantaNetSpeed(effect, Number(mergedSettings.speed ?? DEFAULT_VANTA_BACKGROUND.speed)), 120);
+  return effect;
+}
+
+function applyVantaNetSpeed(effect, speed) {
+  const multiplier = Number.isFinite(speed) ? speed : DEFAULT_VANTA_BACKGROUND.speed;
+  window.requestAnimationFrame(() => {
+    for (const point of effect?.points ?? []) {
+      if (point._simexBaseR === undefined) {
+        point._simexBaseR = point.r;
+      }
+      point.r = point._simexBaseR * multiplier;
+    }
+  });
+}
+
+function hexToNumber(hexColor) {
+  const normalized = String(hexColor ?? "").replace("#", "");
+  const parsed = Number.parseInt(normalized, 16);
+  return Number.isFinite(parsed) ? parsed : 0xf1a1ad;
+}
+
+
+
+
+
+

@@ -9,6 +9,7 @@
   "mixed",
   "gauge",
   "mapScatter",
+  "image",
   "kpi",
   "table",
   "deltaList",
@@ -21,6 +22,10 @@ export function validatePanelConfig(panel, data, geoData) {
 
   if (panel.type === "kpi" && panel.items?.length) {
     return null;
+  }
+
+  if (panel.type === "image") {
+    return panel.imageSrc ? null : "Upload an image for this panel.";
   }
 
   if (!Array.isArray(data)) {

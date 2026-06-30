@@ -1,22 +1,21 @@
 ﻿import React from "react";
 
-import ChartPanel from "./ChartPanel.jsx";
-import ChartSettingsPanel from "./ChartSettingsPanel.jsx";
+import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
+import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
-
-const LAYOUT_OPTIONS = [
-  { value: "single-column", label: "Single column" },
-  { value: "two-column", label: "Side by side" },
-  { value: "two-by-two", label: "2x2 grid" },
-  { value: "focus-plus-grid", label: "Focus + grid" },
-];
 
 export default function DashboardRenderer({
   dashboard,
   editMode,
   onToggleEditMode,
-  onPageLayoutChange,
+  onPageAdd,
+  onPageRemove,
+  onPageChange,
+  onDashboardChange,
   onPanelChange,
+  onSectionChange,
+  onSectionInsert,
+  onVantaBackgroundChange,
   onPanelAdd,
   onPanelRemove,
   onPanelReorder,
@@ -30,7 +29,22 @@ export default function DashboardRenderer({
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
+  const [multiSelectMode, setMultiSelectMode] = React.useState(false);
+  const [multiPanelIds, setMultiPanelIds] = React.useState([]);
+  const [multiFullscreenOpen, setMultiFullscreenOpen] = React.useState(false);
+  const [multiFullscreenLayout, setMultiFullscreenLayout] = React.useState("sideBySide");
   const importInputRef = React.useRef(null);
+  const [showVantaSettings, setShowVantaSettings] = React.useState(false);
+  const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
+  const [selectedPanelDraft, setSelectedPanelDraft] = React.useState(null);
+  const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
+  const [pageDrafts, setPageDrafts] = React.useState({});
+  const [sectionDrafts, setSectionDrafts] = React.useState({});
+  const panelDebounceRef = React.useRef(null);
+  const dashboardDebounceRef = React.useRef(null);
+  const pageDebounceRef = React.useRef(null);
+  const sectionDebounceRef = React.useRef(null);
+  const selectedPanelRef = React.useRef(null);
   const [filterValues, setFilterValues] = React.useState(() =>
     collectFilterDefaults(dashboard),
   );
@@ -49,6 +63,23 @@ export default function DashboardRenderer({
   const selectedPanelColumns = Array.isArray(selectedPanelData)
     ? Object.keys(selectedPanelData[0] ?? {})
     : [];
+
+  React.useEffect(() => {
+    selectedPanelRef.current = selectedPanel;
+    setSelectedPanelDraft(selectedPanel ? structuredClone(selectedPanel) : null);
+    window.clearTimeout(panelDebounceRef.current);
+  }, [selectedPanel?.id]);
+
+  React.useEffect(() => {
+    if (!editMode) {
+      setShowVantaSettings(false);
+      setSelectedPanelId(null);
+    }
+  }, [editMode]);
+
+  React.useEffect(() => {
+    setDashboardDraft(dashboardTextDraftFromDashboard(dashboard));
+  }, [dashboard.programLabel, dashboard.scenarioLabel, dashboard.lastUpdated]);
 
   function changeFilter(filter, value) {
     setFilterValues((current) => ({
@@ -69,11 +100,15 @@ export default function DashboardRenderer({
   }
 
   function handlePanelDragOver(event, panelId) {
-    if (!editMode || !draggingPanelId || draggingPanelId === panelId) {
+    if (!editMode || !draggingPanelId) {
       return;
     }
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+    if (draggingPanelId === panelId) {
+      setDragOverPanelId(null);
+      return;
+    }
     setDragOverPanelId(panelId);
   }
 
@@ -90,103 +125,327 @@ export default function DashboardRenderer({
     setDragOverPanelId(null);
   }
 
+  function handlePointerDragState(sourcePanelId, targetPanelId) {
+    setDraggingPanelId(sourcePanelId);
+    setDragOverPanelId(targetPanelId);
+  }
+
+  function startMultiFullscreenSelection(panelId) {
+    setMultiSelectMode(true);
+    setMultiPanelIds((current) => (current.includes(panelId) ? current : [...current, panelId].slice(0, 4)));
+  }
+
+  function toggleMultiPanel(panelId) {
+    setMultiPanelIds((current) => {
+      if (current.includes(panelId)) {
+        return current.filter((id) => id !== panelId);
+      }
+      if (current.length >= 4) {
+        return current;
+      }
+      return [...current, panelId];
+    });
+  }
+
+  function closeMultiFullscreen() {
+    setMultiFullscreenOpen(false);
+  }
+
+  function cancelMultiSelection() {
+    setMultiSelectMode(false);
+    setMultiPanelIds([]);
+    setMultiFullscreenOpen(false);
+  }
+
+  function addPage() {
+    const label = window.prompt("Name this new tab", "New tab");
+    if (!label) {
+      return;
+    }
+
+    const pageId = uniquePageId(dashboard, label);
+    onPageAdd({
+      id: pageId,
+      label,
+      title: label,
+      description: "New dashboard page.",
+      sections: [
+        {
+          id: `${pageId}_section`,
+          title: "New section",
+          description: "",
+          panels: [],
+        },
+      ],
+    });
+    setActivePageId(pageId);
+    setSelectedPanelId(null);
+  }
+
+  function openBackgroundSettings() {
+    setBackgroundDraft(sanitizeVantaSettings(dashboard.vantaBackground));
+    setShowVantaSettings(true);
+  }
+
+  function saveBackgroundSettings() {
+    onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
+    setShowVantaSettings(false);
+  }
+
+  function resetBackgroundSettings() {
+    const defaults = sanitizeVantaSettings();
+    setBackgroundDraft(defaults);
+    onVantaBackgroundChange(defaults);
+    setShowVantaSettings(false);
+  }
+
+  function changeBackgroundDraft(updates) {
+    setBackgroundDraft((current) => ({ ...current, ...updates }));
+  }
+
+  function changeSelectedPanel(updates) {
+    setSelectedPanelDraft((current) => {
+      const base = current ?? selectedPanelRef.current;
+      if (!base) {
+        return current;
+      }
+      const nextPanel = { ...base, ...updates };
+      window.clearTimeout(panelDebounceRef.current);
+      panelDebounceRef.current = window.setTimeout(() => {
+        const committedPanel = selectedPanelRef.current;
+        if (committedPanel) {
+          onPanelChange(nextPanel.id, diffPanel(committedPanel, nextPanel));
+        }
+      }, 850);
+      return nextPanel;
+    });
+  }
+
+  function changePage(pageId, updates) {
+    setPageDrafts((current) => ({
+      ...current,
+      [pageId]: { ...(current[pageId] ?? pageDraftFromPage(dashboard.pages.find((page) => page.id === pageId))), ...updates },
+    }));
+    window.clearTimeout(pageDebounceRef.current);
+    const basePage = pageDrafts[pageId] ?? pageDraftFromPage(dashboard.pages.find((page) => page.id === pageId));
+    const nextDraft = { ...basePage, ...updates };
+    pageDebounceRef.current = window.setTimeout(() => onPageChange(pageId, nextDraft), 650);
+  }
+
+  function changeDashboardText(updates) {
+    const nextDraft = { ...dashboardDraft, ...updates };
+    setDashboardDraft(nextDraft);
+    window.clearTimeout(dashboardDebounceRef.current);
+    dashboardDebounceRef.current = window.setTimeout(() => onDashboardChange(nextDraft), 650);
+  }
+
+  function changeSection(section, updates) {
+    const baseSection = sectionDrafts[section.id] ?? sectionDraftFromSection(section);
+    const nextDraft = { ...baseSection, ...updates };
+    setSectionDrafts((current) => ({
+      ...current,
+      [section.id]: nextDraft,
+    }));
+    window.clearTimeout(sectionDebounceRef.current);
+    sectionDebounceRef.current = window.setTimeout(() => {
+      onSectionChange(activePage.id, section.id, nextDraft);
+    }, 650);
+  }
+
+  function applyBackgroundSettings() {
+    onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
+  }
+
+  function startSectionAtPanel(section, panel) {
+    const title = window.prompt("Section title", "New section");
+    if (!title) {
+      return;
+    }
+    const description = window.prompt("Section subtext", "") ?? "";
+    onSectionInsert(activePage.id, section.id, panel.id, {
+      id: `${section.id}_${Date.now()}`,
+      title,
+      description,
+    });
+  }
+
+  function removeSectionTitle(section) {
+    onSectionChange(activePage.id, section.id, { title: "", description: "" });
+  }
+
+  function removeActivePage() {
+    if ((dashboard.pages ?? []).length <= 1) {
+      return;
+    }
+    if (!window.confirm(`Remove the "${activePage.label}" tab?`)) {
+      return;
+    }
+
+    const activeIndex = dashboard.pages.findIndex((page) => page.id === activePage.id);
+    const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
+    onPageRemove(activePage.id);
+    setActivePageId(fallbackPage.id);
+    setSelectedPanelId(null);
+  }
+
+  if (editMode && showVantaSettings) {
+    return (
+      <main className="app-shell background-editor-shell">
+        <section className="background-editor-bar">
+          <VantaSettingsPanel settings={backgroundDraft} onChange={changeBackgroundDraft} />
+          <div className="background-editor-actions">
+            <button type="button" className="secondary" onClick={applyBackgroundSettings}>Apply</button>
+            <button type="button" onClick={saveBackgroundSettings}>Save</button>
+            <button type="button" className="secondary" onClick={resetBackgroundSettings}>Reset</button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="dashboard-header">
         <div className="dashboard-brand-block">
           <img className="pdpc-header-mark" src="/assets/pdpc-mark.png" alt="" />
           <div>
-            <p className="eyebrow">{dashboard.programLabel}</p>
-            <h1>{activePage?.title ?? dashboard.title}</h1>
-            <p className="subtitle">{activePage?.description ?? dashboard.description}</p>
+            <p className="eyebrow">{dashboardDraft.programLabel}</p>
+            {editMode ? (
+              <div className="header-text-edit-fields">
+                <input
+                  aria-label="Program label"
+                  value={dashboardDraft.programLabel ?? ""}
+                  onChange={(event) => changeDashboardText({ programLabel: event.target.value })}
+                />
+                <input
+                  aria-label="Page title"
+                  value={(pageDrafts[activePage.id]?.title ?? activePage?.title) ?? dashboard.title}
+                  onChange={(event) => changePage(activePage.id, { title: event.target.value })}
+                />
+                <input
+                  aria-label="Page subtitle"
+                  value={(pageDrafts[activePage.id]?.description ?? activePage?.description) ?? dashboard.description}
+                  onChange={(event) => changePage(activePage.id, { description: event.target.value })}
+                />
+              </div>
+            ) : (
+              <>
+                <h1>{activePage?.title ?? dashboard.title}</h1>
+                <p className="subtitle">{activePage?.description ?? dashboard.description}</p>
+              </>
+            )}
           </div>
         </div>
         <div className="header-right-rail">
           <dl className="dashboard-meta">
             <div>
               <dt>Scenario</dt>
-              <dd>{dashboard.scenarioLabel}</dd>
+              <dd>
+                {editMode ? (
+                  <input value={dashboardDraft.scenarioLabel ?? ""} onChange={(event) => changeDashboardText({ scenarioLabel: event.target.value })} />
+                ) : (
+                  dashboard.scenarioLabel
+                )}
+              </dd>
             </div>
             <div>
               <dt>Updated</dt>
-              <dd>{dashboard.lastUpdated}</dd>
+              <dd>
+                {editMode ? (
+                  <input value={dashboardDraft.lastUpdated ?? ""} onChange={(event) => changeDashboardText({ lastUpdated: event.target.value })} />
+                ) : (
+                  dashboard.lastUpdated
+                )}
+              </dd>
             </div>
           </dl>
-          <div className={`header-edit-card ${editMode ? "expanded" : "collapsed"}`}>
-            {!editMode ? (
-              <button
-                type="button"
-                className="header-edit-icon-button"
-                aria-label="Open edit mode"
-                title="Edit mode"
-                onClick={onToggleEditMode}
-              >
-                <span className="edit-sliders-icon" aria-hidden="true" />
-              </button>
-            ) : (
+        </div>
+        <button
+          type="button"
+          className="header-edit-floating-button"
+          aria-label={editMode ? "Save edit mode" : "Open edit mode"}
+          title={editMode ? "Save" : "Edit mode"}
+          onClick={onToggleEditMode}
+        >
+          {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
+        </button>
+      </header>
+
+      {editMode && (
+        <section className="edit-command-banner" aria-label="Edit commands">
+          <div className="edit-command-title">
+            <p className="eyebrow">Mode</p>
+            <h2>Edit mode</h2>
+          </div>
+          <div className="header-edit-controls">
+            <div className="tab-edit-controls">
+              <button type="button" onClick={addPage}>Add tab</button>
+              <button type="button" className="secondary" disabled={(dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
+            </div>
+            <button type="button" onClick={() => importInputRef.current?.click()}>Import config</button>
+            <button type="button" onClick={onExportConfig}>Export config</button>
+            <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
+            <button type="button" className="secondary" onClick={onResetEditSession}>Reset edits</button>
+            {multiSelectMode && (
               <>
-                <div className="header-edit-title-row">
-                  <div>
-                    <p className="eyebrow">Mode</p>
-                    <h2>Edit mode</h2>
-                  </div>
-                  <button type="button" className="secondary" onClick={onToggleEditMode}>
-                    Save
-                  </button>
-                </div>
-                <div className="header-edit-controls">
-                  <label>
-                    {activePage.label} layout
-                    <select
-                      value={activePage.layout ?? dashboard.layout}
-                      onChange={(event) => onPageLayoutChange(activePage.id, event.target.value)}
-                    >
-                      {LAYOUT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="button" onClick={() => importInputRef.current?.click()}>
-                    Import config
-                  </button>
-                  <button type="button" onClick={onExportConfig}>
-                    Export config
-                  </button>
-                  <button type="button" className="secondary" onClick={onResetEditSession}>
-                    Reset edits
-                  </button>
-                  <input
-                    ref={importInputRef}
-                    className="visually-hidden"
-                    type="file"
-                    accept="application/json,.json"
-                    onChange={(event) => {
-                      onImportConfig(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
-                  />
-                </div>
+                <button type="button" disabled={multiPanelIds.length < 2} onClick={() => setMultiFullscreenOpen(true)}>Multi-fullscreen ({multiPanelIds.length})</button>
+                <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel multi</button>
               </>
             )}
+            <input
+              ref={importInputRef}
+              className="visually-hidden"
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) => {
+                onImportConfig(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
           </div>
-        </div>
-      </header>
+        </section>
+      )}
+
+      {multiSelectMode && !editMode && (
+        <section className="multi-select-banner" aria-label="Multi-fullscreen selection">
+          <strong>{multiPanelIds.length} selected</strong>
+          <button type="button" disabled={multiPanelIds.length < 2} onClick={() => setMultiFullscreenOpen(true)}>Multi-fullscreen</button>
+          <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel</button>
+        </section>
+      )}
 
       <nav className="page-tabs" aria-label="Dashboard pages">
         {dashboard.pages.map((page) => (
-          <button
-            key={page.id}
-            type="button"
-            className={page.id === activePage.id ? "active" : "secondary"}
-            onClick={() => {
-              setActivePageId(page.id);
-              setSelectedPanelId(null);
-            }}
-          >
-            {page.label}
-          </button>
+          editMode ? (
+            <label className={`page-tab-edit ${page.id === activePage.id ? "active" : ""}`} key={page.id}>
+              <button
+                type="button"
+                className={page.id === activePage.id ? "active" : "secondary"}
+                onClick={() => {
+                  setActivePageId(page.id);
+                  setSelectedPanelId(null);
+                }}
+              >
+                Open
+              </button>
+              <input
+                value={(pageDrafts[page.id]?.label ?? page.label) ?? ""}
+                onChange={(event) => changePage(page.id, { label: event.target.value })}
+              />
+            </label>
+          ) : (
+            <button
+              key={page.id}
+              type="button"
+              className={page.id === activePage.id ? "active" : "secondary"}
+              onClick={() => {
+                setActivePageId(page.id);
+                setSelectedPanelId(null);
+              }}
+            >
+              {page.label}
+            </button>
+          )
         ))}
       </nav>
 
@@ -199,17 +458,33 @@ export default function DashboardRenderer({
           {activePage.sections.map((section) => (
             <section className="dashboard-section" key={section.id}>
               <div className="section-header">
-                <div>
-                  <h2>{section.title}</h2>
-                  {section.description && <p>{section.description}</p>}
+                <div className="section-title-block">
+                  {editMode ? (
+                    <>
+                      <label className="section-edit-field">
+                        <span>Section title</span>
+                        <input
+                          value={(sectionDrafts[section.id]?.title ?? section.title) ?? ""}
+                          onChange={(event) => changeSection(section, { title: event.target.value })}
+                        />
+                      </label>
+                      <label className="section-edit-field">
+                        <span>Section subtext</span>
+                        <input
+                          value={(sectionDrafts[section.id]?.description ?? section.description) ?? ""}
+                          onChange={(event) => changeSection(section, { description: event.target.value })}
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <>
+                      <h2>{section.title}</h2>
+                      {section.description && <p>{section.description}</p>}
+                    </>
+                  )}
                 </div>
-                <div className="section-actions">
-                  <FilterControls
-                    filters={section.filters ?? []}
-                    values={filterValues}
-                    onChange={changeFilter}
-                  />
-                  {editMode && (
+                {editMode && (
+                  <div className="section-actions">
                     <button
                       type="button"
                       className="secondary add-panel-button"
@@ -217,10 +492,17 @@ export default function DashboardRenderer({
                     >
                       Add chart
                     </button>
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      className="secondary add-panel-button"
+                      onClick={() => removeSectionTitle(section)}
+                    >
+                      Remove title
+                    </button>
+                  </div>
+                )}
               </div>
-              <LayoutGrid layout={section.layout ?? activePage.layout ?? dashboard.layout}>
+              <LayoutGrid>
                 {section.panels.map((panel) => (
                   <ChartPanel
                     key={panel.id}
@@ -232,12 +514,19 @@ export default function DashboardRenderer({
                     editMode={editMode}
                     isDragging={draggingPanelId === panel.id}
                     isDragTarget={dragOverPanelId === panel.id}
+                    isSelected={editMode && selectedPanelId === panel.id}
+                    multiSelectMode={multiSelectMode}
+                    isMultiSelected={multiPanelIds.includes(panel.id)}
                     onEdit={() => setSelectedPanelId(panel.id)}
                     onRemove={() => removePanel(panel.id)}
-                    onDragStart={(event) => handlePanelDragStart(event, panel.id)}
-                    onDragOver={(event) => handlePanelDragOver(event, panel.id)}
-                    onDrop={(event) => handlePanelDrop(event, panel.id)}
-                    onDragEnd={clearDragState}
+                    onToggleMultiSelect={() => toggleMultiPanel(panel.id)}
+                    onFullScreenHold={() => startMultiFullscreenSelection(panel.id)}
+                    onPointerDragStateChange={handlePointerDragState}
+                    onPointerReorder={(sourcePanelId, targetPanelId) => {
+                      onPanelReorder(sourcePanelId, targetPanelId);
+                      clearDragState();
+                    }}
+                    onStartSection={() => startSectionAtPanel(section, panel)}
                   />
                 ))}
               </LayoutGrid>
@@ -247,18 +536,186 @@ export default function DashboardRenderer({
 
         {editMode && selectedPanel && (
           <ChartSettingsPanel
-            panel={selectedPanel}
+            panel={selectedPanelDraft ?? selectedPanel}
             dataSources={dashboard.dataSources}
             dataColumns={selectedPanelColumns}
             dataRows={Array.isArray(selectedPanelData) ? selectedPanelData : []}
             onClose={() => setSelectedPanelId(null)}
             onRemove={() => removePanel(selectedPanel.id)}
-            onChange={(updates) => onPanelChange(selectedPanel.id, updates)}
+            onChange={changeSelectedPanel}
           />
         )}
       </section>
+      {multiFullscreenOpen && (
+        <MultiFullscreenOverlay
+          dashboard={dashboard}
+          panelIds={multiPanelIds}
+          layout={multiFullscreenLayout}
+          onLayoutChange={setMultiFullscreenLayout}
+          onPanelOrderChange={setMultiPanelIds}
+          onClose={closeMultiFullscreen}
+        />
+      )}
     </main>
   );
+}
+
+function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, onPanelOrderChange, onClose }) {
+  const panels = panelIds.map((panelId) => findPanel(dashboard, panelId)).filter(Boolean);
+  const layoutOptions = multiLayoutOptions(panels.length);
+  const resolvedLayout = layoutOptions.some((option) => option.value === layout) ? layout : layoutOptions[0]?.value;
+
+  return (
+    <div className="fullscreen-backdrop" role="dialog" aria-modal="true">
+      <article className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}>
+        <div className="multi-fullscreen-controls">
+          {layoutOptions.map((option) => (
+            <button key={option.value} type="button" className={resolvedLayout === option.value ? "active" : "secondary"} onClick={() => onLayoutChange(option.value)} title={option.label}>
+              {option.icon}
+            </button>
+          ))}
+          <button type="button" className="secondary" onClick={onClose}>Close</button>
+        </div>
+        <div className={`multi-fullscreen-grid multi-count-${panels.length} layout-${resolvedLayout}`}>
+          {panels.map((panel, index) => (
+            <section className={`multi-fullscreen-cell multi-cell-${index + 1}`} key={panel.id}>
+              <div className="multi-cell-controls">
+                <strong>{index + 1}</strong>
+                <button type="button" className="secondary" disabled={index === 0} onClick={() => onPanelOrderChange(moveItem(panelIds, index, index - 1))}>Prev</button>
+                <button type="button" className="secondary" disabled={index === panels.length - 1} onClick={() => onPanelOrderChange(moveItem(panelIds, index, index + 1))}>Next</button>
+              </div>
+              <PanelBody
+                panel={panel}
+                data={dashboard.loadedData[panel.dataSource] ?? []}
+                geoData={dashboard.loadedData[panel.geoSource]}
+                fullScreen
+                multiFullScreen
+              />
+            </section>
+          ))}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function moveItem(items, fromIndex, toIndex) {
+  const nextItems = [...items];
+  const [item] = nextItems.splice(fromIndex, 1);
+  nextItems.splice(toIndex, 0, item);
+  return nextItems;
+}
+
+function multiLayoutOptions(count) {
+  if (count === 2) {
+    return [
+      { value: "sideBySide", label: "Side by side", icon: "||" },
+      { value: "overUnder", label: "Over-under", icon: "=" },
+    ];
+  }
+  if (count === 3) {
+    return [
+      { value: "topFocus", label: "One on top", icon: "T" },
+      { value: "bottomFocus", label: "One on bottom", icon: "B" },
+      { value: "leftFocus", label: "One on left", icon: "L" },
+      { value: "rightFocus", label: "One on right", icon: "R" },
+    ];
+  }
+  return [{ value: "grid2x2", label: "2 by 2", icon: "2x2" }];
+}
+
+function diffPanel(previous, next) {
+  const updates = {};
+  for (const key of Object.keys(next)) {
+    if (JSON.stringify(previous?.[key]) !== JSON.stringify(next[key])) {
+      updates[key] = next[key];
+    }
+  }
+  return updates;
+}
+
+function dashboardTextDraftFromDashboard(dashboard) {
+  return {
+    programLabel: dashboard?.programLabel ?? "",
+    scenarioLabel: dashboard?.scenarioLabel ?? "",
+    lastUpdated: dashboard?.lastUpdated ?? "",
+  };
+}
+
+function pageDraftFromPage(page) {
+  return {
+    label: page?.label ?? "",
+    title: page?.title ?? "",
+    description: page?.description ?? "",
+  };
+}
+
+function sectionDraftFromSection(section) {
+  return {
+    title: section?.title ?? "",
+    description: section?.description ?? "",
+  };
+}
+
+function VantaSettingsPanel({ settings = {}, onChange }) {
+  const resolved = sanitizeVantaSettings(settings);
+  return (
+    <div className="vanta-settings-panel">
+      <label>Static background<input type="color" value={resolved.backgroundColor} onChange={(event) => onChange({ backgroundColor: event.target.value })} /></label>
+      <label>Line/dot color<input type="color" value={resolved.networkColor} onChange={(event) => onChange({ networkColor: event.target.value })} /></label>
+      <RangeSetting label="Points" value={resolved.points} min={3} max={18} step={1} onChange={(points) => onChange({ points })} />
+      <RangeSetting label="Max distance" value={resolved.maxDistance} min={8} max={32} step={1} onChange={(maxDistance) => onChange({ maxDistance })} />
+      <RangeSetting label="Spacing" value={resolved.spacing} min={10} max={34} step={1} onChange={(spacing) => onChange({ spacing })} />
+      <RangeSetting label="Motion speed" value={resolved.speed} min={0.1} max={2} step={0.05} onChange={(speed) => onChange({ speed })} />
+      <label className="checkbox-row"><input type="checkbox" checked={resolved.mouseControls} onChange={(event) => onChange({ mouseControls: event.target.checked })} />Mouse tracking</label>
+    </div>
+  );
+}
+
+function RangeSetting({ label, value, min, max, step, onChange }) {
+  return (
+    <label className="range-setting">
+      <span>{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+      <output>{value}</output>
+    </label>
+  );
+}
+
+function sanitizeVantaSettings(settings) {
+  const merged = {
+    backgroundColor: "#f7f9fc",
+    networkColor: "#f1a1ad",
+    mouseControls: false,
+    touchControls: false,
+    points: 6,
+    maxDistance: 17,
+    spacing: 18,
+    speed: 0.45,
+    ...settings,
+  };
+  return {
+    ...merged,
+    points: clampNumber(merged.points, 3, 18),
+    maxDistance: clampNumber(merged.maxDistance, 8, 32),
+    spacing: clampNumber(merged.spacing, 10, 34),
+    speed: clampNumber(merged.speed, 0.1, 2),
+  };
+}
+
+function clampNumber(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return min;
+  }
+  return Math.min(Math.max(number, min), max);
 }
 
 function FilterControls({ filters, values, onChange }) {
@@ -347,3 +804,30 @@ function findPanel(dashboard, panelId) {
   }
   return null;
 }
+
+function uniquePageId(dashboard, label) {
+  const base = slugify(label) || "new_page";
+  const existing = new Set((dashboard.pages ?? []).map((page) => page.id));
+  let candidate = base;
+  let counter = 2;
+  while (existing.has(candidate)) {
+    candidate = `${base}_${counter}`;
+    counter += 1;
+  }
+  return candidate;
+}
+
+function slugify(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+
+
+
+
+
+

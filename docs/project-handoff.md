@@ -365,3 +365,200 @@ Each editable ECharts panel now has a `Text size` section in the panel settings 
 ### Update: measured vertical chart scaling
 
 Chart scaling now measures the actual rendered chart container with `ResizeObserver` and passes width/height-derived scale into ECharts. This avoids the old failure mode where CSS made a panel taller but ECharts kept behaving like the chart was still a short 380px canvas. Fullscreen charts now call ECharts `resize()` after dimension changes and use the measured fullscreen height when scaling fonts, grid spacing, and line weights.
+
+## Update: 2026-06-30 V2 editing sprint checkpoint
+
+This checkpoint completes the current feature-building sprint before the next cosmetic/design sprint. The project is still a static React + Vite app that can be hosted from `dist/` after `pnpm.cmd build`; Docker and Python are not required for end users.
+
+### Current command map
+
+From the V2 repo:
+
+```powershell
+cd "C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2"
+pnpm.cmd install
+pnpm.cmd dev -- --host 0.0.0.0 --port 5173
+pnpm.cmd build
+```
+
+Open the development app at:
+
+```text
+http://localhost:5173/
+```
+
+### Current source map
+
+- `public/config/dashboard.json`: official default dashboard config loaded at startup.
+- `public/data/biomedical/`: prepared biomedical CSV files.
+- `public/data/socio-economic/`: prepared socio-economic CSV files.
+- `public/data/geo/`: map geometry and overlay data.
+- `public/vendor/`: local Vanta/Three browser scripts for the animated background.
+- `src/App.jsx`: app-level config state, edit-session save/reset, page/tab edits, import/export config, background edits, and fullscreen state.
+- `src/components/DashboardRenderer.jsx`: header, page tabs, section rendering, edit toolbar, background editor, section add/remove behavior, and panel grid.
+- `src/components/LayoutGrid.jsx`: edit-mode panel ordering and drag behavior.
+- `src/components/ChartPanel.jsx`: panel renderer for ECharts, maps, gauges, image panels, tables, KPIs, delta cards, fullscreen, multi-fullscreen selection, CSV viewer, and panel action buttons.
+- `src/components/ChartSettingsPanel.jsx`: current point-and-click panel editor.
+- `src/components/ChartSettingsPanelV2.jsx`: newer tabbed editor implementation used by the settings panel.
+- `src/lib/chartOptionRegistry.js`: registry-style definition of editor tabs, sections, and chart-specific options.
+- `src/lib/buildEchartsOption.js`: ECharts option builder for chart rendering.
+- `src/lib/validateConfig.js`: lightweight validation for missing data sources, unsupported panel types, and field/series issues.
+- `src/styles.css`: page styling, header styling, edit UI, panel grid, fullscreen overlays, map controls, and background editor styling.
+
+### Dashboard shell and global editing
+
+- Header text is editable, including the organization label, page title, page subtitle, scenario label/value, and updated label/value.
+- The edit button now sits in the title banner area instead of resizing the header when edit mode opens.
+- Edit mode opens a separate command banner below the title banner.
+- Main page tabs can be renamed, added, and removed from edit mode.
+- Sections can have editable title and subtext.
+- Section title/subtext blocks can be removed without deleting the charts in that section.
+- New section title/subtext blocks can be inserted through edit mode.
+- The old page-level layout selector was removed; pages now use the two-column dashboard layout by default.
+- The last edited chart highlight is cleared when leaving edit mode.
+
+### Config import/export and persistence
+
+- `Import config` loads a dashboard JSON config from the user's machine.
+- `Export config` prompts for a filename and defaults to `SimEx-config-YYYYMMDD.json`.
+- Edits are kept in browser state while using the app.
+- Exported config is the portable way to preserve and share point-and-click edits.
+- Uploaded image panels are embedded into config as browser data URLs, so configs can become larger.
+
+### Background editor
+
+- The app uses local `public/vendor/three.min.js` and `public/vendor/vanta.net.min.js` for the Vanta.NET background.
+- Background editing opens a focused background toolbar instead of leaving the full dashboard visible.
+- Background options include static color, line color, dot color, point count, max distance, spacing, mouse tracking, and motion speed.
+- Numeric inputs are clamped to safe ranges so invalid values such as too many points cannot crash the animation.
+- Background changes are isolated so the Vanta effect does not reload every time a chart option is edited.
+- The background editor has Apply, Save, and Reset controls.
+
+### Panel and section layout
+
+- Panels can be dragged to reorder in edit mode.
+- Map panels reserve map-body dragging for panning the map; in edit mode, drag the card border/header area when the goal is to reorder the panel.
+- New charts are inserted at the top of the target section.
+- Panel size options are:
+  - `half`: 0.5 x 1.
+  - `normal`: 1 x 1.
+  - `wide`: 2 x 1.
+  - `tall`: 1 x 2.
+  - `large`: 2 x 2.
+- Chart area, panel background, borders, and related visual surfaces can be styled from edit mode.
+
+### Supported panel types
+
+- Line chart.
+- Bar chart.
+- Grouped bar chart.
+- Stacked bar chart.
+- Horizontal bar chart.
+- Horizontal stacked bar chart.
+- Area chart.
+- Mixed bar/line chart.
+- Gauge chart.
+- Map chart.
+- Table.
+- KPI/stat card.
+- Delta/comparison list.
+- Image panel.
+
+### Data controls
+
+- Each panel chooses its own data source.
+- Source CSV can be viewed in a scrollable in-app table window.
+- Each chart can define source hover text for the information icon.
+- Date-like datasets get independent per-chart date controls.
+- Datasets with five or fewer unique dates use a date checklist.
+- Datasets with more than five unique dates use from/to date fields and calendar-style selection.
+- Categorical axes can be filtered with a checklist of categories.
+- Categorical axes can be ordered by CSV order, alphabetically, or by values from a selected data column.
+- Non-date categorical axis labels are forced to show all labels where practical; date axes keep the more compact date behavior.
+
+### Chart editor organization
+
+The chart editor is moving toward a schema-driven model. Common chart types use horizontal tabs and collapsible groups:
+
+- `Data`: source file, CSV viewer, source hover text, x/category/date fields, date/category filters, ordering.
+- `Series`: add/remove/duplicate series, label, value column, series type, colors, axis assignment, line/bar appearance.
+- `Axes & Scale`: axis titles, label rotation/font size, min/max, zero/auto scaling, secondary y-axis settings, reference lines.
+- `Style & Layout`: title, legend, palettes, panel size, chart area colors, fullscreen behavior, and source icon spacing.
+
+### Series and chart styling
+
+- Series can be added, duplicated, and removed where the panel type supports multiple series.
+- Mixed bar/line charts keep line series rendered above bar series.
+- Mixed chart editor identifies whether each series is a bar or a line.
+- Line options include width, style, marker style, and shadow/area-under-line behavior.
+- Bar options include bar width/height, gap, and grouping/stacking behavior.
+- Legend options include show/hide, position, inside-corner positions, symbol size, and font size.
+- Color palettes include PDPC-style palettes, manual series colors, reversible red-green Likert, reversible blue-yellow Likert, and a custom Likert palette based on the supplied green/yellow/orange/red example.
+- Chart title and information icon spacing were increased so they do not sit on the inner chart border.
+
+### Axes, reference lines, and scaling
+
+- ECharts panels support title font size, axis label sizes, and legend font size adjustments.
+- Fullscreen and large/tall panels scale fonts and line weights based on actual panel dimensions.
+- Secondary y-axis options appear when at least one series is assigned to a secondary axis.
+- Reference lines support value, label, axis choice, color, line style, and label placement.
+- Dotted reference lines use a more visible dash pattern so dots do not collapse into a nearly solid line.
+
+### Gauge behavior
+
+- Gauge panels use the ECharts segmented speed gauge style with configurable range colors.
+- Gauge unit text is optional and is concatenated directly to the value; add a leading space in the unit field if spacing is desired.
+- Gauge label text can be left empty when the chart title already explains the metric.
+- Gauge-specific settings include max value, stage colors, arc width, unit, red/critical zone configuration, and title/detail font sizing.
+
+### Map behavior
+
+- Map charts use an OpenStreetMap-style tile base with local overlay data.
+- Maps support pan, wheel zoom, plus/minus zoom buttons, and a reset/recenter button.
+- Map title and panel controls remain visible above the map instead of being covered by the map body.
+- The working homepage and wastewater maps are the reference behavior for new map panels.
+- Boundary offset controls were removed from the map edit menu.
+
+### Fullscreen behavior
+
+- Each chart has a fullscreen button positioned left of the information/source button.
+- Holding the fullscreen button activates multi-chart fullscreen selection.
+- Multi-fullscreen supports selecting two to four charts.
+- Two-chart layouts support side-by-side and over-under.
+- Three-chart layouts support one large chart plus two smaller charts, with position controls.
+- Four-chart layouts use a 2x2 grid.
+- Multi-fullscreen includes controls to switch the relative positions of selected charts.
+- Charts in multi-fullscreen scale to their shared cell size instead of using solo fullscreen scale for every chart.
+
+### Image panels
+
+- Image panels can be added as a chart type.
+- Supported image uploads include common browser image formats such as PNG, JPEG, WebP, and GIF.
+- Image display controls include fit/crop/stretch behavior, zoom, and x/y positioning.
+- Alt text can be edited for the image.
+
+### Known technical note: Vite large-bundle warning
+
+`pnpm.cmd build` may show a warning similar to:
+
+```text
+Some chunks are larger than 500 kB after minification.
+```
+
+This is not a build failure. Vite is warning that one generated JavaScript file is larger than its default comfort threshold after compression/minification. This dashboard currently bundles React, ECharts, chart renderers, map behavior, edit controls, config handling, and fullscreen tools into one static browser app, so the warning is expected.
+
+Why it matters:
+
+- A larger bundle can take longer to download on slow networks.
+- It can take longer for older devices to parse and start the app.
+- For local simulation rooms or internal static hosting, this is usually acceptable unless startup feels slow.
+
+Future optimization options:
+
+- Lazy-load the edit panel only when edit mode opens.
+- Lazy-load heavy map/chart modules only when needed.
+- Use Vite/Rollup `manualChunks` to split vendor code from app code.
+- Import only the ECharts modules that are actually used.
+- Raise Vite's `chunkSizeWarningLimit` only after deciding the larger bundle is acceptable.
+
+The current sprint treats the warning as acceptable because the build succeeds and feature completeness is the priority.

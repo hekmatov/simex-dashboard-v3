@@ -1,10 +1,20 @@
-{
+﻿{
   "programLabel": "Pandemic & Disaster Preparedness Center",
   "title": "SimEx Dashboard V2",
   "description": "Static, config-driven dashboard for simulation exercise briefings.",
   "scenarioLabel": "HeV-A26 Day 2 Simulation",
   "lastUpdated": "2026-06-27",
   "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
   "dataSources": {
     "bio_cases": "data/biomedical/cases.csv",
     "bio_province_cases": "data/biomedical/province_cases.csv",
@@ -50,6 +60,16 @@
           "title": "Scenario overview",
           "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "panels": [
             {
               "id": "home_status_cards",
@@ -101,6 +121,16 @@
           "title": "Cases and Mortality",
           "description": "National case surveillance, province snapshots, and mortality.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "filters": [
             {
               "id": "bio_case_dates",
@@ -281,6 +311,16 @@
           "title": "Healthcare",
           "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "filters": [
             {
               "id": "healthcare_dates",
@@ -445,6 +485,16 @@
           "title": "Testing",
           "description": "Testing volume and positivity rate.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "panels": [
             {
               "id": "bio_testing_overlay",
@@ -478,6 +528,16 @@
           "title": "Wastewater Surveillance",
           "description": "Wastewater surveillance by province.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "panels": [
             {
               "id": "bio_wastewater_map",
@@ -514,6 +574,16 @@
           "title": "Vaccination",
           "description": "Current vaccination status and vaccination rate over time.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "panels": [
             {
               "id": "bio_vaccination_current",
@@ -554,6 +624,16 @@
           "title": "Behaviour",
           "description": "Values, risk perception, and adherence by measurement moment.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "filters": [
             {
               "id": "behaviour_snapshot",
@@ -686,6 +766,16 @@
           "title": "Public Trust",
           "description": "Trust in institutions over time and current trust meter.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "filters": [
             {
               "id": "trust_snapshot",
@@ -737,6 +827,16 @@
           "title": "Subjective Wellbeing",
           "description": "Wellbeing, lifestyle, and resilience survey indicators.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "filters": [
             {
               "id": "wellbeing_snapshot",
@@ -825,6 +925,16 @@
           "title": "Economy",
           "description": "Business closures and unemployment.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "panels": [
             {
               "id": "socio_business_closures",
@@ -860,6 +970,16 @@
           "title": "Absenteeism",
           "description": "Healthcare and school absenteeism.",
           "layout": "two-column",
+  "vantaBackground": {
+    "backgroundColor": "#f7f9fc",
+    "networkColor": "#f1a1ad",
+    "mouseControls": false,
+    "touchControls": false,
+    "points": 6,
+    "maxDistance": 17,
+    "spacing": 18,
+    "speed": 0.45
+  },
           "panels": [
             {
               "id": "socio_healthcare_absenteeism",
@@ -891,3 +1011,4 @@
     }
   ]
 }
+
