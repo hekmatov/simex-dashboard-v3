@@ -15,6 +15,15 @@ const DEFAULT_VANTA_BACKGROUND = {
   speed: 0.45,
 };
 
+const DEFAULT_GLOBAL_STYLES = {
+  panelColors: {
+    panelBackgroundColor: "#f5f8fb",
+    panelBorderColor: "#d8e2ec",
+    chartAreaColor: "#eaf1f6",
+    chartAreaBorderColor: "#d8e2ec",
+  },
+};
+
 const VANTA_LIMITS = {
   points: [3, 18],
   maxDistance: [8, 32],
@@ -230,7 +239,24 @@ function sanitizeDashboardConfig(config) {
   }
   return {
     ...config,
+    globalStyles: sanitizeGlobalStyles(config.globalStyles),
     vantaBackground: sanitizeVantaSettings(config.vantaBackground),
+  };
+}
+
+function sanitizeGlobalStyles(styles) {
+  const panelColors = {
+    ...DEFAULT_GLOBAL_STYLES.panelColors,
+    ...(styles?.panelColors ?? {}),
+  };
+  return {
+    ...(styles ?? {}),
+    panelColors: {
+      panelBackgroundColor: normalizeHexColor(panelColors.panelBackgroundColor, DEFAULT_GLOBAL_STYLES.panelColors.panelBackgroundColor),
+      panelBorderColor: normalizeHexColor(panelColors.panelBorderColor, DEFAULT_GLOBAL_STYLES.panelColors.panelBorderColor),
+      chartAreaColor: normalizeHexColor(panelColors.chartAreaColor, DEFAULT_GLOBAL_STYLES.panelColors.chartAreaColor),
+      chartAreaBorderColor: normalizeHexColor(panelColors.chartAreaBorderColor, DEFAULT_GLOBAL_STYLES.panelColors.chartAreaBorderColor),
+    },
   };
 }
 

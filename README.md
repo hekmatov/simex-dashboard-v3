@@ -50,7 +50,7 @@ pnpm.cmd preview
 
 ## Current Feature Map
 
-The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, maps, gauges, image panels, import/export config, and a configurable animated background.
+The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, gauges, image panels, import/export config, and a configurable animated background.
 
 For a complete pickup guide, see:
 

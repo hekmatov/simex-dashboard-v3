@@ -5,6 +5,14 @@
   "scenarioLabel": "HeV-A26 Day 2 Simulation",
   "lastUpdated": "2026-06-27",
   "layout": "two-column",
+  "globalStyles": {
+    "panelColors": {
+      "panelBackgroundColor": "#f5f8fb",
+      "panelBorderColor": "#d8e2ec",
+      "chartAreaColor": "#eaf1f6",
+      "chartAreaBorderColor": "#d8e2ec"
+    }
+  },
   "vantaBackground": {
     "backgroundColor": "#f7f9fc",
     "networkColor": "#f1a1ad",

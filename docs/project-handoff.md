@@ -421,6 +421,9 @@ http://localhost:5173/
 
 - `Import config` loads a dashboard JSON config from the user's machine.
 - `Export config` prompts for a filename and defaults to `SimEx-config-YYYYMMDD.json`.
+- Individual chart panels have an export menu in the top-right action cluster.
+- Panel export supports PNG and JPEG choices at 96, 150, and 300 DPI-equivalent export scales.
+- ECharts-backed panels use ECharts' native image export. Map and image panels use custom browser-side canvas export helpers.
 - Edits are kept in browser state while using the app.
 - Exported config is the portable way to preserve and share point-and-click edits.
 - Uploaded image panels are embedded into config as browser data URLs, so configs can become larger.
@@ -439,6 +442,8 @@ http://localhost:5173/
 - Panels can be dragged to reorder in edit mode.
 - Map panels reserve map-body dragging for panning the map; in edit mode, drag the card border/header area when the goal is to reorder the panel.
 - New charts are inserted at the top of the target section.
+- Edit mode includes a global panel color selector for default panel background, panel border, chart background, and chart border colors.
+- Each panel can either inherit the global panel colors or keep custom panel/chart colors in its own settings.
 - Panel size options are:
   - `half`: 0.5 x 1.
   - `normal`: 1 x 1.

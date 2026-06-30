@@ -59,6 +59,7 @@ export default function DashboardRenderer({
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const selectedPanel = findPanel(dashboard, selectedPanelId);
+  const globalPanelColors = resolveGlobalPanelColors(dashboard);
   const selectedPanelData = dashboard.loadedData[selectedPanel?.dataSource] ?? [];
   const selectedPanelColumns = Array.isArray(selectedPanelData)
     ? Object.keys(selectedPanelData[0] ?? {})
@@ -256,6 +257,18 @@ export default function DashboardRenderer({
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
   }
 
+  function changeGlobalPanelColors(updates) {
+    onDashboardChange({
+      globalStyles: {
+        ...(dashboard.globalStyles ?? {}),
+        panelColors: {
+          ...globalPanelColors,
+          ...updates,
+        },
+      },
+    });
+  }
+
   function startSectionAtPanel(section, panel) {
     const title = window.prompt("Section title", "New section");
     if (!title) {
@@ -384,6 +397,7 @@ export default function DashboardRenderer({
             </div>
             <button type="button" onClick={() => importInputRef.current?.click()}>Import config</button>
             <button type="button" onClick={onExportConfig}>Export config</button>
+            <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
             <button type="button" className="secondary" onClick={onResetEditSession}>Reset edits</button>
             {multiSelectMode && (
@@ -507,6 +521,7 @@ export default function DashboardRenderer({
                   <ChartPanel
                     key={panel.id}
                     panel={panel}
+                    globalPanelColors={globalPanelColors}
                     data={dashboard.loadedData[panel.dataSource]}
                     geoData={dashboard.loadedData[panel.geoSource]}
                     filterDefinitions={section.filters ?? []}
@@ -540,6 +555,7 @@ export default function DashboardRenderer({
             dataSources={dashboard.dataSources}
             dataColumns={selectedPanelColumns}
             dataRows={Array.isArray(selectedPanelData) ? selectedPanelData : []}
+            globalPanelColors={globalPanelColors}
             onClose={() => setSelectedPanelId(null)}
             onRemove={() => removePanel(selectedPanel.id)}
             onChange={changeSelectedPanel}
@@ -547,7 +563,7 @@ export default function DashboardRenderer({
         )}
       </section>
       {multiFullscreenOpen && (
-        <MultiFullscreenOverlay
+          <MultiFullscreenOverlay
           dashboard={dashboard}
           panelIds={multiPanelIds}
           layout={multiFullscreenLayout}
@@ -562,6 +578,7 @@ export default function DashboardRenderer({
 
 function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, onPanelOrderChange, onClose }) {
   const panels = panelIds.map((panelId) => findPanel(dashboard, panelId)).filter(Boolean);
+  const globalPanelColors = resolveGlobalPanelColors(dashboard);
   const layoutOptions = multiLayoutOptions(panels.length);
   const resolvedLayout = layoutOptions.some((option) => option.value === layout) ? layout : layoutOptions[0]?.value;
 
@@ -586,6 +603,7 @@ function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, o
               </div>
               <PanelBody
                 panel={panel}
+                globalPanelColors={globalPanelColors}
                 data={dashboard.loadedData[panel.dataSource] ?? []}
                 geoData={dashboard.loadedData[panel.geoSource]}
                 fullScreen
@@ -596,6 +614,20 @@ function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, o
         </div>
       </article>
     </div>
+  );
+}
+
+function GlobalPanelColorControls({ colors, onChange }) {
+  return (
+    <details className="global-color-controls">
+      <summary>Global panel colors</summary>
+      <div className="global-color-grid">
+        <label>Panel background<input type="color" value={colors.panelBackgroundColor} onChange={(event) => onChange({ panelBackgroundColor: event.target.value })} /></label>
+        <label>Panel border<input type="color" value={colors.panelBorderColor} onChange={(event) => onChange({ panelBorderColor: event.target.value })} /></label>
+        <label>Chart background<input type="color" value={colors.chartAreaColor} onChange={(event) => onChange({ chartAreaColor: event.target.value })} /></label>
+        <label>Chart border<input type="color" value={colors.chartAreaBorderColor} onChange={(event) => onChange({ chartAreaBorderColor: event.target.value })} /></label>
+      </div>
+    </details>
   );
 }
 
@@ -670,6 +702,15 @@ function VantaSettingsPanel({ settings = {}, onChange }) {
       <label className="checkbox-row"><input type="checkbox" checked={resolved.mouseControls} onChange={(event) => onChange({ mouseControls: event.target.checked })} />Mouse tracking</label>
     </div>
   );
+}
+
+function resolveGlobalPanelColors(dashboard) {
+  return {
+    panelBackgroundColor: dashboard?.globalStyles?.panelColors?.panelBackgroundColor ?? "#f5f8fb",
+    panelBorderColor: dashboard?.globalStyles?.panelColors?.panelBorderColor ?? "#d8e2ec",
+    chartAreaColor: dashboard?.globalStyles?.panelColors?.chartAreaColor ?? "#eaf1f6",
+    chartAreaBorderColor: dashboard?.globalStyles?.panelColors?.chartAreaBorderColor ?? "#d8e2ec",
+  };
 }
 
 function RangeSetting({ label, value, min, max, step, onChange }) {

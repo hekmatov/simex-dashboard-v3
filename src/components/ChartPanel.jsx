@@ -6,6 +6,7 @@ import { validatePanelConfig } from "../lib/validateConfig.js";
 
 function ChartPanel({
   panel,
+  globalPanelColors,
   data,
   geoData,
   filterDefinitions,
@@ -26,6 +27,8 @@ function ChartPanel({
 }) {
   const [fullScreen, setFullScreen] = React.useState(false);
   const pointerDragRef = React.useRef(null);
+  const exportRef = React.useRef(null);
+  const visualPanel = resolvePanelColors(panel, globalPanelColors);
   const filteredData = applyPanelFilters(
     data ?? [],
     panel,
@@ -55,8 +58,8 @@ function ChartPanel({
         data-panel-id={panel.id}
         className={articleClassName}
         style={{
-          backgroundColor: panel.panelBackgroundColor,
-          borderColor: panel.panelBorderColor,
+          backgroundColor: visualPanel.panelBackgroundColor,
+          borderColor: visualPanel.panelBorderColor,
         }}
         onPointerDown={(event) => startPanelPointerDrag(event, panel.id)}
         onPointerMove={movePanelPointerDrag}
@@ -74,6 +77,7 @@ function ChartPanel({
           onToggleMultiSelect={onToggleMultiSelect}
           onFullScreen={() => setFullScreen(true)}
           onFullScreenHold={onFullScreenHold}
+          onExport={(format, dpi) => exportRef.current?.(format, dpi)}
         />
         {validationError ? (
           <>
@@ -81,7 +85,7 @@ function ChartPanel({
             <p>{validationError}</p>
           </>
         ) : (
-          <PanelBody panel={panel} data={filteredData} geoData={geoData} />
+          <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} exportRef={exportRef} />
         )}
       </article>
 
@@ -102,7 +106,7 @@ function ChartPanel({
                 <p>{validationError}</p>
               </section>
             ) : (
-              <PanelBody panel={panel} data={filteredData} geoData={geoData} fullScreen />
+              <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} fullScreen />
             )}
           </article>
         </div>
@@ -197,9 +201,11 @@ function PanelActionButtons({
   onToggleMultiSelect,
   onFullScreen,
   onFullScreenHold,
+  onExport,
 }) {
   const holdTimerRef = React.useRef(null);
   const holdTriggeredRef = React.useRef(false);
+  const [exportOpen, setExportOpen] = React.useState(false);
 
   function startFullScreenPress(event) {
     holdTriggeredRef.current = false;
@@ -225,6 +231,27 @@ function PanelActionButtons({
 
   return (
     <div className="chart-action-buttons">
+      <span className="chart-export-control">
+        <button
+          type="button"
+          className="chart-icon-button chart-export-button"
+          aria-label="Export chart"
+          title="Export chart"
+          onClick={() => setExportOpen((current) => !current)}
+        >
+          <span className="download-icon" aria-hidden="true" />
+        </button>
+        {exportOpen && (
+          <span className="chart-export-menu">
+            {[96, 150, 300].map((dpi) => (
+              <React.Fragment key={dpi}>
+                <button type="button" onClick={() => { setExportOpen(false); onExport?.("png", dpi); }}>PNG {dpi} DPI</button>
+                <button type="button" onClick={() => { setExportOpen(false); onExport?.("jpeg", dpi); }}>JPEG {dpi} DPI</button>
+              </React.Fragment>
+            ))}
+          </span>
+        )}
+      </span>
       <button
         type="button"
         className="chart-icon-button chart-fullscreen-button"
@@ -280,60 +307,77 @@ function PanelActionButtons({
   );
 }
 
-export function PanelBody({ panel, data, geoData, fullScreen = false, multiFullScreen = false }) {
+export function PanelBody({ panel, globalPanelColors, data, geoData, fullScreen = false, multiFullScreen = false, exportRef }) {
   const containerRef = React.useRef(null);
   const chartRef = React.useRef(null);
   const dimensions = useElementDimensions(containerRef);
-  const renderContext = chartRenderContext(panel, fullScreen, dimensions, multiFullScreen);
+  const visualPanel = resolvePanelColors(panel, globalPanelColors);
+  const renderContext = chartRenderContext(visualPanel, fullScreen, dimensions, multiFullScreen);
 
   React.useEffect(() => {
     chartRef.current?.getEchartsInstance?.().resize();
-  }, [dimensions.width, dimensions.height, fullScreen, panel.size]);
+  }, [dimensions.width, dimensions.height, fullScreen, visualPanel.size]);
 
-  if (panel.type === "kpi") {
-    return <KpiPanel panel={panel} data={data} />;
+  React.useEffect(() => {
+    if (!exportRef) {
+      return undefined;
+    }
+    exportRef.current = (format, dpi) => exportPanelImage({
+      panel: visualPanel,
+      chartRef,
+      container: containerRef.current,
+      format,
+      dpi,
+    });
+    return () => {
+      exportRef.current = null;
+    };
+  }, [exportRef, visualPanel, dimensions.width, dimensions.height]);
+
+  if (visualPanel.type === "kpi") {
+    return <KpiPanel panel={visualPanel} data={data} />;
   }
-  if (panel.type === "table") {
-    return <TablePanel panel={panel} data={data} />;
+  if (visualPanel.type === "table") {
+    return <TablePanel panel={visualPanel} data={data} />;
   }
-  if (panel.type === "deltaList") {
-    return <DeltaListPanel panel={panel} data={data} />;
+  if (visualPanel.type === "deltaList") {
+    return <DeltaListPanel panel={visualPanel} data={data} />;
   }
-  if (panel.type === "image") {
+  if (visualPanel.type === "image") {
     return (
       <div
         ref={containerRef}
         className={multiFullScreen ? "chart-canvas chart-canvas-multi" : fullScreen ? "chart-canvas chart-canvas-fullscreen" : "chart-canvas"}
-        style={{ backgroundColor: panel.chartAreaColor, borderColor: panel.chartAreaBorderColor }}
+        style={{ backgroundColor: visualPanel.chartAreaColor, borderColor: visualPanel.chartAreaBorderColor }}
       >
-        <ImagePanel panel={panel} fullScreen={fullScreen && !multiFullScreen} />
+        <ImagePanel panel={visualPanel} fullScreen={fullScreen && !multiFullScreen} />
       </div>
     );
   }
-  if (panel.type === "mapScatter") {
+  if (visualPanel.type === "mapScatter") {
     return (
       <div
         ref={containerRef}
         className={multiFullScreen ? "chart-canvas chart-canvas-multi" : fullScreen ? "chart-canvas chart-canvas-fullscreen" : "chart-canvas"}
-        style={{ backgroundColor: panel.chartAreaColor, borderColor: panel.chartAreaBorderColor }}
+        style={{ backgroundColor: visualPanel.chartAreaColor, borderColor: visualPanel.chartAreaBorderColor }}
       >
-        <TileMapPanel panel={panel} data={data} geoData={geoData} dimensions={dimensions} />
+        <TileMapPanel panel={visualPanel} data={data} geoData={geoData} dimensions={dimensions} />
       </div>
     );
   }
-  if (!NON_ECHART_TYPES.has(panel.type)) {
+  if (!NON_ECHART_TYPES.has(visualPanel.type)) {
     return (
       <div
         ref={containerRef}
         className={multiFullScreen ? "chart-canvas chart-canvas-multi" : fullScreen ? "chart-canvas chart-canvas-fullscreen" : "chart-canvas"}
-        style={{ backgroundColor: panel.chartAreaColor, borderColor: panel.chartAreaBorderColor }}
+        style={{ backgroundColor: visualPanel.chartAreaColor, borderColor: visualPanel.chartAreaBorderColor }}
       >
         <ReactECharts
           ref={chartRef}
-          option={buildEchartsOption(panel, data, geoData, renderContext)}
+          option={buildEchartsOption(visualPanel, data, geoData, renderContext)}
           className="chart-canvas-inner"
           style={{ height: "100%", width: "100%" }}
-          opts={{ renderer: panel.type === "gauge" ? "svg" : "canvas" }}
+          opts={{ renderer: visualPanel.type === "gauge" ? "svg" : "canvas" }}
           notMerge
         />
       </div>
@@ -485,6 +529,7 @@ function TileMapPanel({ panel, data, geoData, dimensions }) {
             key={`${tile.z}-${tile.x}-${tile.y}`}
             src={`https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`}
             alt=""
+            crossOrigin="anonymous"
             draggable="false"
             style={{
               left: `${tile.left}px`,
@@ -568,6 +613,7 @@ function useElementDimensions(ref) {
 function areChartPanelPropsEqual(previous, next) {
   return (
     previous.panel === next.panel &&
+    previous.globalPanelColors === next.globalPanelColors &&
     previous.data === next.data &&
     previous.geoData === next.geoData &&
     previous.filterDefinitions === next.filterDefinitions &&
@@ -766,6 +812,179 @@ function formatValue(value) {
     return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
   }
   return value ?? "";
+}
+
+async function exportPanelImage({ panel, chartRef, container, format = "png", dpi = 150 }) {
+  const type = format === "jpeg" ? "jpeg" : "png";
+  const pixelRatio = Math.max(1, Number(dpi) / 96);
+  const fileName = `${slugify(panel.title || panel.id || "chart")}-${dpi}dpi.${type === "jpeg" ? "jpg" : "png"}`;
+  const backgroundColor = type === "jpeg" ? "#ffffff" : panel.chartAreaColor ?? "#ffffff";
+
+  try {
+    const echartsInstance = chartRef.current?.getEchartsInstance?.();
+    if (echartsInstance) {
+      const url = echartsInstance.getDataURL({
+        type,
+        pixelRatio,
+        backgroundColor,
+      });
+      downloadDataUrl(url, fileName);
+      return;
+    }
+
+    if (panel.type === "mapScatter") {
+      const url = await exportMapToDataUrl(container, type, pixelRatio, backgroundColor);
+      downloadDataUrl(url, fileName);
+      return;
+    }
+
+    if (panel.type === "image") {
+      const url = await exportImagePanelToDataUrl(container, type, pixelRatio, backgroundColor);
+      downloadDataUrl(url, fileName);
+      return;
+    }
+
+    const url = await exportSimplePanelToDataUrl(container, panel, type, pixelRatio, backgroundColor);
+    downloadDataUrl(url, fileName);
+  } catch (error) {
+    window.alert(`Could not export this panel: ${error.message}`);
+  }
+}
+
+async function exportMapToDataUrl(container, type, pixelRatio, backgroundColor) {
+  const mapElement = container?.querySelector?.(".tile-map-panel");
+  if (!mapElement) {
+    throw new Error("Map panel is not available yet.");
+  }
+  const rect = mapElement.getBoundingClientRect();
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(rect.width * pixelRatio);
+  canvas.height = Math.round(rect.height * pixelRatio);
+  const context = canvas.getContext("2d");
+  context.scale(pixelRatio, pixelRatio);
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, rect.width, rect.height);
+
+  const tiles = [...mapElement.querySelectorAll(".tile-map-tiles img")];
+  await Promise.all(tiles.map(waitForImage));
+  tiles.forEach((tile) => {
+    const left = parseFloat(tile.style.left) || 0;
+    const top = parseFloat(tile.style.top) || 0;
+    const width = parseFloat(tile.style.width) || tile.naturalWidth;
+    const height = parseFloat(tile.style.height) || tile.naturalHeight;
+    context.drawImage(tile, left, top, width, height);
+  });
+
+  const overlay = mapElement.querySelector(".tile-map-overlay");
+  if (overlay) {
+    const overlayImage = await svgElementToImage(overlay);
+    context.drawImage(overlayImage, 0, 0, rect.width, rect.height);
+  }
+
+  const title = mapElement.querySelector(".tile-map-title")?.textContent;
+  if (title) {
+    context.fillStyle = "#08224a";
+    context.font = "700 16px Inter, Arial, sans-serif";
+    context.fillText(title, 16, 28);
+  }
+  return canvas.toDataURL(`image/${type}`, type === "jpeg" ? 0.92 : undefined);
+}
+
+async function exportImagePanelToDataUrl(container, type, pixelRatio, backgroundColor) {
+  const image = container?.querySelector?.(".image-panel-frame img");
+  if (!image) {
+    throw new Error("No image is loaded in this panel.");
+  }
+  await waitForImage(image);
+  const rect = container.getBoundingClientRect();
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(rect.width * pixelRatio);
+  canvas.height = Math.round(rect.height * pixelRatio);
+  const context = canvas.getContext("2d");
+  context.scale(pixelRatio, pixelRatio);
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, rect.width, rect.height);
+  context.drawImage(image, 0, 0, rect.width, rect.height);
+  return canvas.toDataURL(`image/${type}`, type === "jpeg" ? 0.92 : undefined);
+}
+
+async function exportSimplePanelToDataUrl(container, panel, type, pixelRatio, backgroundColor) {
+  const rect = container?.getBoundingClientRect?.();
+  if (!rect) {
+    throw new Error("Panel is not available yet.");
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(rect.width * pixelRatio);
+  canvas.height = Math.round(rect.height * pixelRatio);
+  const context = canvas.getContext("2d");
+  context.scale(pixelRatio, pixelRatio);
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, rect.width, rect.height);
+  context.fillStyle = "#08224a";
+  context.font = "700 18px Inter, Arial, sans-serif";
+  context.fillText(panel.title ?? "Dashboard panel", 20, 34);
+  context.font = "13px Inter, Arial, sans-serif";
+  context.fillText("Static panel export placeholder. Use browser print/export for full table or KPI content.", 20, 60);
+  return canvas.toDataURL(`image/${type}`, type === "jpeg" ? 0.92 : undefined);
+}
+
+function svgElementToImage(svgElement) {
+  return new Promise((resolve, reject) => {
+    const clone = svgElement.cloneNode(true);
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const source = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not render map overlay for export."));
+    };
+    image.src = url;
+  });
+}
+
+function waitForImage(image) {
+  if (image.complete && image.naturalWidth > 0) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    image.addEventListener("load", resolve, { once: true });
+    image.addEventListener("error", () => reject(new Error("Could not load an image used by this panel.")), { once: true });
+  });
+}
+
+function downloadDataUrl(url, fileName) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+}
+
+function slugify(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "chart";
+}
+
+function resolvePanelColors(panel, globalPanelColors) {
+  if (!panel.useGlobalPanelColors) {
+    return panel;
+  }
+  return {
+    ...panel,
+    panelBackgroundColor: globalPanelColors?.panelBackgroundColor ?? panel.panelBackgroundColor,
+    panelBorderColor: globalPanelColors?.panelBorderColor ?? panel.panelBorderColor,
+    chartAreaColor: globalPanelColors?.chartAreaColor ?? panel.chartAreaColor,
+    chartAreaBorderColor: globalPanelColors?.chartAreaBorderColor ?? panel.chartAreaBorderColor,
+  };
 }
 
 function lonLatToGlobalPixel(lon, lat, zoom) {

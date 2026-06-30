@@ -901,6 +901,74 @@ th {
   position: relative;
 }
 
+.chart-export-control {
+  display: inline-flex;
+  position: relative;
+}
+
+.chart-export-button {
+  background: rgb(255 255 255 / 88%);
+}
+
+.download-icon {
+  border-bottom: 2px solid currentColor;
+  display: block;
+  height: 14px;
+  position: relative;
+  width: 14px;
+}
+
+.download-icon::before {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  content: "";
+  height: 7px;
+  left: 4px;
+  position: absolute;
+  top: 1px;
+  transform: rotate(45deg);
+  width: 7px;
+}
+
+.download-icon::after {
+  background: currentColor;
+  content: "";
+  height: 10px;
+  left: 6px;
+  position: absolute;
+  top: 0;
+  width: 2px;
+}
+
+.chart-export-menu {
+  background: #08224a;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgb(8 34 74 / 24%);
+  display: grid;
+  gap: 4px;
+  min-width: 136px;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 9;
+}
+
+.chart-export-menu button {
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.chart-export-menu button:hover {
+  background: rgb(255 255 255 / 18%);
+}
+
 .chart-info-button {
   background: #5b9bd5;
   color: white;
@@ -1637,6 +1705,65 @@ button.danger {
   display: grid;
   gap: 8px;
   grid-template-columns: 1fr 1fr;
+}
+
+.global-color-controls {
+  position: relative;
+}
+
+.global-color-controls summary {
+  align-items: center;
+  background: rgb(255 255 255 / 82%);
+  border: 1px solid rgb(8 34 74 / 14%);
+  border-radius: 999px;
+  color: #08224a;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 8px 12px;
+}
+
+.global-color-grid {
+  background: #f8fbff;
+  border: 1px solid rgb(8 34 74 / 12%);
+  border-radius: 14px;
+  box-shadow: 0 14px 30px rgb(8 34 74 / 16%);
+  display: grid;
+  gap: 8px;
+  min-width: 260px;
+  padding: 12px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 12;
+}
+
+.global-color-grid label {
+  align-items: center;
+  color: #08224a;
+  display: grid;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  grid-template-columns: 1fr auto;
+}
+
+.global-color-preview {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.global-color-preview span {
+  border: 2px solid;
+  border-radius: 10px;
+  color: #08224a;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 12px;
+  text-align: center;
 }
 
 .chart-panel-multi-selected {

@@ -55,7 +55,7 @@ const FONT_CONTROLS = {
   mapLabel: { label: "Map hover labels", defaultValue: 12 },
 };
 
-export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, dataRows = [], onChange, onClose, onRemove }) {
+export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, dataRows = [], globalPanelColors, onChange, onClose, onRemove }) {
   const [activeTab, setActiveTab] = React.useState("data");
   const [openSections, setOpenSections] = React.useState({});
   const sectionsByTab = getSectionsForPanelType(panel.type);
@@ -133,7 +133,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
       case "legend": return <LegendSection panel={panel} patch={patch} />;
       case "palette": return <PaletteSection panel={panel} patch={patch} />;
       case "textSize": return <TextSizeSection panel={panel} updateFontSize={updateFontSize} />;
-      case "panelLayout": return <PanelLayoutSection panel={panel} patch={patch} />;
+      case "panelLayout": return <PanelLayoutSection panel={panel} globalPanelColors={globalPanelColors} patch={patch} />;
       case "tooltip": return <TooltipSection panel={panel} patch={patch} />;
       case "gaugeData": return <GaugeDataSection panel={panel} dataColumns={dataColumns} patch={patch} />;
       case "gaugeRedZone": return <GaugeRedZoneSection panel={panel} patch={patch} />;
@@ -475,17 +475,34 @@ function TextSizeSection({ panel, updateFontSize }) {
   return <div className="font-control-list">{controls.map((key) => <FontSizeControl key={key} settingKey={key} panel={panel} updateFontSize={updateFontSize} />)}</div>;
 }
 
-function PanelLayoutSection({ panel, patch }) {
+function PanelLayoutSection({ panel, globalPanelColors, patch }) {
+  const colors = {
+    panelBackgroundColor: globalPanelColors?.panelBackgroundColor ?? "#f5f8fb",
+    panelBorderColor: globalPanelColors?.panelBorderColor ?? "#d8e2ec",
+    chartAreaColor: globalPanelColors?.chartAreaColor ?? "#eaf1f6",
+    chartAreaBorderColor: globalPanelColors?.chartAreaBorderColor ?? "#d8e2ec",
+  };
+  const useGlobalColors = panel.useGlobalPanelColors ?? false;
   return (
     <>
       <label>Panel size<select value={normalizePanelSize(panel.size)} onChange={(event) => patch({ size: event.target.value })}><option value="half">Half - 0.5 x 1</option><option value="normal">Normal - 1 x 1</option><option value="wide">Wide - 2 x 1</option><option value="tall">Tall - 1 x 2</option><option value="large">Large - 2 x 2</option></select></label>
       <label className="checkbox-row"><input type="checkbox" checked={panel.fullscreenScaling ?? true} onChange={(event) => patch({ fullscreenScaling: event.target.checked })} />Scale fonts in fullscreen</label>
-      <label>Panel background<input type="color" value={panel.panelBackgroundColor ?? "#f5f8fb"} onChange={(event) => patch({ panelBackgroundColor: event.target.value })} /></label>
-      <label>Panel border<input type="color" value={panel.panelBorderColor ?? "#d8e2ec"} onChange={(event) => patch({ panelBorderColor: event.target.value })} /></label>
-      <label>Chart area background<input type="color" value={panel.chartAreaColor ?? "#eaf1f6"} onChange={(event) => patch({ chartAreaColor: event.target.value })} /></label>
-      <label>Chart area border<input type="color" value={panel.chartAreaBorderColor ?? "#d8e2ec"} onChange={(event) => patch({ chartAreaBorderColor: event.target.value })} /></label>
+      <label className="checkbox-row"><input type="checkbox" checked={useGlobalColors} onChange={(event) => patch({ useGlobalPanelColors: event.target.checked })} />Use global panel colors</label>
+      {useGlobalColors ? (
+        <div className="global-color-preview">
+          <span style={{ backgroundColor: colors.panelBackgroundColor, borderColor: colors.panelBorderColor }}>Panel</span>
+          <span style={{ backgroundColor: colors.chartAreaColor, borderColor: colors.chartAreaBorderColor }}>Chart</span>
+        </div>
+      ) : (
+        <>
+          <label>Panel background<input type="color" value={panel.panelBackgroundColor ?? "#f5f8fb"} onChange={(event) => patch({ panelBackgroundColor: event.target.value })} /></label>
+          <label>Panel border<input type="color" value={panel.panelBorderColor ?? "#d8e2ec"} onChange={(event) => patch({ panelBorderColor: event.target.value })} /></label>
+          <label>Chart area background<input type="color" value={panel.chartAreaColor ?? "#eaf1f6"} onChange={(event) => patch({ chartAreaColor: event.target.value })} /></label>
+          <label>Chart area border<input type="color" value={panel.chartAreaBorderColor ?? "#d8e2ec"} onChange={(event) => patch({ chartAreaBorderColor: event.target.value })} /></label>
+        </>
+      )}
       <div className="settings-button-row">
-        <button type="button" className="secondary" onClick={() => patch({ panelBackgroundColor: undefined, panelBorderColor: undefined, chartAreaColor: undefined, chartAreaBorderColor: undefined })}>Reset panel colors</button>
+        <button type="button" className="secondary" onClick={() => patch({ useGlobalPanelColors: false, panelBackgroundColor: undefined, panelBorderColor: undefined, chartAreaColor: undefined, chartAreaBorderColor: undefined })}>Reset custom colors</button>
       </div>
     </>
   );
