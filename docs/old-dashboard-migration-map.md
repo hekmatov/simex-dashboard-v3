@@ -119,7 +119,7 @@ When edit mode is opened, the app stores a temporary snapshot of the dashboard c
 
 - `Save` exits edit mode and keeps the changes made during that edit session.
 - `Reset edits` exits edit mode and restores the config to how it looked when edit mode was opened.
-- `Export config` still downloads the current config, including saved edits.
+- `Export bundle` downloads the current config, including saved edits and any uploaded CSV sources.
 
 Panel size options are:
 

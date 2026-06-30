@@ -216,8 +216,8 @@ Socio-economic content areas:
 - Fullscreen chart scaling for font size, line weight, gauge size, and map point size.
 - Save button exits edit mode and keeps edits.
 - Reset edits button discards edits made during the current edit session.
-- Import config button.
-- Export config button with filename prompt. Default filename format: `SimEx-config-YYYYMMDD.json`.
+- Import bundle button.
+- Export bundle button with filename prompt. Default filename format: `SimEx-dashboard-bundle-YYYYMMDD.json`.
 
 ### Per-panel settings
 
@@ -417,16 +417,20 @@ http://localhost:5173/
 - The old page-level layout selector was removed; pages now use the two-column dashboard layout by default.
 - The last edited chart highlight is cleared when leaving edit mode.
 
-### Config import/export and persistence
+### Bundle import/export, uploaded CSVs, and persistence
 
-- `Import config` loads a dashboard JSON config from the user's machine.
-- `Export config` prompts for a filename and defaults to `SimEx-config-YYYYMMDD.json`.
+- `Upload CSV` embeds a selected CSV file as a dashboard data source.
+- Uploaded CSV sources appear in chart data-source dropdowns and are labeled with the uploaded filename.
+- `Import bundle` loads either the newer dashboard bundle JSON format or an older plain dashboard config JSON file.
+- `Export bundle` prompts for a filename and defaults to `SimEx-dashboard-bundle-YYYYMMDD.json`.
+- Dashboard bundles contain the config plus uploaded CSV text under the `uploadedCsvSources` bundle field.
+- File-backed CSV/GeoJSON sources under `public/data/**` remain referenced by path; uploaded CSVs are embedded for portability.
 - Individual chart panels have an export menu in the top-right action cluster.
 - Panel export supports PNG and JPEG choices at 96, 150, and 300 DPI-equivalent export scales.
 - ECharts-backed panels use ECharts' native image export. Map and image panels use custom browser-side canvas export helpers.
 - Edits are kept in browser state while using the app.
-- Exported config is the portable way to preserve and share point-and-click edits.
-- Uploaded image panels are embedded into config as browser data URLs, so configs can become larger.
+- Exported bundles are the portable way to preserve and share point-and-click edits plus uploaded CSVs.
+- Uploaded image panels are embedded into config as browser data URLs, so bundles can become larger.
 
 ### Background editor
 
@@ -443,7 +447,8 @@ http://localhost:5173/
 - Map panels reserve map-body dragging for panning the map; in edit mode, drag the card border/header area when the goal is to reorder the panel.
 - New charts are inserted at the top of the target section.
 - Edit mode includes a global panel color selector for default panel background, panel border, chart background, and chart border colors.
-- Each panel can either inherit the global panel colors or keep custom panel/chart colors in its own settings.
+- Each panel inherits the global panel colors by default.
+- A panel can opt out and keep custom panel/chart colors in its own settings.
 - Panel size options are:
   - `half`: 0.5 x 1.
   - `normal`: 1 x 1.
@@ -567,3 +572,60 @@ Future optimization options:
 - Raise Vite's `chunkSizeWarningLimit` only after deciding the larger bundle is acceptable.
 
 The current sprint treats the warning as acceptable because the build succeeds and feature completeness is the priority.
+
+## Portable deployment guidance
+
+The dashboard is a static Vite app. After a maintainer builds it, viewers do not need Docker, Python, Node, or `pnpm`.
+
+Maintainer build command:
+
+```powershell
+pnpm.cmd build
+```
+
+Flash-drive package command:
+
+```powershell
+pnpm.cmd package:flashdrive
+```
+
+Deployable output:
+
+```text
+dist/
+```
+
+Flash-drive output:
+
+```text
+release/SimEx Dashboard V2 Flashdrive/
+```
+
+If the existing flash-drive output folder is locked, usually because the launcher window is still running from that folder, the package command writes a timestamped sibling folder under `release/` and prints the exact folder path to use.
+
+Good deployment options:
+
+- GitHub Pages.
+- Netlify.
+- Cloudflare Pages.
+- SharePoint or institutional static file hosting.
+- Any simple internal web server that can serve the `dist` folder.
+
+The project now uses a relative Vite base path and generates `public/portable-dashboard-data.js` during `prebuild`. The built `dist` folder includes that script as `portable-dashboard-data.js`. When the app is opened from `file://`, the loader uses this embedded config/data instead of trying to fetch nearby JSON/CSV files.
+
+Flash-drive behavior:
+
+- Double-clicking `index.html` in the packaged folder should open the dashboard.
+- If `index.html` opens blank, use `START_DASHBOARD.bat`; it starts a tiny PowerShell-based local server at `http://127.0.0.1:8765/`.
+- The default config and prepared CSV/GeoJSON data are embedded in `portable-dashboard-data.js`.
+- Uploaded CSVs and scenario edits should still be moved with `Export bundle` and `Import bundle`.
+- Online map tiles still require internet access.
+- If a locked-down browser blocks scripts from USB drives, try `START_DASHBOARD.bat`, copy the folder to the computer first, or use a static host.
+
+Practical sharing model:
+
+1. Host the built `dist` folder or copy the flash-drive package folder.
+2. Use edit mode to upload CSVs and adjust charts.
+3. Export a dashboard bundle JSON.
+4. Email or copy the bundle JSON by flash drive.
+5. Another user opens the dashboard app and imports the bundle.

@@ -200,11 +200,11 @@ function SourceSection({ panel, dataSources, dataSourcePath, dataRows, patch }) 
         Data source
         <select value={panel.dataSource ?? ""} onChange={(event) => patch({ dataSource: event.target.value, dateSelection: undefined, categorySelection: undefined })}>
           <option value="">No data source</option>
-          {Object.keys(dataSources ?? {}).map((sourceId) => <option key={sourceId} value={sourceId}>{sourceId}</option>)}
+          {Object.entries(dataSources ?? {}).map(([sourceId, source]) => <option key={sourceId} value={sourceId}>{dataSourceLabel(sourceId, source)}</option>)}
         </select>
       </label>
       <div className="settings-button-row">
-        <button type="button" className="secondary" disabled={!dataSourcePath} onClick={() => openDataSourceTable(panel.title, dataSourcePath, dataRows)}>View source CSV</button>
+        <button type="button" className="secondary" disabled={!dataSourcePath} onClick={() => openDataSourceTable(panel.title, dataSourceDisplayPath(dataSourcePath), dataRows)}>View source CSV</button>
       </div>
       <label>
         Panel type
@@ -482,7 +482,7 @@ function PanelLayoutSection({ panel, globalPanelColors, patch }) {
     chartAreaColor: globalPanelColors?.chartAreaColor ?? "#eaf1f6",
     chartAreaBorderColor: globalPanelColors?.chartAreaBorderColor ?? "#d8e2ec",
   };
-  const useGlobalColors = panel.useGlobalPanelColors ?? false;
+  const useGlobalColors = panel.useGlobalPanelColors !== false;
   return (
     <>
       <label>Panel size<select value={normalizePanelSize(panel.size)} onChange={(event) => patch({ size: event.target.value })}><option value="half">Half - 0.5 x 1</option><option value="normal">Normal - 1 x 1</option><option value="wide">Wide - 2 x 1</option><option value="tall">Tall - 1 x 2</option><option value="large">Large - 2 x 2</option></select></label>
@@ -593,6 +593,20 @@ function renderCsvTable(title, path, rows) {
   const columns = collectColumns(rows);
   const body = rows.slice(0, 1000).map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(row[column])}</td>`).join("")}</tr>`).join("");
   return `<!doctype html><html><head><title>${escapeHtml(title)} source CSV</title><style>body{font-family:Inter,Arial,sans-serif;margin:0;color:#08224a;background:#f5f8fb}header{position:sticky;top:0;background:white;padding:16px 20px;border-bottom:1px solid #d8e2ec}main{padding:20px}.table-wrap{overflow:auto;max-height:calc(100vh - 120px);border:1px solid #d8e2ec;background:white;border-radius:10px}table{border-collapse:collapse;min-width:100%;font-size:13px}th,td{border-bottom:1px solid #e6eef5;padding:8px 10px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#eaf2f8}small{color:#506a82}</style></head><body><header><strong>${escapeHtml(title)}</strong><br/><small>${escapeHtml(path)} · showing ${Math.min(rows.length, 1000).toLocaleString()} of ${rows.length.toLocaleString()} rows</small></header><main><div class="table-wrap"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div></main></body></html>`;
+}
+
+function dataSourceLabel(sourceId, source) {
+  if (source?.type === "uploadedCsv") {
+    return `${sourceId} - uploaded ${source.fileName ?? "CSV"}`;
+  }
+  return sourceId;
+}
+
+function dataSourceDisplayPath(source) {
+  if (source?.type === "uploadedCsv") {
+    return `Uploaded CSV: ${source.fileName ?? "unnamed file"}`;
+  }
+  return source;
 }
 
 function collectColumns(rows) {

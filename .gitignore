@@ -1,5 +1,7 @@
 node_modules/
 dist/
+release/
+public/portable-dashboard-data.js
 .vite/
 .DS_Store
 *.log

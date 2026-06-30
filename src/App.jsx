@@ -4,6 +4,7 @@ import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
+const BUNDLE_TYPE = "simex-dashboard-v2-bundle";
 const DEFAULT_VANTA_BACKGROUND = {
   backgroundColor: "#f7f9fc",
   networkColor: "#f1a1ad",
@@ -47,7 +48,7 @@ export default function App() {
   }, [vantaSettingsKey]);
 
   useEffect(() => {
-    loadDashboard("/config/dashboard.json")
+    loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then((loadedDashboard) => {
         const config = stripRuntimeFields(loadedDashboard);
         const savedConfig = sanitizeDashboardConfig(loadSavedConfig() ?? config);
@@ -157,10 +158,19 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const importedConfig = JSON.parse(reader.result);
+        const importedFile = JSON.parse(reader.result);
+        const importedConfig = importedFile?.bundleType === BUNDLE_TYPE
+          ? {
+              ...importedFile.config,
+              dataSources: {
+                ...(importedFile.config?.dataSources ?? {}),
+                ...(importedFile.uploadedCsvSources ?? {}),
+              },
+            }
+          : importedFile;
         updateDashboardConfig(importedConfig);
       } catch (importError) {
-        setError(new Error(`Could not import config: ${importError.message}`));
+        setError(new Error(`Could not import dashboard bundle: ${importError.message}`));
       }
     };
     reader.onerror = () => {
@@ -171,13 +181,22 @@ export default function App() {
 
   function exportConfig() {
     const config = stripRuntimeFields(dashboard);
-    const defaultName = `SimEx-config-${dateStamp()}`;
-    const chosenName = window.prompt("Name this exported config file", defaultName);
+    const defaultName = `SimEx-dashboard-bundle-${dateStamp()}`;
+    const chosenName = window.prompt("Name this exported dashboard bundle", defaultName);
     if (!chosenName) {
       return;
     }
     const fileName = chosenName.endsWith(".json") ? chosenName : `${chosenName}.json`;
-    const blob = new Blob([JSON.stringify(config, null, 2)], {
+    const bundle = {
+      bundleType: BUNDLE_TYPE,
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      config,
+      uploadedCsvSources: Object.fromEntries(
+        Object.entries(config.dataSources ?? {}).filter(([, source]) => source?.type === "uploadedCsv"),
+      ),
+    };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -186,6 +205,34 @@ export default function App() {
     link.download = fileName;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  function uploadCsvSource(file) {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const config = stripRuntimeFields(dashboard);
+      const sourceId = uniqueDataSourceId(config, file.name);
+      updateDashboardConfig({
+        ...config,
+        dataSources: {
+          ...(config.dataSources ?? {}),
+          [sourceId]: {
+            type: "uploadedCsv",
+            fileName: file.name,
+            csvText: String(reader.result ?? ""),
+            uploadedAt: new Date().toISOString(),
+          },
+        },
+      });
+    };
+    reader.onerror = () => {
+      setError(new Error("Could not read the selected CSV file."));
+    };
+    reader.readAsText(file);
   }
 
   if (error) {
@@ -228,6 +275,7 @@ export default function App() {
       onPanelReorder={reorderPanel}
       onImportConfig={importConfig}
       onExportConfig={exportConfig}
+      onUploadCsv={uploadCsvSource}
       onResetEditSession={cancelEditSession}
     />
   );
@@ -461,6 +509,22 @@ function createPanelFromSection(section, config) {
     colorScheme: "manual",
     series: baseSeries,
   };
+}
+
+function uniqueDataSourceId(config, fileName) {
+  const baseName = String(fileName ?? "uploaded-data")
+    .replace(/\.[^.]+$/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "uploaded_data";
+  let sourceId = `uploaded_${baseName}`;
+  let counter = 2;
+  while (config.dataSources?.[sourceId]) {
+    sourceId = `uploaded_${baseName}_${counter}`;
+    counter += 1;
+  }
+  return sourceId;
 }
 
 function createImagePanel() {

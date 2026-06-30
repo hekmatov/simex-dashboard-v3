@@ -975,7 +975,7 @@ function slugify(value) {
 }
 
 function resolvePanelColors(panel, globalPanelColors) {
-  if (!panel.useGlobalPanelColors) {
+  if (panel.useGlobalPanelColors === false) {
     return panel;
   }
   return {

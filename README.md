@@ -29,6 +29,12 @@ Build static files:
 pnpm.cmd build
 ```
 
+Create a flash-drive package:
+
+```powershell
+pnpm.cmd package:flashdrive
+```
+
 Preview the built app:
 
 ```powershell
@@ -50,13 +56,74 @@ pnpm.cmd preview
 
 ## Current Feature Map
 
-The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, gauges, image panels, import/export config, and a configurable animated background.
+The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, uploaded CSV data sources, portable dashboard bundle import/export, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, gauges, image panels, and a configurable animated background.
 
 For a complete pickup guide, see:
 
 ```text
 docs/project-handoff.md
 ```
+
+## Portable Data Bundles
+
+In edit mode:
+
+- `Upload CSV` embeds a selected CSV as a dashboard data source.
+- Uploaded CSV sources appear in chart data-source dropdowns.
+- `Export bundle` downloads a JSON bundle containing the dashboard config plus uploaded CSV text.
+- `Import bundle` restores that bundle later, including the uploaded CSV data.
+
+Static files already in `public/data/**` remain file-backed. Uploaded CSVs are bundled so they can travel by email or flash drive as one JSON file.
+
+## Deployment Without Docker
+
+Build the static site:
+
+```powershell
+pnpm.cmd build
+```
+
+The deployable site is the `dist` folder. It can be copied to a static host such as GitHub Pages, Netlify, Cloudflare Pages, SharePoint static hosting, or a basic internal web server. No Python, Docker, or Node is needed by viewers after the site is built.
+
+For sharing content separately from the app, export a dashboard bundle from edit mode and send the `.json` bundle file. Another user can open the hosted dashboard and import that bundle.
+
+## Flash Drive Package
+
+Create the portable folder:
+
+```powershell
+pnpm.cmd package:flashdrive
+```
+
+Copy this folder to a USB drive:
+
+```text
+release/SimEx Dashboard V2 Flashdrive/
+```
+
+If that folder is open or locked by a running dashboard launcher, the package command creates a fresh timestamped folder under `release/` instead. Use the folder named in the command output.
+
+The user opens:
+
+```text
+index.html
+```
+
+This package includes `portable-dashboard-data.js`, an embedded copy of the default dashboard config and prepared CSV/GeoJSON data. That embedded data is what allows the dashboard to open from `file://` without a local web server.
+
+If `index.html` shows a blank page, open:
+
+```text
+START_DASHBOARD.bat
+```
+
+That fallback starts a tiny local server using built-in Windows PowerShell and opens the dashboard at `http://127.0.0.1:8765/`. Keep the PowerShell window open while using the dashboard.
+
+Caveats:
+
+- Online map tiles still need internet access.
+- Some institutional browsers may block scripts from USB drives. If that happens, try `START_DASHBOARD.bat`, copy the folder to the computer first, or use a static host.
+- Exported dashboard bundles are still the best way to move scenario-specific edits and uploaded CSVs between copies of the dashboard.
 
 ## Bundle Size Note
 

@@ -21,6 +21,7 @@ export default function DashboardRenderer({
   onPanelReorder,
   onImportConfig,
   onExportConfig,
+  onUploadCsv,
   onResetEditSession,
 }) {
   const [activePageId, setActivePageId] = React.useState(
@@ -34,6 +35,7 @@ export default function DashboardRenderer({
   const [multiFullscreenOpen, setMultiFullscreenOpen] = React.useState(false);
   const [multiFullscreenLayout, setMultiFullscreenLayout] = React.useState("sideBySide");
   const importInputRef = React.useRef(null);
+  const csvInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
   const [selectedPanelDraft, setSelectedPanelDraft] = React.useState(null);
@@ -320,7 +322,7 @@ export default function DashboardRenderer({
     <main className="app-shell">
       <header className="dashboard-header">
         <div className="dashboard-brand-block">
-          <img className="pdpc-header-mark" src="/assets/pdpc-mark.png" alt="" />
+          <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-mark.png`} alt="" />
           <div>
             <p className="eyebrow">{dashboardDraft.programLabel}</p>
             {editMode ? (
@@ -395,8 +397,9 @@ export default function DashboardRenderer({
               <button type="button" onClick={addPage}>Add tab</button>
               <button type="button" className="secondary" disabled={(dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
             </div>
-            <button type="button" onClick={() => importInputRef.current?.click()}>Import config</button>
-            <button type="button" onClick={onExportConfig}>Export config</button>
+            <button type="button" onClick={() => importInputRef.current?.click()}>Import bundle</button>
+            <button type="button" onClick={onExportConfig}>Export bundle</button>
+            <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}>Upload CSV</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
             <button type="button" className="secondary" onClick={onResetEditSession}>Reset edits</button>
@@ -413,6 +416,16 @@ export default function DashboardRenderer({
               accept="application/json,.json"
               onChange={(event) => {
                 onImportConfig(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <input
+              ref={csvInputRef}
+              className="visually-hidden"
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => {
+                onUploadCsv(event.target.files?.[0]);
                 event.target.value = "";
               }}
             />

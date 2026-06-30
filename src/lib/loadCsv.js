@@ -7,6 +7,10 @@ export async function loadCsv(path) {
   }
 
   const csvText = await response.text();
+  return parseCsvText(csvText, path);
+}
+
+export function parseCsvText(csvText, label = "uploaded CSV") {
   const parsed = Papa.parse(csvText, {
     header: true,
     dynamicTyping: true,
@@ -15,7 +19,7 @@ export async function loadCsv(path) {
 
   if (parsed.errors.length > 0) {
     const firstError = parsed.errors[0];
-    throw new Error(`CSV parse error in ${path}: ${firstError.message}`);
+    throw new Error(`CSV parse error in ${label}: ${firstError.message}`);
   }
 
   return parsed.data;
