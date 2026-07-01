@@ -45,6 +45,18 @@ const TYPE_SECTIONS = {
     axes: [],
     style: ["titleLayout", "palette", "textSize", "panelLayout"],
   },
+  choroplethMap: {
+    data: ["source", "singleDateSelection"],
+    series: ["choroplethData"],
+    axes: [],
+    style: ["titleLayout", "palette", "textSize", "panelLayout"],
+  },
+  chronoChoroplethMap: {
+    data: ["source", "dateSelection"],
+    series: ["choroplethData"],
+    axes: [],
+    style: ["titleLayout", "palette", "textSize", "panelLayout"],
+  },
   image: {
     data: ["imageSource"],
     series: [],
@@ -74,6 +86,7 @@ const TYPE_SECTIONS = {
 export const CHART_OPTION_SECTIONS = {
   source: { tab: "data", title: "Source", optionIds: ["title", "infoSource", "dataSource", "sourceCsv", "panelType"] },
   dateSelection: { tab: "data", title: "Date Filter", optionIds: ["dateSelection"] },
+  singleDateSelection: { tab: "data", title: "Date", optionIds: ["singleDateSelection"] },
   categorySelection: { tab: "data", title: "Category Checklist", optionIds: ["categorySelection"] },
   categoryOrder: { tab: "data", title: "Category Ordering", optionIds: ["categoryOrder", "categorySortColumn", "categorySortDirection"] },
   seriesList: { tab: "series", title: "Series", optionIds: ["addSeries", "removeSeries", "duplicateSeries", "seriesFields"] },
@@ -82,6 +95,7 @@ export const CHART_OPTION_SECTIONS = {
   gaugeData: { tab: "series", title: "Gauge Data", optionIds: ["valueField", "labelField", "unit", "max"] },
   gaugeRedZone: { tab: "series", title: "Gauge Stage Colors", optionIds: ["gaugeStageColors"] },
   mapData: { tab: "series", title: "Map Data", optionIds: ["nameField", "valueField", "pointScale"] },
+  choroplethData: { tab: "series", title: "Choropleth Data & Overlay", optionIds: ["geoSource", "joinField", "valueField", "labelField", "mapLayoutSize", "visualRange", "provinceOverlay"] },
   imageSource: { tab: "data", title: "Image Source", optionIds: ["imageUpload", "imageFit"] },
   tableFields: { tab: "series", title: "Table Columns", optionIds: ["columns"] },
   deltaFields: { tab: "series", title: "Delta Fields", optionIds: ["titleField", "valueField", "detailField"] },

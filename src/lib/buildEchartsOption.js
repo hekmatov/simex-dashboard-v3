@@ -12,10 +12,15 @@ const COLOR_SCHEMES = {
   pdpc: ["#043BCB", "#00A676", "#4496D1", "#2456A6", "#007C89", "#08224A", "#7FDEC1", "#8F1D2C"],
   redGreen5: ["#8F1D2C", "#E16B5A", "#F3D37A", "#7FDEC1", "#00A676"],
   likertInfographic5: ["#43A047", "#AEBB2E", "#F6A21A", "#F47C20", "#D71920"],
+  caseIntensity: ["#FFF3E8", "#F3D37A", "#E16B5A", "#D71920", "#8F1D2C"],
   blueYellow5: ["#08224A", "#043BCB", "#4496D1", "#F3D37A", "#C98700"],
   cool: ["#08224A", "#2456A6", "#4496D1", "#007C89", "#7FDEC1"],
   warm: ["#8F1D2C", "#C98700", "#F3D37A", "#E16B5A", "#08224A"],
 };
+const choroplethGeoCache = new WeakMap();
+const provinceOverlayCache = new WeakMap();
+const provinceOverlayGeometryCache = new WeakMap();
+const registeredMaps = new Map();
 
 export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
   const scale = renderContext.scale ?? 1;
@@ -25,6 +30,10 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
 
   if (panel.type === "mapScatter") {
     return buildMapOption(panel, data, geoData, scale);
+  }
+
+  if (panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap") {
+    return buildChoroplethMapOption(panel, data, geoData, scale, renderContext);
   }
 
   const isHorizontal = panel.type === "horizontalBar" || panel.type === "horizontalStackedBar";
@@ -63,6 +72,9 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
   return {
     color: colors,
     backgroundColor: panel.chartAreaColor ?? "transparent",
+    animation: panel.chartAnimation ?? true,
+    animationDurationUpdate: scaled(220, scale),
+    animationEasingUpdate: "cubicOut",
     title: chartTitle(panel, scale),
     tooltip: {
       trigger: panel.tooltipTrigger ?? "axis",
@@ -330,6 +342,326 @@ function caseMapColor(value, maxValue) {
   return "#007C89";
 }
 
+function buildChoroplethMapOption(panel, data, geoData, scale, renderContext = {}) {
+  const mapName = panel.mapName ?? panel.id ?? "choropleth-map";
+  const geoNameProperty = panel.geoNameProperty ?? "statcode";
+  const geoLabelProperty = panel.geoLabelProperty ?? "statnaam";
+  const valueField = panel.valueField ?? "AantalCumulatief";
+  const labelField = panel.labelField ?? "Gemeentenaam";
+  const features = normalizeChoroplethGeoJson(geoData, geoNameProperty, geoLabelProperty);
+  registerMapOnce(mapName, features);
+
+  const colors = panelColors(panel);
+  const mapRows = choroplethRows(panel, data, valueField);
+  const values = mapRows.map((row) => row.value).filter((value) => Number.isFinite(value));
+  const minValue = numericOrUndefined(panel.visualMin) ?? Math.min(...values, 0);
+  const maxValue = numericOrUndefined(panel.visualMax) ?? Math.max(...values, 1);
+  const provinceOverlaySource = panel.provinceOverlaySource ?? "geo_netherlands_provinces";
+  const provinceOverlayGeoData = panel.showProvinceOverlay
+    ? renderContext.loadedData?.[provinceOverlaySource]
+    : null;
+  const provinceOverlayFeatures = normalizeProvinceOverlayGeoJson(
+    provinceOverlayGeoData,
+    panel.provinceOverlayNameProperty ?? "statnaam",
+  );
+  const transitionMs = 260;
+  const mapLayoutCenter = panel.mapLayoutCenter ?? ["50%", "55%"];
+  const mapLayoutSize = panel.mapLayoutSize ?? "82%";
+  const provinceOverlayGeometry = provinceOverlayFeatures ? cachedProvinceOverlayGeometry(provinceOverlayFeatures) : { lines: [], labels: [] };
+
+  return {
+    color: colors,
+    backgroundColor: panel.chartAreaColor ?? "transparent",
+    animation: true,
+    animationDurationUpdate: transitionMs,
+    animationEasingUpdate: "cubicOut",
+    title: chartTitle(panel, scale),
+    tooltip: {
+      trigger: "item",
+      formatter: (params) => {
+        const row = params.data;
+        if (!row) {
+          return `${params.name}<br/>No data`;
+        }
+        return [
+          row.displayName ?? params.name,
+          `${valueField}: ${formatTooltipValue(row.value)}`,
+          row.date ? `Date: ${row.date}` : "",
+          row.dataMethod ? `Data: ${row.dataMethod}` : "",
+          row.populationSource ? `Population: ${row.populationSource}` : "",
+        ].filter(Boolean).join("<br/>");
+      },
+    },
+    visualMap: {
+      min: minValue,
+      max: maxValue,
+      seriesIndex: 0,
+      left: scaled(18, scale),
+      bottom: scaled(22, scale),
+      text: [panel.highLabel ?? "High", panel.lowLabel ?? "Low"],
+      calculable: true,
+      textStyle: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "legend", 12, scale) },
+      inRange: { color: colors },
+      outOfRange: { color: "#DDE7EF" },
+    },
+    geo: {
+      map: mapName,
+      roam: panel.roam ?? true,
+      nameProperty: "name",
+      layoutCenter: mapLayoutCenter,
+      layoutSize: mapLayoutSize,
+      ...(panel.mapAspectScale ? { aspectScale: Number(panel.mapAspectScale) } : {}),
+      itemStyle: {
+        areaColor: panel.missingColor ?? "#DDE7EF",
+        borderColor: panel.mapBorderColor ?? "#F8FBFF",
+        borderWidth: scaled(panel.mapBorderWidth ?? 0.8, scale),
+      },
+      emphasis: {
+        label: {
+          show: true,
+          color: DEFAULT_TEXT_COLOR,
+          fontSize: fontSize(panel, "mapLabel", 12, scale),
+          formatter: (params) => params.data?.displayName ?? params.name,
+        },
+        itemStyle: {
+          areaColor: panel.mapEmphasisColor ?? "#F3D37A",
+          borderColor: "#08224A",
+          borderWidth: scaled(1.2, scale),
+        },
+      },
+    },
+    series: [
+      {
+        id: `${panel.id ?? mapName}-choropleth`,
+        name: panel.title,
+        type: "map",
+        geoIndex: 0,
+        nameProperty: "name",
+        animation: true,
+        animationDurationUpdate: transitionMs,
+        animationEasingUpdate: "cubicOut",
+        data: mapRows,
+      },
+      ...provinceOverlaySeries(panel, provinceOverlayGeometry.lines, provinceOverlayGeometry.labels, scale),
+    ],
+  };
+}
+
+function normalizeChoroplethGeoJson(geoData, codeProperty, labelProperty) {
+  if (!geoData?.features) {
+    return geoData;
+  }
+  const cacheKey = `${codeProperty}|${labelProperty}`;
+  const cached = choroplethGeoCache.get(geoData);
+  if (cached?.key === cacheKey) {
+    return cached.value;
+  }
+  const normalized = {
+    ...geoData,
+    features: geoData.features.map((feature) => {
+      const code = feature.properties?.[codeProperty] ?? feature.properties?.statcode ?? feature.properties?.name;
+      const label = feature.properties?.[labelProperty] ?? feature.properties?.statnaam ?? code;
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          name: String(code),
+          label: String(label),
+        },
+      };
+    }),
+  };
+  choroplethGeoCache.set(geoData, { key: cacheKey, value: normalized });
+  return normalized;
+}
+
+function normalizeProvinceOverlayGeoJson(geoData, labelProperty) {
+  if (!geoData?.features) {
+    return null;
+  }
+  const cacheKey = labelProperty;
+  const cached = provinceOverlayCache.get(geoData);
+  if (cached?.key === cacheKey) {
+    return cached.value;
+  }
+  const normalized = {
+    ...geoData,
+    features: geoData.features.map((feature) => {
+      const label = feature.properties?.[labelProperty] ?? feature.properties?.statnaam ?? feature.properties?.name ?? "";
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          name: String(label),
+        },
+      };
+    }),
+  };
+  provinceOverlayCache.set(geoData, { key: cacheKey, value: normalized });
+  return normalized;
+}
+
+function registerMapOnce(mapName, geoData) {
+  if (!geoData) {
+    return;
+  }
+  if (registeredMaps.get(mapName) === geoData) {
+    return;
+  }
+  echarts.registerMap(mapName, geoData);
+  registeredMaps.set(mapName, geoData);
+}
+
+function provinceOverlaySeries(panel, lines, labels, scale) {
+  if (!lines.length && !labels.length) {
+    return [];
+  }
+  return [
+    {
+      name: "Province borders",
+      type: "lines",
+      coordinateSystem: "geo",
+      polyline: true,
+      silent: true,
+      animation: false,
+      z: 20,
+      lineStyle: {
+        color: panel.provinceBorderColor ?? "#08224A",
+        width: scaled(panel.provinceBorderWidth ?? 1.4, scale),
+        opacity: 0.95,
+      },
+      data: lines.map((coords) => ({ coords })),
+    },
+    {
+      name: "Province names",
+      type: "scatter",
+      coordinateSystem: "geo",
+      silent: true,
+      animation: false,
+      symbolSize: 0,
+      z: 21,
+      label: {
+        show: panel.showProvinceNames ?? true,
+        formatter: (params) => params.name,
+        color: panel.provinceNameColor ?? "#08224A",
+        fontSize: scaled(panel.provinceNameFontSize ?? 12, scale),
+        fontWeight: 800,
+        textBorderColor: "rgba(255,255,255,0.82)",
+        textBorderWidth: 3,
+      },
+      data: labels.map((item) => ({
+        name: item.name,
+        value: item.value,
+      })),
+    },
+  ];
+}
+
+function provinceBoundaryLines(geoData) {
+  return (geoData.features ?? []).flatMap((feature) => geometryRings(feature.geometry));
+}
+
+function cachedProvinceOverlayGeometry(geoData) {
+  const cached = provinceOverlayGeometryCache.get(geoData);
+  if (cached) {
+    return cached;
+  }
+  const geometry = {
+    lines: provinceBoundaryLines(geoData),
+    labels: provinceLabelPoints(geoData),
+  };
+  provinceOverlayGeometryCache.set(geoData, geometry);
+  return geometry;
+}
+
+function provinceLabelPoints(geoData) {
+  return (geoData.features ?? []).map((feature) => {
+    const rings = geometryRings(feature.geometry);
+    const coordinates = rings.flat();
+    return {
+      name: feature.properties?.name ?? "",
+      value: centroidOfCoordinates(coordinates),
+    };
+  }).filter((item) => Number.isFinite(item.value?.[0]) && Number.isFinite(item.value?.[1]));
+}
+
+function geometryRings(geometry) {
+  if (!geometry) {
+    return [];
+  }
+  if (geometry.type === "Polygon") {
+    return (geometry.coordinates ?? []).filter((ring) => ring.length > 1);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return (geometry.coordinates ?? []).flatMap((polygon) => (polygon ?? []).filter((ring) => ring.length > 1));
+  }
+  return [];
+}
+
+function centroidOfCoordinates(coordinates) {
+  if (!coordinates.length) {
+    return [NaN, NaN];
+  }
+  const bounds = coordinates.reduce((current, coordinate) => ({
+    minLon: Math.min(current.minLon, coordinate[0]),
+    maxLon: Math.max(current.maxLon, coordinate[0]),
+    minLat: Math.min(current.minLat, coordinate[1]),
+    maxLat: Math.max(current.maxLat, coordinate[1]),
+  }), {
+    minLon: Infinity,
+    maxLon: -Infinity,
+    minLat: Infinity,
+    maxLat: -Infinity,
+  });
+  return [
+    (bounds.minLon + bounds.maxLon) / 2,
+    (bounds.minLat + bounds.maxLat) / 2,
+  ];
+}
+
+function choroplethRows(panel, data, valueField) {
+  const joinField = panel.joinField ?? "MunicipalityCode";
+  const dateField = panel.dateSelection?.column ?? panel.dateField ?? "Datum";
+  const grouped = new Map();
+  for (const row of data ?? []) {
+    const code = normalizeJoinCode(row[joinField], panel);
+    if (!code) {
+      continue;
+    }
+    const value = toNumber(row[valueField]);
+    const date = row[dateField];
+    const current = grouped.get(code);
+    if (!current || compareDateishValues(date, current.date) >= 0) {
+      grouped.set(code, {
+        name: code,
+        value,
+        displayName: row[panel.labelField ?? "Gemeentenaam"] ?? code,
+        date,
+        dataMethod: row.dataMethod,
+        populationSource: row.populationSource,
+      });
+    }
+  }
+  return [...grouped.values()];
+}
+
+function normalizeJoinCode(value, panel) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return "";
+  }
+  if (/^[A-Za-z]{2}\d+/.test(text)) {
+    return text.toUpperCase();
+  }
+  const numeric = Number(text);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return "";
+  }
+  const prefix = panel.joinPrefix ?? "GM";
+  const padLength = Number(panel.joinPadLength ?? 4);
+  return `${prefix}${String(Math.trunc(numeric)).padStart(padLength, "0")}`;
+}
+
 function normalizeGeoJson(geoData) {
   if (!geoData?.features) {
     return geoData;
@@ -503,7 +835,7 @@ function symbolForSeries(panel, item) {
 
 function isDateLikeField(field) {
   const normalized = String(field ?? "").toLowerCase();
-  return normalized.includes("date") || normalized.includes("snapshot");
+  return normalized.includes("date") || normalized.includes("datum") || normalized.includes("snapshot");
 }
 
 function referenceLineConfig(referenceLines, yAxisIndex = 0) {
@@ -513,6 +845,8 @@ function referenceLineConfig(referenceLines, yAxisIndex = 0) {
   }
   return {
     symbol: "none",
+    animation: false,
+    silent: true,
     label: { color: DEFAULT_TEXT_COLOR, formatter: (params) => params.name ?? "" },
     data: axisLines.map((line) => ({
       yAxis: line.y,
@@ -608,6 +942,15 @@ function toNumber(value) {
 
 function formatTooltipValue(value) {
   return typeof value === "number" ? value.toLocaleString() : value;
+}
+
+function compareDateishValues(a, b) {
+  const dateA = Date.parse(a);
+  const dateB = Date.parse(b);
+  if (!Number.isNaN(dateA) && !Number.isNaN(dateB)) {
+    return dateA - dateB;
+  }
+  return String(a ?? "").localeCompare(String(b ?? ""), undefined, { numeric: true });
 }
 
 

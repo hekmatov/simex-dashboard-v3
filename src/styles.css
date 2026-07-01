@@ -388,8 +388,11 @@ h1 {
 }
 
 .layout-grid {
+  align-items: stretch;
   display: grid;
   gap: 16px;
+  grid-auto-flow: dense;
+  grid-auto-rows: 418px;
 }
 
 button,
@@ -484,7 +487,9 @@ textarea {
   border: 1px solid rgb(8 34 74 / 11%);
   border-radius: 20px;
   box-shadow: 0 16px 42px rgb(8 34 74 / 10%);
+  display: grid;
   min-height: 360px;
+  min-width: 0;
   padding: 18px;
   position: relative;
 }
@@ -498,41 +503,44 @@ textarea {
 
 .chart-panel {
   grid-column: span 2;
+  grid-row: span 1;
 }
 
 .chart-size-half {
   grid-column: span 1;
+  grid-row: span 1;
 }
 
 .chart-size-normal,
 .chart-size-standard {
   grid-column: span 2;
+  grid-row: span 1;
 }
 
 .chart-size-wide {
   grid-column: span 4;
+  grid-row: span 1;
 }
 
 .chart-size-tall {
   grid-column: span 2;
+  grid-row: span 2;
   min-height: 736px;
 }
 
 .chart-size-large {
   grid-column: span 4;
+  grid-row: span 2;
   min-height: 736px;
 }
 
 .chart-size-half .chart-canvas,
 .chart-size-normal .chart-canvas,
 .chart-size-standard .chart-canvas,
-.chart-size-wide .chart-canvas {
-  height: 380px;
-}
-
+.chart-size-wide .chart-canvas,
 .chart-size-tall .chart-canvas,
 .chart-size-large .chart-canvas {
-  height: 744px;
+  height: 100%;
 }
 
 .chart-canvas {
@@ -540,9 +548,100 @@ textarea {
   border: 1px solid rgb(8 34 74 / 7%);
   border-radius: 16px;
   height: 380px;
+  min-height: 0;
   overflow: hidden;
   padding: 0;
   width: 100%;
+}
+
+.chart-canvas-chrono {
+  padding: 0;
+}
+
+.chrono-choropleth-shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+}
+
+.chrono-choropleth-chart {
+  min-height: 0;
+}
+
+.chrono-timeline {
+  align-items: center;
+  background: rgb(248 251 255 / 92%);
+  border-top: 1px solid rgb(8 34 74 / 9%);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  padding: 8px 12px 10px;
+}
+
+.chrono-timeline button {
+  min-height: 32px;
+  padding: 6px 12px;
+}
+
+.chrono-timeline span {
+  color: #08224a;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.chrono-slider-label {
+  display: block;
+  min-width: 0;
+  position: relative;
+}
+
+.chrono-slider-label input {
+  width: 100%;
+}
+
+.chrono-slider-label strong {
+  background: #08224a;
+  border-radius: 999px;
+  color: white;
+  font-size: 11px;
+  padding: 3px 7px;
+  pointer-events: none;
+  position: absolute;
+  top: -24px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.chrono-map-date-display {
+  background: rgb(8 34 74 / 82%);
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 999px;
+  color: white;
+  font-size: 22px;
+  font-weight: 800;
+  left: 50%;
+  letter-spacing: 0;
+  padding: 8px 16px;
+  pointer-events: none;
+  position: absolute;
+  top: 18px;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.chrono-speed-buttons {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.chrono-speed-buttons button {
+  min-height: 30px;
+  min-width: 38px;
+  padding: 5px 8px;
 }
 
 .chart-panel-error,
@@ -560,6 +659,9 @@ textarea {
 .delta-panel-content {
   display: grid;
   gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
 }
 
 .kpi-panel-content h3,
@@ -604,6 +706,9 @@ textarea {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .delta-card strong {
@@ -756,6 +861,10 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .layout-grid {
+    grid-auto-rows: auto;
+  }
+
   .settings-panel {
     max-height: none;
     position: static;
@@ -769,6 +878,7 @@ th {
   .chart-size-large,
   .layout-focus-plus-grid > :first-child {
     grid-column: auto;
+    grid-row: auto;
   }
 
   .chart-size-tall,
@@ -858,7 +968,7 @@ th {
   position: absolute;
   right: 28px;
   top: 28px;
-  z-index: 3;
+  z-index: 8;
 }
 
 .chart-icon-button,
@@ -877,8 +987,101 @@ th {
   display: inline-flex;
   height: 28px;
   justify-content: center;
+  line-height: 1;
   padding: 0;
   width: 28px;
+}
+
+.chart-panel-action-button {
+  align-items: center;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 28px;
+}
+
+.chart-svg-icon {
+  display: block;
+  fill: none;
+  height: 16px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+  width: 16px;
+}
+
+.panel-action-icon {
+  display: inline-block;
+  height: 14px;
+  position: relative;
+  width: 14px;
+}
+
+.panel-edit-icon::before {
+  background: currentColor;
+  border-radius: 2px;
+  content: "";
+  height: 4px;
+  left: 2px;
+  position: absolute;
+  top: 6px;
+  transform: rotate(-35deg);
+  width: 11px;
+}
+
+.panel-edit-icon::after {
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  content: "";
+  height: 4px;
+  left: 1px;
+  position: absolute;
+  top: 9px;
+  width: 4px;
+}
+
+.panel-section-icon::before {
+  background: currentColor;
+  content: "";
+  height: 12px;
+  left: 6px;
+  position: absolute;
+  top: 1px;
+  width: 2px;
+}
+
+.panel-section-icon::after {
+  border-bottom: 2px solid currentColor;
+  border-top: 2px solid currentColor;
+  content: "";
+  height: 8px;
+  left: 1px;
+  position: absolute;
+  top: 2px;
+  width: 12px;
+}
+
+.panel-remove-icon::before,
+.panel-remove-icon::after {
+  background: currentColor;
+  border-radius: 2px;
+  content: "";
+  height: 2px;
+  left: 1px;
+  position: absolute;
+  top: 6px;
+  width: 12px;
+}
+
+.panel-remove-icon::before {
+  transform: rotate(45deg);
+}
+
+.panel-remove-icon::after {
+  transform: rotate(-45deg);
 }
 
 .chart-fullscreen-button {
@@ -1365,11 +1568,12 @@ button.danger {
   font-size: 17px;
   font-weight: 800;
   left: 52px;
-  max-width: calc(100% - 96px);
+  max-width: calc(100% - 240px);
   padding: 6px 10px;
+  pointer-events: none;
   position: absolute;
   top: 10px;
-  z-index: 4;
+  z-index: 2;
 }
 
 .tile-map-tiles img {

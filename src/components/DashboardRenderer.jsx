@@ -61,11 +61,15 @@ export default function DashboardRenderer({
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const selectedPanel = findPanel(dashboard, selectedPanelId);
-  const globalPanelColors = resolveGlobalPanelColors(dashboard);
+  const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const selectedPanelData = dashboard.loadedData[selectedPanel?.dataSource] ?? [];
   const selectedPanelColumns = Array.isArray(selectedPanelData)
     ? Object.keys(selectedPanelData[0] ?? {})
     : [];
+
+  React.useEffect(() => {
+    selectedPanelRef.current = selectedPanel;
+  }, [selectedPanel]);
 
   React.useEffect(() => {
     selectedPanelRef.current = selectedPanel;
@@ -537,6 +541,7 @@ export default function DashboardRenderer({
                     globalPanelColors={globalPanelColors}
                     data={dashboard.loadedData[panel.dataSource]}
                     geoData={dashboard.loadedData[panel.geoSource]}
+                    loadedData={dashboard.loadedData}
                     filterDefinitions={section.filters ?? []}
                     filterValues={filterValues}
                     editMode={editMode}
@@ -619,6 +624,7 @@ function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, o
                 globalPanelColors={globalPanelColors}
                 data={dashboard.loadedData[panel.dataSource] ?? []}
                 geoData={dashboard.loadedData[panel.geoSource]}
+                loadedData={dashboard.loadedData}
                 fullScreen
                 multiFullScreen
               />

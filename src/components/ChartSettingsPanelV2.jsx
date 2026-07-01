@@ -12,6 +12,8 @@ const CHART_TYPES = [
   { value: "mixed", label: "Mixed bar/line" },
   { value: "gauge", label: "Gauge" },
   { value: "mapScatter", label: "Map" },
+  { value: "choroplethMap", label: "Choropleth map" },
+  { value: "chronoChoroplethMap", label: "Animated choropleth" },
   { value: "image", label: "Image" },
   { value: "table", label: "Table" },
   { value: "deltaList", label: "Delta list" },
@@ -23,6 +25,7 @@ const COLOR_SCHEMES = [
   { value: "pdpc", label: "PDPC mixed" },
   { value: "redGreen5", label: "Likert red to green" },
   { value: "likertInfographic5", label: "Likert infographic" },
+  { value: "caseIntensity", label: "Case intensity" },
   { value: "blueYellow5", label: "Likert blue to yellow" },
   { value: "cool", label: "Cool blues/teals" },
   { value: "warm", label: "Warm alert" },
@@ -44,7 +47,7 @@ const MARKER_STYLE_OPTIONS = ["none", "circle", "emptyCircle", "rect", "diamond"
 const AXIS_TYPES = new Set(["bar", "line", "area", "horizontalBar", "horizontalStackedBar", "groupedBar", "stackedBar", "mixed"]);
 const BAR_TYPES = new Set(["bar", "horizontalBar", "horizontalStackedBar", "groupedBar", "stackedBar"]);
 const SERIES_TYPES = new Set([...AXIS_TYPES]);
-const ECHART_TYPES = new Set([...AXIS_TYPES, "gauge", "mapScatter"]);
+const ECHART_TYPES = new Set([...AXIS_TYPES, "gauge", "mapScatter", "choroplethMap", "chronoChoroplethMap"]);
 const FONT_CONTROLS = {
   title: { label: "Chart title", defaultValue: 17 },
   axis: { label: "Axis labels", defaultValue: 12 },
@@ -120,6 +123,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
     switch (sectionId) {
       case "source": return <SourceSection panel={panel} dataSources={dataSources} dataSourcePath={dataSourcePath} dataRows={dataRows} patch={patch} />;
       case "dateSelection": return <DateSection column={dateColumn} options={dateOptions} selection={panel.dateSelection} patch={patch} />;
+      case "singleDateSelection": return <SingleDateSection column={dateColumn} options={dateOptions} selection={panel.dateSelection} patch={patch} />;
       case "categorySelection": return <CategorySection column={panel.x} options={categoryOptions} selection={panel.categorySelection} patch={patch} />;
       case "categoryOrder": return <CategoryOrderSection panel={panel} dataColumns={dataColumns} patch={patch} />;
       case "seriesList": return <SeriesSection panel={panel} dataColumns={dataColumns} patchSeries={patchSeries} addSeries={addSeries} duplicateSeries={duplicateSeries} removeSeries={removeSeries} />;
@@ -138,6 +142,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
       case "gaugeData": return <GaugeDataSection panel={panel} dataColumns={dataColumns} patch={patch} />;
       case "gaugeRedZone": return <GaugeRedZoneSection panel={panel} patch={patch} />;
       case "mapData": return <MapSection panel={panel} dataColumns={dataColumns} patch={patch} />;
+      case "choroplethData": return <ChoroplethSection panel={panel} dataSources={dataSources} dataColumns={dataColumns} patch={patch} />;
       case "imageSource": return <ImageSection panel={panel} patch={patch} />;
       case "tableFields": return <TableSection panel={panel} patch={patch} />;
       case "deltaFields": return <DeltaSection panel={panel} dataColumns={dataColumns} patch={patch} patchFields={patchFields} />;
@@ -193,6 +198,10 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
 }
 
 function SourceSection({ panel, dataSources, dataSourcePath, dataRows, patch }) {
+  function changePanelType(nextType) {
+    patch(defaultsForPanelType(nextType, panel, dataSources));
+  }
+
   return (
     <>
       <label>Title<input value={panel.title ?? ""} onChange={(event) => patch({ title: event.target.value })} /></label>
@@ -208,7 +217,7 @@ function SourceSection({ panel, dataSources, dataSourcePath, dataRows, patch }) 
       </div>
       <label>
         Panel type
-        <select value={panel.type} onChange={(event) => patch({ type: event.target.value })}>
+        <select value={panel.type} onChange={(event) => changePanelType(event.target.value)}>
           {CHART_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
       </label>
@@ -231,6 +240,32 @@ function DateSection({ column, options, selection, patch }) {
         <label>To<input type="date" value={range.end} min={options[0]} max={options[options.length - 1]} onChange={(event) => patch({ dateSelection: { column, mode: "range", start: range.start, end: event.target.value } })} /></label>
       </div>
       <button type="button" className="secondary" onClick={() => patch({ dateSelection: { column, mode: "range", start: options[0], end: options[options.length - 1] } })}>Full range</button>
+    </div>
+  );
+}
+
+function SingleDateSection({ column, options, selection, patch }) {
+  if (!column || options.length === 0) return <p className="settings-note">No date-like column was found for this data source.</p>;
+  const selected = selection?.column === column && selection.mode === "single" ? selection.value : options[options.length - 1];
+  return (
+    <div className="date-checklist-control date-range-control">
+      <div className="date-checklist-header"><span className="settings-field-label">Date</span><small>{column} · {options.length} dates</small></div>
+      <label>
+        Display date
+        <input
+          type="date"
+          value={selected ?? ""}
+          min={options[0]}
+          max={options[options.length - 1]}
+          onChange={(event) => patch({ dateSelection: { column, mode: "single", value: nearestAvailableDate(event.target.value, options) } })}
+        />
+      </label>
+      <label>
+        Available dates
+        <select value={selected ?? ""} onChange={(event) => patch({ dateSelection: { column, mode: "single", value: event.target.value } })}>
+          {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </label>
     </div>
   );
 }
@@ -548,6 +583,51 @@ function MapSection({ panel, dataColumns, patch }) {
   );
 }
 
+function ChoroplethSection({ panel, dataSources, dataColumns, patch }) {
+  return (
+    <>
+      <label>
+        GeoJSON source
+        <select value={panel.geoSource ?? ""} onChange={(event) => patch({ geoSource: event.target.value })}>
+          <option value="">No GeoJSON source</option>
+          {Object.entries(dataSources ?? {}).map(([sourceId, source]) => (
+            <option key={sourceId} value={sourceId}>{dataSourceLabel(sourceId, source)}</option>
+          ))}
+        </select>
+      </label>
+      <label>CSV join field<select value={panel.joinField ?? ""} onChange={(event) => patch({ joinField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <label>Value field<select value={panel.valueField ?? ""} onChange={(event) => patch({ valueField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <label>Label field<select value={panel.labelField ?? ""} onChange={(event) => patch({ labelField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <label>GeoJSON code property<input value={panel.geoNameProperty ?? "statcode"} onChange={(event) => patch({ geoNameProperty: event.target.value })} /></label>
+      <label>GeoJSON label property<input value={panel.geoLabelProperty ?? "statnaam"} onChange={(event) => patch({ geoLabelProperty: event.target.value })} /></label>
+      <label>Value legend label<input value={panel.valueLabel ?? ""} onChange={(event) => patch({ valueLabel: event.target.value })} /></label>
+      <label>Map fill size<input type="range" min="60" max="96" step="1" value={Number(String(panel.mapLayoutSize ?? "82").replace("%", ""))} onChange={(event) => patch({ mapLayoutSize: `${event.target.value}%` })} /></label>
+      <label>Minimum color scale<input type="number" value={panel.visualMin ?? ""} onChange={(event) => patch({ visualMin: event.target.value === "" ? undefined : Number(event.target.value) })} /></label>
+      <label>Maximum color scale<input type="number" value={panel.visualMax ?? ""} onChange={(event) => patch({ visualMax: event.target.value === "" ? undefined : Number(event.target.value) })} /></label>
+      <label>Missing-data color<input type="color" value={panel.missingColor ?? "#DDE7EF"} onChange={(event) => patch({ missingColor: event.target.value })} /></label>
+      <label>Border color<input type="color" value={panel.mapBorderColor ?? "#F8FBFF"} onChange={(event) => patch({ mapBorderColor: event.target.value })} /></label>
+      <label>Border width<input type="number" min="0" max="5" step="0.1" value={panel.mapBorderWidth ?? 0.8} onChange={(event) => patch({ mapBorderWidth: Number(event.target.value) })} /></label>
+      {panel.type === "chronoChoroplethMap" && <p className="settings-note">Playback speed is controlled in the chart play bar to keep the timelapse responsive.</p>}
+      <label className="checkbox-row"><input type="checkbox" checked={Boolean(panel.showProvinceOverlay)} onChange={(event) => patch({ showProvinceOverlay: event.target.checked })} /> Show province borders</label>
+      <label>
+        Province GeoJSON source
+        <select value={panel.provinceOverlaySource ?? "geo_netherlands_provinces"} onChange={(event) => patch({ provinceOverlaySource: event.target.value })}>
+          <option value="">No province source</option>
+          {Object.entries(dataSources ?? {}).map(([sourceId, source]) => (
+            <option key={sourceId} value={sourceId}>{dataSourceLabel(sourceId, source)}</option>
+          ))}
+        </select>
+      </label>
+      <label>Province border color<input type="color" value={panel.provinceBorderColor ?? "#08224A"} onChange={(event) => patch({ provinceBorderColor: event.target.value })} /></label>
+      <label>Province border thickness<input type="number" min="0" max="8" step="0.1" value={panel.provinceBorderWidth ?? 1.4} onChange={(event) => patch({ provinceBorderWidth: Number(event.target.value) })} /></label>
+      <label className="checkbox-row"><input type="checkbox" checked={panel.showProvinceNames ?? true} onChange={(event) => patch({ showProvinceNames: event.target.checked })} /> Show province names</label>
+      <label>Province name font size<input type="number" min="6" max="36" step="1" value={panel.provinceNameFontSize ?? 12} onChange={(event) => patch({ provinceNameFontSize: Number(event.target.value) })} /></label>
+      <label>Province name color<input type="color" value={panel.provinceNameColor ?? "#08224A"} onChange={(event) => patch({ provinceNameColor: event.target.value })} /></label>
+      <p className="settings-note">Municipality codes such as 14 are normalized to GM0014 before joining to Cartomap's statcode property.</p>
+    </>
+  );
+}
+
 function TableSection({ panel, patch }) {
   return <label>Visible columns<textarea rows="4" value={(panel.columns ?? []).join(", ")} onChange={(event) => patch({ columns: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) })} /></label>;
 }
@@ -609,6 +689,79 @@ function dataSourceDisplayPath(source) {
   return source;
 }
 
+function defaultsForPanelType(type, panel, dataSources) {
+  if (type === "choroplethMap" || type === "chronoChoroplethMap") {
+    const municipalDataSource = chooseDataSource(dataSources, [
+      "bio_municipal_infections_harmonized_2021",
+      "municipal_infections_2021_harmonized",
+      "municipal",
+    ], false);
+    const municipalGeoSource = chooseDataSource(dataSources, [
+      "geo_netherlands_municipalities_2021",
+      "gemeente_2021",
+      "municipalities",
+      "gemeente",
+    ], true);
+    const animated = type === "chronoChoroplethMap";
+
+    return {
+      type,
+      title: panel.title && panel.title !== "New chart"
+        ? panel.title
+        : animated ? "Municipality Infection Rate Timelapse" : "Municipality Infection Rate Choropleth",
+      dataSource: municipalDataSource ?? panel.dataSource,
+      geoSource: municipalGeoSource ?? panel.geoSource,
+      joinField: panel.joinField ?? "MunicipalityCode",
+      valueField: panel.valueField ?? "infectionsPer10000",
+      labelField: panel.labelField ?? "Gemeentenaam",
+      geoNameProperty: panel.geoNameProperty ?? "statcode",
+      geoLabelProperty: panel.geoLabelProperty ?? "statnaam",
+      valueLabel: panel.valueLabel ?? "Infections per 10,000 residents",
+      mapName: panel.mapName ?? (animated ? "nl-gemeente-2021-animation" : "nl-gemeente-2021"),
+      mapLayoutCenter: panel.mapLayoutCenter ?? ["50%", "55%"],
+      mapLayoutSize: panel.mapLayoutSize ?? "82%",
+      colorScheme: panel.colorScheme ?? "caseIntensity",
+      legend: false,
+      size: panel.size === "half" ? "normal" : panel.size,
+      provinceOverlaySource: panel.provinceOverlaySource ?? "geo_netherlands_provinces",
+      provinceBorderColor: panel.provinceBorderColor ?? "#08224A",
+      provinceBorderWidth: panel.provinceBorderWidth ?? 1.4,
+      provinceNameFontSize: panel.provinceNameFontSize ?? 12,
+      provinceNameColor: panel.provinceNameColor ?? "#08224A",
+      dateSelection: animated
+        ? {
+            column: panel.dateSelection?.column ?? "Datum",
+            mode: "range",
+            start: panel.dateSelection?.start ?? "2020-02-27",
+            end: panel.dateSelection?.end ?? "2021-04-17",
+          }
+        : {
+            column: panel.dateSelection?.column ?? "Datum",
+            mode: "single",
+            value: panel.dateSelection?.value ?? "2021-04-17",
+          },
+    };
+  }
+
+  return { type };
+}
+
+function chooseDataSource(dataSources, preferredClues, geoOnly) {
+  const entries = Object.entries(dataSources ?? {});
+  const matchingEntries = geoOnly
+    ? entries.filter(([sourceId, source]) => sourceId.startsWith("geo_") || String(source).toLowerCase().includes(".geojson"))
+    : entries.filter(([sourceId, source]) => !sourceId.startsWith("geo_") && !String(source).toLowerCase().includes(".geojson"));
+
+  for (const clue of preferredClues) {
+    const normalizedClue = clue.toLowerCase();
+    const match = matchingEntries.find(([sourceId, source]) => `${sourceId} ${String(source)}`.toLowerCase().includes(normalizedClue));
+    if (match) {
+      return match[0];
+    }
+  }
+  return matchingEntries[0]?.[0];
+}
+
 function collectColumns(rows) {
   return [...new Set((rows ?? []).flatMap((row) => Object.keys(row ?? {})))];
 }
@@ -636,7 +789,7 @@ function inferDateColumn(columns, panel) {
 
 function isDateLikeColumn(column) {
   const normalized = String(column ?? "").toLowerCase();
-  return normalized.includes("date") || normalized.includes("snapshot") || normalized.includes("time");
+  return normalized.includes("date") || normalized.includes("datum") || normalized.includes("snapshot") || normalized.includes("time");
 }
 
 function axisIsDate(panel) {
@@ -681,7 +834,7 @@ function hasSecondaryAxis(panel) {
 }
 
 function supportsLegend(type) {
-  return ECHART_TYPES.has(type) && type !== "gauge" && type !== "mapScatter";
+  return ECHART_TYPES.has(type) && type !== "gauge" && type !== "mapScatter" && type !== "choroplethMap" && type !== "chronoChoroplethMap";
 }
 
 function supportsColorScheme(type) {
@@ -698,9 +851,20 @@ function normalizePanelSize(size) {
 
 function fontControlsForPanel(type) {
   if (type === "gauge") return ["title", "gaugeValue", "gaugeLabel", "gaugeAxis"];
-  if (type === "mapScatter") return ["title", "legend", "mapLabel"];
+  if (type === "mapScatter" || type === "choroplethMap" || type === "chronoChoroplethMap") return ["title", "legend", "mapLabel"];
   if (AXIS_TYPES.has(type)) return ["title", "axis", "legend"];
   return ["title"];
+}
+
+function nearestAvailableDate(value, options) {
+  if (options.includes(value)) return value;
+  const target = Date.parse(value);
+  if (Number.isNaN(target)) return options[options.length - 1] ?? "";
+  return options.reduce((best, option) => {
+    const currentDistance = Math.abs(Date.parse(option) - target);
+    const bestDistance = Math.abs(Date.parse(best) - target);
+    return currentDistance < bestDistance ? option : best;
+  }, options[0]);
 }
 
 function previewColors(scheme, reverse) {
@@ -709,6 +873,7 @@ function previewColors(scheme, reverse) {
     pdpc: ["#043BCB", "#00A676", "#4496D1", "#2456A6", "#007C89"],
     redGreen5: ["#8F1D2C", "#E16B5A", "#F3D37A", "#7FDEC1", "#00A676"],
     likertInfographic5: ["#43A047", "#AEBB2E", "#F6A21A", "#F47C20", "#D71920"],
+    caseIntensity: ["#FFF3E8", "#F3D37A", "#E16B5A", "#D71920", "#8F1D2C"],
     blueYellow5: ["#08224A", "#043BCB", "#4496D1", "#F3D37A", "#C98700"],
     cool: ["#08224A", "#2456A6", "#4496D1", "#007C89", "#7FDEC1"],
     warm: ["#8F1D2C", "#C98700", "#F3D37A", "#E16B5A", "#08224A"],

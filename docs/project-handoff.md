@@ -151,9 +151,10 @@ Maintainer-side helper script for preparing static data from the old dashboard s
 ```text
 docs/old-dashboard-migration-map.md
 docs/project-handoff.md
+docs/municipality-choropleth.md
 ```
 
-Migration notes and this handoff file.
+Migration notes, this handoff file, and municipality choropleth data-join notes.
 
 ## Features included so far
 
@@ -198,6 +199,7 @@ Socio-economic content areas:
 - Mixed bar and line charts.
 - Gauge or speedometer indicators.
 - Province map overlays using local GeoJSON.
+- Municipality choropleth maps using local GeoJSON.
 - KPI cards.
 - Tables.
 - Delta or comparison panels.
@@ -249,6 +251,7 @@ Panel settings currently include:
 - Grouped/stacked data controls.
 - Gauge value, label, and max controls.
 - Map province/name field, value field, and point scale controls.
+- Choropleth GeoJSON source, join field, value field, label field, visual scale, and boundary style controls.
 - Table column controls.
 - Delta list title/value/row-count controls.
 
@@ -261,6 +264,7 @@ Panel settings currently include:
 - Reversible gradients.
 - Cool blues/teals.
 - Warm alert palette.
+- Case intensity palette for choropleth maps.
 
 ### Data and filtering behavior
 
@@ -275,6 +279,8 @@ Panel settings currently include:
 
 - Maps use local GeoJSON, not live map tiles.
 - GeoJSON location: `public/data/geo/netherlands-provinces.geojson`.
+- Municipality GeoJSON locations: `public/data/geo/gemeente_2020.geojson`, `public/data/geo/gemeente_2021.geojson`, and `public/data/geo/gemeente_2026.geojson`.
+- Harmonized municipality infection rates for the 2021 map live at `public/data/biomedical/municipal_infections_2021_harmonized.csv`.
 - PDPC visual assets are stored under `public/assets`.
 - Header includes a compact PDPC mark.
 - A subtle PDPC watermark/background treatment has been added.
@@ -402,6 +408,7 @@ http://localhost:5173/
 - `src/components/ChartSettingsPanelV2.jsx`: newer tabbed editor implementation used by the settings panel.
 - `src/lib/chartOptionRegistry.js`: registry-style definition of editor tabs, sections, and chart-specific options.
 - `src/lib/buildEchartsOption.js`: ECharts option builder for chart rendering.
+- `docs/municipality-choropleth.md`: notes for the RIVM municipal CSV, Cartomap WGS84 GeoJSON, and CSV-to-GeoJSON join.
 - `src/lib/validateConfig.js`: lightweight validation for missing data sources, unsupported panel types, and field/series issues.
 - `src/styles.css`: page styling, header styling, edit UI, panel grid, fullscreen overlays, map controls, and background editor styling.
 
@@ -469,6 +476,8 @@ http://localhost:5173/
 - Mixed bar/line chart.
 - Gauge chart.
 - Map chart.
+- Choropleth map.
+- Animated choropleth map with play/pause timeline.
 - Table.
 - KPI/stat card.
 - Delta/comparison list.
@@ -525,6 +534,10 @@ The chart editor is moving toward a schema-driven model. Common chart types use 
 
 - Map charts use an OpenStreetMap-style tile base with local overlay data.
 - Maps support pan, wheel zoom, plus/minus zoom buttons, and a reset/recenter button.
+- Choropleth maps use ECharts map rendering with local WGS84 GeoJSON.
+- The current municipality choropleths use `public/data/biomedical/municipal_infections_2021_harmonized.csv` joined to `statcode` in `public/data/geo/gemeente_2021.geojson`.
+- The harmonized CSV includes `infectionsPer1000` and `infectionsPer10000`; the default choropleth value is infections per 10,000 population.
+- The harmonized CSV records `dataMethod` and `populationSource` so imputed values are auditable.
 - Map title and panel controls remain visible above the map instead of being covered by the map body.
 - The working homepage and wastewater maps are the reference behavior for new map panels.
 - Boundary offset controls were removed from the map edit menu.

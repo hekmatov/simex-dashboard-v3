@@ -9,6 +9,7 @@ function ChartPanel({
   globalPanelColors,
   data,
   geoData,
+  loadedData,
   filterDefinitions,
   filterValues,
   editMode,
@@ -41,7 +42,7 @@ function ChartPanel({
   const articleClassName = [
     "chart-panel",
     `chart-size-${normalizePanelSize(panel.size)}`,
-    panel.type === "mapScatter" ? "chart-panel-map" : "",
+    panel.type === "mapScatter" || panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap" ? "chart-panel-map" : "",
     editMode ? "chart-panel-editable" : "",
     isDragging ? "chart-panel-dragging" : "",
     isDragTarget ? "chart-panel-drag-target" : "",
@@ -85,7 +86,7 @@ function ChartPanel({
             <p>{validationError}</p>
           </>
         ) : (
-          <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} exportRef={exportRef} />
+          <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} loadedData={loadedData} exportRef={exportRef} />
         )}
       </article>
 
@@ -106,7 +107,7 @@ function ChartPanel({
                 <p>{validationError}</p>
               </section>
             ) : (
-              <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} fullScreen />
+              <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} loadedData={loadedData} fullScreen />
             )}
           </article>
         </div>
@@ -189,6 +190,7 @@ function isNearPanelBorder(element, event, threshold) {
 }
 
 const NON_ECHART_TYPES = new Set(["kpi", "table", "deltaList", "image"]);
+const tileMapViewStateByPanelId = new Map();
 
 function PanelActionButtons({
   editMode,
@@ -239,7 +241,7 @@ function PanelActionButtons({
           title="Export chart"
           onClick={() => setExportOpen((current) => !current)}
         >
-          <span className="download-icon" aria-hidden="true" />
+          <DownloadIcon />
         </button>
         {exportOpen && (
           <span className="chart-export-menu">
@@ -263,7 +265,7 @@ function PanelActionButtons({
         aria-label="Fullscreen chart"
         title="Click for fullscreen. Hold for multi-fullscreen selection."
       >
-        <span className="fullscreen-icon" aria-hidden="true" />
+        <FullscreenIcon />
       </button>
       <span className="chart-info-control">
         <button
@@ -284,22 +286,24 @@ function PanelActionButtons({
       )}
       {editMode && (
         <>
-          <button type="button" className="chart-edit-button" onClick={onEdit}>
-            Edit
+          <button type="button" className="chart-edit-button chart-panel-action-button" onClick={onEdit} aria-label="Edit panel" title="Edit panel">
+            <EditIcon />
           </button>
-          <button type="button" className="chart-edit-button" onClick={onStartSection}>
-            Start section
+          <button type="button" className="chart-edit-button chart-panel-action-button" onClick={onStartSection} aria-label="Start a section here" title="Start a section here">
+            <StartSectionIcon />
           </button>
           <button
             type="button"
-            className="chart-remove-button"
+            className="chart-remove-button chart-panel-action-button"
             onClick={() => {
               if (window.confirm("Remove this panel?")) {
                 onRemove();
               }
             }}
+            aria-label="Remove panel"
+            title="Remove panel"
           >
-            Remove
+            <RemoveIcon />
           </button>
         </>
       )}
@@ -307,12 +311,89 @@ function PanelActionButtons({
   );
 }
 
-export function PanelBody({ panel, globalPanelColors, data, geoData, fullScreen = false, multiFullScreen = false, exportRef }) {
+function IconSvg({ children }) {
+  return (
+    <svg className="chart-svg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {children}
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <IconSvg>
+      <path d="M12 4v10" />
+      <path d="M7.5 10.5 12 15l4.5-4.5" />
+      <path d="M5 19h14" />
+    </IconSvg>
+  );
+}
+
+function FullscreenIcon() {
+  return (
+    <IconSvg>
+      <path d="M8 4H4v4" />
+      <path d="M16 4h4v4" />
+      <path d="M20 16v4h-4" />
+      <path d="M8 20H4v-4" />
+    </IconSvg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <IconSvg>
+      <path d="M5 19h4.5L19 9.5 14.5 5 5 14.5V19z" />
+      <path d="M13.5 6 18 10.5" />
+    </IconSvg>
+  );
+}
+
+function StartSectionIcon() {
+  return (
+    <IconSvg>
+      <path d="M5 6h14" />
+      <path d="M5 18h14" />
+      <path d="M12 9v6" />
+      <path d="M9 12h6" />
+    </IconSvg>
+  );
+}
+
+function RemoveIcon() {
+  return (
+    <IconSvg>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </IconSvg>
+  );
+}
+
+function replaceMergeForPanel(panel) {
+  if (panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap") {
+    return ["series", "geo", "visualMap"];
+  }
+  return undefined;
+}
+
+export function PanelBody({ panel, globalPanelColors, data, geoData, loadedData = {}, fullScreen = false, multiFullScreen = false, exportRef }) {
   const containerRef = React.useRef(null);
   const chartRef = React.useRef(null);
   const dimensions = useElementDimensions(containerRef);
-  const visualPanel = resolvePanelColors(panel, globalPanelColors);
-  const renderContext = chartRenderContext(visualPanel, fullScreen, dimensions, multiFullScreen);
+  const visualPanel = React.useMemo(() => resolvePanelColors(panel, globalPanelColors), [panel, globalPanelColors]);
+  const renderContext = React.useMemo(() => ({
+    ...chartRenderContext(visualPanel, fullScreen, dimensions, multiFullScreen),
+    loadedData,
+  }), [visualPanel, fullScreen, dimensions.width, dimensions.height, multiFullScreen, loadedData]);
+  const echartsOption = React.useMemo(
+    () => {
+      if (NON_ECHART_TYPES.has(visualPanel.type) || visualPanel.type === "mapScatter" || visualPanel.type === "chronoChoroplethMap") {
+        return null;
+      }
+      return buildEchartsOption(visualPanel, data, geoData, renderContext);
+    },
+    [visualPanel, data, geoData, renderContext],
+  );
 
   React.useEffect(() => {
     chartRef.current?.getEchartsInstance?.().resize();
@@ -365,6 +446,23 @@ export function PanelBody({ panel, globalPanelColors, data, geoData, fullScreen 
       </div>
     );
   }
+  if (visualPanel.type === "chronoChoroplethMap") {
+    return (
+      <div
+        ref={containerRef}
+        className={multiFullScreen ? "chart-canvas chart-canvas-multi chart-canvas-chrono" : fullScreen ? "chart-canvas chart-canvas-fullscreen chart-canvas-chrono" : "chart-canvas chart-canvas-chrono"}
+        style={{ backgroundColor: visualPanel.chartAreaColor, borderColor: visualPanel.chartAreaBorderColor }}
+      >
+        <ChronoChoroplethPanel
+          panel={visualPanel}
+          data={data}
+          geoData={geoData}
+          renderContext={renderContext}
+          chartRef={chartRef}
+        />
+      </div>
+    );
+  }
   if (!NON_ECHART_TYPES.has(visualPanel.type)) {
     return (
       <div
@@ -374,11 +472,13 @@ export function PanelBody({ panel, globalPanelColors, data, geoData, fullScreen 
       >
         <ReactECharts
           ref={chartRef}
-          option={buildEchartsOption(visualPanel, data, geoData, renderContext)}
+          option={echartsOption}
           className="chart-canvas-inner"
           style={{ height: "100%", width: "100%" }}
           opts={{ renderer: visualPanel.type === "gauge" ? "svg" : "canvas" }}
-          notMerge
+          notMerge={false}
+          replaceMerge={replaceMergeForPanel(visualPanel)}
+          lazyUpdate
         />
       </div>
     );
@@ -386,14 +486,107 @@ export function PanelBody({ panel, globalPanelColors, data, geoData, fullScreen 
   return null;
 }
 
+function ChronoChoroplethPanel({ panel, data, geoData, renderContext, chartRef }) {
+  const dateColumn = panel.dateSelection?.column ?? panel.dateField ?? "Datum";
+  const dates = React.useMemo(() => uniqueSortedDates(data, dateColumn), [data, dateColumn]);
+  const rowsByDate = React.useMemo(() => groupRowsByValue(data, dateColumn), [data, dateColumn]);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const [speed, setSpeed] = React.useState(() => Number(panel.timelapseSpeed ?? 1));
+  const [playing, setPlaying] = React.useState(false);
+  const boundedIndex = Math.min(activeIndex, Math.max(dates.length - 1, 0));
+  const activeDate = dates[boundedIndex] ?? "";
+  const activeRows = React.useMemo(
+    () => rowsByDate.get(String(activeDate)) ?? [],
+    [rowsByDate, activeDate],
+  );
+  const activePanel = React.useMemo(
+    () => ({ ...panel, type: "choroplethMap", dateSelection: { column: dateColumn, mode: "single", value: activeDate } }),
+    [panel, dateColumn, activeDate],
+  );
+
+  React.useEffect(() => {
+    setActiveIndex((current) => Math.min(current, Math.max(dates.length - 1, 0)));
+  }, [dates.length]);
+
+  React.useEffect(() => {
+    if (!playing || dates.length <= 1) {
+      return undefined;
+    }
+    const intervalMs = Math.max(180, 900 / clamp(speed, 1, 3));
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => {
+        if (current >= dates.length - 1) {
+          setPlaying(false);
+          return current;
+        }
+        return current + 1;
+      });
+    }, intervalMs);
+    return () => window.clearInterval(timer);
+  }, [playing, dates.length, speed]);
+
+  return (
+    <div className="chrono-choropleth-shell">
+      <ReactECharts
+        ref={chartRef}
+        option={buildEchartsOption(activePanel, activeRows, geoData, renderContext)}
+        className="chart-canvas-inner chrono-choropleth-chart"
+        style={{ height: "100%", width: "100%" }}
+        opts={{ renderer: "canvas" }}
+        notMerge={false}
+        replaceMerge={["series", "geo", "visualMap"]}
+        lazyUpdate
+      />
+      <div className="chrono-map-date-display" aria-live="polite">{activeDate}</div>
+      <div className="chrono-timeline" aria-label="Animated choropleth timeline">
+        <button type="button" onClick={() => setPlaying((current) => !current)} disabled={dates.length <= 1}>
+          {playing ? "Pause" : "Play"}
+        </button>
+        <span>{dates[0] ?? ""}</span>
+        <label className="chrono-slider-label">
+          <input
+            type="range"
+            min="0"
+            max={Math.max(dates.length - 1, 0)}
+            step="1"
+            value={boundedIndex}
+            onChange={(event) => {
+              setPlaying(false);
+              setActiveIndex(Number(event.target.value));
+            }}
+          />
+          <strong style={{ left: `${dates.length > 1 ? (boundedIndex / (dates.length - 1)) * 100 : 0}%` }}>{activeDate}</strong>
+        </label>
+        <span>{dates[dates.length - 1] ?? ""}</span>
+        <div className="chrono-speed-buttons" aria-label="Timelapse speed">
+          {[1, 2, 3].map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={speed === item ? "active" : "secondary"}
+              onClick={() => setSpeed(item)}
+            >
+              {item}x
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TileMapPanel({ panel, data, geoData, dimensions }) {
   const mapRef = React.useRef(null);
-  const [targetZoom, setTargetZoom] = React.useState(panel.tileZoom ?? 7);
-  const [renderZoom, setRenderZoom] = React.useState(panel.tileZoom ?? 7);
-  const [center, setCenter] = React.useState({
-    lat: panel.tileCenterLat ?? 52.12,
-    lon: panel.tileCenterLon ?? 5.28,
-  });
+  const initialView = tileMapViewStateByPanelId.get(panel.id) ?? {
+    zoom: panel.tileZoom ?? 7,
+    center: {
+      lat: panel.tileCenterLat ?? 52.12,
+      lon: panel.tileCenterLon ?? 5.28,
+    },
+  };
+  const [targetZoom, setTargetZoom] = React.useState(initialView.zoom);
+  const [renderZoom, setRenderZoom] = React.useState(initialView.zoom);
+  const [center, setCenter] = React.useState(initialView.center);
   const dragState = React.useRef(null);
   const width = Math.max(dimensions.width || 520, 320);
   const height = Math.max(dimensions.height || 380, 260);
@@ -428,6 +621,13 @@ function TileMapPanel({ panel, data, geoData, dimensions }) {
   }, [targetZoom]);
 
   React.useEffect(() => {
+    tileMapViewStateByPanelId.set(panel.id, {
+      zoom: targetZoom,
+      center,
+    });
+  }, [panel.id, targetZoom, center]);
+
+  React.useEffect(() => {
     const element = mapRef.current;
     if (!element) {
       return undefined;
@@ -455,11 +655,16 @@ function TileMapPanel({ panel, data, geoData, dimensions }) {
 
   function resetMapView() {
     const defaultZoom = panel.tileZoom ?? 7;
-    setTargetZoom(defaultZoom);
-    setRenderZoom(defaultZoom);
-    setCenter({
+    const defaultCenter = {
       lat: panel.tileCenterLat ?? 52.12,
       lon: panel.tileCenterLon ?? 5.28,
+    };
+    setTargetZoom(defaultZoom);
+    setRenderZoom(defaultZoom);
+    setCenter(defaultCenter);
+    tileMapViewStateByPanelId.set(panel.id, {
+      zoom: defaultZoom,
+      center: defaultCenter,
     });
   }
 
@@ -773,6 +978,10 @@ function applyPanelDateSelection(data, panel) {
     return data;
   }
 
+  if (selection.mode === "single") {
+    return data.filter((row) => String(row[selection.column] ?? "") === String(selection.value ?? ""));
+  }
+
   if (selection.mode === "range") {
     const start = String(selection.start ?? "");
     const end = String(selection.end ?? "");
@@ -795,7 +1004,7 @@ function applyPanelDateSelection(data, panel) {
 
 function isDateLikeColumn(column) {
   const normalized = String(column ?? "").toLowerCase();
-  return normalized.includes("date") || normalized.includes("snapshot");
+  return normalized.includes("date") || normalized.includes("datum") || normalized.includes("snapshot");
 }
 
 function compareDateishValues(a, b) {
@@ -812,6 +1021,26 @@ function formatValue(value) {
     return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
   }
   return value ?? "";
+}
+
+function uniqueSortedDates(data, column) {
+  return [...new Set((data ?? []).map((row) => row?.[column]).filter(Boolean))]
+    .sort(compareDateishValues);
+}
+
+function groupRowsByValue(rows, column) {
+  const groups = new Map();
+  for (const row of rows ?? []) {
+    const key = String(row?.[column] ?? "");
+    if (!key) {
+      continue;
+    }
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key).push(row);
+  }
+  return groups;
 }
 
 async function exportPanelImage({ panel, chartRef, container, format = "png", dpi = 150 }) {

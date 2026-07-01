@@ -53,10 +53,11 @@ pnpm.cmd preview
 - `src/lib/chartOptionRegistry.js`: schema-style registry for chart edit options.
 - `docs/project-handoff.md`: current maintainer handoff and feature map.
 - `docs/old-dashboard-migration-map.md`: migration notes from the original PDPC dashboard.
+- `docs/municipality-choropleth.md`: municipality choropleth data join and map-source notes.
 
 ## Current Feature Map
 
-The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, uploaded CSV data sources, portable dashboard bundle import/export, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, gauges, image panels, and a configurable animated background.
+The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, uploaded CSV data sources, portable dashboard bundle import/export, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, municipality choropleths, gauges, image panels, and a configurable animated background.
 
 For a complete pickup guide, see:
 

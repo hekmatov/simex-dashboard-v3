@@ -9,6 +9,8 @@
   "mixed",
   "gauge",
   "mapScatter",
+  "choroplethMap",
+  "chronoChoroplethMap",
   "image",
   "kpi",
   "table",
@@ -55,6 +57,18 @@ export function validatePanelConfig(panel, data, geoData) {
     for (const field of [panel.nameField, panel.latField, panel.lonField, panel.valueField]) {
       if (!columns.has(field)) {
         return `Map column "${field}" was not found in "${panel.dataSource}".`;
+      }
+    }
+    return null;
+  }
+
+  if (panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap") {
+    if (!geoData) {
+      return `GeoJSON source "${panel.geoSource}" was not loaded.`;
+    }
+    for (const field of [panel.joinField, panel.valueField]) {
+      if (!columns.has(field)) {
+        return `Choropleth column "${field}" was not found in "${panel.dataSource}".`;
       }
     }
     return null;

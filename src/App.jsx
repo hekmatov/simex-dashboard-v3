@@ -51,7 +51,11 @@ export default function App() {
     loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then((loadedDashboard) => {
         const config = stripRuntimeFields(loadedDashboard);
-        const savedConfig = sanitizeDashboardConfig(loadSavedConfig() ?? config);
+        const savedBrowserConfig = loadSavedConfig();
+        const savedConfig = sanitizeDashboardConfig(mergeDefaultConfigAdditions(savedBrowserConfig, config) ?? config);
+        if (savedBrowserConfig) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig, null, 2));
+        }
 
         setDefaultConfig(config);
         return loadDashboardConfig(savedConfig);
@@ -63,6 +67,15 @@ export default function App() {
   function updateDashboardConfig(nextConfig) {
     const safeConfig = sanitizeDashboardConfig(nextConfig);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(safeConfig, null, 2));
+    if (dashboard && sameDataSources(dashboard.dataSources, safeConfig.dataSources)) {
+      setError(null);
+      setDashboard({
+        ...safeConfig,
+        pages: Array.isArray(safeConfig.pages) ? safeConfig.pages : dashboard.pages,
+        loadedData: dashboard.loadedData,
+      });
+      return;
+    }
     loadDashboardConfig(safeConfig)
       .then((loadedDashboard) => {
         setError(null);
@@ -343,9 +356,64 @@ function loadSavedConfig() {
   return JSON.parse(saved);
 }
 
+function mergeDefaultConfigAdditions(savedConfig, defaultConfig) {
+  if (!savedConfig) {
+    return null;
+  }
+  const mergedConfig = {
+    ...structuredClone(savedConfig),
+    dataSources: {
+      ...(defaultConfig?.dataSources ?? {}),
+      ...(savedConfig.dataSources ?? {}),
+    },
+  };
+
+  const pages = mergedConfig.pages ?? [];
+  (defaultConfig?.pages ?? []).forEach((defaultPage) => {
+    const savedPage = pages.find((page) => page.id === defaultPage.id);
+    if (!savedPage) {
+      pages.push(defaultPage);
+      return;
+    }
+
+    savedPage.sections = savedPage.sections ?? [];
+    (defaultPage.sections ?? []).forEach((defaultSection) => {
+      const savedSection = savedPage.sections.find((section) => section.id === defaultSection.id);
+      if (!savedSection) {
+        savedPage.sections.push(defaultSection);
+        return;
+      }
+
+      savedSection.panels = savedSection.panels ?? [];
+      const savedPanelIds = new Set(savedSection.panels.map((panel) => panel.id));
+      (defaultSection.panels ?? []).forEach((defaultPanel, index) => {
+        if (savedPanelIds.has(defaultPanel.id)) {
+          return;
+        }
+        const previousDefaultPanel = defaultSection.panels
+          .slice(0, index)
+          .reverse()
+          .find((panel) => savedPanelIds.has(panel.id));
+        const previousIndex = previousDefaultPanel
+          ? savedSection.panels.findIndex((panel) => panel.id === previousDefaultPanel.id)
+          : -1;
+        savedSection.panels.splice(previousIndex + 1, 0, defaultPanel);
+        savedPanelIds.add(defaultPanel.id);
+      });
+    });
+  });
+
+  mergedConfig.pages = pages;
+  return mergedConfig;
+}
+
 function stripRuntimeFields(dashboard) {
   const { loadedData, ...config } = dashboard;
   return config;
+}
+
+function sameDataSources(left, right) {
+  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
 }
 
 function updatePageInConfig(config, pageId, updater) {

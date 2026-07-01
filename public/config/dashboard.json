@@ -1,4 +1,4 @@
-﻿{
+{
   "programLabel": "Pandemic & Disaster Preparedness Center",
   "title": "SimEx Dashboard V2",
   "description": "Static, config-driven dashboard for simulation exercise briefings.",
@@ -54,7 +54,12 @@
     "socio_resilience": "data/socio-economic/resilience.csv",
     "socio_education_absenteeism": "data/socio-economic/education_absenteeism.csv",
     "socio_healthcare_absenteeism": "data/socio-economic/healthcare_absenteeism.csv",
-    "geo_netherlands_provinces": "data/geo/netherlands-provinces.geojson"
+    "geo_netherlands_provinces": "data/geo/netherlands-provinces.geojson",
+    "bio_municipal_infections": "data/biomedical/municipal_infections.csv",
+    "geo_netherlands_municipalities_2026": "data/geo/gemeente_2026.geojson",
+    "geo_netherlands_municipalities_2021": "data/geo/gemeente_2021.geojson",
+    "geo_netherlands_municipalities_2020": "data/geo/gemeente_2020.geojson",
+    "bio_municipal_infections_harmonized_2021": "data/biomedical/municipal_infections_2021_harmonized.csv"
   },
   "pages": [
     {
@@ -68,16 +73,16 @@
           "title": "Scenario overview",
           "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "panels": [
             {
               "id": "home_status_cards",
@@ -129,16 +134,16 @@
           "title": "Cases and Mortality",
           "description": "National case surveillance, province snapshots, and mortality.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "filters": [
             {
               "id": "bio_case_dates",
@@ -162,6 +167,74 @@
               "valueField": "Infected_total",
               "mapName": "netherlands-provinces",
               "color": "#043BCB"
+            },
+            {
+              "id": "bio_municipality_choropleth",
+              "type": "choroplethMap",
+              "title": "Municipality Infection Rate Choropleth",
+              "dataSource": "bio_municipal_infections_harmonized_2021",
+              "geoSource": "geo_netherlands_municipalities_2021",
+              "mapName": "nl-gemeente-2021",
+              "joinField": "MunicipalityCode",
+              "valueField": "infectionsPer10000",
+              "valueLabel": "Infections per 10,000 population",
+              "labelField": "Gemeentenaam",
+              "geoNameProperty": "statcode",
+              "geoLabelProperty": "statnaam",
+              "dateSelection": {
+                "column": "Datum",
+                "mode": "single",
+                "value": "2021-04-17"
+              },
+              "size": "large",
+              "legend": false,
+              "colorScheme": "caseIntensity",
+              "missingColor": "#DDE7EF",
+              "mapBorderColor": "#F8FBFF",
+              "mapBorderWidth": 0.5,
+              "showProvinceOverlay": false,
+              "provinceOverlaySource": "geo_netherlands_provinces",
+              "provinceBorderColor": "#08224A",
+              "provinceBorderWidth": 1.4,
+              "showProvinceNames": true,
+              "provinceNameFontSize": 12,
+              "provinceNameColor": "#08224A",
+              "infoSource": "Prepared from RIVM municipal infection data harmonized to Cartomap 2021 municipality boundaries, joined to municipality population data. Missing source municipalities are imputed using the same-day province population-weighted infection rate."
+            },
+            {
+              "id": "bio_municipality_choropleth_animation",
+              "type": "chronoChoroplethMap",
+              "title": "Municipality Infection Rate Timelapse",
+              "dataSource": "bio_municipal_infections_harmonized_2021",
+              "geoSource": "geo_netherlands_municipalities_2021",
+              "mapName": "nl-gemeente-2021-animation",
+              "joinField": "MunicipalityCode",
+              "valueField": "infectionsPer10000",
+              "valueLabel": "Infections per 10,000 population",
+              "labelField": "Gemeentenaam",
+              "geoNameProperty": "statcode",
+              "geoLabelProperty": "statnaam",
+              "dateSelection": {
+                "column": "Datum",
+                "mode": "range",
+                "start": "2020-02-27",
+                "end": "2021-04-17"
+              },
+              "size": "large",
+              "legend": false,
+              "colorScheme": "caseIntensity",
+              "missingColor": "#DDE7EF",
+              "mapBorderColor": "#F8FBFF",
+              "mapBorderWidth": 0.5,
+              "mapLayoutSize": "82%",
+              "showProvinceOverlay": false,
+              "provinceOverlaySource": "geo_netherlands_provinces",
+              "provinceBorderColor": "#08224A",
+              "provinceBorderWidth": 1.4,
+              "showProvinceNames": true,
+              "provinceNameFontSize": 12,
+              "provinceNameColor": "#08224A",
+              "infoSource": "Animated daily view of infections per 10,000 population. Data are harmonized to Cartomap 2021 municipality boundaries; missing source municipalities are imputed using same-day province population-weighted infection rates."
             },
             {
               "id": "bio_confirmed_cases",
@@ -319,16 +392,16 @@
           "title": "Healthcare",
           "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "filters": [
             {
               "id": "healthcare_dates",
@@ -493,16 +566,16 @@
           "title": "Testing",
           "description": "Testing volume and positivity rate.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "panels": [
             {
               "id": "bio_testing_overlay",
@@ -536,16 +609,16 @@
           "title": "Wastewater Surveillance",
           "description": "Wastewater surveillance by province.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "panels": [
             {
               "id": "bio_wastewater_map",
@@ -582,16 +655,16 @@
           "title": "Vaccination",
           "description": "Current vaccination status and vaccination rate over time.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "panels": [
             {
               "id": "bio_vaccination_current",
@@ -632,16 +705,16 @@
           "title": "Behaviour",
           "description": "Values, risk perception, and adherence by measurement moment.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "filters": [
             {
               "id": "behaviour_snapshot",
@@ -774,16 +847,16 @@
           "title": "Public Trust",
           "description": "Trust in institutions over time and current trust meter.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "filters": [
             {
               "id": "trust_snapshot",
@@ -835,16 +908,16 @@
           "title": "Subjective Wellbeing",
           "description": "Wellbeing, lifestyle, and resilience survey indicators.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "filters": [
             {
               "id": "wellbeing_snapshot",
@@ -933,16 +1006,16 @@
           "title": "Economy",
           "description": "Business closures and unemployment.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "panels": [
             {
               "id": "socio_business_closures",
@@ -978,16 +1051,16 @@
           "title": "Absenteeism",
           "description": "Healthcare and school absenteeism.",
           "layout": "two-column",
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
+          "vantaBackground": {
+            "backgroundColor": "#f7f9fc",
+            "networkColor": "#f1a1ad",
+            "mouseControls": false,
+            "touchControls": false,
+            "points": 6,
+            "maxDistance": 17,
+            "spacing": 18,
+            "speed": 0.45
+          },
           "panels": [
             {
               "id": "socio_healthcare_absenteeism",
@@ -1019,4 +1092,3 @@
     }
   ]
 }
-

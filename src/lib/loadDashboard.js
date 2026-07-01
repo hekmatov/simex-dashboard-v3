@@ -1,5 +1,7 @@
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 
+const dataSourceCache = new Map();
+
 export async function loadDashboard(configPath) {
   const portable = portableDashboard();
   if (usingFileProtocol() && portable?.config) {
@@ -37,6 +39,24 @@ export async function loadDashboardConfig(dashboard) {
 }
 
 async function loadDataSource(source) {
+  const cacheKey = dataSourceCacheKey(source);
+  if (dataSourceCache.has(cacheKey)) {
+    return dataSourceCache.get(cacheKey);
+  }
+
+  const loadPromise = loadDataSourceFresh(source);
+  dataSourceCache.set(cacheKey, loadPromise);
+  try {
+    const loaded = await loadPromise;
+    dataSourceCache.set(cacheKey, loaded);
+    return loaded;
+  } catch (error) {
+    dataSourceCache.delete(cacheKey);
+    throw error;
+  }
+}
+
+async function loadDataSourceFresh(source) {
   if (source?.type === "uploadedCsv") {
     return parseCsvText(source.csvText ?? "", source.fileName ?? "uploaded CSV");
   }
@@ -69,6 +89,22 @@ async function loadDataSource(source) {
     }
     throw error;
   }
+}
+
+function dataSourceCacheKey(source) {
+  if (source?.type === "uploadedCsv") {
+    return `uploadedCsv:${source.fileName ?? ""}:${source.uploadedAt ?? ""}:${source.csvText?.length ?? 0}:${hashText(source.csvText ?? "")}`;
+  }
+  return `static:${String(source ?? "").replaceAll("\\", "/")}`;
+}
+
+function hashText(text) {
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return hash;
 }
 
 function sourceUrl(source) {
