@@ -43,6 +43,7 @@ function ChartPanel({
     "chart-panel",
     `chart-size-${normalizePanelSize(panel.size)}`,
     panel.type === "mapScatter" || panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap" ? "chart-panel-map" : "",
+    panel.type === "chronoChoroplethMap" ? "chart-panel-chrono" : "",
     editMode ? "chart-panel-editable" : "",
     isDragging ? "chart-panel-dragging" : "",
     isDragTarget ? "chart-panel-drag-target" : "",
@@ -369,6 +370,23 @@ function RemoveIcon() {
   );
 }
 
+function PlayIcon() {
+  return (
+    <IconSvg>
+      <path d="M8 5v14l11-7-11-7z" />
+    </IconSvg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <IconSvg>
+      <path d="M8 5v14" />
+      <path d="M16 5v14" />
+    </IconSvg>
+  );
+}
+
 function replaceMergeForPanel(panel) {
   if (panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap") {
     return ["series", "geo", "visualMap"];
@@ -493,6 +511,7 @@ function ChronoChoroplethPanel({ panel, data, geoData, renderContext, chartRef }
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [speed, setSpeed] = React.useState(() => Number(panel.timelapseSpeed ?? 1));
   const [playing, setPlaying] = React.useState(false);
+  const preservedGeoView = React.useRef(null);
   const boundedIndex = Math.min(activeIndex, Math.max(dates.length - 1, 0));
   const activeDate = dates[boundedIndex] ?? "";
   const activeRows = React.useMemo(
@@ -503,6 +522,33 @@ function ChronoChoroplethPanel({ panel, data, geoData, renderContext, chartRef }
     () => ({ ...panel, type: "choroplethMap", dateSelection: { column: dateColumn, mode: "single", value: activeDate } }),
     [panel, dateColumn, activeDate],
   );
+  const chronoOption = React.useMemo(
+    () => {
+      const option = buildEchartsOption(activePanel, activeRows, geoData, renderContext);
+      if (preservedGeoView.current) {
+        option.geo = {
+          ...option.geo,
+          ...preservedGeoView.current,
+        };
+      }
+      return option;
+    },
+    [activePanel, activeRows, geoData, renderContext],
+  );
+
+  const chartEvents = React.useMemo(() => ({
+    georoam: () => {
+      const instance = chartRef.current?.getEchartsInstance?.();
+      const option = instance?.getOption?.();
+      const geoOption = Array.isArray(option?.geo) ? option.geo[0] : option?.geo;
+      if (geoOption) {
+        preservedGeoView.current = {
+          center: geoOption.center,
+          zoom: geoOption.zoom,
+        };
+      }
+    },
+  }), [chartRef]);
 
   React.useEffect(() => {
     setActiveIndex((current) => Math.min(current, Math.max(dates.length - 1, 0)));
@@ -529,18 +575,26 @@ function ChronoChoroplethPanel({ panel, data, geoData, renderContext, chartRef }
     <div className="chrono-choropleth-shell">
       <ReactECharts
         ref={chartRef}
-        option={buildEchartsOption(activePanel, activeRows, geoData, renderContext)}
+        option={chronoOption}
         className="chart-canvas-inner chrono-choropleth-chart"
         style={{ height: "100%", width: "100%" }}
         opts={{ renderer: "canvas" }}
         notMerge={false}
-        replaceMerge={["series", "geo", "visualMap"]}
+        replaceMerge={["series", "visualMap"]}
+        onEvents={chartEvents}
         lazyUpdate
       />
       <div className="chrono-map-date-display" aria-live="polite">{activeDate}</div>
       <div className="chrono-timeline" aria-label="Animated choropleth timeline">
-        <button type="button" onClick={() => setPlaying((current) => !current)} disabled={dates.length <= 1}>
-          {playing ? "Pause" : "Play"}
+        <button
+          type="button"
+          className="chrono-play-button"
+          onClick={() => setPlaying((current) => !current)}
+          disabled={dates.length <= 1}
+          aria-label={playing ? "Pause timelapse" : "Play timelapse"}
+          title={playing ? "Pause" : "Play"}
+        >
+          {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
         <span>{dates[0] ?? ""}</span>
         <label className="chrono-slider-label">

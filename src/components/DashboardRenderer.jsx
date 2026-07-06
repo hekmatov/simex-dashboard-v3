@@ -3,6 +3,7 @@
 import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
+import VoiceFocusControl from "./VoiceFocusControl.jsx";
 
 export default function DashboardRenderer({
   dashboard,
@@ -34,6 +35,11 @@ export default function DashboardRenderer({
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
   const [multiFullscreenOpen, setMultiFullscreenOpen] = React.useState(false);
   const [multiFullscreenLayout, setMultiFullscreenLayout] = React.useState("sideBySide");
+  const [voiceFocusPanelIds, setVoiceFocusPanelIds] = React.useState([]);
+  const [voiceFocusOpen, setVoiceFocusOpen] = React.useState(false);
+  const [voiceFocusLayout, setVoiceFocusLayout] = React.useState("solo");
+  const [voiceFocusReason, setVoiceFocusReason] = React.useState(null);
+  const [voicePanelVisible, setVoicePanelVisible] = React.useState(false);
   const importInputRef = React.useRef(null);
   const csvInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
@@ -162,6 +168,17 @@ export default function DashboardRenderer({
     setMultiSelectMode(false);
     setMultiPanelIds([]);
     setMultiFullscreenOpen(false);
+  }
+
+  function openVoiceFocus(panelIds, reason) {
+    const nextPanelIds = uniquePanelIds(panelIds).filter((panelId) => findPanel(dashboard, panelId)).slice(0, 4);
+    if (nextPanelIds.length === 0) {
+      return;
+    }
+    setVoiceFocusPanelIds(nextPanelIds);
+    setVoiceFocusReason(reason);
+    setVoiceFocusLayout(defaultMultiLayout(nextPanelIds.length));
+    setVoiceFocusOpen(true);
   }
 
   function addPage() {
@@ -379,15 +396,28 @@ export default function DashboardRenderer({
             </div>
           </dl>
         </div>
-        <button
-          type="button"
-          className="header-edit-floating-button"
-          aria-label={editMode ? "Save edit mode" : "Open edit mode"}
-          title={editMode ? "Save" : "Edit mode"}
-          onClick={onToggleEditMode}
-        >
-          {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
-        </button>
+        <div className="header-floating-actions">
+          {!editMode && (
+            <button
+              type="button"
+              className={`header-mic-floating-button ${voicePanelVisible ? "active" : ""}`}
+              aria-label={voicePanelVisible ? "Hide voice focus" : "Open voice focus"}
+              title={voicePanelVisible ? "Hide voice focus" : "Voice focus"}
+              onClick={() => setVoicePanelVisible((current) => !current)}
+            >
+              <span className="mic-icon" aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            className="header-edit-floating-button"
+            aria-label={editMode ? "Save edit mode" : "Open edit mode"}
+            title={editMode ? "Save" : "Edit mode"}
+            onClick={onToggleEditMode}
+          >
+            {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
+          </button>
+        </div>
       </header>
 
       {editMode && (
@@ -443,6 +473,13 @@ export default function DashboardRenderer({
           <button type="button" disabled={multiPanelIds.length < 2} onClick={() => setMultiFullscreenOpen(true)}>Multi-fullscreen</button>
           <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel</button>
         </section>
+      )}
+
+      {!editMode && voicePanelVisible && (
+        <VoiceFocusControl
+          dashboard={dashboard}
+          onOpenFocus={openVoiceFocus}
+        />
       )}
 
       <nav className="page-tabs" aria-label="Dashboard pages">
@@ -581,7 +618,7 @@ export default function DashboardRenderer({
         )}
       </section>
       {multiFullscreenOpen && (
-          <MultiFullscreenOverlay
+        <MultiFullscreenOverlay
           dashboard={dashboard}
           panelIds={multiPanelIds}
           layout={multiFullscreenLayout}
@@ -590,20 +627,39 @@ export default function DashboardRenderer({
           onClose={closeMultiFullscreen}
         />
       )}
+      {voiceFocusOpen && (
+        <MultiFullscreenOverlay
+          dashboard={dashboard}
+          panelIds={voiceFocusPanelIds}
+          layout={voiceFocusLayout}
+          label="Voice focus"
+          reason={voiceFocusReason}
+          onLayoutChange={setVoiceFocusLayout}
+          onPanelOrderChange={setVoiceFocusPanelIds}
+          onClose={() => setVoiceFocusOpen(false)}
+        />
+      )}
     </main>
   );
 }
 
-function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, onPanelOrderChange, onClose }) {
+function MultiFullscreenOverlay({ dashboard, panelIds, layout, label = "Multi-fullscreen", reason, onLayoutChange, onPanelOrderChange, onClose }) {
   const panels = panelIds.map((panelId) => findPanel(dashboard, panelId)).filter(Boolean);
   const globalPanelColors = resolveGlobalPanelColors(dashboard);
   const layoutOptions = multiLayoutOptions(panels.length);
   const resolvedLayout = layoutOptions.some((option) => option.value === layout) ? layout : layoutOptions[0]?.value;
+  if (panels.length === 0) {
+    return null;
+  }
 
   return (
     <div className="fullscreen-backdrop" role="dialog" aria-modal="true">
       <article className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}>
         <div className="multi-fullscreen-controls">
+          <div className="multi-fullscreen-title">
+            <strong>{label}</strong>
+            {reason?.detail && <span>{reason.detail}</span>}
+          </div>
           {layoutOptions.map((option) => (
             <button key={option.value} type="button" className={resolvedLayout === option.value ? "active" : "secondary"} onClick={() => onLayoutChange(option.value)} title={option.label}>
               {option.icon}
@@ -626,7 +682,7 @@ function MultiFullscreenOverlay({ dashboard, panelIds, layout, onLayoutChange, o
                 geoData={dashboard.loadedData[panel.geoSource]}
                 loadedData={dashboard.loadedData}
                 fullScreen
-                multiFullScreen
+                multiFullScreen={panels.length > 1}
               />
             </section>
           ))}
@@ -658,6 +714,9 @@ function moveItem(items, fromIndex, toIndex) {
 }
 
 function multiLayoutOptions(count) {
+  if (count === 1) {
+    return [{ value: "solo", label: "Single chart", icon: "1" }];
+  }
   if (count === 2) {
     return [
       { value: "sideBySide", label: "Side by side", icon: "||" },
@@ -673,6 +732,14 @@ function multiLayoutOptions(count) {
     ];
   }
   return [{ value: "grid2x2", label: "2 by 2", icon: "2x2" }];
+}
+
+function defaultMultiLayout(count) {
+  return multiLayoutOptions(count)[0]?.value ?? "solo";
+}
+
+function uniquePanelIds(panelIds) {
+  return [...new Set((panelIds ?? []).filter(Boolean))];
 }
 
 function diffPanel(previous, next) {

@@ -10,7 +10,8 @@
     "build": "vite build",
     "build:flashdrive": "pnpm.cmd build",
     "package:flashdrive": "pnpm build && node scripts/package-flashdrive.mjs",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "voice:service": "python scripts/voice-service/voice_service.py"
   },
   "dependencies": {
     "echarts": "^5.6.0",

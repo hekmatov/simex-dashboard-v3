@@ -5,3 +5,4 @@ public/portable-dashboard-data.js
 .vite/
 .DS_Store
 *.log
+voice-logs/

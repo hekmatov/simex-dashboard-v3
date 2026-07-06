@@ -454,6 +454,7 @@ function SecondaryAxisSection({ panel, patch }) {
 }
 
 function ReferenceLinesSection({ panel, patchReferenceLine, addReferenceLine, removeReferenceLine }) {
+  const hasSecondaryAxis = (panel.series ?? []).some((item) => Number(item.yAxisIndex ?? 0) === 1);
   return (
     <div className="settings-series-list">
       <button type="button" onClick={addReferenceLine}>Add reference line</button>
@@ -464,7 +465,9 @@ function ReferenceLinesSection({ panel, patchReferenceLine, addReferenceLine, re
           <label>Value<input type="number" value={line.y ?? 0} onChange={(event) => patchReferenceLine(index, { y: Number(event.target.value) })} /></label>
           <label>Color<input type="color" value={line.color ?? "#08224A"} onChange={(event) => patchReferenceLine(index, { color: event.target.value })} /></label>
           <label>Style<select value={line.lineStyle ?? "dashed"} onChange={(event) => patchReferenceLine(index, { lineStyle: event.target.value })}><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
-          <label>Axis<select value={line.yAxisIndex ?? 0} onChange={(event) => patchReferenceLine(index, { yAxisIndex: Number(event.target.value) })}><option value={0}>Primary</option><option value={1}>Secondary</option></select></label>
+          {hasSecondaryAxis && (
+            <label>Y-axis<select value={line.yAxisIndex ?? 0} onChange={(event) => patchReferenceLine(index, { yAxisIndex: Number(event.target.value) })}><option value={0}>Primary</option><option value={1}>Secondary</option></select></label>
+          )}
           <label>Label position<select value={line.labelPosition ?? "end"} onChange={(event) => patchReferenceLine(index, { labelPosition: event.target.value })}><option value="start">Start</option><option value="middle">Middle</option><option value="end">End</option><option value="insideStartTop">Inside start top</option><option value="insideEndTop">Inside end top</option><option value="insideEndBottom">Inside end bottom</option></select></label>
         </div>
       ))}

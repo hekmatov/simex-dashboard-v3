@@ -88,13 +88,20 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
       : hasSecondAxis
         ? [valueAxis, { ...valueAxis, name: panel.secondaryAxisTitle ?? "", min: numericOrUndefined(panel.secondaryAxisMin), max: numericOrUndefined(panel.secondaryAxisMax), splitLine: { show: false } }]
         : valueAxis,
-    series: series.map((item) => ({
+    series: series.map((item, index) => ({
       ...item,
       data: isHorizontal ? [...item.data].reverse() : item.data,
       z: item.type === "line" ? 10 : 2,
-      markLine: referenceLineConfig(panel.referenceLines, item.yAxisIndex ?? 0),
+      markLine: shouldAttachReferenceLine(series, item, index)
+        ? referenceLineConfig(panel.referenceLines, item.yAxisIndex ?? 0)
+        : undefined,
     })),
   };
+}
+
+function shouldAttachReferenceLine(series, item, index) {
+  const axisIndex = Number(item.yAxisIndex ?? 0);
+  return series.findIndex((candidate) => Number(candidate.yAxisIndex ?? 0) === axisIndex) === index;
 }
 
 function buildSeries(panel, data, labels, colors, useDateAxis, scale) {
@@ -165,7 +172,7 @@ function buildSeriesFromLongData(panel, data, labels, colors, useDateAxis, scale
 
 function buildGaugeOption(panel, data, scale) {
   const row = data[0] ?? {};
-  const value = toNumber(row[panel.valueField]);
+  const value = Math.round(toNumber(row[panel.valueField]));
   const max = panel.max ?? 100;
   const label = panel.labelField ? row[panel.labelField] ?? "" : "";
   const unit = panel.unit ?? "%";
