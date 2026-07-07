@@ -1,4 +1,5 @@
 ﻿import React from "react";
+import ColorField from "./ColorField.jsx";
 import { CHART_OPTION_SECTIONS, CHART_SETTING_TABS, getSectionsForPanelType } from "../lib/chartOptionRegistry.js";
 
 const CHART_TYPES = [
@@ -57,7 +58,6 @@ const FONT_CONTROLS = {
   gaugeAxis: { label: "Gauge axis labels", defaultValue: 12 },
   mapLabel: { label: "Map hover labels", defaultValue: 12 },
 };
-
 export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, dataRows = [], globalPanelColors, onChange, onClose, onRemove }) {
   const [activeTab, setActiveTab] = React.useState("data");
   const [openSections, setOpenSections] = React.useState({});
@@ -366,7 +366,7 @@ function SeriesCard({ panel, series, index, count, dataColumns, patchSeries, dup
       <label>Name<input value={series.name ?? ""} onChange={(event) => patchSeries(index, { name: event.target.value })} /></label>
       <label>Value column<select value={series.y ?? ""} onChange={(event) => patchSeries(index, { y: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
       <label>Axis<select value={series.yAxisIndex ?? 0} onChange={(event) => patchSeries(index, { yAxisIndex: Number(event.target.value) })}><option value={0}>Primary y-axis</option><option value={1}>Secondary y-axis</option></select></label>
-      <label>Color<input type="color" value={series.color ?? "#043BCB"} onChange={(event) => patchSeries(index, { color: event.target.value })} /></label>
+      <ColorField label="Color" value={series.color ?? "#043BCB"} onChange={(color) => patchSeries(index, { color })} />
       <label>Opacity<input type="number" min="0.1" max="1" step="0.05" value={series.opacity ?? 1} onChange={(event) => patchSeries(index, { opacity: Number(event.target.value) })} /></label>
       {lineLike && <LineSeriesOptions series={series} index={index} patchSeries={patchSeries} />}
       {barLike && <BarSeriesOptions series={series} index={index} patchSeries={patchSeries} />}
@@ -378,7 +378,7 @@ function LineSeriesOptions({ series, index, patchSeries }) {
   return <>
     <label>Line width<input type="number" min="1" max="16" value={series.lineWidth ?? 3} onChange={(event) => patchSeries(index, { lineWidth: Number(event.target.value) })} /></label>
     <label>Line style<select value={series.lineStyle ?? "solid"} onChange={(event) => patchSeries(index, { lineStyle: event.target.value })}>{LINE_STYLE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
-    {series.lineStyle === "shadow" && <label>Shadow color<input type="color" value={series.shadowColor ?? "#4F6F8C"} onChange={(event) => patchSeries(index, { shadowColor: event.target.value })} /></label>}
+    {series.lineStyle === "shadow" && <ColorField label="Shadow color" value={series.shadowColor ?? "#4F6F8C"} onChange={(color) => patchSeries(index, { shadowColor: color })} />}
     <label className="checkbox-row"><input type="checkbox" checked={series.smooth ?? false} onChange={(event) => patchSeries(index, { smooth: event.target.checked })} />Smooth line</label>
     <label>Marker<select value={series.markerStyle ?? "none"} onChange={(event) => patchSeries(index, { markerStyle: event.target.value })}>{MARKER_STYLE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
     <label>Marker size<input type="number" min="2" max="24" value={series.markerSize ?? 6} onChange={(event) => patchSeries(index, { markerSize: Number(event.target.value) })} /></label>
@@ -463,7 +463,7 @@ function ReferenceLinesSection({ panel, patchReferenceLine, addReferenceLine, re
           <div className="settings-series-header"><strong>{line.label || `Reference ${index + 1}`}</strong><button type="button" className="secondary" onClick={() => removeReferenceLine(index)}>Remove</button></div>
           <label>Label<input value={line.label ?? ""} onChange={(event) => patchReferenceLine(index, { label: event.target.value })} /></label>
           <label>Value<input type="number" value={line.y ?? 0} onChange={(event) => patchReferenceLine(index, { y: Number(event.target.value) })} /></label>
-          <label>Color<input type="color" value={line.color ?? "#08224A"} onChange={(event) => patchReferenceLine(index, { color: event.target.value })} /></label>
+          <ColorField label="Color" value={line.color ?? "#08224A"} fallback="#08224A" onChange={(color) => patchReferenceLine(index, { color })} />
           <label>Style<select value={line.lineStyle ?? "dashed"} onChange={(event) => patchReferenceLine(index, { lineStyle: event.target.value })}><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
           {hasSecondaryAxis && (
             <label>Y-axis<select value={line.yAxisIndex ?? 0} onChange={(event) => patchReferenceLine(index, { yAxisIndex: Number(event.target.value) })}><option value={0}>Primary</option><option value={1}>Secondary</option></select></label>
@@ -533,10 +533,10 @@ function PanelLayoutSection({ panel, globalPanelColors, patch }) {
         </div>
       ) : (
         <>
-          <label>Panel background<input type="color" value={panel.panelBackgroundColor ?? "#f5f8fb"} onChange={(event) => patch({ panelBackgroundColor: event.target.value })} /></label>
-          <label>Panel border<input type="color" value={panel.panelBorderColor ?? "#d8e2ec"} onChange={(event) => patch({ panelBorderColor: event.target.value })} /></label>
-          <label>Chart area background<input type="color" value={panel.chartAreaColor ?? "#eaf1f6"} onChange={(event) => patch({ chartAreaColor: event.target.value })} /></label>
-          <label>Chart area border<input type="color" value={panel.chartAreaBorderColor ?? "#d8e2ec"} onChange={(event) => patch({ chartAreaBorderColor: event.target.value })} /></label>
+          <ColorField label="Panel background" value={panel.panelBackgroundColor ?? "#f5f8fb"} fallback="#f5f8fb" onChange={(color) => patch({ panelBackgroundColor: color })} />
+          <ColorField label="Panel border" value={panel.panelBorderColor ?? "#d8e2ec"} fallback="#d8e2ec" onChange={(color) => patch({ panelBorderColor: color })} />
+          <ColorField label="Chart area background" value={panel.chartAreaColor ?? "#eaf1f6"} fallback="#eaf1f6" onChange={(color) => patch({ chartAreaColor: color })} />
+          <ColorField label="Chart area border" value={panel.chartAreaBorderColor ?? "#d8e2ec"} fallback="#d8e2ec" onChange={(color) => patch({ chartAreaBorderColor: color })} />
         </>
       )}
       <div className="settings-button-row">
@@ -566,9 +566,9 @@ function GaugeRedZoneSection({ panel, patch }) {
     <>
       <label>Low zone end<input type="number" min="0.05" max="0.95" step="0.05" value={panel.gaugeLowStop ?? 0.3} onChange={(event) => patch({ gaugeLowStop: Number(event.target.value) })} /></label>
       <label>Mid zone end<input type="number" min="0.05" max="0.95" step="0.05" value={panel.gaugeMidStop ?? 0.7} onChange={(event) => patch({ gaugeMidStop: Number(event.target.value) })} /></label>
-      <label>Low color<input type="color" value={panel.gaugeLowColor ?? "#67e0e3"} onChange={(event) => patch({ gaugeLowColor: event.target.value })} /></label>
-      <label>Mid color<input type="color" value={panel.gaugeMidColor ?? "#37a2da"} onChange={(event) => patch({ gaugeMidColor: event.target.value })} /></label>
-      <label>High color<input type="color" value={panel.gaugeHighColor ?? "#fd666d"} onChange={(event) => patch({ gaugeHighColor: event.target.value })} /></label>
+      <ColorField label="Low color" value={panel.gaugeLowColor ?? "#67e0e3"} fallback="#67e0e3" onChange={(color) => patch({ gaugeLowColor: color })} />
+      <ColorField label="Mid color" value={panel.gaugeMidColor ?? "#37a2da"} fallback="#37a2da" onChange={(color) => patch({ gaugeMidColor: color })} />
+      <ColorField label="High color" value={panel.gaugeHighColor ?? "#fd666d"} fallback="#fd666d" onChange={(color) => patch({ gaugeHighColor: color })} />
       <label>Arc width<input type="number" min="12" max="48" value={panel.gaugeArcWidth ?? 30} onChange={(event) => patch({ gaugeArcWidth: Number(event.target.value) })} /></label>
     </>
   );
@@ -607,8 +607,8 @@ function ChoroplethSection({ panel, dataSources, dataColumns, patch }) {
       <label>Map fill size<input type="range" min="60" max="96" step="1" value={Number(String(panel.mapLayoutSize ?? "82").replace("%", ""))} onChange={(event) => patch({ mapLayoutSize: `${event.target.value}%` })} /></label>
       <label>Minimum color scale<input type="number" value={panel.visualMin ?? ""} onChange={(event) => patch({ visualMin: event.target.value === "" ? undefined : Number(event.target.value) })} /></label>
       <label>Maximum color scale<input type="number" value={panel.visualMax ?? ""} onChange={(event) => patch({ visualMax: event.target.value === "" ? undefined : Number(event.target.value) })} /></label>
-      <label>Missing-data color<input type="color" value={panel.missingColor ?? "#DDE7EF"} onChange={(event) => patch({ missingColor: event.target.value })} /></label>
-      <label>Border color<input type="color" value={panel.mapBorderColor ?? "#F8FBFF"} onChange={(event) => patch({ mapBorderColor: event.target.value })} /></label>
+      <ColorField label="Missing-data color" value={panel.missingColor ?? "#DDE7EF"} fallback="#DDE7EF" onChange={(color) => patch({ missingColor: color })} />
+      <ColorField label="Border color" value={panel.mapBorderColor ?? "#F8FBFF"} fallback="#F8FBFF" onChange={(color) => patch({ mapBorderColor: color })} />
       <label>Border width<input type="number" min="0" max="5" step="0.1" value={panel.mapBorderWidth ?? 0.8} onChange={(event) => patch({ mapBorderWidth: Number(event.target.value) })} /></label>
       {panel.type === "chronoChoroplethMap" && <p className="settings-note">Playback speed is controlled in the chart play bar to keep the timelapse responsive.</p>}
       <label className="checkbox-row"><input type="checkbox" checked={Boolean(panel.showProvinceOverlay)} onChange={(event) => patch({ showProvinceOverlay: event.target.checked })} /> Show province borders</label>
@@ -621,11 +621,11 @@ function ChoroplethSection({ panel, dataSources, dataColumns, patch }) {
           ))}
         </select>
       </label>
-      <label>Province border color<input type="color" value={panel.provinceBorderColor ?? "#08224A"} onChange={(event) => patch({ provinceBorderColor: event.target.value })} /></label>
+      <ColorField label="Province border color" value={panel.provinceBorderColor ?? "#08224A"} fallback="#08224A" onChange={(color) => patch({ provinceBorderColor: color })} />
       <label>Province border thickness<input type="number" min="0" max="8" step="0.1" value={panel.provinceBorderWidth ?? 1.4} onChange={(event) => patch({ provinceBorderWidth: Number(event.target.value) })} /></label>
       <label className="checkbox-row"><input type="checkbox" checked={panel.showProvinceNames ?? true} onChange={(event) => patch({ showProvinceNames: event.target.checked })} /> Show province names</label>
       <label>Province name font size<input type="number" min="6" max="36" step="1" value={panel.provinceNameFontSize ?? 12} onChange={(event) => patch({ provinceNameFontSize: Number(event.target.value) })} /></label>
-      <label>Province name color<input type="color" value={panel.provinceNameColor ?? "#08224A"} onChange={(event) => patch({ provinceNameColor: event.target.value })} /></label>
+      <ColorField label="Province name color" value={panel.provinceNameColor ?? "#08224A"} fallback="#08224A" onChange={(color) => patch({ provinceNameColor: color })} />
       <p className="settings-note">Municipality codes such as 14 are normalized to GM0014 before joining to Cartomap's statcode property.</p>
     </>
   );

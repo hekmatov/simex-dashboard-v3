@@ -1,5 +1,6 @@
 ﻿import React from "react";
 
+import ColorField from "./ColorField.jsx";
 import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
@@ -697,10 +698,10 @@ function GlobalPanelColorControls({ colors, onChange }) {
     <details className="global-color-controls">
       <summary>Global panel colors</summary>
       <div className="global-color-grid">
-        <label>Panel background<input type="color" value={colors.panelBackgroundColor} onChange={(event) => onChange({ panelBackgroundColor: event.target.value })} /></label>
-        <label>Panel border<input type="color" value={colors.panelBorderColor} onChange={(event) => onChange({ panelBorderColor: event.target.value })} /></label>
-        <label>Chart background<input type="color" value={colors.chartAreaColor} onChange={(event) => onChange({ chartAreaColor: event.target.value })} /></label>
-        <label>Chart border<input type="color" value={colors.chartAreaBorderColor} onChange={(event) => onChange({ chartAreaBorderColor: event.target.value })} /></label>
+        <ColorField label="Panel background" value={colors.panelBackgroundColor} fallback="#f5f8fb" onChange={(color) => onChange({ panelBackgroundColor: color })} />
+        <ColorField label="Panel border" value={colors.panelBorderColor} fallback="#d8e2ec" onChange={(color) => onChange({ panelBorderColor: color })} />
+        <ColorField label="Chart background" value={colors.chartAreaColor} fallback="#eaf1f6" onChange={(color) => onChange({ chartAreaColor: color })} />
+        <ColorField label="Chart border" value={colors.chartAreaBorderColor} fallback="#d8e2ec" onChange={(color) => onChange({ chartAreaBorderColor: color })} />
       </div>
     </details>
   );
@@ -779,8 +780,8 @@ function VantaSettingsPanel({ settings = {}, onChange }) {
   const resolved = sanitizeVantaSettings(settings);
   return (
     <div className="vanta-settings-panel">
-      <label>Static background<input type="color" value={resolved.backgroundColor} onChange={(event) => onChange({ backgroundColor: event.target.value })} /></label>
-      <label>Line/dot color<input type="color" value={resolved.networkColor} onChange={(event) => onChange({ networkColor: event.target.value })} /></label>
+      <ColorField label="Static background" value={resolved.backgroundColor} fallback="#08224a" onChange={(color) => onChange({ backgroundColor: color })} />
+      <ColorField label="Line/dot color" value={resolved.networkColor} fallback="#9bd3ff" onChange={(color) => onChange({ networkColor: color })} />
       <RangeSetting label="Points" value={resolved.points} min={3} max={18} step={1} onChange={(points) => onChange({ points })} />
       <RangeSetting label="Max distance" value={resolved.maxDistance} min={8} max={32} step={1} onChange={(maxDistance) => onChange({ maxDistance })} />
       <RangeSetting label="Spacing" value={resolved.spacing} min={10} max={34} step={1} onChange={(spacing) => onChange({ spacing })} />
