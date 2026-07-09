@@ -23,6 +23,7 @@ export default function DashboardRenderer({
   onPanelReorder,
   onImportConfig,
   onExportConfig,
+  onExportPackageDefault,
   onUploadCsv,
   onResetEditSession,
 }) {
@@ -434,6 +435,7 @@ export default function DashboardRenderer({
             </div>
             <button type="button" onClick={() => importInputRef.current?.click()}>Import bundle</button>
             <button type="button" onClick={onExportConfig}>Export bundle</button>
+            <button type="button" onClick={onExportPackageDefault}>Export package default</button>
             <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}>Upload CSV</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>

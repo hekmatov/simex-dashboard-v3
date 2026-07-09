@@ -193,14 +193,43 @@ export default function App() {
   }
 
   function exportConfig() {
-    const config = stripRuntimeFields(dashboard);
-    const defaultName = `SimEx-dashboard-bundle-${dateStamp()}`;
-    const chosenName = window.prompt("Name this exported dashboard bundle", defaultName);
-    if (!chosenName) {
-      return;
+    promptAndDownloadDashboardBundle(bundleFromDashboard(dashboard), `SimEx-dashboard-bundle-${dateStamp()}`);
+  }
+
+  async function exportPackageDefaultConfig() {
+    const bundle = bundleFromDashboard(dashboard);
+    const fileName = "packaged-dashboard-bundle.json";
+
+    if (globalThis.window?.showSaveFilePicker) {
+      try {
+        const fileHandle = await globalThis.window.showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: "SimEx dashboard package default bundle",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(bundle, null, 2));
+        await writable.close();
+        window.alert(`Saved ${fileName}. Place it in the project root before running pnpm.cmd package:flashdrive.`);
+        return;
+      } catch (saveError) {
+        if (saveError?.name === "AbortError") {
+          return;
+        }
+      }
     }
-    const fileName = chosenName.endsWith(".json") ? chosenName : `${chosenName}.json`;
-    const bundle = {
+
+    downloadDashboardBundle(bundle, fileName);
+    window.alert(`Your browser downloaded ${fileName}. Move it into the project root before running pnpm.cmd package:flashdrive.`);
+  }
+
+  function bundleFromDashboard(currentDashboard) {
+    const config = stripRuntimeFields(currentDashboard);
+    return {
       bundleType: BUNDLE_TYPE,
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -209,6 +238,18 @@ export default function App() {
         Object.entries(config.dataSources ?? {}).filter(([, source]) => source?.type === "uploadedCsv"),
       ),
     };
+  }
+
+  function promptAndDownloadDashboardBundle(bundle, defaultName) {
+    const chosenName = window.prompt("Name this exported dashboard bundle", defaultName);
+    if (!chosenName) {
+      return;
+    }
+    const fileName = chosenName.endsWith(".json") ? chosenName : `${chosenName}.json`;
+    downloadDashboardBundle(bundle, fileName);
+  }
+
+  function downloadDashboardBundle(bundle, fileName) {
     const blob = new Blob([JSON.stringify(bundle, null, 2)], {
       type: "application/json",
     });
@@ -288,6 +329,7 @@ export default function App() {
       onPanelReorder={reorderPanel}
       onImportConfig={importConfig}
       onExportConfig={exportConfig}
+      onExportPackageDefault={exportPackageDefaultConfig}
       onUploadCsv={uploadCsvSource}
       onResetEditSession={cancelEditSession}
     />

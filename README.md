@@ -73,6 +73,7 @@ In edit mode:
 - Uploaded CSV sources appear in chart data-source dropdowns.
 - `Export bundle` downloads a JSON bundle containing the dashboard config plus uploaded CSV text.
 - `Import bundle` restores that bundle later, including the uploaded CSV data.
+- `Export package default` saves the current browser-edited dashboard as `packaged-dashboard-bundle.json` for the flash-drive builder.
 
 Static files already in `public/data/**` remain file-backed. Uploaded CSVs are bundled so they can travel by email or flash drive as one JSON file.
 
@@ -95,6 +96,25 @@ Create the portable folder:
 ```powershell
 pnpm.cmd package:flashdrive
 ```
+
+If you want browser edit-mode changes to become the default dashboard inside the flash-drive package:
+
+1. Open V2 locally.
+2. Enter edit mode and make/save the dashboard edits.
+3. Click `Export package default`.
+4. Save or move the downloaded file to the project root as:
+
+```text
+packaged-dashboard-bundle.json
+```
+
+5. Run:
+
+```powershell
+pnpm.cmd package:flashdrive
+```
+
+When that file exists, the package command embeds it as the flash-drive dashboard default. If the file is absent, the package uses `public/config/dashboard.json`.
 
 Copy this folder to a USB drive:
 
@@ -124,7 +144,8 @@ Caveats:
 
 - Online map tiles still need internet access.
 - Some institutional browsers may block scripts from USB drives. If that happens, try `START_DASHBOARD.bat`, copy the folder to the computer first, or use a static host.
-- Exported dashboard bundles are still the best way to move scenario-specific edits and uploaded CSVs between copies of the dashboard.
+- `packaged-dashboard-bundle.json` is ignored by Git on purpose. It is a local packaging input, not a shared source file.
+- Exported dashboard bundles are still the best way to move scenario-specific edits and uploaded CSVs between separate dashboard copies.
 
 ## Bundle Size Note
 

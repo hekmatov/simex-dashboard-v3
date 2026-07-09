@@ -141,6 +141,7 @@ Use edit mode inside the dashboard:
 - \`Upload CSV\` adds a CSV as a dashboard data source.
 - \`Export bundle\` saves dashboard edits plus uploaded CSV data into one JSON bundle.
 - \`Import bundle\` restores that JSON bundle later.
+- To make browser edits the package default, use \`Export package default\` before packaging and save \`packaged-dashboard-bundle.json\` in the project root.
 
 ## Caveats
 

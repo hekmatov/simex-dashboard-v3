@@ -430,6 +430,7 @@ http://localhost:5173/
 - Uploaded CSV sources appear in chart data-source dropdowns and are labeled with the uploaded filename.
 - `Import bundle` loads either the newer dashboard bundle JSON format or an older plain dashboard config JSON file.
 - `Export bundle` prompts for a filename and defaults to `SimEx-dashboard-bundle-YYYYMMDD.json`.
+- `Export package default` saves the current browser-edited dashboard as `packaged-dashboard-bundle.json` for flash-drive packaging.
 - Dashboard bundles contain the config plus uploaded CSV text under the `uploadedCsvSources` bundle field.
 - File-backed CSV/GeoJSON sources under `public/data/**` remain referenced by path; uploaded CSVs are embedded for portability.
 - Individual chart panels have an export menu in the top-right action cluster.
@@ -437,6 +438,8 @@ http://localhost:5173/
 - ECharts-backed panels use ECharts' native image export. Map and image panels use custom browser-side canvas export helpers.
 - Edits are kept in browser state while using the app.
 - Exported bundles are the portable way to preserve and share point-and-click edits plus uploaded CSVs.
+- `pnpm.cmd package:flashdrive` automatically embeds `packaged-dashboard-bundle.json` when that file exists in the project root; otherwise it uses `public/config/dashboard.json`.
+- `packaged-dashboard-bundle.json` is intentionally ignored by Git because it is a local packaging input.
 - Uploaded image panels are embedded into config as browser data URLs, so bundles can become larger.
 
 ### Background editor
@@ -632,6 +635,7 @@ Flash-drive behavior:
 - If `index.html` opens blank, use `START_DASHBOARD.bat`; it starts a tiny PowerShell-based local server at `http://127.0.0.1:8765/`.
 - The default config and prepared CSV/GeoJSON data are embedded in `portable-dashboard-data.js`.
 - Uploaded CSVs and scenario edits should still be moved with `Export bundle` and `Import bundle`.
+- To make browser edit-mode changes the default in a flash-drive package, click `Export package default`, save or move the resulting `packaged-dashboard-bundle.json` to the project root, then run `pnpm.cmd package:flashdrive`.
 - Online map tiles still require internet access.
 - If a locked-down browser blocks scripts from USB drives, try `START_DASHBOARD.bat`, copy the folder to the computer first, or use a static host.
 
