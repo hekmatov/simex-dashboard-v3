@@ -77,6 +77,13 @@ In edit mode:
 
 Static files already in `public/data/**` remain file-backed. Uploaded CSVs are bundled so they can travel by email or flash drive as one JSON file.
 
+When the dashboard app is updated, browser-saved edits are reconciled with the new default dashboard:
+
+- Matching pages, sections, and panels keep the user's current edit-mode configuration.
+- New default pages, sections, and panels from the update are added.
+- Default file-backed data sources use the latest source definitions from the updated app.
+- Uploaded CSVs and custom saved data sources are preserved.
+
 ## Deployment Without Docker
 
 Build the static site:

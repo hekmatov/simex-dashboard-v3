@@ -441,6 +441,7 @@ http://localhost:5173/
 - `pnpm.cmd package:flashdrive` automatically embeds `packaged-dashboard-bundle.json` when that file exists in the project root; otherwise it uses `public/config/dashboard.json`.
 - `packaged-dashboard-bundle.json` is intentionally ignored by Git because it is a local packaging input.
 - Uploaded image panels are embedded into config as browser data URLs, so bundles can become larger.
+- App updates reconcile the latest default dashboard with browser-saved edits. Matching page, section, and panel IDs keep the user's edit-mode configuration; new default content is added; default file-backed data sources are refreshed from the updated app; uploaded CSV and custom data sources are preserved.
 
 ### Background editor
 

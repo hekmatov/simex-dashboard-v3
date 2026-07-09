@@ -402,51 +402,107 @@ function mergeDefaultConfigAdditions(savedConfig, defaultConfig) {
   if (!savedConfig) {
     return null;
   }
-  const mergedConfig = {
-    ...structuredClone(savedConfig),
-    dataSources: {
-      ...(defaultConfig?.dataSources ?? {}),
-      ...(savedConfig.dataSources ?? {}),
-    },
-  };
+  const {
+    dataSources: savedDataSources,
+    pages: savedPages,
+    loadedData: _savedLoadedData,
+    ...savedTopLevel
+  } = structuredClone(savedConfig);
+  const {
+    dataSources: defaultDataSources,
+    pages: defaultPages,
+    loadedData: _defaultLoadedData,
+    ...defaultTopLevel
+  } = structuredClone(defaultConfig ?? {});
 
-  const pages = mergedConfig.pages ?? [];
-  (defaultConfig?.pages ?? []).forEach((defaultPage) => {
-    const savedPage = pages.find((page) => page.id === defaultPage.id);
-    if (!savedPage) {
-      pages.push(defaultPage);
+  return {
+    ...defaultTopLevel,
+    ...savedTopLevel,
+    dataSources: mergeDataSources(defaultDataSources, savedDataSources),
+    pages: mergePages(defaultPages ?? [], savedPages ?? []),
+  };
+}
+
+function mergeDataSources(defaultDataSources = {}, savedDataSources = {}) {
+  const merged = { ...defaultDataSources };
+  Object.entries(savedDataSources ?? {}).forEach(([sourceId, source]) => {
+    const isUploadedSource = source?.type === "uploadedCsv";
+    const isSavedOnlySource = !Object.prototype.hasOwnProperty.call(defaultDataSources, sourceId);
+    if (isUploadedSource || isSavedOnlySource) {
+      merged[sourceId] = source;
+    }
+  });
+  return merged;
+}
+
+function mergePages(defaultPages, savedPages) {
+  const savedById = new Map(savedPages.map((page) => [page.id, page]));
+  const defaultIds = new Set(defaultPages.map((page) => page.id));
+  return [
+    ...defaultPages.map((defaultPage) => mergePage(defaultPage, savedById.get(defaultPage.id))),
+    ...savedPages.filter((savedPage) => !defaultIds.has(savedPage.id)),
+  ];
+}
+
+function mergePage(defaultPage, savedPage) {
+  if (!savedPage) {
+    return defaultPage;
+  }
+  const { sections: defaultSections = [], ...defaultRest } = defaultPage;
+  const { sections: savedSections = [], ...savedRest } = savedPage;
+  return {
+    ...defaultRest,
+    ...savedRest,
+    sections: mergeSections(defaultSections, savedSections),
+  };
+}
+
+function mergeSections(defaultSections, savedSections) {
+  const savedById = new Map(savedSections.map((section) => [section.id, section]));
+  const defaultIds = new Set(defaultSections.map((section) => section.id));
+  return [
+    ...defaultSections.map((defaultSection) => mergeSection(defaultSection, savedById.get(defaultSection.id))),
+    ...savedSections.filter((savedSection) => !defaultIds.has(savedSection.id)),
+  ];
+}
+
+function mergeSection(defaultSection, savedSection) {
+  if (!savedSection) {
+    return defaultSection;
+  }
+  const { panels: defaultPanels = [], ...defaultRest } = defaultSection;
+  const { panels: savedPanels = [], ...savedRest } = savedSection;
+  return {
+    ...defaultRest,
+    ...savedRest,
+    panels: mergePanels(defaultPanels, savedPanels),
+  };
+}
+
+function mergePanels(defaultPanels, savedPanels) {
+  const defaultById = new Map(defaultPanels.map((panel) => [panel.id, panel]));
+  const mergedPanels = savedPanels.map((savedPanel) => {
+    const defaultPanel = defaultById.get(savedPanel.id);
+    return defaultPanel ? { ...defaultPanel, ...savedPanel } : savedPanel;
+  });
+  const mergedPanelIds = new Set(mergedPanels.map((panel) => panel.id));
+
+  defaultPanels.forEach((defaultPanel, index) => {
+    if (mergedPanelIds.has(defaultPanel.id)) {
       return;
     }
-
-    savedPage.sections = savedPage.sections ?? [];
-    (defaultPage.sections ?? []).forEach((defaultSection) => {
-      const savedSection = savedPage.sections.find((section) => section.id === defaultSection.id);
-      if (!savedSection) {
-        savedPage.sections.push(defaultSection);
-        return;
-      }
-
-      savedSection.panels = savedSection.panels ?? [];
-      const savedPanelIds = new Set(savedSection.panels.map((panel) => panel.id));
-      (defaultSection.panels ?? []).forEach((defaultPanel, index) => {
-        if (savedPanelIds.has(defaultPanel.id)) {
-          return;
-        }
-        const previousDefaultPanel = defaultSection.panels
-          .slice(0, index)
-          .reverse()
-          .find((panel) => savedPanelIds.has(panel.id));
-        const previousIndex = previousDefaultPanel
-          ? savedSection.panels.findIndex((panel) => panel.id === previousDefaultPanel.id)
-          : -1;
-        savedSection.panels.splice(previousIndex + 1, 0, defaultPanel);
-        savedPanelIds.add(defaultPanel.id);
-      });
-    });
+    const previousDefaultPanel = defaultPanels
+      .slice(0, index)
+      .reverse()
+      .find((panel) => mergedPanelIds.has(panel.id));
+    const previousIndex = previousDefaultPanel
+      ? mergedPanels.findIndex((panel) => panel.id === previousDefaultPanel.id)
+      : -1;
+    mergedPanels.splice(previousIndex + 1, 0, defaultPanel);
+    mergedPanelIds.add(defaultPanel.id);
   });
 
-  mergedConfig.pages = pages;
-  return mergedConfig;
+  return mergedPanels;
 }
 
 function stripRuntimeFields(dashboard) {
