@@ -9,8 +9,8 @@ Voice Focus adds a browser microphone assistant to SimEx Dashboard V2. It record
 - Optional Gemini transcription and LLM chart judge modes through the same local service.
 - Rolling semantic focus controller that keeps conversation memory and avoids switching charts on a single weak segment.
 - Feedback buttons for chart picks.
-- Live focus log in the dashboard.
-- Automatic session log saving when the mic is stopped.
+- Human-readable live focus log in the dashboard, grouped by audio segment.
+- Automatic raw JSON and readable Markdown session log saving when the mic is stopped.
 - Configurable model warm-up so the first real transcription is not delayed by model loading.
 
 ## Dashboard Controls
@@ -26,7 +26,8 @@ Inside the panel:
 - `Transcription`: chooses `Local Whisper` or `Gemini online`.
 - `Focus mode`: chooses `Semantic controller` or `LLM chart judge`.
 - `Audio capture settings`: controls browser-side audio capture.
-- `Focus log`: shows transcript requests, responses, topic updates, candidate scores, decisions, and errors.
+- `Focus log`: shows each audio segment with its transcript, topic summary, embedding terms, candidate chart scores, decisions, and errors.
+- `Chart matching keywords`: adds or removes browser-local keywords for panel matching tests.
 
 ## Recommended Local Launch
 
@@ -117,7 +118,7 @@ This is the recommended default. It runs locally in the browser after transcript
 The controller:
 
 - Keeps recent transcript segments.
-- Extracts uncommon topic terms from the rolling discussion.
+- Extracts chart-aware phrases from the rolling discussion first, such as `risk perception`, then backfills with uncommon single-word terms.
 - Scores chart metadata, aliases, and fields.
 - Applies feedback boosts or penalties.
 - Holds the current focus unless a new topic is clearly stronger.
@@ -161,6 +162,7 @@ $env:GEMINI_API_KEY="your-api-key"
 | `SIMEX_VOICE_PORT` | `8766` | Voice service port |
 | `SIMEX_VOICE_WARMUP` | `1` | Warm up Whisper at service launch |
 | `SIMEX_VOICE_LOG_DIR` | `voice-logs` in the project folder | Saved voice focus logs |
+| `SIMEX_VOICE_READABLE_LOG_DIR` | `voice-logs/readable` | Saved human-readable Markdown logs |
 | `SIMEX_TRANSCRIPTION_BACKEND` | `whisper` | Default transcription backend |
 | `SIMEX_WHISPER_MODEL` | `small` | Whisper model size/name |
 | `SIMEX_WHISPER_DEVICE` | `cpu` | `cpu` or `cuda` |
@@ -177,21 +179,28 @@ $env:GEMINI_API_KEY="your-api-key"
 
 ## Logs
 
-When the mic starts, the dashboard creates a fresh voice session log. When the mic stops, the log is saved by the voice service.
+When the mic starts, the dashboard creates a fresh voice session log. When the mic stops, the log is saved by the voice service in two forms.
 
-Default folder:
+Default raw JSON folder:
 
 ```text
 C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2\voice-logs
 ```
 
-The log includes:
+Default readable Markdown folder:
+
+```text
+C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2\voice-logs\readable
+```
+
+The readable log groups information by audio segment and includes:
 
 - Session start and stop.
-- Transcription requests and responses.
+- Segment recording time, source, duration, and backend.
+- Exact transcript text.
 - Empty transcript warnings.
 - Topic summary updates.
-- Local semantic candidate scores.
+- Embedding terms and candidate chart scores.
 - LLM chart judge requests and responses.
 - Final focus decisions.
 

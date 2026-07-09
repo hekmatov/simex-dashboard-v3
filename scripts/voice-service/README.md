@@ -37,6 +37,7 @@ Optional environment variables:
 - `SIMEX_VOICE_PORT`: service port, default `8766`
 - `SIMEX_VOICE_WARMUP`: warm up Whisper on service launch, default `1`
 - `SIMEX_VOICE_LOG_DIR`: folder for saved voice focus logs, default `voice-logs` in the V2 project folder
+- `SIMEX_VOICE_READABLE_LOG_DIR`: folder for human-readable Markdown logs, default `voice-logs/readable`
 - `SIMEX_TRANSCRIPTION_BACKEND`: default backend, `whisper` or `gemini`; default `whisper`
 - `SIMEX_WHISPER_MODEL`: Whisper model, default `small`
 - `SIMEX_WHISPER_LANGUAGE`: optional language hint, for example `en` or `nl`
@@ -84,8 +85,9 @@ The dashboard has two focus modes:
   transcript. This requires `GEMINI_API_KEY`.
 
 Each time the mic is started, the dashboard creates a fresh focus log session.
-When the mic is stopped, the browser sends that log to the localhost service and
-the service saves it under `SIMEX_VOICE_LOG_DIR`.
+When the mic is stopped, the browser sends that log to the localhost service.
+The service saves raw JSON under `SIMEX_VOICE_LOG_DIR` and grouped Markdown
+reports under `SIMEX_VOICE_READABLE_LOG_DIR`.
 
 For the full launch guide, tuning presets, focus modes, and troubleshooting
 notes, see `docs/voice-focus-guide.md`.

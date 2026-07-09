@@ -21,7 +21,7 @@ export function visibleLogEntries(entries) {
   return entries.slice(-MAX_VISIBLE_LOG_ENTRIES);
 }
 
-export async function saveVoiceFocusLog(serviceUrl, session, entries) {
+export async function saveVoiceFocusLog(serviceUrl, session, entries, readableEntries = []) {
   if (!session || entries.length === 0) {
     return null;
   }
@@ -34,6 +34,7 @@ export async function saveVoiceFocusLog(serviceUrl, session, entries) {
       session,
       stoppedAt: new Date().toISOString(),
       entries,
+      readableEntries,
     }),
   });
   if (!response.ok) {

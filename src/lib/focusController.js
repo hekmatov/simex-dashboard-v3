@@ -182,6 +182,7 @@ function stableDecision(previousState, candidates, now, maxPanels) {
 }
 
 function topicTermsFromText(text, chartIndex) {
+  const phraseTerms = topicPhrasesFromText(text, chartIndex);
   const chartFrequency = chartTokenFrequency(chartIndex);
   const counts = new Map();
   for (const token of tokenize(text)) {
@@ -194,10 +195,57 @@ function topicTermsFromText(text, chartIndex) {
     }
     counts.set(token, (counts.get(token) ?? 0) + 1 + 1 / chartCount);
   }
-  return [...counts.entries()]
+  const tokenTerms = [...counts.entries()]
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-    .slice(0, MAX_SUMMARY_TERMS)
     .map(([token]) => token);
+  const phraseTokens = new Set(phraseTerms.flatMap((phrase) => tokenize(phrase)));
+  const backfillTokens = tokenTerms.filter((token) => !phraseTokens.has(token));
+  return [...phraseTerms, ...backfillTokens].slice(0, MAX_SUMMARY_TERMS);
+}
+
+function topicPhrasesFromText(text, chartIndex) {
+  const normalizedText = ` ${normalizeText(text)} `;
+  const phraseCounts = new Map();
+  const phrasePanelCounts = new Map();
+  for (const record of chartIndex ?? []) {
+    for (const phrase of chartPhrases(record)) {
+      phrasePanelCounts.set(phrase, (phrasePanelCounts.get(phrase) ?? 0) + 1);
+      if (normalizedText.includes(` ${phrase} `)) {
+        phraseCounts.set(phrase, (phraseCounts.get(phrase) ?? 0) + 1);
+      }
+    }
+  }
+  return [...phraseCounts.entries()]
+    .map(([phrase, count]) => {
+      const tokenCount = tokenize(phrase).length;
+      const panelCount = phrasePanelCounts.get(phrase) ?? 1;
+      return [
+        phrase,
+        count + tokenCount * 0.6 + 1 / panelCount,
+      ];
+    })
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, Math.max(4, Math.floor(MAX_SUMMARY_TERMS * 0.7)))
+    .map(([phrase]) => phrase);
+}
+
+function chartPhrases(record) {
+  const fragments = [
+    record.title,
+    record.sectionTitle,
+    ...(record.aliases ?? []),
+    ...(record.keywords ?? []),
+  ];
+  return [...new Set(
+    fragments
+      .map((fragment) => normalizeText(fragment))
+      .filter((phrase) => {
+        const tokens = tokenize(phrase);
+        return tokens.length >= 2
+          && tokens.length <= 6
+          && tokens.some((token) => !isCommonVoiceWord(token));
+      }),
+  )];
 }
 
 function topicSummary(topicTerms, recentText) {

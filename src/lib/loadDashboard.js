@@ -4,7 +4,7 @@ const dataSourceCache = new Map();
 
 export async function loadDashboard(configPath) {
   const portable = portableDashboard();
-  if (usingFileProtocol() && portable?.config) {
+  if ((usingFileProtocol() || portable?.packageDefault) && portable?.config) {
     return loadDashboardConfig(portable.config);
   }
 

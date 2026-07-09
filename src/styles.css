@@ -2086,7 +2086,8 @@ button.danger {
 }
 
 .voice-capture-settings,
-.voice-replay-settings {
+.voice-replay-settings,
+.voice-keyword-editor {
   background: #edf5fb;
   border: 1px solid rgb(8 34 74 / 10%);
   border-radius: 14px;
@@ -2094,7 +2095,8 @@ button.danger {
 }
 
 .voice-capture-settings summary,
-.voice-replay-settings summary {
+.voice-replay-settings summary,
+.voice-keyword-editor summary {
   color: #08224a;
   cursor: pointer;
   font-size: 13px;
@@ -2113,6 +2115,13 @@ button.danger {
   display: grid;
   gap: 9px;
   grid-template-columns: minmax(220px, 1fr) auto auto;
+  margin-top: 10px;
+}
+
+.voice-keyword-editor-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1fr);
   margin-top: 10px;
 }
 
@@ -2139,6 +2148,17 @@ button.danger {
 
 .voice-replay-file input {
   font-size: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.voice-keyword-input span {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.voice-keyword-input input {
   min-width: 0;
   width: 100%;
 }
@@ -2349,6 +2369,63 @@ button.danger {
   justify-self: end;
 }
 
+.voice-keyword-panel {
+  background: white;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+.voice-keyword-panel > div:first-child strong,
+.voice-keyword-list strong {
+  color: #08224a;
+  font-size: 12px;
+}
+
+.voice-keyword-panel small,
+.voice-keyword-list span {
+  color: #49627a;
+  font-size: 11px;
+}
+
+.voice-keyword-list {
+  display: grid;
+  gap: 6px;
+}
+
+.voice-keyword-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.voice-keyword-chip {
+  align-items: center;
+  background: #edf5fb;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 999px;
+  color: #08224a;
+  display: inline-flex;
+  gap: 7px;
+  min-height: 28px;
+  padding: 5px 9px;
+}
+
+.voice-keyword-chip small {
+  color: #49627a;
+  font-weight: 800;
+}
+
+.voice-keyword-footer {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .voice-focus-log {
   background: #edf5fb;
   border: 1px solid rgb(8 34 74 / 10%);
@@ -2378,6 +2455,111 @@ button.danger {
   display: grid;
   gap: 4px;
   padding: 8px 10px;
+}
+
+.voice-log-segment {
+  gap: 10px;
+}
+
+.voice-log-segment header {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.voice-log-segment header span {
+  background: #edf5fb;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 999px;
+  color: #08224a;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 8px;
+}
+
+.voice-log-metadata {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.voice-log-metadata div {
+  background: #f6f9fc;
+  border: 1px solid rgb(8 34 74 / 8%);
+  border-radius: 9px;
+  padding: 7px 8px;
+}
+
+.voice-log-metadata dt,
+.voice-log-segment h3 {
+  color: #08224a;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.voice-log-metadata dd,
+.voice-log-segment p,
+.voice-log-empty {
+  color: #49627a;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.voice-log-segment section {
+  display: grid;
+  gap: 5px;
+}
+
+.voice-log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.voice-log-chips span {
+  background: #edf5fb;
+  border: 1px solid rgb(8 34 74 / 8%);
+  border-radius: 999px;
+  color: #08224a;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 7px;
+}
+
+.voice-log-candidates {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.voice-log-candidates div {
+  background: #f6f9fc;
+  border: 1px solid rgb(8 34 74 / 8%);
+  border-radius: 9px;
+  display: grid;
+  gap: 3px;
+  padding: 7px 8px;
+}
+
+.voice-log-candidates span {
+  color: #49627a;
+  font-size: 11px;
+}
+
+.voice-log-segment details summary {
+  color: #49627a;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.voice-log-session span {
+  color: #49627a;
+  font-size: 12px;
 }
 
 .voice-focus-log article strong {
@@ -2423,8 +2605,12 @@ button.danger {
   .voice-focus-main,
   .voice-capture-grid,
   .voice-replay-grid,
+  .voice-keyword-editor-grid,
+  .voice-keyword-footer,
   .voice-segment-debug,
-  .voice-topic-state {
+  .voice-topic-state,
+  .voice-log-metadata,
+  .voice-log-candidates {
     grid-template-columns: 1fr;
   }
 

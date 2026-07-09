@@ -9,6 +9,15 @@ import {
 } from "../lib/focusController.js";
 import { rankChartMatches } from "../lib/conversationMatcher.js";
 import {
+  addChartKeywords,
+  applyChartKeywordOverrides,
+  clearChartKeywordOverrides,
+  panelKeywordView,
+  readChartKeywordOverrides,
+  removeChartKeyword,
+  restoreChartKeyword,
+} from "../lib/chartKeywordOverrides.js";
+import {
   addVoiceFeedback,
   clearVoiceFeedback,
   readVoiceFeedback,
@@ -40,6 +49,9 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   const [recording, setRecording] = React.useState(false);
   const [autoFocus, setAutoFocus] = React.useState(true);
   const [aliases, setAliases] = React.useState({});
+  const [keywordOverrides, setKeywordOverrides] = React.useState(() => readChartKeywordOverrides());
+  const [selectedKeywordPanelId, setSelectedKeywordPanelId] = React.useState("");
+  const [keywordDraft, setKeywordDraft] = React.useState("");
   const [transcriptionBackend, setTranscriptionBackend] = React.useState("whisper");
   const [focusMode, setFocusMode] = React.useState("semantic");
   const [maxFocusPanels, setMaxFocusPanels] = React.useState(DEFAULT_MAX_FOCUS_PANELS);
@@ -70,6 +82,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   const segmentTimerRef = React.useRef(null);
   const recordingRequestedRef = React.useRef(false);
   const audioSourceLabelRef = React.useRef("Browser default microphone");
+  const segmentSequenceRef = React.useRef(0);
   const lastAudioUrlRef = React.useRef("");
   const replayAudioRef = React.useRef(null);
   const replayAudioUrlRef = React.useRef("");
@@ -81,13 +94,27 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   const activeSessionRef = React.useRef(null);
   const pendingTranscriptionsRef = React.useRef(0);
 
+  const chartAliasConfig = React.useMemo(
+    () => applyChartKeywordOverrides(aliases, keywordOverrides),
+    [aliases, keywordOverrides],
+  );
   const chartIndex = React.useMemo(
-    () => buildChartSearchIndex(dashboard, aliases),
-    [dashboard, aliases],
+    () => buildChartSearchIndex(dashboard, chartAliasConfig),
+    [dashboard, chartAliasConfig],
   );
   const transcriptText = transcriptParts.join(" ");
   const activeSegmentCount = Math.max(0, segmentStats.sent - segmentStats.completed - segmentStats.failed);
   const maxFocusPanelCount = clampFocusPanelLimit(maxFocusPanels);
+  const selectedKeywordPanel = selectedKeywordPanelId
+    ? chartIndex.find((record) => record.panelId === selectedKeywordPanelId)
+    : chartIndex[0];
+  const selectedKeywordPanelView = selectedKeywordPanel
+    ? panelKeywordView(selectedKeywordPanel.panelId, aliases, keywordOverrides)
+    : null;
+  const groupedFocusLog = React.useMemo(
+    () => groupFocusLogEntries(focusLogEntries, 12),
+    [focusLogEntries],
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -148,6 +175,12 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   React.useEffect(() => {
     maxFocusPanelsRef.current = maxFocusPanels;
   }, [maxFocusPanels]);
+
+  React.useEffect(() => {
+    if (!selectedKeywordPanelId && chartIndex.length > 0) {
+      setSelectedKeywordPanelId(chartIndex[0].panelId);
+    }
+  }, [chartIndex, selectedKeywordPanelId]);
 
   React.useEffect(() => () => {
     stopRecording();
@@ -310,12 +343,21 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     recorder.onstop = () => {
       if (chunks.length > 0) {
         const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        const segmentContext = {
+          segmentId: `segment-${segmentSequenceRef.current + 1}`,
+          recordedAt: new Date().toISOString(),
+          source: audioSourceLabelRef.current || selectedMicLabel(audioDevices, selectedDeviceId),
+          durationSeconds: Math.round(segmentDurationMs(captureSettings) / 1000),
+          sizeKb: Math.round(audioBlob.size / 1024),
+          mimeType: audioBlob.type,
+        };
+        segmentSequenceRef.current += 1;
         rememberLastAudio(audioBlob);
         setSegmentStats((current) => ({
           ...current,
           recorded: current.recorded + 1,
         }));
-        transcribeAudioChunk(audioBlob);
+        transcribeAudioChunk(audioBlob, segmentContext);
       }
       if (recordingRequestedRef.current) {
         window.setTimeout(() => startRecordingSegment(stream), 50);
@@ -334,12 +376,14 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     }, segmentDurationMs(captureSettings));
   }
 
-  async function transcribeAudioChunk(blob) {
+  async function transcribeAudioChunk(blob, segmentContext) {
     const formData = new FormData();
     formData.append("audio", blob, `voice-focus-${Date.now()}.webm`);
     formData.append("backend", transcriptionBackend);
     setSegmentState("transcribing");
     appendLog("transcribe-request", {
+      segmentId: segmentContext?.segmentId,
+      segment: segmentContext,
       transcriptionBackend,
       mimeType: blob.type,
       sizeKb: Math.round(blob.size / 1024),
@@ -359,10 +403,11 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       }
       const result = await response.json();
       appendLog("transcribe-response", {
+        segmentId: segmentContext?.segmentId,
         textLength: String(result.text ?? "").trim().length,
         textPreview: String(result.text ?? "").trim().slice(0, 240),
       });
-      appendTranscript(result.text);
+      appendTranscript(result.text, segmentContext);
       setSegmentStats((current) => ({
         ...current,
         completed: current.completed + 1,
@@ -375,6 +420,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       }));
       setSegmentState(recordingRequestedRef.current ? "recording" : "idle");
       appendLog("transcribe-error", {
+        segmentId: segmentContext?.segmentId,
         message: error.message,
       });
       setStatusMessage(`Transcription paused: ${error.message}`);
@@ -405,10 +451,11 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     }
   }
 
-  function appendTranscript(text) {
+  function appendTranscript(text, segmentContext = null) {
     const cleanText = String(text ?? "").trim();
     if (!cleanText) {
       appendLog("empty-transcript", {
+        segmentId: segmentContext?.segmentId,
         message: "The transcription service returned no text for this segment.",
       });
       setStatusMessage("Transcription returned no text for the last segment.");
@@ -417,15 +464,17 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     setStatusMessage("Transcript received; updating chart focus.");
     setTranscriptParts((current) => {
       const nextParts = [...current, cleanText].slice(-TRANSCRIPT_WINDOW_SIZE);
-      processFocusSegment(cleanText, nextParts);
+      processFocusSegment(cleanText, nextParts, segmentContext);
       return nextParts;
     });
   }
 
-  async function processFocusSegment(cleanText, nextParts) {
+  async function processFocusSegment(cleanText, nextParts, segmentContext = null) {
     const nextTranscript = nextParts.join(" ");
     const maxPanelCount = clampFocusPanelLimit(maxFocusPanelsRef.current);
     appendLog("transcript", {
+      segmentId: segmentContext?.segmentId,
+      recordedAt: segmentContext?.recordedAt,
       text: cleanText,
       rollingTranscript: nextTranscript,
       transcriptionBackend,
@@ -443,14 +492,32 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     setTopicSummary(semanticUpdate.state.summary);
     setMatches(semanticUpdate.matches);
     appendLog("topic", {
+      segmentId: segmentContext?.segmentId,
       summary: semanticUpdate.state.summary,
       topicTerms: semanticUpdate.state.topicTerms,
     });
-    appendLog("embedding", semanticUpdate.embedding);
+    appendLog("embedding", {
+      segmentId: segmentContext?.segmentId,
+      ...semanticUpdate.embedding,
+    });
+    appendLog("candidates", {
+      segmentId: segmentContext?.segmentId,
+      candidates: semanticUpdate.candidates.map((candidate) => ({
+        panelId: candidate.panelId,
+        title: candidate.title,
+        pageLabel: candidate.pageLabel,
+        sectionTitle: candidate.sectionTitle,
+        score: candidate.score,
+        confidence: candidate.confidence,
+        matchedTerms: candidate.matchedTerms,
+        reason: candidate.reason,
+      })),
+    });
 
     let decision = semanticUpdate.decision;
     if (focusModeRef.current === "llm" && semanticUpdate.candidates.length > 0) {
       appendLog("llm-request", {
+        segmentId: segmentContext?.segmentId,
         candidatePanelIds: semanticUpdate.candidates.map((match) => match.panelId),
         maxSelectedCharts: maxPanelCount,
       });
@@ -469,18 +536,27 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
           pendingSignature: "",
           pendingCount: 0,
         };
-        appendLog("llm-response", judgeResult);
+        appendLog("llm-response", {
+          segmentId: segmentContext?.segmentId,
+          ...judgeResult,
+        });
       } catch (error) {
         decision = {
           ...semanticUpdate.decision,
           reason: `${semanticUpdate.decision.reason} LLM judge unavailable: ${error.message}`,
         };
-        appendLog("llm-error", { message: error.message });
+        appendLog("llm-error", {
+          segmentId: segmentContext?.segmentId,
+          message: error.message,
+        });
       }
     }
 
     setFocusDecision(decision);
-    appendLog("decision", decision);
+    appendLog("decision", {
+      segmentId: segmentContext?.segmentId,
+      ...decision,
+    });
     maybeOpenFocus(decision, semanticUpdate.matches, nextTranscript, semanticUpdate.state.summary);
   }
 
@@ -534,7 +610,34 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   function clearTranscript() {
     setTranscriptParts([]);
     setMatches([]);
+    segmentSequenceRef.current = 0;
     lastFocusedSignatureRef.current = "";
+  }
+
+  function addKeywordsToSelectedPanel() {
+    if (!selectedKeywordPanel?.panelId || !keywordDraft.trim()) {
+      return;
+    }
+    setKeywordOverrides(addChartKeywords(keywordOverrides, selectedKeywordPanel.panelId, keywordDraft));
+    setKeywordDraft("");
+  }
+
+  function removeKeywordFromSelectedPanel(keyword, isDefaultKeyword) {
+    if (!selectedKeywordPanel?.panelId) {
+      return;
+    }
+    setKeywordOverrides(removeChartKeyword(keywordOverrides, selectedKeywordPanel.panelId, keyword, isDefaultKeyword));
+  }
+
+  function restoreKeywordToSelectedPanel(keyword) {
+    if (!selectedKeywordPanel?.panelId) {
+      return;
+    }
+    setKeywordOverrides(restoreChartKeyword(keywordOverrides, selectedKeywordPanel.panelId, keyword));
+  }
+
+  function resetKeywordOverrides() {
+    setKeywordOverrides(clearChartKeywordOverrides());
   }
 
   async function refreshAudioDevices() {
@@ -573,6 +676,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     setLogSaveMessage("");
     setTranscriptParts([]);
     setMatches([]);
+    segmentSequenceRef.current = 0;
     setTopicSummary("Waiting for a stable discussion topic.");
     setFocusDecision(null);
     lastFocusedSignatureRef.current = "";
@@ -601,10 +705,11 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       focusMode: focusModeRef.current,
     });
     const entries = [...focusLogRef.current];
+    const readableEntries = groupFocusLogEntries(entries);
     activeSessionRef.current = null;
-    saveVoiceFocusLog(serviceUrl, session, entries)
+    saveVoiceFocusLog(serviceUrl, session, entries, readableEntries)
       .then((result) => {
-        setLogSaveMessage(result?.path ? `Saved log: ${result.path}` : "Saved voice focus log.");
+        setLogSaveMessage(result?.readablePath ? `Saved readable log: ${result.readablePath}` : result?.path ? `Saved log: ${result.path}` : "Saved voice focus log.");
       })
       .catch((error) => {
         setLogSaveMessage(`Log save failed: ${error.message}`);
@@ -906,18 +1011,91 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
         <button type="button" className="secondary voice-reset-button" onClick={resetFeedback} disabled={feedbackRecords.length === 0}>
           Reset voice learning
         </button>
+        <details className="voice-keyword-editor">
+          <summary>Chart matching keywords</summary>
+          <div className="voice-keyword-editor-grid">
+            <label className="voice-capture-field">
+              Chart or panel
+              <select
+                value={selectedKeywordPanel?.panelId ?? ""}
+                onChange={(event) => setSelectedKeywordPanelId(event.target.value)}
+              >
+                {chartIndex.map((record) => (
+                  <option key={record.panelId} value={record.panelId}>
+                    {record.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="voice-capture-field voice-keyword-input">
+              Add keyword or phrase
+              <span>
+                <input
+                  type="text"
+                  value={keywordDraft}
+                  onChange={(event) => setKeywordDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addKeywordsToSelectedPanel();
+                    }
+                  }}
+                  placeholder="e.g. intensive care pressure"
+                />
+                <button type="button" className="secondary" onClick={addKeywordsToSelectedPanel} disabled={!keywordDraft.trim()}>
+                  Add
+                </button>
+              </span>
+            </label>
+          </div>
+          {selectedKeywordPanel ? (
+            <div className="voice-keyword-panel">
+              <div>
+                <strong>{selectedKeywordPanel.title}</strong>
+                <small>{selectedKeywordPanel.pageLabel} / {selectedKeywordPanel.sectionTitle}</small>
+              </div>
+              <KeywordList
+                title="Active default keywords"
+                keywords={selectedKeywordPanelView?.defaultKeywords}
+                emptyText="No default keywords."
+                onRemove={(keyword) => removeKeywordFromSelectedPanel(keyword, true)}
+              />
+              <KeywordList
+                title="Added test keywords"
+                keywords={selectedKeywordPanelView?.addedKeywords}
+                emptyText="No local keywords added."
+                onRemove={(keyword) => removeKeywordFromSelectedPanel(keyword, false)}
+              />
+              <KeywordList
+                title="Removed default keywords"
+                keywords={selectedKeywordPanelView?.removedKeywords}
+                emptyText="No default keywords removed."
+                actionLabel="Restore"
+                onRemove={restoreKeywordToSelectedPanel}
+              />
+            </div>
+          ) : (
+            <p className="voice-capture-note">No selectable charts found.</p>
+          )}
+          <div className="voice-keyword-footer">
+            <p className="voice-capture-note">
+              Keyword edits are stored in this browser and immediately affect voice matching. They do not change the dashboard config file.
+            </p>
+            <button type="button" className="secondary" onClick={resetKeywordOverrides} disabled={Object.keys(keywordOverrides).length === 0}>
+              Reset keyword edits
+            </button>
+          </div>
+        </details>
         <details className="voice-focus-log" open>
           <summary>Focus log</summary>
           <div>
             {focusLogEntries.length === 0 ? (
               <span>No focus log entries yet.</span>
             ) : (
-              focusLogEntries.map((entry, index) => (
-                <article key={`${entry.at}-${entry.type}-${index}`}>
-                  <strong>{entry.type}</strong>
-                  <small>{new Date(entry.at).toLocaleTimeString()}</small>
-                  <pre>{JSON.stringify(logEntryPreview(entry), null, 2)}</pre>
-                </article>
+              groupedFocusLog.map((group) => (
+                group.kind === "segment"
+                  ? <SegmentLogCard key={group.segmentId} group={group} />
+                  : <SessionLogCard key={`${group.at}-${group.type}`} entry={group} />
               ))
             )}
           </div>
@@ -925,6 +1103,140 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
         </details>
       </div>
     </section>
+  );
+}
+
+function KeywordList({ title, keywords = [], emptyText, actionLabel = "Remove", onRemove }) {
+  return (
+    <div className="voice-keyword-list">
+      <strong>{title}</strong>
+      {keywords.length === 0 ? (
+        <span>{emptyText}</span>
+      ) : (
+        <div>
+          {keywords.map((keyword) => (
+            <button type="button" className="voice-keyword-chip" key={keyword} onClick={() => onRemove(keyword)}>
+              <span>{keyword}</span>
+              <small>{actionLabel}</small>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SegmentLogCard({ group }) {
+  const segment = group.segment ?? {};
+  const transcript = group.transcript?.text ?? group.response?.textPreview ?? "";
+  const topicTerms = group.topic?.topicTerms ?? group.embedding?.terms ?? [];
+  const candidates = group.candidates?.candidates ?? group.embedding?.candidateScores ?? [];
+  const decision = group.decision;
+  return (
+    <article className="voice-log-segment">
+      <header>
+        <div>
+          <strong>{segmentLabel(group.segmentId)}</strong>
+          <small>{formatLocalTime(segment.recordedAt ?? group.at)}{segment.source ? ` / ${segment.source}` : ""}</small>
+        </div>
+        <span>{group.error ? "Transcription error" : decision?.action ?? "Processing"}</span>
+      </header>
+      <dl className="voice-log-metadata">
+        <div>
+          <dt>Backend</dt>
+          <dd>{group.request?.transcriptionBackend ?? group.transcript?.transcriptionBackend ?? "Not recorded"}</dd>
+        </div>
+        <div>
+          <dt>Audio</dt>
+          <dd>{segment.durationSeconds ?? "-"}s / {segment.sizeKb ?? group.request?.sizeKb ?? "-"} KB</dd>
+        </div>
+        <div>
+          <dt>Focus action</dt>
+          <dd>{decision?.action ?? "No decision yet"}</dd>
+        </div>
+      </dl>
+      <section>
+        <h3>Transcript</h3>
+        <p>{transcript || group.error?.message || "No transcript yet."}</p>
+      </section>
+      <section>
+        <h3>Topic summary</h3>
+        <p>{group.topic?.summary ?? "No topic update yet."}</p>
+        <ChipRow values={topicTerms} emptyText="No topic terms yet." />
+      </section>
+      <section>
+        <h3>Embedding</h3>
+        <p>{group.embedding?.model ?? "No embedding update yet."}</p>
+        <ChipRow values={group.embedding?.terms} emptyText="No embedding terms yet." />
+      </section>
+      <section>
+        <h3>Potential matches</h3>
+        <PanelCandidateList candidates={candidates} />
+      </section>
+      <section>
+        <h3>Decision</h3>
+        {decision ? (
+          <>
+            <p>{decision.reason}</p>
+            <ChipRow values={decision.panelIds} emptyText="No panels selected." />
+          </>
+        ) : (
+          <p>No chart focus decision yet.</p>
+        )}
+      </section>
+      {group.llmRequest || group.llmResponse || group.llmError ? (
+        <section>
+          <h3>LLM judge</h3>
+          <p>{group.llmError?.message ?? group.llmResponse?.reason ?? "Request sent to chart judge."}</p>
+          <ChipRow values={group.llmRequest?.candidatePanelIds ?? group.llmResponse?.selectedPanelIds} emptyText="No LLM panel list recorded." />
+        </section>
+      ) : null}
+      <details>
+        <summary>Raw events</summary>
+        <pre>{JSON.stringify(group.entries.map(logEntryPreview), null, 2)}</pre>
+      </details>
+    </article>
+  );
+}
+
+function SessionLogCard({ entry }) {
+  return (
+    <article className="voice-log-session">
+      <strong>{entry.type}</strong>
+      <small>{formatLocalTime(entry.at)}</small>
+      <span>{sessionLogSummary(entry)}</span>
+    </article>
+  );
+}
+
+function ChipRow({ values = [], emptyText }) {
+  const cleanValues = [...new Set((values ?? []).map(String).filter(Boolean))];
+  if (cleanValues.length === 0) {
+    return <span className="voice-log-empty">{emptyText}</span>;
+  }
+  return (
+    <div className="voice-log-chips">
+      {cleanValues.map((value) => <span key={value}>{value}</span>)}
+    </div>
+  );
+}
+
+function PanelCandidateList({ candidates = [] }) {
+  if (!candidates.length) {
+    return <span className="voice-log-empty">No candidate panels yet.</span>;
+  }
+  return (
+    <div className="voice-log-candidates">
+      {candidates.slice(0, 8).map((candidate) => (
+        <div key={candidate.panelId}>
+          <strong>{candidate.title ?? candidate.panelId}</strong>
+          <small>
+            {candidate.panelId} / score {candidate.score ?? "-"}{candidate.confidence ? ` / ${candidate.confidence}` : ""}
+          </small>
+          <span>{candidate.reason ?? formatMatchedTerms(candidate.matchedTerms)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -990,6 +1302,97 @@ function focusReason(matches, transcriptText, decision, topicSummary) {
     transcriptSnippet: transcriptText.slice(-280),
     topicSummary,
   };
+}
+
+function groupFocusLogEntries(entries, limit = 0) {
+  const grouped = [];
+  const segmentGroups = new Map();
+  for (const entry of entries ?? []) {
+    if (!entry.segmentId) {
+      grouped.push({ kind: "session", ...entry });
+      continue;
+    }
+    let group = segmentGroups.get(entry.segmentId);
+    if (!group) {
+      group = {
+        kind: "segment",
+        segmentId: entry.segmentId,
+        at: entry.at,
+        entries: [],
+      };
+      segmentGroups.set(entry.segmentId, group);
+      grouped.push(group);
+    }
+    group.entries.push(entry);
+    group.at = group.at ?? entry.at;
+    if (entry.segment) {
+      group.segment = entry.segment;
+    }
+    if (entry.type === "transcribe-request") {
+      group.request = entry;
+    }
+    if (entry.type === "transcribe-response") {
+      group.response = entry;
+    }
+    if (entry.type === "transcribe-error" || entry.type === "empty-transcript") {
+      group.error = entry;
+    }
+    if (entry.type === "transcript") {
+      group.transcript = entry;
+    }
+    if (entry.type === "topic") {
+      group.topic = entry;
+    }
+    if (entry.type === "embedding") {
+      group.embedding = entry;
+    }
+    if (entry.type === "candidates") {
+      group.candidates = entry;
+    }
+    if (entry.type === "decision") {
+      group.decision = entry;
+    }
+    if (entry.type === "llm-request") {
+      group.llmRequest = entry;
+    }
+    if (entry.type === "llm-response") {
+      group.llmResponse = entry;
+    }
+    if (entry.type === "llm-error") {
+      group.llmError = entry;
+    }
+  }
+  return limit > 0 ? grouped.slice(-limit) : grouped;
+}
+
+function segmentLabel(segmentId) {
+  const number = String(segmentId ?? "").match(/\d+/)?.[0];
+  return number ? `Audio segment ${number}` : "Audio segment";
+}
+
+function formatLocalTime(value) {
+  if (!value) {
+    return "Time not recorded";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleTimeString();
+}
+
+function formatMatchedTerms(terms = []) {
+  return terms.length ? `Matched ${terms.join(", ")}` : "No matched terms recorded.";
+}
+
+function sessionLogSummary(entry) {
+  if (entry.type === "session-start") {
+    return `Session started in ${entry.focusMode ?? entry.mode ?? "unknown"} mode with ${entry.maxFocusPanels ?? "-"} max focus charts.`;
+  }
+  if (entry.type === "session-stop") {
+    return "Session stopped; log save will run after pending transcriptions finish.";
+  }
+  if (entry.type === "replay-start") {
+    return `Replay file: ${entry.fileName ?? "unknown file"}.`;
+  }
+  return JSON.stringify(logEntryPreview(entry));
 }
 
 function logEntryPreview(entry) {

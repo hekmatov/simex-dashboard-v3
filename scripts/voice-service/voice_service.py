@@ -56,6 +56,9 @@ GEMINI_PROMPT = os.getenv(
 )
 DEFAULT_VOICE_LOG_DIR = Path(__file__).resolve().parents[2] / "voice-logs"
 VOICE_LOG_DIR = Path(os.getenv("SIMEX_VOICE_LOG_DIR", str(DEFAULT_VOICE_LOG_DIR)))
+VOICE_READABLE_LOG_DIR = Path(
+    os.getenv("SIMEX_VOICE_READABLE_LOG_DIR", str(VOICE_LOG_DIR / "readable"))
+)
 FOCUS_JUDGE_PROMPT = os.getenv(
     "SIMEX_FOCUS_JUDGE_PROMPT",
     (
@@ -132,12 +135,12 @@ class VoiceRequestHandler(BaseHTTPRequestHandler):
     def _handle_voice_log(self) -> None:
         try:
             payload = self._read_json_body()
-            saved_path = save_voice_log(payload)
+            saved_path, readable_path = save_voice_log(payload)
         except Exception as error:
             self._send_json({"error": str(error)}, status=503)
             return
 
-        self._send_json({"ok": True, "path": str(saved_path)})
+        self._send_json({"ok": True, "path": str(saved_path), "readablePath": str(readable_path)})
 
     def _read_json_body(self) -> dict:
         content_type = self.headers.get("Content-Type", "")
@@ -353,18 +356,129 @@ def extract_json_object(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
-def save_voice_log(payload: dict) -> Path:
+def save_voice_log(payload: dict) -> tuple[Path, Path]:
     session = payload.get("session") or {}
     session_id = safe_filename(str(session.get("id") or "voice-focus-log"))
     VOICE_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    VOICE_READABLE_LOG_DIR.mkdir(parents=True, exist_ok=True)
     saved_path = VOICE_LOG_DIR / f"{session_id}.json"
+    readable_path = VOICE_READABLE_LOG_DIR / f"{session_id}.md"
     saved_payload = {
         "session": session,
         "stoppedAt": payload.get("stoppedAt"),
         "entries": payload.get("entries", []),
+        "readableEntries": payload.get("readableEntries", []),
     }
     saved_path.write_text(json.dumps(saved_payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    return saved_path
+    readable_path.write_text(render_readable_voice_log(saved_payload), encoding="utf-8")
+    return saved_path, readable_path
+
+
+def render_readable_voice_log(payload: dict) -> str:
+    session = payload.get("session") or {}
+    readable_entries = payload.get("readableEntries") or []
+    lines = [
+        f"# Voice Focus Log: {session.get('id', 'unknown session')}",
+        "",
+        f"- Started: {session.get('startedAt', 'unknown')}",
+        f"- Stopped: {payload.get('stoppedAt', 'unknown')}",
+        f"- Mode: {session.get('mode', 'unknown')}",
+        "",
+    ]
+    for entry in readable_entries:
+        if entry.get("kind") == "segment":
+            lines.extend(render_segment_log(entry))
+        else:
+            lines.extend(render_session_log(entry))
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_segment_log(group: dict) -> list[str]:
+    segment = group.get("segment") or {}
+    transcript = (group.get("transcript") or {}).get("text") or (group.get("response") or {}).get("textPreview") or ""
+    topic = group.get("topic") or {}
+    embedding = group.get("embedding") or {}
+    candidates = (group.get("candidates") or {}).get("candidates") or embedding.get("candidateScores") or []
+    decision = group.get("decision") or {}
+    error = group.get("error") or {}
+    lines = [
+        f"## {segment_label(group.get('segmentId'))}",
+        "",
+        f"- Recorded: {segment.get('recordedAt') or group.get('at') or 'unknown'}",
+        f"- Source: {segment.get('source', 'unknown')}",
+        f"- Audio: {segment.get('durationSeconds', '-')}s, {segment.get('sizeKb', '-')} KB, {segment.get('mimeType', 'unknown type')}",
+        f"- Backend: {(group.get('request') or group.get('transcript') or {}).get('transcriptionBackend', 'unknown')}",
+        f"- Focus action: {decision.get('action', 'none')}",
+        "",
+        "### Transcript",
+        "",
+        transcript or error.get("message") or "No transcript was recorded.",
+        "",
+        "### Topic Summary",
+        "",
+        topic.get("summary") or "No topic update was recorded.",
+        "",
+        f"- Topic terms: {join_list(topic.get('topicTerms') or embedding.get('terms'))}",
+        "",
+        "### Embedding",
+        "",
+        f"- Model: {embedding.get('model', 'not recorded')}",
+        f"- Terms: {join_list(embedding.get('terms'))}",
+        "",
+        "### Potential Panel Matches",
+        "",
+    ]
+    if candidates:
+        for candidate in candidates[:8]:
+            lines.append(
+                f"- {candidate.get('title') or candidate.get('panelId', 'unknown panel')} "
+                f"({candidate.get('panelId', 'no id')}): score {candidate.get('score', '-')}; "
+                f"matched {join_list(candidate.get('matchedTerms'))}"
+            )
+    else:
+        lines.append("- No candidate panels recorded.")
+    lines.extend([
+        "",
+        "### Decision",
+        "",
+        f"- Selected panels: {join_list(decision.get('panelIds'))}",
+        f"- Reason: {decision.get('reason', 'No decision recorded.')}",
+        "",
+    ])
+    if group.get("llmRequest") or group.get("llmResponse") or group.get("llmError"):
+        llm_response = group.get("llmResponse") or {}
+        llm_error = group.get("llmError") or {}
+        lines.extend([
+            "### LLM Judge",
+            "",
+            f"- Candidate panels: {join_list((group.get('llmRequest') or {}).get('candidatePanelIds'))}",
+            f"- Selected panels: {join_list(llm_response.get('selectedPanelIds'))}",
+            f"- Result: {llm_error.get('message') or llm_response.get('reason') or 'Request sent.'}",
+            "",
+        ])
+    return lines
+
+
+def render_session_log(entry: dict) -> list[str]:
+    return [
+        f"## {entry.get('type', 'session-event')}",
+        "",
+        f"- Time: {entry.get('at', 'unknown')}",
+        f"- Details: {json.dumps({k: v for k, v in entry.items() if k not in {'kind', 'at'}}, ensure_ascii=False)}",
+        "",
+    ]
+
+
+def segment_label(segment_id: object) -> str:
+    text = str(segment_id or "Audio segment")
+    digits = "".join(character for character in text if character.isdigit())
+    return f"Audio segment {digits}" if digits else "Audio segment"
+
+
+def join_list(values: object) -> str:
+    if not isinstance(values, list) or not values:
+        return "none"
+    return ", ".join(str(value) for value in values if value)
 
 
 def safe_filename(value: str) -> str:
