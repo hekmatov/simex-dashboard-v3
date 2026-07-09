@@ -2085,14 +2085,16 @@ button.danger {
   gap: 10px;
 }
 
-.voice-capture-settings {
+.voice-capture-settings,
+.voice-replay-settings {
   background: #edf5fb;
   border: 1px solid rgb(8 34 74 / 10%);
   border-radius: 14px;
   padding: 10px 12px;
 }
 
-.voice-capture-settings summary {
+.voice-capture-settings summary,
+.voice-replay-settings summary {
   color: #08224a;
   cursor: pointer;
   font-size: 13px;
@@ -2103,6 +2105,14 @@ button.danger {
   display: grid;
   gap: 9px;
   grid-template-columns: 2fr repeat(3, minmax(140px, 1fr));
+  margin-top: 10px;
+}
+
+.voice-replay-grid {
+  align-items: end;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
   margin-top: 10px;
 }
 
@@ -2123,6 +2133,12 @@ button.danger {
 }
 
 .voice-capture-field select {
+  min-width: 0;
+  width: 100%;
+}
+
+.voice-replay-file input {
+  font-size: 12px;
   min-width: 0;
   width: 100%;
 }
@@ -2406,6 +2422,7 @@ button.danger {
 @media (max-width: 900px) {
   .voice-focus-main,
   .voice-capture-grid,
+  .voice-replay-grid,
   .voice-segment-debug,
   .voice-topic-state {
     grid-template-columns: 1fr;

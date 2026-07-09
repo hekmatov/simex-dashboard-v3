@@ -59,6 +59,8 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   });
   const [lastAudioUrl, setLastAudioUrl] = React.useState("");
   const [lastAudioMeta, setLastAudioMeta] = React.useState(null);
+  const [replayFile, setReplayFile] = React.useState(null);
+  const [replayActive, setReplayActive] = React.useState(false);
   const [topicSummary, setTopicSummary] = React.useState("Waiting for a stable discussion topic.");
   const [focusDecision, setFocusDecision] = React.useState(null);
   const [focusLogEntries, setFocusLogEntries] = React.useState([]);
@@ -67,7 +69,10 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   const streamRef = React.useRef(null);
   const segmentTimerRef = React.useRef(null);
   const recordingRequestedRef = React.useRef(false);
+  const audioSourceLabelRef = React.useRef("Browser default microphone");
   const lastAudioUrlRef = React.useRef("");
+  const replayAudioRef = React.useRef(null);
+  const replayAudioUrlRef = React.useRef("");
   const lastFocusedSignatureRef = React.useRef("");
   const focusStateRef = React.useRef(createFocusState());
   const focusLogRef = React.useRef([]);
@@ -169,6 +174,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       });
       streamRef.current = stream;
       recordingRequestedRef.current = true;
+      audioSourceLabelRef.current = selectedMicLabel(audioDevices, selectedDeviceId);
       startVoiceFocusSession();
       refreshAudioDevices();
       startRecordingSegment(stream);
@@ -181,19 +187,110 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   }
 
   function stopRecording() {
+    const wasReplayActive = replayActive || Boolean(replayAudioRef.current);
     recordingRequestedRef.current = false;
     window.clearTimeout(segmentTimerRef.current);
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== "inactive") {
       recorder.stop();
     }
+    cleanupReplayAudio();
     streamRef.current?.getTracks?.().forEach((track) => track.stop());
     streamRef.current = null;
     recorderRef.current = null;
     setRecording(false);
     setSegmentState("idle");
     queueVoiceFocusSessionFinish();
-    setStatusMessage(serviceState === "available" ? "Voice focus ready." : "Local voice service is not running.");
+    setStatusMessage(wasReplayActive ? "Audio replay stopped." : serviceState === "available" ? "Voice focus ready." : "Local voice service is not running.");
+  }
+
+  async function startReplay() {
+    if (!replayFile) {
+      setStatusMessage("Choose a session recording file first.");
+      return;
+    }
+    if (serviceState !== "available") {
+      setStatusMessage(serviceState === "warming" ? "Wait for the voice service warm-up to finish." : "Start the local voice service before replay testing.");
+      return;
+    }
+    if (!window.MediaRecorder) {
+      setStatusMessage("This browser does not support audio segment recording.");
+      return;
+    }
+
+    if (recording) {
+      stopRecording();
+    }
+    cleanupReplayAudio();
+
+    const audio = new Audio();
+    const captureStream = audio.captureStream?.bind(audio) ?? audio.mozCaptureStream?.bind(audio);
+    if (!captureStream) {
+      setStatusMessage("This browser cannot capture audio file playback. Use Chrome or route system audio to a virtual microphone.");
+      return;
+    }
+
+    const replayUrl = URL.createObjectURL(replayFile);
+    replayAudioUrlRef.current = replayUrl;
+    replayAudioRef.current = audio;
+    audio.src = replayUrl;
+    audio.preload = "auto";
+    audio.volume = 1;
+    audioSourceLabelRef.current = `Replay: ${replayFile.name}`;
+    audio.onended = () => {
+      setStatusMessage("Replay ended; finishing voice focus session.");
+      stopRecording();
+    };
+    audio.onerror = () => {
+      setStatusMessage("Replay audio could not be played by the browser.");
+      stopRecording();
+    };
+
+    try {
+      await audio.play();
+      const stream = captureStream();
+      if (stream.getAudioTracks().length === 0) {
+        throw new Error("Replay produced no audio track.");
+      }
+      streamRef.current = stream;
+      recordingRequestedRef.current = true;
+      startVoiceFocusSession("replay");
+      appendLog("replay-start", {
+        fileName: replayFile.name,
+        fileSizeKb: Math.round(replayFile.size / 1024),
+        fileType: replayFile.type || "unknown",
+      });
+      startRecordingSegment(stream);
+      setRecording(true);
+      setReplayActive(true);
+      setSegmentState("recording");
+      setStatusMessage(`Replaying ${replayFile.name} through voice focus.`);
+    } catch (error) {
+      cleanupReplayAudio();
+      streamRef.current?.getTracks?.().forEach((track) => track.stop());
+      streamRef.current = null;
+      recordingRequestedRef.current = false;
+      setRecording(false);
+      setSegmentState("idle");
+      setStatusMessage(`Replay unavailable: ${error.message}`);
+    }
+  }
+
+  function cleanupReplayAudio() {
+    const audio = replayAudioRef.current;
+    if (audio) {
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+    replayAudioRef.current = null;
+    if (replayAudioUrlRef.current) {
+      URL.revokeObjectURL(replayAudioUrlRef.current);
+      replayAudioUrlRef.current = "";
+    }
+    setReplayActive(false);
   }
 
   function startRecordingSegment(stream) {
@@ -297,7 +394,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       recordedAt: new Date().toLocaleTimeString(),
       durationSeconds: Math.round(segmentDurationMs(captureSettings) / 1000),
       bitrateKbps: Math.round(Number(captureSettings.audioBitsPerSecond) / 1000),
-      micLabel: selectedMicLabel(audioDevices, selectedDeviceId),
+      micLabel: audioSourceLabelRef.current || selectedMicLabel(audioDevices, selectedDeviceId),
     });
   }
 
@@ -459,13 +556,14 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     }));
   }
 
-  function startVoiceFocusSession() {
+  function startVoiceFocusSession(source = "microphone") {
     const session = createVoiceFocusSession(focusModeRef.current);
     activeSessionRef.current = session;
     focusStateRef.current = createFocusState();
     focusLogRef.current = [
       createLogEntry("session-start", {
         sessionId: session.id,
+        source,
         focusMode: focusModeRef.current,
         maxFocusPanels: clampFocusPanelLimit(maxFocusPanelsRef.current),
         transcriptionBackend,
@@ -557,7 +655,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
         </div>
         <div className="voice-focus-actions">
           <button type="button" onClick={toggleRecording} disabled={serviceState !== "available"}>
-            {recording ? "Stop mic" : "Start mic"}
+            {recording ? (replayActive ? "Stop replay" : "Stop mic") : "Start mic"}
           </button>
           <label className="voice-focus-toggle">
             <input
@@ -712,6 +810,35 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
           <p className="voice-capture-note">
             Microphone, processing, sample rate, and channel changes apply after restarting the mic. Bitrate, segment length, and transcription backend apply to the next segment.
             Gemini sends audio segments to Google through the local voice service and requires GEMINI_API_KEY.
+          </p>
+        </details>
+        <details className="voice-replay-settings">
+          <summary>Test with recording</summary>
+          <div className="voice-replay-grid">
+            <label className="voice-capture-field voice-replay-file">
+              Session recording
+              <input
+                type="file"
+                accept="audio/*,video/*"
+                disabled={recording}
+                onChange={(event) => setReplayFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button
+              type="button"
+              className="secondary"
+              onClick={startReplay}
+              disabled={!replayFile || recording || serviceState !== "available"}
+            >
+              Start replay
+            </button>
+            <button type="button" className="secondary" onClick={stopRecording} disabled={!replayActive}>
+              Stop replay
+            </button>
+          </div>
+          <p className="voice-capture-note">
+            Replays a local recording through the same segmenting, transcription, matching, logging, and focus overlay path as the microphone. Current segment length, backend, and focus mode settings apply.
+            {replayFile ? ` Selected: ${replayFile.name}` : ""}
           </p>
         </details>
         <div className="voice-segment-debug" aria-label="Voice segment diagnostics">
