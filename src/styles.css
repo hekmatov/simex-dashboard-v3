@@ -1022,9 +1022,9 @@ th {
 
 .chart-panel-selected {
   background: #f0f7ff;
-  border-color: #043bcb;
+  border-color: var(--edit-highlight-color, #043bcb);
   box-shadow:
-    0 0 0 3px rgb(4 59 203 / 20%),
+    0 0 0 3px color-mix(in srgb, var(--edit-highlight-color, #043bcb) 24%, transparent),
     0 18px 46px rgb(8 34 74 / 16%);
 }
 .chart-panel-dragging {
@@ -2498,9 +2498,9 @@ button.danger {
 }
 
 .chart-panel-multi-selected {
-  border-color: #00a676;
+  border-color: var(--multi-select-highlight-color, #00a676);
   box-shadow:
-    0 0 0 3px rgb(0 166 118 / 24%),
+    0 0 0 3px color-mix(in srgb, var(--multi-select-highlight-color, #00a676) 26%, transparent),
     0 18px 46px rgb(8 34 74 / 16%);
 }
 

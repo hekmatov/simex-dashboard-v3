@@ -62,6 +62,8 @@ function ChartPanel({
         style={{
           backgroundColor: visualPanel.panelBackgroundColor,
           borderColor: visualPanel.panelBorderColor,
+          "--edit-highlight-color": visualPanel.editHighlightColor,
+          "--multi-select-highlight-color": visualPanel.multiSelectHighlightColor,
         }}
         onPointerDown={(event) => startPanelPointerDrag(event, panel.id)}
         onPointerMove={movePanelPointerDrag}
@@ -1259,7 +1261,11 @@ function slugify(value) {
 
 function resolvePanelColors(panel, globalPanelColors) {
   if (panel.useGlobalPanelColors === false) {
-    return panel;
+    return {
+      ...panel,
+      editHighlightColor: globalPanelColors?.editHighlightColor ?? panel.editHighlightColor,
+      multiSelectHighlightColor: globalPanelColors?.multiSelectHighlightColor ?? panel.multiSelectHighlightColor,
+    };
   }
   return {
     ...panel,
@@ -1267,6 +1273,8 @@ function resolvePanelColors(panel, globalPanelColors) {
     panelBorderColor: globalPanelColors?.panelBorderColor ?? panel.panelBorderColor,
     chartAreaColor: globalPanelColors?.chartAreaColor ?? panel.chartAreaColor,
     chartAreaBorderColor: globalPanelColors?.chartAreaBorderColor ?? panel.chartAreaBorderColor,
+    editHighlightColor: globalPanelColors?.editHighlightColor ?? panel.editHighlightColor,
+    multiSelectHighlightColor: globalPanelColors?.multiSelectHighlightColor ?? panel.multiSelectHighlightColor,
   };
 }
 

@@ -2,6 +2,7 @@ import React from "react";
 
 import { buildChartSearchIndex } from "../lib/chartSearchIndex.js";
 import {
+  clampFocusPanelLimit,
   createFocusState,
   normalizeJudgeDecision,
   updateSemanticFocusState,
@@ -22,6 +23,7 @@ import {
 const DEFAULT_SERVICE_URL = "http://127.0.0.1:8766";
 const TRANSCRIPT_WINDOW_SIZE = 8;
 const SEGMENT_DURATION_MS = 12000;
+const DEFAULT_MAX_FOCUS_PANELS = "2";
 const DEFAULT_CAPTURE_SETTINGS = {
   echoCancellation: false,
   noiseSuppression: false,
@@ -40,6 +42,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   const [aliases, setAliases] = React.useState({});
   const [transcriptionBackend, setTranscriptionBackend] = React.useState("whisper");
   const [focusMode, setFocusMode] = React.useState("semantic");
+  const [maxFocusPanels, setMaxFocusPanels] = React.useState(DEFAULT_MAX_FOCUS_PANELS);
   const [audioDevices, setAudioDevices] = React.useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = React.useState("");
   const [captureSettings, setCaptureSettings] = React.useState(DEFAULT_CAPTURE_SETTINGS);
@@ -69,6 +72,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   const focusStateRef = React.useRef(createFocusState());
   const focusLogRef = React.useRef([]);
   const focusModeRef = React.useRef(focusMode);
+  const maxFocusPanelsRef = React.useRef(DEFAULT_MAX_FOCUS_PANELS);
   const activeSessionRef = React.useRef(null);
   const pendingTranscriptionsRef = React.useRef(0);
 
@@ -78,6 +82,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   );
   const transcriptText = transcriptParts.join(" ");
   const activeSegmentCount = Math.max(0, segmentStats.sent - segmentStats.completed - segmentStats.failed);
+  const maxFocusPanelCount = clampFocusPanelLimit(maxFocusPanels);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -134,6 +139,10 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
   React.useEffect(() => {
     focusModeRef.current = focusMode;
   }, [focusMode]);
+
+  React.useEffect(() => {
+    maxFocusPanelsRef.current = maxFocusPanels;
+  }, [maxFocusPanels]);
 
   React.useEffect(() => () => {
     stopRecording();
@@ -318,6 +327,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
 
   async function processFocusSegment(cleanText, nextParts) {
     const nextTranscript = nextParts.join(" ");
+    const maxPanelCount = clampFocusPanelLimit(maxFocusPanelsRef.current);
     appendLog("transcript", {
       text: cleanText,
       rollingTranscript: nextTranscript,
@@ -329,6 +339,8 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       cleanText,
       chartIndex,
       feedbackRecords,
+      Date.now(),
+      { maxPanels: maxPanelCount },
     );
     focusStateRef.current = semanticUpdate.state;
     setTopicSummary(semanticUpdate.state.summary);
@@ -340,16 +352,18 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     appendLog("embedding", semanticUpdate.embedding);
 
     let decision = semanticUpdate.decision;
-    if (focusModeRef.current === "llm" && semanticUpdate.matches.length > 0) {
+    if (focusModeRef.current === "llm" && semanticUpdate.candidates.length > 0) {
       appendLog("llm-request", {
-        candidatePanelIds: semanticUpdate.matches.map((match) => match.panelId),
+        candidatePanelIds: semanticUpdate.candidates.map((match) => match.panelId),
+        maxSelectedCharts: maxPanelCount,
       });
       try {
-        const judgeResult = await requestFocusJudge(semanticUpdate, nextTranscript);
+        const judgeResult = await requestFocusJudge(semanticUpdate, nextTranscript, maxPanelCount);
         decision = normalizeJudgeDecision(
           judgeResult,
           semanticUpdate.matches,
           focusStateRef.current.selectedPanelIds,
+          { maxPanels: maxPanelCount },
         );
         focusStateRef.current = {
           ...focusStateRef.current,
@@ -395,9 +409,10 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     if (matches.length === 0) {
       return;
     }
+    const visibleMatches = matches.slice(0, maxFocusPanelCount);
     onOpenFocus(
-      matches.map((match) => match.panelId),
-      focusReason(matches, transcriptText, focusDecision, topicSummary),
+      visibleMatches.map((match) => match.panelId),
+      focusReason(visibleMatches, transcriptText, focusDecision, topicSummary),
     );
   }
 
@@ -410,13 +425,13 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       reason: match.reason,
     });
     setFeedbackRecords(nextRecords);
-    setMatches(rankChartMatches(transcriptText, chartIndex, nextRecords));
+    setMatches(rankChartMatches(transcriptText, chartIndex, nextRecords, { limit: maxFocusPanelCount }));
   }
 
   function resetFeedback() {
     clearVoiceFeedback();
     setFeedbackRecords([]);
-    setMatches(rankChartMatches(transcriptText, chartIndex, []));
+    setMatches(rankChartMatches(transcriptText, chartIndex, [], { limit: maxFocusPanelCount }));
   }
 
   function clearTranscript() {
@@ -452,6 +467,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
       createLogEntry("session-start", {
         sessionId: session.id,
         focusMode: focusModeRef.current,
+        maxFocusPanels: clampFocusPanelLimit(maxFocusPanelsRef.current),
         transcriptionBackend,
       }),
     ];
@@ -503,7 +519,7 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
     setFocusLogEntries(visibleLogEntries(focusLogRef.current));
   }
 
-  async function requestFocusJudge(semanticUpdate, nextTranscript) {
+  async function requestFocusJudge(semanticUpdate, nextTranscript, maxPanelCount) {
     const response = await fetch(`${serviceUrl}/focus-decision`, {
       method: "POST",
       headers: {
@@ -513,7 +529,8 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
         conversationSummary: semanticUpdate.state.summary,
         recentTranscript: nextTranscript,
         currentPanelIds: focusStateRef.current.selectedPanelIds,
-        candidateCharts: semanticUpdate.matches.map((match) => ({
+        maxSelectedCharts: maxPanelCount,
+        candidateCharts: semanticUpdate.candidates.map((match) => ({
           panelId: match.panelId,
           title: match.title,
           pageLabel: match.pageLabel,
@@ -581,6 +598,18 @@ export default function VoiceFocusControl({ dashboard, onOpenFocus }) {
               >
                 <option value="semantic">Semantic controller</option>
                 <option value="llm">LLM chart judge</option>
+              </select>
+            </label>
+            <label className="voice-capture-field">
+              Max focus charts
+              <select
+                value={maxFocusPanels}
+                onChange={(event) => setMaxFocusPanels(event.target.value)}
+              >
+                <option value="1">1 chart</option>
+                <option value="2">2 charts</option>
+                <option value="3">3 charts</option>
+                <option value="4">4 charts</option>
               </select>
             </label>
             <label className="voice-capture-field voice-capture-device">

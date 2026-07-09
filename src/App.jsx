@@ -22,6 +22,8 @@ const DEFAULT_GLOBAL_STYLES = {
     panelBorderColor: "#d8e2ec",
     chartAreaColor: "#eaf1f6",
     chartAreaBorderColor: "#d8e2ec",
+    editHighlightColor: "#043bcb",
+    multiSelectHighlightColor: "#00a676",
   },
 };
 
@@ -359,6 +361,8 @@ function sanitizeGlobalStyles(styles) {
       panelBorderColor: normalizeHexColor(panelColors.panelBorderColor, DEFAULT_GLOBAL_STYLES.panelColors.panelBorderColor),
       chartAreaColor: normalizeHexColor(panelColors.chartAreaColor, DEFAULT_GLOBAL_STYLES.panelColors.chartAreaColor),
       chartAreaBorderColor: normalizeHexColor(panelColors.chartAreaBorderColor, DEFAULT_GLOBAL_STYLES.panelColors.chartAreaBorderColor),
+      editHighlightColor: normalizeHexColor(panelColors.editHighlightColor, DEFAULT_GLOBAL_STYLES.panelColors.editHighlightColor),
+      multiSelectHighlightColor: normalizeHexColor(panelColors.multiSelectHighlightColor, DEFAULT_GLOBAL_STYLES.panelColors.multiSelectHighlightColor),
     },
   };
 }

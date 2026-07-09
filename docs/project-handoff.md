@@ -458,6 +458,7 @@ http://localhost:5173/
 - Map panels reserve map-body dragging for panning the map; in edit mode, drag the card border/header area when the goal is to reorder the panel.
 - New charts are inserted at the top of the target section.
 - Edit mode includes a global panel color selector for default panel background, panel border, chart background, and chart border colors.
+- Global panel colors also control the active edit highlight and multi-fullscreen selection highlight.
 - Each panel inherits the global panel colors by default.
 - A panel can opt out and keep custom panel/chart colors in its own settings.
 - Panel size options are:

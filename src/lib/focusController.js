@@ -1,8 +1,13 @@
 import { normalizeText, tokenize } from "./chartSearchIndex.js";
-import { rankChartMatches } from "./conversationMatcher.js";
+import { isCommonVoiceWord, rankChartMatches } from "./conversationMatcher.js";
 
 const MAX_SEGMENTS = 24;
 const MAX_SUMMARY_TERMS = 14;
+const DEFAULT_MAX_FOCUS_PANELS = 2;
+const MAX_FOCUS_PANELS = 4;
+const INTERNAL_CANDIDATE_LIMIT = 8;
+const MIN_ADDITIONAL_PANEL_SCORE = 2.2;
+const ADDITIONAL_PANEL_SCORE_RATIO = 0.64;
 const SWITCH_MARGIN = 1.18;
 const MIN_SWITCH_SECONDS = 28;
 
@@ -18,7 +23,8 @@ export function createFocusState() {
   };
 }
 
-export function updateSemanticFocusState(previousState, transcriptSegment, chartIndex, feedbackRecords = [], now = Date.now()) {
+export function updateSemanticFocusState(previousState, transcriptSegment, chartIndex, feedbackRecords = [], now = Date.now(), options = {}) {
+  const maxPanels = clampFocusPanelLimit(options.maxPanels);
   const cleanSegment = String(transcriptSegment ?? "").trim();
   const segments = cleanSegment
     ? [...previousState.segments, { text: cleanSegment, at: now }].slice(-MAX_SEGMENTS)
@@ -34,11 +40,11 @@ export function updateSemanticFocusState(previousState, transcriptSegment, chart
     recentText,
   ].join(" ");
   const candidates = rankChartMatches(contextText, chartIndex, feedbackRecords, {
-    limit: 8,
+    limit: INTERNAL_CANDIDATE_LIMIT,
     minimumScore: 1,
   });
-  const focusCandidates = candidates.slice(0, 4);
-  const decision = stableDecision(previousState, focusCandidates, now);
+  const focusCandidates = selectFocusCandidates(candidates, maxPanels);
+  const decision = stableDecision(previousState, focusCandidates, now, maxPanels);
 
   return {
     state: {
@@ -67,25 +73,52 @@ export function updateSemanticFocusState(previousState, transcriptSegment, chart
   };
 }
 
-export function normalizeJudgeDecision(result, fallbackMatches, previousPanelIds = []) {
-  const fallbackIds = fallbackMatches.map((match) => match.panelId).slice(0, 4);
+export function normalizeJudgeDecision(result, fallbackMatches, previousPanelIds = [], options = {}) {
+  const maxPanels = clampFocusPanelLimit(options.maxPanels);
+  const fallbackIds = selectFocusCandidates(fallbackMatches, maxPanels).map((match) => match.panelId);
   const panelIds = Array.isArray(result?.selectedPanelIds)
-    ? result.selectedPanelIds.map(String).filter(Boolean).slice(0, 4)
+    ? result.selectedPanelIds.map(String).filter(Boolean).slice(0, maxPanels)
     : fallbackIds;
   return {
-    panelIds: panelIds.length ? panelIds : previousPanelIds.slice(0, 4),
-    action: result?.action ?? (sameSignature(panelIds, previousPanelIds) ? "keep" : "update"),
+    panelIds: panelIds.length ? panelIds : previousPanelIds.slice(0, maxPanels),
+    action: result?.action ?? (sameSignature(panelIds, previousPanelIds, maxPanels) ? "keep" : "update"),
     confidence: Number(result?.confidence ?? fallbackMatches[0]?.score ?? 0),
     reason: result?.reason ?? "Used fallback semantic candidates.",
   };
 }
 
-function stableDecision(previousState, candidates, now) {
+export function clampFocusPanelLimit(value) {
+  const number = Number(value);
+  return Math.min(Math.max(Number.isFinite(number) ? Math.round(number) : DEFAULT_MAX_FOCUS_PANELS, 1), MAX_FOCUS_PANELS);
+}
+
+function selectFocusCandidates(candidates, maxPanels) {
+  const limit = clampFocusPanelLimit(maxPanels);
+  const [topCandidate, ...rest] = candidates;
+  if (!topCandidate) {
+    return [];
+  }
+  const selected = [topCandidate];
+  for (const candidate of rest) {
+    if (selected.length >= limit) {
+      break;
+    }
+    const strongEnough = candidate.score >= MIN_ADDITIONAL_PANEL_SCORE;
+    const closeEnough = candidate.score >= topCandidate.score * ADDITIONAL_PANEL_SCORE_RATIO;
+    if (strongEnough && closeEnough) {
+      selected.push(candidate);
+    }
+  }
+  return selected;
+}
+
+function stableDecision(previousState, candidates, now, maxPanels) {
+  const previousPanelIds = previousState.selectedPanelIds.slice(0, maxPanels);
   const candidateIds = candidates.map((candidate) => candidate.panelId);
   if (candidateIds.length === 0) {
     return {
       action: "keep",
-      panelIds: previousState.selectedPanelIds,
+      panelIds: previousPanelIds,
       selectedSince: previousState.selectedSince,
       pendingSignature: "",
       pendingCount: 0,
@@ -93,23 +126,23 @@ function stableDecision(previousState, candidates, now) {
     };
   }
 
-  if (previousState.selectedPanelIds.length === 0) {
+  if (previousPanelIds.length === 0) {
     return {
       action: "initial",
       panelIds: candidateIds,
       selectedSince: now,
-      pendingSignature: signature(candidateIds),
+      pendingSignature: signature(candidateIds, maxPanels),
       pendingCount: 0,
       reason: "Initial focus from rolling discussion context.",
     };
   }
 
-  const currentSignature = signature(previousState.selectedPanelIds);
-  const nextSignature = signature(candidateIds);
+  const currentSignature = signature(previousPanelIds, maxPanels);
+  const nextSignature = signature(candidateIds, maxPanels);
   if (currentSignature === nextSignature) {
     return {
       action: "keep",
-      panelIds: previousState.selectedPanelIds,
+      panelIds: previousPanelIds,
       selectedSince: previousState.selectedSince,
       pendingSignature: "",
       pendingCount: 0,
@@ -119,7 +152,7 @@ function stableDecision(previousState, candidates, now) {
 
   const topScore = candidates[0]?.score ?? 0;
   const currentScore = candidates
-    .filter((candidate) => previousState.selectedPanelIds.includes(candidate.panelId))
+    .filter((candidate) => previousPanelIds.includes(candidate.panelId))
     .reduce((total, candidate) => total + candidate.score, 0);
   const enoughMargin = topScore >= Math.max(1.4, currentScore * SWITCH_MARGIN);
   const enoughTime = now - previousState.selectedSince >= MIN_SWITCH_SECONDS * 1000;
@@ -140,7 +173,7 @@ function stableDecision(previousState, candidates, now) {
 
   return {
     action: "hold",
-    panelIds: previousState.selectedPanelIds,
+    panelIds: previousPanelIds,
     selectedSince: previousState.selectedSince,
     pendingSignature: nextSignature,
     pendingCount,
@@ -152,7 +185,7 @@ function topicTermsFromText(text, chartIndex) {
   const chartFrequency = chartTokenFrequency(chartIndex);
   const counts = new Map();
   for (const token of tokenize(text)) {
-    if (token.length < 3) {
+    if (token.length < 3 || isCommonVoiceWord(token)) {
       continue;
     }
     const chartCount = chartFrequency.get(token) ?? 0;
@@ -185,10 +218,10 @@ function chartTokenFrequency(chartIndex) {
   return frequency;
 }
 
-function signature(panelIds) {
-  return panelIds.slice(0, 4).join("|");
+function signature(panelIds, maxPanels = MAX_FOCUS_PANELS) {
+  return panelIds.slice(0, maxPanels).join("|");
 }
 
-function sameSignature(left, right) {
-  return signature(left) === signature(right);
+function sameSignature(left, right, maxPanels = MAX_FOCUS_PANELS) {
+  return signature(left, maxPanels) === signature(right, maxPanels);
 }

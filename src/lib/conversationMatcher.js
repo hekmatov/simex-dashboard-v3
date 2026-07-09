@@ -1,14 +1,17 @@
 import { normalizeText, tokenize } from "./chartSearchIndex.js";
 
 const DEFAULT_LIMIT = 4;
+const MAX_LIMIT = 12;
 const MINIMUM_SCORE = 1.2;
-const DEFAULT_MAX_TOKEN_FREQUENCY_RATIO = 0.22;
+const DEFAULT_MAX_TOKEN_FREQUENCY_RATIO = 0.16;
 const MIN_TOKEN_LENGTH = 3;
 
 const COMMON_WORDS = new Set([
   "a",
   "an",
   "and",
+  "about",
+  "also",
   "are",
   "as",
   "at",
@@ -19,6 +22,9 @@ const COMMON_WORDS = new Set([
   "can",
   "chart",
   "charts",
+  "could",
+  "current",
+  "currently",
   "dashboard",
   "data",
   "de",
@@ -44,9 +50,18 @@ const COMMON_WORDS = new Set([
   "in",
   "is",
   "it",
+  "just",
+  "let",
+  "lets",
+  "look",
+  "looking",
+  "maybe",
   "met",
   "naar",
+  "need",
+  "needs",
   "niet",
+  "now",
   "of",
   "on",
   "or",
@@ -54,9 +69,12 @@ const COMMON_WORDS = new Set([
   "over",
   "panel",
   "panels",
+  "recent",
+  "recently",
   "section",
   "see",
   "show",
+  "should",
   "that",
   "the",
   "their",
@@ -64,7 +82,15 @@ const COMMON_WORDS = new Set([
   "there",
   "these",
   "this",
+  "today",
   "to",
+  "topic",
+  "topics",
+  "talk",
+  "talking",
+  "tell",
+  "use",
+  "using",
   "van",
   "voor",
   "was",
@@ -77,11 +103,12 @@ const COMMON_WORDS = new Set([
   "which",
   "with",
   "wordt",
+  "would",
   "zijn",
 ]);
 
 export function rankChartMatches(transcript, chartIndex, feedbackRecords = [], options = {}) {
-  const limit = Math.min(Math.max(Number(options.limit ?? DEFAULT_LIMIT), 1), 4);
+  const limit = Math.min(Math.max(Number(options.limit ?? DEFAULT_LIMIT), 1), MAX_LIMIT);
   const queryText = normalizeText(transcript);
   const tokenFrequency = chartTokenFrequency(chartIndex);
   const queryTokens = uncommonQueryTokens(tokenize(queryText), chartIndex, tokenFrequency, options);
@@ -161,6 +188,10 @@ function feedbackAdjustment(panelId, queryTokens, feedbackRecords) {
 function uncommonQueryTokens(tokens, chartIndex, tokenFrequency, options = {}) {
   const maxFrequency = maxAllowedTokenFrequency(chartIndex, options);
   return tokens.filter((token) => isUsefulToken(token, tokenFrequency, maxFrequency));
+}
+
+export function isCommonVoiceWord(token) {
+  return COMMON_WORDS.has(token);
 }
 
 function isUsefulToken(token, tokenFrequency, maxFrequency) {

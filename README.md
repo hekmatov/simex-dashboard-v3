@@ -83,6 +83,7 @@ When the dashboard app is updated, browser-saved edits are reconciled with the n
 - New default pages, sections, and panels from the update are added.
 - Default file-backed data sources use the latest source definitions from the updated app.
 - Uploaded CSVs and custom saved data sources are preserved.
+- Global panel colors include panel/chart backgrounds, borders, edit highlight color, and multi-fullscreen selection highlight color.
 
 ## Deployment Without Docker
 

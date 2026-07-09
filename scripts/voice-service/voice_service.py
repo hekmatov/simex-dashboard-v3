@@ -280,11 +280,13 @@ def judge_focus_with_gemini(payload: dict) -> dict:
     if not GEMINI_API_KEY:
         raise RuntimeError("Set GEMINI_API_KEY before using the LLM chart judge.")
 
+    max_selected_charts = clamp_int(payload.get("maxSelectedCharts", 2), 1, 4)
     prompt = {
         "instructions": FOCUS_JUDGE_PROMPT,
         "conversationSummary": payload.get("conversationSummary", ""),
         "recentTranscript": payload.get("recentTranscript", ""),
         "currentPanelIds": payload.get("currentPanelIds", []),
+        "maxSelectedCharts": max_selected_charts,
         "candidateCharts": payload.get("candidateCharts", []),
         "responseShape": {
             "selectedPanelIds": ["chart-id", "chart-id"],
@@ -294,7 +296,7 @@ def judge_focus_with_gemini(payload: dict) -> dict:
         },
     }
     result_text = call_gemini_text(
-        "Choose the 1-4 most relevant charts. Return only valid JSON.\n"
+        f"Choose 1-{max_selected_charts} most relevant charts. Return only valid JSON.\n"
         + json.dumps(prompt, ensure_ascii=False)
     )
     decision = extract_json_object(result_text)
@@ -302,12 +304,20 @@ def judge_focus_with_gemini(payload: dict) -> dict:
     if not isinstance(panel_ids, list):
         panel_ids = []
     return {
-        "selectedPanelIds": [str(panel_id) for panel_id in panel_ids[:4]],
+        "selectedPanelIds": [str(panel_id) for panel_id in panel_ids[:max_selected_charts]],
         "action": str(decision.get("action", "switch")),
         "confidence": float(decision.get("confidence", 0)),
         "reason": str(decision.get("reason", "Gemini selected charts from rolling context.")),
         "rawText": result_text,
     }
+
+
+def clamp_int(value: object, minimum: int, maximum: int) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        number = minimum
+    return max(minimum, min(maximum, number))
 
 
 def call_gemini_text(prompt: str) -> str:
