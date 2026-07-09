@@ -8,6 +8,8 @@
     "dev": "vite --host 0.0.0.0",
     "prebuild": "node scripts/build-portable-data.mjs",
     "build": "vite build",
+    "build:cloudflare": "set SIMEX_EMBED_PORTABLE_DATA=0&& node scripts/build-portable-data.mjs && vite build",
+    "build:cloudflare:linux": "SIMEX_EMBED_PORTABLE_DATA=0 node scripts/build-portable-data.mjs && vite build",
     "build:flashdrive": "pnpm.cmd build",
     "package:flashdrive": "pnpm build && node scripts/package-flashdrive.mjs",
     "preview": "vite preview --host 0.0.0.0",

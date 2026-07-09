@@ -8,6 +8,21 @@ const configPath = path.join(publicDir, "config", "dashboard.json");
 const packageDefaultBundlePath = path.join(rootDir, "packaged-dashboard-bundle.json");
 const outputPath = path.join(publicDir, "portable-dashboard-data.js");
 const BUNDLE_TYPE = "simex-dashboard-v2-bundle";
+const embedPortableData = process.env.SIMEX_EMBED_PORTABLE_DATA !== "0";
+
+if (!embedPortableData) {
+  const payload = {
+    type: "simex-dashboard-v2-portable-data",
+    generatedAt: new Date().toISOString(),
+    packageDefault: false,
+    config: null,
+    sources: {},
+  };
+  const js = `window.SIMEX_PORTABLE_DASHBOARD = ${JSON.stringify(payload)};\n`;
+  await fs.writeFile(outputPath, js, "utf8");
+  console.log(`Wrote ${path.relative(rootDir, outputPath)} as a cloud-hosting stub without embedded data.`);
+  process.exit(0);
+}
 
 const config = await portableConfig();
 const sources = {};

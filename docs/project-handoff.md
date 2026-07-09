@@ -442,6 +442,7 @@ http://localhost:5173/
 - `packaged-dashboard-bundle.json` is intentionally ignored by Git because it is a local packaging input.
 - Uploaded image panels are embedded into config as browser data URLs, so bundles can become larger.
 - App updates reconcile the latest default dashboard with browser-saved edits. Matching page, section, and panel IDs keep the user's edit-mode configuration; new default content is added; default file-backed data sources are refreshed from the updated app; uploaded CSV and custom data sources are preserved.
+- Cloudflare Pages should use `pnpm run build:cloudflare:linux`, not `pnpm build`. The Cloudflare build writes a small portable-data stub so static CSV/GeoJSON files are served separately and no single generated asset exceeds Cloudflare Pages' file-size limit.
 
 ### Background editor
 

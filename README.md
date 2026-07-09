@@ -97,6 +97,16 @@ The deployable site is the `dist` folder. It can be copied to a static host such
 
 For sharing content separately from the app, export a dashboard bundle from edit mode and send the `.json` bundle file. Another user can open the hosted dashboard and import that bundle.
 
+### Cloudflare Pages
+
+Use the Cloudflare-specific build command:
+
+```text
+pnpm run build:cloudflare:linux
+```
+
+This writes a tiny `portable-dashboard-data.js` stub and lets the hosted dashboard load `public/config/dashboard.json` plus `public/data/**` as separate static files. Do not use the normal `pnpm build` command on Cloudflare Pages because the normal portable build embeds all prepared data into one file for flash-drive use, and that file can exceed Cloudflare Pages' per-file size limit.
+
 ## Flash Drive Package
 
 Create the portable folder:
