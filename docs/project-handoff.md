@@ -4,7 +4,7 @@
 
 - Project: SimEx Dashboard V2
 - Repo folder: `C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2`
-- Active branch at time of handoff: `codex/import-old-dashboard-content`
+- Active published content branch: `content/cloudflare-beta`; stable no-voice branch: `main`; voice testing branch: `feature/voice-focus-testing`
 - Stack: React, Vite, ECharts, Papa Parse
 - Local dev URL: `http://localhost:5173/`
 - Original dashboard comparison URL, when the Docker container is running separately: `http://localhost:8081/`
@@ -447,6 +447,84 @@ http://localhost:5173/
 - App updates reconcile the latest default dashboard with browser-saved edits. Matching page, section, and panel IDs keep the user's edit-mode configuration; new default content is added; default file-backed data sources are refreshed from the updated app; uploaded CSV and custom data sources are preserved.
 - Cloudflare Pages should use `pnpm run build:cloudflare:linux`, not `pnpm build`. The Cloudflare build writes a small portable-data stub so static CSV/GeoJSON files are served separately and no single generated asset exceeds Cloudflare Pages' file-size limit.
 
+#### Applying saved browser edits to Git branches
+
+Browser-made edits live in the browser until they are exported and promoted. To make those edits part of the default dashboard that GitHub, Cloudflare, and flash-drive packages use, use this workflow.
+
+Before promoting edits:
+
+1. In the dashboard, click `Save` for the relevant edit mode changes.
+2. Click `Export package default`.
+3. Save the file as `packaged-dashboard-bundle.json` in the project root:
+
+```text
+C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2\packaged-dashboard-bundle.json
+```
+
+4. Confirm the file is fresh:
+
+```powershell
+Get-Item .\packaged-dashboard-bundle.json | Select-Object FullName, LastWriteTime, Length
+```
+
+If the timestamp or size looks wrong, stop and export again. Promoting a stale bundle will overwrite the tracked dashboard baseline with stale browser state.
+
+To apply edits only to the Cloudflare beta branch:
+
+```powershell
+git switch content/cloudflare-beta
+pnpm.cmd promote:bundle
+git status
+git diff -- public/config/dashboard.json
+git diff -- public/data/uploaded
+git add public/config/dashboard.json public/data/uploaded
+git commit -m "Promote browser dashboard edits"
+pnpm.cmd build:cloudflare
+git push origin content/cloudflare-beta
+```
+
+Use this when the browser edits are content/layout changes intended for the currently published beta site, but you are not ready to update `main` or the voice branch.
+
+To apply edits to all three active branches:
+
+```powershell
+git switch content/cloudflare-beta
+pnpm.cmd promote:bundle
+git status
+git diff -- public/config/dashboard.json
+git diff -- public/data/uploaded
+git add public/config/dashboard.json public/data/uploaded
+git commit -m "Promote browser dashboard edits"
+pnpm.cmd build:cloudflare
+git push origin content/cloudflare-beta
+git log --oneline -1
+```
+
+Copy the commit hash printed by the last command, then propagate that exact content baseline:
+
+```powershell
+git switch main
+git merge --ff-only content/cloudflare-beta
+git push origin main
+
+git switch feature/voice-focus-testing
+git cherry-pick <commit-hash-from-content-branch>
+pnpm.cmd build
+git push origin feature/voice-focus-testing
+
+git switch content/cloudflare-beta
+```
+
+Use the all-branches path when the browser edits should become the shared baseline for future work. Keep `main` and `content/cloudflare-beta` free of voice-service code; only `feature/voice-focus-testing` should contain voice-specific scripts, UI, or documentation.
+
+Review checklist after `promote:bundle`:
+
+- `public/config/dashboard.json` changed only in expected pages, sections, panels, labels, colors, or data bindings.
+- New or changed uploaded CSV files appear under `public/data/uploaded/` only when the browser edits used uploaded CSVs.
+- `packaged-dashboard-bundle.json` remains untracked; it is a local transfer file, not a committed source file.
+- Cloudflare-targeted changes pass `pnpm.cmd build:cloudflare`.
+- Voice-branch changes pass `pnpm.cmd build`.
+
 ### Background editor
 
 - The app uses local `public/vendor/three.min.js` and `public/vendor/vanta.net.min.js` for the Vanta.NET background.
@@ -652,3 +730,51 @@ Practical sharing model:
 3. Export a dashboard bundle JSON.
 4. Email or copy the bundle JSON by flash drive.
 5. Another user opens the dashboard app and imports the bundle.
+
+## Chat handoff and work-session strategy
+
+This project can continue in one long Codex chat, but separate chats are usually better once a coherent unit of work has been committed and pushed. Long chats preserve conversational continuity, but they also accumulate old assumptions. New chats are cleaner when they start from the handoff document, current branch, and latest commits.
+
+Recommended breakpoint for starting a new chat:
+
+- Start a new chat after a sprint, feature cluster, or data update is committed and pushed.
+- Start a new chat after changing the active workstream, for example moving from dashboard content to voice testing, Cloudflare deployment, or data conversion.
+- Start a new chat when the current task has produced a stable commit and the next task has a different goal or risk profile.
+- Avoid starting a new chat in the middle of uncommitted code edits, unresolved merge/cherry-pick conflicts, or browser-only dashboard edits that have not been exported and promoted.
+
+How to end a chat cleanly:
+
+1. Save browser edits in the dashboard if relevant.
+2. If those edits should become the baseline, export `packaged-dashboard-bundle.json` and run `pnpm.cmd promote:bundle`.
+3. Run the appropriate build check: `pnpm.cmd build:cloudflare` for `content/cloudflare-beta`, or `pnpm.cmd build` for local/voice work.
+4. Commit and push the finished work.
+5. Update this handoff file when branch roles, deployment steps, data workflow, or major features change.
+6. End with the current branch, last commit hash, what was changed, what was verified, and any unresolved issue.
+
+How to start a new chat:
+
+1. Tell Codex the repo path:
+
+```text
+C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2
+```
+
+2. Tell Codex which branch/workstream to use:
+
+```text
+content/cloudflare-beta for published dashboard/content work
+main for stable no-voice baseline checks
+feature/voice-focus-testing for voice feature work only
+```
+
+3. Ask Codex to read:
+
+```text
+AGENTS.md
+docs/project-handoff.md
+```
+
+4. If browser edits were made since the last commit, say whether `packaged-dashboard-bundle.json` has already been exported to the project root.
+5. State the exact next task and whether it should be pushed to one branch or all three.
+
+Practical rule: use one chat for one coherent unit of work. Use a new chat when the next request would require re-establishing branch context, deployment context, or a different feature area anyway.
