@@ -12,6 +12,7 @@
     "build:cloudflare:linux": "SIMEX_EMBED_PORTABLE_DATA=0 node scripts/build-portable-data.mjs && vite build",
     "build:flashdrive": "pnpm.cmd build",
     "package:flashdrive": "pnpm build && node scripts/package-flashdrive.mjs",
+    "promote:bundle": "node scripts/promote-dashboard-bundle.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "voice:service": "python scripts/voice-service/voice_service.py"
   },

@@ -77,6 +77,18 @@ In edit mode:
 
 Static files already in `public/data/**` remain file-backed. Uploaded CSVs are bundled so they can travel by email or flash drive as one JSON file.
 
+To make browser edit-mode changes part of the GitHub version:
+
+1. Click `Export package default` or `Export bundle`.
+2. Put the exported JSON in the project root as `packaged-dashboard-bundle.json`, or pass its path to the command below.
+3. Run:
+
+```powershell
+pnpm.cmd promote:bundle
+```
+
+That command writes the edited dashboard into `public/config/dashboard.json`. Any uploaded CSVs are written into `public/data/uploaded/`. Review the diff, then commit and push those tracked files. This is the source-controlled workflow for publishing browser edits through GitHub and Cloudflare.
+
 When the dashboard app is updated, browser-saved edits are reconciled with the new default dashboard:
 
 - Matching pages, sections, and panels keep the user's current edit-mode configuration.

@@ -1,8 +1,30 @@
 import React from "react";
 
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+const DISCRETE_COLORS = [
+  "#043BCB",
+  "#08224A",
+  "#00A676",
+  "#4496D1",
+  "#67E0E3",
+  "#F59E0B",
+  "#FD666D",
+  "#8F1D2C",
+  "#7C3AED",
+  "#F5F8FB",
+  "#EAF1F6",
+  "#FFFFFF",
+];
+const GRADIENT_MAPS = [
+  { label: "Red to green", colors: ["#D71920", "#Fdae61", "#FFFFBF", "#A6D96A", "#1A9641"] },
+  { label: "Green to red", colors: ["#1A9641", "#A6D96A", "#FFFFBF", "#Fdae61", "#D71920"] },
+  { label: "Blue to yellow", colors: ["#2C7BB6", "#ABD9E9", "#FFFFBF", "#FDAE61", "#D7191C"] },
+  { label: "Yellow to blue", colors: ["#D7191C", "#FDAE61", "#FFFFBF", "#ABD9E9", "#2C7BB6"] },
+  { label: "Likert", colors: ["#3BA64A", "#A7B734", "#F6A21A", "#F47B20", "#DF1F2D"] },
+  { label: "PDPC", colors: ["#08224A", "#043BCB", "#36BDEB", "#2BAA7B", "#F1A1AD"] },
+];
 
-export default function ColorField({ label, value, fallback = "#043BCB", onChange }) {
+export default function ColorField({ label, value, fallback = "#043BCB", onChange, showPresets = true }) {
   const normalizedValue = normalizeHexColor(value, fallback);
   const [draft, setDraft] = React.useState(normalizedValue);
   const [message, setMessage] = React.useState("");
@@ -95,6 +117,37 @@ export default function ColorField({ label, value, fallback = "#043BCB", onChang
           <PipetteIcon />
         </button>
       </div>
+      {showPresets ? (
+        <>
+          <div className="settings-color-preset-grid" aria-label={`${label} color presets`}>
+            {DISCRETE_COLORS.map((color) => (
+              <button
+                type="button"
+                key={color}
+                className={color.toUpperCase() === normalizedValue ? "active" : ""}
+                style={{ backgroundColor: color }}
+                title={color}
+                aria-label={`Use ${color} for ${label}`}
+                onClick={() => commitColor(color)}
+              />
+            ))}
+          </div>
+          <div className="settings-gradient-grid" aria-label={`${label} gradient maps`}>
+            {GRADIENT_MAPS.map((map) => (
+              <button
+                type="button"
+                key={map.label}
+                title={`${map.label}: use middle color`}
+                aria-label={`${map.label} gradient map`}
+                onClick={() => commitColor(map.colors[Math.floor(map.colors.length / 2)])}
+              >
+                <span style={{ background: `linear-gradient(90deg, ${map.colors.join(", ")})` }} />
+                <small>{map.label}</small>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
       {message ? <small>{message}</small> : null}
     </div>
   );

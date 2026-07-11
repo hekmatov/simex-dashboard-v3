@@ -438,6 +438,7 @@ http://localhost:5173/
 - ECharts-backed panels use ECharts' native image export. Map and image panels use custom browser-side canvas export helpers.
 - Edits are kept in browser state while using the app.
 - Exported bundles are the portable way to preserve and share point-and-click edits plus uploaded CSVs.
+- To promote browser edits into the GitHub-tracked dashboard, export a bundle as `packaged-dashboard-bundle.json` in the project root and run `pnpm.cmd promote:bundle`. This writes the edited config to `public/config/dashboard.json` and writes uploaded CSVs to `public/data/uploaded/`.
 - `pnpm.cmd package:flashdrive` automatically embeds `packaged-dashboard-bundle.json` when that file exists in the project root; otherwise it uses `public/config/dashboard.json`.
 - `packaged-dashboard-bundle.json` is intentionally ignored by Git because it is a local packaging input.
 - Uploaded image panels are embedded into config as browser data URLs, so bundles can become larger.
