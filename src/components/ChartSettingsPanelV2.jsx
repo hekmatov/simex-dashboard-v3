@@ -58,7 +58,7 @@ const FONT_CONTROLS = {
   gaugeAxis: { label: "Gauge axis labels", defaultValue: 12 },
   mapLabel: { label: "Map hover labels", defaultValue: 12 },
 };
-export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, dataRows = [], globalPanelColors, onChange, onClose, onRemove }) {
+export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, dataRows = [], globalPanelColors, onChange, onSave, onCancel, onRemove }) {
   const [activeTab, setActiveTab] = React.useState("data");
   const [openSections, setOpenSections] = React.useState({});
   const sectionsByTab = getSectionsForPanelType(panel.type);
@@ -158,7 +158,10 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
           <p className="eyebrow">Panel settings</p>
           <h2>{panel.title}</h2>
         </div>
-        <button type="button" className="secondary" onClick={onClose}>Close</button>
+        <div className="settings-panel-actions">
+          <button type="button" onClick={onSave}>Save</button>
+          <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
+        </div>
       </div>
 
       <div className="settings-tabs" role="tablist" aria-label="Chart setting groups">

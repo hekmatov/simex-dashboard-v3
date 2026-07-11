@@ -1,19 +1,19 @@
 import React from "react";
 
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
-const DISCRETE_COLORS = [
-  "#043BCB",
-  "#08224A",
-  "#00A676",
-  "#4496D1",
-  "#67E0E3",
-  "#F59E0B",
-  "#FD666D",
-  "#8F1D2C",
-  "#7C3AED",
-  "#F5F8FB",
-  "#EAF1F6",
-  "#FFFFFF",
+const COLOR_GROUPS = [
+  {
+    label: "PDPC",
+    colors: ["#08224A", "#043BCB", "#36BDEB", "#2BAA7B", "#F1A1AD"],
+  },
+  {
+    label: "Status",
+    colors: ["#15803D", "#84A82D", "#F59E0B", "#EA580C", "#DC2626"],
+  },
+  {
+    label: "Neutrals",
+    colors: ["#111827", "#374151", "#6B7280", "#D8E2EC", "#F5F8FB", "#FFFFFF"],
+  },
 ];
 const GRADIENT_MAPS = [
   { label: "Red to green", colors: ["#D71920", "#Fdae61", "#FFFFBF", "#A6D96A", "#1A9641"] },
@@ -99,7 +99,14 @@ export default function ColorField({ label, value, fallback = "#043BCB", onChang
     <div className="settings-color-field">
       <span>{label}</span>
       <div className="settings-color-row">
-        <span className="settings-color-swatch" style={{ backgroundColor: normalizedValue }} aria-hidden="true" />
+        <label className="settings-color-swatch" style={{ backgroundColor: normalizedValue }} title="Open color picker">
+          <input
+            aria-label={`Pick ${label}`}
+            type="color"
+            value={normalizedValue}
+            onChange={(event) => commitColor(event.target.value)}
+          />
+        </label>
         <input
           aria-label={label}
           value={draft}
@@ -119,17 +126,24 @@ export default function ColorField({ label, value, fallback = "#043BCB", onChang
       </div>
       {showPresets ? (
         <>
-          <div className="settings-color-preset-grid" aria-label={`${label} color presets`}>
-            {DISCRETE_COLORS.map((color) => (
-              <button
-                type="button"
-                key={color}
-                className={color.toUpperCase() === normalizedValue ? "active" : ""}
-                style={{ backgroundColor: color }}
-                title={color}
-                aria-label={`Use ${color} for ${label}`}
-                onClick={() => commitColor(color)}
-              />
+          <div className="settings-color-palette" aria-label={`${label} color presets`}>
+            {COLOR_GROUPS.map((group) => (
+              <div className="settings-color-palette-group" key={group.label}>
+                <small>{group.label}</small>
+                <div className="settings-color-preset-grid">
+                  {group.colors.map((color) => (
+                    <button
+                      type="button"
+                      key={color}
+                      className={color.toUpperCase() === normalizedValue ? "active" : ""}
+                      style={{ backgroundColor: color }}
+                      title={color}
+                      aria-label={`Use ${color} for ${label}`}
+                      onClick={() => commitColor(color)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
           <div className="settings-gradient-grid" aria-label={`${label} gradient maps`}>

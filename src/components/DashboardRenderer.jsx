@@ -44,11 +44,9 @@ export default function DashboardRenderer({
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
   const [pageDrafts, setPageDrafts] = React.useState({});
   const [sectionDrafts, setSectionDrafts] = React.useState({});
-  const panelDebounceRef = React.useRef(null);
   const dashboardDebounceRef = React.useRef(null);
   const pageDebounceRef = React.useRef(null);
   const sectionDebounceRef = React.useRef(null);
-  const selectedPanelRef = React.useRef(null);
   const [filterValues, setFilterValues] = React.useState(() =>
     collectFilterDefaults(dashboard),
   );
@@ -70,13 +68,7 @@ export default function DashboardRenderer({
     : [];
 
   React.useEffect(() => {
-    selectedPanelRef.current = selectedPanel;
-  }, [selectedPanel]);
-
-  React.useEffect(() => {
-    selectedPanelRef.current = selectedPanel;
     setSelectedPanelDraft(selectedPanel ? structuredClone(selectedPanel) : null);
-    window.clearTimeout(panelDebounceRef.current);
   }, [selectedPanel?.id]);
 
   React.useEffect(() => {
@@ -214,20 +206,26 @@ export default function DashboardRenderer({
 
   function changeSelectedPanel(updates) {
     setSelectedPanelDraft((current) => {
-      const base = current ?? selectedPanelRef.current;
+      const base = current ?? selectedPanel;
       if (!base) {
         return current;
       }
-      const nextPanel = { ...base, ...updates };
-      window.clearTimeout(panelDebounceRef.current);
-      panelDebounceRef.current = window.setTimeout(() => {
-        const committedPanel = selectedPanelRef.current;
-        if (committedPanel) {
-          onPanelChange(nextPanel.id, diffPanel(committedPanel, nextPanel));
-        }
-      }, 850);
-      return nextPanel;
+      return { ...base, ...updates };
     });
+  }
+
+  function saveSelectedPanel() {
+    if (!selectedPanel || !selectedPanelDraft) {
+      setSelectedPanelId(null);
+      return;
+    }
+    onPanelChange(selectedPanel.id, diffPanel(selectedPanel, selectedPanelDraft));
+    setSelectedPanelId(null);
+  }
+
+  function cancelSelectedPanel() {
+    setSelectedPanelDraft(selectedPanel ? structuredClone(selectedPanel) : null);
+    setSelectedPanelId(null);
   }
 
   function changePage(pageId, updates) {
@@ -579,7 +577,8 @@ export default function DashboardRenderer({
             dataColumns={selectedPanelColumns}
             dataRows={Array.isArray(selectedPanelData) ? selectedPanelData : []}
             globalPanelColors={globalPanelColors}
-            onClose={() => setSelectedPanelId(null)}
+            onSave={saveSelectedPanel}
+            onCancel={cancelSelectedPanel}
             onRemove={() => removePanel(selectedPanel.id)}
             onChange={changeSelectedPanel}
           />

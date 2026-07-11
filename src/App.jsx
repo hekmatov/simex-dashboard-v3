@@ -87,7 +87,11 @@ export default function App() {
   }
 
   function updatePanel(panelId, updates) {
-    updateDashboardConfig(updatePanelInConfig(stripRuntimeFields(dashboard), panelId, updates));
+    const nextConfig = updatePanelInConfig(stripRuntimeFields(dashboard), panelId, updates);
+    updateDashboardConfig(nextConfig);
+    if (editMode && editSessionStartConfig) {
+      setEditSessionStartConfig(updatePanelInConfig(editSessionStartConfig, panelId, updates));
+    }
   }
 
   function updateSection(pageId, sectionId, updates) {

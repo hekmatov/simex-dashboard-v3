@@ -4,30 +4,26 @@
   "description": "Static, config-driven dashboard for simulation exercise briefings.",
   "scenarioLabel": "HeV-A26 Day 2 Simulation",
   "lastUpdated": "2026-06-27",
-  "footerTitle": "SimEx Dashboard V2",
-  "footerCredit": "Developed by Hekmat Alrouh",
-  "contactEmail": "hekmat.alrouh@live.com",
-  "feedbackUrl": "",
-  "repositoryUrl": "https://github.com/hekmatov/simex-dashboard-v2",
-  "showRepositoryLink": false,
   "layout": "two-column",
   "globalStyles": {
     "panelColors": {
       "panelBackgroundColor": "#f5f8fb",
       "panelBorderColor": "#d8e2ec",
       "chartAreaColor": "#eaf1f6",
-      "chartAreaBorderColor": "#d8e2ec"
+      "chartAreaBorderColor": "#d8e2ec",
+      "editHighlightColor": "#043bcb",
+      "multiSelectHighlightColor": "#00a676"
     }
   },
   "vantaBackground": {
     "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
+    "networkColor": "#0075FF",
     "mouseControls": false,
     "touchControls": false,
     "points": 6,
     "maxDistance": 17,
     "spacing": 18,
-    "speed": 0.45
+    "speed": 1.05
   },
   "dataSources": {
     "bio_cases": "data/biomedical/cases.csv",
@@ -162,52 +158,6 @@
           ],
           "panels": [
             {
-              "id": "bio_geo_spread",
-              "type": "mapScatter",
-              "title": "Geographic Spread Netherlands",
-              "dataSource": "bio_province_cases_latest",
-              "geoSource": "geo_netherlands_provinces",
-              "nameField": "province",
-              "latField": "lat",
-              "lonField": "lon",
-              "valueField": "Infected_total",
-              "mapName": "netherlands-provinces",
-              "color": "#043BCB"
-            },
-            {
-              "id": "bio_municipality_choropleth",
-              "type": "choroplethMap",
-              "title": "Municipality Infection Rate Choropleth",
-              "dataSource": "bio_municipal_infections_harmonized_2021",
-              "geoSource": "geo_netherlands_municipalities_2021",
-              "mapName": "nl-gemeente-2021",
-              "joinField": "MunicipalityCode",
-              "valueField": "infectionsPer10000",
-              "valueLabel": "Infections per 10,000 population",
-              "labelField": "Gemeentenaam",
-              "geoNameProperty": "statcode",
-              "geoLabelProperty": "statnaam",
-              "dateSelection": {
-                "column": "Datum",
-                "mode": "single",
-                "value": "2021-04-17"
-              },
-              "size": "large",
-              "legend": false,
-              "colorScheme": "caseIntensity",
-              "missingColor": "#DDE7EF",
-              "mapBorderColor": "#F8FBFF",
-              "mapBorderWidth": 0.5,
-              "showProvinceOverlay": false,
-              "provinceOverlaySource": "geo_netherlands_provinces",
-              "provinceBorderColor": "#08224A",
-              "provinceBorderWidth": 1.4,
-              "showProvinceNames": true,
-              "provinceNameFontSize": 12,
-              "provinceNameColor": "#08224A",
-              "infoSource": "Prepared from RIVM municipal infection data harmonized to Cartomap 2021 municipality boundaries, joined to municipality population data. Missing source municipalities are imputed using the same-day province population-weighted infection rate."
-            },
-            {
               "id": "bio_municipality_choropleth_animation",
               "type": "chronoChoroplethMap",
               "title": "Municipality Infection Rate Timelapse",
@@ -223,46 +173,43 @@
               "dateSelection": {
                 "column": "Datum",
                 "mode": "range",
-                "start": "2020-02-27",
+                "start": "2020-03-08",
                 "end": "2021-04-17"
               },
-              "size": "large",
+              "size": "tall",
               "legend": false,
               "colorScheme": "caseIntensity",
               "missingColor": "#DDE7EF",
               "mapBorderColor": "#F8FBFF",
-              "mapBorderWidth": 0.5,
+              "mapBorderWidth": 0.4,
               "mapLayoutSize": "82%",
-              "showProvinceOverlay": false,
+              "showProvinceOverlay": true,
               "provinceOverlaySource": "geo_netherlands_provinces",
               "provinceBorderColor": "#08224A",
               "provinceBorderWidth": 1.4,
               "showProvinceNames": true,
-              "provinceNameFontSize": 12,
+              "provinceNameFontSize": 7,
               "provinceNameColor": "#08224A",
-              "infoSource": "Animated daily view of infections per 10,000 population. Data are harmonized to Cartomap 2021 municipality boundaries; missing source municipalities are imputed using same-day province population-weighted infection rates."
+              "infoSource": "Animated daily view of infections per 10,000 population. Data are harmonized to Cartomap 2021 municipality boundaries; missing source municipalities are imputed using same-day province population-weighted infection rates.",
+              "animationIntervalMs": 720,
+              "choroplethTransitionMs": 575,
+              "timelapseSpeed": 3
             },
             {
-              "id": "bio_confirmed_cases",
-              "type": "line",
-              "title": "Confirmed Cases (cumulative)",
-              "dataSource": "bio_cases",
-              "x": "date",
-              "filters": [
-                {
-                  "filterId": "bio_case_dates",
-                  "column": "date"
-                }
-              ],
-              "series": [
-                {
-                  "name": "Cases",
-                  "y": "national_total_cases",
-                  "color": "#043BCB",
-                  "lineWidth": 3
-                }
-              ],
-              "legend": false
+              "id": "bio_case_deltas",
+              "type": "deltaList",
+              "title": "Change Since Previous Day",
+              "dataSource": "bio_province_deltas",
+              "rowLimit": 12,
+              "sortBy": "Case delta",
+              "sortDirection": "desc",
+              "fields": {
+                "title": "province",
+                "value": "Case delta",
+                "detail": "Cumulative cases"
+              },
+              "valuePrefix": "+",
+              "size": "normal"
             },
             {
               "id": "bio_r_values",
@@ -291,7 +238,35 @@
                 }
               ],
               "yScale": "auto",
-              "legend": false
+              "legend": false,
+              "size": "normal"
+            },
+            {
+              "id": "bio_confirmed_cases",
+              "type": "line",
+              "title": "Confirmed Cases (cumulative)",
+              "dataSource": "bio_cases",
+              "x": "date",
+              "filters": [
+                {
+                  "filterId": "bio_case_dates",
+                  "column": "date"
+                }
+              ],
+              "series": [
+                {
+                  "name": "Cases",
+                  "y": "national_total_cases",
+                  "color": "#043BCB",
+                  "lineWidth": 3
+                }
+              ],
+              "legend": false,
+              "size": "normal",
+              "fontSizes": {
+                "title": 17,
+                "axis": 13
+              }
             },
             {
               "id": "bio_region_comparison",
@@ -306,23 +281,8 @@
                   "color": "#4496D1"
                 }
               ],
-              "legend": false
-            },
-            {
-              "id": "bio_case_deltas",
-              "type": "deltaList",
-              "title": "Change Since Previous Day",
-              "dataSource": "bio_province_deltas",
-              "rowLimit": 12,
-              "sortBy": "Case delta",
-              "sortDirection": "desc",
-              "fields": {
-                "title": "province",
-                "value": "Case delta",
-                "detail": "Cumulative cases"
-              },
-              "valuePrefix": "+",
-              "size": "normal"
+              "legend": false,
+              "size": "tall"
             },
             {
               "id": "bio_new_cases_deaths",
@@ -336,24 +296,32 @@
                   "column": "date"
                 }
               ],
-              "size": "wide",
+              "size": "large",
               "series": [
                 {
                   "name": "Daily new cases",
                   "y": "daily_new_cases",
                   "type": "bar",
-                  "color": "#043BCB"
+                  "color": "#032782"
                 },
                 {
                   "name": "New deaths",
                   "y": "new_deaths",
                   "type": "line",
                   "yAxisIndex": 1,
-                  "color": "#8F1D2C",
-                  "lineWidth": 3
+                  "color": "#dd3308",
+                  "lineWidth": 1
                 }
               ],
-              "legend": true
+              "legend": true,
+              "dateSelection": {
+                "column": "date",
+                "mode": "range",
+                "start": "2027-04-09",
+                "end": "2027-05-16"
+              },
+              "barGap": "20%",
+              "barCategoryGap": "10%"
             },
             {
               "id": "bio_mortality_age",
@@ -361,7 +329,7 @@
               "title": "Age Distribution of HeV-A26 Mortality",
               "dataSource": "bio_mortality",
               "x": "date",
-              "size": "wide",
+              "size": "normal",
               "series": [
                 {
                   "name": "0-19",
@@ -389,7 +357,14 @@
                   "color": "#08224A"
                 }
               ],
-              "legend": true
+              "legend": true,
+              "dateSelection": {
+                "column": "date",
+                "mode": "list",
+                "values": [
+                  "2027-02-21"
+                ]
+              }
             }
           ]
         },
@@ -432,7 +407,14 @@
               ],
               "valueField": "value",
               "labelField": "title",
-              "colorField": "color"
+              "colorField": "color",
+              "size": "half",
+              "gaugeArcWidth": 25,
+              "fontSizes": {
+                "gaugeValue": 23,
+                "gaugeLabel": 12,
+                "gaugeAxis": 13
+              }
             },
             {
               "id": "bio_hospital_occupancy_gauge",
@@ -447,7 +429,14 @@
               ],
               "valueField": "value",
               "labelField": "title",
-              "colorField": "color"
+              "colorField": "color",
+              "size": "half",
+              "gaugeArcWidth": 25,
+              "fontSizes": {
+                "gaugeValue": 23,
+                "gaugeLabel": 12,
+                "gaugeAxis": 13
+              }
             },
             {
               "id": "bio_icu_occupancy",
@@ -537,7 +526,7 @@
                   "column": "date"
                 }
               ],
-              "size": "wide",
+              "size": "normal",
               "series": [
                 {
                   "name": "ICU admissions",
@@ -738,7 +727,7 @@
           "panels": [
             {
               "id": "socio_risk_perception",
-              "type": "stackedBar",
+              "type": "horizontalStackedBar",
               "title": "Risk Perception",
               "dataSource": "socio_behaviour",
               "x": "Question",
@@ -757,7 +746,37 @@
                 "valueField": "Percentage"
               },
               "size": "wide",
-              "legend": true
+              "legend": true,
+              "colorScheme": "likertInfographic5",
+              "reverseColorScheme": false,
+              "fontSizes": {
+                "title": 17
+              }
+            },
+            {
+              "id": "socio_values_deltas",
+              "type": "deltaList",
+              "title": "Values: Change Compared to Previous Phase",
+              "dataSource": "socio_values_deltas",
+              "filters": [
+                {
+                  "filterId": "behaviour_snapshot",
+                  "column": "selected_date"
+                }
+              ],
+              "fields": {
+                "title": "Value",
+                "value": "Percentage delta",
+                "detail": "Percentage"
+              },
+              "rowLimit": 12,
+              "dateSelection": {
+                "column": "date",
+                "mode": "list",
+                "values": [
+                  "2027-04-26"
+                ]
+              }
             },
             {
               "id": "socio_risk_deltas",
@@ -827,24 +846,6 @@
                 }
               ],
               "legend": false
-            },
-            {
-              "id": "socio_values_deltas",
-              "type": "deltaList",
-              "title": "Values: Change Compared to Previous Phase",
-              "dataSource": "socio_values_deltas",
-              "filters": [
-                {
-                  "filterId": "behaviour_snapshot",
-                  "column": "selected_date"
-                }
-              ],
-              "fields": {
-                "title": "Value",
-                "value": "Percentage delta",
-                "detail": "Percentage"
-              },
-              "rowLimit": 12
             }
           ]
         },
@@ -889,7 +890,7 @@
                 "valueField": "trust"
               },
               "legend": true,
-              "size": "wide",
+              "size": "normal",
               "yScale": "auto"
             },
             {
@@ -967,7 +968,13 @@
                 "nameField": "Answer",
                 "valueField": "Percentage"
               },
-              "legend": true
+              "legend": true,
+              "categorySelection": {
+                "column": "Age group",
+                "values": [
+                  "Average"
+                ]
+              }
             },
             {
               "id": "socio_lifestyle",
