@@ -546,7 +546,7 @@ function mergePanels(defaultPanels, savedPanels) {
   const defaultById = new Map(defaultPanels.map((panel) => [panel.id, panel]));
   const mergedPanels = savedPanels.map((savedPanel) => {
     const defaultPanel = defaultById.get(savedPanel.id);
-    return defaultPanel ? { ...defaultPanel, ...savedPanel } : savedPanel;
+    return defaultPanel ? mergePanelConfig(defaultPanel, savedPanel) : savedPanel;
   });
   const mergedPanelIds = new Set(mergedPanels.map((panel) => panel.id));
 
@@ -566,6 +566,29 @@ function mergePanels(defaultPanels, savedPanels) {
   });
 
   return mergedPanels;
+}
+
+function mergePanelConfig(defaultPanel, savedPanel) {
+  const mergedPanel = { ...defaultPanel, ...savedPanel };
+  const defaultVersion = Number(defaultPanel.configVersion ?? 0);
+  const savedVersion = Number(savedPanel.configVersion ?? 0);
+  const versionedFields = Array.isArray(defaultPanel.configVersionedFields)
+    ? defaultPanel.configVersionedFields
+    : [];
+
+  if (defaultVersion > savedVersion && versionedFields.length > 0) {
+    for (const field of versionedFields) {
+      if (Object.prototype.hasOwnProperty.call(defaultPanel, field)) {
+        mergedPanel[field] = structuredClone(defaultPanel[field]);
+      } else {
+        delete mergedPanel[field];
+      }
+    }
+    mergedPanel.configVersion = defaultVersion;
+    mergedPanel.configVersionedFields = structuredClone(versionedFields);
+  }
+
+  return mergedPanel;
 }
 
 function stripRuntimeFields(dashboard) {

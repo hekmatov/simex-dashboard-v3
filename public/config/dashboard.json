@@ -414,6 +414,20 @@
             },
             {
               "id": "bio_mortality_age",
+              "configVersion": 2,
+              "configVersionedFields": [
+                "type",
+                "x",
+                "xAxisMode",
+                "categorySelection",
+                "xAxisTitle",
+                "yAxisTitle",
+                "showValueLabels",
+                "valueLabelPosition",
+                "series",
+                "seriesFrom",
+                "dataFormat"
+              ],
               "type": "horizontalBar",
               "title": "Age Distribution of HeV-A26 Mortality",
               "dataSource": "bio_mortality",
