@@ -14,6 +14,8 @@ export default function DashboardRenderer({
   onPageChange,
   onDashboardChange,
   onPanelChange,
+  onPanelEditCommit,
+  onPanelEditCancel,
   onSectionChange,
   onSectionInsert,
   onVantaBackgroundChange,
@@ -41,6 +43,7 @@ export default function DashboardRenderer({
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
   const [selectedPanelDraft, setSelectedPanelDraft] = React.useState(null);
+  const [chartEditBaseline, setChartEditBaseline] = React.useState(null);
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
   const [pageDrafts, setPageDrafts] = React.useState({});
   const [sectionDrafts, setSectionDrafts] = React.useState({});
@@ -210,21 +213,23 @@ export default function DashboardRenderer({
       if (!base) {
         return current;
       }
-      return { ...base, ...updates };
+      const nextPanel = { ...base, ...updates };
+      onPanelChange(nextPanel.id, diffPanel(base, nextPanel), { commitToEditSession: false });
+      return nextPanel;
     });
   }
 
   function saveSelectedPanel() {
-    if (!selectedPanel || !selectedPanelDraft) {
-      setSelectedPanelId(null);
-      return;
-    }
-    onPanelChange(selectedPanel.id, diffPanel(selectedPanel, selectedPanelDraft));
+    onPanelEditCommit(dashboardWithCurrentDrafts());
+    setChartEditBaseline(null);
     setSelectedPanelId(null);
   }
 
   function cancelSelectedPanel() {
-    setSelectedPanelDraft(selectedPanel ? structuredClone(selectedPanel) : null);
+    if (chartEditBaseline) {
+      onPanelEditCancel(chartEditBaseline);
+    }
+    setChartEditBaseline(null);
     setSelectedPanelId(null);
   }
 
@@ -305,6 +310,21 @@ export default function DashboardRenderer({
     onPageRemove(activePage.id);
     setActivePageId(fallbackPage.id);
     setSelectedPanelId(null);
+  }
+
+  function openPanelEditor(panelId) {
+    if (!chartEditBaseline) {
+      setChartEditBaseline(dashboardWithCurrentDrafts());
+    }
+    setSelectedPanelId(panelId);
+  }
+
+  function saveEditMode() {
+    if (chartEditBaseline) {
+      onPanelEditCommit(dashboardWithCurrentDrafts());
+      setChartEditBaseline(null);
+    }
+    onToggleEditMode();
   }
 
   function dashboardWithCurrentDrafts() {
@@ -410,7 +430,7 @@ export default function DashboardRenderer({
             className="header-edit-floating-button"
             aria-label={editMode ? "Save edit mode" : "Open edit mode"}
             title={editMode ? "Save" : "Edit mode"}
-            onClick={onToggleEditMode}
+            onClick={editMode ? saveEditMode : onToggleEditMode}
           >
             {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
           </button>
@@ -578,7 +598,7 @@ export default function DashboardRenderer({
                     isSelected={editMode && selectedPanelId === panel.id}
                     multiSelectMode={multiSelectMode}
                     isMultiSelected={multiPanelIds.includes(panel.id)}
-                    onEdit={() => setSelectedPanelId(panel.id)}
+                    onEdit={() => openPanelEditor(panel.id)}
                     onRemove={() => removePanel(panel.id)}
                     onToggleMultiSelect={() => toggleMultiPanel(panel.id)}
                     onFullScreenHold={() => startMultiFullscreenSelection(panel.id)}

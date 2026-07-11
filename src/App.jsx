@@ -68,11 +68,11 @@ export default function App() {
       .catch((loadError) => setError(loadError));
   }, []);
 
-  function applyLoadedDashboard(loadedDashboard, { showReport = false } = {}) {
+  function applyLoadedDashboard(loadedDashboard, { showReport = false, persistReconciliation = true } = {}) {
     const runtimeConfig = stripRuntimeFields(loadedDashboard);
     const reconciled = reconcileDashboardWithLoadedData(runtimeConfig, loadedDashboard.loadedData);
     const safeConfig = sanitizeDashboardConfig(reconciled.config);
-    if (JSON.stringify(safeConfig) !== JSON.stringify(runtimeConfig)) {
+    if (persistReconciliation && JSON.stringify(safeConfig) !== JSON.stringify(runtimeConfig)) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(safeConfig, null, 2));
     }
     setDashboard({
@@ -104,12 +104,46 @@ export default function App() {
       .catch((loadError) => setError(loadError));
   }
 
-  function updatePanel(panelId, updates) {
+  function previewDashboardConfig(nextConfig) {
+    const safeConfig = sanitizeDashboardConfig(nextConfig);
+    if (dashboard && sameDataSources(dashboard.dataSources, safeConfig.dataSources)) {
+      setError(null);
+      setDashboard({
+        ...safeConfig,
+        pages: Array.isArray(safeConfig.pages) ? safeConfig.pages : dashboard.pages,
+        loadedData: dashboard.loadedData,
+      });
+      return;
+    }
+    loadDashboardConfig(safeConfig)
+      .then((loadedDashboard) => {
+        setError(null);
+        applyLoadedDashboard(loadedDashboard, { persistReconciliation: false });
+      })
+      .catch((loadError) => setError(loadError));
+  }
+
+  function updatePanel(panelId, updates, options = {}) {
+    const { commitToEditSession = true } = options;
     const nextConfig = updatePanelInConfig(stripRuntimeFields(dashboard), panelId, updates);
+    if (!commitToEditSession) {
+      previewDashboardConfig(nextConfig);
+      return;
+    }
     updateDashboardConfig(nextConfig);
-    if (editMode && editSessionStartConfig) {
+    if (commitToEditSession && editMode && editSessionStartConfig) {
       setEditSessionStartConfig(updatePanelInConfig(editSessionStartConfig, panelId, updates));
     }
+  }
+
+  function commitPanelEditSession(config) {
+    const safeConfig = sanitizeDashboardConfig(stripRuntimeFields(config));
+    updateDashboardConfig(safeConfig);
+    setEditSessionStartConfig(safeConfig);
+  }
+
+  function cancelPanelEditSession(config) {
+    updateDashboardConfig(stripRuntimeFields(config));
   }
 
   function updateSection(pageId, sectionId, updates) {
@@ -349,6 +383,8 @@ export default function App() {
         onPageChange={updatePage}
         onDashboardChange={updateDashboardFields}
         onPanelChange={updatePanel}
+        onPanelEditCommit={commitPanelEditSession}
+        onPanelEditCancel={cancelPanelEditSession}
         onSectionChange={updateSection}
         onSectionInsert={insertSection}
         onVantaBackgroundChange={updateVantaBackground}
