@@ -424,7 +424,7 @@ function SeriesFromSection({ panel, dataColumns, patchSeriesFrom }) {
     <>
       <ColumnSelectField label="Series name column" value={panel.seriesFrom?.nameField ?? ""} columns={dataColumns} tip="seriesName" onChange={(value) => patchSeriesFrom({ nameField: value })} />
       <ColumnSelectField label="Series value column" value={panel.seriesFrom?.valueField ?? ""} columns={dataColumns} tip="value" onChange={(value) => patchSeriesFrom({ valueField: value })} />
-      <p className="settings-note">Use this when one CSV column contains the group name and another contains the numeric value.</p>
+      <p className="settings-note">Use this only when one CSV column names multiple series. For a simple long-format chart such as Age group + deaths, leave this empty and use one normal series with the value column.</p>
     </>
   );
 }
@@ -788,7 +788,7 @@ function chartDataRequirement(type, dataFormat) {
       tips: ["Keep values short so they fit in compact cards.", "Use detail text for direction, time period, or comparison notes."],
     };
   }
-  const longRequired = ["Category or x-axis column.", "Series name column, for example age group or response option.", "Numeric value column.", "Optional date column for filtering or timeline charts."];
+  const longRequired = ["Category or x-axis column.", "Numeric value column.", "Optional date column for filtering or timeline charts.", "Optional series name column only when the CSV contains multiple groups that should become separate chart series."];
   const wideRequired = ["Category or x-axis column.", "One numeric column for each series, for example cases and deaths.", "Optional date column if the x-axis is time-based."];
   return {
     title: "Axis chart data structure",
@@ -803,7 +803,7 @@ function chartDataRequirement(type, dataFormat) {
       ? { columns: ["date", "age_group", "deaths"], rows: [["2027-05-02", "60-79", "1476"], ["2027-05-02", "80+", "888"]] }
       : { columns: ["date", "new_cases", "new_deaths"], rows: [["2027-05-02", "1200", "28"]] },
     tips: format === "long"
-      ? ["Use Series name column and Series value column in the Series tab.", "Long format is best when the number of groups can change over time."]
+      ? ["For one value per category, set X/category to the category column and add one series using the numeric value column.", "Use Series name column only when one CSV column contains multiple series names, such as response option or scenario.", "Long format is best when categories or groups can change over time."]
       : ["Add one chart series for each numeric value column.", "Wide format is simplest when you have a fixed set of series."],
   };
 }

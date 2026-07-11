@@ -109,11 +109,14 @@ function applyPanelColumnFallbacks(panel, columns, changes) {
 }
 
 function ensureField(target, fieldName, columns, fallback, changes, label) {
-  if (!target[fieldName] || columns.includes(target[fieldName])) {
+  if (target[fieldName] && columns.includes(target[fieldName])) {
     return;
   }
   const nextValue = fallback ?? columns[0] ?? "";
-  changes.push(`Updated missing ${label} "${target[fieldName]}" to "${nextValue}".`);
+  const previousValue = target[fieldName];
+  changes.push(previousValue
+    ? `Updated missing ${label} "${previousValue}" to "${nextValue}".`
+    : `Set missing ${label} to "${nextValue}".`);
   target[fieldName] = nextValue;
 }
 

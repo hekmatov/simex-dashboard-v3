@@ -216,12 +216,12 @@ export default function App() {
     reader.readAsText(file);
   }
 
-  function exportConfig() {
-    promptAndDownloadDashboardBundle(bundleFromDashboard(dashboard), `SimEx-dashboard-bundle-${dateStamp()}`);
+  function exportConfig(configOverride) {
+    promptAndDownloadDashboardBundle(bundleFromDashboard(configOverride ?? dashboard), `SimEx-dashboard-bundle-${dateStamp()}`);
   }
 
-  async function exportPackageDefaultConfig() {
-    const bundle = bundleFromDashboard(dashboard);
+  async function exportPackageDefaultConfig(configOverride) {
+    const bundle = bundleFromDashboard(configOverride ?? dashboard);
     const fileName = "packaged-dashboard-bundle.json";
 
     if (globalThis.window?.showSaveFilePicker) {

@@ -307,6 +307,31 @@ export default function DashboardRenderer({
     setSelectedPanelId(null);
   }
 
+  function dashboardWithCurrentDrafts() {
+    const nextDashboard = structuredClone(dashboard);
+    Object.assign(nextDashboard, dashboardDraft);
+
+    nextDashboard.pages = (nextDashboard.pages ?? []).map((page) => {
+      const pageDraft = pageDrafts[page.id];
+      const nextPage = pageDraft ? { ...page, ...pageDraft } : page;
+      return {
+        ...nextPage,
+        sections: (nextPage.sections ?? []).map((section) => {
+          const sectionDraft = sectionDrafts[section.id];
+          const nextSection = sectionDraft ? { ...section, ...sectionDraft } : section;
+          return {
+            ...nextSection,
+            panels: (nextSection.panels ?? []).map((panel) =>
+              selectedPanelDraft && panel.id === selectedPanelDraft.id ? selectedPanelDraft : panel,
+            ),
+          };
+        }),
+      };
+    });
+
+    return nextDashboard;
+  }
+
   if (editMode && showVantaSettings) {
     return (
       <main className="app-shell background-editor-shell">
@@ -404,8 +429,8 @@ export default function DashboardRenderer({
               <button type="button" className="secondary" disabled={(dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
             </div>
             <button type="button" onClick={() => importInputRef.current?.click()}>Import bundle</button>
-            <button type="button" onClick={onExportConfig}>Export bundle</button>
-            <button type="button" onClick={onExportPackageDefault}>Export package default</button>
+            <button type="button" onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export bundle</button>
+            <button type="button" onClick={() => onExportPackageDefault(dashboardWithCurrentDrafts())}>Export package default</button>
             <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}>Upload CSV</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
