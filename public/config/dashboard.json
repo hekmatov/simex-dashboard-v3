@@ -129,8 +129,9 @@
                   "lon"
                 ],
                 "signature": "date|province|Infected_total|lat|lon",
-                "checkedAt": "2026-07-11T18:28:45.475Z"
-              }
+                "checkedAt": "2026-07-11T20:30:11.858Z"
+              },
+              "joinField": "date"
             }
           ]
         }
@@ -203,7 +204,7 @@
                   "new_deaths"
                 ],
                 "signature": "date|national_total_cases|total_deaths|daily_new_cases|new_deaths",
-                "checkedAt": "2026-07-11T18:28:45.475Z"
+                "checkedAt": "2026-07-11T20:30:11.858Z"
               }
             },
             {
@@ -261,7 +262,7 @@
                   "sourceMunicipalityCodes"
                 ],
                 "signature": "Datum|MunicipalityCode|Gemeentecode|Gemeentenaam|Provincienaam|AantalCumulatief|population|infectionsPerPopulation|infectionsPer1000|infectionsPer10000|dataMethod|populationSource|sourceMunicipalityCodes",
-                "checkedAt": "2026-07-11T18:28:45.592Z"
+                "checkedAt": "2026-07-11T20:30:11.904Z"
               }
             },
             {
@@ -299,7 +300,7 @@
                   "R_value"
                 ],
                 "signature": "date|R_value",
-                "checkedAt": "2026-07-11T18:28:45.592Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -326,7 +327,7 @@
                   "lon"
                 ],
                 "signature": "date|province|Infected_total|lat|lon",
-                "checkedAt": "2026-07-11T18:28:45.592Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -359,7 +360,7 @@
                   "Is first snapshot"
                 ],
                 "signature": "date|province|Infected_total|lat|lon|Cumulative cases|Previous cumulative cases|Case delta|Comparison date|Comparison label|Is first snapshot",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -409,7 +410,7 @@
                   "new_deaths"
                 ],
                 "signature": "date|national_total_cases|total_deaths|daily_new_cases|new_deaths",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -441,11 +442,12 @@
                   "date"
                 ],
                 "signature": "Age group|deaths|date",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               },
               "dataFormat": "long",
               "seriesFrom": {
-                "valueField": "deaths"
+                "valueField": "deaths",
+                "nameField": "Age group"
               }
             }
           ]
@@ -504,7 +506,7 @@
                   "color"
                 ],
                 "signature": "id|title|value|color",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -535,7 +537,7 @@
                   "color"
                 ],
                 "signature": "id|title|value|color",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -584,7 +586,7 @@
                   "Total occupancy"
                 ],
                 "signature": "date|HeV-A26 occupancy|Other occupancy|Capacity|Total occupancy",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -633,7 +635,7 @@
                   "Total occupancy"
                 ],
                 "signature": "date|HeV-A26 occupancy|Other occupancy|Capacity|Total occupancy",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -669,7 +671,7 @@
                   "new_clinic_admissions"
                 ],
                 "signature": "date|new_icu_admissions|new_clinic_admissions",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -694,7 +696,7 @@
                   "Cases"
                 ],
                 "signature": "Year|Month|Month name|Treatment|Cases",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             }
           ]
@@ -746,7 +748,7 @@
                   "test_positivity_rate"
                 ],
                 "signature": "date|tests_per_day|test_positivity_rate",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             }
           ]
@@ -789,8 +791,9 @@
                   "lon"
                 ],
                 "signature": "date|province_id|virus_particles|province|lat|lon",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
-              }
+                "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "joinField": "province_id"
             },
             {
               "id": "bio_wastewater_province",
@@ -816,7 +819,7 @@
                   "lon"
                 ],
                 "signature": "date|province_id|virus_particles|province|lat|lon",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             }
           ]
@@ -856,7 +859,7 @@
                   "Status"
                 ],
                 "signature": "Group|First_vaccination_pct|Second_vaccination_pct|Status",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -878,7 +881,7 @@
                   "vaccination_rate_pct"
                 ],
                 "signature": "date|group|vaccination_rate_pct",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             }
           ]
@@ -962,7 +965,7 @@
                   "Behaviour type"
                 ],
                 "signature": "date|date_value|Month Label|Question key|Question|Answer|Percentage|Age group|Behaviour type",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -1008,7 +1011,7 @@
                   "selected_date"
                 ],
                 "signature": "date|date_value|Month Label|Question key|Question|Answer group|Age group|Behaviour type|Percentage|Previous percentage|Percentage delta|Comparison date|Comparison label|Is first snapshot|selected_date",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -1047,7 +1050,7 @@
                   "Behaviour type"
                 ],
                 "signature": "date|date_value|Month Label|Question key|Question|Answer|Percentage|Age group|Behaviour type",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -1079,7 +1082,7 @@
                   "Percentage"
                 ],
                 "signature": "date|date_value|Month Label|Value|Percentage",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -1121,7 +1124,7 @@
                   "selected_date"
                 ],
                 "signature": "date|date_value|Month Label|Value|Percentage|Previous percentage|Percentage delta|Comparison date|Comparison label|Is first snapshot|selected_date",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             }
           ]
@@ -1180,7 +1183,7 @@
                   "date_value"
                 ],
                 "signature": "date|Trustee_id|trust|institution|date_label|date_value",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -1207,7 +1210,7 @@
                   "date_value"
                 ],
                 "signature": "date|Trustee_id|trust|institution|date_label|date_value",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             }
           ]
@@ -1263,7 +1266,7 @@
                   "Percentage"
                 ],
                 "signature": "snapshot_id|Snapshot|Snapshot label|Age group|Percentage",
-                "checkedAt": "2026-07-11T18:28:45.593Z"
+                "checkedAt": "2026-07-11T20:30:11.905Z"
               }
             },
             {
@@ -1301,7 +1304,7 @@
                   "Percentage"
                 ],
                 "signature": "Category|snapshot_id|Snapshot|Snapshot label|Age group|Answer|Percentage",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             },
             {
@@ -1334,7 +1337,7 @@
                   "Percentage"
                 ],
                 "signature": "Category|snapshot_id|Snapshot|Snapshot label|Question key|Question|Answer|Percentage",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             },
             {
@@ -1367,7 +1370,7 @@
                   "Percentage"
                 ],
                 "signature": "Category|snapshot_id|Snapshot|Snapshot label|Question key|Question|Answer|Percentage",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             }
           ]
@@ -1409,7 +1412,7 @@
                   "Sector"
                 ],
                 "signature": "Sector_id|Closures|Year|Code|Sector",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             },
             {
@@ -1433,7 +1436,7 @@
                   "Date label"
                 ],
                 "signature": "Date|Value|Date label",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             }
           ]
@@ -1475,7 +1478,7 @@
                   "Absenteeism percentage"
                 ],
                 "signature": "Year|Month|Month order|Period|Absenteeism percentage",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             },
             {
@@ -1499,7 +1502,7 @@
                   "Absenteeism percentage"
                 ],
                 "signature": "Year|Month|Month order|Period|Absenteeism percentage",
-                "checkedAt": "2026-07-11T18:28:45.594Z"
+                "checkedAt": "2026-07-11T20:30:11.906Z"
               }
             }
           ]
