@@ -414,40 +414,11 @@
             },
             {
               "id": "bio_mortality_age",
-              "configVersion": 2,
-              "configVersionedFields": [
-                "type",
-                "x",
-                "xAxisMode",
-                "categorySelection",
-                "xAxisTitle",
-                "yAxisTitle",
-                "showValueLabels",
-                "valueLabelPosition",
-                "series",
-                "seriesFrom",
-                "dataFormat"
-              ],
-              "type": "horizontalBar",
+              "type": "stackedBar",
               "title": "Age Distribution of HeV-A26 Mortality",
               "dataSource": "bio_mortality",
-              "x": "Age group",
-              "xAxisMode": "category",
+              "x": "date",
               "size": "wide",
-              "categorySelection": {
-                "column": "Age group",
-                "values": [
-                  "0-19",
-                  "20-39",
-                  "40-59",
-                  "60-79",
-                  "80+"
-                ]
-              },
-              "xAxisTitle": "Age group",
-              "yAxisTitle": "Deaths",
-              "showValueLabels": true,
-              "valueLabelPosition": "right",
               "series": [
                 {
                   "name": "Deaths",
@@ -472,7 +443,10 @@
                 "signature": "Age group|deaths|date",
                 "checkedAt": "2026-07-11T18:28:45.593Z"
               },
-              "dataFormat": "long"
+              "dataFormat": "long",
+              "seriesFrom": {
+                "valueField": "deaths"
+              }
             }
           ]
         },
