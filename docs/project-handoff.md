@@ -436,6 +436,7 @@ http://localhost:5173/
 - Individual chart panels have an export menu in the top-right action cluster.
 - Panel export supports PNG and JPEG choices at 96, 150, and 300 DPI-equivalent export scales.
 - ECharts-backed panels use ECharts' native image export. Map and image panels use custom browser-side canvas export helpers.
+- The footer uses configurable `feedbackUrl`, `contactEmail`, `footerTitle`, `footerCredit`, and private-repository-safe `showRepositoryLink` fields. Use `docs/google-feedback-form.md` and `tools/google/create-simex-feedback-form.gs` to create a Google Form for participant feedback.
 - Edits are kept in browser state while using the app.
 - Exported bundles are the portable way to preserve and share point-and-click edits plus uploaded CSVs.
 - To promote browser edits into the GitHub-tracked dashboard, export a bundle as `packaged-dashboard-bundle.json` in the project root and run `pnpm.cmd promote:bundle`. This writes the edited config to `public/config/dashboard.json` and writes uploaded CSVs to `public/data/uploaded/`.

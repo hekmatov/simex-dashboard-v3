@@ -595,28 +595,39 @@ export default function DashboardRenderer({
           onClose={closeMultiFullscreen}
         />
       )}
-      <DashboardFooter />
+      <DashboardFooter dashboard={dashboard} />
     </main>
   );
 }
 
-function DashboardFooter() {
+function DashboardFooter({ dashboard }) {
+  const feedbackUrl = dashboard.feedbackUrl || feedbackMailtoUrl(dashboard.contactEmail);
+  const contactUrl = dashboard.contactEmail ? `mailto:${dashboard.contactEmail}` : null;
+  const showRepositoryLink = Boolean(dashboard.repositoryUrl && dashboard.showRepositoryLink);
   return (
     <footer className="dashboard-footer" aria-label="Dashboard information and feedback">
       <div>
-        <strong>SimEx Dashboard V2</strong>
-        <span>Developed by Hekmat Alrouh</span>
+        <strong>{dashboard.footerTitle ?? "SimEx Dashboard V2"}</strong>
+        <span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span>
       </div>
       <nav aria-label="Project links">
-        <a href="https://github.com/hekmatov/simex-dashboard-v2/issues/new" target="_blank" rel="noreferrer">
+        <a href={feedbackUrl} target="_blank" rel="noreferrer">
           Report a bug / request a feature
         </a>
-        <a href="https://github.com/hekmatov/simex-dashboard-v2" target="_blank" rel="noreferrer">
-          Project repository
-        </a>
+        {contactUrl && <a href={contactUrl}>Contact maintainer</a>}
+        {showRepositoryLink && (
+          <a href={dashboard.repositoryUrl} target="_blank" rel="noreferrer">
+            Project repository
+          </a>
+        )}
       </nav>
     </footer>
   );
+}
+
+function feedbackMailtoUrl(contactEmail) {
+  const email = contactEmail || "hekmat.alrouh@live.com";
+  return `mailto:${email}?subject=${encodeURIComponent("SimEx Dashboard feedback")}`;
 }
 
 function MultiFullscreenOverlay({ dashboard, panelIds, layout, label = "Multi-fullscreen", reason, onLayoutChange, onPanelOrderChange, onClose }) {

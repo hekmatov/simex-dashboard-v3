@@ -54,10 +54,13 @@ pnpm.cmd preview
 - `docs/project-handoff.md`: current maintainer handoff and feature map.
 - `docs/old-dashboard-migration-map.md`: migration notes from the original PDPC dashboard.
 - `docs/municipality-choropleth.md`: municipality choropleth data join and map-source notes.
+- `docs/google-feedback-form.md`: Google Form setup for participant bug reports and feature requests.
 
 ## Current Feature Map
 
 The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, uploaded CSV data sources, portable dashboard bundle import/export, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, municipality choropleths, gauges, image panels, and a configurable animated background.
+
+The footer includes a configurable feedback link. For private repositories, use the Google Form workflow in `docs/google-feedback-form.md` instead of linking to GitHub Issues.
 
 For a complete pickup guide, see:
 
