@@ -337,6 +337,50 @@ h1 {
   grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
 }
 
+.dashboard-footer {
+  align-items: center;
+  background: rgb(248 251 255 / 82%);
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgb(8 34 74 / 6%);
+  color: #49627a;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: space-between;
+  margin-top: 22px;
+  padding: 14px 16px;
+}
+
+.dashboard-footer div,
+.dashboard-footer nav {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dashboard-footer strong {
+  color: #08224a;
+  font-size: 14px;
+}
+
+.dashboard-footer span,
+.dashboard-footer a {
+  color: #49627a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-footer a {
+  text-decoration: none;
+}
+
+.dashboard-footer a:hover {
+  color: #043bcb;
+  text-decoration: underline;
+}
+
 .page-stack {
   display: grid;
   gap: 18px;

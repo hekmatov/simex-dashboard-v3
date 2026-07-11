@@ -89,6 +89,8 @@ pnpm.cmd promote:bundle
 
 That command writes the edited dashboard into `public/config/dashboard.json`. Any uploaded CSVs are written into `public/data/uploaded/`. Review the diff, then commit and push those tracked files. This is the source-controlled workflow for publishing browser edits through GitHub and Cloudflare.
 
+For maintainer work, treat this promoted output as the new baseline before making further code changes. In practice: export browser edits, run `pnpm.cmd promote:bundle`, commit the changed config/data files, then start the next feature or design update from that commit. This prevents future app updates from reverting your browser-made dashboard content.
+
 When the dashboard app is updated, browser-saved edits are reconciled with the new default dashboard:
 
 - Matching pages, sections, and panels keep the user's current edit-mode configuration.

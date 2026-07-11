@@ -595,7 +595,27 @@ export default function DashboardRenderer({
           onClose={closeMultiFullscreen}
         />
       )}
+      <DashboardFooter />
     </main>
+  );
+}
+
+function DashboardFooter() {
+  return (
+    <footer className="dashboard-footer" aria-label="Dashboard information and feedback">
+      <div>
+        <strong>SimEx Dashboard V2</strong>
+        <span>Developed by Hekmat Alrouh</span>
+      </div>
+      <nav aria-label="Project links">
+        <a href="https://github.com/hekmatov/simex-dashboard-v2/issues/new" target="_blank" rel="noreferrer">
+          Report a bug / request a feature
+        </a>
+        <a href="https://github.com/hekmatov/simex-dashboard-v2" target="_blank" rel="noreferrer">
+          Project repository
+        </a>
+      </nav>
+    </footer>
   );
 }
 
