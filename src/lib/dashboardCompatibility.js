@@ -1,9 +1,12 @@
 const AXIS_TYPES = new Set(["bar", "line", "area", "horizontalBar", "horizontalStackedBar", "groupedBar", "stackedBar", "mixed"]);
 const GEO_TYPES = new Set(["mapScatter", "choroplethMap", "chronoChoroplethMap"]);
 
+import { legacyBindingForPanel, profileTabularData } from "./chartDataModel.js";
+
 export function reconcileDashboardWithLoadedData(config, loadedData) {
   const nextConfig = structuredClone(config);
   const reports = [];
+  const profileCache = new Map();
 
   for (const page of nextConfig.pages ?? []) {
     for (const section of page.sections ?? []) {
@@ -13,8 +16,15 @@ export function reconcileDashboardWithLoadedData(config, loadedData) {
           continue;
         }
 
-        const columns = collectColumns(rows);
-        const previousColumns = Array.isArray(panel.sourceSchema?.columns) ? panel.sourceSchema.columns : null;
+        let profile = profileCache.get(panel.dataSource);
+        if (!profile) {
+          profile = profileTabularData(rows);
+          profileCache.set(panel.dataSource, profile);
+        }
+        const columns = profile.columns.map((column) => column.name);
+        const previousColumns = Array.isArray(panel.sourceSchema?.columns)
+          ? panel.sourceSchema.columns.map((column) => typeof column === "string" ? column : column?.name).filter(Boolean)
+          : null;
         const changes = [];
 
         if (previousColumns) {
@@ -29,11 +39,27 @@ export function reconcileDashboardWithLoadedData(config, loadedData) {
         }
 
         applyPanelColumnFallbacks(panel, columns, changes);
+        if (AXIS_TYPES.has(panel.type)) {
+          repairDataBinding(panel, columns, changes);
+        }
         const nextSignature = columns.join("|");
         const previousSignature = panel.sourceSchema?.signature;
+        const previousFingerprint = panel.sourceSchema?.dataFingerprint;
+        const previousRowCount = panel.sourceSchema?.rowCount;
+        if (previousFingerprint && previousFingerprint !== profile.fingerprint) {
+          if (previousRowCount !== undefined && previousRowCount !== profile.rowCount) {
+            changes.push(`CSV row count changed from ${previousRowCount} to ${profile.rowCount}; chart data was refreshed.`);
+          } else {
+            changes.push("CSV values changed; chart data was refreshed.");
+          }
+        }
         panel.sourceSchema = {
+          version: 2,
           columns,
+          columnProfiles: profile.columns,
           signature: nextSignature,
+          rowCount: profile.rowCount,
+          dataFingerprint: profile.fingerprint,
           checkedAt: new Date().toISOString(),
         };
 
@@ -60,16 +86,7 @@ export function reconcileDashboardWithLoadedData(config, loadedData) {
 
 function applyPanelColumnFallbacks(panel, columns, changes) {
   if (AXIS_TYPES.has(panel.type)) {
-    ensureField(panel, "x", columns, preferredCategoryColumn(columns), changes, "x/category field");
-    panel.series = (panel.series ?? []).map((series, index) => {
-      const nextSeries = { ...series };
-      ensureField(nextSeries, "y", columns, preferredValueColumn(columns, panel.x), changes, `${series.name ?? `Series ${index + 1}`} value field`);
-      return nextSeries;
-    });
-    if (panel.seriesFrom) {
-      ensureNestedField(panel.seriesFrom, "nameField", columns, preferredCategoryColumn(columns), changes, "long-format series name column");
-      ensureNestedField(panel.seriesFrom, "valueField", columns, preferredValueColumn(columns, panel.seriesFrom.nameField), changes, "long-format series value column");
-    }
+    return;
   }
 
   if (panel.type === "gauge") {
@@ -106,6 +123,43 @@ function applyPanelColumnFallbacks(panel, columns, changes) {
       }
     }
   }
+}
+
+function repairDataBinding(panel, columns, changes) {
+  panel.dataBinding = panel.dataBinding ?? legacyBindingForPanel(panel);
+  const binding = panel.dataBinding;
+  if (!binding) return;
+
+  repairBindingField(binding.x, "field", columns, changes, "x-axis field");
+  for (const measure of binding.measures ?? []) {
+    repairBindingField(measure, "field", columns, changes, "measurement field");
+  }
+  binding.series = binding.series ?? { fields: [] };
+  binding.series.fields = (binding.series.fields ?? []).map((field) => repairFieldName(field, columns, changes, "cluster field"));
+  for (const filter of binding.filters ?? []) {
+    filter.field = repairFieldName(filter.field, columns, changes, "filter field");
+  }
+}
+
+function repairBindingField(target, key, columns, changes, label) {
+  if (!target) return;
+  target[key] = repairFieldName(target[key], columns, changes, label);
+}
+
+function repairFieldName(field, columns, changes, label) {
+  if (!field || columns.includes(field)) return field;
+  const normalized = normalizeColumnName(field);
+  const matches = columns.filter((column) => normalizeColumnName(column) === normalized);
+  if (matches.length === 1) {
+    changes.push(`Updated renamed ${label} "${field}" to "${matches[0]}".`);
+    return matches[0];
+  }
+  changes.push(`Missing ${label} "${field}" requires review; no unsafe replacement was applied.`);
+  return field;
+}
+
+function normalizeColumnName(value) {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 function ensureField(target, fieldName, columns, fallback, changes, label) {

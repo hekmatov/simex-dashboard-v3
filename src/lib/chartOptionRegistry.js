@@ -6,15 +6,15 @@
 ];
 
 const COMMON_SECTIONS = {
-  data: ["source", "dateSelection", "categorySelection", "categoryOrder"],
-  series: ["seriesList"],
+  data: ["source", "dataBinding", "categoryOrder"],
+  series: [],
   axes: ["axisFields", "axisScale", "secondaryAxis", "referenceLines"],
   style: ["titleLayout", "legend", "palette", "textSize", "panelLayout"],
 };
 
 const BAR_SECTIONS = {
-  data: ["source", "dateSelection", "categorySelection", "categoryOrder"],
-  series: ["seriesList", "barAppearance", "seriesFrom"],
+  data: ["source", "dataBinding", "categoryOrder"],
+  series: ["barAppearance"],
   axes: ["axisFields", "axisScale", "secondaryAxis"],
   style: ["titleLayout", "legend", "palette", "textSize", "panelLayout", "tooltip"],
 };
@@ -23,8 +23,8 @@ const TYPE_SECTIONS = {
   line: COMMON_SECTIONS,
   area: COMMON_SECTIONS,
   mixed: {
-    data: ["source", "dateSelection", "categorySelection", "categoryOrder"],
-    series: ["seriesList", "barAppearance"],
+    data: ["source", "dataBinding", "categoryOrder"],
+    series: ["barAppearance"],
     axes: ["axisFields", "axisScale", "secondaryAxis", "referenceLines"],
     style: ["titleLayout", "legend", "palette", "textSize", "panelLayout", "tooltip"],
   },
@@ -85,6 +85,7 @@ const TYPE_SECTIONS = {
 
 export const CHART_OPTION_SECTIONS = {
   source: { tab: "data", title: "Source", optionIds: ["title", "infoSource", "dataSource", "sourceCsv", "panelType"] },
+  dataBinding: { tab: "data", title: "Observations, Measurements & Filters", optionIds: ["xRole", "measures", "clusterFields", "filters", "aggregation"] },
   dateSelection: { tab: "data", title: "Date Filter", optionIds: ["dateSelection"] },
   singleDateSelection: { tab: "data", title: "Date", optionIds: ["singleDateSelection"] },
   categorySelection: { tab: "data", title: "Category Checklist", optionIds: ["categorySelection"] },

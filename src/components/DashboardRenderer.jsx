@@ -1,5 +1,6 @@
 ﻿import React from "react";
 
+import AddChartWizard from "./AddChartWizard.jsx";
 import ColorField from "./ColorField.jsx";
 import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
@@ -43,6 +44,7 @@ export default function DashboardRenderer({
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
   const [selectedPanelDraft, setSelectedPanelDraft] = React.useState(null);
+  const [chartWizardTarget, setChartWizardTarget] = React.useState(null);
   const [chartEditBaseline, setChartEditBaseline] = React.useState(null);
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
   const [pageDrafts, setPageDrafts] = React.useState({});
@@ -567,7 +569,7 @@ export default function DashboardRenderer({
                     <button
                       type="button"
                       className="secondary add-panel-button"
-                      onClick={() => onPanelAdd(activePage.id, section.id)}
+                      onClick={() => setChartWizardTarget({ pageId: activePage.id, sectionId: section.id })}
                     >
                       Add chart
                     </button>
@@ -629,6 +631,13 @@ export default function DashboardRenderer({
           />
         )}
       </section>
+      <AddChartWizard
+        open={Boolean(chartWizardTarget)}
+        dataSources={dashboard.dataSources}
+        loadedData={dashboard.loadedData}
+        onClose={() => setChartWizardTarget(null)}
+        onCreate={({ panel, uploadedSource }) => onPanelAdd(chartWizardTarget.pageId, chartWizardTarget.sectionId, panel, uploadedSource)}
+      />
       {multiFullscreenOpen && (
         <MultiFullscreenOverlay
           dashboard={dashboard}

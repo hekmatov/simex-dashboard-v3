@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node --test",
     "predev": "node scripts/build-portable-data.mjs",
     "dev": "vite --host 0.0.0.0",
     "prebuild": "node scripts/build-portable-data.mjs",
@@ -11,6 +12,7 @@
     "build:cloudflare": "set SIMEX_EMBED_PORTABLE_DATA=0&& node scripts/build-portable-data.mjs && vite build",
     "build:cloudflare:linux": "SIMEX_EMBED_PORTABLE_DATA=0 node scripts/build-portable-data.mjs && vite build",
     "build:flashdrive": "pnpm.cmd build",
+    "migrate:chart-schema": "node scripts/migrate-chart-schema-v2.mjs",
     "package:flashdrive": "pnpm build && node scripts/package-flashdrive.mjs",
     "promote:bundle": "node scripts/promote-dashboard-bundle.mjs",
     "preview": "vite preview --host 0.0.0.0"

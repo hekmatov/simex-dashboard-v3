@@ -2452,4 +2452,293 @@ button.danger {
   min-height: calc(100vh - 120px);
 }
 
+.data-binding-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.data-profile-summary,
+.binding-preview-summary,
+.binding-role-card,
+.binding-measure-card,
+.binding-filter-card,
+.wizard-choice-card,
+.wizard-review-card {
+  background: rgb(255 255 255 / 78%);
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.data-profile-summary span,
+.data-profile-summary small,
+.binding-preview-summary span,
+.binding-preview-summary small,
+.wizard-source-summary span,
+.wizard-source-summary small {
+  color: #506a82;
+}
+
+.data-profile-columns {
+  background: #eef4f8;
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.data-profile-columns summary {
+  color: #08224a;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.data-profile-column-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.data-profile-column-list > div {
+  background: white;
+  border-radius: 8px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+}
+
+.data-profile-column-list span,
+.data-profile-column-list small {
+  color: #506a82;
+}
+
+.binding-role-card h4,
+.binding-filter-card h4 {
+  color: #08224a;
+  font-size: 14px;
+  margin: 0;
+}
+
+.binding-checkbox-list,
+.binding-filter-values {
+  background: #f5f8fb;
+  border: 1px solid #e1e9f0;
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.binding-checkbox-list .checkbox-row,
+.binding-filter-values .checkbox-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin: 0;
+}
+
+.binding-checkbox-list small {
+  color: #6a7f92;
+  font-size: 11px;
+}
+
+.binding-measure-card {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.binding-measure-card > strong {
+  grid-column: 1 / -1;
+}
+
+.binding-measure-appearance {
+  border-top: 1px solid #e1e9f0;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 10px;
+}
+
+.binding-filter-adder {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.binding-filter-list,
+.binding-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.binding-diagnostics {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.binding-diagnostic-ok {
+  color: #007854;
+  font-weight: 700;
+}
+
+.binding-diagnostic-error,
+.wizard-error {
+  color: #a21729;
+}
+
+.binding-diagnostic-warning {
+  color: #8a5a00;
+}
+
+.chart-wizard-backdrop {
+  align-items: center;
+  background: rgb(4 24 48 / 62%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 1300;
+}
+
+.chart-wizard {
+  background: #f5f8fb;
+  border: 1px solid #d8e2ec;
+  border-radius: 18px;
+  box-shadow: 0 28px 80px rgb(4 24 48 / 34%);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  max-height: calc(100vh - 48px);
+  max-width: 1100px;
+  overflow: hidden;
+  width: min(1100px, 100%);
+}
+
+.chart-wizard-header,
+.chart-wizard-footer {
+  align-items: center;
+  background: white;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.chart-wizard-header {
+  border-bottom: 1px solid #d8e2ec;
+}
+
+.chart-wizard-header h2,
+.chart-wizard-header p {
+  margin: 0;
+}
+
+.chart-wizard-footer {
+  border-top: 1px solid #d8e2ec;
+}
+
+.chart-wizard-footer span {
+  color: #6a7f92;
+  flex: 1;
+  font-size: 12px;
+  text-align: center;
+}
+
+.chart-wizard-steps {
+  background: #eaf1f6;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 10px 20px;
+}
+
+.chart-wizard-steps li {
+  border-bottom: 3px solid transparent;
+  color: #6a7f92;
+  font-size: 12px;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.chart-wizard-steps li.active {
+  border-color: #043bcb;
+  color: #043bcb;
+  font-weight: 800;
+}
+
+.chart-wizard-steps li.complete {
+  color: #007854;
+}
+
+.chart-wizard-body {
+  overflow: auto;
+  padding: 20px;
+}
+
+.chart-wizard-source-grid,
+.chart-wizard-review {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wizard-choice-card h3,
+.wizard-review-card h3 {
+  margin: 0;
+}
+
+.wizard-source-summary {
+  background: #eaf1f6;
+  border-radius: 10px;
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+}
+
+.wizard-review-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.wizard-review-card dl div {
+  border-bottom: 1px solid #e1e9f0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 120px minmax(0, 1fr);
+  padding-bottom: 8px;
+}
+
+.wizard-review-card dt {
+  color: #506a82;
+}
+
+.wizard-review-card dd {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .chart-wizard-backdrop {
+    padding: 0;
+  }
+
+  .chart-wizard {
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .chart-wizard-source-grid,
+  .chart-wizard-review,
+  .binding-measure-card,
+  .binding-measure-appearance {
+    grid-template-columns: 1fr;
+  }
+}
+
 

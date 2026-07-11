@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import ColorField from "./ColorField.jsx";
+import DataBindingEditor from "./DataBindingEditor.jsx";
 import { CHART_OPTION_SECTIONS, CHART_SETTING_TABS, getSectionsForPanelType } from "../lib/chartOptionRegistry.js";
 
 const CHART_TYPES = [
@@ -59,12 +60,6 @@ const FONT_CONTROLS = {
   mapLabel: { label: "Map hover labels", defaultValue: 12 },
 };
 
-const DATA_FORMATS = [
-  { value: "auto", label: "Auto / not sure" },
-  { value: "wide", label: "Wide - one row has many value columns" },
-  { value: "long", label: "Long - one row per observation/category" },
-];
-
 const COLUMN_TIPS = {
   category: "Use a text-like column with group names, regions, age bands, categories, or dates used as labels. Avoid total rows unless you want them shown as a category.",
   value: "Use a numeric column. Remove commas or percent signs if they prevent values from being interpreted as numbers.",
@@ -79,6 +74,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
   const [activeTab, setActiveTab] = React.useState("data");
   const [openSections, setOpenSections] = React.useState({});
   const sectionsByTab = getSectionsForPanelType(panel.type);
+  const visibleTabs = CHART_SETTING_TABS.filter((tab) => (sectionsByTab[tab.id] ?? []).length > 0);
   const sectionIds = sectionsByTab[activeTab] ?? [];
   const dateColumn = inferDateColumn(dataColumns, panel);
   const dateOptions = collectUniqueValues(dataRows, dateColumn).sort(compareDateishValues);
@@ -86,7 +82,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
   const dataSourcePath = panel.dataSource ? dataSources?.[panel.dataSource] : "";
 
   React.useEffect(() => {
-    if (!sectionsByTab[activeTab]) setActiveTab("data");
+    if (!(sectionsByTab[activeTab] ?? []).length) setActiveTab(visibleTabs[0]?.id ?? "data");
   }, [activeTab, panel.type, sectionsByTab]);
 
   function patch(updates) {
@@ -139,6 +135,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
   function renderSection(sectionId) {
     switch (sectionId) {
       case "source": return <SourceSection panel={panel} dataSources={dataSources} dataSourcePath={dataSourcePath} dataRows={dataRows} patch={patch} />;
+      case "dataBinding": return <DataBindingEditor panel={panel} rows={dataRows} onChange={patch} />;
       case "dateSelection": return <DateSection column={dateColumn} options={dateOptions} selection={panel.dateSelection} patch={patch} />;
       case "singleDateSelection": return <SingleDateSection column={dateColumn} options={dateOptions} selection={panel.dateSelection} patch={patch} />;
       case "categorySelection": return <CategorySection column={panel.x} options={categoryOptions} selection={panel.categorySelection} patch={patch} />;
@@ -182,7 +179,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
       </div>
 
       <div className="settings-tabs" role="tablist" aria-label="Chart setting groups">
-        {CHART_SETTING_TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button key={tab.id} type="button" className={activeTab === tab.id ? "active" : "secondary"} onClick={() => setActiveTab(tab.id)}>
             {tab.label}
           </button>
@@ -227,7 +224,7 @@ function SourceSection({ panel, dataSources, dataSourcePath, dataRows, patch }) 
       <label>Title<input value={panel.title ?? ""} onChange={(event) => patch({ title: event.target.value })} /></label>
       <label>
         Data source
-        <select value={panel.dataSource ?? ""} onChange={(event) => patch({ dataSource: event.target.value, dateSelection: undefined, categorySelection: undefined })}>
+        <select value={panel.dataSource ?? ""} onChange={(event) => patch({ dataSource: event.target.value, dataBinding: undefined, dateSelection: undefined, categorySelection: undefined })}>
           <option value="">No data source</option>
           {Object.entries(dataSources ?? {}).map(([sourceId, source]) => <option key={sourceId} value={sourceId}>{dataSourceLabel(sourceId, source)}</option>)}
         </select>
@@ -236,12 +233,7 @@ function SourceSection({ panel, dataSources, dataSourcePath, dataRows, patch }) 
         <button type="button" className="secondary" disabled={!dataSourcePath} onClick={() => openDataSourceTable(panel.title, dataSourceDisplayPath(dataSourcePath), dataRows)}>View source CSV</button>
         <button type="button" className="secondary" onClick={() => openChartDataHelp(panel.type, panel.dataFormat ?? "auto")}>Expected data structure</button>
       </div>
-      <label>
-        Source CSV format
-        <select value={panel.dataFormat ?? "auto"} onChange={(event) => patch({ dataFormat: event.target.value })}>
-          {DATA_FORMATS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-      </label>
+      <p className="settings-note">Long and wide CSV layouts are detected automatically. Assign columns by role in the next section.</p>
       <label>
         Panel type
         <select value={panel.type} onChange={(event) => changePanelType(event.target.value)}>
@@ -445,10 +437,11 @@ function BarAppearanceSection({ panel, patch }) {
 
 function AxisFieldsSection({ panel, dataColumns, patch }) {
   if (!AXIS_TYPES.has(panel.type)) return <p className="settings-note">This panel type does not use x/y axes.</p>;
+  const bindingX = panel.dataBinding?.x;
   return (
     <>
-      <ColumnSelectField label="X / category field" value={panel.x ?? ""} columns={dataColumns} tip={panel.xAxisMode === "date" ? "date" : "category"} onChange={(value) => patch({ x: value, dateSelection: undefined, categorySelection: undefined })} />
-      <label>X-axis type<select value={panel.xAxisMode ?? "auto"} onChange={(event) => patch({ xAxisMode: event.target.value })}><option value="auto">Auto</option><option value="date">Date</option><option value="category">Category</option></select></label>
+      <ColumnSelectField label="X / category field" value={bindingX?.field ?? panel.x ?? ""} columns={dataColumns} tip={(bindingX?.type === "temporal" || panel.xAxisMode === "date") ? "date" : "category"} onChange={(value) => patch({ dataBinding: { ...panel.dataBinding, x: { ...(bindingX ?? {}), field: value }, series: { ...(panel.dataBinding?.series ?? {}), fields: (panel.dataBinding?.series?.fields ?? []).filter((field) => field !== value) } } })} />
+      <label>X-axis type<select value={bindingX?.type ?? (panel.xAxisMode === "date" ? "temporal" : "category")} onChange={(event) => patch({ dataBinding: { ...panel.dataBinding, x: { ...(bindingX ?? {}), type: event.target.value } } })}><option value="temporal">Date / time</option><option value="category">Category</option></select></label>
       <label>X-axis title<input value={panel.xAxisTitle ?? ""} onChange={(event) => patch({ xAxisTitle: event.target.value })} /></label>
       <label>Y-axis title<input value={panel.yAxisTitle ?? ""} onChange={(event) => patch({ yAxisTitle: event.target.value })} /></label>
     </>
@@ -916,7 +909,7 @@ function compareDateishValues(a, b) {
 }
 
 function inferDateColumn(columns, panel) {
-  if (axisIsDate(panel)) return panel.x;
+  if (axisIsDate(panel)) return panel.dataBinding?.x?.field ?? panel.x;
   return (columns ?? []).find(isDateLikeColumn) ?? "";
 }
 
@@ -926,6 +919,7 @@ function isDateLikeColumn(column) {
 }
 
 function axisIsDate(panel) {
+  if (panel.dataBinding?.x) return panel.dataBinding.x.type === "temporal";
   return panel.xAxisMode === "date" || (panel.xAxisMode !== "category" && isDateLikeColumn(panel.x));
 }
 
@@ -963,7 +957,8 @@ function isLineLike(panelType, resolvedType) {
 }
 
 function hasSecondaryAxis(panel) {
-  return (panel.series ?? []).some((series) => Number(series.yAxisIndex ?? 0) === 1);
+  const series = panel.dataBinding?.measures ?? panel.series ?? [];
+  return series.some((item) => Number(item.yAxisIndex ?? 0) === 1);
 }
 
 function supportsLegend(type) {

@@ -1,4 +1,5 @@
 {
+  "schemaVersion": 2,
   "programLabel": "Pandemic & Disaster Preparedness Center",
   "title": "SimEx Dashboard V2",
   "description": "Static, config-driven dashboard for simulation exercise briefings.",
@@ -174,19 +175,10 @@
               "type": "line",
               "title": "Confirmed Cases (cumulative)",
               "dataSource": "bio_cases",
-              "x": "date",
               "filters": [
                 {
                   "filterId": "bio_case_dates",
                   "column": "date"
-                }
-              ],
-              "series": [
-                {
-                  "name": "Cases",
-                  "y": "national_total_cases",
-                  "color": "#043BCB",
-                  "lineWidth": 3
                 }
               ],
               "legend": false,
@@ -205,6 +197,27 @@
                 ],
                 "signature": "date|national_total_cases|total_deaths|daily_new_cases|new_deaths",
                 "checkedAt": "2026-07-11T20:30:11.858Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "national_total_cases",
+                    "label": "Cases",
+                    "color": "#043BCB",
+                    "lineWidth": 3
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -270,19 +283,10 @@
               "type": "line",
               "title": "Estimated R-value Over Time",
               "dataSource": "bio_r_values",
-              "x": "date",
               "filters": [
                 {
                   "filterId": "bio_case_dates",
                   "column": "date"
-                }
-              ],
-              "series": [
-                {
-                  "name": "R-value",
-                  "y": "R_value",
-                  "color": "#8F1D2C",
-                  "lineWidth": 3
                 }
               ],
               "referenceLines": [
@@ -301,6 +305,27 @@
                 ],
                 "signature": "date|R_value",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "R_value",
+                    "label": "R-value",
+                    "color": "#8F1D2C",
+                    "lineWidth": 3
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -308,14 +333,6 @@
               "type": "horizontalBar",
               "title": "Confirmed Cases per Province",
               "dataSource": "bio_province_cases_latest",
-              "x": "province",
-              "series": [
-                {
-                  "name": "Cumulative cases",
-                  "y": "Infected_total",
-                  "color": "#4496D1"
-                }
-              ],
               "legend": false,
               "size": "tall",
               "sourceSchema": {
@@ -328,6 +345,26 @@
                 ],
                 "signature": "date|province|Infected_total|lat|lon",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "province",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Infected_total",
+                    "label": "Cumulative cases",
+                    "color": "#4496D1"
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -368,7 +405,6 @@
               "type": "mixed",
               "title": "Confirmed Cases and Deaths per Day",
               "dataSource": "bio_cases",
-              "x": "date",
               "filters": [
                 {
                   "filterId": "bio_case_dates",
@@ -376,29 +412,7 @@
                 }
               ],
               "size": "wide",
-              "series": [
-                {
-                  "name": "Daily new cases",
-                  "y": "daily_new_cases",
-                  "type": "bar",
-                  "color": "#043BCB"
-                },
-                {
-                  "name": "New deaths",
-                  "y": "new_deaths",
-                  "type": "line",
-                  "yAxisIndex": 1,
-                  "color": "#8F1D2C",
-                  "lineWidth": 3
-                }
-              ],
               "legend": true,
-              "dateSelection": {
-                "column": "date",
-                "mode": "range",
-                "start": "2027-04-09",
-                "end": "2027-05-16"
-              },
               "barGap": "20%",
               "barCategoryGap": "10%",
               "sourceSchema": {
@@ -411,30 +425,51 @@
                 ],
                 "signature": "date|national_total_cases|total_deaths|daily_new_cases|new_deaths",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "daily_new_cases",
+                    "label": "Daily new cases",
+                    "type": "bar",
+                    "color": "#043BCB"
+                  },
+                  {
+                    "field": "new_deaths",
+                    "label": "New deaths",
+                    "type": "line",
+                    "color": "#8F1D2C",
+                    "yAxisIndex": 1,
+                    "lineWidth": 3
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [
+                  {
+                    "field": "date",
+                    "operator": "range",
+                    "min": "2027-04-09",
+                    "max": "2027-05-16"
+                  }
+                ],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
               "id": "bio_mortality_age",
-              "type": "stackedBar",
+              "type": "bar",
               "title": "Age Distribution of HeV-A26 Mortality",
               "dataSource": "bio_mortality",
-              "x": "date",
               "size": "wide",
-              "series": [
-                {
-                  "name": "Deaths",
-                  "y": "deaths",
-                  "color": "#00A676"
-                }
-              ],
-              "legend": true,
-              "dateSelection": {
-                "column": "date",
-                "mode": "list",
-                "values": [
-                  "02/05/2027"
-                ]
-              },
+              "legend": false,
               "sourceSchema": {
                 "columns": [
                   "Age group",
@@ -444,10 +479,44 @@
                 "signature": "Age group|deaths|date",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
               },
-              "dataFormat": "long",
-              "seriesFrom": {
-                "valueField": "deaths",
-                "nameField": "Age group"
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Age group",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "deaths",
+                    "label": "Deaths",
+                    "color": "#00A676"
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [
+                  {
+                    "field": "date",
+                    "operator": "in",
+                    "values": [
+                      "02/05/2027"
+                    ]
+                  },
+                  {
+                    "field": "Age group",
+                    "operator": "in",
+                    "values": [
+                      "0-19",
+                      "20-39",
+                      "40-59",
+                      "60-79",
+                      "80+"
+                    ]
+                  }
+                ],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             }
           ]
@@ -545,35 +614,10 @@
               "type": "line",
               "title": "Total ICU Occupancy",
               "dataSource": "bio_icu_occupancy",
-              "x": "date",
               "filters": [
                 {
                   "filterId": "healthcare_dates",
                   "column": "date"
-                }
-              ],
-              "series": [
-                {
-                  "name": "HeV-A26 occupancy",
-                  "y": "HeV-A26 occupancy",
-                  "color": "#4496D1"
-                },
-                {
-                  "name": "Other occupancy",
-                  "y": "Other occupancy",
-                  "color": "#00A676"
-                },
-                {
-                  "name": "Capacity",
-                  "y": "Capacity",
-                  "color": "#8F1D2C",
-                  "lineStyle": "dashed"
-                },
-                {
-                  "name": "Total occupancy",
-                  "y": "Total occupancy",
-                  "color": "#043BCB",
-                  "lineWidth": 4
                 }
               ],
               "legend": true,
@@ -587,6 +631,43 @@
                 ],
                 "signature": "date|HeV-A26 occupancy|Other occupancy|Capacity|Total occupancy",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "HeV-A26 occupancy",
+                    "label": "HeV-A26 occupancy",
+                    "color": "#4496D1"
+                  },
+                  {
+                    "field": "Other occupancy",
+                    "label": "Other occupancy",
+                    "color": "#00A676"
+                  },
+                  {
+                    "field": "Capacity",
+                    "label": "Capacity",
+                    "color": "#8F1D2C",
+                    "lineStyle": "dashed"
+                  },
+                  {
+                    "field": "Total occupancy",
+                    "label": "Total occupancy",
+                    "color": "#043BCB",
+                    "lineWidth": 4
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -594,35 +675,10 @@
               "type": "line",
               "title": "Total Hospital Occupancy",
               "dataSource": "bio_hospital_occupancy",
-              "x": "date",
               "filters": [
                 {
                   "filterId": "healthcare_dates",
                   "column": "date"
-                }
-              ],
-              "series": [
-                {
-                  "name": "HeV-A26 occupancy",
-                  "y": "HeV-A26 occupancy",
-                  "color": "#4496D1"
-                },
-                {
-                  "name": "Other occupancy",
-                  "y": "Other occupancy",
-                  "color": "#00A676"
-                },
-                {
-                  "name": "Capacity",
-                  "y": "Capacity",
-                  "color": "#8F1D2C",
-                  "lineStyle": "dashed"
-                },
-                {
-                  "name": "Total occupancy",
-                  "y": "Total occupancy",
-                  "color": "#043BCB",
-                  "lineWidth": 4
                 }
               ],
               "legend": true,
@@ -636,6 +692,43 @@
                 ],
                 "signature": "date|HeV-A26 occupancy|Other occupancy|Capacity|Total occupancy",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "HeV-A26 occupancy",
+                    "label": "HeV-A26 occupancy",
+                    "color": "#4496D1"
+                  },
+                  {
+                    "field": "Other occupancy",
+                    "label": "Other occupancy",
+                    "color": "#00A676"
+                  },
+                  {
+                    "field": "Capacity",
+                    "label": "Capacity",
+                    "color": "#8F1D2C",
+                    "lineStyle": "dashed"
+                  },
+                  {
+                    "field": "Total occupancy",
+                    "label": "Total occupancy",
+                    "color": "#043BCB",
+                    "lineWidth": 4
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -643,7 +736,6 @@
               "type": "groupedBar",
               "title": "ICU and Hospital Admissions per Day",
               "dataSource": "bio_admissions",
-              "x": "date",
               "filters": [
                 {
                   "filterId": "healthcare_dates",
@@ -651,18 +743,6 @@
                 }
               ],
               "size": "wide",
-              "series": [
-                {
-                  "name": "ICU admissions",
-                  "y": "new_icu_admissions",
-                  "color": "#043BCB"
-                },
-                {
-                  "name": "Hospital admissions",
-                  "y": "new_clinic_admissions",
-                  "color": "#4496D1"
-                }
-              ],
               "legend": true,
               "sourceSchema": {
                 "columns": [
@@ -672,6 +752,31 @@
                 ],
                 "signature": "date|new_icu_admissions|new_clinic_admissions",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "new_icu_admissions",
+                    "label": "ICU admissions",
+                    "color": "#043BCB"
+                  },
+                  {
+                    "field": "new_clinic_admissions",
+                    "label": "Hospital admissions",
+                    "color": "#4496D1"
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -679,14 +784,8 @@
               "type": "groupedBar",
               "title": "Surgeries Performed per Month",
               "dataSource": "bio_healthcare_cases",
-              "x": "Month name",
               "size": "wide",
-              "seriesFrom": {
-                "nameField": "Year",
-                "valueField": "Cases"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Year",
@@ -697,6 +796,27 @@
                 ],
                 "signature": "Year|Month|Month name|Treatment|Cases",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Month name",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "Cases",
+                    "label": "Cases"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Year"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             }
           ]
@@ -722,24 +842,7 @@
               "type": "mixed",
               "title": "Tests Conducted and Test Positivity per Day",
               "dataSource": "bio_testing",
-              "x": "date",
               "size": "wide",
-              "series": [
-                {
-                  "name": "Tests per day",
-                  "y": "tests_per_day",
-                  "type": "bar",
-                  "color": "#043BCB"
-                },
-                {
-                  "name": "Test positivity rate",
-                  "y": "test_positivity_rate",
-                  "type": "line",
-                  "yAxisIndex": 1,
-                  "color": "#8F1D2C",
-                  "lineWidth": 3
-                }
-              ],
               "legend": true,
               "sourceSchema": {
                 "columns": [
@@ -749,6 +852,35 @@
                 ],
                 "signature": "date|tests_per_day|test_positivity_rate",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "tests_per_day",
+                    "label": "Tests per day",
+                    "type": "bar",
+                    "color": "#043BCB"
+                  },
+                  {
+                    "field": "test_positivity_rate",
+                    "label": "Test positivity rate",
+                    "type": "line",
+                    "color": "#8F1D2C",
+                    "yAxisIndex": 1,
+                    "lineWidth": 3
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             }
           ]
@@ -800,14 +932,6 @@
               "type": "horizontalBar",
               "title": "HeV-A26 Virus Particles per Province",
               "dataSource": "bio_wastewater_latest",
-              "x": "province",
-              "series": [
-                {
-                  "name": "Virus particles",
-                  "y": "virus_particles",
-                  "color": "#007C89"
-                }
-              ],
               "legend": false,
               "sourceSchema": {
                 "columns": [
@@ -820,6 +944,26 @@
                 ],
                 "signature": "date|province_id|virus_particles|province|lat|lon",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "province",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "virus_particles",
+                    "label": "Virus particles",
+                    "color": "#007C89"
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             }
           ]
@@ -867,13 +1011,7 @@
               "type": "line",
               "title": "Vaccination Rate Over Time",
               "dataSource": "bio_vaccination_timeseries",
-              "x": "date",
-              "seriesFrom": {
-                "nameField": "group",
-                "valueField": "vaccination_rate_pct"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "date",
@@ -882,6 +1020,27 @@
                 ],
                 "signature": "date|group|vaccination_rate_pct",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "vaccination_rate_pct",
+                    "label": "vaccination_rate_pct"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "group"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             }
           ]
@@ -929,21 +1088,12 @@
               "type": "stackedBar",
               "title": "Risk Perception",
               "dataSource": "socio_behaviour",
-              "x": "Question",
               "filters": [
                 {
                   "filterId": "behaviour_snapshot",
                   "column": "date_value"
-                },
-                {
-                  "column": "Behaviour type",
-                  "equals": "risk_perception"
                 }
               ],
-              "seriesFrom": {
-                "nameField": "Answer",
-                "valueField": "Percentage"
-              },
               "size": "wide",
               "legend": true,
               "colorScheme": "likertInfographic5",
@@ -951,7 +1101,6 @@
               "fontSizes": {
                 "title": 17
               },
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "date",
@@ -966,6 +1115,35 @@
                 ],
                 "signature": "date|date_value|Month Label|Question key|Question|Answer|Percentage|Age group|Behaviour type",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Question",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Answer"
+                  ]
+                },
+                "filters": [
+                  {
+                    "field": "Behaviour type",
+                    "operator": "in",
+                    "values": [
+                      "risk_perception"
+                    ]
+                  }
+                ],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1019,24 +1197,14 @@
               "type": "stackedBar",
               "title": "Adherence to Health Measures",
               "dataSource": "socio_behaviour",
-              "x": "Question",
               "filters": [
                 {
                   "filterId": "behaviour_snapshot",
                   "column": "date_value"
-                },
-                {
-                  "column": "Behaviour type",
-                  "equals": "adherence"
                 }
               ],
-              "seriesFrom": {
-                "nameField": "Answer",
-                "valueField": "Percentage"
-              },
               "size": "wide",
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "date",
@@ -1051,6 +1219,35 @@
                 ],
                 "signature": "date|date_value|Month Label|Question key|Question|Answer|Percentage|Age group|Behaviour type",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Question",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Answer"
+                  ]
+                },
+                "filters": [
+                  {
+                    "field": "Behaviour type",
+                    "operator": "in",
+                    "values": [
+                      "adherence"
+                    ]
+                  }
+                ],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1058,18 +1255,10 @@
               "type": "horizontalBar",
               "title": "Key Considerations from Citizens in Current Phase",
               "dataSource": "socio_values",
-              "x": "Value",
               "filters": [
                 {
                   "filterId": "behaviour_snapshot",
                   "column": "date_value"
-                }
-              ],
-              "series": [
-                {
-                  "name": "Share of responses",
-                  "y": "Percentage",
-                  "color": "#043BCB"
                 }
               ],
               "legend": false,
@@ -1083,6 +1272,26 @@
                 ],
                 "signature": "date|date_value|Month Label|Value|Percentage",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Value",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Share of responses",
+                    "color": "#043BCB"
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             },
             {
@@ -1164,15 +1373,9 @@
               "type": "line",
               "title": "Trust",
               "dataSource": "socio_trust",
-              "x": "date_label",
-              "seriesFrom": {
-                "nameField": "institution",
-                "valueField": "trust"
-              },
               "legend": true,
               "size": "wide",
               "yScale": "auto",
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "date",
@@ -1184,6 +1387,27 @@
                 ],
                 "signature": "date|Trustee_id|trust|institution|date_label|date_value",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "date_label",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "trust",
+                    "label": "trust"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "institution"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1250,13 +1474,7 @@
               "type": "line",
               "title": "Loneliness",
               "dataSource": "socio_loneliness",
-              "x": "Snapshot label",
-              "seriesFrom": {
-                "nameField": "Age group",
-                "valueField": "Percentage"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "snapshot_id",
@@ -1267,6 +1485,27 @@
                 ],
                 "signature": "snapshot_id|Snapshot|Snapshot label|Age group|Percentage",
                 "checkedAt": "2026-07-11T20:30:11.905Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Snapshot label",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Age group"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1274,25 +1513,13 @@
               "type": "stackedBar",
               "title": "Wellbeing",
               "dataSource": "socio_mental_wellbeing",
-              "x": "Age group",
               "filters": [
                 {
                   "filterId": "wellbeing_snapshot",
                   "column": "Snapshot label"
                 }
               ],
-              "seriesFrom": {
-                "nameField": "Answer",
-                "valueField": "Percentage"
-              },
               "legend": true,
-              "categorySelection": {
-                "column": "Age group",
-                "values": [
-                  "Average"
-                ]
-              },
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Category",
@@ -1305,6 +1532,35 @@
                 ],
                 "signature": "Category|snapshot_id|Snapshot|Snapshot label|Age group|Answer|Percentage",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Age group",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Answer"
+                  ]
+                },
+                "filters": [
+                  {
+                    "field": "Age group",
+                    "operator": "in",
+                    "values": [
+                      "Average"
+                    ]
+                  }
+                ],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1312,19 +1568,13 @@
               "type": "stackedBar",
               "title": "Lifestyle",
               "dataSource": "socio_lifestyle",
-              "x": "Question",
               "filters": [
                 {
                   "filterId": "wellbeing_snapshot",
                   "column": "Snapshot label"
                 }
               ],
-              "seriesFrom": {
-                "nameField": "Answer",
-                "valueField": "Percentage"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Category",
@@ -1338,6 +1588,27 @@
                 ],
                 "signature": "Category|snapshot_id|Snapshot|Snapshot label|Question key|Question|Answer|Percentage",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Question",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Answer"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1345,19 +1616,13 @@
               "type": "stackedBar",
               "title": "Resilience",
               "dataSource": "socio_resilience",
-              "x": "Question",
               "filters": [
                 {
                   "filterId": "wellbeing_snapshot",
                   "column": "Snapshot label"
                 }
               ],
-              "seriesFrom": {
-                "nameField": "Answer",
-                "valueField": "Percentage"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Category",
@@ -1371,6 +1636,27 @@
                 ],
                 "signature": "Category|snapshot_id|Snapshot|Snapshot label|Question key|Question|Answer|Percentage",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Question",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Percentage",
+                    "label": "Percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Answer"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             }
           ]
@@ -1396,13 +1682,7 @@
               "type": "groupedBar",
               "title": "Business Closures",
               "dataSource": "socio_business_closures",
-              "x": "Sector",
-              "seriesFrom": {
-                "nameField": "Year",
-                "valueField": "Closures"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Sector_id",
@@ -1413,6 +1693,27 @@
                 ],
                 "signature": "Sector_id|Closures|Year|Code|Sector",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Sector",
+                  "type": "category"
+                },
+                "measures": [
+                  {
+                    "field": "Closures",
+                    "label": "Closures"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Year"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1420,14 +1721,6 @@
               "type": "line",
               "title": "Unemployment",
               "dataSource": "socio_unemployment",
-              "x": "Date label",
-              "series": [
-                {
-                  "name": "Unemployment rate",
-                  "y": "Value",
-                  "color": "#043BCB"
-                }
-              ],
               "legend": false,
               "sourceSchema": {
                 "columns": [
@@ -1437,6 +1730,26 @@
                 ],
                 "signature": "Date|Value|Date label",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Date label",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "Value",
+                    "label": "Unemployment rate",
+                    "color": "#043BCB"
+                  }
+                ],
+                "series": {
+                  "fields": []
+                },
+                "filters": [],
+                "aggregation": "first",
+                "missingValue": "gap"
               }
             }
           ]
@@ -1462,13 +1775,7 @@
               "type": "line",
               "title": "Absenteeism in Healthcare",
               "dataSource": "socio_healthcare_absenteeism",
-              "x": "Month",
-              "seriesFrom": {
-                "nameField": "Year",
-                "valueField": "Absenteeism percentage"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Year",
@@ -1479,6 +1786,27 @@
                 ],
                 "signature": "Year|Month|Month order|Period|Absenteeism percentage",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Month",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "Absenteeism percentage",
+                    "label": "Absenteeism percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Year"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             },
             {
@@ -1486,13 +1814,7 @@
               "type": "line",
               "title": "School Absenteeism",
               "dataSource": "socio_education_absenteeism",
-              "x": "Month",
-              "seriesFrom": {
-                "nameField": "Year",
-                "valueField": "Absenteeism percentage"
-              },
               "legend": true,
-              "series": [],
               "sourceSchema": {
                 "columns": [
                   "Year",
@@ -1503,6 +1825,27 @@
                 ],
                 "signature": "Year|Month|Month order|Period|Absenteeism percentage",
                 "checkedAt": "2026-07-11T20:30:11.906Z"
+              },
+              "dataBinding": {
+                "version": 2,
+                "x": {
+                  "field": "Month",
+                  "type": "temporal"
+                },
+                "measures": [
+                  {
+                    "field": "Absenteeism percentage",
+                    "label": "Absenteeism percentage"
+                  }
+                ],
+                "series": {
+                  "fields": [
+                    "Year"
+                  ]
+                },
+                "filters": [],
+                "aggregation": "sum",
+                "missingValue": "gap"
               }
             }
           ]

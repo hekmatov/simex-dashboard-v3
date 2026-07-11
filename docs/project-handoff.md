@@ -1,5 +1,11 @@
 ﻿# SimEx Dashboard V2 Project Handoff
 
+## Update: Chart Data System V2 overhaul
+
+Axis charts now use a versioned field-role model instead of separate long/wide and `series`/`seriesFrom` paths. The model explicitly separates x observation, one or more measurements, cluster dimensions, filters, aggregation, and missing-value behavior. `Add chart` opens a guided wizard that can use an existing CSV or atomically add an uploaded CSV with the new panel. CSV reconciliation now fingerprints values and row counts in addition to checking columns, reports content-only changes, repairs only high-confidence column renames, and avoids unsafe arbitrary replacements.
+
+The migration and architecture are documented in `docs/chart-data-system-v2.md`. The `bio_mortality_age` panel is the reference example: age group is the x-axis, deaths is the measurement, date is a filter, `total_deaths` is excluded, and age group is not also used as a cluster dimension.
+
 ## Current snapshot
 
 - Project: SimEx Dashboard V2

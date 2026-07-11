@@ -1,5 +1,7 @@
 ﻿import * as echarts from "echarts";
 
+import { prepareAxisChartData } from "./chartDataModel.js";
+
 const DEFAULT_TEXT_COLOR = "#08224A";
 const DEFAULT_GRID = {
   left: 58,
@@ -36,34 +38,45 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
     return buildChoroplethMapOption(panel, data, geoData, scale, renderContext);
   }
 
-  const isHorizontal = panel.type === "horizontalBar" || panel.type === "horizontalStackedBar";
-  const xAxisIsDate = panel.xAxisMode === "date" || isDateLikeField(panel.x);
+  const prepared = panel.dataBinding ? prepareAxisChartData(panel, data) : null;
+  const resolvedPanel = prepared
+    ? {
+        ...panel,
+        x: prepared.binding?.x?.field ?? panel.x,
+        xAxisMode: prepared.binding?.x?.type === "temporal" ? "date" : "category",
+      }
+    : panel;
+  const isHorizontal = resolvedPanel.type === "horizontalBar" || resolvedPanel.type === "horizontalStackedBar";
+  const xAxisIsDate = resolvedPanel.xAxisMode === "date" || isDateLikeField(resolvedPanel.x);
   const useDateAxis = xAxisIsDate && !isHorizontal;
-  const filteredData = applyCategorySelection(data, panel);
-  const sortedData = sortRowsForAxis(filteredData, panel.x, useDateAxis);
-  const labels = orderedCategoryLabels(sortedData, panel, useDateAxis);
-  const colors = panelColors(panel);
-  const series = orderSeriesForPanel(panel, buildSeries(panel, sortedData, labels, colors, useDateAxis, scale));
+  const filteredData = prepared ? data : applyCategorySelection(data, resolvedPanel);
+  const sortedData = prepared ? data : sortRowsForAxis(filteredData, resolvedPanel.x, useDateAxis);
+  const labels = prepared?.xValues ?? orderedCategoryLabels(sortedData, resolvedPanel, useDateAxis);
+  const colors = panelColors(resolvedPanel);
+  const builtSeries = prepared
+    ? buildSeriesFromDataBinding(resolvedPanel, prepared, colors, useDateAxis, scale)
+    : buildSeries(resolvedPanel, sortedData, labels, colors, useDateAxis, scale);
+  const series = orderSeriesForPanel(resolvedPanel, builtSeries);
   const hasSecondAxis = series.some((item) => item.yAxisIndex === 1);
 
   const valueAxis = {
     type: "value",
-    name: panel.yAxisTitle ?? "",
-    min: numericOrUndefined(panel.yMin) ?? (panel.yScale === "auto" ? undefined : 0),
-    max: numericOrUndefined(panel.yMax),
-    axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "axis", 12, scale), formatter: axisLabelFormatter(panel) },
-    nameTextStyle: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(panel, "axis", 12, scale) },
-    splitLine: { show: panel.showGrid ?? true, lineStyle: { color: "rgba(8, 34, 74, 0.08)" } },
+    name: resolvedPanel.yAxisTitle ?? "",
+    min: numericOrUndefined(resolvedPanel.yMin) ?? (resolvedPanel.yScale === "auto" ? undefined : 0),
+    max: numericOrUndefined(resolvedPanel.yMax),
+    axisLabel: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(resolvedPanel, "axis", 12, scale), formatter: axisLabelFormatter(resolvedPanel) },
+    nameTextStyle: { color: DEFAULT_TEXT_COLOR, fontSize: fontSize(resolvedPanel, "axis", 12, scale) },
+    splitLine: { show: resolvedPanel.showGrid ?? true, lineStyle: { color: "rgba(8, 34, 74, 0.08)" } },
   };
   const categoryAxis = {
     type: useDateAxis ? "time" : "category",
-    name: panel.xAxisTitle ?? "",
+    name: resolvedPanel.xAxisTitle ?? "",
     data: useDateAxis ? undefined : isHorizontal ? [...labels].reverse() : labels,
     axisLabel: {
       color: DEFAULT_TEXT_COLOR,
-      fontSize: fontSize(panel, "axis", 12, scale),
+      fontSize: fontSize(resolvedPanel, "axis", 12, scale),
       interval: useDateAxis ? undefined : 0,
-      rotate: useDateAxis ? undefined : panel.axisLabelRotation ?? 0,
+      rotate: useDateAxis ? undefined : resolvedPanel.axisLabelRotation ?? 0,
       hideOverlap: useDateAxis ? undefined : false,
     },
     axisTick: { alignWithLabel: true },
@@ -71,32 +84,62 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
 
   return {
     color: colors,
-    backgroundColor: panel.chartAreaColor ?? "transparent",
-    animation: panel.chartAnimation ?? true,
+    backgroundColor: resolvedPanel.chartAreaColor ?? "transparent",
+    animation: resolvedPanel.chartAnimation ?? true,
     animationDurationUpdate: scaled(220, scale),
     animationEasingUpdate: "cubicOut",
-    title: chartTitle(panel, scale),
+    title: chartTitle(resolvedPanel, scale),
     tooltip: {
-      trigger: panel.tooltipTrigger ?? "axis",
+      trigger: resolvedPanel.tooltipTrigger ?? "axis",
       valueFormatter: formatTooltipValue,
     },
-    legend: legendConfig(panel, series, scale),
-    grid: scaledGrid(panel, scale),
+    legend: legendConfig(resolvedPanel, series, scale),
+    grid: scaledGrid(resolvedPanel, scale),
     xAxis: isHorizontal ? valueAxis : categoryAxis,
     yAxis: isHorizontal
       ? categoryAxis
       : hasSecondAxis
-        ? [valueAxis, { ...valueAxis, name: panel.secondaryAxisTitle ?? "", min: numericOrUndefined(panel.secondaryAxisMin), max: numericOrUndefined(panel.secondaryAxisMax), splitLine: { show: false } }]
+        ? [valueAxis, { ...valueAxis, name: resolvedPanel.secondaryAxisTitle ?? "", min: numericOrUndefined(resolvedPanel.secondaryAxisMin), max: numericOrUndefined(resolvedPanel.secondaryAxisMax), splitLine: { show: false } }]
         : valueAxis,
     series: series.map((item, index) => ({
       ...item,
       data: isHorizontal ? [...item.data].reverse() : item.data,
       z: item.type === "line" ? 10 : 2,
       markLine: shouldAttachReferenceLine(series, item, index)
-        ? referenceLineConfig(panel.referenceLines, item.yAxisIndex ?? 0)
+          ? referenceLineConfig(resolvedPanel.referenceLines, item.yAxisIndex ?? 0)
         : undefined,
     })),
   };
+}
+
+function buildSeriesFromDataBinding(panel, prepared, colors, useDateAxis, scale) {
+  return prepared.series.map((item, index) => {
+    const color = item.color ?? colors[index % colors.length];
+    const resolvedType = seriesType(panel.type, item.type);
+    const symbol = symbolForSeries(panel, item);
+    return {
+      name: item.name,
+      type: resolvedType,
+      yAxisIndex: item.yAxisIndex,
+      data: useDateAxis
+        ? prepared.xValues.map((xValue, valueIndex) => [xValue, item.values[valueIndex]])
+        : item.values,
+      itemStyle: { color, opacity: item.opacity ?? 1 },
+      lineStyle: resolvedType === "line" ? lineStyleForSeries(item, color, scale) : undefined,
+      barWidth: resolvedType === "bar" ? panel.barWidth || undefined : undefined,
+      barGap: resolvedType === "bar" ? panel.barGap || undefined : undefined,
+      barCategoryGap: resolvedType === "bar" ? panel.barCategoryGap || undefined : undefined,
+      label: resolvedType === "bar" && panel.showValueLabels
+        ? { show: true, position: panel.valueLabelPosition ?? "top", color: DEFAULT_TEXT_COLOR, fontSize: scaled(panel.valueLabelFontSize ?? 11, scale) }
+        : undefined,
+      symbol,
+      symbolSize: symbol && symbol !== "none" ? scaled(item.markerSize ?? 6, scale) : undefined,
+      showSymbol: resolvedType === "line" ? symbol !== "none" : undefined,
+      areaStyle: areaStyleForSeries(panel, item, color),
+      smooth: item.smooth ?? false,
+      stack: item.stack || (isStackedPanel(panel.type) ? "total" : undefined),
+    };
+  });
 }
 
 function shouldAttachReferenceLine(series, item, index) {

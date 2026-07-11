@@ -17,6 +17,8 @@
   "deltaList",
 ]);
 
+import { isAxisPanel, prepareAxisChartData } from "./chartDataModel.js";
+
 export function validatePanelConfig(panel, data, geoData) {
   if (!SUPPORTED_PANEL_TYPES.has(panel.type)) {
     return `Unsupported panel type "${panel.type}".`;
@@ -36,6 +38,11 @@ export function validatePanelConfig(panel, data, geoData) {
 
   if (data.length === 0) {
     return `Data source "${panel.dataSource}" has no rows after filtering.`;
+  }
+
+  if (isAxisPanel(panel) && panel.dataBinding) {
+    const diagnostic = prepareAxisChartData(panel, data).diagnostics.find((item) => item.severity === "error");
+    return diagnostic?.message ?? null;
   }
 
   const columns = new Set(Object.keys(data[0]));

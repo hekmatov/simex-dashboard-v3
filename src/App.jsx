@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import { migrateDashboardToDataModel } from "./lib/chartDataModel.js";
 import { reconcileDashboardWithLoadedData } from "./lib/dashboardCompatibility.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
@@ -54,8 +55,9 @@ export default function App() {
   useEffect(() => {
     loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then((loadedDashboard) => {
-        const config = stripRuntimeFields(loadedDashboard);
-        const savedBrowserConfig = loadSavedConfig();
+        const config = migrateDashboardToDataModel(stripRuntimeFields(loadedDashboard));
+        const storedConfig = loadSavedConfig();
+        const savedBrowserConfig = storedConfig ? migrateDashboardToDataModel(storedConfig) : null;
         const savedConfig = sanitizeDashboardConfig(mergeDefaultConfigAdditions(savedBrowserConfig, config) ?? config);
         if (savedBrowserConfig) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig, null, 2));
@@ -184,8 +186,18 @@ export default function App() {
     updateDashboardConfig(removePageFromConfig(stripRuntimeFields(dashboard), pageId));
   }
 
-  function addPanel(pageId, sectionId) {
-    updateDashboardConfig(addPanelToConfig(stripRuntimeFields(dashboard), pageId, sectionId));
+  function addPanel(pageId, sectionId, panel, uploadedSource) {
+    let config = stripRuntimeFields(dashboard);
+    let nextPanel = panel;
+    if (uploadedSource) {
+      const sourceId = uniqueDataSourceId(config, uploadedSource.fileName);
+      config = {
+        ...config,
+        dataSources: { ...(config.dataSources ?? {}), [sourceId]: uploadedSource },
+      };
+      nextPanel = { ...panel, dataSource: sourceId };
+    }
+    updateDashboardConfig(addPanelToConfig(config, pageId, sectionId, nextPanel));
   }
 
   function removePanel(panelId) {
@@ -239,7 +251,7 @@ export default function App() {
               },
             }
           : importedFile;
-        updateDashboardConfig(importedConfig);
+        updateDashboardConfig(migrateDashboardToDataModel(importedConfig));
       } catch (importError) {
         setError(new Error(`Could not import dashboard bundle: ${importError.message}`));
       }
@@ -289,7 +301,7 @@ export default function App() {
     const config = stripRuntimeFields(currentDashboard);
     return {
       bundleType: BUNDLE_TYPE,
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       config,
       uploadedCsvSources: Object.fromEntries(
@@ -711,7 +723,7 @@ function removePageFromConfig(config, pageId) {
   };
 }
 
-function addPanelToConfig(config, pageId, sectionId) {
+function addPanelToConfig(config, pageId, sectionId, panel) {
   return updatePageInConfig(config, pageId, (page) => ({
     ...page,
     sections: page.sections.map((section) => {
@@ -720,7 +732,7 @@ function addPanelToConfig(config, pageId, sectionId) {
       }
       return {
         ...section,
-        panels: [createPanelFromSection(section, config), ...section.panels],
+        panels: [panel ?? createPanelFromSection(section, config), ...section.panels],
       };
     }),
   }));

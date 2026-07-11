@@ -972,13 +972,15 @@ function applyPanelFilters(data, panel, filters, filterDefinitions, filterValues
     return data;
   }
 
-  const dateScopedRows = applyPanelDateSelection(data, panel);
+  const dateScopedRows = panel.dataBinding ? data : applyPanelDateSelection(data, panel);
 
   return filters.reduce((rows, filter) => {
     if (filter.equals !== undefined) {
+      if (panel.dataBinding) return rows;
       return rows.filter((row) => String(row[filter.column]) === String(filter.equals));
     }
     if (Array.isArray(filter.in)) {
+      if (panel.dataBinding) return rows;
       const allowed = new Set(filter.in.map(String));
       return rows.filter((row) => allowed.has(String(row[filter.column])));
     }
