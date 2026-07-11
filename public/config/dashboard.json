@@ -17,13 +17,13 @@
   },
   "vantaBackground": {
     "backgroundColor": "#f7f9fc",
-    "networkColor": "#0075FF",
+    "networkColor": "#f1a1ad",
     "mouseControls": false,
     "touchControls": false,
     "points": 6,
     "maxDistance": 17,
     "spacing": 18,
-    "speed": 1.05
+    "speed": 0.45
   },
   "dataSources": {
     "bio_cases": "data/biomedical/cases.csv",
@@ -119,7 +119,18 @@
               "size": "normal",
               "legend": false,
               "mapName": "netherlands-provinces",
-              "color": "#043BCB"
+              "color": "#043BCB",
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "province",
+                  "Infected_total",
+                  "lat",
+                  "lon"
+                ],
+                "signature": "date|province|Infected_total|lat|lon",
+                "checkedAt": "2026-07-11T18:28:45.475Z"
+              }
             }
           ]
         }
@@ -158,6 +169,44 @@
           ],
           "panels": [
             {
+              "id": "bio_confirmed_cases",
+              "type": "line",
+              "title": "Confirmed Cases (cumulative)",
+              "dataSource": "bio_cases",
+              "x": "date",
+              "filters": [
+                {
+                  "filterId": "bio_case_dates",
+                  "column": "date"
+                }
+              ],
+              "series": [
+                {
+                  "name": "Cases",
+                  "y": "national_total_cases",
+                  "color": "#043BCB",
+                  "lineWidth": 3
+                }
+              ],
+              "legend": false,
+              "size": "normal",
+              "fontSizes": {
+                "title": 17,
+                "axis": 13
+              },
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "national_total_cases",
+                  "total_deaths",
+                  "daily_new_cases",
+                  "new_deaths"
+                ],
+                "signature": "date|national_total_cases|total_deaths|daily_new_cases|new_deaths",
+                "checkedAt": "2026-07-11T18:28:45.475Z"
+              }
+            },
+            {
               "id": "bio_municipality_choropleth_animation",
               "type": "chronoChoroplethMap",
               "title": "Municipality Infection Rate Timelapse",
@@ -173,7 +222,7 @@
               "dateSelection": {
                 "column": "Datum",
                 "mode": "range",
-                "start": "2020-03-08",
+                "start": "2020-02-27",
                 "end": "2021-04-17"
               },
               "size": "tall",
@@ -181,7 +230,7 @@
               "colorScheme": "caseIntensity",
               "missingColor": "#DDE7EF",
               "mapBorderColor": "#F8FBFF",
-              "mapBorderWidth": 0.4,
+              "mapBorderWidth": 0.5,
               "mapLayoutSize": "82%",
               "showProvinceOverlay": true,
               "provinceOverlaySource": "geo_netherlands_provinces",
@@ -191,25 +240,29 @@
               "provinceNameFontSize": 7,
               "provinceNameColor": "#08224A",
               "infoSource": "Animated daily view of infections per 10,000 population. Data are harmonized to Cartomap 2021 municipality boundaries; missing source municipalities are imputed using same-day province population-weighted infection rates.",
-              "animationIntervalMs": 720,
+              "animationIntervalMs": 450,
               "choroplethTransitionMs": 575,
-              "timelapseSpeed": 3
-            },
-            {
-              "id": "bio_case_deltas",
-              "type": "deltaList",
-              "title": "Change Since Previous Day",
-              "dataSource": "bio_province_deltas",
-              "rowLimit": 12,
-              "sortBy": "Case delta",
-              "sortDirection": "desc",
-              "fields": {
-                "title": "province",
-                "value": "Case delta",
-                "detail": "Cumulative cases"
-              },
-              "valuePrefix": "+",
-              "size": "normal"
+              "timelapseSpeed": 3,
+              "visualMin": 0,
+              "sourceSchema": {
+                "columns": [
+                  "Datum",
+                  "MunicipalityCode",
+                  "Gemeentecode",
+                  "Gemeentenaam",
+                  "Provincienaam",
+                  "AantalCumulatief",
+                  "population",
+                  "infectionsPerPopulation",
+                  "infectionsPer1000",
+                  "infectionsPer10000",
+                  "dataMethod",
+                  "populationSource",
+                  "sourceMunicipalityCodes"
+                ],
+                "signature": "Datum|MunicipalityCode|Gemeentecode|Gemeentenaam|Provincienaam|AantalCumulatief|population|infectionsPerPopulation|infectionsPer1000|infectionsPer10000|dataMethod|populationSource|sourceMunicipalityCodes",
+                "checkedAt": "2026-07-11T18:28:45.592Z"
+              }
             },
             {
               "id": "bio_r_values",
@@ -239,33 +292,14 @@
               ],
               "yScale": "auto",
               "legend": false,
-              "size": "normal"
-            },
-            {
-              "id": "bio_confirmed_cases",
-              "type": "line",
-              "title": "Confirmed Cases (cumulative)",
-              "dataSource": "bio_cases",
-              "x": "date",
-              "filters": [
-                {
-                  "filterId": "bio_case_dates",
-                  "column": "date"
-                }
-              ],
-              "series": [
-                {
-                  "name": "Cases",
-                  "y": "national_total_cases",
-                  "color": "#043BCB",
-                  "lineWidth": 3
-                }
-              ],
-              "legend": false,
               "size": "normal",
-              "fontSizes": {
-                "title": 17,
-                "axis": 13
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "R_value"
+                ],
+                "signature": "date|R_value",
+                "checkedAt": "2026-07-11T18:28:45.592Z"
               }
             },
             {
@@ -282,7 +316,51 @@
                 }
               ],
               "legend": false,
-              "size": "tall"
+              "size": "tall",
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "province",
+                  "Infected_total",
+                  "lat",
+                  "lon"
+                ],
+                "signature": "date|province|Infected_total|lat|lon",
+                "checkedAt": "2026-07-11T18:28:45.592Z"
+              }
+            },
+            {
+              "id": "bio_case_deltas",
+              "type": "deltaList",
+              "title": "Change Since Previous Day",
+              "dataSource": "bio_province_deltas",
+              "rowLimit": 12,
+              "sortBy": "Case delta",
+              "sortDirection": "desc",
+              "fields": {
+                "title": "province",
+                "value": "Case delta",
+                "detail": "Cumulative cases"
+              },
+              "valuePrefix": "+",
+              "size": "normal",
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "province",
+                  "Infected_total",
+                  "lat",
+                  "lon",
+                  "Cumulative cases",
+                  "Previous cumulative cases",
+                  "Case delta",
+                  "Comparison date",
+                  "Comparison label",
+                  "Is first snapshot"
+                ],
+                "signature": "date|province|Infected_total|lat|lon|Cumulative cases|Previous cumulative cases|Case delta|Comparison date|Comparison label|Is first snapshot",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_new_cases_deaths",
@@ -296,21 +374,21 @@
                   "column": "date"
                 }
               ],
-              "size": "large",
+              "size": "wide",
               "series": [
                 {
                   "name": "Daily new cases",
                   "y": "daily_new_cases",
                   "type": "bar",
-                  "color": "#032782"
+                  "color": "#043BCB"
                 },
                 {
                   "name": "New deaths",
                   "y": "new_deaths",
                   "type": "line",
                   "yAxisIndex": 1,
-                  "color": "#dd3308",
-                  "lineWidth": 1
+                  "color": "#8F1D2C",
+                  "lineWidth": 3
                 }
               ],
               "legend": true,
@@ -321,7 +399,18 @@
                 "end": "2027-05-16"
               },
               "barGap": "20%",
-              "barCategoryGap": "10%"
+              "barCategoryGap": "10%",
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "national_total_cases",
+                  "total_deaths",
+                  "daily_new_cases",
+                  "new_deaths"
+                ],
+                "signature": "date|national_total_cases|total_deaths|daily_new_cases|new_deaths",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_mortality_age",
@@ -329,32 +418,12 @@
               "title": "Age Distribution of HeV-A26 Mortality",
               "dataSource": "bio_mortality",
               "x": "date",
-              "size": "normal",
+              "size": "wide",
               "series": [
                 {
-                  "name": "0-19",
-                  "y": "age_0_19",
+                  "name": "Deaths",
+                  "y": "deaths",
                   "color": "#00A676"
-                },
-                {
-                  "name": "20-39",
-                  "y": "age_20_39",
-                  "color": "#007C89"
-                },
-                {
-                  "name": "40-59",
-                  "y": "age_40_59",
-                  "color": "#4496D1"
-                },
-                {
-                  "name": "60-79",
-                  "y": "age_60_79",
-                  "color": "#2456A6"
-                },
-                {
-                  "name": "80+",
-                  "y": "age_80_plus",
-                  "color": "#08224A"
                 }
               ],
               "legend": true,
@@ -362,8 +431,21 @@
                 "column": "date",
                 "mode": "list",
                 "values": [
-                  "2027-02-21"
+                  "02/05/2027"
                 ]
+              },
+              "sourceSchema": {
+                "columns": [
+                  "Age group",
+                  "deaths",
+                  "date"
+                ],
+                "signature": "Age group|deaths|date",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              },
+              "dataFormat": "long",
+              "seriesFrom": {
+                "valueField": "deaths"
               }
             }
           ]
@@ -406,7 +488,6 @@
                 }
               ],
               "valueField": "value",
-              "labelField": "title",
               "colorField": "color",
               "size": "half",
               "gaugeArcWidth": 25,
@@ -414,6 +495,16 @@
                 "gaugeValue": 23,
                 "gaugeLabel": 12,
                 "gaugeAxis": 13
+              },
+              "sourceSchema": {
+                "columns": [
+                  "id",
+                  "title",
+                  "value",
+                  "color"
+                ],
+                "signature": "id|title|value|color",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
               }
             },
             {
@@ -428,7 +519,6 @@
                 }
               ],
               "valueField": "value",
-              "labelField": "title",
               "colorField": "color",
               "size": "half",
               "gaugeArcWidth": 25,
@@ -436,6 +526,16 @@
                 "gaugeValue": 23,
                 "gaugeLabel": 12,
                 "gaugeAxis": 13
+              },
+              "sourceSchema": {
+                "columns": [
+                  "id",
+                  "title",
+                  "value",
+                  "color"
+                ],
+                "signature": "id|title|value|color",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
               }
             },
             {
@@ -474,7 +574,18 @@
                   "lineWidth": 4
                 }
               ],
-              "legend": true
+              "legend": true,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "HeV-A26 occupancy",
+                  "Other occupancy",
+                  "Capacity",
+                  "Total occupancy"
+                ],
+                "signature": "date|HeV-A26 occupancy|Other occupancy|Capacity|Total occupancy",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_hospital_occupancy",
@@ -512,7 +623,18 @@
                   "lineWidth": 4
                 }
               ],
-              "legend": true
+              "legend": true,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "HeV-A26 occupancy",
+                  "Other occupancy",
+                  "Capacity",
+                  "Total occupancy"
+                ],
+                "signature": "date|HeV-A26 occupancy|Other occupancy|Capacity|Total occupancy",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_admissions",
@@ -526,7 +648,7 @@
                   "column": "date"
                 }
               ],
-              "size": "normal",
+              "size": "wide",
               "series": [
                 {
                   "name": "ICU admissions",
@@ -539,7 +661,16 @@
                   "color": "#4496D1"
                 }
               ],
-              "legend": true
+              "legend": true,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "new_icu_admissions",
+                  "new_clinic_admissions"
+                ],
+                "signature": "date|new_icu_admissions|new_clinic_admissions",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_delayed_healthcare",
@@ -552,7 +683,19 @@
                 "nameField": "Year",
                 "valueField": "Cases"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Year",
+                  "Month",
+                  "Month name",
+                  "Treatment",
+                  "Cases"
+                ],
+                "signature": "Year|Month|Month name|Treatment|Cases",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             }
           ]
         },
@@ -595,7 +738,16 @@
                   "lineWidth": 3
                 }
               ],
-              "legend": true
+              "legend": true,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "tests_per_day",
+                  "test_positivity_rate"
+                ],
+                "signature": "date|tests_per_day|test_positivity_rate",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             }
           ]
         },
@@ -626,7 +778,19 @@
               "lonField": "lon",
               "valueField": "virus_particles",
               "mapName": "netherlands-provinces",
-              "color": "#007C89"
+              "color": "#007C89",
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "province_id",
+                  "virus_particles",
+                  "province",
+                  "lat",
+                  "lon"
+                ],
+                "signature": "date|province_id|virus_particles|province|lat|lon",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_wastewater_province",
@@ -641,7 +805,19 @@
                   "color": "#007C89"
                 }
               ],
-              "legend": false
+              "legend": false,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "province_id",
+                  "virus_particles",
+                  "province",
+                  "lat",
+                  "lon"
+                ],
+                "signature": "date|province_id|virus_particles|province|lat|lon",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             }
           ]
         },
@@ -671,7 +847,17 @@
                 "First_vaccination_pct",
                 "Second_vaccination_pct",
                 "Status"
-              ]
+              ],
+              "sourceSchema": {
+                "columns": [
+                  "Group",
+                  "First_vaccination_pct",
+                  "Second_vaccination_pct",
+                  "Status"
+                ],
+                "signature": "Group|First_vaccination_pct|Second_vaccination_pct|Status",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "bio_vaccination_rate",
@@ -683,7 +869,17 @@
                 "nameField": "group",
                 "valueField": "vaccination_rate_pct"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "group",
+                  "vaccination_rate_pct"
+                ],
+                "signature": "date|group|vaccination_rate_pct",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             }
           ]
         }
@@ -727,7 +923,7 @@
           "panels": [
             {
               "id": "socio_risk_perception",
-              "type": "horizontalStackedBar",
+              "type": "stackedBar",
               "title": "Risk Perception",
               "dataSource": "socio_behaviour",
               "x": "Question",
@@ -751,31 +947,22 @@
               "reverseColorScheme": false,
               "fontSizes": {
                 "title": 17
-              }
-            },
-            {
-              "id": "socio_values_deltas",
-              "type": "deltaList",
-              "title": "Values: Change Compared to Previous Phase",
-              "dataSource": "socio_values_deltas",
-              "filters": [
-                {
-                  "filterId": "behaviour_snapshot",
-                  "column": "selected_date"
-                }
-              ],
-              "fields": {
-                "title": "Value",
-                "value": "Percentage delta",
-                "detail": "Percentage"
               },
-              "rowLimit": 12,
-              "dateSelection": {
-                "column": "date",
-                "mode": "list",
-                "values": [
-                  "2027-04-26"
-                ]
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "date_value",
+                  "Month Label",
+                  "Question key",
+                  "Question",
+                  "Answer",
+                  "Percentage",
+                  "Age group",
+                  "Behaviour type"
+                ],
+                "signature": "date|date_value|Month Label|Question key|Question|Answer|Percentage|Age group|Behaviour type",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
               }
             },
             {
@@ -801,7 +988,28 @@
                 "value": "Percentage delta",
                 "detail": "Answer group"
               },
-              "rowLimit": 12
+              "rowLimit": 12,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "date_value",
+                  "Month Label",
+                  "Question key",
+                  "Question",
+                  "Answer group",
+                  "Age group",
+                  "Behaviour type",
+                  "Percentage",
+                  "Previous percentage",
+                  "Percentage delta",
+                  "Comparison date",
+                  "Comparison label",
+                  "Is first snapshot",
+                  "selected_date"
+                ],
+                "signature": "date|date_value|Month Label|Question key|Question|Answer group|Age group|Behaviour type|Percentage|Previous percentage|Percentage delta|Comparison date|Comparison label|Is first snapshot|selected_date",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "socio_adherence",
@@ -824,7 +1032,23 @@
                 "valueField": "Percentage"
               },
               "size": "wide",
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "date_value",
+                  "Month Label",
+                  "Question key",
+                  "Question",
+                  "Answer",
+                  "Percentage",
+                  "Age group",
+                  "Behaviour type"
+                ],
+                "signature": "date|date_value|Month Label|Question key|Question|Answer|Percentage|Age group|Behaviour type",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "socio_values",
@@ -845,7 +1069,60 @@
                   "color": "#043BCB"
                 }
               ],
-              "legend": false
+              "legend": false,
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "date_value",
+                  "Month Label",
+                  "Value",
+                  "Percentage"
+                ],
+                "signature": "date|date_value|Month Label|Value|Percentage",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
+            },
+            {
+              "id": "socio_values_deltas",
+              "type": "deltaList",
+              "title": "Values: Change Compared to Previous Phase",
+              "dataSource": "socio_values_deltas",
+              "filters": [
+                {
+                  "filterId": "behaviour_snapshot",
+                  "column": "selected_date"
+                }
+              ],
+              "fields": {
+                "title": "Value",
+                "value": "Percentage delta",
+                "detail": "Percentage"
+              },
+              "rowLimit": 12,
+              "dateSelection": {
+                "column": "date",
+                "mode": "list",
+                "values": [
+                  "2027-04-26"
+                ]
+              },
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "date_value",
+                  "Month Label",
+                  "Value",
+                  "Percentage",
+                  "Previous percentage",
+                  "Percentage delta",
+                  "Comparison date",
+                  "Comparison label",
+                  "Is first snapshot",
+                  "selected_date"
+                ],
+                "signature": "date|date_value|Month Label|Value|Percentage|Previous percentage|Percentage delta|Comparison date|Comparison label|Is first snapshot|selected_date",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             }
           ]
         },
@@ -890,8 +1167,21 @@
                 "valueField": "trust"
               },
               "legend": true,
-              "size": "normal",
-              "yScale": "auto"
+              "size": "wide",
+              "yScale": "auto",
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "Trustee_id",
+                  "trust",
+                  "institution",
+                  "date_label",
+                  "date_value"
+                ],
+                "signature": "date|Trustee_id|trust|institution|date_label|date_value",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "socio_trust_meter",
@@ -906,7 +1196,19 @@
               ],
               "valueField": "trust",
               "labelField": "institution",
-              "color": "#00A676"
+              "color": "#00A676",
+              "sourceSchema": {
+                "columns": [
+                  "date",
+                  "Trustee_id",
+                  "trust",
+                  "institution",
+                  "date_label",
+                  "date_value"
+                ],
+                "signature": "date|Trustee_id|trust|institution|date_label|date_value",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             }
           ]
         },
@@ -950,7 +1252,19 @@
                 "nameField": "Age group",
                 "valueField": "Percentage"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "snapshot_id",
+                  "Snapshot",
+                  "Snapshot label",
+                  "Age group",
+                  "Percentage"
+                ],
+                "signature": "snapshot_id|Snapshot|Snapshot label|Age group|Percentage",
+                "checkedAt": "2026-07-11T18:28:45.593Z"
+              }
             },
             {
               "id": "socio_mental_wellbeing",
@@ -974,6 +1288,20 @@
                 "values": [
                   "Average"
                 ]
+              },
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Category",
+                  "snapshot_id",
+                  "Snapshot",
+                  "Snapshot label",
+                  "Age group",
+                  "Answer",
+                  "Percentage"
+                ],
+                "signature": "Category|snapshot_id|Snapshot|Snapshot label|Age group|Answer|Percentage",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
               }
             },
             {
@@ -992,7 +1320,22 @@
                 "nameField": "Answer",
                 "valueField": "Percentage"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Category",
+                  "snapshot_id",
+                  "Snapshot",
+                  "Snapshot label",
+                  "Question key",
+                  "Question",
+                  "Answer",
+                  "Percentage"
+                ],
+                "signature": "Category|snapshot_id|Snapshot|Snapshot label|Question key|Question|Answer|Percentage",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
+              }
             },
             {
               "id": "socio_resilience",
@@ -1010,7 +1353,22 @@
                 "nameField": "Answer",
                 "valueField": "Percentage"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Category",
+                  "snapshot_id",
+                  "Snapshot",
+                  "Snapshot label",
+                  "Question key",
+                  "Question",
+                  "Answer",
+                  "Percentage"
+                ],
+                "signature": "Category|snapshot_id|Snapshot|Snapshot label|Question key|Question|Answer|Percentage",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
+              }
             }
           ]
         },
@@ -1040,7 +1398,19 @@
                 "nameField": "Year",
                 "valueField": "Closures"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Sector_id",
+                  "Closures",
+                  "Year",
+                  "Code",
+                  "Sector"
+                ],
+                "signature": "Sector_id|Closures|Year|Code|Sector",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
+              }
             },
             {
               "id": "socio_unemployment",
@@ -1055,7 +1425,16 @@
                   "color": "#043BCB"
                 }
               ],
-              "legend": false
+              "legend": false,
+              "sourceSchema": {
+                "columns": [
+                  "Date",
+                  "Value",
+                  "Date label"
+                ],
+                "signature": "Date|Value|Date label",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
+              }
             }
           ]
         },
@@ -1085,7 +1464,19 @@
                 "nameField": "Year",
                 "valueField": "Absenteeism percentage"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Year",
+                  "Month",
+                  "Month order",
+                  "Period",
+                  "Absenteeism percentage"
+                ],
+                "signature": "Year|Month|Month order|Period|Absenteeism percentage",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
+              }
             },
             {
               "id": "socio_education_absenteeism",
@@ -1097,7 +1488,19 @@
                 "nameField": "Year",
                 "valueField": "Absenteeism percentage"
               },
-              "legend": true
+              "legend": true,
+              "series": [],
+              "sourceSchema": {
+                "columns": [
+                  "Year",
+                  "Month",
+                  "Month order",
+                  "Period",
+                  "Absenteeism percentage"
+                ],
+                "signature": "Year|Month|Month order|Period|Absenteeism percentage",
+                "checkedAt": "2026-07-11T18:28:45.594Z"
+              }
             }
           ]
         }
