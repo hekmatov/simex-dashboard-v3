@@ -58,6 +58,23 @@ const FONT_CONTROLS = {
   gaugeAxis: { label: "Gauge axis labels", defaultValue: 12 },
   mapLabel: { label: "Map hover labels", defaultValue: 12 },
 };
+
+const DATA_FORMATS = [
+  { value: "auto", label: "Auto / not sure" },
+  { value: "wide", label: "Wide - one row has many value columns" },
+  { value: "long", label: "Long - one row per observation/category" },
+];
+
+const COLUMN_TIPS = {
+  category: "Use a text-like column with group names, regions, age bands, categories, or dates used as labels. Avoid total rows unless you want them shown as a category.",
+  value: "Use a numeric column. Remove commas or percent signs if they prevent values from being interpreted as numbers.",
+  date: "Use consistent dates. ISO format such as 2027-05-02 is safest, but common slash dates can also work if they are consistent.",
+  seriesName: "Use a text column that names each series, group, or response option in long-format data.",
+  latitude: "Use decimal latitude values, for example 52.0907. Do not use degrees/minutes/seconds text.",
+  longitude: "Use decimal longitude values, for example 5.1214. Do not use degrees/minutes/seconds text.",
+  join: "Use an ID/code column that matches the GeoJSON property exactly after known municipality-code normalization.",
+  label: "Use a human-readable label column such as municipality, province, region, or indicator name.",
+};
 export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, dataRows = [], globalPanelColors, onChange, onSave, onCancel, onRemove }) {
   const [activeTab, setActiveTab] = React.useState("data");
   const [openSections, setOpenSections] = React.useState({});
@@ -217,7 +234,14 @@ function SourceSection({ panel, dataSources, dataSourcePath, dataRows, patch }) 
       </label>
       <div className="settings-button-row">
         <button type="button" className="secondary" disabled={!dataSourcePath} onClick={() => openDataSourceTable(panel.title, dataSourceDisplayPath(dataSourcePath), dataRows)}>View source CSV</button>
+        <button type="button" className="secondary" onClick={() => openChartDataHelp(panel.type, panel.dataFormat ?? "auto")}>Expected data structure</button>
       </div>
+      <label>
+        Source CSV format
+        <select value={panel.dataFormat ?? "auto"} onChange={(event) => patch({ dataFormat: event.target.value })}>
+          {DATA_FORMATS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </label>
       <label>
         Panel type
         <select value={panel.type} onChange={(event) => changePanelType(event.target.value)}>
@@ -339,7 +363,7 @@ function CategoryOrderSection({ panel, dataColumns, patch }) {
     <>
       <label>Category order<select value={panel.categoryOrder ?? "csv"} onChange={(event) => patch({ categoryOrder: event.target.value })}><option value="csv">Order of appearance in CSV</option><option value="alphabetical">Alphabetical</option><option value="valueColumn">By selected value column</option></select></label>
       {panel.categoryOrder === "valueColumn" && <>
-        <label>Sort value column<select value={panel.categorySortColumn ?? ""} onChange={(event) => patch({ categorySortColumn: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+        <ColumnSelectField label="Sort value column" value={panel.categorySortColumn ?? ""} columns={dataColumns} tip="value" onChange={(value) => patch({ categorySortColumn: value })} />
         <label>Sort direction<select value={panel.categorySortDirection ?? "desc"} onChange={(event) => patch({ categorySortDirection: event.target.value })}><option value="desc">Highest first</option><option value="asc">Lowest first</option></select></label>
       </>}
     </>
@@ -367,7 +391,7 @@ function SeriesCard({ panel, series, index, count, dataColumns, patchSeries, dup
       <div className="settings-series-header"><strong>{series.name || `Series ${index + 1}`}</strong><div><button type="button" className="secondary" onClick={() => duplicateSeries(index)}>Duplicate</button><button type="button" className="secondary" disabled={count <= 1} onClick={() => removeSeries(index)}>Remove</button></div></div>
       {panel.type === "mixed" && <label>Series type<select value={resolvedType} onChange={(event) => patchSeries(index, { type: event.target.value })}><option value="bar">Bar</option><option value="line">Line</option></select></label>}
       <label>Name<input value={series.name ?? ""} onChange={(event) => patchSeries(index, { name: event.target.value })} /></label>
-      <label>Value column<select value={series.y ?? ""} onChange={(event) => patchSeries(index, { y: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="Value column" value={series.y ?? ""} columns={dataColumns} tip="value" onChange={(value) => patchSeries(index, { y: value })} />
       <label>Axis<select value={series.yAxisIndex ?? 0} onChange={(event) => patchSeries(index, { yAxisIndex: Number(event.target.value) })}><option value={0}>Primary y-axis</option><option value={1}>Secondary y-axis</option></select></label>
       <ColorField label="Color" value={series.color ?? "#043BCB"} onChange={(color) => patchSeries(index, { color })} />
       <label>Opacity<input type="number" min="0.1" max="1" step="0.05" value={series.opacity ?? 1} onChange={(event) => patchSeries(index, { opacity: Number(event.target.value) })} /></label>
@@ -398,8 +422,8 @@ function SeriesFromSection({ panel, dataColumns, patchSeriesFrom }) {
   }
   return (
     <>
-      <label>Series name column<select value={panel.seriesFrom?.nameField ?? ""} onChange={(event) => patchSeriesFrom({ nameField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Series value column<select value={panel.seriesFrom?.valueField ?? ""} onChange={(event) => patchSeriesFrom({ valueField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="Series name column" value={panel.seriesFrom?.nameField ?? ""} columns={dataColumns} tip="seriesName" onChange={(value) => patchSeriesFrom({ nameField: value })} />
+      <ColumnSelectField label="Series value column" value={panel.seriesFrom?.valueField ?? ""} columns={dataColumns} tip="value" onChange={(value) => patchSeriesFrom({ valueField: value })} />
       <p className="settings-note">Use this when one CSV column contains the group name and another contains the numeric value.</p>
     </>
   );
@@ -423,7 +447,7 @@ function AxisFieldsSection({ panel, dataColumns, patch }) {
   if (!AXIS_TYPES.has(panel.type)) return <p className="settings-note">This panel type does not use x/y axes.</p>;
   return (
     <>
-      <label>X / category field<select value={panel.x ?? ""} onChange={(event) => patch({ x: event.target.value, dateSelection: undefined, categorySelection: undefined })}><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="X / category field" value={panel.x ?? ""} columns={dataColumns} tip={panel.xAxisMode === "date" ? "date" : "category"} onChange={(value) => patch({ x: value, dateSelection: undefined, categorySelection: undefined })} />
       <label>X-axis type<select value={panel.xAxisMode ?? "auto"} onChange={(event) => patch({ xAxisMode: event.target.value })}><option value="auto">Auto</option><option value="date">Date</option><option value="category">Category</option></select></label>
       <label>X-axis title<input value={panel.xAxisTitle ?? ""} onChange={(event) => patch({ xAxisTitle: event.target.value })} /></label>
       <label>Y-axis title<input value={panel.yAxisTitle ?? ""} onChange={(event) => patch({ yAxisTitle: event.target.value })} /></label>
@@ -556,8 +580,10 @@ function TooltipSection({ panel, patch }) {
 function GaugeDataSection({ panel, dataColumns, patch }) {
   return (
     <>
-      <label>Value field<select value={panel.valueField ?? ""} onChange={(event) => patch({ valueField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Label field<select value={panel.labelField ?? ""} onChange={(event) => patch({ labelField: event.target.value || undefined })}><option value="">No label - number only</option><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="Value field" value={panel.valueField ?? ""} columns={dataColumns} tip="value" onChange={(value) => patch({ valueField: value })} />
+      <ColumnSelectField label="Label field" value={panel.labelField ?? ""} columns={dataColumns} tip="label" onChange={(value) => patch({ labelField: value || undefined })}>
+        <option value="">No label - number only</option>
+      </ColumnSelectField>
       <label>Unit<input value={panel.unit ?? "%"} onChange={(event) => patch({ unit: event.target.value })} /></label>
       <label>Maximum value<input type="number" min="1" value={panel.max ?? 100} onChange={(event) => patch({ max: Number(event.target.value) })} /></label>
     </>
@@ -580,10 +606,10 @@ function GaugeRedZoneSection({ panel, patch }) {
 function MapSection({ panel, dataColumns, patch }) {
   return (
     <>
-      <label>Name field<select value={panel.nameField ?? ""} onChange={(event) => patch({ nameField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Latitude field<select value={panel.latField ?? ""} onChange={(event) => patch({ latField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Longitude field<select value={panel.lonField ?? ""} onChange={(event) => patch({ lonField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Value field<select value={panel.valueField ?? ""} onChange={(event) => patch({ valueField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="Name field" value={panel.nameField ?? ""} columns={dataColumns} tip="label" onChange={(value) => patch({ nameField: value })} />
+      <ColumnSelectField label="Latitude field" value={panel.latField ?? ""} columns={dataColumns} tip="latitude" onChange={(value) => patch({ latField: value })} />
+      <ColumnSelectField label="Longitude field" value={panel.lonField ?? ""} columns={dataColumns} tip="longitude" onChange={(value) => patch({ lonField: value })} />
+      <ColumnSelectField label="Value field" value={panel.valueField ?? ""} columns={dataColumns} tip="value" onChange={(value) => patch({ valueField: value })} />
       <label>Point scale<input type="number" min="0.2" max="4" step="0.1" value={panel.pointScale ?? 1} onChange={(event) => patch({ pointScale: Number(event.target.value) })} /></label>
     </>
   );
@@ -601,9 +627,9 @@ function ChoroplethSection({ panel, dataSources, dataColumns, patch }) {
           ))}
         </select>
       </label>
-      <label>CSV join field<select value={panel.joinField ?? ""} onChange={(event) => patch({ joinField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Value field<select value={panel.valueField ?? ""} onChange={(event) => patch({ valueField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Label field<select value={panel.labelField ?? ""} onChange={(event) => patch({ labelField: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="CSV join field" value={panel.joinField ?? ""} columns={dataColumns} tip="join" onChange={(value) => patch({ joinField: value })} />
+      <ColumnSelectField label="Value field" value={panel.valueField ?? ""} columns={dataColumns} tip="value" onChange={(value) => patch({ valueField: value })} />
+      <ColumnSelectField label="Label field" value={panel.labelField ?? ""} columns={dataColumns} tip="label" onChange={(value) => patch({ labelField: value })} />
       <label>GeoJSON code property<input value={panel.geoNameProperty ?? "statcode"} onChange={(event) => patch({ geoNameProperty: event.target.value })} /></label>
       <label>GeoJSON label property<input value={panel.geoLabelProperty ?? "statnaam"} onChange={(event) => patch({ geoLabelProperty: event.target.value })} /></label>
       <label>Value legend label<input value={panel.valueLabel ?? ""} onChange={(event) => patch({ valueLabel: event.target.value })} /></label>
@@ -641,10 +667,27 @@ function TableSection({ panel, patch }) {
 function DeltaSection({ panel, dataColumns, patchFields }) {
   return (
     <>
-      <label>Title field<select value={panel.fields?.title ?? ""} onChange={(event) => patchFields({ title: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Value field<select value={panel.fields?.value ?? ""} onChange={(event) => patchFields({ value: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
-      <label>Detail field<select value={panel.fields?.detail ?? ""} onChange={(event) => patchFields({ detail: event.target.value })}><ColumnOptions columns={dataColumns} /></select></label>
+      <ColumnSelectField label="Title field" value={panel.fields?.title ?? ""} columns={dataColumns} tip="label" onChange={(value) => patchFields({ title: value })} />
+      <ColumnSelectField label="Value field" value={panel.fields?.value ?? ""} columns={dataColumns} tip="value" onChange={(value) => patchFields({ value })} />
+      <ColumnSelectField label="Detail field" value={panel.fields?.detail ?? ""} columns={dataColumns} tip="label" onChange={(value) => patchFields({ detail: value })} />
     </>
+  );
+}
+
+function ColumnSelectField({ label, value, onChange, columns, tip = "category", children }) {
+  return (
+    <label>
+      <span className="settings-label-with-help">
+        <span>{label}</span>
+        <button type="button" className="column-help-button" title={COLUMN_TIPS[tip] ?? COLUMN_TIPS.category} aria-label={`${label} guidance`}>
+          ?
+        </button>
+      </span>
+      <select value={value ?? ""} onChange={(event) => onChange(event.target.value)}>
+        {children}
+        <ColumnOptions columns={columns} />
+      </select>
+    </label>
   );
 }
 
@@ -679,6 +722,90 @@ function renderCsvTable(title, path, rows) {
   const columns = collectColumns(rows);
   const body = rows.slice(0, 1000).map((row) => `<tr>${columns.map((column) => `<td>${escapeHtml(row[column])}</td>`).join("")}</tr>`).join("");
   return `<!doctype html><html><head><title>${escapeHtml(title)} source CSV</title><style>body{font-family:Inter,Arial,sans-serif;margin:0;color:#08224a;background:#f5f8fb}header{position:sticky;top:0;background:white;padding:16px 20px;border-bottom:1px solid #d8e2ec}main{padding:20px}.table-wrap{overflow:auto;max-height:calc(100vh - 120px);border:1px solid #d8e2ec;background:white;border-radius:10px}table{border-collapse:collapse;min-width:100%;font-size:13px}th,td{border-bottom:1px solid #e6eef5;padding:8px 10px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#eaf2f8}small{color:#506a82}</style></head><body><header><strong>${escapeHtml(title)}</strong><br/><small>${escapeHtml(path)} · showing ${Math.min(rows.length, 1000).toLocaleString()} of ${rows.length.toLocaleString()} rows</small></header><main><div class="table-wrap"><table><thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div></main></body></html>`;
+}
+
+function openChartDataHelp(type, dataFormat) {
+  const windowRef = window.open("", "_blank", "width=760,height=680");
+  if (!windowRef) return;
+  windowRef.document.write(renderChartDataHelp(type, dataFormat));
+  windowRef.document.close();
+}
+
+function renderChartDataHelp(type, dataFormat) {
+  const help = chartDataRequirement(type, dataFormat);
+  return `<!doctype html><html><head><title>${escapeHtml(help.title)}</title><style>body{font-family:Inter,Arial,sans-serif;margin:0;color:#08224a;background:#f5f8fb}header{background:white;border-bottom:1px solid #d8e2ec;padding:18px 22px}main{display:grid;gap:16px;padding:22px}h1{font-size:22px;margin:0 0 6px}h2{font-size:15px;margin:0 0 8px}.card{background:white;border:1px solid #d8e2ec;border-radius:12px;padding:14px 16px}ul{margin:0;padding-left:20px}li{margin:6px 0}code{background:#eef5fb;border-radius:5px;padding:2px 5px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #e6eef5;padding:8px;text-align:left}th{background:#eaf2f8}</style></head><body><header><h1>${escapeHtml(help.title)}</h1><p>${escapeHtml(help.summary)}</p></header><main><section class="card"><h2>Required columns</h2><ul>${help.required.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section><section class="card"><h2>${escapeHtml(help.exampleTitle)}</h2><table><thead><tr>${help.example.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${help.example.rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></section><section class="card"><h2>Practical tips</h2><ul>${help.tips.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section></main></body></html>`;
+}
+
+function chartDataRequirement(type, dataFormat) {
+  const format = dataFormat === "long" || dataFormat === "wide" ? dataFormat : "auto";
+  if (type === "gauge") {
+    return {
+      title: "Gauge data structure",
+      summary: "A gauge usually needs one row with one numeric value column.",
+      required: ["One numeric value column, for example occupancy_percent.", "Optional label column if the gauge should show a label below the number.", "Optional unit text can be typed in the chart editor."],
+      exampleTitle: "Example CSV",
+      example: { columns: ["indicator", "value", "unit"], rows: [["ICU occupancy", "80", "%"]] },
+      tips: ["Keep the value numeric. Use 80 rather than 80%.", "Use the chart title for context when the label column is empty."],
+    };
+  }
+  if (type === "mapScatter") {
+    return {
+      title: "Point map data structure",
+      summary: "A point map needs location columns and a numeric value used for bubble size or color.",
+      required: ["Name/label column.", "Latitude column with decimal coordinates.", "Longitude column with decimal coordinates.", "Numeric value column."],
+      exampleTitle: "Example CSV",
+      example: { columns: ["province", "latitude", "longitude", "cases"], rows: [["Zuid-Holland", "52.02", "4.30", "1200"]] },
+      tips: ["Latitude and longitude must be separate numeric columns.", "Use decimal coordinates, not address text."],
+    };
+  }
+  if (type === "choroplethMap" || type === "chronoChoroplethMap") {
+    return {
+      title: type === "chronoChoroplethMap" ? "Animated choropleth data structure" : "Choropleth map data structure",
+      summary: "A choropleth joins CSV rows to GeoJSON regions using a matching code field.",
+      required: ["CSV join/code column matching the GeoJSON property.", "Numeric value column to color the map.", "Optional readable label column.", type === "chronoChoroplethMap" ? "Date column, with one row per region per date." : "One row per region for the selected date."],
+      exampleTitle: "Example CSV",
+      example: { columns: ["MunicipalityCode", "Gemeentenaam", "Datum", "infectionsPer10000"], rows: [["GM0014", "Groningen", "2021-04-16", "53.2"]] },
+      tips: ["Codes must match the map data. Municipality codes can be normalized when configured.", "For animated maps, use long format with repeated municipalities across dates."],
+    };
+  }
+  if (type === "table") {
+    return {
+      title: "Table data structure",
+      summary: "A table can show any CSV columns selected in the editor.",
+      required: ["At least one column.", "Optional visible column list in the chart editor."],
+      exampleTitle: "Example CSV",
+      example: { columns: ["indicator", "value", "note"], rows: [["Hospital capacity", "72", "Current scenario"]] },
+      tips: ["Keep column names readable because they become table headers.", "Tables are useful for source values that do not need a chart."],
+    };
+  }
+  if (type === "deltaList" || type === "kpi") {
+    return {
+      title: "KPI / delta-list data structure",
+      summary: "KPI-style panels need short label and value columns.",
+      required: ["Title/label column.", "Numeric or short text value column.", "Optional detail/change column."],
+      exampleTitle: "Example CSV",
+      example: { columns: ["label", "value", "detail"], rows: [["Province cases", "1200", "+8%"]] },
+      tips: ["Keep values short so they fit in compact cards.", "Use detail text for direction, time period, or comparison notes."],
+    };
+  }
+  const longRequired = ["Category or x-axis column.", "Series name column, for example age group or response option.", "Numeric value column.", "Optional date column for filtering or timeline charts."];
+  const wideRequired = ["Category or x-axis column.", "One numeric column for each series, for example cases and deaths.", "Optional date column if the x-axis is time-based."];
+  return {
+    title: "Axis chart data structure",
+    summary: format === "long"
+      ? "Long format means each row is one observation, and one column names the series."
+      : format === "wide"
+        ? "Wide format means each row contains multiple value columns, one per series."
+        : "Axis charts can use either long or wide CSV data. Choose the source format in the editor for more relevant settings.",
+    required: format === "long" ? longRequired : wideRequired,
+    exampleTitle: format === "long" ? "Long-format example" : "Wide-format example",
+    example: format === "long"
+      ? { columns: ["date", "age_group", "deaths"], rows: [["2027-05-02", "60-79", "1476"], ["2027-05-02", "80+", "888"]] }
+      : { columns: ["date", "new_cases", "new_deaths"], rows: [["2027-05-02", "1200", "28"]] },
+    tips: format === "long"
+      ? ["Use Series name column and Series value column in the Series tab.", "Long format is best when the number of groups can change over time."]
+      : ["Add one chart series for each numeric value column.", "Wide format is simplest when you have a fixed set of series."],
+  };
 }
 
 function dataSourceLabel(sourceId, source) {

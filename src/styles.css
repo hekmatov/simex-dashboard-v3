@@ -1570,6 +1570,97 @@ button.danger {
   margin: 0;
 }
 
+.settings-label-with-help {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.column-help-button {
+  align-items: center;
+  background: #eaf1f6;
+  border: 1px solid rgb(8 34 74 / 16%);
+  border-radius: 999px;
+  color: #08224a;
+  cursor: help;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  height: 18px;
+  justify-content: center;
+  min-height: 18px;
+  padding: 0;
+  width: 18px;
+}
+
+.column-help-button:hover {
+  background: #d8e8f5;
+  border-color: rgb(4 59 203 / 28%);
+}
+
+.compatibility-modal-backdrop {
+  align-items: start;
+  background: rgb(8 34 74 / 42%);
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  overflow: auto;
+  padding: 56px 16px;
+  position: fixed;
+  z-index: 5000;
+}
+
+.compatibility-modal {
+  background: #f8fbff;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgb(8 34 74 / 30%);
+  color: #08224a;
+  display: grid;
+  gap: 14px;
+  max-width: 760px;
+  padding: 20px;
+  width: min(760px, 100%);
+}
+
+.compatibility-modal header {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.compatibility-modal h2,
+.compatibility-modal p {
+  margin: 0;
+}
+
+.compatibility-report-list {
+  display: grid;
+  gap: 10px;
+  max-height: min(55vh, 520px);
+  overflow: auto;
+}
+
+.compatibility-report-card {
+  background: white;
+  border: 1px solid rgb(8 34 74 / 12%);
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.compatibility-report-card span,
+.compatibility-report-card small {
+  color: #506a82;
+}
+
+.compatibility-report-card ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
 .date-checklist-actions {
   display: grid;
   gap: 8px;

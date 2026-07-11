@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import { reconcileDashboardWithLoadedData } from "./lib/dashboardCompatibility.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
@@ -40,6 +41,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editSessionStartConfig, setEditSessionStartConfig] = useState(null);
+  const [compatibilityReports, setCompatibilityReports] = useState([]);
 
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
@@ -62,9 +64,25 @@ export default function App() {
         setDefaultConfig(config);
         return loadDashboardConfig(savedConfig);
       })
-      .then(setDashboard)
+      .then((loadedDashboard) => applyLoadedDashboard(loadedDashboard, { showReport: true }))
       .catch((loadError) => setError(loadError));
   }, []);
+
+  function applyLoadedDashboard(loadedDashboard, { showReport = false } = {}) {
+    const runtimeConfig = stripRuntimeFields(loadedDashboard);
+    const reconciled = reconcileDashboardWithLoadedData(runtimeConfig, loadedDashboard.loadedData);
+    const safeConfig = sanitizeDashboardConfig(reconciled.config);
+    if (JSON.stringify(safeConfig) !== JSON.stringify(runtimeConfig)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeConfig, null, 2));
+    }
+    setDashboard({
+      ...safeConfig,
+      loadedData: loadedDashboard.loadedData,
+    });
+    if (showReport && reconciled.reports.length > 0) {
+      setCompatibilityReports(reconciled.reports);
+    }
+  }
 
   function updateDashboardConfig(nextConfig) {
     const safeConfig = sanitizeDashboardConfig(nextConfig);
@@ -81,7 +99,7 @@ export default function App() {
     loadDashboardConfig(safeConfig)
       .then((loadedDashboard) => {
         setError(null);
-        setDashboard(loadedDashboard);
+        applyLoadedDashboard(loadedDashboard);
       })
       .catch((loadError) => setError(loadError));
   }
@@ -318,27 +336,64 @@ export default function App() {
   }
 
   return (
-    <DashboardRenderer
-      dashboard={dashboard}
-      editMode={editMode}
-      onToggleEditMode={toggleEditMode}
-      onPageAdd={addPage}
-      onPageRemove={removePage}
-      onPageChange={updatePage}
-      onDashboardChange={updateDashboardFields}
-      onPanelChange={updatePanel}
-      onSectionChange={updateSection}
-      onSectionInsert={insertSection}
-      onVantaBackgroundChange={updateVantaBackground}
-      onPanelAdd={addPanel}
-      onPanelRemove={removePanel}
-      onPanelReorder={reorderPanel}
-      onImportConfig={importConfig}
-      onExportConfig={exportConfig}
-      onExportPackageDefault={exportPackageDefaultConfig}
-      onUploadCsv={uploadCsvSource}
-      onResetEditSession={cancelEditSession}
-    />
+    <>
+      {compatibilityReports.length > 0 && (
+        <CompatibilityReportModal reports={compatibilityReports} onClose={() => setCompatibilityReports([])} />
+      )}
+      <DashboardRenderer
+        dashboard={dashboard}
+        editMode={editMode}
+        onToggleEditMode={toggleEditMode}
+        onPageAdd={addPage}
+        onPageRemove={removePage}
+        onPageChange={updatePage}
+        onDashboardChange={updateDashboardFields}
+        onPanelChange={updatePanel}
+        onSectionChange={updateSection}
+        onSectionInsert={insertSection}
+        onVantaBackgroundChange={updateVantaBackground}
+        onPanelAdd={addPanel}
+        onPanelRemove={removePanel}
+        onPanelReorder={reorderPanel}
+        onImportConfig={importConfig}
+        onExportConfig={exportConfig}
+        onExportPackageDefault={exportPackageDefaultConfig}
+        onUploadCsv={uploadCsvSource}
+        onResetEditSession={cancelEditSession}
+      />
+    </>
+  );
+}
+
+function CompatibilityReportModal({ reports, onClose }) {
+  return (
+    <div className="compatibility-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="compatibility-report-title">
+      <section className="compatibility-modal">
+        <header>
+          <div>
+            <p className="eyebrow">CSV compatibility check</p>
+            <h2 id="compatibility-report-title">Chart settings were checked against source data</h2>
+          </div>
+          <button type="button" className="secondary" onClick={onClose}>Close</button>
+        </header>
+        <p>
+          One or more source CSV files changed compared with saved chart settings. The dashboard applied safe fallback settings where possible.
+          Review the affected charts below.
+        </p>
+        <div className="compatibility-report-list">
+          {reports.map((report) => (
+            <article key={`${report.panelId}-${report.dataSource}`} className="compatibility-report-card">
+              <strong>{report.title}</strong>
+              <span>{report.page} / {report.section}</span>
+              <small>Data source: {report.dataSource}</small>
+              <ul>
+                {report.changes.map((change) => <li key={change}>{change}</li>)}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
