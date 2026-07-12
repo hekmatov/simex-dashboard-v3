@@ -40,7 +40,7 @@ export function reconcileDashboardWithLoadedData(config, loadedData) {
 
         applyPanelColumnFallbacks(panel, columns, changes);
         if (AXIS_TYPES.has(panel.type)) {
-          repairDataBinding(panel, columns, changes);
+          repairDataBinding(panel, columns, profile, changes);
         }
         const nextSignature = columns.join("|");
         const previousSignature = panel.sourceSchema?.signature;
@@ -125,12 +125,17 @@ function applyPanelColumnFallbacks(panel, columns, changes) {
   }
 }
 
-function repairDataBinding(panel, columns, changes) {
+function repairDataBinding(panel, columns, profile, changes) {
   panel.dataBinding = panel.dataBinding ?? legacyBindingForPanel(panel);
   const binding = panel.dataBinding;
   if (!binding) return;
 
   repairBindingField(binding.x, "field", columns, changes, "x-axis field");
+  const xProfile = profile.columns.find((column) => column.name === binding.x?.field);
+  if (binding.x?.type === "temporal" && xProfile?.type !== "temporal") {
+    changes.push(`Changed x-axis interpretation for "${binding.x.field}" from date/time to category because the CSV values are not dates.`);
+    binding.x.type = "category";
+  }
   for (const measure of binding.measures ?? []) {
     repairBindingField(measure, "field", columns, changes, "measurement field");
   }

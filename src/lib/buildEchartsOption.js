@@ -43,7 +43,7 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
     ? {
         ...panel,
         x: prepared.binding?.x?.field ?? panel.x,
-        xAxisMode: prepared.binding?.x?.type === "temporal" ? "date" : "category",
+        xAxisMode: prepared.xType === "temporal" ? "date" : "category",
       }
     : panel;
   const isHorizontal = resolvedPanel.type === "horizontalBar" || resolvedPanel.type === "horizontalStackedBar";

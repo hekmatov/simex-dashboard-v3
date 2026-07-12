@@ -210,15 +210,13 @@ export default function DashboardRenderer({
   }
 
   function changeSelectedPanel(updates) {
-    setSelectedPanelDraft((current) => {
-      const base = current ?? selectedPanel;
-      if (!base) {
-        return current;
-      }
-      const nextPanel = { ...base, ...updates };
-      onPanelChange(nextPanel.id, diffPanel(base, nextPanel), { commitToEditSession: false });
-      return nextPanel;
-    });
+    const base = selectedPanelDraft ?? selectedPanel;
+    if (!base) {
+      return;
+    }
+    const nextPanel = { ...base, ...updates };
+    setSelectedPanelDraft(nextPanel);
+    onPanelChange(nextPanel.id, diffPanel(base, nextPanel), { commitToEditSession: false });
   }
 
   function saveSelectedPanel() {

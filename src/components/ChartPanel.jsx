@@ -393,6 +393,9 @@ function replaceMergeForPanel(panel) {
   if (panel.type === "choroplethMap" || panel.type === "chronoChoroplethMap") {
     return ["series", "geo", "visualMap"];
   }
+  if (panel.dataBinding) {
+    return ["series", "legend", "xAxis", "yAxis"];
+  }
   return undefined;
 }
 

@@ -56,3 +56,26 @@ test("mortality age reference chart uses age only as x, not as cluster", async (
   assert.deepEqual(panel.dataBinding.series.fields, []);
   assert.ok(panel.dataBinding.filters.some((filter) => filter.field === "Age group" && !filter.values.includes("total_deaths")));
 });
+
+test("surgeries chart supports Year and Year plus Treatment clustering", async () => {
+  const config = migrateDashboardToDataModel(JSON.parse(await readFile(path.join(root, "public/config/dashboard.json"), "utf8")));
+  const panels = config.pages.flatMap((page) => page.sections.flatMap((section) => section.panels));
+  const panel = panels.find((candidate) => candidate.id === "bio_delayed_healthcare");
+  const source = config.dataSources[panel.dataSource];
+  const text = await readFile(path.join(root, "public", source), "utf8");
+  const rows = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
+  const byYear = prepareAxisChartData(panel, rows);
+  const byYearAndTreatment = prepareAxisChartData({
+    ...panel,
+    dataBinding: {
+      ...panel.dataBinding,
+      series: { fields: ["Year", "Treatment"] },
+    },
+  }, rows);
+
+  assert.equal(byYear.xType, "category");
+  assert.equal(byYear.xValues.length, 12);
+  assert.equal(byYear.series.length, 2);
+  assert.equal(byYearAndTreatment.series.length, 8);
+  assert.equal(new Set(byYearAndTreatment.series.map((series) => series.name)).size, 8);
+});

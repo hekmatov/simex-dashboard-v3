@@ -12,6 +12,7 @@ const AXIS_PANEL_TYPES = new Set([
 ]);
 
 const DATE_NAME_PATTERN = /date|datum|time|snapshot|month|year/i;
+const STRICT_DATE_NAME_PATTERN = /date|datum|time|snapshot/i;
 const IDENTIFIER_NAME_PATTERN = /(^|[_\s-])(id|code|key)($|[_\s-])/i;
 
 export function isAxisPanel(panel) {
@@ -106,7 +107,7 @@ export function legacyBindingForPanel(panel) {
     version: CHART_DATA_MODEL_VERSION,
     x: {
       field: panel.x ?? "",
-      type: panel.xAxisMode === "date" || (panel.xAxisMode !== "category" && DATE_NAME_PATTERN.test(panel.x ?? ""))
+      type: panel.xAxisMode === "date" || (panel.xAxisMode !== "category" && STRICT_DATE_NAME_PATTERN.test(panel.x ?? ""))
         ? "temporal"
         : "category",
     },
@@ -145,11 +146,12 @@ export function prepareAxisChartData(panel, rows = []) {
   }
 
   const filteredRows = applyDataFilters(safeRows, binding.filters ?? []);
+  const xType = resolveXType(binding, profile, diagnostics);
   const seriesFields = binding.series?.fields ?? [];
   const groupKeys = collectGroupKeys(filteredRows, seriesFields);
   const xValues = orderXValues(
     uniqueValues(filteredRows.map((row) => row?.[binding.x.field])),
-    binding.x.type,
+    xType,
     panel.categoryOrder,
   );
   const measures = binding.measures ?? [];
@@ -203,6 +205,7 @@ export function prepareAxisChartData(panel, rows = []) {
     diagnostics,
     rowsBefore: safeRows.length,
     rowsAfter: filteredRows.length,
+    xType,
     xValues,
     series: preparedSeries,
   };
@@ -266,6 +269,19 @@ function validateBinding(binding, profile) {
     }
   }
   return diagnostics;
+}
+
+function resolveXType(binding, profile, diagnostics) {
+  const requestedType = binding?.x?.type === "temporal" ? "temporal" : "category";
+  if (requestedType !== "temporal") return requestedType;
+  const column = profile.columns.find((item) => item.name === binding.x?.field);
+  if (column?.type === "temporal") return requestedType;
+  diagnostics.push({
+    severity: "warning",
+    code: "temporal-axis-fallback",
+    message: `X-axis field "${binding.x?.field ?? ""}" is not date/time data. It will be plotted as categories instead.`,
+  });
+  return "category";
 }
 
 function profileColumn(name, rows) {
@@ -445,6 +461,7 @@ function emptyPreparedData(binding, profile, diagnostics, rowCount) {
     diagnostics,
     rowsBefore: rowCount,
     rowsAfter: 0,
+    xType: binding?.x?.type === "temporal" ? "temporal" : "category",
     xValues: [],
     series: [],
   };

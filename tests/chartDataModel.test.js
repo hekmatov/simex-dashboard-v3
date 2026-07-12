@@ -78,6 +78,58 @@ test("the same field cannot be both x-axis and cluster dimension", () => {
   assert.ok(prepared.diagnostics.some((diagnostic) => diagnostic.code === "duplicate-dimension-role"));
 });
 
+test("text month names fall back from a time axis to categorical rendering", () => {
+  const rows = [
+    { Year: 2026, "Month name": "January", Cases: 10 },
+    { Year: 2027, "Month name": "January", Cases: 12 },
+    { Year: 2026, "Month name": "February", Cases: 14 },
+    { Year: 2027, "Month name": "February", Cases: 16 },
+  ];
+  const panel = {
+    type: "groupedBar",
+    dataBinding: {
+      version: 2,
+      x: { field: "Month name", type: "temporal" },
+      measures: [{ field: "Cases", label: "Cases" }],
+      series: { fields: ["Year"] },
+      filters: [],
+      aggregation: "sum",
+      missingValue: "gap",
+    },
+  };
+
+  const prepared = prepareAxisChartData(panel, rows);
+  assert.equal(prepared.xType, "category");
+  assert.deepEqual(prepared.xValues, ["January", "February"]);
+  assert.equal(prepared.series.length, 2);
+  assert.ok(prepared.diagnostics.some((diagnostic) => diagnostic.code === "temporal-axis-fallback"));
+});
+
+test("adding and removing a second cluster field produces stable unique series", () => {
+  const rows = [
+    { Year: 2026, "Month name": "January", Treatment: "A", Cases: 10 },
+    { Year: 2027, "Month name": "January", Treatment: "A", Cases: 12 },
+    { Year: 2026, "Month name": "January", Treatment: "B", Cases: 14 },
+    { Year: 2027, "Month name": "January", Treatment: "B", Cases: 16 },
+  ];
+  const baseBinding = {
+    version: 2,
+    x: { field: "Month name", type: "category" },
+    measures: [{ field: "Cases", label: "Cases" }],
+    filters: [],
+    aggregation: "sum",
+    missingValue: "gap",
+  };
+  const byYear = prepareAxisChartData({ type: "groupedBar", dataBinding: { ...baseBinding, series: { fields: ["Year"] } } }, rows);
+  const byYearAndTreatment = prepareAxisChartData({ type: "groupedBar", dataBinding: { ...baseBinding, series: { fields: ["Year", "Treatment"] } } }, rows);
+
+  assert.equal(byYear.series.length, 2);
+  assert.deepEqual(byYear.series.map((series) => series.name), ["2026", "2027"]);
+  assert.equal(byYearAndTreatment.series.length, 4);
+  assert.equal(new Set(byYearAndTreatment.series.map((series) => series.id)).size, 4);
+  assert.deepEqual(byYearAndTreatment.series.map((series) => series.name), ["2026 · A", "2027 · A", "2026 · B", "2027 · B"]);
+});
+
 test("legacy long-format panels migrate to explicit field roles", () => {
   const binding = legacyBindingForPanel({
     type: "stackedBar",

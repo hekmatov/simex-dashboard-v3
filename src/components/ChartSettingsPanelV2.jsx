@@ -438,9 +438,26 @@ function BarAppearanceSection({ panel, patch }) {
 function AxisFieldsSection({ panel, dataColumns, patch }) {
   if (!AXIS_TYPES.has(panel.type)) return <p className="settings-note">This panel type does not use x/y axes.</p>;
   const bindingX = panel.dataBinding?.x;
+  function changeXField(value) {
+    const profile = panel.sourceSchema?.columnProfiles?.find((column) => column.name === value);
+    patch({
+      dataBinding: {
+        ...panel.dataBinding,
+        x: {
+          ...(bindingX ?? {}),
+          field: value,
+          type: profile?.type === "temporal" || (!profile && isDateLikeColumn(value)) ? "temporal" : "category",
+        },
+        series: {
+          ...(panel.dataBinding?.series ?? {}),
+          fields: (panel.dataBinding?.series?.fields ?? []).filter((field) => field !== value),
+        },
+      },
+    });
+  }
   return (
     <>
-      <ColumnSelectField label="X / category field" value={bindingX?.field ?? panel.x ?? ""} columns={dataColumns} tip={(bindingX?.type === "temporal" || panel.xAxisMode === "date") ? "date" : "category"} onChange={(value) => patch({ dataBinding: { ...panel.dataBinding, x: { ...(bindingX ?? {}), field: value }, series: { ...(panel.dataBinding?.series ?? {}), fields: (panel.dataBinding?.series?.fields ?? []).filter((field) => field !== value) } } })} />
+      <ColumnSelectField label="X / category field" value={bindingX?.field ?? panel.x ?? ""} columns={dataColumns} tip={(bindingX?.type === "temporal" || panel.xAxisMode === "date") ? "date" : "category"} onChange={changeXField} />
       <label>X-axis type<select value={bindingX?.type ?? (panel.xAxisMode === "date" ? "temporal" : "category")} onChange={(event) => patch({ dataBinding: { ...panel.dataBinding, x: { ...(bindingX ?? {}), type: event.target.value } } })}><option value="temporal">Date / time</option><option value="category">Category</option></select></label>
       <label>X-axis title<input value={panel.xAxisTitle ?? ""} onChange={(event) => patch({ xAxisTitle: event.target.value })} /></label>
       <label>Y-axis title<input value={panel.yAxisTitle ?? ""} onChange={(event) => patch({ yAxisTitle: event.target.value })} /></label>
