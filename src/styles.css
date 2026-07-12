@@ -34,6 +34,63 @@ body::before {
   z-index: 1;
 }
 
+.device-layout-control {
+  align-items: center;
+  color: #49627a;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 10px;
+  justify-content: flex-end;
+  margin: 10px 0;
+}
+
+.device-layout-control > div {
+  display: flex;
+  gap: 6px;
+}
+
+.device-layout-control button {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.app-shell[data-device-layout="tablet"] {
+  max-width: 1180px;
+}
+
+.app-shell[data-device-layout="tablet"] .layout-grid {
+  grid-auto-rows: 440px;
+}
+
+.app-shell[data-device-layout="phone"] {
+  max-width: 760px;
+  padding: 12px;
+}
+
+.app-shell[data-device-layout="phone"] .layout-grid,
+.app-shell[data-device-layout="phone"] .dashboard-workspace-with-settings {
+  grid-auto-rows: auto;
+  grid-template-columns: 1fr;
+}
+
+.app-shell[data-device-layout="phone"] .chart-size-half,
+.app-shell[data-device-layout="phone"] .chart-size-normal,
+.app-shell[data-device-layout="phone"] .chart-size-standard,
+.app-shell[data-device-layout="phone"] .chart-size-wide,
+.app-shell[data-device-layout="phone"] .chart-size-tall,
+.app-shell[data-device-layout="phone"] .chart-size-large {
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 420px;
+}
+
+.app-shell[data-device-layout="phone"] .chart-canvas,
+.app-shell[data-device-layout="phone"] .chart-size-tall .chart-canvas,
+.app-shell[data-device-layout="phone"] .chart-size-large .chart-canvas {
+  height: 420px;
+}
+
 .background-editor-shell {
   align-items: start;
   display: grid;
@@ -1024,6 +1081,10 @@ th {
 @media (max-width: 1000px) {
   .app-shell {
     padding: 12px;
+  }
+
+  .device-layout-control {
+    justify-content: flex-start;
   }
 
   .dashboard-header,

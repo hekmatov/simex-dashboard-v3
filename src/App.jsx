@@ -6,6 +6,7 @@ import { reconcileDashboardWithLoadedData } from "./lib/dashboardCompatibility.j
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
+const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-v2-device-layout";
 const BUNDLE_TYPE = "simex-dashboard-v2-bundle";
 const DEFAULT_VANTA_BACKGROUND = {
   backgroundColor: "#f7f9fc",
@@ -43,6 +44,7 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [editSessionStartConfig, setEditSessionStartConfig] = useState(null);
   const [compatibilityReports, setCompatibilityReports] = useState([]);
+  const [deviceLayout, setDeviceLayout] = useState(() => loadDeviceLayout());
 
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
@@ -51,6 +53,11 @@ export default function App() {
     const vantaEffect = initializeVantaBackground(vantaSettings);
     return () => vantaEffect?.destroy?.();
   }, [vantaSettingsKey]);
+
+  function changeDeviceLayout(layout) {
+    setDeviceLayout(layout);
+    localStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
+  }
 
   useEffect(() => {
     loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
@@ -388,6 +395,8 @@ export default function App() {
       )}
       <DashboardRenderer
         dashboard={dashboard}
+        deviceLayout={deviceLayout}
+        onDeviceLayoutChange={changeDeviceLayout}
         editMode={editMode}
         onToggleEditMode={toggleEditMode}
         onPageAdd={addPage}
@@ -411,6 +420,11 @@ export default function App() {
       />
     </>
   );
+}
+
+function loadDeviceLayout() {
+  const layout = localStorage.getItem(DEVICE_LAYOUT_STORAGE_KEY);
+  return ["auto", "tablet", "phone"].includes(layout) ? layout : "auto";
 }
 
 function CompatibilityReportModal({ reports, onClose }) {

@@ -801,7 +801,7 @@
                 "version": 2,
                 "x": {
                   "field": "Month name",
-                  "type": "category"
+                  "type": "temporal"
                 },
                 "measures": [
                   {

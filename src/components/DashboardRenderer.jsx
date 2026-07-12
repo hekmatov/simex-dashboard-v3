@@ -2,12 +2,15 @@
 
 import AddChartWizard from "./AddChartWizard.jsx";
 import ColorField from "./ColorField.jsx";
+import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 
 export default function DashboardRenderer({
   dashboard,
+  deviceLayout,
+  onDeviceLayoutChange,
   editMode,
   onToggleEditMode,
   onPageAdd,
@@ -368,7 +371,7 @@ export default function DashboardRenderer({
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-device-layout={deviceLayout}>
       <header className="dashboard-header">
         <div className="dashboard-brand-block">
           <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-mark.png`} alt="" />
@@ -436,6 +439,7 @@ export default function DashboardRenderer({
           </button>
         </div>
       </header>
+      <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
 
       {editMode && (
         <section className="edit-command-banner" aria-label="Edit commands">
