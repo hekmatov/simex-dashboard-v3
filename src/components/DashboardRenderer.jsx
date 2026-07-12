@@ -440,9 +440,8 @@ export default function DashboardRenderer({
           </button>
         </div>
       </header>
-      <div className="dashboard-device-tools">
+      <div className="dashboard-install-tools">
         <InstallDashboardPrompt />
-        <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
       </div>
 
       {editMode && (
@@ -655,6 +654,9 @@ export default function DashboardRenderer({
         />
       )}
       <DashboardFooter dashboard={dashboard} />
+      <div className="dashboard-device-tools">
+        <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
+      </div>
     </main>
   );
 }

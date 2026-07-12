@@ -53,6 +53,12 @@ body::before {
   margin: 10px 0;
 }
 
+.dashboard-install-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0;
+}
+
 .dashboard-device-tools .device-layout-control {
   margin: 0;
 }
@@ -1122,6 +1128,10 @@ th {
   .dashboard-device-tools {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dashboard-install-tools {
+    justify-content: flex-start;
   }
 
   .dashboard-header,
