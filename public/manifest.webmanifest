@@ -9,9 +9,9 @@
   "theme_color": "#043bcb",
   "icons": [
     {
-      "src": "assets/pdpc-mark.png",
+      "src": "assets/pwa-icon.svg",
       "sizes": "any",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]

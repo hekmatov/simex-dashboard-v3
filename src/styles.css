@@ -45,6 +45,38 @@ body::before {
   margin: 10px 0;
 }
 
+.dashboard-device-tools {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 10px 0;
+}
+
+.dashboard-device-tools .device-layout-control {
+  margin: 0;
+}
+
+.install-dashboard-button,
+.install-dashboard-prompt {
+  color: #49627a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.install-dashboard-button {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.install-dashboard-prompt {
+  cursor: pointer;
+}
+
+.install-dashboard-prompt p {
+  margin: 6px 0 0;
+}
+
 .device-layout-control > div {
   display: flex;
   gap: 6px;
@@ -1085,6 +1117,11 @@ th {
 
   .device-layout-control {
     justify-content: flex-start;
+  }
+
+  .dashboard-device-tools {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .dashboard-header,

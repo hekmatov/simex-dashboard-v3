@@ -3,6 +3,7 @@
 import AddChartWizard from "./AddChartWizard.jsx";
 import ColorField from "./ColorField.jsx";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
+import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
 import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
@@ -439,7 +440,10 @@ export default function DashboardRenderer({
           </button>
         </div>
       </header>
-      <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
+      <div className="dashboard-device-tools">
+        <InstallDashboardPrompt />
+        <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
+      </div>
 
       {editMode && (
         <section className="edit-command-banner" aria-label="Edit commands">
