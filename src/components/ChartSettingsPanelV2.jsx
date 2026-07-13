@@ -160,7 +160,7 @@ export default function ChartSettingsPanelV2({ panel, dataSources, dataColumns, 
       case "imageSource": return <ImageSection panel={panel} patch={patch} />;
       case "tableFields": return <TableSection panel={panel} patch={patch} />;
       case "deltaFields": return <DeltaSection panel={panel} dataColumns={dataColumns} patch={patch} patchFields={patchFields} />;
-      case "kpiFields": return <p className="settings-note">KPI card fields are read from the configured data source columns.</p>;
+      case "kpiFields": return <KpiSection panel={panel} patch={patch} />;
       default: return null;
     }
   }
@@ -682,6 +682,77 @@ function DeltaSection({ panel, dataColumns, patchFields }) {
       <ColumnSelectField label="Detail field" value={panel.fields?.detail ?? ""} columns={dataColumns} tip="label" onChange={(value) => patchFields({ detail: value })} />
     </>
   );
+}
+
+function KpiSection({ panel, patch }) {
+  const cards = panel.items ?? [];
+  const layout = panel.kpiLayout ?? {};
+  const columns = clampInteger(layout.columns, 1, 12, Math.max(1, cards.length));
+  const rows = clampInteger(layout.rows, 1, 12, 1);
+
+  function patchLayout(updates) {
+    const nextColumns = clampInteger(updates.columns ?? columns, 1, 12, columns);
+    const nextRows = clampInteger(updates.rows ?? rows, 1, 12, rows);
+    patch({
+      kpiLayout: { ...layout, ...updates, columns: nextColumns, rows: nextRows },
+      items: cards.map((card) => ({
+        ...card,
+        columnSpan: clampInteger(card.columnSpan, 1, nextColumns, 1),
+        rowSpan: clampInteger(card.rowSpan, 1, nextRows, 1),
+      })),
+    });
+  }
+
+  function setCardCount(count) {
+    const nextCount = clampInteger(count, 1, 24, Math.max(1, cards.length));
+    const nextCards = Array.from({ length: nextCount }, (_, index) => cards[index] ?? {
+      label: `KPI ${index + 1}`,
+      value: "",
+      columnSpan: 1,
+      rowSpan: 1,
+    });
+    patch({ items: nextCards });
+  }
+
+  function patchCard(index, updates) {
+    patch({ items: cards.map((card, cardIndex) => cardIndex === index ? {
+      ...card,
+      ...updates,
+      columnSpan: clampInteger(updates.columnSpan ?? card.columnSpan, 1, columns, 1),
+      rowSpan: clampInteger(updates.rowSpan ?? card.rowSpan, 1, rows, 1),
+    } : card) });
+  }
+
+  function removeCard(index) {
+    patch({ items: cards.filter((_, cardIndex) => cardIndex !== index) });
+  }
+
+  return (
+    <div className="settings-series-list kpi-settings-list">
+      <p className="settings-note">Create text-based cards here, or connect the KPI panel to a CSV in Source. Cards fill the available panel space as its size changes.</p>
+      <label>Number of cards<input type="number" min="1" max="24" value={Math.max(1, cards.length)} onChange={(event) => setCardCount(event.target.value)} /></label>
+      <div className="kpi-layout-controls">
+        <label>Chart columns<input type="number" min="1" max="12" value={columns} onChange={(event) => patchLayout({ columns: event.target.value })} /></label>
+        <label>Chart rows<input type="number" min="1" max="12" value={rows} onChange={(event) => patchLayout({ rows: event.target.value })} /></label>
+      </div>
+      {cards.map((card, index) => (
+        <div className="settings-series" key={`${panel.id}-kpi-${index}`}>
+          <div className="settings-series-header"><strong>Card {index + 1}</strong><button type="button" className="secondary" disabled={cards.length <= 1} onClick={() => removeCard(index)}>Remove</button></div>
+          <label>Label<input value={card.label ?? ""} onChange={(event) => patchCard(index, { label: event.target.value })} /></label>
+          <label>Value / text<textarea rows="2" value={card.value ?? ""} onChange={(event) => patchCard(index, { value: event.target.value })} /></label>
+          <div className="kpi-layout-controls">
+            <label>Card columns<input type="number" min="1" max={columns} value={clampInteger(card.columnSpan, 1, columns, 1)} onChange={(event) => patchCard(index, { columnSpan: event.target.value })} /></label>
+            <label>Card rows<input type="number" min="1" max={rows} value={clampInteger(card.rowSpan, 1, rows, 1)} onChange={(event) => patchCard(index, { rowSpan: event.target.value })} /></label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function clampInteger(value, min, max, fallback) {
+  const numeric = Number.parseInt(value, 10);
+  return Math.min(max, Math.max(min, Number.isFinite(numeric) ? numeric : fallback));
 }
 
 function ColumnSelectField({ label, value, onChange, columns, tip = "category", children }) {

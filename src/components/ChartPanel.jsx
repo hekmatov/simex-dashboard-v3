@@ -419,7 +419,18 @@ export function PanelBody({ panel, globalPanelColors, data, geoData, loadedData 
   );
 
   React.useEffect(() => {
-    chartRef.current?.getEchartsInstance?.().resize();
+    const resize = () => chartRef.current?.getEchartsInstance?.().resize();
+    const frame = window.requestAnimationFrame(resize);
+    // Mobile browsers can finish expanding the visual viewport after the
+    // fullscreen panel has rendered. Resize once more after that transition.
+    const timer = window.setTimeout(resize, 220);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", resize);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      viewport?.removeEventListener("resize", resize);
+    };
   }, [dimensions.width, dimensions.height, fullScreen, visualPanel.size]);
 
   React.useEffect(() => {
@@ -894,17 +905,27 @@ function areChartPanelPropsEqual(previous, next) {
 export default React.memo(ChartPanel, areChartPanelPropsEqual);
 
 function KpiPanel({ panel, data }) {
-  const rows = panel.items ?? Object.entries(data[0] ?? {}).map(([label, value]) => ({ label, value }));
+  const cards = panel.items ?? Object.entries(data[0] ?? {}).map(([label, value]) => ({ label, value }));
+  const layout = panel.kpiLayout ?? {};
+  const columns = clamp(Number(layout.columns) || Math.max(1, cards.length), 1, 12);
+  const rows = clamp(Number(layout.rows) || 1, 1, 12);
   return (
     <div className="kpi-panel-content">
       <h3>{panel.title}</h3>
-      <div className="kpi-grid">
-        {rows.map((item) => (
-          <div className="kpi-card" key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
+      <div
+        className="kpi-grid"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+      >
+        {cards.map((item, index) => {
+          const columnSpan = clamp(Number(item.columnSpan) || 1, 1, columns);
+          const rowSpan = clamp(Number(item.rowSpan) || 1, 1, rows);
+          return (
+            <div className="kpi-card" key={`${item.label}-${index}`} style={{ gridColumn: `span ${columnSpan}`, gridRow: `span ${rowSpan}` }}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
