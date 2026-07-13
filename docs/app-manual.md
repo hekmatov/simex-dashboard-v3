@@ -161,16 +161,16 @@ Map base tiles may require internet access. Boundary geometry and thematic data 
 - **Delta/comparison lists** show configurable rows of values or changes.
 - **Image panels** support uploaded browser image formats, fit/crop/stretch display, zoom, positioning, and alt text.
 
-## Dashboard bundles
+## Dashboard files
 
-A dashboard bundle is a JSON file containing the dashboard configuration together with uploaded CSV text. It preserves panel data bindings, page structure, layout, and styling.
+A dashboard file is a JSON file containing the dashboard configuration together with uploaded CSV text. It preserves panel data bindings, page structure, layout, and styling.
 
-Use **Export bundle** to create a portable, shareable copy of the configured dashboard. Use **Import bundle** to restore it in another dashboard instance.
+Use **Export dashboard** to create a portable, shareable copy of the configured dashboard. Use **Import dashboard** to restore it in another dashboard instance.
 
 To share a scenario-specific version:
 
 1. Make and save edits in edit mode.
-2. Export a bundle.
+2. Export a dashboard file.
 3. Share the JSON file.
 4. Import it into another copy of the dashboard.
 
@@ -368,7 +368,7 @@ Open the packaged `index.html`. If a browser blocks scripts opened directly from
 - Use a table alongside a chart when viewers need exact values.
 - Keep units consistent across titles, axes, labels, and source data.
 - Test a map after changing its data-to-boundary join field.
-- Export a bundle before a substantial round of browser edits or before importing another bundle.
+- Export a dashboard file before a substantial round of browser edits or before importing another dashboard file.
 - Use 150 or 300 DPI-equivalent exports for reports and presentation slides.
 
 ## Further technical references

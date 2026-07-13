@@ -74,25 +74,14 @@ In edit mode:
 
 - `Upload CSV` embeds a selected CSV as a dashboard data source.
 - Uploaded CSV sources appear in chart data-source dropdowns.
-- `Export bundle` downloads a JSON bundle containing the dashboard config plus uploaded CSV text.
-- `Import bundle` restores that bundle later, including the uploaded CSV data.
-- `Export package default` saves the current browser-edited dashboard as `packaged-dashboard-bundle.json` for the flash-drive builder.
+- `Export dashboard` downloads a dashboard file containing the dashboard config plus uploaded CSV text.
+- `Import dashboard` restores a dashboard file later, including the uploaded CSV data.
 
 Static files already in `public/data/**` remain file-backed. Uploaded CSVs are bundled so they can travel by email or flash drive as one JSON file.
 
 To make browser edit-mode changes part of the GitHub version:
 
-1. Click `Export package default` or `Export bundle`.
-2. Put the exported JSON in the project root as `packaged-dashboard-bundle.json`, or pass its path to the command below.
-3. Run:
-
-```powershell
-pnpm.cmd promote:bundle
-```
-
-That command writes the edited dashboard into `public/config/dashboard.json`. Any uploaded CSVs are written into `public/data/uploaded/`. Review the diff, then commit and push those tracked files. This is the source-controlled workflow for publishing browser edits through GitHub and Cloudflare.
-
-For maintainer work, treat this promoted output as the new baseline before making further code changes. In practice: export browser edits, run `pnpm.cmd promote:bundle`, commit the changed config/data files, then start the next feature or design update from that commit. This prevents future app updates from reverting your browser-made dashboard content.
+Use the project's current configuration publication workflow to update the shared default dashboard. Exported dashboard files are intended for sharing or restoring browser-configured dashboard views.
 
 When the dashboard app is updated, browser-saved edits are reconciled with the new default dashboard:
 
@@ -132,24 +121,7 @@ Create the portable folder:
 pnpm.cmd package:flashdrive
 ```
 
-If you want browser edit-mode changes to become the default dashboard inside the flash-drive package:
-
-1. Open V2 locally.
-2. Enter edit mode and make/save the dashboard edits.
-3. Click `Export package default`.
-4. Save or move the downloaded file to the project root as:
-
-```text
-packaged-dashboard-bundle.json
-```
-
-5. Run:
-
-```powershell
-pnpm.cmd package:flashdrive
-```
-
-When that file exists, the package command embeds it as the flash-drive dashboard default. If the file is absent, the package uses `public/config/dashboard.json`.
+The flash-drive package uses the tracked default configuration in `public/config/dashboard.json`.
 
 Copy this folder to a USB drive:
 
@@ -179,8 +151,7 @@ Caveats:
 
 - Online map tiles still need internet access.
 - Some institutional browsers may block scripts from USB drives. If that happens, try `START_DASHBOARD.bat`, copy the folder to the computer first, or use a static host.
-- `packaged-dashboard-bundle.json` is ignored by Git on purpose. It is a local packaging input, not a shared source file.
-- Exported dashboard bundles are still the best way to move scenario-specific edits and uploaded CSVs between separate dashboard copies.
+- Exported dashboard files are the best way to move scenario-specific edits and uploaded CSVs between separate dashboard copies.
 
 ## Bundle Size Note
 

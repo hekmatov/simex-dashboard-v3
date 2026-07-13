@@ -29,7 +29,6 @@ export default function DashboardRenderer({
   onPanelReorder,
   onImportConfig,
   onExportConfig,
-  onExportPackageDefault,
   onUploadCsv,
   onResetEditSession,
 }) {
@@ -451,9 +450,8 @@ export default function DashboardRenderer({
               <button type="button" onClick={addPage}>Add tab</button>
               <button type="button" className="secondary" disabled={(dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
             </div>
-            <button type="button" onClick={() => importInputRef.current?.click()}>Import bundle</button>
-            <button type="button" onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export bundle</button>
-            <button type="button" onClick={() => onExportPackageDefault(dashboardWithCurrentDrafts())}>Export package default</button>
+            <button type="button" onClick={() => importInputRef.current?.click()}>Import dashboard</button>
+            <button type="button" onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
             <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}>Upload CSV</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>

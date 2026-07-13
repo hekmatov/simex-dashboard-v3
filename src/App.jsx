@@ -274,37 +274,6 @@ export default function App() {
     promptAndDownloadDashboardBundle(bundleFromDashboard(configOverride ?? dashboard), `SimEx-dashboard-bundle-${dateStamp()}`);
   }
 
-  async function exportPackageDefaultConfig(configOverride) {
-    const bundle = bundleFromDashboard(configOverride ?? dashboard);
-    const fileName = "packaged-dashboard-bundle.json";
-
-    if (globalThis.window?.showSaveFilePicker) {
-      try {
-        const fileHandle = await globalThis.window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [
-            {
-              description: "SimEx dashboard package default bundle",
-              accept: { "application/json": [".json"] },
-            },
-          ],
-        });
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(bundle, null, 2));
-        await writable.close();
-        window.alert(`Saved ${fileName}. Place it in the project root before running pnpm.cmd package:flashdrive.`);
-        return;
-      } catch (saveError) {
-        if (saveError?.name === "AbortError") {
-          return;
-        }
-      }
-    }
-
-    downloadDashboardBundle(bundle, fileName);
-    window.alert(`Your browser downloaded ${fileName}. Move it into the project root before running pnpm.cmd package:flashdrive.`);
-  }
-
   function bundleFromDashboard(currentDashboard) {
     const config = stripRuntimeFields(currentDashboard);
     return {
@@ -415,7 +384,6 @@ export default function App() {
         onPanelReorder={reorderPanel}
         onImportConfig={importConfig}
         onExportConfig={exportConfig}
-        onExportPackageDefault={exportPackageDefaultConfig}
         onUploadCsv={uploadCsvSource}
         onResetEditSession={cancelEditSession}
       />
