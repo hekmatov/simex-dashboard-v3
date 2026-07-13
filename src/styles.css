@@ -1231,6 +1231,57 @@ th {
 }
 
 @media (max-width: 640px) {
+  .app-shell[data-device-layout="phone"] {
+    padding: 8px;
+  }
+
+  .app-shell[data-device-layout="phone"] .dashboard-header {
+    border-radius: 18px;
+    gap: 14px;
+    margin-bottom: 10px;
+    padding: 18px;
+  }
+
+  .app-shell[data-device-layout="phone"] .page-tabs {
+    border-radius: 14px;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 6px;
+  }
+
+  .app-shell[data-device-layout="phone"] .page-stack,
+  .app-shell[data-device-layout="phone"] .dashboard-workspace {
+    gap: 12px;
+  }
+
+  .app-shell[data-device-layout="phone"] .section-header {
+    gap: 8px;
+  }
+
+  .app-shell[data-device-layout="phone"] .section-header h2 {
+    font-size: 20px;
+  }
+
+  .app-shell[data-device-layout="phone"] .layout-grid {
+    gap: 12px;
+  }
+
+  .app-shell[data-device-layout="phone"] .chart-panel,
+  .app-shell[data-device-layout="phone"] .status-panel {
+    border-radius: 16px;
+    min-height: 380px;
+    padding: 12px;
+  }
+
+  .app-shell[data-device-layout="phone"] .chart-canvas {
+    border-radius: 12px;
+  }
+
+  .app-shell[data-device-layout="phone"] .chart-action-buttons {
+    bottom: 18px;
+    right: 18px;
+  }
+
   .header-edit-floating-button {
     display: none;
   }
@@ -2588,21 +2639,38 @@ button.danger {
 
 @media (max-width: 640px) {
   .fullscreen-backdrop {
-    padding: 10px;
+    padding: 6px;
   }
 
   .fullscreen-panel {
     border-radius: 14px;
-    padding: 12px;
+    padding: 6px;
   }
 
   .fullscreen-close-button {
-    right: 12px;
-    top: 12px;
+    right: 6px;
+    top: 6px;
   }
 
   .chart-canvas-fullscreen {
-    height: calc(100dvh - 52px);
+    border-radius: 10px;
+    height: calc(100dvh - 24px);
+  }
+
+  .multi-fullscreen-panel {
+    border-radius: 14px;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .multi-fullscreen-grid {
+    gap: 8px;
+    height: calc(100dvh - 82px);
+  }
+
+  .multi-fullscreen-cell {
+    border-radius: 12px;
+    padding: 4px;
   }
 }
 

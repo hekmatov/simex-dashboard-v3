@@ -1412,10 +1412,13 @@ function chartRenderContext(panel, fullScreen, dimensions, multiFullScreen = fal
   const width = dimensions.width || fallbackWidth;
   const heightScale = height / 380;
   const widthScale = width / 520;
+  const compact = fullScreen && width <= 720;
   const contextScale = multiFullScreen
     ? Math.max(0.95, Math.min(1.7, 1 + (heightScale - 1) * 0.32 + (widthScale - 1) * 0.12))
     : fullScreen
-    ? Math.max(1.8, Math.min(2.65, 1 + (heightScale - 1) * 0.62 + (widthScale - 1) * 0.22))
+    ? compact
+      ? Math.max(1, Math.min(1.3, 1 + (heightScale - 1) * 0.15 + (widthScale - 1) * 0.1))
+      : Math.max(1.8, Math.min(2.65, 1 + (heightScale - 1) * 0.62 + (widthScale - 1) * 0.22))
     : Math.max(0.94, Math.min(1.65, 1 + (heightScale - 1) * 0.36 + (widthScale - 1) * 0.12));
 
   return {
@@ -1424,6 +1427,7 @@ function chartRenderContext(panel, fullScreen, dimensions, multiFullScreen = fal
     width,
     heightScale,
     widthScale,
+    compact,
     panelSize,
     scale: contextScale,
   };

@@ -26,6 +26,7 @@ const registeredMaps = new Map();
 
 export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
   const scale = renderContext.scale ?? 1;
+  const compact = Boolean(renderContext.compact);
   if (panel.type === "gauge") {
     return buildGaugeOption(panel, data, scale);
   }
@@ -74,10 +75,10 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
     data: useDateAxis ? undefined : isHorizontal ? [...labels].reverse() : labels,
     axisLabel: {
       color: DEFAULT_TEXT_COLOR,
-      fontSize: fontSize(resolvedPanel, "axis", 12, scale),
-      interval: useDateAxis ? undefined : 0,
+      fontSize: compact ? Math.min(fontSize(resolvedPanel, "axis", 12, scale), 12) : fontSize(resolvedPanel, "axis", 12, scale),
+      interval: useDateAxis || compact ? undefined : 0,
       rotate: useDateAxis ? undefined : resolvedPanel.axisLabelRotation ?? 0,
-      hideOverlap: useDateAxis ? undefined : false,
+      hideOverlap: compact ? true : useDateAxis ? undefined : false,
     },
     axisTick: { alignWithLabel: true },
   };
@@ -94,7 +95,7 @@ export function buildEchartsOption(panel, data, geoData, renderContext = {}) {
       valueFormatter: formatTooltipValue,
     },
     legend: legendConfig(resolvedPanel, series, scale),
-    grid: scaledGrid(resolvedPanel, scale),
+    grid: scaledGrid(resolvedPanel, scale, renderContext),
     xAxis: isHorizontal ? valueAxis : categoryAxis,
     yAxis: isHorizontal
       ? categoryAxis
@@ -927,8 +928,18 @@ function scaled(value, scale) {
   return Math.round(value * scale);
 }
 
-function scaledGrid(panel, scale) {
+function scaledGrid(panel, scale, renderContext = {}) {
   const legendPosition = panel.legendPosition ?? "top";
+  if (renderContext.compact) {
+    const hasSecondAxis = (panel.series ?? []).some((item) => Number(item.yAxisIndex ?? 0) === 1);
+    return {
+      containLabel: true,
+      left: legendPosition === "left" ? 118 : 42,
+      right: legendPosition === "right" ? 118 : hasSecondAxis ? 52 : 24,
+      top: legendPosition === "top" ? 76 : 54,
+      bottom: legendPosition === "bottom" ? 64 : 42,
+    };
+  }
   return {
     containLabel: true,
     left: legendPosition === "left" ? scaled(160, Math.min(scale, 1.25)) : scaled(DEFAULT_GRID.left, scale),
