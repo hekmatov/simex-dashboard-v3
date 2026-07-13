@@ -129,6 +129,10 @@ body::before {
   height: 420px;
 }
 
+.app-shell[data-device-layout="phone"] .header-edit-floating-button {
+  display: none;
+}
+
 .background-editor-shell {
   align-items: start;
   display: grid;
@@ -1218,6 +1222,10 @@ th {
 }
 
 @media (max-width: 640px) {
+  .header-edit-floating-button {
+    display: none;
+  }
+
   .delta-grid {
     grid-template-columns: 1fr;
   }

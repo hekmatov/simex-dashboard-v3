@@ -825,8 +825,27 @@ function VantaSettingsPanel({ settings = {}, onChange }) {
   const resolved = sanitizeVantaSettings(settings);
   return (
     <div className="vanta-settings-panel">
-      <ColorField label="Static background" value={resolved.backgroundColor} fallback="#08224a" onChange={(color) => onChange({ backgroundColor: color })} />
-      <ColorField label="Line/dot color" value={resolved.networkColor} fallback="#9bd3ff" onChange={(color) => onChange({ networkColor: color })} />
+      <label>
+        Color scheme
+        <select
+          value={resolved.colorScheme ?? "manual"}
+          onChange={(event) => {
+            const scheme = event.target.value;
+            const colors = backgroundPaletteColors(scheme);
+            onChange({
+              colorScheme: scheme,
+              ...(colors ? { backgroundColor: colors[0], networkColor: colors[1] } : {}),
+            });
+          }}
+        >
+          {BACKGROUND_COLOR_SCHEMES.map((scheme) => <option key={scheme.value} value={scheme.value}>{scheme.label}</option>)}
+        </select>
+      </label>
+      <div className="color-scheme-preview" aria-label="Background color scheme preview">
+        {(backgroundPaletteColors(resolved.colorScheme) ?? [resolved.backgroundColor, resolved.networkColor]).map((color, index) => <span key={`${color}-${index}`} style={{ backgroundColor: color }} />)}
+      </div>
+      <ColorField label="Static background" value={resolved.backgroundColor} fallback="#08224a" onChange={(color) => onChange({ backgroundColor: color, colorScheme: "manual" })} />
+      <ColorField label="Line/dot color" value={resolved.networkColor} fallback="#9bd3ff" onChange={(color) => onChange({ networkColor: color, colorScheme: "manual" })} />
       <RangeSetting label="Points" value={resolved.points} min={3} max={18} step={1} onChange={(points) => onChange({ points })} />
       <RangeSetting label="Max distance" value={resolved.maxDistance} min={8} max={32} step={1} onChange={(maxDistance) => onChange({ maxDistance })} />
       <RangeSetting label="Spacing" value={resolved.spacing} min={10} max={34} step={1} onChange={(spacing) => onChange({ spacing })} />
@@ -883,6 +902,30 @@ function sanitizeVantaSettings(settings) {
     spacing: clampNumber(merged.spacing, 10, 34),
     speed: clampNumber(merged.speed, 0.1, 2),
   };
+}
+
+const BACKGROUND_COLOR_SCHEMES = [
+  { value: "manual", label: "Manual colors" },
+  { value: "pdpc", label: "PDPC mixed" },
+  { value: "redGreen5", label: "Likert red to green" },
+  { value: "likertInfographic5", label: "Likert infographic" },
+  { value: "caseIntensity", label: "Case intensity" },
+  { value: "blueYellow5", label: "Likert blue to yellow" },
+  { value: "cool", label: "Cool blues/teals" },
+  { value: "warm", label: "Warm alert" },
+];
+
+function backgroundPaletteColors(scheme) {
+  const palettes = {
+    pdpc: ["#08224A", "#043BCB", "#36BDEB", "#2BAA7B", "#F1A1AD"],
+    redGreen5: ["#D71920", "#FDAE61", "#FFFFBF", "#A6D96A", "#1A9641"],
+    likertInfographic5: ["#3BA64A", "#A7B734", "#F6A21A", "#F47B20", "#DF1F2D"],
+    caseIntensity: ["#7FDEC1", "#4496D1", "#043BCB", "#08224A", "#8F1D2C"],
+    blueYellow5: ["#2C7BB6", "#ABD9E9", "#FFFFBF", "#FDAE61", "#D7191C"],
+    cool: ["#08224A", "#2456A6", "#4496D1", "#007C89", "#7FDEC1"],
+    warm: ["#8F1D2C", "#C98700", "#F3D37A", "#E16B5A", "#08224A"],
+  };
+  return palettes[scheme];
 }
 
 function clampNumber(value, min, max) {

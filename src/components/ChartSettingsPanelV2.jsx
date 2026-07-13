@@ -833,6 +833,10 @@ function dataSourceDisplayPath(source) {
 }
 
 function defaultsForPanelType(type, panel, dataSources) {
+  if (type === "gauge") {
+    return { type, labelField: "" };
+  }
+
   if (type === "choroplethMap" || type === "chronoChoroplethMap") {
     const municipalDataSource = chooseDataSource(dataSources, [
       "bio_municipal_infections_harmonized_2021",
