@@ -35,8 +35,12 @@ export default function InstallDashboardPrompt() {
   if (isAppleMobile) {
     return (
       <details className="install-dashboard-prompt">
-        <summary>Install on this iPhone or iPad</summary>
-        <p>{isSafari ? "Tap Share, then choose " : "Open this page in Safari, then tap Share and choose "}<strong>Add to Home Screen</strong>.</p>
+        <summary>Install dashboard app</summary>
+        <p>
+          {isSafari
+            ? <>Tap <strong>Share</strong>, scroll to <strong>Add to Home Screen</strong>, turn on <strong>Open as Web App</strong>, then tap <strong>Add</strong>.</>
+            : <>Open this page in <strong>Safari</strong>, then tap <strong>Share</strong> → <strong>Add to Home Screen</strong> → <strong>Add</strong>.</>}
+        </p>
       </details>
     );
   }

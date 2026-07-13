@@ -48,6 +48,7 @@ body::before {
 .dashboard-device-tools {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
   margin: 10px 0;
@@ -77,10 +78,44 @@ body::before {
 
 .install-dashboard-prompt {
   cursor: pointer;
+  position: relative;
+}
+
+.install-dashboard-prompt summary {
+  align-items: center;
+  background: white;
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  color: #49627a;
+  cursor: pointer;
+  display: inline-flex;
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.install-dashboard-prompt summary::marker,
+.install-dashboard-prompt summary::-webkit-details-marker {
+  display: none;
+}
+
+.install-dashboard-prompt[open] summary {
+  border-color: #043bcb;
+  color: #043bcb;
 }
 
 .install-dashboard-prompt p {
-  margin: 6px 0 0;
+  background: #f8fbff;
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgb(8 34 74 / 12%);
+  line-height: 1.45;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  position: absolute;
+  right: 0;
+  top: 34px;
+  width: min(330px, calc(100vw - 24px));
+  z-index: 12;
 }
 
 .device-layout-control > div {
@@ -1139,8 +1174,7 @@ th {
   }
 
   .dashboard-device-tools {
-    align-items: flex-start;
-    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .dashboard-install-tools {
@@ -1231,6 +1265,26 @@ th {
 }
 
 @media (max-width: 640px) {
+  .dashboard-device-tools {
+    gap: 8px;
+  }
+
+  .dashboard-device-tools .device-layout-control {
+    gap: 6px;
+  }
+
+  .device-layout-control button,
+  .install-dashboard-button,
+  .install-dashboard-prompt summary {
+    min-height: 32px;
+    padding: 5px 8px;
+  }
+
+  .install-dashboard-prompt p {
+    left: 0;
+    right: auto;
+  }
+
   .app-shell[data-device-layout="phone"] {
     padding: 8px;
   }
