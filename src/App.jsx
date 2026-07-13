@@ -7,6 +7,7 @@ import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-v2-device-layout";
+const SHOW_COMPATIBILITY_REPORTS = import.meta.env.VITE_SHOW_COMPATIBILITY_REPORTS !== "false";
 const BUNDLE_TYPE = "simex-dashboard-v2-bundle";
 const DEFAULT_VANTA_BACKGROUND = {
   backgroundColor: "#f7f9fc",
@@ -73,7 +74,7 @@ export default function App() {
         setDefaultConfig(config);
         return loadDashboardConfig(savedConfig);
       })
-      .then((loadedDashboard) => applyLoadedDashboard(loadedDashboard, { showReport: true }))
+      .then((loadedDashboard) => applyLoadedDashboard(loadedDashboard, { showReport: SHOW_COMPATIBILITY_REPORTS }))
       .catch((loadError) => setError(loadError));
   }, []);
 
@@ -390,7 +391,7 @@ export default function App() {
 
   return (
     <>
-      {compatibilityReports.length > 0 && (
+      {SHOW_COMPATIBILITY_REPORTS && compatibilityReports.length > 0 && (
         <CompatibilityReportModal reports={compatibilityReports} onClose={() => setCompatibilityReports([])} />
       )}
       <DashboardRenderer

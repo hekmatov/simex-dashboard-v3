@@ -46,7 +46,9 @@ export function reconcileDashboardWithLoadedData(config, loadedData) {
         const previousSignature = panel.sourceSchema?.signature;
         const previousFingerprint = panel.sourceSchema?.dataFingerprint;
         const previousRowCount = panel.sourceSchema?.rowCount;
-        if (previousFingerprint && previousFingerprint !== profile.fingerprint) {
+        const sourceContentChanged = Boolean(previousFingerprint && previousFingerprint !== profile.fingerprint);
+        const sourceSchemaChanged = Boolean(previousSignature && previousSignature !== nextSignature);
+        if (sourceContentChanged) {
           if (previousRowCount !== undefined && previousRowCount !== profile.rowCount) {
             changes.push(`CSV row count changed from ${previousRowCount} to ${profile.rowCount}; chart data was refreshed.`);
           } else {
@@ -63,7 +65,7 @@ export function reconcileDashboardWithLoadedData(config, loadedData) {
           checkedAt: new Date().toISOString(),
         };
 
-        if (changes.length > 0 || (previousSignature && previousSignature !== nextSignature)) {
+        if (sourceContentChanged || sourceSchemaChanged) {
           reports.push({
             panelId: panel.id,
             title: panel.title ?? panel.id,
