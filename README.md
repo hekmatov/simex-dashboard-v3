@@ -51,7 +51,7 @@ pnpm.cmd preview
 - `src/components/ChartPanel.jsx`: renders individual charts, maps, tables, KPIs, fullscreen views, and panel actions.
 - `src/components/ChartSettingsPanel.jsx`: edit-mode controls for pages, sections, panels, data, series, axes, legends, styles, and layout.
 - `src/lib/chartOptionRegistry.js`: schema-style registry for chart edit options.
-- `docs/project-handoff.md`: current maintainer handoff and feature map.
+- `docs/app-manual.md`: public guide to dashboard use, configuration, deployment, and technical architecture.
 - `docs/old-dashboard-migration-map.md`: migration notes from the original PDPC dashboard.
 - `docs/municipality-choropleth.md`: municipality choropleth data join and map-source notes.
 - `docs/google-feedback-form.md`: Google Form setup for participant bug reports and feature requests.
@@ -62,10 +62,10 @@ The dashboard currently supports a config-driven multi-page layout, point-and-cl
 
 The footer includes a configurable feedback link. For private repositories, use the Google Form workflow in `docs/google-feedback-form.md` instead of linking to GitHub Issues.
 
-For a complete pickup guide, see:
+For a complete guide to using and understanding the dashboard, see:
 
 ```text
-docs/project-handoff.md
+docs/app-manual.md
 ```
 
 ## Portable Data Bundles
