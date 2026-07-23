@@ -13,6 +13,7 @@ export default function DashboardRenderer({
   dashboard,
   displayState,
   onDisplayAction,
+  companionStatusLabel,
   deviceLayout,
   onDeviceLayoutChange,
   editMode,
@@ -651,6 +652,9 @@ export default function DashboardRenderer({
       />
       <DashboardFooter dashboard={dashboard} />
       <div className="dashboard-device-tools">
+        <span className="companion-status" role="status">
+          {companionStatusLabel}
+        </span>
         <InstallDashboardPrompt />
         <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
       </div>

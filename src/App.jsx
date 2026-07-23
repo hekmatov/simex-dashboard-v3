@@ -8,6 +8,7 @@ import {
   reduceDisplayState,
 } from "./lib/displayController.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
+import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-v2-device-layout";
@@ -51,10 +52,16 @@ export default function App() {
   const [compatibilityReports, setCompatibilityReports] = useState([]);
   const [deviceLayout, setDeviceLayout] = useState(() => loadDeviceLayout());
   const [displayState, setDisplayState] = useState(initialDisplayState);
+  const [companionStatus, setCompanionStatus] = useState("standalone");
+  const displayStateRef = React.useRef(displayState);
+  const validDisplayChartIdsRef = React.useRef(new Set());
+  const companionClientRef = React.useRef(null);
   const validDisplayChartIds = React.useMemo(
     () => configuredPanelIds(dashboard),
     [dashboard?.pages],
   );
+  const dashboardReady = Boolean(dashboard);
+  validDisplayChartIdsRef.current = validDisplayChartIds;
 
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
@@ -88,25 +95,89 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setDisplayState((current) =>
-      reduceDisplayState(
-        current,
-        {
-          type: "companion_reconcile",
-          chart_ids: current.displayed_chart_ids.filter((chartId) =>
-            validDisplayChartIds.has(chartId),
-          ),
-        },
-        validDisplayChartIds,
-      ),
+    const current = displayStateRef.current;
+    const next = reduceDisplayState(
+      current,
+      {
+        type: "companion_reconcile",
+        chart_ids: current.displayed_chart_ids.filter((chartId) =>
+          validDisplayChartIds.has(chartId),
+        ),
+      },
+      validDisplayChartIds,
     );
+    if (next !== current) {
+      displayStateRef.current = next;
+      setDisplayState(next);
+      companionClientRef.current?.displayStateChanged("manual_close");
+    }
   }, [validDisplayChartIds]);
 
   const dispatchDisplayAction = React.useCallback((action) => {
-    setDisplayState((current) =>
-      reduceDisplayState(current, action, validDisplayChartIds),
+    const current = displayStateRef.current;
+    const next = reduceDisplayState(
+      current,
+      action,
+      validDisplayChartIdsRef.current,
     );
-  }, [validDisplayChartIds]);
+    if (next !== current) {
+      displayStateRef.current = next;
+      setDisplayState(next);
+      const changeReason = displayActionReason(action);
+      if (changeReason) {
+        companionClientRef.current?.displayStateChanged(changeReason);
+      }
+    }
+    return next;
+  }, []);
+
+  useEffect(() => {
+    if (!dashboardReady) {
+      return undefined;
+    }
+    let disposed = false;
+    let client = null;
+
+    fetch(`${import.meta.env.BASE_URL}integration/quorum-chart-catalogue.json`, {
+      cache: "no-store",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("catalogue unavailable");
+        }
+        return response.json();
+      })
+      .then((catalogue) => {
+        if (disposed) {
+          return;
+        }
+        client = createQuorumCompanionClient({
+          catalogue,
+          getDisplayState: () => displayStateRef.current,
+          dispatchDisplayAction,
+          onStatus: (status) => {
+            if (!disposed) {
+              setCompanionStatus(status);
+            }
+          },
+        });
+        companionClientRef.current = client;
+        return client.start();
+      })
+      .catch(() => {
+        if (!disposed) {
+          setCompanionStatus("disconnected");
+        }
+      });
+
+    return () => {
+      disposed = true;
+      if (companionClientRef.current === client) {
+        companionClientRef.current = null;
+      }
+      client?.stop();
+    };
+  }, [dashboardReady, dispatchDisplayAction]);
 
   function applyLoadedDashboard(loadedDashboard, { showReport = false, persistReconciliation = true } = {}) {
     const runtimeConfig = stripRuntimeFields(loadedDashboard);
@@ -397,6 +468,7 @@ export default function App() {
         dashboard={dashboard}
         displayState={displayState}
         onDisplayAction={dispatchDisplayAction}
+        companionStatusLabel={companionStatusLabel(companionStatus)}
         deviceLayout={deviceLayout}
         onDeviceLayoutChange={changeDeviceLayout}
         editMode={editMode}
@@ -431,6 +503,37 @@ function configuredPanelIds(dashboard) {
       ),
     ),
   );
+}
+
+function displayActionReason(action) {
+  switch (action.type) {
+    case "manual_open":
+    case "manual_set":
+      return "manual_open";
+    case "manual_close":
+    case "manual_close_all":
+      return "manual_close";
+    case "manual_reorder":
+      return "manual_reorder";
+    default:
+      return null;
+  }
+}
+
+function companionStatusLabel(status) {
+  switch (status) {
+    case "ready":
+      return "Companion connected";
+    case "discovering":
+    case "connecting":
+    case "authenticating":
+      return "Companion connecting";
+    case "incompatible":
+    case "disconnected":
+      return "Companion unavailable";
+    default:
+      return "Standalone";
+  }
 }
 
 function loadDeviceLayout() {
