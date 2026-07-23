@@ -51,7 +51,10 @@ pnpm.cmd preview
 - `src/components/ChartPanel.jsx`: renders individual charts, maps, tables, KPIs, fullscreen views, and panel actions.
 - `src/components/ChartSettingsPanel.jsx`: edit-mode controls for pages, sections, panels, data, series, axes, legends, styles, and layout.
 - `src/lib/chartOptionRegistry.js`: schema-style registry for chart edit options.
+- `public/integration/quorum-chart-catalogue.json`: generated metadata-only chart catalogue for Quorum.
+- `src/lib/quorumCompanionClient.js`: optional fail-closed companion discovery and WebSocket client.
 - `docs/app-manual.md`: public guide to dashboard use, configuration, deployment, and technical architecture.
+- `docs/quorum-companion.md`: Quorum catalogue, protocol, deployment, privacy, and test guide.
 - `docs/old-dashboard-migration-map.md`: migration notes from the original PDPC dashboard.
 - `docs/municipality-choropleth.md`: municipality choropleth data join and map-source notes.
 - `docs/google-feedback-form.md`: Google Form setup for participant bug reports and feature requests.
@@ -61,6 +64,34 @@ pnpm.cmd preview
 The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, uploaded CSV data sources, portable dashboard bundle import/export, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, municipality choropleths, gauges, image panels, and a configurable animated background.
 
 The footer includes a configurable feedback link. For private repositories, use the Google Form workflow in `docs/google-feedback-form.md` instead of linking to GitHub Issues.
+
+## Optional Quorum Companion
+
+The dashboard can connect to the local Quorum moderator companion through a
+same-origin, metadata-only protocol. Quorum may request an operator-authorized
+set of up to four chart IDs; manual and companion fullscreen actions use the
+same revisioned browser display state. If discovery is absent or incompatible,
+the dashboard remains manually usable in standalone mode.
+
+The integration never exchanges transcripts, speaker data, summaries, topics,
+evidence text, or other discussion content. Recommendation ranking and the
+recently closed list remain Quorum responsibilities; the dashboard reports only
+its actual ordered visible chart IDs.
+
+Generate the explicit catalogue snapshot with:
+
+```powershell
+pnpm.cmd run build:quorum-catalogue
+```
+
+Run the companion browser tests with:
+
+```powershell
+pnpm.cmd run build
+pnpm.cmd run test:e2e --project=chromium
+```
+
+See `docs/quorum-companion.md` for the complete contract and deployment guide.
 
 For a complete guide to using and understanding the dashboard, see:
 
