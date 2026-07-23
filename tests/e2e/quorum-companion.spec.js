@@ -144,6 +144,35 @@ test("stale catalogue disables companion commands", async ({ page, request }) =>
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
 });
 
+test("runtime chart-definition drift disables companion commands", async ({
+  page,
+  request,
+}) => {
+  const configResponse = await request.get(
+    "http://127.0.0.1:4173/config/dashboard.json",
+  );
+  const config = await configResponse.json();
+  config.pages[1].sections[0].panels[1].title =
+    "Locally changed chart meaning";
+  await page.addInitScript((savedConfig) => {
+    localStorage.setItem(
+      "simex-dashboard-v2-config-pages-v2",
+      JSON.stringify(savedConfig),
+    );
+  }, config);
+
+  await page.goto("/");
+
+  await expect(page.getByText("Companion unavailable")).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await events(request)).some(
+        (event) => event.type === "dashboard_hello",
+      ),
+    )
+    .toBe(false);
+});
+
 test("missing bootstrap preserves standalone dashboard behavior", async ({
   page,
   request,

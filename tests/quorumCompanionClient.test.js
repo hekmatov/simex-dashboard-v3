@@ -134,6 +134,57 @@ test("valid display requests dispatch companion state while stale and invalid re
   );
 });
 
+test("safely identifiable malformed commands receive deterministic rejections", async () => {
+  assert.ok(clientModule, "companion client must be implemented");
+  const harness = createHarness();
+  await ready(harness);
+  const socket = harness.sockets[0];
+
+  socket.receive({
+    ...serverMessage(2, "display_set_requested", {
+      chart_ids: ["chart-a"],
+      expected_display_revision: 0,
+      reason_code: "operator_selected_recommendation",
+      unknown_field: true,
+    }),
+  });
+  socket.receive(
+    serverMessage(3, "display_set_requested", {
+      chart_ids: ["chart-a", "chart-a"],
+      expected_display_revision: 0,
+      reason_code: "operator_selected_recommendation",
+    }),
+  );
+  socket.receive(
+    serverMessage(4, "display_set_requested", {
+      chart_ids: ["a", "b", "c", "d", "e"],
+      expected_display_revision: 0,
+      reason_code: "operator_selected_recommendation",
+    }),
+  );
+  socket.receive({
+    ...serverMessage(5, "display_set_requested", {
+      chart_ids: ["chart-a"],
+      expected_display_revision: 0,
+      reason_code: "operator_selected_recommendation",
+    }),
+    acknowledgement_status: "accepted",
+  });
+
+  assert.deepEqual(
+    socket
+      .sentMessages()
+      .slice(-4)
+      .map((message) => message.payload.reason_code),
+    [
+      "malformed_message",
+      "invalid_chart",
+      "capacity_exceeded",
+      "malformed_message",
+    ],
+  );
+});
+
 test("reconnect authenticates again then snapshots current browser state", async () => {
   assert.ok(clientModule, "companion client must be implemented");
   const scheduled = [];

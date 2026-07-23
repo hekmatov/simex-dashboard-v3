@@ -70,6 +70,99 @@ export function canonicalCatalogueBytes(catalogue) {
   return new TextEncoder().encode(JSON.stringify(sortObjectKeys(catalogue)));
 }
 
+export function canonicalDashboardSemanticsBytes(dashboard) {
+  if (!dashboard || typeof dashboard !== "object" || Array.isArray(dashboard)) {
+    throw new Error("dashboard must be an object");
+  }
+  return new TextEncoder().encode(
+    JSON.stringify(
+      sortObjectKeys({
+        catalogue_revision: requiredText(
+          dashboard.catalogueRevision ?? dashboard.lastUpdated,
+          "catalogue revision",
+        ),
+        pages: semanticPages(dashboard.pages),
+      }),
+    ),
+  );
+}
+
+function semanticPages(pages) {
+  return requiredArray(pages, "dashboard pages").map((page) => ({
+    ...page,
+    sections: requiredArray(page?.sections, `sections for page ${page?.id}`).map(
+      (section) => ({
+        ...section,
+        panels: requiredArray(
+          section?.panels,
+          `panels for section ${section?.id}`,
+        ).map(semanticPanel),
+      }),
+    ),
+  }));
+}
+
+function semanticPanel({
+  sourceSchema: _runtimeCompatibility,
+  ...panel
+}) {
+  if (!panel.dataBinding?.x) {
+    return panel;
+  }
+  const { type: _profiledAxisType, ...semanticXAxis } = panel.dataBinding.x;
+  return {
+    ...panel,
+    dataBinding: {
+      ...panel.dataBinding,
+      x: semanticXAxis,
+    },
+  };
+}
+
+export async function buildChartCatalogueSnapshot(
+  dashboard,
+  aliasConfig,
+  digestBytes = sha256Hex,
+) {
+  const catalogue = buildChartCatalogue(dashboard, aliasConfig);
+  const dashboardSemanticDigest = await digestBytes(
+    canonicalDashboardSemanticsBytes(dashboard),
+  );
+  const body = {
+    ...catalogue,
+    dashboard_semantic_digest: dashboardSemanticDigest,
+  };
+  return {
+    ...body,
+    digest: await digestBytes(canonicalCatalogueBytes(body)),
+  };
+}
+
+export async function catalogueMatchesDashboardSnapshot(
+  dashboard,
+  aliasConfig,
+  snapshot,
+  digestBytes = sha256Hex,
+) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return false;
+  }
+  try {
+    const active = await buildChartCatalogueSnapshot(
+      dashboard,
+      aliasConfig,
+      digestBytes,
+    );
+    return (
+      active.catalogue_id === snapshot.catalogue_id &&
+      active.dashboard_semantic_digest === snapshot.dashboard_semantic_digest &&
+      active.digest === snapshot.digest
+    );
+  } catch {
+    return false;
+  }
+}
+
 function chartDescription(panel, section, page) {
   const description =
     panel.description ??
@@ -129,4 +222,11 @@ function sortObjectKeys(value) {
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+async function sha256Hex(bytes) {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
 }

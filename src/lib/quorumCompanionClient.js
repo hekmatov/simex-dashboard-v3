@@ -1,5 +1,6 @@
 import {
   DASHBOARD_CAPABILITIES,
+  MAX_PROTOCOL_MESSAGE_BYTES,
   QUORUM_PROTOCOL_VERSION,
   makeDashboardMessage,
   parseBootstrap,
@@ -182,7 +183,8 @@ export function createQuorumCompanionClient({
     let message;
     try {
       message = parseCompanionMessage(text);
-    } catch {
+    } catch (error) {
+      rejectIdentifiableMalformedMessage(text, error);
       return;
     }
 
@@ -214,6 +216,34 @@ export function createQuorumCompanionClient({
 
     processedCommandIds.add(message.message_id);
     applyDisplayRequest(message);
+  }
+
+  function rejectIdentifiableMalformedMessage(text, error) {
+    const envelope = identifyEnvelope(text);
+    if (!envelope) {
+      return;
+    }
+    if (
+      connectionMessageIds.has(envelope.message_id) ||
+      processedCommandIds.has(envelope.message_id)
+    ) {
+      return;
+    }
+    if (envelope.session_id !== bootstrap.session_id) {
+      reject(envelope.message_id, "session_mismatch");
+      return;
+    }
+    if (envelope.protocol_version !== QUORUM_PROTOCOL_VERSION) {
+      reject(envelope.message_id, "protocol_mismatch");
+      return;
+    }
+    if (envelope.sequence !== incomingSequence + 1) {
+      reject(envelope.message_id, "invalid_sequence");
+      return;
+    }
+    incomingSequence = envelope.sequence;
+    connectionMessageIds.add(envelope.message_id);
+    reject(envelope.message_id, malformedReason(error, envelope));
   }
 
   function acceptReady(message) {
@@ -339,6 +369,58 @@ function loadInstanceId(storage, randomId) {
 
 function rejectionCode(error) {
   return REJECTION_CODES.has(error?.code) ? error.code : "invalid_chart";
+}
+
+function identifyEnvelope(text) {
+  if (typeof text !== "string") {
+    return null;
+  }
+  if (new TextEncoder().encode(text).byteLength > MAX_PROTOCOL_MESSAGE_BYTES) {
+    return null;
+  }
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    !boundedIdentifier(value.message_id) ||
+    !boundedIdentifier(value.session_id) ||
+    !Number.isSafeInteger(value.sequence) ||
+    value.sequence <= 0
+  ) {
+    return null;
+  }
+  return value;
+}
+
+function malformedReason(error, envelope) {
+  const chartIds = envelope?.payload?.chart_ids;
+  if (Array.isArray(chartIds) && chartIds.length > 4) {
+    return "capacity_exceeded";
+  }
+  if (
+    Array.isArray(chartIds) &&
+    new Set(chartIds).size !== chartIds.length
+  ) {
+    return "invalid_chart";
+  }
+  return error?.message === "display state requires unique chart IDs"
+    ? "invalid_chart"
+    : "malformed_message";
+}
+
+function boundedIdentifier(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 256 &&
+    value.trim() === value
+  );
 }
 
 function defaultRandomId() {

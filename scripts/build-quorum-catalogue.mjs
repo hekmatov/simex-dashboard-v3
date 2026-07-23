@@ -2,8 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 import {
-  buildChartCatalogue,
-  canonicalCatalogueBytes,
+  buildChartCatalogueSnapshot,
 } from "../src/lib/quorumCatalogue.js";
 
 const dashboard = JSON.parse(
@@ -12,11 +11,11 @@ const dashboard = JSON.parse(
 const aliases = JSON.parse(
   await readFile("public/config/chart-aliases.json", "utf8"),
 );
-const catalogue = buildChartCatalogue(dashboard, aliases);
-const digest = createHash("sha256")
-  .update(canonicalCatalogueBytes(catalogue))
-  .digest("hex");
-const output = { ...catalogue, digest };
+const output = await buildChartCatalogueSnapshot(
+  dashboard,
+  aliases,
+  (bytes) => createHash("sha256").update(bytes).digest("hex"),
+);
 
 await mkdir("public/integration", { recursive: true });
 await writeFile(

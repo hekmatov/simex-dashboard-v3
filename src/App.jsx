@@ -8,6 +8,7 @@ import {
   reduceDisplayState,
 } from "./lib/displayController.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
+import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
@@ -138,17 +139,27 @@ export default function App() {
     let disposed = false;
     let client = null;
 
-    fetch(`${import.meta.env.BASE_URL}integration/quorum-chart-catalogue.json`, {
-      cache: "no-store",
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("catalogue unavailable");
-        }
-        return response.json();
-      })
-      .then((catalogue) => {
+    Promise.all([
+      fetchJson(
+        `${import.meta.env.BASE_URL}integration/quorum-chart-catalogue.json`,
+      ),
+      fetchJson(`${import.meta.env.BASE_URL}config/chart-aliases.json`),
+    ])
+      .then(async ([catalogue, aliases]) => {
         if (disposed) {
+          return;
+        }
+        const matchesActiveDashboard =
+          await catalogueMatchesDashboardSnapshot(
+            stripRuntimeFields(dashboard),
+            aliases,
+            catalogue,
+          );
+        if (disposed) {
+          return;
+        }
+        if (!matchesActiveDashboard) {
+          setCompanionStatus("incompatible");
           return;
         }
         client = createQuorumCompanionClient({
@@ -177,7 +188,7 @@ export default function App() {
       }
       client?.stop();
     };
-  }, [dashboardReady, dispatchDisplayAction]);
+  }, [dashboard, dashboardReady, dispatchDisplayAction]);
 
   function applyLoadedDashboard(loadedDashboard, { showReport = false, persistReconciliation = true } = {}) {
     const runtimeConfig = stripRuntimeFields(loadedDashboard);
@@ -534,6 +545,14 @@ function companionStatusLabel(status) {
     default:
       return "Standalone";
   }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("required dashboard metadata unavailable");
+  }
+  return response.json();
 }
 
 function loadDeviceLayout() {

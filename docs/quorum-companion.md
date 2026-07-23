@@ -46,6 +46,13 @@ match both `catalogue_id` and `digest` before display commands are enabled. This
 is the explicit local catalogue snapshot for protocol v1; a future catalogue
 exchange API can preserve the same versioned contract.
 
+The snapshot also contains `dashboard_semantic_digest`, an opaque SHA-256 digest
+of the packaged page, section, and panel definitions. Before discovery, the
+browser regenerates both digests from its active configuration and aliases. A
+saved, imported, or edited chart definition therefore disables companion
+commands until a new catalogue is deliberately generated and deployed. This
+prevents a stable chart ID from silently acquiring a different meaning.
+
 ## Discovery and Connection
 
 After the dashboard and catalogue load, the browser requests:
@@ -79,6 +86,12 @@ increasing sequence, idempotency key, type, acknowledgement status, and
 type-specific payload. Messages larger than 16 KiB, unknown fields, invalid
 reason codes, duplicate chart IDs, and sets larger than four charts are
 rejected by the shared codec.
+
+When an invalid message still has a safely bounded message ID, session,
+protocol, and next sequence, the dashboard consumes that sequence and sends
+`display_rejected` with `malformed_message`, `invalid_chart`, or
+`capacity_exceeded`. Oversized, non-JSON, or unidentifiable input is discarded
+without reflecting attacker-controlled content.
 
 The six message types are:
 
@@ -140,4 +153,5 @@ isolated on loopback port `4174`. The mock server and controls live only under
 
 Coverage includes operator-authorized sets, manual single and multi-open,
 individual close, reorder, stale revision, invalid chart ID, reconnect
-snapshot, stale catalogue, and missing-bootstrap standalone behaviour.
+snapshot, stale catalogue, runtime chart-definition drift, identifiable
+malformed commands, and missing-bootstrap standalone behaviour.
