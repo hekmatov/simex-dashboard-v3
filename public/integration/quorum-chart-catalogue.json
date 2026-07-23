@@ -1,0 +1,847 @@
+{
+  "contract_version": "1",
+  "catalogue_id": "simex-dashboard",
+  "catalogue_revision": "2026-06-27",
+  "charts": [
+    {
+      "chart_id": "bio_admissions",
+      "title": "ICU and Hospital Admissions per Day",
+      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "page_id": "biomedical",
+      "section_id": "healthcare",
+      "aliases": [
+        "icu and hospital admissions",
+        "new admissions",
+        "opnames",
+        "ziekenhuisopnames"
+      ],
+      "keywords": [
+        "ICU",
+        "admissions",
+        "hospital",
+        "opnames"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_case_deltas",
+      "title": "Change Since Previous Day",
+      "description": "National case surveillance, province snapshots, and mortality.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "case deltas",
+        "change since previous day",
+        "dagelijkse verandering",
+        "daily change"
+      ],
+      "keywords": [
+        "delta",
+        "increase",
+        "previous day",
+        "stijging"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_confirmed_cases",
+      "title": "Confirmed Cases (cumulative)",
+      "description": "National case surveillance, province snapshots, and mortality.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "bevestigde gevallen",
+        "confirmed cases",
+        "cumulatieve besmettingen",
+        "cumulative cases"
+      ],
+      "keywords": [
+        "besmettingen",
+        "cases",
+        "infecties",
+        "infection",
+        "surveillance"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_delayed_healthcare",
+      "title": "Surgeries Performed per Month",
+      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "page_id": "biomedical",
+      "section_id": "healthcare",
+      "aliases": [
+        "delayed healthcare",
+        "operaties",
+        "surgeries performed",
+        "uitgestelde zorg"
+      ],
+      "keywords": [
+        "delayed",
+        "healthcare",
+        "operaties",
+        "surgery",
+        "zorg"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_hospital_occupancy",
+      "title": "Total Hospital Occupancy",
+      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "page_id": "biomedical",
+      "section_id": "healthcare",
+      "aliases": [
+        "clinic occupancy",
+        "hospital occupancy over time",
+        "ziekenhuis bezetting verloop"
+      ],
+      "keywords": [
+        "beds",
+        "capacity",
+        "clinic",
+        "hospital",
+        "ziekenhuis"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_hospital_occupancy_gauge",
+      "title": "Current Hospital Occupancy",
+      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "page_id": "biomedical",
+      "section_id": "healthcare",
+      "aliases": [
+        "current hospital occupancy",
+        "hospital pressure",
+        "kliniek druk",
+        "ziekenhuisbezetting"
+      ],
+      "keywords": [
+        "beds",
+        "bezetting",
+        "capacity",
+        "hospital",
+        "ziekenhuis"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_icu_occupancy",
+      "title": "Total ICU Occupancy",
+      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "page_id": "biomedical",
+      "section_id": "healthcare",
+      "aliases": [
+        "ic bezetting verloop",
+        "icu capacity",
+        "icu occupancy over time",
+        "intensive care bezetting"
+      ],
+      "keywords": [
+        "ICU",
+        "beds",
+        "bezetting",
+        "capacity",
+        "pressure"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_icu_occupancy_gauge",
+      "title": "Current ICU Occupancy",
+      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "page_id": "biomedical",
+      "section_id": "healthcare",
+      "aliases": [
+        "current icu occupancy",
+        "huidige ic druk",
+        "ic bezetting",
+        "icu pressure"
+      ],
+      "keywords": [
+        "ICU",
+        "beds",
+        "bezetting",
+        "capacity",
+        "intensive care"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_mortality_age",
+      "title": "Age Distribution of HeV-A26 Mortality",
+      "description": "National case surveillance, province snapshots, and mortality.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "age distribution",
+        "leeftijdsverdeling",
+        "mortality by age",
+        "sterfte naar leeftijd"
+      ],
+      "keywords": [
+        "age",
+        "leeftijd",
+        "mortality",
+        "older people",
+        "sterfte"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_municipality_choropleth_animation",
+      "title": "Municipality Infection Rate Timelapse",
+      "description": "Animated daily view of infections per 10,000 population. Data are harmonized to Cartomap 2021 municipality boundaries; missing source municipalities are imputed using same-day province population-weighted infection rates.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "animatie",
+        "choropleth",
+        "gemeente infecties",
+        "gemeente verloop",
+        "gemeentekaart",
+        "infection timelapse",
+        "municipality animation",
+        "municipality infection rate",
+        "tijdlijn"
+      ],
+      "keywords": [
+        "animation",
+        "gemeente",
+        "infecties",
+        "infection rate",
+        "municipality",
+        "over time",
+        "population",
+        "timelapse"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_new_cases_deaths",
+      "title": "Confirmed Cases and Deaths per Day",
+      "description": "National case surveillance, province snapshots, and mortality.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "daily cases",
+        "deaths per day",
+        "new cases and deaths",
+        "nieuwe gevallen",
+        "sterfgevallen"
+      ],
+      "keywords": [
+        "cases",
+        "deaths",
+        "mortality",
+        "overlijden",
+        "sterfte"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_r_values",
+      "title": "Estimated R-value Over Time",
+      "description": "National case surveillance, province snapshots, and mortality.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "r value",
+        "r waarde",
+        "reproductiegetal",
+        "reproduction number"
+      ],
+      "keywords": [
+        "R",
+        "besmettelijkheid",
+        "spread",
+        "transmission"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_region_comparison",
+      "title": "Confirmed Cases per Province",
+      "description": "National case surveillance, province snapshots, and mortality.",
+      "page_id": "biomedical",
+      "section_id": "cases_mortality",
+      "aliases": [
+        "cases per province",
+        "gevallen per provincie",
+        "province comparison",
+        "provincies vergelijken"
+      ],
+      "keywords": [
+        "cases",
+        "province",
+        "provincie",
+        "regionaal",
+        "regional"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_testing_overlay",
+      "title": "Tests Conducted and Test Positivity per Day",
+      "description": "Testing volume and positivity rate.",
+      "page_id": "biomedical",
+      "section_id": "testing",
+      "aliases": [
+        "positiviteitspercentage",
+        "test positivity",
+        "testen en positiviteit",
+        "testing and positivity",
+        "tests conducted"
+      ],
+      "keywords": [
+        "RIVM",
+        "positive tests",
+        "positiviteit",
+        "testen",
+        "testing"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_vaccination_current",
+      "title": "Current Vaccination Status",
+      "description": "Current vaccination status and vaccination rate over time.",
+      "page_id": "biomedical",
+      "section_id": "vaccination",
+      "aliases": [
+        "current vaccination status",
+        "huidige vaccinatie",
+        "vaccinatiestatus",
+        "vaccination groups"
+      ],
+      "keywords": [
+        "groups",
+        "vaccinatie",
+        "vaccination",
+        "vaccine"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_vaccination_rate",
+      "title": "Vaccination Rate Over Time",
+      "description": "Current vaccination status and vaccination rate over time.",
+      "page_id": "biomedical",
+      "section_id": "vaccination",
+      "aliases": [
+        "vaccinatie verloop",
+        "vaccinatiegraad",
+        "vaccination rate over time"
+      ],
+      "keywords": [
+        "rate",
+        "vaccinatiegraad",
+        "vaccination",
+        "vaccine uptake"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_wastewater_map",
+      "title": "Geographic Spread",
+      "description": "Wastewater surveillance by province.",
+      "page_id": "biomedical",
+      "section_id": "wastewater",
+      "aliases": [
+        "afvalwater verspreiding",
+        "rioolwater kaart",
+        "wastewater map",
+        "wastewater spread"
+      ],
+      "keywords": [
+        "deeltjes",
+        "province",
+        "rioolwater",
+        "virus particles",
+        "wastewater"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_wastewater_province",
+      "title": "HeV-A26 Virus Particles per Province",
+      "description": "Wastewater surveillance by province.",
+      "page_id": "biomedical",
+      "section_id": "wastewater",
+      "aliases": [
+        "rioolwater per provincie",
+        "virus particles per province",
+        "wastewater per province"
+      ],
+      "keywords": [
+        "province",
+        "rioolwater",
+        "virus particles",
+        "wastewater"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "home_case_map",
+      "title": "Geographic case spread",
+      "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
+      "page_id": "home",
+      "section_id": "home_overview",
+      "aliases": [
+        "case map",
+        "case spread map",
+        "geografische verspreiding",
+        "geographic spread",
+        "infectiekaart",
+        "kaart",
+        "provinciekaart",
+        "provincies",
+        "verspreiding"
+      ],
+      "keywords": [
+        "cases",
+        "infected",
+        "infecties",
+        "map",
+        "province",
+        "verspreiding"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "home_status_cards",
+      "title": "Dashboard areas",
+      "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
+      "page_id": "home",
+      "section_id": "home_overview",
+      "aliases": [
+        "dashboard areas",
+        "home",
+        "hoofdpagina",
+        "overview",
+        "overzicht",
+        "start page"
+      ],
+      "keywords": [
+        "biomedical",
+        "runtime",
+        "socio-economic",
+        "static app"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_adherence",
+      "title": "Adherence to Health Measures",
+      "description": "Values, risk perception, and adherence by measurement moment.",
+      "page_id": "socio_economic",
+      "section_id": "behaviour",
+      "aliases": [
+        "adherence to health measures",
+        "gezondheidsmaatregelen",
+        "measure compliance",
+        "naleving maatregelen"
+      ],
+      "keywords": [
+        "adherence",
+        "behaviour",
+        "compliance",
+        "maatregelen",
+        "naleving"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_business_closures",
+      "title": "Business Closures",
+      "description": "Business closures and unemployment.",
+      "page_id": "socio_economic",
+      "section_id": "economy",
+      "aliases": [
+        "bedrijfssluitingen",
+        "business closures",
+        "company closures",
+        "ondernemingen sluiten"
+      ],
+      "keywords": [
+        "business",
+        "closures",
+        "economie",
+        "economy"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_education_absenteeism",
+      "title": "School Absenteeism",
+      "description": "Healthcare and school absenteeism.",
+      "page_id": "socio_economic",
+      "section_id": "absenteeism",
+      "aliases": [
+        "education absenteeism",
+        "onderwijsverzuim",
+        "school absenteeism",
+        "schoolverzuim"
+      ],
+      "keywords": [
+        "absenteeism",
+        "education",
+        "onderwijs",
+        "schools",
+        "verzuim"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_healthcare_absenteeism",
+      "title": "Absenteeism in Healthcare",
+      "description": "Healthcare and school absenteeism.",
+      "page_id": "socio_economic",
+      "section_id": "absenteeism",
+      "aliases": [
+        "care staff absence",
+        "healthcare absenteeism",
+        "verzuim in de zorg",
+        "zorgverzuim"
+      ],
+      "keywords": [
+        "absenteeism",
+        "healthcare",
+        "staff",
+        "verzuim",
+        "zorg"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_lifestyle",
+      "title": "Lifestyle",
+      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "page_id": "socio_economic",
+      "section_id": "subjective_wellbeing",
+      "aliases": [
+        "health behaviour",
+        "leefstijl",
+        "lifestyle"
+      ],
+      "keywords": [
+        "behaviour",
+        "leefstijl",
+        "lifestyle",
+        "wellbeing"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_loneliness",
+      "title": "Loneliness",
+      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "page_id": "socio_economic",
+      "section_id": "subjective_wellbeing",
+      "aliases": [
+        "eenzaamheid",
+        "ernstige eenzaamheid",
+        "loneliness",
+        "severe loneliness"
+      ],
+      "keywords": [
+        "age group",
+        "eenzaamheid",
+        "loneliness",
+        "wellbeing",
+        "welzijn"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_mental_wellbeing",
+      "title": "Wellbeing",
+      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "page_id": "socio_economic",
+      "section_id": "subjective_wellbeing",
+      "aliases": [
+        "angst stress slaap",
+        "anxiety stress sleep",
+        "mentaal welzijn",
+        "mental wellbeing"
+      ],
+      "keywords": [
+        "mental health",
+        "sleep",
+        "stress",
+        "wellbeing",
+        "welzijn"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_resilience",
+      "title": "Resilience",
+      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "page_id": "socio_economic",
+      "section_id": "subjective_wellbeing",
+      "aliases": [
+        "resilience",
+        "social resilience",
+        "sociale veerkracht",
+        "veerkracht"
+      ],
+      "keywords": [
+        "community",
+        "resilience",
+        "veerkracht",
+        "wellbeing"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_risk_deltas",
+      "title": "Risk Perception: Change Compared to Previous Measurement",
+      "description": "Values, risk perception, and adherence by measurement moment.",
+      "page_id": "socio_economic",
+      "section_id": "behaviour",
+      "aliases": [
+        "risk perception changes",
+        "risk perception deltas",
+        "verandering risicoperceptie"
+      ],
+      "keywords": [
+        "change",
+        "delta",
+        "risico",
+        "risk",
+        "verandering"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_risk_perception",
+      "title": "Risk Perception",
+      "description": "Values, risk perception, and adherence by measurement moment.",
+      "page_id": "socio_economic",
+      "section_id": "behaviour",
+      "aliases": [
+        "public risk perception",
+        "risico inschatting",
+        "risicoperceptie",
+        "risk perception"
+      ],
+      "keywords": [
+        "behaviour",
+        "gedrag",
+        "perception",
+        "risico",
+        "risk"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_trust_meter",
+      "title": "Current Trust",
+      "description": "Trust in institutions over time and current trust meter.",
+      "page_id": "socio_economic",
+      "section_id": "trust",
+      "aliases": [
+        "current trust",
+        "huidig vertrouwen",
+        "trust meter",
+        "vertrouwensmeter"
+      ],
+      "keywords": [
+        "institution",
+        "meter",
+        "trust",
+        "vertrouwen"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_trust_trend",
+      "title": "Trust",
+      "description": "Trust in institutions over time and current trust meter.",
+      "page_id": "socio_economic",
+      "section_id": "trust",
+      "aliases": [
+        "public trust over time",
+        "publiek vertrouwen",
+        "trust in institutions",
+        "vertrouwen in instituties"
+      ],
+      "keywords": [
+        "confidence",
+        "institutions",
+        "trust",
+        "vertrouwen"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_unemployment",
+      "title": "Unemployment",
+      "description": "Business closures and unemployment.",
+      "page_id": "socio_economic",
+      "section_id": "economy",
+      "aliases": [
+        "unemployment",
+        "unemployment rate",
+        "werkloosheid",
+        "werkloosheidspercentage"
+      ],
+      "keywords": [
+        "economy",
+        "employment",
+        "jobs",
+        "werkloosheid"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_values",
+      "title": "Key Considerations from Citizens in Current Phase",
+      "description": "Values, risk perception, and adherence by measurement moment.",
+      "page_id": "socio_economic",
+      "section_id": "behaviour",
+      "aliases": [
+        "citizen values",
+        "overwegingen burgers",
+        "public considerations",
+        "waarden"
+      ],
+      "keywords": [
+        "advice",
+        "burgers",
+        "citizens",
+        "values",
+        "waarden"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "socio_values_deltas",
+      "title": "Values: Change Compared to Previous Phase",
+      "description": "Values, risk perception, and adherence by measurement moment.",
+      "page_id": "socio_economic",
+      "section_id": "behaviour",
+      "aliases": [
+        "values changes",
+        "values compared to previous phase",
+        "verandering waarden"
+      ],
+      "keywords": [
+        "change",
+        "delta",
+        "values",
+        "verandering",
+        "waarden"
+      ],
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen"
+      ]
+    }
+  ],
+  "digest": "359fb8ccd687297ebe793dcd3f1b38061ef2d0a0b92c2e42fc939da906d4131a"
+}
