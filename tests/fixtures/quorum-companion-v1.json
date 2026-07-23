@@ -1,0 +1,176 @@
+{
+  "protocol_version": "1",
+  "envelope_fields": [
+    "acknowledgement_status",
+    "idempotency_key",
+    "message_id",
+    "payload",
+    "protocol_version",
+    "sequence",
+    "session_id",
+    "type"
+  ],
+  "message_types": {
+    "companion_ready": [
+      "accepted_dashboard_instance_id",
+      "accepted_display_revision",
+      "catalogue_digest",
+      "catalogue_id"
+    ],
+    "dashboard_hello": [
+      "capabilities",
+      "catalogue_digest",
+      "catalogue_id",
+      "credential",
+      "dashboard_instance_id",
+      "display_revision",
+      "displayed_chart_ids"
+    ],
+    "dashboard_snapshot": [
+      "dashboard_instance_id",
+      "display_revision",
+      "displayed_chart_ids"
+    ],
+    "display_rejected": [
+      "display_revision",
+      "reason_code",
+      "rejected_message_id"
+    ],
+    "display_set_requested": [
+      "chart_ids",
+      "expected_display_revision",
+      "reason_code"
+    ],
+    "display_state_changed": [
+      "change_reason",
+      "display_revision",
+      "displayed_chart_ids"
+    ]
+  },
+  "reason_codes": [
+    "operator_selected_recommendation",
+    "manual_open",
+    "manual_close",
+    "manual_reorder",
+    "reconnect_snapshot",
+    "protocol_mismatch",
+    "credential_mismatch",
+    "session_mismatch",
+    "catalogue_mismatch",
+    "stale_revision",
+    "invalid_chart",
+    "invalid_sequence",
+    "capacity_exceeded",
+    "malformed_message"
+  ],
+  "capabilities": [
+    "display_set",
+    "display_state",
+    "individual_close",
+    "reorder",
+    "reconnect_snapshot"
+  ],
+  "examples": [
+    {
+      "protocol_version": "1",
+      "message_id": "dashboard-message-1",
+      "session_id": "session-001",
+      "sequence": 1,
+      "idempotency_key": "dashboard-hello:instance-001:0",
+      "type": "dashboard_hello",
+      "acknowledgement_status": "required",
+      "payload": {
+        "credential": "opaque-test-credential",
+        "dashboard_instance_id": "instance-001",
+        "catalogue_id": "simex-dashboard",
+        "catalogue_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "capabilities": [
+          "display_set",
+          "display_state",
+          "individual_close",
+          "reorder",
+          "reconnect_snapshot"
+        ],
+        "display_revision": 0,
+        "displayed_chart_ids": []
+      }
+    },
+    {
+      "protocol_version": "1",
+      "message_id": "server-message-1",
+      "session_id": "session-001",
+      "sequence": 1,
+      "idempotency_key": "companion-ready:instance-001:0",
+      "type": "companion_ready",
+      "acknowledgement_status": "accepted",
+      "payload": {
+        "accepted_dashboard_instance_id": "instance-001",
+        "catalogue_id": "simex-dashboard",
+        "catalogue_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "accepted_display_revision": 0
+      }
+    },
+    {
+      "protocol_version": "1",
+      "message_id": "server-message-2",
+      "session_id": "session-001",
+      "sequence": 2,
+      "idempotency_key": "display-request:operator-action-001",
+      "type": "display_set_requested",
+      "acknowledgement_status": "required",
+      "payload": {
+        "chart_ids": [
+          "bio_confirmed_cases"
+        ],
+        "expected_display_revision": 0,
+        "reason_code": "operator_selected_recommendation"
+      }
+    },
+    {
+      "protocol_version": "1",
+      "message_id": "dashboard-message-2",
+      "session_id": "session-001",
+      "sequence": 2,
+      "idempotency_key": "display-state:instance-001:1",
+      "type": "display_state_changed",
+      "acknowledgement_status": "required",
+      "payload": {
+        "display_revision": 1,
+        "displayed_chart_ids": [
+          "bio_confirmed_cases"
+        ],
+        "change_reason": "operator_selected_recommendation"
+      }
+    },
+    {
+      "protocol_version": "1",
+      "message_id": "dashboard-message-3",
+      "session_id": "session-001",
+      "sequence": 3,
+      "idempotency_key": "display-rejected:server-message-9",
+      "type": "display_rejected",
+      "acknowledgement_status": "rejected",
+      "payload": {
+        "rejected_message_id": "server-message-9",
+        "display_revision": 1,
+        "reason_code": "stale_revision"
+      }
+    },
+    {
+      "protocol_version": "1",
+      "message_id": "dashboard-message-4",
+      "session_id": "session-001",
+      "sequence": 4,
+      "idempotency_key": "dashboard-snapshot:instance-001:1",
+      "type": "dashboard_snapshot",
+      "acknowledgement_status": "required",
+      "payload": {
+        "dashboard_instance_id": "instance-001",
+        "display_revision": 1,
+        "displayed_chart_ids": [
+          "bio_confirmed_cases"
+        ]
+      }
+    }
+  ]
+}
