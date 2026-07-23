@@ -64,6 +64,13 @@ export function reduceDisplayState(state, action, validChartIds = null) {
       }
       return withDisplayedCharts(state, chartIds);
     }
+    case "manual_set": {
+      const chartIds = validatedChartIds(action.chart_ids, {
+        minimum: 1,
+        validIds,
+      });
+      return withDisplayedCharts(state, chartIds);
+    }
     case "companion_set": {
       if (action.expected_display_revision !== state.display_revision) {
         throw new DisplayStateError("stale_revision");

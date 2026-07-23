@@ -3,6 +3,10 @@
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import { migrateDashboardToDataModel } from "./lib/chartDataModel.js";
 import { reconcileDashboardWithLoadedData } from "./lib/dashboardCompatibility.js";
+import {
+  initialDisplayState,
+  reduceDisplayState,
+} from "./lib/displayController.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
@@ -46,6 +50,11 @@ export default function App() {
   const [editSessionStartConfig, setEditSessionStartConfig] = useState(null);
   const [compatibilityReports, setCompatibilityReports] = useState([]);
   const [deviceLayout, setDeviceLayout] = useState(() => loadDeviceLayout());
+  const [displayState, setDisplayState] = useState(initialDisplayState);
+  const validDisplayChartIds = React.useMemo(
+    () => configuredPanelIds(dashboard),
+    [dashboard?.pages],
+  );
 
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
@@ -77,6 +86,27 @@ export default function App() {
       .then((loadedDashboard) => applyLoadedDashboard(loadedDashboard, { showReport: SHOW_COMPATIBILITY_REPORTS }))
       .catch((loadError) => setError(loadError));
   }, []);
+
+  useEffect(() => {
+    setDisplayState((current) =>
+      reduceDisplayState(
+        current,
+        {
+          type: "companion_reconcile",
+          chart_ids: current.displayed_chart_ids.filter((chartId) =>
+            validDisplayChartIds.has(chartId),
+          ),
+        },
+        validDisplayChartIds,
+      ),
+    );
+  }, [validDisplayChartIds]);
+
+  const dispatchDisplayAction = React.useCallback((action) => {
+    setDisplayState((current) =>
+      reduceDisplayState(current, action, validDisplayChartIds),
+    );
+  }, [validDisplayChartIds]);
 
   function applyLoadedDashboard(loadedDashboard, { showReport = false, persistReconciliation = true } = {}) {
     const runtimeConfig = stripRuntimeFields(loadedDashboard);
@@ -365,6 +395,8 @@ export default function App() {
       )}
       <DashboardRenderer
         dashboard={dashboard}
+        displayState={displayState}
+        onDisplayAction={dispatchDisplayAction}
         deviceLayout={deviceLayout}
         onDeviceLayoutChange={changeDeviceLayout}
         editMode={editMode}
@@ -388,6 +420,16 @@ export default function App() {
         onResetEditSession={cancelEditSession}
       />
     </>
+  );
+}
+
+function configuredPanelIds(dashboard) {
+  return new Set(
+    (dashboard?.pages ?? []).flatMap((page) =>
+      (page.sections ?? []).flatMap((section) =>
+        (section.panels ?? []).map((panel) => panel.id),
+      ),
+    ),
   );
 }
 

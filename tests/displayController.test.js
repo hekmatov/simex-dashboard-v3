@@ -148,6 +148,18 @@ test("manual reorder requires an exact permutation and increments revision", () 
   );
 });
 
+test("manual multi-selection opens one exact display set in one revision", () => {
+  assert.ok(displayModule, "display controller must be implemented");
+  const state = displayModule.reduceDisplayState(
+    displayModule.initialDisplayState(),
+    { type: "manual_set", chart_ids: ["a", "b", "c"] },
+  );
+
+  assert.deepEqual(state.displayed_chart_ids, ["a", "b", "c"]);
+  assert.equal(state.display_revision, 1);
+  assert.equal(state.layout, "topFocus");
+});
+
 test("layout is local presentation state and does not advance display revision", () => {
   assert.ok(displayModule, "display controller must be implemented");
   let state = displayModule.initialDisplayState();

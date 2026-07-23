@@ -3,13 +3,16 @@
 import AddChartWizard from "./AddChartWizard.jsx";
 import ColorField from "./ColorField.jsx";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
+import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
-import ChartPanel, { PanelBody } from "./ChartPanel.jsx";
+import ChartPanel from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 
 export default function DashboardRenderer({
   dashboard,
+  displayState,
+  onDisplayAction,
   deviceLayout,
   onDeviceLayoutChange,
   editMode,
@@ -40,8 +43,6 @@ export default function DashboardRenderer({
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
   const [multiSelectMode, setMultiSelectMode] = React.useState(false);
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
-  const [multiFullscreenOpen, setMultiFullscreenOpen] = React.useState(false);
-  const [multiFullscreenLayout, setMultiFullscreenLayout] = React.useState("sideBySide");
   const importInputRef = React.useRef(null);
   const csvInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
@@ -156,14 +157,18 @@ export default function DashboardRenderer({
     });
   }
 
-  function closeMultiFullscreen() {
-    setMultiFullscreenOpen(false);
+  function openMultiFullscreen() {
+    if (multiPanelIds.length < 2) {
+      return;
+    }
+    onDisplayAction({ type: "manual_set", chart_ids: multiPanelIds });
+    setMultiSelectMode(false);
+    setMultiPanelIds([]);
   }
 
   function cancelMultiSelection() {
     setMultiSelectMode(false);
     setMultiPanelIds([]);
-    setMultiFullscreenOpen(false);
   }
 
   function addPage() {
@@ -458,7 +463,7 @@ export default function DashboardRenderer({
             <button type="button" className="secondary" onClick={onResetEditSession}>Reset edits</button>
             {multiSelectMode && (
               <>
-                <button type="button" disabled={multiPanelIds.length < 2} onClick={() => setMultiFullscreenOpen(true)}>Multi-fullscreen ({multiPanelIds.length})</button>
+                <button type="button" disabled={multiPanelIds.length < 2} onClick={openMultiFullscreen}>Multi-fullscreen ({multiPanelIds.length})</button>
                 <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel multi</button>
               </>
             )}
@@ -489,7 +494,7 @@ export default function DashboardRenderer({
       {multiSelectMode && !editMode && (
         <section className="multi-select-banner" aria-label="Multi-fullscreen selection">
           <strong>{multiPanelIds.length} selected</strong>
-          <button type="button" disabled={multiPanelIds.length < 2} onClick={() => setMultiFullscreenOpen(true)}>Multi-fullscreen</button>
+          <button type="button" disabled={multiPanelIds.length < 2} onClick={openMultiFullscreen}>Multi-fullscreen</button>
           <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel</button>
         </section>
       )}
@@ -603,6 +608,7 @@ export default function DashboardRenderer({
                     onRemove={() => removePanel(panel.id)}
                     onToggleMultiSelect={() => toggleMultiPanel(panel.id)}
                     onFullScreenHold={() => startMultiFullscreenSelection(panel.id)}
+                    onDisplayAction={onDisplayAction}
                     onPointerDragStateChange={handlePointerDragState}
                     onPointerReorder={(sourcePanelId, targetPanelId) => {
                       onPanelReorder(sourcePanelId, targetPanelId);
@@ -637,16 +643,12 @@ export default function DashboardRenderer({
         onClose={() => setChartWizardTarget(null)}
         onCreate={({ panel, uploadedSource }) => onPanelAdd(chartWizardTarget.pageId, chartWizardTarget.sectionId, panel, uploadedSource)}
       />
-      {multiFullscreenOpen && (
-        <MultiFullscreenOverlay
-          dashboard={dashboard}
-          panelIds={multiPanelIds}
-          layout={multiFullscreenLayout}
-          onLayoutChange={setMultiFullscreenLayout}
-          onPanelOrderChange={setMultiPanelIds}
-          onClose={closeMultiFullscreen}
-        />
-      )}
+      <FullscreenDisplay
+        dashboard={dashboard}
+        displayState={displayState}
+        globalPanelColors={globalPanelColors}
+        onDisplayAction={onDisplayAction}
+      />
       <DashboardFooter dashboard={dashboard} />
       <div className="dashboard-device-tools">
         <InstallDashboardPrompt />
@@ -686,55 +688,6 @@ function feedbackMailtoUrl(contactEmail) {
   return `mailto:${email}?subject=${encodeURIComponent("SimEx Dashboard feedback")}`;
 }
 
-function MultiFullscreenOverlay({ dashboard, panelIds, layout, label = "Multi-fullscreen", reason, onLayoutChange, onPanelOrderChange, onClose }) {
-  const panels = panelIds.map((panelId) => findPanel(dashboard, panelId)).filter(Boolean);
-  const globalPanelColors = resolveGlobalPanelColors(dashboard);
-  const layoutOptions = multiLayoutOptions(panels.length);
-  const resolvedLayout = layoutOptions.some((option) => option.value === layout) ? layout : layoutOptions[0]?.value;
-  if (panels.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="fullscreen-backdrop" role="dialog" aria-modal="true">
-      <article className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}>
-        <div className="multi-fullscreen-controls">
-          <div className="multi-fullscreen-title">
-            <strong>{label}</strong>
-            {reason?.detail && <span>{reason.detail}</span>}
-          </div>
-          {layoutOptions.map((option) => (
-            <button key={option.value} type="button" className={resolvedLayout === option.value ? "active" : "secondary"} onClick={() => onLayoutChange(option.value)} title={option.label}>
-              {option.icon}
-            </button>
-          ))}
-          <button type="button" className="secondary" onClick={onClose}>Close</button>
-        </div>
-        <div className={`multi-fullscreen-grid multi-count-${panels.length} layout-${resolvedLayout}`}>
-          {panels.map((panel, index) => (
-            <section className={`multi-fullscreen-cell multi-cell-${index + 1}`} key={panel.id}>
-              <div className="multi-cell-controls">
-                <strong>{index + 1}</strong>
-                <button type="button" className="secondary" disabled={index === 0} onClick={() => onPanelOrderChange(moveItem(panelIds, index, index - 1))}>Prev</button>
-                <button type="button" className="secondary" disabled={index === panels.length - 1} onClick={() => onPanelOrderChange(moveItem(panelIds, index, index + 1))}>Next</button>
-              </div>
-              <PanelBody
-                panel={panel}
-                globalPanelColors={globalPanelColors}
-                data={dashboard.loadedData[panel.dataSource] ?? []}
-                geoData={dashboard.loadedData[panel.geoSource]}
-                loadedData={dashboard.loadedData}
-                fullScreen
-                multiFullScreen={panels.length > 1}
-              />
-            </section>
-          ))}
-        </div>
-      </article>
-    </div>
-  );
-}
-
 function GlobalPanelColorControls({ colors, onChange }) {
   return (
     <details className="global-color-controls">
@@ -749,38 +702,6 @@ function GlobalPanelColorControls({ colors, onChange }) {
       </div>
     </details>
   );
-}
-
-function moveItem(items, fromIndex, toIndex) {
-  const nextItems = [...items];
-  const [item] = nextItems.splice(fromIndex, 1);
-  nextItems.splice(toIndex, 0, item);
-  return nextItems;
-}
-
-function multiLayoutOptions(count) {
-  if (count === 1) {
-    return [{ value: "solo", label: "Single chart", icon: "1" }];
-  }
-  if (count === 2) {
-    return [
-      { value: "sideBySide", label: "Side by side", icon: "||" },
-      { value: "overUnder", label: "Over-under", icon: "=" },
-    ];
-  }
-  if (count === 3) {
-    return [
-      { value: "topFocus", label: "One on top", icon: "T" },
-      { value: "bottomFocus", label: "One on bottom", icon: "B" },
-      { value: "leftFocus", label: "One on left", icon: "L" },
-      { value: "rightFocus", label: "One on right", icon: "R" },
-    ];
-  }
-  return [{ value: "grid2x2", label: "2 by 2", icon: "2x2" }];
-}
-
-function defaultMultiLayout(count) {
-  return multiLayoutOptions(count)[0]?.value ?? "solo";
 }
 
 function diffPanel(previous, next) {
