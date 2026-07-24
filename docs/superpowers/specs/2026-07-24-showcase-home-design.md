@@ -3,7 +3,7 @@
 Date: 2026-07-24  
 Status: Approved for implementation planning  
 Branch: `codex/showcase-home`  
-Repository: `C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2`
+Repository: `<repo-root>`
 
 ## Purpose
 

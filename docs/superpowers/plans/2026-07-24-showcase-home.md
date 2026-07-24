@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Work only in `C:\Users\hekma\Documents\SimEx Dashboard\simex-dashboard-v2`; do not modify the OneDrive copy.
+- Work only in `<repo-root>`; do not modify any cloud-synchronised copy.
 - Implement on `codex/showcase-home`, which is based on `codex/dashboard-companion-readiness`.
 - Promote `packaged-dashboard-bundle.json` before app changes and review any resulting diff.
 - Preserve Quorum companion initialization, protocol, catalogue, display control, fullscreen behavior, and analytical-page behavior.
@@ -1302,7 +1302,7 @@ In one terminal:
 
 ```powershell
 pnpm.cmd build
-pnpm.cmd preview -- --host 127.0.0.1 --port 4175
+pnpm.cmd exec vite preview --host 127.0.0.1 --port 4175
 ```
 
 In a second terminal:
@@ -1414,7 +1414,7 @@ Build and preview the app:
 
 ```powershell
 pnpm.cmd build
-pnpm.cmd preview -- --host 127.0.0.1 --port 4175
+pnpm.cmd exec vite preview --host 127.0.0.1 --port 4175
 ```
 
 In a second terminal, capture the approved Biomedical preview:

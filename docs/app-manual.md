@@ -56,7 +56,7 @@ Build and preview the app:
 
 ```powershell
 pnpm.cmd build
-pnpm.cmd preview -- --host 127.0.0.1 --port 4175
+pnpm.cmd exec vite preview --host 127.0.0.1 --port 4175
 ```
 
 In a second terminal, capture the approved Biomedical preview:

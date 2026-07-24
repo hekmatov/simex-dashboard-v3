@@ -68,9 +68,35 @@ export default function App() {
   const vantaSettingsKey = JSON.stringify(vantaSettings);
 
   useEffect(() => {
-    const vantaEffect = initializeVantaBackground(vantaSettings);
-    return () => vantaEffect?.destroy?.();
-  }, [vantaSettingsKey]);
+    if (!dashboardReady) {
+      return undefined;
+    }
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    let vantaEffect = null;
+
+    const applyMotionPreference = () => {
+      vantaEffect?.destroy?.();
+      vantaEffect = reducedMotion?.matches
+        ? null
+        : initializeVantaBackground(vantaSettings);
+    };
+
+    applyMotionPreference();
+    if (reducedMotion?.addEventListener) {
+      reducedMotion.addEventListener("change", applyMotionPreference);
+    } else {
+      reducedMotion?.addListener?.(applyMotionPreference);
+    }
+
+    return () => {
+      if (reducedMotion?.removeEventListener) {
+        reducedMotion.removeEventListener("change", applyMotionPreference);
+      } else {
+        reducedMotion?.removeListener?.(applyMotionPreference);
+      }
+      vantaEffect?.destroy?.();
+    };
+  }, [dashboardReady, vantaSettingsKey]);
 
   function changeDeviceLayout(layout) {
     setDeviceLayout(layout);

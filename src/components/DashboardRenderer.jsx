@@ -417,7 +417,11 @@ export default function DashboardRenderer({
               </div>
             ) : (
               <>
-                <h1>{activePage?.title ?? dashboard.title}</h1>
+                {landingActive ? (
+                  <div className="dashboard-page-title">{activePage?.title ?? dashboard.title}</div>
+                ) : (
+                  <h1>{activePage?.title ?? dashboard.title}</h1>
+                )}
                 <p className="subtitle">{activePage?.description ?? dashboard.description}</p>
               </>
             )}
