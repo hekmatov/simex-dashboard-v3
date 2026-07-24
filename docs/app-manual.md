@@ -4,13 +4,13 @@
 
 SimEx Dashboard V2 is a static, configurable web dashboard for presenting simulation-exercise data. It combines prepared epidemiological and socio-economic data with configurable charts, maps, tables, indicators, and comparison panels.
 
-This manual describes the published dashboard and its supported configuration and deployment model. It intentionally excludes development history, personal workflows, local-machine details, and experimental features.
+This manual describes the published dashboard and its supported configuration and deployment model. It intentionally excludes development history, personal workflows, and experimental features. Most guidance is for dashboard visitors and users; where maintaining a published asset requires it, the manual also includes a limited, clearly marked local maintainer workflow.
 
 ## Dashboard at a glance
 
 The default dashboard has three pages:
 
-- **HeV-A26 Dashboard Home** for scenario overview and headline indicators.
+- **HeV-A26 Dashboard Home** as an orienting showcase landing page that introduces SimEx, demonstrates the HeV-A26 scenario, and routes visitors into the live dashboard views.
 - **HeV-A26 Dashboard: Epidemiological overview** for cases and mortality, healthcare, testing, wastewater surveillance, and vaccination.
 - **HeV-A26 Dashboard: Socio-economic overview** for behaviour, public trust, subjective wellbeing, economy, and absenteeism.
 
