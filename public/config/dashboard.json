@@ -68,8 +68,101 @@
     {
       "id": "home",
       "label": "Home",
-      "title": "HeV-A26 Dashboard Home",
-      "description": "Exercise overview with quick links into biomedical and socio-economic indicators.",
+      "pageType": "landing",
+      "title": "SimEx Dashboard",
+      "description": "A reusable dashboard platform for simulation exercise decision support.",
+      "landing": {
+        "hero": {
+          "deliveryLabel": "First deliverable · Live HeV-A26 demonstration",
+          "headline": "From complex exercise data to shared situational awareness",
+          "summary": "A reusable dashboard platform that brings biomedical and socio-economic signals into one decision-support environment.",
+          "primaryAction": {
+            "label": "Explore the live dashboard",
+            "pageId": "biomedical"
+          },
+          "secondaryAction": {
+            "label": "See what to try",
+            "anchorId": "showcase-tour"
+          }
+        },
+        "previewAsset": {
+          "src": "assets/showcase-dashboard-preview.png",
+          "alt": "SimEx biomedical dashboard showing epidemiological indicators, charts, and geographic analysis."
+        },
+        "proofPoints": [
+          {
+            "title": "Cross-domain overview",
+            "description": "Health and societal impacts in one environment."
+          },
+          {
+            "title": "Briefing-ready views",
+            "description": "Focused, responsive, and fullscreen presentation."
+          },
+          {
+            "title": "Configurable foundation",
+            "description": "Adaptable layouts, charts, and prepared data sources."
+          }
+        ],
+        "capabilities": [
+          {
+            "number": "01",
+            "title": "See the evolving situation",
+            "description": "Track cases, mortality, healthcare pressure, testing, wastewater, and vaccination."
+          },
+          {
+            "number": "02",
+            "title": "Understand wider impacts",
+            "description": "Connect behaviour, trust, wellbeing, economic disruption, and absenteeism."
+          },
+          {
+            "number": "03",
+            "title": "Turn insight into a briefing",
+            "description": "Use focused charts, multi-view comparison, and responsive presentation layouts."
+          }
+        ],
+        "domainRoutes": [
+          {
+            "eyebrow": "Biomedical domain",
+            "title": "Follow epidemiological pressure",
+            "description": "Explore geographic spread, transmission, healthcare demand, surveillance, and vaccination.",
+            "actionLabel": "Explore Biomedical",
+            "pageId": "biomedical",
+            "tone": "biomedical"
+          },
+          {
+            "eyebrow": "Socio-economic domain",
+            "title": "See impacts beyond healthcare",
+            "description": "Explore behaviour, trust, wellbeing, business disruption, and workforce impacts.",
+            "actionLabel": "Explore Socio-economic",
+            "pageId": "socio_economic",
+            "tone": "socio"
+          }
+        ],
+        "tourAnchorId": "showcase-tour",
+        "tourItems": [
+          "Filter indicators and time periods",
+          "Open one or several charts in fullscreen",
+          "Compare desktop, tablet, and phone layouts",
+          "Review configurable views without changing the public default"
+        ],
+        "deliveryStatus": [
+          {
+            "state": "complete",
+            "label": "Dashboard delivered",
+            "description": "Working multi-domain dashboard with prepared demonstration data."
+          },
+          {
+            "state": "complete",
+            "label": "Cloud-hosted showcase",
+            "description": "Browser-accessible demonstration for stakeholder review and orientation."
+          },
+          {
+            "state": "ready",
+            "label": "Quorum integration-ready",
+            "description": "Compatibility foundation prepared; the hosted demonstration operates independently."
+          }
+        ]
+      },
       "sections": [
         {
           "id": "home_overview",
