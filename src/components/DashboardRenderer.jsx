@@ -8,6 +8,7 @@ import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
 import ChartPanel from "./ChartPanel.jsx";
 import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
+import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 
 export default function DashboardRenderer({
   dashboard,
@@ -70,6 +71,7 @@ export default function DashboardRenderer({
 
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
+  const landingActive = hasLandingPresentation(activePage);
   const selectedPanel = findPanel(dashboard, selectedPanelId);
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const selectedPanelData = dashboard.loadedData[selectedPanel?.dataSource] ?? [];
@@ -97,6 +99,14 @@ export default function DashboardRenderer({
       ...current,
       [filter.id]: value,
     }));
+  }
+
+  function navigateToPage(pageId) {
+    if (!(dashboard.pages ?? []).some((page) => page.id === pageId)) {
+      return;
+    }
+    setActivePageId(pageId);
+    setSelectedPanelId(null);
   }
 
   function removePanel(panelId) {
@@ -377,7 +387,11 @@ export default function DashboardRenderer({
   }
 
   return (
-    <main className="app-shell" data-device-layout={deviceLayout}>
+    <main
+      className="app-shell"
+      data-device-layout={deviceLayout}
+      data-page-type={landingActive ? "landing" : "analytical"}
+    >
       <header className="dashboard-header">
         <div className="dashboard-brand-block">
           <img className="pdpc-header-mark" src={`${import.meta.env.BASE_URL}assets/pdpc-mark.png`} alt="" />
@@ -507,10 +521,7 @@ export default function DashboardRenderer({
               <button
                 type="button"
                 className={page.id === activePage.id ? "active" : "secondary"}
-                onClick={() => {
-                  setActivePageId(page.id);
-                  setSelectedPanelId(null);
-                }}
+                onClick={() => navigateToPage(page.id)}
               >
                 Open
               </button>
@@ -524,10 +535,7 @@ export default function DashboardRenderer({
               key={page.id}
               type="button"
               className={page.id === activePage.id ? "active" : "secondary"}
-              onClick={() => {
-                setActivePageId(page.id);
-                setSelectedPanelId(null);
-              }}
+              onClick={() => navigateToPage(page.id)}
             >
               {page.label}
             </button>
@@ -541,7 +549,14 @@ export default function DashboardRenderer({
         }`}
       >
         <div className="page-stack">
-          {activePage.sections.map((section) => (
+          {landingActive ? (
+            <LandingPage
+              page={activePage}
+              pages={dashboard.pages}
+              onNavigate={navigateToPage}
+            />
+          ) : (
+            activePage.sections.map((section) => (
             <section className="dashboard-section" key={section.id}>
               <div className="section-header">
                 <div className="section-title-block">
@@ -620,7 +635,8 @@ export default function DashboardRenderer({
                 ))}
               </LayoutGrid>
             </section>
-          ))}
+            ))
+          )}
         </div>
 
         {editMode && selectedPanel && (
