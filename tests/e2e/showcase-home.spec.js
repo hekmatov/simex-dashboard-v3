@@ -51,3 +51,28 @@ test("saved beta configuration receives the new Home presentation", async ({ pag
   expect(persisted.pages[0].pageType).toBe("landing");
   expect(persisted.pages[0].landing.hero.primaryAction.pageId).toBe("biomedical");
 });
+
+test("preview failure preserves the complete landing journey", async ({ page }) => {
+  await page.route("**/assets/showcase-dashboard-preview.png", (route) => route.abort());
+  await page.goto("/");
+  await expect(page.locator(".showcase-landing-preview")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "From complex exercise data to shared situational awareness",
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Explore the live dashboard" })).toBeVisible();
+});
+
+test("phone layout remains readable without horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Support the exercise information cycle" })).toBeVisible();
+  const hasOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(hasOverflow).toBe(false);
+  await expect(page.locator(".showcase-route")).toHaveCount(2);
+  await expect(page.locator(".showcase-hero")).toHaveCSS("display", "grid");
+});
