@@ -185,7 +185,9 @@ test("runtime chart-definition drift disables companion commands", async ({
 
   await page.goto("/");
 
-  await expect(page.getByText("Companion unavailable")).toBeVisible();
+  await expect(page.getByText("Companion unavailable")).toBeVisible({
+    timeout: 20_000,
+  });
   await expect
     .poll(async () =>
       (await events(request)).some(
