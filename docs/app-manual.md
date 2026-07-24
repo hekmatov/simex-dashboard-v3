@@ -31,6 +31,44 @@ Panel actions can include:
 
 Charts automatically increase text and visual weight when shown in tall, large, or fullscreen panels.
 
+## Showcase Home
+
+The Home tab is an orienting landing page for first-time visitors and the
+Cloudflare-hosted demonstration. It presents SimEx as a reusable platform and
+uses the HeV-A26 scenario as the current live example.
+
+The page provides:
+
+- a concise operational-value statement;
+- routes to the Biomedical and Socio-economic tabs;
+- a short list of demonstration capabilities to try;
+- delivery-status language that distinguishes the cloud showcase from Quorum
+  integration readiness.
+
+The hosted dashboard operates normally in `Standalone` mode when no Quorum
+companion is present. `Quorum integration-ready` means that the compatibility
+foundation is included; it does not mean the public Cloudflare page is actively
+connected to Quorum.
+
+### Refreshing the dashboard preview
+
+Build and preview the app:
+
+```powershell
+pnpm.cmd build
+pnpm.cmd preview -- --host 127.0.0.1 --port 4175
+```
+
+In a second terminal, capture the approved Biomedical preview:
+
+```powershell
+node scripts/capture-showcase-preview.mjs http://127.0.0.1:4175
+```
+
+Review `public/assets/showcase-dashboard-preview.png` before committing it.
+The image must show only public demonstration data and must not include editor
+panels, browser chrome, private information, or console overlays.
+
 ### Edit mode
 
 Edit mode provides browser-based controls for changing the dashboard without manually modifying JSON or source code. It can be used to:

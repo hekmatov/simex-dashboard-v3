@@ -8,6 +8,28 @@ test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
 });
 
+test("Quorum chart display remains available when the dashboard starts on showcase Home", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", {
+      name: "From complex exercise data to shared situational awareness",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Companion connected")).toBeVisible();
+
+  await control(request, "display-set", {
+    chart_ids: [FIRST_CHART],
+    expected_display_revision: 0,
+  });
+
+  await expect(
+    page.locator(`[data-displayed-chart-id="${FIRST_CHART}"]`),
+  ).toBeVisible();
+});
+
 test("operator-authorized display and individual close share actual browser state", async ({
   page,
   request,
