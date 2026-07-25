@@ -4,20 +4,12 @@
     "keywords": ["biomedical", "socio-economic", "runtime", "static app"]
   },
   "home_case_map": {
-    "aliases": ["case map", "geographic spread", "kaart", "verspreiding", "provincies"],
-    "keywords": ["cases", "infected", "province", "map", "infecties"]
-  },
-  "bio_geo_spread": {
-    "aliases": ["case spread map", "geografische verspreiding", "infectiekaart", "provinciekaart"],
-    "keywords": ["cases", "infected", "province", "map", "verspreiding"]
-  },
-  "bio_municipality_choropleth": {
-    "aliases": ["municipality infection rate", "gemeente infecties", "gemeentekaart", "choropleth"],
-    "keywords": ["municipality", "gemeente", "infection rate", "infecties", "population"]
+    "aliases": ["case map", "case spread map", "geographic spread", "geografische verspreiding", "infectiekaart", "kaart", "provinciekaart", "provincies", "verspreiding"],
+    "keywords": ["cases", "infected", "infecties", "map", "province", "verspreiding"]
   },
   "bio_municipality_choropleth_animation": {
-    "aliases": ["infection timelapse", "municipality animation", "animatie", "tijdlijn", "gemeente verloop"],
-    "keywords": ["timelapse", "animation", "infection rate", "gemeente", "over time"]
+    "aliases": ["animatie", "choropleth", "gemeente infecties", "gemeente verloop", "gemeentekaart", "infection timelapse", "municipality animation", "municipality infection rate", "tijdlijn"],
+    "keywords": ["animation", "gemeente", "infecties", "infection rate", "municipality", "over time", "population", "timelapse"]
   },
   "bio_confirmed_cases": {
     "aliases": ["confirmed cases", "cumulative cases", "bevestigde gevallen", "cumulatieve besmettingen"],

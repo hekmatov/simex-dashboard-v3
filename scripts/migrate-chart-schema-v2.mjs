@@ -6,21 +6,8 @@ import { isAxisPanel, migrateDashboardToDataModel } from "../src/lib/chartDataMo
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = path.join(root, "public", "config", "dashboard.json");
-const packageBundlePath = path.join(root, "packaged-dashboard-bundle.json");
 
 await migrateConfigFile(configPath);
-
-try {
-  const bundle = JSON.parse(await fs.readFile(packageBundlePath, "utf8"));
-  if (bundle?.config) {
-    bundle.version = 2;
-    bundle.config = cleanMigratedConfig(bundle.config);
-    await fs.writeFile(packageBundlePath, `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
-    console.log(`Migrated ${path.relative(root, packageBundlePath)}.`);
-  }
-} catch (error) {
-  if (error.code !== "ENOENT") throw error;
-}
 
 async function migrateConfigFile(filePath) {
   const config = JSON.parse(await fs.readFile(filePath, "utf8"));
