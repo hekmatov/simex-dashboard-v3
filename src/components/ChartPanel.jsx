@@ -23,10 +23,10 @@ function ChartPanel({
   onStartSection,
   onToggleMultiSelect,
   onFullScreenHold,
+  onDisplayAction,
   onPointerReorder,
   onPointerDragStateChange,
 }) {
-  const [fullScreen, setFullScreen] = React.useState(false);
   const pointerDragRef = React.useRef(null);
   const exportRef = React.useRef(null);
   const visualPanel = resolvePanelColors(panel, globalPanelColors);
@@ -55,7 +55,6 @@ function ChartPanel({
     .join(" ");
 
   return (
-    <>
       <article
         data-panel-id={panel.id}
         className={articleClassName}
@@ -79,7 +78,9 @@ function ChartPanel({
           multiSelectMode={multiSelectMode}
           isMultiSelected={isMultiSelected}
           onToggleMultiSelect={onToggleMultiSelect}
-          onFullScreen={() => setFullScreen(true)}
+          onFullScreen={() =>
+            onDisplayAction({ type: "manual_open", chart_id: panel.id })
+          }
           onFullScreenHold={onFullScreenHold}
           onExport={(format, dpi) => exportRef.current?.(format, dpi)}
         />
@@ -92,30 +93,6 @@ function ChartPanel({
           <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} loadedData={loadedData} exportRef={exportRef} />
         )}
       </article>
-
-      {fullScreen && (
-        <div className="fullscreen-backdrop" role="dialog" aria-modal="true">
-          <article className="fullscreen-panel">
-            <button
-              type="button"
-              className="fullscreen-close-button"
-              onClick={() => setFullScreen(false)}
-              aria-label="Close fullscreen chart"
-            >
-              Close
-            </button>
-            {validationError ? (
-              <section className="chart-panel-error fullscreen-error">
-                <h3>{panel.title}</h3>
-                <p>{validationError}</p>
-              </section>
-            ) : (
-              <PanelBody panel={panel} globalPanelColors={globalPanelColors} data={filteredData} geoData={geoData} loadedData={loadedData} fullScreen />
-            )}
-          </article>
-        </div>
-      )}
-    </>
   );
 
   function startPanelPointerDrag(event, panelId) {
@@ -898,7 +875,8 @@ function areChartPanelPropsEqual(previous, next) {
     previous.isDragTarget === next.isDragTarget &&
     previous.isSelected === next.isSelected &&
     previous.multiSelectMode === next.multiSelectMode &&
-    previous.isMultiSelected === next.isMultiSelected
+    previous.isMultiSelected === next.isMultiSelected &&
+    previous.onDisplayAction === next.onDisplayAction
   );
 }
 

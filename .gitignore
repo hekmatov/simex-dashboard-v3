@@ -7,3 +7,5 @@ packaged-dashboard-bundle.json
 .DS_Store
 *.log
 voice-logs/
+playwright-report/
+test-results/

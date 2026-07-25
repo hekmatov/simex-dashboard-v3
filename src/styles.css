@@ -54,6 +54,16 @@ body::before {
   margin: 10px 0;
 }
 
+.companion-status {
+  background: rgb(248 251 255 / 92%);
+  border: 1px solid rgb(8 34 74 / 14%);
+  border-radius: 999px;
+  color: #49627a;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
 .dashboard-install-tools {
   display: flex;
   justify-content: flex-end;

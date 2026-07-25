@@ -51,7 +51,10 @@ pnpm.cmd preview
 - `src/components/ChartPanel.jsx`: renders individual charts, maps, tables, KPIs, fullscreen views, and panel actions.
 - `src/components/ChartSettingsPanel.jsx`: edit-mode controls for pages, sections, panels, data, series, axes, legends, styles, and layout.
 - `src/lib/chartOptionRegistry.js`: schema-style registry for chart edit options.
+- `public/integration/quorum-chart-catalogue.json`: generated metadata-only chart catalogue for Quorum.
+- `src/lib/quorumCompanionClient.js`: optional fail-closed companion discovery and WebSocket client.
 - `docs/app-manual.md`: public guide to dashboard use, configuration, deployment, and technical architecture.
+- `docs/quorum-companion.md`: Quorum catalogue, protocol, deployment, privacy, and test guide.
 - `docs/old-dashboard-migration-map.md`: migration notes from the original PDPC dashboard.
 - `docs/municipality-choropleth.md`: municipality choropleth data join and map-source notes.
 - `docs/google-feedback-form.md`: Google Form setup for participant bug reports and feature requests.
@@ -61,6 +64,34 @@ pnpm.cmd preview
 The dashboard currently supports a config-driven multi-page layout, point-and-click edit mode, uploaded CSV data sources, portable dashboard bundle import/export, global and per-panel visual styling, per-chart data filtering, panel drag/reorder, single-chart and multi-chart fullscreen views, individual chart image export, maps, municipality choropleths, gauges, image panels, and a configurable animated background.
 
 The footer includes a configurable feedback link. For private repositories, use the Google Form workflow in `docs/google-feedback-form.md` instead of linking to GitHub Issues.
+
+## Optional Quorum Companion
+
+The dashboard can connect to the local Quorum moderator companion through a
+same-origin, metadata-only protocol. Quorum may request an operator-authorized
+set of up to four chart IDs; manual and companion fullscreen actions use the
+same revisioned browser display state. If discovery is absent or incompatible,
+the dashboard remains manually usable in standalone mode.
+
+The integration never exchanges transcripts, speaker data, summaries, topics,
+evidence text, or other discussion content. Recommendation ranking and the
+recently closed list remain Quorum responsibilities; the dashboard reports only
+its actual ordered visible chart IDs.
+
+Generate the explicit catalogue snapshot with:
+
+```powershell
+pnpm.cmd run build:quorum-catalogue
+```
+
+Run the companion browser tests with:
+
+```powershell
+pnpm.cmd run build
+pnpm.cmd run test:e2e --project=chromium
+```
+
+See `docs/quorum-companion.md` for the complete contract and deployment guide.
 
 For a complete guide to using and understanding the dashboard, see:
 
@@ -74,25 +105,14 @@ In edit mode:
 
 - `Upload CSV` embeds a selected CSV as a dashboard data source.
 - Uploaded CSV sources appear in chart data-source dropdowns.
-- `Export bundle` downloads a JSON bundle containing the dashboard config plus uploaded CSV text.
-- `Import bundle` restores that bundle later, including the uploaded CSV data.
-- `Export package default` saves the current browser-edited dashboard as `packaged-dashboard-bundle.json` for the flash-drive builder.
+- `Export dashboard` downloads a dashboard file containing the dashboard config plus uploaded CSV text.
+- `Import dashboard` restores a dashboard file later, including the uploaded CSV data.
 
 Static files already in `public/data/**` remain file-backed. Uploaded CSVs are bundled so they can travel by email or flash drive as one JSON file.
 
 To make browser edit-mode changes part of the GitHub version:
 
-1. Click `Export package default` or `Export bundle`.
-2. Put the exported JSON in the project root as `packaged-dashboard-bundle.json`, or pass its path to the command below.
-3. Run:
-
-```powershell
-pnpm.cmd promote:bundle
-```
-
-That command writes the edited dashboard into `public/config/dashboard.json`. Any uploaded CSVs are written into `public/data/uploaded/`. Review the diff, then commit and push those tracked files. This is the source-controlled workflow for publishing browser edits through GitHub and Cloudflare.
-
-For maintainer work, treat this promoted output as the new baseline before making further code changes. In practice: export browser edits, run `pnpm.cmd promote:bundle`, commit the changed config/data files, then start the next feature or design update from that commit. This prevents future app updates from reverting your browser-made dashboard content.
+Use the project's current configuration publication workflow to update the shared default dashboard. Exported dashboard files are intended for sharing or restoring browser-configured dashboard views.
 
 When the dashboard app is updated, browser-saved edits are reconciled with the new default dashboard:
 
@@ -132,24 +152,7 @@ Create the portable folder:
 pnpm.cmd package:flashdrive
 ```
 
-If you want browser edit-mode changes to become the default dashboard inside the flash-drive package:
-
-1. Open V2 locally.
-2. Enter edit mode and make/save the dashboard edits.
-3. Click `Export package default`.
-4. Save or move the downloaded file to the project root as:
-
-```text
-packaged-dashboard-bundle.json
-```
-
-5. Run:
-
-```powershell
-pnpm.cmd package:flashdrive
-```
-
-When that file exists, the package command embeds it as the flash-drive dashboard default. If the file is absent, the package uses `public/config/dashboard.json`.
+The flash-drive package uses the tracked default configuration in `public/config/dashboard.json`.
 
 Copy this folder to a USB drive:
 
@@ -179,8 +182,7 @@ Caveats:
 
 - Online map tiles still need internet access.
 - Some institutional browsers may block scripts from USB drives. If that happens, try `START_DASHBOARD.bat`, copy the folder to the computer first, or use a static host.
-- `packaged-dashboard-bundle.json` is ignored by Git on purpose. It is a local packaging input, not a shared source file.
-- Exported dashboard bundles are still the best way to move scenario-specific edits and uploaded CSVs between separate dashboard copies.
+- Exported dashboard files are the best way to move scenario-specific edits and uploaded CSVs between separate dashboard copies.
 
 ## Bundle Size Note
 

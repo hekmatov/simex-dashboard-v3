@@ -3,7 +3,13 @@
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import { migrateDashboardToDataModel } from "./lib/chartDataModel.js";
 import { reconcileDashboardWithLoadedData } from "./lib/dashboardCompatibility.js";
+import {
+  initialDisplayState,
+  reduceDisplayState,
+} from "./lib/displayController.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
+import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
+import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 
 const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-v2-device-layout";
@@ -46,6 +52,17 @@ export default function App() {
   const [editSessionStartConfig, setEditSessionStartConfig] = useState(null);
   const [compatibilityReports, setCompatibilityReports] = useState([]);
   const [deviceLayout, setDeviceLayout] = useState(() => loadDeviceLayout());
+  const [displayState, setDisplayState] = useState(initialDisplayState);
+  const [companionStatus, setCompanionStatus] = useState("standalone");
+  const displayStateRef = React.useRef(displayState);
+  const validDisplayChartIdsRef = React.useRef(new Set());
+  const companionClientRef = React.useRef(null);
+  const validDisplayChartIds = React.useMemo(
+    () => configuredPanelIds(dashboard),
+    [dashboard?.pages],
+  );
+  const dashboardReady = Boolean(dashboard);
+  validDisplayChartIdsRef.current = validDisplayChartIds;
 
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
@@ -77,6 +94,101 @@ export default function App() {
       .then((loadedDashboard) => applyLoadedDashboard(loadedDashboard, { showReport: SHOW_COMPATIBILITY_REPORTS }))
       .catch((loadError) => setError(loadError));
   }, []);
+
+  useEffect(() => {
+    const current = displayStateRef.current;
+    const next = reduceDisplayState(
+      current,
+      {
+        type: "companion_reconcile",
+        chart_ids: current.displayed_chart_ids.filter((chartId) =>
+          validDisplayChartIds.has(chartId),
+        ),
+      },
+      validDisplayChartIds,
+    );
+    if (next !== current) {
+      displayStateRef.current = next;
+      setDisplayState(next);
+      companionClientRef.current?.displayStateChanged("manual_close");
+    }
+  }, [validDisplayChartIds]);
+
+  const dispatchDisplayAction = React.useCallback((action) => {
+    const current = displayStateRef.current;
+    const next = reduceDisplayState(
+      current,
+      action,
+      validDisplayChartIdsRef.current,
+    );
+    if (next !== current) {
+      displayStateRef.current = next;
+      setDisplayState(next);
+      const changeReason = displayActionReason(action);
+      if (changeReason) {
+        companionClientRef.current?.displayStateChanged(changeReason);
+      }
+    }
+    return next;
+  }, []);
+
+  useEffect(() => {
+    if (!dashboardReady) {
+      return undefined;
+    }
+    let disposed = false;
+    let client = null;
+
+    Promise.all([
+      fetchJson(
+        `${import.meta.env.BASE_URL}integration/quorum-chart-catalogue.json`,
+      ),
+      fetchJson(`${import.meta.env.BASE_URL}config/chart-aliases.json`),
+    ])
+      .then(async ([catalogue, aliases]) => {
+        if (disposed) {
+          return;
+        }
+        const matchesActiveDashboard =
+          await catalogueMatchesDashboardSnapshot(
+            stripRuntimeFields(dashboard),
+            aliases,
+            catalogue,
+          );
+        if (disposed) {
+          return;
+        }
+        if (!matchesActiveDashboard) {
+          setCompanionStatus("incompatible");
+          return;
+        }
+        client = createQuorumCompanionClient({
+          catalogue,
+          getDisplayState: () => displayStateRef.current,
+          dispatchDisplayAction,
+          onStatus: (status) => {
+            if (!disposed) {
+              setCompanionStatus(status);
+            }
+          },
+        });
+        companionClientRef.current = client;
+        return client.start();
+      })
+      .catch(() => {
+        if (!disposed) {
+          setCompanionStatus("disconnected");
+        }
+      });
+
+    return () => {
+      disposed = true;
+      if (companionClientRef.current === client) {
+        companionClientRef.current = null;
+      }
+      client?.stop();
+    };
+  }, [dashboard, dashboardReady, dispatchDisplayAction]);
 
   function applyLoadedDashboard(loadedDashboard, { showReport = false, persistReconciliation = true } = {}) {
     const runtimeConfig = stripRuntimeFields(loadedDashboard);
@@ -274,37 +386,6 @@ export default function App() {
     promptAndDownloadDashboardBundle(bundleFromDashboard(configOverride ?? dashboard), `SimEx-dashboard-bundle-${dateStamp()}`);
   }
 
-  async function exportPackageDefaultConfig(configOverride) {
-    const bundle = bundleFromDashboard(configOverride ?? dashboard);
-    const fileName = "packaged-dashboard-bundle.json";
-
-    if (globalThis.window?.showSaveFilePicker) {
-      try {
-        const fileHandle = await globalThis.window.showSaveFilePicker({
-          suggestedName: fileName,
-          types: [
-            {
-              description: "SimEx dashboard package default bundle",
-              accept: { "application/json": [".json"] },
-            },
-          ],
-        });
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(bundle, null, 2));
-        await writable.close();
-        window.alert(`Saved ${fileName}. Place it in the project root before running pnpm.cmd package:flashdrive.`);
-        return;
-      } catch (saveError) {
-        if (saveError?.name === "AbortError") {
-          return;
-        }
-      }
-    }
-
-    downloadDashboardBundle(bundle, fileName);
-    window.alert(`Your browser downloaded ${fileName}. Move it into the project root before running pnpm.cmd package:flashdrive.`);
-  }
-
   function bundleFromDashboard(currentDashboard) {
     const config = stripRuntimeFields(currentDashboard);
     return {
@@ -396,6 +477,9 @@ export default function App() {
       )}
       <DashboardRenderer
         dashboard={dashboard}
+        displayState={displayState}
+        onDisplayAction={dispatchDisplayAction}
+        companionStatusLabel={companionStatusLabel(companionStatus)}
         deviceLayout={deviceLayout}
         onDeviceLayoutChange={changeDeviceLayout}
         editMode={editMode}
@@ -415,12 +499,60 @@ export default function App() {
         onPanelReorder={reorderPanel}
         onImportConfig={importConfig}
         onExportConfig={exportConfig}
-        onExportPackageDefault={exportPackageDefaultConfig}
         onUploadCsv={uploadCsvSource}
         onResetEditSession={cancelEditSession}
       />
     </>
   );
+}
+
+function configuredPanelIds(dashboard) {
+  return new Set(
+    (dashboard?.pages ?? []).flatMap((page) =>
+      (page.sections ?? []).flatMap((section) =>
+        (section.panels ?? []).map((panel) => panel.id),
+      ),
+    ),
+  );
+}
+
+function displayActionReason(action) {
+  switch (action.type) {
+    case "manual_open":
+    case "manual_set":
+      return "manual_open";
+    case "manual_close":
+    case "manual_close_all":
+      return "manual_close";
+    case "manual_reorder":
+      return "manual_reorder";
+    default:
+      return null;
+  }
+}
+
+function companionStatusLabel(status) {
+  switch (status) {
+    case "ready":
+      return "Companion connected";
+    case "discovering":
+    case "connecting":
+    case "authenticating":
+      return "Companion connecting";
+    case "incompatible":
+    case "disconnected":
+      return "Companion unavailable";
+    default:
+      return "Standalone";
+  }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("required dashboard metadata unavailable");
+  }
+  return response.json();
 }
 
 function loadDeviceLayout() {
