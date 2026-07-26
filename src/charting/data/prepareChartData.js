@@ -78,13 +78,13 @@ export function prepareChartData(input = {}) {
     );
   }
 
-  const prepared = PREPARERS[schema.dataFamily]({
+  const prepared = prepareProjectedData({
     ...input,
     chart,
     schema,
     rows: transformed.rows,
     transformed,
-  });
+  }, temporalProjection);
   const timeAware = applyTemporalProvenance({
     chart,
     prepared,
@@ -94,6 +94,44 @@ export function prepareChartData(input = {}) {
     ...timeAware,
     diagnostics: [...initialDiagnostics, ...(timeAware.diagnostics ?? [])],
   }, transformed, schema);
+}
+
+function prepareProjectedData(input, temporalProjection) {
+  if (input.schema.dataFamily !== "axis" || !temporalProjection.measureRows) {
+    return PREPARERS[input.schema.dataFamily](input);
+  }
+  const parts = [...temporalProjection.measureRows.values()].map(({ measure, rows }) => (
+    prepareAxisData({
+      ...input,
+      chart: {
+        ...input.chart,
+        roles: {
+          ...input.chart.roles,
+          measurements: measure,
+        },
+      },
+      rows,
+      transformed: {
+        ...input.transformed,
+        rows,
+      },
+    })
+  ));
+  return {
+    marks: parts.flatMap(({ marks = [] }) => marks),
+    diagnostics: parts.flatMap(({ diagnostics = [] }) => diagnostics),
+    duplicateGroupCount: parts.reduce(
+      (total, { duplicateGroupCount = 0 }) => total + duplicateGroupCount,
+      0,
+    ),
+    meta: {
+      ...(parts[0]?.meta ?? {}),
+      axes: {
+        primary: parts.flatMap(({ meta }) => meta?.axes?.primary ?? []),
+        secondary: parts.flatMap(({ meta }) => meta?.axes?.secondary ?? []),
+      },
+    },
+  };
 }
 
 function validateGroupTransform(schema, transformed, datasetProfile) {

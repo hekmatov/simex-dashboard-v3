@@ -33,6 +33,13 @@ export function applyTimeContext({
       "The active playback time must be a finite canonical timestamp.",
     );
   }
+  if (!Number.isFinite(new Date(timeContext.activeEpochMs).valueOf())) {
+    return invalidProjection(
+      rows,
+      "invalid-time-context",
+      "The active playback time must be within the supported date range.",
+    );
+  }
 
   const timeBinding = temporalBinding(chart);
   if (!timeBinding) {
@@ -53,66 +60,118 @@ export function applyTimeContext({
   const groups = groupRows(chart, rows, profile, transformed, timeBinding);
   const matches = new Map();
   const projectedRows = [];
+  const projectedSourceRows = new Map();
+  const projectedSyntheticRows = new Map();
+  const measurements = measureBindings(chart);
+  const measureRows = familyForType(chart.typeId) === "axis" && measurements.length > 1
+    ? new Map(measurements.map((measure) => [
+        bindingField(measure),
+        { measure, rows: [] },
+      ]))
+    : null;
 
   try {
     for (const [identity, group] of groups) {
-      const buckets = temporalBuckets(group, timeBinding, profile);
+      const buckets = temporalBuckets(group.rows, timeBinding, profile);
       const match = matchGroup({
         chart,
         buckets,
+        measure: group.measure,
         profile,
         reference,
         activeEpochMs: timeContext.activeEpochMs,
         transformed,
       });
       const provenance = temporalProvenance(match, timeContext.activeEpochMs, activeCanonical);
-      const availableBuckets = matchableBuckets(chart, buckets, profile, transformed);
+      const availableBuckets = matchableBuckets(
+        chart,
+        buckets,
+        profile,
+        transformed,
+        group.measure,
+      );
       const record = { identity, buckets, availableBuckets, match, provenance };
       matches.set(identity, record);
 
       if (mode === "trace") {
-        projectedRows.push(...group);
+        appendMeasureRows(measureRows, group.measure, group.rows);
+        appendProjectedSourceRows({
+          chart,
+          rows: group.rows,
+          measure: group.measure,
+          measurements,
+          projectedRows,
+          projectedSourceRows,
+        });
         if (match.status === "interpolated") {
-          projectedRows.push(synthesizeInterpolatedRow({
+          const interpolatedRow = synthesizeInterpolatedRow({
             chart,
             buckets,
+            measure: group.measure,
             profile,
             reference,
             activeEpochMs: timeContext.activeEpochMs,
             activeCanonical,
             transformed,
-          }));
+          });
+          appendMeasureRows(measureRows, group.measure, [interpolatedRow]);
+          appendProjectedSyntheticRow({
+            chart,
+            row: interpolatedRow,
+            identity: group.baseIdentity,
+            measure: group.measure,
+            measurements,
+            projectedRows,
+            projectedSyntheticRows,
+          });
         }
         continue;
       }
 
       if (match.status === "missing") continue;
       if (match.status === "interpolated") {
-        projectedRows.push(synthesizeInterpolatedRow({
+        if (isDeltaChart(chart)) {
+          const preceding = precedingBucket(availableBuckets, timeContext.activeEpochMs);
+          if (preceding) projectedRows.push(...preceding.rows);
+          record.comparison = comparisonProvenance(preceding);
+        }
+        const interpolatedRow = synthesizeInterpolatedRow({
           chart,
           buckets,
+          measure: group.measure,
           profile,
           reference,
           activeEpochMs: timeContext.activeEpochMs,
           activeCanonical,
           transformed,
-        }));
+        });
+        appendMeasureRows(measureRows, group.measure, [interpolatedRow]);
+        appendProjectedSyntheticRow({
+          chart,
+          row: interpolatedRow,
+          identity: group.baseIdentity,
+          measure: group.measure,
+          measurements,
+          projectedRows,
+          projectedSyntheticRows,
+        });
         continue;
       }
 
       if (isDeltaChart(chart)) {
         const preceding = precedingBucket(availableBuckets, match.observation.epochMs);
         if (preceding) projectedRows.push(...preceding.rows);
-        record.comparison = preceding
-          ? {
-              status: "observed",
-              sourceEpochMs: preceding.epochMs,
-              activeEpochMs: preceding.epochMs,
-              activeCanonical: preceding.canonical,
-            }
-          : null;
+        record.comparison = comparisonProvenance(preceding);
       }
-      projectedRows.push(...match.observation.rows);
+      appendMeasureRows(measureRows, group.measure, match.observation.rows);
+      appendProjectedSourceRows({
+        chart,
+        rows: match.observation.rows,
+        measure: group.measure,
+        measurements,
+        projectedRows,
+        projectedSourceRows,
+      });
     }
   } catch (cause) {
     return invalidProjection(
@@ -150,6 +209,7 @@ export function applyTimeContext({
     matches,
     activeTime,
     timeBinding,
+    ...(measureRows ? { measureRows } : {}),
     transformed,
   };
 }
@@ -185,10 +245,19 @@ export function applyTemporalProvenance({ chart = {}, prepared = {}, projection 
 
 function groupRows(chart, rows, profile, transformed, timeBinding) {
   const groups = new Map();
+  const measurements = familyForType(chart.typeId) === "axis"
+    ? measureBindings(chart)
+    : [];
+  const groupMeasurements = measurements.length > 0 ? measurements : [null];
   for (const row of rows) {
-    const identity = rowIdentity(chart, row, profile, transformed, timeBinding);
-    if (!groups.has(identity)) groups.set(identity, []);
-    groups.get(identity).push(row);
+    const baseIdentity = rowIdentity(chart, row, profile, transformed, timeBinding);
+    for (const measure of groupMeasurements) {
+      const identity = rowIdentity(chart, row, profile, transformed, timeBinding, measure);
+      if (!groups.has(identity)) {
+        groups.set(identity, { baseIdentity, measure, rows: [] });
+      }
+      groups.get(identity).rows.push(row);
+    }
   }
   return groups;
 }
@@ -210,19 +279,26 @@ function temporalBuckets(rows, timeBinding, profile) {
 function matchGroup({
   chart,
   buckets,
+  measure: selectedMeasure,
   profile,
   reference,
   activeEpochMs,
   transformed,
 }) {
-  const measure = measureBindings(chart)[0] ?? null;
+  const measure = selectedMeasure ?? measureBindings(chart)[0] ?? null;
   const interpolationAllowed = measure ? bindingAllowsInterpolation(measure, profile) : false;
-  const observations = matchableBuckets(chart, buckets, profile, transformed).map((bucket) => ({
-    ...bucket,
-    value: measure
-      ? bucketMeasureValue(bucket, measure, profile, transformed)
-      : 0,
-  }));
+  const observations = matchableBuckets(
+    chart,
+    buckets,
+    profile,
+    transformed,
+    measure,
+  ).map((bucket) => ({
+      ...bucket,
+      value: measure
+        ? bucketMeasureValue(bucket, measure, profile, transformed)
+        : 0,
+    }));
   return matchTemporalObservation({
     observations,
     activeEpochMs,
@@ -235,24 +311,32 @@ function matchGroup({
 function synthesizeInterpolatedRow({
   chart,
   buckets,
+  measure: selectedMeasure,
   profile,
   reference,
   activeEpochMs,
   activeCanonical,
   transformed,
 }) {
-  const usableBuckets = matchableBuckets(chart, buckets, profile, transformed);
+  const measure = selectedMeasure ?? measureBindings(chart)[0] ?? null;
+  const usableBuckets = matchableBuckets(
+    chart,
+    buckets,
+    profile,
+    transformed,
+    measure,
+  );
   const lowerIndex = usableBuckets.findIndex(({ epochMs }) => epochMs > activeEpochMs) - 1;
   const lower = usableBuckets[lowerIndex];
   const upper = usableBuckets[lowerIndex + 1];
   if (!lower || !upper) throw new Error("Interpolation requires observations on both sides.");
   const timeBinding = temporalBinding(chart);
   const row = { ...lower.rows[0], [bindingField(timeBinding)]: activeCanonical };
-  for (const measure of measureBindings(chart)) {
+  for (const measureBinding of measure ? [measure] : measureBindings(chart)) {
     const observations = buckets
       .map((bucket) => ({
         epochMs: bucket.epochMs,
-        value: bucketMeasureValue(bucket, measure, profile, transformed),
+        value: bucketMeasureValue(bucket, measureBinding, profile, transformed),
       }))
       .filter(({ value }) => Number.isFinite(value));
     const match = matchTemporalObservation({
@@ -260,9 +344,9 @@ function synthesizeInterpolatedRow({
       activeEpochMs,
       policy: reference.policy ?? "exact",
       toleranceMs: reference.toleranceMs ?? reference.tolerance,
-      interpolationAllowed: bindingAllowsInterpolation(measure, profile),
+      interpolationAllowed: bindingAllowsInterpolation(measureBinding, profile),
     });
-    row[bindingField(measure)] = match.observation.value;
+    row[bindingField(measureBinding)] = match.observation.value;
   }
   return row;
 }
@@ -291,8 +375,8 @@ function bucketMeasureValue(bucket, binding, profile, transformed) {
   return method === "last" ? values.at(-1) : values[0];
 }
 
-function matchableBuckets(chart, buckets, profile, transformed) {
-  const measure = measureBindings(chart)[0] ?? null;
+function matchableBuckets(chart, buckets, profile, transformed, selectedMeasure = null) {
+  const measure = selectedMeasure ?? measureBindings(chart)[0] ?? null;
   if (!measure) return buckets;
   return buckets.filter((bucket) => Number.isFinite(
     bucketMeasureValue(bucket, measure, profile, transformed),
@@ -335,6 +419,17 @@ function precedingBucket(buckets, displayedEpochMs) {
   return null;
 }
 
+function comparisonProvenance(bucket) {
+  return bucket
+    ? {
+        status: "observed",
+        sourceEpochMs: bucket.epochMs,
+        activeEpochMs: bucket.epochMs,
+        activeCanonical: bucket.canonical,
+      }
+    : null;
+}
+
 function temporalBinding(chart) {
   const role = chart.typeId === "line"
     || chart.typeId === "area"
@@ -356,15 +451,17 @@ function measureBindings(chart) {
   return roleIds.flatMap((role) => bindingList(chart.roles?.[role]));
 }
 
-function rowIdentity(chart, row, profile, transformed, timeBinding) {
+function rowIdentity(chart, row, profile, transformed, timeBinding, measure = null) {
   const family = familyForType(chart.typeId);
   const group = groupValue(row, transformed, profile, timeBinding);
   if (family === "axis") {
-    return stableKey([
+    const values = [
       multiRoleValue(row, chart, "cluster", profile),
       roleValue(row, chart, "label", profile),
       group,
-    ]);
+    ];
+    if (measure) values.push(bindingField(measure));
+    return stableKey(values);
   }
   if (family === "target") {
     return stableKey([
@@ -390,7 +487,7 @@ function rowIdentity(chart, row, profile, transformed, timeBinding) {
 
 function markIdentity(chart, mark) {
   const family = familyForType(chart.typeId);
-  if (family === "axis") return stableKey([mark.cluster, mark.label, mark.group]);
+  if (family === "axis") return stableKey([mark.cluster, mark.label, mark.group, mark.measure]);
   if (family === "target") return stableKey([mark.entity, mark.label]);
   if (family === "geography") return stableKey([mark.geography, mark.group]);
   if (family === "matrix") return stableKey([mark.row, mark.column, mark.group]);
@@ -414,6 +511,70 @@ function projectSnapshotMarkTime(chart, mark, activeCanonical) {
     return { ...mark, time: activeCanonical };
   }
   return mark;
+}
+
+function appendProjectedSourceRows({
+  chart,
+  rows,
+  measure,
+  measurements,
+  projectedRows,
+  projectedSourceRows,
+}) {
+  if (familyForType(chart.typeId) !== "axis" || measurements.length <= 1 || !measure) {
+    projectedRows.push(...rows);
+    return;
+  }
+  for (const row of rows) {
+    let projected = projectedSourceRows.get(row);
+    if (!projected) {
+      projected = measurementOnlyRow(row, measurements, measure);
+      projectedSourceRows.set(row, projected);
+      projectedRows.push(projected);
+    } else {
+      const field = bindingField(measure);
+      projected[field] = row[field];
+    }
+  }
+}
+
+function appendProjectedSyntheticRow({
+  chart,
+  row,
+  identity,
+  measure,
+  measurements,
+  projectedRows,
+  projectedSyntheticRows,
+}) {
+  if (familyForType(chart.typeId) !== "axis" || measurements.length <= 1 || !measure) {
+    projectedRows.push(row);
+    return;
+  }
+  let projected = projectedSyntheticRows.get(identity);
+  if (!projected) {
+    projected = measurementOnlyRow(row, measurements, measure);
+    projectedSyntheticRows.set(identity, projected);
+    projectedRows.push(projected);
+  } else {
+    const field = bindingField(measure);
+    projected[field] = row[field];
+  }
+}
+
+function measurementOnlyRow(row, measurements, selectedMeasure) {
+  const projected = { ...row };
+  for (const measurement of measurements) {
+    projected[bindingField(measurement)] = null;
+  }
+  const selectedField = bindingField(selectedMeasure);
+  projected[selectedField] = row[selectedField];
+  return projected;
+}
+
+function appendMeasureRows(measureRows, measure, rows) {
+  if (!measureRows || !measure) return;
+  measureRows.get(bindingField(measure))?.rows.push(...rows);
 }
 
 function roleValue(row, chart, roleId, profile) {

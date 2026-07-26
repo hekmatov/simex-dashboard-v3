@@ -118,6 +118,40 @@ test("snapshot bars match each series independently and preserve carried provena
   assert.equal(result.meta.activeTime.status, "mixed");
 });
 
+test("multi-measure snapshots match each measurement independently when the first is unavailable", () => {
+  const rows = [
+    { at: "2027-05-01", admissions: 10, discharges: null },
+    { at: "2027-05-02", admissions: null, discharges: 22 },
+  ];
+  const result = prepare({
+    chart: playbackChart("bar", {
+      measurements: [
+        { field: "admissions", label: "Admissions" },
+        { field: "discharges", label: "Discharges" },
+      ],
+      observation: { field: "at" },
+    }),
+    rows,
+  });
+
+  assert.equal(result.status, "ready");
+  assert.deepEqual(
+    result.marks.map(({ measure, value, temporalProvenance }) => ({
+      measure,
+      value,
+      status: temporalProvenance.status,
+      sourceEpochMs: temporalProvenance.sourceEpochMs,
+    })),
+    [{
+      measure: "discharges",
+      value: 22,
+      status: "observed",
+      sourceEpochMs: MAY_2,
+    }],
+  );
+  assert.equal(result.meta.activeTime.status, "mixed");
+});
+
 test("trace charts retain history while exposing observed and missing active series states", () => {
   const rows = [
     { at: "2027-05-01", clinic: "A", value: 10 },
@@ -150,6 +184,32 @@ test("trace charts retain history while exposing observed and missing active ser
   assert.ok(clinicB.every(({ active }) => active === false));
   assert.ok(clinicB.every(({ temporalProvenance }) => temporalProvenance.status === "missing"));
   assert.equal(result.meta.activeTime.mode, "trace");
+  assert.equal(result.meta.activeTime.status, "mixed");
+});
+
+test("multi-measure traces retain measurement-specific observed and missing provenance", () => {
+  const rows = [
+    { at: "2027-05-01", admissions: 10, discharges: null },
+    { at: "2027-05-02", admissions: null, discharges: 22 },
+  ];
+  const result = prepare({
+    chart: playbackChart("line", {
+      measurements: [
+        { field: "admissions", label: "Admissions" },
+        { field: "discharges", label: "Discharges" },
+      ],
+      observation: { field: "at" },
+    }),
+    rows,
+  });
+  const byMeasure = Object.fromEntries(result.marks.map((mark) => [mark.measure, mark]));
+
+  assert.equal(result.status, "ready");
+  assert.equal(byMeasure.admissions.active, false);
+  assert.equal(byMeasure.admissions.temporalProvenance.status, "missing");
+  assert.equal(byMeasure.discharges.active, true);
+  assert.equal(byMeasure.discharges.temporalProvenance.status, "observed");
+  assert.equal(byMeasure.discharges.temporalProvenance.sourceEpochMs, MAY_2);
   assert.equal(result.meta.activeTime.status, "mixed");
 });
 
@@ -268,6 +328,26 @@ test("a malformed active context fails closed through normal invalid-result sema
   assert.ok(result.diagnostics.some(({ code }) => code === "invalid-time-context"));
 });
 
+test("a finite out-of-range active epoch returns a bounded invalid-context diagnostic", () => {
+  const rows = [{ at: "2027-05-01", value: 10 }];
+  const result = prepareChartData({
+    chart: playbackChart("kpi", {
+      value: { field: "value" },
+      time: { field: "at" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+    timeContext: { groupId: "exercise", activeEpochMs: Number.MAX_SAFE_INTEGER },
+  });
+  const diagnostic = result.diagnostics.find(({ code }) => code === "invalid-time-context");
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  assert.ok(diagnostic);
+  assert.match(diagnostic.message, /supported date range/);
+  assert.ok(diagnostic.message.length <= 240);
+});
+
 test("playback deltas select the active value and latest distinct preceding observation, never target", () => {
   const rows = [
     { at: "2027-05-01", value: 10, target: 999 },
@@ -294,6 +374,36 @@ test("playback deltas select the active value and latest distinct preceding obse
   assert.equal(mark.temporalProvenance.status, "observed");
   assert.equal(mark.temporalProvenance.sourceEpochMs, MAY_2);
   assert.equal(mark.temporalProvenance.comparison.sourceEpochMs, MAY_1);
+});
+
+test("interpolated playback deltas retain the latest distinct preceding observation as baseline", () => {
+  const rows = [
+    { at: "2027-05-01", value: 10, target: 999 },
+    { at: "2027-05-03", value: 30, target: 999 },
+  ];
+  const result = prepare({
+    chart: playbackChart("deltaCard", {
+      measurement: { field: "value", interpolationAllowed: true },
+      time: { field: "at" },
+      target: { field: "target" },
+    }, { policy: "interpolate" }),
+    rows,
+    interpolationFields: ["value"],
+  });
+  const mark = result.marks[0];
+
+  assert.equal(result.status, "ready");
+  assert.equal(mark.displayed, 20);
+  assert.equal(mark.displayedTime, "2027-05-02");
+  assert.equal(mark.comparison, 10);
+  assert.equal(mark.comparisonTime, "2027-05-01");
+  assert.notEqual(mark.comparison, mark.target);
+  assert.deepEqual(mark.delta, { absolute: 10, percentage: 100 });
+  assert.equal(mark.temporalProvenance.status, "interpolated");
+  assert.equal(mark.temporalProvenance.lowerEpochMs, MAY_1);
+  assert.equal(mark.temporalProvenance.upperEpochMs, MAY_3);
+  assert.equal(mark.temporalProvenance.comparison.sourceEpochMs, MAY_1);
+  assert.equal(mark.temporalProvenance.comparison.activeEpochMs, MAY_1);
 });
 
 test("playback projection does not mutate chart, rows, profile, or time context", () => {
