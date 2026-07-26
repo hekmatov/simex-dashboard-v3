@@ -11,6 +11,7 @@ export const CHART_CONFIG_VERSION = 3;
 
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "temporalMatch"]);
+const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues", "temporalMatch"]);
 const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
@@ -167,8 +168,11 @@ function validateFilter(filter, columnTypes, chart) {
 function validateTransformations(chart, schema, columnTypes) {
   ensureObject(chart.transformations, "Chart transformations");
   checkKnownKeys(chart.transformations, TRANSFORMATION_KEYS, "chart transformations");
-  checkRequiredKeys(chart.transformations, TRANSFORMATION_KEYS, "Chart transformations");
-  const { filters, grouping, aggregation, duplicates, missingValues, temporalMatch } = chart.transformations;
+  checkRequiredKeys(chart.transformations, REQUIRED_TRANSFORMATION_KEYS, "Chart transformations");
+  const { filters, grouping, duplicates, missingValues, temporalMatch } = chart.transformations;
+  const aggregation = Object.hasOwn(chart.transformations, "aggregation")
+    ? chart.transformations.aggregation
+    : null;
   if (!Array.isArray(filters)) throw new Error("Chart transformations filters must be an array.");
   if (filters.length > 0 && !schema.transforms.includes("filter")) throw new Error(`Chart type "${schema.typeId}" does not support filters.`);
   filters.forEach((filter) => validateFilter(filter, columnTypes, chart));

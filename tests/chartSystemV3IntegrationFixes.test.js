@@ -493,6 +493,64 @@ test("duplicate and aggregation controls preserve supported shorthand and aggreg
   );
 });
 
+test("arithmetic duplicate shorthand may literally omit the aggregation property", () => {
+  const base = configuredChart("bar", {
+    measurements: [{ field: "value", interpretation: "number" }],
+    observation: { field: "category", interpretation: "category" },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance({
+    ...base,
+    transformations: {
+      filters: [],
+      grouping: null,
+      duplicates: "sum",
+      missingValues: "gap",
+      temporalMatch: null,
+    },
+  }));
+});
+
+test("aggregate duplicate strategy accepts only explicit arithmetic methods", () => {
+  const base = configuredChart("bar", {
+    measurements: [{ field: "value", interpretation: "number" }],
+    observation: { field: "category", interpretation: "category" },
+  });
+  for (const aggregation of ["first", "last"]) {
+    assert.throws(
+      () => validateChartInstance({
+        ...base,
+        transformations: {
+          filters: [],
+          grouping: null,
+          aggregation,
+          duplicates: "aggregate",
+          missingValues: "gap",
+          temporalMatch: null,
+        },
+      }),
+      /aggregate.*explicit.*arithmetic aggregation/i,
+      aggregation,
+    );
+  }
+  for (const aggregation of ["sum", "mean", "average", "min", "max", "count"]) {
+    assert.doesNotThrow(
+      () => validateChartInstance({
+        ...base,
+        transformations: {
+          filters: [],
+          grouping: null,
+          aggregation,
+          duplicates: "aggregate",
+          missingValues: "gap",
+          temporalMatch: null,
+        },
+      }),
+      aggregation,
+    );
+  }
+});
+
 test("all declared presentation subshapes reject malformed values before rendering", () => {
   const cases = [
     ["axes", { primary: "value axis" }],
