@@ -128,8 +128,10 @@ test("special numeric values remain distinct for unique counts and fingerprints"
     { value: Number.NEGATIVE_INFINITY },
     { value: -0 },
     { value: 0 },
+    { value: null },
   ]);
   assert.equal(profile.columns[0].uniqueCount, 5);
   assert.notEqual(profileDataset([{ value: Number.NaN }]).fingerprint, profileDataset([{ value: Number.POSITIVE_INFINITY }]).fingerprint);
   assert.notEqual(profileDataset([{ value: -0 }]).fingerprint, profileDataset([{ value: 0 }]).fingerprint);
+  assert.notEqual(profileDataset([{ value: null }]).fingerprint, profileDataset([{ value: Number.NaN }]).fingerprint);
 });
