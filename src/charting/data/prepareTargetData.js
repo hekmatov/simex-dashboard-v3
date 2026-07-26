@@ -130,6 +130,8 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
     marks.push({
       entity: displayed.entity,
       time: displayed.time,
+      displayedTime: displayed.time,
+      comparisonTime: comparison.time,
       displayed: displayed.value,
       comparison: comparison.value,
       target: displayed.target,

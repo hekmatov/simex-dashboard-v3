@@ -529,6 +529,32 @@ test("delta card reports displayed, comparison, absolute, and percentage values"
   assert.deepEqual(result.marks[0].delta, { absolute: 2, percentage: 25 });
 });
 
+test("delta preparation retains the exact selected times after missing-value removal and duplicate resolution", () => {
+  const rows = [
+    { at: "2027-05-03", value: 10 },
+    { at: "2027-05-02", value: "" },
+    { at: "2027-05-01", value: 2 },
+    { at: "2027-05-01", value: 3 },
+  ];
+  const result = prepareChartData({
+    chart: chart("deltaCard", {
+      measurement: { field: "value" },
+      time: { field: "at" },
+    }, [
+      { type: "missing", strategy: "drop" },
+      { type: "duplicates", strategy: "aggregate" },
+      { type: "aggregate", method: "sum" },
+    ]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.marks[0].displayedTime, "2027-05-03");
+  assert.equal(result.marks[0].comparisonTime, "2027-05-01");
+  assert.equal(result.marks[0].comparison, 5);
+});
+
 test("delta card rejects multiple bound entities with an actionable alternative", () => {
   const rows = [
     { at: "2027-05-01", entity: "A", value: 5 },

@@ -17,6 +17,7 @@ function gaugeModel(chart, marks) {
   const layout = gaugeLayout(chart.presentation?.collection, marks.length);
   return {
     kind: "echarts",
+    semanticSummary: targetSemanticSummary(chart, marks),
     presentation: {
       collection: clone(chart.presentation?.collection ?? null),
     },
@@ -63,6 +64,7 @@ function bulletModel(chart, marks) {
   const categories = marks.map((mark, index) => mark.label ?? `Item ${index + 1}`);
   return {
     kind: "echarts",
+    semanticSummary: targetSemanticSummary(chart, marks),
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
@@ -126,10 +128,23 @@ function deltaItem(chart, mark, index) {
     label: mark.entity ?? chart.title ?? "Change",
     value: mark.displayed,
     target: mark.target ?? null,
-    time: mark.time ?? null,
+    time: mark.displayedTime ?? mark.time ?? null,
     comparison: mark.comparison,
+    comparisonTime: mark.comparisonTime ?? null,
     delta: clone(mark.delta ?? { absolute: null, percentage: null }),
     direction: absolute > 0 ? "increase" : absolute < 0 ? "decrease" : "unchanged",
+  };
+}
+
+function targetSemanticSummary(chart, marks) {
+  return {
+    collection: clone(chart.presentation?.collection ?? null),
+    items: marks.map((mark, index) => ({
+      label: mark.entity ?? mark.label ?? chart.title ?? `Item ${index + 1}`,
+      actual: mark.value ?? mark.actual ?? null,
+      target: mark.target ?? null,
+      time: mark.time ?? null,
+    })),
   };
 }
 

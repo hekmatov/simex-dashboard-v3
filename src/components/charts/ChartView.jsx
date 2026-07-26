@@ -1,7 +1,6 @@
 import React from "react";
 
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
-import { applyTimeContext, applyTransforms, readRoleValue } from "../../charting/data/transforms.js";
 import { buildRenderModel } from "../../charting/rendering/buildRenderModel.js";
 import CardChartView from "./CardChartView.jsx";
 import EChartsChartView from "./EChartsChartView.jsx";
@@ -14,41 +13,31 @@ export default function ChartView(props) {
   try {
     const prepared = prepareChartData(props);
     const model = buildRenderModel({ ...props, prepared });
-    if (model.kind === "echarts") return React.createElement(EChartsChartView, { model, chart: props.chart });
-    if (model.kind === "cards") return React.createElement(CardChartView, { model: addComparisonTimes(model, props), chart: props.chart });
-    if (model.kind === "table") return React.createElement(TableChartView, { model, chart: props.chart });
-    if (model.kind === "image") return React.createElement(ImageChartView, { model, chart: props.chart });
+    const provenance = resolveProvenance(props);
+    if (model.kind === "echarts") return React.createElement(EChartsChartView, { model, chart: props.chart, provenance });
+    if (model.kind === "cards") return React.createElement(CardChartView, { model, chart: props.chart, provenance });
+    if (model.kind === "table") return React.createElement(TableChartView, { model, chart: props.chart, provenance });
+    if (model.kind === "image") return React.createElement(ImageChartView, { model, chart: props.chart, provenance });
     return React.createElement(ChartStatus, { message: model.message, empty: prepared.status === "empty" });
   } catch {
     return React.createElement(ChartStatus, { message: "This chart cannot be displayed." });
   }
 }
 
-function addComparisonTimes(model, { chart = {}, rows = [], datasetProfile, timeContext } = {}) {
-  if (!Array.isArray(model.items)) return model;
-  const timeBinding = chart.roles?.time;
-  if (!timeBinding) return model;
-  const entityBinding = chart.roles?.entity;
-  const scopedRows = scopeRows(rows, chart, timeContext, timeBinding, datasetProfile);
-  return { ...model, items: model.items.map((item) => ({ ...item, comparisonTime: comparisonTimeFor(item, scopedRows, timeBinding, entityBinding, datasetProfile) })) };
+function resolveProvenance({ chart = {}, renderContext = {}, datasetProfile } = {}) {
+  const sourceId = text(chart.sourceId);
+  const metadata = renderContext.sources?.[sourceId]?.provenance
+    ?? renderContext.sourceMetadata?.[sourceId]?.provenance
+    ?? renderContext.sourceMetadata?.[sourceId]
+    ?? datasetProfile?.provenance;
+  return {
+    label: text(metadata?.label) ?? sourceId ?? "Unavailable",
+    capturedAt: text(metadata?.capturedAt),
+  };
 }
 
-function scopeRows(rows, chart, timeContext, timeBinding, datasetProfile) {
-  const transformed = applyTransforms(rows, chart.transformations, datasetProfile);
-  return applyTimeContext(transformed.rows, timeContext, datasetProfile).rows.filter((row) => {
-    const time = readRoleValue(row, timeBinding, datasetProfile);
-    return Boolean(time);
-  });
-}
-
-function comparisonTimeFor(item, rows, timeBinding, entityBinding, datasetProfile) {
-  if (item.comparison === null || item.comparison === undefined) return null;
-  return rows
-    .filter((row) => !entityBinding || Object.is(readRoleValue(row, entityBinding, datasetProfile), item.label))
-    .map((row) => readRoleValue(row, timeBinding, datasetProfile))
-    .filter((time) => time && time < item.time)
-    .sort((left, right) => String(left).localeCompare(String(right)))
-    .at(-1) ?? null;
+function text(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function ChartStatus({ message, empty = false }) {

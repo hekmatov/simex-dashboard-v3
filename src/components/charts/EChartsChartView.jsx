@@ -1,8 +1,9 @@
 import React from "react";
 import * as echarts from "echarts";
 
-export default function EChartsChartView({ model, chart = {} }) {
+export default function EChartsChartView({ model, chart = {}, provenance }) {
   const hostRef = React.useRef(null);
+  const lifecycleRef = React.useRef(null);
   const titleId = React.useId();
   const descriptionId = React.useId();
   const summaryId = React.useId();
@@ -13,18 +14,17 @@ export default function EChartsChartView({ model, chart = {} }) {
   React.useEffect(() => {
     const host = hostRef.current;
     if (!host || typeof window === "undefined" || typeof document === "undefined") return undefined;
-    registerMap(model.mapRegistration);
-    const instance = echarts.getInstanceByDom(host) ?? echarts.init(host, undefined, { renderer: "canvas" });
-    instance.setOption(model.option ?? {}, { notMerge: true, replaceMerge: model.replaceMerge, lazyUpdate: false });
-    const resize = () => instance.resize();
-    window.addEventListener("resize", resize);
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
-    observer?.observe(host);
+    const lifecycle = createEChartsLifecycle();
+    lifecycleRef.current = lifecycle;
+    lifecycle.mount(host);
     return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", resize);
-      instance.dispose();
+      lifecycle.dispose();
+      if (lifecycleRef.current === lifecycle) lifecycleRef.current = null;
     };
+  }, []);
+
+  React.useEffect(() => {
+    lifecycleRef.current?.update(model);
   }, [model]);
 
   return React.createElement("section", {
@@ -38,14 +38,74 @@ export default function EChartsChartView({ model, chart = {} }) {
   React.createElement("h3", { id: titleId, className: "chart-view-title" }, title),
   React.createElement("p", { id: descriptionId, className: "chart-view-description" }, description),
   React.createElement("p", { id: summaryId, className: "chart-view-summary" }, summary),
+  React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
+  provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null,
   React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }));
 }
 
-function registerMap(registration) {
-  if (registration?.name && registration.geoJson?.features?.length) echarts.registerMap(registration.name, registration.geoJson);
+export function createEChartsLifecycle({
+  echartsApi = echarts,
+  windowTarget = typeof window === "undefined" ? null : window,
+  ResizeObserverCtor = typeof ResizeObserver === "undefined" ? null : ResizeObserver,
+} = {}) {
+  let instance = null;
+  let observer = null;
+  let resizeListener = null;
+
+  return {
+    mount(host) {
+      if (instance || !host) return;
+      let nextInstance = null;
+      try {
+        nextInstance = echartsApi.getInstanceByDom(host) ?? echartsApi.init(host, undefined, { renderer: "canvas" });
+        resizeListener = () => { try { nextInstance?.resize(); } catch {} };
+        windowTarget?.addEventListener?.("resize", resizeListener);
+        observer = ResizeObserverCtor ? new ResizeObserverCtor(resizeListener) : null;
+        observer?.observe(host);
+        instance = nextInstance;
+      } catch {
+        observer?.disconnect?.();
+        if (resizeListener) windowTarget?.removeEventListener?.("resize", resizeListener);
+        try { nextInstance?.dispose?.(); } catch {}
+        observer = null;
+        resizeListener = null;
+      }
+    },
+    update(model) {
+      if (!instance) return;
+      try {
+        registerMap(echartsApi, model?.mapRegistration);
+        instance.setOption(model?.option ?? {}, {
+          notMerge: true,
+          replaceMerge: model?.replaceMerge,
+          lazyUpdate: false,
+        });
+      } catch {}
+    },
+    dispose() {
+      observer?.disconnect?.();
+      if (resizeListener) windowTarget?.removeEventListener?.("resize", resizeListener);
+      try { instance?.dispose?.(); } catch {}
+      instance = null;
+      observer = null;
+      resizeListener = null;
+    },
+  };
+}
+
+function registerMap(echartsApi, registration) {
+  if (registration?.name && registration.geoJson) echartsApi.registerMap(registration.name, registration.geoJson);
 }
 
 function summaryFor(model, chart) {
+  const semanticItems = model.semanticSummary?.items;
+  if (Array.isArray(semanticItems) && semanticItems.length > 0) {
+    return semanticItems.map((item) => [
+      `${item.label ?? "Item"}: actual ${displayValue(item.actual)}`,
+      `target ${displayValue(item.target)}`,
+      item.time ? `observed ${item.time}` : null,
+    ].filter(Boolean).join("; ")).join(". ");
+  }
   const targetDetails = (model.option?.series ?? [])
     .flatMap((series) => Array.isArray(series.data) ? series.data : [])
     .filter((item) => item && typeof item === "object" && "target" in item)
@@ -56,5 +116,7 @@ function summaryFor(model, chart) {
 }
 
 function displayValue(value) {
-  return value === null || value === undefined ? "not available" : String(value);
+  return value === null || value === undefined || (typeof value === "number" && !Number.isFinite(value))
+    ? "Unavailable"
+    : String(value);
 }

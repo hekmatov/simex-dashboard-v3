@@ -301,10 +301,15 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   assert.deepEqual(gauge.option.series[0].data[0], { value: 72, name: "gauge title", target: 80, time: "2027-05-02" });
   assert.equal(gauge.option.series[0].max, 100);
   assert.equal(gauge.option.title.left, "right");
+  assert.deepEqual(gauge.semanticSummary.items, [{ label: "gauge title", actual: 72, target: 80, time: "2027-05-02" }]);
   assert.equal(bullet.option.series[0].type, "bar");
   assert.deepEqual(bullet.option.series[0].data, [8, 6]);
   assert.equal(bullet.option.series[1].name, "Target");
   assert.deepEqual(bullet.option.series[1].data.map(({ value }) => value), [[10, "Clinic A"], [9, "Clinic B"]]);
+  assert.deepEqual(bullet.semanticSummary.items, [
+    { label: "Clinic A", actual: 8, target: 10, time: null },
+    { label: "Clinic B", actual: 6, target: 9, time: null },
+  ]);
 });
 
 test("multi-item gauges preserve every prepared mark in a deterministic collection layout", () => {
@@ -326,6 +331,13 @@ test("multi-item gauges preserve every prepared mark in a deterministic collecti
   ]);
   assert.notDeepEqual(model.option.series[0].center, model.option.series[1].center);
   assert.deepEqual(model.presentation.collection, collection);
+  assert.deepEqual(model.semanticSummary, {
+    collection,
+    items: [
+      { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02" },
+      { label: "Clinic B", actual: 55, target: 70, time: "2027-05-03" },
+    ],
+  });
 
   const svg = renderSvg(model.option, 800, 400);
   assert.match(svg, />72</);
@@ -338,8 +350,8 @@ test("KPI, delta card, and delta list produce semantic card models", () => {
     prepared: ready([{ value: 72, target: 80, time: "2027-05-02" }]),
   });
   const deltaPrepared = ready([
-    { entity: "Clinic A", displayed: 10, comparison: 8, target: 12, time: "2027-05-02", delta: { absolute: 2, percentage: 25 } },
-    { entity: "Clinic B", displayed: 4, comparison: 8, target: 7, time: "2027-05-02", delta: { absolute: -4, percentage: -50 } },
+    { entity: "Clinic A", displayed: 10, displayedTime: "2027-05-02", comparison: 8, comparisonTime: "2027-05-01", target: 12, time: "2027-05-02", delta: { absolute: 2, percentage: 25 } },
+    { entity: "Clinic B", displayed: 4, displayedTime: "2027-05-02", comparison: 8, comparisonTime: "2027-05-01", target: 7, time: "2027-05-02", delta: { absolute: -4, percentage: -50 } },
   ]);
   const deltaCard = buildRenderModel({ chart: chart("deltaCard"), prepared: ready([deltaPrepared.marks[0]]) });
   const deltaList = buildRenderModel({
@@ -362,6 +374,8 @@ test("KPI, delta card, and delta list produce semantic card models", () => {
   });
   assert.equal(deltaCard.items[0].direction, "increase");
   assert.deepEqual(deltaCard.items[0].delta, { absolute: 2, percentage: 25 });
+  assert.equal(deltaCard.items[0].comparisonTime, "2027-05-01");
+  assert.equal(deltaCard.items[0].time, "2027-05-02");
   assert.deepEqual(deltaList.items.map(({ label, direction }) => [label, direction]), [
     ["Clinic A", "increase"],
     ["Clinic B", "decrease"],
@@ -525,8 +539,8 @@ test("table and image return semantic renderer-neutral models", () => {
   const table = buildRenderModel({
     chart: chart("table"),
     prepared: ready([
-      { columns: ["facility", "score"], values: { facility: "Clinic", score: 3 }, time: "2027-05-02" },
-      { columns: ["facility", "score"], values: { facility: "Hospital", score: 5 }, time: null },
+      { rowKey: "table:clinic-a", columns: ["facility", "score"], values: { facility: "Clinic", score: 3 }, time: "2027-05-02" },
+      { rowKey: "table:hospital-b", columns: ["facility", "score"], values: { facility: "Hospital", score: 5 }, time: null },
     ]),
   });
   const image = buildRenderModel({
@@ -541,10 +555,22 @@ test("table and image return semantic renderer-neutral models", () => {
   ]);
   assert.deepEqual(table.rows[0], { facility: "Clinic", score: 3 });
   assert.deepEqual(table.rowMetadata, [
-    { time: "2027-05-02" },
-    { time: null },
+    { key: "table:clinic-a", time: "2027-05-02" },
+    { key: "table:hospital-b", time: null },
   ]);
   assert.deepEqual(image, { kind: "image", src: "/map.png", alt: "Response map", fit: "contain" });
+});
+
+test("table row keys are canonical for equal structured values and remain unique for duplicates", () => {
+  const model = buildRenderModel({
+    chart: chart("table"),
+    prepared: ready([
+      { columns: ["details"], values: { details: { b: 2, a: 1 } }, time: null },
+      { columns: ["details"], values: { details: { a: 1, b: 2 } }, time: null },
+    ]),
+  });
+
+  assert.equal(model.rowMetadata[1].key, `${model.rowMetadata[0].key}#2`);
 });
 
 test("non-ready input produces a bounded error model with the first diagnostic", () => {

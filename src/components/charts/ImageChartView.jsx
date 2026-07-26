@@ -1,10 +1,14 @@
 import React from "react";
 
-export default function ImageChartView({ model, chart = {} }) {
+export default function ImageChartView({ model, chart = {}, provenance }) {
   const src = safeImageSource(model.src);
   if (!src) return React.createElement("div", { className: "chart-status-error", role: "status", "aria-live": "polite" }, "This chart image cannot be displayed.");
   const title = chart.title || "Chart image";
-  return React.createElement("figure", { className: "chart-image-view" }, React.createElement("img", { src, alt: model.alt || chart.description || title, style: { objectFit: safeFit(model.fit) } }), React.createElement("figcaption", null, title));
+  return React.createElement("figure", { className: "chart-image-view" },
+    React.createElement("img", { src, alt: model.alt || chart.description || title, style: { objectFit: safeFit(model.fit) } }),
+    React.createElement("figcaption", null, title),
+    React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
+    provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null);
 }
 
 function safeImageSource(value) {
