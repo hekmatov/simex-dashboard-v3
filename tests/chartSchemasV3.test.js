@@ -74,10 +74,22 @@ test("validation rejects schemas without a registered renderer", () => {
   );
 });
 
-test("validation rejects conversions to unapproved chart types", () => {
+test("validation rejects conversions outside its supplied catalogue", () => {
   assert.throws(
-    () => validateChartSchema({ ...getChartSchema("line"), conversions: ["notAChart"] }),
+    () => validateChartSchema(
+      { ...getChartSchema("line"), conversions: ["notAChart"] },
+      { conversionTargetIds: new Set(["line"]) },
+    ),
     /Unknown conversion target "notAChart"/,
+  );
+});
+
+test("a registry rejects an approved conversion target it does not register", () => {
+  const line = structuredClone(getChartSchema("line"));
+  line.conversions = ["area"];
+  assert.throws(
+    () => createChartSchemaRegistry([line]),
+    /Unknown conversion target "area"/,
   );
 });
 
@@ -118,6 +130,16 @@ test("registry schemas and discovery results are immutable", () => {
   assert.throws(() => { line.roles[0].label = "Changed"; }, TypeError);
   assert.throws(() => { listChartSchemas().push(line); }, TypeError);
   assert.throws(() => { listChartSchemaGroups()[0].charts.pop(); }, TypeError);
+});
+
+test("registry deep-freezes nested data from a shallow-frozen schema", () => {
+  const line = structuredClone(getChartSchema("line"));
+  line.conversions = [];
+  Object.freeze(line);
+
+  const registry = createChartSchemaRegistry([line]);
+  assert.throws(() => { line.roles[0].label = "Changed after registration"; }, TypeError);
+  assert.equal(registry.get("line").roles[0].label, "Measurements");
 });
 
 test("unknown chart type lookups fail with an actionable message", () => {

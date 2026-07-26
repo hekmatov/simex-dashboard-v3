@@ -1,4 +1,4 @@
-import { CHART_COLUMN_TYPES, CHART_DATA_FAMILIES, CHART_FORM_SECTIONS, CHART_RENDERERS, CHART_SCHEMA_GROUPS, CHART_SCHEMA_VERSION, CHART_SOURCE_KINDS, CHART_TRANSFORMS, CHART_TYPE_IDS } from "./schemaTypes.js";
+import { CHART_COLUMN_TYPES, CHART_DATA_FAMILIES, CHART_FORM_SECTIONS, CHART_RENDERERS, CHART_SCHEMA_GROUPS, CHART_SCHEMA_VERSION, CHART_SOURCE_KINDS, CHART_TRANSFORMS } from "./schemaTypes.js";
 
 const groupIds = new Set(CHART_SCHEMA_GROUPS.map(({ id }) => id));
 function requiredString(value, name) { if (typeof value !== "string" || value.trim() === "") throw new Error(`Chart schema ${name} is required.`); }
@@ -13,7 +13,7 @@ function validateRole(role) {
   if (role.max !== null && (!Number.isInteger(role.max) || role.max < role.min)) throw new Error(`Role "${role.id}" max cardinality must be null or at least min.`);
 }
 
-export function validateChartSchema(schema) {
+export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   if (!schema || typeof schema !== "object") throw new Error("Chart schema must be an object.");
   if (schema.version !== CHART_SCHEMA_VERSION) throw new Error(`Chart schema version ${CHART_SCHEMA_VERSION} is required.`);
   requiredString(schema.typeId, "typeId"); requiredString(schema.label, "label"); requiredString(schema.description, "description");
@@ -34,7 +34,11 @@ export function validateChartSchema(schema) {
   if (schema.capabilities.collection && !schema.form.sections.includes("collection")) throw new Error("Collection-capable chart schemas require a collection form section.");
   if (schema.capabilities.timeSync && !schema.roles.some(({ accepts }) => accepts.includes("temporal"))) throw new Error("Time-synchronized chart schemas require a role that accepts temporal data.");
   if (!Array.isArray(schema.conversions)) throw new Error("Chart schema conversions must be an array.");
-  for (const target of schema.conversions) { known(target, CHART_TYPE_IDS, "conversion target"); if (target === schema.typeId) throw new Error("Chart schema cannot convert to itself."); }
+  for (const target of schema.conversions) {
+    requiredString(target, "conversion target");
+    if (conversionTargetIds && !conversionTargetIds.has(target)) throw new Error(`Unknown conversion target "${target}".`);
+    if (target === schema.typeId) throw new Error("Chart schema cannot convert to itself.");
+  }
   if (!schema.semantics || typeof schema.semantics !== "object") throw new Error("Chart schema semantics are required.");
   requiredString(schema.semantics.purpose, "semantics purpose"); requiredString(schema.semantics.mark, "semantics mark");
   return schema;

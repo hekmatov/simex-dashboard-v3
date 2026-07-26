@@ -13,9 +13,6 @@ export const CHART_SCHEMA_GROUPS = Object.freeze([
   Object.freeze({ id: "geography", label: "Geography" }),
   Object.freeze({ id: "operational", label: "Operational content" }),
 ]);
-export const CHART_TYPE_IDS = Object.freeze([
-  "bar", "groupedBar", "stackedBar", "horizontalBar", "horizontalStackedBar", "line", "area", "mixed", "pie", "donut", "kpi", "gauge", "bullet", "deltaCard", "deltaList", "scatter", "bubble", "heatmap", "readinessMatrix", "timeline", "swimlane", "choroplethMap", "chronoChoroplethMap", "mapScatter", "table", "image",
-]);
 export const CHART_COLUMN_TYPES = Object.freeze(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
 export const CHART_SOURCE_KINDS = Object.freeze(["dataset", "inline"]);
 export const CHART_TRANSFORMS = Object.freeze(["filter", "group", "aggregate", "duplicates", "missing", "temporalMatch"]);
