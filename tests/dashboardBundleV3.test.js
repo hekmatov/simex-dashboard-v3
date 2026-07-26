@@ -79,6 +79,29 @@ function version3Dashboard() {
   };
 }
 
+function profileOnlyDashboard(temporal) {
+  const dashboard = version3Dashboard();
+  dashboard.dataSources["uploaded-cases"] = {
+    kind: "dataset",
+    type: "profileSnapshot",
+    parsingMetadata: {
+      reportedAt: { interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only" },
+    },
+    profile: {
+      rowCount: 1,
+      columns: [
+        {
+          name: "reportedAt",
+          type: "temporal",
+          temporal,
+        },
+        { name: "cases", type: "numeric" },
+      ],
+    },
+  };
+  return dashboard;
+}
+
 function pieChart(overrides = {}) {
   return {
     configVersion: 3,
@@ -422,6 +445,66 @@ test("detected temporal values require deterministic evidence before enabling ti
   validIso.dataSources["uploaded-cases"].parsingMetadata = {};
   validIso.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
   assert.doesNotThrow(() => validateDashboardConfig(validIso));
+});
+
+test("profile-only temporal evidence rejects invalid and noncanonical values despite empty diagnostics", () => {
+  for (const value of ["not a date", "02/05/2027", "2027-02-30", "2027-05-01T12:00:00Z"]) {
+    const dashboard = profileOnlyDashboard({ values: [value], diagnostics: [] });
+    assert.throws(
+      () => validateDashboardConfig(dashboard),
+      /does not validate as temporal|temporal evidence/i,
+      value,
+    );
+  }
+});
+
+test("profile-only temporal evidence rejects malformed or empty evidence", () => {
+  for (const temporal of [
+    undefined,
+    {},
+    { values: "2027-05-01", diagnostics: [] },
+    { values: [], diagnostics: [] },
+    { values: [null, ""], diagnostics: [] },
+    { values: ["2027-05-01"], diagnostics: null },
+  ]) {
+    const dashboard = profileOnlyDashboard(temporal);
+    assert.throws(
+      () => validateDashboardConfig(dashboard),
+      /does not validate as temporal|temporal evidence/i,
+    );
+  }
+});
+
+test("profile-only temporal evidence rejects error diagnostics", () => {
+  const dashboard = profileOnlyDashboard({
+    values: ["2027-05-01"],
+    diagnostics: [{ index: 0, severity: "error", code: "invalid-calendar-date" }],
+  });
+
+  assert.throws(
+    () => validateDashboardConfig(dashboard),
+    /does not validate as temporal|temporal evidence/i,
+  );
+});
+
+test("canonical profile-only dates and instants retain source parsing metadata and enable time sync", () => {
+  for (const value of ["2027-05-01", "2027-05-01T12:00:00.000Z"]) {
+    const dashboard = profileOnlyDashboard({ values: [null, value], diagnostics: [] });
+    assert.doesNotThrow(() => validateDashboardConfig(dashboard), value);
+  }
+});
+
+test("invalid profile-only evidence cannot enable time sync", () => {
+  const dashboard = profileOnlyDashboard({ values: ["stale invalid value"], diagnostics: [] });
+  dashboard.pages[0].sections[0].panels[0].interaction.timeSync = {
+    groupId: "outbreak",
+    policy: "nearest",
+  };
+
+  assert.throws(
+    () => validateDashboardConfig(dashboard),
+    /does not validate as temporal|effective temporal role|temporal evidence/i,
+  );
 });
 
 test("collection rotation uses a five-second integer minimum", () => {

@@ -55,11 +55,24 @@ function temporalSpecification(binding, sourceColumn) {
   return { interpretation: "temporal", ...(sourceColumn.parsingMetadata ?? {}) };
 }
 
+function hasCanonicalTemporalProfileEvidence(temporal) {
+  if (!isRecord(temporal) || !Array.isArray(temporal.values) || temporal.values.length === 0) return false;
+  if (!Array.isArray(temporal.diagnostics) || temporal.diagnostics.length > 0) return false;
+  let hasCanonicalValue = false;
+  for (const value of temporal.values) {
+    if (value === null) continue;
+    if (typeof value !== "string" || value === "") return false;
+    const parsed = parseTemporalValue(value);
+    if (!parsed.ok || parsed.canonical !== value) return false;
+    hasCanonicalValue = true;
+  }
+  return hasCanonicalValue;
+}
+
 function hasTemporalEvidence(binding, sourceColumn) {
   const values = sourceColumn.values.filter((value) => value !== null && value !== undefined && !(typeof value === "string" && value.trim() === ""));
   if (values.length > 0) return values.every((value) => parseTemporalValue(value, temporalSpecification(binding, sourceColumn)).ok);
-  const temporal = sourceColumn.temporal;
-  return Array.isArray(temporal?.values) && temporal.values.some((value) => value !== null) && Array.isArray(temporal.diagnostics) && temporal.diagnostics.length === 0;
+  return hasCanonicalTemporalProfileEvidence(sourceColumn.temporal);
 }
 
 function requireTemporalEvidence(binding, role, sourceColumn) {
