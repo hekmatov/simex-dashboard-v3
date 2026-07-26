@@ -2325,6 +2325,159 @@ button.danger {
   }
 }
 
+/* Version-3 chart view primitives: intentionally scoped so existing panels keep their layout. */
+.chart-echarts-view,
+.chart-card-view,
+.chart-table-view,
+.chart-image-view {
+  margin: 0;
+  min-width: 0;
+}
+
+.chart-view-title,
+.chart-view-description,
+.chart-view-summary,
+.chart-view-provenance {
+  margin: 0;
+}
+
+.chart-view-title {
+  color: #18334e;
+  font-size: 1rem;
+}
+
+.chart-view-description,
+.chart-view-summary,
+.chart-view-provenance {
+  color: #506a82;
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+
+.chart-echarts-host {
+  min-height: 260px;
+  width: 100%;
+}
+
+.chart-card-collection {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 12px;
+}
+
+.chart-card {
+  background: #fff;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.chart-card h4 {
+  color: #18334e;
+  margin: 0 0 10px;
+}
+
+.chart-card dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.chart-card dl div {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.chart-card dt {
+  color: #506a82;
+  font-size: 0.8125rem;
+}
+
+.chart-card dd {
+  color: #18334e;
+  font-weight: 700;
+  margin: 0;
+  text-align: right;
+}
+
+.chart-table-scroll {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.chart-table-view table {
+  border-collapse: collapse;
+  min-width: 100%;
+  width: max-content;
+}
+
+.chart-table-view caption {
+  caption-side: top;
+  color: #506a82;
+  padding-bottom: 6px;
+  text-align: left;
+}
+
+.chart-table-view th,
+.chart-table-view td {
+  border-bottom: 1px solid #d8e2ec;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.chart-table-view th {
+  color: #18334e;
+}
+
+.chart-image-view img {
+  display: block;
+  height: auto;
+  max-height: 560px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.chart-image-view figcaption {
+  color: #506a82;
+  font-size: 0.875rem;
+  margin-top: 6px;
+}
+
+.chart-status-error,
+.chart-status-empty {
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.chart-status-error {
+  background: #fcedef;
+  color: #a21729;
+}
+
+.chart-status-empty {
+  background: #eaf1f6;
+  color: #506a82;
+}
+
+@media (max-width: 520px) {
+  .chart-echarts-host {
+    min-height: 220px;
+  }
+
+  .chart-card dl div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .chart-card dd {
+    text-align: left;
+  }
+}
+
 /* Showcase landing */
 .showcase-landing {
   background: rgb(248 251 255 / 92%);
