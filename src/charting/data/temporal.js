@@ -35,6 +35,13 @@ export function normalizeTemporalColumn(values, specification = {}) {
 function detectUnambiguousFormat(value) {
   if (DATE_ONLY.test(value)) return "YYYY-MM-DD";
   if (ISO_INSTANT.test(value)) return "ISO-8601";
+  const slashDate = DAY_MONTH_YEAR.exec(value);
+  if (slashDate) {
+    const first = Number(slashDate[1]);
+    const second = Number(slashDate[2]);
+    if (first > 12) return "DD/MM/YYYY";
+    if (second > 12) return "MM/DD/YYYY";
+  }
   return null;
 }
 

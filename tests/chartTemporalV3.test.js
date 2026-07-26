@@ -18,6 +18,26 @@ test("DD/MM/YYYY is parsed only through an explicit or unambiguous rule", () => 
   assert.equal(parsed.canonical, "2027-05-02");
 });
 
+test("auto parsing accepts only slash dates whose month position is unambiguous", () => {
+  assert.deepEqual(parseTemporalValue("13/05/2027", { interpretation: "auto" }), {
+    ok: true,
+    canonical: "2027-05-13",
+    kind: "date-only",
+  });
+  assert.deepEqual(parseTemporalValue("05/13/2027", { interpretation: "auto" }), {
+    ok: true,
+    canonical: "2027-05-13",
+    kind: "date-only",
+  });
+  assert.equal(parseTemporalValue("02/05/2027", { interpretation: "auto" }).diagnostic.code, "ambiguous-date-format");
+});
+
+test("an auto-selected slash format reports invalid calendar dates precisely", () => {
+  const invalid = parseTemporalValue("31/02/2027", { interpretation: "auto" });
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.diagnostic.code, "invalid-calendar-date");
+});
+
 test("a forced category interpretation wins over a date-shaped field name", () => {
   const profile = profileDataset(
     [{ date: "02/05/2027", deaths: "2590" }],
@@ -84,15 +104,32 @@ test("profiling reports typed columns, missing and unique counts, examples, hint
 });
 
 test("author overrides determine a column type and temporal format", () => {
+  const metadata = { interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only" };
   const profile = profileDataset(
     [{ reported: "02/05/2027", code: "001" }],
     {
-      reported: { interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only" },
+      reported: metadata,
       code: { interpretation: "category" },
     },
   );
   const byName = Object.fromEntries(profile.columns.map((column) => [column.name, column]));
   assert.equal(byName.reported.type, "temporal");
   assert.deepEqual(byName.reported.temporal.values, ["2027-05-02"]);
+  assert.deepEqual(byName.reported.temporal.parsingMetadata, metadata);
+  metadata.format = "MM/DD/YYYY";
+  assert.equal(byName.reported.temporal.parsingMetadata.format, "DD/MM/YYYY");
   assert.equal(byName.code.type, "category");
+});
+
+test("special numeric values remain distinct for unique counts and fingerprints", () => {
+  const profile = profileDataset([
+    { value: Number.NaN },
+    { value: Number.POSITIVE_INFINITY },
+    { value: Number.NEGATIVE_INFINITY },
+    { value: -0 },
+    { value: 0 },
+  ]);
+  assert.equal(profile.columns[0].uniqueCount, 5);
+  assert.notEqual(profileDataset([{ value: Number.NaN }]).fingerprint, profileDataset([{ value: Number.POSITIVE_INFINITY }]).fingerprint);
+  assert.notEqual(profileDataset([{ value: -0 }]).fingerprint, profileDataset([{ value: 0 }]).fingerprint);
 });

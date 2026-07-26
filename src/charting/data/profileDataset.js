@@ -16,7 +16,8 @@ export function profileDataset(rows = [], authorMetadata = {}) {
 function profileColumn(name, rows, specification) {
   const sourceValues = rows.map((row) => row[name]);
   const present = sourceValues.filter((value) => !isMissing(value));
-  const temporal = normalizeTemporalColumn(sourceValues, specification);
+  const normalizedTemporal = normalizeTemporalColumn(sourceValues, specification);
+  const temporal = { ...normalizedTemporal, parsingMetadata: temporalParsingMetadata(present, specification) };
   const type = forcedType(specification.interpretation) ?? inferType(name, present, temporal);
   const result = {
     name, type,
@@ -40,6 +41,30 @@ function inferType(name, values, temporal) {
 function forcedType(interpretation) {
   if (!interpretation || interpretation === "auto") return null;
   return { number: "numeric", numeric: "numeric", boolean: "boolean", temporal: "temporal", geographic: "geographic", category: "category" }[interpretation] ?? null;
+}
+
+function temporalParsingMetadata(values, specification) {
+  const parsingMetadata = { interpretation: specification.interpretation ?? "auto" };
+  const format = specification.format ?? inferTemporalFormat(values);
+  if (format) parsingMetadata.format = format;
+  if (specification.timezone !== undefined) parsingMetadata.timezone = specification.timezone;
+  return parsingMetadata;
+}
+
+function inferTemporalFormat(values) {
+  if (values.length === 0) return null;
+  if (values.every((value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim()))) return "YYYY-MM-DD";
+  if (values.every((value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value.trim()))) return "ISO-8601";
+  const formats = values.map(autoSlashFormat);
+  return formats.every(Boolean) && new Set(formats).size === 1 ? formats[0] : null;
+}
+
+function autoSlashFormat(value) {
+  const match = typeof value === "string" && /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
+  if (!match) return null;
+  if (Number(match[1]) > 12) return "DD/MM/YYYY";
+  if (Number(match[2]) > 12) return "MM/DD/YYYY";
+  return null;
 }
 
 function geographicHint(name) {
@@ -66,9 +91,19 @@ function fingerprintValue(value) { return stableStringify(value); }
 function stableStringify(value) {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
-  if (typeof value === "number" || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") return stableNumber(value);
+  if (typeof value === "boolean") return `boolean:${value}`;
+  if (typeof value === "string") return `string:${JSON.stringify(value)}`;
   if (value instanceof Date) return `date:${value.toISOString()}`;
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
   if (typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
   return String(value);
+}
+
+function stableNumber(value) {
+  if (Number.isNaN(value)) return "number:NaN";
+  if (value === Number.POSITIVE_INFINITY) return "number:Infinity";
+  if (value === Number.NEGATIVE_INFINITY) return "number:-Infinity";
+  if (Object.is(value, -0)) return "number:-0";
+  return `number:${value}`;
 }
