@@ -28,6 +28,7 @@ export function buildAxisRenderModel({ chart, prepared, datasetProfile, renderCo
       stack: STACKED_TYPES.has(chart.typeId) ? "total" : undefined,
       areaStyle: chart.typeId === "area" ? { opacity: 0.24 } : undefined,
       showSymbol: type === "line",
+      label: axisLabelOption(chart, horizontal),
       emphasis: { focus: "series" },
     };
   });
@@ -45,6 +46,16 @@ export function buildAxisRenderModel({ chart, prepared, datasetProfile, renderCo
       series,
       dataZoom: zoomOption(chart, horizontal),
     },
+  };
+}
+
+function axisLabelOption(chart, horizontal) {
+  const labels = chart.presentation?.labels;
+  if (!labels) return undefined;
+  return {
+    show: labels.visible === true,
+    position: labels.position ?? (horizontal ? "right" : "top"),
+    formatter: labels.format,
   };
 }
 

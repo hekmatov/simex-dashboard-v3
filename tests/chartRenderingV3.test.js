@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import * as echarts from "echarts";
+
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
 
@@ -31,6 +33,16 @@ function ready(marks, meta = {}) {
     diagnostics: [],
     meta,
   };
+}
+
+function renderSvg(option, width = 640, height = 400) {
+  const instance = echarts.init(null, null, { renderer: "svg", ssr: true, width, height });
+  try {
+    instance.setOption(option);
+    return instance.renderToSVGString();
+  } finally {
+    instance.dispose();
+  }
 }
 
 const axisMarks = ready([
@@ -102,6 +114,40 @@ test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts
   assert.equal(model.option.dataZoom[0].zoomOnMouseWheel, "ctrl");
 });
 
+test("axis series honor validated label visibility, position, and formatting", () => {
+  const enabled = buildRenderModel({
+    chart: chart("bar", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        labels: { visible: true, position: "insideTop", format: "{c} units" },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  const disabled = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        labels: { visible: false },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.deepEqual(enabled.option.series[0].label, {
+    show: true,
+    position: "insideTop",
+    formatter: "{c} units",
+  });
+  assert.deepEqual(disabled.option.series[0].label, {
+    show: false,
+    position: "top",
+    formatter: undefined,
+  });
+});
+
 test("forced category dates never become an ECharts time axis", () => {
   const model = buildRenderModel({
     chart: chart("line", {
@@ -144,6 +190,26 @@ test("pie and donut produce actual ECharts pie series from canonical marks", () 
   assert.equal(pie.option.series[0].radius[0], "0%");
   assert.notEqual(donut.option.series[0].radius[0], "0%");
   assert.deepEqual(pie.option.series[0].data[0], { name: "Cases", value: 3, share: 0.75 });
+});
+
+test("grouped composition lays out non-overlapping pie series", () => {
+  const model = buildRenderModel({
+    chart: chart("pie"),
+    prepared: ready([
+      { category: "Alpha", value: 3, share: 0.6, group: "North", groupKey: "North" },
+      { category: "Other North", value: 2, share: 0.4, group: "North", groupKey: "North" },
+      { category: "Beta", value: 4, share: 0.8, group: "South", groupKey: "South" },
+      { category: "Other South", value: 1, share: 0.2, group: "South", groupKey: "South" },
+    ]),
+  });
+
+  assert.deepEqual(model.option.series.map(({ center }) => center), [
+    ["25%", "50%"],
+    ["75%", "50%"],
+  ]);
+  const svg = renderSvg(model.option, 800, 400);
+  assert.match(svg, /Alpha/);
+  assert.match(svg, /Beta/);
 });
 
 test("scatter and bubble encode canonical relationship marks and clusters", () => {
@@ -195,6 +261,27 @@ test("timeline and swimlane encode canonical intervals on time axes and lanes", 
   assert.equal(swimlane.option.series[0].data[1].name, "Report");
 });
 
+test("timeline custom rendering reads and visibly renders the encoded event label", () => {
+  const model = buildRenderModel({
+    chart: chart("timeline"),
+    prepared: ready([
+      {
+        event: "Mobilize Alpha",
+        start: "2027-05-01",
+        end: "2027-05-03",
+        lane: null,
+        status: "Active",
+        group: null,
+        groupKey: "",
+      },
+    ]),
+  });
+
+  assert.equal(model.option.series[0].data[0].value[4], "Mobilize Alpha");
+  const svg = renderSvg(model.option);
+  assert.match(svg, /Mobilize Alpha/);
+});
+
 test("gauge and bullet encode actual, target, and configured ranges", () => {
   const gauge = buildRenderModel({
     chart: chart("gauge", {
@@ -218,6 +305,31 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   assert.deepEqual(bullet.option.series[0].data, [8, 6]);
   assert.equal(bullet.option.series[1].name, "Target");
   assert.deepEqual(bullet.option.series[1].data.map(({ value }) => value), [[10, "Clinic A"], [9, "Clinic B"]]);
+});
+
+test("multi-item gauges preserve every prepared mark in a deterministic collection layout", () => {
+  const collection = { layout: "fixedGrid", rows: 1, columns: 2 };
+  const model = buildRenderModel({
+    chart: chart("gauge", {
+      presentation: { title: { align: "left" }, collection },
+    }),
+    prepared: ready([
+      { value: 72, target: 80, label: "Clinic A", time: "2027-05-02" },
+      { value: 55, target: 70, entity: "Clinic B", time: "2027-05-03" },
+    ]),
+  });
+
+  assert.equal(model.option.series.length, 2);
+  assert.deepEqual(model.option.series.map(({ data }) => data[0]), [
+    { value: 72, name: "Clinic A", target: 80, time: "2027-05-02" },
+    { value: 55, name: "Clinic B", target: 70, time: "2027-05-03" },
+  ]);
+  assert.notDeepEqual(model.option.series[0].center, model.option.series[1].center);
+  assert.deepEqual(model.presentation.collection, collection);
+
+  const svg = renderSvg(model.option, 800, 400);
+  assert.match(svg, />72</);
+  assert.match(svg, />55</);
 });
 
 test("KPI, delta card, and delta list produce semantic card models", () => {
@@ -274,6 +386,60 @@ test("choropleth and chronological choropleth retain map feature metadata and ti
   assert.deepEqual(chronological.option.options[1].series[0].data.map(({ name }) => name), ["GE-TB", "GE-AJ"]);
 });
 
+test("geography zoom remains pan-only until the host receives a Ctrl-wheel gesture", () => {
+  const model = buildRenderModel({
+    chart: chart("choroplethMap", {
+      interaction: { zoom: { enabled: true } },
+    }),
+    prepared: ready([
+      { geography: "GE-TB", value: 7, time: null, feature: { name: "Tbilisi" }, group: null, groupKey: "" },
+    ]),
+  });
+
+  assert.equal(model.option.geo.roam, "move");
+  assert.deepEqual(model.interaction, {
+    zoom: { enabled: true, modifierKey: "Control", target: "geo" },
+  });
+});
+
+test("choropleth joins series data through the configured feature property", () => {
+  const feature = {
+    type: "Feature",
+    properties: { district_name: "Tbilisi", code: "GE-TB" },
+    geometry: {
+      type: "Polygon",
+      coordinates: [[[44, 41], [45, 41], [45, 42], [44, 42], [44, 41]]],
+    },
+  };
+  const model = buildRenderModel({
+    chart: chart("choroplethMap", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        map: { geoSource: "georgia-districts", joinField: "district_name" },
+      },
+      interaction: { zoom: { enabled: true } },
+    }),
+    prepared: ready([
+      { geography: "GE-TB", value: 7, time: null, feature, group: null, groupKey: "" },
+    ]),
+  });
+
+  assert.equal(model.option.geo.nameProperty, "district_name");
+  assert.equal(model.option.series[0].data[0].name, "Tbilisi");
+  assert.deepEqual(model.mapRegistration, {
+    name: "georgia-districts",
+    source: "georgia-districts",
+    joinField: "district_name",
+    geoJson: { type: "FeatureCollection", features: [feature] },
+  });
+
+  echarts.registerMap(model.mapRegistration.name, model.mapRegistration.geoJson);
+  const svg = renderSvg(model.option);
+  assert.match(svg, /<svg/);
+  assert.match(svg, /<path/);
+});
+
 test("map scatter uses only canonical feature coordinates and value metadata", () => {
   const prepared = ready([
     {
@@ -293,11 +459,73 @@ test("map scatter uses only canonical feature coordinates and value metadata", (
   assert.equal(model.option.series[0].data[0].geography, "GE-TB");
 });
 
+test("map scatter derives polygon centroids and skips marks without coordinates", () => {
+  const polygon = {
+    type: "Feature",
+    properties: { name: "Square" },
+    geometry: {
+      type: "Polygon",
+      coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]],
+    },
+  };
+  const multiPolygon = {
+    type: "Feature",
+    properties: { name: "Twin squares" },
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: [
+        [[[10, 10], [12, 10], [12, 12], [10, 12], [10, 10]]],
+        [[[14, 14], [16, 14], [16, 16], [14, 16], [14, 14]]],
+      ],
+    },
+  };
+  const model = buildRenderModel({
+    chart: chart("mapScatter"),
+    prepared: ready([
+      { geography: "square", value: 5, time: null, feature: polygon, group: null, groupKey: "" },
+      { geography: "twins", value: 9, time: null, feature: multiPolygon, group: null, groupKey: "" },
+      { geography: "missing", value: 3, time: null, feature: { name: "No geometry" }, group: null, groupKey: "" },
+    ]),
+  });
+
+  assert.deepEqual(model.option.series[0].data.map(({ value }) => value), [
+    [1, 1, 5],
+    [13, 13, 9],
+  ]);
+  assert.deepEqual(model.diagnostics, [{
+    code: "map-scatter-coordinate-missing",
+    severity: "warning",
+    message: "Map point “missing” has no usable coordinate and was skipped.",
+    geography: "missing",
+  }]);
+});
+
+test("map scatter returns a bounded error when no mark has a coordinate", () => {
+  const model = buildRenderModel({
+    chart: chart("mapScatter"),
+    prepared: ready([
+      { geography: "missing", value: 3, time: null, feature: { name: "No geometry" }, group: null, groupKey: "" },
+    ]),
+  });
+
+  assert.deepEqual(model, {
+    kind: "error",
+    message: "No map scatter marks have valid geographic coordinates.",
+    diagnostics: [{
+      code: "map-scatter-coordinate-missing",
+      severity: "warning",
+      message: "Map point “missing” has no usable coordinate and was skipped.",
+      geography: "missing",
+    }],
+  });
+  assert.ok(model.message.length <= 240);
+});
+
 test("table and image return semantic renderer-neutral models", () => {
   const table = buildRenderModel({
     chart: chart("table"),
     prepared: ready([
-      { columns: ["facility", "score"], values: { facility: "Clinic", score: 3 }, time: null },
+      { columns: ["facility", "score"], values: { facility: "Clinic", score: 3 }, time: "2027-05-02" },
       { columns: ["facility", "score"], values: { facility: "Hospital", score: 5 }, time: null },
     ]),
   });
@@ -312,6 +540,10 @@ test("table and image return semantic renderer-neutral models", () => {
     { key: "score", label: "score" },
   ]);
   assert.deepEqual(table.rows[0], { facility: "Clinic", score: 3 });
+  assert.deepEqual(table.rowMetadata, [
+    { time: "2027-05-02" },
+    { time: null },
+  ]);
   assert.deepEqual(image, { kind: "image", src: "/map.png", alt: "Response map", fit: "contain" });
 });
 

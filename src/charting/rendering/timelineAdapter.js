@@ -24,6 +24,7 @@ export function buildTimelineRenderModel({ chart, prepared }) {
             mark.end ?? mark.start,
             swimlane ? mark.lane ?? "Unassigned" : "Events",
             mark.status,
+            mark.event,
           ],
           event: mark.event,
           start: mark.start,
@@ -43,7 +44,7 @@ export function buildTimelineRenderModel({ chart, prepared }) {
   };
 }
 
-function renderInterval(params, api) {
+function renderInterval(_params, api) {
   const start = api.coord([api.value(0), api.value(2)]);
   const end = api.coord([api.value(1), api.value(2)]);
   const height = Math.max(6, api.size([0, 1])[1] * 0.5);
@@ -54,17 +55,19 @@ function renderInterval(params, api) {
     width,
     height,
   };
+  const color = api.visual("color") ?? "#2456a6";
   return {
     type: "group",
     children: [
-      { type: "rect", shape, style: api.style() },
+      { type: "rect", shape, style: { fill: color, opacity: 0.82 } },
       {
         type: "text",
         style: {
-          text: params.name,
+          text: String(api.value(4) ?? ""),
           x: shape.x + 4,
           y: start[1],
           verticalAlign: "middle",
+          fill: "#ffffff",
         },
       },
     ],

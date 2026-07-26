@@ -1,5 +1,6 @@
 export function buildCompositionRenderModel({ chart, prepared }) {
   const groups = groupMarks(prepared.marks);
+  const layout = compositionLayout(groups.length);
   return {
     kind: "echarts",
     option: {
@@ -7,15 +8,30 @@ export function buildCompositionRenderModel({ chart, prepared }) {
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "item" },
       legend: { show: chart.presentation?.legend?.visible !== false },
-      series: groups.map(({ name, marks }) => ({
+      series: groups.map(({ name, marks }, index) => ({
         name,
         type: "pie",
-        radius: chart.typeId === "donut" ? ["42%", "72%"] : ["0%", "72%"],
+        center: layout.centers[index],
+        radius: chart.typeId === "donut" ? [layout.innerRadius, layout.outerRadius] : ["0%", layout.outerRadius],
         avoidLabelOverlap: true,
         label: { show: chart.presentation?.labels?.visible !== false },
         data: marks.map(({ category, value, share }) => ({ name: String(category), value, share })),
       })),
     },
+  };
+}
+
+function compositionLayout(count) {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
+  const rows = Math.max(1, Math.ceil(count / columns));
+  const outer = count === 1 ? 72 : Math.max(12, Math.min(32, 38 / Math.max(columns, rows)));
+  return {
+    centers: Array.from({ length: count }, (_, index) => [
+      `${((index % columns + 0.5) / columns) * 100}%`,
+      `${((Math.floor(index / columns) + 0.5) / rows) * 100}%`,
+    ]),
+    innerRadius: `${Math.round(outer * 0.58)}%`,
+    outerRadius: `${outer}%`,
   };
 }
 

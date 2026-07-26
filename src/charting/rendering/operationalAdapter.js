@@ -14,6 +14,7 @@ export function buildOperationalRenderModel({ chart, prepared }) {
     kind: "table",
     columns: names.map((name) => ({ key: name, label: name })),
     rows: prepared.marks.map(({ values }) => clone(values)),
+    rowMetadata: prepared.marks.map(({ time }) => ({ time: time ?? null })),
   };
 }
 

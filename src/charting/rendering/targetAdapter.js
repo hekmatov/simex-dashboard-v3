@@ -7,30 +7,55 @@ export function buildTargetRenderModel({ chart, prepared }) {
 }
 
 function gaugeModel(chart, marks) {
-  const mark = marks[0];
   const ranges = chart.presentation?.targets?.ranges ?? [];
   const rangeMaximum = Math.max(0, ...ranges.map(rangeEnd).filter(Number.isFinite));
-  const maximum = Math.max(100, rangeMaximum, finite(mark.value), finite(mark.target));
+  const maximum = Math.max(
+    100,
+    rangeMaximum,
+    ...marks.flatMap(({ value, target }) => [finite(value), finite(target)]),
+  );
+  const layout = gaugeLayout(chart.presentation?.collection, marks.length);
   return {
     kind: "echarts",
+    presentation: {
+      collection: clone(chart.presentation?.collection ?? null),
+    },
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
-      series: [{
-        name: chart.title ?? "",
-        type: "gauge",
-        min: 0,
-        max: maximum,
-        axisLine: { lineStyle: { color: gaugeSegments(ranges, maximum) } },
-        detail: { valueAnimation: true },
-        data: [{
-          value: mark.value,
-          name: chart.title ?? "",
-          target: mark.target,
-          time: mark.time,
-        }],
-      }],
+      series: marks.map((mark, index) => {
+        const name = mark.entity ?? mark.label ?? chart.title ?? "";
+        return {
+          name,
+          type: "gauge",
+          min: 0,
+          max: maximum,
+          center: layout.centers[index],
+          radius: layout.radius,
+          axisLine: { lineStyle: { color: gaugeSegments(ranges, maximum) } },
+          detail: { valueAnimation: true },
+          title: { show: Boolean(name) },
+          data: [{
+            value: mark.value,
+            name,
+            target: mark.target,
+            time: mark.time,
+          }],
+        };
+      }),
     },
+  };
+}
+
+function gaugeLayout(collection, count) {
+  const columns = collection?.columns ?? Math.max(1, Math.ceil(Math.sqrt(count)));
+  const rows = collection?.rows ?? Math.max(1, Math.ceil(count / columns));
+  return {
+    centers: Array.from({ length: count }, (_, index) => [
+      `${((index % columns + 0.5) / columns) * 100}%`,
+      `${((Math.floor(index / columns) + 0.5) / rows) * 100}%`,
+    ]),
+    radius: `${Math.max(12, Math.min(38, 36 / Math.max(columns, rows)))}%`,
   };
 }
 
