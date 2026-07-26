@@ -18,7 +18,7 @@ export function matchTemporalObservation(input = {}) {
     throw new TypeError("activeEpochMs must be a finite number.");
   }
 
-  const observations = input.observations ?? [];
+  const observations = input.observations === undefined ? [] : input.observations;
   validateObservations(observations);
   validateTolerance(policy, input.toleranceMs);
   if (policy === "interpolate" && input.interpolationAllowed !== true) {

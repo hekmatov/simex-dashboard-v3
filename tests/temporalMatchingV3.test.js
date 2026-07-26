@@ -17,10 +17,16 @@ const samples = Object.freeze([
 const missing = Object.freeze({ status: "missing", observation: null });
 
 test("exact matching is the fail-closed default and never invents a value", () => {
-  assert.deepEqual(matchTemporalObservation({
+  const match = matchTemporalObservation({
     observations: samples,
     activeEpochMs: MAY_2,
-  }), missing);
+  });
+
+  assert.deepEqual(match, missing);
+  assert.equal(Object.isFrozen(match), true);
+  assert.throws(() => {
+    match.status = "observed";
+  }, TypeError);
 });
 
 test("an exact match preserves the canonical observation and reports its source timestamp", () => {
@@ -36,6 +42,42 @@ test("an exact match preserves the canonical observation and reports its source 
     sourceEpochMs: MAY_3,
   });
   assert.strictEqual(match.observation, samples[1]);
+});
+
+test("matched result wrappers are immutable without freezing or detaching canonical observations", () => {
+  const observations = [
+    { epochMs: MAY_1, value: 10 },
+    { epochMs: MAY_3, value: 20 },
+  ];
+  const cases = [
+    {
+      input: { activeEpochMs: MAY_1, policy: "exact" },
+      source: observations[0],
+    },
+    {
+      input: { activeEpochMs: MAY_2, policy: "lastKnown" },
+      source: observations[0],
+    },
+    {
+      input: {
+        activeEpochMs: MAY_3 - 1,
+        policy: "nearest",
+        toleranceMs: 1,
+      },
+      source: observations[1],
+    },
+  ];
+
+  for (const { input, source } of cases) {
+    const match = matchTemporalObservation({ observations, ...input });
+
+    assert.equal(Object.isFrozen(match), true, input.policy);
+    assert.strictEqual(match.observation, source, input.policy);
+    assert.equal(Object.isFrozen(source), false, input.policy);
+    assert.throws(() => {
+      match.status = "missing";
+    }, TypeError, input.policy);
+  }
 });
 
 test("all matching policies treat observations at the range boundaries as observed", () => {
@@ -151,8 +193,12 @@ test("nearest matching rejects an equidistant tie instead of choosing an arbitra
 });
 
 test("numeric interpolation reports both bounds and uses the active timestamp", () => {
+  const observations = [
+    { epochMs: MAY_1, value: 10 },
+    { epochMs: MAY_3, value: 20 },
+  ];
   const match = matchTemporalObservation({
-    observations: samples,
+    observations,
     activeEpochMs: MAY_2,
     policy: "interpolate",
     interpolationAllowed: true,
@@ -164,8 +210,17 @@ test("numeric interpolation reports both bounds and uses the active timestamp", 
     lowerEpochMs: MAY_1,
     upperEpochMs: MAY_3,
   });
-  assert.notStrictEqual(match.observation, samples[0]);
-  assert.notStrictEqual(match.observation, samples[1]);
+  assert.equal(Object.isFrozen(match), true);
+  assert.equal(Object.isFrozen(match.observation), true);
+  assert.notStrictEqual(match.observation, observations[0]);
+  assert.notStrictEqual(match.observation, observations[1]);
+  assert.throws(() => {
+    match.observation.value = 999;
+  }, TypeError);
+
+  observations[0].value = -100;
+  observations[1].value = 1_000;
+  assert.equal(match.observation.value, 15);
 });
 
 test("interpolation fails closed unless the schema explicitly permits it", () => {
@@ -271,6 +326,14 @@ test("canonical timestamps must be finite numbers and are never reparsed from da
 });
 
 test("malformed observation collections and entries are rejected", () => {
+  assert.throws(
+    () => matchTemporalObservation({
+      observations: null,
+      activeEpochMs: MAY_1,
+      policy: "exact",
+    }),
+    /observations must be an array/,
+  );
   assert.throws(
     () => matchTemporalObservation({
       observations: {},
