@@ -1,5 +1,8 @@
 import {
+  aggregateNumbers,
   applyMissingStrategy,
+  consolidateCandidates,
+  error,
   firstRoleBinding,
   readRoleValue,
   stableKey,
@@ -21,22 +24,42 @@ export function prepareTargetData({ schema, chart, rows, datasetProfile, transfo
       readRoleValue(row, primaryBinding, datasetProfile),
       transformed.config.missingStrategy,
     );
-    if (!primary.keep) continue;
+    const targetValue = targetRole
+      ? applyMissingStrategy(readRoleValue(row, targetRole, datasetProfile), transformed.config.missingStrategy)
+      : { keep: true, value: null };
+    if (!primary.keep || !targetValue.keep) continue;
     marks.push(schema.typeId === "bullet"
       ? {
           actual: primary.value,
-          target: readRoleValue(row, targetRole, datasetProfile),
+          target: targetValue.value,
           label: readRoleValue(row, labelRole, datasetProfile),
           time: readRoleValue(row, timeRole, datasetProfile),
         }
       : {
           value: primary.value,
-          target: readRoleValue(row, targetRole, datasetProfile),
+          target: targetValue.value,
           time: readRoleValue(row, timeRole, datasetProfile),
         }
     );
   }
-  return { marks, diagnostics: [], duplicateGroupCount: 0 };
+  return consolidateCandidates(
+    marks,
+    (mark) => stableKey(mark.time, schema.typeId === "bullet" ? mark.label : null),
+    transformed,
+    (duplicates, method) => (
+      schema.typeId === "bullet"
+        ? {
+            ...duplicates[0],
+            actual: aggregateNumbers(duplicates.map(({ actual }) => actual), method),
+            target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
+          }
+        : {
+            ...duplicates[0],
+            value: aggregateNumbers(duplicates.map(({ value }) => value), method),
+            target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
+          }
+    ),
+  );
 }
 
 function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) {
@@ -44,22 +67,57 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
   const entity = firstRoleBinding(chart, "entity");
   const time = firstRoleBinding(chart, "time");
   const target = firstRoleBinding(chart, "target");
-  const groups = new Map();
+  const candidates = [];
   for (const row of rows) {
     const primary = applyMissingStrategy(
       readRoleValue(row, measurement, datasetProfile),
       transformed.config.missingStrategy,
     );
-    if (!primary.keep) continue;
+    const targetValue = target
+      ? applyMissingStrategy(readRoleValue(row, target, datasetProfile), transformed.config.missingStrategy)
+      : { keep: true, value: null };
+    if (!primary.keep || !targetValue.keep) continue;
     const entityValue = readRoleValue(row, entity, datasetProfile);
-    const key = schema.typeId === "deltaList" ? stableKey(entityValue) : "all";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push({
+    const timeValue = readRoleValue(row, time, datasetProfile);
+    if (timeValue === null) continue;
+    candidates.push({
       entity: entityValue,
       value: primary.value,
-      time: readRoleValue(row, time, datasetProfile),
-      target: readRoleValue(row, target, datasetProfile),
+      time: timeValue,
+      target: targetValue.value,
     });
+  }
+  if (schema.typeId === "deltaCard" && entity) {
+    const entities = new Set(candidates.map(({ entity: value }) => stableKey(value)));
+    if (entities.size > 1) {
+      return {
+        marks: [],
+        diagnostics: [error(
+          "delta-card-multiple-entities",
+          "Filter one entity for a delta card, or use a delta list to compare multiple entities.",
+          { entityCount: entities.size },
+        )],
+        duplicateGroupCount: 0,
+      };
+    }
+  }
+  const consolidated = consolidateCandidates(
+    candidates,
+    (observation) => stableKey(observation.entity, observation.time),
+    transformed,
+    (duplicates, method) => ({
+      ...duplicates[0],
+      value: aggregateNumbers(duplicates.map(({ value }) => value), method),
+      target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
+    }),
+  );
+  if (consolidated.diagnostics.some(({ severity }) => severity === "error")) return consolidated;
+
+  const groups = new Map();
+  for (const observation of consolidated.marks) {
+    const key = stableKey(observation.entity);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(observation);
   }
   const marks = [];
   for (const observations of groups.values()) {
@@ -81,5 +139,9 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
       },
     });
   }
-  return { marks, diagnostics: [], duplicateGroupCount: 0 };
+  return {
+    marks,
+    diagnostics: consolidated.diagnostics,
+    duplicateGroupCount: consolidated.duplicateGroupCount,
+  };
 }

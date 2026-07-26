@@ -10,6 +10,7 @@ import { prepareTimelineData } from "./prepareTimelineData.js";
 import {
   applyTimeContext,
   applyTransforms,
+  error,
   validateRoleBindings,
   warning,
 } from "./transforms.js";
@@ -38,15 +39,20 @@ const MARK_FIELDS_BY_ROLE = Object.freeze({
   geography: { geography: "geography", value: "value", time: "time" },
   operational: { columns: "columns", time: "time" },
 });
+const GROUPABLE_FAMILIES = new Set(["axis", "composition", "relationship", "matrix", "timeline", "geography"]);
 
 export function prepareChartData(input = {}) {
   const chart = input.chart ?? {};
   const schema = getChartSchema(chart.typeId);
-  const transformedRows = applyTransforms(input.rows, chart.transformations);
+  const transformedRows = applyTransforms(input.rows, chart.transformations, input.datasetProfile);
   const timeScoped = applyTimeContext(transformedRows.rows, input.timeContext, input.datasetProfile);
   const transformed = { ...transformedRows, ...timeScoped };
   const bindingDiagnostics = validateRoleBindings(schema, chart, input.datasetProfile);
-  const initialDiagnostics = [...transformed.diagnostics, ...bindingDiagnostics];
+  const initialDiagnostics = [
+    ...transformed.diagnostics,
+    ...bindingDiagnostics,
+    ...validateGroupTransform(schema, transformed, input.datasetProfile),
+  ];
 
   if (initialDiagnostics.some(({ severity }) => severity === "error")) {
     return finalizePreparedResult(
@@ -69,6 +75,22 @@ export function prepareChartData(input = {}) {
   }, transformed, schema);
 }
 
+function validateGroupTransform(schema, transformed, datasetProfile) {
+  const fields = transformed.config.groupFields;
+  if (fields.length === 0) return [];
+  if (!GROUPABLE_FAMILIES.has(schema.dataFamily)) {
+    return [error(
+      "group-transform-unsupported",
+      `${schema.label} ${schema.dataFamily} marks cannot represent grouped data. Remove the group transform or choose a grouped chart.`,
+      { dataFamily: schema.dataFamily, fields },
+    )];
+  }
+  const columns = new Set((datasetProfile?.columns ?? []).map(({ name }) => name));
+  return fields
+    .filter((field) => !columns.has(field))
+    .map((field) => error("group-field-missing", `Group field "${field}" is not in the dataset.`, { field }));
+}
+
 function finalizePreparedResult(prepared, transformed, schema) {
   const diagnostics = [...(prepared.diagnostics ?? [])];
   const hasErrors = diagnostics.some(({ severity }) => severity === "error");
@@ -77,7 +99,7 @@ function finalizePreparedResult(prepared, transformed, schema) {
   if (!hasErrors && renderableMarkCount === 0) {
     diagnostics.push(warning("no-renderable-marks", "No renderer-ready marks remain after validation and transformations."));
   }
-  return {
+  return cloneAndFreeze({
     status: hasErrors ? "blocked" : renderableMarkCount > 0 ? "ready" : "empty",
     marks,
     diagnostics,
@@ -96,7 +118,7 @@ function finalizePreparedResult(prepared, transformed, schema) {
       missingStrategy: transformed.config.missingStrategy,
       ...(prepared.meta ?? {}),
     },
-  };
+  });
 }
 
 function isRenderableMark(mark, schema) {
@@ -126,4 +148,14 @@ function hasRenderableValue(value) {
     && value !== undefined
     && value !== ""
     && (!Array.isArray(value) || value.length > 0);
+}
+
+function cloneAndFreeze(value) {
+  return deepFreeze(structuredClone(value));
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const nested of Object.values(value)) deepFreeze(nested);
+  return Object.freeze(value);
 }

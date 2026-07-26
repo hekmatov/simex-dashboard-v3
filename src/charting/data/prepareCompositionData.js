@@ -3,6 +3,7 @@ import {
   applyMissingStrategy,
   consolidateCandidates,
   firstRoleBinding,
+  groupMetadata,
   readRoleValue,
   stableKey,
 } from "./transforms.js";
@@ -13,11 +14,15 @@ export function prepareCompositionData({ chart, rows, datasetProfile, transforme
   const candidates = [];
   for (const row of rows) {
     const missing = applyMissingStrategy(readRoleValue(row, value, datasetProfile), transformed.config.missingStrategy);
-    if (missing.keep) candidates.push({ category: readRoleValue(row, category, datasetProfile), value: missing.value });
+    if (missing.keep) candidates.push({
+      category: readRoleValue(row, category, datasetProfile),
+      value: missing.value,
+      ...groupMetadata(row, transformed, datasetProfile),
+    });
   }
   const consolidated = consolidateCandidates(
     candidates,
-    (mark) => stableKey(mark.category),
+    (mark) => stableKey(mark.category, mark.groupKey),
     transformed,
     (group, method) => ({ ...group[0], value: aggregateNumbers(group.map(({ value: item }) => item), method) }),
   );

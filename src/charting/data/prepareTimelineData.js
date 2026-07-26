@@ -1,6 +1,7 @@
 import {
   consolidateCandidates,
   firstRoleBinding,
+  groupMetadata,
   readRoleValue,
   stableKey,
 } from "./transforms.js";
@@ -13,10 +14,11 @@ export function prepareTimelineData({ chart, rows, datasetProfile, transformed }
     end: readRoleValue(row, roles.end, datasetProfile),
     lane: readRoleValue(row, roles.lane, datasetProfile),
     status: readRoleValue(row, roles.status, datasetProfile),
+    ...groupMetadata(row, transformed, datasetProfile),
   }));
   return consolidateCandidates(
     candidates,
-    (mark) => stableKey(mark.event, mark.start, mark.end, mark.lane),
+    (mark) => stableKey(mark.event, mark.start, mark.end, mark.lane, mark.status, mark.groupKey),
     transformed,
     (group) => group[0],
   );

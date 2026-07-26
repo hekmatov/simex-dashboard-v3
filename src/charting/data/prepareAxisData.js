@@ -5,6 +5,7 @@ import {
   clusterValueAndKey,
   consolidateCandidates,
   firstRoleBinding,
+  groupMetadata,
   readRoleValue,
   roleBindings,
   stableKey,
@@ -20,6 +21,7 @@ export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
   for (const row of rows) {
     const x = readRoleValue(row, observation, datasetProfile);
     const cluster = clusterValueAndKey(row, clusters, datasetProfile);
+    const group = groupMetadata(row, transformed, datasetProfile);
     for (const measurement of measurements) {
       const missing = applyMissingStrategy(readRoleValue(row, measurement, datasetProfile), transformed.config.missingStrategy);
       if (!missing.keep) continue;
@@ -32,13 +34,14 @@ export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
         clusterKey: cluster.clusterKey,
         label: readRoleValue(row, label, datasetProfile),
         axis: measurement?.axis === "secondary" || measurement?.yAxisIndex === 1 ? "secondary" : "primary",
+        ...group,
       });
     }
   }
 
   const consolidated = consolidateCandidates(
     candidates,
-    (mark) => stableKey(mark.x, mark.measure, mark.clusterKey),
+    (mark) => stableKey(mark.x, mark.measure, mark.clusterKey, mark.label, mark.groupKey),
     transformed,
     (group, method) => ({ ...group[0], value: aggregateNumbers(group.map(({ value }) => value), method) }),
   );

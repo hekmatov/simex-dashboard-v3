@@ -7,7 +7,7 @@ const DEFAULTS = Object.freeze({
   groupFields: [],
 });
 
-export function applyTransforms(rows = [], transformations = []) {
+export function applyTransforms(rows = [], transformations = [], datasetProfile) {
   const safeRows = Array.isArray(rows) ? rows.filter(isRow) : [];
   const transforms = Array.isArray(transformations) ? transformations : [];
   const config = { ...DEFAULTS };
@@ -18,7 +18,7 @@ export function applyTransforms(rows = [], transformations = []) {
   for (const transform of transforms) {
     if (!transform || typeof transform !== "object") continue;
     if (transform.type === "filter") {
-      currentRows = currentRows.filter((row) => matchesFilter(row, transform));
+      currentRows = currentRows.filter((row) => matchesFilter(row, transform, datasetProfile));
       filterCount += 1;
     } else if (transform.type === "aggregate") {
       config.aggregation = transform.method ?? null;
@@ -211,6 +211,16 @@ export function clusterValueAndKey(row, bindings, datasetProfile) {
   };
 }
 
+export function groupMetadata(row, transformed, datasetProfile) {
+  const fields = transformed.config.groupFields;
+  if (fields.length === 0) return {};
+  const values = fields.map((field) => readRoleValue(row, field, datasetProfile));
+  return {
+    group: values.length === 1 ? values[0] : values,
+    groupKey: stableKey(...values),
+  };
+}
+
 export function isMissing(value) {
   return value === null || value === undefined || (typeof value === "string" && value.trim() === "");
 }
@@ -222,15 +232,16 @@ export function diagnostic(severity, code, message, details = {}) {
 export const error = (code, message, details) => diagnostic("error", code, message, details);
 export const warning = (code, message, details) => diagnostic("warning", code, message, details);
 
-function matchesFilter(row, filter) {
+function matchesFilter(row, filter, datasetProfile) {
   if (filter.enabled === false || !filter.field) return true;
-  const value = row?.[filter.field];
-  if (filter.operator === "range") return inRange(value, filter.min, filter.max);
-  if (filter.operator === "notIn") return !(filter.values ?? []).some((candidate) => sameValue(value, candidate));
-  if (filter.operator === "equals") return sameValue(value, filter.value);
-  if (filter.operator === "notEquals") return !sameValue(value, filter.value);
+  const value = normalizeFilterValue(row?.[filter.field], filter.field, datasetProfile, false);
+  const operand = (candidate) => normalizeFilterValue(candidate, filter.field, datasetProfile, true);
+  if (filter.operator === "range") return inRange(value, operand(filter.min), operand(filter.max));
+  if (filter.operator === "notIn") return !(filter.values ?? []).some((candidate) => sameValue(value, operand(candidate)));
+  if (filter.operator === "equals") return sameValue(value, operand(filter.value));
+  if (filter.operator === "notEquals") return !sameValue(value, operand(filter.value));
   if (filter.operator === "contains") return String(value ?? "").includes(String(filter.value ?? ""));
-  return (filter.values ?? []).some((candidate) => sameValue(value, candidate));
+  return (filter.values ?? []).some((candidate) => sameValue(value, operand(candidate)));
 }
 
 function inRange(value, min, max) {
@@ -242,6 +253,19 @@ function inRange(value, min, max) {
 
 function profileColumn(profile, field) {
   return profile?.columns?.find(({ name }) => name === field);
+}
+
+function normalizeFilterValue(value, field, datasetProfile, isOperand) {
+  if (isMissing(value)) return null;
+  const column = profileColumn(datasetProfile, field);
+  const type = canonicalColumnType(column?.type);
+  if (type === "number") return numericValue(value);
+  if (type !== "temporal") return value;
+  const parsed = parseTemporalValue(value, column?.temporal?.parsingMetadata ?? {});
+  if (parsed.ok) return parsed.canonical;
+  if (!isOperand) return null;
+  const canonical = parseTemporalValue(value, { interpretation: "temporal" });
+  return canonical.ok ? canonical.canonical : null;
 }
 
 function canonicalContextValue(value) {

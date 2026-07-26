@@ -74,6 +74,131 @@ test("filters run before grouping and cluster keys cannot collide", () => {
   assert.equal(result.meta.rowsAfterFilters, 2);
 });
 
+test("group transforms keep distinct normalized groups out of duplicate collisions", () => {
+  const rows = [
+    { category: "A", scenario: "Base", value: 2 },
+    { category: "A", scenario: "Surge", value: 3 },
+  ];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }, [{ type: "group", fields: ["scenario"] }]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.meta.duplicateGroupCount, 0);
+  assert.deepEqual(result.marks.map(({ group }) => group), ["Base", "Surge"]);
+  assert.equal(new Set(result.marks.map(({ groupKey }) => groupKey)).size, 2);
+});
+
+test("group transforms still detect collisions inside the same group", () => {
+  const rows = [
+    { category: "A", scenario: "Base", value: 2 },
+    { category: "A", scenario: "Base", value: 3 },
+    { category: "A", scenario: "Surge", value: 4 },
+  ];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }, [
+      { type: "group", fields: ["scenario"] },
+      { type: "duplicates", strategy: "aggregate" },
+      { type: "aggregate", method: "sum" },
+    ]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.meta.duplicateGroupCount, 1);
+  assert.deepEqual(result.marks.map(({ group, value }) => [group, value]), [["Base", 5], ["Surge", 4]]);
+});
+
+test("families without grouped mark semantics reject group transforms actionably", () => {
+  const rows = [{ category: "A", value: 2 }];
+  const result = prepareChartData({
+    chart: chart("kpi", { value: { field: "value" } }, [{ type: "group", fields: ["category"] }]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "blocked");
+  assert.ok(result.diagnostics.some(({ code, message }) => (
+    code === "group-transform-unsupported" && /KPI|target/i.test(message)
+  )));
+});
+
+test("temporal equals filters compare canonical profile-backed values", () => {
+  const rows = [
+    { at: "01/05/2027", category: "A", value: 1 },
+    { at: "02/05/2027", category: "B", value: 2 },
+  ];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }, [{ type: "filter", field: "at", operator: "equals", value: "2027-05-02" }]),
+    rows,
+    datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
+  });
+
+  assert.deepEqual(result.marks.map(({ x, value }) => [x, value]), [["B", 2]]);
+});
+
+test("temporal inclusion filters normalize every operand", () => {
+  const rows = [
+    { at: "01/05/2027", category: "A", value: 1 },
+    { at: "02/05/2027", category: "B", value: 2 },
+    { at: "03/05/2027", category: "C", value: 3 },
+  ];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }, [{ type: "filter", field: "at", operator: "in", values: ["2027-05-01", "2027-05-03"] }]),
+    rows,
+    datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
+  });
+
+  assert.deepEqual(result.marks.map(({ x }) => x), ["A", "C"]);
+});
+
+test("DD/MM temporal ranges compare chronologically after normalization", () => {
+  const rows = [
+    { at: "31/05/2027", category: "A", value: 1 },
+    { at: "02/06/2027", category: "B", value: 2 },
+    { at: "10/06/2027", category: "C", value: 3 },
+  ];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }, [{ type: "filter", field: "at", operator: "range", min: "2027-06-01", max: "2027-06-05" }]),
+    rows,
+    datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
+  });
+
+  assert.deepEqual(result.marks.map(({ x, value }) => [x, value]), [["B", 2]]);
+});
+
+test("author-forced categories retain literal filter semantics", () => {
+  const rows = [{ date: "02/05/2027", category: "A", value: 1 }];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "category" },
+    }, [{ type: "filter", field: "date", operator: "equals", value: "2027-05-02" }]),
+    rows,
+    datasetProfile: profiled(rows, { date: { interpretation: "category" } }),
+  });
+
+  assert.equal(result.status, "empty");
+  assert.equal(result.meta.rowsAfterFilters, 0);
+});
+
 test("duplicate resolution appears only when complete role keys collide", () => {
   const duplicateRows = [
     { month: "May", region: "North", value: 2 },
@@ -152,6 +277,32 @@ test("axis marks retain measurement, cluster, label, and primary or secondary ax
   ]);
 });
 
+test("axis labels separate role keys while same-label observations still collide", () => {
+  const rows = [
+    { period: "May", value: 2, note: "Reported" },
+    { period: "May", value: 3, note: "Reported" },
+    { period: "May", value: 4, note: "Projected" },
+  ];
+  const result = prepareChartData({
+    chart: chart("bar", {
+      measurements: { field: "value" },
+      observation: { field: "period" },
+      label: { field: "note" },
+    }, [
+      { type: "duplicates", strategy: "aggregate" },
+      { type: "aggregate", method: "sum" },
+    ]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.meta.duplicateGroupCount, 1);
+  assert.deepEqual(result.marks.map(({ label, value }) => [label, value]), [
+    ["Reported", 5],
+    ["Projected", 4],
+  ]);
+});
+
 test("missing-value strategies distinguish gaps, zeroes, and dropped observations", () => {
   const rows = [{ period: "May", value: "" }, { period: "June", value: 4 }];
   const input = {
@@ -226,6 +377,38 @@ test("relationship duplicate metadata appears only for identical point-role keys
   assert.deepEqual(result.marks.map(({ label, size }) => [label, size]), [["A", 7], ["B", 5]]);
 });
 
+test("selected relationship size obeys gap, drop, and zero missing policies", () => {
+  const rows = [{ x: 1, y: 2, size: "" }];
+  const input = {
+    chart: chart("bubble", {
+      x: { field: "x" },
+      y: { field: "y" },
+      size: { field: "size" },
+    }),
+    rows,
+    datasetProfile: profiled(rows, { size: { interpretation: "numeric" } }),
+  };
+  const gap = prepareChartData({
+    ...input,
+    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "gap" }] },
+  });
+  const drop = prepareChartData({
+    ...input,
+    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "drop" }] },
+  });
+  const zero = prepareChartData({
+    ...input,
+    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "zero" }] },
+  });
+
+  assert.equal(gap.status, "ready");
+  assert.equal(gap.marks[0].size, null);
+  assert.equal(drop.status, "empty");
+  assert.deepEqual(drop.marks, []);
+  assert.equal(zero.status, "ready");
+  assert.equal(zero.marks[0].size, 0);
+});
+
 test("matrix and timeline families normalize temporal fields in their canonical marks", () => {
   const matrixRows = [{ facility: "Clinic", indicator: "PPE", score: 3, at: "02/05/2027" }];
   const metadata = { at: { interpretation: "temporal", format: "DD/MM/YYYY" } };
@@ -263,6 +446,26 @@ test("matrix and timeline families normalize temporal fields in their canonical 
   });
 });
 
+test("timeline statuses separate role keys while same-status events still collide", () => {
+  const rows = [
+    { event: "Deploy", start: "2027-05-02", status: "Planned" },
+    { event: "Deploy", start: "2027-05-02", status: "Planned" },
+    { event: "Deploy", start: "2027-05-02", status: "Done" },
+  ];
+  const result = prepareChartData({
+    chart: chart("timeline", {
+      event: { field: "event" },
+      start: { field: "start" },
+      status: { field: "status" },
+    }, [{ type: "duplicates", strategy: "first" }]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.meta.duplicateGroupCount, 1);
+  assert.deepEqual(result.marks.map(({ status }) => status), ["Planned", "Done"]);
+});
+
 test("KPI, gauge, and bullet targets emit their complete renderer values", () => {
   const statusRows = [{ at: "2027-05-02", actual: 8, target: 10 }];
   const profile = profiled(statusRows);
@@ -287,6 +490,29 @@ test("KPI, gauge, and bullet targets emit their complete renderer values", () =>
   assert.deepEqual(bullet.marks[0], { actual: 8, target: 10, label: null, time: null });
 });
 
+test("bullet labels separate role keys while same-label targets still collide", () => {
+  const rows = [
+    { actual: 8, target: 10, label: "Facility A" },
+    { actual: 9, target: 10, label: "Facility A" },
+    { actual: 7, target: 10, label: "Facility B" },
+  ];
+  const result = prepareChartData({
+    chart: chart("bullet", {
+      actual: { field: "actual" },
+      target: { field: "target" },
+      label: { field: "label" },
+    }, [{ type: "duplicates", strategy: "first" }]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.meta.duplicateGroupCount, 1);
+  assert.deepEqual(result.marks.map(({ label, actual }) => [label, actual]), [
+    ["Facility A", 8],
+    ["Facility B", 7],
+  ]);
+});
+
 test("delta card reports displayed, comparison, absolute, and percentage values", () => {
   const rows = [{ at: "2027-05-01", value: 8 }, { at: "2027-05-02", value: 10 }];
   const result = prepareChartData({
@@ -301,6 +527,119 @@ test("delta card reports displayed, comparison, absolute, and percentage values"
   assert.equal(result.marks[0].displayed, 10);
   assert.equal(result.marks[0].comparison, 8);
   assert.deepEqual(result.marks[0].delta, { absolute: 2, percentage: 25 });
+});
+
+test("delta card rejects multiple bound entities with an actionable alternative", () => {
+  const rows = [
+    { at: "2027-05-01", entity: "A", value: 5 },
+    { at: "2027-05-02", entity: "A", value: 6 },
+    { at: "2027-05-01", entity: "B", value: 8 },
+    { at: "2027-05-02", entity: "B", value: 10 },
+  ];
+  const result = prepareChartData({
+    chart: chart("deltaCard", {
+      measurement: { field: "value" },
+      entity: { field: "entity" },
+      time: { field: "at" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "blocked");
+  assert.ok(result.diagnostics.some(({ code, message }) => (
+    code === "delta-card-multiple-entities"
+    && /filter one entity|delta list/i.test(message)
+  )));
+});
+
+test("delta card succeeds when a filter leaves one bound entity", () => {
+  const rows = [
+    { at: "2027-05-01", entity: "A", value: 5 },
+    { at: "2027-05-02", entity: "A", value: 6 },
+    { at: "2027-05-01", entity: "B", value: 8 },
+    { at: "2027-05-02", entity: "B", value: 10 },
+  ];
+  const result = prepareChartData({
+    chart: chart("deltaCard", {
+      measurement: { field: "value" },
+      entity: { field: "entity" },
+      time: { field: "at" },
+    }, [{ type: "filter", field: "entity", operator: "equals", value: "B" }]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.marks[0].entity, "B");
+  assert.deepEqual(result.marks[0].delta, { absolute: 2, percentage: 25 });
+});
+
+test("delta duplicate timestamps require an explicit resolution strategy", () => {
+  const rows = [
+    { at: "2027-05-01", entity: "A", value: 2 },
+    { at: "2027-05-01", entity: "A", value: 3 },
+    { at: "2027-05-02", entity: "A", value: 10 },
+  ];
+  const result = prepareChartData({
+    chart: chart("deltaCard", {
+      measurement: { field: "value" },
+      entity: { field: "entity" },
+      time: { field: "at" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "blocked");
+  assert.equal(result.meta.duplicateGroupCount, 1);
+  assert.ok(result.diagnostics.some(({ code }) => code === "duplicate-resolution-required"));
+});
+
+test("delta duplicate timestamps aggregate only with both explicit controls", () => {
+  const rows = [
+    { at: "2027-05-01", entity: "A", value: 2 },
+    { at: "2027-05-01", entity: "A", value: 3 },
+    { at: "2027-05-02", entity: "A", value: 10 },
+  ];
+  const result = prepareChartData({
+    chart: chart("deltaCard", {
+      measurement: { field: "value" },
+      entity: { field: "entity" },
+      time: { field: "at" },
+    }, [
+      { type: "duplicates", strategy: "aggregate" },
+      { type: "aggregate", method: "sum" },
+    ]),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.meta.duplicateGroupCount, 1);
+  assert.equal(result.marks[0].comparison, 5);
+  assert.deepEqual(result.marks[0].delta, { absolute: 5, percentage: 100 });
+});
+
+test("delta comparisons use the latest two distinct valid timestamps", () => {
+  const rows = [
+    { at: "invalid", entity: "A", value: 100 },
+    { at: "2027-05-01", entity: "A", value: 4 },
+    { at: "2027-05-02", entity: "A", value: 6 },
+  ];
+  const result = prepareChartData({
+    chart: chart("deltaList", {
+      measurement: { field: "value" },
+      entity: { field: "entity" },
+      time: { field: "at" },
+    }),
+    rows,
+    datasetProfile: profiled(rows, { at: { interpretation: "temporal" } }),
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.marks[0].comparison, 4);
+  assert.equal(result.marks[0].displayed, 6);
 });
 
 test("target marks apply shared missing-value behavior before readiness", () => {
@@ -321,6 +660,37 @@ test("target marks apply shared missing-value behavior before readiness", () => 
   assert.equal(zero.marks[0].value, 0);
   assert.equal(drop.status, "empty");
   assert.deepEqual(drop.marks, []);
+});
+
+test("required bullet targets obey gap, drop, and zero missing policies", () => {
+  const rows = [{ actual: 8, target: "" }];
+  const input = {
+    chart: chart("bullet", {
+      actual: { field: "actual" },
+      target: { field: "target" },
+    }),
+    rows,
+    datasetProfile: profiled(rows, { target: { interpretation: "numeric" } }),
+  };
+  const gap = prepareChartData({
+    ...input,
+    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "gap" }] },
+  });
+  const drop = prepareChartData({
+    ...input,
+    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "drop" }] },
+  });
+  const zero = prepareChartData({
+    ...input,
+    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "zero" }] },
+  });
+
+  assert.equal(gap.status, "empty");
+  assert.equal(gap.marks[0].target, null);
+  assert.equal(drop.status, "empty");
+  assert.deepEqual(drop.marks, []);
+  assert.equal(zero.status, "ready");
+  assert.equal(zero.marks[0].target, 0);
 });
 
 test("target readiness requires every schema-required canonical value", () => {
@@ -403,6 +773,26 @@ test("geography marks preserve canonical identifiers, time, and supplied feature
   });
 });
 
+test("geography feature metadata is cloned and frozen at the pipeline boundary", () => {
+  const rows = [{ district: "GE-TB", value: 7 }];
+  const feature = { name: "Tbilisi", properties: { color: "red" } };
+  const result = prepareChartData({
+    chart: chart("choroplethMap", {
+      geography: { field: "district" },
+      value: { field: "value" },
+    }),
+    rows,
+    datasetProfile: profiled(rows, { district: { interpretation: "geographic" } }),
+    geography: { featuresById: { "GE-TB": feature } },
+  });
+
+  assert.notEqual(result.marks[0].feature, feature);
+  assert.notEqual(result.marks[0].feature.properties, feature.properties);
+  feature.properties.color = "blue";
+  assert.equal(result.marks[0].feature.properties.color, "red");
+  assert.throws(() => { result.marks[0].feature.properties.color = "green"; }, TypeError);
+});
+
 test("table and image operational charts produce canonical rows and image marks", () => {
   const rows = [{ facility: "Clinic", score: 3, hidden: "x" }];
   const table = prepareChartData({
@@ -423,6 +813,22 @@ test("table and image operational charts produce canonical rows and image marks"
     datasetProfile: profiled(imageRows),
   });
   assert.deepEqual(image.marks[0], { src: "/map.png", alt: "Response map", fit: "contain" });
+});
+
+test("structured table cells are cloned and frozen at the pipeline boundary", () => {
+  const details = { readiness: { score: 3 } };
+  const rows = [{ facility: "Clinic", details }];
+  const result = prepareChartData({
+    chart: chart("table", { columns: [{ field: "facility" }, { field: "details" }] }),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.notEqual(result.marks[0].values.details, details);
+  assert.notEqual(result.marks[0].values.details.readiness, details.readiness);
+  details.readiness.score = 1;
+  assert.equal(result.marks[0].values.details.readiness.score, 3);
+  assert.throws(() => { result.marks[0].values.details.readiness.score = 2; }, TypeError);
 });
 
 test("readiness never reports ready when every candidate mark is non-renderable", () => {

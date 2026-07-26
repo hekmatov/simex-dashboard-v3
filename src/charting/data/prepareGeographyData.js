@@ -3,6 +3,7 @@ import {
   applyMissingStrategy,
   consolidateCandidates,
   firstRoleBinding,
+  groupMetadata,
   readRoleValue,
   stableKey,
 } from "./transforms.js";
@@ -21,11 +22,12 @@ export function prepareGeographyData({ chart, rows, datasetProfile, geography, t
       value: missing.value,
       time: readRoleValue(row, time, datasetProfile),
       feature: geography?.featuresById?.[geographyValue] ?? null,
+      ...groupMetadata(row, transformed, datasetProfile),
     });
   }
   return consolidateCandidates(
     candidates,
-    (mark) => stableKey(mark.geography, mark.time),
+    (mark) => stableKey(mark.geography, mark.time, mark.groupKey),
     transformed,
     (group, method) => ({ ...group[0], value: aggregateNumbers(group.map(({ value: item }) => item), method) }),
   );
