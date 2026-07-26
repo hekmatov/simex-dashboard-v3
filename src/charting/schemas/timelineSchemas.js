@@ -1,0 +1,4 @@
+import { chartSchema, role } from "./schemaTypes.js";
+const roles = () => [role("event", "Event", ["text", "category"], 1), role("start", "Start", ["temporal"], 1), role("end", "End", ["temporal"], 0), role("lane", "Lane", ["category", "text"], 0), role("status", "Status", ["category", "text"], 0)];
+const base = { group: "timeline", form: { sections: ["data", "appearance", "labels", "timeline", "interactions", "advanced"] }, dataFamily: "timeline", renderer: "timeline", capabilities: { timeSync: true, collection: false, zoom: true }, conversions: [] };
+export const timelineSchemas = [chartSchema({ ...base, typeId: "timeline", label: "Timeline", description: "Show events and intervals over time.", roles: roles(), semantics: { purpose: "sequence", mark: "event" } }), chartSchema({ ...base, typeId: "swimlane", label: "Swimlane", description: "Show events over time organized into lanes.", roles: roles(), semantics: { purpose: "sequence", mark: "swimlane-event" } })];
