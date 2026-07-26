@@ -258,7 +258,8 @@ function canonicalTransformConfig(transformations, diagnostics) {
     diagnostics.push(error("invalid-transform-grouping", "Chart transformation grouping must be null or an array."));
   }
   const aggregation = source.aggregation ?? null;
-  const duplicateStrategy = source.duplicates ?? "error";
+  const duplicateSelection = source.duplicates ?? null;
+  const duplicateStrategy = duplicateSelection ?? "error";
   const missingStrategy = source.missingValues ?? "gap";
   if (aggregation !== null && !AGGREGATIONS.has(aggregation)) {
     diagnostics.push(error("invalid-aggregation", `Unsupported aggregation "${aggregation}".`));
@@ -269,8 +270,11 @@ function canonicalTransformConfig(transformations, diagnostics) {
   if (!MISSING_STRATEGIES.has(missingStrategy)) {
     diagnostics.push(error("invalid-missing-strategy", `Unsupported missing-value strategy "${missingStrategy}".`));
   }
-  if (duplicateStrategy === "aggregate" && !aggregation) {
-    diagnostics.push(error("aggregation-required", "Duplicate strategy aggregate requires an explicit aggregation method."));
+  if (duplicateStrategy === "aggregate" && !ARITHMETIC_DUPLICATES.has(aggregation)) {
+    diagnostics.push(error(
+      "aggregation-required",
+      "Duplicate strategy aggregate requires an explicit supported arithmetic aggregation.",
+    ));
   }
   if (
     ARITHMETIC_DUPLICATES.has(duplicateStrategy)
@@ -280,6 +284,18 @@ function canonicalTransformConfig(transformations, diagnostics) {
     diagnostics.push(error(
       "conflicting-duplicate-aggregation",
       `Duplicate strategy "${duplicateStrategy}" conflicts with aggregation "${aggregation}".`,
+    ));
+  }
+  if (
+    aggregation !== null
+    && AGGREGATIONS.has(aggregation)
+    && DUPLICATE_STRATEGIES.has(duplicateStrategy)
+    && duplicateStrategy !== "aggregate"
+    && !ARITHMETIC_DUPLICATES.has(duplicateStrategy)
+  ) {
+    diagnostics.push(error(
+      "unused-aggregation",
+      `Duplicate strategy "${duplicateSelection ?? "null"}" does not use aggregation "${aggregation}"; aggregation must be null.`,
     ));
   }
   if (source.temporalMatch?.policy && source.temporalMatch.policy !== "exact") {
