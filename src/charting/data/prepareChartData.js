@@ -8,7 +8,11 @@ import { prepareRelationshipData } from "./prepareRelationshipData.js";
 import { prepareTargetData } from "./prepareTargetData.js";
 import { prepareTimelineData } from "./prepareTimelineData.js";
 import {
-  applyTimeContext,
+  applyTemporalProvenance,
+  applyTimeContext as applyPlaybackTimeContext,
+} from "../time/applyTimeContext.js";
+import {
+  applyTimeContext as applyLegacyTimeContext,
   applyTransforms,
   error,
   validateRoleBindings,
@@ -45,8 +49,20 @@ export function prepareChartData(input = {}) {
   const chart = input.chart ?? {};
   const schema = getChartSchema(chart.typeId);
   const transformedRows = applyTransforms(input.rows, chart.transformations, input.datasetProfile, chart);
-  const timeScoped = applyTimeContext(transformedRows.rows, input.timeContext, input.datasetProfile);
-  const transformed = { ...transformedRows, ...timeScoped };
+  const timeScoped = applyLegacyTimeContext(transformedRows.rows, input.timeContext, input.datasetProfile);
+  const temporalProjection = applyPlaybackTimeContext({
+    chart,
+    rows: timeScoped.rows,
+    profile: input.datasetProfile,
+    timeContext: input.timeContext,
+    transformed: transformedRows,
+  });
+  const transformed = {
+    ...transformedRows,
+    rows: temporalProjection.rows,
+    rowsAfterTimeContext: temporalProjection.rowsAfterTimeContext,
+    diagnostics: [...transformedRows.diagnostics, ...temporalProjection.diagnostics],
+  };
   const bindingDiagnostics = validateRoleBindings(schema, chart, input.datasetProfile);
   const initialDiagnostics = [
     ...transformed.diagnostics,
@@ -69,9 +85,14 @@ export function prepareChartData(input = {}) {
     rows: transformed.rows,
     transformed,
   });
+  const timeAware = applyTemporalProvenance({
+    chart,
+    prepared,
+    projection: temporalProjection,
+  });
   return finalizePreparedResult({
-    ...prepared,
-    diagnostics: [...initialDiagnostics, ...(prepared.diagnostics ?? [])],
+    ...timeAware,
+    diagnostics: [...initialDiagnostics, ...(timeAware.diagnostics ?? [])],
   }, transformed, schema);
 }
 
