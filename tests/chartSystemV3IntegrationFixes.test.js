@@ -493,22 +493,92 @@ test("duplicate and aggregation controls preserve supported shorthand and aggreg
   );
 });
 
-test("arithmetic duplicate shorthand may literally omit the aggregation property", () => {
-  const base = configuredChart("bar", {
-    measurements: [{ field: "value", interpretation: "number" }],
-    observation: { field: "category", interpretation: "category" },
-  });
+const arithmeticDuplicateOutcomes = new Map([
+  ["sum", 15],
+  ["mean", 5],
+  ["average", 5],
+  ["min", 2],
+  ["max", 9],
+  ["count", 3],
+]);
 
-  assert.doesNotThrow(() => validateChartInstance({
-    ...base,
-    transformations: {
-      filters: [],
-      grouping: null,
-      duplicates: "sum",
-      missingValues: "gap",
-      temporalMatch: null,
-    },
-  }));
+for (const duplicates of [null, "error", "first", "last", ...arithmeticDuplicateOutcomes.keys()]) {
+  test(`explicit undefined aggregation is invalid for duplicate strategy ${duplicates ?? "null"}`, () => {
+    const rows = [
+      { category: "keep", value: 2 },
+      { category: "drop", value: 3 },
+    ];
+    const instance = configuredChart("bar", {
+      measurements: [{ field: "value", interpretation: "number" }],
+      observation: { field: "category", interpretation: "category" },
+    }, {
+      transformations: {
+        filters: [{ field: "category", operator: "equals", value: "keep" }],
+        grouping: null,
+        aggregation: undefined,
+        duplicates,
+        missingValues: "gap",
+        temporalMatch: null,
+      },
+    });
+
+    assert.throws(
+      () => validateChartInstance(instance),
+      /unsupported aggregation "undefined"/i,
+      duplicates ?? "null",
+    );
+
+    const prepared = prepareChartData({
+      chart: instance,
+      rows,
+      datasetProfile: profileDataset(rows),
+    });
+    assert.equal(prepared.status, "invalid", duplicates ?? "null");
+    assert.deepEqual(prepared.marks, [], duplicates ?? "null");
+    assert.equal(prepared.meta.renderableMarkCount, 0, duplicates ?? "null");
+    assert.equal(prepared.meta.rowsAfterFilters, rows.length, duplicates ?? "null");
+    assert.ok(
+      prepared.diagnostics.some(({ code, severity }) => (
+        code === "invalid-aggregation" && severity === "error"
+      )),
+      JSON.stringify(prepared.diagnostics),
+    );
+  });
+}
+
+test("arithmetic duplicate shorthand may literally omit the aggregation property", () => {
+  const rows = [
+    { category: "A", value: 2 },
+    { category: "A", value: 4 },
+    { category: "A", value: 9 },
+  ];
+
+  for (const [duplicates, expected] of arithmeticDuplicateOutcomes) {
+    const instance = configuredChart("bar", {
+      measurements: [{ field: "value", interpretation: "number" }],
+      observation: { field: "category", interpretation: "category" },
+    }, {
+      transformations: {
+        filters: [],
+        grouping: null,
+        duplicates,
+        missingValues: "gap",
+        temporalMatch: null,
+      },
+    });
+
+    assert.doesNotThrow(
+      () => validateChartInstance(instance),
+      duplicates,
+    );
+    const prepared = prepareChartData({
+      chart: instance,
+      rows,
+      datasetProfile: profileDataset(rows),
+    });
+    assert.equal(prepared.status, "ready", duplicates);
+    assert.equal(prepared.marks[0].value, expected, duplicates);
+  }
 });
 
 test("aggregate duplicate strategy accepts only explicit arithmetic methods", () => {

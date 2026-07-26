@@ -257,7 +257,7 @@ function canonicalTransformConfig(transformations, diagnostics) {
   if (source.grouping !== undefined && source.grouping !== null && !Array.isArray(source.grouping)) {
     diagnostics.push(error("invalid-transform-grouping", "Chart transformation grouping must be null or an array."));
   }
-  const aggregation = source.aggregation ?? null;
+  const aggregation = Object.hasOwn(source, "aggregation") ? source.aggregation : null;
   const duplicateSelection = source.duplicates ?? null;
   const duplicateStrategy = duplicateSelection ?? "error";
   const missingStrategy = source.missingValues ?? "gap";
