@@ -41,12 +41,17 @@ function profileColumns(sourceId, source) {
 
 function sourceColumnTypes(sourceId, source) {
   const columns = profileColumns(sourceId, source);
+  const rows = sourceRows(sourceId, source);
   const map = new Map();
   for (const column of columns) {
     ensureObject(column, `Data source "${sourceId}" profile column`);
     requiredString(column.name, `Data source "${sourceId}" profile column name`);
     requiredString(column.type, `Data source "${sourceId}" profile column type`);
-    map.set(column.name, column.type);
+    map.set(column.name, {
+      type: column.type,
+      values: rows?.map((row) => row[column.name]) ?? [],
+      authorInterpretation: source.parsingMetadata?.[column.name]?.interpretation ?? column.temporal?.parsingMetadata?.interpretation,
+    });
   }
   return map;
 }

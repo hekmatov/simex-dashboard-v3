@@ -113,6 +113,26 @@ function kpiChart(overrides = {}) {
   };
 }
 
+function deltaListChart(overrides = {}) {
+  return {
+    configVersion: 3,
+    id: "delta-list",
+    typeId: "deltaList",
+    title: "Delta list",
+    description: "Changes by facility.",
+    sourceId: "delta-data",
+    roles: { measurement: { field: "value" }, entity: { field: "entity" }, time: { field: "at", interpretation: "temporal" } },
+    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", temporalMatch: null },
+    presentation: {
+      title: { align: "left" },
+      collection: { layout: "fixedGrid", rows: 2, columns: 2, itemSpacing: 8, sortField: "value", sortDirection: "desc", rankingMode: "sort", overflow: "manualPages", pageSize: 4, rotationInterval: 5000, loop: true, pauseOnHover: true, transition: "fade", lockPositionsDuringPlayback: false, accessibleItemLabel: "Facility status" },
+    },
+    interaction: { zoom: { enabled: false }, timeSync: null },
+    layout: { size: "wide" },
+    ...overrides,
+  };
+}
+
 test("version 3 bundles round-trip uploaded and inline sources", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, {
@@ -329,4 +349,63 @@ test("bundle timestamps require a valid canonical ISO-8601 instant", () => {
     () => serializeDashboardBundle(version3Dashboard(), { now: "2026-02-30T12:00:00.000Z" }),
     /canonical ISO-8601 timestamp/i,
   );
+});
+
+test("a category source cannot become temporal only through a role override", () => {
+  const dashboard = version3Dashboard();
+  dashboard.dataSources["uploaded-cases"].csvText = "reportedAt,cases\nnot a date,4\n";
+  dashboard.dataSources["uploaded-cases"].parsingMetadata = {};
+  dashboard.pages[0].sections[0].panels[0].roles.observation = { field: "reportedAt", interpretation: "temporal" };
+
+  assert.throws(() => validateDashboardConfig(dashboard), /effective temporal interpretation|does not validate as temporal/i);
+});
+
+test("an explicit DD/MM/YYYY role override validates source values and enables time synchronization", () => {
+  const dashboard = version3Dashboard();
+  dashboard.dataSources["uploaded-cases"].csvText = "reportedAt,cases\n02/05/2027,4\n";
+  dashboard.dataSources["uploaded-cases"].parsingMetadata = {};
+  dashboard.pages[0].sections[0].panels[0].roles.observation = {
+    field: "reportedAt", interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only",
+  };
+
+  assert.doesNotThrow(() => validateDashboardConfig(dashboard));
+});
+
+test("time synchronization requires an effectively temporal source binding", () => {
+  const dashboard = version3Dashboard();
+  dashboard.dataSources["uploaded-cases"].csvText = "reportedAt,cases\nMay,4\n";
+  dashboard.dataSources["uploaded-cases"].parsingMetadata = {};
+  dashboard.pages[0].sections[0].panels[0].roles.observation = { field: "reportedAt" };
+
+  assert.throws(() => validateDashboardConfig(dashboard), /effective temporal role/i);
+});
+
+test("collection presentation accepts only documented enum and bounded value shapes", () => {
+  assert.doesNotThrow(() => validateChartInstance(deltaListChart()));
+
+  for (const [property, value, message] of [
+    ["rankingMode", "random", /rankingMode/],
+    ["overflow", "infinite", /overflow/],
+    ["pageSize", 0, /pageSize/],
+    ["pageSize", 5, /pageSize/],
+    ["transition", "bounce", /transition/],
+    ["accessibleItemLabel", "", /accessibleItemLabel/],
+    ["itemSpacing", -1, /itemSpacing/],
+    ["sortField", {}, /sortField/],
+    ["sortDirection", "up", /sortDirection/],
+    ["rotationInterval", 0, /rotationInterval/],
+    ["loop", "yes", /loop/],
+    ["pauseOnHover", 1, /pauseOnHover/],
+    ["lockPositionsDuringPlayback", "no", /lockPositionsDuringPlayback/],
+  ]) {
+    const chart = deltaListChart();
+    chart.presentation.collection[property] = value;
+    assert.throws(() => validateChartInstance(chart), message, property);
+  }
+
+  for (const dimension of ["rows", "columns"]) {
+    const chart = deltaListChart();
+    chart.presentation.collection[dimension] = 5;
+    assert.throws(() => validateChartInstance(chart), /between 1 and 4/, dimension);
+  }
 });

@@ -1,4 +1,5 @@
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import { parseTemporalValue } from "../data/temporal.js";
 
 export const CHART_CONFIG_VERSION = 3;
 
@@ -14,6 +15,9 @@ const DUPLICATE_STRATEGIES = new Set(["error", "first", "last", "aggregate", "su
 const MISSING_VALUE_STRATEGIES = new Set(["gap", "zero", "drop"]);
 const TIME_POLICIES = new Set(["exact", "lastKnown", "nearest", "interpolation"]);
 const COLLECTION_LAYOUTS = new Set(["fixedGrid", "scrollableGrid", "carousel"]);
+const COLLECTION_RANKING_MODES = new Set(["fixedOrder", "sort", "priority"]);
+const COLLECTION_OVERFLOWS = new Set(["manualPages", "scroll", "autoRotate", "visibleLimit"]);
+const COLLECTION_TRANSITIONS = new Set(["fade", "slide"]);
 const COLUMN_TYPES = new Set(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -40,9 +44,29 @@ function bindingsFor(value, role) {
   return [value];
 }
 
+function columnDetails(columnTypes, field) {
+  const value = columnTypes?.get(field);
+  if (!value) return null;
+  return typeof value === "string" ? { type: value, values: [] } : value;
+}
+
+function effectiveBindingType(binding, role, sourceColumn) {
+  const declared = binding.interpretation === undefined ? null : bindingType(binding.interpretation);
+  if (!sourceColumn) return declared;
+  const detected = bindingType(sourceColumn.type);
+  if (!declared || declared === detected) return detected;
+  if (sourceColumn.authorInterpretation && bindingType(sourceColumn.authorInterpretation) === declared) return declared;
+  if (declared === "temporal" && binding.format) {
+    const values = sourceColumn.values.filter((value) => value !== null && value !== undefined && !(typeof value === "string" && value.trim() === ""));
+    if (values.length > 0 && values.every((value) => parseTemporalValue(value, { interpretation: "temporal", format: binding.format, timezone: binding.timezone }).ok)) return "temporal";
+    throw new Error(`Role "${role.id}" field "${binding.field}" does not validate as temporal under its explicit format.`);
+  }
+  throw new Error(`Role "${role.id}" field "${binding.field}" has no effective ${declared} interpretation.`);
+}
+
 function validateBinding(binding, role, schema, columnTypes) {
   ensureObject(binding, `Role "${role.id}" binding`);
-  const allowed = new Set(["field", "interpretation"]);
+  const allowed = new Set(["field", "interpretation", "format", "timezone"]);
   if (schema.dataFamily === "axis" && role.id === "measurements") allowed.add("axis");
   checkKnownKeys(binding, allowed, `role "${role.id}" binding`);
   requiredString(binding.field, `Role "${role.id}" field`);
@@ -51,23 +75,30 @@ function validateBinding(binding, role, schema, columnTypes) {
     if (typeof binding.interpretation !== "string" || !COLUMN_TYPES.has(bindingType(binding.interpretation))) throw new Error(`Role "${role.id}" interpretation is unsupported.`);
     if (!role.accepts.includes("any") && !role.accepts.includes(bindingType(binding.interpretation))) throw new Error(`Role "${role.id}" interpretation "${binding.interpretation}" does not satisfy its schema.`);
   }
-  if (!columnTypes) return;
-  const type = columnTypes.get(binding.field);
-  if (!type) throw new Error(`Role "${role.id}" field "${binding.field}" does not exist in the declared source.`);
-  const normalized = bindingType(type);
-  if (!role.accepts.includes("any") && !role.accepts.includes(normalized)) throw new Error(`Role "${role.id}" field "${binding.field}" has type "${type}" and does not satisfy the schema.`);
+  if ((binding.format !== undefined || binding.timezone !== undefined) && binding.interpretation !== "temporal") throw new Error(`Role "${role.id}" format and timezone require temporal interpretation.`);
+  if (binding.format !== undefined) requiredString(binding.format, `Role "${role.id}" format`);
+  if (binding.timezone !== undefined) requiredString(binding.timezone, `Role "${role.id}" timezone`);
+  if (!columnTypes) return bindingType(binding.interpretation);
+  const sourceColumn = columnDetails(columnTypes, binding.field);
+  if (!sourceColumn) throw new Error(`Role "${role.id}" field "${binding.field}" does not exist in the declared source.`);
+  const normalized = effectiveBindingType(binding, role, sourceColumn);
+  if (!role.accepts.includes("any") && !role.accepts.includes(normalized)) throw new Error(`Role "${role.id}" field "${binding.field}" has type "${sourceColumn.type}" and does not satisfy the schema.`);
+  return normalized;
 }
 
 function validateRoles(chart, schema, columnTypes) {
   ensureObject(chart.roles, "Chart roles");
   const byId = new Map(schema.roles.map((role) => [role.id, role]));
   for (const roleId of Object.keys(chart.roles)) if (!byId.has(roleId)) throw new Error(`Unknown role "${roleId}" for chart type "${schema.typeId}".`);
+  const temporalRoles = new Set();
   for (const role of schema.roles) {
     const bindings = bindingsFor(chart.roles[role.id], role);
     if (bindings.length < role.min) throw new Error(`Role "${role.id}" requires at least ${role.min} binding${role.min === 1 ? "" : "s"}.`);
     if (role.max !== null && bindings.length > role.max) throw new Error(`Role "${role.id}" accepts at most ${role.max} binding${role.max === 1 ? "" : "s"}.`);
-    bindings.forEach((binding) => validateBinding(binding, role, schema, columnTypes));
+    const effectiveTypes = bindings.map((binding) => validateBinding(binding, role, schema, columnTypes));
+    if (effectiveTypes.includes("temporal")) temporalRoles.add(role.id);
   }
+  return temporalRoles;
 }
 
 function validateFilter(filter) {
@@ -111,12 +142,17 @@ function validateCollection(collection, schema) {
   const keys = new Set(["layout", "rows", "columns", "itemSpacing", "sortField", "sortDirection", "rankingMode", "overflow", "pageSize", "rotationInterval", "loop", "pauseOnHover", "transition", "lockPositionsDuringPlayback", "accessibleItemLabel"]);
   checkKnownKeys(collection, keys, "chart collection presentation");
   if (!COLLECTION_LAYOUTS.has(collection.layout)) throw new Error(`Unsupported collection layout "${collection.layout}".`);
-  for (const dimension of ["rows", "columns"]) if (!Number.isInteger(collection[dimension]) || collection[dimension] < 1) throw new Error(`Chart collection ${dimension} must be a positive integer.`);
-  if (collection.itemSpacing !== undefined && (!Number.isFinite(collection.itemSpacing) || collection.itemSpacing < 0)) throw new Error("Chart collection itemSpacing must be non-negative.");
+  for (const dimension of ["rows", "columns"]) if (!Number.isInteger(collection[dimension]) || collection[dimension] < 1 || collection[dimension] > 4) throw new Error(`Chart collection ${dimension} must be between 1 and 4.`);
+  if (collection.itemSpacing !== undefined && (!Number.isFinite(collection.itemSpacing) || collection.itemSpacing < 0 || collection.itemSpacing > 64)) throw new Error("Chart collection itemSpacing must be between 0 and 64.");
   if (collection.sortField !== undefined) requiredString(collection.sortField, "Chart collection sortField");
   if (collection.sortDirection !== undefined && !["asc", "desc"].includes(collection.sortDirection)) throw new Error("Chart collection sortDirection must be asc or desc.");
+  if (collection.rankingMode !== undefined && !COLLECTION_RANKING_MODES.has(collection.rankingMode)) throw new Error("Chart collection rankingMode is unsupported.");
+  if (collection.overflow !== undefined && !COLLECTION_OVERFLOWS.has(collection.overflow)) throw new Error("Chart collection overflow is unsupported.");
+  if (collection.pageSize !== undefined && (!Number.isInteger(collection.pageSize) || collection.pageSize < 1 || collection.pageSize > collection.rows * collection.columns)) throw new Error("Chart collection pageSize must be a positive integer within the grid capacity.");
   for (const key of ["loop", "pauseOnHover", "lockPositionsDuringPlayback"]) if (collection[key] !== undefined && typeof collection[key] !== "boolean") throw new Error(`Chart collection ${key} must be boolean.`);
   if (collection.rotationInterval !== undefined && (!Number.isFinite(collection.rotationInterval) || collection.rotationInterval <= 0)) throw new Error("Chart collection rotationInterval must be positive.");
+  if (collection.transition !== undefined && !COLLECTION_TRANSITIONS.has(collection.transition)) throw new Error("Chart collection transition must be fade or slide.");
+  if (collection.accessibleItemLabel !== undefined) requiredString(collection.accessibleItemLabel, "Chart collection accessibleItemLabel");
 }
 
 function validatePresentation(chart, schema) {
@@ -140,11 +176,7 @@ function validatePresentation(chart, schema) {
   optionalObject(chart.presentation.advanced, "Chart presentation advanced", new Set());
 }
 
-function temporalBindingExists(chart, schema) {
-  return schema.roles.some((role) => role.accepts.includes("temporal") && bindingsFor(chart.roles[role.id], role).length > 0);
-}
-
-function validateInteraction(chart, schema) {
+function validateInteraction(chart, schema, temporalRoles) {
   ensureObject(chart.interaction, "Chart interaction");
   checkKnownKeys(chart.interaction, INTERACTION_KEYS, "chart interaction");
   checkRequiredKeys(chart.interaction, INTERACTION_KEYS, "Chart interaction");
@@ -154,7 +186,7 @@ function validateInteraction(chart, schema) {
   if (chart.interaction.zoom.enabled && !schema.capabilities.zoom) throw new Error(`Chart type "${schema.typeId}" does not support zoom.`);
   const { timeSync } = chart.interaction;
   if (timeSync === null) return;
-  if (!schema.capabilities.timeSync || !temporalBindingExists(chart, schema)) throw new Error(`Chart type "${schema.typeId}" needs a non-empty temporal role before time synchronization can be enabled.`);
+  if (!schema.capabilities.timeSync || temporalRoles.size === 0) throw new Error(`Chart type "${schema.typeId}" needs an effective temporal role before time synchronization can be enabled.`);
   ensureObject(timeSync, "Chart time synchronization");
   checkKnownKeys(timeSync, new Set(["groupId", "policy", "tolerance"]), "chart time synchronization");
   requiredString(timeSync.groupId, "Chart time synchronization groupId");
@@ -193,10 +225,10 @@ export function validateChartInstance(chart, { columnTypes } = {}) {
   if (typeof chart.description !== "string") throw new Error("Chart description is required and must be a string.");
   requiredString(chart.sourceId, "Chart sourceId");
   const schema = getChartSchema(chart.typeId);
-  validateRoles(chart, schema, columnTypes);
+  const temporalRoles = validateRoles(chart, schema, columnTypes);
   validateTransformations(chart, schema);
   validatePresentation(chart, schema);
-  validateInteraction(chart, schema);
+  validateInteraction(chart, schema, temporalRoles);
   validateLayout(chart);
   return chart;
 }
