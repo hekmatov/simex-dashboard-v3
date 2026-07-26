@@ -290,7 +290,7 @@ test("time synchronization rejects an empty optional temporal role array", () =>
     interaction: { zoom: { enabled: false }, timeSync: { groupId: "status", policy: "exact" } },
   });
 
-  assert.throws(() => validateChartInstance(chart), /at least 1 binding|temporal role/i);
+  assert.throws(() => validateChartInstance(chart), /binding object|temporal role/i);
 });
 
 test("inline source records use one row representation and enforce each schema manual-data policy", () => {
@@ -324,6 +324,19 @@ test("image manual data rejects undeclared fields and oversized concise input", 
   ];
 
   assert.throws(() => validateDashboardConfig(dashboard), /manual data field "note"/i);
+
+  const multiple = version3Dashboard();
+  multiple.dataSources["manual-status"] = {
+    kind: "inline",
+    rows: [
+      { src: "/map.png", alt: "Map", fit: "contain" },
+      { src: "/map-2.png", alt: "Second map", fit: "contain" },
+    ],
+  };
+  multiple.pages[0].sections[0].panels = [
+    kpiChart({ id: "image", typeId: "image", roles: {}, interaction: { zoom: { enabled: true }, timeSync: null } }),
+  ];
+  assert.throws(() => validateDashboardConfig(multiple), /exactly one row/i);
 });
 
 test("serialization strips nested runtime state but preserves opaque manual data columns", () => {

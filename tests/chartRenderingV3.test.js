@@ -85,7 +85,7 @@ test("line, area, and mixed options preserve axis types and primary or secondary
     prepared: ready([
       { x: "2027-05-01", value: 4, measure: "cases", measureLabel: "Cases", cluster: null, clusterKey: "", group: null, groupKey: "", axis: "primary" },
       { x: "2027-05-02", value: 6, measure: "cases", measureLabel: "Cases", cluster: null, clusterKey: "", group: null, groupKey: "", axis: "primary" },
-    ]),
+    ], { axisInterpretation: "temporal" }),
   });
   const area = buildRenderModel({ chart: chart("area"), prepared: axisMarks });
   const mixed = buildRenderModel({ chart: chart("mixed"), prepared: axisMarks });
@@ -155,24 +155,21 @@ test("forced category dates never become an ECharts time axis", () => {
     }),
     prepared: ready([
       { x: "2027-05-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
-    ]),
+    ], { axisInterpretation: "category" }),
   });
 
   assert.equal(model.option.xAxis.type, "category");
   assert.deepEqual(model.option.xAxis.data, ["2027-05-01"]);
 });
 
-test("field-only observations use the canonical dataset profile interpretation", () => {
+test("field-only observations use canonical preparation metadata without downstream inference", () => {
   const model = buildRenderModel({
     chart: chart("line", {
       roles: { observation: { field: "recorded_at" } },
     }),
     prepared: ready([
       { x: "2027-05-01", value: 4, measure: "value", measureLabel: "Value", clusterKey: "", groupKey: "", axis: "primary" },
-    ]),
-    datasetProfile: {
-      columns: [{ name: "recorded_at", type: "temporal" }],
-    },
+    ], { axisInterpretation: "temporal" }),
   });
 
   assert.equal(model.option.xAxis.type, "time");
@@ -371,6 +368,7 @@ test("KPI, delta card, and delta list produce semantic card models", () => {
     comparison: null,
     delta: null,
     direction: null,
+    favorability: null,
   });
   assert.equal(deltaCard.items[0].direction, "increase");
   assert.deepEqual(deltaCard.items[0].delta, { absolute: 2, percentage: 25 });
@@ -575,18 +573,18 @@ test("table row keys are canonical for equal structured values and remain unique
 
 test("non-ready input produces a bounded error model with the first diagnostic", () => {
   const longMessage = `Invalid binding ${"x".repeat(500)}`;
-  const blocked = buildRenderModel({
+  const invalid = buildRenderModel({
     chart: chart("bar"),
-    prepared: { status: "blocked", marks: [], diagnostics: [{ severity: "error", message: longMessage }], meta: {} },
+    prepared: { status: "invalid", marks: [], diagnostics: [{ severity: "error", message: longMessage }], meta: {} },
   });
   const empty = buildRenderModel({
     chart: chart("bar"),
     prepared: { status: "empty", marks: [], diagnostics: [], meta: {} },
   });
 
-  assert.equal(blocked.kind, "error");
-  assert.match(blocked.message, /^Invalid binding/);
-  assert.ok(blocked.message.length <= 240);
+  assert.equal(invalid.kind, "error");
+  assert.match(invalid.message, /^Invalid binding/);
+  assert.ok(invalid.message.length <= 240);
   assert.deepEqual(empty, { kind: "error", message: "No renderer-ready chart data is available." });
 });
 

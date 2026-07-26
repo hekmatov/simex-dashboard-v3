@@ -10,6 +10,10 @@ import {
   roleBindings,
   stableKey,
 } from "./transforms.js";
+import {
+  profileColumn as findProfileColumn,
+  resolveEffectiveBinding as effectiveBinding,
+} from "./bindings.js";
 
 export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
   const measurements = roleBindings(chart, "measurements");
@@ -48,6 +52,10 @@ export function prepareAxisData({ chart, rows, datasetProfile, transformed }) {
   return {
     ...consolidated,
     meta: {
+      axisInterpretation: effectiveBinding(
+        observation,
+        findProfileColumn(datasetProfile, bindingField(observation)),
+      ).type,
       axes: {
         primary: measurements.filter((binding) => binding?.axis !== "secondary" && binding?.yAxisIndex !== 1).map(bindingField),
         secondary: measurements.filter((binding) => binding?.axis === "secondary" || binding?.yAxisIndex === 1).map(bindingField),

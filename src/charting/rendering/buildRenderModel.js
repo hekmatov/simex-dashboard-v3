@@ -1,4 +1,5 @@
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import { buildAccessibilityCompanion } from "./accessibilityRows.js";
 import { getRenderAdapter } from "./renderAdapterRegistry.js";
 
 const MAX_ERROR_LENGTH = 240;
@@ -7,8 +8,13 @@ export function buildRenderModel(input = {}) {
   if (input.prepared?.status !== "ready") {
     return { kind: "error", message: readinessMessage(input.prepared) };
   }
-  const renderer = getChartSchema(input.chart?.typeId).renderer;
-  return getRenderAdapter(renderer)(input);
+  const schema = getChartSchema(input.chart?.typeId);
+  const model = getRenderAdapter(schema.renderer)(input);
+  if (model.kind !== "echarts") return model;
+  return {
+    ...model,
+    accessibility: buildAccessibilityCompanion(schema, input.prepared.marks, input.chart),
+  };
 }
 
 function readinessMessage(prepared) {

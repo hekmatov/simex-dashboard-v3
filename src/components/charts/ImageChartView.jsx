@@ -1,10 +1,14 @@
 import React from "react";
+import { titleContainerProps } from "./chartViewPresentation.js";
 
 export default function ImageChartView({ model, chart = {}, provenance }) {
   const src = safeImageSource(model.src);
   if (!src) return React.createElement("div", { className: "chart-status-error", role: "status", "aria-live": "polite" }, "This chart image cannot be displayed.");
   const title = chart.title || "Chart image";
-  return React.createElement("figure", { className: "chart-image-view" },
+  return React.createElement("figure", {
+    className: "chart-image-view",
+    ...titleContainerProps(chart),
+  },
     React.createElement("img", { src, alt: model.alt || chart.description || title, style: { objectFit: safeFit(model.fit) } }),
     React.createElement("figcaption", null, title),
     React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),

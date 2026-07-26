@@ -65,11 +65,14 @@ test("delta cards render the exact resolved comparison time rather than a raw-ro
     chart: {
       ...deltaCard,
       roles: { measurement: { field: "value" }, time: { field: "at" } },
-      transformations: [
-        { type: "missing", strategy: "drop" },
-        { type: "duplicates", strategy: "aggregate" },
-        { type: "aggregate", method: "sum" },
-      ],
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: "sum",
+        duplicates: "aggregate",
+        missingValues: "drop",
+        temporalMatch: null,
+      },
     },
     rows,
     datasetProfile: profileDataset(rows, { at: { interpretation: "temporal" } }),
@@ -209,7 +212,7 @@ test("ECharts render models remain SSR-safe and describe their content", () => {
   }));
 
   assert.match(html, /role="img"/);
-  assert.match(html, /Monthly capacity contains 1 plotted value/);
+  assert.match(html, /value at May: 4/);
   assert.match(html, /data-zoom-modifier="Control"/);
 });
 

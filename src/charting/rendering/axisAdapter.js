@@ -1,10 +1,11 @@
 const HORIZONTAL_TYPES = new Set(["horizontalBar", "horizontalStackedBar"]);
 const STACKED_TYPES = new Set(["stackedBar", "horizontalStackedBar"]);
 
-export function buildAxisRenderModel({ chart, prepared, datasetProfile, renderContext = {} }) {
+export function buildAxisRenderModel({ chart, prepared }) {
   const horizontal = HORIZONTAL_TYPES.has(chart.typeId);
-  const temporal = !horizontal && observationInterpretation(chart, prepared, datasetProfile, renderContext) === "temporal";
+  const temporal = !horizontal && prepared.meta?.axisInterpretation === "temporal";
   const categories = unique(prepared.marks.map(({ x }) => x));
+  const categoryIndexes = new Map(categories.map((category, index) => [category, index]));
   const grouped = groupSeries(prepared.marks);
   const hasSecondary = grouped.some(({ axis }) => axis === "secondary");
   const categoryAxis = {
@@ -19,7 +20,7 @@ export function buildAxisRenderModel({ chart, prepared, datasetProfile, renderCo
       ? [...group.marks]
           .sort((left, right) => String(left.x).localeCompare(String(right.x)))
           .map(({ x, value }) => [x, value])
-      : categories.map((category) => group.marks.find(({ x }) => Object.is(x, category))?.value ?? null);
+      : categoryValues(group.marks, categoryIndexes, categories.length);
     return {
       name: group.name,
       type,
@@ -57,22 +58,6 @@ function axisLabelOption(chart, horizontal) {
     position: labels.position ?? (horizontal ? "right" : "top"),
     formatter: labels.format,
   };
-}
-
-function observationInterpretation(chart, prepared, datasetProfile, renderContext) {
-  return renderContext.axisInterpretation
-    ?? renderContext.interpretations?.observation
-    ?? prepared.meta?.axisInterpretation
-    ?? prepared.meta?.observationInterpretation
-    ?? chart.roles?.observation?.interpretation
-    ?? profileInterpretation(chart, datasetProfile)
-    ?? "category";
-}
-
-function profileInterpretation(chart, datasetProfile) {
-  const field = chart.roles?.observation?.field;
-  if (!field) return undefined;
-  return datasetProfile?.columns?.find(({ name }) => name === field)?.type;
 }
 
 function valueAxis(settings = {}, secondary = false) {
@@ -154,4 +139,13 @@ function ariaOption(chart) {
 
 function unique(values) {
   return [...new Set(values)];
+}
+
+function categoryValues(marks, indexes, count) {
+  const values = Array.from({ length: count }, () => null);
+  for (const mark of marks) {
+    const index = indexes.get(mark.x);
+    if (index !== undefined) values[index] = mark.value;
+  }
+  return values;
 }

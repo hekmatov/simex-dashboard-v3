@@ -1,15 +1,17 @@
-export function buildGeographyRenderModel({ chart, prepared, renderContext = {} }) {
-  if (chart.typeId === "mapScatter") return mapScatterModel(chart, prepared.marks, renderContext);
-  if (chart.typeId === "chronoChoroplethMap") return chronologicalMapModel(chart, prepared.marks, renderContext);
-  return choroplethModel(chart, latestFrame(prepared.marks), renderContext);
+import { featureCoordinates, normalizeGeoData } from "../data/geoData.js";
+
+export function buildGeographyRenderModel({ chart, prepared, geoData, renderContext = {} }) {
+  if (chart.typeId === "mapScatter") return mapScatterModel(chart, prepared.marks, renderContext, geoData);
+  if (chart.typeId === "chronoChoroplethMap") return chronologicalMapModel(chart, prepared.marks, renderContext, geoData);
+  return choroplethModel(chart, latestFrame(prepared.marks), renderContext, geoData);
 }
 
-function choroplethModel(chart, marks, renderContext) {
+function choroplethModel(chart, marks, renderContext, geoData) {
   const values = marks.map(({ value }) => value).filter(Number.isFinite);
   return {
     kind: "echarts",
     interaction: geographyInteraction(chart),
-    mapRegistration: mapRegistration(chart, marks, renderContext),
+    mapRegistration: mapRegistration(chart, marks, renderContext, geoData),
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
@@ -24,7 +26,7 @@ function choroplethModel(chart, marks, renderContext) {
   };
 }
 
-function chronologicalMapModel(chart, marks, renderContext) {
+function chronologicalMapModel(chart, marks, renderContext, geoData) {
   const times = unique(marks.map(({ time }) => time).filter((time) => time !== null && time !== undefined))
     .sort((left, right) => String(left).localeCompare(String(right)));
   const values = marks.map(({ value }) => value).filter(Number.isFinite);
@@ -43,7 +45,7 @@ function chronologicalMapModel(chart, marks, renderContext) {
   return {
     kind: "echarts",
     interaction: geographyInteraction(chart),
-    mapRegistration: mapRegistration(chart, marks, renderContext),
+    mapRegistration: mapRegistration(chart, marks, renderContext, geoData),
     option: {
       ...baseOption,
       baseOption,
@@ -55,8 +57,11 @@ function chronologicalMapModel(chart, marks, renderContext) {
   };
 }
 
-function mapScatterModel(chart, marks, renderContext) {
-  const located = marks.map((mark) => ({ mark, coordinates: featureCoordinates(mark.feature) }));
+function mapScatterModel(chart, marks, renderContext, geoData) {
+  const located = marks.map((mark) => ({
+    mark,
+    coordinates: mark.coordinates ?? featureCoordinates(mark.feature),
+  }));
   const valid = located.filter(({ coordinates }) => coordinates !== null);
   const diagnostics = located
     .filter(({ coordinates }) => coordinates === null)
@@ -74,7 +79,7 @@ function mapScatterModel(chart, marks, renderContext) {
     kind: "echarts",
     diagnostics,
     interaction: geographyInteraction(chart),
-    mapRegistration: mapRegistration(chart, marks, renderContext),
+    mapRegistration: mapRegistration(chart, marks, renderContext, geoData),
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
@@ -126,19 +131,23 @@ function geoOption(chart, renderContext) {
   };
 }
 
-function mapRegistration(chart, marks, renderContext) {
+function mapRegistration(chart, marks, renderContext, geoData) {
   const joinField = chart.presentation?.map?.joinField ?? null;
-  const features = new Map();
-  for (const mark of marks) {
-    if (mark.feature?.type !== "Feature") continue;
-    const key = featureJoinName(mark, joinField);
-    if (!features.has(key)) features.set(key, clone(mark.feature));
+  let geoJson = normalizeGeoData(geoData);
+  if (geoJson.features.length === 0) {
+    const features = new Map();
+    for (const mark of marks) {
+      if (mark.feature?.type !== "Feature") continue;
+      const key = featureJoinName(mark, joinField);
+      if (!features.has(key)) features.set(key, clone(mark.feature));
+    }
+    geoJson = { type: "FeatureCollection", features: [...features.values()] };
   }
   return {
     name: mapName(chart, renderContext),
     source: chart.presentation?.map?.geoSource ?? null,
     joinField,
-    geoJson: { type: "FeatureCollection", features: [...features.values()] },
+    geoJson,
   };
 }
 
@@ -180,88 +189,6 @@ function featureJoinName(mark, joinField) {
     : String(joined);
 }
 
-function featureCoordinates(feature) {
-  if (feature?.geometry?.type === "Point" && coordinatePair(feature.geometry.coordinates)) {
-    return feature.geometry.coordinates.slice(0, 2);
-  }
-  for (const candidate of [
-    feature?.coordinates,
-    feature?.center,
-    feature?.centroid,
-    feature?.properties?.coordinates,
-    [feature?.properties?.longitude, feature?.properties?.latitude],
-    [feature?.properties?.lon, feature?.properties?.lat],
-  ]) {
-    if (coordinatePair(candidate)) return candidate.slice(0, 2).map(Number);
-  }
-  return geometryCentroid(feature?.geometry);
-}
-
-function geometryCentroid(geometry) {
-  if (geometry?.type === "Polygon") return polygonCentroid(geometry.coordinates);
-  if (geometry?.type === "MultiPolygon") {
-    const centroids = (geometry.coordinates ?? []).map(polygonCentroidDetails).filter(Boolean);
-    if (centroids.length > 0) {
-      const totalArea = centroids.reduce((sum, { area }) => sum + area, 0);
-      if (totalArea > 0) {
-        return [
-          centroids.reduce((sum, { center, area }) => sum + center[0] * area, 0) / totalArea,
-          centroids.reduce((sum, { center, area }) => sum + center[1] * area, 0) / totalArea,
-        ];
-      }
-    }
-    return boundingCenter(geometry.coordinates);
-  }
-  return null;
-}
-
-function polygonCentroid(coordinates) {
-  return polygonCentroidDetails(coordinates)?.center ?? boundingCenter(coordinates);
-}
-
-function polygonCentroidDetails(coordinates) {
-  const ring = coordinates?.[0];
-  if (!Array.isArray(ring) || ring.length < 3) return null;
-  let crossSum = 0;
-  let xSum = 0;
-  let ySum = 0;
-  for (let index = 0; index < ring.length - 1; index += 1) {
-    const left = ring[index];
-    const right = ring[index + 1];
-    if (!coordinatePair(left) || !coordinatePair(right)) return null;
-    const cross = Number(left[0]) * Number(right[1]) - Number(right[0]) * Number(left[1]);
-    crossSum += cross;
-    xSum += (Number(left[0]) + Number(right[0])) * cross;
-    ySum += (Number(left[1]) + Number(right[1])) * cross;
-  }
-  if (crossSum === 0) return null;
-  return {
-    center: [xSum / (3 * crossSum), ySum / (3 * crossSum)],
-    area: Math.abs(crossSum / 2),
-  };
-}
-
-function boundingCenter(coordinates) {
-  const points = [];
-  collectCoordinates(coordinates, points);
-  if (points.length === 0) return null;
-  const longitudes = points.map(([longitude]) => longitude);
-  const latitudes = points.map(([, latitude]) => latitude);
-  return [
-    (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
-    (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
-  ];
-}
-
-function collectCoordinates(value, points) {
-  if (coordinatePair(value)) {
-    points.push(value.slice(0, 2).map(Number));
-    return;
-  }
-  if (!Array.isArray(value)) return;
-  for (const nested of value) collectCoordinates(nested, points);
-}
-
 function missingCoordinateDiagnostic(mark) {
   return {
     code: "map-scatter-coordinate-missing",
@@ -269,13 +196,6 @@ function missingCoordinateDiagnostic(mark) {
     message: `Map point “${mark.geography}” has no usable coordinate and was skipped.`,
     geography: mark.geography,
   };
-}
-
-function coordinatePair(value) {
-  return Array.isArray(value)
-    && value.length >= 2
-    && Number.isFinite(Number(value[0]))
-    && Number.isFinite(Number(value[1]));
 }
 
 function titleOption(chart) {

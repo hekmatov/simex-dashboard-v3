@@ -1,5 +1,6 @@
 import {
   bindingField,
+  error,
   firstRoleBinding,
   readRoleValue,
   roleBindings,
@@ -7,6 +8,17 @@ import {
 
 export function prepareOperationalData({ schema, chart, rows, datasetProfile }) {
   if (schema.typeId === "image") {
+    if (rows.length !== 1) {
+      return {
+        marks: [],
+        diagnostics: [error(
+          "image-row-count",
+          "Image manual data must contain exactly one row.",
+          { rowCount: rows.length },
+        )],
+        duplicateGroupCount: 0,
+      };
+    }
     return {
       marks: rows
         .filter((row) => row?.src)

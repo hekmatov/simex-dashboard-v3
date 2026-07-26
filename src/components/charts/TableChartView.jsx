@@ -1,4 +1,5 @@
 import React from "react";
+import { titleContainerProps } from "./chartViewPresentation.js";
 
 export default function TableChartView({ model, chart = {}, provenance }) {
   const columns = Array.isArray(model.columns) ? model.columns : [];
@@ -12,7 +13,11 @@ export default function TableChartView({ model, chart = {}, provenance }) {
       key: metadata[index]?.key ?? canonicalRowKey(row, columns, metadata[index]?.time),
       "aria-label": metadata[index]?.time ? `Observed ${metadata[index].time}` : undefined,
     }, columns.map((column) => React.createElement("td", { key: column.key }, formatValue(row?.[column.key])))))));
-  return React.createElement("section", { className: "chart-table-view", "aria-label": title },
+  return React.createElement("section", {
+    className: "chart-table-view",
+    "aria-label": title,
+    ...titleContainerProps(chart),
+  },
     React.createElement("h3", { className: "chart-view-title" }, title),
     chart.description ? React.createElement("p", { className: "chart-view-description" }, chart.description) : null,
     React.createElement("div", { className: "chart-table-scroll" }, table),

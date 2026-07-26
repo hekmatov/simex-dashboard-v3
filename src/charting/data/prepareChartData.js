@@ -44,7 +44,7 @@ const GROUPABLE_FAMILIES = new Set(["axis", "composition", "relationship", "matr
 export function prepareChartData(input = {}) {
   const chart = input.chart ?? {};
   const schema = getChartSchema(chart.typeId);
-  const transformedRows = applyTransforms(input.rows, chart.transformations, input.datasetProfile);
+  const transformedRows = applyTransforms(input.rows, chart.transformations, input.datasetProfile, chart);
   const timeScoped = applyTimeContext(transformedRows.rows, input.timeContext, input.datasetProfile);
   const transformed = { ...transformedRows, ...timeScoped };
   const bindingDiagnostics = validateRoleBindings(schema, chart, input.datasetProfile);
@@ -100,7 +100,7 @@ function finalizePreparedResult(prepared, transformed, schema) {
     diagnostics.push(warning("no-renderable-marks", "No renderer-ready marks remain after validation and transformations."));
   }
   return cloneAndFreeze({
-    status: hasErrors ? "blocked" : renderableMarkCount > 0 ? "ready" : "empty",
+    status: hasErrors ? "invalid" : renderableMarkCount > 0 ? "ready" : "empty",
     marks,
     diagnostics,
     meta: {
@@ -132,7 +132,16 @@ function isRenderableMark(mark, schema) {
   if (family === "axis") return mark.x !== null && mark.x !== undefined && mark.value !== null && mark.value !== undefined;
   if (family === "composition") return mark.category !== null && mark.category !== undefined && mark.value !== null && mark.value !== undefined;
   if (family === "matrix") return hasRenderableValue(mark.row) && hasRenderableValue(mark.column) && hasRenderableValue(mark.value);
-  if (family === "geography") return mark.geography !== null && mark.geography !== undefined && mark.value !== null && mark.value !== undefined;
+  if (family === "geography") {
+    const located = schema.typeId === "mapScatter"
+      ? Array.isArray(mark.coordinates) && mark.coordinates.length >= 2
+      : mark.feature?.type === "Feature";
+    return located
+      && mark.geography !== null
+      && mark.geography !== undefined
+      && mark.value !== null
+      && mark.value !== undefined;
+  }
   if (family === "relationship") return mark.x !== null && mark.y !== null;
   if (family === "timeline") return Boolean(mark.event) && Boolean(mark.start);
   if (family === "target") {

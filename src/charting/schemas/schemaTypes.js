@@ -22,5 +22,7 @@ export const CHART_RENDERERS = Object.freeze({ axis: "axis", composition: "compo
 
 export function role(id, label, accepts, min, max = 1) { return { id, label, accepts, min, max }; }
 export function chartSchema(definition) {
-  return { version: CHART_SCHEMA_VERSION, sources: ["dataset"], transforms: ["filter", "aggregate", "duplicates", "missing"], manualData: null, ...definition };
+  const groupable = !["target", "operational"].includes(definition.dataFamily);
+  const transforms = ["filter", ...(groupable ? ["group"] : []), "aggregate", "duplicates", "missing"];
+  return { version: CHART_SCHEMA_VERSION, sources: ["dataset"], transforms, manualData: null, ...definition };
 }

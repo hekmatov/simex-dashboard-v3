@@ -99,6 +99,8 @@ function validateManualData(chart, source) {
   if (!schema.sources.includes("inline")) throw new Error(`Chart "${chart.id}" does not support inline source "${chart.sourceId}".`);
   if (!schema.manualData) throw new Error(`Chart "${chart.id}" does not allow manual data.`);
   const rows = source.rows ?? source.data;
+  if (schema.manualData.minRows === 1 && schema.manualData.maxRows === 1 && rows.length !== 1) throw new Error(`Chart "${chart.id}" manual data must contain exactly one row.`);
+  if (schema.manualData.minRows !== undefined && rows.length < schema.manualData.minRows) throw new Error(`Chart "${chart.id}" manual data requires exactly ${schema.manualData.minRows} row.`);
   if (schema.manualData.maxRows !== undefined && rows.length > schema.manualData.maxRows) throw new Error(`Chart "${chart.id}" manual data exceeds ${schema.manualData.maxRows} rows.`);
   if (schema.manualData.fields) {
     const allowed = new Set(schema.manualData.fields);

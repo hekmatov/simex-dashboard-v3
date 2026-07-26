@@ -8,8 +8,28 @@ function profiled(rows, metadata = {}) {
   return profileDataset(rows, metadata);
 }
 
-function chart(typeId, roles, transformations = []) {
-  return { typeId, roles, transformations };
+function transformationObject(transformationEntries = []) {
+  const transformations = {
+    filters: [],
+    grouping: null,
+    aggregation: null,
+    duplicates: null,
+    missingValues: "gap",
+    temporalMatch: null,
+  };
+  for (const entry of transformationEntries) {
+    if (entry.type === "filter") transformations.filters.push({ ...entry, type: undefined });
+    if (entry.type === "group") transformations.grouping = entry.fields;
+    if (entry.type === "aggregate") transformations.aggregation = entry.method;
+    if (entry.type === "duplicates") transformations.duplicates = entry.strategy;
+    if (entry.type === "missing") transformations.missingValues = entry.strategy;
+  }
+  transformations.filters = transformations.filters.map(({ type: _type, ...filter }) => filter);
+  return transformations;
+}
+
+function chart(typeId, roles, transformationEntries = []) {
+  return { typeId, roles, transformations: transformationObject(transformationEntries) };
 }
 
 test("ready means the adapter receives at least one renderable mark", () => {
@@ -42,7 +62,7 @@ test("missing required roles and incompatible field types block readiness", () =
     datasetProfile: profiled(rows),
   });
 
-  assert.equal(result.status, "blocked");
+  assert.equal(result.status, "invalid");
   assert.deepEqual(
     result.diagnostics.filter(({ severity }) => severity === "error").map(({ code }) => code).sort(),
     ["invalid-role-cardinality", "role-field-type"],
@@ -125,7 +145,7 @@ test("families without grouped mark semantics reject group transforms actionably
     datasetProfile: profiled(rows),
   });
 
-  assert.equal(result.status, "blocked");
+  assert.equal(result.status, "invalid");
   assert.ok(result.diagnostics.some(({ code, message }) => (
     code === "group-transform-unsupported" && /KPI|target/i.test(message)
   )));
@@ -246,7 +266,7 @@ test("duplicate aggregation is explicit and unresolved collisions block renderin
     datasetProfile: profiled(rows),
   });
 
-  assert.equal(result.status, "blocked");
+  assert.equal(result.status, "invalid");
   assert.ok(result.diagnostics.some(({ code }) => code === "duplicate-resolution-required"));
   assert.equal(result.meta.markCount, 0);
 });
@@ -314,9 +334,9 @@ test("missing-value strategies distinguish gaps, zeroes, and dropped observation
     datasetProfile: profiled(rows, { value: { interpretation: "numeric" } }),
   };
 
-  const gap = prepareChartData({ ...input, chart: { ...input.chart, transformations: [{ type: "missing", strategy: "gap" }] } });
-  const zero = prepareChartData({ ...input, chart: { ...input.chart, transformations: [{ type: "missing", strategy: "zero" }] } });
-  const drop = prepareChartData({ ...input, chart: { ...input.chart, transformations: [{ type: "missing", strategy: "drop" }] } });
+  const gap = prepareChartData({ ...input, chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "gap" }]) } });
+  const zero = prepareChartData({ ...input, chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "zero" }]) } });
+  const drop = prepareChartData({ ...input, chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "drop" }]) } });
 
   assert.deepEqual(gap.marks.map(({ value }) => value), [null, 4]);
   assert.deepEqual(zero.marks.map(({ value }) => value), [0, 4]);
@@ -390,15 +410,15 @@ test("selected relationship size obeys gap, drop, and zero missing policies", ()
   };
   const gap = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "gap" }] },
+    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "gap" }]) },
   });
   const drop = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "drop" }] },
+    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "drop" }]) },
   });
   const zero = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "zero" }] },
+    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "zero" }]) },
   });
 
   assert.equal(gap.status, "ready");
@@ -485,9 +505,9 @@ test("KPI, gauge, and bullet targets emit their complete renderer values", () =>
     datasetProfile: profile,
   });
 
-  assert.deepEqual(kpi.marks[0], { value: 8, target: 10, time: "2027-05-02" });
-  assert.deepEqual(gauge.marks[0], { value: 8, target: 10, time: "2027-05-02" });
-  assert.deepEqual(bullet.marks[0], { actual: 8, target: 10, label: null, time: null });
+  assert.deepEqual(kpi.marks[0], { value: 8, target: 10, entity: null, label: null, time: "2027-05-02" });
+  assert.deepEqual(gauge.marks[0], { value: 8, target: 10, entity: null, label: null, time: "2027-05-02" });
+  assert.deepEqual(bullet.marks[0], { actual: 8, target: 10, entity: null, label: null, time: null });
 });
 
 test("bullet labels separate role keys while same-label targets still collide", () => {
@@ -572,7 +592,7 @@ test("delta card rejects multiple bound entities with an actionable alternative"
     datasetProfile: profiled(rows),
   });
 
-  assert.equal(result.status, "blocked");
+  assert.equal(result.status, "invalid");
   assert.ok(result.diagnostics.some(({ code, message }) => (
     code === "delta-card-multiple-entities"
     && /filter one entity|delta list/i.test(message)
@@ -617,7 +637,7 @@ test("delta duplicate timestamps require an explicit resolution strategy", () =>
     datasetProfile: profiled(rows),
   });
 
-  assert.equal(result.status, "blocked");
+  assert.equal(result.status, "invalid");
   assert.equal(result.meta.duplicateGroupCount, 1);
   assert.ok(result.diagnostics.some(({ code }) => code === "duplicate-resolution-required"));
 });
@@ -700,15 +720,15 @@ test("required bullet targets obey gap, drop, and zero missing policies", () => 
   };
   const gap = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "gap" }] },
+    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "gap" }]) },
   });
   const drop = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "drop" }] },
+    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "drop" }]) },
   });
   const zero = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: [{ type: "missing", strategy: "zero" }] },
+    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "zero" }]) },
   });
 
   assert.equal(gap.status, "empty");
@@ -783,6 +803,12 @@ test("delta lists compare the latest two observations independently per entity",
 
 test("geography marks preserve canonical identifiers, time, and supplied feature metadata", () => {
   const rows = [{ district: "GE-TB", value: 7, at: "2027-05-02" }];
+  const feature = {
+    type: "Feature",
+    id: "GE-TB",
+    properties: { name: "Tbilisi" },
+    geometry: { type: "Point", coordinates: [44.79, 41.72] },
+  };
   const result = prepareChartData({
     chart: chart("chronoChoroplethMap", {
       geography: { field: "district" },
@@ -791,17 +817,26 @@ test("geography marks preserve canonical identifiers, time, and supplied feature
     }),
     rows,
     datasetProfile: profiled(rows, { district: { interpretation: "geographic" } }),
-    geography: { featuresById: { "GE-TB": { name: "Tbilisi" } } },
+    geoData: { type: "FeatureCollection", features: [feature] },
   });
 
   assert.deepEqual(result.marks[0], {
-    geography: "GE-TB", value: 7, time: "2027-05-02", feature: { name: "Tbilisi" },
+    geography: "GE-TB",
+    value: 7,
+    time: "2027-05-02",
+    feature,
+    coordinates: [44.79, 41.72],
   });
 });
 
 test("geography feature metadata is cloned and frozen at the pipeline boundary", () => {
   const rows = [{ district: "GE-TB", value: 7 }];
-  const feature = { name: "Tbilisi", properties: { color: "red" } };
+  const feature = {
+    type: "Feature",
+    id: "GE-TB",
+    properties: { name: "Tbilisi", color: "red" },
+    geometry: { type: "Point", coordinates: [44.79, 41.72] },
+  };
   const result = prepareChartData({
     chart: chart("choroplethMap", {
       geography: { field: "district" },
@@ -809,7 +844,7 @@ test("geography feature metadata is cloned and frozen at the pipeline boundary",
     }),
     rows,
     datasetProfile: profiled(rows, { district: { interpretation: "geographic" } }),
-    geography: { featuresById: { "GE-TB": feature } },
+    geoData: { type: "FeatureCollection", features: [feature] },
   });
 
   assert.notEqual(result.marks[0].feature, feature);

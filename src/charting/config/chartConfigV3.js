@@ -1,5 +1,11 @@
-import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import {
+  bindingForField,
+  canonicalColumnType,
+  resolveBindingValue,
+  resolveEffectiveBinding,
+} from "../data/bindings.js";
 import { parseTemporalValue } from "../data/temporal.js";
+import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 
 export const CHART_CONFIG_VERSION = 3;
 
@@ -11,14 +17,17 @@ const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
 const FILTER_OPERATORS = new Set(["in", "notIn", "range", "equals", "notEquals", "contains"]);
 const AGGREGATIONS = new Set(["sum", "mean", "average", "min", "max", "count", "first", "last"]);
-const DUPLICATE_STRATEGIES = new Set(["error", "first", "last", "aggregate", "sum", "mean", "average", "min", "max", "count"]);
+const ARITHMETIC_DUPLICATES = new Set(["sum", "mean", "average", "min", "max", "count"]);
+const DUPLICATE_STRATEGIES = new Set(["error", "first", "last", "aggregate", ...ARITHMETIC_DUPLICATES]);
 const MISSING_VALUE_STRATEGIES = new Set(["gap", "zero", "drop"]);
-const TIME_POLICIES = new Set(["exact", "lastKnown", "nearest", "interpolation"]);
 const COLLECTION_LAYOUTS = new Set(["fixedGrid", "scrollableGrid", "carousel"]);
 const COLLECTION_RANKING_MODES = new Set(["fixedOrder", "sort", "priority"]);
 const COLLECTION_OVERFLOWS = new Set(["manualPages", "scroll", "autoRotate", "visibleLimit"]);
 const COLLECTION_TRANSITIONS = new Set(["fade", "slide"]);
 const COLUMN_TYPES = new Set(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
+const TITLE_ALIGNMENTS = new Set(["left", "center", "right"]);
+const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neutral"]);
+const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function requiredString(value, description) { if (typeof value !== "string" || value.trim() === "") throw new Error(`${description} is required.`); }
@@ -28,7 +37,7 @@ function checkRequiredKeys(value, keys, description) { for (const key of keys) i
 function optionalObject(value, description, keys) { if (value === undefined) return; ensureObject(value, description); checkKnownKeys(value, keys, description.toLowerCase()); }
 
 function bindingType(type) {
-  return type === "numeric" ? "number" : type;
+  return canonicalColumnType(type);
 }
 
 function bindingsFor(value, role) {
@@ -37,10 +46,7 @@ function bindingsFor(value, role) {
     if (!Array.isArray(value)) throw new Error(`Role "${role.id}" must be an array of bindings.`);
     return value;
   }
-  if (Array.isArray(value)) {
-    if (role.accepts.includes("temporal")) throw new Error(`Temporal role "${role.id}" must be a binding object, not an array.`);
-    throw new Error(`Role "${role.id}" must be a binding object, not an array.`);
-  }
+  if (Array.isArray(value)) throw new Error(`Role "${role.id}" must be a binding object, not an array.`);
   return [value];
 }
 
@@ -48,11 +54,6 @@ function columnDetails(columnTypes, field) {
   const value = columnTypes?.get(field);
   if (!value) return null;
   return typeof value === "string" ? { type: value, values: [] } : value;
-}
-
-function temporalSpecification(binding, sourceColumn) {
-  if (binding.format !== undefined) return { interpretation: "temporal", format: binding.format, timezone: binding.timezone };
-  return { interpretation: "temporal", ...(sourceColumn.parsingMetadata ?? {}) };
 }
 
 function hasCanonicalTemporalProfileEvidence(temporal) {
@@ -69,27 +70,36 @@ function hasCanonicalTemporalProfileEvidence(temporal) {
   return hasCanonicalValue;
 }
 
-function hasTemporalEvidence(binding, sourceColumn) {
-  const values = sourceColumn.values.filter((value) => value !== null && value !== undefined && !(typeof value === "string" && value.trim() === ""));
-  if (values.length > 0) return values.every((value) => parseTemporalValue(value, temporalSpecification(binding, sourceColumn)).ok);
-  return hasCanonicalTemporalProfileEvidence(sourceColumn.temporal);
+function presentValues(sourceColumn) {
+  return (sourceColumn.values ?? []).filter((value) => (
+    value !== null
+    && value !== undefined
+    && !(typeof value === "string" && value.trim() === "")
+  ));
 }
 
-function requireTemporalEvidence(binding, role, sourceColumn) {
-  if (!hasTemporalEvidence(binding, sourceColumn)) throw new Error(`Role "${role.id}" field "${binding.field}" does not validate as temporal under its effective parsing rule.`);
-  return "temporal";
+function requireBindingEvidence(binding, role, sourceColumn, effectiveType) {
+  const values = presentValues(sourceColumn);
+  if (values.length > 0) {
+    const valid = values.every((value) => resolveBindingValue(value, binding, sourceColumn).ok);
+    if (!valid) {
+      throw new Error(`Role "${role.id}" field "${binding.field}" does not validate as ${effectiveType} under its effective parsing rule.`);
+    }
+    return effectiveType;
+  }
+  if (effectiveType === "temporal" && !hasCanonicalTemporalProfileEvidence(sourceColumn.temporal)) {
+    throw new Error(`Role "${role.id}" field "${binding.field}" does not validate as temporal under its effective parsing rule.`);
+  }
+  return effectiveType;
 }
 
 function effectiveBindingType(binding, role, sourceColumn) {
-  const declared = binding.interpretation === undefined ? null : bindingType(binding.interpretation);
-  if (!sourceColumn) return declared;
-  const detected = bindingType(sourceColumn.type);
-  if (!declared || declared === detected) return detected === "temporal" ? requireTemporalEvidence(binding, role, sourceColumn) : detected;
-  if (sourceColumn.authorInterpretation && bindingType(sourceColumn.authorInterpretation) === declared) return declared === "temporal" ? requireTemporalEvidence(binding, role, sourceColumn) : declared;
-  if (declared === "temporal" && binding.format) {
-    return requireTemporalEvidence(binding, role, sourceColumn);
+  if (!sourceColumn) return bindingType(binding.interpretation);
+  const effective = resolveEffectiveBinding(binding, sourceColumn).type;
+  if (effective === "temporal" || effective === "number" || effective === "boolean") {
+    return requireBindingEvidence(binding, role, sourceColumn, effective);
   }
-  throw new Error(`Role "${role.id}" field "${binding.field}" has no effective ${declared} interpretation.`);
+  return effective;
 }
 
 function validateBinding(binding, role, schema, columnTypes) {
@@ -100,8 +110,9 @@ function validateBinding(binding, role, schema, columnTypes) {
   requiredString(binding.field, `Role "${role.id}" field`);
   if (binding.axis !== undefined && !["primary", "secondary"].includes(binding.axis)) throw new Error(`Role "${role.id}" axis must be primary or secondary.`);
   if (binding.interpretation !== undefined) {
-    if (typeof binding.interpretation !== "string" || !COLUMN_TYPES.has(bindingType(binding.interpretation))) throw new Error(`Role "${role.id}" interpretation is unsupported.`);
-    if (!role.accepts.includes("any") && !role.accepts.includes(bindingType(binding.interpretation))) throw new Error(`Role "${role.id}" interpretation "${binding.interpretation}" does not satisfy its schema.`);
+    const normalized = bindingType(binding.interpretation);
+    if (typeof binding.interpretation !== "string" || !COLUMN_TYPES.has(normalized)) throw new Error(`Role "${role.id}" interpretation is unsupported.`);
+    if (!role.accepts.includes("any") && !role.accepts.includes(normalized)) throw new Error(`Role "${role.id}" interpretation "${binding.interpretation}" does not satisfy its schema.`);
   }
   if ((binding.format !== undefined || binding.timezone !== undefined) && binding.interpretation !== "temporal") throw new Error(`Role "${role.id}" format and timezone require temporal interpretation.`);
   if (binding.format !== undefined) requiredString(binding.format, `Role "${role.id}" format`);
@@ -129,7 +140,7 @@ function validateRoles(chart, schema, columnTypes) {
   return temporalRoles;
 }
 
-function validateFilter(filter) {
+function validateFilter(filter, columnTypes, chart) {
   ensureObject(filter, "Chart filter");
   const universal = new Set(["field", "operator"]);
   const accepted = { in: ["values"], notIn: ["values"], range: ["min", "max"], equals: ["value"], notEquals: ["value"], contains: ["value"] };
@@ -139,32 +150,56 @@ function validateFilter(filter) {
   if (["in", "notIn"].includes(filter.operator) && (!Array.isArray(filter.values) || filter.values.length === 0)) throw new Error(`Chart filter ${filter.operator} requires non-empty values.`);
   if (["equals", "notEquals", "contains"].includes(filter.operator) && !Object.hasOwn(filter, "value")) throw new Error(`Chart filter ${filter.operator} requires value.`);
   if (filter.operator === "range" && (!Object.hasOwn(filter, "min") || !Object.hasOwn(filter, "max"))) throw new Error("Chart filter range requires min and max.");
+  if (!columnTypes) return;
+  const column = columnDetails(columnTypes, filter.field);
+  if (!column) throw new Error(`Chart filter field "${filter.field}" does not exist in the declared source.`);
+  for (const operand of filterOperands(filter)) {
+    const resolved = resolveBindingValue(operand, bindingForField(chart, filter.field), column, {
+      allowCanonicalTemporal: true,
+    });
+    if (!resolved.ok) {
+      const valueType = resolved.type === "number" ? "numeric" : resolved.type;
+      throw new Error(`Chart filter field "${filter.field}" has an invalid ${valueType} operand.`);
+    }
+  }
 }
 
-function validateTransformations(chart, schema) {
+function validateTransformations(chart, schema, columnTypes) {
   ensureObject(chart.transformations, "Chart transformations");
   checkKnownKeys(chart.transformations, TRANSFORMATION_KEYS, "chart transformations");
   checkRequiredKeys(chart.transformations, TRANSFORMATION_KEYS, "Chart transformations");
   const { filters, grouping, aggregation, duplicates, missingValues, temporalMatch } = chart.transformations;
   if (!Array.isArray(filters)) throw new Error("Chart transformations filters must be an array.");
   if (filters.length > 0 && !schema.transforms.includes("filter")) throw new Error(`Chart type "${schema.typeId}" does not support filters.`);
-  filters.forEach(validateFilter);
+  filters.forEach((filter) => validateFilter(filter, columnTypes, chart));
   if (grouping !== null && (!Array.isArray(grouping) || grouping.some((field) => typeof field !== "string" || field.trim() === ""))) throw new Error("Chart transformations grouping must be null or an array of fields.");
   if (grouping?.length && !schema.transforms.includes("group")) throw new Error(`Chart type "${schema.typeId}" does not support grouping.`);
+  for (const field of grouping ?? []) {
+    if (columnTypes && !columnDetails(columnTypes, field)) throw new Error(`Chart grouping field "${field}" does not exist in the declared source.`);
+  }
   if (aggregation !== null && (!AGGREGATIONS.has(aggregation) || !schema.transforms.includes("aggregate"))) throw new Error(`Unsupported aggregation "${aggregation}" for chart type "${schema.typeId}".`);
   if (duplicates !== null && (!DUPLICATE_STRATEGIES.has(duplicates) || !schema.transforms.includes("duplicates"))) throw new Error(`Unsupported duplicate strategy "${duplicates}" for chart type "${schema.typeId}".`);
+  if (duplicates === "aggregate" && !aggregation) throw new Error("Duplicate strategy aggregate requires an explicit supported aggregation.");
+  if (
+    ARITHMETIC_DUPLICATES.has(duplicates)
+    && aggregation
+    && canonicalAggregation(duplicates) !== canonicalAggregation(aggregation)
+  ) {
+    throw new Error(`Conflicting duplicate strategy "${duplicates}" and aggregation "${aggregation}".`);
+  }
   if (!MISSING_VALUE_STRATEGIES.has(missingValues) || !schema.transforms.includes("missing")) throw new Error(`Unsupported missing-value handling "${missingValues}" for chart type "${schema.typeId}".`);
   if (temporalMatch !== null) {
     ensureObject(temporalMatch, "Chart temporal match");
     checkKnownKeys(temporalMatch, new Set(["policy", "tolerance"]), "chart temporal match");
     requiredString(temporalMatch.policy, "Chart temporal match policy");
-    if (!schema.capabilities.timeSync || !TIME_POLICIES.has(temporalMatch.policy)) throw new Error(`Unsupported temporal matching policy "${temporalMatch.policy}".`);
-    if (temporalMatch.tolerance !== undefined && (!Number.isFinite(temporalMatch.tolerance) || temporalMatch.tolerance <= 0)) throw new Error("Chart temporal match tolerance must be positive.");
+    if (!schema.capabilities.timeSync) throw new Error(`Unsupported temporal matching policy "${temporalMatch.policy}".`);
+    if (temporalMatch.policy !== "exact") throw new Error("Only exact temporal matching is supported in the version 3 core.");
+    if (temporalMatch.tolerance !== undefined) throw new Error("Exact temporal matching does not accept a tolerance.");
   }
 }
 
 function validateCollection(collection, schema) {
-  if (collection === null) return;
+  if (collection === null || collection === undefined) return;
   if (!schema.capabilities.collection) throw new Error(`Chart type "${schema.typeId}" does not support collection presentation.`);
   ensureObject(collection, "Chart collection presentation");
   const keys = new Set(["layout", "rows", "columns", "itemSpacing", "sortField", "sortDirection", "rankingMode", "overflow", "pageSize", "rotationInterval", "loop", "pauseOnHover", "transition", "lockPositionsDuringPlayback", "accessibleItemLabel"]);
@@ -188,20 +223,85 @@ function validatePresentation(chart, schema) {
   checkKnownKeys(chart.presentation, PRESENTATION_KEYS, "chart presentation");
   ensureObject(chart.presentation.title, "Chart presentation title");
   checkKnownKeys(chart.presentation.title, new Set(["align"]), "chart presentation title");
-  if (!["left", "center", "right"].includes(chart.presentation.title.align)) throw new Error("Chart presentation title alignment must be left, center, or right.");
+  if (!TITLE_ALIGNMENTS.has(chart.presentation.title.align)) throw new Error("Chart presentation title alignment must be left, center, or right.");
   validateCollection(chart.presentation.collection, schema);
-  optionalObject(chart.presentation.labels, "Chart presentation labels", new Set(["visible", "position", "format"]));
-  if (chart.presentation.labels?.visible !== undefined && typeof chart.presentation.labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
-  if (chart.presentation.labels?.position !== undefined && typeof chart.presentation.labels.position !== "string") throw new Error("Chart presentation labels position must be a string.");
-  if (chart.presentation.labels?.format !== undefined && typeof chart.presentation.labels.format !== "string") throw new Error("Chart presentation labels format must be a string.");
-  optionalObject(chart.presentation.axes, "Chart presentation axes", new Set(["primary", "secondary"]));
-  optionalObject(chart.presentation.targets, "Chart presentation targets", new Set(["ranges", "direction"]));
-  optionalObject(chart.presentation.map, "Chart presentation map", new Set(["scale", "geoSource", "joinField"]));
-  optionalObject(chart.presentation.timeline, "Chart presentation timeline", new Set(["lanes", "marker"]));
-  optionalObject(chart.presentation.background, "Chart presentation background", new Set(["color", "transparent"]));
-  optionalObject(chart.presentation.legend, "Chart presentation legend", new Set(["visible", "position"]));
-  optionalObject(chart.presentation.accessibility, "Chart presentation accessibility", new Set(["description", "summary"]));
+  validateLabels(chart.presentation.labels);
+  validateAxes(chart.presentation.axes);
+  validateTargets(chart.presentation.targets);
+  validateMap(chart.presentation.map);
+  validateTimeline(chart.presentation.timeline);
+  validateBackground(chart.presentation.background);
+  validateLegend(chart.presentation.legend);
+  validateAccessibility(chart.presentation.accessibility);
   optionalObject(chart.presentation.advanced, "Chart presentation advanced", new Set());
+}
+
+function validateLabels(labels) {
+  optionalObject(labels, "Chart presentation labels", new Set(["visible", "position", "format"]));
+  if (labels?.visible !== undefined && typeof labels.visible !== "boolean") throw new Error("Chart presentation labels visible must be boolean.");
+  for (const field of ["position", "format"]) if (labels?.[field] !== undefined && typeof labels[field] !== "string") throw new Error(`Chart presentation labels ${field} must be a string.`);
+}
+
+function validateAxes(axes) {
+  optionalObject(axes, "Chart presentation axes", new Set(["primary", "secondary"]));
+  for (const axisName of ["primary", "secondary"]) {
+    const axis = axes?.[axisName];
+    if (axis === undefined) continue;
+    ensureObject(axis, `Chart presentation axes ${axisName}`);
+    checkKnownKeys(axis, new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle"]), `chart presentation axes ${axisName}`);
+    for (const field of ["title", "name", "xTitle", "yTitle"]) if (axis[field] !== undefined && typeof axis[field] !== "string") throw new Error(`Chart presentation axes ${axisName} ${field} must be a string.`);
+    for (const field of ["min", "max"]) if (axis[field] !== undefined && !Number.isFinite(axis[field])) throw new Error(`Chart presentation axes ${axisName} ${field} must be finite.`);
+    if (axis.grid !== undefined && typeof axis.grid !== "boolean") throw new Error(`Chart presentation axes ${axisName} grid must be boolean.`);
+    if (axis.min !== undefined && axis.max !== undefined && axis.min > axis.max) throw new Error(`Chart presentation axes ${axisName} min cannot exceed max.`);
+  }
+}
+
+function validateTargets(targets) {
+  optionalObject(targets, "Chart presentation targets", new Set(["ranges", "direction"]));
+  if (targets?.direction !== undefined && !TARGET_DIRECTIONS.has(targets.direction)) throw new Error("Chart presentation targets direction must be increase-is-good, decrease-is-good, or neutral.");
+  if (targets?.ranges === undefined) return;
+  if (!Array.isArray(targets.ranges)) throw new Error("Chart presentation targets ranges must be an array.");
+  for (const range of targets.ranges) {
+    if (typeof range === "number") {
+      if (!Number.isFinite(range)) throw new Error("Chart presentation targets range values must be finite.");
+      continue;
+    }
+    ensureObject(range, "Chart presentation targets range");
+    checkKnownKeys(range, new Set(["min", "max", "to", "value", "color", "label"]), "chart presentation targets range");
+    const end = range.max ?? range.to ?? range.value;
+    if (!Number.isFinite(end)) throw new Error("Chart presentation targets range max must be finite.");
+    if (range.min !== undefined && (!Number.isFinite(range.min) || range.min > end)) throw new Error("Chart presentation targets range min must be finite and not exceed max.");
+    if (range.color !== undefined) requiredString(range.color, "Chart presentation targets range color");
+    if (range.label !== undefined && typeof range.label !== "string") throw new Error("Chart presentation targets range label must be a string.");
+  }
+}
+
+function validateMap(map) {
+  optionalObject(map, "Chart presentation map", new Set(["scale", "geoSource", "joinField"]));
+  for (const field of ["scale", "geoSource", "joinField"]) if (map?.[field] !== undefined) requiredString(map[field], `Chart presentation map ${field}`);
+}
+
+function validateTimeline(timeline) {
+  optionalObject(timeline, "Chart presentation timeline", new Set(["lanes", "marker"]));
+  if (timeline?.lanes !== undefined && (!Array.isArray(timeline.lanes) || timeline.lanes.some((lane) => typeof lane !== "string" || lane.trim() === ""))) throw new Error("Chart presentation timeline lanes must be an array of non-empty strings.");
+  if (timeline?.marker !== undefined) requiredString(timeline.marker, "Chart presentation timeline marker");
+}
+
+function validateBackground(background) {
+  optionalObject(background, "Chart presentation background", new Set(["color", "transparent"]));
+  if (background?.color !== undefined) requiredString(background.color, "Chart presentation background color");
+  if (background?.transparent !== undefined && typeof background.transparent !== "boolean") throw new Error("Chart presentation background transparent must be boolean.");
+}
+
+function validateLegend(legend) {
+  optionalObject(legend, "Chart presentation legend", new Set(["visible", "position"]));
+  if (legend?.visible !== undefined && typeof legend.visible !== "boolean") throw new Error("Chart presentation legend visible must be boolean.");
+  if (legend?.position !== undefined && !LEGEND_POSITIONS.has(legend.position)) throw new Error("Chart presentation legend position must be top, bottom, left, or right.");
+}
+
+function validateAccessibility(accessibility) {
+  optionalObject(accessibility, "Chart presentation accessibility", new Set(["description", "summary"]));
+  for (const field of ["description", "summary"]) if (accessibility?.[field] !== undefined && typeof accessibility[field] !== "string") throw new Error(`Chart presentation accessibility ${field} must be a string.`);
 }
 
 function validateInteraction(chart, schema, temporalRoles) {
@@ -218,8 +318,8 @@ function validateInteraction(chart, schema, temporalRoles) {
   ensureObject(timeSync, "Chart time synchronization");
   checkKnownKeys(timeSync, new Set(["groupId", "policy", "tolerance"]), "chart time synchronization");
   requiredString(timeSync.groupId, "Chart time synchronization groupId");
-  if (!TIME_POLICIES.has(timeSync.policy)) throw new Error(`Unsupported time synchronization policy "${timeSync.policy}".`);
-  if (timeSync.tolerance !== undefined && (!Number.isFinite(timeSync.tolerance) || timeSync.tolerance <= 0)) throw new Error("Chart time synchronization tolerance must be positive.");
+  if (timeSync.policy !== "exact") throw new Error("Only exact temporal matching is supported in the version 3 core.");
+  if (timeSync.tolerance !== undefined) throw new Error("Exact time synchronization does not accept a tolerance.");
 }
 
 function validateLayout(chart) {
@@ -234,10 +334,32 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
   ensureObject(options, "Chart draft options");
   const schema = getChartSchema(options.typeId);
   return structuredClone({
-    configVersion: CHART_CONFIG_VERSION, id: options.id ?? `chart-${schema.typeId}`, typeId: schema.typeId, title: options.title ?? "", description: options.description ?? "", sourceId: options.sourceId ?? null, roles: options.roles ?? {},
-    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", temporalMatch: null, ...(options.transformations ?? {}) },
-    presentation: { ...options.presentation, title: { align: "left", ...(options.presentation?.title ?? {}) }, collection: options.presentation?.collection ?? null },
-    interaction: { ...options.interaction, zoom: { enabled: schema.capabilities.zoom, ...(options.interaction?.zoom ?? {}) }, timeSync: options.interaction?.timeSync ?? null },
+    configVersion: CHART_CONFIG_VERSION,
+    id: options.id ?? `chart-${schema.typeId}`,
+    typeId: schema.typeId,
+    title: options.title ?? "",
+    description: options.description ?? "",
+    sourceId: options.sourceId ?? null,
+    roles: options.roles ?? {},
+    transformations: {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+      ...(options.transformations ?? {}),
+    },
+    presentation: {
+      ...options.presentation,
+      title: { align: "left", ...(options.presentation?.title ?? {}) },
+      collection: options.presentation?.collection ?? null,
+    },
+    interaction: {
+      ...options.interaction,
+      zoom: { enabled: schema.capabilities.zoom, ...(options.interaction?.zoom ?? {}) },
+      timeSync: options.interaction?.timeSync ?? null,
+    },
     layout: { size: "standard", ...(options.layout ?? {}) },
   });
 }
@@ -249,14 +371,26 @@ export function validateChartInstance(chart, { columnTypes } = {}) {
   if (!Object.hasOwn(chart, "description")) throw new Error("Chart description is required and must be a string.");
   checkRequiredKeys(chart, CHART_KEYS, "Chart instance");
   if (chart.configVersion !== CHART_CONFIG_VERSION) throw new Error("Chart configuration version 3 is required.");
-  requiredString(chart.id, "Chart id"); requiredString(chart.typeId, "Chart typeId"); requiredString(chart.title, "Chart title");
+  requiredString(chart.id, "Chart id");
+  requiredString(chart.typeId, "Chart typeId");
+  requiredString(chart.title, "Chart title");
   if (typeof chart.description !== "string") throw new Error("Chart description is required and must be a string.");
   requiredString(chart.sourceId, "Chart sourceId");
   const schema = getChartSchema(chart.typeId);
   const temporalRoles = validateRoles(chart, schema, columnTypes);
-  validateTransformations(chart, schema);
+  validateTransformations(chart, schema, columnTypes);
   validatePresentation(chart, schema);
   validateInteraction(chart, schema, temporalRoles);
   validateLayout(chart);
   return chart;
+}
+
+function filterOperands(filter) {
+  if (filter.operator === "range") return [filter.min, filter.max];
+  if (filter.operator === "in" || filter.operator === "notIn") return filter.values;
+  return [filter.value];
+}
+
+function canonicalAggregation(value) {
+  return value === "average" ? "mean" : value;
 }

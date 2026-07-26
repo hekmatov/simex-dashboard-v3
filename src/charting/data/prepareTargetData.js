@@ -15,6 +15,7 @@ export function prepareTargetData({ schema, chart, rows, datasetProfile, transfo
   const valueRole = firstRoleBinding(chart, "value");
   const actualRole = firstRoleBinding(chart, "actual");
   const targetRole = firstRoleBinding(chart, "target");
+  const entityRole = firstRoleBinding(chart, "entity");
   const labelRole = firstRoleBinding(chart, "label");
   const timeRole = firstRoleBinding(chart, "time");
   const marks = [];
@@ -28,23 +29,28 @@ export function prepareTargetData({ schema, chart, rows, datasetProfile, transfo
       ? applyMissingStrategy(readRoleValue(row, targetRole, datasetProfile), transformed.config.missingStrategy)
       : { keep: true, value: null };
     if (!primary.keep || !targetValue.keep) continue;
+    const identity = {
+      entity: readRoleValue(row, entityRole, datasetProfile),
+      label: readRoleValue(row, labelRole, datasetProfile),
+    };
     marks.push(schema.typeId === "bullet"
       ? {
           actual: primary.value,
           target: targetValue.value,
-          label: readRoleValue(row, labelRole, datasetProfile),
+          ...identity,
           time: readRoleValue(row, timeRole, datasetProfile),
         }
       : {
           value: primary.value,
           target: targetValue.value,
+          ...identity,
           time: readRoleValue(row, timeRole, datasetProfile),
         }
     );
   }
   return consolidateCandidates(
     marks,
-    (mark) => stableKey(mark.time, schema.typeId === "bullet" ? mark.label : null),
+    (mark) => stableKey(mark.time, mark.entity, mark.label),
     transformed,
     (duplicates, method) => (
       schema.typeId === "bullet"

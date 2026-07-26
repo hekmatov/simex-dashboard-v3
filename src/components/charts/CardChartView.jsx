@@ -1,10 +1,15 @@
 import React from "react";
+import { titleContainerProps } from "./chartViewPresentation.js";
 
 export default function CardChartView({ model, chart = {}, provenance }) {
   const title = chart.title || "Chart summary";
   const description = chart.description || "Summary values for this chart.";
   const items = Array.isArray(model.items) ? model.items : [];
-  return React.createElement("section", { className: "chart-card-view", "aria-label": title },
+  return React.createElement("section", {
+    className: "chart-card-view",
+    "aria-label": title,
+    ...titleContainerProps(chart),
+  },
     React.createElement("h3", { className: "chart-view-title" }, title),
     React.createElement("p", { className: "chart-view-description" }, description),
     React.createElement("div", { className: "chart-card-collection", role: "list" }, items.map((item) => React.createElement(CardItem, { key: item.key, item, chart }))),
@@ -18,6 +23,7 @@ function CardItem({ item, chart }) {
     item.delta?.absolute !== null && item.delta?.absolute !== undefined ? ["Change", signed(item.delta.absolute)] : null,
     item.delta?.percentage !== null && item.delta?.percentage !== undefined ? ["Percentage change", formatPercentage(item.delta.percentage)] : null,
     item.direction ? ["Direction", item.direction] : null,
+    item.favorability ? ["Favorable outcome", item.favorability] : null,
     item.comparison !== null && item.comparison !== undefined ? ["Comparison value", formatValue(item.comparison)] : null,
     item.comparisonTime ? ["Compared with", item.comparisonTime] : null,
     item.time ? ["Observed", item.time] : null,

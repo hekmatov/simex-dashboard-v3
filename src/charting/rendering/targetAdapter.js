@@ -61,7 +61,7 @@ function gaugeLayout(collection, count) {
 }
 
 function bulletModel(chart, marks) {
-  const categories = marks.map((mark, index) => mark.label ?? `Item ${index + 1}`);
+  const categories = marks.map((mark, index) => mark.entity ?? mark.label ?? `Item ${index + 1}`);
   return {
     kind: "echarts",
     semanticSummary: targetSemanticSummary(chart, marks),
@@ -109,20 +109,24 @@ function cardModel(chart, marks) {
 }
 
 function kpiItem(chart, mark, index) {
+  const identity = mark.entity ?? mark.label;
   return {
-    key: `kpi-${index}`,
-    label: chart.title ?? "KPI",
+    key: String(identity ?? `kpi-${index}`),
+    label: identity ?? chart.title ?? "KPI",
     value: mark.value,
     target: mark.target ?? null,
     time: mark.time ?? null,
     comparison: null,
     delta: null,
     direction: null,
+    favorability: null,
   };
 }
 
 function deltaItem(chart, mark, index) {
   const absolute = mark.delta?.absolute;
+  const direction = absolute > 0 ? "increase" : absolute < 0 ? "decrease" : "unchanged";
+  const favorableDirection = chart.presentation?.targets?.direction ?? "neutral";
   return {
     key: String(mark.entity ?? `${chart.typeId}-${index}`),
     label: mark.entity ?? chart.title ?? "Change",
@@ -132,7 +136,8 @@ function deltaItem(chart, mark, index) {
     comparison: mark.comparison,
     comparisonTime: mark.comparisonTime ?? null,
     delta: clone(mark.delta ?? { absolute: null, percentage: null }),
-    direction: absolute > 0 ? "increase" : absolute < 0 ? "decrease" : "unchanged",
+    direction,
+    favorability: favorability(direction, favorableDirection),
   };
 }
 
@@ -146,6 +151,12 @@ function targetSemanticSummary(chart, marks) {
       time: mark.time ?? null,
     })),
   };
+}
+
+function favorability(direction, favorableDirection) {
+  if (direction === "unchanged" || favorableDirection === "neutral") return "neutral";
+  const favorableMovement = favorableDirection === "increase-is-good" ? "increase" : "decrease";
+  return direction === favorableMovement ? "favorable" : "unfavorable";
 }
 
 function gaugeSegments(ranges, maximum) {

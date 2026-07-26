@@ -1,6 +1,8 @@
 export function buildMatrixRenderModel({ chart, prepared }) {
   const rows = unique(prepared.marks.map(({ row }) => row));
   const columns = unique(prepared.marks.map(({ column }) => column));
+  const rowIndexes = new Map(rows.map((row, index) => [row, index]));
+  const columnIndexes = new Map(columns.map((column, index) => [column, index]));
   const values = prepared.marks.map(({ value }) => value).filter(Number.isFinite);
   const readiness = chart.typeId === "readinessMatrix";
   return {
@@ -27,8 +29,8 @@ export function buildMatrixRenderModel({ chart, prepared }) {
         type: "heatmap",
         label: { show: readiness || chart.presentation?.labels?.visible === true },
         data: prepared.marks.map((mark) => [
-          columns.findIndex((column) => Object.is(column, mark.column)),
-          rows.findIndex((row) => Object.is(row, mark.row)),
+          columnIndexes.get(mark.column),
+          rowIndexes.get(mark.row),
           mark.value,
           { time: mark.time, group: mark.group },
         ]),
