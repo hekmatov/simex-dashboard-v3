@@ -409,3 +409,26 @@ test("collection presentation accepts only documented enum and bounded value sha
     assert.throws(() => validateChartInstance(chart), /between 1 and 4/, dimension);
   }
 });
+
+test("detected temporal values require deterministic evidence before enabling time sync", () => {
+  const invalid = version3Dashboard();
+  invalid.dataSources["uploaded-cases"].csvText = "date,cases\nnot a date,4\n";
+  invalid.dataSources["uploaded-cases"].parsingMetadata = {};
+  invalid.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
+  assert.throws(() => validateDashboardConfig(invalid), /does not validate as temporal|temporal evidence/i);
+
+  const validIso = version3Dashboard();
+  validIso.dataSources["uploaded-cases"].csvText = "date,cases\n2027-05-01,4\n";
+  validIso.dataSources["uploaded-cases"].parsingMetadata = {};
+  validIso.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
+  assert.doesNotThrow(() => validateDashboardConfig(validIso));
+});
+
+test("collection rotation uses a five-second integer minimum", () => {
+  for (const value of [4999, 5000.5, "5000"]) {
+    const chart = deltaListChart();
+    chart.presentation.collection.rotationInterval = value;
+    assert.throws(() => validateChartInstance(chart), /rotationInterval.*5000/i, String(value));
+  }
+  assert.doesNotThrow(() => validateChartInstance(deltaListChart()));
+});

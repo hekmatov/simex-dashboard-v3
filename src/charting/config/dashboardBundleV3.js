@@ -51,6 +51,8 @@ function sourceColumnTypes(sourceId, source) {
       type: column.type,
       values: rows?.map((row) => row[column.name]) ?? [],
       authorInterpretation: source.parsingMetadata?.[column.name]?.interpretation ?? column.temporal?.parsingMetadata?.interpretation,
+      parsingMetadata: source.parsingMetadata?.[column.name] ?? column.temporal?.parsingMetadata,
+      temporal: column.temporal,
     });
   }
   return map;

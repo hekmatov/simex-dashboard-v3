@@ -50,16 +50,31 @@ function columnDetails(columnTypes, field) {
   return typeof value === "string" ? { type: value, values: [] } : value;
 }
 
+function temporalSpecification(binding, sourceColumn) {
+  if (binding.format !== undefined) return { interpretation: "temporal", format: binding.format, timezone: binding.timezone };
+  return { interpretation: "temporal", ...(sourceColumn.parsingMetadata ?? {}) };
+}
+
+function hasTemporalEvidence(binding, sourceColumn) {
+  const values = sourceColumn.values.filter((value) => value !== null && value !== undefined && !(typeof value === "string" && value.trim() === ""));
+  if (values.length > 0) return values.every((value) => parseTemporalValue(value, temporalSpecification(binding, sourceColumn)).ok);
+  const temporal = sourceColumn.temporal;
+  return Array.isArray(temporal?.values) && temporal.values.some((value) => value !== null) && Array.isArray(temporal.diagnostics) && temporal.diagnostics.length === 0;
+}
+
+function requireTemporalEvidence(binding, role, sourceColumn) {
+  if (!hasTemporalEvidence(binding, sourceColumn)) throw new Error(`Role "${role.id}" field "${binding.field}" does not validate as temporal under its effective parsing rule.`);
+  return "temporal";
+}
+
 function effectiveBindingType(binding, role, sourceColumn) {
   const declared = binding.interpretation === undefined ? null : bindingType(binding.interpretation);
   if (!sourceColumn) return declared;
   const detected = bindingType(sourceColumn.type);
-  if (!declared || declared === detected) return detected;
-  if (sourceColumn.authorInterpretation && bindingType(sourceColumn.authorInterpretation) === declared) return declared;
+  if (!declared || declared === detected) return detected === "temporal" ? requireTemporalEvidence(binding, role, sourceColumn) : detected;
+  if (sourceColumn.authorInterpretation && bindingType(sourceColumn.authorInterpretation) === declared) return declared === "temporal" ? requireTemporalEvidence(binding, role, sourceColumn) : declared;
   if (declared === "temporal" && binding.format) {
-    const values = sourceColumn.values.filter((value) => value !== null && value !== undefined && !(typeof value === "string" && value.trim() === ""));
-    if (values.length > 0 && values.every((value) => parseTemporalValue(value, { interpretation: "temporal", format: binding.format, timezone: binding.timezone }).ok)) return "temporal";
-    throw new Error(`Role "${role.id}" field "${binding.field}" does not validate as temporal under its explicit format.`);
+    return requireTemporalEvidence(binding, role, sourceColumn);
   }
   throw new Error(`Role "${role.id}" field "${binding.field}" has no effective ${declared} interpretation.`);
 }
@@ -150,7 +165,7 @@ function validateCollection(collection, schema) {
   if (collection.overflow !== undefined && !COLLECTION_OVERFLOWS.has(collection.overflow)) throw new Error("Chart collection overflow is unsupported.");
   if (collection.pageSize !== undefined && (!Number.isInteger(collection.pageSize) || collection.pageSize < 1 || collection.pageSize > collection.rows * collection.columns)) throw new Error("Chart collection pageSize must be a positive integer within the grid capacity.");
   for (const key of ["loop", "pauseOnHover", "lockPositionsDuringPlayback"]) if (collection[key] !== undefined && typeof collection[key] !== "boolean") throw new Error(`Chart collection ${key} must be boolean.`);
-  if (collection.rotationInterval !== undefined && (!Number.isFinite(collection.rotationInterval) || collection.rotationInterval <= 0)) throw new Error("Chart collection rotationInterval must be positive.");
+  if (collection.rotationInterval !== undefined && (!Number.isInteger(collection.rotationInterval) || collection.rotationInterval < 5000)) throw new Error("Chart collection rotationInterval must be an integer of at least 5000 ms.");
   if (collection.transition !== undefined && !COLLECTION_TRANSITIONS.has(collection.transition)) throw new Error("Chart collection transition must be fade or slide.");
   if (collection.accessibleItemLabel !== undefined) requiredString(collection.accessibleItemLabel, "Chart collection accessibleItemLabel");
 }
