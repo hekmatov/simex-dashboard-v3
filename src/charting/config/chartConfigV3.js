@@ -179,13 +179,22 @@ function validateTransformations(chart, schema, columnTypes) {
   }
   if (aggregation !== null && (!AGGREGATIONS.has(aggregation) || !schema.transforms.includes("aggregate"))) throw new Error(`Unsupported aggregation "${aggregation}" for chart type "${schema.typeId}".`);
   if (duplicates !== null && (!DUPLICATE_STRATEGIES.has(duplicates) || !schema.transforms.includes("duplicates"))) throw new Error(`Unsupported duplicate strategy "${duplicates}" for chart type "${schema.typeId}".`);
-  if (duplicates === "aggregate" && !aggregation) throw new Error("Duplicate strategy aggregate requires an explicit supported aggregation.");
+  if (duplicates === "aggregate" && !ARITHMETIC_DUPLICATES.has(aggregation)) {
+    throw new Error("Duplicate strategy aggregate requires an explicit supported arithmetic aggregation.");
+  }
   if (
     ARITHMETIC_DUPLICATES.has(duplicates)
     && aggregation
     && canonicalAggregation(duplicates) !== canonicalAggregation(aggregation)
   ) {
     throw new Error(`Conflicting duplicate strategy "${duplicates}" and aggregation "${aggregation}".`);
+  }
+  if (
+    aggregation !== null
+    && duplicates !== "aggregate"
+    && !ARITHMETIC_DUPLICATES.has(duplicates)
+  ) {
+    throw new Error(`Duplicate strategy "${duplicates ?? "null"}" does not use aggregation "${aggregation}"; aggregation must be null.`);
   }
   if (!MISSING_VALUE_STRATEGIES.has(missingValues) || !schema.transforms.includes("missing")) throw new Error(`Unsupported missing-value handling "${missingValues}" for chart type "${schema.typeId}".`);
   if (temporalMatch !== null) {

@@ -8,28 +8,15 @@ function profiled(rows, metadata = {}) {
   return profileDataset(rows, metadata);
 }
 
-function transformationObject(transformationEntries = []) {
-  const transformations = {
-    filters: [],
-    grouping: null,
-    aggregation: null,
-    duplicates: null,
-    missingValues: "gap",
-    temporalMatch: null,
-  };
-  for (const entry of transformationEntries) {
-    if (entry.type === "filter") transformations.filters.push({ ...entry, type: undefined });
-    if (entry.type === "group") transformations.grouping = entry.fields;
-    if (entry.type === "aggregate") transformations.aggregation = entry.method;
-    if (entry.type === "duplicates") transformations.duplicates = entry.strategy;
-    if (entry.type === "missing") transformations.missingValues = entry.strategy;
-  }
-  transformations.filters = transformations.filters.map(({ type: _type, ...filter }) => filter);
-  return transformations;
-}
-
-function chart(typeId, roles, transformationEntries = []) {
-  return { typeId, roles, transformations: transformationObject(transformationEntries) };
+function chart(typeId, roles, transformations = {
+  filters: [],
+  grouping: null,
+  aggregation: null,
+  duplicates: null,
+  missingValues: "gap",
+  temporalMatch: null,
+}) {
+  return { typeId, roles, transformations };
 }
 
 test("ready means the adapter receives at least one renderable mark", () => {
@@ -81,9 +68,14 @@ test("filters run before grouping and cluster keys cannot collide", () => {
       measurements: { field: "value" },
       observation: { field: "month" },
       cluster: { field: "scenario" },
-    }, [
-      { type: "filter", field: "region", operator: "in", values: ["North"] },
-    ]),
+    }, {
+      filters: [{ field: "region", operator: "in", values: ["North"] }],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows, { month: { interpretation: "category" } }),
   });
@@ -103,7 +95,14 @@ test("group transforms keep distinct normalized groups out of duplicate collisio
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [{ type: "group", fields: ["scenario"] }]),
+    }, {
+      filters: [],
+      grouping: ["scenario"],
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -124,11 +123,14 @@ test("group transforms still detect collisions inside the same group", () => {
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [
-      { type: "group", fields: ["scenario"] },
-      { type: "duplicates", strategy: "aggregate" },
-      { type: "aggregate", method: "sum" },
-    ]),
+    }, {
+      filters: [],
+      grouping: ["scenario"],
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -140,7 +142,14 @@ test("group transforms still detect collisions inside the same group", () => {
 test("families without grouped mark semantics reject group transforms actionably", () => {
   const rows = [{ category: "A", value: 2 }];
   const result = prepareChartData({
-    chart: chart("kpi", { value: { field: "value" } }, [{ type: "group", fields: ["category"] }]),
+    chart: chart("kpi", { value: { field: "value" } }, {
+      filters: [],
+      grouping: ["category"],
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -160,7 +169,14 @@ test("temporal equals filters compare canonical profile-backed values", () => {
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [{ type: "filter", field: "at", operator: "equals", value: "2027-05-02" }]),
+    }, {
+      filters: [{ field: "at", operator: "equals", value: "2027-05-02" }],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
   });
@@ -178,7 +194,14 @@ test("temporal inclusion filters normalize every operand", () => {
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [{ type: "filter", field: "at", operator: "in", values: ["2027-05-01", "2027-05-03"] }]),
+    }, {
+      filters: [{ field: "at", operator: "in", values: ["2027-05-01", "2027-05-03"] }],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
   });
@@ -196,7 +219,14 @@ test("DD/MM temporal ranges compare chronologically after normalization", () => 
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [{ type: "filter", field: "at", operator: "range", min: "2027-06-01", max: "2027-06-05" }]),
+    }, {
+      filters: [{ field: "at", operator: "range", min: "2027-06-01", max: "2027-06-05" }],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
   });
@@ -210,7 +240,14 @@ test("author-forced categories retain literal filter semantics", () => {
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [{ type: "filter", field: "date", operator: "equals", value: "2027-05-02" }]),
+    }, {
+      filters: [{ field: "date", operator: "equals", value: "2027-05-02" }],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows, { date: { interpretation: "category" } }),
   });
@@ -230,10 +267,14 @@ test("duplicate resolution appears only when complete role keys collide", () => 
       measurements: { field: "value" },
       observation: { field: "month" },
       cluster: { field: "region" },
-    }, [
-      { type: "duplicates", strategy: "aggregate" },
-      { type: "aggregate", method: "sum" },
-    ]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows: duplicateRows,
     datasetProfile: profiled(duplicateRows),
   });
@@ -247,7 +288,14 @@ test("duplicate resolution appears only when complete role keys collide", () => 
       measurements: { field: "value" },
       observation: { field: "month" },
       cluster: { field: "region" },
-    }, [{ type: "duplicates", strategy: "aggregate" }]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows: duplicateRows.slice(1),
     datasetProfile: profiled(duplicateRows),
   });
@@ -308,10 +356,14 @@ test("axis labels separate role keys while same-label observations still collide
       measurements: { field: "value" },
       observation: { field: "period" },
       label: { field: "note" },
-    }, [
-      { type: "duplicates", strategy: "aggregate" },
-      { type: "aggregate", method: "sum" },
-    ]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -334,9 +386,48 @@ test("missing-value strategies distinguish gaps, zeroes, and dropped observation
     datasetProfile: profiled(rows, { value: { interpretation: "numeric" } }),
   };
 
-  const gap = prepareChartData({ ...input, chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "gap" }]) } });
-  const zero = prepareChartData({ ...input, chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "zero" }]) } });
-  const drop = prepareChartData({ ...input, chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "drop" }]) } });
+  const gap = prepareChartData({
+    ...input,
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "gap",
+        temporalMatch: null,
+      },
+    },
+  });
+  const zero = prepareChartData({
+    ...input,
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "zero",
+        temporalMatch: null,
+      },
+    },
+  });
+  const drop = prepareChartData({
+    ...input,
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "drop",
+        temporalMatch: null,
+      },
+    },
+  });
 
   assert.deepEqual(gap.marks.map(({ value }) => value), [null, 4]);
   assert.deepEqual(zero.marks.map(({ value }) => value), [0, 4]);
@@ -385,10 +476,14 @@ test("relationship duplicate metadata appears only for identical point-role keys
       y: { field: "y" },
       size: { field: "size" },
       label: { field: "label" },
-    }, [
-      { type: "duplicates", strategy: "aggregate" },
-      { type: "aggregate", method: "sum" },
-    ]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -410,15 +505,45 @@ test("selected relationship size obeys gap, drop, and zero missing policies", ()
   };
   const gap = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "gap" }]) },
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "gap",
+        temporalMatch: null,
+      },
+    },
   });
   const drop = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "drop" }]) },
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "drop",
+        temporalMatch: null,
+      },
+    },
   });
   const zero = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "zero" }]) },
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "zero",
+        temporalMatch: null,
+      },
+    },
   });
 
   assert.equal(gap.status, "ready");
@@ -477,7 +602,14 @@ test("timeline statuses separate role keys while same-status events still collid
       event: { field: "event" },
       start: { field: "start" },
       status: { field: "status" },
-    }, [{ type: "duplicates", strategy: "first" }]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: "first",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -521,7 +653,14 @@ test("bullet labels separate role keys while same-label targets still collide", 
       actual: { field: "actual" },
       target: { field: "target" },
       label: { field: "label" },
-    }, [{ type: "duplicates", strategy: "first" }]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: "first",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -560,11 +699,14 @@ test("delta preparation retains the exact selected times after missing-value rem
     chart: chart("deltaCard", {
       measurement: { field: "value" },
       time: { field: "at" },
-    }, [
-      { type: "missing", strategy: "drop" },
-      { type: "duplicates", strategy: "aggregate" },
-      { type: "aggregate", method: "sum" },
-    ]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "drop",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -611,7 +753,14 @@ test("delta card succeeds when a filter leaves one bound entity", () => {
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }, [{ type: "filter", field: "entity", operator: "equals", value: "B" }]),
+    }, {
+      filters: [{ field: "entity", operator: "equals", value: "B" }],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -653,10 +802,14 @@ test("delta duplicate timestamps aggregate only with both explicit controls", ()
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }, [
-      { type: "duplicates", strategy: "aggregate" },
-      { type: "aggregate", method: "sum" },
-    ]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -692,12 +845,26 @@ test("target marks apply shared missing-value behavior before readiness", () => 
   const rows = [{ value: "" }];
   const profile = profiled(rows, { value: { interpretation: "numeric" } });
   const zero = prepareChartData({
-    chart: chart("kpi", { value: { field: "value" } }, [{ type: "missing", strategy: "zero" }]),
+    chart: chart("kpi", { value: { field: "value" } }, {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "zero",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profile,
   });
   const drop = prepareChartData({
-    chart: chart("kpi", { value: { field: "value" } }, [{ type: "missing", strategy: "drop" }]),
+    chart: chart("kpi", { value: { field: "value" } }, {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "drop",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profile,
   });
@@ -720,15 +887,45 @@ test("required bullet targets obey gap, drop, and zero missing policies", () => 
   };
   const gap = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "gap" }]) },
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "gap",
+        temporalMatch: null,
+      },
+    },
   });
   const drop = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "drop" }]) },
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "drop",
+        temporalMatch: null,
+      },
+    },
   });
   const zero = prepareChartData({
     ...input,
-    chart: { ...input.chart, transformations: transformationObject([{ type: "missing", strategy: "zero" }]) },
+    chart: {
+      ...input.chart,
+      transformations: {
+        filters: [],
+        grouping: null,
+        aggregation: null,
+        duplicates: null,
+        missingValues: "zero",
+        temporalMatch: null,
+      },
+    },
   });
 
   assert.equal(gap.status, "empty");
@@ -898,7 +1095,14 @@ test("readiness never reports ready when every candidate mark is non-renderable"
     chart: chart("bar", {
       measurements: { field: "value" },
       observation: { field: "category" },
-    }, [{ type: "missing", strategy: "drop" }]),
+    }, {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "drop",
+      temporalMatch: null,
+    }),
     rows,
     datasetProfile: profiled(rows, { value: { interpretation: "numeric" } }),
   });

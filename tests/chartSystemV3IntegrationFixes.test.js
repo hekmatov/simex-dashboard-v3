@@ -438,11 +438,45 @@ test("every duplicate arithmetic strategy uses its advertised method", () => {
   }
 });
 
-test("aggregate duplicates require a method and conflicting shorthand is rejected", () => {
+for (const [duplicates, aggregation] of [
+  ["first", "sum"],
+  [null, "sum"],
+  ["error", "count"],
+]) {
+  test(`duplicate strategy ${duplicates ?? "null"} rejects unused ${aggregation} aggregation`, () => {
+    const base = configuredChart("bar", {
+      measurements: [{ field: "value", interpretation: "number" }],
+      observation: { field: "category", interpretation: "category" },
+    });
+    assert.throws(
+      () => validateChartInstance({
+        ...base,
+        transformations: transformations({ duplicates, aggregation }),
+      }),
+      /duplicate strategy.*does not use aggregation|aggregation.*requires.*duplicate strategy/i,
+    );
+  });
+}
+
+test("duplicate and aggregation controls preserve supported shorthand and aggregate relationships", () => {
   const base = configuredChart("bar", {
     measurements: [{ field: "value", interpretation: "number" }],
     observation: { field: "category", interpretation: "category" },
   });
+  for (const relationship of [
+    { duplicates: "sum" },
+    { duplicates: "mean", aggregation: "mean" },
+    { duplicates: "average", aggregation: "mean" },
+    { duplicates: "aggregate", aggregation: "sum" },
+  ]) {
+    assert.doesNotThrow(
+      () => validateChartInstance({
+        ...base,
+        transformations: transformations(relationship),
+      }),
+      JSON.stringify(relationship),
+    );
+  }
   assert.throws(
     () => validateChartInstance({
       ...base,
