@@ -36,12 +36,11 @@ function attachTargetCollectionAccessibility(model, schema, marks, chart) {
       rows: companion.rows.map((row) => ({
         ...row,
         label: item.label,
+        ...targetPlaybackAccessibility(item),
       })),
     };
     const baseSummary = describeAccessibilityCompanion(accessibility);
-    const accessibleSummary = item.provenance?.label
-      ? `${baseSummary}. ${item.provenance.label}`
-      : baseSummary;
+    const accessibleSummary = describeTargetPlayback(baseSummary, item);
     return {
       ...item,
       accessibleSummary,
@@ -62,6 +61,29 @@ function attachTargetCollectionAccessibility(model, schema, marks, chart) {
     ...model,
     items,
   });
+}
+
+function targetPlaybackAccessibility(item) {
+  if (!item.provenance) return {};
+  if (item.temporalStatus === "observed") {
+    return {
+      time: item.provenance.sourceTime ?? item.activeTime,
+      temporalStatus: "observed",
+    };
+  }
+  return {
+    time: null,
+    playbackTime: item.activeTime,
+    temporalStatus: item.temporalStatus,
+    ...(item.provenance.sourceTime ? { sourceTime: item.provenance.sourceTime } : {}),
+    ...(item.provenance.lowerTime ? { lowerTime: item.provenance.lowerTime } : {}),
+    ...(item.provenance.upperTime ? { upperTime: item.provenance.upperTime } : {}),
+  };
+}
+
+function describeTargetPlayback(baseSummary, item) {
+  if (!item.provenance || item.temporalStatus === "observed") return baseSummary;
+  return `${baseSummary}. Playback time ${item.activeTime}. ${item.provenance.label}`;
 }
 
 function deepFreeze(value) {

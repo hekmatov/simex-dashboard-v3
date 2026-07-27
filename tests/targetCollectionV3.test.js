@@ -186,7 +186,7 @@ test("repeated bullets isolate one prepared observation per item and expose norm
   }
 });
 
-test("playback provenance remains outside mini options and ranking consumes the displayed values", () => {
+test("playback accessibility distinguishes the playback time from carried, nearest, and interpolated provenance", () => {
   const activeTime = {
     groupId: "exercise",
     epochMs: MAY_2,
@@ -233,15 +233,60 @@ test("playback provenance remains outside mini options and ranking consumes the 
           sourceEpochMs: MAY_3,
         },
       },
+      {
+        entity: "Clinic C",
+        value: 62,
+        target: 80,
+        time: "2027-05-02",
+        active: true,
+        temporalProvenance: {
+          status: "interpolated",
+          activeEpochMs: MAY_2,
+          activeCanonical: "2027-05-02",
+          lowerEpochMs: MAY_1,
+          upperEpochMs: MAY_3,
+        },
+      },
+      {
+        entity: "Clinic D",
+        value: 80,
+        target: 80,
+        time: "2027-05-02",
+        active: true,
+        temporalProvenance: {
+          status: "observed",
+          activeEpochMs: MAY_2,
+          activeCanonical: "2027-05-02",
+          sourceEpochMs: MAY_2,
+        },
+      },
     ], { activeTime }),
   });
 
   assert.equal(model.items[0].temporalStatus, "carried");
   assert.equal(model.items[0].provenance.label, "Last measured 2027-05-01");
   assert.equal(model.items[0].model.option.series[0].data[0].provenance.label, "Last measured 2027-05-01");
-  assert.match(model.items[0].accessibleSummary, /Last measured 2027-05-01/);
+  assert.equal(
+    model.items[0].accessibleSummary,
+    "Clinic A: actual 78; target 80. Playback time 2027-05-02. Last measured 2027-05-01",
+  );
   assert.equal(model.items[1].temporalStatus, "nearest");
   assert.equal(model.items[1].provenance.label, "Nearest measurement 2027-05-03");
+  assert.equal(
+    model.items[1].accessibleSummary,
+    "Clinic B: actual 45; target 80. Playback time 2027-05-02. Nearest measurement 2027-05-03",
+  );
+  assert.equal(
+    model.items[2].accessibleSummary,
+    "Clinic C: actual 62; target 80. Playback time 2027-05-02. Interpolated between 2027-05-01 and 2027-05-03",
+  );
+  assert.equal(
+    model.items[3].accessibleSummary,
+    "Clinic D: actual 80; target 80; observed 2027-05-02",
+  );
+  assert.doesNotMatch(model.items[0].accessibleSummary, /observed 2027-05-02/i);
+  assert.doesNotMatch(model.items[1].accessibleSummary, /observed 2027-05-02/i);
+  assert.doesNotMatch(model.items[2].accessibleSummary, /observed 2027-05-02/i);
 
   const ranked = rankCollection(model.items, settings);
   assert.equal(ranked[0].entityId, model.items[1].entityId);
@@ -298,4 +343,57 @@ test("repeated targets fail closed when stable semantic identity is missing or d
   assert.ok(duplicate.message.length <= 240);
   assert.equal(composite.kind, "targetCollection");
   assert.equal(new Set(composite.items.map(({ entityId }) => entityId)).size, 2);
+});
+
+test("repeated target identities normalize visible labels and reject blank or colliding semantics", () => {
+  const normalizedInput = ready([
+    { entity: " Clinic A ", label: " Beds ", value: 4, target: 8 },
+    { entity: " Clinic B ", label: " Beds ", value: 6, target: 8 },
+  ]);
+  const normalized = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: normalizedInput,
+  });
+  const repeated = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: normalizedInput,
+  });
+  const whitespaceOnly = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { entity: "   ", value: 4, target: 8 },
+      { entity: "Clinic B", value: 6, target: 8 },
+    ]),
+  });
+  const typedDisplayCollision = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { entity: 1, value: 4, target: 8 },
+      { entity: "1", value: 6, target: 8 },
+    ]),
+  });
+  const crossRoleDisplayCollision = buildRenderModel({
+    chart: chart("bullet"),
+    prepared: ready([
+      { entity: "A", actual: 4, target: 8 },
+      { label: "A", actual: 6, target: 8 },
+    ]),
+  });
+
+  assert.equal(normalized.kind, "targetCollection");
+  assert.deepEqual(
+    normalized.items.map(({ label }) => label),
+    ["Clinic A — Beds", "Clinic B — Beds"],
+  );
+  assert.ok(normalized.items.every(({ label }) => label.trim().length > 0));
+  assert.deepEqual(
+    normalized.items.map(({ entityId }) => entityId),
+    repeated.items.map(({ entityId }) => entityId),
+  );
+  assert.equal(whitespaceOnly.kind, "error");
+  assert.match(whitespaceOnly.message, /must not be blank/i);
+  assert.equal(typedDisplayCollision.kind, "error");
+  assert.match(typedDisplayCollision.message, /duplicate.*identity/i);
+  assert.equal(crossRoleDisplayCollision.kind, "error");
+  assert.match(crossRoleDisplayCollision.message, /duplicate.*identity/i);
 });

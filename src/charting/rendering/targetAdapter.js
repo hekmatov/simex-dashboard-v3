@@ -312,15 +312,25 @@ function targetIdentity(mark, index) {
       `Repeated target item ${index + 1} requires a stable entity or label identity.`,
     );
   }
+  const displayLabel = identityLabel(entity, label);
   return {
-    entityId: `target:${JSON.stringify([entity, label])}`,
-    label: identityLabel(entity, label),
+    entityId: `target:${JSON.stringify(displayLabel)}`,
+    label: displayLabel,
   };
 }
 
 function identityValue(value, role, index) {
   if (value === null || value === undefined || value === "") return null;
-  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().normalize();
+    if (normalized === "") {
+      throw new Error(
+        `Repeated target item ${index + 1} ${role} identity must not be blank.`,
+      );
+    }
+    return normalized;
+  }
+  if (typeof value === "boolean") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
   throw new Error(
     `Repeated target item ${index + 1} ${role} identity must be text, a finite number, or a boolean.`,
