@@ -1,9 +1,29 @@
 import { parseTemporalValue } from "../charting/data/temporal.js";
+import { profileDataset } from "../charting/data/profileDataset.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 
 const dataSourceCache = new Map();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
 const SOURCE_KEYS = new Set(["kind", "path", "provenance", "parsingMetadata"]);
+const INLINE_SOURCE_KEYS = new Set([
+  "data",
+  "fingerprint",
+  "kind",
+  "parsingMetadata",
+  "provenance",
+  "rows",
+  "sourceFingerprint",
+]);
+const UPLOADED_SOURCE_KEYS = new Set([
+  "csvText",
+  "fileName",
+  "fingerprint",
+  "kind",
+  "parsingMetadata",
+  "provenance",
+  "sourceFingerprint",
+  "type",
+]);
 const PROVENANCE_KEYS = new Set(["label"]);
 const PARSING_KEYS = new Set(["interpretation", "format", "timezone"]);
 const PARSING_INTERPRETATIONS = new Set([
@@ -151,6 +171,12 @@ export async function loadDashboardConfig(
       source,
       portableSources?.[sourceId],
     );
+    if (source.kind === "inline" || source.type === "uploadedCsv") {
+      hydratedProfiles[sourceId] = profileDataset(
+        loadedData[sourceId],
+        source.parsingMetadata ?? {},
+      );
+    }
   }
 
   return {
@@ -168,12 +194,43 @@ export function validateDataSourceDescriptor(sourceId, source) {
     source,
     `Data source "${sourceId}" descriptor`,
   );
+  const kind = entryValue(entries, "kind");
+  if (kind === "inline") {
+    rejectUnknownEntries(
+      entries,
+      INLINE_SOURCE_KEYS,
+      `data source "${sourceId}" descriptor`,
+    );
+    const rows = entryValue(entries, "rows") ?? entryValue(entries, "data");
+    if (
+      Object.hasOwn(source, "rows") === Object.hasOwn(source, "data")
+      || !Array.isArray(rows)
+      || rows.some((row) => (
+        row === null || typeof row !== "object" || Array.isArray(row)
+      ))
+    ) {
+      throw new Error(
+        `Inline data source "${sourceId}" must contain either rows or data.`,
+      );
+    }
+    return "inline";
+  }
+  if (kind === "dataset" && entryValue(entries, "type") === "uploadedCsv") {
+    rejectUnknownEntries(
+      entries,
+      UPLOADED_SOURCE_KEYS,
+      `data source "${sourceId}" descriptor`,
+    );
+    if (typeof entryValue(entries, "csvText") !== "string") {
+      throw new Error(`Uploaded CSV source "${sourceId}" csvText is required.`);
+    }
+    return "uploadedCsv";
+  }
   rejectUnknownEntries(
     entries,
     SOURCE_KEYS,
     `data source "${sourceId}" descriptor`,
   );
-  const kind = entryValue(entries, "kind");
   if (!SOURCE_KINDS.has(kind)) {
     throw new Error(
       `Data source "${sourceId}" kind must be "csv" or "geojson".`,
@@ -248,7 +305,14 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
   if (missing.length > 0) {
     throw new Error(`Missing dataset profile for source "${missing[0]}".`);
   }
-  const unexpected = profileIds.filter((sourceId) => !csvIds.includes(sourceId));
+  const runtimeTabularIds = sourceEntries
+    .filter(([, source]) => (
+      source.kind === "inline" || source.type === "uploadedCsv"
+    ))
+    .map(([sourceId]) => sourceId);
+  const unexpected = profileIds.filter((sourceId) => (
+    !csvIds.includes(sourceId) && !runtimeTabularIds.includes(sourceId)
+  ));
   if (unexpected.length > 0) {
     throw new Error(
       `Unexpected dataset profile for source "${unexpected[0]}".`,
@@ -308,6 +372,12 @@ async function loadDataSource(sourceId, source, portableSource) {
 
 async function loadDataSourceFresh(sourceId, source, portableSource) {
   validateDataSourceDescriptor(sourceId, source);
+  if (source.kind === "inline") {
+    return structuredClone(source.rows ?? source.data);
+  }
+  if (source.type === "uploadedCsv") {
+    return parseCsvText(source.csvText, source.fileName ?? `${sourceId}.csv`);
+  }
   if (portableSource) {
     return parsePortableSource(sourceId, source, portableSource);
   }
@@ -761,6 +831,10 @@ function dataSourceCacheKey(sourceId, source, portableSource) {
     source.kind,
     source.path,
     stableStringify(source.parsingMetadata ?? {}),
+    source.sourceFingerprint
+      ?? source.fingerprint
+      ?? source.csvText
+      ?? stableStringify(source.rows ?? source.data ?? null),
     portableSource ? "portable" : "network",
   ].join(":");
 }

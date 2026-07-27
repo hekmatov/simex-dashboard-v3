@@ -140,6 +140,33 @@ test("canonical object transformations and DD/MM bindings survive a bundle-to-EC
       cases: { interpretation: "number" },
     },
   });
+  dashboard.dataSources["outbreak-clock"] = {
+    kind: "inline",
+    rows: [
+      { time: "2027-05-02" },
+      { time: "2027-05-03" },
+    ],
+    parsingMetadata: {
+      time: {
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+        timezone: "date-only",
+      },
+    },
+  };
+  dashboard.timeSyncGroups = [{
+    id: "outbreak",
+    name: "Outbreak playback",
+    primaryClock: {
+      sourceId: "outbreak-clock",
+      timeField: "time",
+    },
+    matching: { policy: "exact" },
+    members: [{
+      chartId: chart.id,
+      timeRole: "observation",
+    }],
+  }];
 
   const parsed = roundTripDashboard(dashboard);
   const parsedChart = parsed.pages[0].sections[0].panels[0];

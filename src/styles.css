@@ -4423,10 +4423,6 @@ button.danger {
   font-size: 12px;
 }
 
-.chart-settings-panel-v2 {
-  min-width: 0;
-}
-
 @media (max-width: 980px) {
   .chart-editor-v3 {
     max-height: none;

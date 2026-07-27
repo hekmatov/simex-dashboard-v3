@@ -180,13 +180,6 @@ export function buildDashboardEditorProfiles({
   return profiles;
 }
 
-export function selectAuthoritativeEditorPanel(savedPanel, legacyDraft) {
-  return savedPanel?.configVersion === 3
-    && typeof savedPanel.typeId === "string"
-    ? savedPanel
-    : legacyDraft ?? savedPanel;
-}
-
 export function applyChartEditorSave(dashboard, {
   chart,
   timeSyncGroups = [],
@@ -491,62 +484,40 @@ export function SelectedChartEditor({
   dashboard = {},
   savedRevision,
   profiles: suppliedProfiles,
-  globalPanelColors,
   onSave,
   onReset,
   onCancel,
   onRemove,
-  onLegacyChange,
-  LegacyEditor = null,
 } = {}) {
-  if (panel?.configVersion === 3 && typeof panel.typeId === "string") {
-    const loadedData = dashboard.loadedData ?? {};
-    const rows = readEntry(loadedData, panel.sourceId);
-    const dataSources = dashboard.dataSources ?? {};
-    const source = readEntry(dataSources, panel.sourceId);
-    const runtimeProfiles = buildDashboardEditorProfiles({
-      loadedData,
-      dataSources,
-      suppliedProfiles: suppliedProfiles ?? dashboard.profiles ?? {},
-    });
-    const profile = readEntry(runtimeProfiles, panel.sourceId);
-    const charts = chartPanels(dashboard).filter(
-      (chart) => chart?.configVersion === 3,
-    );
-    return React.createElement(ChartEditorV3, {
-      chart: panel,
-      timeSyncGroups: dashboard.timeSyncGroups ?? [],
-      savedRevision,
-      existingCharts: charts,
-      rows: Array.isArray(rows) ? rows : [],
-      profile,
-      loadedData,
-      profiles: runtimeProfiles,
-      parsingMetadata: isRecord(source) ? source.parsingMetadata ?? {} : {},
-      onSave,
-      onReset,
-      onCancel,
-      onRemove,
-    });
+  if (panel?.configVersion !== 3 || typeof panel.typeId !== "string") {
+    throw new Error("The live editor accepts only version 3 charts.");
   }
-  const rows = readEntry(dashboard.loadedData ?? {}, panel?.dataSource);
-  return React.createElement(
-    "div",
-    { className: "chart-settings-panel-v2", "data-editor-version": "2" },
-    typeof LegacyEditor === "function"
-      ? React.createElement(LegacyEditor, {
-          panel,
-          dataSources: dashboard.dataSources,
-          dataColumns: Array.isArray(rows) ? Object.keys(rows[0] ?? {}) : [],
-          dataRows: Array.isArray(rows) ? rows : [],
-          globalPanelColors,
-          onSave,
-          onCancel,
-          onRemove,
-          onChange: onLegacyChange,
-        })
-      : null,
-  );
+  const loadedData = dashboard.loadedData ?? {};
+  const rows = readEntry(loadedData, panel.sourceId);
+  const dataSources = dashboard.dataSources ?? {};
+  const source = readEntry(dataSources, panel.sourceId);
+  const runtimeProfiles = buildDashboardEditorProfiles({
+    loadedData,
+    dataSources,
+    suppliedProfiles: suppliedProfiles ?? dashboard.profiles ?? {},
+  });
+  const profile = readEntry(runtimeProfiles, panel.sourceId);
+  const charts = chartPanels(dashboard);
+  return React.createElement(ChartEditorV3, {
+    chart: panel,
+    timeSyncGroups: dashboard.timeSyncGroups ?? [],
+    savedRevision,
+    existingCharts: charts,
+    rows: Array.isArray(rows) ? rows : [],
+    profile,
+    loadedData,
+    profiles: runtimeProfiles,
+    parsingMetadata: isRecord(source) ? source.parsingMetadata ?? {} : {},
+    onSave,
+    onReset,
+    onCancel,
+    onRemove,
+  });
 }
 
 function updateEditorGroups(state, value, context) {

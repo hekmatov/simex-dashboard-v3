@@ -72,14 +72,18 @@ test("manual single, multi-open, and reorder use the same display state", async 
   const fullscreenButton = firstPanel.getByRole("button", {
     name: "Fullscreen chart",
   });
-  await firstPanel.locator(".chart-canvas").hover();
-  await fullscreenButton.hover();
-  await page.mouse.down();
+  await firstPanel.locator(".chart-view-frame").hover();
+  await fullscreenButton.dispatchEvent("pointerdown");
   await page.waitForTimeout(700);
-  await page.mouse.up();
+  await fullscreenButton.dispatchEvent("pointerup");
+  await expect(
+    firstPanel.getByRole("button", {
+      name: "Remove from multi-fullscreen",
+    }),
+  ).toBeVisible();
   await page
     .locator(`[data-panel-id="${SECOND_CHART}"]`)
-    .getByRole("button", { name: "Select" })
+    .getByRole("button", { name: "Add to multi-fullscreen" })
     .click();
   await page
     .getByRole("button", { name: /^Multi-fullscreen$/ })

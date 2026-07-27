@@ -19,6 +19,7 @@ export function PlaybackProvider({
   loadedData = {},
   profiles = {},
   initialState,
+  initialPosition = "earliest",
   children,
 }) {
   const validatedGroups = React.useMemo(() => {
@@ -27,7 +28,13 @@ export function PlaybackProvider({
   }, [groups, charts, loadedData, profiles]);
   const [state, dispatch] = React.useReducer(
     reducePlaybackState,
-    { groups: validatedGroups, initialState },
+    {
+      groups: validatedGroups,
+      initialState,
+      initialPosition,
+      loadedData,
+      profiles,
+    },
     initializePlaybackState,
   );
   const activeGroup = React.useMemo(
@@ -215,17 +222,32 @@ function buildMemberTimeContexts(group, activeEpochMs) {
   return Object.freeze(contexts);
 }
 
-function initializePlaybackState({ groups, initialState }) {
+function initializePlaybackState({
+  groups,
+  initialState,
+  initialPosition,
+  loadedData,
+  profiles,
+}) {
   const supplied = initialState && typeof initialState === "object"
     ? initialState
     : {};
   const hasSuppliedGroup = Object.hasOwn(supplied, "activeGroupId");
+  const activeGroupId = hasSuppliedGroup
+    ? supplied.activeGroupId
+    : groups[0]?.id ?? null;
+  const activeGroup = resolveActiveGroup(groups, activeGroupId);
+  const clock = buildPrimaryClock(activeGroup, loadedData, profiles);
+  const hasSuppliedIndex = Object.hasOwn(supplied, "activeIndex");
   return {
     ...initialPlaybackState,
     ...supplied,
-    activeGroupId: hasSuppliedGroup
-      ? supplied.activeGroupId
-      : groups[0]?.id ?? null,
+    activeGroupId,
+    activeIndex: hasSuppliedIndex
+      ? supplied.activeIndex
+      : initialPosition === "latest" && clock.length > 0
+        ? clock.length - 1
+        : 0,
   };
 }
 

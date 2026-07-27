@@ -11,7 +11,6 @@ export function buildGeographyRenderModel({ chart, prepared, geoData, renderCont
   if (activeTime) {
     return choroplethModel(chart, marks, renderContext, geoData, activeTime);
   }
-  if (chart.typeId === "chronoChoroplethMap") return chronologicalMapModel(chart, prepared.marks, renderContext, geoData);
   return choroplethModel(chart, latestFrame(prepared.marks), renderContext, geoData);
 }
 
@@ -33,37 +32,6 @@ function choroplethModel(chart, marks, renderContext, geoData, activeTime = null
       geo: geoOption(chart, renderContext),
       series: [mapSeries(chart, marks, renderContext, activeTime)],
     },
-  };
-}
-
-function chronologicalMapModel(chart, marks, renderContext, geoData) {
-  const times = unique(marks.map(({ time }) => time).filter((time) => time !== null && time !== undefined))
-    .sort((left, right) => String(left).localeCompare(String(right)));
-  const values = marks.map(({ value }) => value).filter(Number.isFinite);
-  const baseOption = {
-    title: titleOption(chart),
-    aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
-    tooltip: { trigger: "item" },
-    timeline: { axisType: "category", autoPlay: false, data: times },
-    visualMap: {
-      min: values.length ? Math.min(...values) : 0,
-      max: values.length ? Math.max(...values) : 0,
-    },
-    geo: geoOption(chart, renderContext),
-    series: [mapSeries(chart, marks.filter(({ time }) => Object.is(time, times.at(-1))), renderContext)],
-  };
-  return {
-    kind: "echarts",
-    interaction: geographyInteraction(chart),
-    mapRegistration: mapRegistration(chart, marks, renderContext, geoData),
-    option: {
-      ...baseOption,
-      baseOption,
-      options: times.map((time) => ({
-        series: [mapSeries(chart, marks.filter((mark) => Object.is(mark.time, time)), renderContext)],
-      })),
-    },
-    replaceMerge: ["series"],
   };
 }
 
@@ -219,10 +187,6 @@ function missingCoordinateDiagnostic(mark) {
 
 function titleOption(chart) {
   return { text: chart.title ?? "", left: chart.presentation?.title?.align ?? "left" };
-}
-
-function unique(values) {
-  return [...new Set(values)];
 }
 
 function clone(value) {

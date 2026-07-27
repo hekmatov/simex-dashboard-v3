@@ -16,7 +16,6 @@
     "build:cloudflare": "set SIMEX_EMBED_PORTABLE_DATA=0&& set VITE_SHOW_COMPATIBILITY_REPORTS=false&& node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs && vite build",
     "build:cloudflare:linux": "SIMEX_EMBED_PORTABLE_DATA=0 VITE_SHOW_COMPATIBILITY_REPORTS=false node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs && vite build",
     "build:flashdrive": "pnpm.cmd build",
-    "migrate:chart-schema": "node scripts/migrate-chart-schema-v2.mjs",
     "package:flashdrive": "pnpm build && node scripts/package-flashdrive.mjs",
     "promote:bundle": "node scripts/promote-dashboard-bundle.mjs",
     "preview": "vite preview --host 0.0.0.0"

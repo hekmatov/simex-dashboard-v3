@@ -495,7 +495,7 @@ test("KPI, delta card, and delta list produce semantic card models", () => {
   });
 });
 
-test("choropleth and chronological choropleth retain map feature metadata and time frames", () => {
+test("chronological choropleths retain full prepared history but build one bounded live frame", () => {
   const prepared = ready([
     { geography: "GE-TB", value: 7, time: "2027-05-01", feature: { name: "Tbilisi", properties: { code: "GE-TB" } }, group: null, groupKey: "" },
     { geography: "GE-TB", value: 9, time: "2027-05-02", feature: { name: "Tbilisi", properties: { code: "GE-TB" } }, group: null, groupKey: "" },
@@ -507,9 +507,13 @@ test("choropleth and chronological choropleth retain map feature metadata and ti
   assert.equal(map.option.series[0].type, "map");
   assert.equal(map.option.series[0].data[0].name, "GE-TB");
   assert.deepEqual(map.option.series[0].data[0].feature.properties, { code: "GE-TB" });
-  assert.deepEqual(chronological.option.timeline.data, ["2027-05-01", "2027-05-02"]);
-  assert.equal(chronological.option.options.length, 2);
-  assert.deepEqual(chronological.option.options[1].series[0].data.map(({ name }) => name), ["GE-TB", "GE-AJ"]);
+  assert.equal(prepared.marks.length, 3);
+  assert.equal(chronological.option.timeline, undefined);
+  assert.equal(chronological.option.options, undefined);
+  assert.deepEqual(
+    chronological.option.series[0].data.map(({ name }) => name),
+    ["GE-TB", "GE-AJ"],
+  );
 });
 
 test("geography zoom enables renderer scaling only when the chart interaction enables it", () => {

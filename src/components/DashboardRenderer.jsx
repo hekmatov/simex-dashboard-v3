@@ -1,20 +1,17 @@
 ﻿import React from "react";
 
-import AddChartWizard from "./AddChartWizard.jsx";
-import {
-  applyChartEditorSave,
-  SelectedChartEditor,
-  selectAuthoritativeEditorPanel,
-} from "./chart-authoring/ChartEditorV3.jsx";
+import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
+import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
 import ChartPanel from "./ChartPanel.jsx";
-import ChartSettingsPanel from "./ChartSettingsPanelV2.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
+import PlaybackControls from "./playback/PlaybackControls.jsx";
+import { PlaybackProvider } from "./playback/PlaybackProvider.jsx";
 
 export default function DashboardRenderer({
   dashboard,
@@ -29,18 +26,17 @@ export default function DashboardRenderer({
   onPageRemove,
   onPageChange,
   onDashboardChange,
-  onPanelChange,
   onPanelEditCommit,
   onPanelEditCancel,
   onSectionChange,
   onSectionInsert,
   onVantaBackgroundChange,
-  onPanelAdd,
+  onChartCreate,
+  onChartSave,
   onPanelRemove,
   onPanelReorder,
   onImportConfig,
   onExportConfig,
-  onUploadCsv,
   onResetEditSession,
 }) {
   const [activePageId, setActivePageId] = React.useState(
@@ -52,10 +48,8 @@ export default function DashboardRenderer({
   const [multiSelectMode, setMultiSelectMode] = React.useState(false);
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
   const importInputRef = React.useRef(null);
-  const csvInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
-  const [selectedPanelDraft, setSelectedPanelDraft] = React.useState(null);
   const [chartWizardTarget, setChartWizardTarget] = React.useState(null);
   const [chartEditBaseline, setChartEditBaseline] = React.useState(null);
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
@@ -64,32 +58,14 @@ export default function DashboardRenderer({
   const dashboardDebounceRef = React.useRef(null);
   const pageDebounceRef = React.useRef(null);
   const sectionDebounceRef = React.useRef(null);
-  const [filterValues, setFilterValues] = React.useState(() =>
-    collectFilterDefaults(dashboard),
-  );
   const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
     React.useState(false);
-
-  React.useEffect(() => {
-    setFilterValues((current) => ({
-      ...collectFilterDefaults(dashboard),
-      ...current,
-    }));
-  }, [dashboard]);
 
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const landingActive = hasLandingPresentation(activePage);
   const selectedPanel = findPanel(dashboard, selectedPanelId);
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
-
-  React.useEffect(() => {
-    setSelectedPanelDraft(
-      selectedPanel && selectedPanel.configVersion !== 3
-        ? structuredClone(selectedPanel)
-        : null,
-    );
-  }, [selectedPanel?.id, selectedPanel?.configVersion]);
 
   React.useEffect(() => {
     if (!editMode) {
@@ -101,13 +77,6 @@ export default function DashboardRenderer({
   React.useEffect(() => {
     setDashboardDraft(dashboardTextDraftFromDashboard(dashboard));
   }, [dashboard.programLabel, dashboard.scenarioLabel, dashboard.lastUpdated]);
-
-  function changeFilter(filter, value) {
-    setFilterValues((current) => ({
-      ...current,
-      [filter.id]: value,
-    }));
-  }
 
   function navigateToPage(pageId) {
     if (!(dashboard.pages ?? []).some((page) => page.id === pageId)) {
@@ -152,11 +121,6 @@ export default function DashboardRenderer({
   function clearDragState() {
     setDraggingPanelId(null);
     setDragOverPanelId(null);
-  }
-
-  function handlePointerDragState(sourcePanelId, targetPanelId) {
-    setDraggingPanelId(sourcePanelId);
-    setDragOverPanelId(targetPanelId);
   }
 
   function startMultiFullscreenSelection(panelId) {
@@ -236,29 +200,8 @@ export default function DashboardRenderer({
     setBackgroundDraft((current) => ({ ...current, ...updates }));
   }
 
-  function changeSelectedPanel(updates) {
-    const base = selectedPanelDraft ?? selectedPanel;
-    if (!base) {
-      return;
-    }
-    const nextPanel = { ...base, ...updates };
-    setSelectedPanelDraft(nextPanel);
-    onPanelChange(nextPanel.id, diffPanel(base, nextPanel), { commitToEditSession: false });
-  }
-
-  function saveSelectedPanel() {
-    onPanelEditCommit(dashboardWithCurrentDrafts());
-    setChartEditBaseline(null);
-    setSelectedPanelId(null);
-  }
-
-  function saveSelectedChartV3({ chart, timeSyncGroups }) {
-    const nextDashboard = applyChartEditorSave(
-      dashboardWithCurrentDrafts(null),
-      { chart, timeSyncGroups },
-    );
-    onPanelEditCommit(nextDashboard);
-    setSelectedPanelDraft(null);
+  function saveSelectedChartV3(payload) {
+    onChartSave(payload);
     setChartEditBaseline(null);
     setSelectedPanelId(null);
   }
@@ -365,7 +308,7 @@ export default function DashboardRenderer({
     onToggleEditMode();
   }
 
-  function dashboardWithCurrentDrafts(panelOverride = selectedPanelDraft) {
+  function dashboardWithCurrentDrafts(panelOverride = null) {
     const nextDashboard = structuredClone(dashboard);
     Object.assign(nextDashboard, dashboardDraft);
 
@@ -406,6 +349,13 @@ export default function DashboardRenderer({
   }
 
   return (
+    <PlaybackProvider
+      groups={dashboard.timeSyncGroups ?? []}
+      charts={configuredCharts(dashboard)}
+      loadedData={dashboard.loadedData ?? {}}
+      profiles={dashboard.datasetProfiles ?? {}}
+      initialPosition="latest"
+    >
     <main
       className="app-shell"
       data-device-layout={deviceLayout}
@@ -506,7 +456,6 @@ export default function DashboardRenderer({
             </div>
             <button type="button" onClick={() => importInputRef.current?.click()}>Import dashboard</button>
             <button type="button" onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
-            <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}>Upload CSV</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
             {multiSelectMode && (
@@ -522,16 +471,6 @@ export default function DashboardRenderer({
               accept="application/json,.json"
               onChange={(event) => {
                 onImportConfig(event.target.files?.[0]);
-                event.target.value = "";
-              }}
-            />
-            <input
-              ref={csvInputRef}
-              className="visually-hidden"
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) => {
-                onUploadCsv(event.target.files?.[0]);
                 event.target.value = "";
               }}
             />
@@ -575,6 +514,9 @@ export default function DashboardRenderer({
           )
         ))}
       </nav>
+      {(dashboard.timeSyncGroups?.length ?? 0) > 0 && (
+        <PlaybackControls />
+      )}
 
       <section
         className={`dashboard-workspace ${
@@ -641,12 +583,10 @@ export default function DashboardRenderer({
                   <ChartPanel
                     key={panel.id}
                     panel={panel}
-                    globalPanelColors={globalPanelColors}
-                    data={dashboard.loadedData[panel.dataSource]}
-                    geoData={dashboard.loadedData[panel.geoSource]}
-                    loadedData={dashboard.loadedData}
-                    filterDefinitions={section.filters ?? []}
-                    filterValues={filterValues}
+                    rows={dashboard.loadedData[panel.sourceId] ?? []}
+                    datasetProfile={dashboard.datasetProfiles?.[panel.sourceId]}
+                    geoData={dashboard.loadedData[panel.presentation?.map?.geoSource]}
+                    dataSources={dashboard.dataSources}
                     editMode={editMode}
                     isDragging={draggingPanelId === panel.id}
                     isDragTarget={dragOverPanelId === panel.id}
@@ -658,11 +598,10 @@ export default function DashboardRenderer({
                     onToggleMultiSelect={() => toggleMultiPanel(panel.id)}
                     onFullScreenHold={() => startMultiFullscreenSelection(panel.id)}
                     onDisplayAction={onDisplayAction}
-                    onPointerDragStateChange={handlePointerDragState}
-                    onPointerReorder={(sourcePanelId, targetPanelId) => {
-                      onPanelReorder(sourcePanelId, targetPanelId);
-                      clearDragState();
-                    }}
+                    onDragStart={(event) => handlePanelDragStart(event, panel.id)}
+                    onDragOver={(event) => handlePanelDragOver(event, panel.id)}
+                    onDrop={(event) => handlePanelDrop(event, panel.id)}
+                    onDragEnd={clearDragState}
                     onStartSection={() => startSectionAtPanel(section, panel)}
                   />
                 ))}
@@ -673,31 +612,32 @@ export default function DashboardRenderer({
         </div>
 
         {editMode && selectedPanel && (
-          <SelectedChartEditor
-            panel={selectAuthoritativeEditorPanel(
-              selectedPanel,
-              selectedPanelDraft,
-            )}
-            dashboard={dashboard}
-            globalPanelColors={globalPanelColors}
-            onSave={(payload) => (
-              selectedPanel?.configVersion === 3
-                ? saveSelectedChartV3(payload)
-                : saveSelectedPanel()
-            )}
+          <ChartEditorV3
+            chart={selectedPanel}
+            timeSyncGroups={dashboard.timeSyncGroups ?? []}
+            existingCharts={configuredCharts(dashboard)}
+            rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
+            profile={dashboard.datasetProfiles?.[selectedPanel.sourceId]}
+            loadedData={dashboard.loadedData ?? {}}
+            profiles={dashboard.datasetProfiles ?? {}}
+            parsingMetadata={dashboard.dataSources?.[selectedPanel.sourceId]?.parsingMetadata ?? {}}
+            onSave={saveSelectedChartV3}
             onCancel={cancelSelectedPanel}
             onRemove={() => removePanel(selectedPanel.id)}
-            onLegacyChange={changeSelectedPanel}
-            LegacyEditor={ChartSettingsPanel}
           />
         )}
       </section>
-      <AddChartWizard
+      <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
+        timeSyncGroups={dashboard.timeSyncGroups ?? []}
+        existingCharts={configuredCharts(dashboard)}
         onClose={() => setChartWizardTarget(null)}
-        onCreate={({ panel, uploadedSource }) => onPanelAdd(chartWizardTarget.pageId, chartWizardTarget.sectionId, panel, uploadedSource)}
+        onCreate={(payload) => {
+          onChartCreate(payload, chartWizardTarget);
+          setChartWizardTarget(null);
+        }}
       />
       <ConfirmDialog
         open={resetEditSessionConfirmation}
@@ -714,7 +654,6 @@ export default function DashboardRenderer({
       <FullscreenDisplay
         dashboard={dashboard}
         displayState={displayState}
-        globalPanelColors={globalPanelColors}
         onDisplayAction={onDisplayAction}
       />
       <DashboardFooter dashboard={dashboard} />
@@ -726,6 +665,7 @@ export default function DashboardRenderer({
         <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
       </div>
     </main>
+    </PlaybackProvider>
   );
 }
 
@@ -736,7 +676,7 @@ function DashboardFooter({ dashboard }) {
   return (
     <footer className="dashboard-footer" aria-label="Dashboard information and feedback">
       <div>
-        <strong>{dashboard.footerTitle ?? "SimEx Dashboard V2"}</strong>
+        <strong>{dashboard.footerTitle ?? "SimEx Dashboard V3"}</strong>
         <span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span>
       </div>
       <nav aria-label="Project links">
@@ -923,78 +863,6 @@ function clampNumber(value, min, max) {
   return Math.min(Math.max(number, min), max);
 }
 
-function FilterControls({ filters, values, onChange }) {
-  if (filters.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="filter-strip">
-      {filters.map((filter) => {
-        const value = values[filter.id];
-        if (filter.type === "dateRange") {
-          return (
-            <div className="filter-pair" key={filter.id}>
-              <span>{filter.label}</span>
-              <input
-                aria-label={`${filter.label} start`}
-                type="date"
-                value={value?.start ?? filter.defaultStart}
-                min={filter.defaultStart}
-                max={filter.defaultEnd}
-                onChange={(event) =>
-                  onChange(filter, { ...value, start: event.target.value })
-                }
-              />
-              <input
-                aria-label={`${filter.label} end`}
-                type="date"
-                value={value?.end ?? filter.defaultEnd}
-                min={filter.defaultStart}
-                max={filter.defaultEnd}
-                onChange={(event) =>
-                  onChange(filter, { ...value, end: event.target.value })
-                }
-              />
-            </div>
-          );
-        }
-
-        return (
-          <label key={filter.id}>
-            {filter.label}
-            <select
-              value={value ?? filter.defaultValue}
-              onChange={(event) => onChange(filter, event.target.value)}
-            >
-              {filter.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-        );
-      })}
-    </div>
-  );
-}
-
-function collectFilterDefaults(dashboard) {
-  const defaults = {};
-  for (const page of dashboard.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      for (const filter of section.filters ?? []) {
-        defaults[filter.id] =
-          filter.type === "dateRange"
-            ? { start: filter.defaultStart, end: filter.defaultEnd }
-            : filter.defaultValue;
-      }
-    }
-  }
-  return defaults;
-}
-
 function findPanel(dashboard, panelId) {
   if (!panelId) {
     return null;
@@ -1008,6 +876,14 @@ function findPanel(dashboard, panelId) {
     }
   }
   return null;
+}
+
+function configuredCharts(dashboard) {
+  return (dashboard?.pages ?? []).flatMap((page) =>
+    (page.sections ?? []).flatMap((section) =>
+      (section.panels ?? []).map((panel) => panel.chart ?? panel),
+    ),
+  );
 }
 
 function uniquePageId(dashboard, label) {

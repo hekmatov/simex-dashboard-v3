@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { profileDataset } from "../data/profileDataset.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
 import {
   normalizeChartInstance,
   validateChartInstance,
@@ -12,8 +13,24 @@ export const DASHBOARD_CONFIG_VERSION = 3;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 
 const RUNTIME_CONFIGURATION_KEYS = new Set(["loadedData", "loadedRows", "runtimeRows"]);
-const SOURCE_KINDS = new Set(["dataset", "inline"]);
-const SOURCE_KEYS = new Set(["kind", "type", "fileName", "csvText", "rows", "data", "parsingMetadata", "provenance", "fingerprint", "sourceFingerprint", "profile", "datasetProfile", "url"]);
+const SOURCE_KINDS = new Set(["csv", "dataset", "geojson", "inline"]);
+const SOURCE_KEYS = new Set(["kind", "path", "type", "fileName", "csvText", "rows", "data", "parsingMetadata", "provenance", "fingerprint", "sourceFingerprint", "profile", "datasetProfile", "url"]);
+const DASHBOARD_KEYS = new Set([
+  "configVersion",
+  "dataSources",
+  "datasetProfiles",
+  "description",
+  "globalStyles",
+  "id",
+  "lastUpdated",
+  "layout",
+  "pages",
+  "programLabel",
+  "scenarioLabel",
+  "timeSyncGroups",
+  "title",
+  "vantaBackground",
+]);
 const CANONICAL_ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -32,18 +49,18 @@ function sourceRows(sourceId, source) {
   return null;
 }
 
-function profileColumns(sourceId, source) {
+function profileColumns(sourceId, source, profiles = {}) {
   const rows = sourceRows(sourceId, source);
   if (rows !== null) return profileDataset(rows, source.parsingMetadata ?? {}).columns;
-  const profile = source.profile ?? source.datasetProfile;
+  const profile = source.profile ?? source.datasetProfile ?? profiles[sourceId];
   if (!profile) return Object.entries(source.parsingMetadata ?? {}).map(([name, metadata]) => ({ name, type: metadata.interpretation }));
   ensureObject(profile, `Data source "${sourceId}" profile`);
   if (!Array.isArray(profile.columns)) throw new Error(`Data source "${sourceId}" profile columns must be an array.`);
   return profile.columns;
 }
 
-function sourceColumnTypes(sourceId, source) {
-  const columns = profileColumns(sourceId, source);
+function sourceColumnTypes(sourceId, source, profiles) {
+  const columns = profileColumns(sourceId, source, profiles);
   const rows = sourceRows(sourceId, source);
   const map = new Map();
   for (const column of columns) {
@@ -64,7 +81,13 @@ function sourceColumnTypes(sourceId, source) {
 function validateSource(sourceId, source) {
   ensureObject(source, `Data source "${sourceId}"`);
   checkKnownKeys(source, SOURCE_KEYS, `data source "${sourceId}"`);
-  if (!SOURCE_KINDS.has(source.kind)) throw new Error(`Data source "${sourceId}" kind must be dataset or inline.`);
+  if (!SOURCE_KINDS.has(source.kind)) throw new Error(`Data source "${sourceId}" kind is not supported by chart system v3.`);
+  if (source.kind === "csv" || source.kind === "geojson") {
+    requiredString(source.path, `Data source "${sourceId}" path`);
+    if (source.type !== undefined || source.csvText !== undefined || source.rows !== undefined || source.data !== undefined) {
+      throw new Error(`Tracked ${source.kind} source "${sourceId}" cannot contain embedded rows.`);
+    }
+  }
   if (source.type !== undefined) requiredString(source.type, `Data source "${sourceId}" type`);
   for (const metadata of ["parsingMetadata", "provenance"]) if (source[metadata] !== undefined) ensureObject(source[metadata], `Data source "${sourceId}" ${metadata}`);
   for (const fingerprint of ["fingerprint", "sourceFingerprint"]) if (source[fingerprint] !== undefined && typeof source[fingerprint] !== "string") throw new Error(`Data source "${sourceId}" ${fingerprint} must be a string.`);
@@ -170,21 +193,117 @@ function validCanonicalInstant(now) {
 /** Validates all configured charts, source records, and page/section placement in a v3 dashboard. */
 export function validateDashboardConfig(config) {
   ensureObject(config, "Dashboard configuration");
+  checkKnownKeys(config, DASHBOARD_KEYS, "dashboard configuration");
   if (config.configVersion !== DASHBOARD_CONFIG_VERSION) throw new Error("Dashboard configuration version 3 is required.");
   requiredString(config.id, "Dashboard id"); requiredString(config.title, "Dashboard title"); ensureObject(config.dataSources, "Dashboard dataSources");
+  const profiles = config.datasetProfiles ?? {};
+  ensureObject(profiles, "Dashboard datasetProfiles");
   const sources = new Map();
   for (const [sourceId, source] of Object.entries(config.dataSources)) { requiredString(sourceId, "Data source id"); validateSource(sourceId, source); sources.set(sourceId, source); }
+  const charts = configuredPanels(config);
   const chartIds = new Set();
-  for (const chart of configuredPanels(config)) {
+  for (const chart of charts) {
     const source = sources.get(chart.sourceId);
     if (!source) { validateChartInstance(chart); throw new Error(`Chart "${chart.id}" references unknown source "${chart.sourceId}".`); }
     const schema = getChartSchema(chart.typeId);
-    if (!schema.sources.includes(source.kind)) throw new Error(`Chart "${chart.id}" does not support ${source.kind} source "${chart.sourceId}".`);
-    validateChartInstance(chart, { columnTypes: sourceColumnTypes(chart.sourceId, source) });
+    const schemaSourceKind = source.kind === "inline" ? "inline" : "dataset";
+    if (!schema.sources.includes(schemaSourceKind)) throw new Error(`Chart "${chart.id}" does not support ${source.kind} source "${chart.sourceId}".`);
+    validateChartInstance(chart, { columnTypes: sourceColumnTypes(chart.sourceId, source, profiles) });
     ensureUnique(chartIds, chart.id, "Chart id");
     validateManualData(chart, source);
   }
+  const loadedData = {};
+  const validationProfiles = structuredClone(profiles);
+  for (const [sourceId, source] of sources) {
+    const rows = sourceRows(sourceId, source);
+    loadedData[sourceId] = rows ?? [];
+    if (validationProfiles[sourceId] === undefined) {
+      validationProfiles[sourceId] = (
+        rows === null
+          ? source.profile ?? source.datasetProfile
+          : profileDataset(rows, source.parsingMetadata ?? {})
+      );
+    }
+  }
+  validateTimeSyncGroups(config.timeSyncGroups ?? [], {
+    charts,
+    loadedData,
+    profiles: validationProfiles,
+  });
   return config;
+}
+
+/** Reads only the explicitly supplied v3 storage key and validates before use. */
+export function readDashboardStorage(storage, storageKey, { profiles } = {}) {
+  if (!storage || typeof storage.getItem !== "function") {
+    throw new TypeError("Dashboard storage must provide getItem.");
+  }
+  requiredString(storageKey, "Dashboard storage key");
+  const text = storage.getItem(storageKey);
+  if (text === null) return null;
+  let config;
+  try {
+    config = JSON.parse(text);
+  } catch {
+    throw new Error("Saved dashboard configuration must be valid JSON.");
+  }
+  validateDashboardConfig(
+    config.datasetProfiles === undefined && profiles !== undefined
+      ? { ...config, datasetProfiles: profiles }
+      : config,
+  );
+  return structuredClone(config);
+}
+
+/** Adds a normalized chart, optional new source, and group proposal atomically. */
+export function integrateCreatedChart(dashboard, payload, target) {
+  ensureObject(dashboard, "Dashboard configuration");
+  ensureObject(payload, "Chart creation payload");
+  ensureObject(target, "Chart placement");
+  requiredString(target.pageId, "Chart placement page id");
+  requiredString(target.sectionId, "Chart placement section id");
+  const next = serializableConfig(dashboard);
+  if (payload.source !== undefined) {
+    const sourceId = payload.chart?.sourceId;
+    requiredString(sourceId, "Created chart source id");
+    if (Object.hasOwn(next.dataSources, sourceId)) {
+      throw new Error(`Data source "${sourceId}" already exists.`);
+    }
+    next.dataSources[sourceId] = structuredClone(payload.source);
+  }
+  if (payload.timeSyncGroups !== undefined) {
+    next.timeSyncGroups = structuredClone(payload.timeSyncGroups);
+  }
+  const page = next.pages.find(({ id }) => id === target.pageId);
+  const section = page?.sections?.find(({ id }) => id === target.sectionId);
+  if (!section) {
+    throw new Error("The selected chart destination no longer exists.");
+  }
+  section.panels.push(normalizeChartInstance(payload.chart));
+  validateDashboardConfig(next);
+  return next;
+}
+
+/** Replaces one normalized chart and its complete group proposal atomically. */
+export function integrateSavedChart(dashboard, payload) {
+  ensureObject(dashboard, "Dashboard configuration");
+  ensureObject(payload, "Chart save payload");
+  const chart = normalizeChartInstance(payload.chart);
+  const next = serializableConfig(dashboard);
+  let replaced = false;
+  for (const page of next.pages ?? []) {
+    for (const section of page.sections ?? []) {
+      section.panels = (section.panels ?? []).map((panel) => {
+        if ((panel.chart ?? panel).id !== chart.id) return panel;
+        replaced = true;
+        return structuredClone(chart);
+      });
+    }
+  }
+  if (!replaced) throw new Error(`Chart "${chart.id}" does not exist in the dashboard.`);
+  next.timeSyncGroups = structuredClone(payload.timeSyncGroups ?? next.timeSyncGroups ?? []);
+  validateDashboardConfig(next);
+  return next;
 }
 
 export function serializeDashboardBundle(config, { now = null } = {}) {

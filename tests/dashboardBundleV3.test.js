@@ -68,6 +68,19 @@ function version3Dashboard() {
         fingerprint: "manual-fingerprint",
       },
     },
+    timeSyncGroups: [{
+      id: "outbreak",
+      name: "Outbreak playback",
+      primaryClock: {
+        sourceId: "uploaded-cases",
+        timeField: "reportedAt",
+      },
+      matching: { policy: "exact" },
+      members: [{
+        chartId: "outbreak-trend",
+        timeRole: "observation",
+      }],
+    }],
     pages: [{
       id: "overview",
       title: "Overview",
@@ -545,20 +558,24 @@ test("time synchronization rejects an empty optional temporal role array", () =>
 test("inline source records use one row representation and enforce each schema manual-data policy", () => {
   const dashboard = version3Dashboard();
   dashboard.pages[0].sections[0].panels = [pieChart()];
+  dashboard.timeSyncGroups = [];
   assert.doesNotThrow(() => validateDashboardConfig(dashboard));
 
   const ambiguous = version3Dashboard();
   ambiguous.dataSources["manual-status"].data = [{ label: "Ready", value: 12 }];
   ambiguous.pages[0].sections[0].panels = [pieChart()];
+  ambiguous.timeSyncGroups = [];
   assert.throws(() => validateDashboardConfig(ambiguous), /both rows and data/i);
 
   const disallowed = version3Dashboard();
   disallowed.pages[0].sections[0].panels = [lineChart({ sourceId: "manual-status", interaction: { zoom: { enabled: true }, timeSync: null } })];
+  disallowed.timeSyncGroups = [];
   assert.throws(() => validateDashboardConfig(disallowed), /does not support inline source/i);
 
   const oversized = version3Dashboard();
   oversized.dataSources["manual-status"].rows = Array.from({ length: 21 }, (_, value) => ({ label: `Status ${value}`, value }));
   oversized.pages[0].sections[0].panels = [pieChart()];
+  oversized.timeSyncGroups = [];
   assert.throws(() => validateDashboardConfig(oversized), /exceeds 20 rows/i);
 });
 
@@ -648,7 +665,13 @@ test("a category source cannot become temporal only through a role override", ()
 test("an explicit DD/MM/YYYY role override validates source values and enables time synchronization", () => {
   const dashboard = version3Dashboard();
   dashboard.dataSources["uploaded-cases"].csvText = "reportedAt,cases\n02/05/2027,4\n";
-  dashboard.dataSources["uploaded-cases"].parsingMetadata = {};
+  dashboard.dataSources["uploaded-cases"].parsingMetadata = {
+    reportedAt: {
+      interpretation: "temporal",
+      format: "DD/MM/YYYY",
+      timezone: "date-only",
+    },
+  };
   dashboard.pages[0].sections[0].panels[0].roles.observation = {
     field: "reportedAt", interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only",
   };
@@ -697,12 +720,14 @@ test("detected temporal values require deterministic evidence before enabling ti
   invalid.dataSources["uploaded-cases"].csvText = "date,cases\nnot a date,4\n";
   invalid.dataSources["uploaded-cases"].parsingMetadata = {};
   invalid.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
+  invalid.timeSyncGroups[0].primaryClock.timeField = "date";
   assert.throws(() => validateDashboardConfig(invalid), /does not validate as temporal|temporal evidence/i);
 
   const validIso = version3Dashboard();
   validIso.dataSources["uploaded-cases"].csvText = "date,cases\n2027-05-01,4\n";
   validIso.dataSources["uploaded-cases"].parsingMetadata = {};
   validIso.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
+  validIso.timeSyncGroups[0].primaryClock.timeField = "date";
   assert.doesNotThrow(() => validateDashboardConfig(validIso));
 });
 
@@ -910,6 +935,7 @@ test("bundle write boundaries persist every collection layout, overflow, ranking
     },
   ];
   const dashboard = version3Dashboard();
+  dashboard.timeSyncGroups = [];
   dashboard.dataSources["collection-status"] = {
     kind: "dataset",
     type: "uploadedCsv",

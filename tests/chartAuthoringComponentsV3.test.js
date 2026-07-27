@@ -114,7 +114,6 @@ const {
   rebaseChartEditorState,
   reduceChartEditorState,
   saveChartEditorState,
-  selectAuthoritativeEditorPanel,
   SelectedChartEditor,
 } = await import(
   "../src/components/chart-authoring/ChartEditorV3.jsx"
@@ -2428,14 +2427,8 @@ test("authoritative v3 routing rebases only for a changed saved snapshot and who
   const first = validPieChart({ title: "First saved" });
   const same = structuredClone(first);
   const updated = validPieChart({ title: "Server-saved update" });
-  const legacyDraft = { ...first, title: "Legacy draft must not win" };
-
-  assert.equal(
-    selectAuthoritativeEditorPanel(first, legacyDraft),
-    first,
-  );
   const routedFirst = SelectedChartEditor({
-    panel: selectAuthoritativeEditorPanel(first, legacyDraft),
+    panel: first,
     savedRevision: "chart-revision-1",
     dashboard: {
       pages: [{
@@ -2501,7 +2494,7 @@ test("authoritative v3 routing rebases only for a changed saved snapshot and who
   assert.equal(dashboard.pages[0].sections[0].panels[0].title, "First saved");
 });
 
-test("dashboard editor routing uses ChartEditorV3 for version-3 charts and preserves legacy fallback", () => {
+test("dashboard editor routing accepts only version-3 charts", () => {
   const chart = validPieChart();
   const v3 = render(React.createElement(SelectedChartEditor, {
     panel: chart,
@@ -2521,12 +2514,11 @@ test("dashboard editor routing uses ChartEditorV3 for version-3 charts and prese
     onSave() {},
     onCancel() {},
     onRemove() {},
-    onLegacyChange() {},
   }));
   assert.match(v3, /chart-editor-v3/);
   assert.doesNotMatch(v3, /chart-settings-panel-v2/);
 
-  const legacy = render(React.createElement(SelectedChartEditor, {
+  assert.throws(() => SelectedChartEditor({
     panel: {
       id: "legacy",
       title: "Legacy line",
@@ -2544,9 +2536,7 @@ test("dashboard editor routing uses ChartEditorV3 for version-3 charts and prese
     onSave() {},
     onCancel() {},
     onRemove() {},
-    onLegacyChange() {},
-  }));
-  assert.match(legacy, /chart-settings-panel-v2/);
+  }), /only version 3 charts/i);
 });
 
 function findElement(node, predicate) {

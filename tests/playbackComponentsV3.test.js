@@ -134,6 +134,23 @@ test("the provider exposes a frozen context and optional consumption is safe out
   assert.equal(optional, "<output>optional</output>");
 });
 
+test("a live provider can initialize paused synchronized charts at the latest group time", () => {
+  function Probe() {
+    const playback = usePlayback();
+    return React.createElement("output", null, [
+      playback.activeIndex,
+      playback.activeEpochMs,
+      playback.playing ? "playing" : "paused",
+    ].join("|"));
+  }
+
+  const html = renderPlayback(React.createElement(Probe), {
+    initialPosition: "latest",
+  });
+
+  assert.equal(html, `<output>2|${MAY_3}|paused</output>`);
+});
+
 test("playback view renders eligible members and explicit missing and unavailable states", () => {
   const fixture = playbackFixture();
   const unavailable = lineChart({

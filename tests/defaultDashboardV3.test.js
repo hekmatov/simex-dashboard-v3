@@ -533,18 +533,20 @@ test("all configured geography joins resolve and the choropleth is genuinely tim
       .filter(Boolean),
   );
   assert.deepEqual(preparedTimes, profiledTimes, "full temporal history must remain prepared");
-  const representativeTime = prepared.marks.at(-1).time;
-  const representativeFrame = {
-    ...prepared,
-    marks: prepared.marks.filter(({ time }) => time === representativeTime),
-  };
+  assert.equal(prepared.marks.length, 146080);
   const model = buildRenderModel({
     chart: choropleth,
-    prepared: representativeFrame,
+    prepared,
     geoData: await sources.geo(choropleth.presentation.map.geoSource),
   });
   assert.notEqual(model.kind, "error");
-  assert.ok(representativeFrame.marks.length > 300);
+  assert.equal(model.option.timeline, undefined);
+  assert.equal(model.option.options, undefined);
+  assert.ok(model.option.series[0].data.length > 300);
+  assert.ok(
+    model.option.series[0].data.length < 1000,
+    "the initial live option must contain one bounded frame",
+  );
 });
 
 test("showcase landing metadata is retained byte-for-byte at the semantic JSON level", async () => {
