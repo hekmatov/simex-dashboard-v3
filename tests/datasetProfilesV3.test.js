@@ -27,6 +27,7 @@ import { parseCsvText } from "../src/lib/loadCsv.js";
 import {
   loadDashboardConfig,
   validateDataSourceDescriptor,
+  validateGeoJson,
 } from "../src/lib/loadDashboard.js";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -304,6 +305,15 @@ test("profile generation rejects traversal, unsafe IDs, legacy strings, and miss
           kind: "csv",
           path: "data/%2e%2e/secret.csv",
           provenance: { label: "Encoded traversal fixture" },
+        },
+        /safe relative public path/i,
+      ],
+      [
+        "unsafe",
+        {
+          kind: "csv",
+          path: "data/file:stream.csv",
+          provenance: { label: "Windows alternate stream fixture" },
         },
         /safe relative public path/i,
       ],
@@ -685,6 +695,173 @@ test("runtime rejects malformed GeoJSON before exposing it to charts", async () 
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("GeoJSON validation enforces type-specific coordinate nesting and minima", () => {
+  const featureCollection = (geometry, properties = {}) => ({
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties,
+      geometry,
+    }],
+  });
+  const ring = [
+    [0, 0, 7],
+    [1, 0, 7],
+    [1, 1, 7],
+    [0, 0, 7],
+  ];
+
+  for (const geometry of [
+    null,
+    { type: "Point", coordinates: [4.9, 52.3] },
+    { type: "MultiPoint", coordinates: [[4.9, 52.3], [5, 52.4]] },
+    { type: "LineString", coordinates: [[0, 0], [1, 1]] },
+    {
+      type: "MultiLineString",
+      coordinates: [
+        [[0, 0], [1, 1]],
+        [[2, 2], [3, 3]],
+      ],
+    },
+    { type: "Polygon", coordinates: [ring] },
+    { type: "MultiPolygon", coordinates: [[ring], [ring]] },
+    {
+      type: "GeometryCollection",
+      geometries: [
+        { type: "Point", coordinates: [0, 0] },
+        { type: "LineString", coordinates: [[0, 0], [1, 1]] },
+      ],
+    },
+  ]) {
+    assert.doesNotThrow(() => validateGeoJson(featureCollection(
+      geometry,
+      { label: "valid", nested: { values: [1, true, null] } },
+    )));
+  }
+
+  for (const geometry of [
+    { type: "Point", coordinates: [[0, 0]] },
+    { type: "Point", coordinates: [0, Number.POSITIVE_INFINITY] },
+    { type: "Point", coordinates: [0, 0], geometries: [] },
+    { type: "MultiPoint", coordinates: [0, 0] },
+    { type: "MultiPoint", coordinates: [] },
+    { type: "LineString", coordinates: [[0, 0]] },
+    { type: "MultiLineString", coordinates: [] },
+    { type: "MultiLineString", coordinates: [[[0, 0]]] },
+    { type: "Polygon", coordinates: [] },
+    {
+      type: "Polygon",
+      coordinates: [[
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ]],
+    },
+    {
+      type: "Polygon",
+      coordinates: [[
+        [0, 0, 7],
+        [1, 0, 7],
+        [1, 1, 7],
+        [0, 0],
+      ]],
+    },
+    { type: "MultiPolygon", coordinates: [ring] },
+    { type: "MultiPolygon", coordinates: [] },
+    { type: "GeometryCollection", geometries: [] },
+    {
+      type: "GeometryCollection",
+      geometries: [{ type: "Point", coordinates: [[0, 0]] }],
+    },
+    {
+      type: "GeometryCollection",
+      geometries: [{ type: "Point", coordinates: [0, 0] }],
+      coordinates: [],
+    },
+    { type: "Circle", coordinates: [0, 0] },
+  ]) {
+    assert.throws(
+      () => validateGeoJson(featureCollection(geometry)),
+      /geojson/i,
+    );
+  }
+
+  assert.throws(
+    () => validateGeoJson({ type: "FeatureCollection", features: [] }),
+    /geojson/i,
+  );
+});
+
+test("GeoJSON features require inert object-or-null properties", () => {
+  const featureCollection = (properties) => ({
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties,
+      geometry: { type: "Point", coordinates: [0, 0] },
+    }],
+  });
+
+  assert.doesNotThrow(() => validateGeoJson(featureCollection(null)));
+  assert.doesNotThrow(() => validateGeoJson(featureCollection({
+    label: "safe",
+    metadata: { values: [1, "two", null] },
+  })));
+
+  for (const properties of [[], "unsafe", 42, true]) {
+    assert.throws(
+      () => validateGeoJson(featureCollection(properties)),
+      /geojson/i,
+    );
+  }
+
+  const dangerousProperties = Object.create(null);
+  Object.defineProperty(dangerousProperties, "__proto__", {
+    value: "unsafe",
+    enumerable: true,
+  });
+  assert.throws(
+    () => validateGeoJson(featureCollection(dangerousProperties)),
+    /geojson/i,
+  );
+
+  let getterCalls = 0;
+  const accessorProperties = {};
+  Object.defineProperty(accessorProperties, "secret", {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return "unsafe";
+    },
+  });
+  assert.throws(
+    () => validateGeoJson(featureCollection(accessorProperties)),
+    /geojson/i,
+  );
+  assert.equal(getterCalls, 0);
+
+  const accessorFeature = {
+    type: "Feature",
+    properties: {},
+  };
+  Object.defineProperty(accessorFeature, "geometry", {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return { type: "Point", coordinates: [0, 0] };
+    },
+  });
+  assert.throws(
+    () => validateGeoJson({
+      type: "FeatureCollection",
+      features: [accessorFeature],
+    }),
+    /geojson/i,
+  );
+  assert.equal(getterCalls, 0);
 });
 
 test("portable data embeds descriptors, full profiles, and source bytes deterministically", async () => {
