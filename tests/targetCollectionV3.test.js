@@ -1,0 +1,301 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { rankCollection } from "../src/charting/collection/rankCollection.js";
+import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
+
+const MAY_1 = Date.UTC(2027, 4, 1);
+const MAY_2 = Date.UTC(2027, 4, 2);
+const MAY_3 = Date.UTC(2027, 4, 3);
+
+function chart(typeId, overrides = {}) {
+  return {
+    id: `${typeId}-collection`,
+    typeId,
+    title: `${typeId} status`,
+    description: `${typeId} description`,
+    roles: {},
+    presentation: {
+      title: { align: "left" },
+      collection: collectionSettings(),
+      targets: { ranges: [50, 80, 100] },
+      ...(overrides.presentation ?? {}),
+    },
+    interaction: { zoom: { enabled: false } },
+    ...overrides,
+  };
+}
+
+function collectionSettings(ranking = { mode: "fixed" }) {
+  return {
+    layout: "fixed",
+    rows: 1,
+    columns: 2,
+    gap: 16,
+    overflow: "manualPages",
+    ranking,
+    carousel: {
+      intervalMs: 10000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "none",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  };
+}
+
+function ready(marks, meta = {}) {
+  return {
+    status: "ready",
+    marks,
+    diagnostics: [],
+    meta,
+  };
+}
+
+function assertDeeplyFrozen(value) {
+  if (value === null || typeof value !== "object") return;
+  assert.equal(Object.isFrozen(value), true);
+  for (const nested of Object.values(value)) assertDeeplyFrozen(nested);
+}
+
+test("repeated gauges become stable detached one-mark collection models with ranking metrics", () => {
+  const sourceChart = chart("gauge");
+  const sourcePrepared = ready([
+    {
+      entity: "Clinic A",
+      label: "Oxygen",
+      value: 72,
+      target: 80,
+      time: "2027-05-02",
+      delta: { absolute: -3, percentage: -4 },
+      riskScore: 7,
+    },
+    {
+      entity: "Clinic B",
+      label: "Oxygen",
+      value: 55,
+      target: 70,
+      time: "2027-05-02",
+    },
+  ]);
+  const chartBefore = structuredClone(sourceChart);
+  const preparedBefore = structuredClone(sourcePrepared);
+
+  const model = buildRenderModel({ chart: sourceChart, prepared: sourcePrepared });
+  const repeated = buildRenderModel({ chart: sourceChart, prepared: sourcePrepared });
+
+  assert.equal(model.kind, "targetCollection");
+  assert.equal(model.items.length, 2);
+  assert.deepEqual(
+    model.items.map(({ entityId }) => entityId),
+    repeated.items.map(({ entityId }) => entityId),
+  );
+  assert.equal(new Set(model.items.map(({ entityId }) => entityId)).size, 2);
+  assert.deepEqual(model.items[0].delta, { absolute: -3, percentage: -4 });
+  assert.equal(model.items[0].value, 72);
+  assert.equal(model.items[0].actual, 72);
+  assert.equal(model.items[0].target, 80);
+  assert.equal(model.items[0].absoluteDelta, -3);
+  assert.equal(model.items[0].percentageDelta, -4);
+  assert.equal(model.items[0].distanceFromTarget, 8);
+  assert.equal(model.items[0].riskScore, 7);
+  assert.equal(model.items[1].distanceFromTarget, 15);
+  assert.deepEqual(model.presentation, {
+    collection: sourceChart.presentation.collection,
+  });
+
+  for (const item of model.items) {
+    assert.equal(item.model.kind, "echarts");
+    assert.equal(item.model.option.series.length, 1);
+    assert.equal(item.model.option.series[0].data.length, 1);
+    assert.equal(item.model.option.series[0].center, undefined);
+    assert.equal(item.model.option.title, undefined);
+    assert.equal(item.model.semanticSummary.items.length, 1);
+    assert.match(item.accessibleSummary, new RegExp(item.label));
+    assert.match(item.accessibleSummary, /actual \d+; target \d+; observed 2027-05-02/);
+  }
+
+  assert.equal(model.layout, undefined);
+  assert.equal(model.page, undefined);
+  assert.equal(model.timer, undefined);
+  assert.deepEqual(sourceChart, chartBefore);
+  assert.deepEqual(sourcePrepared, preparedBefore);
+  assert.equal(Object.isFrozen(sourceChart.presentation.collection), false);
+  assert.equal(Object.isFrozen(sourcePrepared.marks[0].delta), false);
+  assertDeeplyFrozen(model);
+
+  sourceChart.presentation.collection.rows = 4;
+  sourcePrepared.marks[0].delta.absolute = 999;
+  assert.equal(model.presentation.collection.rows, 1);
+  assert.equal(model.items[0].delta.absolute, -3);
+});
+
+test("repeated bullets isolate one prepared observation per item and expose normalized actual values", () => {
+  const model = buildRenderModel({
+    chart: chart("bullet"),
+    prepared: ready([
+      { entity: "Clinic A", actual: 8, target: 10, time: "2027-05-02" },
+      { entity: "Clinic B", actual: 6, target: 9, time: "2027-05-02", riskScore: 4 },
+    ]),
+  });
+
+  assert.equal(model.kind, "targetCollection");
+  assert.deepEqual(
+    model.items.map(({ label, value, actual, target, distanceFromTarget, riskScore }) => ({
+      label,
+      value,
+      actual,
+      target,
+      distanceFromTarget,
+      riskScore,
+    })),
+    [
+      {
+        label: "Clinic A",
+        value: 8,
+        actual: 8,
+        target: 10,
+        distanceFromTarget: 2,
+        riskScore: undefined,
+      },
+      {
+        label: "Clinic B",
+        value: 6,
+        actual: 6,
+        target: 9,
+        distanceFromTarget: 3,
+        riskScore: 4,
+      },
+    ],
+  );
+  for (const item of model.items) {
+    assert.equal(item.model.option.yAxis.data.length, 1);
+    assert.equal(item.model.option.series[0].data.length, 1);
+    assert.equal(item.model.option.series[1].data.length, 1);
+    assert.equal(item.model.option.grid, undefined);
+    assert.deepEqual(item.model.accessibility.rows, [{
+      label: item.label,
+      actual: item.actual,
+      target: item.target,
+      time: "2027-05-02",
+    }]);
+  }
+});
+
+test("playback provenance remains outside mini options and ranking consumes the displayed values", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "snapshot",
+    status: "mixed",
+  };
+  const settings = collectionSettings({
+    mode: "priority",
+    method: "furthestFromTarget",
+    stabilize: false,
+  });
+  const model = buildRenderModel({
+    chart: chart("gauge", {
+      presentation: {
+        collection: settings,
+        targets: { ranges: [50, 80, 100] },
+      },
+    }),
+    prepared: ready([
+      {
+        entity: "Clinic A",
+        value: 78,
+        target: 80,
+        time: "2027-05-02",
+        active: true,
+        temporalProvenance: {
+          status: "carried",
+          activeEpochMs: MAY_2,
+          activeCanonical: "2027-05-02",
+          sourceEpochMs: MAY_1,
+        },
+      },
+      {
+        entity: "Clinic B",
+        value: 45,
+        target: 80,
+        time: "2027-05-02",
+        active: true,
+        temporalProvenance: {
+          status: "nearest",
+          activeEpochMs: MAY_2,
+          activeCanonical: "2027-05-02",
+          sourceEpochMs: MAY_3,
+        },
+      },
+    ], { activeTime }),
+  });
+
+  assert.equal(model.items[0].temporalStatus, "carried");
+  assert.equal(model.items[0].provenance.label, "Last measured 2027-05-01");
+  assert.equal(model.items[0].model.option.series[0].data[0].provenance.label, "Last measured 2027-05-01");
+  assert.match(model.items[0].accessibleSummary, /Last measured 2027-05-01/);
+  assert.equal(model.items[1].temporalStatus, "nearest");
+  assert.equal(model.items[1].provenance.label, "Nearest measurement 2027-05-03");
+
+  const ranked = rankCollection(model.items, settings);
+  assert.equal(ranked[0].entityId, model.items[1].entityId);
+  assert.equal(ranked[0].value, 45);
+  assert.equal(ranked[0].model.semanticSummary.items[0].actual, 45);
+});
+
+test("single Gauge and Bullet observations retain the ordinary ECharts path", () => {
+  for (const [typeId, mark] of [
+    ["gauge", { value: 72, target: 80, time: "2027-05-02" }],
+    ["bullet", { actual: 8, target: 10, label: "Clinic A", time: "2027-05-02" }],
+  ]) {
+    const model = buildRenderModel({
+      chart: chart(typeId, {
+        presentation: { collection: null, targets: { ranges: [50, 80, 100] } },
+      }),
+      prepared: ready([mark]),
+    });
+
+    assert.equal(model.kind, "echarts");
+    assert.equal(model.option.series[0].data.length, 1);
+    assert.equal(model.accessibility.rows.length, 1);
+  }
+});
+
+test("repeated targets fail closed when stable semantic identity is missing or duplicated", () => {
+  const missing = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { value: 4, target: 8 },
+      { value: 6, target: 8 },
+    ]),
+  });
+  const duplicate = buildRenderModel({
+    chart: chart("bullet"),
+    prepared: ready([
+      { entity: "Clinic A", label: "Beds", actual: 4, target: 8 },
+      { entity: "Clinic A", label: "Beds", actual: 6, target: 8 },
+    ]),
+  });
+  const composite = buildRenderModel({
+    chart: chart("bullet"),
+    prepared: ready([
+      { entity: "Clinic A", label: "Beds", actual: 4, target: 8 },
+      { entity: "Clinic A", label: "Oxygen", actual: 6, target: 8 },
+    ]),
+  });
+
+  assert.equal(missing.kind, "error");
+  assert.match(missing.message, /stable entity or label/i);
+  assert.ok(missing.message.length <= 240);
+  assert.equal(duplicate.kind, "error");
+  assert.match(duplicate.message, /duplicate.*identity/i);
+  assert.ok(duplicate.message.length <= 240);
+  assert.equal(composite.kind, "targetCollection");
+  assert.equal(new Set(composite.items.map(({ entityId }) => entityId)).size, 2);
+});

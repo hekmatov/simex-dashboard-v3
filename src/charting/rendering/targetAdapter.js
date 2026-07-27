@@ -2,38 +2,137 @@ const GAUGE_COLORS = ["#d73027", "#fdae61", "#1a9850", "#2c7bb6"];
 
 export function buildTargetRenderModel({ chart, prepared }) {
   const activeTime = prepared.meta?.activeTime ?? null;
-  if (chart.typeId === "gauge") return gaugeModel(chart, prepared.marks, activeTime);
-  if (chart.typeId === "bullet") return bulletModel(chart, prepared.marks, activeTime);
+  if (chart.typeId === "gauge" || chart.typeId === "bullet") {
+    return prepared.marks.length > 1
+      ? targetCollectionModel(chart, prepared.marks, activeTime)
+      : singleTargetModel(chart, prepared.marks[0], activeTime);
+  }
   return cardModel(chart, prepared.marks, activeTime);
 }
 
-function gaugeModel(chart, marks, activeTime) {
+function targetCollectionModel(chart, marks, activeTime) {
+  try {
+    const identities = new Set();
+    const items = marks.map((mark, index) => {
+      const identity = targetIdentity(mark, index);
+      if (identities.has(identity.entityId)) {
+        throw new Error(
+          `Repeated ${chart.typeId} observations have duplicate collection identity "${identity.label}".`,
+        );
+      }
+      identities.add(identity.entityId);
+      return targetCollectionItem(chart, mark, identity, activeTime);
+    });
+    return {
+      kind: "targetCollection",
+      items,
+      presentation: {
+        collection: clone(chart.presentation?.collection ?? null),
+      },
+    };
+  } catch (cause) {
+    const message = bounded(
+      cause?.message || `Repeated ${chart.typeId} observations cannot be displayed as a collection.`,
+    );
+    return {
+      kind: "error",
+      message,
+      diagnostics: [{
+        severity: "error",
+        code: "target-collection-identity-invalid",
+        message,
+      }],
+    };
+  }
+}
+
+function targetCollectionItem(chart, mark, identity, activeTime) {
+  const actual = targetActual(chart, mark);
+  const provenance = activeTime && isActiveObservation(mark)
+    ? provenanceSummary(mark.temporalProvenance)
+    : null;
+  const delta = targetDelta(mark);
+  const absoluteDelta = finiteMetric(mark.absoluteDelta)
+    ?? finiteMetric(mark.absoluteChange)
+    ?? finiteMetric(delta?.absolute);
+  const percentageDelta = finiteMetric(mark.percentageDelta)
+    ?? finiteMetric(mark.percentageChange)
+    ?? finiteMetric(delta?.percentage);
+  const distanceFromTarget = finiteMetric(mark.distanceFromTarget)
+    ?? (
+      Number.isFinite(actual) && Number.isFinite(mark.target)
+        ? Math.abs(actual - mark.target)
+        : undefined
+    );
+  const miniModel = singleTargetModel(chart, mark, activeTime, true);
+  return {
+    entityId: identity.entityId,
+    label: identity.label,
+    value: actual,
+    actual,
+    target: mark.target ?? null,
+    time: mark.time ?? null,
+    delta,
+    ...(absoluteDelta === undefined ? {} : { absoluteDelta }),
+    ...(percentageDelta === undefined ? {} : { percentageDelta }),
+    ...(distanceFromTarget === undefined ? {} : { distanceFromTarget }),
+    ...(Number.isFinite(mark.riskScore) ? { riskScore: mark.riskScore } : {}),
+    ...(provenance
+      ? {
+          activeTime: activeTime.canonical,
+          temporalStatus: provenance.status,
+          provenance,
+        }
+      : {}),
+    model: {
+      ...miniModel,
+      semanticSummary: {
+        ...miniModel.semanticSummary,
+        items: miniModel.semanticSummary.items.map((item) => ({
+          ...item,
+          label: identity.label,
+        })),
+      },
+    },
+  };
+}
+
+function singleTargetModel(chart, mark, activeTime, embedded = false) {
+  return chart.typeId === "gauge"
+    ? gaugeModel(chart, mark, activeTime, embedded)
+    : bulletModel(chart, mark, activeTime, embedded);
+}
+
+function gaugeModel(chart, mark, activeTime, embedded = false) {
   const ranges = chart.presentation?.targets?.ranges ?? [];
   const rangeMaximum = Math.max(0, ...ranges.map(rangeEnd).filter(Number.isFinite));
   const maximum = Math.max(
     100,
     rangeMaximum,
-    ...marks.flatMap(({ value, target }) => [finite(value), finite(target)]),
+    finite(mark?.value),
+    finite(mark?.target),
   );
-  const layout = gaugeLayout(chart.presentation?.collection, marks.length);
+  const name = mark?.entity ?? mark?.label ?? chart.title ?? "";
   return {
     kind: "echarts",
-    semanticSummary: targetSemanticSummary(chart, marks, activeTime),
-    presentation: {
-      collection: clone(chart.presentation?.collection ?? null),
-    },
+    semanticSummary: targetSemanticSummary(chart, mark ? [mark] : [], activeTime, embedded),
+    ...(embedded
+      ? {}
+      : {
+          presentation: {
+            collection: clone(chart.presentation?.collection ?? null),
+          },
+        }),
     option: {
-      title: titleOption(chart),
+      ...(embedded ? {} : { title: titleOption(chart) }),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
-      series: marks.map((mark, index) => {
-        const name = mark.entity ?? mark.label ?? chart.title ?? "";
-        return {
+      series: mark
+        ? [{
           name,
           type: "gauge",
           min: 0,
           max: maximum,
-          center: layout.centers[index],
-          radius: layout.radius,
+          ...(embedded ? {} : { center: ["50%", "50%"], radius: "36%" }),
           axisLine: { lineStyle: { color: gaugeSegments(ranges, maximum) } },
           detail: { valueAnimation: true },
           title: { show: Boolean(name) },
@@ -47,45 +146,42 @@ function gaugeModel(chart, marks, activeTime) {
             },
             activeTime,
           )],
-        };
-      }),
+        }]
+        : [],
     },
   };
 }
 
-function gaugeLayout(collection, count) {
-  const columns = collection?.columns ?? Math.max(1, Math.ceil(Math.sqrt(count)));
-  const rows = collection?.rows ?? Math.max(1, Math.ceil(count / columns));
-  return {
-    centers: Array.from({ length: count }, (_, index) => [
-      `${((index % columns + 0.5) / columns) * 100}%`,
-      `${((Math.floor(index / columns) + 0.5) / rows) * 100}%`,
-    ]),
-    radius: `${Math.max(12, Math.min(38, 36 / Math.max(columns, rows)))}%`,
-  };
-}
-
-function bulletModel(chart, marks, activeTime) {
-  const categories = marks.map((mark, index) => mark.entity ?? mark.label ?? `Item ${index + 1}`);
+function bulletModel(chart, mark, activeTime, embedded = false) {
+  const label = mark?.entity ?? mark?.label ?? chart.title ?? "Item";
   return {
     kind: "echarts",
-    semanticSummary: targetSemanticSummary(chart, marks, activeTime),
+    semanticSummary: targetSemanticSummary(chart, mark ? [mark] : [], activeTime, embedded),
+    ...(embedded
+      ? {}
+      : {
+          presentation: {
+            collection: clone(chart.presentation?.collection ?? null),
+          },
+        }),
     option: {
-      title: titleOption(chart),
+      ...(embedded ? {} : { title: titleOption(chart) }),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "axis" },
-      grid: { containLabel: true, left: 72, right: 36, top: 76, bottom: 42 },
+      ...(embedded
+        ? {}
+        : { grid: { containLabel: true, left: 72, right: 36, top: 76, bottom: 42 } }),
       xAxis: { type: "value" },
-      yAxis: { type: "category", data: categories },
+      yAxis: { type: "category", data: mark ? [label] : [] },
       series: [
         {
           name: "Actual",
           type: "bar",
-          data: marks.map((mark) => (
-            activeTime && isActiveObservation(mark)
-              ? targetDataItem(mark, { value: mark.actual }, activeTime)
-              : mark.actual
-          )),
+          data: mark
+            ? [activeTime && isActiveObservation(mark)
+                ? targetDataItem(mark, { value: mark.actual }, activeTime)
+                : mark.actual]
+            : [],
           z: 2,
         },
         {
@@ -93,10 +189,12 @@ function bulletModel(chart, marks, activeTime) {
           type: "scatter",
           symbol: "rect",
           symbolSize: [4, 24],
-          data: marks.map((mark, index) => ({
-            value: [mark.target, categories[index]],
-            time: mark.time,
-          })),
+          data: mark
+            ? [{
+                value: [mark.target, label],
+                time: mark.time,
+              }]
+            : [],
           z: 3,
         },
       ],
@@ -182,9 +280,9 @@ function deltaItem(chart, mark, index, activeTime) {
   };
 }
 
-function targetSemanticSummary(chart, marks, activeTime) {
+function targetSemanticSummary(chart, marks, activeTime, embedded = false) {
   return {
-    collection: clone(chart.presentation?.collection ?? null),
+    collection: embedded ? null : clone(chart.presentation?.collection ?? null),
     items: marks.map((mark, index) => {
       const provenance = activeTime && isActiveObservation(mark)
         ? provenanceSummary(mark.temporalProvenance)
@@ -204,6 +302,49 @@ function targetSemanticSummary(chart, marks, activeTime) {
       };
     }),
   };
+}
+
+function targetIdentity(mark, index) {
+  const entity = identityValue(mark.entity, "entity", index);
+  const label = identityValue(mark.label, "label", index);
+  if (entity === null && label === null) {
+    throw new Error(
+      `Repeated target item ${index + 1} requires a stable entity or label identity.`,
+    );
+  }
+  return {
+    entityId: `target:${JSON.stringify([entity, label])}`,
+    label: identityLabel(entity, label),
+  };
+}
+
+function identityValue(value, role, index) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  throw new Error(
+    `Repeated target item ${index + 1} ${role} identity must be text, a finite number, or a boolean.`,
+  );
+}
+
+function identityLabel(entity, label) {
+  if (entity !== null && label !== null && String(entity) !== String(label)) {
+    return `${String(entity)} — ${String(label)}`;
+  }
+  return String(entity ?? label);
+}
+
+function targetActual(chart, mark) {
+  return chart.typeId === "bullet" ? mark.actual : mark.value;
+}
+
+function targetDelta(mark) {
+  if (mark.delta === null || mark.delta === undefined) return null;
+  return clone(mark.delta);
+}
+
+function finiteMetric(value) {
+  return Number.isFinite(value) ? value : undefined;
 }
 
 function favorability(direction, favorableDirection) {

@@ -292,28 +292,26 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   });
   const bullet = buildRenderModel({
     chart: chart("bullet"),
-    prepared: ready([
-      { actual: 8, target: 10, label: "Clinic A", time: null },
-      { actual: 6, target: 9, label: "Clinic B", time: null },
-    ]),
+    prepared: ready([{ actual: 8, target: 10, label: "Clinic A", time: null }]),
   });
 
   assert.equal(gauge.option.series[0].type, "gauge");
   assert.deepEqual(gauge.option.series[0].data[0], { value: 72, name: "gauge title", target: 80, time: "2027-05-02" });
   assert.equal(gauge.option.series[0].max, 100);
+  assert.deepEqual(gauge.option.series[0].center, ["50%", "50%"]);
+  assert.equal(gauge.option.series[0].radius, "36%");
   assert.equal(gauge.option.title.left, "right");
   assert.deepEqual(gauge.semanticSummary.items, [{ label: "gauge title", actual: 72, target: 80, time: "2027-05-02" }]);
   assert.equal(bullet.option.series[0].type, "bar");
-  assert.deepEqual(bullet.option.series[0].data, [8, 6]);
+  assert.deepEqual(bullet.option.series[0].data, [8]);
   assert.equal(bullet.option.series[1].name, "Target");
-  assert.deepEqual(bullet.option.series[1].data.map(({ value }) => value), [[10, "Clinic A"], [9, "Clinic B"]]);
+  assert.deepEqual(bullet.option.series[1].data.map(({ value }) => value), [[10, "Clinic A"]]);
   assert.deepEqual(bullet.semanticSummary.items, [
     { label: "Clinic A", actual: 8, target: 10, time: null },
-    { label: "Clinic B", actual: 6, target: 9, time: null },
   ]);
 });
 
-test("multi-item gauges preserve every prepared mark in a deterministic collection layout", () => {
+test("multi-item gauges preserve every prepared mark as renderer-neutral collection items", () => {
   const collection = {
     layout: "fixed",
     rows: 1,
@@ -342,24 +340,21 @@ test("multi-item gauges preserve every prepared mark in a deterministic collecti
     ]),
   });
 
-  assert.equal(model.option.series.length, 2);
-  assert.deepEqual(model.option.series.map(({ data }) => data[0]), [
+  assert.equal(model.kind, "targetCollection");
+  assert.deepEqual(model.items.map(({ model: itemModel }) => itemModel.option.series[0].data[0]), [
     { value: 72, name: "Clinic A", target: 80, time: "2027-05-02" },
     { value: 55, name: "Clinic B", target: 70, time: "2027-05-03" },
   ]);
-  assert.notDeepEqual(model.option.series[0].center, model.option.series[1].center);
+  assert.equal(model.items.every(({ model: itemModel }) => itemModel.option.series.length === 1), true);
+  assert.equal(model.items.every(({ model: itemModel }) => itemModel.option.series[0].center === undefined), true);
   assert.deepEqual(model.presentation.collection, collection);
-  assert.deepEqual(model.semanticSummary, {
-    collection,
-    items: [
+  assert.deepEqual(
+    model.items.map(({ model: itemModel }) => itemModel.semanticSummary.items[0]),
+    [
       { label: "Clinic A", actual: 72, target: 80, time: "2027-05-02" },
       { label: "Clinic B", actual: 55, target: 70, time: "2027-05-03" },
     ],
-  });
-
-  const svg = renderSvg(model.option, 800, 400);
-  assert.match(svg, />72</);
-  assert.match(svg, />55</);
+  );
 });
 
 test("KPI, delta card, and delta list produce semantic card models", () => {

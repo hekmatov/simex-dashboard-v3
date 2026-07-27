@@ -241,10 +241,9 @@ test("gauge render models expose their value and target in the accessible summar
   assert.match(html, /Supply readiness: actual 8; target 10/);
 });
 
-test("bullet summaries expose every exact label, actual, target, and time from the render model", () => {
+test("a single bullet summary exposes its exact label, actual, target, and time", () => {
   const rows = [
     { facility: "Clinic A", actual: 8, target: 10, observed: "2027-05-01" },
-    { facility: "Clinic B", actual: 6, target: 9, observed: "2027-05-02" },
   ];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: {
@@ -262,7 +261,6 @@ test("bullet summaries expose every exact label, actual, target, and time from t
   }));
 
   assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
-  assert.match(html, /Clinic B: actual 6; target 9; observed 2027-05-02/);
 });
 
 test("ECharts lifecycle initializes once, updates in place, registers maps before options, resizes, and cleans up", () => {
