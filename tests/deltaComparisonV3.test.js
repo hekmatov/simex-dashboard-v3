@@ -28,13 +28,16 @@ function observations(values = [10, 20, 30]) {
 }
 
 function deltaChart({
+  typeId = "deltaCard",
   interpolationAllowed = false,
   comparison = { mode: "previousObservation" },
   timeSync = null,
+  missingValues = "gap",
+  entityField = null,
 } = {}) {
   return {
     id: "clinic-change",
-    typeId: "deltaCard",
+    typeId,
     roles: {
       measurement: {
         field: "value",
@@ -42,13 +45,14 @@ function deltaChart({
       },
       time: { field: "at" },
       target: { field: "target" },
+      ...(entityField ? { entity: { field: entityField } } : {}),
     },
     transformations: {
       filters: [],
       grouping: [],
       aggregation: null,
       duplicates: null,
-      missingValues: "gap",
+      missingValues,
       comparison,
     },
     interaction: {
@@ -104,6 +108,141 @@ test("previous-observation comparison selects the distinct preceding observation
     sourceEpochMs: MAY_2,
     sourceCanonical: "2027-05-02",
   });
+});
+
+test("static and playback Delta histories skip gaps but retain zero-filled measurements", () => {
+  const rows = [
+    { at: "2027-05-01", value: 10, target: 100 },
+    { at: "2027-05-02", value: null, target: 100 },
+    { at: "2027-05-03", value: 30, target: 100 },
+  ];
+  const profile = realProfile(rows);
+
+  for (const [missingValues, expectedComparison] of [
+    ["gap", 10],
+    ["zero", 0],
+  ]) {
+    const chart = deltaChart({ missingValues });
+    const staticResult = prepareChartData({
+      chart,
+      rows,
+      datasetProfile: profile,
+    });
+    const playbackResult = prepareChartData({
+      chart: {
+        ...chart,
+        interaction: { timeSync: { groupId: "exercise" } },
+      },
+      rows,
+      datasetProfile: profile,
+      timeContext: {
+        groupId: "exercise",
+        activeEpochMs: MAY_3,
+        matching: { policy: "exact" },
+      },
+    });
+
+    for (const result of [staticResult, playbackResult]) {
+      assert.equal(result.status, "ready");
+      assert.equal(result.marks.length, 1);
+      assert.equal(result.marks[0].displayed, 30);
+      assert.equal(result.marks[0].comparison, expectedComparison);
+    }
+    assert.deepEqual(
+      playbackResult.marks[0].comparisonProvenance,
+      staticResult.marks[0].comparisonProvenance,
+    );
+  }
+});
+
+test("multi-entity Delta histories use the same valid gap and zero baselines in static and playback paths", () => {
+  const rows = [
+    { entity: "Clinic A", at: "2027-05-01", value: 10, target: 100 },
+    { entity: "Clinic A", at: "2027-05-02", value: null, target: 100 },
+    { entity: "Clinic A", at: "2027-05-03", value: 30, target: 100 },
+    { entity: "Clinic B", at: "2027-05-01", value: 40, target: 100 },
+    { entity: "Clinic B", at: "2027-05-02", value: null, target: 100 },
+    { entity: "Clinic B", at: "2027-05-03", value: 60, target: 100 },
+  ];
+  const profile = realProfile(rows);
+
+  for (const [missingValues, expected] of [
+    ["gap", { "Clinic A": 10, "Clinic B": 40 }],
+    ["zero", { "Clinic A": 0, "Clinic B": 0 }],
+  ]) {
+    const chart = deltaChart({
+      typeId: "deltaList",
+      entityField: "entity",
+      missingValues,
+    });
+    const staticResult = prepareChartData({
+      chart,
+      rows,
+      datasetProfile: profile,
+    });
+    const playbackResult = prepareChartData({
+      chart: {
+        ...chart,
+        interaction: { timeSync: { groupId: "exercise" } },
+      },
+      rows,
+      datasetProfile: profile,
+      timeContext: {
+        groupId: "exercise",
+        activeEpochMs: MAY_3,
+        matching: { policy: "exact" },
+      },
+    });
+
+    for (const result of [staticResult, playbackResult]) {
+      assert.equal(result.status, "ready");
+      assert.deepEqual(
+        Object.fromEntries(result.marks.map(({ entity, comparison }) => [
+          entity,
+          comparison,
+        ])),
+        expected,
+      );
+    }
+  }
+});
+
+test("missing optional targets stay null and never remove Delta measurements under any missing strategy", () => {
+  const rows = [
+    { at: "2027-04-30", value: 5, target: 100 },
+    { at: "2027-05-01", value: 10, target: null },
+    { at: "2027-05-02", value: 20, target: null },
+  ];
+  const profile = realProfile(rows);
+
+  for (const missingValues of ["gap", "zero", "drop"]) {
+    const chart = deltaChart({ missingValues });
+    const staticResult = prepareChartData({
+      chart,
+      rows,
+      datasetProfile: profile,
+    });
+    const playbackResult = prepareChartData({
+      chart: {
+        ...chart,
+        interaction: { timeSync: { groupId: "exercise" } },
+      },
+      rows,
+      datasetProfile: profile,
+      timeContext: {
+        groupId: "exercise",
+        activeEpochMs: MAY_2,
+        matching: { policy: "exact" },
+      },
+    });
+
+    for (const result of [staticResult, playbackResult]) {
+      assert.equal(result.status, "ready");
+      assert.equal(result.marks[0].displayed, 20);
+      assert.equal(result.marks[0].comparison, 10);
+      assert.equal(result.marks[0].target, null);
+    }
+  }
 });
 
 test("fixed exact comparison selects the requested observation", () => {
@@ -322,7 +461,135 @@ test("resolver does not mutate observations, chart configuration, or profile", (
   });
 
   assert.equal(result.status, "matched");
+  assert.notEqual(result.observation, source[0]);
   assert.deepEqual({ source, comparison, chart, profile }, before);
+});
+
+test("direct resolver rejects executable, inherited, symbolic, unknown, and malformed comparison contracts", () => {
+  let modeReads = 0;
+  let policyReads = 0;
+  const accessorComparison = {};
+  Object.defineProperty(accessorComparison, "mode", {
+    enumerable: true,
+    get() {
+      modeReads += 1;
+      return "previousObservation";
+    },
+  });
+  const accessorMatching = {};
+  Object.defineProperty(accessorMatching, "policy", {
+    enumerable: true,
+    get() {
+      policyReads += 1;
+      return "exact";
+    },
+  });
+  const inheritedComparison = Object.create({ mode: "previousObservation" });
+  const symbolicComparison = { mode: "previousObservation" };
+  symbolicComparison[Symbol("hidden")] = true;
+  const inheritedMatching = Object.create({ policy: "exact" });
+  const symbolicMatching = { policy: "exact" };
+  symbolicMatching[Symbol("hidden")] = true;
+  const fixed = (matching) => ({
+    mode: "fixedTime",
+    at: "2027-05-01T00:00:00.000Z",
+    ...(matching === undefined ? {} : { matching }),
+  });
+
+  for (const comparison of [
+    inheritedComparison,
+    accessorComparison,
+    symbolicComparison,
+    { mode: "previousObservation", unexpected: true },
+    fixed(),
+    fixed(inheritedMatching),
+    fixed(accessorMatching),
+    fixed(symbolicMatching),
+    fixed({ policy: "exact", unexpected: true }),
+    fixed({ policy: "closest" }),
+    fixed({ policy: "nearest" }),
+  ]) {
+    const result = resolve({ comparison });
+    assert.equal(result.status, "invalid");
+    assert.equal(result.diagnostic.code, "invalid-delta-comparison");
+  }
+  assert.equal(modeReads, 0);
+  assert.equal(policyReads, 0);
+});
+
+test("prepare boundary rejects malformed comparison structures without invoking accessors", () => {
+  const rows = [
+    { at: "2027-04-30", value: 5, target: 100 },
+    { at: "2027-05-01", value: 10, target: null },
+    { at: "2027-05-02", value: 20, target: null },
+  ];
+  const profile = realProfile(rows);
+  let comparisonReads = 0;
+  let policyReads = 0;
+  const accessorComparisonChart = deltaChart();
+  Object.defineProperty(accessorComparisonChart.transformations, "comparison", {
+    enumerable: true,
+    get() {
+      comparisonReads += 1;
+      return { mode: "previousObservation" };
+    },
+  });
+  const matching = {};
+  Object.defineProperty(matching, "policy", {
+    enumerable: true,
+    get() {
+      policyReads += 1;
+      return "exact";
+    },
+  });
+  const matchingAccessorChart = deltaChart({
+    comparison: {
+      mode: "fixedTime",
+      at: "2027-05-01T00:00:00.000Z",
+      matching,
+    },
+  });
+  const inheritedComparisonChart = deltaChart();
+  const inheritedTransformations = Object.create({
+    comparison: { mode: "previousObservation" },
+  });
+  Object.assign(inheritedTransformations, {
+    filters: [],
+    grouping: [],
+    aggregation: null,
+    duplicates: null,
+    missingValues: "gap",
+  });
+  inheritedComparisonChart.transformations = inheritedTransformations;
+
+  for (const [description, chart] of [
+    ["accessor comparison", accessorComparisonChart],
+    ["accessor matching", matchingAccessorChart],
+    ["inherited comparison", inheritedComparisonChart],
+    ["missing matching", deltaChart({
+      comparison: {
+        mode: "fixedTime",
+        at: "2027-05-01T00:00:00.000Z",
+      },
+    })],
+    ["unknown matching property", deltaChart({
+      comparison: {
+        mode: "fixedTime",
+        at: "2027-05-01T00:00:00.000Z",
+        matching: { policy: "exact", unexpected: true },
+      },
+    })],
+  ]) {
+    const result = prepareChartData({ chart, rows, datasetProfile: profile });
+    assert.equal(result.status, "invalid", description);
+    assert.deepEqual(result.marks, [], description);
+    assert.ok(result.diagnostics.some(({ code }) => (
+      code === "invalid-delta-comparison"
+      || code === "invalid-transform-comparison"
+    )), `${description}: ${JSON.stringify(result.diagnostics)}`);
+  }
+  assert.equal(comparisonReads, 0);
+  assert.equal(policyReads, 0);
 });
 
 function realProfile(rows, { interpolationAllowed = false } = {}) {

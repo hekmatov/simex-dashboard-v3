@@ -84,9 +84,9 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
       transformed.config.missingStrategy,
     );
     const targetValue = target
-      ? applyMissingStrategy(readRoleValue(row, target, datasetProfile), transformed.config.missingStrategy)
-      : { keep: true, value: null };
-    if (!primary.keep || !targetValue.keep) continue;
+      ? readRoleValue(row, target, datasetProfile)
+      : null;
+    if (!primary.keep || !Number.isFinite(primary.value)) continue;
     const entityValue = readRoleValue(row, entity, datasetProfile);
     const timeValue = readRoleValue(row, time, datasetProfile);
     if (timeValue === null) continue;
@@ -96,7 +96,7 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
       time: timeValue,
       canonical: timeValue,
       epochMs: canonicalEpochMs(timeValue),
-      target: targetValue.value,
+      target: Number.isFinite(targetValue) ? targetValue : null,
     });
   }
   if (schema.typeId === "deltaCard" && entity) {

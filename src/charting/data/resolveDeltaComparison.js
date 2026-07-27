@@ -1,8 +1,13 @@
 import { parseTemporalValue } from "./temporal.js";
 import { matchTemporalObservation } from "../time/temporalMatch.js";
-import { assertTimeSyncInterpolationAllowed } from "../time/timeSyncModel.js";
+import {
+  assertTimeSyncInterpolationAllowed,
+  validateEffectiveTimeSyncMatching,
+} from "../time/timeSyncModel.js";
 
 const DEFAULT_COMPARISON = Object.freeze({ mode: "previousObservation" });
+const PREVIOUS_COMPARISON_KEYS = new Set(["mode"]);
+const FIXED_COMPARISON_KEYS = new Set(["mode", "at", "matching"]);
 const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
 
 /**
@@ -20,12 +25,9 @@ export function resolveDeltaComparison({
   try {
     validateDisplayed(displayed);
     validateObservationSequence(observations, displayed);
-    const configured = comparison ?? DEFAULT_COMPARISON;
+    const configured = validateComparison(comparison ?? DEFAULT_COMPARISON);
     if (configured.mode === "previousObservation") {
       return resolvePrevious(observations, displayed);
-    }
-    if (configured.mode !== "fixedTime") {
-      return invalid(`Unsupported Delta comparison mode "${configured.mode}".`);
     }
     return resolveFixed({
       observations,
@@ -79,9 +81,6 @@ function resolveFixed({
   }
 
   const matching = comparison.matching;
-  if (!matching || typeof matching !== "object" || Array.isArray(matching)) {
-    return invalid("A fixed Delta comparison requires a temporal matching policy.");
-  }
   if (matching.policy === "interpolate") {
     assertTimeSyncInterpolationAllowed({ chart, timeRole, profile });
   }
@@ -119,6 +118,96 @@ function resolveFixed({
     observation,
     matchProvenance(temporalMatch, parsed.canonical, candidates),
   );
+}
+
+function validateComparison(comparison) {
+  const descriptors = strictRecordDescriptors(
+    comparison,
+    "Delta comparison",
+  );
+  const mode = requiredDescriptorValue(
+    descriptors,
+    "mode",
+    "Delta comparison",
+  );
+  if (typeof mode !== "string" || mode.trim() === "") {
+    throw new Error("Delta comparison mode is required.");
+  }
+  if (mode === "previousObservation") {
+    checkKnownDescriptorKeys(
+      descriptors,
+      PREVIOUS_COMPARISON_KEYS,
+      "Delta comparison",
+    );
+    return Object.freeze({ mode });
+  }
+  if (mode !== "fixedTime") {
+    throw new Error(`Unsupported Delta comparison mode "${mode}".`);
+  }
+  checkKnownDescriptorKeys(
+    descriptors,
+    FIXED_COMPARISON_KEYS,
+    "Delta comparison",
+  );
+  const at = requiredDescriptorValue(
+    descriptors,
+    "at",
+    "Delta comparison",
+  );
+  if (typeof at !== "string" || at.trim() === "") {
+    throw new Error("Delta comparison at is required.");
+  }
+  const matching = validateEffectiveTimeSyncMatching(
+    requiredDescriptorValue(
+      descriptors,
+      "matching",
+      "Delta comparison",
+    ),
+    "Delta comparison",
+  );
+  return Object.freeze({ mode, at, matching });
+}
+
+function strictRecordDescriptors(value, description) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(`${description} must be an object.`);
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${description} must be a plain object.`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${description} cannot contain symbol properties.`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!Object.hasOwn(descriptor, "value")) {
+      throw new TypeError(
+        `${description} property "${key}" must be a data property.`,
+      );
+    }
+    if (!descriptor.enumerable) {
+      throw new TypeError(
+        `${description} property "${key}" must be enumerable.`,
+      );
+    }
+  }
+  return descriptors;
+}
+
+function requiredDescriptorValue(descriptors, key, description) {
+  if (!Object.hasOwn(descriptors, key)) {
+    throw new Error(`${description} property "${key}" is required.`);
+  }
+  return descriptors[key].value;
+}
+
+function checkKnownDescriptorKeys(descriptors, allowed, description) {
+  for (const key of Object.keys(descriptors)) {
+    if (!allowed.has(key)) {
+      throw new Error(`Unknown ${description.toLowerCase()} property "${key}".`);
+    }
+  }
 }
 
 function validateDisplayed(displayed) {

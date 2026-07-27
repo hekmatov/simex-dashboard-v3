@@ -310,8 +310,29 @@ function canonicalTransformConfig(transformations, diagnostics) {
     aggregation,
     duplicateStrategy,
     missingStrategy,
-    comparison: source.comparison ?? null,
+    comparison: safeComparisonValue(source, diagnostics),
   };
+}
+
+function safeComparisonValue(source, diagnostics) {
+  if (!Object.hasOwn(source, "comparison")) {
+    if ("comparison" in source) {
+      diagnostics.push(error(
+        "invalid-transform-comparison",
+        "Chart comparison must be an owned data property.",
+      ));
+    }
+    return null;
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(source, "comparison");
+  if (!descriptor || !Object.hasOwn(descriptor, "value") || !descriptor.enumerable) {
+    diagnostics.push(error(
+      "invalid-transform-comparison",
+      "Chart comparison must be an enumerable data property.",
+    ));
+    return null;
+  }
+  return descriptor.value ?? null;
 }
 
 function validFilters(filters, datasetProfile, chart, diagnostics) {
