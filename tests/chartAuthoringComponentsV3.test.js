@@ -27,6 +27,7 @@ import {
 import {
   applyGeographySourceSelection,
 } from "../src/charting/forms/geographySource.js";
+import * as geographySource from "../src/charting/forms/geographySource.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 import { validateGeoJson } from "../src/lib/loadDashboard.js";
 
@@ -1516,6 +1517,213 @@ test("changing a geography source invalidates stale preparation and conversion c
   assert.ok(conversionModel.sections
     .find(({ id }) => id === "data")
     .fields.some(({ id }) => id === "geoSource"));
+});
+
+test("property-only GeoJSON joins stay reachable and renderer-ready for both geography charts", () => {
+  const rows = [
+    { area: "north", value: 12, observed: "2027-05-01" },
+    { area: "south", value: 7, observed: "2027-05-01" },
+  ];
+  const geoData = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { areaCode: "north", label: "North" },
+        geometry: { type: "Point", coordinates: [4.9, 52.3] },
+      },
+      {
+        type: "Feature",
+        properties: { areaCode: "south", label: "South" },
+        geometry: { type: "Point", coordinates: [5.1, 52.1] },
+      },
+    ],
+  };
+  const synchronizeRoles = geographySource.applyGeographyRoleSelection;
+  const joinOptions = geographySource.geoJoinFieldOptions;
+  assert.equal(typeof synchronizeRoles, "function");
+  assert.equal(typeof joinOptions, "function");
+
+  for (const typeId of ["chronoChoroplethMap", "mapScatter"]) {
+    const roleless = createChartDraft(typeId, {
+      id: `property-only-${typeId}`,
+      title: `Property-only ${typeId}`,
+      sourceId: "property-values",
+    });
+    const selected = applyGeographySourceSelection(roleless, {
+      sourceId: "property-boundaries",
+      geoData,
+      rows,
+    });
+    assert.equal(selected.presentation.map.joinField, undefined, typeId);
+
+    const withRoles = {
+      ...selected,
+      roles: {
+        geography: { field: "area" },
+        value: { field: "value" },
+        time: { field: "observed" },
+      },
+    };
+    const joined = synchronizeRoles(withRoles, { geoData, rows });
+    assert.equal(joined.presentation.map.joinField, "areaCode", typeId);
+
+    const runtime = createWizardPreparation({
+      chart: joined,
+      rows,
+      geoData,
+    });
+    const geoJoinFields = joinOptions(geoData);
+    const editor = buildEditorFormModel({
+      chart: joined,
+      profile: runtime.profile,
+      prepared: runtime.prepared,
+      geoSources: [{
+        value: "property-boundaries",
+        label: "Property-only boundaries",
+      }],
+      geoJoinFields,
+    });
+    const dataFields = editor.sections.find(({ id }) => id === "data").fields;
+    const joinField = dataFields.find(({ id }) => id === "geoJoinField");
+    assert.deepEqual(joinField?.path, [
+      "presentation",
+      "map",
+      "joinField",
+    ], typeId);
+    assert.deepEqual(joinField?.options, [
+      { value: "", label: "Use GeoJSON feature IDs" },
+      { value: "areaCode", label: "areaCode" },
+      { value: "label", label: "label" },
+    ], typeId);
+    assert.equal(joinField?.value, "areaCode", typeId);
+    assert.equal(runtime.prepared.status, "ready", typeId);
+    assert.equal(runtime.prepared.marks.length, 2, typeId);
+    assert.equal(
+      buildWizardFormModel({
+        draft: joined,
+        profile: runtime.profile,
+        prepared: runtime.prepared,
+        geoSources: [{
+          value: "property-boundaries",
+          label: "Property-only boundaries",
+        }],
+        geoJoinFields,
+      }).canCreate,
+      true,
+      typeId,
+    );
+
+    const dataHtml = render(React.createElement(DataRolesStep, {
+      section: editor.sections.find(({ id }) => id === "data"),
+      columns: runtime.profile.columns,
+      diagnostics: runtime.prepared.diagnostics,
+      onChange() {},
+    }));
+    assert.equal(
+      (dataHtml.match(/data-field-id="geoJoinField"/g) ?? []).length,
+      1,
+      typeId,
+    );
+    const mapHtml = render(React.createElement(GeneratedFormSection, {
+      section: editor.sections.find(({ id }) => id === "map"),
+      onChange() {},
+    }));
+    assert.match(mapHtml, /Scale/, typeId);
+    assert.doesNotMatch(mapHtml, /Join field|GeoJSON property/, typeId);
+
+    const changedSource = applyGeographySourceSelection(joined, {
+      sourceId: "replacement-boundaries",
+      geoData: {
+        type: "FeatureCollection",
+        features: geoData.features.map((feature) => ({
+          ...feature,
+          properties: {
+            districtCode: feature.properties.areaCode,
+          },
+        })),
+      },
+      rows,
+    });
+    assert.equal(
+      changedSource.presentation.map.geoSource,
+      "replacement-boundaries",
+      typeId,
+    );
+    assert.equal(
+      changedSource.presentation.map.joinField,
+      "districtCode",
+      typeId,
+    );
+  }
+});
+
+test("ambiguous and missing geography joins identify the early semantic field and recover explicitly", () => {
+  const rows = [{ area: "north", value: 12, observed: "2027-05-01" }];
+  const feature = (properties) => ({
+    type: "Feature",
+    properties,
+    geometry: { type: "Point", coordinates: [4.9, 52.3] },
+  });
+  const chart = createChartDraft("chronoChoroplethMap", {
+    id: "ambiguous-property-join",
+    title: "Ambiguous property join",
+    sourceId: "property-values",
+    roles: {
+      geography: { field: "area" },
+      value: { field: "value" },
+      time: { field: "observed" },
+    },
+    presentation: {
+      map: {
+        geoSource: "ambiguous-boundaries",
+        scale: "sequential",
+      },
+    },
+  });
+  const ambiguousGeoData = {
+    type: "FeatureCollection",
+    features: [feature({ areaCode: "north", alternateCode: "north" })],
+  };
+  const ambiguous = createWizardPreparation({
+    chart,
+    rows,
+    geoData: ambiguousGeoData,
+  });
+  assert.equal(ambiguous.prepared.status, "invalid");
+  assert.ok(ambiguous.prepared.diagnostics.some((diagnostic) => (
+    diagnostic.code === "geography-join-ambiguous"
+    && diagnostic.fieldId === "geoJoinField"
+  )));
+
+  const missing = createWizardPreparation({
+    chart,
+    rows,
+    geoData: {
+      type: "FeatureCollection",
+      features: [feature({ areaCode: "west" })],
+    },
+  });
+  assert.equal(missing.prepared.status, "invalid");
+  assert.ok(missing.prepared.diagnostics.some((diagnostic) => (
+    diagnostic.code === "geography-join-unmatched"
+    && diagnostic.fieldId === "geoJoinField"
+  )));
+
+  const recovered = structuredClone(chart);
+  recovered.presentation.map.joinField = "areaCode";
+  const preserved = geographySource.applyGeographyRoleSelection(recovered, {
+    geoData: ambiguousGeoData,
+    rows,
+  });
+  assert.equal(preserved.presentation.map.joinField, "areaCode");
+  const ready = createWizardPreparation({
+    chart: preserved,
+    rows,
+    geoData: ambiguousGeoData,
+  });
+  assert.equal(ready.prepared.status, "ready");
+  assert.equal(ready.prepared.marks[0].feature.properties.areaCode, "north");
 });
 
 test("ready style layout renders the schema-generated label-position control", () => {

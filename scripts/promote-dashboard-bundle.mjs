@@ -105,8 +105,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT_PATH) {
     + `${path.relative(DEFAULT_ROOT, result.configPath)}.`,
   );
   console.log(
-    "Review the Git diff, rebuild dataset profiles, then commit the updated "
-    + "configuration and files under public/data/uploaded.",
+    "Review the Git diff, then commit the updated configuration and files "
+    + "under public/data/uploaded. Promoted profiles are already load-ready.",
   );
 }
 

@@ -15,7 +15,9 @@ import {
   validateManualData,
 } from "../../charting/forms/manualData.js";
 import {
+  applyGeographyRoleSelection,
   applyGeographySourceSelection,
+  geoJoinFieldOptions,
   validatedGeoSourceOptions,
 } from "../../charting/forms/geographySource.js";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
@@ -123,6 +125,7 @@ export default function ChartWizardV3({
     safeGeoDataSources,
     wizard.draft?.presentation?.map?.geoSource,
   );
+  const geoJoinFields = geoJoinFieldOptions(geoData);
   const runtime = createWizardPreparation({
     chart: wizard.draft,
     rows,
@@ -145,6 +148,7 @@ export default function ChartWizardV3({
     prepared: runtime.prepared,
     timeSyncGroups: wizard.timeSyncGroups,
     geoSources,
+    geoJoinFields,
   });
   const canCreate = form.canCreate
     && (sourceKind !== "manual" || manualErrors.length === 0);
@@ -155,6 +159,7 @@ export default function ChartWizardV3({
         prepared: runtime.prepared,
         timeSyncGroups: wizard.timeSyncGroups,
         geoSources,
+        geoJoinFields,
       })
     : { sections: [], valid: false };
   const active = form.steps.find(({ id }) => id === wizard.activeStep)
@@ -198,6 +203,50 @@ export default function ChartWizardV3({
       } catch (error) {
         setSubmissionError(safeMessage(error));
       }
+      return;
+    }
+    if (
+      path?.length === 3
+      && path[0] === "presentation"
+      && path[1] === "map"
+      && path[2] === "joinField"
+    ) {
+      const map = {
+        ...wizard.draft?.presentation?.map,
+      };
+      if (typeof value === "string" && value.trim()) {
+        map.joinField = value;
+      } else {
+        delete map.joinField;
+      }
+      updatePath(["presentation", "map"], map);
+      return;
+    }
+    if (
+      path?.[0] === "roles"
+      && wizard.draft
+      && getChartSchema(wizard.draft.typeId).dataFamily === "geography"
+    ) {
+      setWizard((current) => {
+        const updated = reduceWizardState({
+          ...current,
+          loadedData: runtimeLoadedData,
+          profiles,
+        }, {
+          type: "updateChart",
+          path,
+          value,
+        });
+        const sourceId = updated.draft?.presentation?.map?.geoSource;
+        return {
+          ...updated,
+          draft: applyGeographyRoleSelection(updated.draft, {
+            geoData: readEntry(safeGeoDataSources, sourceId),
+            rows,
+          }),
+        };
+      });
+      setSubmissionError("");
       return;
     }
     updatePath(path, value);

@@ -1,4 +1,8 @@
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import {
+  analyzeGeographyJoin,
+  geographyPropertyFields,
+} from "../data/geographyJoin.js";
 
 export function validatedGeoSourceOptions(dataSources, geoDataSources) {
   const sources = collectionEntries(dataSources);
@@ -41,15 +45,68 @@ export function applyGeographySourceSelection(chart, {
   ) {
     throw new Error(`GeoJSON source "${sourceId}" is unavailable or invalid.`);
   }
-  const joinField = inferredJoinField(chart, rows, geoData.features);
   const current = chart.presentation?.map ?? {};
-  const map = {
+  const mapWithoutJoin = {
     geoSource: sourceId,
     scale: typeof current.scale === "string" && current.scale.trim()
       ? current.scale
       : "sequential",
-    ...(joinField ? { joinField } : {}),
   };
+  const candidate = chartWithMap(chart, mapWithoutJoin);
+  const analysis = analyzeGeographyJoin({
+    chart: candidate,
+    rows,
+    geoData,
+  });
+  const map = analysis.status === "ready" && analysis.joinField
+    ? { ...mapWithoutJoin, joinField: analysis.joinField }
+    : mapWithoutJoin;
+  return chartWithMap(chart, map);
+}
+
+export function applyGeographyRoleSelection(chart, {
+  geoData,
+  rows = [],
+} = {}) {
+  const schema = getChartSchema(chart?.typeId);
+  if (schema.dataFamily !== "geography") return structuredClone(chart);
+  const current = chart?.presentation?.map;
+  if (
+    typeof current?.geoSource !== "string"
+    || current.geoSource.trim() === ""
+  ) {
+    return structuredClone(chart);
+  }
+  const analysis = analyzeGeographyJoin({ chart, rows, geoData });
+  if (analysis.status === "ready") {
+    return chartWithMap(chart, {
+      ...current,
+      ...(analysis.joinField ? { joinField: analysis.joinField } : {}),
+    });
+  }
+  const mapWithoutJoin = { ...current };
+  delete mapWithoutJoin.joinField;
+  const fallback = analyzeGeographyJoin({
+    chart: chartWithMap(chart, mapWithoutJoin),
+    rows,
+    geoData,
+  });
+  return chartWithMap(chart, {
+    ...mapWithoutJoin,
+    ...(fallback.status === "ready" && fallback.joinField
+      ? { joinField: fallback.joinField }
+      : {}),
+  });
+}
+
+export function geoJoinFieldOptions(geoData) {
+  return geographyPropertyFields(geoData).map((field) => ({
+    value: field,
+    label: field,
+  }));
+}
+
+function chartWithMap(chart, map) {
   return {
     ...structuredClone(chart),
     presentation: {
@@ -57,68 +114,6 @@ export function applyGeographySourceSelection(chart, {
       map,
     },
   };
-}
-
-function inferredJoinField(chart, rows, features) {
-  const geographyField = chart.roles?.geography?.field;
-  if (
-    typeof geographyField !== "string"
-    || !Array.isArray(rows)
-  ) {
-    return null;
-  }
-  const values = new Set(rows.flatMap((row) => {
-    const value = canonical(row?.[geographyField]);
-    return value === null ? [] : [value];
-  }));
-  if (values.size === 0) return null;
-
-  const featureIdScore = matchScore(
-    values,
-    features.map(({ id }) => id),
-  );
-  let bestField = null;
-  let bestScore = featureIdScore;
-  const propertyNames = new Set(features.flatMap((feature) => (
-    isRecord(feature?.properties)
-      ? Object.keys(feature.properties)
-      : []
-  )));
-  for (const propertyName of propertyNames) {
-    const score = matchScore(
-      values,
-      features.map((feature) => feature.properties?.[propertyName]),
-    );
-    if (score > bestScore) {
-      bestField = propertyName;
-      bestScore = score;
-    }
-  }
-  return bestScore > 0 ? bestField : null;
-}
-
-function matchScore(expected, candidates) {
-  const available = new Set(candidates.flatMap((value) => {
-    const normalized = canonical(value);
-    return normalized === null ? [] : [normalized];
-  }));
-  let score = 0;
-  for (const value of expected) {
-    if (available.has(value)) score += 1;
-  }
-  return score;
-}
-
-function canonical(value) {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
-  if (typeof value === "boolean") return String(value);
-  return null;
 }
 
 function collectionEntries(value) {

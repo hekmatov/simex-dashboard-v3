@@ -7,6 +7,7 @@ import { prepareOperationalData } from "./prepareOperationalData.js";
 import { prepareRelationshipData } from "./prepareRelationshipData.js";
 import { prepareTargetData } from "./prepareTargetData.js";
 import { prepareTimelineData } from "./prepareTimelineData.js";
+import { analyzeGeographyJoin } from "./geographyJoin.js";
 import {
   applyTemporalProvenance,
   applyTimeContext as applyPlaybackTimeContext,
@@ -63,12 +64,19 @@ export function prepareChartData(input = {}) {
     rowsAfterTimeContext: temporalProjection.rowsAfterTimeContext,
     diagnostics: [...transformedRows.diagnostics, ...temporalProjection.diagnostics],
   };
+  const geographyBinding = prepareGeographyBinding(
+    schema,
+    chart,
+    transformed.rows,
+    input.geoData,
+  );
+  const preparationChart = geographyBinding.chart;
   const bindingDiagnostics = validateRoleBindings(schema, chart, input.datasetProfile);
   const initialDiagnostics = [
     ...transformed.diagnostics,
     ...bindingDiagnostics,
     ...validateGroupTransform(schema, transformed, input.datasetProfile),
-    ...validateGeographySource(schema, chart, input.geoData),
+    ...geographyBinding.diagnostics,
   ];
 
   if (initialDiagnostics.some(({ severity }) => severity === "error")) {
@@ -81,13 +89,13 @@ export function prepareChartData(input = {}) {
 
   const prepared = prepareProjectedData({
     ...input,
-    chart,
+    chart: preparationChart,
     schema,
     rows: transformed.rows,
     transformed,
   }, temporalProjection);
   const timeAware = applyTemporalProvenance({
-    chart,
+    chart: preparationChart,
     prepared,
     projection: temporalProjection,
   });
@@ -97,19 +105,24 @@ export function prepareChartData(input = {}) {
   }, transformed, schema);
 }
 
-function validateGeographySource(schema, chart, geoData) {
-  if (schema.dataFamily !== "geography") return [];
+function prepareGeographyBinding(schema, chart, rows, geoData) {
+  if (schema.dataFamily !== "geography") {
+    return { chart, diagnostics: [] };
+  }
   const sourceId = chart.presentation?.map?.geoSource;
-  const details = {
+  const sourceDetails = {
     fieldId: "geoSource",
     path: ["presentation", "map", "geoSource"],
   };
   if (typeof sourceId !== "string" || sourceId.trim() === "") {
-    return [error(
-      "geography-source-required",
-      "Choose a valid GeoJSON source for this chart.",
-      details,
-    )];
+    return {
+      chart,
+      diagnostics: [error(
+        "geography-source-required",
+        "Choose a valid GeoJSON source for this chart.",
+        sourceDetails,
+      )],
+    };
   }
   if (
     !geoData
@@ -117,13 +130,70 @@ function validateGeographySource(schema, chart, geoData) {
     || !Array.isArray(geoData.features)
     || geoData.features.length === 0
   ) {
-    return [error(
-      "geography-source-unavailable",
-      `GeoJSON source "${sourceId}" is unavailable or invalid. Choose another source.`,
-      details,
-    )];
+    return {
+      chart,
+      diagnostics: [error(
+        "geography-source-unavailable",
+        `GeoJSON source "${sourceId}" is unavailable or invalid. Choose another source.`,
+        sourceDetails,
+      )],
+    };
   }
-  return [];
+
+  const analysis = analyzeGeographyJoin({ chart, rows, geoData });
+  if (analysis.status === "pending") {
+    return { chart, diagnostics: [] };
+  }
+  if (analysis.status === "ready") {
+    if (!analysis.joinField || chart.presentation?.map?.joinField) {
+      return { chart, diagnostics: [] };
+    }
+    return {
+      chart: {
+        ...chart,
+        presentation: {
+          ...chart.presentation,
+          map: {
+            ...chart.presentation.map,
+            joinField: analysis.joinField,
+          },
+        },
+      },
+      diagnostics: [],
+    };
+  }
+  const joinDetails = {
+    fieldId: "geoJoinField",
+    path: ["presentation", "map", "joinField"],
+  };
+  if (analysis.status === "ambiguous") {
+    return {
+      chart,
+      diagnostics: [error(
+        "geography-join-ambiguous",
+        `Several GeoJSON properties match the geographic identifiers (${analysis.candidates.join(", ")}). Choose the GeoJSON property to use.`,
+        { ...joinDetails, candidates: analysis.candidates },
+      )],
+    };
+  }
+  if (analysis.status === "missing-property") {
+    return {
+      chart,
+      diagnostics: [error(
+        "geography-join-property-missing",
+        `GeoJSON property "${analysis.joinField}" is not present in the selected source. Choose another GeoJSON property.`,
+        { ...joinDetails, joinField: analysis.joinField },
+      )],
+    };
+  }
+  return {
+    chart,
+    diagnostics: [error(
+      "geography-join-unmatched",
+      "No GeoJSON feature IDs or properties match the selected geographic identifiers. Choose the GeoJSON property to use.",
+      joinDetails,
+    )],
+  };
 }
 
 function prepareProjectedData(input, temporalProjection) {

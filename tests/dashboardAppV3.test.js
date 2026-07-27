@@ -228,9 +228,19 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
       ],
     },
   );
+  const staleExternalProfiles = {
+    uploaded: {
+      ...structuredClone(promoted.config.datasetProfiles.uploaded),
+      columns: promoted.config.datasetProfiles.uploaded.columns.map(
+        (column) => column.name === "facility"
+          ? { ...column, examples: ["Stale external value"] }
+          : column,
+      ),
+    },
+  };
   const hydrated = await loadDashboardConfig(
     promoted.config,
-    promoted.config.datasetProfiles,
+    staleExternalProfiles,
     {
       uploaded: {
         kind: "csv",
@@ -242,6 +252,12 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
     facility: "Clinic A",
     value: 8,
   }]);
+  assert.deepEqual(
+    hydrated.datasetProfiles.uploaded.columns.find(
+      ({ name }) => name === "facility",
+    ).examples,
+    ["Clinic A"],
+  );
   assert.throws(
     () => preparePromotedDashboard(JSON.stringify({
       bundleType: "simex-dashboard-v2-bundle",

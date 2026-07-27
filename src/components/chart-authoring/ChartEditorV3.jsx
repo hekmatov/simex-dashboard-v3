@@ -11,7 +11,9 @@ import {
   buildFormPreparationKey,
 } from "../../charting/forms/formModel.js";
 import {
+  applyGeographyRoleSelection,
   applyGeographySourceSelection,
+  geoJoinFieldOptions,
   validatedGeoSourceOptions,
 } from "../../charting/forms/geographySource.js";
 import {
@@ -277,6 +279,7 @@ export default function ChartEditorV3({
         ? geoData
         : null
     );
+  const geoJoinFields = geoJoinFieldOptions(selectedGeoData);
   const profile = providedProfile ?? profileDataset(safeRows, parsingMetadata);
   const preparationKey = buildFormPreparationKey({
     chart: state.draft,
@@ -307,22 +310,24 @@ export default function ChartEditorV3({
     prepared,
     timeSyncGroups: state.timeSyncGroups,
     geoSources,
+    geoJoinFields,
   });
   const allCharts = chartsWithDraft(existingCharts, state.draft);
   const timeSyncField = model.sections
     .flatMap(({ fields }) => fields)
     .find(({ id }) => id === "timeSync");
+  const editorUpdateContext = {
+    existingCharts,
+    loadedData: runtimeLoadedData,
+    profiles: runtimeProfiles,
+    profile,
+  };
   const dispatch = (action) => setState((current) => {
     try {
       return reduceChartEditorState(
         current,
         action,
-        {
-          existingCharts,
-          loadedData: runtimeLoadedData,
-          profiles: runtimeProfiles,
-          profile,
-        },
+        editorUpdateContext,
       );
     } catch (error) {
       return {
@@ -371,6 +376,55 @@ export default function ChartEditorV3({
           error: safeMessage(error),
         }));
       }
+      return;
+    }
+    if (
+      path?.length === 3
+      && path[0] === "presentation"
+      && path[1] === "map"
+      && path[2] === "joinField"
+    ) {
+      const map = {
+        ...state.draft?.presentation?.map,
+      };
+      if (typeof value === "string" && value.trim()) {
+        map.joinField = value;
+      } else {
+        delete map.joinField;
+      }
+      dispatch({
+        type: "updateChart",
+        path: ["presentation", "map"],
+        value: map,
+      });
+      return;
+    }
+    if (
+      path?.[0] === "roles"
+      && getChartSchema(state.draft.typeId).dataFamily === "geography"
+    ) {
+      setState((current) => {
+        try {
+          const updated = reduceChartEditorState(current, {
+            type: "updateChart",
+            path,
+            value,
+          }, editorUpdateContext);
+          const sourceId = updated.draft.presentation?.map?.geoSource;
+          return {
+            ...updated,
+            draft: applyGeographyRoleSelection(updated.draft, {
+              geoData: readEntry(geoDataSources, sourceId),
+              rows: safeRows,
+            }),
+          };
+        } catch (error) {
+          return {
+            ...current,
+            error: safeMessage(error),
+          };
+        }
+      });
       return;
     }
     dispatch({

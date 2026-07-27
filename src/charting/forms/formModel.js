@@ -39,6 +39,7 @@ export function buildWizardFormModel({
   prepared,
   timeSyncGroups,
   geoSources = [],
+  geoJoinFields = [],
 } = {}) {
   const hasType = Boolean(draft?.typeId);
   const hasSource = hasType && nonEmptyString(draft.sourceId);
@@ -55,6 +56,7 @@ export function buildWizardFormModel({
         prepared,
         timeSyncGroups,
         geoSources,
+        geoJoinFields,
       })
     : null;
 
@@ -99,6 +101,7 @@ export function buildEditorFormModel({
   prepared,
   timeSyncGroups = [],
   geoSources = [],
+  geoJoinFields = [],
 } = {}) {
   if (!chart || typeof chart !== "object") {
     throw new TypeError("A chart draft is required to build its form.");
@@ -111,6 +114,7 @@ export function buildEditorFormModel({
     schema,
     timeSyncGroups: Array.isArray(timeSyncGroups) ? timeSyncGroups : [],
     geoSources: normalizedGeoSources(geoSources),
+    geoJoinFields: normalizedGeoSources(geoJoinFields),
   };
   const previewReady = preparationMatchesDraft({
     chart,
@@ -192,7 +196,14 @@ function materializeSection(sectionId, context) {
   return builders[sectionId]?.(context) ?? [];
 }
 
-function dataFields({ chart, profile, prepared, schema, geoSources }) {
+function dataFields({
+  chart,
+  profile,
+  prepared,
+  schema,
+  geoSources,
+  geoJoinFields,
+}) {
   const fields = schema.roles.map((role) => {
     const supportsAxisAssignment = schema.dataFamily === "axis"
       && role.accepts.includes("number")
@@ -233,6 +244,23 @@ function dataFields({ chart, profile, prepared, schema, geoSources }) {
         ...geoSources,
       ],
     });
+    if (
+      nonEmptyString(chart.presentation?.map?.geoSource)
+      && geoJoinFields.length > 0
+    ) {
+      fields.push({
+        id: "geoJoinField",
+        label: "GeoJSON property",
+        control: "select",
+        path: ["presentation", "map", "joinField"],
+        value: chart.presentation?.map?.joinField ?? "",
+        help: "Choose the GeoJSON property whose values match the selected geographic identifier column.",
+        options: [
+          { value: "", label: "Use GeoJSON feature IDs" },
+          ...geoJoinFields,
+        ],
+      });
+    }
   }
 
   if (schema.comparison) {

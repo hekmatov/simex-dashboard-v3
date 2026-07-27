@@ -153,9 +153,9 @@ export async function loadDashboardConfig(
 ) {
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
-  const reusableProfiles = (
-    datasetProfiles
-    ?? entryValue(dashboardEntries, "datasetProfiles")
+  const reusableProfiles = mergeDatasetProfiles(
+    datasetProfiles,
+    entryValue(dashboardEntries, "datasetProfiles"),
   );
   validateDatasetProfiles(dataSources, reusableProfiles);
   const hydratedProfiles = structuredClone(reusableProfiles);
@@ -185,6 +185,30 @@ export async function loadDashboardConfig(
     datasetProfiles: hydratedProfiles,
     loadedData,
   };
+}
+
+function mergeDatasetProfiles(externalProfiles, embeddedProfiles) {
+  const merged = new Map(
+    plainDataEntries(
+      externalProfiles ?? {},
+      "External dataset profiles",
+    ),
+  );
+  for (const [sourceId, profile] of plainDataEntries(
+    embeddedProfiles ?? {},
+    "Dashboard datasetProfiles",
+  )) {
+    // A serialized/imported dashboard is a self-contained accepted contract.
+    // External tracked profiles fill gaps but cannot replace its source-local
+    // profile with a stale profile that happened to use the same source id.
+    merged.set(sourceId, profile);
+  }
+  return Object.fromEntries(
+    [...merged].map(([sourceId, profile]) => [
+      sourceId,
+      structuredClone(profile),
+    ]),
+  );
 }
 
 export function validateDataSourceDescriptor(sourceId, source) {

@@ -367,7 +367,7 @@ test("raw GeoJSON FeatureCollections join choropleths by the configured field", 
   assert.deepEqual(model.mapRegistration.geoJson, geoData);
 });
 
-test("unmatched geography is diagnosed and cannot claim renderer readiness", () => {
+test("unmatched geography identifies the semantic join field and blocks rendering", () => {
   const rows = [{ district: "UNKNOWN", value: 7 }];
   const chart = {
     typeId: "choroplethMap",
@@ -397,9 +397,9 @@ test("unmatched geography is diagnosed and cannot claim renderer readiness", () 
     },
   });
 
-  assert.equal(result.status, "empty");
-  assert.ok(result.diagnostics.some(({ code, geography }) => (
-    code === "geography-unmatched" && geography === "UNKNOWN"
+  assert.equal(result.status, "invalid");
+  assert.ok(result.diagnostics.some(({ code, fieldId }) => (
+    code === "geography-join-unmatched" && fieldId === "geoJoinField"
   )));
 });
 
