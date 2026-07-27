@@ -1,5 +1,6 @@
 import React from "react";
 
+import { useModalFocus } from "../common/ModalFocusScope.jsx";
 import RoleField from "./RoleField.jsx";
 
 export default function ChartConversionDialog({
@@ -11,6 +12,16 @@ export default function ChartConversionDialog({
   onConfirm = noop,
   onCancel = noop,
 } = {}) {
+  const dialogRef = useModalFocus({
+    open: Boolean(conversion?.plan),
+    initialFocusSelector: [
+      ".chart-conversion-remapping select:not([disabled])",
+      ".chart-conversion-remapping input:not([disabled])",
+      "#chart-conversion-playback-role:not([disabled])",
+      "[data-modal-conversion-cancel=\"true\"]",
+    ].join(","),
+    onEscape: onCancel,
+  });
   if (!conversion?.plan) return null;
   const { plan } = conversion;
   const roleFields = Array.isArray(conversion.roleFields)
@@ -38,6 +49,8 @@ export default function ChartConversionDialog({
       "aria-describedby": error
         ? "chart-conversion-consequences chart-conversion-error"
         : "chart-conversion-consequences",
+      tabIndex: -1,
+      ref: dialogRef,
     },
     React.createElement(
       "section",
@@ -212,6 +225,7 @@ export default function ChartConversionDialog({
           {
             type: "button",
             className: "secondary",
+            "data-modal-conversion-cancel": "true",
             onClick: onCancel,
           },
           "Cancel",

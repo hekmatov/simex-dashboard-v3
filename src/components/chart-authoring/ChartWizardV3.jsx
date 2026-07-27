@@ -20,6 +20,7 @@ import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
 import { parseCsvText } from "../../lib/loadCsv.js";
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
+import { useModalFocus } from "../common/ModalFocusScope.jsx";
 import ChartTypePicker from "./ChartTypePicker.jsx";
 import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
@@ -66,6 +67,16 @@ export default function ChartWizardV3({
   const [uploadError, setUploadError] = React.useState("");
   const [submissionError, setSubmissionError] = React.useState("");
   const [pendingSourceUi, setPendingSourceUi] = React.useState(null);
+  const wizardDialogRef = useModalFocus({
+    open,
+    initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
+    onEscape: () => {
+      setWizard((current) => reduceWizardState(current, {
+        type: "requestClose",
+      }));
+      setSubmissionError("");
+    },
+  });
 
   React.useEffect(() => {
     if (!open) return;
@@ -83,6 +94,14 @@ export default function ChartWizardV3({
     setSubmissionError("");
     setPendingSourceUi(null);
   }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const selectedStep = wizardDialogRef.current?.querySelector(
+      "[data-modal-initial-focus=\"true\"]",
+    );
+    selectedStep?.focus?.({ preventScroll: true });
+  }, [open, wizard.activeStep, wizardDialogRef]);
 
   if (!open) return null;
 
@@ -300,6 +319,8 @@ export default function ChartWizardV3({
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": "chart-wizard-title",
+      tabIndex: -1,
+      ref: wizardDialogRef,
     },
     React.createElement(
       "section",
@@ -339,6 +360,8 @@ export default function ChartWizardV3({
             key: step.id,
             type: "button",
             className: "chart-wizard-step-button",
+            "data-modal-initial-focus":
+              wizard.activeStep === step.id ? "true" : undefined,
             "aria-current": wizard.activeStep === step.id ? "step" : undefined,
             "data-complete": step.complete ? "true" : "false",
             onClick: () => dispatch({ type: "navigate", step: step.id }),

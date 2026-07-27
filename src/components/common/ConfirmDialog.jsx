@@ -1,5 +1,7 @@
 import React from "react";
 
+import ModalFocusScope from "./ModalFocusScope.jsx";
+
 export default function ConfirmDialog({
   open = false,
   title = "Are you sure?",
@@ -12,17 +14,18 @@ export default function ConfirmDialog({
   if (!open) return null;
   const id = `confirm-${safeId(title)}`;
   return React.createElement(
-    "div",
+    ModalFocusScope,
     {
+      as: "div",
+      open,
+      initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
+      onEscape: onCancel,
       className: "confirm-dialog-backdrop",
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": `${id}-title`,
       "aria-describedby": message ? `${id}-message` : undefined,
       tabIndex: -1,
-      onKeyDown: (event) => {
-        if (event.key === "Escape") onCancel();
-      },
     },
     React.createElement(
       "section",
@@ -39,7 +42,7 @@ export default function ConfirmDialog({
           {
             type: "button",
             className: "secondary",
-            autoFocus: true,
+            "data-modal-initial-focus": "true",
             onClick: onCancel,
           },
           cancelLabel,
