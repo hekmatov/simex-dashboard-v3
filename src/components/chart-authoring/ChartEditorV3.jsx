@@ -229,6 +229,7 @@ export default function ChartEditorV3({
   savedRevision,
   existingCharts = [],
   rows = [],
+  geoData = null,
   profile: providedProfile,
   prepared: providedPrepared,
   loadedData = {},
@@ -270,6 +271,7 @@ export default function ChartEditorV3({
         chart: state.draft,
         rows: safeRows,
         profile,
+        geoData,
       });
   const runtimeLoadedData = collectionWithEntry(
     loadedData,
@@ -401,6 +403,7 @@ export default function ChartEditorV3({
             key: `${state.draft.id}:${state.previewRevision}`,
             chart: state.draft,
             rows: safeRows,
+            geoData,
             datasetProfile: profile,
             diagnosticNamespace: state.draft.id,
           }),
@@ -502,6 +505,10 @@ export function SelectedChartEditor({
     suppliedProfiles: suppliedProfiles ?? dashboard.profiles ?? {},
   });
   const profile = readEntry(runtimeProfiles, panel.sourceId);
+  const geoSourceId = panel.presentation?.map?.geoSource;
+  const geoData = typeof geoSourceId === "string"
+    ? readEntry(loadedData, geoSourceId)
+    : null;
   const charts = chartPanels(dashboard);
   return React.createElement(ChartEditorV3, {
     chart: panel,
@@ -509,6 +516,7 @@ export function SelectedChartEditor({
     savedRevision,
     existingCharts: charts,
     rows: Array.isArray(rows) ? rows : [],
+    geoData,
     profile,
     loadedData,
     profiles: runtimeProfiles,
@@ -1011,12 +1019,13 @@ function removeChartFromGroups(groups, chartId) {
   });
 }
 
-function createEditorPreparation({ chart, rows, profile }) {
+function createEditorPreparation({ chart, rows, profile, geoData }) {
   try {
     const prepared = prepareChartData({
       chart,
       rows,
       datasetProfile: profile,
+      geoData,
     });
     return {
       ...prepared,

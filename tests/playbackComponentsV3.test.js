@@ -6,6 +6,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import {
+  initialPlaybackState,
+  reducePlaybackState,
+} from "../src/charting/time/playbackReducer.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -278,6 +282,106 @@ test("ChartView receives active time only when its configured group matches", ()
   assert.match(synchronized, /value at 2027-05-02: 20/);
   assert.doesNotMatch(synchronized, /value at 2027-05-01: 10/);
   assert.doesNotMatch(synchronized, /value at 2027-05-03: 30/);
+});
+
+test("closing playback removes chart time context and restores static line and latest choropleth rendering", () => {
+  const fixture = playbackFixture();
+  const chart = fixture.charts[0];
+  const chartProps = {
+    chart,
+    rows: fixture.loadedData.primary,
+    datasetProfile: fixture.profiles.primary,
+  };
+  const outsideProvider = renderToStaticMarkup(
+    React.createElement(ChartView, chartProps),
+  );
+
+  function ContextProbe() {
+    const playback = usePlayback();
+    return React.createElement("output", null, [
+      playback.timeContext === null ? "no-group-context" : "group-context",
+      playback.timeContextForChart(chart.id) === null
+        ? "no-chart-context"
+        : "chart-context",
+    ].join("|"));
+  }
+
+  const closedLine = renderPlayback(
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(ContextProbe),
+      React.createElement(ChartView, chartProps),
+    ),
+    {
+      initialState: {
+        activeGroupId: "exercise",
+        activeIndex: 1,
+        playing: false,
+        speed: 1,
+        playbackView: false,
+      },
+    },
+  );
+
+  assert.match(outsideProvider, /at 2027-05-01: 10/);
+  assert.match(outsideProvider, /at 2027-05-03: 30/);
+  assert.match(closedLine, /no-group-context\|no-chart-context/);
+  assert.match(closedLine, /at 2027-05-01: 10/);
+  assert.match(closedLine, /at 2027-05-03: 30/);
+
+  const geographyRows = [
+    { observed: "2027-05-01", area: "A", cases: 10 },
+    { observed: "2027-05-03", area: "A", cases: 30 },
+  ];
+  const geographyChart = chronoChoroplethChart();
+  const geographyProfile = temporalProfile(geographyRows);
+  const geographyGroup = {
+    id: "exercise",
+    name: "Exercise timeline",
+    primaryClock: { sourceId: "primary", timeField: "observed" },
+    matching: { policy: "exact" },
+    members: [{ chartId: geographyChart.id, timeRole: "time" }],
+  };
+  const closedChoropleth = renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups: [geographyGroup],
+        charts: [geographyChart],
+        loadedData: { primary: geographyRows },
+        profiles: { primary: geographyProfile },
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 0,
+          playing: false,
+          speed: 1,
+          playbackView: false,
+        },
+      },
+      React.createElement(ChartView, {
+        chart: geographyChart,
+        rows: geographyRows,
+        datasetProfile: geographyProfile,
+        geoData: oneAreaGeoJson(),
+      }),
+    ),
+  );
+  assert.match(closedChoropleth, /2027-05-03/);
+  assert.doesNotMatch(closedChoropleth, /2027-05-01/);
+
+  const atSecondTime = {
+    ...initialPlaybackState,
+    activeGroupId: "exercise",
+    activeIndex: 1,
+    playbackView: true,
+  };
+  const reopened = reducePlaybackState(
+    reducePlaybackState(atSecondTime, { type: "closeView" }),
+    { type: "openView" },
+  );
+  assert.equal(reopened.activeIndex, 1);
+  assert.equal(reopened.playbackView, true);
 });
 
 test("group matching defaults reach ChartView and disclose carried card provenance", () => {
@@ -755,6 +859,65 @@ function timelineChart(typeId) {
       zoom: { enabled: false },
       timeSync: { groupId: "exercise" },
     },
+  };
+}
+
+function chronoChoroplethChart() {
+  return {
+    id: "chrono-map",
+    typeId: "chronoChoroplethMap",
+    title: "Cases by area",
+    sourceId: "primary",
+    roles: {
+      geography: { field: "area" },
+      value: { field: "cases" },
+      time: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    transformations: {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+    },
+    presentation: {
+      collection: null,
+      labels: { visible: true },
+      map: {
+        geoSource: "areas",
+        joinField: "id",
+        scale: "sequential",
+      },
+    },
+    interaction: {
+      zoom: { enabled: true },
+      timeSync: { groupId: "exercise" },
+    },
+  };
+}
+
+function oneAreaGeoJson() {
+  return {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      id: "A",
+      properties: { id: "A" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [0, 0],
+          [1, 0],
+          [1, 1],
+          [0, 1],
+          [0, 0],
+        ]],
+      },
+    }],
   };
 }
 

@@ -57,7 +57,7 @@ function version3Dashboard() {
         fileName: "cases.csv",
         csvText: "reportedAt,cases\n2027-05-01,4\n",
         parsingMetadata: { reportedAt: { interpretation: "temporal", format: "YYYY-MM-DD" } },
-        provenance: { label: "Exercise control", capturedAt: "2027-05-01" },
+        provenance: { label: "Exercise control" },
         fingerprint: "cases-fingerprint",
       },
       "manual-status": {
@@ -102,7 +102,7 @@ function profileOnlyDashboard(temporal) {
       reportedAt: { interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only" },
     },
     profile: {
-      rowCount: 1,
+      rowCount: Array.isArray(temporal?.values) ? temporal.values.length : 1,
       columns: [
         {
           name: "reportedAt",
@@ -202,6 +202,107 @@ test("version 3 bundles round-trip uploaded and inline sources", () => {
   assert.equal(bundle.version, 3);
   assert.equal(bundle.metadata.exportedAt, "2026-07-26T12:00:00.000Z");
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), dashboard);
+});
+
+test("bundle, metadata, and source records are exact version 3 data contracts", () => {
+  const bundle = serializeDashboardBundle(version3Dashboard(), {
+    now: "2026-07-26T12:00:00.000Z",
+  });
+
+  for (const mutate of [
+    (candidate) => { candidate.legacyPayload = {}; },
+    (candidate) => { candidate.metadata.legacyPayload = {}; },
+    (candidate) => {
+      candidate.config.dataSources["uploaded-cases"].legacyPayload = {};
+    },
+    (candidate) => {
+      candidate.config.dataSources["uploaded-cases"].provenance.capturedAt = "2027-05-01";
+    },
+    (candidate) => {
+      candidate.config.dataSources["uploaded-cases"].parsingMetadata.reportedAt.example = "2027-05-01";
+    },
+  ]) {
+    const candidate = structuredClone(bundle);
+    mutate(candidate);
+    assert.throws(
+      () => parseDashboardBundle(JSON.stringify(candidate)),
+      /unknown .*property/i,
+    );
+  }
+});
+
+test("source validation rejects generic datasets, unsafe tracked paths, and alternate inline shapes", () => {
+  for (const source of [
+    { kind: "dataset", type: "arbitrary", rows: [{ value: 1 }] },
+    {
+      kind: "csv",
+      path: "../private.csv",
+      provenance: { label: "Unsafe" },
+    },
+    {
+      kind: "geojson",
+      path: "data/not-geo.json",
+      provenance: { label: "Wrong extension" },
+    },
+    { kind: "inline", data: [{ label: "Ready", value: 12 }] },
+  ]) {
+    const dashboard = version3Dashboard();
+    dashboard.dataSources["unused-source"] = source;
+    assert.throws(
+      () => validateDashboardConfig(dashboard),
+      /not supported|safe relative public path|\.geojson|unknown.*property|rows/i,
+    );
+  }
+});
+
+test("source validation rejects accessors, custom prototypes, dangerous row keys, and inconsistent profiles without executing getters", () => {
+  let reads = 0;
+  const source = {};
+  Object.defineProperty(source, "kind", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return "inline";
+    },
+  });
+  source.rows = [{ value: 1 }];
+
+  const accessorDashboard = version3Dashboard();
+  accessorDashboard.dataSources["unused-source"] = source;
+  assert.throws(
+    () => validateDashboardConfig(accessorDashboard),
+    /data source.*property "kind".*data property/i,
+  );
+  assert.equal(reads, 0);
+
+  const inheritedDashboard = version3Dashboard();
+  inheritedDashboard.dataSources["manual-status"] = Object.assign(
+    Object.create({ kind: "inline" }),
+    { rows: [{ label: "Ready", value: 12 }] },
+  );
+  assert.throws(
+    () => validateDashboardConfig(inheritedDashboard),
+    /data source.*ordinary data object|plain object/i,
+  );
+
+  const dangerousDashboard = version3Dashboard();
+  dangerousDashboard.dataSources["manual-status"].rows = [
+    JSON.parse('{"label":"Ready","value":12,"__proto__":{"polluted":true}}'),
+  ];
+  assert.throws(
+    () => validateDashboardConfig(dangerousDashboard),
+    /unsafe property "__proto__"/i,
+  );
+
+  const profileDashboard = profileOnlyDashboard({
+    values: ["2027-05-01", "2027-05-02"],
+    diagnostics: [],
+  });
+  profileDashboard.dataSources["uploaded-cases"].profile.rowCount = 1;
+  assert.throws(
+    () => validateDashboardConfig(profileDashboard),
+    /rowCount|align/i,
+  );
 });
 
 test("version 2 bundles are rejected with an actionable message", () => {
@@ -513,15 +614,15 @@ test("parsed bundles do not alias their serialized input", () => {
   assert.equal(bundle.config.dataSources["manual-status"].rows[0].value, 12);
 });
 
-test("import discards runtime-only rows from otherwise valid bundles", () => {
+test("import rejects runtime-only rows instead of silently changing a bundle", () => {
   const bundle = serializeDashboardBundle(version3Dashboard(), { now: "2026-07-26T12:00:00.000Z" });
   bundle.config.loadedData = { "uploaded-cases": [{ reportedAt: "2027-05-01", cases: 4 }] };
   bundle.config.dataSources["uploaded-cases"].loadedRows = [{ reportedAt: "2027-05-01", cases: 4 }];
 
-  const parsed = parseDashboardBundle(JSON.stringify(bundle));
-
-  assert.equal(Object.hasOwn(parsed, "loadedData"), false);
-  assert.equal(Object.hasOwn(parsed.dataSources["uploaded-cases"], "loadedRows"), false);
+  assert.throws(
+    () => parseDashboardBundle(JSON.stringify(bundle)),
+    /unknown dashboard configuration property "loadedData"|unknown data source.*"loadedRows"/i,
+  );
 });
 
 test("dashboard validation rejects selected fields that do not exist in the uploaded source", () => {
@@ -565,7 +666,7 @@ test("inline source records use one row representation and enforce each schema m
   ambiguous.dataSources["manual-status"].data = [{ label: "Ready", value: 12 }];
   ambiguous.pages[0].sections[0].panels = [pieChart()];
   ambiguous.timeSyncGroups = [];
-  assert.throws(() => validateDashboardConfig(ambiguous), /both rows and data/i);
+  assert.throws(() => validateDashboardConfig(ambiguous), /unknown data source.*property "data"/i);
 
   const disallowed = version3Dashboard();
   disallowed.pages[0].sections[0].panels = [lineChart({ sourceId: "manual-status", interaction: { zoom: { enabled: true }, timeSync: null } })];
@@ -612,25 +713,23 @@ test("serialization strips nested runtime state but preserves opaque manual data
     loadedData: { transient: true },
   };
   dashboard.dataSources["manual-status"].rows[0].loadedRows = "domain value";
-  dashboard.dataSources["manual-status"].provenance = { nested: { runtimeRows: [1] } };
 
   const bundle = serializeDashboardBundle(dashboard, { now: "2026-07-26T12:00:00.000Z" });
 
   assert.equal(Object.hasOwn(bundle.config.pages[0].sections[0].panels[0].presentation.labels, "loadedData"), false);
-  assert.equal(Object.hasOwn(bundle.config.dataSources["manual-status"].provenance.nested, "runtimeRows"), false);
   assert.equal(bundle.config.dataSources["manual-status"].rows[0].loadedRows, "domain value");
   assert.equal(dashboard.pages[0].sections[0].panels[0].presentation.labels.loadedData.transient, true);
 });
 
-test("import strips nested structural runtime state without rewriting opaque manual rows", () => {
+test("import rejects nested structural runtime state without rewriting opaque manual rows", () => {
   const bundle = serializeDashboardBundle(version3Dashboard(), { now: "2026-07-26T12:00:00.000Z" });
   bundle.config.pages[0].sections[0].panels[0].presentation.labels = { visible: true, runtimeRows: ["temporary"] };
   bundle.config.dataSources["manual-status"].rows[0].runtimeRows = "domain value";
 
-  const parsed = parseDashboardBundle(JSON.stringify(bundle));
-
-  assert.equal(Object.hasOwn(parsed.pages[0].sections[0].panels[0].presentation.labels, "runtimeRows"), false);
-  assert.equal(parsed.dataSources["manual-status"].rows[0].runtimeRows, "domain value");
+  assert.throws(
+    () => parseDashboardBundle(JSON.stringify(bundle)),
+    /unknown chart presentation labels property "runtimeRows"/i,
+  );
 });
 
 test("bundle parsing reports a missing or non-object version 3 configuration clearly", () => {

@@ -207,6 +207,102 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
   );
 });
 
+test("debounced edits flush before chart saves and cancellation prevents stale callbacks", async () => {
+  const {
+    applyDashboardEdits,
+    createDebouncedDashboardEdits,
+    createSerializedDashboardCommitController,
+  } = await import("../src/lib/dashboardCommitController.js");
+  const { integrateSavedChart } = await import(
+    "../src/charting/config/dashboardBundleV3.js"
+  );
+  const clock = fakeClock();
+  const committed = [];
+  const baseline = minimalDashboard();
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: baseline,
+    commit: async (candidate) => {
+      committed.push(structuredClone(candidate));
+      return structuredClone(candidate);
+    },
+  });
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: clock,
+    onCommit: (pending) => controller.mutate((dashboard) => (
+      applyDashboardEdits(dashboard, pending)
+    )),
+  });
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { title: "Edited dashboard" },
+  });
+  const flushed = edits.flush();
+  const saved = controller.mutate((dashboard) => integrateSavedChart(
+    dashboard,
+    {
+      chart: pieChart({ title: "Edited chart" }),
+      timeSyncGroups: [],
+    },
+  ));
+  await Promise.all([flushed, saved]);
+  assert.equal(controller.getCurrent().title, "Edited dashboard");
+  assert.equal(
+    controller.getCurrent().pages[0].sections[0].panels[0].title,
+    "Edited chart",
+  );
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { title: "Must never return" },
+  });
+  edits.cancel();
+  await controller.replace(baseline);
+  await clock.advance(650);
+  assert.equal(controller.getCurrent().title, "Exercise dashboard");
+  assert.equal(edits.pendingCount(), 0);
+  assert.equal(committed.at(-1).title, "Exercise dashboard");
+});
+
+test("serialized dashboard commits compose rapid mutations and retain the last good state after validation failure", async () => {
+  const {
+    createSerializedDashboardCommitController,
+  } = await import("../src/lib/dashboardCommitController.js");
+  const releases = [];
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: minimalDashboard(),
+    commit: async (candidate) => {
+      if (candidate.title === "") throw new Error("Dashboard title is required.");
+      await new Promise((resolve) => releases.push(resolve));
+      return structuredClone(candidate);
+    },
+  });
+
+  const first = controller.mutate((dashboard) => {
+    dashboard.title = "First save";
+  });
+  const second = controller.mutate((dashboard) => {
+    dashboard.pages[0].title = "Rapid second save";
+  });
+  await waitForRelease(releases);
+  releases.shift()();
+  await first;
+  await waitForRelease(releases);
+  releases.shift()();
+  await second;
+
+  assert.equal(controller.getCurrent().title, "First save");
+  assert.equal(controller.getCurrent().pages[0].title, "Rapid second save");
+
+  const invalid = controller.mutate((dashboard) => {
+    dashboard.title = "";
+  });
+  await assert.rejects(invalid, /title is required/i);
+  assert.equal(controller.getCurrent().title, "First save");
+  assert.equal(controller.getCurrent().pages[0].title, "Rapid second save");
+});
+
 test("the attached empty-chart case produces a canonical renderer-ready time point", async () => {
   const echarts = await import("echarts");
   const { profileDataset } = await import(
@@ -354,4 +450,37 @@ function kpiChart(overrides = {}) {
     },
     ...overrides,
   });
+}
+
+function fakeClock() {
+  let now = 0;
+  let nextId = 1;
+  const timers = new Map();
+  return {
+    setTimeout(callback, delay) {
+      const id = nextId;
+      nextId += 1;
+      timers.set(id, { at: now + delay, callback });
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
+    async advance(milliseconds) {
+      now += milliseconds;
+      const due = [...timers.entries()]
+        .filter(([, timer]) => timer.at <= now)
+        .sort((left, right) => left[1].at - right[1].at);
+      for (const [id, timer] of due) {
+        timers.delete(id);
+        await timer.callback();
+      }
+    },
+  };
+}
+
+async function waitForRelease(releases) {
+  while (releases.length === 0) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
 }

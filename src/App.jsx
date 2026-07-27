@@ -13,6 +13,10 @@ import {
   initialDisplayState,
   reduceDisplayState,
 } from "./lib/displayController.js";
+import {
+  applyDashboardEdits,
+  createSerializedDashboardCommitController,
+} from "./lib/dashboardCommitController.js";
 import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
@@ -39,6 +43,8 @@ export default function App() {
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
   const displayStateRef = React.useRef(displayState);
+  const dashboardRef = React.useRef(null);
+  const dashboardCommitControllerRef = React.useRef(null);
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
 
@@ -82,7 +88,11 @@ export default function App() {
           selected,
           selected.datasetProfiles ?? tracked.datasetProfiles,
         );
-        if (!disposed) setDashboard(loaded);
+        if (!disposed) {
+          dashboardRef.current = loaded;
+          ensureDashboardCommitController(loaded);
+          setDashboard(loaded);
+        }
       })
       .catch((loadError) => {
         if (!disposed) setError(loadError);
@@ -90,6 +100,10 @@ export default function App() {
     return () => {
       disposed = true;
     };
+  }, []);
+
+  React.useEffect(() => () => {
+    dashboardCommitControllerRef.current?.dispose();
   }, []);
 
   React.useEffect(() => {
@@ -166,9 +180,22 @@ export default function App() {
     };
   }, [dashboard, dispatchDisplayAction]);
 
-  async function commitConfiguration(nextConfig) {
+  function ensureDashboardCommitController(initialDashboard = dashboardRef.current) {
+    if (dashboardCommitControllerRef.current === null) {
+      dashboardCommitControllerRef.current =
+        createSerializedDashboardCommitController({
+          initialDashboard: configurationForPortableUse(initialDashboard),
+          commit: persistConfiguration,
+        });
+    }
+    return dashboardCommitControllerRef.current;
+  }
+
+  async function persistConfiguration(nextConfig) {
     try {
-      const profiles = nextConfig.datasetProfiles ?? dashboard?.datasetProfiles ?? {};
+      const profiles = nextConfig.datasetProfiles
+        ?? dashboardRef.current?.datasetProfiles
+        ?? {};
       const stored = configurationForStorage(nextConfig);
       validateDashboardConfig({
         ...stored,
@@ -179,19 +206,26 @@ export default function App() {
         DASHBOARD_STORAGE_KEY,
         JSON.stringify(configurationForStorage(loaded), null, 2),
       );
+      dashboardRef.current = loaded;
       setDashboard(loaded);
       setError(null);
-      return loaded;
+      return configurationForPortableUse(loaded);
     } catch (commitError) {
       setError(commitError);
       throw commitError;
     }
   }
 
+  function commitConfiguration(nextConfig) {
+    return ensureDashboardCommitController().replace(
+      configurationForPortableUse(nextConfig),
+    );
+  }
+
   function mutateDashboard(mutator) {
-    const next = structuredClone(configurationForPortableUse(dashboard));
-    mutator(next);
-    void commitConfiguration(next);
+    ignoreCommitFailure(
+      ensureDashboardCommitController().mutate(mutator),
+    );
   }
 
   function toggleEditMode() {
@@ -205,17 +239,25 @@ export default function App() {
   }
 
   function resetEditSession() {
-    if (editBaseline) void commitConfiguration(editBaseline);
+    if (editBaseline) ignoreCommitFailure(commitConfiguration(editBaseline));
     setEditBaseline(null);
     setEditMode(false);
   }
 
   function createChart(payload, target) {
-    void commitConfiguration(integrateCreatedChart(dashboard, payload, target));
+    ignoreCommitFailure(
+      ensureDashboardCommitController().mutate((current) => (
+        integrateCreatedChart(current, payload, target)
+      )),
+    );
   }
 
   function saveChart(payload) {
-    void commitConfiguration(integrateSavedChart(dashboard, payload));
+    ignoreCommitFailure(
+      ensureDashboardCommitController().mutate((current) => (
+        integrateSavedChart(current, payload)
+      )),
+    );
   }
 
   function removeChart(chartId) {
@@ -309,8 +351,11 @@ export default function App() {
         Object.assign(next.pages.find(({ id }) => id === pageId), updates);
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
-      onPanelEditCommit={(config) => void commitConfiguration(config)}
-      onPanelEditCancel={(config) => void commitConfiguration(config)}
+      onApplyPendingEdits={(edits) => mutateDashboard((next) => (
+        applyDashboardEdits(next, edits)
+      ))}
+      onPanelEditCommit={(config) => ignoreCommitFailure(commitConfiguration(config))}
+      onPanelEditCancel={(config) => ignoreCommitFailure(commitConfiguration(config))}
       onSectionChange={(pageId, sectionId, updates) => mutateDashboard((next) => {
         const page = next.pages.find(({ id }) => id === pageId);
         Object.assign(page.sections.find(({ id }) => id === sectionId), updates);
@@ -503,4 +548,8 @@ function dateStamp() {
     String(now.getMonth() + 1).padStart(2, "0"),
     String(now.getDate()).padStart(2, "0"),
   ].join("");
+}
+
+function ignoreCommitFailure(promise) {
+  void promise.catch(() => {});
 }

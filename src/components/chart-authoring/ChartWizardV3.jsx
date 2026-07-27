@@ -43,6 +43,7 @@ export default function ChartWizardV3({
   open,
   dataSources,
   loadedData,
+  geoDataSources,
   timeSyncGroups,
   existingCharts = [],
   onClose,
@@ -50,6 +51,7 @@ export default function ChartWizardV3({
 }) {
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
   const safeLoadedData = collectionOrEmpty(loadedData);
+  const safeGeoDataSources = collectionOrEmpty(geoDataSources);
   const safeGroups = Array.isArray(timeSyncGroups) ? timeSyncGroups : [];
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
@@ -109,9 +111,14 @@ export default function ChartWizardV3({
   const rows = readEntry(runtimeLoadedData, wizard.draft?.sourceId) ?? [];
   const source = wizard.source
     ?? readEntry(safeDataSources, wizard.draft?.sourceId);
+  const geoData = readEntry(
+    safeGeoDataSources,
+    wizard.draft?.presentation?.map?.geoSource,
+  );
   const runtime = createWizardPreparation({
     chart: wizard.draft,
     rows,
+    geoData,
     authorMetadata: source?.parsingMetadata
       ?? manualParsingMetadata(manualTable),
   });
@@ -431,6 +438,7 @@ export default function ChartWizardV3({
           ? React.createElement(StyleLayoutStep, {
               chart: wizard.draft,
               rows,
+              geoData,
               profile: runtime.profile,
               prepared: runtime.prepared,
               sections: editor.sections,
@@ -531,6 +539,7 @@ export default function ChartWizardV3({
 export function createWizardPreparation({
   chart,
   rows = [],
+  geoData,
   authorMetadata = {},
 } = {}) {
   const safeRows = Array.isArray(rows) ? rows : [];
@@ -544,6 +553,7 @@ export function createWizardPreparation({
       chart,
       rows: safeRows,
       datasetProfile: profile,
+      geoData,
     });
     return {
       profile,

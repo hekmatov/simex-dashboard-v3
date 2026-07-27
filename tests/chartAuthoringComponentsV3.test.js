@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { open, readFile } from "node:fs/promises";
 import test from "node:test";
 import { register } from "node:module";
+import path from "node:path";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -19,6 +21,10 @@ import {
   reduceWizardState,
 } from "../src/charting/forms/wizardDraft.js";
 import { buildEditorFormModel } from "../src/charting/forms/formModel.js";
+import { parseCsvText } from "../src/lib/loadCsv.js";
+import { validateGeoJson } from "../src/lib/loadDashboard.js";
+
+const ROOT = path.resolve(import.meta.dirname, "..");
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -158,6 +164,47 @@ const deltaField = {
 
 function render(element) {
   return renderToStaticMarkup(element);
+}
+
+async function trackedGeographyFixture(chartId) {
+  const dashboard = JSON.parse(await readFile(
+    path.join(ROOT, "public/config/dashboard.json"),
+    "utf8",
+  ));
+  const chart = dashboard.pages
+    .flatMap(({ sections }) => sections)
+    .flatMap(({ panels }) => panels)
+    .find(({ id }) => id === chartId);
+  assert.ok(chart, `Missing tracked chart ${chartId}`);
+  const source = dashboard.dataSources[chart.sourceId];
+  const geoSource = dashboard.dataSources[chart.presentation.map.geoSource];
+  const sourcePath = path.join(ROOT, "public", source.path);
+  const csvText = chart.typeId === "chronoChoroplethMap"
+    ? await readCsvPrefix(sourcePath, 40)
+    : await readFile(sourcePath, "utf8");
+  const rows = parseCsvText(csvText, source.path);
+  const geoData = JSON.parse(await readFile(
+    path.join(ROOT, "public", geoSource.path),
+    "utf8",
+  ));
+  validateGeoJson(geoData, `Tracked ${chartId} GeoJSON`);
+  return { chart, rows, geoData, source };
+}
+
+async function readCsvPrefix(filePath, lineCount) {
+  const handle = await open(filePath, "r");
+  try {
+    const buffer = Buffer.alloc(256 * 1024);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    return buffer
+      .subarray(0, bytesRead)
+      .toString("utf8")
+      .split(/\r?\n/)
+      .slice(0, lineCount)
+      .join("\n");
+  } finally {
+    await handle.close();
+  }
 }
 
 test("chart types render in searchable registry purpose groups", () => {
@@ -1192,6 +1239,62 @@ test("style step hides presentation and interaction controls until the current p
   assert.match(ready, /Background/);
   assert.match(ready, /Zoom/);
   assert.match(ready, /Advanced/);
+});
+
+test("tracked map and choropleth data reach ready wizard style and editor previews", async () => {
+  for (const chartId of [
+    "bio_wastewater_map",
+    "bio_municipality_choropleth_animation",
+  ]) {
+    const {
+      chart,
+      rows,
+      geoData,
+      source,
+    } = await trackedGeographyFixture(chartId);
+    const runtime = createWizardPreparation({
+      chart,
+      rows,
+      authorMetadata: source.parsingMetadata,
+      geoData,
+    });
+    const model = buildEditorFormModel({
+      chart,
+      profile: runtime.profile,
+      prepared: runtime.prepared,
+      timeSyncGroups: [],
+    });
+
+    assert.equal(runtime.prepared.status, "ready", chartId);
+    assert.ok(
+      model.sections.some(({ id }) => id === "appearance"),
+      `${chartId} style controls must be reachable`,
+    );
+
+    const styleHtml = render(React.createElement(StyleLayoutStep, {
+      chart,
+      rows,
+      geoData,
+      profile: runtime.profile,
+      prepared: runtime.prepared,
+      sections: model.sections,
+      onChange() {},
+    }));
+    assert.match(styleHtml, /chart-authoring-preview-ready/, chartId);
+    assert.match(styleHtml, /Title alignment/, chartId);
+
+    const editorHtml = render(React.createElement(ChartEditorV3, {
+      chart,
+      rows,
+      geoData,
+      profile: runtime.profile,
+      loadedData: { [chart.sourceId]: rows },
+      profiles: { [chart.sourceId]: runtime.profile },
+      timeSyncGroups: [],
+    }));
+    assert.match(editorHtml, /chart-authoring-preview-ready/, chartId);
+    assert.doesNotMatch(editorHtml, /Preview needs attention/, chartId);
+  }
 });
 
 test("ready style layout renders the schema-generated label-position control", () => {

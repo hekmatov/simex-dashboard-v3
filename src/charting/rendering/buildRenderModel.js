@@ -24,7 +24,11 @@ export function buildRenderModel(input = {}) {
   if (model.kind !== "echarts") return model;
   return {
     ...model,
-    accessibility: buildAccessibilityCompanion(schema, input.prepared.marks, input.chart),
+    accessibility: buildAccessibilityCompanion(
+      schema,
+      model.accessibilityMarks ?? input.prepared.marks,
+      input.chart,
+    ),
   };
 }
 

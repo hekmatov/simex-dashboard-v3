@@ -5,6 +5,7 @@ import GeneratedFormSection from "./GeneratedFormSection.jsx";
 export default function StyleLayoutStep({
   chart = null,
   rows = [],
+  geoData = null,
   profile = null,
   prepared = null,
   sections = [],
@@ -50,6 +51,7 @@ export default function StyleLayoutStep({
             React.createElement(ChartPreview, {
               chart,
               rows,
+              geoData,
               datasetProfile: profile,
               diagnosticNamespace: chart.id,
             }),

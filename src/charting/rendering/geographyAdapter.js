@@ -18,6 +18,7 @@ function choroplethModel(chart, marks, renderContext, geoData, activeTime = null
   const values = marks.map(({ value }) => value).filter(Number.isFinite);
   return {
     kind: "echarts",
+    accessibilityMarks: marks,
     ...(activeTime ? { temporal: temporalMetadata(activeTime) } : {}),
     interaction: geographyInteraction(chart),
     mapRegistration: mapRegistration(chart, marks, renderContext, geoData),

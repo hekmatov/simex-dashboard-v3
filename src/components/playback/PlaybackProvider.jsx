@@ -60,8 +60,10 @@ export function PlaybackProvider({
     [activeGroup, activeEpochMs],
   );
   const timeContextForChart = React.useCallback(
-    (chartId) => memberTimeContexts[chartId] ?? null,
-    [memberTimeContexts],
+    (chartId) => state.playbackView === true
+      ? memberTimeContexts[chartId] ?? null
+      : null,
+    [memberTimeContexts, state.playbackView],
   );
 
   React.useEffect(() => {
@@ -108,7 +110,9 @@ export function PlaybackProvider({
     profiles,
     speed: state.speed,
     status: playbackStatus(activeGroup, clock, activeEpochMs),
-    timeContext: activeGroup && activeEpochMs !== null
+    timeContext: state.playbackView === true
+      && activeGroup
+      && activeEpochMs !== null
       ? Object.freeze({ groupId: activeGroup.id, activeEpochMs })
       : null,
     timeContextForChart,

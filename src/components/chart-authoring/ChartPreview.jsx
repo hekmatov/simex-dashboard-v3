@@ -7,6 +7,7 @@ function ChartPreview({
   chart,
   rows = [],
   datasetProfile,
+  geoData,
   timeContext,
   renderContext,
   diagnosticNamespace = chart?.id
@@ -17,6 +18,7 @@ function ChartPreview({
       chart,
       rows: Array.isArray(rows) ? rows : [],
       datasetProfile,
+      geoData,
       timeContext
     });
   } catch (error) {
@@ -42,6 +44,7 @@ function ChartPreview({
       chart,
       rows,
       datasetProfile,
+      geoData,
       timeContext,
       renderContext
     }

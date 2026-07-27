@@ -12,6 +12,8 @@ import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackControls from "./playback/PlaybackControls.jsx";
 import { PlaybackProvider } from "./playback/PlaybackProvider.jsx";
+import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
+import { validateGeoJson } from "../lib/loadDashboard.js";
 
 export default function DashboardRenderer({
   dashboard,
@@ -26,6 +28,7 @@ export default function DashboardRenderer({
   onPageRemove,
   onPageChange,
   onDashboardChange,
+  onApplyPendingEdits,
   onPanelEditCommit,
   onPanelEditCancel,
   onSectionChange,
@@ -55,9 +58,25 @@ export default function DashboardRenderer({
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
   const [pageDrafts, setPageDrafts] = React.useState({});
   const [sectionDrafts, setSectionDrafts] = React.useState({});
-  const dashboardDebounceRef = React.useRef(null);
-  const pageDebounceRef = React.useRef(null);
-  const sectionDebounceRef = React.useRef(null);
+  const pendingEditCallbacksRef = React.useRef(null);
+  pendingEditCallbacksRef.current = {
+    onApplyPendingEdits,
+    onDashboardChange,
+    onPageChange,
+    onSectionChange,
+  };
+  const pendingEditsRef = React.useRef(null);
+  if (pendingEditsRef.current === null) {
+    pendingEditsRef.current = createDebouncedDashboardEdits({
+      delay: 650,
+      scheduler: typeof window === "undefined" ? globalThis : window,
+      onCommit: (edits) => commitPendingDashboardEdits(
+        edits,
+        pendingEditCallbacksRef.current,
+      ),
+    });
+  }
+  const pendingEdits = pendingEditsRef.current;
   const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
     React.useState(false);
 
@@ -66,6 +85,10 @@ export default function DashboardRenderer({
   const landingActive = hasLandingPresentation(activePage);
   const selectedPanel = findPanel(dashboard, selectedPanelId);
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
+  const geoDataSources = React.useMemo(
+    () => validatedGeoDataSources(dashboard),
+    [dashboard.dataSources, dashboard.loadedData],
+  );
 
   React.useEffect(() => {
     if (!editMode) {
@@ -73,6 +96,8 @@ export default function DashboardRenderer({
       setSelectedPanelId(null);
     }
   }, [editMode]);
+
+  React.useEffect(() => () => pendingEdits.dispose(), [pendingEdits]);
 
   React.useEffect(() => {
     setDashboardDraft(dashboardTextDraftFromDashboard(dashboard));
@@ -88,6 +113,7 @@ export default function DashboardRenderer({
 
   function removePanel(panelId) {
     setSelectedPanelId((current) => (current === panelId ? null : current));
+    void pendingEdits.flush();
     onPanelRemove(panelId);
   }
 
@@ -113,6 +139,7 @@ export default function DashboardRenderer({
   function handlePanelDrop(event, targetPanelId) {
     event.preventDefault();
     const sourcePanelId = event.dataTransfer.getData("text/plain") || draggingPanelId;
+    void pendingEdits.flush();
     onPanelReorder(sourcePanelId, targetPanelId);
     setDraggingPanelId(null);
     setDragOverPanelId(null);
@@ -161,6 +188,7 @@ export default function DashboardRenderer({
     }
 
     const pageId = uniquePageId(dashboard, label);
+    void pendingEdits.flush();
     onPageAdd({
       id: pageId,
       label,
@@ -185,6 +213,7 @@ export default function DashboardRenderer({
   }
 
   function saveBackgroundSettings() {
+    void pendingEdits.flush();
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
     setShowVantaSettings(false);
   }
@@ -192,6 +221,7 @@ export default function DashboardRenderer({
   function resetBackgroundSettings() {
     const defaults = sanitizeVantaSettings();
     setBackgroundDraft(defaults);
+    void pendingEdits.flush();
     onVantaBackgroundChange(defaults);
     setShowVantaSettings(false);
   }
@@ -201,12 +231,14 @@ export default function DashboardRenderer({
   }
 
   function saveSelectedChartV3(payload) {
+    void pendingEdits.flush();
     onChartSave(payload);
     setChartEditBaseline(null);
     setSelectedPanelId(null);
   }
 
   function cancelSelectedPanel() {
+    pendingEdits.cancel();
     if (chartEditBaseline) {
       onPanelEditCancel(chartEditBaseline);
     }
@@ -219,17 +251,22 @@ export default function DashboardRenderer({
       ...current,
       [pageId]: { ...(current[pageId] ?? pageDraftFromPage(dashboard.pages.find((page) => page.id === pageId))), ...updates },
     }));
-    window.clearTimeout(pageDebounceRef.current);
     const basePage = pageDrafts[pageId] ?? pageDraftFromPage(dashboard.pages.find((page) => page.id === pageId));
     const nextDraft = { ...basePage, ...updates };
-    pageDebounceRef.current = window.setTimeout(() => onPageChange(pageId, nextDraft), 650);
+    pendingEdits.schedule(`page:${pageId}`, {
+      type: "page",
+      pageId,
+      updates: nextDraft,
+    });
   }
 
   function changeDashboardText(updates) {
     const nextDraft = { ...dashboardDraft, ...updates };
     setDashboardDraft(nextDraft);
-    window.clearTimeout(dashboardDebounceRef.current);
-    dashboardDebounceRef.current = window.setTimeout(() => onDashboardChange(nextDraft), 650);
+    pendingEdits.schedule("dashboard", {
+      type: "dashboard",
+      updates: nextDraft,
+    });
   }
 
   function changeSection(section, updates) {
@@ -239,17 +276,21 @@ export default function DashboardRenderer({
       ...current,
       [section.id]: nextDraft,
     }));
-    window.clearTimeout(sectionDebounceRef.current);
-    sectionDebounceRef.current = window.setTimeout(() => {
-      onSectionChange(activePage.id, section.id, nextDraft);
-    }, 650);
+    pendingEdits.schedule(`section:${activePage.id}:${section.id}`, {
+      type: "section",
+      pageId: activePage.id,
+      sectionId: section.id,
+      updates: nextDraft,
+    });
   }
 
   function applyBackgroundSettings() {
+    void pendingEdits.flush();
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
   }
 
   function changeGlobalPanelColors(updates) {
+    void pendingEdits.flush();
     onDashboardChange({
       globalStyles: {
         ...(dashboard.globalStyles ?? {}),
@@ -267,6 +308,7 @@ export default function DashboardRenderer({
       return;
     }
     const description = window.prompt("Section subtext", "") ?? "";
+    void pendingEdits.flush();
     onSectionInsert(activePage.id, section.id, panel.id, {
       id: `${section.id}_${Date.now()}`,
       title,
@@ -275,6 +317,7 @@ export default function DashboardRenderer({
   }
 
   function removeSectionTitle(section) {
+    void pendingEdits.flush();
     onSectionChange(activePage.id, section.id, { title: "", description: "" });
   }
 
@@ -288,6 +331,7 @@ export default function DashboardRenderer({
 
     const activeIndex = dashboard.pages.findIndex((page) => page.id === activePage.id);
     const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
+    void pendingEdits.flush();
     onPageRemove(activePage.id);
     setActivePageId(fallbackPage.id);
     setSelectedPanelId(null);
@@ -301,10 +345,8 @@ export default function DashboardRenderer({
   }
 
   function saveEditMode() {
-    if (chartEditBaseline) {
-      onPanelEditCommit(dashboardWithCurrentDrafts());
-      setChartEditBaseline(null);
-    }
+    void pendingEdits.flush();
+    setChartEditBaseline(null);
     onToggleEditMode();
   }
 
@@ -585,7 +627,7 @@ export default function DashboardRenderer({
                     panel={panel}
                     rows={dashboard.loadedData[panel.sourceId] ?? []}
                     datasetProfile={dashboard.datasetProfiles?.[panel.sourceId]}
-                    geoData={dashboard.loadedData[panel.presentation?.map?.geoSource]}
+                    geoData={geoDataSources[panel.presentation?.map?.geoSource]}
                     dataSources={dashboard.dataSources}
                     editMode={editMode}
                     isDragging={draggingPanelId === panel.id}
@@ -617,6 +659,7 @@ export default function DashboardRenderer({
             timeSyncGroups={dashboard.timeSyncGroups ?? []}
             existingCharts={configuredCharts(dashboard)}
             rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
+            geoData={geoDataSources[selectedPanel.presentation?.map?.geoSource]}
             profile={dashboard.datasetProfiles?.[selectedPanel.sourceId]}
             loadedData={dashboard.loadedData ?? {}}
             profiles={dashboard.datasetProfiles ?? {}}
@@ -631,10 +674,12 @@ export default function DashboardRenderer({
         open={Boolean(chartWizardTarget)}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
+        geoDataSources={geoDataSources}
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
         onClose={() => setChartWizardTarget(null)}
         onCreate={(payload) => {
+          void pendingEdits.flush();
           onChartCreate(payload, chartWizardTarget);
           setChartWizardTarget(null);
         }}
@@ -647,6 +692,7 @@ export default function DashboardRenderer({
         cancelLabel="Keep editing"
         onConfirm={() => {
           setResetEditSessionConfirmation(false);
+          pendingEdits.cancel();
           onResetEditSession();
         }}
         onCancel={() => setResetEditSessionConfirmation(false)}
@@ -861,6 +907,41 @@ function clampNumber(value, min, max) {
     return min;
   }
   return Math.min(Math.max(number, min), max);
+}
+
+export function validatedGeoDataSources(dashboard = {}) {
+  const result = Object.create(null);
+  for (const [sourceId, source] of Object.entries(dashboard.dataSources ?? {})) {
+    if (source?.kind !== "geojson") continue;
+    const candidate = dashboard.loadedData?.[sourceId];
+    try {
+      validateGeoJson(candidate, `Data source "${sourceId}" GeoJSON`);
+      result[sourceId] = candidate;
+    } catch {
+      // Invalid geography never crosses the rendering or authoring boundary.
+    }
+  }
+  return result;
+}
+
+export function commitPendingDashboardEdits(edits, callbacks = {}) {
+  if (typeof callbacks.onApplyPendingEdits === "function") {
+    return callbacks.onApplyPendingEdits(edits);
+  }
+  for (const edit of edits) {
+    if (edit.type === "dashboard") {
+      callbacks.onDashboardChange?.(edit.updates);
+    } else if (edit.type === "page") {
+      callbacks.onPageChange?.(edit.pageId, edit.updates);
+    } else if (edit.type === "section") {
+      callbacks.onSectionChange?.(
+        edit.pageId,
+        edit.sectionId,
+        edit.updates,
+      );
+    }
+  }
+  return undefined;
 }
 
 function findPanel(dashboard, panelId) {

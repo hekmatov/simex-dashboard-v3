@@ -137,7 +137,7 @@ test("canonical object transformations and DD/MM bindings survive a bundle-to-EC
         format: "DD/MM/YYYY",
         timezone: "date-only",
       },
-      cases: { interpretation: "number" },
+      cases: { interpretation: "numeric" },
     },
   });
   dashboard.dataSources["outbreak-clock"] = {
@@ -280,7 +280,7 @@ test("dashboard transformation fields and typed filter operands fail actionably"
     csvText: "at,value,group\n02/05/2027,4,A\n",
     parsingMetadata: {
       at: { interpretation: "temporal", format: "DD/MM/YYYY" },
-      value: { interpretation: "number" },
+      value: { interpretation: "numeric" },
     },
   };
 
@@ -338,7 +338,7 @@ test("raw GeoJSON FeatureCollections join choropleths by the configured field", 
     csvText: "district,value\nGE-TB,7\n",
     parsingMetadata: {
       district: { interpretation: "geographic" },
-      value: { interpretation: "number" },
+      value: { interpretation: "numeric" },
     },
   };
   const geoData = {
