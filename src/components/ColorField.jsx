@@ -32,13 +32,19 @@ function ColorField({
   dataColorField,
   help,
   error,
-  ariaDescribedBy
+  invalid = false,
+  ariaDescribedBy,
+  allowTransparency = false,
+  transparent = false,
+  onTransparencyChange,
+  showContrast = false
 }) {
   const normalizedValue = normalizeHexColor(value, fallback);
   const [draft, setDraft] = React.useState(normalizedValue);
   const [message, setMessage] = React.useState("");
   const pickerActiveRef = React.useRef(false);
   const controlId = id || `settings-color-${safeId(label)}`;
+  const contrast = describeColorContrast(normalizedValue, { transparent });
   React.useEffect(() => {
     setDraft(normalizedValue);
   }, [normalizedValue]);
@@ -101,7 +107,7 @@ function ColorField({
     {
       className: "settings-color-field",
       "data-color-field": dataColorField,
-      "data-invalid": error ? "true" : void 0
+      "data-invalid": error || invalid ? "true" : void 0
     },
     /* @__PURE__ */ React.createElement("label", { htmlFor: controlId }, label),
     /* @__PURE__ */ React.createElement("div", { className: "settings-color-row" }, /* @__PURE__ */ React.createElement("label", { className: "settings-color-swatch", style: { backgroundColor: normalizedValue }, title: "Open color picker" }, /* @__PURE__ */ React.createElement(
@@ -118,7 +124,7 @@ function ColorField({
         id: controlId,
         "aria-label": label,
         "aria-describedby": ariaDescribedBy || void 0,
-        "aria-invalid": error ? "true" : void 0,
+        "aria-invalid": error || invalid ? "true" : void 0,
         value: draft,
         onChange: (event) => commitColor(event.target.value),
         onBlur: (event) => setDraft(normalizeHexColor(event.target.value, normalizedValue)),
@@ -135,6 +141,11 @@ function ColorField({
       },
       /* @__PURE__ */ React.createElement(PipetteIcon, null)
     )),
+    allowTransparency ? /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle settings-color-transparency" }, /* @__PURE__ */ React.createElement("input", {
+      type: "checkbox",
+      checked: transparent === true,
+      onChange: (event) => onTransparencyChange?.(event.target.checked)
+    }), "Transparent background") : null,
     showPresets ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "settings-color-palette", "aria-label": `${label} color presets` }, COLOR_GROUPS.map((group) => /* @__PURE__ */ React.createElement("div", { className: "settings-color-palette-group", key: group.label }, /* @__PURE__ */ React.createElement("small", null, group.label), /* @__PURE__ */ React.createElement("div", { className: "settings-color-preset-grid" }, group.colors.map((color) => /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -158,6 +169,7 @@ function ColorField({
       /* @__PURE__ */ React.createElement("span", { style: { background: `linear-gradient(90deg, ${map.colors.join(", ")})` } }),
       /* @__PURE__ */ React.createElement("small", null, map.label)
     )))) : null,
+    showContrast || allowTransparency ? /* @__PURE__ */ React.createElement("small", { role: "status", "aria-live": "polite", className: `settings-color-contrast settings-color-contrast-${contrast.level}` }, contrast.message) : null,
     message ? /* @__PURE__ */ React.createElement("small", null, message) : null,
     help ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-help` }, help) : null,
     error ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-error`, role: "alert" }, error) : null
@@ -242,9 +254,51 @@ function normalizeHexColor(value, fallback) {
   const color = String(value ?? "").trim();
   return HEX_COLOR_PATTERN.test(color) ? color.toUpperCase() : fallback;
 }
+function describeColorContrast(value, { transparent = false } = {}) {
+  if (transparent) {
+    return {
+      level: "contextual",
+      message: "Transparent background: contrast depends on the content behind the chart."
+    };
+  }
+  const color = normalizeHexColor(value, "#FFFFFF");
+  const darkRatio = contrastRatio(color, "#08224A");
+  const lightRatio = contrastRatio(color, "#FFFFFF");
+  if (darkRatio >= 4.5) {
+    return {
+      level: "high",
+      message: `High contrast with dark text (${darkRatio.toFixed(1)}:1).`
+    };
+  }
+  if (lightRatio >= 4.5) {
+    return {
+      level: "high",
+      message: `High contrast with light text (${lightRatio.toFixed(1)}:1).`
+    };
+  }
+  return {
+    level: "low",
+    message: `Low contrast with dark or light text (best is ${Math.max(darkRatio, lightRatio).toFixed(1)}:1).`
+  };
+}
+function contrastRatio(first, second) {
+  const lighter = Math.max(relativeLuminance(first), relativeLuminance(second));
+  const darker = Math.min(relativeLuminance(first), relativeLuminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+function relativeLuminance(value) {
+  const color = normalizeHexColor(value, "#000000");
+  const channels = [1, 3, 5].map((start) => Number.parseInt(color.slice(start, start + 2), 16) / 255).map((channel) => (
+    channel <= 0.04045
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4
+  ));
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
 function safeId(value) {
   return typeof value === "string" ? value.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase() : "color";
 }
 export {
-  ColorField as default
+  ColorField as default,
+  describeColorContrast
 };

@@ -8,7 +8,8 @@ function ChartPreview({
   rows = [],
   datasetProfile,
   timeContext,
-  renderContext
+  renderContext,
+  diagnosticNamespace = chart?.id
 } = {}) {
   let prepared;
   try {
@@ -23,14 +24,17 @@ function ChartPreview({
       PreviewState,
       {
         status: "invalid",
-        diagnostics: [{
+        diagnostics: buildPreviewDiagnostics([{
           message: error instanceof Error ? error.message : "The preview could not be prepared."
-        }]
+        }], { namespace: diagnosticNamespace })
       }
     );
   }
   if (prepared.status !== "ready") {
-    return /* @__PURE__ */ React.createElement(PreviewState, { status: prepared.status, diagnostics: prepared.diagnostics });
+    return /* @__PURE__ */ React.createElement(PreviewState, {
+      status: prepared.status,
+      diagnostics: buildPreviewDiagnostics(prepared.diagnostics, { namespace: diagnosticNamespace })
+    });
   }
   return /* @__PURE__ */ React.createElement("section", { className: "chart-authoring-preview chart-authoring-preview-ready", "aria-label": "Chart preview" }, /* @__PURE__ */ React.createElement(
     ChartView,
@@ -59,24 +63,55 @@ function PreviewState({ status, diagnostics }) {
       "li",
       {
         key: `${diagnostic.code ?? "diagnostic"}-${index}`,
-        "data-responsible-field": responsibleField(diagnostic)
+        id: diagnostic.id,
+        "data-responsible-field": diagnostic.fieldId ?? responsibleField(diagnostic)
       },
       boundedMessage(diagnostic.message)
     ))) : /* @__PURE__ */ React.createElement("p", null, "No renderer-ready marks are available for the selected roles and filters.")
   );
 }
+function buildPreviewDiagnostics(diagnostics, { namespace = "chart" } = {}) {
+  const safeNamespace = safeId(namespace || "chart");
+  if (!Array.isArray(diagnostics)) return [];
+  return diagnostics.filter(isRecord).slice(0, MAX_DIAGNOSTICS).map((diagnostic, index) => {
+    const fieldId = responsibleField(diagnostic);
+    const code = typeof diagnostic.code === "string" && diagnostic.code
+      ? diagnostic.code
+      : "diagnostic";
+    return {
+      ...diagnostic,
+      id: `chart-preview-${safeNamespace}-${safeId(fieldId)}-${safeId(code)}-${index}`,
+      fieldId,
+      message: boundedMessage(diagnostic.message)
+    };
+  });
+}
 function responsibleField(diagnostic) {
   if (typeof diagnostic.role === "string") return diagnostic.role;
   if (typeof diagnostic.field === "string") return diagnostic.field;
+  if (Array.isArray(diagnostic.path)) {
+    const known = ["measurements", "measurement", "observation", "category", "value", "filters", "duplicates", "map", "timeline", "target"];
+    const match = diagnostic.path.find((part) => known.includes(part));
+    if (match) return match;
+  }
   if (/filter/i.test(diagnostic.code ?? "")) return "filters";
   if (/duplicate/i.test(diagnostic.code ?? "")) return "duplicates";
   if (/map|geograph/i.test(diagnostic.code ?? "")) return "map";
   return "data";
+}
+function safeId(value) {
+  return typeof value === "string"
+    ? value.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
+    : "unknown";
+}
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function boundedMessage(value) {
   const message = typeof value === "string" && value.trim() ? value.trim() : "The selected data cannot be rendered.";
   return message.length <= MAX_MESSAGE_LENGTH ? message : `${message.slice(0, MAX_MESSAGE_LENGTH - 1)}\u2026`;
 }
 export {
-  ChartPreview as default
+  ChartPreview as default,
+  buildPreviewDiagnostics
 };

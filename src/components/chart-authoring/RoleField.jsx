@@ -3,7 +3,8 @@ import {
   FieldShell,
   GroupShell,
   fieldControlId,
-  fieldDescribedBy
+  fieldDescribedBy,
+  fieldHasError
 } from "./StandardField.jsx";
 function RoleField({
   field,
@@ -25,6 +26,7 @@ function RoleField({
         value: binding?.field ?? "",
         required: field.required === true,
         "aria-describedby": describedBy || void 0,
+        "aria-invalid": fieldHasError(field) ? "true" : void 0,
         onChange: (event) => onChange(
           event.target.value ? { ...binding ?? {}, field: event.target.value } : null
         )

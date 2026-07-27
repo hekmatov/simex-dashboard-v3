@@ -6,7 +6,12 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
-import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
+import {
+  createChartDraft,
+  normalizeChartInstance,
+  validateChartInstance,
+} from "../src/charting/config/chartConfigV3.js";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
@@ -46,11 +51,25 @@ const {
 const { default: RoleField } = await import(
   "../src/components/chart-authoring/RoleField.jsx"
 );
-const { default: StandardField } = await import(
+const {
+  default: StandardField,
+  filterForOperator,
+  updateStructuredFieldValue,
+} = await import(
   "../src/components/chart-authoring/StandardField.jsx"
 );
-const { default: ChartPreview } = await import(
+const {
+  default: ChartPreview,
+  buildPreviewDiagnostics,
+} = await import(
   "../src/components/chart-authoring/ChartPreview.jsx"
+);
+const {
+  default: ColorField,
+  describeColorContrast,
+} = await import("../src/components/ColorField.jsx");
+const { default: SchemaField } = await import(
+  "../src/components/chart-authoring/SchemaField.jsx"
 );
 
 const backgroundSection = {
@@ -367,6 +386,107 @@ test("filter controls select a source column and emit the curated filter contrac
   assert.doesNotMatch(populated, /\[object Object\]/);
 });
 
+test("structured presentation controls emit only validator-approved nested contracts", () => {
+  const cases = [
+    ["labels", {}, ["visible"], true, { visible: true }],
+    ["labels", { visible: true }, ["position"], "top", { visible: true, position: "top" }],
+    ["labels", { visible: true }, ["format"], "{value}", { visible: true, format: "{value}" }],
+    ["axes", {}, ["primary", "title"], "Capacity", { primary: { title: "Capacity" } }],
+    ["axes", { primary: { title: "Capacity" } }, ["secondary", "grid"], false, {
+      primary: { title: "Capacity" },
+      secondary: { grid: false },
+    }],
+    ["targets", {}, ["direction"], "increase-is-good", { direction: "increase-is-good" }],
+    ["targets", { direction: "neutral" }, ["ranges"], [50, 80, 100], {
+      direction: "neutral",
+      ranges: [50, 80, 100],
+    }],
+    ["map", {}, ["scale"], "continuous", { scale: "continuous" }],
+    ["map", { scale: "continuous" }, ["geoSource"], "regions", {
+      scale: "continuous",
+      geoSource: "regions",
+    }],
+    ["map", { scale: "continuous" }, ["joinField"], "region_id", {
+      scale: "continuous",
+      joinField: "region_id",
+    }],
+    ["timeline", {}, ["lanes"], ["Response", "Recovery"], {
+      lanes: ["Response", "Recovery"],
+    }],
+    ["timeline", { lanes: ["Response"] }, ["marker"], "diamond", {
+      lanes: ["Response"],
+      marker: "diamond",
+    }],
+  ];
+  const presentation = {};
+  for (const [control, current, path, value, expected] of cases) {
+    const next = updateStructuredFieldValue(control, current, path, value);
+    assert.deepEqual(next, expected, `${control}.${path.join(".")}`);
+    presentation[control] = next;
+  }
+  const chart = validLineChart({ presentation });
+  assert.doesNotThrow(() => validateChartInstance(chart, {
+    columnTypes: columnTypes(),
+  }));
+  assert.deepEqual(normalizeChartInstance(chart).presentation.labels, presentation.labels);
+});
+
+test("filter operator changes materialize exact operands and remove incompatible keys", () => {
+  const equals = filterForOperator({
+    field: "period",
+    operator: "range",
+    min: "May",
+    max: "June",
+  }, "equals");
+  const included = filterForOperator(equals, "in");
+  const range = filterForOperator({
+    field: "capacity",
+    operator: "equals",
+    value: 5,
+  }, "range");
+
+  assert.deepEqual(equals, {
+    field: "period",
+    operator: "equals",
+    value: "May",
+  });
+  assert.deepEqual(included, {
+    field: "period",
+    operator: "in",
+    values: ["May"],
+  });
+  assert.deepEqual(range, {
+    field: "capacity",
+    operator: "range",
+    min: 5,
+    max: 5,
+  });
+  for (const filter of [
+    equals,
+    included,
+    filterForOperator(included, "notIn"),
+    filterForOperator(equals, "notEquals"),
+    filterForOperator(equals, "contains"),
+    range,
+  ]) {
+    const chart = validLineChart({
+      transformations: { filters: [filter] },
+    });
+    assert.doesNotThrow(() => validateChartInstance(chart, {
+      columnTypes: columnTypes(),
+    }), filter.operator);
+    const allowed = {
+      equals: ["field", "operator", "value"],
+      notEquals: ["field", "operator", "value"],
+      contains: ["field", "operator", "value"],
+      in: ["field", "operator", "values"],
+      notIn: ["field", "operator", "values"],
+      range: ["field", "operator", "min", "max"],
+    }[filter.operator];
+    assert.deepEqual(Object.keys(filter), allowed);
+  }
+});
+
 test("generated fields associate labels, help, and errors with their control", () => {
   const html = render(React.createElement(GeneratedFormSection, {
     section: {
@@ -455,6 +575,179 @@ test("preview uses the shared chart renderer for ready data and bounds actionabl
   assert.ok(invalid.length < 1600);
 });
 
+test("preview diagnostics are stable and programmatically describe the responsible field", () => {
+  const rows = [{ period: "May", capacity: 4 }];
+  const chart = createChartDraft("bar", {
+    id: "diagnostic-preview",
+    title: "Invalid chart",
+    sourceId: "capacity-data",
+  });
+  const datasetProfile = profileDataset(rows);
+  const prepared = prepareChartData({ chart, rows, datasetProfile });
+  const diagnostics = buildPreviewDiagnostics(prepared.diagnostics, {
+    namespace: chart.id,
+  });
+  const html = render(React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(GeneratedFormSection, {
+      section: {
+        id: "data",
+        label: "Data",
+        fields: [{
+          id: "measurements",
+          label: "Measurements",
+          control: "role",
+          path: ["roles", "measurements"],
+          value: [],
+          multiple: true,
+          min: 1,
+          max: null,
+          required: true,
+          accepts: ["number"],
+        }],
+      },
+      columns: datasetProfile.columns,
+      diagnostics: prepared.diagnostics,
+      diagnosticNamespace: chart.id,
+      onChange() {},
+    }),
+    React.createElement(ChartPreview, {
+      chart,
+      rows,
+      datasetProfile,
+      diagnosticNamespace: chart.id,
+    }),
+  ));
+  const measurement = diagnostics.find(({ fieldId }) => fieldId === "measurements");
+
+  assert.ok(measurement);
+  assert.match(html, new RegExp(`id="${measurement.id}"`));
+  assert.match(html, new RegExp(`aria-describedby="${measurement.id}"`));
+  assert.match(html, /data-field-id="measurements"[^>]*aria-invalid="true"/);
+  assert.equal((html.match(new RegExp(`id="${measurement.id}"`, "g")) ?? []).length, 1);
+});
+
+test("collection controls expose overflow, custom priority, and stabilization as normalized emissions", () => {
+  let settings = normalizeCollectionSettings({
+    layout: "fixed",
+    ranking: { mode: "fixed" },
+  });
+  const updates = [
+    [["overflow"], "limit"],
+    [["ranking"], {
+      mode: "priority",
+      expression: {
+        operator: "weightedSum",
+        terms: [{ metric: "riskScore", weight: 1 }],
+      },
+      stabilize: false,
+    }],
+    [["ranking", "stabilize"], true],
+  ];
+  for (const [path, value] of updates) {
+    settings = updateCollectionSettings(settings, path, value);
+    assert.deepEqual(settings, normalizeCollectionSettings(settings));
+    assert.equal("rankingMode" in settings, false);
+    assert.equal("rotationInterval" in settings, false);
+  }
+  assert.equal(settings.overflow, "limit");
+  assert.equal(settings.ranking.stabilize, true);
+  assert.deepEqual(settings.ranking.expression, {
+    operator: "weightedSum",
+    terms: [{ metric: "riskScore", weight: 1 }],
+  });
+
+  const html = render(React.createElement(CollectionSettingsField, {
+    field: { id: "collection", label: "Collection display" },
+    value: settings,
+    onChange() {},
+  }));
+  assert.match(html, /Overflow behavior/);
+  assert.match(html, /Custom priority/);
+  assert.match(html, /Keep positions stable for ties/);
+});
+
+test("background colors support valid transparency and accessible contrast guidance", () => {
+  assert.match(describeColorContrast("#FFFFFF").message, /High contrast with dark text/);
+  assert.match(describeColorContrast("#777777").message, /Low contrast/);
+  const transparent = render(React.createElement(ColorField, {
+    id: "background-color",
+    label: "Background",
+    value: "#FFFFFF",
+    onChange() {},
+    allowTransparency: true,
+    transparent: true,
+    onTransparencyChange() {},
+  }));
+  const high = render(React.createElement(ColorField, {
+    id: "background-high",
+    label: "Background",
+    value: "#FFFFFF",
+    onChange() {},
+    showContrast: true,
+  }));
+  const low = render(React.createElement(ColorField, {
+    id: "background-low",
+    label: "Background",
+    value: "#777777",
+    onChange() {},
+    showContrast: true,
+  }));
+
+  assert.match(transparent, /Transparent background/);
+  assert.match(transparent, /type="checkbox"[^>]*checked/);
+  assert.match(high, /role="status"[^>]*aria-live="polite"[^>]*>High contrast/);
+  assert.match(low, /role="status"[^>]*aria-live="polite"[^>]*>Low contrast/);
+});
+
+test("background transparency emits the validator-approved object while series remains a color scalar", () => {
+  const calls = [];
+  const chart = validLineChart({
+    presentation: {
+      background: { color: "#FFFFFF", transparent: false },
+    },
+  });
+  const background = SchemaField({
+    field: backgroundSection.fields[0],
+    value: "#FFFFFF",
+    chart,
+    onChange(path, value) {
+      calls.push({ path, value });
+    },
+  });
+  background.props.onTransparencyChange(true);
+  const series = SchemaField({
+    field: {
+      id: "seriesColor",
+      label: "Series color",
+      control: "color",
+      path: ["presentation", "advanced", "seriesColor"],
+      value: "#043BCB",
+    },
+    value: "#043BCB",
+    chart,
+    onChange(path, value) {
+      calls.push({ path, value });
+    },
+  });
+  series.props.onChange("#36BDEB");
+
+  assert.deepEqual(calls[0], {
+    path: ["presentation", "background"],
+    value: { color: "#FFFFFF", transparent: true },
+  });
+  assert.deepEqual(calls[1], {
+    path: ["presentation", "advanced", "seriesColor"],
+    value: "#36BDEB",
+  });
+  const withBackground = structuredClone(chart);
+  withBackground.presentation.background = calls[0].value;
+  assert.doesNotThrow(() => validateChartInstance(withBackground, {
+    columnTypes: columnTypes(),
+  }));
+});
+
 test("hostile or incomplete authoring props fail closed without rendering raw objects", () => {
   const picker = render(React.createElement(ChartTypePicker, {
     query: { toString() { throw new Error("must not coerce"); } },
@@ -477,4 +770,30 @@ function findElement(node, predicate) {
     if (found) return found;
   }
   return null;
+}
+
+function validLineChart(overrides = {}) {
+  return createChartDraft("line", {
+    id: "contract-line",
+    title: "Contract line",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "capacity", axis: "primary" }],
+      observation: { field: "period", interpretation: "category" },
+    },
+    ...overrides,
+    transformations: {
+      ...(overrides.transformations ?? {}),
+    },
+    presentation: {
+      ...(overrides.presentation ?? {}),
+    },
+  });
+}
+
+function columnTypes() {
+  return new Map([
+    ["capacity", { name: "capacity", type: "numeric" }],
+    ["period", { name: "period", type: "category" }],
+  ]);
 }
