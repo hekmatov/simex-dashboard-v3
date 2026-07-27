@@ -333,7 +333,8 @@ test("repeated Gauge and Bullet charts dispatch through one accessible collectio
     assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
     assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 1);
     assert.equal((html.match(/class="chart-target-collection-item"/g) ?? []).length, 2);
-    assert.equal((html.match(/role="img"/g) ?? []).length, 2);
+    assert.equal((html.match(/role="group"/g) ?? []).length, 2);
+    assert.doesNotMatch(html, /role="img"/);
     assert.match(html, /aria-labelledby="[^"]+"/);
     assert.match(html, /aria-describedby="[^"]+"/);
     assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);

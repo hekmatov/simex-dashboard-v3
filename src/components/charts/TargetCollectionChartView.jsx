@@ -56,7 +56,7 @@ function TargetCollectionItem({ item }) {
   );
   return React.createElement("article", {
     className: "chart-target-collection-item",
-    role: "img",
+    role: "group",
     "aria-labelledby": labelId,
     "aria-describedby": summaryId,
     ...(item.temporalStatus

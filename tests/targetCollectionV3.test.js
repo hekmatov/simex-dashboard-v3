@@ -436,6 +436,8 @@ test("the target collection view renders detached model identity and semantic su
   assert.match(html, /data-collection-entity-id="target:&quot;Clinic B&quot;"/);
   assert.match(html, /Clinic A: actual 72; target 80; observed 2027-05-02/);
   assert.match(html, /Clinic B: actual 55; target 70; observed 2027-05-02/);
+  assert.equal((html.match(/role="group"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /role="img"/);
   assert.equal((html.match(/class="chart-view-title"/g) ?? []).length, 1);
   assert.equal((html.match(/Source: Operations register/g) ?? []).length, 1);
   assert.deepEqual(model, modelBefore);

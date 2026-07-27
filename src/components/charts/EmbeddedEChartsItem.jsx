@@ -7,39 +7,66 @@ const MAX_RUNTIME_ERROR_LENGTH = 240;
 export default function EmbeddedEChartsItem({
   model,
   runtimeError: suppliedRuntimeError = null,
+  createLifecycle = createEmbeddedEChartsLifecycle,
 }) {
   const hostRef = React.useRef(null);
   const lifecycleRef = React.useRef(null);
+  const lifecycleFactoryRef = React.useRef(null);
+  const currentModelRef = React.useRef(model);
+  const failedModelRef = React.useRef(null);
   const [runtimeError, setRuntimeError] = React.useState(null);
+  const modelError = invalidModelError(model);
   const activeError = suppliedRuntimeError
-    ?? invalidModelError(model)
+    ?? modelError
     ?? runtimeError;
+  currentModelRef.current = model;
+
+  React.useEffect(() => {
+    if (
+      runtimeError
+      && suppliedRuntimeError === null
+      && modelError === null
+      && failedModelRef.current !== model
+    ) {
+      failedModelRef.current = null;
+      setRuntimeError(null);
+    }
+  }, [model, modelError, runtimeError, suppliedRuntimeError]);
 
   React.useEffect(() => {
     const host = hostRef.current;
     if (
       !host
+      || activeError
       || model?.kind !== "echarts"
       || typeof window === "undefined"
       || typeof document === "undefined"
     ) {
-      return undefined;
+      disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef);
+      return;
     }
-    const lifecycle = createEmbeddedEChartsLifecycle({
-      onError: setRuntimeError,
-    });
-    lifecycleRef.current = lifecycle;
-    lifecycle.mount(host);
-    return () => {
-      lifecycle.dispose();
-      if (lifecycleRef.current === lifecycle) lifecycleRef.current = null;
-    };
-  }, []);
 
-  React.useEffect(() => {
-    if (!lifecycleRef.current || model?.kind !== "echarts") return;
+    if (
+      !lifecycleRef.current
+      || lifecycleFactoryRef.current !== createLifecycle
+    ) {
+      disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef);
+      const lifecycle = createLifecycle({
+        onError(error) {
+          failedModelRef.current = currentModelRef.current;
+          setRuntimeError(boundedEmbeddedError(error));
+        },
+      });
+      lifecycleRef.current = lifecycle;
+      lifecycleFactoryRef.current = createLifecycle;
+      lifecycle.mount(host);
+    }
     lifecycleRef.current.update(model);
-  }, [model]);
+  }, [activeError, createLifecycle, model]);
+
+  React.useEffect(() => () => {
+    disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef);
+  }, []);
 
   if (activeError) {
     return React.createElement("p", {
@@ -54,6 +81,12 @@ export default function EmbeddedEChartsItem({
     className: "chart-embedded-echarts-host",
     "aria-hidden": true,
   });
+}
+
+function disposeCurrentLifecycle(lifecycleRef, lifecycleFactoryRef) {
+  lifecycleRef.current?.dispose();
+  lifecycleRef.current = null;
+  lifecycleFactoryRef.current = null;
 }
 
 export function createEmbeddedEChartsLifecycle(options = {}) {
