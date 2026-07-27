@@ -15,6 +15,15 @@
 - Do not read or write OneDrive.
 - Do not merge, push, deploy, or update a Cloudflare branch.
 - Use the chart schema registry as the only chart-type capability list.
+- Chart-local time synchronization authors membership only
+  (`interaction.timeSync.groupId`). Matching defaults and overrides belong to
+  dashboard synchronization groups and return through a separate group-update
+  interface.
+- Delta comparison controls derive from `schema.comparison`; no chart-type list
+  decides when fixed-time, matching-policy, or tolerance controls appear.
+- Collection authoring emits only the fully normalized nested Collection
+  Display contract from
+  `2026-07-27-chart-v3-contract-integration-amendment.md`.
 - Wizard order is Chart type → Data source → Data roles → Style and layout.
 - All four tabs remain clickable regardless of completion state.
 - Incomplete destinations show prerequisites; they do not silently create data mappings.
@@ -45,7 +54,12 @@
 - `src/components/chart-authoring/RoleField.jsx` — single and multiple role assignment.
 - `src/components/chart-authoring/StandardField.jsx` — text, number, select, toggle, and range controls.
 - `src/components/chart-authoring/CollectionSettingsField.jsx` — collection layout and ranking controls.
-- `src/components/chart-authoring/TimeSyncSettingsField.jsx` — synchronization-group and matching controls.
+- `src/components/chart-authoring/TimeSyncSettingsField.jsx` — chart
+  membership plus dashboard group/member matching controls through separate
+  change callbacks.
+- `src/components/chart-authoring/DeltaComparisonField.jsx` —
+  schema-derived previous/fixed baseline, matching policy, fixed time, and
+  tolerance controls.
 - `src/components/chart-authoring/GeneratedFormSection.jsx` — shared section renderer.
 - `src/components/chart-authoring/ChartPreview.jsx` — final prepared-data preview.
 - `src/components/chart-authoring/ChartTypePicker.jsx` — purpose-grouped searchable cards.
@@ -91,6 +105,7 @@ export function buildWizardFormModel({
   draft,
   profile,
   prepared,
+  timeSyncGroups,
 }): {
   steps: Array<{
     id: "type" | "source" | "roles" | "style",
@@ -105,6 +120,7 @@ export function buildEditorFormModel({
   chart,
   profile,
   prepared,
+  timeSyncGroups,
 }): {
   sections: Array<{
     id: string,
@@ -116,6 +132,21 @@ export function buildEditorFormModel({
 };
 ```
 
+Wizard and editor save interfaces produce:
+
+```js
+{
+  chart,
+  source?,
+  timeSyncGroups?,
+}
+```
+
+`chart.interaction.timeSync` contains only the chosen `groupId`.
+`timeSyncGroups` contains any validated group default/member override changes.
+The form never mirrors a matching policy into transformations or chart-local
+interaction state.
+
 `src/charting/forms/wizardDraft.js` produces:
 
 ```js
@@ -125,6 +156,7 @@ export function reduceWizardState(state: WizardState, action: WizardAction): Wiz
 export function finalizeWizardDraft(state: WizardState): {
   chart: ChartInstanceV3,
   source?: DataSourceV3,
+  timeSyncGroups?: TimeSyncGroupV3[],
 };
 ```
 
@@ -191,6 +223,65 @@ test("every wizard tab is directly navigable", () => {
     /Choose a chart type/,
   );
 });
+
+test("Delta comparison fields come from the schema descriptor", () => {
+  const model = buildEditorFormModel({
+    chart: deltaDraft,
+    profile,
+    prepared,
+    timeSyncGroups,
+  });
+  const comparison = model.sections
+    .flatMap(({ fields }) => fields)
+    .find(({ id }) => id === "deltaComparison");
+  assert.equal(comparison.control, "deltaComparison");
+  assert.deepEqual(
+    comparison.modes,
+    getChartSchema("deltaCard").comparison.modes,
+  );
+});
+
+test("time matching edits target a group member by semantic identity", () => {
+  const model = buildEditorFormModel({
+    chart: synchronizedLine,
+    profile,
+    prepared,
+    timeSyncGroups,
+  });
+  const timeSync = model.sections
+    .flatMap(({ fields }) => fields)
+    .find(({ id }) => id === "timeSync");
+  assert.deepEqual(
+    timeSync.chartPath,
+    ["interaction", "timeSync", "groupId"],
+  );
+  assert.deepEqual(
+    timeSync.groupTarget,
+    {
+      groupId: "exercise-clock",
+      chartId: synchronizedLine.id,
+      property: "matching",
+    },
+  );
+});
+
+test("a group-member matching edit is immutable and validates the whole group collection", () => {
+  const next = reduceWizardState(synchronizedDraftState, {
+    type: "updateTimeSyncMember",
+    target: {
+      groupId: "exercise-clock",
+      chartId: synchronizedLine.id,
+      property: "matching",
+    },
+    value: { policy: "nearest", toleranceMs: 3600000 },
+  });
+  assert.notEqual(next.timeSyncGroups, synchronizedDraftState.timeSyncGroups);
+  assert.doesNotThrow(() => validateTimeSyncGroups(next.timeSyncGroups, {
+    charts: next.charts,
+    loadedData,
+    profiles,
+  }));
+});
 ```
 
 - [ ] **Step 2: Run the form tests and confirm missing-module failures**
@@ -206,18 +297,34 @@ Expected: FAIL because the form modules are absent.
 - [ ] **Step 3: Implement pure derivation and draft transitions**
 
 ```js
-export function buildEditorFormModel({ chart, profile, prepared }) {
+export function buildEditorFormModel({
+  chart,
+  profile,
+  prepared,
+  timeSyncGroups,
+}) {
   const schema = getChartSchema(chart.typeId);
   return {
     sections: schema.form.sections
-      .map((section) => materializeSection(section, { chart, profile, prepared }))
+      .map((section) => materializeSection(section, {
+        chart,
+        profile,
+        prepared,
+        timeSyncGroups,
+      }))
       .filter(({ fields }) => fields.length > 0),
     valid: validateChartInstance(chart, { profile, prepared }).length === 0,
   };
 }
 ```
 
-The reducer handles type selection, source selection, role updates, presentation updates, direct navigation, source-clear confirmation state, close confirmation state, and finalization. It must not contain type-specific `if` branches.
+The reducer handles type selection, source selection, role updates,
+presentation updates, direct navigation, source-clear confirmation state,
+close confirmation state, and finalization. Group-member edits use semantic
+`{ groupId, chartId, property }` targets: the reducer locates the array member
+by `chartId`, updates it immutably, and validates the complete proposed group
+collection before retaining it. It must not contain type-specific `if`
+branches.
 
 - [ ] **Step 4: Run form, schema, and configuration tests**
 
@@ -389,6 +496,7 @@ git commit -m "feat: support concise manual chart data"
 - Create: `src/components/chart-authoring/StandardField.jsx`
 - Create: `src/components/chart-authoring/CollectionSettingsField.jsx`
 - Create: `src/components/chart-authoring/TimeSyncSettingsField.jsx`
+- Create: `src/components/chart-authoring/DeltaComparisonField.jsx`
 - Create: `src/components/chart-authoring/GeneratedFormSection.jsx`
 - Create: `src/components/chart-authoring/ChartPreview.jsx`
 - Create: `src/components/chart-authoring/ChartTypePicker.jsx`
@@ -419,6 +527,24 @@ test("background uses the same color field contract as series color", () => {
   const html = renderGeneratedSection(backgroundSection);
   assert.match(html, /data-color-field="background"/);
 });
+
+test("Delta comparison shows only controls required by its mode and policy", () => {
+  const fixedNearest = renderGeneratedSection(deltaFixedNearestSection);
+  assert.match(fixedNearest, /Comparison time/);
+  assert.match(fixedNearest, /Matching policy/);
+  assert.match(fixedNearest, /Tolerance/);
+  assert.doesNotMatch(
+    renderGeneratedSection(deltaPreviousSection),
+    /Tolerance/,
+  );
+});
+
+test("collection controls emit only the normalized nested contract", () => {
+  const next = captureCollectionChange(priorityCarouselField);
+  assert.deepEqual(next, normalizeCollectionSettings(next));
+  assert.equal("rankingMode" in next, false);
+  assert.equal("rotationInterval" in next, false);
+});
 ```
 
 - [ ] **Step 2: Run the component test**
@@ -440,9 +566,17 @@ export default function SchemaField({ field, value, onChange }) {
   if (field.control === "color") return <ColorField {...sharedProps} />;
   if (field.control === "collection") return <CollectionSettingsField {...sharedProps} />;
   if (field.control === "timeSync") return <TimeSyncSettingsField {...sharedProps} />;
+  if (field.control === "deltaComparison") return <DeltaComparisonField {...sharedProps} />;
   return <StandardField {...sharedProps} />;
 }
 ```
+
+`TimeSyncSettingsField` receives `onMembershipChange(groupId)` and
+`onGroupsChange(nextGroups)` separately. It validates the complete proposed
+group collection before emitting it. `DeltaComparisonField` receives the
+schema descriptor and conditionally shows fixed time, matching policy, and
+nearest tolerance; interpolation remains available only when the profile and
+explicit permission contract allow it.
 
 `ChartPreview` calls the same `prepareChartData` and `ChartView` used by the final dashboard. Provide a bounded empty or invalid state with diagnostics beside the responsible field.
 
@@ -477,8 +611,10 @@ git commit -m "feat: render curated schema controls"
 
 **Interfaces:**
 
-- Consumes: `{ open, dataSources, loadedData, onClose, onCreate }`
-- Produces: `{ chart, source? }` only after version-3 validation succeeds
+- Consumes:
+  `{ open, dataSources, loadedData, timeSyncGroups, onClose, onCreate }`
+- Produces: `{ chart, source?, timeSyncGroups? }` only after chart and proposed
+  synchronization-group validation succeeds
 
 - [ ] **Step 1: Add failing SSR and state assertions for the approved workflow**
 
@@ -493,6 +629,18 @@ test("wizard exposes four button tabs in the approved order", () => {
 test("duplicate controls are absent until prepared data reports duplicates", () => {
   assert.doesNotMatch(renderRoles({ duplicateGroupCount: 0 }), /Duplicate observations/);
   assert.match(renderRoles({ duplicateGroupCount: 2 }), /Duplicate observations/);
+});
+
+test("wizard finalization keeps matching in the group member only", () => {
+  const result = finalizeWizardDraft(synchronizedDraftState);
+  assert.deepEqual(result.chart.interaction.timeSync, {
+    groupId: "exercise-clock",
+  });
+  assert.equal(
+    result.timeSyncGroups[0].members[0].matching.policy,
+    "nearest",
+  );
+  assert.equal("temporalMatch" in result.chart.transformations, false);
 });
 ```
 
@@ -518,7 +666,7 @@ Expected: FAIL for missing wizard components.
 </nav>
 ```
 
-Step 1 has no visual customization. Step 2 shows source profile examples and warnings. Step 3 renders roles with measurements first for axis charts. Step 4 shows `ChartPreview` beside essential and Advanced presentation controls. Close opens `Discard chart?` with `Discard` and `Continue editing`.
+Step 1 has no visual customization. Step 2 shows source profile examples and warnings. Step 3 renders roles with measurements first for axis charts and schema-derived Delta comparison controls where applicable. Step 4 shows `ChartPreview` beside essential and Advanced presentation controls. Close opens `Discard chart?` with `Discard` and `Continue editing`. Finalization normalizes the chart instance and returns proposed synchronization-group changes separately.
 
 - [ ] **Step 4: Run wizard, form, manual-data, and pipeline tests**
 
@@ -551,8 +699,11 @@ git commit -m "feat: add schema-generated chart wizard"
 
 **Interfaces:**
 
-- Consumes: saved chart plus one editable draft
-- Produces: `onSave(validatedChart)`, `onReset()`, `onCancel()`, and contextual sections
+- Consumes: saved chart, saved synchronization groups, and isolated editable
+  drafts for each
+- Produces:
+  `onSave({ chart: validatedChart, timeSyncGroups? })`, `onReset()`,
+  `onCancel()`, and contextual sections
 
 - [ ] **Step 1: Add failing contextual-tab and action tests**
 
@@ -587,11 +738,25 @@ Expected: FAIL because the editor components are absent.
 - [ ] **Step 3: Implement editor sections, draft isolation, reset, and conversion**
 
 ```jsx
-export default function ChartEditorV3({ chart, ...callbacks }) {
+export default function ChartEditorV3({ chart, timeSyncGroups, ...callbacks }) {
   const [draft, setDraft] = React.useState(() => structuredClone(chart));
-  const model = buildEditorFormModel({ chart: draft, profile: callbacks.profile, prepared: callbacks.prepared });
+  const [groupDraft, setGroupDraft] = React.useState(
+    () => structuredClone(timeSyncGroups),
+  );
+  const model = buildEditorFormModel({
+    chart: draft,
+    profile: callbacks.profile,
+    prepared: callbacks.prepared,
+    timeSyncGroups: groupDraft,
+  });
   return (
-    <form onSubmit={(event) => { event.preventDefault(); callbacks.onSave(draft); }}>
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      callbacks.onSave({
+        chart: normalizeChartInstance(draft),
+        timeSyncGroups: groupDraft,
+      });
+    }}>
       <ContextualTabs sections={model.sections} />
       <ChartPreview chart={draft} {...callbacks.previewProps} />
       <EditSessionActions valid={model.valid} onReset={callbacks.onReset} />
@@ -600,7 +765,8 @@ export default function ChartEditorV3({ chart, ...callbacks }) {
 }
 ```
 
-Reset restores the most recently saved chart, not schema defaults. Conversion removal is confirmed before application.
+Reset restores the most recently saved chart and synchronization groups, not
+schema defaults. Conversion removal is confirmed before application.
 
 - [ ] **Step 4: Run editor, conversion, and full unit tests**
 
