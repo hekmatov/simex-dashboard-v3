@@ -27,7 +27,6 @@ const PRESENTATION_SECTIONS = Object.freeze({
   advanced: "advanced",
 });
 
-const CONVERSION_OPTION_KEYS = new Set(["cancelled", "roles"]);
 const DANGEROUS_PROPERTY_KEYS = new Set([
   "__proto__",
   "prototype",
@@ -38,7 +37,11 @@ const DANGEROUS_PROPERTY_KEYS = new Set([
  * Describe which target roles can be retained and which settings will be
  * removed before any conversion is applied.
  */
-export function planChartConversion(chart, targetTypeId) {
+export function planChartConversion(
+  chart,
+  targetTypeId,
+  roleAssignments = undefined,
+) {
   const snapshot = clonePlainData(chart, "Chart");
   if (!isRecord(snapshot)) {
     throw new TypeError("Chart must be a plain object.");
@@ -47,7 +50,17 @@ export function planChartConversion(chart, targetTypeId) {
   const targetId = requiredString(targetTypeId, "Target chart type");
   const source = getChartSchema(sourceTypeId);
   const target = getChartSchema(targetId);
-  const roles = retainedRoles(snapshot.roles, target);
+  const roles = preservedRoles(snapshot.roles, target);
+  const effectiveRoles = roleAssignments === undefined
+    ? roles
+    : mergeTargetRoles(
+        roles,
+        cloneRoleAssignments(roleAssignments),
+        target,
+      );
+  if (effectiveRoles === null) {
+    throw new Error("Role assignments include a role not declared by the target chart.");
+  }
 
   return {
     kind: sourceTypeId === targetId || source.conversions.includes(targetId)
@@ -55,23 +68,30 @@ export function planChartConversion(chart, targetTypeId) {
       : "remap",
     sourceTypeId,
     targetTypeId: targetId,
-    retainedRoles: clonePlainData(roles, "Retained roles"),
+    preservedRoles: clonePlainData(roles, "Preserved roles"),
     requiredRoles: target.roles
       .filter((role) => (
-        role.min > assignmentCount(roles[role.id], role)
+        role.min > assignmentCount(effectiveRoles[role.id], role)
+        || !assignmentCompatible(effectiveRoles[role.id], role)
       ))
       .map((role) => clonePlainData(role, `Target role "${role.id}"`)),
-    removedSettings: removedSettings(snapshot, target, roles),
+    removedSettings: removedSettings(
+      snapshot,
+      target,
+      roles,
+      effectiveRoles,
+    ),
   };
 }
 
 /**
- * Apply a planned conversion atomically. Cancellation or an invalid target
- * configuration returns the exact original chart reference.
+ * Apply a planned conversion atomically. A null role-assignment sentinel
+ * means the author canceled; cancellation or invalid target configuration
+ * returns the exact original chart reference.
  */
-export function applyChartConversion(chart, targetTypeId, options = {}) {
-  const optionSnapshot = cloneConversionOptions(options);
-  if (optionSnapshot.cancelled === true) return chart;
+export function applyChartConversion(chart, targetTypeId, roleAssignments = {}) {
+  if (roleAssignments === null) return chart;
+  const assignmentSnapshot = cloneRoleAssignments(roleAssignments);
 
   const snapshot = clonePlainData(chart, "Chart");
   if (!isRecord(snapshot)) {
@@ -82,8 +102,8 @@ export function applyChartConversion(chart, targetTypeId, options = {}) {
   getChartSchema(sourceTypeId);
   const target = getChartSchema(targetId);
   const roles = mergeTargetRoles(
-    retainedRoles(snapshot.roles, target),
-    optionSnapshot.roles,
+    preservedRoles(snapshot.roles, target),
+    assignmentSnapshot,
     target,
   );
   if (roles === null || !requiredRolesComplete(roles, target)) return chart;
@@ -107,26 +127,15 @@ export function applyChartConversion(chart, targetTypeId, options = {}) {
   }
 }
 
-function cloneConversionOptions(options) {
-  const snapshot = clonePlainData(options, "Conversion options");
+function cloneRoleAssignments(roleAssignments) {
+  const snapshot = clonePlainData(roleAssignments, "Role assignments");
   if (!isRecord(snapshot)) {
-    throw new TypeError("Conversion options must be a plain object.");
-  }
-  for (const key of Object.keys(snapshot)) {
-    if (!CONVERSION_OPTION_KEYS.has(key)) {
-      throw new Error(`Unknown conversion option "${key}".`);
-    }
-  }
-  if (
-    Object.hasOwn(snapshot, "cancelled")
-    && typeof snapshot.cancelled !== "boolean"
-  ) {
-    throw new TypeError("Conversion options cancelled must be a boolean.");
+    throw new TypeError("Role assignments must be a plain object.");
   }
   return snapshot;
 }
 
-function retainedRoles(sourceRoles, target) {
+function preservedRoles(sourceRoles, target) {
   if (!isRecord(sourceRoles)) return {};
   const retained = {};
   for (const role of target.roles) {
@@ -196,11 +205,11 @@ function bindingCompatible(binding, role) {
   return role.accepts.includes("any") || role.accepts.includes(interpretation);
 }
 
-function removedSettings(chart, target, retained) {
+function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
   const removed = [];
   const targetRoleIds = new Set(target.roles.map(({ id }) => id));
   for (const roleId of Object.keys(isRecord(chart.roles) ? chart.roles : {})) {
-    if (!targetRoleIds.has(roleId) || !Object.hasOwn(retained, roleId)) {
+    if (!targetRoleIds.has(roleId) || !Object.hasOwn(preserved, roleId)) {
       removed.push(setting(`roles.${roleId}`, "Role is not valid for the target chart."));
     }
   }
@@ -257,18 +266,21 @@ function removedSettings(chart, target, retained) {
   if (
     interaction.timeSync !== null
     && interaction.timeSync !== undefined
-    && !target.capabilities.timeSync
+    && (
+      !target.capabilities.timeSync
+      || !hasTemporalAssignment(target, effectiveRoles)
+    )
   ) {
     removed.push(setting(
       "interaction.timeSync",
-      "Time synchronization is not supported by the target chart.",
+      "Time synchronization cannot be preserved without a compatible temporal role.",
     ));
   }
   return removed;
 }
 
-function setting(path, reason) {
-  return { path, reason };
+function setting(path, label) {
+  return { path, label };
 }
 
 function meaningful(value, fallback) {

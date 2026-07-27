@@ -94,6 +94,8 @@ test("line to area preserves compatible roles and title alignment", () => {
   const plan = planChartConversion(chart, "area");
 
   assert.equal(plan.kind, "compatible");
+  assert.deepEqual(plan.preservedRoles, chart.roles);
+  assert.equal("retainedRoles" in plan, false);
   assert.deepEqual(plan.requiredRoles, []);
 
   const converted = applyChartConversion(chart, "area", {});
@@ -121,19 +123,22 @@ test("line to pie requires category and value remapping and reports removed sett
   assert.ok(plan.removedSettings.some(
     ({ path }) => path === "interaction.zoom",
   ));
+  assert.ok(plan.removedSettings.every((setting) => (
+    typeof setting.path === "string"
+    && typeof setting.label === "string"
+    && !Object.hasOwn(setting, "reason")
+  )));
 });
 
 test("guided remapping produces a valid normalized target without mutating the source", () => {
   const chart = lineChart();
   const before = structuredClone(chart);
   const converted = applyChartConversion(chart, "pie", {
-    roles: {
-      category: {
-        field: "reportedAt",
-        interpretation: "category",
-      },
-      value: { field: "value" },
+    category: {
+      field: "reportedAt",
+      interpretation: "category",
     },
+    value: { field: "value" },
   });
 
   assert.notEqual(converted, chart);
@@ -164,14 +169,12 @@ test("a schema-declared compatible conversion strips target-inapplicable collect
   ));
 
   const converted = applyChartConversion(chart, "deltaCard", {
-    roles: {
-      measurement: { field: "value" },
-      entity: { field: "region" },
-      time: {
-        field: "reportedAt",
-        interpretation: "temporal",
-        format: "YYYY-MM-DD",
-      },
+    measurement: { field: "value" },
+    entity: { field: "region" },
+    time: {
+      field: "reportedAt",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
     },
   });
 
@@ -201,15 +204,11 @@ test("incomplete and invalid target roles fail closed with original identity", (
   const before = structuredClone(chart);
 
   const incomplete = applyChartConversion(chart, "pie", {
-    roles: {
-      category: { field: "reportedAt", interpretation: "category" },
-    },
+    category: { field: "reportedAt", interpretation: "category" },
   });
   const invalid = applyChartConversion(chart, "pie", {
-    roles: {
-      category: { field: "reportedAt", interpretation: "category" },
-      value: { field: "value", interpretation: "category" },
-    },
+    category: { field: "reportedAt", interpretation: "category" },
+    value: { field: "value", interpretation: "category" },
   });
 
   assert.equal(incomplete, chart);
@@ -217,17 +216,21 @@ test("incomplete and invalid target roles fail closed with original identity", (
   assert.deepEqual(chart, before);
 });
 
+test("conversion planning keeps incompatible guided bindings in required roles", () => {
+  const chart = lineChart();
+  const plan = planChartConversion(chart, "pie", {
+    category: { field: "reportedAt", interpretation: "category" },
+    value: { field: "value", interpretation: "category" },
+  });
+
+  assert.deepEqual(plan.requiredRoles.map(({ id }) => id), ["value"]);
+});
+
 test("canceling a conversion returns the exact unchanged chart", () => {
   const chart = lineChart();
   const before = structuredClone(chart);
 
-  const result = applyChartConversion(chart, "pie", {
-    cancelled: true,
-    roles: {
-      category: { field: "reportedAt", interpretation: "category" },
-      value: { field: "value" },
-    },
-  });
+  const result = applyChartConversion(chart, "pie", null);
 
   assert.equal(result, chart);
   assert.deepEqual(chart, before);
@@ -237,11 +240,9 @@ test("target role assignments reject undeclared roles without partial applicatio
   const chart = lineChart();
 
   const result = applyChartConversion(chart, "pie", {
-    roles: {
-      category: { field: "reportedAt", interpretation: "category" },
-      value: { field: "value" },
-      cluster: { field: "region" },
-    },
+    category: { field: "reportedAt", interpretation: "category" },
+    value: { field: "value" },
+    cluster: { field: "region" },
   });
 
   assert.equal(result, chart);
@@ -256,6 +257,47 @@ test("conversion planning derives transform removals from target schema capabili
   assert.ok(removedPaths.includes("transformations.grouping"));
   assert.ok(removedPaths.includes("presentation.axes"));
   assert.ok(removedPaths.includes("interaction.zoom"));
+});
+
+test("line to KPI reports and applies time-sync removal when no temporal role remains", () => {
+  const chart = lineChart();
+  const plan = planChartConversion(chart, "kpi");
+
+  assert.ok(plan.removedSettings.some(
+    ({ path }) => path === "interaction.timeSync",
+  ));
+
+  const converted = applyChartConversion(chart, "kpi", {
+    value: { field: "value" },
+  });
+  assert.notEqual(converted, chart);
+  assert.equal(converted.interaction.timeSync, null);
+  validateChartInstance(converted);
+});
+
+test("a guided temporal remap keeps time-sync planning and application aligned", () => {
+  const chart = lineChart();
+  const assignments = {
+    value: { field: "value" },
+    time: {
+      field: "reportedAt",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  };
+  const plan = planChartConversion(chart, "kpi", assignments);
+
+  assert.equal(plan.removedSettings.some(
+    ({ path }) => path === "interaction.timeSync",
+  ), false);
+  assert.deepEqual(plan.requiredRoles, []);
+
+  const converted = applyChartConversion(chart, "kpi", assignments);
+  assert.notEqual(converted, chart);
+  assert.deepEqual(converted.interaction.timeSync, {
+    groupId: "exercise-clock",
+  });
+  validateChartInstance(converted);
 });
 
 test("conversion boundaries reject accessors without evaluating them", () => {
@@ -278,7 +320,7 @@ test("conversion boundaries reject accessors without evaluating them", () => {
 
   let optionReads = 0;
   const hostileOptions = {};
-  Object.defineProperty(hostileOptions, "roles", {
+  Object.defineProperty(hostileOptions, "value", {
     enumerable: true,
     get() {
       optionReads += 1;
@@ -287,7 +329,7 @@ test("conversion boundaries reject accessors without evaluating them", () => {
   });
   assert.throws(
     () => applyChartConversion(chart, "area", hostileOptions),
-    /roles.*data property/i,
+    /value.*data property/i,
   );
   assert.equal(optionReads, 0);
 });
@@ -320,6 +362,6 @@ test("invalid conversion arguments fail explicitly before reading nested input",
   );
   assert.throws(
     () => applyChartConversion(chart, "area", []),
-    /conversion options must be a plain object/i,
+    /role assignments must be a plain object/i,
   );
 });
