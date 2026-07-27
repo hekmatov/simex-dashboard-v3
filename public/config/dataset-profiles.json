@@ -1,0 +1,3495 @@
+{
+  "bio_admissions": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "type": "temporal",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          2
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "new_icu_admissions",
+        "type": "numeric",
+        "uniqueCount": 53,
+        "warnings": []
+      },
+      {
+        "examples": [
+          2,
+          0,
+          11
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "new_clinic_admissions",
+        "type": "numeric",
+        "uniqueCount": 94,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "d9ad5869e437a04b2806aefde026d91345563e5945c6de47ad9f84e5e3d0c064",
+    "kind": "csv",
+    "path": "data/biomedical/admissions.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 177,
+    "sourceId": "bio_admissions",
+    "warnings": []
+  },
+  "bio_cases": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "type": "temporal",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          2,
+          4,
+          15
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "national_total_cases",
+        "type": "numeric",
+        "uniqueCount": 176,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          2
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "total_deaths",
+        "type": "numeric",
+        "uniqueCount": 36,
+        "warnings": []
+      },
+      {
+        "examples": [
+          2,
+          0,
+          11
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "daily_new_cases",
+        "type": "numeric",
+        "uniqueCount": 152,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          2
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "new_deaths",
+        "type": "numeric",
+        "uniqueCount": 36,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "b2d2b67ab42e0448ebd7f67e35e89800bdd5af4ab39324b453e7f5567cc990af",
+    "kind": "csv",
+    "path": "data/biomedical/cases.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 177,
+    "sourceId": "bio_cases",
+    "warnings": []
+  },
+  "bio_healthcare_cases": {
+    "columns": [
+      {
+        "examples": [
+          2026,
+          2027
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Year",
+        "type": "numeric",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "January",
+          "February",
+          "March"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month name",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Orthopedie",
+          "Oogheelkunde",
+          "Heelkunde"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Treatment",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          11883,
+          12182,
+          12657
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Cases",
+        "type": "numeric",
+        "uniqueCount": 81,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "7f109986aef48c4c455b3b0a1f72fef4f01d08f6de630f28b1f703b2daeb2d0d",
+    "kind": "csv",
+    "path": "data/biomedical/healthcare_cases.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 96,
+    "sourceId": "bio_healthcare_cases",
+    "warnings": []
+  },
+  "bio_hospital_occupancy": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "type": "temporal",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          4,
+          15
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "HeV-A26 occupancy",
+        "type": "numeric",
+        "uniqueCount": 155,
+        "warnings": []
+      },
+      {
+        "examples": [
+          17530,
+          17750,
+          17571
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Other occupancy",
+        "type": "numeric",
+        "uniqueCount": 172,
+        "warnings": []
+      },
+      {
+        "examples": [
+          21827,
+          22055,
+          21934
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "Capacity",
+        "type": "numeric",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          17531,
+          17751,
+          17575
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Total occupancy",
+        "type": "numeric",
+        "uniqueCount": 174,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "c74d101ed030b980c5935c2a56990bd873f5a20e39d29bb444d5c382cd9766e1",
+    "kind": "csv",
+    "path": "data/biomedical/hospital_occupancy.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 177,
+    "sourceId": "bio_hospital_occupancy",
+    "warnings": []
+  },
+  "bio_icu_occupancy": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "type": "temporal",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "HeV-A26 occupancy",
+        "type": "numeric",
+        "uniqueCount": 129,
+        "warnings": []
+      },
+      {
+        "examples": [
+          884,
+          871,
+          889
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Other occupancy",
+        "type": "numeric",
+        "uniqueCount": 102,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1100,
+          1125,
+          1150
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "Capacity",
+        "type": "numeric",
+        "uniqueCount": 40,
+        "warnings": []
+      },
+      {
+        "examples": [
+          885,
+          872,
+          890
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Total occupancy",
+        "type": "numeric",
+        "uniqueCount": 129,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "467f9b835f018c7ddb0e9ccfb14b972543a3d273e1fdbfb12494089773a8a4d6",
+    "kind": "csv",
+    "path": "data/biomedical/icu_occupancy.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 177,
+    "sourceId": "bio_icu_occupancy",
+    "warnings": []
+  },
+  "bio_mortality": {
+    "columns": [
+      {
+        "examples": [
+          "0-19",
+          "20-39",
+          "40-59"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          5,
+          40,
+          181
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "deaths",
+        "type": "numeric",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "02/05/2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "DD/MM/YYYY",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-05-02",
+          "2027-05-02",
+          "2027-05-02"
+        ],
+        "type": "temporal",
+        "uniqueCount": 1,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "d81451555355365361ceb7f9ed01d51be8a2cd85dced58ef2c550ce142ebcf30",
+    "kind": "csv",
+    "path": "data/biomedical/mortality_by_age.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 6,
+    "sourceId": "bio_mortality",
+    "warnings": []
+  },
+  "bio_municipal_infections": {
+    "columns": [
+      {
+        "examples": [
+          "2020-02-27",
+          "2020-02-28",
+          "2020-02-29"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Datum",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2020-02-27",
+          "2020-02-27",
+          "2020-02-27"
+        ],
+        "type": "temporal",
+        "uniqueCount": 415,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "GM0003",
+          "GM0010",
+          "GM0014"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "MunicipalityCode",
+        "type": "category",
+        "uniqueCount": 354,
+        "warnings": []
+      },
+      {
+        "examples": [
+          3,
+          10,
+          14
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Gemeentecode",
+        "type": "numeric",
+        "uniqueCount": 354,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Appingedam",
+          "Delfzijl",
+          "Groningen"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Gemeentenaam",
+        "type": "category",
+        "uniqueCount": 354,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Groningen",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Provincienaam",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          20,
+          24,
+          21
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Provinciecode",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          2
+        ],
+        "geographicHint": null,
+        "missingCount": 754,
+        "name": "Aantal",
+        "type": "numeric",
+        "uniqueCount": 442,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 400,
+        "name": "AantalCumulatief",
+        "type": "numeric",
+        "uniqueCount": 9050,
+        "warnings": []
+      },
+      {
+        "examples": [
+          234949,
+          218334,
+          31881
+        ],
+        "geographicHint": null,
+        "missingCount": 6225,
+        "name": "population",
+        "type": "numeric",
+        "uniqueCount": 339,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Groningen",
+          "Almere",
+          "Stadskanaal"
+        ],
+        "geographicHint": "place",
+        "missingCount": 6225,
+        "name": "populationMunicipalityName",
+        "type": "category",
+        "uniqueCount": 339,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          0.000004443457009553433,
+          0.00003123926150385805
+        ],
+        "geographicHint": null,
+        "missingCount": 6225,
+        "name": "infectionsPerPopulation",
+        "type": "numeric",
+        "uniqueCount": 92141,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          0.004443457009553433,
+          0.031239261503858046
+        ],
+        "geographicHint": null,
+        "missingCount": 6225,
+        "name": "infectionsPer1000",
+        "type": "numeric",
+        "uniqueCount": 92141,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          0.04443457009553433,
+          0.31239261503858046
+        ],
+        "geographicHint": null,
+        "missingCount": 6225,
+        "name": "infectionsPer10000",
+        "type": "numeric",
+        "uniqueCount": 92141,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "d6e2cc711161715bc2deebdd4b5a6913e6938441664f664ffa50e515a10159ba",
+    "kind": "csv",
+    "path": "data/biomedical/municipal_infections.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 146910,
+    "sourceId": "bio_municipal_infections",
+    "warnings": []
+  },
+  "bio_municipal_infections_harmonized_2021": {
+    "columns": [
+      {
+        "examples": [
+          "2020-02-27",
+          "2020-02-28",
+          "2020-02-29"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Datum",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2020-02-27",
+          "2020-02-27",
+          "2020-02-27"
+        ],
+        "type": "temporal",
+        "uniqueCount": 415,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "GM0014",
+          "GM0034",
+          "GM0037"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "MunicipalityCode",
+        "type": "category",
+        "uniqueCount": 352,
+        "warnings": []
+      },
+      {
+        "examples": [
+          14,
+          34,
+          37
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Gemeentecode",
+        "type": "numeric",
+        "uniqueCount": 352,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Groningen",
+          "Almere",
+          "Stadskanaal"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Gemeentenaam",
+        "type": "category",
+        "uniqueCount": 352,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Groningen",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Provincienaam",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          0.009833,
+          1
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "AantalCumulatief",
+        "type": "numeric",
+        "uniqueCount": 9562,
+        "warnings": []
+      },
+      {
+        "examples": [
+          234949,
+          218334,
+          31881
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "population",
+        "type": "numeric",
+        "uniqueCount": 342,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          4.1275427210990483e-7,
+          0.000004443457009553433
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "infectionsPerPopulation",
+        "type": "numeric",
+        "uniqueCount": 94683,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          0.00041275427210990485,
+          0.004443457009553433
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "infectionsPer1000",
+        "type": "numeric",
+        "uniqueCount": 94683,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          0.004127542721099048,
+          0.04443457009553433
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "infectionsPer10000",
+        "type": "numeric",
+        "uniqueCount": 94683,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "observed_direct",
+          "imputed_province_population_weighted_rate",
+          "observed_predecessor_sum"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "dataMethod",
+        "type": "category",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "provided_population_csv",
+          "imputed_province_median_population"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "populationSource",
+        "type": "category",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "GM0014",
+          "GM0034",
+          "GM0037"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "sourceMunicipalityCodes",
+        "type": "category",
+        "uniqueCount": 352,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "f16fe2dda7b2210fa297faf19235c5f7124ff96da96d38fb46cca9f9f1fdd814",
+    "kind": "csv",
+    "path": "data/biomedical/municipal_infections_2021_harmonized.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset harmonized to 2021 municipality boundaries"
+    },
+    "rowCount": 146080,
+    "sourceId": "bio_municipal_infections_harmonized_2021",
+    "warnings": []
+  },
+  "bio_occupancy_gauges": {
+    "columns": [
+      {
+        "examples": [
+          "current_icu_occupancy",
+          "current_hospital_occupancy"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "id",
+        "type": "category",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Current ICU Occupancy",
+          "Current Hospital Occupancy"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "title",
+        "type": "category",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          78.4,
+          69.3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "value",
+        "type": "numeric",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "#00A676"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "color",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "1c45426f7e143b3d22b3fb6bfb7cd775c901f43fa0dafa11bb235b43803c6e80",
+    "kind": "csv",
+    "path": "data/biomedical/occupancy_gauges.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 2,
+    "sourceId": "bio_occupancy_gauges",
+    "warnings": []
+  },
+  "bio_province_cases": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-21",
+          "2027-08-15",
+          "2027-05-03"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-21",
+          "2027-08-15",
+          "2027-05-03"
+        ],
+        "type": "temporal",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Drenthe",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1675,
+          778
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Infected_total",
+        "type": "numeric",
+        "uniqueCount": 26,
+        "warnings": []
+      },
+      {
+        "examples": [
+          52.9928,
+          52.5185,
+          53.2012
+        ],
+        "geographicHint": "latitude",
+        "missingCount": 0,
+        "name": "lat",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          6.5642,
+          5.4714,
+          5.7999
+        ],
+        "geographicHint": "longitude",
+        "missingCount": 0,
+        "name": "lon",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "0492ffcc589b47a660eba968143dc90e97c9111c015356badf03bb90d7db3c5d",
+    "kind": "csv",
+    "path": "data/biomedical/province_cases.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 36,
+    "sourceId": "bio_province_cases",
+    "warnings": []
+  },
+  "bio_province_cases_latest": {
+    "columns": [
+      {
+        "examples": [
+          "2027-08-15"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-08-15",
+          "2027-08-15",
+          "2027-08-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Drenthe",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1675,
+          2252,
+          2245
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Infected_total",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          52.9928,
+          52.5185,
+          53.2012
+        ],
+        "geographicHint": "latitude",
+        "missingCount": 0,
+        "name": "lat",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          6.5642,
+          5.4714,
+          5.7999
+        ],
+        "geographicHint": "longitude",
+        "missingCount": 0,
+        "name": "lon",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "96e830a883f28a86a8dd0ec45cdb636ec391dbb89bf4104a80d86acc57377f7d",
+    "kind": "csv",
+    "path": "data/biomedical/province_cases_latest.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical latest province snapshot"
+    },
+    "rowCount": 12,
+    "sourceId": "bio_province_cases_latest",
+    "warnings": []
+  },
+  "bio_province_deltas": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-21",
+          "2027-05-03",
+          "2027-08-15"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-21",
+          "2027-02-21",
+          "2027-02-21"
+        ],
+        "type": "temporal",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Drenthe",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          12123
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Infected_total",
+        "type": "numeric",
+        "uniqueCount": 26,
+        "warnings": []
+      },
+      {
+        "examples": [
+          52.9928,
+          52.5185,
+          53.2012
+        ],
+        "geographicHint": "latitude",
+        "missingCount": 0,
+        "name": "lat",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          6.5642,
+          5.4714,
+          5.7999
+        ],
+        "geographicHint": "longitude",
+        "missingCount": 0,
+        "name": "lon",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          12123
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Cumulative cases",
+        "type": "numeric",
+        "uniqueCount": 26,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          1,
+          12123
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Previous cumulative cases",
+        "type": "numeric",
+        "uniqueCount": 14,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          12122,
+          9471
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Case delta",
+        "type": "numeric",
+        "uniqueCount": 25,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-02-21",
+          "2027-05-03"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-21",
+          "2027-02-21",
+          "2027-02-21"
+        ],
+        "type": "temporal",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "21 Feb 2027",
+          "03 May 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison label",
+        "type": "category",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "True",
+          "False"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Is first snapshot",
+        "type": "boolean",
+        "uniqueCount": 2,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "4475ab901a12561e94949fec081c5c46d1f39f80bcaf30f21ace1454eea6a411",
+    "kind": "csv",
+    "path": "data/biomedical/province_case_deltas.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical derived province changes"
+    },
+    "rowCount": 36,
+    "sourceId": "bio_province_deltas",
+    "warnings": []
+  },
+  "bio_r_values": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "type": "temporal",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          2.21,
+          2.17,
+          2.15
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "R_value",
+        "type": "numeric",
+        "uniqueCount": 68,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "918f3077ccb42ccd4e851d0382a2697594973bc7117c921109440d4b92c5c192",
+    "kind": "csv",
+    "path": "data/biomedical/r_values.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 177,
+    "sourceId": "bio_r_values",
+    "warnings": []
+  },
+  "bio_testing": {
+    "columns": [
+      {
+        "examples": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-02-20",
+          "2027-02-21",
+          "2027-02-22"
+        ],
+        "type": "temporal",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          20,
+          29,
+          39
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "tests_per_day",
+        "type": "numeric",
+        "uniqueCount": 177,
+        "warnings": []
+      },
+      {
+        "examples": [
+          10,
+          0,
+          5.1
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "test_positivity_rate",
+        "type": "numeric",
+        "uniqueCount": 51,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "9414e7e24e0351084f783d765d8c0590f1705ef235160534d6b6323ed7fa55ed",
+    "kind": "csv",
+    "path": "data/biomedical/testing.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical dataset"
+    },
+    "rowCount": 177,
+    "sourceId": "bio_testing",
+    "warnings": []
+  },
+  "bio_vaccination_current": {
+    "columns": [
+      {
+        "examples": [
+          "Groep 1: 60+",
+          "Groep 2: Volwassenen (18-60) met medisch risico",
+          "Groep 3: Zorgpersoneel"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Group",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          85,
+          70,
+          44
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "First_vaccination_pct",
+        "type": "numeric",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          79,
+          30,
+          21
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Second_vaccination_pct",
+        "type": "numeric",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Actief",
+          "Actief, afronden september verwacht",
+          "Start septemeber 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Status",
+        "type": "category",
+        "uniqueCount": 3,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "b5d81ba720e4532965ae88536bc98eb124a84437e90cf6ddf6bfbdfb7c074cac",
+    "kind": "csv",
+    "path": "data/biomedical/vaccination_current.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical vaccination snapshot"
+    },
+    "rowCount": 4,
+    "sourceId": "bio_vaccination_current",
+    "warnings": []
+  },
+  "bio_vaccination_timeseries": {
+    "columns": [
+      {
+        "examples": [
+          "2027-06-20",
+          "2027-06-27",
+          "2027-07-04"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-06-20",
+          "2027-06-20",
+          "2027-06-20"
+        ],
+        "type": "temporal",
+        "uniqueCount": 9,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Groep 1: 60+",
+          "Groep 2: Volwassenen (18-60) met medisch risico",
+          "Groep 3: Zorgpersoneel"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "group",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          33,
+          6
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "vaccination_rate_pct",
+        "type": "numeric",
+        "uniqueCount": 15,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "0001d3bb21aa9ac5cd4c202788f2322d3abccbabc7b5b109b22a374faa203bca",
+    "kind": "csv",
+    "path": "data/biomedical/vaccination_timeseries.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical vaccination time series"
+    },
+    "rowCount": 36,
+    "sourceId": "bio_vaccination_timeseries",
+    "warnings": []
+  },
+  "bio_wastewater": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-21",
+          "2027-05-03",
+          "2027-08-15"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-21",
+          "2027-03-21",
+          "2027-03-21"
+        ],
+        "type": "temporal",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          3,
+          5,
+          2
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province_id",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          399.7,
+          1446.4
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "virus_particles",
+        "type": "numeric",
+        "uniqueCount": 25,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Drenthe",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          52.9928,
+          52.5185,
+          53.2012
+        ],
+        "geographicHint": "latitude",
+        "missingCount": 0,
+        "name": "lat",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          6.5642,
+          5.4714,
+          5.7999
+        ],
+        "geographicHint": "longitude",
+        "missingCount": 0,
+        "name": "lon",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "8a5042944a4c5226bb3f3f50191246feb706fc44d271d0fab23a9f88ff0d98c3",
+    "kind": "csv",
+    "path": "data/biomedical/wastewater.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical wastewater dataset"
+    },
+    "rowCount": 36,
+    "sourceId": "bio_wastewater",
+    "warnings": []
+  },
+  "bio_wastewater_latest": {
+    "columns": [
+      {
+        "examples": [
+          "2027-08-15"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-08-15",
+          "2027-08-15",
+          "2027-08-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          3,
+          5,
+          2
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province_id",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          191.1,
+          276.1,
+          186.3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "virus_particles",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Drenthe",
+          "Flevoland",
+          "Friesland"
+        ],
+        "geographicHint": "place",
+        "missingCount": 0,
+        "name": "province",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          52.9928,
+          52.5185,
+          53.2012
+        ],
+        "geographicHint": "latitude",
+        "missingCount": 0,
+        "name": "lat",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          6.5642,
+          5.4714,
+          5.7999
+        ],
+        "geographicHint": "longitude",
+        "missingCount": 0,
+        "name": "lon",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "939ed64c35b747528c526c20011b445aeca4517c987af3ae1f59354867c90f43",
+    "kind": "csv",
+    "path": "data/biomedical/wastewater_latest.csv",
+    "provenance": {
+      "label": "Simulation exercise biomedical latest wastewater snapshot"
+    },
+    "rowCount": 12,
+    "sourceId": "bio_wastewater_latest",
+    "warnings": []
+  },
+  "socio_adherence_deltas": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_value",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month Label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question key",
+        "type": "numeric",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Social Distancing",
+          "Quarantaine measures",
+          "Ban on public gathering"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Agreement",
+          "Neutral",
+          "Disagreement"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Answer group",
+        "type": "category",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "All"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "adherence"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Behaviour type",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          86,
+          6,
+          8
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 29,
+        "warnings": []
+      },
+      {
+        "examples": [
+          86,
+          6,
+          8
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Previous percentage",
+        "type": "numeric",
+        "uniqueCount": 29,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          -2,
+          1.0000000000000009
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage delta",
+        "type": "numeric",
+        "uniqueCount": 20,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison label",
+        "type": "category",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "True",
+          "False"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Is first snapshot",
+        "type": "boolean",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "selected_date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "cdc82d83bc17520dce1972b704d24c75deab20b35f3221a9da88e5ff7dd9ca82",
+    "kind": "csv",
+    "path": "data/socio-economic/adherence_deltas.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic derived adherence changes"
+    },
+    "rowCount": 132,
+    "sourceId": "socio_adherence_deltas",
+    "warnings": []
+  },
+  "socio_behaviour": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_value",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month Label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question key",
+        "type": "numeric",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Social Distancing",
+          "Quarantaine measures",
+          "Ban on public gathering"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question",
+        "type": "category",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Agree",
+          "Disagree",
+          "Neutral"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Answer",
+        "type": "category",
+        "uniqueCount": 5,
+        "warnings": []
+      },
+      {
+        "examples": [
+          51,
+          5,
+          6
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 65,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "All"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "adherence",
+          "risk_perception"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Behaviour type",
+        "type": "category",
+        "uniqueCount": 2,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "cb45004d84267cf7e111317153aa5e0f9a0d13fd9f912b6365bb454971acffc4",
+    "kind": "csv",
+    "path": "data/socio-economic/behaviour.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic behaviour dataset"
+    },
+    "rowCount": 550,
+    "sourceId": "socio_behaviour",
+    "warnings": []
+  },
+  "socio_business_closures": {
+    "columns": [
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Sector_id",
+        "type": "numeric",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          2.1,
+          1.4,
+          1.8
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Closures",
+        "type": "numeric",
+        "uniqueCount": 15,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2026-7",
+          "2027-7"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Year",
+        "type": "category",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "HOR",
+          "REC",
+          "DET"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Code",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Horeca",
+          "Recreatie en Cultuur",
+          "Detailhandel niet essentieel"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Sector",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "bd31b194d73e24b263e6ef801b89b56a34f071040a3611a60164cf5816d4f043",
+    "kind": "csv",
+    "path": "data/socio-economic/business_closures.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic business dataset"
+    },
+    "rowCount": 22,
+    "sourceId": "socio_business_closures",
+    "warnings": []
+  },
+  "socio_education_absenteeism": {
+    "columns": [
+      {
+        "examples": [
+          2026,
+          2027
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Year",
+        "type": "numeric",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Jan",
+          "Feb",
+          "Mar"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month order",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2026-01-01",
+          "2026-02-01",
+          "2026-03-01"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Period",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2026-01-01",
+          "2026-02-01",
+          "2026-03-01"
+        ],
+        "type": "temporal",
+        "uniqueCount": 24,
+        "warnings": []
+      },
+      {
+        "examples": [
+          5.2,
+          4.8,
+          4.1
+        ],
+        "geographicHint": null,
+        "missingCount": 5,
+        "name": "Absenteeism percentage",
+        "type": "numeric",
+        "uniqueCount": 17,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "e32161fdf1d2acffeeeeea497cadb2077d44762db65635a377037f5119d3bac8",
+    "kind": "csv",
+    "path": "data/socio-economic/education_absenteeism.csv",
+    "provenance": {
+      "label": "Simulation exercise education absenteeism dataset"
+    },
+    "rowCount": 24,
+    "sourceId": "socio_education_absenteeism",
+    "warnings": []
+  },
+  "socio_healthcare_absenteeism": {
+    "columns": [
+      {
+        "examples": [
+          2026,
+          2027
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Year",
+        "type": "numeric",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Jan",
+          "Feb",
+          "Mar"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month",
+        "type": "category",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month order",
+        "type": "numeric",
+        "uniqueCount": 12,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2026-01-01",
+          "2026-02-01",
+          "2026-03-01"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Period",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2026-01-01",
+          "2026-02-01",
+          "2026-03-01"
+        ],
+        "type": "temporal",
+        "uniqueCount": 24,
+        "warnings": []
+      },
+      {
+        "examples": [
+          8.1,
+          7.8,
+          7.2
+        ],
+        "geographicHint": null,
+        "missingCount": 5,
+        "name": "Absenteeism percentage",
+        "type": "numeric",
+        "uniqueCount": 16,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "2f51195e3fc37c9c2f82a1fa220f50746e5f498ee990d310cc827892b521f1a3",
+    "kind": "csv",
+    "path": "data/socio-economic/healthcare_absenteeism.csv",
+    "provenance": {
+      "label": "Simulation exercise healthcare absenteeism dataset"
+    },
+    "rowCount": 24,
+    "sourceId": "socio_healthcare_absenteeism",
+    "warnings": []
+  },
+  "socio_lifestyle": {
+    "columns": [
+      {
+        "examples": [
+          "Lifestyle"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Category",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "snapshot_id",
+        "type": "numeric",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question key",
+        "type": "numeric",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Sports and physical activity",
+          "Eating a healthy diet",
+          "Alcohol consumption"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Much more",
+          "More",
+          "The same / Not apliccable"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Answer",
+        "type": "category",
+        "uniqueCount": 5,
+        "warnings": []
+      },
+      {
+        "examples": [
+          8.8,
+          16.2,
+          35
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 92,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "097e8f651ebf87afc51b1c99b4faf0d72b74dcf5eb37d3fb6b26eb816d81f5f4",
+    "kind": "csv",
+    "path": "data/socio-economic/lifestyle.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic lifestyle dataset"
+    },
+    "rowCount": 220,
+    "sourceId": "socio_lifestyle",
+    "warnings": []
+  },
+  "socio_loneliness": {
+    "columns": [
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "snapshot_id",
+        "type": "numeric",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15-24",
+          "25-39",
+          "40-54"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          43,
+          32,
+          29
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 31,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "8a16dafd4febd15bb52ab68122c1581354c7b9ed776a11979de84df9e7b5bfb4",
+    "kind": "csv",
+    "path": "data/socio-economic/loneliness.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic loneliness dataset"
+    },
+    "rowCount": 66,
+    "sourceId": "socio_loneliness",
+    "warnings": []
+  },
+  "socio_mental_wellbeing": {
+    "columns": [
+      {
+        "examples": [
+          "Anxiety",
+          "Stress",
+          "Sleeping"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Category",
+        "type": "category",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "snapshot_id",
+        "type": "numeric",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "16-24",
+          "25-39",
+          "40-54"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Never",
+          "Rarely",
+          "Sometimes"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Answer",
+        "type": "category",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          7.3,
+          11.8,
+          23.9
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 209,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "208607d5c640494be84106c97c582bd3e5222a6534cc1007c33fb891702c1610",
+    "kind": "csv",
+    "path": "data/socio-economic/mental_wellbeing.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic mental wellbeing dataset"
+    },
+    "rowCount": 1188,
+    "sourceId": "socio_mental_wellbeing",
+    "warnings": []
+  },
+  "socio_resilience": {
+    "columns": [
+      {
+        "examples": [
+          "Resilience"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Category",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "snapshot_id",
+        "type": "numeric",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Snapshot label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question key",
+        "type": "numeric",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          " I look for creative ways to deal with this situation",
+          " I believe I have myself under control, whatever happens",
+          "I believe I can also draw positive things from this situation"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Strongly agree",
+          "Agree",
+          "Neither agree nor disagree "
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Answer",
+        "type": "category",
+        "uniqueCount": 5,
+        "warnings": []
+      },
+      {
+        "examples": [
+          23.8,
+          44.2,
+          12.8
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 94,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "f56364412e3680df11b3566d8d5a4217fe46a8314aaf009382c31c658085c2a0",
+    "kind": "csv",
+    "path": "data/socio-economic/resilience.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic resilience dataset"
+    },
+    "rowCount": 220,
+    "sourceId": "socio_resilience",
+    "warnings": []
+  },
+  "socio_risk_deltas": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_value",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month Label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question key",
+        "type": "numeric",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Impact on Society",
+          "Neurological damage",
+          "Healthcare capacity"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Question",
+        "type": "category",
+        "uniqueCount": 6,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Agreement",
+          "Neutral",
+          "Disagreement"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Answer group",
+        "type": "category",
+        "uniqueCount": 3,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "All"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Age group",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "risk_perception"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Behaviour type",
+        "type": "category",
+        "uniqueCount": 1,
+        "warnings": []
+      },
+      {
+        "examples": [
+          79,
+          8,
+          13
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 61,
+        "warnings": []
+      },
+      {
+        "examples": [
+          79,
+          8,
+          13
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Previous percentage",
+        "type": "numeric",
+        "uniqueCount": 60,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          -2,
+          2
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage delta",
+        "type": "numeric",
+        "uniqueCount": 19,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison label",
+        "type": "category",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "True",
+          "False"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Is first snapshot",
+        "type": "boolean",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "selected_date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "65ebbd21aa2d7643dbb6eec5b03d74bb88481d31aba83b9f5836acdd23479fd4",
+    "kind": "csv",
+    "path": "data/socio-economic/risk_perception_deltas.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic derived risk-perception changes"
+    },
+    "rowCount": 198,
+    "sourceId": "socio_risk_deltas",
+    "warnings": []
+  },
+  "socio_trust": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          1,
+          2,
+          3
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Trustee_id",
+        "type": "numeric",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          68,
+          69,
+          67
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "trust",
+        "type": "numeric",
+        "uniqueCount": 21,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Healthcare institutions",
+          "Dutch House of Representatives",
+          "Other individuals"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "institution",
+        "type": "category",
+        "uniqueCount": 4,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_value",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "d19ff18724dc79911db0f05b28caf3a9246080f7309a8dfda3f98593854a854a",
+    "kind": "csv",
+    "path": "data/socio-economic/trust.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic trust dataset"
+    },
+    "rowCount": 44,
+    "sourceId": "socio_trust",
+    "warnings": []
+  },
+  "socio_unemployment": {
+    "columns": [
+      {
+        "examples": [
+          "2026-01-01",
+          "2026-02-01",
+          "2026-03-01"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2026-01-01",
+          "2026-02-01",
+          "2026-03-01"
+        ],
+        "type": "temporal",
+        "uniqueCount": 20,
+        "warnings": []
+      },
+      {
+        "examples": [
+          3.8,
+          3.7,
+          3.9
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Value",
+        "type": "numeric",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "Jan 2026",
+          "Feb 2026",
+          "Mar 2026"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Date label",
+        "type": "category",
+        "uniqueCount": 20,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "6b2838a466efed8ae8c0ef40fe738d12667bedd44804a16efce0a028a8e7d3ef",
+    "kind": "csv",
+    "path": "data/socio-economic/unemployment_rate.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic unemployment dataset"
+    },
+    "rowCount": 20,
+    "sourceId": "socio_unemployment",
+    "warnings": []
+  },
+  "socio_values": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_value",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month Label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "01. Bescherming gezondheid burgers",
+          "02. Gevolgen voor toegang tot zorg",
+          "03. Bescherming kwetsbare groepen"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Value",
+        "type": "category",
+        "uniqueCount": 13,
+        "warnings": []
+      },
+      {
+        "examples": [
+          88,
+          87,
+          86
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 22,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "f31d15a84c1bd9a29aae2ffc70cdb8ca0b14a9d88fc0998e5fc210040ea1ab93",
+    "kind": "csv",
+    "path": "data/socio-economic/values.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic citizen-values dataset"
+    },
+    "rowCount": 143,
+    "sourceId": "socio_values",
+    "warnings": []
+  },
+  "socio_values_deltas": {
+    "columns": [
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "date_value",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Month Label",
+        "type": "category",
+        "uniqueCount": 11,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "01. Bescherming gezondheid burgers",
+          "02. Gevolgen voor toegang tot zorg",
+          "03. Bescherming kwetsbare groepen"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Value",
+        "type": "category",
+        "uniqueCount": 13,
+        "warnings": []
+      },
+      {
+        "examples": [
+          88,
+          87,
+          86
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage",
+        "type": "numeric",
+        "uniqueCount": 22,
+        "warnings": []
+      },
+      {
+        "examples": [
+          88,
+          87,
+          86
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Previous percentage",
+        "type": "numeric",
+        "uniqueCount": 22,
+        "warnings": []
+      },
+      {
+        "examples": [
+          0,
+          7,
+          5
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Percentage delta",
+        "type": "numeric",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "15 Mar 2027",
+          "29 Mar 2027",
+          "12 Apr 2027"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Comparison label",
+        "type": "category",
+        "uniqueCount": 10,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "True",
+          "False"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "Is first snapshot",
+        "type": "boolean",
+        "uniqueCount": 2,
+        "warnings": []
+      },
+      {
+        "examples": [
+          "2027-03-15",
+          "2027-03-29",
+          "2027-04-12"
+        ],
+        "geographicHint": null,
+        "missingCount": 0,
+        "name": "selected_date",
+        "parsing": {
+          "format": "YYYY-MM-DD",
+          "interpretation": "temporal",
+          "timezone": "date-only"
+        },
+        "temporalValues": [
+          "2027-03-15",
+          "2027-03-15",
+          "2027-03-15"
+        ],
+        "type": "temporal",
+        "uniqueCount": 11,
+        "warnings": []
+      }
+    ],
+    "fingerprint": "80ba109ee600e1ac1e18251a22619644b967f88e3b3f25103f8efb3214d591db",
+    "kind": "csv",
+    "path": "data/socio-economic/values_deltas.csv",
+    "provenance": {
+      "label": "Simulation exercise socio-economic derived citizen-values changes"
+    },
+    "rowCount": 143,
+    "sourceId": "socio_values_deltas",
+    "warnings": []
+  }
+}

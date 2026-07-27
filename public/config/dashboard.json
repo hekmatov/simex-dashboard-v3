@@ -27,42 +27,601 @@
     "speed": 0.45
   },
   "dataSources": {
-    "bio_cases": "data/biomedical/cases.csv",
-    "bio_province_cases": "data/biomedical/province_cases.csv",
-    "bio_province_cases_latest": "data/biomedical/province_cases_latest.csv",
-    "bio_province_deltas": "data/biomedical/province_case_deltas.csv",
-    "bio_r_values": "data/biomedical/r_values.csv",
-    "bio_mortality": "data/biomedical/mortality_by_age.csv",
-    "bio_testing": "data/biomedical/testing.csv",
-    "bio_icu_occupancy": "data/biomedical/icu_occupancy.csv",
-    "bio_hospital_occupancy": "data/biomedical/hospital_occupancy.csv",
-    "bio_admissions": "data/biomedical/admissions.csv",
-    "bio_occupancy_gauges": "data/biomedical/occupancy_gauges.csv",
-    "bio_healthcare_cases": "data/biomedical/healthcare_cases.csv",
-    "bio_wastewater": "data/biomedical/wastewater.csv",
-    "bio_wastewater_latest": "data/biomedical/wastewater_latest.csv",
-    "bio_vaccination_current": "data/biomedical/vaccination_current.csv",
-    "bio_vaccination_timeseries": "data/biomedical/vaccination_timeseries.csv",
-    "socio_behaviour": "data/socio-economic/behaviour.csv",
-    "socio_risk_deltas": "data/socio-economic/risk_perception_deltas.csv",
-    "socio_adherence_deltas": "data/socio-economic/adherence_deltas.csv",
-    "socio_values": "data/socio-economic/values.csv",
-    "socio_values_deltas": "data/socio-economic/values_deltas.csv",
-    "socio_trust": "data/socio-economic/trust.csv",
-    "socio_business_closures": "data/socio-economic/business_closures.csv",
-    "socio_unemployment": "data/socio-economic/unemployment_rate.csv",
-    "socio_loneliness": "data/socio-economic/loneliness.csv",
-    "socio_mental_wellbeing": "data/socio-economic/mental_wellbeing.csv",
-    "socio_lifestyle": "data/socio-economic/lifestyle.csv",
-    "socio_resilience": "data/socio-economic/resilience.csv",
-    "socio_education_absenteeism": "data/socio-economic/education_absenteeism.csv",
-    "socio_healthcare_absenteeism": "data/socio-economic/healthcare_absenteeism.csv",
-    "geo_netherlands_provinces": "data/geo/netherlands-provinces.geojson",
-    "bio_municipal_infections": "data/biomedical/municipal_infections.csv",
-    "geo_netherlands_municipalities_2026": "data/geo/gemeente_2026.geojson",
-    "geo_netherlands_municipalities_2021": "data/geo/gemeente_2021.geojson",
-    "geo_netherlands_municipalities_2020": "data/geo/gemeente_2020.geojson",
-    "bio_municipal_infections_harmonized_2021": "data/biomedical/municipal_infections_2021_harmonized.csv"
+    "bio_admissions": {
+      "kind": "csv",
+      "path": "data/biomedical/admissions.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_cases": {
+      "kind": "csv",
+      "path": "data/biomedical/cases.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_healthcare_cases": {
+      "kind": "csv",
+      "path": "data/biomedical/healthcare_cases.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "Year": {
+          "interpretation": "numeric"
+        },
+        "Month": {
+          "interpretation": "numeric"
+        },
+        "Month name": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "bio_hospital_occupancy": {
+      "kind": "csv",
+      "path": "data/biomedical/hospital_occupancy.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_icu_occupancy": {
+      "kind": "csv",
+      "path": "data/biomedical/icu_occupancy.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_mortality": {
+      "kind": "csv",
+      "path": "data/biomedical/mortality_by_age.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "DD/MM/YYYY",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_municipal_infections": {
+      "kind": "csv",
+      "path": "data/biomedical/municipal_infections.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "Datum": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_municipal_infections_harmonized_2021": {
+      "kind": "csv",
+      "path": "data/biomedical/municipal_infections_2021_harmonized.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset harmonized to 2021 municipality boundaries"
+      },
+      "parsingMetadata": {
+        "Datum": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_occupancy_gauges": {
+      "kind": "csv",
+      "path": "data/biomedical/occupancy_gauges.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      }
+    },
+    "bio_province_cases": {
+      "kind": "csv",
+      "path": "data/biomedical/province_cases.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_province_cases_latest": {
+      "kind": "csv",
+      "path": "data/biomedical/province_cases_latest.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical latest province snapshot"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_province_deltas": {
+      "kind": "csv",
+      "path": "data/biomedical/province_case_deltas.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical derived province changes"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Comparison date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Comparison label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "bio_r_values": {
+      "kind": "csv",
+      "path": "data/biomedical/r_values.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_testing": {
+      "kind": "csv",
+      "path": "data/biomedical/testing.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "tests_per_day": {
+          "interpretation": "numeric"
+        }
+      }
+    },
+    "bio_vaccination_current": {
+      "kind": "csv",
+      "path": "data/biomedical/vaccination_current.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical vaccination snapshot"
+      }
+    },
+    "bio_vaccination_timeseries": {
+      "kind": "csv",
+      "path": "data/biomedical/vaccination_timeseries.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical vaccination time series"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_wastewater": {
+      "kind": "csv",
+      "path": "data/biomedical/wastewater.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical wastewater dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_wastewater_latest": {
+      "kind": "csv",
+      "path": "data/biomedical/wastewater_latest.csv",
+      "provenance": {
+        "label": "Simulation exercise biomedical latest wastewater snapshot"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "geo_netherlands_municipalities_2020": {
+      "kind": "geojson",
+      "path": "data/geo/gemeente_2020.geojson",
+      "provenance": {
+        "label": "Netherlands municipality boundaries, 2020"
+      }
+    },
+    "geo_netherlands_municipalities_2021": {
+      "kind": "geojson",
+      "path": "data/geo/gemeente_2021.geojson",
+      "provenance": {
+        "label": "Netherlands municipality boundaries, 2021"
+      }
+    },
+    "geo_netherlands_municipalities_2026": {
+      "kind": "geojson",
+      "path": "data/geo/gemeente_2026.geojson",
+      "provenance": {
+        "label": "Netherlands municipality boundaries, 2026"
+      }
+    },
+    "geo_netherlands_provinces": {
+      "kind": "geojson",
+      "path": "data/geo/netherlands-provinces.geojson",
+      "provenance": {
+        "label": "Netherlands province reference boundaries"
+      }
+    },
+    "socio_adherence_deltas": {
+      "kind": "csv",
+      "path": "data/socio-economic/adherence_deltas.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic derived adherence changes"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "date_value": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Month Label": {
+          "interpretation": "category"
+        },
+        "Comparison date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Comparison label": {
+          "interpretation": "category"
+        },
+        "selected_date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "socio_behaviour": {
+      "kind": "csv",
+      "path": "data/socio-economic/behaviour.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic behaviour dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "date_value": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Month Label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_business_closures": {
+      "kind": "csv",
+      "path": "data/socio-economic/business_closures.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic business dataset"
+      },
+      "parsingMetadata": {
+        "Year": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_education_absenteeism": {
+      "kind": "csv",
+      "path": "data/socio-economic/education_absenteeism.csv",
+      "provenance": {
+        "label": "Simulation exercise education absenteeism dataset"
+      },
+      "parsingMetadata": {
+        "Year": {
+          "interpretation": "numeric"
+        },
+        "Month": {
+          "interpretation": "category"
+        },
+        "Month order": {
+          "interpretation": "numeric"
+        },
+        "Period": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "socio_healthcare_absenteeism": {
+      "kind": "csv",
+      "path": "data/socio-economic/healthcare_absenteeism.csv",
+      "provenance": {
+        "label": "Simulation exercise healthcare absenteeism dataset"
+      },
+      "parsingMetadata": {
+        "Year": {
+          "interpretation": "numeric"
+        },
+        "Month": {
+          "interpretation": "category"
+        },
+        "Month order": {
+          "interpretation": "numeric"
+        },
+        "Period": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "socio_lifestyle": {
+      "kind": "csv",
+      "path": "data/socio-economic/lifestyle.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic lifestyle dataset"
+      },
+      "parsingMetadata": {
+        "Snapshot": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Snapshot label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_loneliness": {
+      "kind": "csv",
+      "path": "data/socio-economic/loneliness.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic loneliness dataset"
+      },
+      "parsingMetadata": {
+        "Snapshot": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Snapshot label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_mental_wellbeing": {
+      "kind": "csv",
+      "path": "data/socio-economic/mental_wellbeing.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic mental wellbeing dataset"
+      },
+      "parsingMetadata": {
+        "Snapshot": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Snapshot label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_resilience": {
+      "kind": "csv",
+      "path": "data/socio-economic/resilience.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic resilience dataset"
+      },
+      "parsingMetadata": {
+        "Snapshot": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Snapshot label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_risk_deltas": {
+      "kind": "csv",
+      "path": "data/socio-economic/risk_perception_deltas.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic derived risk-perception changes"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "date_value": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Month Label": {
+          "interpretation": "category"
+        },
+        "Comparison date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Comparison label": {
+          "interpretation": "category"
+        },
+        "selected_date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "socio_trust": {
+      "kind": "csv",
+      "path": "data/socio-economic/trust.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic trust dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "date_label": {
+          "interpretation": "category"
+        },
+        "date_value": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "socio_unemployment": {
+      "kind": "csv",
+      "path": "data/socio-economic/unemployment_rate.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic unemployment dataset"
+      },
+      "parsingMetadata": {
+        "Date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Date label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_values": {
+      "kind": "csv",
+      "path": "data/socio-economic/values.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic citizen-values dataset"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "date_value": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Month Label": {
+          "interpretation": "category"
+        }
+      }
+    },
+    "socio_values_deltas": {
+      "kind": "csv",
+      "path": "data/socio-economic/values_deltas.csv",
+      "provenance": {
+        "label": "Simulation exercise socio-economic derived citizen-values changes"
+      },
+      "parsingMetadata": {
+        "date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "date_value": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Month Label": {
+          "interpretation": "category"
+        },
+        "Comparison date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        },
+        "Comparison label": {
+          "interpretation": "category"
+        },
+        "selected_date": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    }
   },
   "pages": [
     {
