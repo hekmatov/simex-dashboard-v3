@@ -178,9 +178,12 @@ export function applyTimeContext({
       if (match.status === "missing") continue;
       if (match.status === "interpolated") {
         if (isDeltaChart(chart)) {
-          const preceding = precedingBucket(availableBuckets, timeContext.activeEpochMs);
-          if (preceding) projectedRows.push(...preceding.rows);
-          record.comparison = comparisonProvenance(preceding);
+          appendDeltaHistory(
+            projectedRows,
+            availableBuckets,
+            timeContext.activeEpochMs,
+            false,
+          );
         }
         const interpolatedRow = synthesizeInterpolatedRow({
           chart,
@@ -206,9 +209,13 @@ export function applyTimeContext({
       }
 
       if (isDeltaChart(chart)) {
-        const preceding = precedingBucket(availableBuckets, match.observation.epochMs);
-        if (preceding) projectedRows.push(...preceding.rows);
-        record.comparison = comparisonProvenance(preceding);
+        appendDeltaHistory(
+          projectedRows,
+          availableBuckets,
+          match.observation.epochMs,
+          true,
+        );
+        continue;
       }
       appendMeasureRows(measureRows, group.measure, match.observation.rows);
       appendProjectedSourceRows({
@@ -275,8 +282,8 @@ export function applyTemporalProvenance({ chart = {}, prepared = {}, projection 
     return {
       ...mark,
       active,
-      temporalProvenance: isDeltaChart(chart) && record?.comparison
-        ? { ...provenance, comparison: record.comparison }
+      temporalProvenance: isDeltaChart(chart) && sourceMark.comparisonProvenance
+        ? { ...provenance, comparison: sourceMark.comparisonProvenance }
         : provenance,
     };
   });
@@ -463,22 +470,15 @@ function traceMarkIsActive(chart, mark, record) {
   return markEpochMs === record.match.sourceEpochMs;
 }
 
-function precedingBucket(buckets, displayedEpochMs) {
-  for (let index = buckets.length - 1; index >= 0; index -= 1) {
-    if (buckets[index].epochMs < displayedEpochMs) return buckets[index];
+function appendDeltaHistory(target, buckets, displayedEpochMs, includeDisplayed) {
+  for (const bucket of buckets) {
+    if (
+      bucket.epochMs < displayedEpochMs
+      || (includeDisplayed && bucket.epochMs === displayedEpochMs)
+    ) {
+      target.push(...bucket.rows);
+    }
   }
-  return null;
-}
-
-function comparisonProvenance(bucket) {
-  return bucket
-    ? {
-        status: "observed",
-        sourceEpochMs: bucket.epochMs,
-        activeEpochMs: bucket.epochMs,
-        activeCanonical: bucket.canonical,
-      }
-    : null;
 }
 
 function temporalBinding(chart) {

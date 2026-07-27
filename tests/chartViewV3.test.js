@@ -51,7 +51,8 @@ test("card render models expose labels, values, deltas, and provenance", () => {
 
   assert.match(html, /Current capacity/);
   assert.match(html, /\+2/);
-  assert.match(html, /Compared with 2027-05-01/);
+  assert.match(html, /Comparison source/);
+  assert.match(html, /Observed 2027-05-01/);
 });
 
 test("delta cards render the exact resolved comparison time rather than a raw-row guess", () => {
@@ -78,8 +79,9 @@ test("delta cards render the exact resolved comparison time rather than a raw-ro
     datasetProfile: profileDataset(rows, { at: { interpretation: "temporal" } }),
   }));
 
-  assert.match(html, /Compared with 2027-05-01/);
-  assert.doesNotMatch(html, /Compared with 2027-05-02/);
+  assert.match(html, /Comparison source/);
+  assert.match(html, /Observed 2027-05-01/);
+  assert.doesNotMatch(html, /Comparison source Observed 2027-05-02/);
 });
 
 test("invalid prepared data renders a bounded chart error", () => {

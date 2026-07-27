@@ -152,9 +152,13 @@ function deltaItem(chart, mark, index, activeTime) {
   const favorableDirection = chart.presentation?.targets?.direction ?? "neutral";
   const provenance = activeTime && isActiveObservation(mark)
     ? provenanceSummary(mark.temporalProvenance)
-    : null;
-  const comparisonProvenance = provenance && mark.temporalProvenance?.comparison
-    ? provenanceSummary(mark.temporalProvenance.comparison)
+    : mark.displayedProvenance
+      ? provenanceSummary(mark.displayedProvenance)
+      : null;
+  const comparisonSource = mark.temporalProvenance?.comparison
+    ?? mark.comparisonProvenance;
+  const comparisonProvenance = comparisonSource
+    ? provenanceSummary(comparisonSource)
     : null;
   return {
     key: String(mark.entity ?? `${chart.typeId}-${index}`),
@@ -169,7 +173,7 @@ function deltaItem(chart, mark, index, activeTime) {
     favorability: favorability(direction, favorableDirection),
     ...(provenance
       ? {
-          activeTime: activeTime.canonical,
+          ...(activeTime ? { activeTime: activeTime.canonical } : {}),
           temporalStatus: provenance.status,
           provenance,
         }

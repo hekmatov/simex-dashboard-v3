@@ -7,6 +7,10 @@ import {
   readRoleValue,
   stableKey,
 } from "./transforms.js";
+import { resolveDeltaComparison } from "./resolveDeltaComparison.js";
+
+const CANONICAL_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
 
 export function prepareTargetData({ schema, chart, rows, datasetProfile, transformed }) {
   if (schema.typeId === "deltaCard" || schema.typeId === "deltaList") {
@@ -90,6 +94,8 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
       entity: entityValue,
       value: primary.value,
       time: timeValue,
+      canonical: timeValue,
+      epochMs: canonicalEpochMs(timeValue),
       target: targetValue.value,
     });
   }
@@ -126,30 +132,75 @@ function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) 
     groups.get(key).push(observation);
   }
   const marks = [];
+  const diagnostics = [...consolidated.diagnostics];
   for (const observations of groups.values()) {
-    observations.sort((left, right) => String(left.time).localeCompare(String(right.time)));
-    if (observations.length < 2) continue;
-    const comparison = observations.at(-2);
+    observations.sort((left, right) => left.epochMs - right.epochMs);
+    if (observations.length === 0) continue;
     const displayed = observations.at(-1);
-    const comparable = Number.isFinite(displayed.value) && Number.isFinite(comparison.value);
-    const absolute = comparable ? displayed.value - comparison.value : null;
+    const resolved = resolveDeltaComparison({
+      observations,
+      displayed,
+      comparison: transformed.config.comparison,
+      chart,
+      timeRole: "time",
+      profile: datasetProfile,
+    });
+    if (resolved.status !== "matched") {
+      diagnostics.push(resolved.diagnostic);
+      continue;
+    }
+    const baseline = resolved.observation;
+    const comparable = Number.isFinite(displayed.value) && Number.isFinite(baseline.value);
+    const absolute = comparable ? displayed.value - baseline.value : null;
     marks.push({
       entity: displayed.entity,
       time: displayed.time,
       displayedTime: displayed.time,
-      comparisonTime: comparison.time,
+      comparisonTime: baseline.canonical,
       displayed: displayed.value,
-      comparison: comparison.value,
+      comparison: baseline.value,
       target: displayed.target,
       delta: {
         absolute,
-        percentage: !comparable || comparison.value === 0 ? null : (absolute / Math.abs(comparison.value)) * 100,
+        percentage: !comparable || baseline.value === 0
+          ? null
+          : (absolute / Math.abs(baseline.value)) * 100,
       },
+      displayedProvenance: {
+        status: "observed",
+        activeEpochMs: displayed.epochMs,
+        activeCanonical: displayed.canonical,
+        sourceEpochMs: displayed.epochMs,
+        sourceCanonical: displayed.canonical,
+      },
+      comparisonProvenance: resolved.provenance,
     });
   }
   return {
     marks,
-    diagnostics: consolidated.diagnostics,
+    diagnostics,
     duplicateGroupCount: consolidated.duplicateGroupCount,
   };
+}
+
+function canonicalEpochMs(value) {
+  if (typeof value !== "string") return Number.NaN;
+  const dateOnly = CANONICAL_DATE_ONLY.exec(value);
+  if (dateOnly) {
+    return utcEpoch(dateOnly.slice(1).map(Number), [0, 0, 0, 0]);
+  }
+  const instant = CANONICAL_INSTANT.exec(value);
+  return instant
+    ? utcEpoch(
+        instant.slice(1, 4).map(Number),
+        instant.slice(4).map(Number),
+      )
+    : Number.NaN;
+}
+
+function utcEpoch([year, month, day], [hour, minute, second, milliseconds]) {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, milliseconds);
+  return date.valueOf();
 }
