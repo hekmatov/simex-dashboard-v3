@@ -4,6 +4,7 @@ import RoleField from "./RoleField.jsx";
 
 export default function ChartConversionDialog({
   conversion,
+  error = "",
   columns = [],
   onRoleAssignment = noop,
   onConfirm = noop,
@@ -26,7 +27,9 @@ export default function ChartConversionDialog({
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": "chart-conversion-title",
-      "aria-describedby": "chart-conversion-consequences",
+      "aria-describedby": error
+        ? "chart-conversion-consequences chart-conversion-error"
+        : "chart-conversion-consequences",
     },
     React.createElement(
       "section",
@@ -105,6 +108,29 @@ export default function ChartConversionDialog({
             { className: "chart-conversion-no-removals" },
             "No configured settings need to be removed.",
           ),
+      conversion.timeSyncConsequence
+        ? React.createElement(
+            "section",
+            { className: "chart-conversion-time-sync" },
+            React.createElement("h3", null, "Synchronized playback"),
+            React.createElement(
+              "p",
+              null,
+              timeSyncConsequenceSummary(conversion.timeSyncConsequence),
+            ),
+          )
+        : null,
+      error
+        ? React.createElement(
+            "p",
+            {
+              id: "chart-conversion-error",
+              className: "wizard-error",
+              role: "alert",
+            },
+            error,
+          )
+        : null,
       blocked
         ? React.createElement(
             "p",
@@ -154,6 +180,19 @@ function bindingSummary(assignment) {
     .map((binding) => binding?.field)
     .filter((field) => typeof field === "string" && field)
     .join(", ") || "Not assigned";
+}
+
+function timeSyncConsequenceSummary(consequence) {
+  if (consequence.kind === "remap") {
+    return `The ${consequence.fromRole} time role will be remapped to ${consequence.targetLabel}.`;
+  }
+  if (consequence.kind === "preserve") {
+    return `The ${consequence.targetLabel} time role will be preserved.`;
+  }
+  if (consequence.kind === "ambiguous") {
+    return "Choose one temporal role before synchronized playback can be preserved.";
+  }
+  return "Synchronized playback will be removed unless a compatible time role is assigned.";
 }
 
 function noop() {}

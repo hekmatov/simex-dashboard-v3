@@ -151,6 +151,68 @@ export function acceptEditorSave(state, payload) {
   };
 }
 
+export function buildDashboardEditorProfiles({
+  loadedData = {},
+  dataSources = {},
+  suppliedProfiles = {},
+} = {}) {
+  const profiles = Object.create(null);
+  for (const [sourceId, profile] of collectionEntries(suppliedProfiles)) {
+    if (profile !== undefined && profile !== null) {
+      profiles[sourceId] = profile;
+    }
+  }
+  for (const [sourceId, rows] of collectionEntries(loadedData)) {
+    if (
+      Object.hasOwn(profiles, sourceId)
+      || !Array.isArray(rows)
+    ) {
+      continue;
+    }
+    const source = readEntry(dataSources, sourceId);
+    profiles[sourceId] = profileDataset(
+      rows,
+      isRecord(source) ? source.parsingMetadata ?? {} : {},
+    );
+  }
+  return profiles;
+}
+
+export function selectAuthoritativeEditorPanel(savedPanel, legacyDraft) {
+  return savedPanel?.configVersion === 3
+    && typeof savedPanel.typeId === "string"
+    ? savedPanel
+    : legacyDraft ?? savedPanel;
+}
+
+export function applyChartEditorSave(dashboard, {
+  chart,
+  timeSyncGroups = [],
+} = {}) {
+  if (!isRecord(dashboard)) {
+    throw new TypeError("A dashboard is required to save a chart.");
+  }
+  const savedChart = normalizeChartInstance(chart);
+  const nextDashboard = structuredClone(dashboard);
+  let replaced = false;
+  nextDashboard.pages = (nextDashboard.pages ?? []).map((page) => ({
+    ...page,
+    sections: (page.sections ?? []).map((section) => ({
+      ...section,
+      panels: (section.panels ?? []).map((panel) => {
+        if (panel?.id !== savedChart.id) return panel;
+        replaced = true;
+        return structuredClone(savedChart);
+      }),
+    })),
+  }));
+  if (!replaced) {
+    throw new Error(`Chart "${savedChart.id}" does not exist in the dashboard.`);
+  }
+  nextDashboard.timeSyncGroups = cloneGroups(timeSyncGroups);
+  return nextDashboard;
+}
+
 export function editorAuthorityKey({
   chart,
   timeSyncGroups = [],
@@ -234,16 +296,25 @@ export default function ChartEditorV3({
   const timeSyncField = model.sections
     .flatMap(({ fields }) => fields)
     .find(({ id }) => id === "timeSync");
-  const dispatch = (action) => setState((current) => reduceChartEditorState(
-    current,
-    action,
-    {
-      existingCharts,
-      loadedData: runtimeLoadedData,
-      profiles: runtimeProfiles,
-      profile,
-    },
-  ));
+  const dispatch = (action) => setState((current) => {
+    try {
+      return reduceChartEditorState(
+        current,
+        action,
+        {
+          existingCharts,
+          loadedData: runtimeLoadedData,
+          profiles: runtimeProfiles,
+          profile,
+        },
+      );
+    } catch (error) {
+      return {
+        ...current,
+        error: safeMessage(error),
+      };
+    }
+  });
   const changeMembership = (groupId) => {
     const timeRole = timeSyncField?.timeRoles?.[0]?.value;
     dispatch({
@@ -367,7 +438,7 @@ export default function ChartEditorV3({
           })),
         }),
       ),
-      state.error
+      state.error && !state.conversion
         ? React.createElement(
             "p",
             { className: "wizard-error chart-editor-error", role: "alert" },
@@ -396,6 +467,7 @@ export default function ChartEditorV3({
     ),
     React.createElement(ChartConversionDialog, {
       conversion: state.conversion,
+      error: state.conversion ? state.error : "",
       columns: profile?.columns ?? [],
       onRoleAssignment: (roleId, value) => dispatch({
         type: "updateConversionRole",
@@ -411,6 +483,8 @@ export default function ChartEditorV3({
 export function SelectedChartEditor({
   panel,
   dashboard = {},
+  savedRevision,
+  profiles: suppliedProfiles,
   globalPanelColors,
   onSave,
   onReset,
@@ -424,33 +498,19 @@ export function SelectedChartEditor({
     const rows = readEntry(loadedData, panel.sourceId);
     const dataSources = dashboard.dataSources ?? {};
     const source = readEntry(dataSources, panel.sourceId);
-    const profile = profileDataset(
-      Array.isArray(rows) ? rows : [],
-      isRecord(source) ? source.parsingMetadata ?? {} : {},
-    );
+    const runtimeProfiles = buildDashboardEditorProfiles({
+      loadedData,
+      dataSources,
+      suppliedProfiles: suppliedProfiles ?? dashboard.profiles ?? {},
+    });
+    const profile = readEntry(runtimeProfiles, panel.sourceId);
     const charts = chartPanels(dashboard).filter(
       (chart) => chart?.configVersion === 3,
     );
-    const runtimeProfiles = Object.fromEntries(
-      charts.flatMap((candidate) => {
-        const candidateRows = readEntry(loadedData, candidate.sourceId);
-        if (!Array.isArray(candidateRows)) return [];
-        const candidateSource = readEntry(dataSources, candidate.sourceId);
-        return [[
-          candidate.sourceId,
-          profileDataset(
-            candidateRows,
-            isRecord(candidateSource)
-              ? candidateSource.parsingMetadata ?? {}
-              : {},
-          ),
-        ]];
-      }),
-    );
-    runtimeProfiles[panel.sourceId] = profile;
     return React.createElement(ChartEditorV3, {
       chart: panel,
       timeSyncGroups: dashboard.timeSyncGroups ?? [],
+      savedRevision,
       existingCharts: charts,
       rows: Array.isArray(rows) ? rows : [],
       profile,
@@ -540,16 +600,29 @@ function updateEditorMembership(state, action, context) {
 
 function requestEditorConversion(state, targetTypeId) {
   const target = requiredString(targetTypeId, "Target chart type");
-  getChartSchema(target);
+  const targetSchema = getChartSchema(target);
   if (target === state.draft.typeId) return state;
   const plan = planChartConversion(state.draft, target);
+  const roleAssignments = {};
+  const roleFields = conversionRoleFields({
+    chart: state.draft,
+    targetSchema,
+    plan,
+  });
   return {
     ...state,
     conversion: {
       targetTypeId: target,
       plan,
-      roleAssignments: {},
-      roleFields: structuredClone(plan.requiredRoles),
+      roleAssignments,
+      roleFields,
+      timeSyncConsequence: conversionTimeSyncConsequence({
+        chart: state.draft,
+        groups: state.timeSyncGroups,
+        targetSchema,
+        plan,
+        roleAssignments,
+      }),
     },
     error: "",
   };
@@ -567,12 +640,20 @@ function updateConversionRole(state, action) {
     state.conversion.targetTypeId,
     roleAssignments,
   );
+  const targetSchema = getChartSchema(state.conversion.targetTypeId);
   return {
     ...state,
     conversion: {
       ...state.conversion,
       roleAssignments,
       plan,
+      timeSyncConsequence: conversionTimeSyncConsequence({
+        chart: state.draft,
+        groups: state.timeSyncGroups,
+        targetSchema,
+        plan,
+        roleAssignments,
+      }),
     },
     error: "",
   };
@@ -580,47 +661,181 @@ function updateConversionRole(state, action) {
 
 function applyEditorConversion(state, context) {
   if (!state.conversion) return state;
-  if (state.conversion.plan.requiredRoles.length > 0) {
+  try {
+    if (state.conversion.plan.requiredRoles.length > 0) {
+      throw new Error(
+        "Complete the required data roles before applying this chart type change.",
+      );
+    }
+    if (state.conversion.timeSyncConsequence?.kind === "ambiguous") {
+      throw new Error(
+        "Choose one temporal data role before preserving synchronized playback.",
+      );
+    }
+    const converted = applyChartConversion(
+      state.draft,
+      state.conversion.targetTypeId,
+      state.conversion.roleAssignments,
+    );
+    if (
+      converted === state.draft
+      || converted.typeId !== state.conversion.targetTypeId
+    ) {
+      throw new Error(
+        "Check the required data roles before applying this chart type change.",
+      );
+    }
+    validateChartInstance(converted, {
+      columnTypes: profileColumnMap(
+        context.profile ?? readEntry(context.profiles, converted.sourceId),
+      ),
+    });
+    const consequence = state.conversion.timeSyncConsequence;
+    const groups = consequence?.kind === "remove"
+      ? removeChartFromGroups(state.timeSyncGroups, converted.id)
+      : remapChartTimeRole(
+          state.timeSyncGroups,
+          converted.id,
+          consequence?.toRole,
+        );
+    validateEditorGroups(converted, groups, context);
     return {
       ...state,
-      error: "Complete the required data roles before applying this chart type change.",
+      draft: converted,
+      timeSyncGroups: groups,
+      activeTabId: "data",
+      conversion: null,
+      error: "",
+      previewRevision: state.previewRevision + 1,
+    };
+  } catch (error) {
+    const detail = safeMessage(error);
+    const message = /required data roles/i.test(detail)
+      ? detail
+      : `Check the required data roles. ${detail}`;
+    return {
+      ...state,
+      error: safeMessage(new Error(message)),
     };
   }
-  const converted = applyChartConversion(
-    state.draft,
-    state.conversion.targetTypeId,
-    state.conversion.roleAssignments,
-  );
+}
+
+function conversionRoleFields({ chart, targetSchema, plan }) {
+  const fields = [...plan.requiredRoles];
   if (
-    converted === state.draft
-    || converted.typeId !== state.conversion.targetTypeId
+    chart.interaction?.timeSync
+    && targetSchema.capabilities.timeSync
   ) {
+    const existingIds = new Set(fields.map(({ id }) => id));
+    for (const role of targetSchema.roles) {
+      if (
+        role.accepts.includes("temporal")
+        && !existingIds.has(role.id)
+        && !temporalRoleAssigned(plan.preservedRoles?.[role.id], role)
+      ) {
+        fields.push(role);
+        existingIds.add(role.id);
+      }
+    }
+  }
+  return structuredClone(fields);
+}
+
+function conversionTimeSyncConsequence({
+  chart,
+  groups,
+  targetSchema,
+  plan,
+  roleAssignments,
+}) {
+  const member = findChartTimeSyncMember(groups, chart.id);
+  if (!chart.interaction?.timeSync || !member) return null;
+  if (!targetSchema.capabilities.timeSync) {
     return {
-      ...state,
-      error: "The chart type change could not be applied to the selected data roles.",
+      kind: "remove",
+      fromRole: member.timeRole,
     };
   }
-  validateChartInstance(converted, {
-    columnTypes: profileColumnMap(
-      context.profile ?? readEntry(context.profiles, converted.sourceId),
-    ),
-  });
-  const removesTimeSync = state.conversion.plan.removedSettings.some(
-    ({ path }) => path === "interaction.timeSync",
+  const effectiveRoles = effectiveConversionRoles(
+    plan.preservedRoles,
+    roleAssignments,
   );
-  const groups = removesTimeSync
-    ? removeChartFromGroups(state.timeSyncGroups, converted.id)
-    : structuredClone(state.timeSyncGroups);
-  validateEditorGroups(converted, groups, context);
+  const assignedTemporalRoles = targetSchema.roles.filter((role) => (
+    role.accepts.includes("temporal")
+    && temporalRoleAssigned(effectiveRoles[role.id], role)
+  ));
+  if (assignedTemporalRoles.length === 0) {
+    return {
+      kind: "remove",
+      fromRole: member.timeRole,
+    };
+  }
+  if (assignedTemporalRoles.length > 1) {
+    return {
+      kind: "ambiguous",
+      fromRole: member.timeRole,
+    };
+  }
+  const target = assignedTemporalRoles[0];
   return {
-    ...state,
-    draft: converted,
-    timeSyncGroups: groups,
-    activeTabId: "data",
-    conversion: null,
-    error: "",
-    previewRevision: state.previewRevision + 1,
+    kind: target.id === member.timeRole ? "preserve" : "remap",
+    fromRole: member.timeRole,
+    toRole: target.id,
+    targetLabel: target.label,
   };
+}
+
+function effectiveConversionRoles(preservedRoles, roleAssignments) {
+  const roles = structuredClone(preservedRoles ?? {});
+  for (const [roleId, assignment] of Object.entries(roleAssignments ?? {})) {
+    if (assignment === null || assignment === undefined) {
+      delete roles[roleId];
+    } else {
+      roles[roleId] = structuredClone(assignment);
+    }
+  }
+  return roles;
+}
+
+function temporalRoleAssigned(assignment, role) {
+  const bindings = Array.isArray(assignment)
+    ? assignment
+    : assignment ? [assignment] : [];
+  return bindings.length > 0 && bindings.every((binding) => (
+    isRecord(binding)
+    && typeof binding.field === "string"
+    && binding.field.trim() !== ""
+    && (
+      binding.interpretation === "temporal"
+      || (
+        binding.interpretation === undefined
+        && role.accepts.length === 1
+        && role.accepts[0] === "temporal"
+      )
+    )
+  ));
+}
+
+function findChartTimeSyncMember(groups, chartId) {
+  for (const group of Array.isArray(groups) ? groups : []) {
+    const member = Array.isArray(group?.members)
+      ? group.members.find((candidate) => candidate?.chartId === chartId)
+      : null;
+    if (member) return member;
+  }
+  return null;
+}
+
+function remapChartTimeRole(groups, chartId, timeRole) {
+  const result = structuredClone(groups);
+  if (!timeRole) return result;
+  for (const group of result) {
+    const member = Array.isArray(group.members)
+      ? group.members.find((candidate) => candidate.chartId === chartId)
+      : null;
+    if (member) member.timeRole = timeRole;
+  }
+  return result;
 }
 
 function validateEditorGroups(chart, groups, context) {
@@ -699,6 +914,11 @@ function collectionWithEntry(collection, key, value) {
     ...(isRecord(collection) ? collection : {}),
     [key]: value,
   };
+}
+
+function collectionEntries(collection) {
+  if (collection instanceof Map) return [...collection.entries()];
+  return isRecord(collection) ? Object.entries(collection) : [];
 }
 
 function readEntry(collection, key) {

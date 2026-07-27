@@ -1,7 +1,11 @@
 ﻿import React from "react";
 
 import AddChartWizard from "./AddChartWizard.jsx";
-import { SelectedChartEditor } from "./chart-authoring/ChartEditorV3.jsx";
+import {
+  applyChartEditorSave,
+  SelectedChartEditor,
+  selectAuthoritativeEditorPanel,
+} from "./chart-authoring/ChartEditorV3.jsx";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
@@ -80,8 +84,12 @@ export default function DashboardRenderer({
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
 
   React.useEffect(() => {
-    setSelectedPanelDraft(selectedPanel ? structuredClone(selectedPanel) : null);
-  }, [selectedPanel?.id]);
+    setSelectedPanelDraft(
+      selectedPanel && selectedPanel.configVersion !== 3
+        ? structuredClone(selectedPanel)
+        : null,
+    );
+  }, [selectedPanel?.id, selectedPanel?.configVersion]);
 
   React.useEffect(() => {
     if (!editMode) {
@@ -245,8 +253,10 @@ export default function DashboardRenderer({
   }
 
   function saveSelectedChartV3({ chart, timeSyncGroups }) {
-    const nextDashboard = dashboardWithCurrentDrafts(chart);
-    nextDashboard.timeSyncGroups = structuredClone(timeSyncGroups ?? []);
+    const nextDashboard = applyChartEditorSave(
+      dashboardWithCurrentDrafts(null),
+      { chart, timeSyncGroups },
+    );
     onPanelEditCommit(nextDashboard);
     setSelectedPanelDraft(null);
     setChartEditBaseline(null);
@@ -664,7 +674,10 @@ export default function DashboardRenderer({
 
         {editMode && selectedPanel && (
           <SelectedChartEditor
-            panel={selectedPanelDraft ?? selectedPanel}
+            panel={selectAuthoritativeEditorPanel(
+              selectedPanel,
+              selectedPanelDraft,
+            )}
             dashboard={dashboard}
             globalPanelColors={globalPanelColors}
             onSave={(payload) => (

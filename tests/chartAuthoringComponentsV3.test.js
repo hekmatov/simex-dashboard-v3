@@ -13,6 +13,7 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { validateTimeSyncGroups } from "../src/charting/time/timeSyncModel.js";
 import {
   createWizardState,
   reduceWizardState,
@@ -107,10 +108,13 @@ const {
 const {
   default: ChartEditorV3,
   acceptEditorSave,
+  applyChartEditorSave,
+  buildDashboardEditorProfiles,
   createChartEditorState,
   rebaseChartEditorState,
   reduceChartEditorState,
   saveChartEditorState,
+  selectAuthoritativeEditorPanel,
   SelectedChartEditor,
 } = await import(
   "../src/components/chart-authoring/ChartEditorV3.jsx"
@@ -1679,6 +1683,203 @@ test("moving the sole synchronized chart to another group removes only the empty
   });
 });
 
+test("guided synchronized conversion remaps only the edited member semantic time role", () => {
+  const rows = [
+    { observed: "2027-05-01", capacity: 4 },
+    { observed: "2027-05-02", capacity: 6 },
+  ];
+  const chart = synchronizedLineChart();
+  const other = synchronizedLineChart({
+    id: "other-line",
+    interaction: { timeSync: { groupId: "exercise-clock" } },
+  });
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal" },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "observed",
+    },
+    matching: { policy: "exact" },
+    members: [
+      {
+        chartId: chart.id,
+        timeRole: "observation",
+        matching: { policy: "nearest", toleranceMs: 3_600_000 },
+      },
+      {
+        chartId: other.id,
+        timeRole: "observation",
+        matching: { policy: "lastKnown" },
+      },
+    ],
+  }];
+  let state = createChartEditorState({
+    chart,
+    timeSyncGroups: groups,
+  });
+  state = reduceChartEditorState(state, {
+    type: "requestConversion",
+    targetTypeId: "kpi",
+  });
+  assert.deepEqual(
+    state.conversion.roleFields.map(({ id }) => id),
+    ["value", "time"],
+  );
+  assert.equal(state.conversion.timeSyncConsequence.kind, "remove");
+  assert.match(
+    render(React.createElement(ChartConversionDialog, {
+      conversion: state.conversion,
+      columns: profile.columns,
+      onRoleAssignment() {},
+      onConfirm() {},
+      onCancel() {},
+    })),
+    /Synchronized playback.*will be removed/s,
+  );
+
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "value",
+    value: { field: "capacity" },
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "time",
+    value: {
+      field: "observed",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  });
+  assert.deepEqual(state.conversion.timeSyncConsequence, {
+    kind: "remap",
+    fromRole: "observation",
+    toRole: "time",
+    targetLabel: "Time",
+  });
+  const remapHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    columns: profile.columns,
+    onRoleAssignment() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.match(remapHtml, /Synchronized playback/);
+  assert.match(remapHtml, /observation/);
+  assert.match(remapHtml, /Time/);
+
+  state = reduceChartEditorState(state, {
+    type: "applyConversion",
+  }, {
+    existingCharts: [chart, other],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  });
+
+  assert.equal(state.error, "");
+  assert.equal(state.draft.typeId, "kpi");
+  assert.deepEqual(state.draft.interaction.timeSync, {
+    groupId: "exercise-clock",
+  });
+  assert.deepEqual(state.timeSyncGroups[0].members, [
+    {
+      chartId: chart.id,
+      timeRole: "time",
+      matching: { policy: "nearest", toleranceMs: 3_600_000 },
+    },
+    {
+      chartId: other.id,
+      timeRole: "observation",
+      matching: { policy: "lastKnown" },
+    },
+  ]);
+  assert.doesNotThrow(() => validateTimeSyncGroups(state.timeSyncGroups, {
+    charts: [state.draft, other],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+  }));
+});
+
+test("conversion application fails closed with an associated bounded dialog error and can be corrected", () => {
+  const rows = [
+    { period: "May", capacity: 4 },
+    { period: "June", capacity: 6 },
+  ];
+  const profile = profileDataset(rows);
+  let state = createChartEditorState({
+    chart: validLineChart(),
+    timeSyncGroups: [],
+  });
+  state = reduceChartEditorState(state, {
+    type: "requestConversion",
+    targetTypeId: "pie",
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "category",
+    value: { field: "period", interpretation: "category" },
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "value",
+    value: { field: "period", interpretation: "category" },
+  });
+  const beforeChart = state.draft;
+  const beforeGroups = state.timeSyncGroups;
+  const beforeDialog = state.conversion;
+  assert.doesNotThrow(() => {
+    state = reduceChartEditorState(state, {
+      type: "applyConversion",
+    }, {
+      existingCharts: [state.draft],
+      loadedData: { "exercise-data": rows },
+      profiles: { "exercise-data": profile },
+      profile,
+    });
+  });
+  assert.equal(state.draft, beforeChart);
+  assert.equal(state.timeSyncGroups, beforeGroups);
+  assert.equal(state.conversion, beforeDialog);
+  assert.match(state.error, /required data roles/i);
+  assert.ok(state.error.length <= 240);
+
+  const invalidHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    error: state.error,
+    columns: profile.columns,
+    onRoleAssignment() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.match(
+    invalidHtml,
+    /aria-describedby="chart-conversion-consequences chart-conversion-error"/,
+  );
+  assert.match(invalidHtml, /id="chart-conversion-error"[^>]*role="alert"/);
+
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "value",
+    value: { field: "capacity" },
+  });
+  state = reduceChartEditorState(state, {
+    type: "applyConversion",
+  }, {
+    existingCharts: [validLineChart()],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  });
+  assert.equal(state.error, "");
+  assert.equal(state.draft.typeId, "pie");
+  assert.equal(state.conversion, null);
+});
+
 test("conversion dialog distinguishes compatible and remapped changes and cancel preserves the exact draft", () => {
   const line = validLineChart({
     presentation: {
@@ -1806,6 +2007,165 @@ test("destructive conversion applies only after complete direct role assignments
   assert.deepEqual(state.timeSyncGroups, []);
   assert.equal(state.conversion, null);
   assert.equal(state.previewRevision, 1);
+});
+
+test("dashboard editor profiles include an unbound primary-clock source and reuse supplied profiles", () => {
+  const memberRows = [
+    { observed: "2027-05-01", capacity: 4 },
+    { observed: "2027-05-02", capacity: 6 },
+  ];
+  const clockRows = [
+    { clock_at: "2027-05-01" },
+    { clock_at: "2027-05-02" },
+  ];
+  const unusedRows = [{ status: "Ready" }];
+  const chart = synchronizedLineChart();
+  const suppliedClockProfile = profileDataset(clockRows, {
+    clock_at: { interpretation: "temporal" },
+  });
+  const dashboard = {
+    pages: [{
+      id: "page",
+      sections: [{ id: "section", panels: [chart] }],
+    }],
+    dataSources: {
+      "exercise-data": {
+        parsingMetadata: {
+          observed: { interpretation: "temporal" },
+        },
+      },
+      "clock-data": {
+        parsingMetadata: {
+          clock_at: { interpretation: "temporal" },
+        },
+      },
+      "unused-data": {},
+    },
+    loadedData: {
+      "exercise-data": memberRows,
+      "clock-data": clockRows,
+      "unused-data": unusedRows,
+    },
+    profiles: {
+      "clock-data": suppliedClockProfile,
+    },
+    timeSyncGroups: [{
+      id: "exercise-clock",
+      name: "Exercise clock",
+      primaryClock: {
+        sourceId: "clock-data",
+        timeField: "clock_at",
+      },
+      matching: { policy: "exact" },
+      members: [{
+        chartId: chart.id,
+        timeRole: "observation",
+      }],
+    }],
+  };
+  const profiles = buildDashboardEditorProfiles({
+    loadedData: dashboard.loadedData,
+    dataSources: dashboard.dataSources,
+    suppliedProfiles: dashboard.profiles,
+  });
+  assert.equal(profiles["clock-data"], suppliedClockProfile);
+  assert.ok(profiles["exercise-data"]);
+  assert.ok(profiles["unused-data"]);
+
+  const routed = SelectedChartEditor({
+    panel: chart,
+    dashboard,
+    onSave() {},
+    onCancel() {},
+  });
+  assert.equal(routed.props.profiles["clock-data"], suppliedClockProfile);
+  const state = createChartEditorState({
+    chart,
+    timeSyncGroups: dashboard.timeSyncGroups,
+  });
+  assert.doesNotThrow(() => saveChartEditorState(state, {
+    existingCharts: routed.props.existingCharts,
+    loadedData: routed.props.loadedData,
+    profiles: routed.props.profiles,
+    profile: routed.props.profile,
+  }));
+});
+
+test("authoritative v3 routing rebases only for a changed saved snapshot and whole-dashboard save stays intact", () => {
+  const first = validPieChart({ title: "First saved" });
+  const same = structuredClone(first);
+  const updated = validPieChart({ title: "Server-saved update" });
+  const legacyDraft = { ...first, title: "Legacy draft must not win" };
+
+  assert.equal(
+    selectAuthoritativeEditorPanel(first, legacyDraft),
+    first,
+  );
+  const routedFirst = SelectedChartEditor({
+    panel: selectAuthoritativeEditorPanel(first, legacyDraft),
+    savedRevision: "chart-revision-1",
+    dashboard: {
+      pages: [{
+        id: "page",
+        sections: [{ id: "section", panels: [first] }],
+      }],
+      loadedData: {
+        "exercise-data": [{ category: "Ready", value: 6 }],
+      },
+      dataSources: {
+        "exercise-data": {},
+      },
+    },
+    onSave() {},
+    onCancel() {},
+  });
+  assert.equal(routedFirst.props.chart, first);
+  assert.equal(routedFirst.props.savedRevision, "chart-revision-1");
+
+  let state = createChartEditorState({
+    chart: first,
+    timeSyncGroups: [],
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["title"],
+    value: "Unsaved local title",
+  });
+  const identicalRerender = rebaseChartEditorState(state, {
+    chart: same,
+    timeSyncGroups: [],
+  });
+  assert.equal(identicalRerender, state);
+  const changedSnapshot = rebaseChartEditorState(state, {
+    chart: updated,
+    timeSyncGroups: [],
+  });
+  assert.notEqual(changedSnapshot, state);
+  assert.equal(changedSnapshot.draft.title, "Server-saved update");
+
+  const dashboard = {
+    title: "Whole dashboard",
+    pages: [{
+      id: "page",
+      sections: [{
+        id: "section",
+        panels: [
+          first,
+          validLineChart({ id: "other-chart" }),
+        ],
+      }],
+    }],
+    timeSyncGroups: [],
+  };
+  const saved = applyChartEditorSave(dashboard, {
+    chart: updated,
+    timeSyncGroups: [],
+  });
+  assert.notEqual(saved, dashboard);
+  assert.equal(saved.title, "Whole dashboard");
+  assert.equal(saved.pages[0].sections[0].panels[0].title, "Server-saved update");
+  assert.equal(saved.pages[0].sections[0].panels[1].id, "other-chart");
+  assert.equal(dashboard.pages[0].sections[0].panels[0].title, "First saved");
 });
 
 test("dashboard editor routing uses ChartEditorV3 for version-3 charts and preserves legacy fallback", () => {
