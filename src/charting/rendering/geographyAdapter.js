@@ -1,15 +1,25 @@
 import { featureCoordinates, normalizeGeoData } from "../data/geoData.js";
 
 export function buildGeographyRenderModel({ chart, prepared, geoData, renderContext = {} }) {
-  if (chart.typeId === "mapScatter") return mapScatterModel(chart, prepared.marks, renderContext, geoData);
+  const activeTime = prepared.meta?.activeTime ?? null;
+  const marks = activeTime
+    ? prepared.marks.filter(isActiveObservation)
+    : prepared.marks;
+  if (chart.typeId === "mapScatter") {
+    return mapScatterModel(chart, marks, renderContext, geoData, activeTime);
+  }
+  if (activeTime) {
+    return choroplethModel(chart, marks, renderContext, geoData, activeTime);
+  }
   if (chart.typeId === "chronoChoroplethMap") return chronologicalMapModel(chart, prepared.marks, renderContext, geoData);
   return choroplethModel(chart, latestFrame(prepared.marks), renderContext, geoData);
 }
 
-function choroplethModel(chart, marks, renderContext, geoData) {
+function choroplethModel(chart, marks, renderContext, geoData, activeTime = null) {
   const values = marks.map(({ value }) => value).filter(Number.isFinite);
   return {
     kind: "echarts",
+    ...(activeTime ? { temporal: temporalMetadata(activeTime) } : {}),
     interaction: geographyInteraction(chart),
     mapRegistration: mapRegistration(chart, marks, renderContext, geoData),
     option: {
@@ -21,7 +31,7 @@ function choroplethModel(chart, marks, renderContext, geoData) {
         max: values.length ? Math.max(...values) : 0,
       },
       geo: geoOption(chart, renderContext),
-      series: [mapSeries(chart, marks, renderContext)],
+      series: [mapSeries(chart, marks, renderContext, activeTime)],
     },
   };
 }
@@ -57,7 +67,7 @@ function chronologicalMapModel(chart, marks, renderContext, geoData) {
   };
 }
 
-function mapScatterModel(chart, marks, renderContext, geoData) {
+function mapScatterModel(chart, marks, renderContext, geoData, activeTime = null) {
   const located = marks.map((mark) => ({
     mark,
     coordinates: mark.coordinates ?? featureCoordinates(mark.feature),
@@ -77,6 +87,7 @@ function mapScatterModel(chart, marks, renderContext, geoData) {
   const maximum = values.length ? Math.max(...values.map(Math.abs), 1) : 1;
   return {
     kind: "echarts",
+    ...(activeTime ? { temporal: temporalMetadata(activeTime) } : {}),
     diagnostics,
     interaction: geographyInteraction(chart),
     mapRegistration: mapRegistration(chart, marks, renderContext, geoData),
@@ -91,20 +102,24 @@ function mapScatterModel(chart, marks, renderContext, geoData) {
         type: "scatter",
         coordinateSystem: "geo",
         symbolSize: (value) => 8 + (Math.abs(Number(value?.[2])) / maximum) * 24,
-        data: valid.map(({ mark, coordinates }) => ({
-          name: featureName(mark),
-          value: [...coordinates, mark.value],
-          geography: mark.geography,
-          time: mark.time,
-          feature: clone(mark.feature),
-          group: mark.group,
-        })),
+        data: valid.map(({ mark, coordinates }) => geographyDataItem(
+          mark,
+          {
+            name: featureName(mark),
+            value: [...coordinates, mark.value],
+            geography: mark.geography,
+            time: mark.time,
+            feature: clone(mark.feature),
+            group: mark.group,
+          },
+          activeTime,
+        )),
       }],
     },
   };
 }
 
-function mapSeries(chart, marks, renderContext) {
+function mapSeries(chart, marks, renderContext, activeTime = null) {
   const joinField = chart.presentation?.map?.joinField ?? null;
   return {
     name: chart.title ?? "",
@@ -112,14 +127,18 @@ function mapSeries(chart, marks, renderContext) {
     map: mapName(chart, renderContext),
     geoIndex: 0,
     nameProperty: joinField ?? undefined,
-    data: marks.map((mark) => ({
-      name: featureJoinName(mark, joinField),
-      value: mark.value,
-      time: mark.time,
-      label: featureName(mark),
-      feature: clone(mark.feature),
-      group: mark.group,
-    })),
+    data: marks.map((mark) => geographyDataItem(
+      mark,
+      {
+        name: featureJoinName(mark, joinField),
+        value: mark.value,
+        time: mark.time,
+        label: featureName(mark),
+        feature: clone(mark.feature),
+        group: mark.group,
+      },
+      activeTime,
+    )),
   };
 }
 
@@ -208,4 +227,77 @@ function unique(values) {
 
 function clone(value) {
   return value == null ? value : structuredClone(value);
+}
+
+function geographyDataItem(mark, data, activeTime) {
+  if (!activeTime || !isActiveObservation(mark)) return data;
+  const provenance = provenanceSummary(mark.temporalProvenance);
+  return {
+    ...data,
+    active: true,
+    activeTime: activeTime.canonical,
+    temporalStatus: provenance.status,
+    provenance,
+    itemStyle: cueItemStyle(provenance.status),
+    tooltip: { formatter: provenance.label },
+  };
+}
+
+function temporalMetadata(activeTime) {
+  return {
+    groupId: activeTime.groupId,
+    activeTime: activeTime.canonical,
+    status: activeTime.status,
+  };
+}
+
+function isActiveObservation(mark) {
+  return mark?.active === true
+    && mark.temporalProvenance?.status
+    && mark.temporalProvenance.status !== "missing";
+}
+
+function provenanceSummary(provenance) {
+  const status = provenance?.status ?? "missing";
+  const sourceTime = formatEpoch(provenance?.sourceEpochMs);
+  const lowerTime = formatEpoch(provenance?.lowerEpochMs);
+  const upperTime = formatEpoch(provenance?.upperEpochMs);
+  const observedTime = sourceTime ?? formatEpoch(provenance?.activeEpochMs);
+  const label = bounded(
+    status === "observed"
+      ? `Observed ${observedTime}`
+      : status === "carried"
+        ? `Last measured ${sourceTime}`
+        : status === "nearest"
+          ? `Nearest measurement ${sourceTime}`
+          : status === "interpolated"
+            ? `Interpolated between ${lowerTime} and ${upperTime}`
+            : "No measurement at this time",
+  );
+  return {
+    status,
+    label,
+    ...(sourceTime ? { sourceTime } : {}),
+    ...(lowerTime ? { lowerTime } : {}),
+    ...(upperTime ? { upperTime } : {}),
+  };
+}
+
+function cueItemStyle(status) {
+  return {
+    borderColor: "#163d73",
+    borderWidth: 2,
+    borderType: status === "observed" ? "solid" : "dashed",
+    ...(status === "observed" ? {} : { opacity: 0.78 }),
+  };
+}
+
+function formatEpoch(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const canonical = new Date(epochMs).toISOString();
+  return canonical.endsWith("T00:00:00.000Z") ? canonical.slice(0, 10) : canonical;
+}
+
+function bounded(value) {
+  return value.length <= 240 ? value : `${value.slice(0, 239)}â€¦`;
 }

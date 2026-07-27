@@ -1,4 +1,5 @@
 export function buildMatrixRenderModel({ chart, prepared }) {
+  const activeTime = prepared.meta?.activeTime ?? null;
   const rows = unique(prepared.marks.map(({ row }) => row));
   const columns = unique(prepared.marks.map(({ column }) => column));
   const rowIndexes = new Map(rows.map((row, index) => [row, index]));
@@ -28,12 +29,12 @@ export function buildMatrixRenderModel({ chart, prepared }) {
         name: chart.title ?? "",
         type: "heatmap",
         label: { show: readiness || chart.presentation?.labels?.visible === true },
-        data: prepared.marks.map((mark) => [
+        data: prepared.marks.map((mark) => matrixDataItem(
+          mark,
           columnIndexes.get(mark.column),
           rowIndexes.get(mark.row),
-          mark.value,
-          { time: mark.time, group: mark.group },
-        ]),
+          activeTime,
+        )),
         emphasis: { itemStyle: { shadowBlur: 8 } },
       }],
     },
@@ -50,4 +51,76 @@ function unique(values) {
 
 function numericSort(left, right) {
   return left - right;
+}
+
+function matrixDataItem(mark, columnIndex, rowIndex, activeTime) {
+  const value = [
+    columnIndex,
+    rowIndex,
+    mark.value,
+    { time: mark.time, group: mark.group },
+  ];
+  if (!activeTime || !isActiveObservation(mark)) return value;
+  const provenance = provenanceSummary(mark.temporalProvenance);
+  return {
+    value: value.slice(0, 3),
+    time: mark.time,
+    group: mark.group,
+    active: true,
+    activeTime: activeTime.canonical,
+    temporalStatus: provenance.status,
+    provenance,
+    itemStyle: cueItemStyle(provenance.status),
+    tooltip: { formatter: provenance.label },
+  };
+}
+
+function isActiveObservation(mark) {
+  return mark?.active === true
+    && mark.temporalProvenance?.status
+    && mark.temporalProvenance.status !== "missing";
+}
+
+function provenanceSummary(provenance) {
+  const status = provenance?.status ?? "missing";
+  const sourceTime = formatEpoch(provenance?.sourceEpochMs);
+  const lowerTime = formatEpoch(provenance?.lowerEpochMs);
+  const upperTime = formatEpoch(provenance?.upperEpochMs);
+  const observedTime = sourceTime ?? formatEpoch(provenance?.activeEpochMs);
+  const label = bounded(
+    status === "observed"
+      ? `Observed ${observedTime}`
+      : status === "carried"
+        ? `Last measured ${sourceTime}`
+        : status === "nearest"
+          ? `Nearest measurement ${sourceTime}`
+          : status === "interpolated"
+            ? `Interpolated between ${lowerTime} and ${upperTime}`
+            : "No measurement at this time",
+  );
+  return {
+    status,
+    label,
+    ...(sourceTime ? { sourceTime } : {}),
+    ...(lowerTime ? { lowerTime } : {}),
+    ...(upperTime ? { upperTime } : {}),
+  };
+}
+
+function cueItemStyle(status) {
+  return {
+    borderColor: "#2456a6",
+    borderWidth: 3,
+    borderType: status === "observed" ? "solid" : "dashed",
+  };
+}
+
+function formatEpoch(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const canonical = new Date(epochMs).toISOString();
+  return canonical.endsWith("T00:00:00.000Z") ? canonical.slice(0, 10) : canonical;
+}
+
+function bounded(value) {
+  return value.length <= 240 ? value : `${value.slice(0, 239)}â€¦`;
 }

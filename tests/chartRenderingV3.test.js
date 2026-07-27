@@ -6,6 +6,10 @@ import * as echarts from "echarts";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
 
+const MAY_1 = Date.UTC(2027, 4, 1);
+const MAY_2 = Date.UTC(2027, 4, 2);
+const MAY_3 = Date.UTC(2027, 4, 3);
+
 function chart(typeId, overrides = {}) {
   return {
     id: `chart-${typeId}`,
@@ -606,4 +610,253 @@ test("adapters neither consume raw rows nor mutate chart or prepared inputs", ()
   assert.equal(model.kind, "echarts");
   assert.deepEqual(sourceChart, chartBefore);
   assert.deepEqual(sourcePrepared, preparedBefore);
+});
+
+test("line playback retains history and adds one status-aware active marker per available series", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "trace",
+    status: "mixed",
+  };
+  const model = buildRenderModel({
+    chart: chart("line"),
+    prepared: ready([
+      { x: "2027-05-01", value: 10, measure: "cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary", active: false, temporalProvenance: { status: "observed", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_2 } },
+      { x: "2027-05-02", value: 15, measure: "cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary", active: true, temporalProvenance: { status: "observed", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_2 } },
+      { x: "2027-05-01", value: 4, measure: "rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary", active: false, temporalProvenance: { status: "interpolated", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", lowerEpochMs: MAY_1, upperEpochMs: MAY_3 } },
+      { x: "2027-05-02", value: 5, measure: "rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary", active: true, temporalProvenance: { status: "interpolated", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", lowerEpochMs: MAY_1, upperEpochMs: MAY_3 } },
+      { x: "2027-05-03", value: 6, measure: "rate", measureLabel: "Rate", clusterKey: "", groupKey: "", axis: "secondary", active: false, temporalProvenance: { status: "interpolated", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", lowerEpochMs: MAY_1, upperEpochMs: MAY_3 } },
+      { x: "2027-05-01", value: 2, measure: "missing", measureLabel: "Missing", clusterKey: "", groupKey: "", axis: "primary", active: false, temporalProvenance: { status: "missing", activeEpochMs: MAY_2, activeCanonical: "2027-05-02" } },
+    ], { axisInterpretation: "temporal", activeTime }),
+  });
+  const cases = model.option.series.find(({ name }) => name === "Cases");
+  const rate = model.option.series.find(({ name }) => name === "Rate");
+  const missing = model.option.series.find(({ name }) => name === "Missing");
+
+  assert.equal(cases.data.length, 2);
+  assert.deepEqual(cases.markPoint.data[0].coord, ["2027-05-02", 15]);
+  assert.equal(cases.markPoint.symbol, "circle");
+  assert.equal(cases.markPoint.data[0].provenance.label, "Observed 2027-05-02");
+  assert.equal(rate.data.length, 3);
+  assert.deepEqual(rate.markPoint.data[0].coord, ["2027-05-02", 5]);
+  assert.equal(rate.markPoint.symbol, "emptyCircle");
+  assert.equal(rate.markPoint.data[0].itemStyle.borderType, "dashed");
+  assert.equal(rate.markPoint.data[0].provenance.label, "Interpolated between 2027-05-01 and 2027-05-03");
+  assert.equal(missing.markPoint, undefined);
+});
+
+test("snapshot bars annotate prepared active values without duplicating series or inventing points", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "snapshot",
+    status: "mixed",
+  };
+  const model = buildRenderModel({
+    chart: chart("bar"),
+    prepared: ready([
+      { x: "2027-05-02", value: 12, measure: "cases", measureLabel: "Cases", cluster: "A", clusterKey: "A", groupKey: "", axis: "primary", active: true, temporalProvenance: { status: "observed", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_2 } },
+      { x: "2027-05-02", value: 20, measure: "cases", measureLabel: "Cases", cluster: "B", clusterKey: "B", groupKey: "", axis: "primary", active: true, temporalProvenance: { status: "carried", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_1 } },
+    ], { axisInterpretation: "temporal", activeTime }),
+  });
+  const carried = model.option.series.find(({ name }) => /Cases.*B/.test(name));
+
+  assert.equal(model.option.series.length, 2);
+  assert.equal(carried.data.length, 1);
+  assert.deepEqual(carried.data[0].value, ["2027-05-02", 20]);
+  assert.equal(carried.data[0].active, true);
+  assert.equal(carried.data[0].temporalStatus, "carried");
+  assert.equal(carried.data[0].itemStyle.borderType, "dashed");
+  assert.equal(carried.data[0].provenance.label, "Last measured 2027-05-01");
+  assert.equal(carried.markPoint, undefined);
+
+  const missing = buildRenderModel({
+    chart: chart("bar"),
+    prepared: ready([
+      { x: "2027-05-01", value: 4, measure: "cases", measureLabel: "Cases", clusterKey: "", groupKey: "", axis: "primary", active: false, temporalProvenance: { status: "missing", activeEpochMs: MAY_2, activeCanonical: "2027-05-02" } },
+    ], { axisInterpretation: "temporal", activeTime: { ...activeTime, status: "missing" } }),
+  });
+
+  assert.equal(missing.option.series[0].markPoint, undefined);
+  assert.deepEqual(missing.option.series[0].data, [["2027-05-01", 4]]);
+});
+
+test("heatmap playback highlights active prepared cells and retains unrelated cells", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "snapshot",
+    status: "nearest",
+  };
+  const model = buildRenderModel({
+    chart: chart("heatmap"),
+    prepared: ready([
+      { row: "Clinic A", column: "Power", value: 2, time: "2027-05-01", active: false, temporalProvenance: { status: "missing", activeEpochMs: MAY_2, activeCanonical: "2027-05-02" } },
+      { row: "Clinic A", column: "Water", value: 3, time: "2027-05-02", active: true, temporalProvenance: { status: "nearest", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_3 } },
+      { row: "Clinic B", column: "Power", value: 1, time: "2027-05-03", active: false, temporalProvenance: { status: "missing", activeEpochMs: MAY_2, activeCanonical: "2027-05-02" } },
+    ], { activeTime }),
+  });
+
+  assert.equal(model.option.series[0].data.length, 3);
+  const activeCell = model.option.series[0].data.find(({ active }) => active);
+  assert.deepEqual(activeCell.value, [1, 0, 3]);
+  assert.equal(activeCell.temporalStatus, "nearest");
+  assert.equal(activeCell.itemStyle.borderType, "dashed");
+  assert.equal(activeCell.provenance.label, "Nearest measurement 2027-05-03");
+});
+
+test("timeline and swimlane playback retain history while identifying observed and estimated events", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "trace",
+    status: "mixed",
+  };
+  for (const [typeId, status, provenance, expectedLabel] of [
+    ["timeline", "observed", { status: "observed", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_2 }, "Observed 2027-05-02"],
+    ["swimlane", "nearest", { status: "nearest", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_3 }, "Nearest measurement 2027-05-03"],
+  ]) {
+    const model = buildRenderModel({
+      chart: chart(typeId),
+      prepared: ready([
+        { event: "Mobilize", start: "2027-05-01", end: "2027-05-01", lane: "Ops", status: "Planned", active: false, temporalProvenance: provenance },
+        { event: "Activate", start: "2027-05-02", end: "2027-05-02", lane: "Ops", status: "Active", active: true, temporalProvenance: { ...provenance, status } },
+      ], { activeTime }),
+    });
+
+    assert.equal(model.option.series[0].data.length, 2);
+    assert.equal(model.option.series[0].data[0].active, false);
+    assert.equal(model.option.series[0].data[1].active, true);
+    assert.equal(model.option.series[0].data[1].temporalStatus, status);
+    assert.equal(model.option.series[0].data[1].provenance.label, expectedLabel);
+    assert.equal(model.option.series[0].data[1].itemStyle.borderType, status === "observed" ? "solid" : "dashed");
+  }
+});
+
+test("geography playback renders only prepared active frames with time and provenance metadata", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "snapshot",
+    status: "carried",
+  };
+  const active = {
+    geography: "GE-TB",
+    value: 7,
+    time: "2027-05-02",
+    coordinates: [44.79, 41.72],
+    feature: { name: "Tbilisi" },
+    active: true,
+    temporalProvenance: { status: "carried", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_1 },
+  };
+  const inactiveFuture = {
+    geography: "GE-AJ",
+    value: 99,
+    time: "2027-05-03",
+    coordinates: [41.64, 41.65],
+    feature: { name: "Adjara" },
+    active: false,
+    temporalProvenance: { status: "missing", activeEpochMs: MAY_2, activeCanonical: "2027-05-02" },
+  };
+  const chronological = buildRenderModel({
+    chart: chart("chronoChoroplethMap"),
+    prepared: ready([active, inactiveFuture], { activeTime }),
+  });
+  const scatter = buildRenderModel({
+    chart: chart("mapScatter"),
+    prepared: ready([active, inactiveFuture], { activeTime }),
+  });
+
+  assert.equal(chronological.option.timeline, undefined);
+  assert.deepEqual(chronological.option.series[0].data.map(({ name }) => name), ["GE-TB"]);
+  assert.equal(chronological.temporal.activeTime, "2027-05-02");
+  assert.equal(chronological.option.series[0].data[0].temporalStatus, "carried");
+  assert.equal(chronological.option.series[0].data[0].provenance.label, "Last measured 2027-05-01");
+  assert.deepEqual(scatter.option.series[0].data.map(({ geography }) => geography), ["GE-TB"]);
+  assert.equal(scatter.option.series[0].data[0].activeTime, "2027-05-02");
+});
+
+test("KPI, gauge, and bullet playback expose family-correct provenance without changing static output", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "snapshot",
+    status: "mixed",
+  };
+  const carried = { status: "carried", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_1 };
+  const nearest = { status: "nearest", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", sourceEpochMs: MAY_3 };
+  const interpolated = { status: "interpolated", activeEpochMs: MAY_2, activeCanonical: "2027-05-02", lowerEpochMs: MAY_1, upperEpochMs: MAY_3 };
+  const kpi = buildRenderModel({
+    chart: chart("kpi"),
+    prepared: ready([{ value: 12, target: 15, time: "2027-05-02", active: true, temporalProvenance: carried }], { activeTime }),
+  });
+  const gauge = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([{ value: 12, target: 15, time: "2027-05-02", active: true, temporalProvenance: nearest }], { activeTime }),
+  });
+  const bullet = buildRenderModel({
+    chart: chart("bullet"),
+    prepared: ready([{ actual: 12, target: 15, label: "Clinic A", time: "2027-05-02", active: true, temporalProvenance: interpolated }], { activeTime }),
+  });
+
+  assert.equal(kpi.items[0].provenance.label, "Last measured 2027-05-01");
+  assert.equal(gauge.option.series[0].data[0].provenance.label, "Nearest measurement 2027-05-03");
+  assert.equal(gauge.semanticSummary.items[0].provenance.status, "nearest");
+  assert.equal(bullet.option.series[0].data[0].provenance.label, "Interpolated between 2027-05-01 and 2027-05-03");
+  assert.equal(bullet.option.series[0].data[0].itemStyle.borderType, "dashed");
+
+  const missing = buildRenderModel({
+    chart: chart("kpi"),
+    prepared: ready([{ value: 4, time: "2027-05-01", active: false, temporalProvenance: { status: "missing", activeEpochMs: MAY_2, activeCanonical: "2027-05-02" } }], { activeTime: { ...activeTime, status: "missing" } }),
+  });
+  assert.equal(missing.items[0].provenance, undefined);
+});
+
+test("delta playback keeps displayed and comparison provenance distinct", () => {
+  const model = buildRenderModel({
+    chart: chart("deltaCard"),
+    prepared: ready([{
+      entity: "Clinic A",
+      displayed: 20,
+      displayedTime: "2027-05-02",
+      comparison: 10,
+      comparisonTime: "2027-05-01",
+      delta: { absolute: 10, percentage: 100 },
+      active: true,
+      temporalProvenance: {
+        status: "interpolated",
+        activeEpochMs: MAY_2,
+        activeCanonical: "2027-05-02",
+        lowerEpochMs: MAY_1,
+        upperEpochMs: MAY_3,
+        comparison: {
+          status: "observed",
+          activeEpochMs: MAY_1,
+          activeCanonical: "2027-05-01",
+          sourceEpochMs: MAY_1,
+        },
+      },
+    }], {
+      activeTime: {
+        groupId: "exercise",
+        epochMs: MAY_2,
+        canonical: "2027-05-02",
+        mode: "snapshot",
+        status: "interpolated",
+      },
+    }),
+  });
+  const item = model.items[0];
+
+  assert.equal(item.provenance.label, "Interpolated between 2027-05-01 and 2027-05-03");
+  assert.equal(item.comparisonProvenance.label, "Observed 2027-05-01");
+  assert.deepEqual(item.delta, { absolute: 10, percentage: 100 });
+  assert.equal(Object.hasOwn(item.provenance, "comparison"), false);
 });

@@ -4,6 +4,7 @@ const STACKED_TYPES = new Set(["stackedBar", "horizontalStackedBar"]);
 export function buildAxisRenderModel({ chart, prepared }) {
   const horizontal = HORIZONTAL_TYPES.has(chart.typeId);
   const temporal = !horizontal && prepared.meta?.axisInterpretation === "temporal";
+  const activeTime = prepared.meta?.activeTime ?? null;
   const categories = unique(prepared.marks.map(({ x }) => x));
   const categoryIndexes = new Map(categories.map((category, index) => [category, index]));
   const grouped = groupSeries(prepared.marks);
@@ -19,8 +20,9 @@ export function buildAxisRenderModel({ chart, prepared }) {
     const values = temporal
       ? [...group.marks]
           .sort((left, right) => String(left.x).localeCompare(String(right.x)))
-          .map(({ x, value }) => [x, value])
-      : categoryValues(group.marks, categoryIndexes, categories.length);
+          .map((mark) => axisDataValue(mark, [mark.x, mark.value], activeTime, type))
+      : categoryValues(group.marks, categoryIndexes, categories.length, activeTime, type);
+    const marker = type === "line" ? playbackMarker(group.marks, activeTime) : undefined;
     return {
       name: group.name,
       type,
@@ -31,6 +33,7 @@ export function buildAxisRenderModel({ chart, prepared }) {
       showSymbol: type === "line",
       label: axisLabelOption(chart, horizontal),
       emphasis: { focus: "series" },
+      ...(marker ? { markPoint: marker } : {}),
     };
   });
 
@@ -141,11 +144,101 @@ function unique(values) {
   return [...new Set(values)];
 }
 
-function categoryValues(marks, indexes, count) {
+function categoryValues(marks, indexes, count, activeTime, type) {
   const values = Array.from({ length: count }, () => null);
   for (const mark of marks) {
     const index = indexes.get(mark.x);
-    if (index !== undefined) values[index] = mark.value;
+    if (index !== undefined) {
+      values[index] = axisDataValue(mark, mark.value, activeTime, type);
+    }
   }
   return values;
+}
+
+function axisDataValue(mark, value, activeTime, type) {
+  if (!activeTime || type === "line" || !isActiveObservation(mark)) return value;
+  const provenance = provenanceSummary(mark.temporalProvenance);
+  return {
+    value,
+    active: true,
+    activeTime: activeTime.canonical,
+    temporalStatus: provenance.status,
+    provenance,
+    itemStyle: cueItemStyle(provenance.status),
+    tooltip: { formatter: provenance.label },
+  };
+}
+
+function playbackMarker(marks, activeTime) {
+  if (!activeTime) return undefined;
+  const mark = marks.find(isActiveObservation);
+  if (!mark) return undefined;
+  const provenance = provenanceSummary(mark.temporalProvenance);
+  return {
+    symbol: provenance.status === "observed" ? "circle" : "emptyCircle",
+    symbolSize: 12,
+    data: [{
+      name: provenance.label,
+      coord: [activeTime.canonical, mark.value],
+      value: mark.value,
+      active: true,
+      activeTime: activeTime.canonical,
+      temporalStatus: provenance.status,
+      provenance,
+      itemStyle: cueItemStyle(provenance.status),
+      tooltip: { formatter: provenance.label },
+    }],
+  };
+}
+
+function isActiveObservation(mark) {
+  return mark?.active === true
+    && mark.temporalProvenance?.status
+    && mark.temporalProvenance.status !== "missing";
+}
+
+function provenanceSummary(provenance) {
+  const status = provenance?.status ?? "missing";
+  const sourceTime = formatEpoch(provenance?.sourceEpochMs);
+  const lowerTime = formatEpoch(provenance?.lowerEpochMs);
+  const upperTime = formatEpoch(provenance?.upperEpochMs);
+  const observedTime = sourceTime ?? formatEpoch(provenance?.activeEpochMs);
+  const label = bounded(
+    status === "observed"
+      ? `Observed ${observedTime}`
+      : status === "carried"
+        ? `Last measured ${sourceTime}`
+        : status === "nearest"
+          ? `Nearest measurement ${sourceTime}`
+          : status === "interpolated"
+            ? `Interpolated between ${lowerTime} and ${upperTime}`
+            : "No measurement at this time",
+  );
+  return {
+    status,
+    label,
+    ...(sourceTime ? { sourceTime } : {}),
+    ...(lowerTime ? { lowerTime } : {}),
+    ...(upperTime ? { upperTime } : {}),
+  };
+}
+
+function cueItemStyle(status) {
+  const estimated = status !== "observed";
+  return {
+    borderColor: "#2456a6",
+    borderWidth: 2,
+    borderType: estimated ? "dashed" : "solid",
+    ...(estimated ? { color: "#ffffff" } : {}),
+  };
+}
+
+function formatEpoch(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const canonical = new Date(epochMs).toISOString();
+  return canonical.endsWith("T00:00:00.000Z") ? canonical.slice(0, 10) : canonical;
+}
+
+function bounded(value) {
+  return value.length <= 240 ? value : `${value.slice(0, 239)}â€¦`;
 }

@@ -1,12 +1,13 @@
 const GAUGE_COLORS = ["#d73027", "#fdae61", "#1a9850", "#2c7bb6"];
 
 export function buildTargetRenderModel({ chart, prepared }) {
-  if (chart.typeId === "gauge") return gaugeModel(chart, prepared.marks);
-  if (chart.typeId === "bullet") return bulletModel(chart, prepared.marks);
-  return cardModel(chart, prepared.marks);
+  const activeTime = prepared.meta?.activeTime ?? null;
+  if (chart.typeId === "gauge") return gaugeModel(chart, prepared.marks, activeTime);
+  if (chart.typeId === "bullet") return bulletModel(chart, prepared.marks, activeTime);
+  return cardModel(chart, prepared.marks, activeTime);
 }
 
-function gaugeModel(chart, marks) {
+function gaugeModel(chart, marks, activeTime) {
   const ranges = chart.presentation?.targets?.ranges ?? [];
   const rangeMaximum = Math.max(0, ...ranges.map(rangeEnd).filter(Number.isFinite));
   const maximum = Math.max(
@@ -17,7 +18,7 @@ function gaugeModel(chart, marks) {
   const layout = gaugeLayout(chart.presentation?.collection, marks.length);
   return {
     kind: "echarts",
-    semanticSummary: targetSemanticSummary(chart, marks),
+    semanticSummary: targetSemanticSummary(chart, marks, activeTime),
     presentation: {
       collection: clone(chart.presentation?.collection ?? null),
     },
@@ -36,12 +37,16 @@ function gaugeModel(chart, marks) {
           axisLine: { lineStyle: { color: gaugeSegments(ranges, maximum) } },
           detail: { valueAnimation: true },
           title: { show: Boolean(name) },
-          data: [{
-            value: mark.value,
-            name,
-            target: mark.target,
-            time: mark.time,
-          }],
+          data: [targetDataItem(
+            mark,
+            {
+              value: mark.value,
+              name,
+              target: mark.target,
+              time: mark.time,
+            },
+            activeTime,
+          )],
         };
       }),
     },
@@ -60,11 +65,11 @@ function gaugeLayout(collection, count) {
   };
 }
 
-function bulletModel(chart, marks) {
+function bulletModel(chart, marks, activeTime) {
   const categories = marks.map((mark, index) => mark.entity ?? mark.label ?? `Item ${index + 1}`);
   return {
     kind: "echarts",
-    semanticSummary: targetSemanticSummary(chart, marks),
+    semanticSummary: targetSemanticSummary(chart, marks, activeTime),
     option: {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
@@ -76,7 +81,11 @@ function bulletModel(chart, marks) {
         {
           name: "Actual",
           type: "bar",
-          data: marks.map(({ actual }) => actual),
+          data: marks.map((mark) => (
+            activeTime && isActiveObservation(mark)
+              ? targetDataItem(mark, { value: mark.actual }, activeTime)
+              : mark.actual
+          )),
           z: 2,
         },
         {
@@ -95,11 +104,15 @@ function bulletModel(chart, marks) {
   };
 }
 
-function cardModel(chart, marks) {
+function cardModel(chart, marks, activeTime) {
   const delta = chart.typeId === "deltaCard" || chart.typeId === "deltaList";
   return {
     kind: "cards",
-    items: marks.map((mark, index) => delta ? deltaItem(chart, mark, index) : kpiItem(chart, mark, index)),
+    items: marks.map((mark, index) => (
+      delta
+        ? deltaItem(chart, mark, index, activeTime)
+        : kpiItem(chart, mark, index, activeTime)
+    )),
     presentation: {
       collection: clone(chart.presentation?.collection ?? null),
       labels: clone(chart.presentation?.labels ?? null),
@@ -108,8 +121,11 @@ function cardModel(chart, marks) {
   };
 }
 
-function kpiItem(chart, mark, index) {
+function kpiItem(chart, mark, index, activeTime) {
   const identity = mark.entity ?? mark.label;
+  const provenance = activeTime && isActiveObservation(mark)
+    ? provenanceSummary(mark.temporalProvenance)
+    : null;
   return {
     key: String(identity ?? `kpi-${index}`),
     label: identity ?? chart.title ?? "KPI",
@@ -120,13 +136,26 @@ function kpiItem(chart, mark, index) {
     delta: null,
     direction: null,
     favorability: null,
+    ...(provenance
+      ? {
+          activeTime: activeTime.canonical,
+          temporalStatus: provenance.status,
+          provenance,
+        }
+      : {}),
   };
 }
 
-function deltaItem(chart, mark, index) {
+function deltaItem(chart, mark, index, activeTime) {
   const absolute = mark.delta?.absolute;
   const direction = absolute > 0 ? "increase" : absolute < 0 ? "decrease" : "unchanged";
   const favorableDirection = chart.presentation?.targets?.direction ?? "neutral";
+  const provenance = activeTime && isActiveObservation(mark)
+    ? provenanceSummary(mark.temporalProvenance)
+    : null;
+  const comparisonProvenance = provenance && mark.temporalProvenance?.comparison
+    ? provenanceSummary(mark.temporalProvenance.comparison)
+    : null;
   return {
     key: String(mark.entity ?? `${chart.typeId}-${index}`),
     label: mark.entity ?? chart.title ?? "Change",
@@ -138,18 +167,38 @@ function deltaItem(chart, mark, index) {
     delta: clone(mark.delta ?? { absolute: null, percentage: null }),
     direction,
     favorability: favorability(direction, favorableDirection),
+    ...(provenance
+      ? {
+          activeTime: activeTime.canonical,
+          temporalStatus: provenance.status,
+          provenance,
+        }
+      : {}),
+    ...(comparisonProvenance ? { comparisonProvenance } : {}),
   };
 }
 
-function targetSemanticSummary(chart, marks) {
+function targetSemanticSummary(chart, marks, activeTime) {
   return {
     collection: clone(chart.presentation?.collection ?? null),
-    items: marks.map((mark, index) => ({
-      label: mark.entity ?? mark.label ?? chart.title ?? `Item ${index + 1}`,
-      actual: mark.value ?? mark.actual ?? null,
-      target: mark.target ?? null,
-      time: mark.time ?? null,
-    })),
+    items: marks.map((mark, index) => {
+      const provenance = activeTime && isActiveObservation(mark)
+        ? provenanceSummary(mark.temporalProvenance)
+        : null;
+      return {
+        label: mark.entity ?? mark.label ?? chart.title ?? `Item ${index + 1}`,
+        actual: mark.value ?? mark.actual ?? null,
+        target: mark.target ?? null,
+        time: mark.time ?? null,
+        ...(provenance
+          ? {
+              activeTime: activeTime.canonical,
+              temporalStatus: provenance.status,
+              provenance,
+            }
+          : {}),
+      };
+    }),
   };
 }
 
@@ -183,4 +232,70 @@ function titleOption(chart) {
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value);
+}
+
+function targetDataItem(mark, data, activeTime) {
+  if (!activeTime || !isActiveObservation(mark)) return data;
+  const provenance = provenanceSummary(mark.temporalProvenance);
+  return {
+    ...data,
+    active: true,
+    activeTime: activeTime.canonical,
+    temporalStatus: provenance.status,
+    provenance,
+    itemStyle: cueItemStyle(provenance.status),
+    tooltip: { formatter: provenance.label },
+  };
+}
+
+function isActiveObservation(mark) {
+  return mark?.active === true
+    && mark.temporalProvenance?.status
+    && mark.temporalProvenance.status !== "missing";
+}
+
+function provenanceSummary(provenance) {
+  const status = provenance?.status ?? "missing";
+  const sourceTime = formatEpoch(provenance?.sourceEpochMs);
+  const lowerTime = formatEpoch(provenance?.lowerEpochMs);
+  const upperTime = formatEpoch(provenance?.upperEpochMs);
+  const observedTime = sourceTime ?? formatEpoch(provenance?.activeEpochMs);
+  const label = bounded(
+    status === "observed"
+      ? `Observed ${observedTime}`
+      : status === "carried"
+        ? `Last measured ${sourceTime}`
+        : status === "nearest"
+          ? `Nearest measurement ${sourceTime}`
+          : status === "interpolated"
+            ? `Interpolated between ${lowerTime} and ${upperTime}`
+            : "No measurement at this time",
+  );
+  return {
+    status,
+    label,
+    treatment: status === "observed" ? "solid" : "hollow-dashed",
+    ...(sourceTime ? { sourceTime } : {}),
+    ...(lowerTime ? { lowerTime } : {}),
+    ...(upperTime ? { upperTime } : {}),
+  };
+}
+
+function cueItemStyle(status) {
+  return {
+    borderColor: "#2456a6",
+    borderWidth: 2,
+    borderType: status === "observed" ? "solid" : "dashed",
+    ...(status === "observed" ? {} : { color: "#ffffff" }),
+  };
+}
+
+function formatEpoch(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const canonical = new Date(epochMs).toISOString();
+  return canonical.endsWith("T00:00:00.000Z") ? canonical.slice(0, 10) : canonical;
+}
+
+function bounded(value) {
+  return value.length <= 240 ? value : `${value.slice(0, 239)}â€¦`;
 }
