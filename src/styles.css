@@ -2328,6 +2328,7 @@ button.danger {
 /* Version-3 chart view primitives: intentionally scoped so existing panels keep their layout. */
 .chart-echarts-view,
 .chart-card-view,
+.chart-target-collection-view,
 .chart-table-view,
 .chart-image-view {
   margin: 0;
@@ -2377,6 +2378,38 @@ button.danger {
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   margin-top: 12px;
+}
+
+.chart-target-collection {
+  margin-top: 12px;
+}
+
+.chart-target-collection-item {
+  background: #fff;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  min-block-size: 12rem;
+  padding: 12px;
+}
+
+.chart-target-collection-label {
+  color: #18334e;
+  font-size: 0.9375rem;
+  margin: 0 0 8px;
+}
+
+.chart-embedded-echarts-host {
+  block-size: 10rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.chart-embedded-echarts-error {
+  background: #fee9e7;
+  border-radius: 8px;
+  color: #8c1d18;
+  margin: 8px 0 0;
+  padding: 10px;
 }
 
 .collection-display {

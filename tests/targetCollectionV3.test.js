@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { register } from "node:module";
 
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { rankCollection } from "../src/charting/collection/rankCollection.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
+
+register(`data:text/javascript,${encodeURIComponent(`
+export async function load(url, context, nextLoad) {
+  if (url.endsWith(".jsx")) {
+    const loaded = await nextLoad(url, { ...context, format: "module" });
+    return { format: "module", source: loaded.source, shortCircuit: true };
+  }
+  return nextLoad(url, context);
+}
+`)}`, import.meta.url);
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
@@ -396,4 +409,34 @@ test("repeated target identities normalize visible labels and reject blank or co
   assert.match(typedDisplayCollision.message, /duplicate.*identity/i);
   assert.equal(crossRoleDisplayCollision.kind, "error");
   assert.match(crossRoleDisplayCollision.message, /duplicate.*identity/i);
+});
+
+test("the target collection view renders detached model identity and semantic summaries without nested outer metadata", async () => {
+  const {
+    default: TargetCollectionChartView,
+  } = await import("../src/components/charts/TargetCollectionChartView.jsx");
+  const model = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { entity: "Clinic A", value: 72, target: 80, time: "2027-05-02" },
+      { entity: "Clinic B", value: 55, target: 70, time: "2027-05-02" },
+    ]),
+  });
+  const modelBefore = structuredClone(model);
+  const html = renderToStaticMarkup(React.createElement(
+    TargetCollectionChartView,
+    {
+      model,
+      chart: chart("gauge"),
+      provenance: { label: "Operations register" },
+    },
+  ));
+
+  assert.match(html, /data-collection-entity-id="target:&quot;Clinic A&quot;"/);
+  assert.match(html, /data-collection-entity-id="target:&quot;Clinic B&quot;"/);
+  assert.match(html, /Clinic A: actual 72; target 80; observed 2027-05-02/);
+  assert.match(html, /Clinic B: actual 55; target 70; observed 2027-05-02/);
+  assert.equal((html.match(/class="chart-view-title"/g) ?? []).length, 1);
+  assert.equal((html.match(/Source: Operations register/g) ?? []).length, 1);
+  assert.deepEqual(model, modelBefore);
 });

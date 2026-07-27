@@ -263,6 +263,85 @@ test("a single bullet summary exposes its exact label, actual, target, and time"
   assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
 });
 
+test("repeated Gauge and Bullet charts dispatch through one accessible collection view", () => {
+  for (const [typeId, roles, rows] of [
+    [
+      "gauge",
+      {
+        value: { field: "actual" },
+        target: { field: "target" },
+        entity: { field: "facility" },
+        time: { field: "observed" },
+      },
+      [
+        { facility: "Clinic A", actual: 8, target: 10, observed: "2027-05-01" },
+        { facility: "Clinic B", actual: 6, target: 9, observed: "2027-05-01" },
+      ],
+    ],
+    [
+      "bullet",
+      {
+        actual: { field: "actual" },
+        target: { field: "target" },
+        entity: { field: "facility" },
+        time: { field: "observed" },
+      },
+      [
+        { facility: "Clinic A", actual: 8, target: 10, observed: "2027-05-01" },
+        { facility: "Clinic B", actual: 6, target: 9, observed: "2027-05-01" },
+      ],
+    ],
+  ]) {
+    const title = `${typeId} facility targets`;
+    const source = `${typeId}-register`;
+    const html = renderToStaticMarkup(React.createElement(ChartView, {
+      chart: {
+        id: `${typeId}-collection`,
+        typeId,
+        title,
+        description: "Current status by facility.",
+        sourceId: source,
+        roles,
+        presentation: {
+          collection: {
+            layout: "fixed",
+            rows: 1,
+            columns: 2,
+            gap: 12,
+            overflow: "manualPages",
+            ranking: { mode: "fixed" },
+            carousel: {
+              intervalMs: 10000,
+              loop: true,
+              pauseOnHover: true,
+              transition: "none",
+            },
+            playback: { rerank: true, pauseCarousel: true },
+          },
+          targets: { ranges: [50, 80, 100] },
+        },
+        interaction: { zoom: { enabled: false } },
+      },
+      rows,
+      datasetProfile: profileDataset(rows, {
+        observed: { interpretation: "temporal" },
+      }),
+    }));
+
+    assert.match(html, /class="chart-target-collection-view"/);
+    assert.match(html, /data-collection-layout="fixed"/);
+    assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
+    assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 1);
+    assert.equal((html.match(/class="chart-target-collection-item"/g) ?? []).length, 2);
+    assert.equal((html.match(/role="img"/g) ?? []).length, 2);
+    assert.match(html, /aria-labelledby="[^"]+"/);
+    assert.match(html, /aria-describedby="[^"]+"/);
+    assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
+    assert.match(html, /Clinic B: actual 6; target 9; observed 2027-05-01/);
+    assert.doesNotMatch(html, /class="chart-echarts-view"/);
+  }
+});
+
 test("ECharts lifecycle initializes once, updates in place, registers maps before options, resizes, and cleans up", () => {
   const calls = [];
   const instance = {

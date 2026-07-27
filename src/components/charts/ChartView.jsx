@@ -8,6 +8,7 @@ import CardChartView from "./CardChartView.jsx";
 import EChartsChartView from "./EChartsChartView.jsx";
 import ImageChartView from "./ImageChartView.jsx";
 import TableChartView from "./TableChartView.jsx";
+import TargetCollectionChartView from "./TargetCollectionChartView.jsx";
 
 const MAX_STATUS_LENGTH = 240;
 
@@ -25,6 +26,7 @@ export default function ChartView(props) {
     const provenance = resolveProvenance(props);
     if (model.kind === "echarts") return React.createElement(EChartsChartView, { model, chart: props.chart, provenance });
     if (model.kind === "cards") return React.createElement(CardChartView, { model, chart: props.chart, provenance });
+    if (model.kind === "targetCollection") return React.createElement(TargetCollectionChartView, { model, chart: props.chart, provenance });
     if (model.kind === "table") return React.createElement(TableChartView, { model, chart: props.chart, provenance });
     if (model.kind === "image") return React.createElement(ImageChartView, { model, chart: props.chart, provenance });
     return React.createElement(ChartStatus, { message: model.message, empty: prepared.status === "empty" });

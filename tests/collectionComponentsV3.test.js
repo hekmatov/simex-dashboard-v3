@@ -196,6 +196,140 @@ test("an unusable priority ranking stays in configured order and explains the fa
   assert.match(html, /showing configured order/i);
 });
 
+test("target collections use shared fixed, scroll, carousel, and priority presentation semantics", async () => {
+  const {
+    default: TargetCollectionChartView,
+  } = await import("../src/components/charts/TargetCollectionChartView.jsx");
+  const items = [
+    targetItem("clinic-z", "Clinic Z", 8, 10),
+    targetItem("clinic-a", "Clinic A", 6, 9),
+    targetItem("clinic-b", "Clinic B", 7, 8),
+  ];
+  const chart = {
+    title: "Facility targets",
+    description: "Current target status.",
+    presentation: { title: { align: "center" } },
+  };
+
+  for (const [layout, overflow] of [
+    ["fixed", "manualPages"],
+    ["scroll", "scroll"],
+    ["carousel", "autoRotate"],
+  ]) {
+    const html = renderToStaticMarkup(React.createElement(
+      TargetCollectionChartView,
+      {
+        chart,
+        provenance: { label: "Target register", capturedAt: "2027-05-02" },
+        model: {
+          kind: "targetCollection",
+          items,
+          presentation: {
+            collection: {
+              layout,
+              rows: 1,
+              columns: 2,
+              gap: 8,
+              overflow,
+              ranking: { mode: "fixed" },
+              carousel: {
+                intervalMs: 5000,
+                loop: true,
+                pauseOnHover: true,
+                transition: "none",
+              },
+              playback: { rerank: true, pauseCarousel: true },
+            },
+          },
+        },
+      },
+    ));
+
+    assert.match(html, new RegExp(`data-collection-layout="${layout}"`));
+    assert.equal((html.match(/>Facility targets</g) ?? []).length, 1);
+    assert.equal((html.match(/Source: Target register/g) ?? []).length, 1);
+    assert.equal((html.match(/Captured: 2027-05-02/g) ?? []).length, 1);
+    assert.match(html, /data-title-align="center"/);
+  }
+
+  const fallback = renderToStaticMarkup(React.createElement(
+    TargetCollectionChartView,
+    {
+      chart,
+      model: {
+        kind: "targetCollection",
+        items,
+        presentation: {
+          collection: {
+            layout: "fixed",
+            rows: 1,
+            columns: 3,
+            ranking: { mode: "priority", method: "riskScore" },
+          },
+        },
+      },
+    },
+  ));
+  assertTextOrder(
+    fallback,
+    ["Clinic Z", "Clinic A", "Clinic B"],
+    "target priority fallback",
+  );
+  assert.match(fallback, /class="collection-ranking-status"/);
+  assert.match(fallback, /role="status"/);
+  assert.match(fallback, /aria-live="polite"/);
+  assert.match(fallback, /showing configured order/i);
+});
+
+test("target collections preserve playback order locking and embedded provenance summaries", async () => {
+  const {
+    default: TargetCollectionChartView,
+  } = await import("../src/components/charts/TargetCollectionChartView.jsx");
+  const items = [
+    targetItem("clinic-a", "Clinic A", 4, 10),
+    {
+      ...targetItem("clinic-b", "Clinic B", 9, 10),
+      activeTime: "2027-05-02",
+      temporalStatus: "carried",
+      provenance: {
+        status: "carried",
+        label: "Last measured 2027-05-01",
+        sourceTime: "2027-05-01",
+      },
+      accessibleSummary: "Clinic B: actual 9; target 10. Playback time 2027-05-02. Last measured 2027-05-01",
+    },
+  ];
+  const html = renderToStaticMarkup(React.createElement(
+    TargetCollectionChartView,
+    {
+      chart: { title: "Playback targets" },
+      playback: {
+        playbackView: true,
+        playing: true,
+        lockedEntityOrder: ["clinic-a", "clinic-b"],
+      },
+      model: {
+        kind: "targetCollection",
+        items,
+        presentation: {
+          collection: {
+            layout: "fixed",
+            rows: 1,
+            columns: 2,
+            ranking: { mode: "priority", method: "highestCurrent" },
+            playback: { rerank: false, pauseCarousel: true },
+          },
+        },
+      },
+    },
+  ));
+
+  assertTextOrder(html, ["Clinic A", "Clinic B"], "target playback lock");
+  assert.match(html, /data-temporal-status="carried"/);
+  assert.match(html, /Playback time 2027-05-02/);
+  assert.match(html, /Last measured 2027-05-01/);
+});
+
 test("rerank locking applies only while the dedicated Playback view is active", () => {
   const items = [
     { entityId: "a", label: "Alpha", current: 1 },
@@ -588,6 +722,24 @@ function collectionItems(count) {
     label: `Item ${index + 1}`,
     current: index + 1,
   }));
+}
+
+function targetItem(entityId, label, actual, target) {
+  return {
+    entityId,
+    label,
+    value: actual,
+    actual,
+    target,
+    accessibleSummary: `${label}: actual ${actual}; target ${target}; observed 2027-05-01`,
+    model: {
+      kind: "echarts",
+      option: { series: [] },
+      semanticSummary: {
+        items: [{ label, actual, target, time: "2027-05-01" }],
+      },
+    },
+  };
 }
 
 function cardItem(key, label, value) {
