@@ -18,9 +18,11 @@ export function createManualDataTemplate(schema) {
   if (!contract.allowed) {
     throw new Error("This chart schema does not support concise manual data.");
   }
-  const starterRowCount = contract.comparison
-    ? 2
-    : Math.max(1, contract.minRows);
+  const starterRowCount = Math.max(
+    1,
+    contract.minRows,
+    contract.comparison ? 2 : 0,
+  );
   const rows = Array.from(
     { length: starterRowCount },
     () => Object.fromEntries(contract.columns.map(({ fieldId }) => [fieldId, ""])),
@@ -29,6 +31,13 @@ export function createManualDataTemplate(schema) {
     maxRows: contract.maxRows,
     columns: contract.columns.map(cloneColumn),
     rows,
+    ...(contract.comparison
+      ? {
+          comparison: {
+            temporalRoleIds: [...contract.comparison.temporalRoleIds],
+          },
+        }
+      : {}),
   };
 }
 
@@ -62,8 +71,16 @@ export function validateManualData(schema, input) {
       `Manual data exceeds the concise limit of ${contract.maxRows} rows.`,
     );
   }
+  if (rows.length < contract.minRows) {
+    errors.push(
+      `Manual data requires at least ${contract.minRows} rows.`,
+    );
+  }
 
-  const comparableTimes = [];
+  const comparableTimes = new Map(
+    (contract.comparison?.temporalRoleIds ?? [])
+      .map((roleId) => [roleId, []]),
+  );
   let usableRowCount = 0;
   for (const row of rows) {
     if (!row) continue;
@@ -72,23 +89,31 @@ export function validateManualData(schema, input) {
     if (
       contract.comparison
       && rowResult.validRoleValues.get("measurement") === true
-      && typeof rowResult.temporalRoleValues.get("time") === "string"
     ) {
-      comparableTimes.push(rowResult.temporalRoleValues.get("time"));
+      for (const roleId of contract.comparison.temporalRoleIds) {
+        const temporalValue = rowResult.temporalRoleValues.get(roleId);
+        if (typeof temporalValue === "string") {
+          comparableTimes.get(roleId).push(temporalValue);
+        }
+      }
     }
   }
   if (usableRowCount === 0) {
     errors.push("Manual data must contain at least one usable row.");
   }
   if (contract.comparison) {
-    if (comparableTimes.length < 2) {
-      errors.push(
-        "A comparison chart requires at least two usable temporal observations.",
-      );
-    } else if (new Set(comparableTimes).size < 2) {
-      errors.push(
-        "A comparison chart requires two distinct temporal observations.",
-      );
+    for (const [roleId, temporalValues] of comparableTimes) {
+      const label = contract.columns
+        .find((column) => column.roleId === roleId)?.header ?? roleId;
+      if (temporalValues.length < 2) {
+        errors.push(
+          `A comparison chart requires at least two usable temporal observations for "${label}".`,
+        );
+      } else if (new Set(temporalValues).size < 2) {
+        errors.push(
+          `A comparison chart requires two distinct temporal observations for "${label}".`,
+        );
+      }
     }
   }
 
@@ -114,7 +139,7 @@ function readManualContract(schema) {
     return {
       allowed: false,
       columns: [],
-      comparison: false,
+      comparison: null,
       minRows: 0,
       maxRows: 0,
     };
@@ -145,7 +170,18 @@ function readManualContract(schema) {
       'Chart schema property "comparison" must be a data property.',
     );
   }
-  const comparison = comparisonDescriptor?.value !== undefined;
+  const hasComparison = comparisonDescriptor?.value !== undefined;
+  const temporalRoleIds = hasComparison
+    ? roles
+        .filter(({ min, accepts }) => min > 0 && accepts.includes("temporal"))
+        .map(({ id }) => id)
+    : [];
+  if (hasComparison && temporalRoleIds.length === 0) {
+    throw new Error(
+      "A comparison chart schema requires a required temporal role.",
+    );
+  }
+  const comparison = hasComparison ? { temporalRoleIds } : null;
   const bounded = Number.isInteger(maxRows)
     && maxRows > 0
     && maxRows <= MAX_CONCISE_ROWS

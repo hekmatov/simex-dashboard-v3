@@ -7,6 +7,7 @@ import {
   validateManualData,
 } from "../src/charting/forms/manualData.js";
 import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
+import { validateChartSchema } from "../src/charting/schemas/validateChartSchema.js";
 
 function futureConciseSchema() {
   return {
@@ -31,6 +32,21 @@ function futureConciseSchema() {
       },
     ],
     manualData: { maxRows: 4 },
+  };
+}
+
+function futureComparisonSchema({ minRows = 0 } = {}) {
+  const schema = structuredClone(getChartSchema("deltaCard"));
+  return {
+    ...schema,
+    typeId: "futureChangeSummary",
+    label: "Future change summary",
+    roles: schema.roles.map((chartRole) => (
+      chartRole.id === "time"
+        ? { ...chartRole, id: "observedAt", label: "Observed at" }
+        : chartRole
+    )),
+    manualData: { maxRows: 6, minRows },
   };
 }
 
@@ -106,6 +122,51 @@ test("comparison schemas receive two starter observations without a type-specifi
     { measurement: "", entity: "", time: "", target: "" },
   ]);
   assert.equal(createManualDataTemplate(renamedDelta).rows.length, 2);
+});
+
+test("comparison validation derives the temporal field identity from the schema", () => {
+  const schema = futureComparisonSchema();
+  assert.doesNotThrow(() => validateChartSchema(schema));
+
+  const template = createManualDataTemplate(schema);
+  assert.ok(template.columns.some(({ roleId }) => roleId === "observedAt"));
+  assert.ok(!template.columns.some(({ roleId }) => roleId === "time"));
+  assert.deepEqual(template.comparison, {
+    temporalRoleIds: ["observedAt"],
+  });
+  assert.deepEqual(validateManualData(schema, [
+    { measurement: "8", observedAt: "2027-05-01" },
+    { measurement: "10", observedAt: "2027-05-02" },
+  ]), { valid: true, errors: [] });
+});
+
+test("comparison templates and validation honor a minimum above two rows", () => {
+  const schema = futureComparisonSchema({ minRows: 3 });
+  const twoRows = [
+    { measurement: "8", observedAt: "2027-05-01" },
+    { measurement: "10", observedAt: "2027-05-02" },
+  ];
+
+  assert.equal(createManualDataTemplate(schema).rows.length, 3);
+  const result = validateManualData(schema, twoRows);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(" "), /requires at least 3 rows/i);
+});
+
+test("ordinary manual schemas enforce their declared minimum rows", () => {
+  const schema = {
+    ...futureConciseSchema(),
+    manualData: { maxRows: 4, minRows: 3 },
+  };
+  const twoRows = [
+    { indicator: "Ready", score: 8 },
+    { indicator: "Constrained", score: 2 },
+  ];
+
+  assert.equal(createManualDataTemplate(schema).rows.length, 3);
+  const result = validateManualData(schema, twoRows);
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(" "), /requires at least 3 rows/i);
 });
 
 test("manual rows validate required role values while accepting numeric strings", () => {
