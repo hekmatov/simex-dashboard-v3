@@ -73,6 +73,12 @@ function ownValue(descriptors, key, fallback) {
   return Object.hasOwn(descriptors, key) ? descriptors[key].value : fallback;
 }
 
+function valueType(value) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
 function boundedInteger(value, name) {
   if (!Number.isInteger(value) || value < 1 || value > 4) {
     throw new Error(`Collection ${name} must be an integer between 1 and 4.`);
@@ -90,8 +96,11 @@ function booleanValue(value, name) {
 function normalizeRanking(value) {
   const descriptors = recordDescriptors(value, "Collection ranking");
   const mode = ownValue(descriptors, "mode");
+  if (typeof mode !== "string") {
+    throw new Error(`Collection ranking mode must be a string; received type ${valueType(mode)}.`);
+  }
   if (!RANKING_KEYS[mode]) {
-    throw new Error(`Unsupported collection ranking mode "${String(mode)}".`);
+    throw new Error(`Unsupported collection ranking mode "${mode}".`);
   }
   assertKnownKeys(descriptors, RANKING_KEYS[mode], `collection ranking for ${mode}`);
   if (mode === "fixed") return Object.freeze({ mode });
@@ -123,8 +132,11 @@ function normalizeRanking(value) {
   }
   if (hasMethod) {
     const method = descriptors.method.value;
+    if (typeof method !== "string") {
+      throw new Error(`Collection priority method must be a string; received type ${valueType(method)}.`);
+    }
     if (!PRIORITY_METHODS.has(method)) {
-      throw new Error(`Unsupported collection priority method "${String(method)}".`);
+      throw new Error(`Unsupported collection priority method "${method}".`);
     }
     return Object.freeze({ mode, method, stabilize });
   }
@@ -179,8 +191,11 @@ export function normalizeCollectionSettings(settings = {}) {
   const descriptors = recordDescriptors(settings, "Collection settings");
   assertKnownKeys(descriptors, SETTINGS_KEYS, "collection settings");
   const layout = ownValue(descriptors, "layout", "fixed");
+  if (typeof layout !== "string") {
+    throw new Error(`Collection layout must be a string; received type ${valueType(layout)}.`);
+  }
   if (!LAYOUTS.has(layout)) {
-    throw new Error(`Unsupported collection layout "${String(layout)}".`);
+    throw new Error(`Unsupported collection layout "${layout}".`);
   }
   const rows = boundedInteger(ownValue(descriptors, "rows", 2), "rows");
   const columns = boundedInteger(ownValue(descriptors, "columns", 2), "columns");
@@ -189,8 +204,11 @@ export function normalizeCollectionSettings(settings = {}) {
     throw new Error("Collection gap must be between 0 and 64.");
   }
   const overflow = ownValue(descriptors, "overflow", DEFAULT_OVERFLOW[layout]);
+  if (typeof overflow !== "string") {
+    throw new Error(`Collection overflow must be a string; received type ${valueType(overflow)}.`);
+  }
   if (!OVERFLOWS_BY_LAYOUT[layout].has(overflow)) {
-    throw new Error(`Collection overflow "${String(overflow)}" is not valid for ${layout} layout.`);
+    throw new Error(`Collection overflow "${overflow}" is not valid for ${layout} layout.`);
   }
 
   return Object.freeze({

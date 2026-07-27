@@ -10,6 +10,12 @@ const EXPRESSION_KEYS = new Set(["operator", "terms"]);
 const TERM_KEYS = new Set(["metric", "weight"]);
 const MAX_WEIGHTED_SUM_TERMS = 64;
 
+function valueType(value) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
 function assertSafeRecord(value, description) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${description} must be a plain object with own fields.`);
@@ -85,8 +91,11 @@ export function normalizePriorityExpression(expression) {
   const descriptors = assertSafeRecord(expression, "Priority expression");
   assertKnownKeys(descriptors, EXPRESSION_KEYS, "priority expression");
   const operator = requiredValue(descriptors, "operator", "Priority expression");
+  if (typeof operator !== "string") {
+    throw new Error(`Priority expression operator must be a string; received type ${valueType(operator)}.`);
+  }
   if (operator !== "weightedSum") {
-    throw new Error(`Unsupported priority expression operator "${String(operator)}".`);
+    throw new Error(`Unsupported priority expression operator "${operator}".`);
   }
   const terms = requiredValue(descriptors, "terms", "Priority expression");
   assertSafeTerms(terms);
@@ -96,8 +105,11 @@ export function normalizePriorityExpression(expression) {
     assertKnownKeys(termDescriptors, TERM_KEYS, "priority expression term");
     const metric = requiredValue(termDescriptors, "metric", "Priority expression term");
     const weight = requiredValue(termDescriptors, "weight", "Priority expression term");
-    if (typeof metric !== "string" || !PRIORITY_METRICS.has(metric)) {
-      throw new Error(`Unknown priority metric "${String(metric)}".`);
+    if (typeof metric !== "string") {
+      throw new Error(`Priority metric must be a string; received type ${valueType(metric)}.`);
+    }
+    if (!PRIORITY_METRICS.has(metric)) {
+      throw new Error(`Unknown priority metric "${metric}".`);
     }
     if (!Number.isFinite(weight)) {
       throw new Error(`Priority expression weight for "${metric}" must be finite.`);

@@ -182,6 +182,128 @@ test("ranking modes accept only their documented strict shapes", () => {
   }
 });
 
+test("malformed scalar diagnostics never invoke attacker-controlled coercion hooks", () => {
+  function coercionTrap() {
+    let calls = 0;
+    return {
+      value: {
+        [Symbol.toPrimitive]() {
+          calls += 1;
+          return "coerced";
+        },
+        toString() {
+          calls += 1;
+          return "coerced";
+        },
+        valueOf() {
+          calls += 1;
+          return 1;
+        },
+      },
+      calls: () => calls,
+    };
+  }
+
+  const cases = [
+    ["layout", (value) => normalizeCollectionSettings({ layout: value }), /layout.*type object/i],
+    ["rows", (value) => normalizeCollectionSettings({ rows: value }), /rows.*integer/i],
+    ["columns", (value) => normalizeCollectionSettings({ columns: value }), /columns.*integer/i],
+    ["gap", (value) => normalizeCollectionSettings({ gap: value }), /gap.*between/i],
+    ["overflow", (value) => normalizeCollectionSettings({ overflow: value }), /overflow.*type object/i],
+    [
+      "ranking mode",
+      (value) => normalizeCollectionSettings({ ranking: { mode: value } }),
+      /ranking mode.*type object/i,
+    ],
+    [
+      "sort field",
+      (value) => normalizeCollectionSettings({ ranking: { mode: "sort", field: value } }),
+      /sort field.*non-empty/i,
+    ],
+    [
+      "sort direction",
+      (value) => normalizeCollectionSettings({
+        ranking: { mode: "sort", field: "label", direction: value },
+      }),
+      /sort direction.*asc or desc/i,
+    ],
+    [
+      "ranking stabilize",
+      (value) => normalizeCollectionSettings({
+        ranking: { mode: "sort", field: "label", stabilize: value },
+      }),
+      /stabilize.*boolean/i,
+    ],
+    [
+      "priority method",
+      (value) => normalizeCollectionSettings({
+        ranking: { mode: "priority", method: value },
+      }),
+      /priority method.*type object/i,
+    ],
+    [
+      "carousel interval",
+      (value) => normalizeCollectionSettings({ carousel: { intervalMs: value } }),
+      /intervalMs.*integer/i,
+    ],
+    [
+      "carousel loop",
+      (value) => normalizeCollectionSettings({ carousel: { loop: value } }),
+      /loop.*boolean/i,
+    ],
+    [
+      "carousel pause",
+      (value) => normalizeCollectionSettings({ carousel: { pauseOnHover: value } }),
+      /pauseOnHover.*boolean/i,
+    ],
+    [
+      "carousel transition",
+      (value) => normalizeCollectionSettings({ carousel: { transition: value } }),
+      /transition.*none, fade, or slide/i,
+    ],
+    [
+      "playback rerank",
+      (value) => normalizeCollectionSettings({ playback: { rerank: value } }),
+      /rerank.*boolean/i,
+    ],
+    [
+      "playback pause",
+      (value) => normalizeCollectionSettings({ playback: { pauseCarousel: value } }),
+      /pauseCarousel.*boolean/i,
+    ],
+    [
+      "expression operator",
+      (value) => evaluatePriorityExpression({
+        operator: value,
+        terms: [{ metric: "riskScore", weight: 1 }],
+      }, { riskScore: 1 }),
+      /operator.*type object/i,
+    ],
+    [
+      "expression metric",
+      (value) => evaluatePriorityExpression({
+        operator: "weightedSum",
+        terms: [{ metric: value, weight: 1 }],
+      }, { riskScore: 1 }),
+      /priority metric.*type object/i,
+    ],
+    [
+      "expression weight",
+      (value) => evaluatePriorityExpression({
+        operator: "weightedSum",
+        terms: [{ metric: "riskScore", weight: value }],
+      }, { riskScore: 1 }),
+      /weight.*finite/i,
+    ],
+  ];
+
+  for (const [name, invoke, expected] of cases) {
+    const trap = coercionTrap();
+    assert.throws(() => invoke(trap.value), expected, name);
+    assert.equal(trap.calls(), 0, `${name} must not coerce the malformed value`);
+  }
+});
+
 test("safe weighted sums evaluate only declared finite metrics", () => {
   const expression = {
     operator: "weightedSum",

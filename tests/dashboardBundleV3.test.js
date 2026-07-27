@@ -1035,3 +1035,122 @@ test("collection validation rejects prototype and executable nested values witho
   }
   assert.equal(reads, 0);
 });
+
+test("chart boundaries reject non-data collection paths without invoking getters or dropping inherited values", () => {
+  const boundaries = [
+    ["validation", (chart) => validateChartInstance(chart)],
+    ["normalization", (chart) => normalizeChartInstance(chart)],
+    ["bundle serialization", (chart) => {
+      const dashboard = version3Dashboard();
+      dashboard.pages[0].sections[0].panels[0] = chart;
+      return serializeDashboardBundle(dashboard);
+    }],
+  ];
+
+  for (const [boundary, invoke] of boundaries) {
+    {
+      let reads = 0;
+      const chart = deltaListChart();
+      const presentation = chart.presentation;
+      Object.defineProperty(chart, "presentation", {
+        enumerable: true,
+        get() {
+          reads += 1;
+          return presentation;
+        },
+      });
+
+      assert.throws(
+        () => invoke(chart),
+        /chart instance property "presentation".*data property/i,
+        `${boundary} must reject an accessor-backed presentation`,
+      );
+      assert.equal(reads, 0, `${boundary} must not invoke the presentation getter`);
+    }
+
+    {
+      let reads = 0;
+      const chart = deltaListChart();
+      const collection = chart.presentation.collection;
+      Object.defineProperty(chart.presentation, "collection", {
+        enumerable: true,
+        get() {
+          reads += 1;
+          return collection;
+        },
+      });
+
+      assert.throws(
+        () => invoke(chart),
+        /chart presentation property "collection".*data property/i,
+        `${boundary} must reject an accessor-backed collection`,
+      );
+      assert.equal(reads, 0, `${boundary} must not invoke the collection getter`);
+    }
+
+    {
+      const chart = deltaListChart();
+      chart.presentation = Object.assign(
+        Object.create({ collection: chart.presentation.collection }),
+        { title: { align: "left" } },
+      );
+      assert.throws(
+        () => invoke(chart),
+        /chart presentation.*plain object/i,
+        `${boundary} must reject an inherited collection instead of dropping it`,
+      );
+    }
+
+    {
+      const chart = deltaListChart();
+      const collection = chart.presentation.collection;
+      delete chart.presentation.collection;
+      Object.defineProperty(chart.presentation, "collection", {
+        enumerable: false,
+        value: collection,
+      });
+      assert.throws(
+        () => invoke(chart),
+        /chart presentation property "collection".*enumerable/i,
+        `${boundary} must reject a hidden own collection instead of changing its persistence`,
+      );
+    }
+  }
+});
+
+test("chart and bundle boundaries reject malformed presentation and collection values", () => {
+  for (const malformedPresentation of [null, [], "presentation"]) {
+    const chart = deltaListChart({ presentation: malformedPresentation });
+    assert.throws(() => validateChartInstance(chart), /chart presentation.*object/i);
+    assert.throws(() => normalizeChartInstance(chart), /chart presentation.*object/i);
+  }
+
+  for (const malformedCollection of [[], "collection", 7]) {
+    const chart = deltaListChart();
+    chart.presentation.collection = malformedCollection;
+    assert.throws(() => validateChartInstance(chart), /collection settings.*object/i);
+    assert.throws(() => normalizeChartInstance(chart), /collection settings.*object/i);
+
+    const dashboard = version3Dashboard();
+    dashboard.pages[0].sections[0].panels[0] = chart;
+    assert.throws(() => serializeDashboardBundle(dashboard), /collection settings.*object/i);
+
+    const bundle = {
+      bundleType: "simex-dashboard-bundle",
+      version: 3,
+      config: version3Dashboard(),
+    };
+    bundle.config.pages[0].sections[0].panels[0] = chart;
+    assert.throws(
+      () => parseDashboardBundle(JSON.stringify(bundle)),
+      /collection settings.*object/i,
+    );
+  }
+
+  const bundle = serializeDashboardBundle(version3Dashboard());
+  bundle.config.pages[0].sections[0].panels[0].presentation = "presentation";
+  assert.throws(
+    () => parseDashboardBundle(JSON.stringify(bundle)),
+    /chart presentation.*object/i,
+  );
+});

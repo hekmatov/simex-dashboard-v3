@@ -70,6 +70,25 @@ function requiredDescriptorValue(descriptors, key, description) {
   }
   return descriptors[key].value;
 }
+function ownEnumerableDataValue(value, key, description, { required = false } = {}) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) {
+    if (key in value) {
+      throw new Error(`${description} property "${key}" must be an own data property.`);
+    }
+    if (required) {
+      throw new Error(`${description} property "${key}" is required.`);
+    }
+    return { present: false, value: undefined };
+  }
+  if (!Object.hasOwn(descriptor, "value")) {
+    throw new Error(`${description} property "${key}" must be a data property.`);
+  }
+  if (!descriptor.enumerable) {
+    throw new Error(`${description} property "${key}" must be enumerable.`);
+  }
+  return { present: true, value: descriptor.value };
+}
 
 function bindingType(type) {
   return canonicalColumnType(type);
@@ -342,21 +361,33 @@ function validateCollection(collection, schema) {
 }
 
 function validatePresentation(chart, schema) {
-  ensureObject(chart.presentation, "Chart presentation");
-  checkKnownKeys(chart.presentation, PRESENTATION_KEYS, "chart presentation");
-  ensureObject(chart.presentation.title, "Chart presentation title");
-  checkKnownKeys(chart.presentation.title, new Set(["align"]), "chart presentation title");
-  if (!TITLE_ALIGNMENTS.has(chart.presentation.title.align)) throw new Error("Chart presentation title alignment must be left, center, or right.");
-  validateCollection(chart.presentation.collection, schema);
-  validateLabels(chart.presentation.labels);
-  validateAxes(chart.presentation.axes);
-  validateTargets(chart.presentation.targets);
-  validateMap(chart.presentation.map);
-  validateTimeline(chart.presentation.timeline);
-  validateBackground(chart.presentation.background);
-  validateLegend(chart.presentation.legend);
-  validateAccessibility(chart.presentation.accessibility);
-  optionalObject(chart.presentation.advanced, "Chart presentation advanced", new Set());
+  const presentation = ownEnumerableDataValue(
+    chart,
+    "presentation",
+    "Chart instance",
+    { required: true },
+  ).value;
+  const descriptors = strictRecordDescriptors(presentation, "Chart presentation");
+  checkKnownDescriptorKeys(descriptors, PRESENTATION_KEYS, "chart presentation");
+  const title = requiredDescriptorValue(descriptors, "title", "Chart presentation");
+  ensureObject(title, "Chart presentation title");
+  checkKnownKeys(title, new Set(["align"]), "chart presentation title");
+  if (!TITLE_ALIGNMENTS.has(title.align)) throw new Error("Chart presentation title alignment must be left, center, or right.");
+  const collection = ownEnumerableDataValue(
+    presentation,
+    "collection",
+    "Chart presentation",
+  ).value;
+  validateCollection(collection, schema);
+  validateLabels(descriptors.labels?.value);
+  validateAxes(descriptors.axes?.value);
+  validateTargets(descriptors.targets?.value);
+  validateMap(descriptors.map?.value);
+  validateTimeline(descriptors.timeline?.value);
+  validateBackground(descriptors.background?.value);
+  validateLegend(descriptors.legend?.value);
+  validateAccessibility(descriptors.accessibility?.value);
+  optionalObject(descriptors.advanced?.value, "Chart presentation advanced", new Set());
 }
 
 function validateLabels(labels) {
@@ -495,8 +526,19 @@ export function normalizeChartInstance(chart) {
   ensureObject(chart, "Chart instance");
   requiredString(chart.typeId, "Chart typeId");
   const schema = getChartSchema(chart.typeId);
-  ensureObject(chart.presentation, "Chart presentation");
-  const collection = chart.presentation.collection;
+  const presentation = ownEnumerableDataValue(
+    chart,
+    "presentation",
+    "Chart instance",
+    { required: true },
+  ).value;
+  strictRecordDescriptors(presentation, "Chart presentation");
+  const collectionProperty = ownEnumerableDataValue(
+    presentation,
+    "collection",
+    "Chart presentation",
+  );
+  const collection = collectionProperty.value;
   const normalizedCollection = collection === null || collection === undefined
     ? collection
     : (() => {
@@ -506,7 +548,7 @@ export function normalizeChartInstance(chart) {
         return normalizeCollectionSettings(collection);
       })();
   const normalized = structuredClone(chart);
-  if (Object.hasOwn(chart.presentation, "collection")) {
+  if (collectionProperty.present) {
     normalized.presentation.collection = normalizedCollection;
   }
   return normalized;
