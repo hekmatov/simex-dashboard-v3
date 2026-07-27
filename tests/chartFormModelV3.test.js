@@ -1,0 +1,449 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  buildEditorFormModel,
+  buildWizardFormModel,
+} from "../src/charting/forms/formModel.js";
+import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
+import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
+import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
+
+function lineChart(overrides = {}) {
+  return createChartDraft("line", {
+    id: "exercise-trend",
+    title: "Exercise trend",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    transformations: {
+      duplicates: "first",
+    },
+    ...overrides,
+  });
+}
+
+function deltaChart() {
+  return createChartDraft("deltaCard", {
+    id: "exercise-delta",
+    title: "Exercise delta",
+    sourceId: "exercise-data",
+    roles: {
+      measurement: { field: "value" },
+      time: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+  });
+}
+
+function kpiChart() {
+  return createChartDraft("kpi", {
+    id: "exercise-kpi",
+    title: "Exercise status",
+    sourceId: "exercise-data",
+    roles: {
+      value: { field: "value" },
+      time: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    presentation: {
+      collection: {
+        layout: "carousel",
+        rows: 1,
+        columns: 3,
+        overflow: "autoRotate",
+        ranking: {
+          mode: "priority",
+          method: "largestAbsoluteChange",
+          stabilize: true,
+        },
+      },
+    },
+  });
+}
+
+function datasetProfile({
+  temporalDiagnostics = [],
+  interpretationAlternatives,
+} = {}) {
+  return {
+    rowCount: 2,
+    fingerprint: "exercise-data-profile",
+    columns: [
+      {
+        name: "reportedAt",
+        type: "temporal",
+        examples: ["2027-05-01", "2027-05-02"],
+        temporal: {
+          values: ["2027-05-01", "2027-05-02"],
+          diagnostics: temporalDiagnostics,
+          parsingMetadata: {
+            interpretation: "temporal",
+            format: "YYYY-MM-DD",
+            timezone: "date-only",
+          },
+        },
+        ...(interpretationAlternatives
+          ? { interpretationAlternatives }
+          : {}),
+      },
+      {
+        name: "value",
+        type: "numeric",
+        examples: [10, 12],
+      },
+    ],
+  };
+}
+
+const readyPrepared = Object.freeze({
+  status: "ready",
+  marks: [{ x: "2027-05-01", value: 10 }],
+  diagnostics: [],
+  meta: {
+    renderableMarkCount: 1,
+    duplicateGroupCount: 0,
+  },
+});
+
+function synchronizationGroups() {
+  return [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "reportedAt",
+    },
+    matching: { policy: "exact" },
+    members: [{
+      chartId: "exercise-trend",
+      timeRole: "observation",
+      matching: {
+        policy: "nearest",
+        toleranceMs: 3_600_000,
+      },
+    }],
+  }];
+}
+
+function allFields(model) {
+  return model.sections.flatMap(({ fields }) => fields);
+}
+
+test("axis roles put measurements before observations", () => {
+  const model = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+  const roleIds = model.sections
+    .find(({ id }) => id === "data")
+    .fields
+    .filter(({ control }) => control === "role")
+    .map(({ id }) => id);
+
+  assert.ok(roleIds.indexOf("measurements") < roleIds.indexOf("observation"));
+});
+
+test("X interpretation is hidden when the detected choice has no practical alternative", () => {
+  const model = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+
+  assert.equal(
+    allFields(model).some(({ id }) => id === "observationInterpretation"),
+    false,
+  );
+});
+
+test("X interpretation is shown when the profile declares materially different alternatives", () => {
+  const model = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile({
+      interpretationAlternatives: ["temporal", "category"],
+    }),
+    prepared: readyPrepared,
+  });
+  const field = allFields(model)
+    .find(({ id }) => id === "observationInterpretation");
+
+  assert.deepEqual(field.options.map(({ value }) => value), [
+    "temporal",
+    "category",
+  ]);
+  assert.deepEqual(field.path, [
+    "roles",
+    "observation",
+    "interpretation",
+  ]);
+});
+
+test("ambiguous temporal profile evidence exposes a category fallback without extra metadata", () => {
+  const model = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile({
+      temporalDiagnostics: [{
+        code: "ambiguous-date-format",
+        message: "Choose a date format.",
+      }],
+    }),
+    prepared: readyPrepared,
+  });
+  const field = allFields(model)
+    .find(({ id }) => id === "observationInterpretation");
+
+  assert.deepEqual(field.options.map(({ value }) => value), [
+    "temporal",
+    "category",
+  ]);
+});
+
+test("invalid temporal evidence does not advertise an analytically invalid override", () => {
+  const model = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile({
+      temporalDiagnostics: [{
+        code: "invalid-calendar-date",
+        message: "The source date is invalid.",
+      }],
+    }),
+    prepared: readyPrepared,
+  });
+
+  assert.equal(
+    allFields(model).some(({ id }) => id === "observationInterpretation"),
+    false,
+  );
+});
+
+test("axis measurement descriptors offer primary and secondary assignments", () => {
+  const model = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+  const measurements = allFields(model)
+    .find(({ id }) => id === "measurements");
+
+  assert.deepEqual(measurements.axisOptions, ["primary", "secondary"]);
+});
+
+test("data transformations materialize from schema capabilities", () => {
+  const line = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+  const kpi = buildEditorFormModel({
+    chart: kpiChart(),
+    profile: datasetProfile(),
+    prepared: {
+      ...readyPrepared,
+      marks: [{ value: 12 }],
+    },
+  });
+  const lineIds = allFields(line).map(({ id }) => id);
+  const kpiIds = allFields(kpi).map(({ id }) => id);
+
+  for (const id of ["filters", "grouping", "aggregation", "missingValues"]) {
+    assert.ok(lineIds.includes(id), id);
+  }
+  assert.equal(kpiIds.includes("grouping"), false);
+});
+
+test("duplicate resolution materializes only after active roles produce duplicates", () => {
+  const noDuplicates = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+  const duplicates = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: {
+      ...readyPrepared,
+      meta: {
+        ...readyPrepared.meta,
+        duplicateGroupCount: 2,
+      },
+    },
+  });
+
+  assert.equal(
+    allFields(noDuplicates).some(({ id }) => id === "duplicates"),
+    false,
+  );
+  assert.equal(
+    allFields(duplicates).some(({ id }) => id === "duplicates"),
+    true,
+  );
+});
+
+test("visual sections wait for a renderer-ready preview while data remains editable", () => {
+  const unavailable = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: {
+      status: "empty",
+      marks: [],
+      diagnostics: [],
+      meta: {
+        renderableMarkCount: 0,
+        duplicateGroupCount: 0,
+      },
+    },
+  });
+  const ready = buildEditorFormModel({
+    chart: lineChart(),
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+  });
+
+  assert.ok(unavailable.sections.some(({ id }) => id === "data"));
+  assert.equal(
+    unavailable.sections.some(({ id }) => id === "appearance"),
+    false,
+  );
+  assert.ok(ready.sections.some(({ id }) => id === "appearance"));
+});
+
+test("Delta comparison fields come from the schema descriptor", () => {
+  const model = buildEditorFormModel({
+    chart: deltaChart(),
+    profile: datasetProfile(),
+    prepared: {
+      ...readyPrepared,
+      marks: [{
+        displayed: 12,
+        comparison: 10,
+      }],
+    },
+  });
+  const comparison = allFields(model)
+    .find(({ id }) => id === "deltaComparison");
+
+  assert.equal(comparison.control, "deltaComparison");
+  assert.deepEqual(
+    comparison.modes,
+    getChartSchema("deltaCard").comparison.modes,
+  );
+  assert.deepEqual(
+    comparison.matchingPolicies,
+    getChartSchema("deltaCard").comparison.matchingPolicies,
+  );
+  assert.deepEqual(comparison.path, ["transformations", "comparison"]);
+});
+
+test("collection fields author the fully normalized nested contract", () => {
+  const chart = kpiChart();
+  const model = buildEditorFormModel({
+    chart,
+    profile: datasetProfile(),
+    prepared: {
+      ...readyPrepared,
+      marks: [{ value: 12 }],
+    },
+  });
+  const collection = allFields(model)
+    .find(({ id }) => id === "collection");
+
+  assert.deepEqual(
+    collection.value,
+    normalizeCollectionSettings(chart.presentation.collection),
+  );
+  assert.equal("rankingMode" in collection.value, false);
+  assert.equal("rotationInterval" in collection.value, false);
+  assert.deepEqual(collection.path, ["presentation", "collection"]);
+});
+
+test("time matching edits target a group member by semantic identity", () => {
+  const chart = lineChart({
+    interaction: {
+      timeSync: { groupId: "exercise-clock" },
+    },
+  });
+  const model = buildEditorFormModel({
+    chart,
+    profile: datasetProfile(),
+    prepared: readyPrepared,
+    timeSyncGroups: synchronizationGroups(),
+  });
+  const timeSync = allFields(model)
+    .find(({ id }) => id === "timeSync");
+
+  assert.deepEqual(
+    timeSync.chartPath,
+    ["interaction", "timeSync", "groupId"],
+  );
+  assert.deepEqual(timeSync.groupTarget, {
+    groupId: "exercise-clock",
+    chartId: chart.id,
+    property: "matching",
+  });
+  assert.deepEqual(timeSync.memberMatching, {
+    policy: "nearest",
+    toleranceMs: 3_600_000,
+  });
+});
+
+test("sections are contextual because only schema-declared fields materialize", () => {
+  const model = buildEditorFormModel({
+    chart: createChartDraft("pie", {
+      id: "composition",
+      title: "Composition",
+      sourceId: "exercise-data",
+      roles: {
+        category: { field: "reportedAt", interpretation: "category" },
+        value: { field: "value" },
+      },
+    }),
+    profile: datasetProfile(),
+    prepared: {
+      ...readyPrepared,
+      marks: [{ category: "Ready", value: 12 }],
+    },
+  });
+
+  assert.deepEqual(
+    model.sections.map(({ id }) => id),
+    ["data", "appearance", "labels", "advanced"],
+  );
+  assert.equal(model.sections.some(({ fields }) => fields.length === 0), false);
+});
+
+test("wizard prerequisites explain incomplete destinations without disabling them", () => {
+  const model = buildWizardFormModel({
+    draft: null,
+    profile: null,
+    prepared: null,
+  });
+
+  assert.deepEqual(model.steps.map(({ id }) => id), [
+    "type",
+    "source",
+    "roles",
+    "style",
+  ]);
+  assert.match(
+    model.steps
+      .find(({ id }) => id === "style")
+      .prerequisites
+      .join(" "),
+    /Choose a chart type/,
+  );
+  assert.equal(model.steps.every(({ navigable }) => navigable), true);
+});
