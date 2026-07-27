@@ -32,20 +32,31 @@ const STEP_TITLES = Object.freeze({
   style: "Preview and refine the chart",
 });
 
+/**
+ * Schema-generated chart authoring flow.
+ *
+ * `existingCharts` is the authoritative dashboard chart collection used when
+ * validating complete synchronized-playback groups. It is never mutated.
+ */
 export default function ChartWizardV3({
   open,
   dataSources,
   loadedData,
   timeSyncGroups,
+  existingCharts = [],
   onClose,
   onCreate,
 }) {
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
   const safeLoadedData = collectionOrEmpty(loadedData);
   const safeGroups = Array.isArray(timeSyncGroups) ? timeSyncGroups : [];
-  const [wizard, setWizard] = React.useState(() => createInitialWizard({
+  const safeExistingCharts = Array.isArray(existingCharts)
+    ? existingCharts
+    : [];
+  const [wizard, setWizard] = React.useState(() => createChartWizardState({
     loadedData: safeLoadedData,
     timeSyncGroups: safeGroups,
+    existingCharts: safeExistingCharts,
   }));
   const [query, setQuery] = React.useState("");
   const [localRows, setLocalRows] = React.useState({});
@@ -54,12 +65,14 @@ export default function ChartWizardV3({
   const [manualErrors, setManualErrors] = React.useState([]);
   const [uploadError, setUploadError] = React.useState("");
   const [submissionError, setSubmissionError] = React.useState("");
+  const [pendingSourceUi, setPendingSourceUi] = React.useState(null);
 
   React.useEffect(() => {
     if (!open) return;
-    setWizard(createInitialWizard({
+    setWizard(createChartWizardState({
       loadedData: safeLoadedData,
       timeSyncGroups: safeGroups,
+      existingCharts: safeExistingCharts,
     }));
     setQuery("");
     setLocalRows({});
@@ -68,6 +81,7 @@ export default function ChartWizardV3({
     setManualErrors([]);
     setUploadError("");
     setSubmissionError("");
+    setPendingSourceUi(null);
   }, [open]);
 
   if (!open) return null;
@@ -127,13 +141,56 @@ export default function ChartWizardV3({
     path,
     value,
   });
+  const applySourceUi = (nextUi) => {
+    setSourceKind(nextUi.kind);
+    setManualTable(nextUi.manualTable ?? null);
+    setManualErrors(nextUi.manualErrors ?? []);
+    setUploadError("");
+    if (nextUi.localSourceId && Array.isArray(nextUi.localRows)) {
+      setLocalRows((current) => ({
+        ...current,
+        [nextUi.localSourceId]: nextUi.localRows.map((row) => ({ ...row })),
+      }));
+    }
+  };
+  const requestSourceSelection = (action, nextUi) => {
+    let next = reduceWizardState(syncedWizard, {
+      type: "requestSourceChange",
+      ...action,
+    });
+    if (next.confirmation === "changeSource") {
+      setPendingSourceUi(structuredClone(nextUi));
+    } else {
+      if (Array.isArray(nextUi.manualColumns)) {
+        next = assignManualRoles(
+          next,
+          getChartSchema(next.draft.typeId),
+          nextUi.manualColumns,
+        );
+      }
+      applySourceUi(nextUi);
+      setPendingSourceUi(null);
+    }
+    setWizard(next);
+    setSubmissionError("");
+  };
   const selectExisting = (sourceId) => {
     if (!sourceId) return;
-    setSourceKind("existing");
-    setManualTable(null);
-    setManualErrors([]);
-    setUploadError("");
-    dispatch({ type: "selectSource", sourceId, source: null });
+    const rows = readEntry(safeLoadedData, sourceId) ?? [];
+    const sourceMetadata = readEntry(safeDataSources, sourceId);
+    requestSourceSelection({
+      sourceId,
+      source: null,
+      rows,
+      profile: profileDataset(
+        rows,
+        sourceMetadata?.parsingMetadata ?? {},
+      ),
+    }, {
+      kind: "existing",
+      manualTable: null,
+      manualErrors: [],
+    });
   };
   const uploadCsv = async (file) => {
     if (!file) return;
@@ -142,30 +199,18 @@ export default function ChartWizardV3({
         ...safeDataSources,
         ...localRows,
       });
-      const nextLoadedData = mergeCollections(runtimeLoadedData, {
-        [parsed.sourceId]: parsed.rows,
-      });
-      const nextProfiles = {
-        ...profiles,
-        [parsed.sourceId]: parsed.profile,
-      };
-      setLocalRows((current) => ({
-        ...current,
-        [parsed.sourceId]: parsed.rows,
-      }));
-      setSourceKind("upload");
-      setManualTable(null);
-      setManualErrors([]);
-      setUploadError("");
-      setWizard((current) => reduceWizardState({
-        ...current,
-        loadedData: nextLoadedData,
-        profiles: nextProfiles,
-      }, {
-        type: "selectSource",
+      requestSourceSelection({
         sourceId: parsed.sourceId,
         source: parsed.source,
-      }));
+        rows: parsed.rows,
+        profile: parsed.profile,
+      }, {
+        kind: "upload",
+        manualTable: null,
+        manualErrors: [],
+        localSourceId: parsed.sourceId,
+        localRows: parsed.rows,
+      });
     } catch (error) {
       setUploadError(safeMessage(error));
     }
@@ -183,25 +228,19 @@ export default function ChartWizardV3({
       manualRows,
       manualParsingMetadata(table),
     );
-    const nextLoadedData = mergeCollections(runtimeLoadedData, {
-      [sourceId]: manualRows,
-    });
-    let next = reduceWizardState({
-      ...currentWizard,
-      loadedData: nextLoadedData,
-      profiles: { ...profiles, [sourceId]: profile },
-    }, {
-      type: "selectSource",
+    requestSourceSelection({
       sourceId,
       source: inlineSource,
+      rows: manualRows,
+      profile,
+    }, {
+      kind: "manual",
+      manualTable: structuredClone(table),
+      manualErrors: validation.errors,
+      manualColumns: structuredClone(table.columns),
+      localSourceId: sourceId,
+      localRows: manualRows,
     });
-    next = assignManualRoles(next, schema, table.columns);
-    setManualTable(structuredClone(table));
-    setManualErrors(validation.errors);
-    setLocalRows((current) => ({ ...current, [sourceId]: manualRows }));
-    setSourceKind("manual");
-    setUploadError("");
-    setWizard(next);
   };
   const selectManual = () => {
     if (!wizard.draft) return;
@@ -323,7 +362,9 @@ export default function ChartWizardV3({
                   type: "selectType",
                   typeId,
                   chart: {
-                    id: newChartId(typeId),
+                    ...(wizard.draft
+                      ? {}
+                      : { id: newChartId(typeId) }),
                     title: "",
                   },
                 });
@@ -433,6 +474,33 @@ export default function ChartWizardV3({
         setManualErrors([]);
       },
       onCancel: () => dispatch({ type: "cancelConfirmation" }),
+    }),
+    React.createElement(ConfirmDialog, {
+      open: wizard.confirmation === "changeSource",
+      title: "Change data source?",
+      message: wizard.pendingSourceChange?.message
+        ?? "The current data mappings are not compatible with this source.",
+      confirmLabel: "Change source",
+      cancelLabel: "Keep current source",
+      onConfirm: () => {
+        let next = reduceWizardState(wizard, {
+          type: "confirmSourceChange",
+        });
+        if (Array.isArray(pendingSourceUi?.manualColumns)) {
+          next = assignManualRoles(
+            next,
+            getChartSchema(next.draft.typeId),
+            pendingSourceUi.manualColumns,
+          );
+        }
+        setWizard(next);
+        if (pendingSourceUi) applySourceUi(pendingSourceUi);
+        setPendingSourceUi(null);
+      },
+      onCancel: () => {
+        dispatch({ type: "cancelConfirmation" });
+        setPendingSourceUi(null);
+      },
     }),
   );
 }
@@ -571,11 +639,16 @@ export async function parseUploadedCsvFile(file, existingSources = {}) {
   };
 }
 
-function createInitialWizard({ loadedData, timeSyncGroups }) {
+export function createChartWizardState({
+  loadedData,
+  timeSyncGroups,
+  existingCharts = [],
+}) {
   return createWizardState({
     loadedData,
     profiles: profileCollection(loadedData),
     timeSyncGroups,
+    charts: existingCharts,
   });
 }
 

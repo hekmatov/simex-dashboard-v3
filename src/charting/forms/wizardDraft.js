@@ -3,6 +3,10 @@ import {
   normalizeChartInstance,
   validateChartInstance,
 } from "../config/chartConfigV3.js";
+import {
+  canonicalColumnType,
+  resolveEffectiveBinding,
+} from "../data/bindings.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
 
@@ -33,10 +37,11 @@ export function createWizardState(options = {}) {
       : structuredClone(options.source),
     timeSyncGroups: structuredClone(options.timeSyncGroups ?? []),
     timeSyncGroupsProvided: Object.hasOwn(options, "timeSyncGroups"),
-    charts: structuredClone(options.charts ?? []),
+    charts: normalizeExistingCharts(options.charts ?? []),
     loadedData: options.loadedData ?? {},
     profiles: options.profiles ?? {},
     confirmation: null,
+    pendingSourceChange: null,
     closed: false,
   };
 }
@@ -54,6 +59,10 @@ export function reduceWizardState(state, action) {
       return selectType(state, action);
     case "selectSource":
       return selectSource(state, action);
+    case "requestSourceChange":
+      return requestSourceChange(state, action);
+    case "confirmSourceChange":
+      return confirmSourceChange(state);
     case "updateRole":
       return updateRole(state, action);
     case "updateChart":
@@ -79,7 +88,11 @@ export function reduceWizardState(state, action) {
         ? { ...state, confirmation: null, closed: true }
         : state;
     case "cancelConfirmation":
-      return { ...state, confirmation: null };
+      return {
+        ...state,
+        confirmation: null,
+        pendingSourceChange: null,
+      };
     default:
       throw new Error(`Unknown wizard action "${action.type}".`);
   }
@@ -119,11 +132,23 @@ function selectType(state, action) {
   }
   getChartSchema(action.typeId);
   const overrides = isRecord(action.chart) ? action.chart : {};
+  const previousDraftId = state.draft?.id ?? null;
+  const draftId = overrides.id ?? previousDraftId;
+  const groups = previousDraftId
+    ? removeChartFromGroups(state.timeSyncGroups, previousDraftId)
+    : state.timeSyncGroups;
   return {
     ...state,
-    draft: createChartDraft(action.typeId, overrides),
+    draft: createChartDraft(action.typeId, {
+      ...overrides,
+      ...(draftId ? { id: draftId } : {}),
+    }),
     source: null,
+    timeSyncGroups: groups,
+    timeSyncGroupsProvided: state.timeSyncGroupsProvided
+      || groups !== state.timeSyncGroups,
     confirmation: null,
+    pendingSourceChange: null,
     closed: false,
   };
 }
@@ -143,7 +168,49 @@ function selectSource(state, action) {
       ? state.source
       : structuredClone(action.source),
     confirmation: null,
+    pendingSourceChange: null,
   };
+}
+
+function requestSourceChange(state, action) {
+  const draft = requireDraft(state);
+  requiredString(action.sourceId, "Data source id");
+  const change = sourceChange(action);
+  if (
+    action.sourceId === draft.sourceId
+    || !hasSourceMappings(draft)
+    || sourceMappingsAreCompatible(draft, change.profile)
+  ) {
+    return applySourceChange(state, change, { clearMappings: false });
+  }
+  const roleCount = assignedRoleCount(draft);
+  const filterCount = assignedFilterCount(draft);
+  return {
+    ...state,
+    confirmation: "changeSource",
+    pendingSourceChange: {
+      ...change,
+      message: [
+        `Changing this source will clear ${roleCount} data ${
+          roleCount === 1 ? "role" : "roles"
+        }`,
+        `and ${filterCount} ${filterCount === 1 ? "filter" : "filters"}`,
+        "because their columns are not compatible with the new data.",
+      ].join(" "),
+    },
+  };
+}
+
+function confirmSourceChange(state) {
+  if (
+    state.confirmation !== "changeSource"
+    || !isRecord(state.pendingSourceChange)
+  ) {
+    return state;
+  }
+  return applySourceChange(state, state.pendingSourceChange, {
+    clearMappings: true,
+  });
 }
 
 function updateRole(state, action) {
@@ -291,6 +358,7 @@ function confirmClearSource(state) {
     },
     source: null,
     confirmation: null,
+    pendingSourceChange: null,
   };
 }
 
@@ -303,11 +371,144 @@ function validateProposedGroups(state, groups, draft = state.draft) {
 }
 
 function chartsForValidation(charts, draft) {
-  const result = Array.isArray(charts)
-    ? charts.filter(({ id }) => id !== draft?.id)
-    : [];
-  if (draft) result.push(draft);
+  const result = normalizeExistingCharts(charts)
+    .filter(({ id }) => id !== draft?.id);
+  if (draft) result.push(normalizeChartInstance(draft));
   return result;
+}
+
+function normalizeExistingCharts(charts) {
+  if (!Array.isArray(charts)) return [];
+  const byId = new Map();
+  for (const chart of charts) {
+    const normalized = normalizeChartInstance(chart);
+    byId.set(normalized.id, normalized);
+  }
+  return [...byId.values()];
+}
+
+function removeChartFromGroups(groups, chartId) {
+  let changed = false;
+  const next = groups.flatMap((group) => {
+    const members = Array.isArray(group.members)
+      ? group.members.filter((member) => member.chartId !== chartId)
+      : [];
+    if (members.length === (group.members?.length ?? 0)) return [group];
+    changed = true;
+    return members.length > 0 ? [{ ...group, members }] : [];
+  });
+  return changed ? next : groups;
+}
+
+function sourceChange(action) {
+  return {
+    sourceId: action.sourceId,
+    source: action.source === undefined
+      ? undefined
+      : structuredClone(action.source),
+    rows: action.rows === undefined
+      ? undefined
+      : structuredClone(action.rows),
+    profile: action.profile === undefined
+      ? undefined
+      : structuredClone(action.profile),
+  };
+}
+
+function applySourceChange(state, change, { clearMappings }) {
+  const draft = requireDraft(state);
+  const transformations = clearMappings
+    ? {
+        ...draft.transformations,
+        filters: [],
+        grouping: null,
+      }
+    : draft.transformations;
+  return {
+    ...state,
+    draft: {
+      ...draft,
+      sourceId: change.sourceId,
+      roles: clearMappings ? {} : draft.roles,
+      transformations,
+    },
+    source: change.source === undefined
+      ? state.source
+      : structuredClone(change.source),
+    loadedData: change.rows === undefined
+      ? state.loadedData
+      : collectionWithEntry(state.loadedData, change.sourceId, change.rows),
+    profiles: change.profile === undefined
+      ? state.profiles
+      : collectionWithEntry(state.profiles, change.sourceId, change.profile),
+    confirmation: null,
+    pendingSourceChange: null,
+  };
+}
+
+function sourceMappingsAreCompatible(draft, profile) {
+  if (!Array.isArray(profile?.columns)) return false;
+  const schema = getChartSchema(draft.typeId);
+  const columns = new Map(profile.columns.map((column) => [
+    column.name,
+    column,
+  ]));
+  for (const role of schema.roles) {
+    const value = draft.roles?.[role.id];
+    const bindings = Array.isArray(value)
+      ? value
+      : value ? [value] : [];
+    for (const binding of bindings) {
+      const column = columns.get(binding?.field);
+      if (!column) return false;
+      const effectiveType = resolveEffectiveBinding(binding, column).type
+        ?? canonicalColumnType(column.type);
+      if (
+        !role.accepts.includes("any")
+        && !role.accepts.includes(effectiveType)
+      ) {
+        return false;
+      }
+    }
+  }
+  for (const filter of draft.transformations?.filters ?? []) {
+    if (!columns.has(filter?.field)) return false;
+  }
+  for (const field of draft.transformations?.grouping ?? []) {
+    if (!columns.has(field)) return false;
+  }
+  return true;
+}
+
+function hasSourceMappings(draft) {
+  return assignedRoleCount(draft) > 0
+    || assignedFilterCount(draft) > 0
+    || (draft.transformations?.grouping?.length ?? 0) > 0;
+}
+
+function assignedRoleCount(draft) {
+  return Object.values(draft.roles ?? {}).reduce((total, value) => (
+    total + (Array.isArray(value) ? value.length : value ? 1 : 0)
+  ), 0);
+}
+
+function assignedFilterCount(draft) {
+  return Array.isArray(draft.transformations?.filters)
+    ? draft.transformations.filters.length
+    : 0;
+}
+
+function collectionWithEntry(collection, key, value) {
+  const clonedValue = structuredClone(value);
+  if (collection instanceof Map) {
+    const next = new Map(collection);
+    next.set(key, clonedValue);
+    return next;
+  }
+  return {
+    ...(isRecord(collection) ? collection : {}),
+    [key]: clonedValue,
+  };
 }
 
 function profileForChart(profiles, chart) {

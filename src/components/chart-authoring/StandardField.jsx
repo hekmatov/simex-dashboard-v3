@@ -548,6 +548,11 @@ function scalar(value) {
 function text(value) {
   return typeof value === "string" ? value : "";
 }
+function sentence(value) {
+  return typeof value === "string" && value
+    ? value[0].toUpperCase() + value.slice(1)
+    : "";
+}
 function numeric(value) {
   return Number.isFinite(value) ? value : "";
 }

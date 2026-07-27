@@ -8,6 +8,8 @@ import {
 } from "../src/charting/forms/formModel.js";
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
 
 function lineChart(overrides = {}) {
@@ -288,9 +290,14 @@ test("duplicate resolution materializes only after active roles produce duplicat
     chart,
     profile,
     prepared: preparedFor(chart, profile, {
-      ...readyPrepared,
+      status: "invalid",
+      marks: [],
+      diagnostics: [{
+        code: "duplicate-resolution-required",
+        severity: "error",
+      }],
       meta: {
-        ...readyPrepared.meta,
+        renderableMarkCount: 0,
         duplicateGroupCount: 2,
       },
     }),
@@ -304,6 +311,54 @@ test("duplicate resolution materializes only after active roles produce duplicat
     allFields(duplicates).some(({ id }) => id === "duplicates"),
     true,
   );
+});
+
+test("a current duplicate-resolution failure exposes the repair field without claiming preview readiness", () => {
+  const rows = [
+    { category: "A", value: 2 },
+    { category: "A", value: 3 },
+  ];
+  const chart = createChartDraft("bar", {
+    id: "duplicate-bar",
+    title: "Duplicate bar",
+    sourceId: "duplicate-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "category" },
+    },
+  });
+  const profile = profileDataset(rows);
+  const prepared = preparedFor(
+    chart,
+    profile,
+    prepareChartData({ chart, rows, datasetProfile: profile }),
+  );
+  const model = buildEditorFormModel({ chart, profile, prepared });
+
+  assert.equal(prepared.status, "invalid");
+  assert.equal(prepared.meta.duplicateGroupCount, 1);
+  assert.ok(prepared.diagnostics.some(
+    ({ code }) => code === "duplicate-resolution-required",
+  ));
+  assert.ok(allFields(model).some(({ id }) => id === "duplicates"));
+  assert.equal(model.valid, false);
+});
+
+test("an invalid current preparation without the duplicate-resolution diagnostic cannot expose duplicate controls", () => {
+  const chart = lineChart({ transformations: { duplicates: null } });
+  const profile = datasetProfile();
+  const prepared = preparedFor(chart, profile, {
+    status: "invalid",
+    marks: [],
+    diagnostics: [{ code: "aggregation-required", severity: "error" }],
+    meta: {
+      renderableMarkCount: 0,
+      duplicateGroupCount: 2,
+    },
+  });
+  const model = buildEditorFormModel({ chart, profile, prepared });
+
+  assert.equal(allFields(model).some(({ id }) => id === "duplicates"), false);
 });
 
 test("stale duplicate counts cannot materialize controls for a changed draft", () => {
@@ -333,7 +388,7 @@ test("stale duplicate counts cannot materialize controls for a changed draft", (
   );
 });
 
-test("visual sections wait for a renderer-ready preview while data remains editable", () => {
+test("before renderer readiness only data and the required title remain editable", () => {
   const chart = lineChart();
   const profile = datasetProfile();
   const unavailable = buildEditorFormModel({
@@ -356,11 +411,18 @@ test("visual sections wait for a renderer-ready preview while data remains edita
   });
 
   assert.ok(unavailable.sections.some(({ id }) => id === "data"));
-  assert.equal(
-    unavailable.sections.some(({ id }) => id === "appearance"),
-    false,
+  assert.deepEqual(
+    unavailable.sections.map(({ id }) => id),
+    ["data", "appearance"],
   );
+  assert.deepEqual(
+    unavailable.sections.find(({ id }) => id === "appearance")
+      .fields.map(({ id }) => id),
+    ["title"],
+  );
+  assert.equal(unavailable.sections.some(({ id }) => id === "interactions"), false);
   assert.ok(ready.sections.some(({ id }) => id === "appearance"));
+  assert.ok(ready.sections.some(({ id }) => id === "interactions"));
 });
 
 test("appearance begins with the required chart title field", () => {
@@ -431,7 +493,11 @@ test("a stale renderer-ready result cannot unlock style for an incomplete draft"
     prepared,
   });
 
-  assert.equal(editor.sections.some(({ id }) => id === "appearance"), false);
+  assert.deepEqual(
+    editor.sections.find(({ id }) => id === "appearance")
+      .fields.map(({ id }) => id),
+    ["title"],
+  );
   assert.equal(
     wizard.steps.find(({ id }) => id === "style").complete,
     false,
@@ -517,10 +583,11 @@ test("time matching edits target a group member by semantic identity", () => {
       timeSync: { groupId: "exercise-clock" },
     },
   });
+  const profile = datasetProfile();
   const model = buildEditorFormModel({
     chart,
-    profile: datasetProfile(),
-    prepared: readyPrepared,
+    profile,
+    prepared: preparedFor(chart, profile),
     timeSyncGroups: synchronizationGroups(),
   });
   const timeSync = allFields(model)

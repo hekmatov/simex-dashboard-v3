@@ -22,17 +22,6 @@ const SECTION_LABELS = Object.freeze({
   advanced: "Advanced",
 });
 
-const VISUAL_SECTIONS = new Set([
-  "appearance",
-  "labels",
-  "axes",
-  "targets",
-  "map",
-  "timeline",
-  "collection",
-  "advanced",
-]);
-
 const INTERPRETATION_LABELS = Object.freeze({
   any: "Automatic",
   number: "Number",
@@ -126,14 +115,19 @@ export function buildEditorFormModel({
   });
   const sections = schema.form.sections
     .filter((sectionId) => (
-      !VISUAL_SECTIONS.has(sectionId) || previewReady
+      previewReady || sectionId === "data" || sectionId === "appearance"
     ))
-    .map((sectionId) => ({
-      id: sectionId,
-      label: SECTION_LABELS[sectionId] ?? sectionId,
-      fields: materializeSection(sectionId, context),
-      advanced: sectionId === "advanced",
-    }))
+    .map((sectionId) => {
+      const fields = materializeSection(sectionId, context);
+      return {
+        id: sectionId,
+        label: SECTION_LABELS[sectionId] ?? sectionId,
+        fields: !previewReady && sectionId === "appearance"
+          ? fields.filter(({ id }) => id === "title")
+          : fields,
+        advanced: sectionId === "advanced",
+      };
+    })
     .filter(({ fields }) => fields.length > 0);
 
   return {
@@ -238,8 +232,11 @@ function dataFields({ chart, profile, prepared, schema }) {
 
   if (
     schema.transforms.includes("duplicates")
-    && preparationMatchesDraft({ chart, profile, prepared })
+    && preparationCorrelatesDraft({ chart, profile, prepared })
     && Number(prepared?.meta?.duplicateGroupCount) > 0
+    && prepared.diagnostics?.some(
+      ({ code }) => code === "duplicate-resolution-required",
+    )
   ) {
     fields.push({
       id: "duplicates",
@@ -552,8 +549,13 @@ function rendererReady(prepared) {
 
 function preparationMatchesDraft({ chart, profile, prepared }) {
   if (!rendererReady(prepared)) return false;
+  return preparationCorrelatesDraft({ chart, profile, prepared });
+}
+
+function preparationCorrelatesDraft({ chart, profile, prepared }) {
   const expected = buildFormPreparationKey({ chart, profile });
   return expected !== null
+    && prepared?.meta
     && Object.hasOwn(prepared.meta, "formPreparationKey")
     && prepared.meta.formPreparationKey === expected;
 }

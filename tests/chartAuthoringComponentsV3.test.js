@@ -17,6 +17,7 @@ import {
   createWizardState,
   reduceWizardState,
 } from "../src/charting/forms/wizardDraft.js";
+import { buildEditorFormModel } from "../src/charting/forms/formModel.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -96,6 +97,7 @@ const {
 const {
   default: ChartWizardV3,
   applyWizardMembership,
+  createChartWizardState,
   createWizardPreparation,
   parseUploadedCsvFile,
   submitWizardDraft,
@@ -821,6 +823,24 @@ test("wizard exposes four directly clickable button tabs in the approved order",
   );
 });
 
+test("wizard controller retains detached authoritative existing chart context", () => {
+  const existing = validLineChart({
+    id: "existing-trend",
+    interaction: { timeSync: null },
+  });
+  const state = createChartWizardState({
+    loadedData: {
+      "exercise-data": [{ period: "May", capacity: 4 }],
+    },
+    timeSyncGroups: [],
+    existingCharts: [existing],
+  });
+
+  assert.equal(state.charts[0].id, "existing-trend");
+  assert.notEqual(state.charts[0], existing);
+  assert.deepEqual(existing.interaction.timeSync, null);
+});
+
 test("every wizard tab remains enabled and explains unmet prerequisites", () => {
   const html = render(React.createElement(ChartWizardV3, {
     open: true,
@@ -1084,6 +1104,88 @@ test("style and layout starts with the actual preview and separates advanced con
 
   assert.ok(html.indexOf("Chart preview") < html.indexOf("Appearance"));
   assert.match(html, /<details[^>]*>.*<summary>Advanced<\/summary>/);
+});
+
+test("style step hides presentation and interaction controls until the current preview is ready", () => {
+  const rows = [{ period: "May", capacity: 4 }];
+  const incomplete = createChartDraft("line", {
+    id: "incomplete-style",
+    title: "",
+    sourceId: "exercise-data",
+    roles: {},
+  });
+  const invalidRuntime = createWizardPreparation({
+    chart: incomplete,
+    rows,
+  });
+  const invalidModel = buildEditorFormModel({
+    chart: incomplete,
+    profile: invalidRuntime.profile,
+    prepared: invalidRuntime.prepared,
+  });
+  const invalid = render(React.createElement(StyleLayoutStep, {
+    chart: incomplete,
+    rows,
+    profile: invalidRuntime.profile,
+    prepared: invalidRuntime.prepared,
+    sections: invalidModel.sections,
+    prerequisites: ["Assign the required data roles."],
+    onChange() {},
+  }));
+
+  assert.match(invalid, /Chart title/);
+  assert.doesNotMatch(
+    invalid,
+    /Background|Title alignment|Zoom|Synchronized playback|Advanced/,
+  );
+
+  const readyChart = validLineChart();
+  const readyRuntime = createWizardPreparation({
+    chart: readyChart,
+    rows,
+  });
+  const readyModel = buildEditorFormModel({
+    chart: readyChart,
+    profile: readyRuntime.profile,
+    prepared: readyRuntime.prepared,
+  });
+  const ready = render(React.createElement(StyleLayoutStep, {
+    chart: readyChart,
+    rows,
+    profile: readyRuntime.profile,
+    prepared: readyRuntime.prepared,
+    sections: readyModel.sections,
+    onChange() {},
+  }));
+
+  assert.match(ready, /Title alignment/);
+  assert.match(ready, /Background/);
+  assert.match(ready, /Zoom/);
+  assert.match(ready, /Advanced/);
+});
+
+test("ready style layout renders the schema-generated label-position control", () => {
+  const rows = [{ period: "May", capacity: 4 }];
+  const chart = validLineChart();
+  const runtime = createWizardPreparation({ chart, rows });
+  const model = buildEditorFormModel({
+    chart,
+    profile: runtime.profile,
+    prepared: runtime.prepared,
+  });
+  const labels = model.sections.filter(({ id }) => id === "labels");
+
+  const html = render(React.createElement(StyleLayoutStep, {
+    chart,
+    rows,
+    profile: runtime.profile,
+    prepared: runtime.prepared,
+    sections: labels,
+    onChange() {},
+  }));
+
+  assert.match(html, /Label position/);
+  assert.match(html, />Top<\/option>/);
 });
 
 test("wizard preparation correlates the current chart, rows, and profile", () => {
