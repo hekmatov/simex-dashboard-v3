@@ -21,6 +21,7 @@ export async function load(url, context, nextLoad) {
 const { default: ChartView } = await import("../src/components/charts/ChartView.jsx");
 const { default: CardChartView } = await import("../src/components/charts/CardChartView.jsx");
 const { default: EChartsChartView, createEChartsLifecycle } = await import("../src/components/charts/EChartsChartView.jsx");
+const { default: ImageChartView } = await import("../src/components/charts/ImageChartView.jsx");
 const { default: TableChartView } = await import("../src/components/charts/TableChartView.jsx");
 
 const deltaRows = [
@@ -205,10 +206,40 @@ test("image render models use safe sources, alternative text, and fit", () => {
   assert.match(image, /src="\/maps\/readiness.png"/);
   assert.match(image, /alt="Readiness map"/);
   assert.match(image, /object-fit:cover/);
-  assert.match(image, /Zoom 100%/);
-  assert.match(image, /Reset image zoom/);
-  assert.match(image, /data-image-zoom-scale="1"/);
+  assert.doesNotMatch(image, /Zoom 100%|Reset image zoom|data-image-zoom-scale|chart-image-zoom/);
+  assert.doesNotMatch(image, /chart-zoom-guard|Hold Ctrl while scrolling to zoom/);
   assert.match(unsafe, /chart-status-error/);
+});
+
+test("image zoom affordances consume ChartView's authoritative schema and interaction gate", () => {
+  const rows = [{ src: "/maps/readiness.png", alt: "Readiness map" }];
+  const enabled = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "image",
+      title: "Zoomable readiness map",
+      roles: {},
+      interaction: { zoom: { enabled: true } },
+    },
+    rows,
+    datasetProfile: profileDataset(rows),
+  }));
+  const authoritativeDisabled = renderToStaticMarkup(React.createElement(ImageChartView, {
+    chart: {
+      typeId: "image",
+      title: "Locally requested zoom",
+      interaction: { zoom: { enabled: true } },
+    },
+    model: rows[0],
+    zoomEnabled: false,
+  }));
+
+  assert.match(enabled, /class="chart-zoom-guard"/);
+  assert.match(enabled, /chart-image-view--zoom-enabled/);
+  assert.match(enabled, /data-image-zoom-scale="1"/);
+  assert.match(enabled, /Zoom 100%/);
+  assert.match(enabled, /Reset image zoom/);
+  assert.doesNotMatch(authoritativeDisabled, /chart-image-view--zoom-enabled|data-image-zoom-scale|chart-image-zoom/);
+  assert.doesNotMatch(authoritativeDisabled, /Zoom 100%|Reset image zoom/);
 });
 
 test("ECharts render models remain SSR-safe and describe their content", () => {

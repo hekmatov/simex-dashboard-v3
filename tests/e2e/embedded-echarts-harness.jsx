@@ -126,7 +126,10 @@ function dispatchWheel(init = {}) {
     ctrlKey: init.ctrlKey === true,
     deltaY: Number.isFinite(init.deltaY) ? init.deltaY : 0,
   });
-  const dispatchResult = wheelTarget?.dispatchEvent(event) ?? true;
+  const target = init.target === "disabled"
+    ? document.querySelector('[data-zoom-test="disabled"] .chart-image-view')
+    : wheelTarget;
+  const dispatchResult = target?.dispatchEvent(event) ?? true;
   return {
     defaultPrevented: event.defaultPrevented,
     dispatchResult,
@@ -196,6 +199,22 @@ function Harness() {
           }),
         )
       : null,
+    React.createElement(
+      "div",
+      { "data-zoom-test": "disabled" },
+      React.createElement(ImageChartView, {
+        chart: {
+          title: "Non-zoomable map image",
+          interaction: { zoom: { enabled: true } },
+        },
+        model: {
+          src: "/showcase/section-1-collage.svg",
+          alt: "Disabled zoom test",
+          fit: "contain",
+        },
+        zoomEnabled: false,
+      }),
+    ),
     React.createElement("div", {
       "aria-hidden": "true",
       style: { height: "1600px" },
@@ -226,6 +245,7 @@ function ZoomRendererTarget({ revision }) {
     {
       ref: targetRef,
       "data-zoom-revision": revision,
+      "data-zoom-test": "enabled",
     },
     React.createElement(ImageChartView, {
       chart: {
@@ -237,6 +257,7 @@ function ZoomRendererTarget({ revision }) {
         alt: "Zoom test",
         fit: "contain",
       },
+      zoomEnabled: true,
     }),
   );
 }

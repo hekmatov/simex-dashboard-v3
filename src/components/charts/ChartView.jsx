@@ -38,7 +38,12 @@ export default function ChartView(props) {
     else if (model.kind === "cards") view = React.createElement(CardChartView, { model, chart: props.chart, provenance });
     else if (model.kind === "targetCollection") view = React.createElement(TargetCollectionChartView, { model, chart: props.chart, provenance });
     else if (model.kind === "table") view = React.createElement(TableChartView, { model, chart: props.chart, provenance });
-    else if (model.kind === "image") view = React.createElement(ImageChartView, { model, chart: props.chart, provenance });
+    else if (model.kind === "image") view = React.createElement(ImageChartView, {
+      model,
+      chart: props.chart,
+      provenance,
+      zoomEnabled,
+    });
     else return React.createElement(ChartStatus, { message: model.message, empty: prepared.status === "empty" });
     const framedView = React.createElement("div", presentationFrameProps(props.chart), view);
     return zoomEnabled

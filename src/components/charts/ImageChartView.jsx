@@ -5,18 +5,28 @@ const MIN_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 3;
 const IMAGE_SCALE_STEP = 0.25;
 
-export default function ImageChartView({ model, chart = {}, provenance }) {
+export default function ImageChartView({
+  model,
+  chart = {},
+  provenance,
+  zoomEnabled = false,
+}) {
   const src = safeImageSource(model.src);
   const [scale, setScale] = React.useState(MIN_IMAGE_SCALE);
+  const canZoom = zoomEnabled === true;
   React.useEffect(() => {
     setScale(MIN_IMAGE_SCALE);
-  }, [src]);
+  }, [canZoom, src]);
   if (!src) return React.createElement("div", { className: "chart-status-error", role: "status", "aria-live": "polite" }, "This chart image cannot be displayed.");
   const title = chart.title || "Chart image";
   return React.createElement("figure", {
-    className: "chart-image-view",
-    "data-image-zoom-scale": scale,
-    onWheel: (event) => setScale((current) => nextImageZoomScale(current, event)),
+    className: canZoom
+      ? "chart-image-view chart-image-view--zoom-enabled"
+      : "chart-image-view",
+    ...(canZoom ? {
+      "data-image-zoom-scale": scale,
+      onWheel: (event) => setScale((current) => nextImageZoomScale(current, event)),
+    } : {}),
     ...titleContainerProps(chart),
   },
     React.createElement("div", { className: "chart-image-viewport" },
@@ -25,23 +35,27 @@ export default function ImageChartView({ model, chart = {}, provenance }) {
         alt: model.alt || chart.description || title,
         style: {
           objectFit: safeFit(model.fit),
-          transform: `scale(${scale})`,
-          transformOrigin: "center center",
+          ...(canZoom ? {
+            transform: `scale(${scale})`,
+            transformOrigin: "center center",
+          } : {}),
         },
       })),
     React.createElement("figcaption", null, title),
-    React.createElement("div", { className: "chart-image-zoom-controls" },
-      React.createElement("output", {
-        className: "chart-image-zoom-status",
-        role: "status",
-        "aria-live": "polite",
-      }, `Zoom ${Math.round(scale * 100)}%`),
-      React.createElement("button", {
-        type: "button",
-        className: "secondary",
-        disabled: scale === MIN_IMAGE_SCALE,
-        onClick: () => setScale(MIN_IMAGE_SCALE),
-      }, "Reset image zoom")),
+    canZoom
+      ? React.createElement("div", { className: "chart-image-zoom-controls" },
+          React.createElement("output", {
+            className: "chart-image-zoom-status",
+            role: "status",
+            "aria-live": "polite",
+          }, `Zoom ${Math.round(scale * 100)}%`),
+          React.createElement("button", {
+            type: "button",
+            className: "secondary",
+            disabled: scale === MIN_IMAGE_SCALE,
+            onClick: () => setScale(MIN_IMAGE_SCALE),
+          }, "Reset image zoom"))
+      : null,
     React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
     provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null);
 }

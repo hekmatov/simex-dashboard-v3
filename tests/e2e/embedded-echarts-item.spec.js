@@ -145,9 +145,16 @@ test("native Ctrl-wheel guarding, image zoom, reduced motion, and listener clean
   await page.goto(HARNESS_URL);
 
   const guard = page.locator(".chart-zoom-guard");
-  const image = page.locator(".chart-image-view");
+  const enabledChart = page.locator('[data-zoom-test="enabled"]');
+  const image = enabledChart.locator(".chart-image-view");
+  const viewport = image.locator(".chart-image-viewport");
+  const disabledChart = page.locator('[data-zoom-test="disabled"]');
+  const disabledImage = disabledChart.locator(".chart-image-view");
   await expect(guard).toHaveCount(1);
   await expect(image).toHaveAttribute("data-image-zoom-scale", "1");
+  await expect(disabledChart.locator(".chart-zoom-guard")).toHaveCount(0);
+  await expect(disabledImage).not.toHaveAttribute("data-image-zoom-scale", /.+/);
+  await expect(disabledChart.locator(".chart-image-zoom-controls")).toHaveCount(0);
   await expect.poll(() => zoomSnapshot(page)).toMatchObject({
     activeWheelListeners: 1,
     wheelListenerAdds: 1,
@@ -164,11 +171,6 @@ test("native Ctrl-wheel guarding, image zoom, reduced motion, and listener clean
     rendererWheelEvents: [],
   });
 
-  const beforeScroll = await page.evaluate(() => window.scrollY);
-  await image.hover();
-  await page.mouse.wheel(0, 320);
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(beforeScroll);
-
   const controlled = await dispatchWheel(page, { ctrlKey: true, deltaY: -100 });
   expect(controlled.defaultPrevented).toBe(true);
   expect(controlled.dispatchResult).toBe(false);
@@ -177,6 +179,30 @@ test("native Ctrl-wheel guarding, image zoom, reduced motion, and listener clean
   await expect.poll(() => zoomSnapshot(page)).toMatchObject({
     rendererWheelEvents: [{ ctrlKey: true, defaultPrevented: true }],
   });
+
+  const viewportScrollBefore = await viewport.evaluate(({ scrollLeft, scrollTop }) => ({
+    scrollLeft,
+    scrollTop,
+  }));
+  const pageScrollBefore = await page.evaluate(() => window.scrollY);
+  await image.hover();
+  await page.mouse.wheel(0, 320);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageScrollBefore);
+  await expect.poll(() => viewport.evaluate(({ scrollLeft, scrollTop }) => ({
+    scrollLeft,
+    scrollTop,
+  }))).toEqual(viewportScrollBefore);
+  await expect(image).toHaveAttribute("data-image-zoom-scale", "1.25");
+
+  const disabledControlled = await dispatchWheel(page, {
+    ctrlKey: true,
+    deltaY: -100,
+    target: "disabled",
+  });
+  expect(disabledControlled.defaultPrevented).toBe(false);
+  expect(disabledControlled.dispatchResult).toBe(true);
+  await expect(disabledImage).not.toHaveAttribute("data-image-zoom-scale", /.+/);
+  await expect(disabledChart.locator(".chart-image-zoom-controls")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Reset image zoom", exact: true }).click();
   await expect(image).toHaveAttribute("data-image-zoom-scale", "1");
