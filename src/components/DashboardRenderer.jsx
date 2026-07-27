@@ -660,6 +660,8 @@ export default function DashboardRenderer({
             existingCharts={configuredCharts(dashboard)}
             rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
             geoData={geoDataSources[selectedPanel.presentation?.map?.geoSource]}
+            geoDataSources={geoDataSources}
+            dataSources={dashboard.dataSources ?? {}}
             profile={dashboard.datasetProfiles?.[selectedPanel.sourceId]}
             loadedData={dashboard.loadedData ?? {}}
             profiles={dashboard.datasetProfiles ?? {}}

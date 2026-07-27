@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import {
   parseDashboardBundle,
 } from "../src/charting/config/dashboardBundleV3.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { parseCsvText } from "../src/lib/loadCsv.js";
+import { validateDatasetProfiles } from "../src/lib/loadDashboard.js";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const DEFAULT_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..");
@@ -13,6 +16,7 @@ export function preparePromotedDashboard(bundleText) {
   const config = parseDashboardBundle(stripBom(bundleText));
   const promoted = structuredClone(config);
   const files = [];
+  const datasetProfiles = structuredClone(promoted.datasetProfiles ?? {});
 
   for (const [sourceId, source] of Object.entries(promoted.dataSources ?? {})) {
     if (source?.kind !== "dataset" || source.type !== "uploadedCsv") continue;
@@ -25,7 +29,7 @@ export function preparePromotedDashboard(bundleText) {
       relativePath,
       contents: source.csvText,
     });
-    promoted.dataSources[sourceId] = {
+    const descriptor = {
       kind: "csv",
       path: relativePath,
       provenance: {
@@ -35,9 +39,21 @@ export function preparePromotedDashboard(bundleText) {
         ? {}
         : { parsingMetadata: structuredClone(source.parsingMetadata) }),
     };
+    promoted.dataSources[sourceId] = descriptor;
+    datasetProfiles[sourceId] = {
+      sourceId,
+      kind: "csv",
+      path: relativePath,
+      provenance: structuredClone(descriptor.provenance),
+      ...profileDataset(
+        parseCsvText(source.csvText, source.fileName ?? `${sourceId}.csv`),
+        source.parsingMetadata ?? {},
+      ),
+    };
   }
 
-  delete promoted.datasetProfiles;
+  promoted.datasetProfiles = datasetProfiles;
+  validateDatasetProfiles(promoted.dataSources, promoted.datasetProfiles);
   return {
     config: promoted,
     files,

@@ -286,7 +286,7 @@ function structuredControls(control, value, onChange) {
     })));
   }
   if (control === "map") {
-    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)), textControl("Geography source", current.geoSource, (nextValue) => emit(["geoSource"], nextValue)), textControl("Join field", current.joinField, (nextValue) => emit(["joinField"], nextValue)));
+    return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, textControl("Scale", current.scale, (nextValue) => emit(["scale"], nextValue)), textControl("Join field", current.joinField, (nextValue) => emit(["joinField"], nextValue)));
   }
   return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Timeline lanes", /* @__PURE__ */ React.createElement("input", {
     value: Array.isArray(current.lanes) ? current.lanes.join(", ") : "",

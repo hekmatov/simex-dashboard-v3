@@ -376,7 +376,9 @@ test("unmatched geography is diagnosed and cannot claim renderer readiness", () 
       value: { field: "value", interpretation: "number" },
     },
     transformations: transformations(),
-    presentation: { map: { joinField: "code" } },
+    presentation: {
+      map: { geoSource: "district-map", joinField: "code" },
+    },
   };
   const result = prepareChartData({
     chart,
@@ -412,14 +414,19 @@ test("raw GeoJSON point features make map-scatter renderer-ready", () => {
       value: { field: "value", interpretation: "number" },
     },
     transformations: transformations(),
-    presentation: { map: { joinField: "code" } },
+    presentation: {
+      map: { geoSource: "district-map", joinField: "code" },
+    },
     interaction: { zoom: { enabled: false } },
   };
-  const geoData = [{
-    type: "Feature",
-    properties: { code: "GE-TB", name: "Tbilisi" },
-    geometry: { type: "Point", coordinates: [44.79, 41.72] },
-  }];
+  const geoData = {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { code: "GE-TB", name: "Tbilisi" },
+      geometry: { type: "Point", coordinates: [44.79, 41.72] },
+    }],
+  };
   const prepared = prepareChartData({
     chart,
     rows,

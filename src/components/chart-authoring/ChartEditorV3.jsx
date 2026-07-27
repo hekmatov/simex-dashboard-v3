@@ -11,6 +11,10 @@ import {
   buildFormPreparationKey,
 } from "../../charting/forms/formModel.js";
 import {
+  applyGeographySourceSelection,
+  validatedGeoSourceOptions,
+} from "../../charting/forms/geographySource.js";
+import {
   applyChartConversion,
   planChartConversion,
 } from "../../charting/forms/chartConversion.js";
@@ -19,6 +23,7 @@ import {
   listChartSchemas,
 } from "../../charting/schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
+import { validateGeoJson } from "../../lib/loadDashboard.js";
 import ChartConversionDialog from "./ChartConversionDialog.jsx";
 import ChartPreview from "./ChartPreview.jsx";
 import ContextualTabs from "./ContextualTabs.jsx";
@@ -230,6 +235,8 @@ export default function ChartEditorV3({
   existingCharts = [],
   rows = [],
   geoData = null,
+  geoDataSources = {},
+  dataSources = {},
   profile: providedProfile,
   prepared: providedPrepared,
   loadedData = {},
@@ -259,6 +266,17 @@ export default function ChartEditorV3({
   }, [incomingKey]);
 
   const safeRows = Array.isArray(rows) ? rows : [];
+  const geoSources = validatedGeoSourceOptions(
+    dataSources,
+    geoDataSources,
+  );
+  const draftGeoSourceId = state.draft.presentation?.map?.geoSource;
+  const selectedGeoData = readEntry(geoDataSources, draftGeoSourceId)
+    ?? (
+      draftGeoSourceId === chart.presentation?.map?.geoSource
+        ? geoData
+        : null
+    );
   const profile = providedProfile ?? profileDataset(safeRows, parsingMetadata);
   const preparationKey = buildFormPreparationKey({
     chart: state.draft,
@@ -271,7 +289,7 @@ export default function ChartEditorV3({
         chart: state.draft,
         rows: safeRows,
         profile,
-        geoData,
+        geoData: selectedGeoData,
       });
   const runtimeLoadedData = collectionWithEntry(
     loadedData,
@@ -288,6 +306,7 @@ export default function ChartEditorV3({
     profile,
     prepared,
     timeSyncGroups: state.timeSyncGroups,
+    geoSources,
   });
   const allCharts = chartsWithDraft(existingCharts, state.draft);
   const timeSyncField = model.sections
@@ -318,6 +337,46 @@ export default function ChartEditorV3({
       type: "updateTimeSyncMembership",
       groupId,
       timeRole,
+    });
+  };
+  const updateChartPath = (path, value) => {
+    if (
+      path?.length === 3
+      && path[0] === "presentation"
+      && path[1] === "map"
+      && path[2] === "geoSource"
+    ) {
+      if (!value) {
+        dispatch({
+          type: "updateChart",
+          path: ["presentation", "map"],
+          value: undefined,
+        });
+        return;
+      }
+      try {
+        const selected = applyGeographySourceSelection(state.draft, {
+          sourceId: value,
+          geoData: readEntry(geoDataSources, value),
+          rows: safeRows,
+        });
+        dispatch({
+          type: "updateChart",
+          path: ["presentation", "map"],
+          value: selected.presentation.map,
+        });
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          error: safeMessage(error),
+        }));
+      }
+      return;
+    }
+    dispatch({
+      type: "updateChart",
+      path,
+      value,
     });
   };
   const submit = (event) => {
@@ -403,7 +462,7 @@ export default function ChartEditorV3({
             key: `${state.draft.id}:${state.previewRevision}`,
             chart: state.draft,
             rows: safeRows,
-            geoData,
+            geoData: selectedGeoData,
             datasetProfile: profile,
             diagnosticNamespace: state.draft.id,
           }),
@@ -412,11 +471,7 @@ export default function ChartEditorV3({
           sections: model.sections,
           activeTabId: state.activeTabId,
           onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
-          onChange: (path, value) => dispatch({
-            type: "updateChart",
-            path,
-            value,
-          }),
+          onChange: updateChartPath,
           chart: state.draft,
           charts: allCharts,
           columns: profile?.columns ?? [],
@@ -506,9 +561,11 @@ export function SelectedChartEditor({
   });
   const profile = readEntry(runtimeProfiles, panel.sourceId);
   const geoSourceId = panel.presentation?.map?.geoSource;
-  const geoData = typeof geoSourceId === "string"
-    ? readEntry(loadedData, geoSourceId)
-    : null;
+  const geoDataSources = validatedEditorGeoDataSources(
+    dataSources,
+    loadedData,
+  );
+  const geoData = readEntry(geoDataSources, geoSourceId) ?? null;
   const charts = chartPanels(dashboard);
   return React.createElement(ChartEditorV3, {
     chart: panel,
@@ -517,6 +574,8 @@ export function SelectedChartEditor({
     existingCharts: charts,
     rows: Array.isArray(rows) ? rows : [],
     geoData,
+    geoDataSources,
+    dataSources,
     profile,
     loadedData,
     profiles: runtimeProfiles,
@@ -526,6 +585,21 @@ export function SelectedChartEditor({
     onCancel,
     onRemove,
   });
+}
+
+function validatedEditorGeoDataSources(dataSources, loadedData) {
+  const result = Object.create(null);
+  for (const [sourceId, source] of collectionEntries(dataSources)) {
+    if (source?.kind !== "geojson") continue;
+    const candidate = readEntry(loadedData, sourceId);
+    try {
+      validateGeoJson(candidate, `Data source "${sourceId}" GeoJSON`);
+      result[sourceId] = candidate;
+    } catch {
+      // Invalid geography never reaches the editor selector or preview.
+    }
+  }
+  return result;
 }
 
 function updateEditorGroups(state, value, context) {

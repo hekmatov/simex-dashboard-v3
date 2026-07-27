@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { register } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
@@ -175,6 +182,7 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
   const {
     preparePromotedDashboard,
   } = await import("../scripts/promote-dashboard-bundle.mjs");
+  const { loadDashboardConfig } = await import("../src/lib/loadDashboard.js");
   const dashboard = minimalDashboard();
   dashboard.dataSources.uploaded = {
     kind: "dataset",
@@ -197,6 +205,43 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
     relativePath: "data/uploaded/clinic-capacity-uploaded.csv",
     contents: "facility,value\nClinic A,8\n",
   }]);
+  assert.deepEqual(
+    {
+      sourceId: promoted.config.datasetProfiles.uploaded.sourceId,
+      kind: promoted.config.datasetProfiles.uploaded.kind,
+      path: promoted.config.datasetProfiles.uploaded.path,
+      provenance: promoted.config.datasetProfiles.uploaded.provenance,
+      rowCount: promoted.config.datasetProfiles.uploaded.rowCount,
+      columns: promoted.config.datasetProfiles.uploaded.columns.map(
+        ({ name, type }) => ({ name, type }),
+      ),
+    },
+    {
+      sourceId: "uploaded",
+      kind: "csv",
+      path: "data/uploaded/clinic-capacity-uploaded.csv",
+      provenance: { label: "Facilitator upload" },
+      rowCount: 1,
+      columns: [
+        { name: "facility", type: "category" },
+        { name: "value", type: "numeric" },
+      ],
+    },
+  );
+  const hydrated = await loadDashboardConfig(
+    promoted.config,
+    promoted.config.datasetProfiles,
+    {
+      uploaded: {
+        kind: "csv",
+        text: promoted.files[0].contents,
+      },
+    },
+  );
+  assert.deepEqual(hydrated.loadedData.uploaded, [{
+    facility: "Clinic A",
+    value: 8,
+  }]);
   assert.throws(
     () => preparePromotedDashboard(JSON.stringify({
       bundleType: "simex-dashboard-v2-bundle",
@@ -205,6 +250,62 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
     })),
     /version 3 bundles only/i,
   );
+});
+
+test("promotion rejects non-loadable dataset descriptors before writing", async () => {
+  const {
+    serializeDashboardBundle,
+  } = await import("../src/charting/config/dashboardBundleV3.js");
+  const {
+    promoteDashboardBundle,
+  } = await import("../scripts/promote-dashboard-bundle.mjs");
+  const bundle = serializeDashboardBundle(minimalDashboard(), {
+    now: "2026-07-27T00:00:00.000Z",
+  });
+  const rejectedSources = [
+    {
+      kind: "dataset",
+      type: "arbitrary",
+      rows: [{ value: 1 }],
+    },
+    {
+      kind: "dataset",
+      type: "profileSnapshot",
+      parsingMetadata: {},
+      profile: {
+        rowCount: 1,
+        columns: [{ name: "value", type: "numeric" }],
+      },
+    },
+  ];
+
+  for (const source of rejectedSources) {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), "simex-promotion-"));
+    try {
+      const candidate = structuredClone(bundle);
+      candidate.config.dataSources.unloadable = source;
+      candidate.metadata.sourceFingerprints.unloadable = null;
+      await writeFile(
+        path.join(rootDir, "bundle.json"),
+        JSON.stringify(candidate),
+        "utf8",
+      );
+
+      await assert.rejects(
+        promoteDashboardBundle({
+          inputPath: "bundle.json",
+          rootDir,
+        }),
+        /not supported|kind must be/i,
+      );
+      await assert.rejects(
+        access(path.join(rootDir, "public")),
+        { code: "ENOENT" },
+      );
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  }
 });
 
 test("debounced edits flush before chart saves and cancellation prevents stale callbacks", async () => {

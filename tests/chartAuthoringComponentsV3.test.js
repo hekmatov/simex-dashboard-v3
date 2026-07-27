@@ -20,7 +20,13 @@ import {
   createWizardState,
   reduceWizardState,
 } from "../src/charting/forms/wizardDraft.js";
-import { buildEditorFormModel } from "../src/charting/forms/formModel.js";
+import {
+  buildEditorFormModel,
+  buildWizardFormModel,
+} from "../src/charting/forms/formModel.js";
+import {
+  applyGeographySourceSelection,
+} from "../src/charting/forms/geographySource.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 import { validateGeoJson } from "../src/lib/loadDashboard.js";
 
@@ -188,7 +194,14 @@ async function trackedGeographyFixture(chartId) {
     "utf8",
   ));
   validateGeoJson(geoData, `Tracked ${chartId} GeoJSON`);
-  return { chart, rows, geoData, source };
+  return {
+    chart,
+    dashboard,
+    geoData,
+    geoSourceId: chart.presentation.map.geoSource,
+    rows,
+    source,
+  };
 }
 
 async function readCsvPrefix(filePath, lineCount) {
@@ -1295,6 +1308,214 @@ test("tracked map and choropleth data reach ready wizard style and editor previe
     assert.match(editorHtml, /chart-authoring-preview-ready/, chartId);
     assert.doesNotMatch(editorHtml, /Preview needs attention/, chartId);
   }
+});
+
+test("fresh geography drafts can select validated GeoJSON before preview readiness", async () => {
+  for (const chartId of [
+    "bio_municipality_choropleth_animation",
+    "bio_wastewater_map",
+  ]) {
+    const {
+      chart: configured,
+      geoData,
+      geoSourceId,
+      rows,
+      source,
+    } = await trackedGeographyFixture(chartId);
+    const draft = createChartDraft(configured.typeId, {
+      id: `fresh-${configured.typeId}`,
+      title: `Fresh ${configured.typeId}`,
+      sourceId: configured.sourceId,
+      roles: structuredClone(configured.roles),
+    });
+    const missing = createWizardPreparation({
+      chart: draft,
+      rows,
+      authorMetadata: source.parsingMetadata,
+    });
+    assert.equal(missing.prepared.status, "invalid", chartId);
+    assert.ok(missing.prepared.diagnostics.some((diagnostic) => (
+      diagnostic.code === "geography-source-required"
+      && diagnostic.fieldId === "geoSource"
+    )), chartId);
+
+    const geoSources = [{
+      value: geoSourceId,
+      label: source.provenance.label,
+    }];
+    const missingModel = buildEditorFormModel({
+      chart: draft,
+      profile: missing.profile,
+      prepared: missing.prepared,
+      geoSources,
+    });
+    const geoField = missingModel.sections
+      .find(({ id }) => id === "data")
+      ?.fields.find(({ id }) => id === "geoSource");
+    assert.deepEqual(geoField?.path, [
+      "presentation",
+      "map",
+      "geoSource",
+    ], chartId);
+    assert.deepEqual(geoField?.options, [
+      { value: "", label: "Choose a GeoJSON source" },
+      ...geoSources,
+    ], chartId);
+
+    const sourceHtml = render(React.createElement(DataSourceStep, {
+      dataSources: {},
+      loadedData: {},
+      selectedSourceId: draft.sourceId,
+      geographyRequired: true,
+      geoSources,
+      selectedGeoSourceId: "",
+      onGeoSourceChange() {},
+    }));
+    assert.match(sourceHtml, /GeoJSON source/, chartId);
+    assert.doesNotMatch(sourceHtml, /Scale|Join field|Background|Color/, chartId);
+
+    const selectedChart = applyGeographySourceSelection(draft, {
+      sourceId: geoSourceId,
+      geoData,
+      rows,
+    });
+    assert.equal(draft.presentation.map, undefined, chartId);
+    assert.equal(
+      selectedChart.presentation.map.geoSource,
+      geoSourceId,
+      chartId,
+    );
+    assert.equal(
+      selectedChart.presentation.map.scale,
+      "sequential",
+      chartId,
+    );
+
+    const selected = createWizardPreparation({
+      chart: selectedChart,
+      rows,
+      authorMetadata: source.parsingMetadata,
+      geoData,
+    });
+    const wizardModel = buildWizardFormModel({
+      draft: selectedChart,
+      profile: selected.profile,
+      prepared: selected.prepared,
+      timeSyncGroups: [],
+      geoSources,
+    });
+    const readyModel = buildEditorFormModel({
+      chart: selectedChart,
+      profile: selected.profile,
+      prepared: selected.prepared,
+      geoSources,
+    });
+    assert.equal(selected.prepared.status, "ready", chartId);
+    assert.equal(wizardModel.canCreate, true, chartId);
+    assert.ok(
+      readyModel.sections.some(({ id }) => id === "map"),
+      chartId,
+    );
+
+    const editorHtml = render(React.createElement(ChartEditorV3, {
+      chart: selectedChart,
+      rows,
+      geoDataSources: { [geoSourceId]: geoData },
+      dataSources: {
+        [geoSourceId]: {
+          kind: "geojson",
+          provenance: { label: geoSources[0].label },
+        },
+      },
+      profile: selected.profile,
+      loadedData: { [configured.sourceId]: rows },
+      profiles: { [configured.sourceId]: selected.profile },
+      timeSyncGroups: [],
+    }));
+    assert.match(editorHtml, /chart-authoring-preview-ready/, chartId);
+    assert.equal(
+      (editorHtml.match(/data-field-id="geoSource"/g) ?? []).length,
+      1,
+      `${chartId} must expose one non-conflicting geography-source control`,
+    );
+  }
+});
+
+test("changing a geography source invalidates stale preparation and conversion can recover", async () => {
+  const {
+    chart: configured,
+    geoData,
+    geoSourceId,
+    rows,
+    source,
+  } = await trackedGeographyFixture(
+    "bio_municipality_choropleth_animation",
+  );
+  const first = createChartDraft("chronoChoroplethMap", {
+    id: "fresh-geography-change",
+    title: "Fresh geography change",
+    sourceId: configured.sourceId,
+    roles: structuredClone(configured.roles),
+    presentation: {
+      map: { geoSource: geoSourceId },
+    },
+  });
+  const prepared = createWizardPreparation({
+    chart: first,
+    rows,
+    geoData,
+    authorMetadata: source.parsingMetadata,
+  });
+  const changedState = reduceChartEditorState(
+    createChartEditorState({ chart: first }),
+    {
+      type: "updateChart",
+      path: ["presentation", "map", "geoSource"],
+      value: "geo_netherlands_municipalities_2020",
+    },
+  );
+  const stale = buildEditorFormModel({
+    chart: changedState.draft,
+    profile: prepared.profile,
+    prepared: prepared.prepared,
+    geoSources: [
+      { value: geoSourceId, label: "2021 municipalities" },
+      {
+        value: "geo_netherlands_municipalities_2020",
+        label: "2020 municipalities",
+      },
+    ],
+  });
+  assert.equal(stale.valid, false);
+  assert.equal(stale.sections.some(({ id }) => id === "map"), false);
+  assert.ok(stale.sections
+    .find(({ id }) => id === "data")
+    .fields.some(({ id }) => id === "geoSource"));
+
+  const converted = createChartDraft("mapScatter", {
+    id: "converted-geography",
+    title: "Converted geography",
+    sourceId: configured.sourceId,
+    roles: {
+      geography: configured.roles.geography,
+      value: configured.roles.value,
+      time: configured.roles.time,
+    },
+  });
+  const conversionRuntime = createWizardPreparation({
+    chart: converted,
+    rows,
+    authorMetadata: source.parsingMetadata,
+  });
+  const conversionModel = buildEditorFormModel({
+    chart: converted,
+    profile: conversionRuntime.profile,
+    prepared: conversionRuntime.prepared,
+    geoSources: [{ value: geoSourceId, label: "2021 municipalities" }],
+  });
+  assert.ok(conversionModel.sections
+    .find(({ id }) => id === "data")
+    .fields.some(({ id }) => id === "geoSource"));
 });
 
 test("ready style layout renders the schema-generated label-position control", () => {

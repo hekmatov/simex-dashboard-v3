@@ -95,21 +95,54 @@ function version3Dashboard() {
 
 function profileOnlyDashboard(temporal) {
   const dashboard = version3Dashboard();
+  const temporalValues = Array.isArray(temporal?.values)
+    ? temporal.values
+    : [];
+  const rowCount = temporalValues.length || 1;
+  const profileTemporal = temporal && typeof temporal === "object"
+    ? {
+        ...temporal,
+        parsingMetadata: {
+          interpretation: "temporal",
+          format: "DD/MM/YYYY",
+          timezone: "date-only",
+        },
+      }
+    : temporal;
   dashboard.dataSources["uploaded-cases"] = {
-    kind: "dataset",
-    type: "profileSnapshot",
+    kind: "csv",
+    path: "data/profile-only-cases.csv",
+    provenance: { label: "Profile-only cases" },
     parsingMetadata: {
       reportedAt: { interpretation: "temporal", format: "DD/MM/YYYY", timezone: "date-only" },
     },
-    profile: {
-      rowCount: Array.isArray(temporal?.values) ? temporal.values.length : 1,
+  };
+  dashboard.datasetProfiles = {
+    "uploaded-cases": {
+      sourceId: "uploaded-cases",
+      kind: "csv",
+      path: "data/profile-only-cases.csv",
+      provenance: { label: "Profile-only cases" },
+      rowCount,
+      fingerprint: "a".repeat(64),
       columns: [
         {
           name: "reportedAt",
           type: "temporal",
-          temporal,
+          missingCount: temporalValues.filter((value) => value === null).length,
+          uniqueCount: new Set(temporalValues.filter((value) => value !== null)).size,
+          examples: temporalValues.filter((value) => value !== null).slice(0, 3),
+          geographicHint: null,
+          temporal: profileTemporal,
         },
-        { name: "cases", type: "numeric" },
+        {
+          name: "cases",
+          type: "numeric",
+          missingCount: 0,
+          uniqueCount: rowCount > 0 ? 1 : 0,
+          examples: rowCount > 0 ? [1] : [],
+          geographicHint: null,
+        },
       ],
     },
   };
@@ -235,6 +268,15 @@ test("source validation rejects generic datasets, unsafe tracked paths, and alte
   for (const source of [
     { kind: "dataset", type: "arbitrary", rows: [{ value: 1 }] },
     {
+      kind: "dataset",
+      type: "profileSnapshot",
+      parsingMetadata: {},
+      profile: {
+        rowCount: 1,
+        columns: [{ name: "value", type: "numeric" }],
+      },
+    },
+    {
       kind: "csv",
       path: "../private.csv",
       provenance: { label: "Unsafe" },
@@ -298,10 +340,10 @@ test("source validation rejects accessors, custom prototypes, dangerous row keys
     values: ["2027-05-01", "2027-05-02"],
     diagnostics: [],
   });
-  profileDashboard.dataSources["uploaded-cases"].profile.rowCount = 1;
+  profileDashboard.datasetProfiles["uploaded-cases"].rowCount = 1;
   assert.throws(
     () => validateDashboardConfig(profileDashboard),
-    /rowCount|align/i,
+    /rowCount|align|column.*invalid/i,
   );
 });
 
@@ -835,7 +877,7 @@ test("profile-only temporal evidence rejects invalid and noncanonical values des
     const dashboard = profileOnlyDashboard({ values: [value], diagnostics: [] });
     assert.throws(
       () => validateDashboardConfig(dashboard),
-      /does not validate as temporal|temporal evidence/i,
+      /does not validate as temporal|temporal evidence|canonical temporal|temporal column/i,
       value,
     );
   }
@@ -853,20 +895,24 @@ test("profile-only temporal evidence rejects malformed or empty evidence", () =>
     const dashboard = profileOnlyDashboard(temporal);
     assert.throws(
       () => validateDashboardConfig(dashboard),
-      /does not validate as temporal|temporal evidence/i,
+      /does not validate as temporal|temporal evidence|temporal column/i,
     );
   }
 });
 
 test("profile-only temporal evidence rejects error diagnostics", () => {
   const dashboard = profileOnlyDashboard({
-    values: ["2027-05-01"],
-    diagnostics: [{ index: 0, severity: "error", code: "invalid-calendar-date" }],
+    values: [null],
+    diagnostics: [{
+      index: 0,
+      code: "invalid-calendar-date",
+      value: "2027-02-30",
+    }],
   });
 
   assert.throws(
     () => validateDashboardConfig(dashboard),
-    /does not validate as temporal|temporal evidence/i,
+    /does not validate as temporal|temporal evidence|temporal column/i,
   );
 });
 
@@ -886,7 +932,7 @@ test("invalid profile-only evidence cannot enable time sync", () => {
 
   assert.throws(
     () => validateDashboardConfig(dashboard),
-    /does not validate as temporal|effective temporal role|temporal evidence/i,
+    /does not validate as temporal|effective temporal role|temporal evidence|canonical temporal|temporal column/i,
   );
 });
 

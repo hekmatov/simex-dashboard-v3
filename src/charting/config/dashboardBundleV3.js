@@ -8,7 +8,10 @@ import {
   normalizeChartInstance,
   validateChartInstance,
 } from "./chartConfigV3.js";
-import { safePublicPath } from "../../lib/loadDashboard.js";
+import {
+  safePublicPath,
+  validateDatasetProfiles,
+} from "../../lib/loadDashboard.js";
 
 export const DASHBOARD_CONFIG_VERSION = 3;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
@@ -17,7 +20,6 @@ const RUNTIME_CONFIGURATION_KEYS = new Set(["loadedData", "loadedRows", "runtime
 const TRACKED_SOURCE_KEYS = new Set(["kind", "path", "parsingMetadata", "provenance"]);
 const UPLOADED_CSV_SOURCE_KEYS = new Set(["csvText", "fileName", "fingerprint", "kind", "parsingMetadata", "provenance", "sourceFingerprint", "type"]);
 const INLINE_SOURCE_KEYS = new Set(["fingerprint", "kind", "parsingMetadata", "provenance", "rows", "sourceFingerprint"]);
-const PROFILE_SNAPSHOT_SOURCE_KEYS = new Set(["kind", "parsingMetadata", "profile", "type"]);
 const BUNDLE_KEYS = new Set(["bundleType", "config", "metadata", "version"]);
 const BUNDLE_METADATA_KEYS = new Set(["exportedAt", "sourceFingerprints"]);
 const PROVENANCE_KEYS = new Set(["label"]);
@@ -25,12 +27,6 @@ const PARSING_RULE_KEYS = new Set(["format", "interpretation", "timezone"]);
 const PARSING_INTERPRETATIONS = new Set(["auto", "boolean", "category", "geographic", "numeric", "temporal"]);
 const TEMPORAL_FORMATS = new Set(["YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "ISO-8601"]);
 const TIMEZONES = new Set(["date-only"]);
-const PROFILE_KEYS = new Set(["columns", "fingerprint", "rowCount"]);
-const PROFILE_COLUMN_KEYS = new Set(["examples", "geographicHint", "missingCount", "name", "temporal", "type", "uniqueCount"]);
-const PROFILE_TEMPORAL_KEYS = new Set(["diagnostics", "parsingMetadata", "values"]);
-const PROFILE_DIAGNOSTIC_KEYS = new Set(["code", "format", "index", "severity", "value"]);
-const COLUMN_TYPES = new Set(["boolean", "category", "geographic", "numeric", "temporal"]);
-const GEOGRAPHIC_HINTS = new Set([null, "latitude", "longitude", "place"]);
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
 const DASHBOARD_KEYS = new Set([
@@ -179,59 +175,6 @@ function validateRows(value, description) {
   return rows;
 }
 
-function validateProfileSnapshot(sourceId, profile) {
-  const entries = plainDataEntries(profile, `Data source "${sourceId}" profile`);
-  rejectUnknownEntries(entries, PROFILE_KEYS, `data source "${sourceId}" profile`);
-  const rowCount = entryValue(entries, "rowCount");
-  if (!Number.isSafeInteger(rowCount) || rowCount < 0) throw new Error(`Data source "${sourceId}" profile rowCount is invalid.`);
-  validateFingerprint(entryValue(entries, "fingerprint"), `Data source "${sourceId}" profile fingerprint`);
-  const columns = denseDataArray(entryValue(entries, "columns"), `Data source "${sourceId}" profile columns`);
-  const names = new Set();
-  for (const [index, column] of columns.entries()) {
-    const description = `Data source "${sourceId}" profile column ${index}`;
-    const columnEntries = plainDataEntries(column, description);
-    rejectUnknownEntries(columnEntries, PROFILE_COLUMN_KEYS, description.toLowerCase());
-    const name = entryValue(columnEntries, "name");
-    validateColumnName(name, `${description} name`);
-    if (names.has(name)) throw new Error(`${description} name is duplicated.`);
-    names.add(name);
-    if (!COLUMN_TYPES.has(entryValue(columnEntries, "type"))) throw new Error(`${description} type is invalid.`);
-    for (const countKey of ["missingCount", "uniqueCount"]) {
-      const count = entryValue(columnEntries, countKey);
-      if (count !== undefined && (!Number.isSafeInteger(count) || count < 0 || count > rowCount)) {
-        throw new Error(`${description} ${countKey} is invalid.`);
-      }
-    }
-    const examples = entryValue(columnEntries, "examples");
-    if (examples !== undefined) denseDataArray(examples, `${description} examples`).forEach((entry, exampleIndex) => validateRowValue(entry, `${description} example ${exampleIndex}`));
-    const geographicHint = entryValue(columnEntries, "geographicHint");
-    if (geographicHint !== undefined && !GEOGRAPHIC_HINTS.has(geographicHint)) throw new Error(`${description} geographicHint is invalid.`);
-    const temporal = entryValue(columnEntries, "temporal");
-    if (temporal !== undefined) validateProfileTemporal(sourceId, name, temporal, rowCount);
-  }
-}
-
-function validateProfileTemporal(sourceId, columnName, temporal, rowCount) {
-  const description = `Data source "${sourceId}" profile temporal column "${columnName}"`;
-  const entries = plainDataEntries(temporal, description);
-  rejectUnknownEntries(entries, PROFILE_TEMPORAL_KEYS, description.toLowerCase());
-  const rawValues = entryValue(entries, "values");
-  const rawDiagnostics = entryValue(entries, "diagnostics");
-  if (!Array.isArray(rawValues) || !Array.isArray(rawDiagnostics)) {
-    throw new Error(`${description} temporal evidence is invalid.`);
-  }
-  const values = denseDataArray(rawValues, `${description} values`);
-  if (values.length !== rowCount) throw new Error(`${description} values must align with rowCount.`);
-  values.forEach((value, index) => validateRowValue(value, `${description} value ${index}`));
-  const diagnostics = denseDataArray(rawDiagnostics, `${description} diagnostics`);
-  diagnostics.forEach((diagnostic, index) => {
-    const diagnosticEntries = plainDataEntries(diagnostic, `${description} diagnostic ${index}`);
-    rejectUnknownEntries(diagnosticEntries, PROFILE_DIAGNOSTIC_KEYS, `${description.toLowerCase()} diagnostic`);
-  });
-  const parsingMetadata = entryValue(entries, "parsingMetadata");
-  if (parsingMetadata !== undefined) validateParsingRule(parsingMetadata, `${description} parsingMetadata`);
-}
-
 function sourceRows(sourceId, source) {
   if (source.kind === "inline") return source.rows;
   if (source.type === "uploadedCsv") {
@@ -245,7 +188,7 @@ function sourceRows(sourceId, source) {
 function profileColumns(sourceId, source, profiles = {}) {
   const rows = sourceRows(sourceId, source);
   if (rows !== null) return profileDataset(rows, source.parsingMetadata ?? {}).columns;
-  const profile = source.profile ?? profiles[sourceId];
+  const profile = profiles[sourceId];
   if (!profile) return Object.entries(source.parsingMetadata ?? {}).map(([name, metadata]) => ({ name, type: metadata.interpretation }));
   ensureObject(profile, `Data source "${sourceId}" profile`);
   if (!Array.isArray(profile.columns)) throw new Error(`Data source "${sourceId}" profile columns must be an array.`);
@@ -291,9 +234,6 @@ function validateSource(sourceId, source) {
   } else if (kind === "inline") {
     rejectUnknownEntries(entries, INLINE_SOURCE_KEYS, `data source "${sourceId}"`);
     validateRows(entryValue(entries, "rows"), `Inline data source "${sourceId}" rows`);
-  } else if (kind === "dataset" && type === "profileSnapshot") {
-    rejectUnknownEntries(entries, PROFILE_SNAPSHOT_SOURCE_KEYS, `data source "${sourceId}"`);
-    validateProfileSnapshot(sourceId, entryValue(entries, "profile"));
   } else {
     throw new Error(`Data source "${sourceId}" kind and type are not supported by chart system v3.`);
   }
@@ -419,6 +359,7 @@ export function validateDashboardConfig(config) {
   plainDataEntries(profiles, "Dashboard datasetProfiles");
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) { validateSource(sourceId, source); sources.set(sourceId, source); }
+  validateDatasetProfiles(config.dataSources, profiles);
   const charts = configuredPanels(config);
   const chartIds = new Set();
   for (const chart of charts) {
@@ -439,7 +380,7 @@ export function validateDashboardConfig(config) {
     if (validationProfiles[sourceId] === undefined) {
       validationProfiles[sourceId] = (
         rows === null
-          ? source.profile ?? source.datasetProfile
+          ? profiles[sourceId]
           : profileDataset(rows, source.parsingMetadata ?? {})
       );
     }

@@ -10,11 +10,15 @@ export default function DataSourceStep({
   manualTable = null,
   manualErrors = [],
   uploadError = "",
+  geographyRequired = false,
+  geoSources = [],
+  selectedGeoSourceId = "",
   prerequisites = [],
   onSelectExisting = noop,
   onUploadCsv = noop,
   onSelectManual = noop,
   onManualTableChange = noop,
+  onGeoSourceChange = noop,
   onRequestClear = noop,
 } = {}) {
   const entries = sourceEntries(dataSources, loadedData);
@@ -104,6 +108,48 @@ export default function DataSourceStep({
           )
         : null,
     ),
+    geographyRequired
+      ? React.createElement(
+          "section",
+          {
+            className: "wizard-choice-card chart-wizard-geography-source",
+            "data-field-id": "geoSource",
+          },
+          React.createElement("h4", null, "Map geography"),
+          React.createElement(
+            "label",
+            null,
+            "GeoJSON source",
+            React.createElement(
+              "select",
+              {
+                value: selectedGeoSourceId,
+                disabled: blocked,
+                required: true,
+                "aria-describedby": "chart-wizard-geo-source-help",
+                onChange: (event) => onGeoSourceChange(event.target.value),
+              },
+              React.createElement(
+                "option",
+                { value: "" },
+                "Choose a GeoJSON source",
+              ),
+              normalizedGeoSources(geoSources).map(({ value, label }) => (
+                React.createElement(
+                  "option",
+                  { key: value, value },
+                  label,
+                )
+              )),
+            ),
+          ),
+          React.createElement(
+            "p",
+            { id: "chart-wizard-geo-source-help" },
+            "Choose the validated boundary or point file used to locate the selected geographic identifiers.",
+          ),
+        )
+      : null,
     selectedSourceId
       ? React.createElement(
           "section",
@@ -342,6 +388,17 @@ function profileWarnings(profile) {
           message: diagnosticMessage(diagnostic),
         }))
       : []
+  ));
+}
+
+function normalizedGeoSources(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((option) => (
+    option
+    && typeof option.value === "string"
+    && option.value.trim() !== ""
+    && typeof option.label === "string"
+    && option.label.trim() !== ""
   ));
 }
 

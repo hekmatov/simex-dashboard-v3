@@ -68,6 +68,7 @@ export function prepareChartData(input = {}) {
     ...transformed.diagnostics,
     ...bindingDiagnostics,
     ...validateGroupTransform(schema, transformed, input.datasetProfile),
+    ...validateGeographySource(schema, chart, input.geoData),
   ];
 
   if (initialDiagnostics.some(({ severity }) => severity === "error")) {
@@ -94,6 +95,35 @@ export function prepareChartData(input = {}) {
     ...timeAware,
     diagnostics: [...initialDiagnostics, ...(timeAware.diagnostics ?? [])],
   }, transformed, schema);
+}
+
+function validateGeographySource(schema, chart, geoData) {
+  if (schema.dataFamily !== "geography") return [];
+  const sourceId = chart.presentation?.map?.geoSource;
+  const details = {
+    fieldId: "geoSource",
+    path: ["presentation", "map", "geoSource"],
+  };
+  if (typeof sourceId !== "string" || sourceId.trim() === "") {
+    return [error(
+      "geography-source-required",
+      "Choose a valid GeoJSON source for this chart.",
+      details,
+    )];
+  }
+  if (
+    !geoData
+    || geoData.type !== "FeatureCollection"
+    || !Array.isArray(geoData.features)
+    || geoData.features.length === 0
+  ) {
+    return [error(
+      "geography-source-unavailable",
+      `GeoJSON source "${sourceId}" is unavailable or invalid. Choose another source.`,
+      details,
+    )];
+  }
+  return [];
 }
 
 function prepareProjectedData(input, temporalProjection) {

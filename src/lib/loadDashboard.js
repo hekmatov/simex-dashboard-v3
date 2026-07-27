@@ -6,7 +6,6 @@ const dataSourceCache = new Map();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
 const SOURCE_KEYS = new Set(["kind", "path", "provenance", "parsingMetadata"]);
 const INLINE_SOURCE_KEYS = new Set([
-  "data",
   "fingerprint",
   "kind",
   "parsingMetadata",
@@ -201,18 +200,11 @@ export function validateDataSourceDescriptor(sourceId, source) {
       INLINE_SOURCE_KEYS,
       `data source "${sourceId}" descriptor`,
     );
-    const rows = entryValue(entries, "rows") ?? entryValue(entries, "data");
-    if (
-      Object.hasOwn(source, "rows") === Object.hasOwn(source, "data")
-      || !Array.isArray(rows)
-      || rows.some((row) => (
-        row === null || typeof row !== "object" || Array.isArray(row)
-      ))
-    ) {
-      throw new Error(
-        `Inline data source "${sourceId}" must contain either rows or data.`,
-      );
-    }
+    validateTabularRows(
+      entryValue(entries, "rows"),
+      `Inline data source "${sourceId}" rows`,
+    );
+    validateOptionalSourceMetadata(sourceId, entries);
     return "inline";
   }
   if (kind === "dataset" && entryValue(entries, "type") === "uploadedCsv") {
@@ -224,7 +216,20 @@ export function validateDataSourceDescriptor(sourceId, source) {
     if (typeof entryValue(entries, "csvText") !== "string") {
       throw new Error(`Uploaded CSV source "${sourceId}" csvText is required.`);
     }
+    const fileName = entryValue(entries, "fileName");
+    if (
+      fileName !== undefined
+      && (typeof fileName !== "string" || fileName.trim() === "")
+    ) {
+      throw new Error(`Uploaded CSV source "${sourceId}" fileName is invalid.`);
+    }
+    validateOptionalSourceMetadata(sourceId, entries);
     return "uploadedCsv";
+  }
+  if (kind === "dataset") {
+    throw new Error(
+      `Data source "${sourceId}" kind and type are not supported by chart system v3.`,
+    );
   }
   rejectUnknownEntries(
     entries,
@@ -373,7 +378,7 @@ async function loadDataSource(sourceId, source, portableSource) {
 async function loadDataSourceFresh(sourceId, source, portableSource) {
   validateDataSourceDescriptor(sourceId, source);
   if (source.kind === "inline") {
-    return structuredClone(source.rows ?? source.data);
+    return structuredClone(source.rows);
   }
   if (source.type === "uploadedCsv") {
     return parseCsvText(source.csvText, source.fileName ?? `${sourceId}.csv`);
@@ -825,6 +830,43 @@ function validateJsonValue(value, description) {
   validateJsonObject(value, description);
 }
 
+function validateOptionalSourceMetadata(sourceId, entries) {
+  const provenance = entryValue(entries, "provenance");
+  if (provenance !== undefined) {
+    validateProvenance(provenance, `Data source "${sourceId}" provenance`);
+  }
+  const parsingMetadata = entryValue(entries, "parsingMetadata");
+  if (parsingMetadata !== undefined) {
+    validateParsingMetadata(sourceId, parsingMetadata);
+  }
+  for (const key of ["fingerprint", "sourceFingerprint"]) {
+    const value = entryValue(entries, key);
+    if (
+      value !== undefined
+      && (typeof value !== "string" || value.trim() === "")
+    ) {
+      throw new Error(`Data source "${sourceId}" ${key} is invalid.`);
+    }
+  }
+}
+
+function validateTabularRows(value, description) {
+  const rows = denseDataArray(value, description);
+  for (const [rowIndex, row] of rows.entries()) {
+    for (const [key, cell] of plainDataEntries(
+      row,
+      `${description} row ${rowIndex}`,
+    )) {
+      validateColumnName(key, `${description} row ${rowIndex} column name`);
+      if (!isJsonScalar(cell)) {
+        throw new TypeError(
+          `${description} row ${rowIndex} value "${key}" must be a finite JSON scalar.`,
+        );
+      }
+    }
+  }
+}
+
 function dataSourceCacheKey(sourceId, source, portableSource) {
   return [
     sourceId,
@@ -834,7 +876,7 @@ function dataSourceCacheKey(sourceId, source, portableSource) {
     source.sourceFingerprint
       ?? source.fingerprint
       ?? source.csvText
-      ?? stableStringify(source.rows ?? source.data ?? null),
+      ?? stableStringify(source.rows ?? null),
     portableSource ? "portable" : "network",
   ].join(":");
 }

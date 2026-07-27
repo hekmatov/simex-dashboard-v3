@@ -14,6 +14,10 @@ import {
   manualDataAllowed,
   validateManualData,
 } from "../../charting/forms/manualData.js";
+import {
+  applyGeographySourceSelection,
+  validatedGeoSourceOptions,
+} from "../../charting/forms/geographySource.js";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { profileDataset } from "../../charting/data/profileDataset.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
@@ -52,6 +56,10 @@ export default function ChartWizardV3({
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
   const safeLoadedData = collectionOrEmpty(loadedData);
   const safeGeoDataSources = collectionOrEmpty(geoDataSources);
+  const geoSources = validatedGeoSourceOptions(
+    safeDataSources,
+    safeGeoDataSources,
+  );
   const safeGroups = Array.isArray(timeSyncGroups) ? timeSyncGroups : [];
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
@@ -136,6 +144,7 @@ export default function ChartWizardV3({
     profile: runtime.profile,
     prepared: runtime.prepared,
     timeSyncGroups: wizard.timeSyncGroups,
+    geoSources,
   });
   const canCreate = form.canCreate
     && (sourceKind !== "manual" || manualErrors.length === 0);
@@ -145,6 +154,7 @@ export default function ChartWizardV3({
         profile: runtime.profile,
         prepared: runtime.prepared,
         timeSyncGroups: wizard.timeSyncGroups,
+        geoSources,
       })
     : { sections: [], valid: false };
   const active = form.steps.find(({ id }) => id === wizard.activeStep)
@@ -167,6 +177,31 @@ export default function ChartWizardV3({
     path,
     value,
   });
+  const updateAuthoringPath = (path, value) => {
+    if (
+      path?.length === 3
+      && path[0] === "presentation"
+      && path[1] === "map"
+      && path[2] === "geoSource"
+    ) {
+      if (!value) {
+        updatePath(["presentation", "map"], undefined);
+        return;
+      }
+      try {
+        const selected = applyGeographySourceSelection(wizard.draft, {
+          sourceId: value,
+          geoData: readEntry(safeGeoDataSources, value),
+          rows,
+        });
+        updatePath(["presentation", "map"], selected.presentation.map);
+      } catch (error) {
+        setSubmissionError(safeMessage(error));
+      }
+      return;
+    }
+    updatePath(path, value);
+  };
   const applySourceUi = (nextUi) => {
     setSourceKind(nextUi.kind);
     setManualTable(nextUi.manualTable ?? null);
@@ -414,11 +449,21 @@ export default function ChartWizardV3({
               manualTable,
               manualErrors,
               uploadError,
+              geographyRequired: wizard.draft
+                ? getChartSchema(wizard.draft.typeId).dataFamily === "geography"
+                : false,
+              geoSources,
+              selectedGeoSourceId:
+                wizard.draft?.presentation?.map?.geoSource ?? "",
               prerequisites: active.prerequisites,
               onSelectExisting: selectExisting,
               onUploadCsv: uploadCsv,
               onSelectManual: selectManual,
               onManualTableChange: updateManual,
+              onGeoSourceChange: (value) => updateAuthoringPath(
+                ["presentation", "map", "geoSource"],
+                value,
+              ),
               onRequestClear: () => dispatch({ type: "requestClearSource" }),
             })
           : null,
@@ -431,7 +476,7 @@ export default function ChartWizardV3({
               profile: runtime.profile,
               diagnostics: runtime.prepared?.diagnostics ?? [],
               diagnosticNamespace: wizard.draft?.id,
-              onChange: updatePath,
+              onChange: updateAuthoringPath,
             })
           : null,
         wizard.activeStep === "style"

@@ -1109,11 +1109,14 @@ test("geography marks preserve canonical identifiers, time, and supplied feature
     geometry: { type: "Point", coordinates: [44.79, 41.72] },
   };
   const result = prepareChartData({
-    chart: chart("chronoChoroplethMap", {
-      geography: { field: "district" },
-      value: { field: "value" },
-      time: { field: "at" },
-    }),
+    chart: {
+      ...chart("chronoChoroplethMap", {
+        geography: { field: "district" },
+        value: { field: "value" },
+        time: { field: "at" },
+      }),
+      presentation: { map: { geoSource: "test-geography" } },
+    },
     rows,
     datasetProfile: profiled(rows, { district: { interpretation: "geographic" } }),
     geoData: { type: "FeatureCollection", features: [feature] },
@@ -1137,10 +1140,13 @@ test("geography feature metadata is cloned and frozen at the pipeline boundary",
     geometry: { type: "Point", coordinates: [44.79, 41.72] },
   };
   const result = prepareChartData({
-    chart: chart("choroplethMap", {
-      geography: { field: "district" },
-      value: { field: "value" },
-    }),
+    chart: {
+      ...chart("choroplethMap", {
+        geography: { field: "district" },
+        value: { field: "value" },
+      }),
+      presentation: { map: { geoSource: "test-geography" } },
+    },
     rows,
     datasetProfile: profiled(rows, { district: { interpretation: "geographic" } }),
     geoData: { type: "FeatureCollection", features: [feature] },

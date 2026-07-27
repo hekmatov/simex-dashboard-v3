@@ -38,6 +38,7 @@ export function buildWizardFormModel({
   profile,
   prepared,
   timeSyncGroups,
+  geoSources = [],
 } = {}) {
   const hasType = Boolean(draft?.typeId);
   const hasSource = hasType && nonEmptyString(draft.sourceId);
@@ -53,6 +54,7 @@ export function buildWizardFormModel({
         profile,
         prepared,
         timeSyncGroups,
+        geoSources,
       })
     : null;
 
@@ -96,6 +98,7 @@ export function buildEditorFormModel({
   profile,
   prepared,
   timeSyncGroups = [],
+  geoSources = [],
 } = {}) {
   if (!chart || typeof chart !== "object") {
     throw new TypeError("A chart draft is required to build its form.");
@@ -107,6 +110,7 @@ export function buildEditorFormModel({
     prepared,
     schema,
     timeSyncGroups: Array.isArray(timeSyncGroups) ? timeSyncGroups : [],
+    geoSources: normalizedGeoSources(geoSources),
   };
   const previewReady = preparationMatchesDraft({
     chart,
@@ -188,7 +192,7 @@ function materializeSection(sectionId, context) {
   return builders[sectionId]?.(context) ?? [];
 }
 
-function dataFields({ chart, profile, prepared, schema }) {
+function dataFields({ chart, profile, prepared, schema, geoSources }) {
   const fields = schema.roles.map((role) => {
     const supportsAxisAssignment = schema.dataFamily === "axis"
       && role.accepts.includes("number")
@@ -213,6 +217,22 @@ function dataFields({ chart, profile, prepared, schema }) {
   for (const role of schema.roles) {
     const interpretation = interpretationField(role, chart, profile);
     if (interpretation) fields.push(interpretation);
+  }
+
+  if (schema.dataFamily === "geography") {
+    fields.push({
+      id: "geoSource",
+      label: "GeoJSON source",
+      control: "select",
+      path: ["presentation", "map", "geoSource"],
+      value: chart.presentation?.map?.geoSource ?? "",
+      required: true,
+      help: "Choose the validated boundary or point file used to locate the selected geographic identifiers.",
+      options: [
+        { value: "", label: "Choose a GeoJSON source" },
+        ...geoSources,
+      ],
+    });
   }
 
   if (schema.comparison) {
@@ -650,6 +670,27 @@ function selectOptions(values) {
 
 function unique(values) {
   return [...new Set(values)];
+}
+
+function normalizedGeoSources(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.flatMap((option) => {
+    if (
+      !option
+      || typeof option !== "object"
+      || !nonEmptyString(option.value)
+      || !nonEmptyString(option.label)
+      || seen.has(option.value)
+    ) {
+      return [];
+    }
+    seen.add(option.value);
+    return [{
+      value: option.value,
+      label: option.label,
+    }];
+  });
 }
 
 function nonEmptyString(value) {
