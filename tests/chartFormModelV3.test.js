@@ -344,6 +344,91 @@ test("a current duplicate-resolution failure exposes the repair field without cl
   assert.equal(model.valid, false);
 });
 
+test("a resolved duplicate strategy remains editable while zero-collision data stays concise", () => {
+  const duplicateRows = [
+    { category: "A", value: 2 },
+    { category: "A", value: 3 },
+  ];
+  const unresolved = createChartDraft("bar", {
+    id: "duplicate-strategy",
+    title: "Duplicate strategy",
+    sourceId: "duplicate-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: { field: "category" },
+    },
+  });
+  const duplicateProfile = profileDataset(duplicateRows);
+  const unresolvedPrepared = preparedFor(
+    unresolved,
+    duplicateProfile,
+    prepareChartData({
+      chart: unresolved,
+      rows: duplicateRows,
+      datasetProfile: duplicateProfile,
+    }),
+  );
+  const resolved = createChartDraft("bar", {
+    ...unresolved,
+    transformations: {
+      ...unresolved.transformations,
+      duplicates: "first",
+    },
+  });
+  const resolvedPrepared = preparedFor(
+    resolved,
+    duplicateProfile,
+    prepareChartData({
+      chart: resolved,
+      rows: duplicateRows,
+      datasetProfile: duplicateProfile,
+    }),
+  );
+  const uniqueRows = [
+    { category: "A", value: 2 },
+    { category: "B", value: 3 },
+  ];
+  const uniqueProfile = profileDataset(uniqueRows);
+  const uniquePrepared = preparedFor(
+    resolved,
+    uniqueProfile,
+    prepareChartData({
+      chart: resolved,
+      rows: uniqueRows,
+      datasetProfile: uniqueProfile,
+    }),
+  );
+
+  assert.equal(unresolvedPrepared.status, "invalid");
+  assert.ok(unresolvedPrepared.diagnostics.some(
+    ({ code }) => code === "duplicate-resolution-required",
+  ));
+  assert.ok(allFields(buildEditorFormModel({
+    chart: unresolved,
+    profile: duplicateProfile,
+    prepared: unresolvedPrepared,
+  })).some(({ id }) => id === "duplicates"));
+
+  assert.equal(resolvedPrepared.status, "ready");
+  assert.equal(resolvedPrepared.meta.duplicateGroupCount, 1);
+  assert.ok(resolvedPrepared.diagnostics.some(
+    ({ code }) => code === "duplicate-observations",
+  ));
+  assert.ok(allFields(buildEditorFormModel({
+    chart: resolved,
+    profile: duplicateProfile,
+    prepared: resolvedPrepared,
+  })).some(({ id }) => id === "duplicates"));
+
+  assert.equal(uniquePrepared.status, "ready");
+  assert.equal(uniquePrepared.meta.duplicateGroupCount, 0);
+  assert.equal(allFields(buildEditorFormModel({
+    chart: resolved,
+    profile: uniqueProfile,
+    prepared: uniquePrepared,
+  })).some(({ id }) => id === "duplicates"), false);
+});
+
 test("an invalid current preparation without the duplicate-resolution diagnostic cannot expose duplicate controls", () => {
   const chart = lineChart({ transformations: { duplicates: null } });
   const profile = datasetProfile();

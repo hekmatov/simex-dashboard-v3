@@ -234,9 +234,7 @@ function dataFields({ chart, profile, prepared, schema }) {
     schema.transforms.includes("duplicates")
     && preparationCorrelatesDraft({ chart, profile, prepared })
     && Number(prepared?.meta?.duplicateGroupCount) > 0
-    && prepared.diagnostics?.some(
-      ({ code }) => code === "duplicate-resolution-required",
-    )
+    && duplicateResolutionIsEditable(prepared)
   ) {
     fields.push({
       id: "duplicates",
@@ -558,6 +556,16 @@ function preparationCorrelatesDraft({ chart, profile, prepared }) {
     && prepared?.meta
     && Object.hasOwn(prepared.meta, "formPreparationKey")
     && prepared.meta.formPreparationKey === expected;
+}
+
+function duplicateResolutionIsEditable(prepared) {
+  return prepared?.status === "ready"
+    || (
+      prepared?.status === "invalid"
+      && prepared.diagnostics?.some(
+        ({ code }) => code === "duplicate-resolution-required",
+      )
+    );
 }
 
 function profilePreparationColumn(column) {

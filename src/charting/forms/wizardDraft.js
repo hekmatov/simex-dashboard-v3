@@ -363,7 +363,7 @@ function confirmClearSource(state) {
 }
 
 function validateProposedGroups(state, groups, draft = state.draft) {
-  validateTimeSyncGroups(groups, {
+  validateTimeSyncGroups(groups.filter(groupRequiresValidation), {
     charts: chartsForValidation(state.charts, draft),
     loadedData: state.loadedData,
     profiles: state.profiles,
@@ -389,15 +389,19 @@ function normalizeExistingCharts(charts) {
 
 function removeChartFromGroups(groups, chartId) {
   let changed = false;
-  const next = groups.flatMap((group) => {
+  const next = groups.map((group) => {
     const members = Array.isArray(group.members)
       ? group.members.filter((member) => member.chartId !== chartId)
       : [];
-    if (members.length === (group.members?.length ?? 0)) return [group];
+    if (members.length === (group.members?.length ?? 0)) return group;
     changed = true;
-    return members.length > 0 ? [{ ...group, members }] : [];
+    return { ...group, members };
   });
   return changed ? next : groups;
+}
+
+function groupRequiresValidation(group) {
+  return !Array.isArray(group?.members) || group.members.length > 0;
 }
 
 function sourceChange(action) {

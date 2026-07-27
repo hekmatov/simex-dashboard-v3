@@ -457,6 +457,155 @@ test("changing chart type keeps logical identity and removes only the draft's st
   assert.doesNotThrow(() => finalizeWizardDraft(state));
 });
 
+test("changing the sole member's type preserves the empty group definition", () => {
+  const existing = createChartDraft("line", {
+    id: "unrelated-trend",
+    title: "Unrelated trend",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    interaction: { timeSync: { groupId: "unrelated-clock" } },
+  });
+  const draftGroup = {
+    id: "draft-clock",
+    name: "Draft clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "reportedAt",
+    },
+    matching: {
+      policy: "nearest",
+      toleranceMs: 86_400_000,
+    },
+    members: [{
+      chartId: "changing-chart",
+      timeRole: "observation",
+      matching: { policy: "lastKnown" },
+    }],
+  };
+  const unrelatedGroup = {
+    id: "unrelated-clock",
+    name: "Unrelated clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "reportedAt",
+    },
+    matching: { policy: "exact" },
+    members: [{
+      chartId: "unrelated-trend",
+      timeRole: "observation",
+    }],
+  };
+  const categoryRows = [
+    { status: "Ready", value: 3 },
+    { status: "Delayed", value: 1 },
+  ];
+  let state = createWizardState({
+    charts: [existing],
+    timeSyncGroups: [draftGroup, unrelatedGroup],
+    loadedData: {
+      "exercise-data": loadedRows,
+      "category-data": categoryRows,
+    },
+    profiles: {
+      "exercise-data": profile(),
+      "category-data": profileDataset(categoryRows),
+    },
+  });
+  state = reduceWizardState(state, {
+    type: "selectType",
+    typeId: "line",
+    chart: { id: "changing-chart", title: "Changing chart" },
+  });
+  state = reduceWizardState(state, {
+    type: "selectSource",
+    sourceId: "exercise-data",
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "measurements",
+    value: [{ field: "value", axis: "primary" }],
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "observation",
+    value: {
+      field: "reportedAt",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  });
+  state = reduceWizardState(state, {
+    type: "updateChart",
+    path: ["interaction", "timeSync"],
+    value: { groupId: "draft-clock" },
+  });
+  const beforeTypeChange = state;
+
+  state = reduceWizardState(state, {
+    type: "selectType",
+    typeId: "pie",
+    chart: { title: "Readiness mix" },
+  });
+
+  assert.equal(state.timeSyncGroups.length, 2);
+  assert.deepEqual(state.timeSyncGroups[0], {
+    ...beforeTypeChange.timeSyncGroups[0],
+    members: [],
+  });
+  assert.equal(
+    state.timeSyncGroups[1],
+    beforeTypeChange.timeSyncGroups[1],
+  );
+  assert.equal(beforeTypeChange.timeSyncGroups[0].members.length, 1);
+
+  state = reduceWizardState(state, {
+    type: "selectSource",
+    sourceId: "category-data",
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "category",
+    value: { field: "status" },
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "value",
+    value: { field: "value" },
+  });
+  const result = finalizeWizardDraft(state);
+  assert.equal(result.timeSyncGroups[0].id, "draft-clock");
+  assert.deepEqual(result.timeSyncGroups[0].members, []);
+  assert.equal(result.timeSyncGroups[1].members[0].chartId, "unrelated-trend");
+});
+
+test("empty authoring groups do not make malformed member collections valid", () => {
+  const state = createWizardState({ timeSyncGroups: [] });
+
+  assert.throws(
+    () => reduceWizardState(state, {
+      type: "updateTimeSyncGroups",
+      value: [{
+        id: "malformed-clock",
+        name: "Malformed clock",
+        primaryClock: {
+          sourceId: "exercise-data",
+          timeField: "reportedAt",
+        },
+        matching: { policy: "exact" },
+        members: null,
+      }],
+    }),
+    /members must be a non-empty array/i,
+  );
+});
+
 test("compatible source changes apply immediately and preserve mappings immutably", () => {
   const firstRows = [
     { period: "May", capacity: 4, region: "North" },
