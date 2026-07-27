@@ -3929,6 +3929,40 @@ button.danger {
   color: #007854;
 }
 
+.chart-wizard-step-tabs {
+  background: #eaf1f6;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 10px 20px;
+}
+
+.chart-wizard-step-button {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: #506a82;
+  min-width: 0;
+  padding: 9px 6px;
+}
+
+.chart-wizard-step-button:hover,
+.chart-wizard-step-button:focus-visible {
+  background: rgb(255 255 255 / 68%);
+  color: #043bcb;
+}
+
+.chart-wizard-step-button[aria-current="step"] {
+  border-bottom-color: #043bcb;
+  color: #043bcb;
+  font-weight: 800;
+}
+
+.chart-wizard-step-button[data-complete="true"]:not([aria-current="step"]) {
+  color: #007854;
+}
+
 .chart-wizard-body {
   overflow: auto;
   padding: 20px;
@@ -3939,6 +3973,192 @@ button.danger {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chart-wizard-v3 {
+  max-width: 1240px;
+  width: min(1240px, 100%);
+}
+
+.chart-wizard-step {
+  display: grid;
+  gap: 16px;
+}
+
+.chart-wizard-step > h3,
+.chart-wizard-step-intro,
+.wizard-source-profile h4,
+.wizard-source-profile p,
+.wizard-source-warnings h5 {
+  margin: 0;
+}
+
+.chart-wizard-prerequisites {
+  background: #fff8e6;
+  border: 1px solid #e7c86a;
+  border-radius: 10px;
+  color: #624500;
+  padding: 12px 14px;
+}
+
+.chart-wizard-prerequisites ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.chart-wizard-data-source .chart-wizard-source-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wizard-choice-card {
+  background: white;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.wizard-choice-card > h4,
+.wizard-choice-card > p {
+  margin: 0;
+}
+
+.wizard-choice-card > label {
+  display: grid;
+  gap: 6px;
+}
+
+.wizard-source-profile {
+  background: white;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.wizard-source-profile-heading {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.wizard-source-profile-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.wizard-source-profile-table-wrap,
+.chart-wizard-manual-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.wizard-source-profile-table,
+.chart-wizard-manual-table {
+  border-collapse: collapse;
+  min-width: 560px;
+  width: 100%;
+}
+
+.wizard-source-profile-table th,
+.wizard-source-profile-table td,
+.chart-wizard-manual-table th,
+.chart-wizard-manual-table td {
+  border-bottom: 1px solid #e1e9f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.wizard-source-profile-table thead th,
+.chart-wizard-manual-table thead th {
+  background: #f2f6fa;
+  color: #36516a;
+  font-size: 12px;
+}
+
+.chart-wizard-manual-table input {
+  min-width: 140px;
+  width: 100%;
+}
+
+.wizard-source-warnings {
+  background: #fff8e6;
+  border-left: 4px solid #d79a00;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.wizard-source-warnings ul,
+.wizard-error-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.wizard-error-list {
+  color: #a21729;
+}
+
+.chart-wizard-style-grid {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+}
+
+.chart-wizard-preview-column {
+  min-width: 0;
+  position: sticky;
+  top: 0;
+}
+
+.chart-wizard-style-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.confirm-dialog-backdrop {
+  align-items: center;
+  background: rgb(4 24 48 / 72%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 1450;
+}
+
+.confirm-dialog {
+  background: white;
+  border: 1px solid #d8e2ec;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgb(4 24 48 / 36%);
+  display: grid;
+  gap: 12px;
+  max-width: 460px;
+  padding: 22px;
+  width: 100%;
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  margin: 0;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.confirm-dialog .danger {
+  background: #a21729;
+  border-color: #a21729;
 }
 
 .wizard-choice-card h3,
@@ -3988,9 +4208,19 @@ button.danger {
 
   .chart-wizard-source-grid,
   .chart-wizard-review,
+  .chart-wizard-data-source .chart-wizard-source-grid,
+  .chart-wizard-style-grid,
   .binding-measure-card,
   .binding-measure-appearance {
     grid-template-columns: 1fr;
+  }
+
+  .chart-wizard-step-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-wizard-preview-column {
+    position: static;
   }
 }
 

@@ -13,6 +13,10 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import {
+  createWizardState,
+  reduceWizardState,
+} from "../src/charting/forms/wizardDraft.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -70,6 +74,33 @@ const {
 } = await import("../src/components/ColorField.jsx");
 const { default: SchemaField } = await import(
   "../src/components/chart-authoring/SchemaField.jsx"
+);
+const {
+  default: ConfirmDialog,
+} = await import("../src/components/common/ConfirmDialog.jsx");
+const {
+  default: DataSourceStep,
+} = await import(
+  "../src/components/chart-authoring/DataSourceStep.jsx"
+);
+const {
+  default: DataRolesStep,
+} = await import(
+  "../src/components/chart-authoring/DataRolesStep.jsx"
+);
+const {
+  default: StyleLayoutStep,
+} = await import(
+  "../src/components/chart-authoring/StyleLayoutStep.jsx"
+);
+const {
+  default: ChartWizardV3,
+  applyWizardMembership,
+  createWizardPreparation,
+  parseUploadedCsvFile,
+  submitWizardDraft,
+} = await import(
+  "../src/components/chart-authoring/ChartWizardV3.jsx"
 );
 
 const backgroundSection = {
@@ -760,6 +791,446 @@ test("hostile or incomplete authoring props fail closed without rendering raw ob
 
   assert.match(picker, /Search chart types/);
   assert.doesNotMatch(section, /\[object Object\]/);
+});
+
+test("wizard exposes four directly clickable button tabs in the approved order", () => {
+  const html = render(React.createElement(ChartWizardV3, {
+    open: true,
+    dataSources: {},
+    loadedData: {},
+    timeSyncGroups: [],
+    onClose() {},
+    onCreate() {},
+  }));
+  const labels = [
+    "Chart type",
+    "Data source",
+    "Data roles",
+    "Style and layout",
+  ];
+  let lastIndex = -1;
+  for (const label of labels) {
+    const match = new RegExp(`<button[^>]*>${label}</button>`).exec(html);
+    assert.ok(match, `${label} should be a button`);
+    assert.ok(match.index > lastIndex, `${label} should be in order`);
+    lastIndex = match.index;
+  }
+  assert.doesNotMatch(
+    html.slice(html.indexOf("Choose a chart type")),
+    /Background|Series color|Line width|Bar width/,
+  );
+});
+
+test("every wizard tab remains enabled and explains unmet prerequisites", () => {
+  const html = render(React.createElement(ChartWizardV3, {
+    open: true,
+    dataSources: {},
+    loadedData: {},
+    timeSyncGroups: [],
+    onClose() {},
+    onCreate() {},
+  }));
+
+  assert.equal((html.match(/class="chart-wizard-step-button/g) ?? []).length, 4);
+  assert.doesNotMatch(html, /chart-wizard-step-button[^>]*disabled/);
+  assert.match(html, /Choose a chart type/);
+});
+
+test("an early destination explains prerequisites without exposing crashing controls", () => {
+  const html = render(React.createElement(DataSourceStep, {
+    dataSources: {
+      "exercise-data": { kind: "dataset" },
+    },
+    loadedData: {
+      "exercise-data": [{ value: 4 }],
+    },
+    prerequisites: ["Choose a chart type."],
+    manualAllowed: true,
+    onSelectExisting() {
+      assert.fail("blocked source selection must not fire");
+    },
+    onSelectManual() {
+      assert.fail("blocked manual selection must not fire");
+    },
+  }));
+
+  assert.match(html, /Choose a chart type/);
+  assert.match(html, /<select[^>]*disabled/);
+  assert.match(html, /type="file"[^>]*disabled/);
+  assert.match(html, /Enter data manually/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Enter data manually<\/button>/);
+});
+
+test("discard and source-removal confirmations call only the approved callbacks", () => {
+  const calls = [];
+  const dialog = ConfirmDialog({
+    open: true,
+    title: "Discard chart?",
+    message: "The unfinished chart will be lost.",
+    confirmLabel: "Discard",
+    cancelLabel: "Continue editing",
+    onConfirm() {
+      calls.push("discard");
+    },
+    onCancel() {
+      calls.push("continue");
+    },
+  });
+  const discard = findElement(dialog, (element) => (
+    element.type === "button" && element.props.children === "Discard"
+  ));
+  const keep = findElement(dialog, (element) => (
+    element.type === "button" && element.props.children === "Continue editing"
+  ));
+
+  assert.equal(dialog.props.role, "dialog");
+  assert.equal(dialog.props["aria-modal"], "true");
+  keep.props.onClick();
+  assert.deepEqual(calls, ["continue"]);
+  discard.props.onClick();
+  assert.deepEqual(calls, ["continue", "discard"]);
+
+  const source = render(React.createElement(DataSourceStep, {
+    selectedSourceId: "exercise-data",
+    dataSources: { "exercise-data": { kind: "dataset" } },
+    loadedData: { "exercise-data": [{ region: "North", value: 4 }] },
+    profile: profileDataset([{ region: "North", value: 4 }]),
+    onSelectExisting() {},
+    onRequestClear() {},
+  }));
+  assert.match(source, /Remove source/);
+});
+
+test("selected data sources show detected types, examples, and warnings", () => {
+  const rows = [
+    { reported_at: "01/02/2027", capacity: 12, region: "North" },
+    { reported_at: "02/03/2027", capacity: 14, region: "South" },
+  ];
+  const profile = profileDataset(rows, {
+    reported_at: { interpretation: "temporal" },
+  });
+  const html = render(React.createElement(DataSourceStep, {
+    selectedSourceId: "exercise-data",
+    dataSources: { "exercise-data": { kind: "dataset" } },
+    loadedData: { "exercise-data": rows },
+    profile,
+    manualAllowed: false,
+    onSelectExisting() {},
+  }));
+
+  assert.match(html, /Detected columns/);
+  assert.match(html, /capacity/);
+  assert.match(html, /Number/);
+  assert.match(html, /12/);
+  assert.match(html, /Warnings/);
+  assert.doesNotMatch(html, /Enter data manually/);
+});
+
+test("local CSV upload uses the existing parser and returns a profiled dataset source", async () => {
+  const parsed = await parseUploadedCsvFile({
+    name: "Exercise Status.csv",
+    async text() {
+      return "region,value\nNorth,12\nSouth,14\n";
+    },
+  }, {
+    "upload-exercise-status": { kind: "dataset" },
+  });
+
+  assert.equal(parsed.sourceId, "upload-exercise-status-2");
+  assert.deepEqual(parsed.rows, [
+    { region: "North", value: 12 },
+    { region: "South", value: 14 },
+  ]);
+  assert.deepEqual(parsed.source, {
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: "Exercise Status.csv",
+    csvText: "region,value\nNorth,12\nSouth,14\n",
+  });
+  assert.equal(
+    parsed.profile.columns.find(({ name }) => name === "value").type,
+    "numeric",
+  );
+});
+
+test("manual entry is offered only when the selected schema permits concise inline data", () => {
+  const common = {
+    dataSources: {},
+    loadedData: {},
+    onSelectExisting() {},
+    onSelectManual() {},
+  };
+  const allowed = render(React.createElement(DataSourceStep, {
+    ...common,
+    manualAllowed: true,
+    manualTable: {
+      columns: [
+        { fieldId: "category", header: "Category" },
+        { fieldId: "value", header: "Value" },
+      ],
+      rows: [{ category: "Ready", value: "6" }],
+    },
+    onManualTableChange() {},
+  }));
+  const unavailable = render(React.createElement(DataSourceStep, {
+    ...common,
+    manualAllowed: false,
+  }));
+
+  assert.match(allowed, /Enter data manually/);
+  assert.match(allowed, /Category/);
+  assert.doesNotMatch(unavailable, /Enter data manually/);
+});
+
+test("data roles render measurements first and duplicate controls only for correlated duplicates", () => {
+  const measurements = {
+    id: "measurements",
+    label: "Measurements",
+    control: "role",
+    path: ["roles", "measurements"],
+    value: [{ field: "capacity", axis: "primary" }],
+    accepts: ["number"],
+    multiple: true,
+    min: 1,
+    max: null,
+    axisOptions: ["primary", "secondary"],
+  };
+  const observation = {
+    id: "observation",
+    label: "Observation / X-axis",
+    control: "role",
+    path: ["roles", "observation"],
+    value: { field: "period" },
+    accepts: ["category", "temporal"],
+    min: 1,
+    max: 1,
+  };
+  const base = {
+    section: {
+      id: "data",
+      label: "Data roles",
+      fields: [observation, measurements],
+    },
+    columns: [
+      { name: "period", type: "category" },
+      { name: "capacity", type: "numeric" },
+    ],
+    chart: validLineChart(),
+    onChange() {},
+  };
+  const withoutDuplicates = render(React.createElement(DataRolesStep, base));
+  const withDuplicates = render(React.createElement(DataRolesStep, {
+    ...base,
+    section: {
+      ...base.section,
+      fields: [
+        ...base.section.fields,
+        {
+          id: "duplicates",
+          label: "Duplicate observations",
+          control: "duplicates",
+          path: ["transformations", "duplicates"],
+          duplicateGroupCount: 2,
+        },
+      ],
+    },
+  }));
+
+  assert.ok(
+    withoutDuplicates.indexOf("Measurements")
+      < withoutDuplicates.indexOf("Observation / X-axis"),
+  );
+  assert.match(withoutDuplicates, /Primary/);
+  assert.match(withoutDuplicates, /Secondary/);
+  assert.doesNotMatch(withoutDuplicates, /Duplicate observations/);
+  assert.match(withDuplicates, /Duplicate observations/);
+});
+
+test("style and layout starts with the actual preview and separates advanced controls", () => {
+  const rows = [{ period: "May", capacity: 4 }];
+  const chart = validLineChart();
+  const profile = profileDataset(rows);
+  const html = render(React.createElement(StyleLayoutStep, {
+    chart,
+    rows,
+    profile,
+    sections: [
+      {
+        id: "appearance",
+        label: "Appearance",
+        fields: [{
+          id: "title",
+          label: "Chart title",
+          control: "text",
+          path: ["title"],
+          value: chart.title,
+        }],
+      },
+      {
+        id: "advanced",
+        label: "Advanced",
+        advanced: true,
+        fields: [{
+          id: "description",
+          label: "Description",
+          control: "textarea",
+          path: ["description"],
+          value: "",
+        }],
+      },
+    ],
+    onChange() {},
+  }));
+
+  assert.ok(html.indexOf("Chart preview") < html.indexOf("Appearance"));
+  assert.match(html, /<details[^>]*>.*<summary>Advanced<\/summary>/);
+});
+
+test("wizard preparation correlates the current chart, rows, and profile", () => {
+  const rows = [{ period: "May", capacity: 4 }];
+  const chart = validLineChart();
+  const runtime = createWizardPreparation({
+    chart,
+    rows,
+  });
+
+  assert.equal(runtime.profile.rowCount, 1);
+  assert.equal(runtime.prepared.status, "ready");
+  assert.match(
+    runtime.prepared.meta.formPreparationKey,
+    /^chart-form-preparation-v1:/,
+  );
+});
+
+test("wizard membership keeps matching in group members and chart-local state contains only groupId", () => {
+  const chart = createChartDraft("line", {
+    id: "exercise-trend",
+    title: "Exercise trend",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "capacity", axis: "primary" }],
+      observation: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "reportedAt",
+    },
+    matching: { policy: "exact" },
+    members: [],
+  }];
+  const next = applyWizardMembership({
+    chart,
+    groups,
+    groupId: "exercise-clock",
+    timeRole: "observation",
+  });
+
+  assert.deepEqual(next.chart.interaction.timeSync, {
+    groupId: "exercise-clock",
+  });
+  assert.deepEqual(next.groups[0].members, [{
+    chartId: "exercise-trend",
+    timeRole: "observation",
+  }]);
+  assert.equal("matching" in next.chart.interaction.timeSync, false);
+  assert.equal("temporalMatch" in next.chart.transformations, false);
+  assert.deepEqual(groups[0].members, []);
+});
+
+test("moving within the same synchronization group preserves member matching", () => {
+  const chart = createChartDraft("line", {
+    id: "exercise-trend",
+    title: "Exercise trend",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "capacity", axis: "primary" }],
+      observation: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    interaction: { timeSync: { groupId: "exercise-clock" } },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "reportedAt",
+    },
+    matching: { policy: "exact" },
+    members: [{
+      chartId: "exercise-trend",
+      timeRole: "observation",
+      matching: { policy: "lastKnown" },
+    }],
+  }];
+  const next = applyWizardMembership({
+    chart,
+    groups,
+    groupId: "exercise-clock",
+    timeRole: "observation",
+  });
+
+  assert.deepEqual(next.groups[0].members[0].matching, {
+    policy: "lastKnown",
+  });
+});
+
+test("wizard submit callback runs only after normalized chart and whole-group validation", () => {
+  const rows = [
+    { period: "May", capacity: 4 },
+    { period: "June", capacity: 6 },
+  ];
+  const profile = profileDataset(rows);
+  let state = createWizardState({
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    timeSyncGroups: [],
+  });
+  state = reduceWizardState(state, {
+    type: "selectType",
+    typeId: "line",
+    chart: { id: "new-trend", title: "Capacity trend" },
+  });
+  state = reduceWizardState(state, {
+    type: "selectSource",
+    sourceId: "exercise-data",
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "measurements",
+    value: [{ field: "capacity", axis: "primary" }],
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "observation",
+    value: { field: "period", interpretation: "category" },
+  });
+  const calls = [];
+  const result = submitWizardDraft(state, (value) => calls.push(value));
+
+  assert.equal(calls.length, 1);
+  assert.equal(result, calls[0]);
+  assert.deepEqual(Object.keys(result), ["chart", "timeSyncGroups"]);
+  assert.equal(result.chart.id, "new-trend");
+  assert.equal(result.chart.sourceId, "exercise-data");
+  assert.equal("temporalMatch" in result.chart.transformations, false);
+
+  assert.throws(
+    () => submitWizardDraft(createWizardState(), (value) => calls.push(value)),
+    /choose a chart type/i,
+  );
+  assert.equal(calls.length, 1);
 });
 
 function findElement(node, predicate) {

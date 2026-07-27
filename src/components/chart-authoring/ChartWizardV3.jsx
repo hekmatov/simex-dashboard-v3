@@ -1,0 +1,694 @@
+import React from "react";
+import {
+  buildEditorFormModel,
+  buildFormPreparationKey,
+  buildWizardFormModel,
+} from "../../charting/forms/formModel.js";
+import {
+  createWizardState,
+  finalizeWizardDraft,
+  reduceWizardState,
+} from "../../charting/forms/wizardDraft.js";
+import {
+  createManualDataTemplate,
+  manualDataAllowed,
+  validateManualData,
+} from "../../charting/forms/manualData.js";
+import { prepareChartData } from "../../charting/data/prepareChartData.js";
+import { profileDataset } from "../../charting/data/profileDataset.js";
+import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
+import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
+import { parseCsvText } from "../../lib/loadCsv.js";
+import ConfirmDialog from "../common/ConfirmDialog.jsx";
+import ChartTypePicker from "./ChartTypePicker.jsx";
+import DataRolesStep from "./DataRolesStep.jsx";
+import DataSourceStep from "./DataSourceStep.jsx";
+import StyleLayoutStep from "./StyleLayoutStep.jsx";
+
+const STEP_TITLES = Object.freeze({
+  type: "Choose the chart format",
+  source: "Select data to show",
+  roles: "Tell the chart what each column means",
+  style: "Preview and refine the chart",
+});
+
+export default function ChartWizardV3({
+  open,
+  dataSources,
+  loadedData,
+  timeSyncGroups,
+  onClose,
+  onCreate,
+}) {
+  const safeDataSources = isRecord(dataSources) ? dataSources : {};
+  const safeLoadedData = collectionOrEmpty(loadedData);
+  const safeGroups = Array.isArray(timeSyncGroups) ? timeSyncGroups : [];
+  const [wizard, setWizard] = React.useState(() => createInitialWizard({
+    loadedData: safeLoadedData,
+    timeSyncGroups: safeGroups,
+  }));
+  const [query, setQuery] = React.useState("");
+  const [localRows, setLocalRows] = React.useState({});
+  const [sourceKind, setSourceKind] = React.useState("");
+  const [manualTable, setManualTable] = React.useState(null);
+  const [manualErrors, setManualErrors] = React.useState([]);
+  const [uploadError, setUploadError] = React.useState("");
+  const [submissionError, setSubmissionError] = React.useState("");
+
+  React.useEffect(() => {
+    if (!open) return;
+    setWizard(createInitialWizard({
+      loadedData: safeLoadedData,
+      timeSyncGroups: safeGroups,
+    }));
+    setQuery("");
+    setLocalRows({});
+    setSourceKind("");
+    setManualTable(null);
+    setManualErrors([]);
+    setUploadError("");
+    setSubmissionError("");
+  }, [open]);
+
+  if (!open) return null;
+
+  const runtimeLoadedData = mergeCollections(safeLoadedData, localRows);
+  const rows = readEntry(runtimeLoadedData, wizard.draft?.sourceId) ?? [];
+  const source = wizard.source
+    ?? readEntry(safeDataSources, wizard.draft?.sourceId);
+  const runtime = createWizardPreparation({
+    chart: wizard.draft,
+    rows,
+    authorMetadata: source?.parsingMetadata
+      ?? manualParsingMetadata(manualTable),
+  });
+  const profiles = profileCollection(runtimeLoadedData, safeDataSources, {
+    sourceId: wizard.draft?.sourceId,
+    profile: runtime.profile,
+  });
+  const syncedWizard = {
+    ...wizard,
+    loadedData: runtimeLoadedData,
+    profiles,
+  };
+  const form = buildWizardFormModel({
+    draft: wizard.draft,
+    profile: runtime.profile,
+    prepared: runtime.prepared,
+    timeSyncGroups: wizard.timeSyncGroups,
+  });
+  const canCreate = form.canCreate
+    && (sourceKind !== "manual" || manualErrors.length === 0);
+  const editor = wizard.draft
+    ? buildEditorFormModel({
+        chart: wizard.draft,
+        profile: runtime.profile,
+        prepared: runtime.prepared,
+        timeSyncGroups: wizard.timeSyncGroups,
+      })
+    : { sections: [], valid: false };
+  const active = form.steps.find(({ id }) => id === wizard.activeStep)
+    ?? form.steps[0];
+  const dataSection = editor.sections.find(({ id }) => id === "data") ?? null;
+  const timeSyncField = editor.sections
+    .flatMap(({ fields }) => fields)
+    .find(({ id }) => id === "timeSync");
+
+  const dispatch = (action) => {
+    setWizard((current) => reduceWizardState({
+      ...current,
+      loadedData: runtimeLoadedData,
+      profiles,
+    }, action));
+    setSubmissionError("");
+  };
+  const updatePath = (path, value) => dispatch({
+    type: "updateChart",
+    path,
+    value,
+  });
+  const selectExisting = (sourceId) => {
+    if (!sourceId) return;
+    setSourceKind("existing");
+    setManualTable(null);
+    setManualErrors([]);
+    setUploadError("");
+    dispatch({ type: "selectSource", sourceId, source: null });
+  };
+  const uploadCsv = async (file) => {
+    if (!file) return;
+    try {
+      const parsed = await parseUploadedCsvFile(file, {
+        ...safeDataSources,
+        ...localRows,
+      });
+      const nextLoadedData = mergeCollections(runtimeLoadedData, {
+        [parsed.sourceId]: parsed.rows,
+      });
+      const nextProfiles = {
+        ...profiles,
+        [parsed.sourceId]: parsed.profile,
+      };
+      setLocalRows((current) => ({
+        ...current,
+        [parsed.sourceId]: parsed.rows,
+      }));
+      setSourceKind("upload");
+      setManualTable(null);
+      setManualErrors([]);
+      setUploadError("");
+      setWizard((current) => reduceWizardState({
+        ...current,
+        loadedData: nextLoadedData,
+        profiles: nextProfiles,
+      }, {
+        type: "selectSource",
+        sourceId: parsed.sourceId,
+        source: parsed.source,
+      }));
+    } catch (error) {
+      setUploadError(safeMessage(error));
+    }
+  };
+  const updateManual = (table, {
+    schema = wizard.draft ? getChartSchema(wizard.draft.typeId) : null,
+    currentWizard = wizard,
+  } = {}) => {
+    if (!schema || !manualDataAllowed(schema)) return;
+    const validation = validateManualData(schema, table);
+    const sourceId = `inline-${currentWizard.draft.id}`;
+    const manualRows = table.rows.map((row) => ({ ...row }));
+    const inlineSource = { kind: "inline", rows: manualRows };
+    const profile = profileDataset(
+      manualRows,
+      manualParsingMetadata(table),
+    );
+    const nextLoadedData = mergeCollections(runtimeLoadedData, {
+      [sourceId]: manualRows,
+    });
+    let next = reduceWizardState({
+      ...currentWizard,
+      loadedData: nextLoadedData,
+      profiles: { ...profiles, [sourceId]: profile },
+    }, {
+      type: "selectSource",
+      sourceId,
+      source: inlineSource,
+    });
+    next = assignManualRoles(next, schema, table.columns);
+    setManualTable(structuredClone(table));
+    setManualErrors(validation.errors);
+    setLocalRows((current) => ({ ...current, [sourceId]: manualRows }));
+    setSourceKind("manual");
+    setUploadError("");
+    setWizard(next);
+  };
+  const selectManual = () => {
+    if (!wizard.draft) return;
+    const schema = getChartSchema(wizard.draft.typeId);
+    updateManual(createManualDataTemplate(schema), {
+      schema,
+      currentWizard: wizard,
+    });
+  };
+  const changeMembership = (groupId) => {
+    if (!wizard.draft) return;
+    const timeRole = timeSyncField?.timeRoles
+      ?.find(({ field }) => typeof field === "string")?.value
+      ?? timeSyncField?.timeRoles?.[0]?.value;
+    try {
+      const proposal = applyWizardMembership({
+        chart: wizard.draft,
+        groups: wizard.timeSyncGroups,
+        groupId,
+        timeRole,
+      });
+      validateTimeSyncGroups(proposal.groups, {
+        charts: chartsWithDraft(wizard.charts, proposal.chart),
+        loadedData: runtimeLoadedData,
+        profiles,
+      });
+      setWizard((current) => ({
+        ...current,
+        draft: proposal.chart,
+        timeSyncGroups: proposal.groups,
+        timeSyncGroupsProvided: true,
+      }));
+      setSubmissionError("");
+    } catch (error) {
+      setSubmissionError(safeMessage(error));
+    }
+  };
+  const finish = () => {
+    if (!canCreate) return;
+    try {
+      submitWizardDraft(syncedWizard, onCreate);
+      setSubmissionError("");
+    } catch (error) {
+      setSubmissionError(safeMessage(error));
+    }
+  };
+  const confirmClose = () => {
+    const closed = reduceWizardState(wizard, { type: "confirmClose" });
+    setWizard(closed);
+    if (closed.closed && typeof onClose === "function") onClose();
+  };
+
+  return React.createElement(
+    "div",
+    {
+      className: "chart-wizard-backdrop",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "chart-wizard-title",
+    },
+    React.createElement(
+      "section",
+      { className: "chart-wizard chart-wizard-v3" },
+      React.createElement(
+        "header",
+        { className: "chart-wizard-header" },
+        React.createElement(
+          "div",
+          null,
+          React.createElement("p", { className: "eyebrow" }, "Add new chart"),
+          React.createElement(
+            "h2",
+            { id: "chart-wizard-title" },
+            STEP_TITLES[wizard.activeStep],
+          ),
+        ),
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            className: "secondary",
+            onClick: () => dispatch({ type: "requestClose" }),
+          },
+          "Close",
+        ),
+      ),
+      React.createElement(
+        "nav",
+        {
+          className: "chart-wizard-step-tabs",
+          "aria-label": "Chart creation steps",
+        },
+        form.steps.map((step) => React.createElement(
+          "button",
+          {
+            key: step.id,
+            type: "button",
+            className: "chart-wizard-step-button",
+            "aria-current": wizard.activeStep === step.id ? "step" : undefined,
+            "data-complete": step.complete ? "true" : "false",
+            onClick: () => dispatch({ type: "navigate", step: step.id }),
+          },
+          step.label,
+        )),
+      ),
+      React.createElement(
+        "div",
+        { className: "chart-wizard-body" },
+        wizard.activeStep === "type"
+          ? React.createElement(ChartTypePicker, {
+              value: wizard.draft?.typeId ?? "",
+              query,
+              onQueryChange: setQuery,
+              onChange: (typeId) => {
+                setSourceKind("");
+                setManualTable(null);
+                setManualErrors([]);
+                dispatch({
+                  type: "selectType",
+                  typeId,
+                  chart: {
+                    id: newChartId(typeId),
+                    title: "",
+                  },
+                });
+              },
+            })
+          : null,
+        wizard.activeStep === "source"
+          ? React.createElement(DataSourceStep, {
+              dataSources: safeDataSources,
+              loadedData: safeLoadedData,
+              selectedSourceId: wizard.draft?.sourceId ?? "",
+              selectedSourceKind: sourceKind,
+              profile: runtime.profile,
+              manualAllowed: wizard.draft
+                ? manualDataAllowed(getChartSchema(wizard.draft.typeId))
+                : false,
+              manualTable,
+              manualErrors,
+              uploadError,
+              prerequisites: active.prerequisites,
+              onSelectExisting: selectExisting,
+              onUploadCsv: uploadCsv,
+              onSelectManual: selectManual,
+              onManualTableChange: updateManual,
+              onRequestClear: () => dispatch({ type: "requestClearSource" }),
+            })
+          : null,
+        wizard.activeStep === "roles"
+          ? React.createElement(DataRolesStep, {
+              section: dataSection,
+              prerequisites: active.prerequisites,
+              columns: runtime.profile?.columns ?? [],
+              chart: wizard.draft,
+              profile: runtime.profile,
+              diagnostics: runtime.prepared?.diagnostics ?? [],
+              diagnosticNamespace: wizard.draft?.id,
+              onChange: updatePath,
+            })
+          : null,
+        wizard.activeStep === "style"
+          ? React.createElement(StyleLayoutStep, {
+              chart: wizard.draft,
+              rows,
+              profile: runtime.profile,
+              prepared: runtime.prepared,
+              sections: editor.sections,
+              prerequisites: active.prerequisites,
+              columns: runtime.profile?.columns ?? [],
+              charts: chartsWithDraft(wizard.charts, wizard.draft),
+              loadedData: runtimeLoadedData,
+              profiles,
+              onChange: updatePath,
+              onMembershipChange: changeMembership,
+              onGroupsChange: (nextGroups) => dispatch({
+                type: "updateTimeSyncGroups",
+                value: nextGroups,
+              }),
+              onValidationError: (error) => setSubmissionError(safeMessage(error)),
+            })
+          : null,
+        submissionError
+          ? React.createElement(
+              "p",
+              { className: "wizard-error", role: "alert" },
+              submissionError,
+            )
+          : null,
+      ),
+      React.createElement(
+        "footer",
+        { className: "chart-wizard-footer" },
+        React.createElement(
+          "span",
+          { role: "status" },
+          active.prerequisites[0] ?? "",
+        ),
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            disabled: !canCreate,
+            onClick: finish,
+          },
+          "Create chart",
+        ),
+      ),
+    ),
+    React.createElement(ConfirmDialog, {
+      open: wizard.confirmation === "discardChart",
+      title: "Discard chart?",
+      message: "Your unfinished chart and its settings will be lost.",
+      confirmLabel: "Discard",
+      cancelLabel: "Continue editing",
+      onConfirm: confirmClose,
+      onCancel: () => dispatch({ type: "cancelConfirmation" }),
+    }),
+    React.createElement(ConfirmDialog, {
+      open: wizard.confirmation === "clearSource",
+      title: "Remove data source?",
+      message: "Assigned data roles will also be cleared.",
+      confirmLabel: "Remove source",
+      cancelLabel: "Keep source",
+      onConfirm: () => {
+        dispatch({ type: "confirmClearSource" });
+        setSourceKind("");
+        setManualTable(null);
+        setManualErrors([]);
+      },
+      onCancel: () => dispatch({ type: "cancelConfirmation" }),
+    }),
+  );
+}
+
+export function createWizardPreparation({
+  chart,
+  rows = [],
+  authorMetadata = {},
+} = {}) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const profile = profileDataset(
+    safeRows,
+    isRecord(authorMetadata) ? authorMetadata : {},
+  );
+  if (!chart) return { profile, prepared: null };
+  try {
+    const prepared = prepareChartData({
+      chart,
+      rows: safeRows,
+      datasetProfile: profile,
+    });
+    return {
+      profile,
+      prepared: {
+        ...prepared,
+        meta: {
+          ...prepared.meta,
+          formPreparationKey: buildFormPreparationKey({ chart, profile }),
+        },
+      },
+    };
+  } catch (error) {
+    return {
+      profile,
+      prepared: {
+        status: "invalid",
+        marks: [],
+        diagnostics: [{ message: safeMessage(error) }],
+        meta: {
+          renderableMarkCount: 0,
+          formPreparationKey: buildFormPreparationKey({ chart, profile }),
+        },
+      },
+    };
+  }
+}
+
+export function applyWizardMembership({
+  chart,
+  groups,
+  groupId,
+  timeRole,
+} = {}) {
+  if (!chart || typeof chart !== "object") {
+    throw new TypeError("A chart is required for time synchronization.");
+  }
+  if (!Array.isArray(groups)) {
+    throw new TypeError("Time synchronization groups must be an array.");
+  }
+  if (groupId !== null && (
+    typeof groupId !== "string" || groupId.trim() === ""
+  )) {
+    throw new Error("Time synchronization group id is invalid.");
+  }
+  if (groupId !== null && (
+    typeof timeRole !== "string" || timeRole.trim() === ""
+  )) {
+    throw new Error("Choose a temporal data role before synchronizing this chart.");
+  }
+  const clonedGroups = structuredClone(groups);
+  const previousMember = clonedGroups
+    .flatMap(({ members }) => Array.isArray(members) ? members : [])
+    .find(({ chartId }) => chartId === chart.id);
+  const nextGroups = clonedGroups.map((group) => ({
+    ...group,
+    members: Array.isArray(group.members)
+      ? group.members.filter(({ chartId }) => chartId !== chart.id)
+      : [],
+  }));
+  if (groupId !== null) {
+    const target = nextGroups.find(({ id }) => id === groupId);
+    if (!target) {
+      throw new Error(`Unknown time synchronization group "${groupId}".`);
+    }
+    target.members.push({
+      chartId: chart.id,
+      timeRole,
+      ...(previousMember?.matching
+        ? { matching: structuredClone(previousMember.matching) }
+        : {}),
+    });
+  }
+  return {
+    chart: {
+      ...structuredClone(chart),
+      interaction: {
+        ...structuredClone(chart.interaction ?? {}),
+        timeSync: groupId === null ? null : { groupId },
+      },
+    },
+    groups: nextGroups,
+  };
+}
+
+export function submitWizardDraft(state, onCreate) {
+  const result = finalizeWizardDraft(state);
+  if (typeof onCreate !== "function") {
+    throw new TypeError("Chart creation requires an onCreate callback.");
+  }
+  onCreate(result);
+  return result;
+}
+
+export async function parseUploadedCsvFile(file, existingSources = {}) {
+  if (!file || typeof file.text !== "function") {
+    throw new TypeError("Choose a CSV file to upload.");
+  }
+  const fileName = typeof file.name === "string" && file.name.trim()
+    ? file.name.trim()
+    : "uploaded.csv";
+  const csvText = await file.text();
+  const rows = parseCsvText(csvText, fileName);
+  const sourceId = uniqueSourceId(fileName, isRecord(existingSources)
+    ? existingSources
+    : {});
+  return {
+    sourceId,
+    source: {
+      kind: "dataset",
+      type: "uploadedCsv",
+      fileName,
+      csvText,
+    },
+    rows,
+    profile: profileDataset(rows),
+  };
+}
+
+function createInitialWizard({ loadedData, timeSyncGroups }) {
+  return createWizardState({
+    loadedData,
+    profiles: profileCollection(loadedData),
+    timeSyncGroups,
+  });
+}
+
+function assignManualRoles(state, schema, columns) {
+  let next = state;
+  for (const role of schema.roles) {
+    const matches = columns.filter(({ roleId }) => roleId === role.id);
+    if (matches.length === 0) continue;
+    const bindings = matches.map(({ fieldId, expectedType }) => ({
+      field: fieldId,
+      ...(expectedType === "temporal"
+        ? { interpretation: "temporal" }
+        : {}),
+    }));
+    next = reduceWizardState(next, {
+      type: "updateRole",
+      roleId: role.id,
+      value: role.max === null || role.max > 1 ? bindings : bindings[0],
+    });
+  }
+  return next;
+}
+
+function manualParsingMetadata(table) {
+  if (!Array.isArray(table?.columns)) return {};
+  return Object.fromEntries(table.columns.map((column) => [
+    column.fieldId,
+    {
+      interpretation: {
+        number: "number",
+        temporal: "temporal",
+        boolean: "boolean",
+        geographic: "geographic",
+      }[column.expectedType] ?? "category",
+    },
+  ]));
+}
+
+function profileCollection(loadedData, dataSources = {}, selected = {}) {
+  const entries = loadedData instanceof Map
+    ? [...loadedData.entries()]
+    : isRecord(loadedData)
+      ? Object.entries(loadedData)
+      : [];
+  return Object.fromEntries(entries.flatMap(([sourceId, rows]) => {
+    if (!Array.isArray(rows)) return [];
+    const source = readEntry(dataSources, sourceId);
+    const profile = sourceId === selected.sourceId && selected.profile
+      ? selected.profile
+      : profileDataset(rows, source?.parsingMetadata ?? {});
+    return [[sourceId, profile]];
+  }));
+}
+
+function mergeCollections(base, additions) {
+  return {
+    ...(base instanceof Map
+      ? Object.fromEntries(base)
+      : isRecord(base)
+        ? base
+        : {}),
+    ...(additions instanceof Map
+      ? Object.fromEntries(additions)
+      : isRecord(additions)
+        ? additions
+        : {}),
+  };
+}
+
+function collectionOrEmpty(value) {
+  return value instanceof Map || isRecord(value) ? value : {};
+}
+
+function chartsWithDraft(charts, draft) {
+  const result = Array.isArray(charts)
+    ? charts.filter(({ id }) => id !== draft?.id)
+    : [];
+  if (draft) result.push(draft);
+  return result;
+}
+
+function uniqueSourceId(fileName, existing) {
+  const base = String(fileName)
+    .replace(/\.[^.]+$/, "")
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    || "uploaded";
+  let candidate = `upload-${base}`;
+  let suffix = 2;
+  while (Object.hasOwn(existing, candidate)) {
+    candidate = `upload-${base}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function newChartId(typeId) {
+  return `chart-${typeId}-${Date.now().toString(36)}`;
+}
+
+function readEntry(collection, key) {
+  if (collection instanceof Map) return collection.get(key);
+  return isRecord(collection) ? collection[key] : undefined;
+}
+
+function safeMessage(error) {
+  const message = typeof error?.message === "string"
+    ? error.message
+    : "The chart could not be updated.";
+  return message.length <= 240 ? message : `${message.slice(0, 239)}…`;
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
