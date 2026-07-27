@@ -224,6 +224,102 @@ test("ECharts render models remain SSR-safe and describe their content", () => {
   assert.match(html, /role="img"/);
   assert.match(html, /value at May: 4/);
   assert.match(html, /data-zoom-modifier="Control"/);
+  assert.match(html, /class="chart-zoom-guard"/);
+  assert.match(html, /Hold Ctrl while scrolling to zoom/);
+});
+
+test("non-zoom schema capabilities cannot be bypassed by chart-local input", () => {
+  const rows = [{ category: "Hospitals", value: 4 }];
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "pie",
+      title: "Capacity share",
+      roles: {
+        category: { field: "category" },
+        value: { field: "value" },
+      },
+      interaction: { zoom: { enabled: true } },
+    },
+    rows,
+    datasetProfile: profileDataset(rows),
+  }));
+
+  assert.doesNotMatch(html, /chart-zoom-guard|Hold Ctrl while scrolling to zoom/);
+  assert.doesNotMatch(html, /data-zoom-modifier/);
+});
+
+test("custom DOM chart families apply aligned titles and normalized backgrounds", () => {
+  const opaqueCard = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      ...deltaCard,
+      presentation: {
+        ...deltaCard.presentation,
+        title: { align: "right" },
+        background: { color: "#a1b2c3", transparent: false },
+      },
+    },
+    rows: deltaRows,
+    datasetProfile: profileDataset(deltaRows, {
+      observed: { interpretation: "temporal" },
+    }),
+  }));
+  const transparentTable = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "table",
+      title: "Facility readiness",
+      roles: {
+        columns: [{ field: "facility" }, { field: "score" }],
+      },
+      presentation: {
+        title: { align: "center" },
+        background: { color: "#112233", transparent: true },
+      },
+    },
+    rows: [{ facility: "Clinic A", score: 7 }],
+    datasetProfile: profileDataset([{ facility: "Clinic A", score: 7 }]),
+  }));
+  const image = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "image",
+      title: "Readiness map",
+      roles: {},
+      presentation: {
+        title: { align: "left" },
+        background: { color: "#DDEEFF", transparent: false },
+      },
+    },
+    rows: [{ src: "/maps/readiness.png", alt: "Readiness map" }],
+    datasetProfile: profileDataset([{ src: "/maps/readiness.png", alt: "Readiness map" }]),
+  }));
+
+  assert.match(opaqueCard, /class="chart-view-frame"[^>]*data-title-align="right"[^>]*style="text-align:right;background-color:#A1B2C3"/);
+  assert.match(opaqueCard, /class="chart-card-view"[^>]*data-title-align="right"[^>]*style="text-align:right"/);
+  assert.match(transparentTable, /class="chart-view-frame"[^>]*data-title-align="center"[^>]*style="text-align:center;background-color:transparent"/);
+  assert.match(transparentTable, /class="chart-table-view"[^>]*data-title-align="center"[^>]*style="text-align:center"/);
+  assert.match(image, /class="chart-view-frame"[^>]*data-title-align="left"[^>]*style="text-align:left;background-color:#DDEEFF"/);
+  assert.match(image, /class="chart-image-view"[^>]*data-title-align="left"[^>]*style="text-align:left"/);
+});
+
+test("hostile DOM presentation values fall back to left alignment without invalid CSS", () => {
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "kpi",
+      title: "Capacity",
+      roles: { value: { field: "value" } },
+      presentation: {
+        title: { align: "url(javascript:alert(1))" },
+        background: {
+          color: "url(javascript:alert(1))",
+          transparent: false,
+        },
+      },
+    },
+    rows: [{ value: 4 }],
+    datasetProfile: profileDataset([{ value: 4 }]),
+  }));
+
+  assert.match(html, /class="chart-view-frame"[^>]*data-title-align="left"[^>]*style="text-align:left"/);
+  assert.doesNotMatch(html, /javascript|background-color/);
 });
 
 test("gauge render models expose their value and target in the accessible summary", () => {

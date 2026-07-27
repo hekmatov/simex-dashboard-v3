@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { register } from "node:module";
 
 import * as echarts from "echarts";
 
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
+
+register(`data:text/javascript,${encodeURIComponent(`
+export async function load(url, context, nextLoad) {
+  if (url.endsWith(".jsx")) {
+    const loaded = await nextLoad(url, { ...context, format: "module" });
+    return { format: "module", source: loaded.source, shortCircuit: true };
+  }
+  return nextLoad(url, context);
+}
+`)}`, import.meta.url);
+
+const {
+  applyEChartsPresentation,
+} = await import("../src/components/charts/EChartsChartView.jsx");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
@@ -116,6 +131,52 @@ test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts
   assert.equal(model.option.title.left, "center");
   assert.deepEqual(model.option.dataZoom.map(({ type }) => type), ["inside", "slider"]);
   assert.equal(model.option.dataZoom[0].zoomOnMouseWheel, "ctrl");
+});
+
+test("the mounted ECharts option applies every valid title alignment and opaque background", () => {
+  for (const align of ["left", "center", "right"]) {
+    const presented = applyEChartsPresentation({
+      kind: "echarts",
+      option: {
+        title: { text: "Capacity", left: "stale" },
+        series: [],
+      },
+    }, {
+      presentation: {
+        title: { align },
+        background: { color: "#a1b2c3", transparent: false },
+      },
+    });
+
+    assert.equal(presented.option.title.left, align);
+    assert.equal(presented.option.backgroundColor, "#A1B2C3");
+  }
+});
+
+test("transparent and hostile ECharts presentation values cannot create an opaque or invalid fill", () => {
+  const transparent = applyEChartsPresentation({
+    kind: "echarts",
+    option: { title: [{ text: "One" }, { text: "Two", left: "right" }] },
+  }, {
+    presentation: {
+      title: { align: "center" },
+      background: { color: "#112233", transparent: true },
+    },
+  });
+  const hostile = applyEChartsPresentation({
+    kind: "echarts",
+    option: { title: { text: "Capacity", left: "right" } },
+  }, {
+    presentation: {
+      title: { align: "sideways" },
+      background: { color: "url(javascript:alert(1))", transparent: false },
+    },
+  });
+
+  assert.equal(transparent.option.backgroundColor, "transparent");
+  assert.deepEqual(transparent.option.title.map(({ left }) => left), ["center", "center"]);
+  assert.equal(hostile.option.title.left, "left");
+  assert.equal(Object.hasOwn(hostile.option, "backgroundColor"), false);
 });
 
 test("axis series honor validated label visibility, position, and formatting", () => {

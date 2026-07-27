@@ -10,6 +10,7 @@ export default function EChartsChartView({
   model,
   chart = {},
   provenance,
+  zoomEnabled = false,
   runtimeError: suppliedRuntimeError = null,
 }) {
   const hostRef = React.useRef(null);
@@ -20,7 +21,11 @@ export default function EChartsChartView({
   const summaryId = React.useId();
   const title = chart.title || "Chart";
   const description = chart.description || model.option?.aria?.description || "Interactive chart.";
-  const summary = summaryFor(model, chart);
+  const presentedModel = React.useMemo(
+    () => applyEChartsPresentation(model, chart),
+    [model, chart],
+  );
+  const summary = summaryFor(presentedModel, chart);
   const activeError = suppliedRuntimeError ?? runtimeError;
 
   React.useEffect(() => {
@@ -41,8 +46,8 @@ export default function EChartsChartView({
 
   React.useEffect(() => {
     if (!lifecycleRef.current) return;
-    lifecycleRef.current.update(model);
-  }, [model]);
+    lifecycleRef.current.update(presentedModel);
+  }, [presentedModel]);
 
   if (activeError) {
     return React.createElement("div", {
@@ -58,8 +63,9 @@ export default function EChartsChartView({
     role: "img",
     "aria-labelledby": titleId,
     "aria-describedby": `${descriptionId} ${summaryId}`,
-    "data-zoom-modifier": model.interaction?.zoom?.modifierKey
-      ?? (chart.interaction?.zoom?.enabled === true ? "Control" : undefined),
+    "data-zoom-modifier": zoomEnabled
+      ? presentedModel.interaction?.zoom?.modifierKey ?? "Control"
+      : undefined,
     ...titleContainerProps(chart),
   },
   React.createElement("h3", {
@@ -71,6 +77,32 @@ export default function EChartsChartView({
   React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
   provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null,
   React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }));
+}
+
+export function applyEChartsPresentation(model = {}, chart = {}) {
+  const option = model.option && typeof model.option === "object" && !Array.isArray(model.option)
+    ? model.option
+    : {};
+  const {
+    backgroundColor: _ignoredBackground,
+    ...optionWithoutBackground
+  } = option;
+  const align = normalizedTitleAlignment(chart?.presentation?.title?.align);
+  const backgroundColor = normalizedBackground(chart?.presentation?.background);
+  return {
+    ...model,
+    option: {
+      ...optionWithoutBackground,
+      ...(option.title === undefined
+        ? {}
+        : {
+            title: Array.isArray(option.title)
+              ? option.title.map((title) => normalizedTitle(title, align))
+              : normalizedTitle(option.title, align),
+          }),
+      ...(backgroundColor ? { backgroundColor } : {}),
+    },
+  };
 }
 
 export function createEChartsLifecycle({
@@ -144,6 +176,23 @@ function registerMap(echartsApi, registration) {
   if (registration?.name && registration.geoJson) {
     echartsApi.registerMap(registration.name, registration.geoJson);
   }
+}
+
+function normalizedTitle(value, align) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? { ...value, left: align }
+    : { text: "", left: align };
+}
+
+function normalizedTitleAlignment(value) {
+  return ["left", "center", "right"].includes(value) ? value : "left";
+}
+
+function normalizedBackground(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (value.transparent === true) return "transparent";
+  const color = typeof value.color === "string" ? value.color.trim() : "";
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toUpperCase() : null;
 }
 
 function summaryFor(model, chart) {

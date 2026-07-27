@@ -2545,6 +2545,48 @@ button.danger {
   min-width: 0;
 }
 
+.chart-view-frame {
+  border-radius: 12px;
+  min-width: 0;
+}
+
+.chart-zoom-guard {
+  min-width: 0;
+  position: relative;
+}
+
+.chart-zoom-guard:focus-visible {
+  border-radius: 12px;
+  outline: 3px solid rgb(4 59 203 / 34%);
+  outline-offset: 3px;
+}
+
+.chart-zoom-hint {
+  background: rgb(8 34 74 / 94%);
+  border-radius: 999px;
+  bottom: 12px;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  left: 50%;
+  max-width: calc(100% - 24px);
+  opacity: 0;
+  padding: 7px 11px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  transform: translate(-50%, 6px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  z-index: 3;
+}
+
+.chart-zoom-hint--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .chart-view-title,
 .chart-view-description,
 .chart-view-summary,
