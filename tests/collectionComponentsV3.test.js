@@ -21,6 +21,7 @@ const {
 const {
   clampCollectionPage,
   pageForCollectionEntity,
+  resolveCollectionPage,
 } = await import("../src/components/collection/CollectionGrid.jsx");
 const {
   createCollectionTimer,
@@ -29,6 +30,9 @@ const {
   readCollectionEnvironment,
   subscribeToCollectionEnvironment,
 } = await import("../src/components/collection/CollectionCarousel.jsx");
+const {
+  nextManualCollectionPage,
+} = await import("../src/components/collection/CollectionPager.jsx");
 const {
   default: CardChartView,
 } = await import("../src/components/charts/CardChartView.jsx");
@@ -72,6 +76,23 @@ test("scroll collections keep one keyboard-accessible vertical region with every
   assert.doesNotMatch(html, /collection-pager|collection-carousel-controls/);
 });
 
+test("scroll collections keep the configured block size for few and many items", () => {
+  const settings = {
+    layout: "scroll",
+    rows: 2,
+    columns: 2,
+    gap: 10,
+  };
+  const few = renderCollection(settings, collectionItems(1));
+  const many = renderCollection(settings, collectionItems(9));
+  const configuredSize = /--collection-scroll-block-size:calc\(8rem \+ 8rem \+ 16px\)/;
+
+  assert.match(few, configuredSize);
+  assert.match(many, configuredSize);
+  assert.equal((few.match(/role="listitem"/g) ?? []).length, 1);
+  assert.equal((many.match(/role="listitem"/g) ?? []).length, 9);
+});
+
 test("carousel SSR is static, accessible, manually operable, and does not allocate a timer", () => {
   const originalSetInterval = globalThis.setInterval;
   let allocations = 0;
@@ -96,13 +117,40 @@ test("carousel SSR is static, accessible, manually operable, and does not alloca
     assert.match(html, /data-collection-layout="carousel"/);
     assert.match(html, /data-collection-transition="slide"/);
     assert.match(html, /aria-label="Pause collection rotation"/);
-    assert.match(html, /aria-label="Previous collection page"[^>]*disabled/);
+    assert.doesNotMatch(
+      html,
+      /aria-label="Previous collection page"[^>]*disabled/,
+    );
     assert.match(html, /aria-label="Next collection page"/);
     assert.match(html, /Page 1 of 2/);
     assert.match(html, /aria-live="polite"/);
   } finally {
     globalThis.setInterval = originalSetInterval;
   }
+});
+
+test("non-looping carousel keeps boundary controls clamped and disabled", () => {
+  const html = renderCollection({
+    layout: "carousel",
+    rows: 1,
+    columns: 3,
+    carousel: {
+      intervalMs: 5000,
+      loop: false,
+      pauseOnHover: true,
+      transition: "none",
+    },
+  }, collectionItems(6));
+
+  assert.match(html, /aria-label="Previous collection page"[^>]*disabled/);
+  assert.match(html, /aria-label="Next collection page"/);
+});
+
+test("manual carousel paging wraps only when looping is enabled", () => {
+  assert.equal(nextManualCollectionPage(0, 3, -1, true), 2);
+  assert.equal(nextManualCollectionPage(2, 3, 1, true), 0);
+  assert.equal(nextManualCollectionPage(0, 3, -1, false), 0);
+  assert.equal(nextManualCollectionPage(2, 3, 1, false), 2);
 });
 
 test("fixed, scroll, and carousel layouts compose with every ranking mode", () => {
@@ -130,7 +178,7 @@ test("fixed, scroll, and carousel layouts compose with every ranking mode", () =
   }
 });
 
-test("playback order is locked only when collection playback reranking is disabled", () => {
+test("rerank locking applies only while the dedicated Playback view is active", () => {
   const items = [
     { entityId: "a", label: "Alpha", current: 1 },
     { entityId: "b", label: "Bravo", current: 3 },
@@ -145,18 +193,31 @@ test("playback order is locked only when collection playback reranking is disabl
   const playback = {
     activeEpochMs: Date.UTC(2027, 4, 2),
     lockedEntityOrder: ["a", "c", "b"],
-    playing: true,
+    playing: false,
   };
-  const locked = renderCollection({
+  const ordinaryDashboard = renderCollection({
     ...baseSettings,
     playback: { rerank: false, pauseCarousel: true },
-  }, items, playback);
+  }, items, { ...playback, playbackView: false });
+  const lockedPlaybackView = renderCollection({
+    ...baseSettings,
+    playback: { rerank: false, pauseCarousel: true },
+  }, items, { ...playback, playbackView: true });
   const reranked = renderCollection({
     ...baseSettings,
     playback: { rerank: true, pauseCarousel: true },
-  }, items, playback);
+  }, items, { ...playback, playbackView: true });
 
-  assertTextOrder(locked, ["Alpha", "Charlie", "Bravo"], "locked playback");
+  assertTextOrder(
+    ordinaryDashboard,
+    ["Bravo", "Charlie", "Alpha"],
+    "ordinary dashboard",
+  );
+  assertTextOrder(
+    lockedPlaybackView,
+    ["Alpha", "Charlie", "Bravo"],
+    "locked playback",
+  );
   assertTextOrder(reranked, ["Bravo", "Charlie", "Alpha"], "reranked playback");
 });
 
@@ -192,6 +253,30 @@ test("page helpers clamp changes and retain the page containing a focused entity
   assert.equal(nextCarouselPage(2, 3, 1, true), 0);
   assert.equal(nextCarouselPage(2, 3, 1, false), 2);
   assert.equal(nextCarouselPage(0, 3, -1, true), 2);
+});
+
+test("focused entity page is resolved before a reranked page is sliced", () => {
+  const reranked = [
+    { entityId: "bravo", label: "Bravo" },
+    { entityId: "charlie", label: "Charlie" },
+    { entityId: "alpha", label: "Alpha" },
+    { entityId: "delta", label: "Delta" },
+  ];
+  const pageSize = 2;
+  const page = resolveCollectionPage({
+    page: 0,
+    pageCount: 2,
+    items: reranked,
+    focusedEntityId: "alpha",
+    pageSize,
+  });
+  const visibleItems = reranked.slice(page * pageSize, (page + 1) * pageSize);
+
+  assert.equal(page, 1);
+  assert.deepEqual(
+    visibleItems.map(({ entityId }) => entityId),
+    ["alpha", "delta"],
+  );
 });
 
 test("stable entity identity is exposed while rendering leaves inputs untouched", () => {

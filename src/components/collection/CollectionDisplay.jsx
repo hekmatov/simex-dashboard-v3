@@ -5,7 +5,7 @@ import { rankCollection } from "../../charting/collection/rankCollection.js";
 import CollectionCarousel from "./CollectionCarousel.jsx";
 import CollectionGrid, {
   clampCollectionPage,
-  pageForCollectionEntity,
+  resolveCollectionPage,
 } from "./CollectionGrid.jsx";
 import CollectionPager from "./CollectionPager.jsx";
 
@@ -23,11 +23,7 @@ export default function CollectionDisplay({
   const [page, setPage] = React.useState(0);
   const [focusedEntityId, setFocusedEntityId] = React.useState(null);
   const ranked = rankCollection(items, normalized, previousOrder.current);
-  const playbackActive = playback !== null && (
-    playback?.playing === true
-    || Number.isFinite(playback?.activeEpochMs)
-    || Array.isArray(playback?.lockedEntityOrder)
-  );
+  const playbackActive = playback?.playbackView === true;
   const lockedOrder = Array.isArray(playback?.lockedEntityOrder)
     ? playback.lockedEntityOrder
     : previousOrder.current;
@@ -48,22 +44,17 @@ export default function CollectionDisplay({
   const pageCount = normalized.overflow === "limit"
     ? Math.min(1, ordered.length)
     : Math.ceil(ordered.length / pageSize);
-  const currentPage = clampCollectionPage(page, pageCount);
+  const currentPage = resolveCollectionPage({
+    page,
+    pageCount,
+    items: ordered,
+    focusedEntityId,
+    pageSize,
+  });
 
   React.useEffect(() => {
     if (currentPage !== page) setPage(currentPage);
   }, [currentPage, page]);
-
-  React.useEffect(() => {
-    if (!focusedEntityId) return;
-    const focusedPage = pageForCollectionEntity(
-      ordered,
-      focusedEntityId,
-      pageSize,
-      currentPage,
-    );
-    if (focusedPage !== currentPage) setPage(focusedPage);
-  }, [currentPage, focusedEntityId, ordered, pageSize]);
 
   if (ordered.length === 0) {
     return React.createElement("p", {

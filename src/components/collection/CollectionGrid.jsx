@@ -19,6 +19,23 @@ export function pageForCollectionEntity(
   return index < 0 ? fallbackPage : Math.floor(index / pageSize);
 }
 
+export function resolveCollectionPage({
+  page,
+  pageCount,
+  items,
+  focusedEntityId,
+  pageSize,
+}) {
+  const currentPage = clampCollectionPage(page, pageCount);
+  if (!focusedEntityId) return currentPage;
+  return clampCollectionPage(pageForCollectionEntity(
+    items,
+    focusedEntityId,
+    pageSize,
+    currentPage,
+  ), pageCount);
+}
+
 export default function CollectionGrid({
   items,
   settings,
@@ -61,7 +78,17 @@ export default function CollectionGrid({
     tabIndex: 0,
     style: {
       "--collection-gap": `${settings.gap}px`,
+      "--collection-scroll-block-size": scrollBlockSize(
+        settings.rows,
+        settings.gap,
+      ),
       "--collection-visible-rows": settings.rows,
     },
   }, grid);
+}
+
+function scrollBlockSize(rows, gap) {
+  const rowTracks = Array.from({ length: rows }, () => "8rem").join(" + ");
+  const gapAndPadding = (rows - 1) * gap + 6;
+  return `calc(${rowTracks} + ${gapAndPadding}px)`;
 }

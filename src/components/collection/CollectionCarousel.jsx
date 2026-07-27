@@ -2,7 +2,7 @@ import React from "react";
 
 import CollectionGrid, {
   clampCollectionPage,
-  pageForCollectionEntity,
+  resolveCollectionPage,
 } from "./CollectionGrid.jsx";
 import CollectionPager from "./CollectionPager.jsx";
 
@@ -116,7 +116,13 @@ export default function CollectionCarousel({
       ? STATIC_ENVIRONMENT
       : readCollectionEnvironment()
   ));
-  const currentPage = clampCollectionPage(page, pageCount);
+  const currentPage = resolveCollectionPage({
+    page,
+    pageCount,
+    items,
+    focusedEntityId,
+    pageSize,
+  });
   const stoppedAtEnd = settings.carousel.loop !== true
     && currentPage >= pageCount - 1;
   const paused = isCarouselPaused({
@@ -132,20 +138,8 @@ export default function CollectionCarousel({
   }), []);
 
   React.useEffect(() => {
-    const clamped = clampCollectionPage(page, pageCount);
-    if (clamped !== page) setPage(clamped);
-  }, [page, pageCount]);
-
-  React.useEffect(() => {
-    if (!focusedEntityId) return;
-    const focusedPage = pageForCollectionEntity(
-      items,
-      focusedEntityId,
-      pageSize,
-      currentPage,
-    );
-    if (focusedPage !== currentPage) setPage(focusedPage);
-  }, [currentPage, focusedEntityId, items, pageSize]);
+    if (currentPage !== page) setPage(currentPage);
+  }, [currentPage, page]);
 
   React.useEffect(() => createCollectionTimer({
     enabled: pageCount > 1
@@ -194,7 +188,6 @@ export default function CollectionCarousel({
     },
   },
   React.createElement(CollectionGrid, {
-    key: `collection-page-${currentPage}`,
     items: visibleItems,
     settings,
     renderItem,
@@ -226,6 +219,7 @@ export default function CollectionCarousel({
           pageCount,
         )),
         className: "collection-carousel-pager",
+        loop: settings.carousel.loop,
       }))
     : null);
 }
