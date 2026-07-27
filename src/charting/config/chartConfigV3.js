@@ -4,6 +4,7 @@ import {
   resolveBindingValue,
   resolveEffectiveBinding,
 } from "../data/bindings.js";
+import { normalizeCollectionSettings } from "../collection/collectionModel.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
@@ -25,10 +26,6 @@ const AGGREGATIONS = new Set(["sum", "mean", "average", "min", "max", "count", "
 const ARITHMETIC_DUPLICATES = new Set(["sum", "mean", "average", "min", "max", "count"]);
 const DUPLICATE_STRATEGIES = new Set(["error", "first", "last", "aggregate", ...ARITHMETIC_DUPLICATES]);
 const MISSING_VALUE_STRATEGIES = new Set(["gap", "zero", "drop"]);
-const COLLECTION_LAYOUTS = new Set(["fixedGrid", "scrollableGrid", "carousel"]);
-const COLLECTION_RANKING_MODES = new Set(["fixedOrder", "sort", "priority"]);
-const COLLECTION_OVERFLOWS = new Set(["manualPages", "scroll", "autoRotate", "visibleLimit"]);
-const COLLECTION_TRANSITIONS = new Set(["fade", "slide"]);
 const COLUMN_TYPES = new Set(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
 const TITLE_ALIGNMENTS = new Set(["left", "center", "right"]);
 const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neutral"]);
@@ -341,21 +338,7 @@ function validateComparison(transformations, schema) {
 function validateCollection(collection, schema) {
   if (collection === null || collection === undefined) return;
   if (!schema.capabilities.collection) throw new Error(`Chart type "${schema.typeId}" does not support collection presentation.`);
-  ensureObject(collection, "Chart collection presentation");
-  const keys = new Set(["layout", "rows", "columns", "itemSpacing", "sortField", "sortDirection", "rankingMode", "overflow", "pageSize", "rotationInterval", "loop", "pauseOnHover", "transition", "lockPositionsDuringPlayback", "accessibleItemLabel"]);
-  checkKnownKeys(collection, keys, "chart collection presentation");
-  if (!COLLECTION_LAYOUTS.has(collection.layout)) throw new Error(`Unsupported collection layout "${collection.layout}".`);
-  for (const dimension of ["rows", "columns"]) if (!Number.isInteger(collection[dimension]) || collection[dimension] < 1 || collection[dimension] > 4) throw new Error(`Chart collection ${dimension} must be between 1 and 4.`);
-  if (collection.itemSpacing !== undefined && (!Number.isFinite(collection.itemSpacing) || collection.itemSpacing < 0 || collection.itemSpacing > 64)) throw new Error("Chart collection itemSpacing must be between 0 and 64.");
-  if (collection.sortField !== undefined) requiredString(collection.sortField, "Chart collection sortField");
-  if (collection.sortDirection !== undefined && !["asc", "desc"].includes(collection.sortDirection)) throw new Error("Chart collection sortDirection must be asc or desc.");
-  if (collection.rankingMode !== undefined && !COLLECTION_RANKING_MODES.has(collection.rankingMode)) throw new Error("Chart collection rankingMode is unsupported.");
-  if (collection.overflow !== undefined && !COLLECTION_OVERFLOWS.has(collection.overflow)) throw new Error("Chart collection overflow is unsupported.");
-  if (collection.pageSize !== undefined && (!Number.isInteger(collection.pageSize) || collection.pageSize < 1 || collection.pageSize > collection.rows * collection.columns)) throw new Error("Chart collection pageSize must be a positive integer within the grid capacity.");
-  for (const key of ["loop", "pauseOnHover", "lockPositionsDuringPlayback"]) if (collection[key] !== undefined && typeof collection[key] !== "boolean") throw new Error(`Chart collection ${key} must be boolean.`);
-  if (collection.rotationInterval !== undefined && (!Number.isInteger(collection.rotationInterval) || collection.rotationInterval < 5000)) throw new Error("Chart collection rotationInterval must be an integer of at least 5000 ms.");
-  if (collection.transition !== undefined && !COLLECTION_TRANSITIONS.has(collection.transition)) throw new Error("Chart collection transition must be fade or slide.");
-  if (collection.accessibleItemLabel !== undefined) requiredString(collection.accessibleItemLabel, "Chart collection accessibleItemLabel");
+  normalizeCollectionSettings(collection);
 }
 
 function validatePresentation(chart, schema) {
@@ -471,7 +454,7 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
   const options = typeof typeOrOptions === "string" ? { ...overrides, typeId: typeOrOptions } : typeOrOptions;
   ensureObject(options, "Chart draft options");
   const schema = getChartSchema(options.typeId);
-  return structuredClone({
+  return normalizeChartInstance({
     configVersion: CHART_CONFIG_VERSION,
     id: options.id ?? `chart-${schema.typeId}`,
     typeId: schema.typeId,
@@ -502,6 +485,31 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
     },
     layout: { size: "standard", ...(options.layout ?? {}) },
   });
+}
+
+/**
+ * Returns a detached chart whose non-null collection presentation uses the
+ * authoritative, fully materialized version-3 Collection Display shape.
+ */
+export function normalizeChartInstance(chart) {
+  ensureObject(chart, "Chart instance");
+  requiredString(chart.typeId, "Chart typeId");
+  const schema = getChartSchema(chart.typeId);
+  ensureObject(chart.presentation, "Chart presentation");
+  const collection = chart.presentation.collection;
+  const normalizedCollection = collection === null || collection === undefined
+    ? collection
+    : (() => {
+        if (!schema.capabilities.collection) {
+          throw new Error(`Chart type "${schema.typeId}" does not support collection presentation.`);
+        }
+        return normalizeCollectionSettings(collection);
+      })();
+  const normalized = structuredClone(chart);
+  if (Object.hasOwn(chart.presentation, "collection")) {
+    normalized.presentation.collection = normalizedCollection;
+  }
+  return normalized;
 }
 
 /** Validates one fully configured v3 chart instance without mutating it. */

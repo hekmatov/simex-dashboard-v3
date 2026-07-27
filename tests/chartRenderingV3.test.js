@@ -314,7 +314,24 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
 });
 
 test("multi-item gauges preserve every prepared mark in a deterministic collection layout", () => {
-  const collection = { layout: "fixedGrid", rows: 1, columns: 2 };
+  const collection = {
+    layout: "fixed",
+    rows: 1,
+    columns: 2,
+    gap: 16,
+    overflow: "manualPages",
+    ranking: { mode: "fixed" },
+    carousel: {
+      intervalMs: 10000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "none",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  };
   const model = buildRenderModel({
     chart: chart("gauge", {
       presentation: { title: { align: "left" }, collection },
@@ -357,7 +374,27 @@ test("KPI, delta card, and delta list produce semantic card models", () => {
   const deltaCard = buildRenderModel({ chart: chart("deltaCard"), prepared: ready([deltaPrepared.marks[0]]) });
   const deltaList = buildRenderModel({
     chart: chart("deltaList", {
-      presentation: { title: { align: "left" }, collection: { layout: "fixedGrid", rows: 1, columns: 2 } },
+      presentation: {
+        title: { align: "left" },
+        collection: {
+          layout: "fixed",
+          rows: 1,
+          columns: 2,
+          gap: 16,
+          overflow: "manualPages",
+          ranking: { mode: "fixed" },
+          carousel: {
+            intervalMs: 10000,
+            loop: true,
+            pauseOnHover: true,
+            transition: "none",
+          },
+          playback: {
+            rerank: true,
+            pauseCarousel: true,
+          },
+        },
+      },
     }),
     prepared: deltaPrepared,
   });
@@ -382,7 +419,24 @@ test("KPI, delta card, and delta list produce semantic card models", () => {
     ["Clinic A", "increase"],
     ["Clinic B", "decrease"],
   ]);
-  assert.deepEqual(deltaList.presentation.collection, { layout: "fixedGrid", rows: 1, columns: 2 });
+  assert.deepEqual(deltaList.presentation.collection, {
+    layout: "fixed",
+    rows: 1,
+    columns: 2,
+    gap: 16,
+    overflow: "manualPages",
+    ranking: { mode: "fixed" },
+    carousel: {
+      intervalMs: 10000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "none",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  });
 });
 
 test("choropleth and chronological choropleth retain map feature metadata and time frames", () => {

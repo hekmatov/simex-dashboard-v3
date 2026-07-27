@@ -3,7 +3,10 @@ import Papa from "papaparse";
 import { profileDataset } from "../data/profileDataset.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
-import { validateChartInstance } from "./chartConfigV3.js";
+import {
+  normalizeChartInstance,
+  validateChartInstance,
+} from "./chartConfigV3.js";
 
 export const DASHBOARD_CONFIG_VERSION = 3;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
@@ -130,6 +133,34 @@ function serializableConfig(config) {
   return clone;
 }
 
+function normalizeDashboardChartInstances(config) {
+  if (!isRecord(config) || !Array.isArray(config.pages)) return config;
+  return {
+    ...config,
+    pages: config.pages.map((page) => {
+      if (!isRecord(page) || !Array.isArray(page.sections)) return page;
+      return {
+        ...page,
+        sections: page.sections.map((section) => {
+          if (!isRecord(section) || !Array.isArray(section.panels)) return section;
+          return {
+            ...section,
+            panels: section.panels.map((panel) => {
+              if (isRecord(panel) && Object.hasOwn(panel, "chart")) {
+                return {
+                  ...panel,
+                  chart: normalizeChartInstance(panel.chart),
+                };
+              }
+              return normalizeChartInstance(panel);
+            }),
+          };
+        }),
+      };
+    }),
+  };
+}
+
 function validCanonicalInstant(now) {
   if (typeof now !== "string" || !CANONICAL_ISO_INSTANT.test(now)) return false;
   const parsed = parseTemporalValue(now, { format: "ISO-8601" });
@@ -157,7 +188,7 @@ export function validateDashboardConfig(config) {
 }
 
 export function serializeDashboardBundle(config, { now = null } = {}) {
-  const serializable = serializableConfig(config);
+  const serializable = serializableConfig(normalizeDashboardChartInstances(config));
   validateDashboardConfig(serializable);
   if (now !== null && !validCanonicalInstant(now)) throw new Error("Bundle export time must be a valid canonical ISO-8601 timestamp or null.");
   return { bundleType: DASHBOARD_BUNDLE_TYPE, version: DASHBOARD_CONFIG_VERSION, metadata: { exportedAt: now, sourceFingerprints: sourceFingerprints(serializable.dataSources) }, config: serializable };
@@ -168,7 +199,7 @@ export function parseDashboardBundle(text) {
   try { bundle = JSON.parse(text); } catch { throw new Error("Dashboard bundle must be valid JSON."); }
   if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || bundle.version !== DASHBOARD_CONFIG_VERSION) throw new Error("This dashboard supports version 3 bundles only.");
   if (!isRecord(bundle.config)) throw new Error("Bundle config must be a version 3 dashboard configuration object.");
-  const config = serializableConfig(bundle.config);
+  const config = serializableConfig(normalizeDashboardChartInstances(bundle.config));
   validateDashboardConfig(config);
   return config;
 }

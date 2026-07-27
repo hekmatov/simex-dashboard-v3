@@ -730,7 +730,24 @@ test("target collection capabilities and identity roles match each chart type", 
     transformations: transformations(),
     presentation: {
       title: { align: "left" },
-      collection: { layout: "fixedGrid", rows: 1, columns: 2 },
+      collection: {
+        layout: "fixed",
+        rows: 1,
+        columns: 2,
+        gap: 16,
+        overflow: "manualPages",
+        ranking: { mode: "fixed" },
+        carousel: {
+          intervalMs: 10000,
+          loop: true,
+          pauseOnHover: true,
+          transition: "none",
+        },
+        playback: {
+          rerank: true,
+          pauseCarousel: true,
+        },
+      },
     },
   };
   const prepared = prepareChartData({ chart, rows, datasetProfile: profileDataset(rows) });

@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   createChartDraft,
+  normalizeChartInstance,
   validateChartInstance,
 } from "../src/charting/config/chartConfigV3.js";
+import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 import {
   parseDashboardBundle,
   serializeDashboardBundle,
@@ -147,7 +149,29 @@ function deltaListChart(overrides = {}) {
     transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", comparison: { mode: "previousObservation" } },
     presentation: {
       title: { align: "left" },
-      collection: { layout: "fixedGrid", rows: 2, columns: 2, itemSpacing: 8, sortField: "value", sortDirection: "desc", rankingMode: "sort", overflow: "manualPages", pageSize: 4, rotationInterval: 5000, loop: true, pauseOnHover: true, transition: "fade", lockPositionsDuringPlayback: false, accessibleItemLabel: "Facility status" },
+      collection: {
+        layout: "fixed",
+        rows: 2,
+        columns: 2,
+        gap: 8,
+        overflow: "manualPages",
+        ranking: {
+          mode: "sort",
+          field: "value",
+          direction: "desc",
+          stabilize: true,
+        },
+        carousel: {
+          intervalMs: 5000,
+          loop: true,
+          pauseOnHover: true,
+          transition: "fade",
+        },
+        playback: {
+          rerank: false,
+          pauseCarousel: false,
+        },
+      },
     },
     interaction: { zoom: { enabled: false }, timeSync: null },
     layout: { size: "wide" },
@@ -203,6 +227,45 @@ test("chart drafts retain nested defaults when an override changes one field", (
 
   assert.equal(draft.presentation.title.align, "center");
   assert.equal(draft.interaction.zoom.enabled, true);
+});
+
+test("collection-capable draft finalization materializes the persisted Collection Display shape", () => {
+  const authored = {
+    layout: "fixed",
+    rows: 1,
+    columns: 3,
+    ranking: { mode: "fixed" },
+  };
+
+  const draft = createChartDraft("kpi", {
+    id: "facility-status",
+    presentation: { collection: authored },
+  });
+
+  assert.deepEqual(authored, {
+    layout: "fixed",
+    rows: 1,
+    columns: 3,
+    ranking: { mode: "fixed" },
+  });
+  assert.deepEqual(draft.presentation.collection, {
+    layout: "fixed",
+    rows: 1,
+    columns: 3,
+    gap: 16,
+    overflow: "manualPages",
+    ranking: { mode: "fixed" },
+    carousel: {
+      intervalMs: 10000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "none",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  });
 });
 
 test("Delta drafts default to a detached previous-observation comparison", () => {
@@ -376,7 +439,29 @@ test("chart validation rejects unknown roles and invalid schema capabilities", (
     /Unknown role "madeUp"/,
   );
   assert.throws(
-    () => validateChartInstance(lineChart({ presentation: { title: { align: "left" }, collection: { layout: "fixedGrid", rows: 1, columns: 3 } } })),
+    () => validateChartInstance(lineChart({
+      presentation: {
+        title: { align: "left" },
+        collection: {
+          layout: "fixed",
+          rows: 1,
+          columns: 3,
+          gap: 16,
+          overflow: "manualPages",
+          ranking: { mode: "fixed" },
+          carousel: {
+            intervalMs: 10000,
+            loop: true,
+            pauseOnHover: true,
+            transition: "none",
+          },
+          playback: {
+            rerank: true,
+            pauseCarousel: true,
+          },
+        },
+      },
+    })),
     /does not support collection/i,
   );
 });
@@ -580,33 +665,30 @@ test("time synchronization requires an effectively temporal source binding", () 
   assert.throws(() => validateDashboardConfig(dashboard), /effective temporal role/i);
 });
 
-test("collection presentation accepts only documented enum and bounded value shapes", () => {
+test("collection presentation delegates the exact public nested shape to the collection authority", () => {
   assert.doesNotThrow(() => validateChartInstance(deltaListChart()));
 
-  for (const [property, value, message] of [
-    ["rankingMode", "random", /rankingMode/],
-    ["overflow", "infinite", /overflow/],
-    ["pageSize", 0, /pageSize/],
-    ["pageSize", 5, /pageSize/],
-    ["transition", "bounce", /transition/],
-    ["accessibleItemLabel", "", /accessibleItemLabel/],
-    ["itemSpacing", -1, /itemSpacing/],
-    ["sortField", {}, /sortField/],
-    ["sortDirection", "up", /sortDirection/],
-    ["rotationInterval", 0, /rotationInterval/],
-    ["loop", "yes", /loop/],
-    ["pauseOnHover", 1, /pauseOnHover/],
-    ["lockPositionsDuringPlayback", "no", /lockPositionsDuringPlayback/],
+  for (const [collection, message] of [
+    [{ ranking: { mode: "random" } }, /ranking mode/i],
+    [{ layout: "fixed", overflow: "infinite" }, /overflow.*fixed/i],
+    [{ layout: "fixed", ranking: { mode: "sort", field: "value", direction: "up" } }, /direction.*asc or desc/i],
+    [{ layout: "carousel", carousel: { intervalMs: 0 } }, /intervalMs.*5000/i],
+    [{ layout: "carousel", carousel: { transition: "bounce" } }, /transition/i],
+    [{ layout: "carousel", carousel: { loop: "yes" } }, /loop.*boolean/i],
+    [{ layout: "carousel", carousel: { pauseOnHover: 1 } }, /pauseOnHover.*boolean/i],
+    [{ playback: { rerank: "yes" } }, /rerank.*boolean/i],
+    [{ playback: { pauseCarousel: "no" } }, /pauseCarousel.*boolean/i],
+    [{ gap: -1 }, /gap.*between 0 and 64/i],
   ]) {
     const chart = deltaListChart();
-    chart.presentation.collection[property] = value;
-    assert.throws(() => validateChartInstance(chart), message, property);
+    chart.presentation.collection = collection;
+    assert.throws(() => validateChartInstance(chart), message);
   }
 
   for (const dimension of ["rows", "columns"]) {
     const chart = deltaListChart();
     chart.presentation.collection[dimension] = 5;
-    assert.throws(() => validateChartInstance(chart), /between 1 and 4/, dimension);
+    assert.throws(() => validateChartInstance(chart), /between 1 and 4/i, dimension);
   }
 });
 
@@ -684,11 +766,272 @@ test("invalid profile-only evidence cannot enable time sync", () => {
   );
 });
 
-test("collection rotation uses a five-second integer minimum", () => {
+test("collection carousel intervals use a five-second integer minimum", () => {
   for (const value of [4999, 5000.5, "5000"]) {
     const chart = deltaListChart();
-    chart.presentation.collection.rotationInterval = value;
-    assert.throws(() => validateChartInstance(chart), /rotationInterval.*5000/i, String(value));
+    chart.presentation.collection.carousel.intervalMs = value;
+    assert.throws(() => validateChartInstance(chart), /intervalMs.*5000/i, String(value));
   }
   assert.doesNotThrow(() => validateChartInstance(deltaListChart()));
+});
+
+test("normalizeChartInstance materializes collection defaults in a detached chart without mutating authored values", () => {
+  const authoredCollection = {
+    layout: "scroll",
+    rows: 3,
+    ranking: {
+      mode: "sort",
+      field: "value",
+      direction: "desc",
+    },
+  };
+  const chart = deltaListChart({
+    presentation: {
+      title: { align: "center" },
+      collection: authoredCollection,
+    },
+    opaqueAuthoringState: {
+      selectedEntities: ["Clinic A", "Clinic B"],
+    },
+  });
+  const original = structuredClone(chart);
+
+  const normalized = normalizeChartInstance(chart);
+
+  assert.deepEqual(chart, original);
+  assert.notEqual(normalized, chart);
+  assert.notEqual(normalized.presentation, chart.presentation);
+  assert.notEqual(normalized.opaqueAuthoringState, chart.opaqueAuthoringState);
+  assert.deepEqual(normalized.opaqueAuthoringState, {
+    selectedEntities: ["Clinic A", "Clinic B"],
+  });
+  assert.deepEqual(normalized.presentation.collection, {
+    layout: "scroll",
+    rows: 3,
+    columns: 2,
+    gap: 16,
+    overflow: "scroll",
+    ranking: {
+      mode: "sort",
+      field: "value",
+      direction: "desc",
+      stabilize: false,
+    },
+    carousel: {
+      intervalMs: 10000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "none",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  });
+});
+
+test("bundle write boundaries persist every collection layout, overflow, ranking, carousel, and playback shape canonically", () => {
+  const authoredCollections = [
+    {
+      layout: "fixed",
+      ranking: { mode: "fixed" },
+    },
+    {
+      layout: "fixed",
+      rows: 1,
+      columns: 4,
+      gap: 0,
+      overflow: "limit",
+      ranking: {
+        mode: "sort",
+        field: "label",
+        direction: "desc",
+        stabilize: true,
+      },
+      playback: {
+        rerank: false,
+        pauseCarousel: false,
+      },
+    },
+    {
+      layout: "scroll",
+      overflow: "scroll",
+      ranking: {
+        mode: "priority",
+        method: "largestAbsoluteChange",
+        stabilize: true,
+      },
+    },
+    {
+      layout: "scroll",
+      overflow: "limit",
+      ranking: {
+        mode: "priority",
+        expression: {
+          operator: "weightedSum",
+          terms: [
+            { metric: "riskScore", weight: 2 },
+            { metric: "distanceFromTarget", weight: 0.5 },
+          ],
+        },
+      },
+    },
+    {
+      layout: "carousel",
+      overflow: "autoRotate",
+      ranking: {
+        mode: "priority",
+        method: "riskScore",
+      },
+      carousel: {
+        intervalMs: 15000,
+        loop: false,
+        pauseOnHover: false,
+        transition: "slide",
+      },
+      playback: {
+        rerank: true,
+        pauseCarousel: false,
+      },
+    },
+    {
+      layout: "carousel",
+      rows: 4,
+      columns: 4,
+      gap: 64,
+      overflow: "limit",
+      ranking: { mode: "fixed" },
+      carousel: {
+        intervalMs: 5000,
+        loop: true,
+        pauseOnHover: true,
+        transition: "fade",
+      },
+    },
+  ];
+  const dashboard = version3Dashboard();
+  dashboard.dataSources["collection-status"] = {
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: "collection-status.csv",
+    csvText: "entity,value\nClinic A,12\nClinic B,8\n",
+    parsingMetadata: { value: { interpretation: "numeric" } },
+    provenance: { label: "Collection status" },
+    fingerprint: "collection-status-fingerprint",
+  };
+  dashboard.pages[0].sections[0].panels = authoredCollections.map((collection, index) => (
+    kpiChart({
+      id: `collection-${index}`,
+      sourceId: "collection-status",
+      roles: {
+        value: { field: "value" },
+        entity: { field: "entity" },
+      },
+      presentation: {
+        title: { align: "left" },
+        collection,
+      },
+    })
+  ));
+  const originalCollections = structuredClone(authoredCollections);
+
+  const bundle = serializeDashboardBundle(dashboard, {
+    now: "2026-07-26T12:00:00.000Z",
+  });
+  const parsed = parseDashboardBundle(JSON.stringify(bundle));
+
+  assert.deepEqual(authoredCollections, originalCollections);
+  authoredCollections.forEach((authored, index) => {
+    const expected = normalizeCollectionSettings(authored);
+    assert.deepEqual(
+      bundle.config.pages[0].sections[0].panels[index].presentation.collection,
+      expected,
+    );
+    assert.deepEqual(
+      parsed.pages[0].sections[0].panels[index].presentation.collection,
+      expected,
+    );
+  });
+  assert.deepEqual(bundle.config.pages[0].sections[0].panels[0].presentation.collection, {
+    layout: "fixed",
+    rows: 2,
+    columns: 2,
+    gap: 16,
+    overflow: "manualPages",
+    ranking: { mode: "fixed" },
+    carousel: {
+      intervalMs: 10000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "none",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  });
+});
+
+test("legacy collection fields and aliases are rejected instead of migrated", () => {
+  const legacyCollections = [
+    { layout: "fixedGrid", rows: 1, columns: 2 },
+    { layout: "scrollableGrid", rows: 1, columns: 2 },
+    { layout: "fixed", itemSpacing: 8 },
+    { layout: "fixed", sortField: "value" },
+    { layout: "fixed", sortDirection: "desc" },
+    { layout: "fixed", rankingMode: "sort" },
+    { layout: "fixed", pageSize: 2 },
+    { layout: "carousel", rotationInterval: 10000 },
+    { layout: "carousel", loop: true },
+    { layout: "carousel", pauseOnHover: true },
+    { layout: "carousel", transition: "fade" },
+    { layout: "fixed", lockPositionsDuringPlayback: true },
+    { layout: "fixed", accessibleItemLabel: "Facility" },
+    { layout: "fixed", overflow: "visibleLimit" },
+    { layout: "fixed", ranking: { mode: "fixedOrder" } },
+  ];
+
+  for (const collection of legacyCollections) {
+    const chart = deltaListChart();
+    chart.presentation.collection = collection;
+    assert.throws(
+      () => validateChartInstance(chart),
+      /unknown collection settings property|unsupported collection layout|overflow|ranking mode/i,
+      JSON.stringify(collection),
+    );
+  }
+});
+
+test("collection validation rejects prototype and executable nested values without executing accessors", () => {
+  let reads = 0;
+  const accessorRanking = { mode: "priority" };
+  Object.defineProperty(accessorRanking, "method", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return "riskScore";
+    },
+  });
+  const customPrototype = Object.create({ layout: "fixed" });
+  customPrototype.rows = 2;
+  const inheritedRanking = Object.create({ mode: "fixed" });
+  const executableExpression = {
+    operator: "weightedSum",
+    terms: [{ metric: "riskScore", weight: () => 1 }],
+  };
+  const symbolCollection = { layout: "fixed" };
+  symbolCollection[Symbol("hidden")] = true;
+
+  for (const [collection, message] of [
+    [customPrototype, /collection settings.*plain object/i],
+    [{ ranking: inheritedRanking }, /collection ranking.*plain object/i],
+    [{ ranking: accessorRanking }, /ranking property "method".*data property/i],
+    [{ ranking: { mode: "priority", expression: executableExpression } }, /weight.*finite/i],
+    [symbolCollection, /collection settings.*symbol/i],
+  ]) {
+    const chart = deltaListChart();
+    chart.presentation.collection = collection;
+    assert.throws(() => validateChartInstance(chart), message);
+  }
+  assert.equal(reads, 0);
 });
