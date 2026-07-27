@@ -110,6 +110,37 @@ test("previous-observation comparison selects the distinct preceding observation
   });
 });
 
+test("direct resolver rejects an omitted Delta comparison", () => {
+  const source = observations();
+  const result = resolveDeltaComparison({
+    observations: source,
+    displayed: source.at(-1),
+    chart: deltaChart(),
+    timeRole: "time",
+    profile: comparisonProfile(),
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.diagnostic.code, "invalid-delta-comparison");
+  assert.ok(result.diagnostic.message.length <= 240);
+});
+
+test("direct resolver rejects an explicit null Delta comparison", () => {
+  const source = observations();
+  const result = resolveDeltaComparison({
+    observations: source,
+    displayed: source.at(-1),
+    comparison: null,
+    chart: deltaChart(),
+    timeRole: "time",
+    profile: comparisonProfile(),
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.diagnostic.code, "invalid-delta-comparison");
+  assert.ok(result.diagnostic.message.length <= 240);
+});
+
 test("static and playback Delta histories skip gaps but retain zero-filled measurements", () => {
   const rows = [
     { at: "2027-05-01", value: 10, target: 100 },
@@ -590,6 +621,50 @@ test("prepare boundary rejects malformed comparison structures without invoking 
   }
   assert.equal(comparisonReads, 0);
   assert.equal(policyReads, 0);
+});
+
+test("prepare boundary rejects transformations without an owned Delta comparison", () => {
+  const rows = [
+    { at: "2027-05-01", value: 10, target: 100 },
+    { at: "2027-05-02", value: 20, target: 100 },
+  ];
+  const chart = deltaChart();
+  const { comparison: _comparison, ...transformations } = chart.transformations;
+  chart.transformations = transformations;
+
+  const result = prepareChartData({
+    chart,
+    rows,
+    datasetProfile: realProfile(rows),
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  const diagnostic = result.diagnostics.find(
+    ({ code }) => code === "invalid-delta-comparison",
+  );
+  assert.ok(diagnostic);
+  assert.ok(diagnostic.message.length <= 240);
+});
+
+test("prepare boundary rejects an explicit null Delta comparison", () => {
+  const rows = [
+    { at: "2027-05-01", value: 10, target: 100 },
+    { at: "2027-05-02", value: 20, target: 100 },
+  ];
+  const result = prepareChartData({
+    chart: deltaChart({ comparison: null }),
+    rows,
+    datasetProfile: realProfile(rows),
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  const diagnostic = result.diagnostics.find(
+    ({ code }) => code === "invalid-delta-comparison",
+  );
+  assert.ok(diagnostic);
+  assert.ok(diagnostic.message.length <= 240);
 });
 
 function realProfile(rows, { interpolationAllowed = false } = {}) {

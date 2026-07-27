@@ -527,6 +527,10 @@ test("playback deltas select the active value and latest distinct preceding obse
       measurement: { field: "value" },
       time: { field: "at" },
       target: { field: "target" },
+    }, {
+      transformOverrides: {
+        comparison: { mode: "previousObservation" },
+      },
     }),
     rows,
   });
@@ -554,6 +558,10 @@ test("interpolated playback deltas retain the latest distinct preceding observat
       measurement: { field: "value", interpolationAllowed: true },
       time: { field: "at" },
       target: { field: "target" },
+    }, {
+      transformOverrides: {
+        comparison: { mode: "previousObservation" },
+      },
     }),
     rows,
     interpolationFields: ["value"],

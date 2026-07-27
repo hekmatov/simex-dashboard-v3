@@ -22,6 +22,18 @@ function chart(typeId, roles, transformations = {
   return { typeId, roles, transformations };
 }
 
+function previousDeltaTransformations(overrides = {}) {
+  return {
+    filters: [],
+    grouping: [],
+    aggregation: null,
+    duplicates: null,
+    missingValues: "gap",
+    comparison: { mode: "previousObservation" },
+    ...overrides,
+  };
+}
+
 test("pipeline transformation fixtures use the version 3 shape accepted by chart validation", () => {
   const fixtures = [
     chart("bar", {
@@ -785,7 +797,7 @@ test("delta card reports displayed, comparison, absolute, and percentage values"
     chart: chart("deltaCard", {
       measurement: { field: "value" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -806,13 +818,11 @@ test("delta preparation retains the exact selected times after missing-value rem
     chart: chart("deltaCard", {
       measurement: { field: "value" },
       time: { field: "at" },
-    }, {
-      filters: [],
-      grouping: [],
+    }, previousDeltaTransformations({
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "drop",
-    }),
+    })),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -835,7 +845,7 @@ test("delta card rejects multiple bound entities with an actionable alternative"
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -859,13 +869,9 @@ test("delta card succeeds when a filter leaves one bound entity", () => {
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }, {
+    }, previousDeltaTransformations({
       filters: [{ field: "entity", operator: "equals", value: "B" }],
-      grouping: [],
-      aggregation: null,
-      duplicates: null,
-      missingValues: "gap",
-    }),
+    })),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -886,7 +892,7 @@ test("delta duplicate timestamps require an explicit resolution strategy", () =>
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -907,13 +913,10 @@ test("delta duplicate timestamps aggregate only with both explicit controls", ()
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }, {
-      filters: [],
-      grouping: [],
+    }, previousDeltaTransformations({
       aggregation: "sum",
       duplicates: "aggregate",
-      missingValues: "gap",
-    }),
+    })),
     rows,
     datasetProfile: profiled(rows),
   });
@@ -935,7 +938,7 @@ test("delta comparisons use the latest two distinct valid timestamps", () => {
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal" } }),
   });
@@ -1041,7 +1044,7 @@ test("target readiness requires every schema-required canonical value", () => {
     chart: chart("deltaCard", {
       measurement: { field: "value" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows: deltaRows,
     datasetProfile: profiled(deltaRows, { at: { interpretation: "temporal" } }),
   });
@@ -1065,7 +1068,7 @@ test("a delta needs both displayed and comparison measurements to be renderer-re
     chart: chart("deltaCard", {
       measurement: { field: "value" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows,
     datasetProfile: profiled(rows, { value: { interpretation: "numeric" } }),
   });
@@ -1086,7 +1089,7 @@ test("delta lists compare the latest two observations independently per entity",
       measurement: { field: "value" },
       entity: { field: "entity" },
       time: { field: "at" },
-    }),
+    }, previousDeltaTransformations()),
     rows,
     datasetProfile: profiled(rows),
   });

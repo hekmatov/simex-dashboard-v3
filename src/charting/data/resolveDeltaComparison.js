@@ -5,7 +5,6 @@ import {
   validateEffectiveTimeSyncMatching,
 } from "../time/timeSyncModel.js";
 
-const DEFAULT_COMPARISON = Object.freeze({ mode: "previousObservation" });
 const PREVIOUS_COMPARISON_KEYS = new Set(["mode"]);
 const FIXED_COMPARISON_KEYS = new Set(["mode", "at", "matching"]);
 const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
@@ -17,7 +16,7 @@ const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d
 export function resolveDeltaComparison({
   observations = [],
   displayed,
-  comparison = DEFAULT_COMPARISON,
+  comparison,
   chart,
   timeRole,
   profile,
@@ -25,7 +24,7 @@ export function resolveDeltaComparison({
   try {
     validateDisplayed(displayed);
     validateObservationSequence(observations, displayed);
-    const configured = validateComparison(comparison ?? DEFAULT_COMPARISON);
+    const configured = validateComparison(comparison);
     if (configured.mode === "previousObservation") {
       return resolvePrevious(observations, displayed);
     }

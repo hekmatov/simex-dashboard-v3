@@ -36,6 +36,14 @@ const deltaCard = {
     measurement: { field: "capacity" },
     time: { field: "observed" },
   },
+  transformations: {
+    filters: [],
+    grouping: [],
+    aggregation: null,
+    duplicates: null,
+    missingValues: "gap",
+    comparison: { mode: "previousObservation" },
+  },
   presentation: { collection: null, labels: null, accessibility: null },
   interaction: { zoom: { enabled: false } },
 };
