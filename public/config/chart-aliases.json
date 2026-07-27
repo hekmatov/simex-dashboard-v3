@@ -33,6 +33,17 @@
       "cases"
     ]
   },
+  "bio_daily_cases_bar": {
+    "aliases": [
+      "daily confirmed cases"
+    ],
+    "keywords": [
+      "bar",
+      "bio",
+      "daily",
+      "cases"
+    ]
+  },
   "bio_new_cases_deaths": {
     "aliases": [
       "daily cases and deaths"
@@ -135,7 +146,7 @@
   },
   "bio_icu_capacity_bullet": {
     "aliases": [
-      "current icu occupancy against capacity"
+      "icu occupancy against capacity"
     ],
     "keywords": [
       "bullet",
@@ -146,7 +157,7 @@
   },
   "bio_hospital_capacity_bullet": {
     "aliases": [
-      "current hospital occupancy against capacity"
+      "hospital occupancy against capacity"
     ],
     "keywords": [
       "bullet",
@@ -182,7 +193,7 @@
       "new icu and hospital admissions"
     ],
     "keywords": [
-      "bar",
+      "groupedBar",
       "bio",
       "admissions"
     ]

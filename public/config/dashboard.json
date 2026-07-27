@@ -662,6 +662,10 @@
           "timeRole": "observation"
         },
         {
+          "chartId": "bio_daily_cases_bar",
+          "timeRole": "observation"
+        },
+        {
           "chartId": "bio_new_cases_deaths",
           "timeRole": "observation"
         },
@@ -970,6 +974,57 @@
                 "measurements": [
                   {
                     "field": "national_total_cases",
+                    "axis": "primary"
+                  }
+                ],
+                "observation": {
+                  "field": "date",
+                  "interpretation": "temporal"
+                }
+              },
+              "transformations": {
+                "filters": [],
+                "grouping": null,
+                "aggregation": null,
+                "duplicates": null,
+                "missingValues": "gap"
+              },
+              "presentation": {
+                "background": {
+                  "color": "#ffffff",
+                  "transparent": false
+                },
+                "labels": {
+                  "visible": true
+                },
+                "title": {
+                  "align": "center"
+                },
+                "collection": null
+              },
+              "interaction": {
+                "timeSync": {
+                  "groupId": "national_outbreak"
+                },
+                "zoom": {
+                  "enabled": true
+                }
+              },
+              "layout": {
+                "size": "wide"
+              }
+            },
+            {
+              "configVersion": 3,
+              "id": "bio_daily_cases_bar",
+              "typeId": "bar",
+              "title": "Daily confirmed cases",
+              "description": "Daily national new confirmed cases for discrete day-by-day comparison.",
+              "sourceId": "bio_cases",
+              "roles": {
+                "measurements": [
+                  {
+                    "field": "daily_new_cases",
                     "axis": "primary"
                   }
                 ],
@@ -1463,7 +1518,7 @@
               "id": "bio_current_cases_kpi",
               "typeId": "kpi",
               "title": "Current confirmed cases",
-              "description": "Latest national cumulative confirmed-case count.",
+              "description": "Time-indexed national cumulative confirmed-case snapshots; playback selects the active date.",
               "sourceId": "bio_cases",
               "roles": {
                 "value": {
@@ -1472,16 +1527,14 @@
                 "time": {
                   "field": "date",
                   "interpretation": "temporal"
+                },
+                "label": {
+                  "field": "date",
+                  "interpretation": "category"
                 }
               },
               "transformations": {
-                "filters": [
-                  {
-                    "field": "date",
-                    "operator": "equals",
-                    "value": "2027-08-15"
-                  }
-                ],
+                "filters": [],
                 "grouping": null,
                 "aggregation": null,
                 "duplicates": null,
@@ -1495,10 +1548,29 @@
                 "labels": {
                   "visible": true
                 },
+                "collection": {
+                  "layout": "carousel",
+                  "rows": 1,
+                  "columns": 1,
+                  "gap": 16,
+                  "overflow": "autoRotate",
+                  "ranking": {
+                    "mode": "fixed"
+                  },
+                  "carousel": {
+                    "intervalMs": 10000,
+                    "loop": true,
+                    "pauseOnHover": true,
+                    "transition": "fade"
+                  },
+                  "playback": {
+                    "rerank": false,
+                    "pauseCarousel": true
+                  }
+                },
                 "title": {
                   "align": "center"
-                },
-                "collection": null
+                }
               },
               "interaction": {
                 "timeSync": {
@@ -1524,8 +1596,8 @@
               "configVersion": 3,
               "id": "bio_icu_capacity_bullet",
               "typeId": "bullet",
-              "title": "Current ICU occupancy against capacity",
-              "description": "Latest total ICU occupancy compared with available ICU capacity.",
+              "title": "ICU occupancy against capacity",
+              "description": "Time-indexed ICU capacity snapshots; playback selects one active occupancy value.",
               "sourceId": "bio_icu_occupancy",
               "roles": {
                 "actual": {
@@ -1537,16 +1609,14 @@
                 "time": {
                   "field": "date",
                   "interpretation": "temporal"
+                },
+                "label": {
+                  "field": "date",
+                  "interpretation": "category"
                 }
               },
               "transformations": {
-                "filters": [
-                  {
-                    "field": "date",
-                    "operator": "equals",
-                    "value": "2027-08-15"
-                  }
-                ],
+                "filters": [],
                 "grouping": null,
                 "aggregation": null,
                 "duplicates": null,
@@ -1560,13 +1630,32 @@
                 "labels": {
                   "visible": true
                 },
+                "collection": {
+                  "layout": "carousel",
+                  "rows": 1,
+                  "columns": 1,
+                  "gap": 16,
+                  "overflow": "autoRotate",
+                  "ranking": {
+                    "mode": "fixed"
+                  },
+                  "carousel": {
+                    "intervalMs": 10000,
+                    "loop": true,
+                    "pauseOnHover": true,
+                    "transition": "fade"
+                  },
+                  "playback": {
+                    "rerank": false,
+                    "pauseCarousel": true
+                  }
+                },
                 "targets": {
                   "direction": "decrease-is-good"
                 },
                 "title": {
                   "align": "center"
-                },
-                "collection": null
+                }
               },
               "interaction": {
                 "timeSync": {
@@ -1584,8 +1673,8 @@
               "configVersion": 3,
               "id": "bio_hospital_capacity_bullet",
               "typeId": "bullet",
-              "title": "Current hospital occupancy against capacity",
-              "description": "Latest total hospital occupancy compared with available hospital capacity.",
+              "title": "Hospital occupancy against capacity",
+              "description": "Time-indexed hospital capacity snapshots; playback selects one active occupancy value.",
               "sourceId": "bio_hospital_occupancy",
               "roles": {
                 "actual": {
@@ -1597,16 +1686,14 @@
                 "time": {
                   "field": "date",
                   "interpretation": "temporal"
+                },
+                "label": {
+                  "field": "date",
+                  "interpretation": "category"
                 }
               },
               "transformations": {
-                "filters": [
-                  {
-                    "field": "date",
-                    "operator": "equals",
-                    "value": "2027-08-15"
-                  }
-                ],
+                "filters": [],
                 "grouping": null,
                 "aggregation": null,
                 "duplicates": null,
@@ -1620,13 +1707,32 @@
                 "labels": {
                   "visible": true
                 },
+                "collection": {
+                  "layout": "carousel",
+                  "rows": 1,
+                  "columns": 1,
+                  "gap": 16,
+                  "overflow": "autoRotate",
+                  "ranking": {
+                    "mode": "fixed"
+                  },
+                  "carousel": {
+                    "intervalMs": 10000,
+                    "loop": true,
+                    "pauseOnHover": true,
+                    "transition": "fade"
+                  },
+                  "playback": {
+                    "rerank": false,
+                    "pauseCarousel": true
+                  }
+                },
                 "targets": {
                   "direction": "decrease-is-good"
                 },
                 "title": {
                   "align": "center"
-                },
-                "collection": null
+                }
               },
               "interaction": {
                 "timeSync": {
@@ -1757,7 +1863,7 @@
             {
               "configVersion": 3,
               "id": "bio_admissions",
-              "typeId": "bar",
+              "typeId": "groupedBar",
               "title": "New ICU and hospital admissions",
               "description": "Daily new ICU and clinic admissions.",
               "sourceId": "bio_admissions",

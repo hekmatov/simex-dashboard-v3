@@ -31,6 +31,7 @@ const EXPECTED_SECTIONS = {
   ],
   outbreak_dynamics: [
     "bio_confirmed_cases",
+    "bio_daily_cases_bar",
     "bio_new_cases_deaths",
     "bio_r_values",
     "bio_region_comparison",
@@ -80,6 +81,52 @@ const EXPECTED_SECTIONS = {
     "socio_healthcare_absenteeism",
     "socio_education_absenteeism",
   ],
+};
+
+const EXPECTED_CHART_MAPPING = {
+  home_operational_pressure_kpis: ["kpi", "bio_occupancy_gauges"],
+  home_case_map: ["mapScatter", "bio_wastewater_latest"],
+  bio_confirmed_cases: ["line", "bio_cases"],
+  bio_daily_cases_bar: ["bar", "bio_cases"],
+  bio_new_cases_deaths: ["mixed", "bio_cases"],
+  bio_r_values: ["line", "bio_r_values"],
+  bio_region_comparison: ["horizontalBar", "bio_province_cases_latest"],
+  bio_mortality_age: ["pie", "bio_mortality"],
+  bio_case_deltas: ["deltaList", "bio_province_deltas"],
+  bio_municipality_choropleth_animation: [
+    "chronoChoroplethMap",
+    "bio_municipal_infections_harmonized_2021",
+  ],
+  bio_municipality_aggregate: ["line", "bio_municipal_infections_harmonized_2021"],
+  bio_population_infection_bubble: ["bubble", "bio_municipal_infections_harmonized_2021"],
+  bio_current_cases_kpi: ["kpi", "bio_cases"],
+  bio_icu_capacity_bullet: ["bullet", "bio_icu_occupancy"],
+  bio_hospital_capacity_bullet: ["bullet", "bio_hospital_occupancy"],
+  bio_icu_occupancy: ["line", "bio_icu_occupancy"],
+  bio_hospital_occupancy: ["line", "bio_hospital_occupancy"],
+  bio_admissions: ["groupedBar", "bio_admissions"],
+  bio_delayed_healthcare: ["groupedBar", "bio_healthcare_cases"],
+  bio_testing_overlay: ["mixed", "bio_testing"],
+  bio_occupancy_collection: ["gauge", "bio_occupancy_gauges"],
+  bio_wastewater_map: ["mapScatter", "bio_wastewater_latest"],
+  bio_wastewater_province: ["horizontalBar", "bio_wastewater_latest"],
+  bio_vaccination_current: ["table", "bio_vaccination_current"],
+  bio_vaccination_rate: ["line", "bio_vaccination_timeseries"],
+  socio_risk_perception: ["heatmap", "socio_behaviour"],
+  socio_risk_deltas: ["deltaList", "socio_risk_deltas"],
+  socio_adherence: ["stackedBar", "socio_behaviour"],
+  socio_values: ["horizontalBar", "socio_values"],
+  socio_values_deltas: ["deltaList", "socio_values_deltas"],
+  socio_trust_trend: ["line", "socio_trust"],
+  socio_trust_meter: ["gauge", "socio_trust"],
+  socio_loneliness: ["line", "socio_loneliness"],
+  socio_mental_wellbeing: ["stackedBar", "socio_mental_wellbeing"],
+  socio_lifestyle: ["stackedBar", "socio_lifestyle"],
+  socio_resilience: ["stackedBar", "socio_resilience"],
+  socio_business_closures: ["groupedBar", "socio_business_closures"],
+  socio_unemployment: ["line", "socio_unemployment"],
+  socio_healthcare_absenteeism: ["line", "socio_healthcare_absenteeism"],
+  socio_education_absenteeism: ["line", "socio_education_absenteeism"],
 };
 
 const REQUIRED_TYPES = [
@@ -186,7 +233,14 @@ test("the curated dashboard is a clean version 3 configuration with exact analyt
     ]),
   );
   assert.deepEqual(sections, EXPECTED_SECTIONS);
-  assert.equal(configuredCharts(dashboard).length, 39);
+  assert.equal(configuredCharts(dashboard).length, 40);
+  assert.deepEqual(
+    Object.fromEntries(configuredCharts(dashboard).map(({ chart }) => [
+      chart.id,
+      [chart.typeId, chart.sourceId],
+    ])),
+    EXPECTED_CHART_MAPPING,
+  );
 
   const typeIds = new Set(configuredCharts(dashboard).map(({ chart }) => chart.typeId));
   for (const required of REQUIRED_TYPES) {
@@ -272,9 +326,6 @@ test("duplicate-prone analytical views use explicit filters or duplicate resolut
   const explicitlyResolved = [
     "bio_municipality_aggregate",
     "bio_population_infection_bubble",
-    "bio_current_cases_kpi",
-    "bio_icu_capacity_bullet",
-    "bio_hospital_capacity_bullet",
     "bio_mortality_age",
     "bio_delayed_healthcare",
     "socio_risk_perception",
@@ -303,7 +354,58 @@ test("duplicate-prone analytical views use explicit filters or duplicate resolut
   }
 });
 
-test("the municipal and national clocks validate from profiled tracked sources", async () => {
+test("time-indexed KPI and capacity snapshots use honest normalized collection displays", async () => {
+  const { dashboard, profiles } = await loadTrackedInputs();
+  const sources = createSourceLoader(dashboard);
+  const charts = new Map(configuredCharts(dashboard).map(({ chart }) => [chart.id, chart]));
+
+  for (const chartId of [
+    "bio_current_cases_kpi",
+    "bio_icu_capacity_bullet",
+    "bio_hospital_capacity_bullet",
+  ]) {
+    const chart = charts.get(chartId);
+    assert.deepEqual(chart.transformations.filters, [], `${chartId} must retain its full source history`);
+    assert.deepEqual(chart.roles.label, {
+      field: "date",
+      interpretation: "category",
+    });
+    assert.deepEqual(chart.presentation.collection, {
+      layout: "carousel",
+      rows: 1,
+      columns: 1,
+      gap: 16,
+      overflow: "autoRotate",
+      ranking: { mode: "fixed" },
+      carousel: {
+        intervalMs: 10000,
+        loop: true,
+        pauseOnHover: true,
+        transition: "fade",
+      },
+      playback: {
+        rerank: false,
+        pauseCarousel: true,
+      },
+    });
+    const prepared = prepareChartData({
+      chart,
+      rows: await sources.rows(chart.sourceId),
+      datasetProfile: profiles[chart.sourceId],
+    });
+    assert.equal(prepared.status, "ready", chartId);
+    assert.equal(prepared.marks.length, 177, chartId);
+    const model = buildRenderModel({ chart, prepared });
+    assert.equal(
+      model.kind,
+      chart.typeId === "kpi" ? "cards" : "targetCollection",
+      chartId,
+    );
+    assert.deepEqual(model.presentation.collection, chart.presentation.collection, chartId);
+  }
+});
+
+test("the municipal and national clocks validate and every national member is ready at every tick", async () => {
   const { dashboard, profiles } = await loadTrackedInputs();
   const sources = createSourceLoader(dashboard);
   const entries = configuredCharts(dashboard);
@@ -336,8 +438,60 @@ test("the municipal and national clocks validate from profiled tracked sources",
     "bio_municipality_choropleth_animation",
     "bio_municipality_aggregate",
   ]);
-  for (const group of dashboard.timeSyncGroups) {
-    assert.deepEqual(group.matching, { policy: "exact" });
+  assert.deepEqual(municipal.matching, { policy: "exact" });
+
+  const national = dashboard.timeSyncGroups[1];
+  assert.deepEqual(national, {
+    id: "national_outbreak",
+    name: "National outbreak and health-system playback",
+    primaryClock: {
+      sourceId: "bio_cases",
+      timeField: "date",
+    },
+    matching: {
+      policy: "exact",
+    },
+    members: [
+      { chartId: "bio_confirmed_cases", timeRole: "observation" },
+      { chartId: "bio_daily_cases_bar", timeRole: "observation" },
+      { chartId: "bio_new_cases_deaths", timeRole: "observation" },
+      { chartId: "bio_r_values", timeRole: "observation" },
+      { chartId: "bio_current_cases_kpi", timeRole: "time" },
+      { chartId: "bio_admissions", timeRole: "observation" },
+      { chartId: "bio_icu_capacity_bullet", timeRole: "time" },
+      { chartId: "bio_hospital_capacity_bullet", timeRole: "time" },
+    ],
+  });
+  assert.equal(
+    national.members.some(({ chartId }) => chartId === "bio_occupancy_collection"),
+    false,
+  );
+
+  const chartById = new Map(entries.map(({ chart }) => [chart.id, chart]));
+  const clock = buildPrimaryClock(national, loadedData, profiles);
+  for (const activeEpochMs of clock) {
+    for (const member of national.members) {
+      const chart = chartById.get(member.chartId);
+      const prepared = prepareChartData({
+        chart,
+        rows: loadedData[chart.sourceId],
+        datasetProfile: profiles[chart.sourceId],
+        timeContext: {
+          groupId: national.id,
+          activeEpochMs,
+          matching: member.matching ?? national.matching,
+        },
+      });
+      assert.equal(
+        prepared.status,
+        "ready",
+        `${member.chartId} at ${new Date(activeEpochMs).toISOString()}: ${JSON.stringify(prepared.diagnostics)}`,
+      );
+      assert.ok(prepared.meta.renderableMarkCount > 0, member.chartId);
+      if (["kpi", "bullet"].includes(chart.typeId)) {
+        assert.equal(prepared.marks.length, 1, `${member.chartId} must project one snapshot`);
+      }
+    }
   }
 });
 
