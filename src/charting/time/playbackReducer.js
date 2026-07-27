@@ -23,9 +23,14 @@ export function reducePlaybackState(state, action) {
   if (action.type === "play") {
     const clockLength = validClockLength(action.clockLength);
     if (clockLength === 0) return emptyClockState(state);
+    const activeIndex = clampStateIndex(state.activeIndex, clockLength);
     return withChanges(state, {
-      activeIndex: clampStateIndex(state.activeIndex, clockLength),
-      playing: true,
+      activeIndex,
+      playing: (
+        state.playbackView === true
+        && clockLength > 1
+        && activeIndex < clockLength - 1
+      ),
     });
   }
   if (action.type === "pause") {
@@ -102,7 +107,7 @@ export function reducePlaybackState(state, action) {
 function tick(state, clockLength) {
   if (clockLength === 0) return emptyClockState(state);
   const activeIndex = clampStateIndex(state.activeIndex, clockLength);
-  if (state.playing !== true) {
+  if (state.playing !== true || state.playbackView !== true) {
     return withChanges(state, {
       activeIndex,
       playing: false,
@@ -114,7 +119,11 @@ function tick(state, clockLength) {
       playing: false,
     });
   }
-  return withChanges(state, { activeIndex: activeIndex + 1 });
+  const nextIndex = activeIndex + 1;
+  return withChanges(state, {
+    activeIndex: nextIndex,
+    playing: nextIndex < clockLength - 1,
+  });
 }
 
 function emptyClockState(state) {

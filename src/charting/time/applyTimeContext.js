@@ -4,6 +4,7 @@ import {
   profileColumn,
   readBoundValue,
 } from "../data/bindings.js";
+import { assertTimeSyncInterpolationAllowed } from "./timeSyncModel.js";
 import { matchTemporalObservation } from "./temporalMatch.js";
 
 const TRACE_TYPES = new Set(["line", "area", "mixed", "timeline", "swimlane"]);
@@ -56,6 +57,22 @@ export function applyTimeContext({
     timeBinding,
     profile,
   );
+  const matching = effectiveMatching(reference, timeContext);
+  if (matching.policy === "interpolate") {
+    try {
+      assertTimeSyncInterpolationAllowed({
+        chart,
+        timeRole: temporalRoleId(chart),
+        profile,
+      });
+    } catch (cause) {
+      return invalidProjection(
+        rows,
+        "invalid-time-projection",
+        boundedMessage(cause?.message || "This chart does not permit interpolation."),
+      );
+    }
+  }
   const mode = TRACE_TYPES.has(chart.typeId) ? "trace" : "snapshot";
   const groups = groupRows(chart, rows, profile, transformed, timeBinding);
   const matches = new Map();
@@ -77,8 +94,8 @@ export function applyTimeContext({
         chart,
         buckets,
         measure: group.measure,
+        matching,
         profile,
-        reference,
         activeEpochMs: timeContext.activeEpochMs,
         transformed,
       });
@@ -108,8 +125,8 @@ export function applyTimeContext({
             chart,
             buckets,
             measure: group.measure,
+            matching,
             profile,
-            reference,
             activeEpochMs: timeContext.activeEpochMs,
             activeCanonical,
             transformed,
@@ -139,8 +156,8 @@ export function applyTimeContext({
           chart,
           buckets,
           measure: group.measure,
+          matching,
           profile,
-          reference,
           activeEpochMs: timeContext.activeEpochMs,
           activeCanonical,
           transformed,
@@ -280,8 +297,8 @@ function matchGroup({
   chart,
   buckets,
   measure: selectedMeasure,
+  matching,
   profile,
-  reference,
   activeEpochMs,
   transformed,
 }) {
@@ -302,9 +319,11 @@ function matchGroup({
   return matchTemporalObservation({
     observations,
     activeEpochMs,
-    policy: reference.policy ?? "exact",
-    toleranceMs: reference.toleranceMs ?? reference.tolerance,
-    interpolationAllowed,
+    policy: matching.policy,
+    toleranceMs: matching.toleranceMs,
+    interpolationAllowed: matching.policy === "interpolate"
+      ? true
+      : interpolationAllowed,
   });
 }
 
@@ -312,8 +331,8 @@ function synthesizeInterpolatedRow({
   chart,
   buckets,
   measure: selectedMeasure,
+  matching,
   profile,
-  reference,
   activeEpochMs,
   activeCanonical,
   transformed,
@@ -342,9 +361,11 @@ function synthesizeInterpolatedRow({
     const match = matchTemporalObservation({
       observations,
       activeEpochMs,
-      policy: reference.policy ?? "exact",
-      toleranceMs: reference.toleranceMs ?? reference.tolerance,
-      interpolationAllowed: bindingAllowsInterpolation(measureBinding, profile),
+      policy: matching.policy,
+      toleranceMs: matching.toleranceMs,
+      interpolationAllowed: matching.policy === "interpolate"
+        ? true
+        : bindingAllowsInterpolation(measureBinding, profile),
     });
     row[bindingField(measureBinding)] = match.observation.value;
   }
@@ -431,7 +452,12 @@ function comparisonProvenance(bucket) {
 }
 
 function temporalBinding(chart) {
-  const role = chart.typeId === "line"
+  const role = temporalRoleId(chart);
+  return bindingList(chart.roles?.[role])[0] ?? null;
+}
+
+function temporalRoleId(chart) {
+  return chart.typeId === "line"
     || chart.typeId === "area"
     || chart.typeId === "mixed"
     || ["bar", "groupedBar", "stackedBar", "horizontalBar", "horizontalStackedBar"].includes(chart.typeId)
@@ -439,7 +465,6 @@ function temporalBinding(chart) {
     : chart.typeId === "timeline" || chart.typeId === "swimlane"
       ? "start"
       : "time";
-  return bindingList(chart.roles?.[role])[0] ?? null;
 }
 
 function measureBindings(chart) {
@@ -611,6 +636,16 @@ function bindingAllowsInterpolation(binding, profile) {
   return binding?.interpolationAllowed === true || column?.interpolationAllowed === true;
 }
 
+function effectiveMatching(reference, timeContext) {
+  const matching = isRecord(timeContext.matching)
+    ? timeContext.matching
+    : reference;
+  return {
+    policy: matching.policy ?? "exact",
+    toleranceMs: matching.toleranceMs ?? matching.tolerance,
+  };
+}
+
 function canonicalActiveTime(activeEpochMs, rows, timeBinding, profile) {
   const dateOnly = rows
     .map((row) => readBoundValue(row, timeBinding, profile))
@@ -687,6 +722,10 @@ function isPlaybackContext(value) {
     && typeof value === "object"
     && !Array.isArray(value)
     && Object.hasOwn(value, "groupId");
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isDeltaChart(chart) {

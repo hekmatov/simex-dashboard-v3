@@ -42,6 +42,20 @@ export function PlaybackProvider({
     ? 0
     : Math.min(clock.length - 1, Math.max(0, state.activeIndex));
   const activeEpochMs = clock[activeIndex] ?? null;
+  const canAdvance = (
+    state.playbackView === true
+    && clock.length > 1
+    && activeIndex < clock.length - 1
+  );
+  const playing = state.playing === true && canAdvance;
+  const memberTimeContexts = React.useMemo(
+    () => buildMemberTimeContexts(activeGroup, activeEpochMs),
+    [activeGroup, activeEpochMs],
+  );
+  const timeContextForChart = React.useCallback(
+    (chartId) => memberTimeContexts[chartId] ?? null,
+    [memberTimeContexts],
+  );
 
   React.useEffect(() => {
     const groupId = activeGroup?.id ?? null;
@@ -50,15 +64,21 @@ export function PlaybackProvider({
     }
   }, [activeGroup, state.activeGroupId]);
 
+  React.useEffect(() => {
+    if (state.playing === true && !canAdvance) {
+      dispatch({ type: "pause" });
+    }
+  }, [canAdvance, state.playing]);
+
   React.useEffect(() => createPlaybackTimer({
-    playing: state.playing,
+    playing,
     playbackView: state.playbackView,
     clockLength: clock.length,
     speed: state.speed,
     activeIndex,
     dispatch,
   }), [
-    state.playing,
+    playing,
     state.playbackView,
     state.speed,
     activeGroup?.id,
@@ -77,13 +97,14 @@ export function PlaybackProvider({
     groups: validatedGroups,
     loadedData,
     playbackView: state.playbackView,
-    playing: state.playing,
+    playing,
     profiles,
     speed: state.speed,
     status: playbackStatus(activeGroup, clock, activeEpochMs),
     timeContext: activeGroup && activeEpochMs !== null
       ? Object.freeze({ groupId: activeGroup.id, activeEpochMs })
       : null,
+    timeContextForChart,
   }), [
     activeEpochMs,
     activeGroup,
@@ -93,8 +114,9 @@ export function PlaybackProvider({
     loadedData,
     profiles,
     state.playbackView,
-    state.playing,
+    playing,
     state.speed,
+    timeContextForChart,
     validatedGroups,
   ]);
 
@@ -171,6 +193,26 @@ export function createPlaybackTimer({
       handleVisibilityChange,
     );
   };
+}
+
+function buildMemberTimeContexts(group, activeEpochMs) {
+  const contexts = Object.create(null);
+  if (!group || !Number.isFinite(activeEpochMs)) return Object.freeze(contexts);
+  for (const member of group.members) {
+    const sourceMatching = member.matching ?? group.matching;
+    const matching = Object.freeze({
+      policy: sourceMatching.policy,
+      ...(sourceMatching.toleranceMs === undefined
+        ? {}
+        : { toleranceMs: sourceMatching.toleranceMs }),
+    });
+    contexts[member.chartId] = Object.freeze({
+      groupId: group.id,
+      activeEpochMs,
+      matching,
+    });
+  }
+  return Object.freeze(contexts);
 }
 
 function initializePlaybackState({ groups, initialState }) {

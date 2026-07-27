@@ -50,7 +50,7 @@ export default function PlaybackControls() {
       "aria-label": playing
         ? "Pause synchronized charts"
         : "Play synchronized charts",
-      disabled: !hasClock || (!playing && atEnd),
+      disabled: !playbackView || !hasClock || (!playing && atEnd),
       onClick: () => dispatch({
         type: playing ? "pause" : "play",
         ...(playing ? {} : { clockLength: clock.length }),

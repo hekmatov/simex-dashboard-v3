@@ -101,18 +101,39 @@ export function validateTimeSyncGroups(groups, context = {}) {
             `Time synchronization member "${member.chartId}"`,
           );
       if (effectiveMatching.policy === "interpolate") {
-        validateInterpolationPermission(
-          chart,
-          schema,
-          member,
-          context.profiles,
-        );
+        validateInterpolationPermission(chart, schema, member, unwrapProfile(
+          readEntry(context.profiles, chart.sourceId),
+        ));
       }
     }
   }
 
   validateChartReferences(charts, groupIds, membershipByChartId);
   return groups;
+}
+
+/**
+ * Reuses the synchronization-group validator's interpolation decision at the
+ * projection boundary. This prevents playback context from widening a chart's
+ * declared interpolation capability.
+ */
+export function assertTimeSyncInterpolationAllowed({
+  chart,
+  timeRole,
+  profile,
+}) {
+  if (!isRecord(chart)) {
+    throw new TypeError("Time synchronization chart must be an object.");
+  }
+  requiredString(timeRole, "Time synchronization member timeRole");
+  const schema = schemaForMember(chart);
+  validateInterpolationPermission(
+    chart,
+    schema,
+    { timeRole },
+    unwrapProfile(profile),
+  );
+  return true;
 }
 
 /**
@@ -391,7 +412,7 @@ function validateMemberEligibility({
   }
 }
 
-function validateInterpolationPermission(chart, schema, member, profiles) {
+function validateInterpolationPermission(chart, schema, member, profile) {
   const semanticMark = schema.semantics?.mark ?? "";
   if (
     NON_INTERPOLATABLE_FAMILIES.has(schema.dataFamily)
@@ -405,10 +426,14 @@ function validateInterpolationPermission(chart, schema, member, profiles) {
     );
   }
 
-  const profile = unwrapProfile(readEntry(profiles, chart.sourceId));
   const numericMeasures = [];
+  const measureRoleIds = interpolationMeasureRoleIds(chart, schema);
   for (const role of schema.roles) {
-    if (role.id === member.timeRole || !role.accepts.includes("number")) {
+    if (
+      role.id === member.timeRole
+      || !measureRoleIds.has(role.id)
+      || !role.accepts.includes("number")
+    ) {
       continue;
     }
     for (const binding of bindingList(chart.roles?.[role.id])) {
@@ -442,6 +467,17 @@ function validateInterpolationPermission(chart, schema, member, profiles) {
       );
     }
   }
+}
+
+function interpolationMeasureRoleIds(chart, schema) {
+  if (schema.dataFamily === "axis") return new Set(["measurements"]);
+  if (schema.dataFamily === "geography") return new Set(["value"]);
+  if (schema.dataFamily !== "target") return new Set(["value"]);
+  if (chart.typeId === "bullet") return new Set(["actual"]);
+  if (chart.typeId === "deltaCard" || chart.typeId === "deltaList") {
+    return new Set(["measurement"]);
+  }
+  return new Set(["value"]);
 }
 
 function validateChartReferences(charts, groupIds, membershipByChartId) {

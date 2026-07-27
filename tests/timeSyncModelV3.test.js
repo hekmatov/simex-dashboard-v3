@@ -771,7 +771,7 @@ test("previous, next, and seek clamp indices and pause manual navigation", () =>
   );
 });
 
-test("ticks advance while playing and stop once already at the end", () => {
+test("a tick entering the final time atomically stops playback", () => {
   const playing = validReducerState({
     activeIndex: 1,
     playing: true,
@@ -786,7 +786,7 @@ test("ticks advance while playing and stop once already at the end", () => {
       type: "tick",
       clockLength: 3,
     }),
-    { ...playing, activeIndex: 2 },
+    { ...playing, activeIndex: 2, playing: false },
   );
   assert.deepEqual(
     reducePlaybackState(atEnd, {
@@ -801,6 +801,35 @@ test("ticks advance while playing and stop once already at the end", () => {
       { type: "tick", clockLength: 3 },
     ).activeIndex,
     1,
+  );
+});
+
+test("play is unavailable while the playback view is closed or the clock cannot advance", () => {
+  const closed = validReducerState({
+    activeIndex: 0,
+    playing: false,
+    playbackView: false,
+  });
+  const singleTime = validReducerState({
+    activeIndex: 0,
+    playing: false,
+  });
+  const atEnd = validReducerState({
+    activeIndex: 2,
+    playing: false,
+  });
+
+  assert.equal(
+    reducePlaybackState(closed, { type: "play", clockLength: 3 }),
+    closed,
+  );
+  assert.equal(
+    reducePlaybackState(singleTime, { type: "play", clockLength: 1 }),
+    singleTime,
+  );
+  assert.equal(
+    reducePlaybackState(atEnd, { type: "play", clockLength: 3 }),
+    atEnd,
   );
 });
 

@@ -1,7 +1,7 @@
 import React from "react";
 
 import { normalizeCollectionSettings } from "../../charting/collection/collectionModel.js";
-import { rankCollection } from "../../charting/collection/rankCollection.js";
+import { rankCollectionWithDiagnostics } from "../../charting/collection/rankCollection.js";
 import CollectionCarousel from "./CollectionCarousel.jsx";
 import CollectionGrid, {
   clampCollectionPage,
@@ -22,7 +22,20 @@ export default function CollectionDisplay({
   const previousOrder = React.useRef([]);
   const [page, setPage] = React.useState(0);
   const [focusedEntityId, setFocusedEntityId] = React.useState(null);
-  const ranked = rankCollection(items, normalized, previousOrder.current);
+  const ranking = rankCollectionWithDiagnostics(
+    items,
+    normalized,
+    previousOrder.current,
+  );
+  const ranked = ranking.items;
+  const rankingStatus = ranking.diagnostics.length > 0
+    ? React.createElement("p", {
+        className: "collection-ranking-status",
+        role: "status",
+        "aria-live": "polite",
+        "aria-atomic": true,
+      }, ranking.diagnostics[0].message)
+    : null;
   const playbackActive = playback?.playbackView === true;
   const lockedOrder = Array.isArray(playback?.lockedEntityOrder)
     ? playback.lockedEntityOrder
@@ -64,12 +77,14 @@ export default function CollectionDisplay({
   }
 
   if (normalized.layout === "carousel") {
-    return React.createElement(CollectionCarousel, {
-      items: ordered,
-      settings: normalized,
-      renderItem,
-      playback,
-    });
+    return React.createElement(React.Fragment, null,
+      rankingStatus,
+      React.createElement(CollectionCarousel, {
+        items: ordered,
+        settings: normalized,
+        renderItem,
+        playback,
+      }));
   }
 
   if (normalized.layout === "scroll") {
@@ -80,16 +95,18 @@ export default function CollectionDisplay({
       className: "collection-display collection-display--scroll",
       "data-collection-layout": "scroll",
       "aria-label": "Collection",
-    }, React.createElement(CollectionGrid, {
-      items: visibleItems,
-      settings: normalized,
-      renderItem,
-      mode: "scroll",
-      onItemFocus: setFocusedEntityId,
-      onItemBlur: (entityId) => {
-        if (focusedEntityId === entityId) setFocusedEntityId(null);
-      },
-    }));
+    },
+    rankingStatus,
+    React.createElement(CollectionGrid, {
+        items: visibleItems,
+        settings: normalized,
+        renderItem,
+        mode: "scroll",
+        onItemFocus: setFocusedEntityId,
+        onItemBlur: (entityId) => {
+          if (focusedEntityId === entityId) setFocusedEntityId(null);
+        },
+      }));
   }
 
   const visibleItems = normalized.overflow === "limit"
@@ -100,6 +117,7 @@ export default function CollectionDisplay({
     "data-collection-layout": "fixed",
     "aria-label": "Collection",
   },
+  rankingStatus,
   React.createElement(CollectionGrid, {
     items: visibleItems,
     settings: normalized,

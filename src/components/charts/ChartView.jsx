@@ -35,12 +35,13 @@ export default function ChartView(props) {
 
 function withPlaybackTimeContext(props, playback) {
   const groupId = props.chart?.interaction?.timeSync?.groupId;
+  const memberTimeContext = playback?.timeContextForChart?.(props.chart?.id);
   if (
     groupId
-    && playback?.timeContext?.groupId === groupId
-    && Number.isFinite(playback.timeContext.activeEpochMs)
+    && memberTimeContext?.groupId === groupId
+    && Number.isFinite(memberTimeContext.activeEpochMs)
   ) {
-    return { ...props, timeContext: playback.timeContext };
+    return { ...props, timeContext: memberTimeContext };
   }
   return props;
 }

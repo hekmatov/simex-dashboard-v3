@@ -208,11 +208,19 @@ function comparePriority(left, right, ranking, previousPositions) {
  * Returns an immutable reordered array while leaving items and all inputs untouched.
  */
 export function rankCollection(items, settings, previousOrder = []) {
+  return rankCollectionWithDiagnostics(items, settings, previousOrder).items;
+}
+
+export function rankCollectionWithDiagnostics(
+  items,
+  settings,
+  previousOrder = [],
+) {
   const normalized = normalizeCollectionSettings(settings);
   const entries = validateItems(items);
   const previousPositions = previousIndexMap(previousOrder);
   if (normalized.ranking.mode === "fixed") {
-    return Object.freeze(entries.map(({ item }) => item));
+    return rankingResult(entries.map(({ item }) => item));
   }
   const scored = entries.map((entry) => ({
     ...entry,
@@ -220,6 +228,20 @@ export function rankCollection(items, settings, previousOrder = []) {
       ? priorityScore(entry.item, normalized.ranking)
       : undefined,
   }));
+  if (
+    normalized.ranking.mode === "priority"
+    && scored.length > 0
+    && !scored.some(({ score }) => Number.isFinite(score))
+  ) {
+    return rankingResult(
+      entries.map(({ item }) => item),
+      [{
+        severity: "warning",
+        code: "priority-ranking-unavailable",
+        message: "Priority ranking is unavailable for these items. Showing configured order.",
+      }],
+    );
+  }
   if (normalized.ranking.mode === "sort") {
     scored.sort((left, right) => compareSort(
       left,
@@ -235,5 +257,15 @@ export function rankCollection(items, settings, previousOrder = []) {
       previousPositions,
     ));
   }
-  return Object.freeze(scored.map(({ item }) => item));
+  return rankingResult(scored.map(({ item }) => item));
+}
+
+function rankingResult(items, diagnostics = []) {
+  const frozenDiagnostics = Object.freeze(diagnostics.map((diagnostic) => (
+    Object.freeze({ ...diagnostic })
+  )));
+  return Object.freeze({
+    items: Object.freeze([...items]),
+    diagnostics: frozenDiagnostics,
+  });
 }

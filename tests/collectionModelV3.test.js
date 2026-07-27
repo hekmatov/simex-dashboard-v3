@@ -3,7 +3,10 @@ import test from "node:test";
 
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 import { evaluatePriorityExpression } from "../src/charting/collection/priorityExpression.js";
-import { rankCollection } from "../src/charting/collection/rankCollection.js";
+import {
+  rankCollection,
+  rankCollectionWithDiagnostics,
+} from "../src/charting/collection/rankCollection.js";
 
 const builtInItems = [
   {
@@ -404,6 +407,41 @@ test("unavailable priority scores are always last and ties use text then entityI
     ids(rankCollection(items, settings({ mode: "priority", method: "highestCurrent" }))),
     ["c", "a", "b", "missing", "nan"],
   );
+});
+
+test("an entirely unusable priority ranking preserves configured order with a bounded diagnostic", () => {
+  const input = [
+    { entityId: "z", label: "Zulu" },
+    { entityId: "a", label: "Alpha" },
+  ];
+  const rankings = [
+    settings({ mode: "priority", method: "riskScore" }),
+    settings({
+      mode: "priority",
+      expression: {
+        operator: "weightedSum",
+        terms: [{ metric: "riskScore", weight: 1 }],
+      },
+    }),
+  ];
+
+  for (const ranking of rankings) {
+    const result = rankCollectionWithDiagnostics(input, ranking);
+
+    assert.deepEqual(ids(result.items), ["z", "a"]);
+    assert.deepEqual(result.diagnostics.map(({ severity, code }) => ({
+      severity,
+      code,
+    })), [{
+      severity: "warning",
+      code: "priority-ranking-unavailable",
+    }]);
+    assert.match(result.diagnostics[0].message, /showing configured order/i);
+    assert.ok(result.diagnostics[0].message.length <= 240);
+    assert.ok(Object.isFrozen(result));
+    assert.ok(Object.isFrozen(result.items));
+    assert.ok(Object.isFrozen(result.diagnostics));
+  }
 });
 
 test("stabilization uses previous order only for true score ties", () => {

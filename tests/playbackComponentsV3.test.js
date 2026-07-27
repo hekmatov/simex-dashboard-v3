@@ -80,12 +80,25 @@ test("transport actions are disabled for absent, empty, and boundary clocks", ()
       },
     },
   );
+  const closedView = renderPlayback(
+    React.createElement(PlaybackControls),
+    {
+      initialState: {
+        activeGroupId: "exercise",
+        activeIndex: 0,
+        playing: false,
+        speed: 1,
+        playbackView: false,
+      },
+    },
+  );
 
   assert.match(noGroup, /aria-label="Play synchronized charts"[^>]*disabled/);
   assert.match(noGroup, /No playback group is available/);
   assert.match(atStart, /aria-label="Previous time"[^>]*disabled/);
   assert.match(atEnd, /aria-label="Play synchronized charts"[^>]*disabled/);
   assert.match(atEnd, /aria-label="Next time"[^>]*disabled/);
+  assert.match(closedView, /aria-label="Play synchronized charts"[^>]*disabled/);
 });
 
 test("the provider exposes a frozen context and optional consumption is safe outside it", () => {
@@ -248,6 +261,151 @@ test("ChartView receives active time only when its configured group matches", ()
   assert.match(synchronized, /value at 2027-05-02: 20/);
   assert.doesNotMatch(synchronized, /value at 2027-05-01: 10/);
   assert.doesNotMatch(synchronized, /value at 2027-05-03: 30/);
+});
+
+test("group matching defaults reach ChartView and disclose carried card provenance", () => {
+  const primaryRows = [
+    { observed: "2027-05-01", cases: 1 },
+    { observed: "2027-05-02", cases: 2 },
+    { observed: "2027-05-03", cases: 3 },
+  ];
+  const sparseRows = [
+    { observed: "2027-05-01", value: 10 },
+    { observed: "2027-05-03", value: 30 },
+  ];
+  const chart = kpiChart();
+  const html = renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups: [{
+          id: "exercise",
+          name: "Exercise timeline",
+          primaryClock: { sourceId: "primary", timeField: "observed" },
+          matching: { policy: "lastKnown" },
+          members: [{ chartId: chart.id, timeRole: "time" }],
+        }],
+        charts: [chart],
+        loadedData: { primary: primaryRows, sparse: sparseRows },
+        profiles: {
+          primary: temporalProfile(primaryRows),
+          sparse: temporalProfile(sparseRows),
+        },
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 1,
+          playing: false,
+          speed: 1,
+          playbackView: true,
+        },
+      },
+      React.createElement(ChartView, {
+        chart,
+        rows: sparseRows,
+        datasetProfile: temporalProfile(sparseRows),
+      }),
+    ),
+  );
+
+  assert.match(html, /<dt>Value<\/dt><dd>10<\/dd>/);
+  assert.match(html, /<dt>Playback time<\/dt><dd>2027-05-02<\/dd>/);
+  assert.match(html, /Last measured 2027-05-01/);
+  assert.doesNotMatch(html, /No measurement at this time/);
+});
+
+test("member matching overrides carry validated interpolation permission into ChartView", () => {
+  const primaryRows = [
+    { observed: "2027-05-01", cases: 1 },
+    { observed: "2027-05-02", cases: 2 },
+    { observed: "2027-05-03", cases: 3 },
+  ];
+  const sparseRows = [
+    { observed: "2027-05-01", value: 10 },
+    { observed: "2027-05-03", value: 30 },
+  ];
+  const chart = kpiChart({
+    roles: {
+      value: { field: "value", interpolationAllowed: true },
+      time: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+  });
+  const sparseProfile = temporalProfile(sparseRows, ["value"]);
+  const html = renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups: [{
+          id: "exercise",
+          name: "Exercise timeline",
+          primaryClock: { sourceId: "primary", timeField: "observed" },
+          matching: { policy: "exact" },
+          members: [{
+            chartId: chart.id,
+            timeRole: "time",
+            matching: { policy: "interpolate" },
+          }],
+        }],
+        charts: [chart],
+        loadedData: { primary: primaryRows, sparse: sparseRows },
+        profiles: {
+          primary: temporalProfile(primaryRows),
+          sparse: sparseProfile,
+        },
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 1,
+          playing: false,
+          speed: 1,
+          playbackView: true,
+        },
+      },
+      React.createElement(ChartView, {
+        chart,
+        rows: sparseRows,
+        datasetProfile: sparseProfile,
+      }),
+    ),
+  );
+
+  assert.match(html, /<dt>Value<\/dt><dd>20<\/dd>/);
+  assert.match(html, /Interpolated between 2027-05-01 and 2027-05-03/);
+  assert.doesNotMatch(html, /No measurement at this time/);
+});
+
+test("the provider exposes stopped playback when an initial clock state cannot advance", () => {
+  function PlayingProbe() {
+    return React.createElement(
+      "output",
+      null,
+      usePlayback().playing ? "playing" : "stopped",
+    );
+  }
+
+  const atEnd = renderPlayback(React.createElement(PlayingProbe), {
+    initialState: {
+      activeGroupId: "exercise",
+      activeIndex: 2,
+      playing: true,
+      speed: 1,
+      playbackView: true,
+    },
+  });
+  const closed = renderPlayback(React.createElement(PlayingProbe), {
+    initialState: {
+      activeGroupId: "exercise",
+      activeIndex: 0,
+      playing: true,
+      speed: 1,
+      playbackView: false,
+    },
+  });
+
+  assert.equal(atEnd, "<output>stopped</output>");
+  assert.equal(closed, "<output>stopped</output>");
 });
 
 test("ChartView announces an active trace point beyond the 50-row accessibility cap", () => {
@@ -530,6 +688,30 @@ function lineChart(overrides = {}) {
   };
 }
 
+function kpiChart(overrides = {}) {
+  const interaction = overrides.interaction ?? {
+    zoom: { enabled: false },
+    timeSync: { groupId: "exercise", policy: "exact" },
+  };
+  return {
+    id: "sparse-kpi",
+    typeId: "kpi",
+    title: "Sparse status",
+    sourceId: "sparse",
+    roles: {
+      value: { field: "value" },
+      time: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    presentation: { collection: null, labels: null, accessibility: null },
+    ...overrides,
+    interaction,
+  };
+}
+
 function timelineChart(typeId) {
   return {
     id: `${typeId}-chart`,
@@ -559,8 +741,12 @@ function timelineChart(typeId) {
   };
 }
 
-function temporalProfile(rows) {
-  return profileDataset(rows, {
+function temporalProfile(rows, interpolationFields = []) {
+  const profile = profileDataset(rows, {
     observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
   });
+  for (const field of interpolationFields) {
+    profile.columns.find(({ name }) => name === field).interpolationAllowed = true;
+  }
+  return profile;
 }

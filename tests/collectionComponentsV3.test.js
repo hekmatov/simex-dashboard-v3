@@ -178,6 +178,24 @@ test("fixed, scroll, and carousel layouts compose with every ranking mode", () =
   }
 });
 
+test("an unusable priority ranking stays in configured order and explains the fallback", () => {
+  const html = renderCollection({
+    layout: "fixed",
+    rows: 1,
+    columns: 2,
+    ranking: { mode: "priority", method: "riskScore" },
+  }, [
+    { entityId: "z", label: "Zulu" },
+    { entityId: "a", label: "Alpha" },
+  ]);
+
+  assertTextOrder(html, ["Zulu", "Alpha"], "priority fallback");
+  assert.match(html, /class="collection-ranking-status"/);
+  assert.match(html, /role="status"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.match(html, /showing configured order/i);
+});
+
 test("rerank locking applies only while the dedicated Playback view is active", () => {
   const items = [
     { entityId: "a", label: "Alpha", current: 1 },
@@ -496,6 +514,63 @@ test("CardChartView preserves the static single-item card path", () => {
   assert.match(html, /class="chart-card-collection"/);
   assert.match(html, /class="chart-card" role="listitem"/);
   assert.doesNotMatch(html, /collection-display|collection-carousel-controls/);
+});
+
+test("cards distinguish playback time from carried measurement provenance", () => {
+  const html = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: { title: "Current capacity" },
+    model: {
+      items: [{
+        ...cardItem("capacity", "Capacity", 8),
+        time: "2027-05-02",
+        activeTime: "2027-05-02",
+        temporalStatus: "carried",
+        provenance: {
+          status: "carried",
+          label: "Last measured 2027-05-01",
+          sourceTime: "2027-05-01",
+        },
+      }],
+    },
+  }));
+
+  assert.match(html, /data-temporal-status="carried"/);
+  assert.match(html, /<dt>Playback time<\/dt><dd>2027-05-02<\/dd>/);
+  assert.match(html, /<dt>Measurement source<\/dt><dd>Last measured 2027-05-01<\/dd>/);
+  assert.doesNotMatch(html, /<dt>Observed<\/dt>/);
+});
+
+test("delta cards disclose displayed and comparison temporal provenance separately", () => {
+  const html = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: { title: "Capacity change" },
+    model: {
+      items: [{
+        ...cardItem("capacity", "Capacity", 20),
+        comparison: 10,
+        comparisonTime: "2027-05-01",
+        delta: { absolute: 10, percentage: 100 },
+        time: "2027-05-02",
+        activeTime: "2027-05-02",
+        temporalStatus: "interpolated",
+        provenance: {
+          status: "interpolated",
+          label: "Interpolated between 2027-05-01 and 2027-05-03",
+          lowerTime: "2027-05-01",
+          upperTime: "2027-05-03",
+        },
+        comparisonProvenance: {
+          status: "observed",
+          label: "Observed 2027-05-01",
+          sourceTime: "2027-05-01",
+        },
+      }],
+    },
+  }));
+
+  assert.match(html, /<dt>Playback time<\/dt><dd>2027-05-02<\/dd>/);
+  assert.match(html, /Interpolated between 2027-05-01 and 2027-05-03/);
+  assert.match(html, /<dt>Comparison source<\/dt><dd>Observed 2027-05-01<\/dd>/);
+  assert.doesNotMatch(html, /<dt>Observed<\/dt>/);
 });
 
 function renderCollection(settings, items, playback = null) {
