@@ -277,21 +277,23 @@ test("data transformations materialize from schema capabilities", () => {
 });
 
 test("duplicate resolution materializes only after active roles produce duplicates", () => {
+  const chart = lineChart();
+  const profile = datasetProfile();
   const noDuplicates = buildEditorFormModel({
-    chart: lineChart(),
-    profile: datasetProfile(),
-    prepared: readyPrepared,
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
   });
   const duplicates = buildEditorFormModel({
-    chart: lineChart(),
-    profile: datasetProfile(),
-    prepared: {
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile, {
       ...readyPrepared,
       meta: {
         ...readyPrepared.meta,
         duplicateGroupCount: 2,
       },
-    },
+    }),
   });
 
   assert.equal(
@@ -301,6 +303,33 @@ test("duplicate resolution materializes only after active roles produce duplicat
   assert.equal(
     allFields(duplicates).some(({ id }) => id === "duplicates"),
     true,
+  );
+});
+
+test("stale duplicate counts cannot materialize controls for a changed draft", () => {
+  const original = lineChart();
+  const changed = lineChart({
+    transformations: {
+      duplicates: "last",
+    },
+  });
+  const profile = datasetProfile();
+  const stalePrepared = preparedFor(original, profile, {
+    ...readyPrepared,
+    meta: {
+      ...readyPrepared.meta,
+      duplicateGroupCount: 2,
+    },
+  });
+  const model = buildEditorFormModel({
+    chart: changed,
+    profile,
+    prepared: stalePrepared,
+  });
+
+  assert.equal(
+    allFields(model).some(({ id }) => id === "duplicates"),
+    false,
   );
 });
 

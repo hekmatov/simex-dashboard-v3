@@ -238,6 +238,7 @@ function dataFields({ chart, profile, prepared, schema }) {
 
   if (
     schema.transforms.includes("duplicates")
+    && preparationMatchesDraft({ chart, profile, prepared })
     && Number(prepared?.meta?.duplicateGroupCount) > 0
   ) {
     fields.push({
