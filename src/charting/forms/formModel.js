@@ -53,7 +53,11 @@ export function buildWizardFormModel({
   const hasType = Boolean(draft?.typeId);
   const hasSource = hasType && nonEmptyString(draft.sourceId);
   const rolesComplete = hasSource && requiredRolesAssigned(draft);
-  const previewReady = rendererReady(prepared);
+  const previewReady = preparationMatchesDraft({
+    chart: draft,
+    profile,
+    prepared,
+  });
   const editor = hasType
     ? buildEditorFormModel({
         chart: draft,
@@ -75,6 +79,9 @@ export function buildWizardFormModel({
       ...(!hasSource ? ["Choose a data source."] : []),
       ...(!rolesComplete ? ["Assign the required data roles."] : []),
       ...(!previewReady ? ["Prepare a valid chart preview."] : []),
+      ...(previewReady && !editor?.valid
+        ? ["Complete the chart title and required settings."]
+        : []),
     ],
   };
 
@@ -86,7 +93,7 @@ export function buildWizardFormModel({
         type: hasType,
         source: hasSource,
         roles: rolesComplete,
-        style: previewReady,
+        style: Boolean(editor?.valid),
       }[id],
       prerequisites: prerequisiteSets[id],
       navigable: true,
@@ -112,9 +119,14 @@ export function buildEditorFormModel({
     schema,
     timeSyncGroups: Array.isArray(timeSyncGroups) ? timeSyncGroups : [],
   };
+  const previewReady = preparationMatchesDraft({
+    chart,
+    profile,
+    prepared,
+  });
   const sections = schema.form.sections
     .filter((sectionId) => (
-      !VISUAL_SECTIONS.has(sectionId) || rendererReady(prepared)
+      !VISUAL_SECTIONS.has(sectionId) || previewReady
     ))
     .map((sectionId) => ({
       id: sectionId,
@@ -126,8 +138,44 @@ export function buildEditorFormModel({
 
   return {
     sections,
-    valid: rendererReady(prepared) && chartIsValid(chart, profile),
+    valid: previewReady && chartIsValid(chart, profile),
   };
+}
+
+/**
+ * Creates the pure correlation key a preview caller stores at
+ * `prepared.meta.formPreparationKey`. Only preparation-affecting chart and
+ * profile state participates, so title and visual edits do not invalidate a
+ * valid preview while source, role, parsing, transform, or map-join changes do.
+ */
+export function buildFormPreparationKey({ chart, profile } = {}) {
+  if (
+    !chart?.typeId
+    || !nonEmptyString(chart.id)
+    || !nonEmptyString(chart.sourceId)
+    || !requiredRolesAssigned(chart)
+    || !nonEmptyString(profile?.fingerprint)
+  ) {
+    return null;
+  }
+  try {
+    return `chart-form-preparation-v1:${stableSerialize({
+      chart: {
+        id: chart.id,
+        typeId: chart.typeId,
+        sourceId: chart.sourceId,
+        roles: chart.roles,
+        transformations: chart.transformations,
+        map: chart.presentation?.map ?? null,
+      },
+      profile: {
+        fingerprint: profile.fingerprint,
+        columns: profile.columns?.map(profilePreparationColumn) ?? [],
+      },
+    })}`;
+  } catch {
+    return null;
+  }
 }
 
 function materializeSection(sectionId, context) {
@@ -207,6 +255,14 @@ function dataFields({ chart, profile, prepared, schema }) {
 
 function appearanceFields({ chart }) {
   return [
+    {
+      id: "title",
+      label: "Chart title",
+      control: "text",
+      path: ["title"],
+      value: chart.title ?? "",
+      required: true,
+    },
     {
       id: "titleAlignment",
       label: "Title alignment",
@@ -491,6 +547,83 @@ function profileColumnMap(profile) {
 function rendererReady(prepared) {
   return prepared?.status === "ready"
     && Number(prepared?.meta?.renderableMarkCount) > 0;
+}
+
+function preparationMatchesDraft({ chart, profile, prepared }) {
+  if (!rendererReady(prepared)) return false;
+  const expected = buildFormPreparationKey({ chart, profile });
+  return expected !== null
+    && Object.hasOwn(prepared.meta, "formPreparationKey")
+    && prepared.meta.formPreparationKey === expected;
+}
+
+function profilePreparationColumn(column) {
+  return {
+    name: column?.name,
+    type: column?.type,
+    interpretationAlternatives: column?.interpretationAlternatives,
+    validInterpretations: column?.validInterpretations,
+    interpolationAllowed: column?.interpolationAllowed,
+    temporal: column?.temporal
+      ? {
+          parsingMetadata: column.temporal.parsingMetadata,
+          diagnostics: column.temporal.diagnostics?.map((diagnostic) => ({
+            index: diagnostic?.index,
+            code: diagnostic?.code,
+            format: diagnostic?.format,
+          })),
+        }
+      : null,
+  };
+}
+
+function stableSerialize(value, ancestors = new Set()) {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return "number:NaN";
+    if (value === Number.POSITIVE_INFINITY) return "number:Infinity";
+    if (value === Number.NEGATIVE_INFINITY) return "number:-Infinity";
+    if (Object.is(value, -0)) return "number:-0";
+    return `number:${value}`;
+  }
+  if (typeof value !== "object") {
+    throw new TypeError("Unsupported form preparation value.");
+  }
+  if (ancestors.has(value)) {
+    throw new TypeError("Cyclic form preparation value.");
+  }
+  ancestors.add(value);
+  let serialized;
+  if (Array.isArray(value)) {
+    serialized = `[${value
+      .map((item) => stableSerialize(item, ancestors))
+      .join(",")}]`;
+  } else {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError("Form preparation values must be plain objects.");
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    if (Object.getOwnPropertySymbols(value).length > 0) {
+      throw new TypeError("Form preparation values cannot contain symbols.");
+    }
+    const entries = [];
+    for (const key of Object.keys(descriptors).sort()) {
+      const descriptor = descriptors[key];
+      if (!Object.hasOwn(descriptor, "value") || !descriptor.enumerable) {
+        throw new TypeError("Form preparation values must be enumerable data.");
+      }
+      entries.push(
+        `${JSON.stringify(key)}:${stableSerialize(descriptor.value, ancestors)}`,
+      );
+    }
+    serialized = `{${entries.join(",")}}`;
+  }
+  ancestors.delete(value);
+  return serialized;
 }
 
 function canonicalInterpretation(value) {

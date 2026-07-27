@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildEditorFormModel,
+  buildFormPreparationKey,
   buildWizardFormModel,
 } from "../src/charting/forms/formModel.js";
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
@@ -117,6 +118,16 @@ const readyPrepared = Object.freeze({
     duplicateGroupCount: 0,
   },
 });
+
+function preparedFor(chart, profile, prepared = readyPrepared) {
+  return {
+    ...prepared,
+    meta: {
+      ...prepared.meta,
+      formPreparationKey: buildFormPreparationKey({ chart, profile }),
+    },
+  };
+}
 
 function synchronizationGroups() {
   return [{
@@ -294,9 +305,11 @@ test("duplicate resolution materializes only after active roles produce duplicat
 });
 
 test("visual sections wait for a renderer-ready preview while data remains editable", () => {
+  const chart = lineChart();
+  const profile = datasetProfile();
   const unavailable = buildEditorFormModel({
-    chart: lineChart(),
-    profile: datasetProfile(),
+    chart,
+    profile,
     prepared: {
       status: "empty",
       marks: [],
@@ -308,9 +321,9 @@ test("visual sections wait for a renderer-ready preview while data remains edita
     },
   });
   const ready = buildEditorFormModel({
-    chart: lineChart(),
-    profile: datasetProfile(),
-    prepared: readyPrepared,
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
   });
 
   assert.ok(unavailable.sections.some(({ id }) => id === "data"));
@@ -319,6 +332,104 @@ test("visual sections wait for a renderer-ready preview while data remains edita
     false,
   );
   assert.ok(ready.sections.some(({ id }) => id === "appearance"));
+});
+
+test("appearance begins with the required chart title field", () => {
+  const chart = lineChart({ title: "" });
+  const profile = datasetProfile();
+  const model = buildEditorFormModel({
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
+  });
+  const appearance = model.sections.find(({ id }) => id === "appearance");
+
+  assert.deepEqual(
+    appearance.fields.slice(0, 3).map(({ id, path }) => ({ id, path })),
+    [
+      { id: "title", path: ["title"] },
+      {
+        id: "titleAlignment",
+        path: ["presentation", "title", "align"],
+      },
+      {
+        id: "background",
+        path: ["presentation", "background", "color"],
+      },
+    ],
+  );
+});
+
+test("only a matching current preparation completes style and permits creation", () => {
+  const chart = lineChart();
+  const profile = datasetProfile();
+  const prepared = preparedFor(chart, profile);
+  const editor = buildEditorFormModel({
+    chart,
+    profile,
+    prepared,
+  });
+  const wizard = buildWizardFormModel({
+    draft: chart,
+    profile,
+    prepared,
+  });
+
+  assert.equal(editor.valid, true);
+  assert.equal(
+    wizard.steps.find(({ id }) => id === "style").complete,
+    true,
+  );
+  assert.equal(wizard.canCreate, true);
+});
+
+test("a stale renderer-ready result cannot unlock style for an incomplete draft", () => {
+  const original = lineChart();
+  const profile = datasetProfile();
+  const incomplete = lineChart({
+    sourceId: null,
+    roles: {},
+  });
+  const prepared = preparedFor(original, profile);
+  const editor = buildEditorFormModel({
+    chart: incomplete,
+    profile,
+    prepared,
+  });
+  const wizard = buildWizardFormModel({
+    draft: incomplete,
+    profile,
+    prepared,
+  });
+
+  assert.equal(editor.sections.some(({ id }) => id === "appearance"), false);
+  assert.equal(
+    wizard.steps.find(({ id }) => id === "style").complete,
+    false,
+  );
+  assert.equal(wizard.canCreate, false);
+});
+
+test("changing an analytical draft invalidates a previously ready preparation", () => {
+  const original = lineChart();
+  const profile = datasetProfile();
+  const changed = lineChart({
+    transformations: {
+      duplicates: "last",
+    },
+  });
+  const prepared = preparedFor(original, profile);
+  const model = buildWizardFormModel({
+    draft: changed,
+    profile,
+    prepared,
+  });
+
+  assert.equal(
+    model.steps.find(({ id }) => id === "style").complete,
+    false,
+  );
+  assert.equal(model.canCreate, false);
 });
 
 test("Delta comparison fields come from the schema descriptor", () => {
@@ -350,13 +461,14 @@ test("Delta comparison fields come from the schema descriptor", () => {
 
 test("collection fields author the fully normalized nested contract", () => {
   const chart = kpiChart();
+  const profile = datasetProfile();
   const model = buildEditorFormModel({
     chart,
-    profile: datasetProfile(),
-    prepared: {
+    profile,
+    prepared: preparedFor(chart, profile, {
       ...readyPrepared,
       marks: [{ value: 12 }],
-    },
+    }),
   });
   const collection = allFields(model)
     .find(({ id }) => id === "collection");
@@ -401,21 +513,23 @@ test("time matching edits target a group member by semantic identity", () => {
 });
 
 test("sections are contextual because only schema-declared fields materialize", () => {
+  const chart = createChartDraft("pie", {
+    id: "composition",
+    title: "Composition",
+    sourceId: "exercise-data",
+    roles: {
+      category: { field: "reportedAt", interpretation: "category" },
+      value: { field: "value" },
+    },
+  });
+  const profile = datasetProfile();
   const model = buildEditorFormModel({
-    chart: createChartDraft("pie", {
-      id: "composition",
-      title: "Composition",
-      sourceId: "exercise-data",
-      roles: {
-        category: { field: "reportedAt", interpretation: "category" },
-        value: { field: "value" },
-      },
-    }),
-    profile: datasetProfile(),
-    prepared: {
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile, {
       ...readyPrepared,
       marks: [{ category: "Ready", value: 12 }],
-    },
+    }),
   });
 
   assert.deepEqual(
