@@ -238,9 +238,7 @@ export function buildPrimaryClock(group, loadedData = {}, profiles = {}) {
       );
     }
     if (previousEpochMs !== null && epochMs === previousEpochMs) {
-      throw new Error(
-        `Duplicate primary timestamp ${epochMs} in source "${sourceId}" requires aggregation before playback.`,
-      );
+      continue;
     }
     if (previousEpochMs !== null && epochMs < previousEpochMs) {
       throw new Error(

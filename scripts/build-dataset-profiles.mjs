@@ -58,71 +58,13 @@ export async function generateDatasetProfiles({
 
 function reusableProfile(sourceId, source, rows) {
   const authority = profileDataset(rows, source.parsingMetadata ?? {});
-  const columns = authority.columns.map((column) => {
-    const warnings = summarizeDiagnostics(column.temporal?.diagnostics ?? []);
-    return {
-      name: column.name,
-      type: column.type,
-      missingCount: column.missingCount,
-      uniqueCount: column.uniqueCount,
-      examples: column.examples,
-      geographicHint: column.geographicHint,
-      ...(column.type === "temporal" ? {
-        parsing: column.temporal.parsingMetadata,
-        temporalValues: column.temporal.values.slice(0, 3),
-      } : {}),
-      warnings,
-    };
-  });
-  const warnings = columns
-    .flatMap((column) => column.warnings.map((warning) => ({
-      column: column.name,
-      ...warning,
-    })))
-    .sort(compareWarnings);
-
   return {
     sourceId,
     kind: "csv",
     path: source.path,
     provenance: sortValue(source.provenance),
-    rowCount: authority.rowCount,
-    columns,
-    warnings,
-    fingerprint: authority.fingerprint,
+    ...authority,
   };
-}
-
-function summarizeDiagnostics(diagnostics) {
-  const byCode = new Map();
-  for (const diagnostic of diagnostics) {
-    const current = byCode.get(diagnostic.code) ?? {
-      code: diagnostic.code,
-      count: 0,
-      examples: [],
-    };
-    current.count += 1;
-    if (
-      current.examples.length < 3
-      && !current.examples.some((value) => Object.is(value, diagnostic.value))
-    ) {
-      current.examples.push(diagnostic.value);
-    }
-    byCode.set(diagnostic.code, current);
-  }
-  return [...byCode.values()].sort(compareWarnings);
-}
-
-function compareWarnings(left, right) {
-  const leftKey = [
-    String(left.column ?? ""),
-    left.code,
-  ].join("\u0000");
-  const rightKey = [
-    String(right.column ?? ""),
-    right.code,
-  ].join("\u0000");
-  return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
 }
 
 function sortValue(value) {

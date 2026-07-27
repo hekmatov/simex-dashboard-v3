@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   validateDataSourceDescriptor,
   validateDatasetProfiles,
+  validateGeoJson,
 } from "../src/lib/loadDashboard.js";
 
 const defaultRootDir = path.resolve(
@@ -43,11 +44,13 @@ export async function buildPortableData({
       const sourcePath = validateDataSourceDescriptor(sourceId, source);
       const absoluteSourcePath = path.join(publicDir, sourcePath);
       if (source.kind === "geojson") {
+        const data = JSON.parse(
+          stripBom(await readFile(absoluteSourcePath, "utf8")),
+        );
+        validateGeoJson(data, `Data source "${sourceId}" GeoJSON`);
         sources[sourceId] = {
           kind: "geojson",
-          data: JSON.parse(
-            stripBom(await readFile(absoluteSourcePath, "utf8")),
-          ),
+          data,
         };
       } else {
         sources[sourceId] = {

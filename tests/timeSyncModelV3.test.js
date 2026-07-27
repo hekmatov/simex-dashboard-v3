@@ -242,25 +242,45 @@ test("missing primary source, profile, field, or temporal evidence is actionable
   }
 });
 
-test("duplicate or unsorted canonical primary timestamps are rejected", () => {
+test("repeated canonical primary timestamps collapse to one playback point", () => {
   const group = synchronizationGroup();
   const context = validationContext();
 
-  for (const [values, message] of [
-    [["2027-05-01", "2027-05-01"], /duplicate.*primary.*timestamp/i],
-    [["2027-05-02", "2027-05-01"], /strictly increasing/i],
-  ]) {
-    assert.throws(
-      () => buildPrimaryClock(
-        group,
-        context.loadedData,
-        {
-          "primary-cases": profileWithTimes(values),
-        },
-      ),
-      message,
-    );
-  }
+  assert.deepEqual(
+    buildPrimaryClock(
+      group,
+      context.loadedData,
+      {
+        "primary-cases": profileWithTimes([
+          "2027-05-01",
+          "2027-05-01",
+          "2027-05-02",
+          "2027-05-02",
+          "2027-05-03",
+        ]),
+      },
+    ),
+    [MAY_1, MAY_2, MAY_3],
+  );
+});
+
+test("unsorted canonical primary timestamps are rejected", () => {
+  const group = synchronizationGroup();
+  const context = validationContext();
+
+  assert.throws(
+    () => buildPrimaryClock(
+      group,
+      context.loadedData,
+      {
+        "primary-cases": profileWithTimes([
+          "2027-05-02",
+          "2027-05-01",
+        ]),
+      },
+    ),
+    /strictly increasing/i,
+  );
 });
 
 test("malformed canonical temporal profile values are never guessed or coerced", () => {

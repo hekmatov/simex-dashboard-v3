@@ -17,9 +17,17 @@ import {
 import {
   buildPortableData,
 } from "../scripts/build-portable-data.mjs";
+import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import {
+  buildPrimaryClock,
+  validateTimeSyncGroups,
+} from "../src/charting/time/timeSyncModel.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
-import { loadDashboardConfig } from "../src/lib/loadDashboard.js";
+import {
+  loadDashboardConfig,
+  validateDataSourceDescriptor,
+} from "../src/lib/loadDashboard.js";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dashboardPath = path.join(rootDir, "public", "config", "dashboard.json");
@@ -27,6 +35,11 @@ const profilesPath = path.join(rootDir, "public", "config", "dataset-profiles.js
 
 async function trackedJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
+}
+
+async function trackedRows(source) {
+  const text = await readFile(path.join(rootDir, "public", source.path), "utf8");
+  return parseCsvText(text, source.path);
 }
 
 async function withTempDirectory(callback) {
@@ -42,6 +55,41 @@ function portablePayload(source) {
   const prefix = "window.SIMEX_PORTABLE_DASHBOARD = ";
   assert.ok(source.startsWith(prefix));
   return JSON.parse(source.slice(prefix.length, -2));
+}
+
+function reusableProfile(sourceId, source, rows) {
+  return {
+    sourceId,
+    kind: "csv",
+    path: source.path,
+    provenance: source.provenance,
+    ...profileDataset(rows, source.parsingMetadata ?? {}),
+  };
+}
+
+function lineChart(sourceId, groupId = "national-outbreak") {
+  return {
+    id: "tracked-cases",
+    typeId: "line",
+    title: "Tracked cases",
+    sourceId,
+    roles: {
+      measurements: [{ field: "national_total_cases" }],
+      observation: {
+        field: "date",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    transformations: {
+      filters: [],
+      grouping: [],
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+    },
+    interaction: { timeSync: { groupId } },
+  };
 }
 
 test("every retained tabular source has exactly one reusable profile", async () => {
@@ -62,21 +110,27 @@ test("every retained tabular source has exactly one reusable profile", async () 
   }
 });
 
-test("mortality dates use the explicit day-month-year date-only rule", async () => {
+test("mortality dates retain the complete profileDataset temporal authority", async () => {
+  const dashboard = await trackedJson(dashboardPath);
   const profiles = await trackedJson(profilesPath);
+  const source = dashboard.dataSources.bio_mortality;
+  const rows = await trackedRows(source);
   const date = profiles.bio_mortality.columns.find(({ name }) => name === "date");
 
-  assert.deepEqual(date.parsing, {
+  assert.deepEqual(date.temporal.parsingMetadata, {
     interpretation: "temporal",
     format: "DD/MM/YYYY",
     timezone: "date-only",
   });
-  assert.deepEqual(date.temporalValues, [
-    "2027-05-02",
-    "2027-05-02",
-    "2027-05-02",
-  ]);
-  assert.deepEqual(date.warnings, []);
+  assert.equal(date.temporal.values.length, rows.length);
+  assert.deepEqual(
+    date.temporal.values,
+    Array(rows.length).fill("2027-05-02"),
+  );
+  assert.deepEqual(date.temporal.diagnostics, []);
+  assert.equal(Object.hasOwn(date, "parsing"), false);
+  assert.equal(Object.hasOwn(date, "temporalValues"), false);
+  assert.equal(Object.hasOwn(date, "warnings"), false);
 });
 
 test("profiles preserve representative numeric, temporal, and category facts", async () => {
@@ -100,7 +154,7 @@ test("profiles preserve representative numeric, temporal, and category facts", a
     "2027-02-21",
     "2027-02-22",
   ]);
-  assert.deepEqual(caseColumns.date.parsing, {
+  assert.deepEqual(caseColumns.date.temporal.parsingMetadata, {
     interpretation: "temporal",
     format: "YYYY-MM-DD",
     timezone: "date-only",
@@ -112,61 +166,140 @@ test("profiles preserve representative numeric, temporal, and category facts", a
     "Neutral",
   ]);
   assert.equal(testingColumns.tests_per_day.type, "numeric");
-  assert.deepEqual(testingColumns.tests_per_day.warnings, []);
-  assert.ok(Array.isArray(profiles.socio_behaviour.warnings));
-  assert.deepEqual(
-    Object.keys(profiles.bio_cases.provenance),
-    ["label"],
-  );
+  assert.equal(Object.hasOwn(testingColumns.tests_per_day, "temporal"), false);
+  assert.deepEqual(Object.keys(profiles.bio_cases.provenance), ["label"]);
 });
 
-test("generator and runtime use the same CSV parser and profiler authority", async () => {
+test("generated columns exactly equal the runtime parser and profileDataset authority", async () => {
   const dashboard = await trackedJson(dashboardPath);
   const profiles = await trackedJson(profilesPath);
-  const source = dashboard.dataSources.bio_cases;
-  const csvText = await readFile(path.join(rootDir, "public", source.path), "utf8");
-  const rows = parseCsvText(csvText, source.path);
-  const authorityProfile = profileDataset(rows, source.parsingMetadata);
-
-  assert.equal(profiles.bio_cases.rowCount, authorityProfile.rowCount);
-  assert.equal(profiles.bio_cases.fingerprint, authorityProfile.fingerprint);
-  assert.deepEqual(
-    profiles.bio_cases.columns.map(({ name, type, examples }) => ({
-      name,
-      type,
-      examples,
-    })),
-    authorityProfile.columns.map(({ name, type, examples }) => ({
-      name,
-      type,
-      examples,
-    })),
-  );
+  for (const sourceId of ["bio_cases", "bio_mortality", "socio_behaviour"]) {
+    const source = dashboard.dataSources[sourceId];
+    const rows = await trackedRows(source);
+    const authority = profileDataset(rows, source.parsingMetadata ?? {});
+    assert.deepEqual(
+      {
+        rowCount: profiles[sourceId].rowCount,
+        columns: profiles[sourceId].columns,
+        fingerprint: profiles[sourceId].fingerprint,
+      },
+      authority,
+      sourceId,
+    );
+  }
 });
 
-test("profile generation is byte-identical across repeated runs", async () => {
+test("tracked profiles make chart binding and national time synchronization ready", async () => {
+  const dashboard = await trackedJson(dashboardPath);
+  const profiles = await trackedJson(profilesPath);
+  const sourceId = "bio_cases";
+  const rows = await trackedRows(dashboard.dataSources[sourceId]);
+  const chart = lineChart(sourceId);
+  const group = {
+    id: "national-outbreak",
+    name: "National outbreak",
+    primaryClock: { sourceId, timeField: "date" },
+    matching: { policy: "exact" },
+    members: [{ chartId: chart.id, timeRole: "observation" }],
+  };
+
+  const prepared = prepareChartData({
+    chart,
+    rows,
+    datasetProfile: profiles[sourceId],
+  });
+  assert.equal(prepared.status, "ready");
+  assert.equal(prepared.meta.renderableMarkCount, 177);
+  assert.equal(
+    validateTimeSyncGroups([group], {
+      charts: [chart],
+      loadedData: { [sourceId]: rows },
+      profiles,
+    })[0],
+    group,
+  );
+  const clock = buildPrimaryClock(
+    group,
+    { [sourceId]: rows },
+    profiles,
+  );
+  assert.equal(clock.length, 177);
+  assert.equal(clock[0], Date.UTC(2027, 1, 20));
+  assert.equal(clock.at(-1), Date.UTC(2027, 7, 15));
+});
+
+test("municipal repeated rows produce one playback clock point per distinct date", async () => {
+  const dashboard = await trackedJson(dashboardPath);
+  const profiles = await trackedJson(profilesPath);
+  const sourceId = "bio_municipal_infections_harmonized_2021";
+  const rows = await trackedRows(dashboard.dataSources[sourceId]);
+  const profile = profiles[sourceId];
+  const dateColumn = profile.columns.find(({ name }) => name === "Datum");
+  const chart = {
+    id: "municipal-map",
+    typeId: "chronoChoroplethMap",
+    sourceId,
+    roles: {
+      geography: { field: "MunicipalityCode" },
+      value: { field: "infectionsPer10000" },
+      time: { field: "Datum", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
+    interaction: { timeSync: { groupId: "municipal-outbreak" } },
+  };
+  const group = {
+    id: "municipal-outbreak",
+    name: "Municipal outbreak",
+    primaryClock: { sourceId, timeField: "Datum" },
+    matching: { policy: "exact" },
+    members: [{ chartId: chart.id, timeRole: "time" }],
+  };
+
+  assert.equal(dateColumn.temporal.values.length, rows.length);
+  assert.equal(
+    dateColumn.temporal.values.filter((value) => value === "2020-02-27").length,
+    352,
+  );
+  assert.equal(
+    validateTimeSyncGroups([group], {
+      charts: [chart],
+      loadedData: { [sourceId]: rows },
+      profiles,
+    })[0],
+    group,
+  );
+  const clock = buildPrimaryClock(group, { [sourceId]: rows }, profiles);
+  assert.equal(clock.length, 415);
+  assert.equal(clock[0], Date.UTC(2020, 1, 27));
+  assert.equal(clock.at(-1), Date.UTC(2021, 3, 17));
+});
+
+test("profile generation is byte-identical and contains no flattened warnings or machine paths", async () => {
   await withTempDirectory(async (directory) => {
     const first = path.join(directory, "first.json");
     const second = path.join(directory, "second.json");
     await generateDatasetProfiles({ rootDir, outputPath: first });
     await generateDatasetProfiles({ rootDir, outputPath: second });
+    const firstBytes = await readFile(first, "utf8");
 
-    assert.equal(await readFile(first, "utf8"), await readFile(second, "utf8"));
-    assert.equal(await readFile(first, "utf8"), await readFile(profilesPath, "utf8"));
+    assert.equal(firstBytes, await readFile(second, "utf8"));
+    assert.equal(firstBytes, await readFile(profilesPath, "utf8"));
+    assert.doesNotMatch(firstBytes, /"warnings"\s*:/);
+    assert.doesNotMatch(firstBytes, /[A-Za-z]:[\\/]|OneDrive|\\\\Users\\\\/i);
   });
 });
 
-test("profile generation rejects traversal, absolute paths, legacy strings, and missing files", async () => {
+test("profile generation rejects traversal, unsafe IDs, legacy strings, and missing files", async () => {
   await withTempDirectory(async (directory) => {
     const publicDir = path.join(directory, "public");
     const configDir = path.join(publicDir, "config");
     await mkdir(configDir, { recursive: true });
     const outputPath = path.join(configDir, "dataset-profiles.json");
 
-    for (const [source, message] of [
-      [{ kind: "csv", path: "../secret.csv" }, /safe relative public path/i],
-      [{ kind: "csv", path: "C:/secret.csv" }, /safe relative public path/i],
+    for (const [sourceId, source, message] of [
+      ["unsafe", { kind: "csv", path: "../secret.csv" }, /safe relative public path/i],
+      ["unsafe", { kind: "csv", path: "C:/secret.csv" }, /safe relative public path/i],
       [
+        "unsafe",
         {
           kind: "csv",
           path: "data/%2e%2e/secret.csv",
@@ -174,8 +307,14 @@ test("profile generation rejects traversal, absolute paths, legacy strings, and 
         },
         /safe relative public path/i,
       ],
-      ["data/cases.csv", /descriptor must be an object/i],
+      ["__proto__", {
+        kind: "csv",
+        path: "data/cases.csv",
+        provenance: { label: "Dangerous id fixture" },
+      }, /source id/i],
+      ["unsafe", "data/cases.csv", /descriptor must be an ordinary data object/i],
       [
+        "unsafe",
         {
           kind: "csv",
           path: "data/missing.csv",
@@ -185,9 +324,14 @@ test("profile generation rejects traversal, absolute paths, legacy strings, and 
       ],
     ]) {
       const configPath = path.join(configDir, "dashboard.json");
+      const dataSources = Object.create(null);
+      Object.defineProperty(dataSources, sourceId, {
+        value: source,
+        enumerable: true,
+      });
       await writeFile(
         configPath,
-        JSON.stringify({ dataSources: { unsafe: source } }),
+        JSON.stringify({ dataSources }),
         "utf8",
       );
       await assert.rejects(
@@ -202,23 +346,55 @@ test("profile generation rejects traversal, absolute paths, legacy strings, and 
   });
 });
 
-test("runtime loading fails closed for missing, invalid, or mismatched profiles", async () => {
+test("descriptor parsing rules accept only temporal-authority enums", () => {
+  const base = {
+    kind: "csv",
+    path: "data/cases.csv",
+    provenance: { label: "Fixture" },
+  };
+  assert.equal(validateDataSourceDescriptor("cases", {
+    ...base,
+    parsingMetadata: {
+      date: {
+        interpretation: "temporal",
+        format: "DD/MM/YYYY",
+        timezone: "date-only",
+      },
+      cases: { interpretation: "numeric" },
+    },
+  }), "data/cases.csv");
+
+  for (const [rule, message] of [
+    [{ interpretation: "date" }, /interpretation/i],
+    [{ interpretation: "temporal", format: "browser-date" }, /format/i],
+    [{ interpretation: "temporal", format: "YYYY-MM-DD", timezone: "local" }, /timezone/i],
+    [{ interpretation: "numeric", format: "YYYY-MM-DD" }, /only temporal/i],
+  ]) {
+    assert.throws(
+      () => validateDataSourceDescriptor("cases", {
+        ...base,
+        parsingMetadata: { date: rule },
+      }),
+      message,
+    );
+  }
+});
+
+test("runtime loading fails closed for missing, extra, invalid, or mismatched profiles", async () => {
   const source = {
     kind: "csv",
     path: "data/cases.csv",
     provenance: { label: "Fixture" },
-    parsingMetadata: {},
+    parsingMetadata: {
+      date: {
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+        timezone: "date-only",
+      },
+    },
   };
-  const validProfile = {
-    sourceId: "cases",
-    kind: "csv",
-    path: "data/cases.csv",
-    provenance: { label: "Fixture" },
-    rowCount: 1,
-    columns: [{ name: "date", type: "temporal", examples: ["2027-01-01"] }],
-    warnings: [],
-    fingerprint: "a".repeat(64),
-  };
+  const rows = [{ date: "2027-01-01", cases: 7 }];
+  const validProfile = reusableProfile("cases", source, rows);
 
   await assert.rejects(
     loadDashboardConfig({ dataSources: { cases: source } }, {}),
@@ -227,9 +403,139 @@ test("runtime loading fails closed for missing, invalid, or mismatched profiles"
   await assert.rejects(
     loadDashboardConfig(
       { dataSources: { cases: source } },
+      { cases: validProfile, extra: validProfile },
+    ),
+    /unexpected dataset profile/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
       { cases: { ...validProfile, path: "data/other.csv" } },
     ),
     /profile path does not match/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
+      {
+        cases: {
+          ...validProfile,
+          columns: validProfile.columns.map((column) => (
+            column.name === "date"
+              ? {
+                  ...column,
+                  temporal: {
+                    ...column.temporal,
+                    values: ["not-canonical"],
+                  },
+                }
+              : column
+          )),
+        },
+      },
+    ),
+    /canonical temporal/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
+      {
+        cases: {
+          ...validProfile,
+          columns: validProfile.columns.map((column) => (
+            column.name === "date" ? { ...column, name: "constructor" } : column
+          )),
+        },
+      },
+    ),
+    /column.*name/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
+      {
+        cases: {
+          ...validProfile,
+          warnings: [],
+        },
+      },
+    ),
+    /unknown dataset profile.*warnings/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
+      {
+        cases: {
+          ...validProfile,
+          columns: validProfile.columns.map((column) => (
+            column.name === "date"
+              ? {
+                  ...column,
+                  temporal: {
+                    ...column.temporal,
+                    parsingMetadata: { interpretation: "category" },
+                  },
+                }
+              : column
+          )),
+        },
+      },
+    ),
+    /temporal parsing interpretation/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
+      {
+        cases: {
+          ...validProfile,
+          columns: validProfile.columns.map((column) => (
+            column.name === "date"
+              ? {
+                  ...column,
+                  temporal: {
+                    ...column.temporal,
+                    values: [null],
+                    diagnostics: [{
+                      index: 0,
+                      value: "not-a-date",
+                      code: "made-up-warning",
+                    }],
+                  },
+                }
+              : column
+          )),
+        },
+      },
+    ),
+    /diagnostic is invalid/i,
+  );
+  await assert.rejects(
+    loadDashboardConfig(
+      { dataSources: { cases: source } },
+      {
+        cases: {
+          ...validProfile,
+          columns: validProfile.columns.map((column) => (
+            column.name === "cases"
+              ? {
+                  ...column,
+                  temporal: {
+                    values: ["2027-01-01"],
+                    diagnostics: [],
+                    parsingMetadata: {
+                      interpretation: "temporal",
+                      format: "YYYY-MM-DD",
+                    },
+                  },
+                }
+              : column
+          )),
+        },
+      },
+    ),
+    /non-temporal column cannot contain temporal evidence/i,
   );
   await assert.rejects(
     loadDashboardConfig(
@@ -244,33 +550,83 @@ test("runtime loading fails closed for missing, invalid, or mismatched profiles"
   );
 });
 
-test("runtime safely loads CSV and GeoJSON descriptors with reusable profiles", async () => {
+test("runtime validation rejects accessors without invoking them", async () => {
+  let invocations = 0;
+  const source = {};
+  Object.defineProperty(source, "kind", {
+    enumerable: true,
+    get() {
+      invocations += 1;
+      return "csv";
+    },
+  });
+  Object.defineProperties(source, {
+    path: { value: "data/cases.csv", enumerable: true },
+    provenance: {
+      value: { label: "Accessor fixture" },
+      enumerable: true,
+    },
+  });
+
+  await assert.rejects(
+    loadDashboardConfig({ dataSources: { cases: source } }, {}),
+    /data propert/i,
+  );
+  assert.equal(invocations, 0);
+
+  const dataSources = {};
+  Object.defineProperty(dataSources, "cases", {
+    enumerable: true,
+    get() {
+      invocations += 1;
+      return source;
+    },
+  });
+  await assert.rejects(
+    loadDashboardConfig({ dataSources }, {}),
+    /data propert/i,
+  );
+  assert.equal(invocations, 0);
+});
+
+test("runtime loads descriptors with faithfully hydrated reusable profiles", async () => {
   const originalFetch = globalThis.fetch;
-  const calls = [];
+  const source = {
+    kind: "csv",
+    path: "data/cases.csv",
+    provenance: { label: "Fixture cases" },
+    parsingMetadata: {
+      date: {
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+        timezone: "date-only",
+      },
+    },
+  };
+  const rows = [{ date: "2027-01-01", cases: 7 }];
+  const profile = reusableProfile("cases", source, rows);
   globalThis.fetch = async (url) => {
-    calls.push(String(url));
     if (String(url).endsWith("data/cases.csv")) {
       return new Response("date,cases\n2027-01-01,7\n");
     }
     if (String(url).endsWith("data/regions.geojson")) {
-      return new Response(
-        JSON.stringify({ type: "FeatureCollection", features: [] }),
-        { headers: { "content-type": "application/json" } },
-      );
+      return new Response(JSON.stringify({
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          properties: { name: "North" },
+          geometry: { type: "Point", coordinates: [4.9, 52.3] },
+        }],
+      }));
     }
     return new Response("", { status: 404 });
   };
 
   try {
-    const dashboard = await loadDashboardConfig(
+    const loaded = await loadDashboardConfig(
       {
         dataSources: {
-          cases: {
-            kind: "csv",
-            path: "data/cases.csv",
-            provenance: { label: "Fixture cases" },
-            parsingMetadata: {},
-          },
+          cases: source,
           regions: {
             kind: "geojson",
             path: "data/regions.geojson",
@@ -278,53 +634,60 @@ test("runtime safely loads CSV and GeoJSON descriptors with reusable profiles", 
           },
         },
       },
-      {
-        cases: {
-          sourceId: "cases",
-          kind: "csv",
-          path: "data/cases.csv",
-          provenance: { label: "Fixture cases" },
-          rowCount: 1,
-          columns: [
-            {
-              name: "date",
-              type: "temporal",
-              missingCount: 0,
-              uniqueCount: 1,
-              examples: ["2027-01-01"],
-              parsing: { interpretation: "auto", format: "YYYY-MM-DD" },
-              warnings: [],
-            },
-            {
-              name: "cases",
-              type: "numeric",
-              missingCount: 0,
-              uniqueCount: 1,
-              examples: [7],
-              warnings: [],
-            },
-          ],
-          warnings: [],
-          fingerprint: "a".repeat(64),
-        },
-      },
+      { cases: profile },
     );
 
-    assert.deepEqual(dashboard.loadedData.cases, [
-      { date: "2027-01-01", cases: 7 },
-    ]);
-    assert.deepEqual(dashboard.loadedData.regions, {
-      type: "FeatureCollection",
-      features: [],
-    });
-    assert.deepEqual(Object.keys(dashboard.datasetProfiles), ["cases"]);
-    assert.equal(calls.length, 2);
+    assert.deepEqual(loaded.loadedData.cases, rows);
+    assert.equal(loaded.loadedData.regions.type, "FeatureCollection");
+    assert.deepEqual(loaded.datasetProfiles.cases, profile);
+    assert.notEqual(loaded.datasetProfiles.cases, profile);
+    assert.equal(
+      loaded.datasetProfiles.cases.columns[0].temporal.values.length,
+      rows.length,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("portable data embeds descriptors, profiles, and source bytes deterministically", async () => {
+test("runtime rejects malformed GeoJSON before exposing it to charts", async () => {
+  const originalFetch = globalThis.fetch;
+  const fixtures = [
+    { type: "FeatureCollection" },
+    { type: "FeatureCollection", features: [{}] },
+    {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        properties: {},
+        geometry: { type: "Point", coordinates: ["east", 52.3] },
+      }],
+    },
+  ];
+  let index = 0;
+  globalThis.fetch = async () => new Response(JSON.stringify(fixtures[index++]));
+
+  try {
+    for (const fixtureIndex of fixtures.keys()) {
+      await assert.rejects(
+        loadDashboardConfig({
+          dataSources: {
+            [`regions-${fixtureIndex}`]: {
+              kind: "geojson",
+              path: `data/regions-${fixtureIndex}.geojson`,
+              provenance: { label: "Malformed fixture" },
+            },
+          },
+        }, {}),
+        /geojson/i,
+      );
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("portable data embeds descriptors, full profiles, and source bytes deterministically", async () => {
   await withTempDirectory(async (directory) => {
     const first = path.join(directory, "portable-one.js");
     const second = path.join(directory, "portable-two.js");
@@ -377,7 +740,7 @@ test("portable data rejects legacy source inference instead of guessing from ext
         outputPath: path.join(directory, "portable.js"),
         embedPortableData: true,
       }),
-      /descriptor must be an object/i,
+      /descriptor must be an ordinary data object/i,
     );
   });
 });

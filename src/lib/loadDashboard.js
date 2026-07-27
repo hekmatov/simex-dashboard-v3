@@ -1,9 +1,26 @@
+import { parseTemporalValue } from "../charting/data/temporal.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 
 const dataSourceCache = new Map();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
 const SOURCE_KEYS = new Set(["kind", "path", "provenance", "parsingMetadata"]);
+const PROVENANCE_KEYS = new Set(["label"]);
 const PARSING_KEYS = new Set(["interpretation", "format", "timezone"]);
+const PARSING_INTERPRETATIONS = new Set([
+  "auto",
+  "boolean",
+  "category",
+  "geographic",
+  "numeric",
+  "temporal",
+]);
+const TEMPORAL_FORMATS = new Set([
+  "YYYY-MM-DD",
+  "DD/MM/YYYY",
+  "MM/DD/YYYY",
+  "ISO-8601",
+]);
+const TIMEZONES = new Set(["date-only"]);
 const PROFILE_KEYS = new Set([
   "columns",
   "fingerprint",
@@ -12,18 +29,30 @@ const PROFILE_KEYS = new Set([
   "provenance",
   "rowCount",
   "sourceId",
-  "warnings",
 ]);
 const PROFILE_COLUMN_KEYS = new Set([
   "examples",
   "geographicHint",
   "missingCount",
   "name",
-  "parsing",
-  "temporalValues",
+  "temporal",
   "type",
   "uniqueCount",
-  "warnings",
+]);
+const TEMPORAL_KEYS = new Set([
+  "diagnostics",
+  "parsingMetadata",
+  "values",
+]);
+const DIAGNOSTIC_KEYS = new Set(["code", "format", "index", "value"]);
+const DIAGNOSTIC_CODES = new Set([
+  "ambiguous-date-format",
+  "invalid-calendar-date",
+  "invalid-date-format",
+  "invalid-temporal-value",
+  "invalid-time",
+  "invalid-timezone",
+  "unsupported-date-format",
 ]);
 const COLUMN_TYPES = new Set([
   "boolean",
@@ -31,6 +60,22 @@ const COLUMN_TYPES = new Set([
   "geographic",
   "numeric",
   "temporal",
+]);
+const GEOGRAPHIC_HINTS = new Set([
+  null,
+  "latitude",
+  "longitude",
+  "place",
+]);
+const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
+const GEOJSON_GEOMETRY_TYPES = new Set([
+  "Point",
+  "MultiPoint",
+  "LineString",
+  "MultiLineString",
+  "Polygon",
+  "MultiPolygon",
 ]);
 
 export async function loadDashboard(
@@ -69,15 +114,20 @@ export async function loadDashboardConfig(
   datasetProfiles,
   portableSources = null,
 ) {
-  if (!isRecord(dashboard)) {
-    throw new Error("Dashboard config must be an object.");
-  }
-  const dataSources = dashboard.dataSources ?? {};
-  const reusableProfiles = datasetProfiles ?? dashboard.datasetProfiles;
+  const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
+  const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
+  const reusableProfiles = (
+    datasetProfiles
+    ?? entryValue(dashboardEntries, "datasetProfiles")
+  );
   validateDatasetProfiles(dataSources, reusableProfiles);
+  const hydratedProfiles = structuredClone(reusableProfiles);
 
   const loadedData = {};
-  for (const [sourceId, source] of Object.entries(dataSources)) {
+  for (const [sourceId, source] of plainDataEntries(
+    dataSources,
+    "Dashboard dataSources",
+  )) {
     loadedData[sourceId] = await loadDataSource(
       sourceId,
       source,
@@ -89,41 +139,42 @@ export async function loadDashboardConfig(
     ...dashboard,
     pages: normalizePages(dashboard),
     dataSources,
-    datasetProfiles: reusableProfiles,
+    datasetProfiles: hydratedProfiles,
     loadedData,
   };
 }
 
 export function validateDataSourceDescriptor(sourceId, source) {
-  if (!isRecord(source)) {
-    throw new Error(`Data source "${sourceId}" descriptor must be an object.`);
-  }
-  rejectUnknownKeys(source, SOURCE_KEYS, `data source "${sourceId}" descriptor`);
-  if (!SOURCE_KINDS.has(source.kind)) {
+  validateSourceId(sourceId);
+  const entries = plainDataEntries(
+    source,
+    `Data source "${sourceId}" descriptor`,
+  );
+  rejectUnknownEntries(
+    entries,
+    SOURCE_KEYS,
+    `data source "${sourceId}" descriptor`,
+  );
+  const kind = entryValue(entries, "kind");
+  if (!SOURCE_KINDS.has(kind)) {
     throw new Error(
       `Data source "${sourceId}" kind must be "csv" or "geojson".`,
     );
   }
-  const normalizedPath = safePublicPath(source.path, sourceId);
-  const expectedExtension = source.kind === "csv" ? ".csv" : ".geojson";
+  const normalizedPath = safePublicPath(entryValue(entries, "path"), sourceId);
+  const expectedExtension = kind === "csv" ? ".csv" : ".geojson";
   if (!normalizedPath.toLowerCase().endsWith(expectedExtension)) {
     throw new Error(
-      `Data source "${sourceId}" ${source.kind} path must end with ${expectedExtension}.`,
+      `Data source "${sourceId}" ${kind} path must end with ${expectedExtension}.`,
     );
   }
-  if (!isRecord(source.provenance)) {
-    throw new Error(`Data source "${sourceId}" provenance must be an object.`);
-  }
-  if (
-    typeof source.provenance.label !== "string"
-    || source.provenance.label.trim() === ""
-  ) {
-    throw new Error(
-      `Data source "${sourceId}" provenance label is required.`,
-    );
-  }
-  if (source.parsingMetadata !== undefined) {
-    validateParsingMetadata(sourceId, source.parsingMetadata);
+  validateProvenance(
+    entryValue(entries, "provenance"),
+    `Data source "${sourceId}" provenance`,
+  );
+  const parsingMetadata = entryValue(entries, "parsingMetadata");
+  if (parsingMetadata !== undefined) {
+    validateParsingMetadata(sourceId, parsingMetadata);
   }
   return normalizedPath;
 }
@@ -157,22 +208,25 @@ export function safePublicPath(value, sourceId = "unknown") {
 }
 
 export function validateDatasetProfiles(dataSources, datasetProfiles) {
-  if (!isRecord(dataSources)) {
-    throw new Error("Dashboard dataSources must be an object.");
-  }
-  if (!isRecord(datasetProfiles)) {
-    throw new Error("Dataset profiles must be an object.");
-  }
-
+  const sourceEntries = plainDataEntries(
+    dataSources,
+    "Dashboard dataSources",
+  );
+  const profileEntries = plainDataEntries(
+    datasetProfiles,
+    "Dataset profiles",
+  );
+  const profilesById = new Map(profileEntries);
   const csvIds = [];
-  for (const [sourceId, source] of Object.entries(dataSources)) {
+
+  for (const [sourceId, source] of sourceEntries) {
     validateDataSourceDescriptor(sourceId, source);
     if (source.kind === "csv") csvIds.push(sourceId);
   }
   csvIds.sort();
 
-  const profileIds = Object.keys(datasetProfiles).sort();
-  const missing = csvIds.filter((sourceId) => !profileIds.includes(sourceId));
+  const profileIds = [...profilesById.keys()].sort();
+  const missing = csvIds.filter((sourceId) => !profilesById.has(sourceId));
   if (missing.length > 0) {
     throw new Error(`Missing dataset profile for source "${missing[0]}".`);
   }
@@ -186,10 +240,25 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
   for (const sourceId of csvIds) {
     validateDatasetProfile(
       sourceId,
-      dataSources[sourceId],
-      datasetProfiles[sourceId],
+      sourceEntries.find(([id]) => id === sourceId)[1],
+      profilesById.get(sourceId),
     );
   }
+}
+
+export function validateGeoJson(value, description = "GeoJSON source") {
+  const entries = plainDataEntries(value, description);
+  if (entryValue(entries, "type") !== "FeatureCollection") {
+    throw new Error(`${description} must be a GeoJSON FeatureCollection.`);
+  }
+  const features = denseDataArray(
+    entryValue(entries, "features"),
+    `${description} features`,
+  );
+  for (const [index, feature] of features.entries()) {
+    validateGeoJsonFeature(feature, `${description} feature ${index}`);
+  }
+  return value;
 }
 
 async function loadDataSource(sourceId, source, portableSource) {
@@ -218,119 +287,324 @@ async function loadDataSourceFresh(sourceId, source, portableSource) {
 
   const url = sourceUrl(source.path);
   if (source.kind === "geojson") {
-    return fetchJson(url, `data file: ${source.path}`);
+    const geoJson = await fetchJson(url, `data file: ${source.path}`);
+    validateGeoJson(geoJson, `Data source "${sourceId}" GeoJSON`);
+    return geoJson;
   }
   return loadCsv(url);
 }
 
 function validateDatasetProfile(sourceId, source, profile) {
-  if (!isRecord(profile)) {
-    throw new Error(`Dataset profile "${sourceId}" must be an object.`);
-  }
-  rejectUnknownKeys(profile, PROFILE_KEYS, `dataset profile "${sourceId}"`);
-  if (profile.sourceId !== sourceId) {
+  const entries = plainDataEntries(
+    profile,
+    `Dataset profile "${sourceId}"`,
+  );
+  rejectUnknownEntries(entries, PROFILE_KEYS, `dataset profile "${sourceId}"`);
+  if (entryValue(entries, "sourceId") !== sourceId) {
     throw new Error(`Dataset profile "${sourceId}" sourceId does not match.`);
   }
-  if (profile.kind !== "csv") {
+  if (entryValue(entries, "kind") !== "csv") {
     throw new Error(`Dataset profile "${sourceId}" kind must be "csv".`);
   }
-  if (profile.path !== source.path) {
+  if (entryValue(entries, "path") !== source.path) {
     throw new Error(`Dataset profile "${sourceId}" profile path does not match.`);
   }
+  validateProvenance(
+    entryValue(entries, "provenance"),
+    `Dataset profile "${sourceId}" provenance`,
+  );
   if (
-    !Number.isSafeInteger(profile.rowCount)
-    || profile.rowCount < 0
-    || !Array.isArray(profile.columns)
-    || profile.columns.length === 0
-    || !Array.isArray(profile.warnings)
-    || !/^[a-f0-9]{64}$/.test(profile.fingerprint)
+    stableStringify(entryValue(entries, "provenance"))
+    !== stableStringify(source.provenance)
   ) {
-    throw new Error(`Dataset profile "${sourceId}" is invalid.`);
-  }
-  if (JSON.stringify(profile.provenance) !== JSON.stringify(source.provenance)) {
     throw new Error(
       `Dataset profile "${sourceId}" provenance does not match its source.`,
     );
   }
 
+  const rowCount = entryValue(entries, "rowCount");
+  const fingerprint = entryValue(entries, "fingerprint");
+  if (
+    !Number.isSafeInteger(rowCount)
+    || rowCount < 0
+    || !/^[a-f0-9]{64}$/.test(fingerprint)
+  ) {
+    throw new Error(`Dataset profile "${sourceId}" is invalid.`);
+  }
+  const columns = denseDataArray(
+    entryValue(entries, "columns"),
+    `Dataset profile "${sourceId}" columns`,
+  );
+  if (columns.length === 0) {
+    throw new Error(`Dataset profile "${sourceId}" columns cannot be empty.`);
+  }
   const columnNames = new Set();
-  for (const column of profile.columns) {
-    if (!isRecord(column)) {
-      throw new Error(`Dataset profile "${sourceId}" column is invalid.`);
-    }
-    rejectUnknownKeys(
-      column,
-      PROFILE_COLUMN_KEYS,
-      `dataset profile "${sourceId}" column`,
+  for (const [index, column] of columns.entries()) {
+    validateProfileColumn(sourceId, column, index, rowCount, columnNames);
+  }
+}
+
+function validateProfileColumn(
+  sourceId,
+  column,
+  index,
+  rowCount,
+  columnNames,
+) {
+  const description = `Dataset profile "${sourceId}" column ${index}`;
+  const entries = plainDataEntries(column, description);
+  rejectUnknownEntries(entries, PROFILE_COLUMN_KEYS, description);
+  const name = entryValue(entries, "name");
+  validateColumnName(name, `${description} name`);
+  if (columnNames.has(name)) {
+    throw new Error(`Dataset profile "${sourceId}" column name "${name}" is duplicated.`);
+  }
+  columnNames.add(name);
+
+  const type = entryValue(entries, "type");
+  const missingCount = entryValue(entries, "missingCount");
+  const uniqueCount = entryValue(entries, "uniqueCount");
+  if (
+    !COLUMN_TYPES.has(type)
+    || !Number.isSafeInteger(missingCount)
+    || missingCount < 0
+    || missingCount > rowCount
+    || !Number.isSafeInteger(uniqueCount)
+    || uniqueCount < 0
+    || uniqueCount > rowCount
+    || !GEOGRAPHIC_HINTS.has(entryValue(entries, "geographicHint"))
+  ) {
+    throw new Error(`${description} is invalid.`);
+  }
+  const examples = denseDataArray(
+    entryValue(entries, "examples"),
+    `${description} examples`,
+  );
+  if (examples.length > 3 || examples.some((value) => !isJsonScalar(value))) {
+    throw new Error(`${description} examples are invalid.`);
+  }
+
+  const temporal = entryValue(entries, "temporal");
+  if (type === "temporal") {
+    validateTemporalProfile(sourceId, name, temporal, rowCount);
+  } else if (temporal !== undefined) {
+    throw new Error(`${description} non-temporal column cannot contain temporal evidence.`);
+  }
+}
+
+function validateTemporalProfile(sourceId, columnName, temporal, rowCount) {
+  const description = `Dataset profile "${sourceId}" temporal column "${columnName}"`;
+  const entries = plainDataEntries(temporal, description);
+  rejectUnknownEntries(entries, TEMPORAL_KEYS, description);
+  const parsingMetadata = entryValue(entries, "parsingMetadata");
+  const parsing = validateParsingRule(
+    sourceId,
+    columnName,
+    parsingMetadata,
+    { authorRule: false },
+  );
+  if (!["auto", "temporal"].includes(parsing.interpretation)) {
+    throw new Error(`${description} temporal parsing interpretation is invalid.`);
+  }
+  const values = denseDataArray(
+    entryValue(entries, "values"),
+    `${description} values`,
+  );
+  if (values.length !== rowCount) {
+    throw new Error(`${description} values must align with every source row.`);
+  }
+  for (const [index, value] of values.entries()) {
+    if (value === null) continue;
+    const parsed = (
+      typeof value === "string"
+      && parseTemporalValue(value, { interpretation: "temporal" })
     );
-    if (
-      typeof column.name !== "string"
-      || column.name === ""
-      || columnNames.has(column.name)
-      || !COLUMN_TYPES.has(column.type)
-      || !Number.isSafeInteger(column.missingCount)
-      || column.missingCount < 0
-      || !Number.isSafeInteger(column.uniqueCount)
-      || column.uniqueCount < 0
-      || !Array.isArray(column.examples)
-      || !Array.isArray(column.warnings)
-    ) {
-      throw new Error(`Dataset profile "${sourceId}" column is invalid.`);
-    }
-    columnNames.add(column.name);
-    if (column.parsing !== undefined) {
-      validateParsingRule(sourceId, column.name, column.parsing);
-    }
-    if (
-      column.temporalValues !== undefined
-      && !Array.isArray(column.temporalValues)
-    ) {
+    if (!parsed?.ok || parsed.canonical !== value) {
       throw new Error(
-        `Dataset profile "${sourceId}" temporal values are invalid.`,
+        `${description} values must contain canonical temporal strings or null (index ${index}).`,
       );
     }
+  }
+
+  const diagnostics = denseDataArray(
+    entryValue(entries, "diagnostics"),
+    `${description} diagnostics`,
+  );
+  const diagnosticIndexes = new Set();
+  for (const [diagnosticIndex, diagnostic] of diagnostics.entries()) {
+    const diagnosticEntries = plainDataEntries(
+      diagnostic,
+      `${description} diagnostic ${diagnosticIndex}`,
+    );
+    rejectUnknownEntries(
+      diagnosticEntries,
+      DIAGNOSTIC_KEYS,
+      `${description} diagnostic`,
+    );
+    const index = entryValue(diagnosticEntries, "index");
+    const code = entryValue(diagnosticEntries, "code");
+    const format = entryValue(diagnosticEntries, "format");
+    if (
+      !Number.isSafeInteger(index)
+      || index < 0
+      || index >= rowCount
+      || diagnosticIndexes.has(index)
+      || !DIAGNOSTIC_CODES.has(code)
+      || !isJsonScalar(entryValue(diagnosticEntries, "value"))
+      || (format !== undefined && !TEMPORAL_FORMATS.has(format))
+      || values[index] !== null
+    ) {
+      throw new Error(`${description} diagnostic is invalid.`);
+    }
+    diagnosticIndexes.add(index);
   }
 }
 
 function validateParsingMetadata(sourceId, parsingMetadata) {
-  if (!isRecord(parsingMetadata)) {
-    throw new Error(
-      `Data source "${sourceId}" parsingMetadata must be an object.`,
+  const entries = plainDataEntries(
+    parsingMetadata,
+    `Data source "${sourceId}" parsingMetadata`,
+  );
+  for (const [columnName, parsing] of entries) {
+    validateColumnName(
+      columnName,
+      `Data source "${sourceId}" parsing column name`,
     );
-  }
-  for (const [columnName, parsing] of Object.entries(parsingMetadata)) {
-    validateParsingRule(sourceId, columnName, parsing);
+    validateParsingRule(
+      sourceId,
+      columnName,
+      parsing,
+      { authorRule: true },
+    );
   }
 }
 
-function validateParsingRule(sourceId, columnName, parsing) {
-  if (!isRecord(parsing)) {
-    throw new Error(
-      `Data source "${sourceId}" parsing rule for "${columnName}" must be an object.`,
-    );
+function validateParsingRule(
+  sourceId,
+  columnName,
+  parsing,
+  { authorRule },
+) {
+  const description = `Data source "${sourceId}" parsing rule for "${columnName}"`;
+  const entries = plainDataEntries(parsing, description);
+  rejectUnknownEntries(entries, PARSING_KEYS, description);
+  const interpretation = entryValue(entries, "interpretation");
+  const format = entryValue(entries, "format");
+  const timezone = entryValue(entries, "timezone");
+  if (!PARSING_INTERPRETATIONS.has(interpretation)) {
+    throw new Error(`${description} interpretation is invalid.`);
   }
-  rejectUnknownKeys(
-    parsing,
-    PARSING_KEYS,
-    `data source "${sourceId}" parsing rule for "${columnName}"`,
-  );
+  if (format !== undefined && !TEMPORAL_FORMATS.has(format)) {
+    throw new Error(`${description} format is invalid.`);
+  }
+  if (timezone !== undefined && !TIMEZONES.has(timezone)) {
+    throw new Error(`${description} timezone is invalid.`);
+  }
   if (
-    typeof parsing.interpretation !== "string"
-    || parsing.interpretation.trim() === ""
+    authorRule
+    && interpretation !== "temporal"
+    && (format !== undefined || timezone !== undefined)
   ) {
-    throw new Error(
-      `Data source "${sourceId}" parsing interpretation for "${columnName}" is required.`,
-    );
+    throw new Error(`${description} only temporal interpretation accepts format or timezone.`);
   }
-  for (const key of ["format", "timezone"]) {
-    if (
-      parsing[key] !== undefined
-      && (typeof parsing[key] !== "string" || parsing[key].trim() === "")
-    ) {
-      throw new Error(
-        `Data source "${sourceId}" parsing ${key} for "${columnName}" must be a non-empty string.`,
-      );
+  if (
+    timezone === "date-only"
+    && format === "ISO-8601"
+  ) {
+    throw new Error(`${description} date-only timezone cannot use ISO-8601 instant format.`);
+  }
+  return { interpretation, format, timezone };
+}
+
+function validateProvenance(provenance, description) {
+  const entries = plainDataEntries(provenance, description);
+  rejectUnknownEntries(entries, PROVENANCE_KEYS, description);
+  const label = entryValue(entries, "label");
+  if (typeof label !== "string" || label.trim() === "") {
+    throw new Error(`${description} label is required.`);
+  }
+}
+
+function validateSourceId(sourceId) {
+  if (
+    typeof sourceId !== "string"
+    || !SOURCE_ID.test(sourceId)
+    || DANGEROUS_KEYS.has(sourceId)
+  ) {
+    throw new Error(`Data source id "${String(sourceId)}" is invalid.`);
+  }
+}
+
+function validateColumnName(value, description) {
+  if (
+    typeof value !== "string"
+    || value.trim() === ""
+    || /[\u0000-\u001f\u007f]/.test(value)
+    || DANGEROUS_KEYS.has(value)
+  ) {
+    throw new Error(`${description} is invalid.`);
+  }
+}
+
+function validateGeoJsonFeature(feature, description) {
+  const entries = plainDataEntries(feature, description);
+  if (entryValue(entries, "type") !== "Feature") {
+    throw new Error(`${description} must have GeoJSON type "Feature".`);
+  }
+  const properties = entryValue(entries, "properties");
+  if (properties !== null) validateJsonValue(properties, `${description} properties`);
+  const geometry = entryValue(entries, "geometry");
+  if (geometry !== null) validateGeoJsonGeometry(geometry, `${description} geometry`);
+}
+
+function validateGeoJsonGeometry(geometry, description) {
+  const entries = plainDataEntries(geometry, description);
+  const type = entryValue(entries, "type");
+  if (type === "GeometryCollection") {
+    const geometries = denseDataArray(
+      entryValue(entries, "geometries"),
+      `${description} geometries`,
+    );
+    geometries.forEach((entry, index) => (
+      validateGeoJsonGeometry(entry, `${description} geometry ${index}`)
+    ));
+    return;
+  }
+  if (!GEOJSON_GEOMETRY_TYPES.has(type)) {
+    throw new Error(`${description} has an unsupported GeoJSON geometry type.`);
+  }
+  validateCoordinates(entryValue(entries, "coordinates"), `${description} coordinates`);
+}
+
+function validateCoordinates(value, description) {
+  const coordinates = denseDataArray(value, description);
+  if (coordinates.length === 0) {
+    throw new Error(`${description} cannot be empty.`);
+  }
+  if (coordinates.every((entry) => typeof entry === "number")) {
+    if (coordinates.length < 2 || coordinates.some((entry) => !Number.isFinite(entry))) {
+      throw new Error(`${description} position must contain finite coordinates.`);
     }
+    return;
+  }
+  if (coordinates.some((entry) => !Array.isArray(entry))) {
+    throw new Error(`${description} must contain coordinate arrays.`);
+  }
+  coordinates.forEach((entry, index) => (
+    validateCoordinates(entry, `${description} ${index}`)
+  ));
+}
+
+function validateJsonValue(value, description) {
+  if (isJsonScalar(value)) return;
+  if (Array.isArray(value)) {
+    denseDataArray(value, description).forEach((entry, index) => (
+      validateJsonValue(entry, `${description} ${index}`)
+    ));
+    return;
+  }
+  for (const [key, entry] of plainDataEntries(value, description)) {
+    validateJsonValue(entry, `${description}.${key}`);
   }
 }
 
@@ -354,21 +628,25 @@ function portableDashboard() {
 }
 
 function parsePortableSource(sourceId, source, portableSource) {
-  if (!isRecord(portableSource) || portableSource.kind !== source.kind) {
+  const entries = plainDataEntries(
+    portableSource,
+    `Portable data source "${sourceId}"`,
+  );
+  if (entryValue(entries, "kind") !== source.kind) {
     throw new Error(
       `Portable data source "${sourceId}" does not match its descriptor.`,
     );
   }
   if (source.kind === "geojson") {
-    if (!isRecord(portableSource.data)) {
-      throw new Error(`Portable GeoJSON source "${sourceId}" is invalid.`);
-    }
-    return structuredClone(portableSource.data);
+    const data = entryValue(entries, "data");
+    validateGeoJson(data, `Portable data source "${sourceId}" GeoJSON`);
+    return structuredClone(data);
   }
-  if (typeof portableSource.text !== "string") {
+  const text = entryValue(entries, "text");
+  if (typeof text !== "string") {
     throw new Error(`Portable CSV source "${sourceId}" is invalid.`);
   }
-  return parseCsvText(portableSource.text, source.path);
+  return parseCsvText(text, source.path);
 }
 
 function usingFileProtocol() {
@@ -383,16 +661,78 @@ async function fetchJson(url, description) {
   return response.json();
 }
 
-function rejectUnknownKeys(value, allowed, description) {
-  for (const key of Object.keys(value)) {
+function plainDataEntries(value, description) {
+  if (
+    value === null
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || ![Object.prototype, null].includes(Object.getPrototypeOf(value))
+    || Object.getOwnPropertySymbols(value).length > 0
+  ) {
+    throw new TypeError(`${description} must be an ordinary data object.`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const entries = [];
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!Object.hasOwn(descriptor, "value") || !descriptor.enumerable) {
+      throw new TypeError(
+        `${description} property "${key}" must be an enumerable data property.`,
+      );
+    }
+    entries.push([key, descriptor.value]);
+  }
+  return entries;
+}
+
+function denseDataArray(value, description) {
+  if (
+    !Array.isArray(value)
+    || Object.getPrototypeOf(value) !== Array.prototype
+    || Object.getOwnPropertySymbols(value).length > 0
+  ) {
+    throw new TypeError(`${description} must be an ordinary array.`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const values = [];
+  for (let index = 0; index < value.length; index += 1) {
+    const descriptor = descriptors[index];
+    if (
+      !descriptor
+      || !Object.hasOwn(descriptor, "value")
+      || !descriptor.enumerable
+    ) {
+      throw new TypeError(`${description} must be a dense data array.`);
+    }
+    values.push(descriptor.value);
+  }
+  const extra = Object.keys(descriptors).filter((key) => (
+    key !== "length" && !/^(?:0|[1-9]\d*)$/.test(key)
+  ));
+  if (extra.length > 0) {
+    throw new TypeError(`${description} cannot contain named properties.`);
+  }
+  return values;
+}
+
+function rejectUnknownEntries(entries, allowed, description) {
+  for (const [key] of entries) {
     if (!allowed.has(key)) {
       throw new Error(`Unknown ${description} property "${key}".`);
     }
   }
 }
 
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+function entryValue(entries, key) {
+  return entries.find(([entryKey]) => entryKey === key)?.[1];
+}
+
+function isJsonScalar(value) {
+  return (
+    value === null
+    || typeof value === "string"
+    || typeof value === "boolean"
+    || (typeof value === "number" && Number.isFinite(value))
+  );
 }
 
 function stableStringify(value) {
@@ -409,22 +749,17 @@ function normalizePages(dashboard) {
   if (Array.isArray(dashboard.pages)) {
     return dashboard.pages;
   }
-
-  return [
-    {
-      id: "dashboard",
-      label: "Dashboard",
+  return [{
+    id: "dashboard",
+    label: "Dashboard",
+    title: dashboard.title,
+    description: dashboard.description,
+    sections: [{
+      id: "main",
       title: dashboard.title,
       description: dashboard.description,
-      sections: [
-        {
-          id: "main",
-          title: dashboard.title,
-          description: dashboard.description,
-          layout: dashboard.layout,
-          panels: dashboard.charts ?? [],
-        },
-      ],
-    },
-  ];
+      layout: dashboard.layout,
+      panels: dashboard.charts ?? [],
+    }],
+  }];
 }
