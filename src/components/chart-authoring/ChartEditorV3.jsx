@@ -103,9 +103,11 @@ export function reduceChartEditorState(state, action, context = {}) {
     case "cancelConfirmation":
       return { ...state, confirmation: null };
     case "requestConversion":
-      return requestEditorConversion(state, action.targetTypeId);
+      return requestEditorConversion(state, action.targetTypeId, context);
     case "updateConversionRole":
-      return updateConversionRole(state, action);
+      return updateConversionRole(state, action, context);
+    case "updateConversionPlayback":
+      return updateConversionPlayback(state, action);
     case "cancelConversion":
       return { ...state, conversion: null, error: "" };
     case "applyConversion":
@@ -474,6 +476,10 @@ export default function ChartEditorV3({
         roleId,
         value,
       }),
+      onPlaybackSelection: (selection) => dispatch({
+        type: "updateConversionPlayback",
+        selection,
+      }),
       onConfirm: () => dispatch({ type: "applyConversion" }),
       onCancel: () => dispatch({ type: "cancelConversion" }),
     }),
@@ -598,7 +604,7 @@ function updateEditorMembership(state, action, context) {
   };
 }
 
-function requestEditorConversion(state, targetTypeId) {
+function requestEditorConversion(state, targetTypeId, context) {
   const target = requiredString(targetTypeId, "Target chart type");
   const targetSchema = getChartSchema(target);
   if (target === state.draft.typeId) return state;
@@ -608,6 +614,14 @@ function requestEditorConversion(state, targetTypeId) {
     chart: state.draft,
     targetSchema,
     plan,
+  });
+  const playback = conversionPlaybackState({
+    chart: state.draft,
+    groups: state.timeSyncGroups,
+    targetSchema,
+    plan,
+    roleAssignments,
+    profile: conversionProfile(context, state.draft.sourceId),
   });
   return {
     ...state,
@@ -620,15 +634,15 @@ function requestEditorConversion(state, targetTypeId) {
         chart: state.draft,
         groups: state.timeSyncGroups,
         targetSchema,
-        plan,
-        roleAssignments,
+        playback,
       }),
+      playback,
     },
     error: "",
   };
 }
 
-function updateConversionRole(state, action) {
+function updateConversionRole(state, action, context) {
   if (!state.conversion) return state;
   const roleId = requiredString(action.roleId, "Conversion role");
   const roleAssignments = {
@@ -641,6 +655,15 @@ function updateConversionRole(state, action) {
     roleAssignments,
   );
   const targetSchema = getChartSchema(state.conversion.targetTypeId);
+  const playback = conversionPlaybackState({
+    chart: state.draft,
+    groups: state.timeSyncGroups,
+    targetSchema,
+    plan,
+    roleAssignments,
+    profile: conversionProfile(context, state.draft.sourceId),
+    previousPlayback: state.conversion.playback,
+  });
   return {
     ...state,
     conversion: {
@@ -651,8 +674,35 @@ function updateConversionRole(state, action) {
         chart: state.draft,
         groups: state.timeSyncGroups,
         targetSchema,
-        plan,
-        roleAssignments,
+        playback,
+      }),
+      playback,
+    },
+    error: "",
+  };
+}
+
+function updateConversionPlayback(state, action) {
+  if (!state.conversion?.playback) return state;
+  const selection = normalizePlaybackSelection(
+    action.selection,
+    state.conversion.playback,
+  );
+  const playback = {
+    ...state.conversion.playback,
+    selection,
+  };
+  const targetSchema = getChartSchema(state.conversion.targetTypeId);
+  return {
+    ...state,
+    conversion: {
+      ...state.conversion,
+      playback,
+      timeSyncConsequence: conversionTimeSyncConsequence({
+        chart: state.draft,
+        groups: state.timeSyncGroups,
+        targetSchema,
+        playback,
       }),
     },
     error: "",
@@ -667,12 +717,19 @@ function applyEditorConversion(state, context) {
         "Complete the required data roles before applying this chart type change.",
       );
     }
-    if (state.conversion.timeSyncConsequence?.kind === "ambiguous") {
+    if (
+      state.conversion.timeSyncConsequence?.kind === "ambiguous"
+      || (
+        state.conversion.playback?.selectable
+        && state.conversion.playback.options.length > 0
+        && !state.conversion.playback.selection
+      )
+    ) {
       throw new Error(
-        "Choose one temporal data role before preserving synchronized playback.",
+        "Choose a playback time role or remove the chart from synchronized playback.",
       );
     }
-    const converted = applyChartConversion(
+    let converted = applyChartConversion(
       state.draft,
       state.conversion.targetTypeId,
       state.conversion.roleAssignments,
@@ -685,12 +742,22 @@ function applyEditorConversion(state, context) {
         "Check the required data roles before applying this chart type change.",
       );
     }
+    const consequence = state.conversion.timeSyncConsequence;
+    if (
+      consequence?.kind === "remove"
+      && converted.interaction?.timeSync !== null
+    ) {
+      converted = normalizeChartInstance(setAtPath(
+        converted,
+        ["interaction", "timeSync"],
+        null,
+      ));
+    }
     validateChartInstance(converted, {
       columnTypes: profileColumnMap(
         context.profile ?? readEntry(context.profiles, converted.sourceId),
       ),
     });
-    const consequence = state.conversion.timeSyncConsequence;
     const groups = consequence?.kind === "remove"
       ? removeChartFromGroups(state.timeSyncGroups, converted.id)
       : remapChartTimeRole(
@@ -710,7 +777,7 @@ function applyEditorConversion(state, context) {
     };
   } catch (error) {
     const detail = safeMessage(error);
-    const message = /required data roles/i.test(detail)
+    const message = /required data roles|playback time role/i.test(detail)
       ? detail
       : `Check the required data roles. ${detail}`;
     return {
@@ -745,43 +812,133 @@ function conversionTimeSyncConsequence({
   chart,
   groups,
   targetSchema,
-  plan,
-  roleAssignments,
+  playback,
 }) {
   const member = findChartTimeSyncMember(groups, chart.id);
   if (!chart.interaction?.timeSync || !member) return null;
-  if (!targetSchema.capabilities.timeSync) {
+  if (
+    !targetSchema.capabilities.timeSync
+    || playback?.selection?.mode === "remove"
+  ) {
+    return {
+      kind: "remove",
+      fromRole: member.timeRole,
+      ...(playback?.selection?.explicit ? { intentional: true } : {}),
+    };
+  }
+  if (!playback || playback.options.length === 0) {
     return {
       kind: "remove",
       fromRole: member.timeRole,
     };
   }
-  const effectiveRoles = effectiveConversionRoles(
-    plan.preservedRoles,
-    roleAssignments,
-  );
-  const assignedTemporalRoles = targetSchema.roles.filter((role) => (
-    role.accepts.includes("temporal")
-    && temporalRoleAssigned(effectiveRoles[role.id], role)
-  ));
-  if (assignedTemporalRoles.length === 0) {
-    return {
-      kind: "remove",
-      fromRole: member.timeRole,
-    };
-  }
-  if (assignedTemporalRoles.length > 1) {
+  if (!playback.selection) {
     return {
       kind: "ambiguous",
       fromRole: member.timeRole,
     };
   }
-  const target = assignedTemporalRoles[0];
+  const target = playback.options.find(
+    ({ roleId }) => roleId === playback.selection.roleId,
+  );
+  if (!target) {
+    return {
+      kind: "ambiguous",
+      fromRole: member.timeRole,
+    };
+  }
   return {
-    kind: target.id === member.timeRole ? "preserve" : "remap",
+    kind: target.roleId === member.timeRole ? "preserve" : "remap",
     fromRole: member.timeRole,
-    toRole: target.id,
+    toRole: target.roleId,
     targetLabel: target.label,
+  };
+}
+
+function conversionPlaybackState({
+  chart,
+  groups,
+  targetSchema,
+  plan,
+  roleAssignments,
+  profile,
+  previousPlayback,
+}) {
+  const synchronized = Boolean(
+    chart.interaction?.timeSync
+    && findChartTimeSyncMember(groups, chart.id),
+  );
+  if (!synchronized) return null;
+  const selectable = targetSchema.capabilities.timeSync;
+  const effectiveRoles = effectiveConversionRoles(
+    plan.preservedRoles,
+    roleAssignments,
+  );
+  const requiredRoleIds = new Set(
+    plan.requiredRoles.map(({ id }) => id),
+  );
+  const options = selectable
+    ? targetSchema.roles.flatMap((role) => (
+        role.accepts.includes("temporal")
+        && !requiredRoleIds.has(role.id)
+        && temporalRoleAssigned(effectiveRoles[role.id], role, profile)
+          ? [{ roleId: role.id, label: role.label }]
+          : []
+      ))
+    : [];
+  let selection = null;
+  const previous = previousPlayback?.selection;
+  if (!selectable || options.length === 0) {
+    selection = { mode: "remove", explicit: false };
+  } else if (
+    previous?.mode === "remove"
+    && previous.explicit === true
+  ) {
+    selection = previous;
+  } else if (
+    previous?.mode === "role"
+    && previous.explicit === true
+    && options.some(({ roleId }) => roleId === previous.roleId)
+  ) {
+    selection = previous;
+  } else if (options.length === 1) {
+    selection = {
+      mode: "role",
+      roleId: options[0].roleId,
+      explicit: false,
+    };
+  }
+  return {
+    selectable,
+    options,
+    selection,
+  };
+}
+
+function normalizePlaybackSelection(selection, playback) {
+  if (selection === null && playback.options.length > 1) return null;
+  if (!isRecord(selection) || typeof selection.mode !== "string") {
+    throw new Error("A playback time role choice is required.");
+  }
+  if (selection.mode === "remove") {
+    if (!playback.selectable || playback.options.length === 0) {
+      throw new Error("Synchronized playback removal is not selectable here.");
+    }
+    return { mode: "remove", explicit: true };
+  }
+  if (selection.mode !== "role") {
+    throw new Error("Unknown synchronized playback choice.");
+  }
+  const roleId = requiredString(selection.roleId, "Playback time role");
+  if (!playback.options.some((option) => option.roleId === roleId)) {
+    throw new Error(
+      `Playback time role "${roleId}" is not eligible for the current data roles.`,
+    );
+  }
+  return {
+    mode: "role",
+    roleId,
+    explicit: true,
   };
 }
 
@@ -797,7 +954,7 @@ function effectiveConversionRoles(preservedRoles, roleAssignments) {
   return roles;
 }
 
-function temporalRoleAssigned(assignment, role) {
+function temporalRoleAssigned(assignment, role, profileEntry) {
   const bindings = Array.isArray(assignment)
     ? assignment
     : assignment ? [assignment] : [];
@@ -813,7 +970,21 @@ function temporalRoleAssigned(assignment, role) {
         && role.accepts[0] === "temporal"
       )
     )
+    && profileAllowsTemporalField(profileEntry, binding.field)
   ));
+}
+
+function profileAllowsTemporalField(profileEntry, field) {
+  const profile = profileEntry?.datasetProfile
+    ?? profileEntry?.profile
+    ?? profileEntry;
+  if (!Array.isArray(profile?.columns)) return true;
+  const columns = profile.columns.filter((column) => column?.name === field);
+  return columns.length === 1 && columns[0].type === "temporal";
+}
+
+function conversionProfile(context, sourceId) {
+  return context?.profile ?? readEntry(context?.profiles, sourceId);
 }
 
 function findChartTimeSyncMember(groups, chartId) {

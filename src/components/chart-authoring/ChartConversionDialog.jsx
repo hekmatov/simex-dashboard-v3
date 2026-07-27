@@ -7,6 +7,7 @@ export default function ChartConversionDialog({
   error = "",
   columns = [],
   onRoleAssignment = noop,
+  onPlaybackSelection = noop,
   onConfirm = noop,
   onCancel = noop,
 } = {}) {
@@ -19,7 +20,14 @@ export default function ChartConversionDialog({
     ? plan.removedSettings
     : [];
   const preserved = Object.entries(plan.preservedRoles ?? {});
-  const blocked = plan.requiredRoles.length > 0;
+  const playback = conversion.playback;
+  const requiredRolesBlocked = plan.requiredRoles.length > 0;
+  const playbackChoiceRequired = Boolean(
+    playback?.selectable
+    && playback.options?.length > 0
+    && !playback.selection,
+  );
+  const blocked = requiredRolesBlocked || playbackChoiceRequired;
   return React.createElement(
     "div",
     {
@@ -108,6 +116,64 @@ export default function ChartConversionDialog({
             { className: "chart-conversion-no-removals" },
             "No configured settings need to be removed.",
           ),
+      playback?.selectable && playback.options?.length > 0
+        ? React.createElement(
+            "section",
+            { className: "chart-conversion-playback-choice" },
+            React.createElement(
+              "label",
+              { htmlFor: "chart-conversion-playback-role" },
+              "Playback time role",
+            ),
+            React.createElement(
+              "select",
+              {
+                id: "chart-conversion-playback-role",
+                value: playbackSelectionValue(playback.selection),
+                "aria-describedby": playbackChoiceRequired
+                  ? "chart-conversion-playback-help chart-conversion-playback-error"
+                  : "chart-conversion-playback-help",
+                onChange: (event) => onPlaybackSelection(
+                  playbackSelectionFromValue(event.target.value),
+                ),
+              },
+              playback.options.length > 1
+                ? React.createElement(
+                    "option",
+                    { value: "" },
+                    "Choose a playback time role",
+                  )
+                : null,
+              playback.options.map(({ roleId, label }) =>
+                React.createElement(
+                  "option",
+                  { key: roleId, value: `role:${roleId}` },
+                  label,
+                )),
+              React.createElement(
+                "option",
+                { value: "remove" },
+                "Remove from synchronized playback",
+              ),
+            ),
+            React.createElement(
+              "p",
+              { id: "chart-conversion-playback-help" },
+              "Choose which assigned time role follows the shared playback clock, or intentionally remove this chart from synchronized playback.",
+            ),
+            playbackChoiceRequired
+              ? React.createElement(
+                  "p",
+                  {
+                    id: "chart-conversion-playback-error",
+                    className: "wizard-error",
+                    role: "alert",
+                  },
+                  "Choose a playback time role or remove this chart from synchronized playback.",
+                )
+              : null,
+          )
+        : null,
       conversion.timeSyncConsequence
         ? React.createElement(
             "section",
@@ -131,7 +197,7 @@ export default function ChartConversionDialog({
             error,
           )
         : null,
-      blocked
+      requiredRolesBlocked
         ? React.createElement(
             "p",
             { className: "wizard-error", role: "alert" },
@@ -192,7 +258,25 @@ function timeSyncConsequenceSummary(consequence) {
   if (consequence.kind === "ambiguous") {
     return "Choose one temporal role before synchronized playback can be preserved.";
   }
+  if (consequence.intentional) {
+    return "This chart will be removed from synchronized playback. Its assigned analytical time roles will be retained.";
+  }
   return "Synchronized playback will be removed unless a compatible time role is assigned.";
+}
+
+function playbackSelectionValue(selection) {
+  if (selection?.mode === "role") return `role:${selection.roleId}`;
+  if (selection?.mode === "remove") return "remove";
+  return "";
+}
+
+function playbackSelectionFromValue(value) {
+  if (value === "") return null;
+  if (value === "remove") return { mode: "remove" };
+  if (value.startsWith("role:")) {
+    return { mode: "role", roleId: value.slice(5) };
+  }
+  return null;
 }
 
 function noop() {}

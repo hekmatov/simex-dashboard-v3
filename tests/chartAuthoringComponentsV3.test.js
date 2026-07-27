@@ -1805,6 +1805,339 @@ test("guided synchronized conversion remaps only the edited member semantic time
   }));
 });
 
+test("multi-temporal conversion requires an explicit schema-derived playback time role", () => {
+  const rows = [
+    {
+      observed: "2027-05-01",
+      capacity: 4,
+      event: "Alert issued",
+      start_at: "2027-05-01",
+      end_at: "2027-05-02",
+    },
+    {
+      observed: "2027-05-02",
+      capacity: 6,
+      event: "Response activated",
+      start_at: "2027-05-02",
+      end_at: "2027-05-03",
+    },
+  ];
+  const chart = synchronizedLineChart();
+  const other = synchronizedLineChart({
+    id: "other-line",
+    interaction: { timeSync: { groupId: "exercise-clock" } },
+  });
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal" },
+    start_at: { interpretation: "temporal" },
+    end_at: { interpretation: "temporal" },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "observed",
+    },
+    matching: { policy: "exact" },
+    members: [
+      {
+        chartId: chart.id,
+        timeRole: "observation",
+        matching: { policy: "nearest", toleranceMs: 3_600_000 },
+      },
+      {
+        chartId: other.id,
+        timeRole: "observation",
+        matching: { policy: "lastKnown" },
+      },
+    ],
+  }];
+  const context = {
+    existingCharts: [chart, other],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  };
+  const createAmbiguousTimelineConversion = () => {
+    let next = createChartEditorState({
+      chart,
+      timeSyncGroups: groups,
+    });
+    next = reduceChartEditorState(next, {
+      type: "requestConversion",
+      targetTypeId: "timeline",
+    }, context);
+    next = reduceChartEditorState(next, {
+      type: "updateConversionRole",
+      roleId: "event",
+      value: { field: "event" },
+    }, context);
+    next = reduceChartEditorState(next, {
+      type: "updateConversionRole",
+      roleId: "start",
+      value: {
+        field: "start_at",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    }, context);
+    assert.deepEqual(next.conversion.playback.options, [{
+      roleId: "start",
+      label: "Start",
+    }]);
+    assert.deepEqual(next.conversion.playback.selection, {
+      mode: "role",
+      roleId: "start",
+      explicit: false,
+    });
+    next = reduceChartEditorState(next, {
+      type: "updateConversionRole",
+      roleId: "end",
+      value: {
+        field: "end_at",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    }, context);
+    return next;
+  };
+
+  let state = createAmbiguousTimelineConversion();
+  assert.deepEqual(state.conversion.playback.options, [
+    { roleId: "start", label: "Start" },
+    { roleId: "end", label: "End" },
+  ]);
+  assert.equal(state.conversion.playback.selection, null);
+  assert.equal(state.conversion.timeSyncConsequence.kind, "ambiguous");
+  const ambiguousHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    columns: profile.columns,
+    onRoleAssignment() {},
+    onPlaybackSelection() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.match(ambiguousHtml, /Playback time role/);
+  assert.match(ambiguousHtml, />Start</);
+  assert.match(ambiguousHtml, />End</);
+  assert.match(ambiguousHtml, /Remove from synchronized playback/);
+  assert.match(
+    ambiguousHtml,
+    /aria-describedby="chart-conversion-playback-help chart-conversion-playback-error"/,
+  );
+  assert.match(
+    ambiguousHtml,
+    /id="chart-conversion-playback-error"[^>]*role="alert"/,
+  );
+  assert.doesNotMatch(
+    ambiguousHtml,
+    /Complete every required data role/,
+  );
+  assert.match(ambiguousHtml, /disabled/);
+
+  const beforeChart = state.draft;
+  const beforeGroups = state.timeSyncGroups;
+  const beforeDialog = state.conversion;
+  state = reduceChartEditorState(state, { type: "applyConversion" }, context);
+  assert.equal(state.draft, beforeChart);
+  assert.equal(state.timeSyncGroups, beforeGroups);
+  assert.equal(state.conversion, beforeDialog);
+  assert.match(state.error, /playback time role/i);
+  assert.doesNotMatch(state.error, /required data roles/i);
+  const failedHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    error: state.error,
+    columns: profile.columns,
+    onRoleAssignment() {},
+    onPlaybackSelection() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.match(
+    failedHtml,
+    /aria-describedby="chart-conversion-consequences chart-conversion-error"/,
+  );
+
+  state = reduceChartEditorState(state, {
+    type: "updateConversionPlayback",
+    selection: { mode: "role", roleId: "start" },
+  }, context);
+  assert.deepEqual(state.conversion.timeSyncConsequence, {
+    kind: "remap",
+    fromRole: "observation",
+    toRole: "start",
+    targetLabel: "Start",
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "start",
+    value: {
+      field: "event",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  }, context);
+  assert.deepEqual(state.conversion.playback.options, [{
+    roleId: "end",
+    label: "End",
+  }]);
+  assert.deepEqual(state.conversion.playback.selection, {
+    mode: "role",
+    roleId: "end",
+    explicit: false,
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "start",
+    value: {
+      field: "start_at",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  }, context);
+  assert.equal(state.conversion.playback.selection, null);
+  assert.equal(state.conversion.timeSyncConsequence.kind, "ambiguous");
+  state = reduceChartEditorState(state, {
+    type: "updateConversionPlayback",
+    selection: { mode: "role", roleId: "start" },
+  }, context);
+  state = reduceChartEditorState(state, { type: "applyConversion" }, context);
+  assert.equal(state.error, "");
+  assert.equal(state.draft.typeId, "timeline");
+  assert.deepEqual(Object.keys(state.draft.roles), ["event", "start", "end"]);
+  assert.equal(state.timeSyncGroups[0].members[0].timeRole, "start");
+  assert.deepEqual(state.timeSyncGroups[0].members[0].matching, {
+    policy: "nearest",
+    toleranceMs: 3_600_000,
+  });
+  assert.deepEqual(state.timeSyncGroups[0].members[1], groups[0].members[1]);
+
+  state = createAmbiguousTimelineConversion();
+  state = reduceChartEditorState(state, {
+    type: "updateConversionPlayback",
+    selection: { mode: "role", roleId: "end" },
+  }, context);
+  state = reduceChartEditorState(state, { type: "applyConversion" }, context);
+  assert.equal(state.error, "");
+  assert.equal(state.timeSyncGroups[0].members[0].timeRole, "end");
+  assert.deepEqual(Object.keys(state.draft.roles), ["event", "start", "end"]);
+});
+
+test("multi-temporal conversion cancel is exact and intentional playback removal retains analytical roles", () => {
+  const rows = [{
+    observed: "2027-05-01",
+    capacity: 4,
+    event: "Alert issued",
+    start_at: "2027-05-01",
+    end_at: "2027-05-02",
+  }];
+  const chart = synchronizedLineChart();
+  const other = synchronizedLineChart({
+    id: "other-line",
+    interaction: { timeSync: { groupId: "exercise-clock" } },
+  });
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal" },
+    start_at: { interpretation: "temporal" },
+    end_at: { interpretation: "temporal" },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "observed",
+    },
+    matching: { policy: "exact" },
+    members: [
+      {
+        chartId: chart.id,
+        timeRole: "observation",
+        matching: { policy: "nearest", toleranceMs: 3_600_000 },
+      },
+      {
+        chartId: other.id,
+        timeRole: "observation",
+        matching: { policy: "lastKnown" },
+      },
+    ],
+  }];
+  const context = {
+    existingCharts: [chart, other],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  };
+  const prepare = () => {
+    let next = createChartEditorState({ chart, timeSyncGroups: groups });
+    next = reduceChartEditorState(next, {
+      type: "requestConversion",
+      targetTypeId: "timeline",
+    }, context);
+    for (const [roleId, value] of Object.entries({
+      event: { field: "event" },
+      start: {
+        field: "start_at",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+      end: {
+        field: "end_at",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    })) {
+      next = reduceChartEditorState(next, {
+        type: "updateConversionRole",
+        roleId,
+        value,
+      }, context);
+    }
+    return next;
+  };
+
+  let state = prepare();
+  const draftBeforeCancel = state.draft;
+  const groupsBeforeCancel = state.timeSyncGroups;
+  state = reduceChartEditorState(state, { type: "cancelConversion" }, context);
+  assert.equal(state.draft, draftBeforeCancel);
+  assert.equal(state.timeSyncGroups, groupsBeforeCancel);
+  assert.equal(state.conversion, null);
+
+  state = prepare();
+  state = reduceChartEditorState(state, {
+    type: "updateConversionPlayback",
+    selection: { mode: "remove" },
+  }, context);
+  assert.deepEqual(state.conversion.timeSyncConsequence, {
+    kind: "remove",
+    fromRole: "observation",
+    intentional: true,
+  });
+  const removalHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    columns: profile.columns,
+    onRoleAssignment() {},
+    onPlaybackSelection() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.match(
+    removalHtml,
+    /will be removed from synchronized playback/i,
+  );
+  state = reduceChartEditorState(state, { type: "applyConversion" }, context);
+  assert.equal(state.error, "");
+  assert.equal(state.draft.typeId, "timeline");
+  assert.deepEqual(Object.keys(state.draft.roles), ["event", "start", "end"]);
+  assert.equal(state.draft.interaction.timeSync, null);
+  assert.deepEqual(state.timeSyncGroups, [{
+    ...groups[0],
+    members: [groups[0].members[1]],
+  }]);
+});
+
 test("conversion application fails closed with an associated bounded dialog error and can be corrected", () => {
   const rows = [
     { period: "May", capacity: 4 },
