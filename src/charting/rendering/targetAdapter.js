@@ -314,7 +314,7 @@ function targetIdentity(mark, index) {
   }
   const displayLabel = identityLabel(entity, label);
   return {
-    entityId: `target:${JSON.stringify(displayLabel)}`,
+    entityId: `target:${JSON.stringify(String(entity ?? label))}`,
     label: displayLabel,
   };
 }

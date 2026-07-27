@@ -354,8 +354,32 @@ test("repeated targets fail closed when stable semantic identity is missing or d
   assert.equal(duplicate.kind, "error");
   assert.match(duplicate.message, /duplicate.*identity/i);
   assert.ok(duplicate.message.length <= 240);
-  assert.equal(composite.kind, "targetCollection");
-  assert.equal(new Set(composite.items.map(({ entityId }) => entityId)).size, 2);
+  assert.equal(composite.kind, "error");
+  assert.match(composite.message, /duplicate.*identity/i);
+  assert.ok(composite.message.length <= 240);
+});
+
+test("repeated target entity identity remains stable when its descriptive label changes", () => {
+  const before = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { entity: " Clinic A ", label: "Beds", value: 4, target: 8 },
+      { entity: "Clinic B", label: "Beds", value: 6, target: 8 },
+    ]),
+  });
+  const after = buildRenderModel({
+    chart: chart("gauge"),
+    prepared: ready([
+      { entity: "Clinic A", label: "Critical-care beds", value: 5, target: 8 },
+      { entity: "Clinic B", label: "Beds", value: 7, target: 8 },
+    ]),
+  });
+
+  assert.equal(before.kind, "targetCollection");
+  assert.equal(after.kind, "targetCollection");
+  assert.equal(before.items[0].entityId, after.items[0].entityId);
+  assert.equal(before.items[0].label, "Clinic A \u2014 Beds");
+  assert.equal(after.items[0].label, "Clinic A \u2014 Critical-care beds");
 });
 
 test("repeated target identities normalize visible labels and reject blank or colliding semantics", () => {
