@@ -1,7 +1,10 @@
 import React from "react";
+import CollectionDisplay from "../collection/CollectionDisplay.jsx";
+import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import { titleContainerProps } from "./chartViewPresentation.js";
 
 export default function CardChartView({ model, chart = {}, provenance }) {
+  const playback = useOptionalPlayback();
   const title = chart.title || "Chart summary";
   const description = chart.description || "Summary values for this chart.";
   const items = Array.isArray(model.items) ? model.items : [];
@@ -12,11 +15,27 @@ export default function CardChartView({ model, chart = {}, provenance }) {
   },
     React.createElement("h3", { className: "chart-view-title" }, title),
     React.createElement("p", { className: "chart-view-description" }, description),
-    React.createElement("div", { className: "chart-card-collection", role: "list" }, items.map((item) => React.createElement(CardItem, { key: item.key, item, chart }))),
+    React.createElement("div", { className: "chart-card-collection", role: items.length <= 1 ? "list" : undefined },
+      items.length <= 1
+        ? items.map((item) => React.createElement(CardItem, {
+            key: item.key,
+            item,
+            chart,
+          }))
+        : React.createElement(CollectionDisplay, {
+            items: collectionItems(items),
+            settings: model.presentation?.collection ?? {},
+            playback,
+            renderItem: (item) => React.createElement(CardItem, {
+              item,
+              chart,
+              nested: true,
+            }),
+          })),
     React.createElement(Provenance, { provenance }));
 }
 
-function CardItem({ item, chart }) {
+function CardItem({ item, chart, nested = false }) {
   const fields = [
     ["Value", formatValue(item.value)],
     item.target !== null && item.target !== undefined ? ["Target", formatValue(item.target)] : null,
@@ -28,13 +47,30 @@ function CardItem({ item, chart }) {
     item.comparisonTime ? ["Compared with", item.comparisonTime] : null,
     item.time ? ["Observed", item.time] : null,
   ].filter(Boolean);
-  return React.createElement("article", { className: "chart-card", role: "listitem" },
+  return React.createElement("article", {
+    className: "chart-card",
+    role: nested ? undefined : "listitem",
+  },
     React.createElement("h4", null, item.label || chart.title || "Value"),
     React.createElement("dl", null, fields.map(([label, value]) => React.createElement("div", {
       key: label,
       className: `chart-card-${label.toLowerCase().replaceAll(" ", "-")}`,
       "aria-label": label === "Compared with" ? `${label} ${value}` : undefined,
     }, React.createElement("dt", null, label), React.createElement("dd", null, value)))));
+}
+
+function collectionItems(items) {
+  return items.map((item, index) => {
+    const entityId = typeof item.entityId === "string" && item.entityId.trim()
+      ? item.entityId
+      : typeof item.key === "string" && item.key.trim()
+        ? item.key
+        : null;
+    if (!entityId) {
+      throw new Error(`Card collection item ${index + 1} requires a stable key.`);
+    }
+    return { ...item, entityId };
+  });
 }
 
 function Provenance({ provenance = {} }) {

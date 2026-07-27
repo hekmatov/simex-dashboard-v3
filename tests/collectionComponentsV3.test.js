@@ -1,0 +1,459 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { register } from "node:module";
+
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+register(`data:text/javascript,${encodeURIComponent(`
+export async function load(url, context, nextLoad) {
+  if (url.endsWith(".jsx")) {
+    const loaded = await nextLoad(url, { ...context, format: "module" });
+    return { format: "module", source: loaded.source, shortCircuit: true };
+  }
+  return nextLoad(url, context);
+}
+`)}`, import.meta.url);
+
+const {
+  default: CollectionDisplay,
+} = await import("../src/components/collection/CollectionDisplay.jsx");
+const {
+  clampCollectionPage,
+  pageForCollectionEntity,
+} = await import("../src/components/collection/CollectionGrid.jsx");
+const {
+  createCollectionTimer,
+  isCarouselPaused,
+  nextCarouselPage,
+  readCollectionEnvironment,
+  subscribeToCollectionEnvironment,
+} = await import("../src/components/collection/CollectionCarousel.jsx");
+const {
+  default: CardChartView,
+} = await import("../src/components/charts/CardChartView.jsx");
+
+const twelveItems = collectionItems(12);
+
+test("fixed 3 by 3 collections expose exact dimensions and manual pages for overflow", () => {
+  const html = renderCollection({
+    layout: "fixed",
+    rows: 3,
+    columns: 3,
+    gap: 12,
+  }, twelveItems);
+
+  assert.match(html, /data-collection-layout="fixed"/);
+  assert.match(html, /data-collection-rows="3"/);
+  assert.match(html, /data-collection-columns="3"/);
+  assert.match(html, /grid-template-columns:repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(html, /grid-template-rows:repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(html, /gap:12px/);
+  assert.match(html, /Page 1 of 2/);
+  assert.match(html, /aria-label="Previous collection page"[^>]*disabled/);
+  assert.match(html, /aria-label="Next collection page"/);
+  assert.equal((html.match(/role="listitem"/g) ?? []).length, 9);
+  assert.match(html, /Item 9/);
+  assert.doesNotMatch(html, /Item 10/);
+});
+
+test("scroll collections keep one keyboard-accessible vertical region with every item", () => {
+  const html = renderCollection({
+    layout: "scroll",
+    rows: 2,
+    columns: 2,
+  }, collectionItems(7));
+
+  assert.match(html, /data-collection-layout="scroll"/);
+  assert.match(html, /role="region"/);
+  assert.match(html, /aria-label="Scrollable collection"/);
+  assert.match(html, /tabindex="0"/);
+  assert.equal((html.match(/role="listitem"/g) ?? []).length, 7);
+  assert.doesNotMatch(html, /collection-pager|collection-carousel-controls/);
+});
+
+test("carousel SSR is static, accessible, manually operable, and does not allocate a timer", () => {
+  const originalSetInterval = globalThis.setInterval;
+  let allocations = 0;
+  globalThis.setInterval = () => {
+    allocations += 1;
+    return 1;
+  };
+  try {
+    const html = renderCollection({
+      layout: "carousel",
+      rows: 1,
+      columns: 3,
+      carousel: {
+        intervalMs: 5000,
+        loop: true,
+        pauseOnHover: true,
+        transition: "slide",
+      },
+    }, collectionItems(6));
+
+    assert.equal(allocations, 0);
+    assert.match(html, /data-collection-layout="carousel"/);
+    assert.match(html, /data-collection-transition="slide"/);
+    assert.match(html, /aria-label="Pause collection rotation"/);
+    assert.match(html, /aria-label="Previous collection page"[^>]*disabled/);
+    assert.match(html, /aria-label="Next collection page"/);
+    assert.match(html, /Page 1 of 2/);
+    assert.match(html, /aria-live="polite"/);
+  } finally {
+    globalThis.setInterval = originalSetInterval;
+  }
+});
+
+test("fixed, scroll, and carousel layouts compose with every ranking mode", () => {
+  const items = [
+    { entityId: "a", label: "Alpha", current: 1 },
+    { entityId: "b", label: "Bravo", current: 3 },
+    { entityId: "c", label: "Charlie", current: 2 },
+  ];
+  const rankings = [
+    [{ mode: "fixed" }, ["Alpha", "Bravo", "Charlie"]],
+    [{ mode: "sort", field: "current", direction: "desc" }, ["Bravo", "Charlie", "Alpha"]],
+    [{ mode: "priority", method: "highestCurrent" }, ["Bravo", "Charlie", "Alpha"]],
+  ];
+
+  for (const layout of ["fixed", "scroll", "carousel"]) {
+    for (const [ranking, expectedOrder] of rankings) {
+      const html = renderCollection({
+        layout,
+        rows: 2,
+        columns: 2,
+        ranking,
+      }, items);
+      assertTextOrder(html, expectedOrder, `${layout}/${ranking.mode}`);
+    }
+  }
+});
+
+test("playback order is locked only when collection playback reranking is disabled", () => {
+  const items = [
+    { entityId: "a", label: "Alpha", current: 1 },
+    { entityId: "b", label: "Bravo", current: 3 },
+    { entityId: "c", label: "Charlie", current: 2 },
+  ];
+  const baseSettings = {
+    layout: "fixed",
+    rows: 1,
+    columns: 3,
+    ranking: { mode: "priority", method: "highestCurrent" },
+  };
+  const playback = {
+    activeEpochMs: Date.UTC(2027, 4, 2),
+    lockedEntityOrder: ["a", "c", "b"],
+    playing: true,
+  };
+  const locked = renderCollection({
+    ...baseSettings,
+    playback: { rerank: false, pauseCarousel: true },
+  }, items, playback);
+  const reranked = renderCollection({
+    ...baseSettings,
+    playback: { rerank: true, pauseCarousel: true },
+  }, items, playback);
+
+  assertTextOrder(locked, ["Alpha", "Charlie", "Bravo"], "locked playback");
+  assertTextOrder(reranked, ["Bravo", "Charlie", "Alpha"], "reranked playback");
+});
+
+test("empty and single-page collections avoid misleading navigation", () => {
+  const empty = renderCollection({ layout: "fixed" }, []);
+  const singleFixed = renderCollection({
+    layout: "fixed",
+    rows: 2,
+    columns: 2,
+  }, collectionItems(1));
+  const singleCarousel = renderCollection({
+    layout: "carousel",
+    rows: 2,
+    columns: 2,
+  }, collectionItems(4));
+
+  assert.match(empty, /role="status"/);
+  assert.match(empty, /No collection items are available/);
+  assert.doesNotMatch(empty, /role="list"/);
+  assert.doesNotMatch(singleFixed, /collection-pager/);
+  assert.doesNotMatch(singleCarousel, /collection-carousel-controls/);
+  assert.doesNotMatch(singleCarousel, /collection-pager/);
+});
+
+test("page helpers clamp changes and retain the page containing a focused entity", () => {
+  const items = collectionItems(8);
+
+  assert.equal(clampCollectionPage(7, 3), 2);
+  assert.equal(clampCollectionPage(2, 0), 0);
+  assert.equal(pageForCollectionEntity(items, "entity-7", 3, 0), 2);
+  assert.equal(pageForCollectionEntity(items, "missing", 3, 1), 1);
+  assert.equal(nextCarouselPage(0, 3, 1, true), 1);
+  assert.equal(nextCarouselPage(2, 3, 1, true), 0);
+  assert.equal(nextCarouselPage(2, 3, 1, false), 2);
+  assert.equal(nextCarouselPage(0, 3, -1, true), 2);
+});
+
+test("stable entity identity is exposed while rendering leaves inputs untouched", () => {
+  const items = [
+    { entityId: "clinic-a", label: "Clinic A", current: 2 },
+    { entityId: "clinic-b", label: "Clinic B", current: 4 },
+  ];
+  const settings = {
+    layout: "fixed",
+    rows: 1,
+    columns: 2,
+    ranking: { mode: "sort", field: "current", direction: "desc" },
+  };
+  const beforeItems = structuredClone(items);
+  const beforeSettings = structuredClone(settings);
+  const html = renderCollection(settings, items);
+
+  assert.match(html, /data-collection-entity-id="clinic-b"/);
+  assert.match(html, /data-collection-entity-id="clinic-a"/);
+  assertTextOrder(html, ["Clinic B", "Clinic A"], "stable identity");
+  assert.deepEqual(items, beforeItems);
+  assert.deepEqual(settings, beforeSettings);
+});
+
+test("carousel pause rules cover manual, hover, focus, hidden, motion, and playback states", () => {
+  const settings = {
+    carousel: { pauseOnHover: true },
+    playback: { pauseCarousel: true },
+  };
+  const active = {
+    manualPaused: false,
+    hovered: false,
+    focused: false,
+    documentHidden: false,
+    reducedMotion: false,
+    playbackPlaying: false,
+  };
+
+  assert.equal(isCarouselPaused(active, settings), false);
+  for (const reason of [
+    "manualPaused",
+    "hovered",
+    "focused",
+    "documentHidden",
+    "reducedMotion",
+    "playbackPlaying",
+  ]) {
+    assert.equal(
+      isCarouselPaused({ ...active, [reason]: true }, settings),
+      true,
+      reason,
+    );
+  }
+  assert.equal(
+    isCarouselPaused({ ...active, hovered: true }, {
+      ...settings,
+      carousel: { pauseOnHover: false },
+    }),
+    false,
+  );
+  assert.equal(
+    isCarouselPaused({ ...active, playbackPlaying: true }, {
+      ...settings,
+      playback: { pauseCarousel: false },
+    }),
+    false,
+  );
+});
+
+test("carousel owns one timer and cleans it completely", () => {
+  const calls = [];
+  const intervals = new Map();
+  const scheduler = {
+    setInterval(callback, delay) {
+      intervals.set(1, callback);
+      calls.push(`set:${delay}`);
+      return 1;
+    },
+    clearInterval(id) {
+      intervals.delete(id);
+      calls.push(`clear:${id}`);
+    },
+  };
+  let ticks = 0;
+  const cleanup = createCollectionTimer({
+    enabled: true,
+    intervalMs: 5000,
+    onTick: () => { ticks += 1; },
+    scheduler,
+  });
+
+  assert.equal(intervals.size, 1);
+  intervals.get(1)();
+  assert.equal(ticks, 1);
+  cleanup();
+  cleanup();
+  assert.deepEqual(calls, ["set:5000", "clear:1"]);
+  assert.equal(intervals.size, 0);
+
+  createCollectionTimer({
+    enabled: false,
+    intervalMs: 5000,
+    onTick: () => { ticks += 1; },
+    scheduler,
+  })();
+  assert.deepEqual(calls, ["set:5000", "clear:1"]);
+});
+
+test("carousel environment subscription is singular, live, and fully cleaned", () => {
+  const documentListeners = new Map();
+  const motionListeners = new Set();
+  const documentTarget = {
+    hidden: false,
+    addEventListener(type, listener) {
+      assert.equal(documentListeners.has(type), false);
+      documentListeners.set(type, listener);
+    },
+    removeEventListener(type, listener) {
+      if (documentListeners.get(type) === listener) documentListeners.delete(type);
+    },
+  };
+  const motionQuery = {
+    matches: false,
+    addEventListener(type, listener) {
+      assert.equal(type, "change");
+      motionListeners.add(listener);
+    },
+    removeEventListener(type, listener) {
+      assert.equal(type, "change");
+      motionListeners.delete(listener);
+    },
+  };
+  const states = [];
+  const cleanup = subscribeToCollectionEnvironment({
+    documentTarget,
+    motionQuery,
+    onChange: (state) => states.push(state),
+  });
+
+  documentTarget.hidden = true;
+  documentListeners.get("visibilitychange")();
+  motionQuery.matches = true;
+  [...motionListeners][0]();
+  cleanup();
+
+  assert.deepEqual(states, [
+    { documentHidden: false, reducedMotion: false },
+    { documentHidden: true, reducedMotion: false },
+    { documentHidden: true, reducedMotion: true },
+  ]);
+  assert.equal(documentListeners.size, 0);
+  assert.equal(motionListeners.size, 0);
+});
+
+test("carousel reads hidden and reduced-motion state before allocating effects", () => {
+  assert.deepEqual(
+    readCollectionEnvironment(
+      { hidden: true },
+      { matches: true },
+    ),
+    { documentHidden: true, reducedMotion: true },
+  );
+});
+
+test("CardChartView delegates repeated cards and preserves card semantics and provenance", () => {
+  const html = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: {
+      title: "Facility capacity",
+      description: "Current capacity by facility.",
+      presentation: { title: { align: "right" } },
+    },
+    model: {
+      items: [
+        cardItem("clinic-a", "Clinic A", 4),
+        cardItem("clinic-b", "Clinic B", 8),
+        cardItem("clinic-c", "Clinic C", 6),
+      ],
+      presentation: {
+        collection: {
+          layout: "fixed",
+          rows: 1,
+          columns: 2,
+          ranking: { mode: "priority", method: "highestCurrent" },
+        },
+      },
+    },
+    provenance: { label: "Capacity register", capturedAt: "2027-05-02" },
+  }));
+
+  assert.match(html, /data-title-align="right"/);
+  assert.match(html, /Facility capacity/);
+  assert.match(html, /Current capacity by facility/);
+  assert.match(html, /data-collection-layout="fixed"/);
+  assert.match(html, /Page 1 of 2/);
+  assertTextOrder(html, ["Clinic B", "Clinic C"], "card priority");
+  assert.doesNotMatch(html, /Clinic A/);
+  assert.match(html, /role="listitem"/);
+  assert.match(html, /Source: Capacity register/);
+  assert.match(html, /Captured: 2027-05-02/);
+});
+
+test("CardChartView preserves the static single-item card path", () => {
+  const html = renderToStaticMarkup(React.createElement(CardChartView, {
+    chart: { title: "Current capacity" },
+    model: {
+      items: [cardItem("capacity", "Capacity", 8)],
+      presentation: {
+        collection: {
+          layout: "carousel",
+          rows: 1,
+          columns: 1,
+        },
+      },
+    },
+  }));
+
+  assert.match(html, /class="chart-card-collection"/);
+  assert.match(html, /class="chart-card" role="listitem"/);
+  assert.doesNotMatch(html, /collection-display|collection-carousel-controls/);
+});
+
+function renderCollection(settings, items, playback = null) {
+  return renderToStaticMarkup(React.createElement(CollectionDisplay, {
+    items,
+    settings,
+    playback,
+    renderItem: (item) => React.createElement("span", null, item.label),
+  }));
+}
+
+function collectionItems(count) {
+  return Array.from({ length: count }, (_, index) => ({
+    entityId: `entity-${index + 1}`,
+    label: `Item ${index + 1}`,
+    current: index + 1,
+  }));
+}
+
+function cardItem(key, label, value) {
+  return {
+    key,
+    label,
+    value,
+    current: value,
+    target: null,
+    comparison: null,
+    delta: null,
+    direction: null,
+    favorability: null,
+    time: null,
+  };
+}
+
+function assertTextOrder(html, labels, description) {
+  const positions = labels.map((label) => html.indexOf(label));
+  assert.ok(
+    positions.every((position) => position >= 0),
+    `${description}: expected all labels in ${html}`,
+  );
+  assert.deepEqual(
+    [...positions].sort((left, right) => left - right),
+    positions,
+    `${description}: expected ${labels.join(", ")}`,
+  );
+}
