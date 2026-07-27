@@ -1101,6 +1101,216 @@ th {
   font-weight: 600;
 }
 
+.chart-type-picker,
+.chart-authoring-section,
+.chart-authoring-preview {
+  background: #fff;
+  border: 1px solid #d8e2ec;
+  border-radius: 14px;
+  color: #08224a;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.chart-type-picker > h3,
+.chart-authoring-section > h3,
+.chart-type-purpose-group > h4 {
+  margin: 0;
+}
+
+.chart-type-picker > label,
+.chart-authoring-field > label,
+.settings-color-field > label {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-type-purpose-groups,
+.chart-authoring-section-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.chart-type-purpose-group {
+  display: grid;
+  gap: 8px;
+}
+
+.chart-type-card-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.chart-type-card {
+  align-items: start;
+  background: #f8fbff;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  color: #08224a;
+  display: grid;
+  gap: 5px;
+  min-height: 96px;
+  padding: 12px;
+  text-align: left;
+}
+
+.chart-type-card[aria-pressed="true"] {
+  background: #eef4ff;
+  border-color: #043bcb;
+  box-shadow: 0 0 0 2px rgb(4 59 203 / 12%);
+}
+
+.chart-type-card span,
+.chart-authoring-field small,
+.chart-authoring-detected,
+.chart-authoring-empty {
+  color: #49627a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.chart-authoring-field {
+  border: 0;
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.chart-authoring-field input,
+.chart-authoring-field select,
+.chart-authoring-field textarea,
+.chart-type-picker input {
+  border: 1px solid #bdcbd9;
+  border-radius: 8px;
+  color: #08224a;
+  font: inherit;
+  min-height: 38px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.chart-authoring-field > legend {
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 7px;
+  padding: 0;
+}
+
+.chart-authoring-field [aria-invalid="true"] {
+  border-color: #b42318;
+}
+
+.chart-authoring-field [role="alert"] {
+  color: #b42318;
+}
+
+.chart-authoring-control-grid,
+.chart-authoring-role-list > div {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.chart-authoring-control-grid > label,
+.chart-authoring-role-row > label {
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.chart-authoring-role-row {
+  align-items: end;
+  background: #f8fbff;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.5fr) auto;
+  padding: 10px;
+}
+
+.chart-authoring-filter-list {
+  display: grid;
+  gap: 8px;
+}
+
+.chart-authoring-filter-row {
+  align-items: end;
+  background: #f8fbff;
+  border: 1px solid rgb(8 34 74 / 10%);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(130px, 1fr)) auto;
+  padding: 10px;
+}
+
+.chart-authoring-filter-row > label {
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.chart-authoring-inline-toggle {
+  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 8px !important;
+}
+
+.chart-authoring-inline-toggle input {
+  min-height: auto;
+  width: auto;
+}
+
+.chart-authoring-section-advanced {
+  background: #f8fbff;
+}
+
+.chart-authoring-section-advanced > summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.chart-authoring-preview {
+  min-height: 240px;
+}
+
+.chart-authoring-preview-ready {
+  align-content: stretch;
+}
+
+.chart-authoring-preview-empty,
+.chart-authoring-preview-invalid {
+  align-content: center;
+  background: #f8fbff;
+  justify-items: start;
+}
+
+.chart-authoring-preview-invalid {
+  border-color: #f2b8b5;
+}
+
+.chart-authoring-preview ul,
+.chart-authoring-preview p {
+  line-height: 1.45;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .chart-authoring-filter-row,
+  .chart-authoring-role-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .settings-color-palette {
   background: #f8fbff;
   border: 1px solid rgb(8 34 74 / 10%);
