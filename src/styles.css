@@ -2475,6 +2475,93 @@ button.danger {
   color: #506a82;
 }
 
+.playback-controls,
+.playback-view {
+  background: #f5f8fb;
+  border: 1px solid rgb(8 34 74 / 14%);
+  border-radius: 16px;
+  color: #18334e;
+  padding: 16px;
+}
+
+.playback-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.playback-transport,
+.playback-time-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.playback-select,
+.playback-time-controls label {
+  display: grid;
+  font-size: 0.875rem;
+  gap: 4px;
+}
+
+.playback-controls button,
+.playback-controls select,
+.playback-controls input {
+  font: inherit;
+}
+
+.playback-controls button,
+.playback-controls select {
+  min-height: 40px;
+}
+
+.playback-controls button:focus-visible,
+.playback-controls select:focus-visible,
+.playback-controls input:focus-visible {
+  outline: 3px solid #ffd984;
+  outline-offset: 3px;
+}
+
+.playback-current-time,
+.playback-live-status,
+.playback-view-status {
+  margin: 0;
+}
+
+.playback-live-status {
+  flex-basis: 100%;
+}
+
+.playback-members {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.playback-member {
+  background: #fff;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.playback-member--unavailable,
+.playback-view--empty {
+  color: #506a82;
+}
+
+.playback-view-header {
+  margin-bottom: 14px;
+}
+
+.playback-view-header h2,
+.playback-member h3 {
+  margin-top: 0;
+}
+
 @media (max-width: 520px) {
   .chart-echarts-host {
     min-height: 220px;

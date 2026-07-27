@@ -2,6 +2,7 @@ import React from "react";
 
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { buildRenderModel } from "../../charting/rendering/buildRenderModel.js";
+import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import CardChartView from "./CardChartView.jsx";
 import EChartsChartView from "./EChartsChartView.jsx";
 import ImageChartView from "./ImageChartView.jsx";
@@ -10,9 +11,15 @@ import TableChartView from "./TableChartView.jsx";
 const MAX_STATUS_LENGTH = 240;
 
 export default function ChartView(props) {
+  const playback = useOptionalPlayback();
+  const playbackProps = withPlaybackTimeContext(props, playback);
   try {
-    const prepared = prepareChartData(props);
-    const model = buildRenderModel({ ...props, prepared });
+    const prepared = prepareChartData(playbackProps);
+    const model = withPlaybackPresentation(
+      buildRenderModel({ ...playbackProps, prepared }),
+      prepared,
+      playbackProps.timeContext,
+    );
     const provenance = resolveProvenance(props);
     if (model.kind === "echarts") return React.createElement(EChartsChartView, { model, chart: props.chart, provenance });
     if (model.kind === "cards") return React.createElement(CardChartView, { model, chart: props.chart, provenance });
@@ -22,6 +29,51 @@ export default function ChartView(props) {
   } catch {
     return React.createElement(ChartStatus, { message: "This chart cannot be displayed." });
   }
+}
+
+function withPlaybackTimeContext(props, playback) {
+  const groupId = props.chart?.interaction?.timeSync?.groupId;
+  if (
+    groupId
+    && playback?.timeContext?.groupId === groupId
+    && Number.isFinite(playback.timeContext.activeEpochMs)
+  ) {
+    return { ...props, timeContext: playback.timeContext };
+  }
+  return props;
+}
+
+function withPlaybackPresentation(model, prepared, timeContext) {
+  if (!timeContext || prepared.meta?.activeTime === undefined) return model;
+  const activeMarks = prepared.marks?.filter(({ active }) => active === true) ?? [];
+  if (prepared.meta.activeTime.status === "missing" && activeMarks.length === 0) {
+    const message = prepared.diagnostics?.find(({ message: text }) => (
+      /No measurement at this time/.test(text)
+    ))?.message ?? "No measurement at this time.";
+    return { kind: "error", message };
+  }
+  if (
+    model.kind !== "echarts"
+    || model.accessibility?.family !== "axis"
+    || activeMarks.length === 0
+  ) {
+    return model;
+  }
+  const activeRows = prepared.marks
+    .map((mark, index) => mark.active === true
+      ? model.accessibility.rows[index]
+      : null)
+    .filter(Boolean);
+  return {
+    ...model,
+    accessibility: {
+      ...model.accessibility,
+      rows: activeRows.length === 1
+        ? [{ ...activeRows[0], series: "value" }]
+        : activeRows,
+      truncated: false,
+    },
+  };
 }
 
 function resolveProvenance({ chart = {}, renderContext = {}, datasetProfile } = {}) {
