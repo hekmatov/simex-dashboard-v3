@@ -1,8 +1,22 @@
-import { CHART_COLUMN_TYPES, CHART_DATA_FAMILIES, CHART_FORM_SECTIONS, CHART_RENDERERS, CHART_SCHEMA_GROUPS, CHART_SCHEMA_VERSION, CHART_SOURCE_KINDS, CHART_TRANSFORMS } from "./schemaTypes.js";
+import {
+  CHART_COLUMN_TYPES,
+  CHART_COMPARISON_MATCHING_POLICIES,
+  CHART_COMPARISON_MODES,
+  CHART_DATA_FAMILIES,
+  CHART_FORM_SECTIONS,
+  CHART_RENDERERS,
+  CHART_SCHEMA_GROUPS,
+  CHART_SCHEMA_VERSION,
+  CHART_SOURCE_KINDS,
+  CHART_TRANSFORMS,
+} from "./schemaTypes.js";
 
 const groupIds = new Set(CHART_SCHEMA_GROUPS.map(({ id }) => id));
+const comparisonKeys = new Set(["defaultMode", "modes", "matchingPolicies"]);
 function requiredString(value, name) { if (typeof value !== "string" || value.trim() === "") throw new Error(`Chart schema ${name} is required.`); }
 function known(value, supported, description) { if (!supported.includes(value)) throw new Error(`Unknown ${description} "${value}".`); }
+function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
+function checkKnownKeys(value, keys, description) { for (const key of Object.keys(value)) if (!keys.has(key)) throw new Error(`Unknown ${description} property "${key}".`); }
 function validateRole(role) {
   if (!role || typeof role !== "object") throw new Error("Chart schema roles must be objects.");
   requiredString(role.id, "role id");
@@ -25,6 +39,7 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   for (const chartRole of schema.roles) { validateRole(chartRole); if (roleIds.has(chartRole.id)) throw new Error(`Duplicate role "${chartRole.id}".`); roleIds.add(chartRole.id); }
   if (!Array.isArray(schema.transforms)) throw new Error("Chart schema transforms must be an array.");
   for (const transform of schema.transforms) known(transform, CHART_TRANSFORMS, "transform");
+  validateComparisonDescriptor(schema);
   if (!schema.form || !Array.isArray(schema.form.sections) || schema.form.sections.length === 0) throw new Error("Chart schema form requires at least one section.");
   for (const section of schema.form.sections) known(section, CHART_FORM_SECTIONS, "form section");
   known(schema.dataFamily, CHART_DATA_FAMILIES, "data family"); known(schema.renderer, Object.keys(CHART_RENDERERS), "renderer");
@@ -42,4 +57,59 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   if (!schema.semantics || typeof schema.semantics !== "object") throw new Error("Chart schema semantics are required.");
   requiredString(schema.semantics.purpose, "semantics purpose"); requiredString(schema.semantics.mark, "semantics mark");
   return schema;
+}
+
+function validateComparisonDescriptor(schema) {
+  const supportsComparison = schema.transforms.includes("comparison");
+  if (schema.comparison === undefined) {
+    if (supportsComparison) {
+      throw new Error("Chart schemas with the comparison transform require a comparison descriptor.");
+    }
+    return;
+  }
+  if (!isRecord(schema.comparison)) {
+    throw new TypeError("Chart schema comparison must be an object.");
+  }
+  if (!supportsComparison) {
+    throw new Error("Chart schema comparison requires the comparison transform.");
+  }
+  checkKnownKeys(schema.comparison, comparisonKeys, "chart schema comparison");
+  requiredString(schema.comparison.defaultMode, "comparison defaultMode");
+  known(schema.comparison.defaultMode, CHART_COMPARISON_MODES, "comparison default mode");
+  validateKnownUniqueList(
+    schema.comparison.modes,
+    CHART_COMPARISON_MODES,
+    "comparison mode",
+  );
+  validateKnownUniqueList(
+    schema.comparison.matchingPolicies,
+    CHART_COMPARISON_MATCHING_POLICIES,
+    "comparison matching policy",
+  );
+  if (!schema.comparison.modes.includes(schema.comparison.defaultMode)) {
+    throw new Error("Chart schema comparison defaultMode must be included in modes.");
+  }
+  const measurement = schema.roles.find(({ id }) => id === "measurement");
+  if (
+    !measurement
+    || measurement.min < 1
+    || !measurement.accepts.includes("number")
+  ) {
+    throw new Error("Chart schema comparison requires a numeric measurement role.");
+  }
+  if (!schema.roles.some(({ min, accepts }) => min >= 1 && accepts.includes("temporal"))) {
+    throw new Error("Chart schema comparison requires a temporal role.");
+  }
+}
+
+function validateKnownUniqueList(value, supported, description) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`Chart schema ${description}s must be a non-empty array.`);
+  }
+  const seen = new Set();
+  for (const item of value) {
+    known(item, supported, description);
+    if (seen.has(item)) throw new Error(`Duplicate ${description} "${item}".`);
+    seen.add(item);
+  }
 }

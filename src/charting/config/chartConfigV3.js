@@ -6,12 +6,16 @@ import {
 } from "../data/bindings.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import {
+  CHART_COMPARISON_MATCHING_POLICIES,
+  CHART_COMPARISON_MODES,
+} from "../schemas/schemaTypes.js";
 
 export const CHART_CONFIG_VERSION = 3;
 
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
-const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "temporalMatch"]);
-const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues", "temporalMatch"]);
+const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
+const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
 const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
@@ -29,6 +33,8 @@ const COLUMN_TYPES = new Set(["number", "text", "category", "temporal", "geograp
 const TITLE_ALIGNMENTS = new Set(["left", "center", "right"]);
 const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neutral"]);
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
+const COMPARISON_MODES = new Set(CHART_COMPARISON_MODES);
+const COMPARISON_MATCHING_POLICIES = new Set(CHART_COMPARISON_MATCHING_POLICIES);
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function requiredString(value, description) { if (typeof value !== "string" || value.trim() === "") throw new Error(`${description} is required.`); }
@@ -169,7 +175,7 @@ function validateTransformations(chart, schema, columnTypes) {
   ensureObject(chart.transformations, "Chart transformations");
   checkKnownKeys(chart.transformations, TRANSFORMATION_KEYS, "chart transformations");
   checkRequiredKeys(chart.transformations, REQUIRED_TRANSFORMATION_KEYS, "Chart transformations");
-  const { filters, grouping, duplicates, missingValues, temporalMatch } = chart.transformations;
+  const { filters, grouping, duplicates, missingValues } = chart.transformations;
   const aggregation = Object.hasOwn(chart.transformations, "aggregation")
     ? chart.transformations.aggregation
     : null;
@@ -201,13 +207,58 @@ function validateTransformations(chart, schema, columnTypes) {
     throw new Error(`Duplicate strategy "${duplicates ?? "null"}" does not use aggregation "${aggregation}"; aggregation must be null.`);
   }
   if (!MISSING_VALUE_STRATEGIES.has(missingValues) || !schema.transforms.includes("missing")) throw new Error(`Unsupported missing-value handling "${missingValues}" for chart type "${schema.typeId}".`);
-  if (temporalMatch !== null) {
-    ensureObject(temporalMatch, "Chart temporal match");
-    checkKnownKeys(temporalMatch, new Set(["policy", "tolerance"]), "chart temporal match");
-    requiredString(temporalMatch.policy, "Chart temporal match policy");
-    if (!schema.capabilities.timeSync) throw new Error(`Unsupported temporal matching policy "${temporalMatch.policy}".`);
-    if (temporalMatch.policy !== "exact") throw new Error("Only exact temporal matching is supported in the version 3 core.");
-    if (temporalMatch.tolerance !== undefined) throw new Error("Exact temporal matching does not accept a tolerance.");
+  validateComparison(chart.transformations, schema);
+}
+
+function validateComparison(transformations, schema) {
+  const supplied = Object.hasOwn(transformations, "comparison");
+  if (!schema.comparison) {
+    if (supplied) {
+      throw new Error(`Chart type "${schema.typeId}" does not support comparison transformations.`);
+    }
+    return;
+  }
+  if (!supplied) {
+    throw new Error(`Chart type "${schema.typeId}" requires a comparison transformation.`);
+  }
+  const comparison = transformations.comparison;
+  ensureObject(comparison, "Chart comparison");
+  requiredString(comparison.mode, "Chart comparison mode");
+  if (!COMPARISON_MODES.has(comparison.mode) || !schema.comparison.modes.includes(comparison.mode)) {
+    throw new Error(`Unsupported comparison mode "${comparison.mode}" for chart type "${schema.typeId}".`);
+  }
+  if (comparison.mode === "previousObservation") {
+    checkKnownKeys(comparison, new Set(["mode"]), "chart comparison");
+    return;
+  }
+
+  checkKnownKeys(comparison, new Set(["mode", "at", "matching"]), "chart comparison");
+  requiredString(comparison.at, "Chart comparison at");
+  const parsed = parseTemporalValue(comparison.at, { format: "ISO-8601" });
+  if (!parsed.ok || parsed.kind !== "instant" || parsed.canonical !== comparison.at) {
+    throw new Error("Chart comparison at must be a canonical UTC instant.");
+  }
+  ensureObject(comparison.matching, "Chart comparison matching");
+  checkKnownKeys(comparison.matching, new Set(["policy", "toleranceMs"]), "chart comparison matching");
+  requiredString(comparison.matching.policy, "Chart comparison matching policy");
+  const { policy } = comparison.matching;
+  if (
+    !COMPARISON_MATCHING_POLICIES.has(policy)
+    || !schema.comparison.matchingPolicies.includes(policy)
+  ) {
+    throw new Error(`Unknown comparison matching policy "${policy}".`);
+  }
+  const hasTolerance = Object.hasOwn(comparison.matching, "toleranceMs");
+  if (
+    policy === "nearest"
+    && (!hasTolerance
+      || !Number.isFinite(comparison.matching.toleranceMs)
+      || comparison.matching.toleranceMs < 0)
+  ) {
+    throw new Error("Nearest comparison matching requires a finite, non-negative toleranceMs.");
+  }
+  if (policy !== "nearest" && hasTolerance) {
+    throw new Error("Only nearest comparison matching accepts toleranceMs.");
   }
 }
 
@@ -329,10 +380,8 @@ function validateInteraction(chart, schema, temporalRoles) {
   if (timeSync === null) return;
   if (!schema.capabilities.timeSync || temporalRoles.size === 0) throw new Error(`Chart type "${schema.typeId}" needs an effective temporal role before time synchronization can be enabled.`);
   ensureObject(timeSync, "Chart time synchronization");
-  checkKnownKeys(timeSync, new Set(["groupId", "policy", "tolerance"]), "chart time synchronization");
+  checkKnownKeys(timeSync, new Set(["groupId"]), "chart time synchronization");
   requiredString(timeSync.groupId, "Chart time synchronization groupId");
-  if (timeSync.policy !== "exact") throw new Error("Only exact temporal matching is supported in the version 3 core.");
-  if (timeSync.tolerance !== undefined) throw new Error("Exact time synchronization does not accept a tolerance.");
 }
 
 function validateLayout(chart) {
@@ -360,8 +409,10 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
       ...(options.transformations ?? {}),
+      ...(schema.comparison && options.transformations?.comparison === undefined
+        ? { comparison: { mode: schema.comparison.defaultMode } }
+        : {}),
     },
     presentation: {
       ...options.presentation,

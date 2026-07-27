@@ -42,7 +42,6 @@ function transformations(overrides = {}) {
     aggregation: null,
     duplicates: null,
     missingValues: "gap",
-    temporalMatch: null,
     ...overrides,
   };
 }
@@ -57,7 +56,11 @@ function configuredChart(typeId, roles, overrides = {}) {
     description: `${schema.label} description`,
     sourceId: `source-${typeId}`,
     roles,
-    transformations: transformations(),
+    transformations: transformations(
+      schema.comparison
+        ? { comparison: { mode: schema.comparison.defaultMode } }
+        : {},
+    ),
     presentation: {
       title: { align: "left" },
       collection: null,
@@ -111,11 +114,10 @@ test("canonical object transformations and DD/MM bindings survive a bundle-to-EC
       aggregation: "mean",
       duplicates: "aggregate",
       missingValues: "zero",
-      temporalMatch: { policy: "exact" },
     }),
     interaction: {
       zoom: { enabled: false },
-      timeSync: { groupId: "outbreak", policy: "exact" },
+      timeSync: { groupId: "outbreak" },
     },
   });
   const dashboard = dashboardFor(chart, {
@@ -518,7 +520,6 @@ for (const duplicates of [null, "error", "first", "last", ...arithmeticDuplicate
         aggregation: undefined,
         duplicates,
         missingValues: "gap",
-        temporalMatch: null,
       },
     });
 
@@ -563,7 +564,6 @@ test("arithmetic duplicate shorthand may literally omit the aggregation property
         grouping: null,
         duplicates,
         missingValues: "gap",
-        temporalMatch: null,
       },
     });
 
@@ -596,7 +596,6 @@ test("aggregate duplicate strategy accepts only explicit arithmetic methods", ()
           aggregation,
           duplicates: "aggregate",
           missingValues: "gap",
-          temporalMatch: null,
         },
       }),
       /aggregate.*explicit.*arithmetic aggregation/i,
@@ -613,7 +612,6 @@ test("aggregate duplicate strategy accepts only explicit arithmetic methods", ()
           aggregation,
           duplicates: "aggregate",
           missingValues: "gap",
-          temporalMatch: null,
         },
       }),
       aggregation,
@@ -651,15 +649,19 @@ test("all declared presentation subshapes reject malformed values before renderi
   }
 });
 
-test("non-exact temporal policies are rejected until their matching algorithms exist", () => {
-  for (const policy of ["lastKnown", "nearest", "interpolation"]) {
+test("former chart-local temporal matching locations are rejected", () => {
+  for (const policy of ["exact", "lastKnown", "nearest"]) {
     const chart = configuredChart("line", {
       measurements: [{ field: "value" }],
       observation: { field: "at", interpretation: "temporal" },
     }, {
       transformations: transformations({ temporalMatch: { policy } }),
     });
-    assert.throws(() => validateChartInstance(chart), /only exact temporal matching is supported/i, policy);
+    assert.throws(
+      () => validateChartInstance(chart),
+      /unknown chart transformations property "temporalMatch"/i,
+      policy,
+    );
   }
 
   const timeSync = configuredChart("line", {
@@ -671,7 +673,10 @@ test("non-exact temporal policies are rejected until their matching algorithms e
       timeSync: { groupId: "outbreak", policy: "nearest" },
     },
   });
-  assert.throws(() => validateChartInstance(timeSync), /only exact temporal matching is supported/i);
+  assert.throws(
+    () => validateChartInstance(timeSync),
+    /unknown chart time synchronization property "policy"/i,
+  );
 });
 
 test("delta cards expose favorable semantics without losing exact observation times", () => {
@@ -684,7 +689,9 @@ test("delta cards expose favorable semantics without losing exact observation ti
       measurement: { field: "value" },
       time: { field: "at", interpretation: "temporal" },
     },
-    transformations: transformations(),
+    transformations: transformations({
+      comparison: { mode: "previousObservation" },
+    }),
     presentation: {
       title: { align: "left" },
       collection: null,

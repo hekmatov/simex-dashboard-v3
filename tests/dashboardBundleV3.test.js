@@ -29,7 +29,6 @@ function lineChart(overrides = {}) {
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     },
     presentation: {
       title: { align: "left" },
@@ -37,7 +36,7 @@ function lineChart(overrides = {}) {
     },
     interaction: {
       zoom: { enabled: true },
-      timeSync: { groupId: "outbreak", policy: "exact" },
+      timeSync: { groupId: "outbreak" },
     },
     layout: { size: "wide" },
     ...overrides,
@@ -111,7 +110,7 @@ function pieChart(overrides = {}) {
     description: "Status distribution.",
     sourceId: "manual-status",
     roles: { category: { field: "label" }, value: { field: "value" } },
-    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", temporalMatch: null },
+    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
     presentation: { title: { align: "left" }, collection: null },
     interaction: { zoom: { enabled: false }, timeSync: null },
     layout: { size: "standard" },
@@ -128,7 +127,7 @@ function kpiChart(overrides = {}) {
     description: "Current status.",
     sourceId: "manual-status",
     roles: { value: { field: "value" } },
-    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", temporalMatch: null },
+    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
     presentation: { title: { align: "left" }, collection: null },
     interaction: { zoom: { enabled: false }, timeSync: null },
     layout: { size: "standard" },
@@ -145,7 +144,7 @@ function deltaListChart(overrides = {}) {
     description: "Changes by facility.",
     sourceId: "delta-data",
     roles: { measurement: { field: "value" }, entity: { field: "entity" }, time: { field: "at", interpretation: "temporal" } },
-    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", temporalMatch: null },
+    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", comparison: { mode: "previousObservation" } },
     presentation: {
       title: { align: "left" },
       collection: { layout: "fixedGrid", rows: 2, columns: 2, itemSpacing: 8, sortField: "value", sortDirection: "desc", rankingMode: "sort", overflow: "manualPages", pageSize: 4, rotationInterval: 5000, loop: true, pauseOnHover: true, transition: "fade", lockPositionsDuringPlayback: false, accessibleItemLabel: "Facility status" },
@@ -187,7 +186,7 @@ test("chart drafts start with the version 3 defaults for the chosen schema", () 
     sourceId: null,
     roles: {},
     transformations: {
-      filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap", temporalMatch: null,
+      filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap",
     },
     presentation: { title: { align: "left" }, collection: null },
     interaction: { zoom: { enabled: true }, timeSync: null },
@@ -204,6 +203,114 @@ test("chart drafts retain nested defaults when an override changes one field", (
 
   assert.equal(draft.presentation.title.align, "center");
   assert.equal(draft.interaction.zoom.enabled, true);
+});
+
+test("Delta drafts default to a detached previous-observation comparison", () => {
+  const authored = { mode: "fixedTime", at: "2027-05-01T00:00:00.000Z", matching: { policy: "exact" } };
+  const defaultDraft = createChartDraft("deltaCard", { id: "new-delta" });
+  const fixedDraft = createChartDraft("deltaList", {
+    id: "fixed-delta",
+    transformations: { comparison: authored },
+  });
+
+  assert.deepEqual(defaultDraft.transformations.comparison, {
+    mode: "previousObservation",
+  });
+  assert.equal(Object.hasOwn(defaultDraft.transformations, "temporalMatch"), false);
+  assert.deepEqual(fixedDraft.transformations.comparison, authored);
+  assert.notEqual(fixedDraft.transformations.comparison, authored);
+  assert.notEqual(fixedDraft.transformations.comparison.matching, authored.matching);
+
+  authored.matching.policy = "lastKnown";
+  assert.equal(fixedDraft.transformations.comparison.matching.policy, "exact");
+});
+
+test("comparison transformations are schema-aware and fixed times are canonical UTC instants", () => {
+  const base = {
+    filters: [],
+    grouping: null,
+    aggregation: null,
+    duplicates: null,
+    missingValues: "gap",
+  };
+  const delta = deltaListChart({
+    transformations: {
+      ...base,
+      comparison: {
+        mode: "fixedTime",
+        at: "2027-05-01T00:00:00.000Z",
+        matching: { policy: "nearest", toleranceMs: 3_600_000 },
+      },
+    },
+  });
+  assert.doesNotThrow(() => validateChartInstance(delta));
+
+  for (const [comparison, message] of [
+    [{ mode: "previousObservation", at: "2027-05-01T00:00:00.000Z" }, /unknown chart comparison property "at"/i],
+    [{ mode: "fixedTime", at: "2027-05-01", matching: { policy: "exact" } }, /canonical UTC instant/i],
+    [{ mode: "fixedTime", at: "2027-05-01T03:00:00.000+03:00", matching: { policy: "exact" } }, /canonical UTC instant/i],
+    [{ mode: "fixedTime", at: "2027-05-01T00:00:00.000Z", matching: { policy: "nearest" } }, /nearest.*toleranceMs/i],
+    [{ mode: "fixedTime", at: "2027-05-01T00:00:00.000Z", matching: { policy: "exact", toleranceMs: 0 } }, /only nearest.*toleranceMs/i],
+    [{ mode: "fixedTime", at: "2027-05-01T00:00:00.000Z", matching: { policy: "closest" } }, /unknown comparison matching policy "closest"/i],
+  ]) {
+    assert.throws(
+      () => validateChartInstance(deltaListChart({
+        transformations: { ...base, comparison },
+      })),
+      message,
+    );
+  }
+
+  assert.throws(
+    () => validateChartInstance(lineChart({
+      transformations: {
+        ...base,
+        comparison: { mode: "previousObservation" },
+      },
+    })),
+    /does not support comparison/i,
+  );
+});
+
+test("chart time synchronization stores membership only and rejects the former policy locations", () => {
+  const membershipOnly = lineChart({
+    transformations: {
+      filters: [],
+      grouping: null,
+      aggregation: "sum",
+      duplicates: "aggregate",
+      missingValues: "gap",
+    },
+    interaction: {
+      zoom: { enabled: true },
+      timeSync: { groupId: "outbreak" },
+    },
+  });
+  assert.doesNotThrow(() => validateChartInstance(membershipOnly));
+
+  for (const timeSync of [
+    { groupId: "outbreak", policy: "exact" },
+    { groupId: "outbreak", toleranceMs: 0 },
+  ]) {
+    assert.throws(
+      () => validateChartInstance({
+        ...membershipOnly,
+        interaction: { zoom: { enabled: true }, timeSync },
+      }),
+      /unknown chart time synchronization property/i,
+    );
+  }
+
+  assert.throws(
+    () => validateChartInstance({
+      ...membershipOnly,
+      transformations: {
+        ...membershipOnly.transformations,
+        temporalMatch: { policy: "exact" },
+      },
+    }),
+    /unknown chart transformations property "temporalMatch"/i,
+  );
 });
 
 test("chart validation rejects unknown roles and invalid schema capabilities", () => {
@@ -279,7 +386,7 @@ test("dashboard validation rejects source types incompatible with a selected rol
 test("strict chart subshapes reject unknown keys and malformed nested values", () => {
   assert.throws(() => validateChartInstance(lineChart({ layout: { size: "wide", surprise: true } })), /Unknown chart layout property/);
   assert.throws(() => validateChartInstance(lineChart({ roles: { measurements: [{ field: "cases", axis: "primary" }], observation: { field: "reportedAt", interpretation: "temporal", extra: true } } })), /Unknown role "observation" binding property/);
-  assert.throws(() => validateChartInstance(lineChart({ transformations: { filters: [{ field: "cases", operator: "equals", values: [4] }], grouping: null, aggregation: "sum", duplicates: "aggregate", missingValues: "gap", temporalMatch: null } })), /Unknown chart filter property/);
+  assert.throws(() => validateChartInstance(lineChart({ transformations: { filters: [{ field: "cases", operator: "equals", values: [4] }], grouping: null, aggregation: "sum", duplicates: "aggregate", missingValues: "gap" } })), /Unknown chart filter property/);
   assert.throws(() => validateChartInstance(lineChart({ presentation: { title: { align: "left", color: "red" }, collection: null, labels: "visible" } })), /Unknown chart presentation title property/);
   assert.throws(() => validateChartInstance(lineChart({ interaction: { zoom: { enabled: true, wheel: true }, timeSync: null } })), /Unknown chart zoom interaction property/);
 });
@@ -287,7 +394,7 @@ test("strict chart subshapes reject unknown keys and malformed nested values", (
 test("time synchronization rejects an empty optional temporal role array", () => {
   const chart = kpiChart({
     roles: { value: { field: "value" }, time: [] },
-    interaction: { zoom: { enabled: false }, timeSync: { groupId: "status", policy: "exact" } },
+    interaction: { zoom: { enabled: false }, timeSync: { groupId: "status" } },
   });
 
   assert.throws(() => validateChartInstance(chart), /binding object|temporal role/i);

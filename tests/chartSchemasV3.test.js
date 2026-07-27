@@ -116,6 +116,88 @@ test("validation requires a temporal role for time-synchronized charts", () => {
   );
 });
 
+test("only Delta schemas expose the immutable analytical comparison contract", () => {
+  const expected = {
+    defaultMode: "previousObservation",
+    modes: ["previousObservation", "fixedTime"],
+    matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+  };
+
+  for (const schema of listChartSchemas()) {
+    if (schema.typeId === "deltaCard" || schema.typeId === "deltaList") {
+      assert.deepEqual(schema.comparison, expected);
+      assert.equal(Object.isFrozen(schema.comparison), true);
+      assert.equal(Object.isFrozen(schema.comparison.modes), true);
+      assert.equal(Object.isFrozen(schema.comparison.matchingPolicies), true);
+      assert.ok(schema.transforms.includes("comparison"));
+    } else {
+      assert.equal(Object.hasOwn(schema, "comparison"), false, schema.typeId);
+      assert.equal(schema.transforms.includes("comparison"), false, schema.typeId);
+    }
+  }
+});
+
+test("comparison schemas reject malformed modes, policies, roles, and transform declarations", () => {
+  const delta = structuredClone(getChartSchema("deltaCard"));
+  const malformed = [
+    {
+      schema: {
+        ...delta,
+        comparison: {
+          defaultMode: "latest",
+          modes: ["previousObservation", "fixedTime"],
+          matchingPolicies: ["exact"],
+        },
+      },
+      message: /unknown comparison default mode "latest"/i,
+    },
+    {
+      schema: {
+        ...delta,
+        comparison: {
+          defaultMode: "previousObservation",
+          modes: ["previousObservation", "futureObservation"],
+          matchingPolicies: ["exact"],
+        },
+      },
+      message: /unknown comparison mode "futureObservation"/i,
+    },
+    {
+      schema: {
+        ...delta,
+        comparison: {
+          defaultMode: "previousObservation",
+          modes: ["previousObservation"],
+          matchingPolicies: ["closest"],
+        },
+      },
+      message: /unknown comparison matching policy "closest"/i,
+    },
+    {
+      schema: {
+        ...delta,
+        roles: delta.roles.map((role) => (
+          role.id === "measurement"
+            ? { ...role, accepts: ["category"] }
+            : role
+        )),
+      },
+      message: /numeric measurement role/i,
+    },
+    {
+      schema: {
+        ...delta,
+        transforms: delta.transforms.filter((transform) => transform !== "comparison"),
+      },
+      message: /comparison transform/i,
+    },
+  ];
+
+  for (const { schema, message } of malformed) {
+    assert.throws(() => validateChartSchema(schema), message);
+  }
+});
+
 test("a registry rejects duplicate type identifiers", () => {
   const line = structuredClone(getChartSchema("line"));
   assert.throws(

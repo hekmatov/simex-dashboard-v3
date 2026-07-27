@@ -71,7 +71,7 @@ test("delta cards render the exact resolved comparison time rather than a raw-ro
         aggregation: "sum",
         duplicates: "aggregate",
         missingValues: "drop",
-        temporalMatch: null,
+        comparison: { mode: "previousObservation" },
       },
     },
     rows,

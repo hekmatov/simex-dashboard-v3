@@ -20,7 +20,7 @@ const DEFAULTS = Object.freeze({
   duplicateStrategy: "error",
   missingStrategy: "gap",
   groupFields: [],
-  temporalMatch: null,
+  comparison: null,
 });
 
 export function applyTransforms(rows = [], transformations, datasetProfile, chart = null) {
@@ -245,6 +245,12 @@ function canonicalTransformConfig(transformations, diagnostics) {
     return { ...DEFAULTS, filters: [] };
   }
   const source = transformations ?? {};
+  if (Object.hasOwn(source, "temporalMatch")) {
+    diagnostics.push(error(
+      "unknown-transformation-property",
+      'Unknown chart transformation property "temporalMatch". Matching policy belongs to the synchronization group or member.',
+    ));
+  }
   const filters = Array.isArray(source.filters) ? source.filters : [];
   if (source.filters !== undefined && !Array.isArray(source.filters)) {
     diagnostics.push(error("invalid-transform-filters", "Chart transformation filters must be an array."));
@@ -298,19 +304,13 @@ function canonicalTransformConfig(transformations, diagnostics) {
       `Duplicate strategy "${duplicateSelection ?? "null"}" does not use aggregation "${aggregation}"; aggregation must be null.`,
     ));
   }
-  if (source.temporalMatch?.policy && source.temporalMatch.policy !== "exact") {
-    diagnostics.push(error(
-      "unsupported-temporal-match",
-      "Only exact temporal matching is supported in the version 3 core.",
-    ));
-  }
   return {
     filters,
     groupFields,
     aggregation,
     duplicateStrategy,
     missingStrategy,
-    temporalMatch: source.temporalMatch ?? null,
+    comparison: source.comparison ?? null,
   };
 }
 

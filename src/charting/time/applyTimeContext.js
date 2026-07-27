@@ -26,6 +26,16 @@ export function applyTimeContext({
   ) {
     return inactiveProjection(rows);
   }
+  if (
+    !isRecord(reference)
+    || Object.keys(reference).some((key) => key !== "groupId")
+  ) {
+    return invalidProjection(
+      rows,
+      "invalid-time-membership",
+      "Chart time synchronization membership accepts only groupId; matching policy must come from the active group or member.",
+    );
+  }
 
   if (!Number.isFinite(timeContext.activeEpochMs)) {
     return invalidProjection(
@@ -39,6 +49,17 @@ export function applyTimeContext({
       rows,
       "invalid-time-context",
       "The active playback time must be within the supported date range.",
+    );
+  }
+  if (
+    !isRecord(timeContext.matching)
+    || typeof timeContext.matching.policy !== "string"
+    || timeContext.matching.policy.trim() === ""
+  ) {
+    return invalidProjection(
+      rows,
+      "invalid-time-matching",
+      "Active playback requires a validated group or member matching policy.",
     );
   }
 
@@ -57,7 +78,7 @@ export function applyTimeContext({
     timeBinding,
     profile,
   );
-  const matching = effectiveMatching(reference, timeContext);
+  const matching = effectiveMatching(timeContext);
   if (matching.policy === "interpolate") {
     try {
       assertTimeSyncInterpolationAllowed({
@@ -636,13 +657,11 @@ function bindingAllowsInterpolation(binding, profile) {
   return binding?.interpolationAllowed === true || column?.interpolationAllowed === true;
 }
 
-function effectiveMatching(reference, timeContext) {
-  const matching = isRecord(timeContext.matching)
-    ? timeContext.matching
-    : reference;
+function effectiveMatching(timeContext) {
+  const matching = timeContext.matching;
   return {
-    policy: matching.policy ?? "exact",
-    toleranceMs: matching.toleranceMs ?? matching.tolerance,
+    policy: matching.policy,
+    toleranceMs: matching.toleranceMs,
   };
 }
 

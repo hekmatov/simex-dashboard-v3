@@ -16,15 +16,12 @@ function transformations(overrides = {}) {
     aggregation: null,
     duplicates: null,
     missingValues: "gap",
-    temporalMatch: null,
     ...overrides,
   };
 }
 
 function playbackChart(typeId, roles, {
   groupId = "exercise",
-  policy = "exact",
-  toleranceMs,
   transformOverrides,
 } = {}) {
   return {
@@ -32,11 +29,7 @@ function playbackChart(typeId, roles, {
     roles,
     transformations: transformations(transformOverrides),
     interaction: {
-      timeSync: {
-        groupId,
-        policy,
-        ...(toleranceMs === undefined ? {} : { toleranceMs }),
-      },
+      timeSync: { groupId },
     },
   };
 }
@@ -56,12 +49,13 @@ function prepare({
   interpolationFields,
   activeEpochMs = MAY_2,
   groupId = "exercise",
+  matching = { policy: "exact" },
 }) {
   return prepareChartData({
     chart,
     rows,
     datasetProfile: profiled(rows, metadata, interpolationFields),
-    timeContext: { groupId, activeEpochMs },
+    timeContext: { groupId, activeEpochMs, matching },
   });
 }
 
@@ -99,8 +93,9 @@ test("snapshot bars match each series independently and preserve carried provena
       measurements: { field: "value" },
       observation: { field: "at" },
       cluster: { field: "clinic" },
-    }, { policy: "lastKnown" }),
+    }),
     rows,
+    matching: { policy: "lastKnown" },
   });
   const byClinic = Object.fromEntries(result.marks.map((mark) => [mark.cluster, mark]));
 
@@ -247,17 +242,19 @@ test("nearest and interpolation project snapshot values with exact source and bo
     chart: playbackChart("kpi", {
       value: { field: "value" },
       time: { field: "at" },
-    }, { policy: "nearest", toleranceMs: 2 * HOUR_MS }),
+    }),
     rows,
     activeEpochMs: nearestActive,
+    matching: { policy: "nearest", toleranceMs: 2 * HOUR_MS },
   });
   const interpolated = prepare({
     chart: playbackChart("kpi", {
       value: { field: "value", interpolationAllowed: true },
       time: { field: "at" },
-    }, { policy: "interpolate" }),
+    }),
     rows,
     interpolationFields: ["value"],
+    matching: { policy: "interpolate" },
   });
 
   assert.equal(nearest.marks[0].value, 30);
@@ -328,6 +325,55 @@ test("a malformed active context fails closed through normal invalid-result sema
   assert.ok(result.diagnostics.some(({ code }) => code === "invalid-time-context"));
 });
 
+test("active playback fails closed when no effective group or member matching contract is supplied", () => {
+  const rows = [{ at: "2027-05-01", value: 10 }];
+  const result = prepareChartData({
+    chart: playbackChart("kpi", {
+      value: { field: "value" },
+      time: { field: "at" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+    timeContext: { groupId: "exercise", activeEpochMs: MAY_1 },
+  });
+  const diagnostic = result.diagnostics.find(({ code }) => code === "invalid-time-matching");
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  assert.ok(diagnostic);
+  assert.match(diagnostic.message, /group or member matching policy/i);
+  assert.ok(diagnostic.message.length <= 240);
+});
+
+test("direct playback preparation rejects chart-local matching even when context matching exists", () => {
+  const rows = [{ at: "2027-05-01", value: 10 }];
+  const result = prepareChartData({
+    chart: {
+      ...playbackChart("kpi", {
+      value: { field: "value" },
+      time: { field: "at" },
+      }),
+      interaction: {
+        timeSync: { groupId: "exercise", policy: "lastKnown" },
+      },
+    },
+    rows,
+    datasetProfile: profiled(rows),
+    timeContext: {
+      groupId: "exercise",
+      activeEpochMs: MAY_1,
+      matching: { policy: "exact" },
+    },
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  assert.ok(result.diagnostics.some(({ code, message }) => (
+    code === "invalid-time-membership"
+    && /membership.*groupId/i.test(message)
+  )), JSON.stringify(result.diagnostics));
+});
+
 test("a finite out-of-range active epoch returns a bounded invalid-context diagnostic", () => {
   const rows = [{ at: "2027-05-01", value: 10 }];
   const result = prepareChartData({
@@ -386,9 +432,10 @@ test("interpolated playback deltas retain the latest distinct preceding observat
       measurement: { field: "value", interpolationAllowed: true },
       time: { field: "at" },
       target: { field: "target" },
-    }, { policy: "interpolate" }),
+    }),
     rows,
     interpolationFields: ["value"],
+    matching: { policy: "interpolate" },
   });
   const mark = result.marks[0];
 
@@ -416,7 +463,11 @@ test("playback projection does not mutate chart, rows, profile, or time context"
     time: { field: "at" },
   });
   const datasetProfile = profiled(rows);
-  const timeContext = { groupId: "exercise", activeEpochMs: MAY_2 };
+  const timeContext = {
+    groupId: "exercise",
+    activeEpochMs: MAY_2,
+    matching: { policy: "exact" },
+  };
   const before = structuredClone({ chart, rows, datasetProfile, timeContext });
 
   const result = prepareChartData({

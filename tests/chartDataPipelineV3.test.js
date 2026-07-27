@@ -18,7 +18,6 @@ function chart(typeId, roles, transformations = {
   aggregation: null,
   duplicates: null,
   missingValues: "gap",
-  temporalMatch: null,
 }) {
   return { typeId, roles, transformations };
 }
@@ -38,7 +37,6 @@ test("pipeline transformation fixtures use the version 3 shape accepted by chart
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "zero",
-      temporalMatch: null,
     }),
   ];
 
@@ -54,6 +52,33 @@ test("pipeline transformation fixtures use the version 3 shape accepted by chart
       JSON.stringify(fixture.transformations),
     );
   }
+});
+
+test("direct preparation rejects the removed chart-local temporal-match transformation", () => {
+  const rows = [{ at: "2027-05-01", value: 4 }];
+  const result = prepareChartData({
+    chart: chart("line", {
+      measurements: { field: "value" },
+      observation: { field: "at" },
+    }, {
+      filters: [],
+      grouping: [],
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+      temporalMatch: { policy: "lastKnown" },
+    }),
+    rows,
+    datasetProfile: profiled(rows),
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  assert.ok(result.diagnostics.some(({ severity, code, message }) => (
+    severity === "error"
+    && code === "unknown-transformation-property"
+    && /temporalMatch/.test(message)
+  )), JSON.stringify(result.diagnostics));
 });
 
 for (const { duplicates, aggregation } of [
@@ -76,7 +101,6 @@ for (const { duplicates, aggregation } of [
         aggregation,
         duplicates,
         missingValues: "gap",
-        temporalMatch: null,
       }),
       rows,
       datasetProfile: profiled(rows),
@@ -109,7 +133,6 @@ for (const aggregation of ["first", "last"]) {
         aggregation,
         duplicates: "aggregate",
         missingValues: "gap",
-        temporalMatch: null,
       }),
       rows,
       datasetProfile: profiled(rows),
@@ -178,7 +201,6 @@ test("filters run before grouping and cluster keys cannot collide", () => {
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows, { month: { interpretation: "category" } }),
@@ -205,7 +227,6 @@ test("group transforms keep distinct normalized groups out of duplicate collisio
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -233,7 +254,6 @@ test("group transforms still detect collisions inside the same group", () => {
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -252,7 +272,6 @@ test("families without grouped mark semantics reject group transforms actionably
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -279,7 +298,6 @@ test("temporal equals filters compare canonical profile-backed values", () => {
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
@@ -304,7 +322,6 @@ test("temporal inclusion filters normalize every operand", () => {
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
@@ -329,7 +346,6 @@ test("DD/MM temporal ranges compare chronologically after normalization", () => 
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows, { at: { interpretation: "temporal", format: "DD/MM/YYYY" } }),
@@ -350,7 +366,6 @@ test("author-forced categories retain literal filter semantics", () => {
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows, { date: { interpretation: "category" } }),
@@ -377,7 +392,6 @@ test("duplicate resolution appears only when complete role keys collide", () => 
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows: duplicateRows,
     datasetProfile: profiled(duplicateRows),
@@ -398,7 +412,6 @@ test("duplicate resolution appears only when complete role keys collide", () => 
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows: duplicateRows.slice(1),
     datasetProfile: profiled(duplicateRows),
@@ -466,7 +479,6 @@ test("axis labels separate role keys while same-label observations still collide
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -500,7 +512,6 @@ test("missing-value strategies distinguish gaps, zeroes, and dropped observation
         aggregation: null,
         duplicates: null,
         missingValues: "gap",
-        temporalMatch: null,
       },
     },
   });
@@ -514,7 +525,6 @@ test("missing-value strategies distinguish gaps, zeroes, and dropped observation
         aggregation: null,
         duplicates: null,
         missingValues: "zero",
-        temporalMatch: null,
       },
     },
   });
@@ -528,7 +538,6 @@ test("missing-value strategies distinguish gaps, zeroes, and dropped observation
         aggregation: null,
         duplicates: null,
         missingValues: "drop",
-        temporalMatch: null,
       },
     },
   });
@@ -586,7 +595,6 @@ test("relationship duplicate metadata appears only for identical point-role keys
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -617,7 +625,6 @@ test("selected relationship size obeys gap, drop, and zero missing policies", ()
         aggregation: null,
         duplicates: null,
         missingValues: "gap",
-        temporalMatch: null,
       },
     },
   });
@@ -631,7 +638,6 @@ test("selected relationship size obeys gap, drop, and zero missing policies", ()
         aggregation: null,
         duplicates: null,
         missingValues: "drop",
-        temporalMatch: null,
       },
     },
   });
@@ -645,7 +651,6 @@ test("selected relationship size obeys gap, drop, and zero missing policies", ()
         aggregation: null,
         duplicates: null,
         missingValues: "zero",
-        temporalMatch: null,
       },
     },
   });
@@ -712,7 +717,6 @@ test("timeline statuses separate role keys while same-status events still collid
       aggregation: null,
       duplicates: "first",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -763,7 +767,6 @@ test("bullet labels separate role keys while same-label targets still collide", 
       aggregation: null,
       duplicates: "first",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -809,7 +812,6 @@ test("delta preparation retains the exact selected times after missing-value rem
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "drop",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -863,7 +865,6 @@ test("delta card succeeds when a filter leaves one bound entity", () => {
       aggregation: null,
       duplicates: null,
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -912,7 +913,6 @@ test("delta duplicate timestamps aggregate only with both explicit controls", ()
       aggregation: "sum",
       duplicates: "aggregate",
       missingValues: "gap",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows),
@@ -955,7 +955,6 @@ test("target marks apply shared missing-value behavior before readiness", () => 
       aggregation: null,
       duplicates: null,
       missingValues: "zero",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profile,
@@ -967,7 +966,6 @@ test("target marks apply shared missing-value behavior before readiness", () => 
       aggregation: null,
       duplicates: null,
       missingValues: "drop",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profile,
@@ -999,7 +997,6 @@ test("required bullet targets obey gap, drop, and zero missing policies", () => 
         aggregation: null,
         duplicates: null,
         missingValues: "gap",
-        temporalMatch: null,
       },
     },
   });
@@ -1013,7 +1010,6 @@ test("required bullet targets obey gap, drop, and zero missing policies", () => 
         aggregation: null,
         duplicates: null,
         missingValues: "drop",
-        temporalMatch: null,
       },
     },
   });
@@ -1027,7 +1023,6 @@ test("required bullet targets obey gap, drop, and zero missing policies", () => 
         aggregation: null,
         duplicates: null,
         missingValues: "zero",
-        temporalMatch: null,
       },
     },
   });
@@ -1205,7 +1200,6 @@ test("readiness never reports ready when every candidate mark is non-renderable"
       aggregation: null,
       duplicates: null,
       missingValues: "drop",
-      temporalMatch: null,
     }),
     rows,
     datasetProfile: profiled(rows, { value: { interpretation: "numeric" } }),

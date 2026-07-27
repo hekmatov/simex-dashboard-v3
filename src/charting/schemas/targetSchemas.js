@@ -8,6 +8,12 @@ const singleForm = {
 };
 const collectionCapabilities = { timeSync: true, collection: true, zoom: false };
 const singleCapabilities = { timeSync: true, collection: false, zoom: false };
+const deltaTransforms = ["filter", "aggregate", "duplicates", "missing", "comparison"];
+const deltaComparison = () => ({
+  defaultMode: "previousObservation",
+  modes: ["previousObservation", "fixedTime"],
+  matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+});
 const time = () => role("time", "Time", ["temporal"], 0);
 const identity = () => [
   role("entity", "Entity", ["category", "text"], 0),
@@ -80,6 +86,8 @@ export const targetSchemas = [
     form: singleForm,
     dataFamily: "target",
     renderer: "target",
+    transforms: deltaTransforms,
+    comparison: deltaComparison(),
     capabilities: singleCapabilities,
     conversions: ["deltaList", "kpi"],
     manualData: { maxRows: 20 },
@@ -99,6 +107,8 @@ export const targetSchemas = [
     form: collectionForm,
     dataFamily: "target",
     renderer: "target",
+    transforms: deltaTransforms,
+    comparison: deltaComparison(),
     capabilities: collectionCapabilities,
     conversions: ["deltaCard"],
     semantics: { purpose: "change", mark: "delta-list" },

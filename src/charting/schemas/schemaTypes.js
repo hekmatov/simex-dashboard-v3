@@ -15,7 +15,9 @@ export const CHART_SCHEMA_GROUPS = Object.freeze([
 ]);
 export const CHART_COLUMN_TYPES = Object.freeze(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
 export const CHART_SOURCE_KINDS = Object.freeze(["dataset", "inline"]);
-export const CHART_TRANSFORMS = Object.freeze(["filter", "group", "aggregate", "duplicates", "missing", "temporalMatch"]);
+export const CHART_TRANSFORMS = Object.freeze(["filter", "group", "aggregate", "duplicates", "missing", "comparison"]);
+export const CHART_COMPARISON_MODES = Object.freeze(["previousObservation", "fixedTime"]);
+export const CHART_COMPARISON_MATCHING_POLICIES = Object.freeze(["exact", "lastKnown", "nearest", "interpolate"]);
 export const CHART_FORM_SECTIONS = Object.freeze(["data", "appearance", "labels", "axes", "targets", "map", "timeline", "collection", "interactions", "advanced"]);
 export const CHART_DATA_FAMILIES = Object.freeze(["axis", "composition", "target", "relationship", "matrix", "timeline", "geography", "operational"]);
 export const CHART_RENDERERS = Object.freeze({ axis: "axis", composition: "composition", target: "target", relationship: "relationship", matrix: "matrix", timeline: "timeline", geography: "geography", operational: "operational" });

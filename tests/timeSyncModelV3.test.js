@@ -56,7 +56,7 @@ function lineChart(overrides = {}) {
       },
     },
     interaction: {
-      timeSync: { groupId: "exercise", policy: "exact" },
+      timeSync: { groupId: "exercise" },
     },
     ...overrides,
   };
@@ -403,7 +403,7 @@ test("members must reference existing eligible charts and bound temporal roles",
       value: { field: "cases" },
     },
     interaction: {
-      timeSync: { groupId: "exercise", policy: "exact" },
+      timeSync: { groupId: "exercise" },
     },
   };
   assert.throws(
@@ -443,7 +443,7 @@ test("member and chart group references must agree in both directions", () => {
         ...context,
         charts: [lineChart({
           interaction: {
-            timeSync: { groupId: "", policy: "exact" },
+            timeSync: { groupId: "" },
           },
         })],
       },
@@ -458,7 +458,7 @@ test("member and chart group references must agree in both directions", () => {
         ...context,
         charts: [lineChart({
           interaction: {
-            timeSync: { groupId: "another-group", policy: "exact" },
+            timeSync: { groupId: "another-group" },
           },
         })],
       },
@@ -481,7 +481,7 @@ test("member and chart group references must agree in both directions", () => {
           lineChart({
             id: "secondary-trend",
             interaction: {
-              timeSync: { groupId: "exercise", policy: "exact" },
+              timeSync: { groupId: "exercise" },
             },
           }),
         ],
@@ -613,7 +613,7 @@ test("interpolation requires explicit measure permission and a non-discrete sche
       },
     },
     interaction: {
-      timeSync: { groupId: "exercise", policy: "exact" },
+      timeSync: { groupId: "exercise" },
     },
   };
   const eventGroup = synchronizationGroup({

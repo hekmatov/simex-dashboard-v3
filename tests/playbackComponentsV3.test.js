@@ -667,7 +667,7 @@ function playbackFixture() {
 function lineChart(overrides = {}) {
   const interaction = overrides.interaction ?? {
     zoom: { enabled: false },
-    timeSync: { groupId: "exercise", policy: "exact" },
+    timeSync: { groupId: "exercise" },
   };
   return {
     id: "primary-chart",
@@ -691,7 +691,7 @@ function lineChart(overrides = {}) {
 function kpiChart(overrides = {}) {
   const interaction = overrides.interaction ?? {
     zoom: { enabled: false },
-    timeSync: { groupId: "exercise", policy: "exact" },
+    timeSync: { groupId: "exercise" },
   };
   return {
     id: "sparse-kpi",
@@ -736,7 +736,7 @@ function timelineChart(typeId) {
     presentation: { collection: null, labels: null, accessibility: null },
     interaction: {
       zoom: { enabled: false },
-      timeSync: { groupId: "exercise", policy: "exact" },
+      timeSync: { groupId: "exercise" },
     },
   };
 }
