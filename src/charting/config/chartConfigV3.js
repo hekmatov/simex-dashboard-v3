@@ -42,6 +42,37 @@ function ensureObject(value, description) { if (!isRecord(value)) throw new Erro
 function checkKnownKeys(value, keys, description) { for (const key of Object.keys(value)) if (!keys.has(key)) throw new Error(`Unknown ${description} property "${key}".`); }
 function checkRequiredKeys(value, keys, description) { for (const key of keys) if (!Object.hasOwn(value, key)) throw new Error(`${description} property "${key}" is required.`); }
 function optionalObject(value, description, keys) { if (value === undefined) return; ensureObject(value, description); checkKnownKeys(value, keys, description.toLowerCase()); }
+function strictRecordDescriptors(value, description) {
+  if (!isRecord(value)) throw new Error(`${description} must be an object.`);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new Error(`${description} must be a plain object.`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new Error(`${description} cannot contain symbol properties.`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!Object.hasOwn(descriptor, "value")) {
+      throw new Error(`${description} property "${key}" must be a data property.`);
+    }
+    if (!descriptor.enumerable) {
+      throw new Error(`${description} property "${key}" must be enumerable.`);
+    }
+  }
+  return descriptors;
+}
+function checkKnownDescriptorKeys(descriptors, keys, description) {
+  for (const key of Object.keys(descriptors)) {
+    if (!keys.has(key)) throw new Error(`Unknown ${description} property "${key}".`);
+  }
+}
+function requiredDescriptorValue(descriptors, key, description) {
+  if (!Object.hasOwn(descriptors, key)) {
+    throw new Error(`${description} property "${key}" is required.`);
+  }
+  return descriptors[key].value;
+}
 
 function bindingType(type) {
   return canonicalColumnType(type);
@@ -221,39 +252,84 @@ function validateComparison(transformations, schema) {
   if (!supplied) {
     throw new Error(`Chart type "${schema.typeId}" requires a comparison transformation.`);
   }
-  const comparison = transformations.comparison;
-  ensureObject(comparison, "Chart comparison");
-  requiredString(comparison.mode, "Chart comparison mode");
-  if (!COMPARISON_MODES.has(comparison.mode) || !schema.comparison.modes.includes(comparison.mode)) {
-    throw new Error(`Unsupported comparison mode "${comparison.mode}" for chart type "${schema.typeId}".`);
+  const comparisonProperty = Object.getOwnPropertyDescriptor(
+    transformations,
+    "comparison",
+  );
+  if (!comparisonProperty || !Object.hasOwn(comparisonProperty, "value")) {
+    throw new Error("Chart transformations comparison must be a data property.");
   }
-  if (comparison.mode === "previousObservation") {
-    checkKnownKeys(comparison, new Set(["mode"]), "chart comparison");
+  const comparison = comparisonProperty.value;
+  const comparisonDescriptors = strictRecordDescriptors(
+    comparison,
+    "Chart comparison",
+  );
+  const mode = requiredDescriptorValue(
+    comparisonDescriptors,
+    "mode",
+    "Chart comparison",
+  );
+  requiredString(mode, "Chart comparison mode");
+  if (!COMPARISON_MODES.has(mode) || !schema.comparison.modes.includes(mode)) {
+    throw new Error(`Unsupported comparison mode "${mode}" for chart type "${schema.typeId}".`);
+  }
+  if (mode === "previousObservation") {
+    checkKnownDescriptorKeys(
+      comparisonDescriptors,
+      new Set(["mode"]),
+      "chart comparison",
+    );
     return;
   }
 
-  checkKnownKeys(comparison, new Set(["mode", "at", "matching"]), "chart comparison");
-  requiredString(comparison.at, "Chart comparison at");
-  const parsed = parseTemporalValue(comparison.at, { format: "ISO-8601" });
-  if (!parsed.ok || parsed.kind !== "instant" || parsed.canonical !== comparison.at) {
+  checkKnownDescriptorKeys(
+    comparisonDescriptors,
+    new Set(["mode", "at", "matching"]),
+    "chart comparison",
+  );
+  const at = requiredDescriptorValue(
+    comparisonDescriptors,
+    "at",
+    "Chart comparison",
+  );
+  requiredString(at, "Chart comparison at");
+  const parsed = parseTemporalValue(at, { format: "ISO-8601" });
+  if (!parsed.ok || parsed.kind !== "instant" || parsed.canonical !== at) {
     throw new Error("Chart comparison at must be a canonical UTC instant.");
   }
-  ensureObject(comparison.matching, "Chart comparison matching");
-  checkKnownKeys(comparison.matching, new Set(["policy", "toleranceMs"]), "chart comparison matching");
-  requiredString(comparison.matching.policy, "Chart comparison matching policy");
-  const { policy } = comparison.matching;
+  const matching = requiredDescriptorValue(
+    comparisonDescriptors,
+    "matching",
+    "Chart comparison",
+  );
+  const matchingDescriptors = strictRecordDescriptors(
+    matching,
+    "Chart comparison matching",
+  );
+  checkKnownDescriptorKeys(
+    matchingDescriptors,
+    new Set(["policy", "toleranceMs"]),
+    "chart comparison matching",
+  );
+  const policy = requiredDescriptorValue(
+    matchingDescriptors,
+    "policy",
+    "Chart comparison matching",
+  );
+  requiredString(policy, "Chart comparison matching policy");
   if (
     !COMPARISON_MATCHING_POLICIES.has(policy)
     || !schema.comparison.matchingPolicies.includes(policy)
   ) {
     throw new Error(`Unknown comparison matching policy "${policy}".`);
   }
-  const hasTolerance = Object.hasOwn(comparison.matching, "toleranceMs");
+  const hasTolerance = Object.hasOwn(matchingDescriptors, "toleranceMs");
+  const toleranceMs = matchingDescriptors.toleranceMs?.value;
   if (
     policy === "nearest"
     && (!hasTolerance
-      || !Number.isFinite(comparison.matching.toleranceMs)
-      || comparison.matching.toleranceMs < 0)
+      || !Number.isFinite(toleranceMs)
+      || toleranceMs < 0)
   ) {
     throw new Error("Nearest comparison matching requires a finite, non-negative toleranceMs.");
   }

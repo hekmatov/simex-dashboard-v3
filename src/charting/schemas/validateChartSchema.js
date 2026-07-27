@@ -15,8 +15,39 @@ const groupIds = new Set(CHART_SCHEMA_GROUPS.map(({ id }) => id));
 const comparisonKeys = new Set(["defaultMode", "modes", "matchingPolicies"]);
 function requiredString(value, name) { if (typeof value !== "string" || value.trim() === "") throw new Error(`Chart schema ${name} is required.`); }
 function known(value, supported, description) { if (!supported.includes(value)) throw new Error(`Unknown ${description} "${value}".`); }
-function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
-function checkKnownKeys(value, keys, description) { for (const key of Object.keys(value)) if (!keys.has(key)) throw new Error(`Unknown ${description} property "${key}".`); }
+function strictRecordDescriptors(value, description) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(`${description} must be an object.`);
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${description} must be a plain object.`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${description} cannot contain symbol properties.`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!Object.hasOwn(descriptor, "value")) {
+      throw new TypeError(`${description} property "${key}" must be a data property.`);
+    }
+    if (!descriptor.enumerable) {
+      throw new TypeError(`${description} property "${key}" must be enumerable.`);
+    }
+  }
+  return descriptors;
+}
+function checkKnownDescriptorKeys(descriptors, keys, description) {
+  for (const key of Object.keys(descriptors)) {
+    if (!keys.has(key)) throw new Error(`Unknown ${description} property "${key}".`);
+  }
+}
+function requiredDescriptorValue(descriptors, key, description) {
+  if (!Object.hasOwn(descriptors, key)) {
+    throw new Error(`${description} property "${key}" is required.`);
+  }
+  return descriptors[key].value;
+}
 function validateRole(role) {
   if (!role || typeof role !== "object") throw new Error("Chart schema roles must be objects.");
   requiredString(role.id, "role id");
@@ -39,7 +70,7 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   for (const chartRole of schema.roles) { validateRole(chartRole); if (roleIds.has(chartRole.id)) throw new Error(`Duplicate role "${chartRole.id}".`); roleIds.add(chartRole.id); }
   if (!Array.isArray(schema.transforms)) throw new Error("Chart schema transforms must be an array.");
   for (const transform of schema.transforms) known(transform, CHART_TRANSFORMS, "transform");
-  validateComparisonDescriptor(schema);
+  const comparison = validateComparisonDescriptor(schema);
   if (!schema.form || !Array.isArray(schema.form.sections) || schema.form.sections.length === 0) throw new Error("Chart schema form requires at least one section.");
   for (const section of schema.form.sections) known(section, CHART_FORM_SECTIONS, "form section");
   known(schema.dataFamily, CHART_DATA_FAMILIES, "data family"); known(schema.renderer, Object.keys(CHART_RENDERERS), "renderer");
@@ -56,37 +87,51 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   }
   if (!schema.semantics || typeof schema.semantics !== "object") throw new Error("Chart schema semantics are required.");
   requiredString(schema.semantics.purpose, "semantics purpose"); requiredString(schema.semantics.mark, "semantics mark");
-  return schema;
+  return comparison === undefined ? schema : { ...schema, comparison };
 }
 
 function validateComparisonDescriptor(schema) {
   const supportsComparison = schema.transforms.includes("comparison");
-  if (schema.comparison === undefined) {
+  const comparisonProperty = Object.getOwnPropertyDescriptor(schema, "comparison");
+  if (comparisonProperty && !Object.hasOwn(comparisonProperty, "value")) {
+    throw new TypeError("Chart schema comparison must be a data property.");
+  }
+  const comparison = comparisonProperty?.value;
+  if (comparison === undefined) {
     if (supportsComparison) {
       throw new Error("Chart schemas with the comparison transform require a comparison descriptor.");
     }
     return;
   }
-  if (!isRecord(schema.comparison)) {
-    throw new TypeError("Chart schema comparison must be an object.");
-  }
   if (!supportsComparison) {
     throw new Error("Chart schema comparison requires the comparison transform.");
   }
-  checkKnownKeys(schema.comparison, comparisonKeys, "chart schema comparison");
-  requiredString(schema.comparison.defaultMode, "comparison defaultMode");
-  known(schema.comparison.defaultMode, CHART_COMPARISON_MODES, "comparison default mode");
-  validateKnownUniqueList(
-    schema.comparison.modes,
+  const descriptors = strictRecordDescriptors(comparison, "Chart schema comparison");
+  checkKnownDescriptorKeys(descriptors, comparisonKeys, "chart schema comparison");
+  const defaultMode = requiredDescriptorValue(
+    descriptors,
+    "defaultMode",
+    "Chart schema comparison",
+  );
+  requiredString(defaultMode, "comparison defaultMode");
+  known(defaultMode, CHART_COMPARISON_MODES, "comparison default mode");
+  const modes = validateKnownUniqueList(
+    requiredDescriptorValue(descriptors, "modes", "Chart schema comparison"),
     CHART_COMPARISON_MODES,
     "comparison mode",
+    "Chart schema comparison modes",
   );
-  validateKnownUniqueList(
-    schema.comparison.matchingPolicies,
+  const matchingPolicies = validateKnownUniqueList(
+    requiredDescriptorValue(
+      descriptors,
+      "matchingPolicies",
+      "Chart schema comparison",
+    ),
     CHART_COMPARISON_MATCHING_POLICIES,
     "comparison matching policy",
+    "Chart schema comparison matchingPolicies",
   );
-  if (!schema.comparison.modes.includes(schema.comparison.defaultMode)) {
+  if (!modes.includes(defaultMode)) {
     throw new Error("Chart schema comparison defaultMode must be included in modes.");
   }
   const measurement = schema.roles.find(({ id }) => id === "measurement");
@@ -100,16 +145,50 @@ function validateComparisonDescriptor(schema) {
   if (!schema.roles.some(({ min, accepts }) => min >= 1 && accepts.includes("temporal"))) {
     throw new Error("Chart schema comparison requires a temporal role.");
   }
+  return { defaultMode, modes, matchingPolicies };
 }
 
-function validateKnownUniqueList(value, supported, description) {
-  if (!Array.isArray(value) || value.length === 0) {
+function validateKnownUniqueList(value, supported, description, arrayDescription) {
+  const values = strictArrayValues(value, arrayDescription);
+  if (values.length === 0) {
     throw new Error(`Chart schema ${description}s must be a non-empty array.`);
   }
   const seen = new Set();
-  for (const item of value) {
+  for (const item of values) {
     known(item, supported, description);
     if (seen.has(item)) throw new Error(`Duplicate ${description} "${item}".`);
     seen.add(item);
   }
+  return values;
+}
+
+function strictArrayValues(value, description) {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) {
+    throw new TypeError(`${description} must be an ordinary array.`);
+  }
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new TypeError(`${description} cannot contain symbol properties.`);
+  }
+  const expectedNames = new Set([
+    "length",
+    ...Array.from({ length: value.length }, (_, index) => String(index)),
+  ]);
+  for (const name of Object.getOwnPropertyNames(value)) {
+    if (!expectedNames.has(name)) {
+      throw new TypeError(`${description} contains unknown property "${name}".`);
+    }
+  }
+  const values = [];
+  for (let index = 0; index < value.length; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (
+      !descriptor
+      || !Object.hasOwn(descriptor, "value")
+      || !descriptor.enumerable
+    ) {
+      throw new TypeError(`${description} must contain only direct data entries.`);
+    }
+    values.push(descriptor.value);
+  }
+  return values;
 }

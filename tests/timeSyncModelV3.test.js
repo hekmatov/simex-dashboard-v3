@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildPrimaryClock,
   getTimeSyncGroup,
+  validateEffectiveTimeSyncMatching,
   validateTimeSyncGroups,
 } from "../src/charting/time/timeSyncModel.js";
 import {
@@ -557,6 +558,51 @@ test("unknown policies and invalid or misplaced tolerances fail closed", () => {
       message,
     );
   }
+});
+
+test("the effective matching authority accepts only owned inert fields on a plain object", () => {
+  assert.deepEqual(
+    validateEffectiveTimeSyncMatching({ policy: "exact" }),
+    { policy: "exact" },
+  );
+  assert.deepEqual(
+    validateEffectiveTimeSyncMatching({
+      policy: "nearest",
+      toleranceMs: 3_600_000,
+    }),
+    { policy: "nearest", toleranceMs: 3_600_000 },
+  );
+
+  let accessorReads = 0;
+  const accessor = {};
+  Object.defineProperty(accessor, "policy", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return "exact";
+    },
+  });
+  const inherited = Object.create({ policy: "exact" });
+  const symbolic = { policy: "exact" };
+  symbolic[Symbol("hidden")] = true;
+
+  for (const [matching, message] of [
+    [inherited, /matching must be a plain object/i],
+    [accessor, /matching property "policy".*data property/i],
+    [symbolic, /matching.*symbol/i],
+    [{ policy: "exact", unexpected: true }, /unknown temporal matching property "unexpected"/i],
+    [{ policy: "closest" }, /unknown temporal matching policy "closest"/i],
+    [{ policy: "nearest" }, /nearest.*finite, non-negative toleranceMs/i],
+    [{ policy: "nearest", toleranceMs: -1 }, /nearest.*finite, non-negative toleranceMs/i],
+    [{ policy: "nearest", toleranceMs: Number.NaN }, /nearest.*finite, non-negative toleranceMs/i],
+    [{ policy: "exact", toleranceMs: 0 }, /only nearest.*toleranceMs/i],
+  ]) {
+    assert.throws(
+      () => validateEffectiveTimeSyncMatching(matching),
+      message,
+    );
+  }
+  assert.equal(accessorReads, 0);
 });
 
 test("member matching overrides are validated independently", () => {

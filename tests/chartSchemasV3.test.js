@@ -198,6 +198,69 @@ test("comparison schemas reject malformed modes, policies, roles, and transform 
   }
 });
 
+test("comparison schema descriptors accept only owned inert data on plain objects and ordinary arrays", () => {
+  const delta = structuredClone(getChartSchema("deltaCard"));
+  const validDescriptor = () => ({
+    defaultMode: "previousObservation",
+    modes: ["previousObservation", "fixedTime"],
+    matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+  });
+  let accessorReads = 0;
+  const accessorDescriptor = validDescriptor();
+  Object.defineProperty(accessorDescriptor, "defaultMode", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return "previousObservation";
+    },
+  });
+  const inheritedDescriptor = Object.create({
+    defaultMode: "previousObservation",
+  });
+  inheritedDescriptor.modes = ["previousObservation", "fixedTime"];
+  inheritedDescriptor.matchingPolicies = ["exact"];
+  const symbolDescriptor = validDescriptor();
+  symbolDescriptor[Symbol("hidden")] = true;
+  const nonOrdinaryModes = class ComparisonModes extends Array {};
+  const symbolPolicies = ["exact"];
+  symbolPolicies[Symbol("hidden")] = true;
+
+  for (const [comparison, message] of [
+    [inheritedDescriptor, /comparison must be a plain object/i],
+    [accessorDescriptor, /defaultMode.*data property/i],
+    [symbolDescriptor, /comparison.*symbol/i],
+    [{ ...validDescriptor(), modes: new nonOrdinaryModes("previousObservation") }, /modes.*ordinary array/i],
+    [{ ...validDescriptor(), matchingPolicies: symbolPolicies }, /matchingPolicies.*symbol/i],
+  ]) {
+    assert.throws(
+      () => validateChartSchema({ ...delta, comparison }),
+      message,
+    );
+  }
+  assert.equal(accessorReads, 0);
+});
+
+test("registry detaches validated comparison descriptors before freezing them", () => {
+  const delta = structuredClone(getChartSchema("deltaCard"));
+  delta.conversions = [];
+  const authoredComparison = delta.comparison;
+  const authoredModes = authoredComparison.modes;
+  const registry = createChartSchemaRegistry([delta]);
+
+  assert.notEqual(registry.get("deltaCard").comparison, authoredComparison);
+  assert.notEqual(registry.get("deltaCard").comparison.modes, authoredModes);
+  assert.equal(Object.isFrozen(authoredComparison), false);
+  assert.equal(Object.isFrozen(authoredModes), false);
+
+  authoredComparison.defaultMode = "fixedTime";
+  authoredModes[0] = "fixedTime";
+  assert.deepEqual(registry.get("deltaCard").comparison, {
+    defaultMode: "previousObservation",
+    modes: ["previousObservation", "fixedTime"],
+    matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+  });
+});
+
 test("a registry rejects duplicate type identifiers", () => {
   const line = structuredClone(getChartSchema("line"));
   assert.throws(

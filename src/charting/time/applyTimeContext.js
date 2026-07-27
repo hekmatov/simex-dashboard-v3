@@ -4,7 +4,10 @@ import {
   profileColumn,
   readBoundValue,
 } from "../data/bindings.js";
-import { assertTimeSyncInterpolationAllowed } from "./timeSyncModel.js";
+import {
+  assertTimeSyncInterpolationAllowed,
+  validateEffectiveTimeSyncMatching,
+} from "./timeSyncModel.js";
 import { matchTemporalObservation } from "./temporalMatch.js";
 
 const TRACE_TYPES = new Set(["line", "area", "mixed", "timeline", "swimlane"]);
@@ -19,22 +22,25 @@ export function applyTimeContext({
   transformed,
 } = {}) {
   const reference = chart.interaction?.timeSync;
-  if (
-    !isPlaybackContext(timeContext)
-    || !reference
-    || reference.groupId !== timeContext.groupId
-  ) {
-    return inactiveProjection(rows);
-  }
-  if (
-    !isRecord(reference)
-    || Object.keys(reference).some((key) => key !== "groupId")
-  ) {
+  let membership;
+  try {
+    membership = validateTimeSyncMembership(reference);
+  } catch (cause) {
     return invalidProjection(
       rows,
       "invalid-time-membership",
-      "Chart time synchronization membership accepts only groupId; matching policy must come from the active group or member.",
+      boundedMessage(
+        cause?.message
+        || "Chart time synchronization membership accepts only groupId.",
+      ),
     );
+  }
+  if (
+    !isPlaybackContext(timeContext)
+    || membership === null
+    || membership.groupId !== timeContext.groupId
+  ) {
+    return inactiveProjection(rows);
   }
 
   if (!Number.isFinite(timeContext.activeEpochMs)) {
@@ -51,15 +57,19 @@ export function applyTimeContext({
       "The active playback time must be within the supported date range.",
     );
   }
-  if (
-    !isRecord(timeContext.matching)
-    || typeof timeContext.matching.policy !== "string"
-    || timeContext.matching.policy.trim() === ""
-  ) {
+  let matching;
+  try {
+    matching = validateEffectiveTimeSyncMatching(
+      timeContext.matching,
+      "Active playback group or member",
+    );
+  } catch (cause) {
     return invalidProjection(
       rows,
       "invalid-time-matching",
-      "Active playback requires a validated group or member matching policy.",
+      boundedMessage(
+        `Active playback requires a validated group or member matching policy. ${cause?.message ?? ""}`.trim(),
+      ),
     );
   }
 
@@ -78,7 +88,6 @@ export function applyTimeContext({
     timeBinding,
     profile,
   );
-  const matching = effectiveMatching(timeContext);
   if (matching.policy === "interpolate") {
     try {
       assertTimeSyncInterpolationAllowed({
@@ -657,14 +666,6 @@ function bindingAllowsInterpolation(binding, profile) {
   return binding?.interpolationAllowed === true || column?.interpolationAllowed === true;
 }
 
-function effectiveMatching(timeContext) {
-  const matching = timeContext.matching;
-  return {
-    policy: matching.policy,
-    toleranceMs: matching.toleranceMs,
-  };
-}
-
 function canonicalActiveTime(activeEpochMs, rows, timeBinding, profile) {
   const dateOnly = rows
     .map((row) => readBoundValue(row, timeBinding, profile))
@@ -745,6 +746,56 @@ function isPlaybackContext(value) {
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateTimeSyncMembership(reference) {
+  if (reference === null || reference === undefined) return null;
+  if (!isRecord(reference)) {
+    throw new TypeError(
+      "Chart time synchronization membership must be an object or null.",
+    );
+  }
+  const prototype = Object.getPrototypeOf(reference);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(
+      "Chart time synchronization membership must be a plain object.",
+    );
+  }
+  if (Object.getOwnPropertySymbols(reference).length > 0) {
+    throw new TypeError(
+      "Chart time synchronization membership cannot contain symbol properties.",
+    );
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(reference);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (key !== "groupId") {
+      throw new Error(
+        `Chart time synchronization membership accepts only groupId; unknown property "${key}" cannot define matching policy.`,
+      );
+    }
+    if (!Object.hasOwn(descriptor, "value")) {
+      throw new TypeError(
+        `Chart time synchronization membership property "${key}" must be a data property.`,
+      );
+    }
+    if (!descriptor.enumerable) {
+      throw new TypeError(
+        `Chart time synchronization membership property "${key}" must be enumerable.`,
+      );
+    }
+  }
+  if (!Object.hasOwn(descriptors, "groupId")) {
+    throw new Error(
+      "Chart time synchronization membership property \"groupId\" is required.",
+    );
+  }
+  const groupId = descriptors.groupId.value;
+  if (typeof groupId !== "string" || groupId.trim() === "") {
+    throw new Error(
+      "Chart time synchronization membership groupId is required.",
+    );
+  }
+  return { groupId };
 }
 
 function isDeltaChart(chart) {

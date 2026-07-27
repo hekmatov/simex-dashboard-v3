@@ -57,7 +57,7 @@ export function validateTimeSyncGroups(groups, context = {}) {
     }
     groupIds.add(group.id);
 
-    const groupMatching = validateMatching(
+    const groupMatching = validateEffectiveTimeSyncMatching(
       group.matching,
       `Time synchronization group "${group.id}"`,
     );
@@ -96,7 +96,7 @@ export function validateTimeSyncGroups(groups, context = {}) {
 
       const effectiveMatching = member.matching === undefined
         ? groupMatching
-        : validateMatching(
+        : validateEffectiveTimeSyncMatching(
             member.matching,
             `Time synchronization member "${member.chartId}"`,
           );
@@ -302,23 +302,49 @@ function validateMemberShape(member, groupId) {
   requiredString(member.timeRole, "Time synchronization member timeRole");
 }
 
-function validateMatching(matching, description) {
-  if (matching === undefined) return Object.freeze({ policy: "exact" });
+export function validateEffectiveTimeSyncMatching(
+  matching,
+  description = "Effective time synchronization",
+) {
   if (!isRecord(matching)) {
     throw new TypeError(`${description} matching must be an object.`);
   }
-  checkKnownKeys(matching, MATCHING_KEYS, "temporal matching");
-  requiredString(matching.policy, `${description} matching policy`);
-  const policy = matching.policy;
+  const prototype = Object.getPrototypeOf(matching);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${description} matching must be a plain object.`);
+  }
+  if (Object.getOwnPropertySymbols(matching).length > 0) {
+    throw new TypeError(`${description} matching cannot contain symbol properties.`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(matching);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!Object.hasOwn(descriptor, "value")) {
+      throw new TypeError(
+        `${description} matching property "${key}" must be a data property.`,
+      );
+    }
+    if (!descriptor.enumerable) {
+      throw new TypeError(
+        `${description} matching property "${key}" must be enumerable.`,
+      );
+    }
+  }
+  checkKnownKeys(descriptors, MATCHING_KEYS, "temporal matching");
+  if (!Object.hasOwn(descriptors, "policy")) {
+    throw new Error(`${description} matching policy is required.`);
+  }
+  const policy = descriptors.policy.value;
+  requiredString(policy, `${description} matching policy`);
   if (!MATCHING_POLICIES.has(policy)) {
     throw new Error(`Unknown temporal matching policy "${policy}".`);
   }
-  const hasTolerance = Object.hasOwn(matching, "toleranceMs");
+  const hasTolerance = Object.hasOwn(descriptors, "toleranceMs");
+  const toleranceMs = descriptors.toleranceMs?.value;
   if (
     policy === "nearest"
     && (!hasTolerance
-      || !Number.isFinite(matching.toleranceMs)
-      || matching.toleranceMs < 0)
+      || !Number.isFinite(toleranceMs)
+      || toleranceMs < 0)
   ) {
     throw new RangeError(
       `${description} nearest matching requires a finite, non-negative toleranceMs.`,
@@ -329,7 +355,10 @@ function validateMatching(matching, description) {
       `${description} only nearest matching accepts toleranceMs.`,
     );
   }
-  return { policy, toleranceMs: matching.toleranceMs };
+  return Object.freeze({
+    policy,
+    ...(hasTolerance ? { toleranceMs } : {}),
+  });
 }
 
 function validateMemberEligibility({

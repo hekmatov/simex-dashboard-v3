@@ -272,6 +272,63 @@ test("comparison transformations are schema-aware and fixed times are canonical 
   );
 });
 
+test("comparison transformations reject inherited, executable, symbolic, and custom-prototype fields", () => {
+  const base = {
+    filters: [],
+    grouping: null,
+    aggregation: null,
+    duplicates: null,
+    missingValues: "gap",
+  };
+  let comparisonReads = 0;
+  let policyReads = 0;
+  const accessorComparison = {};
+  Object.defineProperty(accessorComparison, "mode", {
+    enumerable: true,
+    get() {
+      comparisonReads += 1;
+      return "previousObservation";
+    },
+  });
+  const inheritedComparison = Object.create({ mode: "previousObservation" });
+  const symbolicComparison = { mode: "previousObservation" };
+  symbolicComparison[Symbol("hidden")] = true;
+  const accessorMatching = {};
+  Object.defineProperty(accessorMatching, "policy", {
+    enumerable: true,
+    get() {
+      policyReads += 1;
+      return "exact";
+    },
+  });
+  const inheritedMatching = Object.create({ policy: "exact" });
+  const symbolicMatching = { policy: "exact" };
+  symbolicMatching[Symbol("hidden")] = true;
+  const fixed = (matching) => ({
+    mode: "fixedTime",
+    at: "2027-05-01T00:00:00.000Z",
+    matching,
+  });
+
+  for (const [comparison, message] of [
+    [inheritedComparison, /chart comparison must be a plain object/i],
+    [accessorComparison, /comparison property "mode".*data property/i],
+    [symbolicComparison, /chart comparison.*symbol/i],
+    [fixed(inheritedMatching), /comparison matching must be a plain object/i],
+    [fixed(accessorMatching), /matching property "policy".*data property/i],
+    [fixed(symbolicMatching), /comparison matching.*symbol/i],
+  ]) {
+    assert.throws(
+      () => validateChartInstance(deltaListChart({
+        transformations: { ...base, comparison },
+      })),
+      message,
+    );
+  }
+  assert.equal(comparisonReads, 0);
+  assert.equal(policyReads, 0);
+});
+
 test("chart time synchronization stores membership only and rejects the former policy locations", () => {
   const membershipOnly = lineChart({
     transformations: {

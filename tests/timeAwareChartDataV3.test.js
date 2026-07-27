@@ -374,6 +374,128 @@ test("direct playback preparation rejects chart-local matching even when context
   )), JSON.stringify(result.diagnostics));
 });
 
+test("chart-local matching is rejected before inactive or different-group playback can bypass validation", () => {
+  const rows = [{ at: "2027-05-01", value: 10 }];
+  const chart = {
+    ...playbackChart("kpi", {
+      value: { field: "value" },
+      time: { field: "at" },
+    }),
+    interaction: {
+      timeSync: { groupId: "exercise", policy: "lastKnown" },
+    },
+  };
+  const datasetProfile = profiled(rows);
+
+  for (const timeContext of [
+    undefined,
+    { groupId: "logistics", activeEpochMs: MAY_1, matching: { policy: "exact" } },
+  ]) {
+    const result = prepareChartData({
+      chart,
+      rows,
+      datasetProfile,
+      timeContext,
+    });
+    const diagnostic = result.diagnostics.find(({ code }) => (
+      code === "invalid-time-membership"
+    ));
+
+    assert.equal(result.status, "invalid");
+    assert.deepEqual(result.marks, []);
+    assert.ok(diagnostic);
+    assert.ok(diagnostic.message.length <= 240);
+  }
+});
+
+test("playback membership rejects inherited, executable, symbolic, and custom-prototype fields", () => {
+  const rows = [{ at: "2027-05-01", value: 10 }];
+  const datasetProfile = profiled(rows);
+  let accessorReads = 0;
+  const accessor = {};
+  Object.defineProperty(accessor, "groupId", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return "exercise";
+    },
+  });
+  const inherited = Object.create({ groupId: "exercise" });
+  const symbolic = { groupId: "exercise" };
+  symbolic[Symbol("hidden")] = true;
+
+  for (const timeSync of [inherited, accessor, symbolic]) {
+    const result = prepareChartData({
+      chart: {
+        ...playbackChart("kpi", {
+          value: { field: "value" },
+          time: { field: "at" },
+        }),
+        interaction: { timeSync },
+      },
+      rows,
+      datasetProfile,
+    });
+    assert.equal(result.status, "invalid");
+    assert.ok(result.diagnostics.some(({ code }) => (
+      code === "invalid-time-membership"
+    )), JSON.stringify(result.diagnostics));
+  }
+  assert.equal(accessorReads, 0);
+});
+
+test("active projection rejects malformed effective group or member matching contracts", () => {
+  const rows = [{ at: "2027-05-01", value: 10 }];
+  const chart = playbackChart("kpi", {
+    value: { field: "value" },
+    time: { field: "at" },
+  });
+  const datasetProfile = profiled(rows);
+  let accessorReads = 0;
+  const accessor = {};
+  Object.defineProperty(accessor, "policy", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return "exact";
+    },
+  });
+  const inherited = Object.create({ policy: "exact" });
+  const symbolic = { policy: "exact" };
+  symbolic[Symbol("hidden")] = true;
+
+  for (const matching of [
+    inherited,
+    accessor,
+    symbolic,
+    { policy: "exact", unexpected: true },
+    { policy: "closest" },
+    { policy: "nearest" },
+    { policy: "nearest", toleranceMs: -1 },
+    { policy: "exact", toleranceMs: 0 },
+  ]) {
+    const result = prepareChartData({
+      chart,
+      rows,
+      datasetProfile,
+      timeContext: {
+        groupId: "exercise",
+        activeEpochMs: MAY_1,
+        matching,
+      },
+    });
+    const diagnostic = result.diagnostics.find(({ code }) => (
+      code === "invalid-time-matching"
+    ));
+
+    assert.equal(result.status, "invalid");
+    assert.deepEqual(result.marks, []);
+    assert.ok(diagnostic, JSON.stringify(result.diagnostics));
+    assert.ok(diagnostic.message.length <= 240);
+  }
+  assert.equal(accessorReads, 0);
+});
+
 test("a finite out-of-range active epoch returns a bounded invalid-context diagnostic", () => {
   const rows = [{ at: "2027-05-01", value: 10 }];
   const result = prepareChartData({
