@@ -457,7 +457,7 @@ test("changing chart type keeps logical identity and removes only the draft's st
   assert.doesNotThrow(() => finalizeWizardDraft(state));
 });
 
-test("changing the sole member's type preserves the empty group definition", () => {
+test("changing the sole member's type removes only the now-empty runtime group", () => {
   const existing = createChartDraft("line", {
     id: "unrelated-trend",
     title: "Unrelated trend",
@@ -554,13 +554,9 @@ test("changing the sole member's type preserves the empty group definition", () 
     chart: { title: "Readiness mix" },
   });
 
-  assert.equal(state.timeSyncGroups.length, 2);
-  assert.deepEqual(state.timeSyncGroups[0], {
-    ...beforeTypeChange.timeSyncGroups[0],
-    members: [],
-  });
+  assert.equal(state.timeSyncGroups.length, 1);
   assert.equal(
-    state.timeSyncGroups[1],
+    state.timeSyncGroups[0],
     beforeTypeChange.timeSyncGroups[1],
   );
   assert.equal(beforeTypeChange.timeSyncGroups[0].members.length, 1);
@@ -580,28 +576,47 @@ test("changing the sole member's type preserves the empty group definition", () 
     value: { field: "value" },
   });
   const result = finalizeWizardDraft(state);
-  assert.equal(result.timeSyncGroups[0].id, "draft-clock");
-  assert.deepEqual(result.timeSyncGroups[0].members, []);
-  assert.equal(result.timeSyncGroups[1].members[0].chartId, "unrelated-trend");
+  assert.equal(result.timeSyncGroups.length, 1);
+  assert.equal(result.timeSyncGroups[0].id, "unrelated-clock");
+  assert.equal(result.timeSyncGroups[0].members[0].chartId, "unrelated-trend");
+  assert.doesNotThrow(() => validateTimeSyncGroups(result.timeSyncGroups, {
+    charts: [existing, result.chart],
+    loadedData: state.loadedData,
+    profiles: state.profiles,
+  }));
 });
 
-test("empty authoring groups do not make malformed member collections valid", () => {
-  const state = createWizardState({ timeSyncGroups: [] });
-
+test("preexisting empty runtime groups fail finalization instead of being filtered", () => {
+  let state = createWizardState({
+    timeSyncGroups: [{
+      id: "empty-clock",
+      name: "Empty clock",
+      primaryClock: {
+        sourceId: "exercise-data",
+        timeField: "reportedAt",
+      },
+      matching: { policy: "exact" },
+      members: [],
+    }],
+    loadedData: { "exercise-data": loadedRows },
+    profiles: { "exercise-data": profile() },
+  });
+  state = reduceWizardState(state, {
+    type: "selectType",
+    typeId: "kpi",
+    chart: { id: "current-value", title: "Current value" },
+  });
+  state = reduceWizardState(state, {
+    type: "selectSource",
+    sourceId: "exercise-data",
+  });
+  state = reduceWizardState(state, {
+    type: "updateRole",
+    roleId: "value",
+    value: { field: "value" },
+  });
   assert.throws(
-    () => reduceWizardState(state, {
-      type: "updateTimeSyncGroups",
-      value: [{
-        id: "malformed-clock",
-        name: "Malformed clock",
-        primaryClock: {
-          sourceId: "exercise-data",
-          timeField: "reportedAt",
-        },
-        matching: { policy: "exact" },
-        members: null,
-      }],
-    }),
+    () => finalizeWizardDraft(state),
     /members must be a non-empty array/i,
   );
 });
