@@ -64,9 +64,38 @@ export function createZoomGuardController({
   };
 }
 
+export function attachZoomGuard(root, controller) {
+  if (
+    !root
+    || typeof root.addEventListener !== "function"
+    || typeof root.removeEventListener !== "function"
+    || !controller
+    || typeof controller.handleWheel !== "function"
+  ) {
+    return () => {};
+  }
+  const handler = (event) => controller.handleWheel(event);
+  const options = { capture: true, passive: false };
+  let attached = false;
+  try {
+    root.addEventListener("wheel", handler, options);
+    attached = true;
+  } catch {
+    return () => {};
+  }
+  return () => {
+    if (!attached) return;
+    attached = false;
+    try {
+      root.removeEventListener("wheel", handler, options);
+    } catch {}
+  };
+}
+
 export default function ZoomGuard({ children }) {
   const [showHint, setShowHint] = React.useState(false);
   const controllerRef = React.useRef(null);
+  const rootRef = React.useRef(null);
   const hintId = React.useId();
   if (!controllerRef.current) {
     controllerRef.current = createZoomGuardController({
@@ -74,10 +103,15 @@ export default function ZoomGuard({ children }) {
     });
   }
   const controller = controllerRef.current;
+  React.useEffect(
+    () => attachZoomGuard(rootRef.current, controller),
+    [controller],
+  );
 
   return React.createElement(
     "div",
     {
+      ref: rootRef,
       className: "chart-zoom-guard",
       tabIndex: 0,
       "aria-describedby": hintId,
@@ -85,7 +119,6 @@ export default function ZoomGuard({ children }) {
       onPointerLeave: controller.pointerLeave,
       onFocus: controller.focus,
       onBlur: controller.blur,
-      onWheelCapture: controller.handleWheel,
     },
     children,
     React.createElement(

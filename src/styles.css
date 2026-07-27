@@ -2844,7 +2844,30 @@ button.danger {
   height: auto;
   max-height: 560px;
   max-width: 100%;
+  transition: transform 140ms ease;
   width: 100%;
+}
+
+.chart-image-viewport {
+  overflow: auto;
+}
+
+.chart-image-view[data-image-zoom-scale="1"] .chart-image-viewport {
+  overflow: visible;
+}
+
+.chart-image-zoom-controls {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.chart-image-zoom-status {
+  color: #506a82;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart-image-view figcaption {
@@ -3322,6 +3345,11 @@ button.danger {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .chart-zoom-hint,
+  .chart-image-view img {
+    transition: none;
+  }
+
   html {
     scroll-behavior: auto;
   }

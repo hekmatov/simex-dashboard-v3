@@ -6,6 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -204,6 +205,9 @@ test("image render models use safe sources, alternative text, and fit", () => {
   assert.match(image, /src="\/maps\/readiness.png"/);
   assert.match(image, /alt="Readiness map"/);
   assert.match(image, /object-fit:cover/);
+  assert.match(image, /Zoom 100%/);
+  assert.match(image, /Reset image zoom/);
+  assert.match(image, /data-image-zoom-scale="1"/);
   assert.match(unsafe, /chart-status-error/);
 });
 
@@ -490,4 +494,63 @@ test("ECharts lifecycle disposes a partially initialized instance when setup fai
   assert.doesNotThrow(() => lifecycle.mount({}));
   assert.doesNotThrow(() => lifecycle.update({ option: { id: "ignored" } }));
   assert.deepEqual(calls, ["dispose"]);
+});
+
+test("the mounted ECharts lifecycle receives a scale-capable geography option", () => {
+  const options = [];
+  const model = buildRenderModel({
+    chart: {
+      id: "regional-readiness",
+      typeId: "choroplethMap",
+      title: "Regional readiness",
+      roles: {},
+      presentation: {
+        title: { align: "left" },
+        map: { geoSource: "regions" },
+      },
+      interaction: { zoom: { enabled: true } },
+    },
+    prepared: {
+      status: "ready",
+      diagnostics: [],
+      meta: {},
+      marks: [{
+        geography: "GE-TB",
+        value: 7,
+        time: null,
+        feature: { name: "Tbilisi" },
+        group: null,
+        groupKey: "",
+      }],
+    },
+  });
+  const lifecycle = createEChartsLifecycle({
+    echartsApi: {
+      getInstanceByDom() {
+        return null;
+      },
+      init() {
+        return {
+          setOption(option) {
+            options.push(option);
+          },
+          dispose() {},
+        };
+      },
+      registerMap() {},
+    },
+    windowTarget: {
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    ResizeObserverCtor: null,
+  });
+
+  lifecycle.mount({});
+  lifecycle.update(model);
+  lifecycle.dispose();
+
+  assert.equal(model.interaction.zoom.target, "geo");
+  assert.equal(options.length, 1);
+  assert.equal(options[0].geo.roam, true);
 });

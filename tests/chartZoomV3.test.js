@@ -17,12 +17,16 @@ export async function load(url, context, nextLoad) {
 
 const {
   default: ZoomGuard,
+  attachZoomGuard,
   createZoomGuardController,
   wheelZoomDecision,
 } = await import("../src/components/charts/ZoomGuard.jsx");
 const {
   chartZoomEnabled,
 } = await import("../src/components/charts/ChartView.jsx");
+const {
+  nextImageZoomScale,
+} = await import("../src/components/charts/ImageChartView.jsx");
 
 test("plain wheel input is blocked from the chart without blocking page scroll", () => {
   assert.deepEqual(wheelZoomDecision({ ctrlKey: false }), {
@@ -95,6 +99,33 @@ test("the guard shows one hint per continuous hover or focus session", () => {
   assert.deepEqual(hintStates, [true, false, true, false]);
 });
 
+test("the native guard attaches one non-passive capture listener and removes that exact listener once", () => {
+  const calls = [];
+  const root = {
+    addEventListener(type, listener, options) {
+      calls.push({ operation: "add", type, listener, options });
+    },
+    removeEventListener(type, listener, options) {
+      calls.push({ operation: "remove", type, listener, options });
+    },
+  };
+  const controller = createZoomGuardController();
+  const detach = attachZoomGuard(root, controller);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].operation, "add");
+  assert.equal(calls[0].type, "wheel");
+  assert.deepEqual(calls[0].options, { capture: true, passive: false });
+
+  detach();
+  detach();
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].operation, "remove");
+  assert.equal(calls[1].type, "wheel");
+  assert.equal(calls[1].listener, calls[0].listener);
+  assert.equal(calls[1].options, calls[0].options);
+});
+
 test("hostile wheel objects fail closed without invoking unusable callbacks", () => {
   const hostile = {};
   Object.defineProperty(hostile, "ctrlKey", {
@@ -159,4 +190,21 @@ test("the zoom hint has a keyboard-focusable accessible status surface", () => {
   assert.match(html, /role="status"/);
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /Hold Ctrl while scrolling to zoom/);
+});
+
+test("image Ctrl-wheel scaling is deterministic, bounded, and ignores plain or malformed wheels", () => {
+  assert.equal(nextImageZoomScale(1, { ctrlKey: true, deltaY: -1 }), 1.25);
+  assert.equal(nextImageZoomScale(1.25, { ctrlKey: true, deltaY: 1 }), 1);
+  assert.equal(nextImageZoomScale(3, { ctrlKey: true, deltaY: -100 }), 3);
+  assert.equal(nextImageZoomScale(1, { ctrlKey: true, deltaY: 100 }), 1);
+  assert.equal(nextImageZoomScale(1.5, { ctrlKey: false, deltaY: -1 }), 1.5);
+  assert.equal(nextImageZoomScale(Number.NaN, null), 1);
+
+  const hostile = {};
+  Object.defineProperty(hostile, "deltaY", {
+    get() {
+      throw new Error("hostile delta");
+    },
+  });
+  assert.equal(nextImageZoomScale(2, hostile), 2);
 });

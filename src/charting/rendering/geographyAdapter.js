@@ -146,7 +146,7 @@ function geoOption(chart, renderContext) {
   return {
     map: mapName(chart, renderContext),
     nameProperty: chart.presentation?.map?.joinField,
-    roam: chart.interaction?.zoom?.enabled === true ? "move" : false,
+    roam: chart.interaction?.zoom?.enabled === true,
   };
 }
 

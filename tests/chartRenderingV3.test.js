@@ -512,8 +512,8 @@ test("choropleth and chronological choropleth retain map feature metadata and ti
   assert.deepEqual(chronological.option.options[1].series[0].data.map(({ name }) => name), ["GE-TB", "GE-AJ"]);
 });
 
-test("geography zoom remains pan-only until the host receives a Ctrl-wheel gesture", () => {
-  const model = buildRenderModel({
+test("geography zoom enables renderer scaling only when the chart interaction enables it", () => {
+  const enabled = buildRenderModel({
     chart: chart("choroplethMap", {
       interaction: { zoom: { enabled: true } },
     }),
@@ -521,10 +521,22 @@ test("geography zoom remains pan-only until the host receives a Ctrl-wheel gestu
       { geography: "GE-TB", value: 7, time: null, feature: { name: "Tbilisi" }, group: null, groupKey: "" },
     ]),
   });
+  const disabled = buildRenderModel({
+    chart: chart("choroplethMap", {
+      interaction: { zoom: { enabled: false } },
+    }),
+    prepared: ready([
+      { geography: "GE-TB", value: 7, time: null, feature: { name: "Tbilisi" }, group: null, groupKey: "" },
+    ]),
+  });
 
-  assert.equal(model.option.geo.roam, "move");
-  assert.deepEqual(model.interaction, {
+  assert.equal(enabled.option.geo.roam, true);
+  assert.deepEqual(enabled.interaction, {
     zoom: { enabled: true, modifierKey: "Control", target: "geo" },
+  });
+  assert.equal(disabled.option.geo.roam, false);
+  assert.deepEqual(disabled.interaction, {
+    zoom: { enabled: false, modifierKey: "Control", target: "geo" },
   });
 });
 
