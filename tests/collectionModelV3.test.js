@@ -42,6 +42,14 @@ function ids(items) {
   return items.map(({ entityId }) => entityId);
 }
 
+function permutations(items) {
+  if (items.length < 2) return [items];
+  return items.flatMap((item, index) => permutations([
+    ...items.slice(0, index),
+    ...items.slice(index + 1),
+  ]).map((remainder) => [item, ...remainder]));
+}
+
 test("documented defaults are detached, deeply immutable, and do not mutate input", () => {
   const input = {};
   const normalized = normalizeCollectionSettings(input);
@@ -308,6 +316,60 @@ test("field sorting supports both directions, direct own fields, missing-last, a
     ids(rankCollection(items, settings({ mode: "sort", field: "severity", direction: "desc" }))),
     ["h", "a", "z", "i", "m", "n"],
   );
+});
+
+test("mixed primitive field sorting has a transitive repeatable total order in both directions", () => {
+  const items = [
+    { entityId: "string-2", label: "String 2", mixed: "2" },
+    { entityId: "number-10", label: "Number 10", mixed: 10 },
+    { entityId: "number-9", label: "Number 9", mixed: 9 },
+    { entityId: "boolean-false", label: "Boolean false", mixed: false },
+    { entityId: "boolean-true", label: "Boolean true", mixed: true },
+    { entityId: "null", label: "Null", mixed: null },
+    { entityId: "undefined", label: "Undefined", mixed: undefined },
+    { entityId: "nan", label: "NaN", mixed: Number.NaN },
+    { entityId: "infinity", label: "Infinity", mixed: Number.POSITIVE_INFINITY },
+  ];
+  const ascending = settings({ mode: "sort", field: "mixed", direction: "asc" });
+  const descending = settings({ mode: "sort", field: "mixed", direction: "desc" });
+  const expectedAscending = [
+    "number-9",
+    "number-10",
+    "string-2",
+    "boolean-false",
+    "boolean-true",
+    "infinity",
+    "nan",
+    "null",
+    "undefined",
+  ];
+  const expectedDescending = [
+    "boolean-true",
+    "boolean-false",
+    "string-2",
+    "number-10",
+    "number-9",
+    "infinity",
+    "nan",
+    "null",
+    "undefined",
+  ];
+
+  for (const input of permutations(items.slice(0, 3))) {
+    const withRemainingTypes = [...input, ...items.slice(3)];
+    assert.deepEqual(ids(rankCollection(withRemainingTypes, ascending)), expectedAscending);
+    assert.deepEqual(ids(rankCollection(withRemainingTypes, descending)), expectedDescending);
+  }
+  assert.deepEqual(ids(rankCollection(items, ascending)), expectedAscending);
+  assert.deepEqual(ids(rankCollection(items, ascending)), expectedAscending);
+  assert.deepEqual(ids(rankCollection(items, descending)), expectedDescending);
+  assert.deepEqual(ids(rankCollection(items, descending)), expectedDescending);
+
+  const [nine, ten, stringTwo] = items.slice(0, 3).reverse();
+  const comesBefore = (left, right) => ids(rankCollection([right, left], ascending))[0] === left.entityId;
+  assert.equal(comesBefore(nine, ten), true);
+  assert.equal(comesBefore(ten, stringTwo), true);
+  assert.equal(comesBefore(nine, stringTwo), true);
 });
 
 test("all approved operational methods rank target item shapes deterministically", () => {

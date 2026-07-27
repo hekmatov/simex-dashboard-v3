@@ -152,14 +152,28 @@ function sortableValue(item, field) {
     return Number.isFinite(value) ? { available: true, value, type: "number" } : { available: false };
   }
   if (typeof value === "string" || typeof value === "boolean") {
-    return { available: true, value: String(value), type: "text" };
+    return { available: true, value, type: typeof value };
   }
   return { available: false };
 }
 
+// Ascending field sort orders supported primitives by type, then value:
+// finite numbers, strings, booleans. Descending reverses this available-value
+// order; unsupported and non-finite values are handled separately and stay last.
+const SORT_TYPE_ORDER = Object.freeze({
+  number: 0,
+  string: 1,
+  boolean: 2,
+});
+
 function compareAvailable(left, right) {
-  if (left.type === "number" && right.type === "number") return left.value - right.value;
-  return compareText(String(left.value), String(right.value));
+  if (left.type !== right.type) {
+    return SORT_TYPE_ORDER[left.type] - SORT_TYPE_ORDER[right.type];
+  }
+  if (left.type === "number") return left.value - right.value;
+  if (left.type === "string") return compareText(left.value, right.value);
+  if (left.value === right.value) return 0;
+  return left.value ? 1 : -1;
 }
 
 function compareSort(left, right, ranking, previousPositions) {
