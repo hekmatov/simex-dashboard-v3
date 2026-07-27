@@ -250,6 +250,92 @@ test("ChartView receives active time only when its configured group matches", ()
   assert.doesNotMatch(synchronized, /value at 2027-05-03: 30/);
 });
 
+test("ChartView announces an active trace point beyond the 50-row accessibility cap", () => {
+  const rows = Array.from({ length: 51 }, (_, index) => ({
+    observed: new Date(MAY_1 + (index * 86_400_000)).toISOString().slice(0, 10),
+    cases: index + 1,
+  }));
+  const chart = lineChart();
+  const fixture = {
+    groups: [{
+      id: "exercise",
+      name: "Exercise timeline",
+      primaryClock: { sourceId: "primary", timeField: "observed" },
+      matching: { policy: "exact" },
+      members: [{ chartId: chart.id, timeRole: "observation" }],
+    }],
+    charts: [chart],
+    loadedData: { primary: rows },
+    profiles: { primary: temporalProfile(rows) },
+  };
+  const html = renderPlayback(
+    React.createElement(ChartView, {
+      chart,
+      rows,
+      datasetProfile: fixture.profiles.primary,
+    }),
+    {
+      ...fixture,
+      initialState: {
+        activeGroupId: "exercise",
+        activeIndex: 50,
+        playing: false,
+        speed: 1,
+        playbackView: true,
+      },
+    },
+  );
+
+  assert.match(html, /value at 2027-06-20: 51/);
+  assert.doesNotMatch(html, /value at 2027-05-01: 1/);
+});
+
+test("timeline and swimlane playback companions announce only active events", () => {
+  const rows = [
+    { event: "Mobilize", start: "2027-05-01", end: "2027-05-01", lane: "Ops", status: "Planned" },
+    { event: "Activate", start: "2027-05-02", end: "2027-05-02", lane: "Ops", status: "Active" },
+    { event: "Demobilize", start: "2027-05-03", end: "2027-05-03", lane: "Ops", status: "Done" },
+  ];
+  const profile = profileDataset(rows, {
+    start: { interpretation: "temporal", format: "YYYY-MM-DD" },
+    end: { interpretation: "temporal", format: "YYYY-MM-DD" },
+  });
+
+  for (const typeId of ["timeline", "swimlane"]) {
+    const chart = timelineChart(typeId);
+    const html = renderPlayback(
+      React.createElement(ChartView, {
+        chart,
+        rows,
+        datasetProfile: profile,
+      }),
+      {
+        groups: [{
+          id: "exercise",
+          name: "Exercise timeline",
+          primaryClock: { sourceId: "primary", timeField: "start" },
+          matching: { policy: "exact" },
+          members: [{ chartId: chart.id, timeRole: "start" }],
+        }],
+        charts: [chart],
+        loadedData: { primary: rows },
+        profiles: { primary: profile },
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 1,
+          playing: false,
+          speed: 1,
+          playbackView: true,
+        },
+      },
+    );
+
+    assert.match(html, /Activate starts 2027-05-02, state Active/);
+    assert.doesNotMatch(html, /Mobilize/);
+    assert.doesNotMatch(html, /Demobilize/);
+  }
+});
+
 test("one playback timer advances, pauses on invisibility, and cleans every resource", () => {
   const calls = [];
   const intervals = new Map();
@@ -307,6 +393,44 @@ test("one playback timer advances, pauses on invisibility, and cleans every reso
   ]);
   assert.equal(intervals.size, 0);
   assert.equal(listeners.size, 0);
+});
+
+test("an initially hidden playback timer pauses without allocating resources", () => {
+  const calls = [];
+  const scheduler = {
+    setInterval() {
+      calls.push("set");
+      return 1;
+    },
+    clearInterval() {
+      calls.push("clear");
+    },
+  };
+  const documentTarget = {
+    hidden: true,
+    addEventListener() {
+      calls.push("listen");
+    },
+    removeEventListener() {
+      calls.push("remove");
+    },
+  };
+  const dispatched = [];
+
+  const cleanup = createPlaybackTimer({
+    playing: true,
+    playbackView: true,
+    clockLength: 3,
+    speed: 1,
+    activeIndex: 0,
+    dispatch: (action) => dispatched.push(action),
+    documentTarget,
+    scheduler,
+  });
+  cleanup();
+
+  assert.deepEqual(dispatched, [{ type: "pause" }]);
+  assert.deepEqual(calls, []);
 });
 
 test("reduced motion never starts playback automatically but deliberate play remains available", () => {
@@ -403,6 +527,35 @@ function lineChart(overrides = {}) {
     presentation: { collection: null, labels: null, accessibility: null },
     ...overrides,
     interaction,
+  };
+}
+
+function timelineChart(typeId) {
+  return {
+    id: `${typeId}-chart`,
+    typeId,
+    title: `${typeId} events`,
+    sourceId: "primary",
+    roles: {
+      event: { field: "event" },
+      start: {
+        field: "start",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+      end: {
+        field: "end",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+      lane: { field: "lane" },
+      status: { field: "status" },
+    },
+    presentation: { collection: null, labels: null, accessibility: null },
+    interaction: {
+      zoom: { enabled: false },
+      timeSync: { groupId: "exercise", policy: "exact" },
+    },
   };
 }
 

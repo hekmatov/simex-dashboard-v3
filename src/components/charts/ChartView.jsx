@@ -1,6 +1,7 @@
 import React from "react";
 
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
+import { buildAccessibilityCompanionForFamily } from "../../charting/rendering/accessibilityRows.js";
 import { buildRenderModel } from "../../charting/rendering/buildRenderModel.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import CardChartView from "./CardChartView.jsx";
@@ -19,6 +20,7 @@ export default function ChartView(props) {
       buildRenderModel({ ...playbackProps, prepared }),
       prepared,
       playbackProps.timeContext,
+      playbackProps.chart,
     );
     const provenance = resolveProvenance(props);
     if (model.kind === "echarts") return React.createElement(EChartsChartView, { model, chart: props.chart, provenance });
@@ -43,7 +45,7 @@ function withPlaybackTimeContext(props, playback) {
   return props;
 }
 
-function withPlaybackPresentation(model, prepared, timeContext) {
+function withPlaybackPresentation(model, prepared, timeContext, chart) {
   if (!timeContext || prepared.meta?.activeTime === undefined) return model;
   const activeMarks = prepared.marks?.filter(({ active }) => active === true) ?? [];
   if (prepared.meta.activeTime.status === "missing" && activeMarks.length === 0) {
@@ -54,24 +56,24 @@ function withPlaybackPresentation(model, prepared, timeContext) {
   }
   if (
     model.kind !== "echarts"
-    || model.accessibility?.family !== "axis"
+    || prepared.meta.activeTime.mode !== "trace"
+    || !["axis", "timeline"].includes(model.accessibility?.family)
     || activeMarks.length === 0
   ) {
     return model;
   }
-  const activeRows = prepared.marks
-    .map((mark, index) => mark.active === true
-      ? model.accessibility.rows[index]
-      : null)
-    .filter(Boolean);
+  const activeCompanion = buildAccessibilityCompanionForFamily(
+    model.accessibility.family,
+    activeMarks,
+    chart,
+  );
   return {
     ...model,
     accessibility: {
-      ...model.accessibility,
-      rows: activeRows.length === 1
-        ? [{ ...activeRows[0], series: "value" }]
-        : activeRows,
-      truncated: false,
+      ...activeCompanion,
+      rows: activeCompanion.family === "axis" && activeCompanion.rows.length === 1
+        ? [{ ...activeCompanion.rows[0], series: "value" }]
+        : activeCompanion.rows,
     },
   };
 }

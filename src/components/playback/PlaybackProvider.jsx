@@ -139,8 +139,11 @@ export function createPlaybackTimer({
     || ![1, 2, 3].includes(speed)
     || typeof dispatch !== "function"
     || typeof scheduler?.setInterval !== "function"
-    || documentTarget?.hidden === true
   ) {
+    return () => {};
+  }
+  if (documentTarget?.hidden === true) {
+    dispatch({ type: "pause" });
     return () => {};
   }
 

@@ -1,7 +1,10 @@
 const MAX_ACCESSIBILITY_ROWS = 50;
 
 export function buildAccessibilityCompanion(schema, marks = [], chart = {}) {
-  const family = schema.dataFamily;
+  return buildAccessibilityCompanionForFamily(schema.dataFamily, marks, chart);
+}
+
+export function buildAccessibilityCompanionForFamily(family, marks = [], chart = {}) {
   const rows = marks
     .slice(0, MAX_ACCESSIBILITY_ROWS)
     .map((mark) => accessibilityRow(family, mark, chart));
