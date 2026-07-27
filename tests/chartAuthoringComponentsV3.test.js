@@ -104,6 +104,33 @@ const {
 } = await import(
   "../src/components/chart-authoring/ChartWizardV3.jsx"
 );
+const {
+  default: ChartEditorV3,
+  acceptEditorSave,
+  createChartEditorState,
+  rebaseChartEditorState,
+  reduceChartEditorState,
+  saveChartEditorState,
+  SelectedChartEditor,
+} = await import(
+  "../src/components/chart-authoring/ChartEditorV3.jsx"
+);
+const {
+  default: ContextualTabs,
+  buildContextualTabs,
+} = await import(
+  "../src/components/chart-authoring/ContextualTabs.jsx"
+);
+const {
+  default: ChartConversionDialog,
+} = await import(
+  "../src/components/chart-authoring/ChartConversionDialog.jsx"
+);
+const {
+  default: EditSessionActions,
+} = await import(
+  "../src/components/chart-authoring/EditSessionActions.jsx"
+);
 
 const backgroundSection = {
   id: "appearance",
@@ -1335,6 +1362,500 @@ test("wizard submit callback runs only after normalized chart and whole-group va
   assert.equal(calls.length, 1);
 });
 
+test("contextual editor tabs are derived from materialized sections without a generic series tab", () => {
+  const pie = validPieChart();
+  const pieRuntime = createWizardPreparation({
+    chart: pie,
+    rows: [
+      { category: "Ready", value: 6 },
+      { category: "Delayed", value: 2 },
+    ],
+  });
+  const pieModel = buildEditorFormModel({
+    chart: pie,
+    profile: pieRuntime.profile,
+    prepared: pieRuntime.prepared,
+  });
+  const pieTabs = buildContextualTabs(pieModel.sections);
+  const pieHtml = render(React.createElement(ContextualTabs, {
+    sections: pieModel.sections,
+    activeTabId: "data",
+    onSelect() {},
+    onChange() {},
+  }));
+
+  assert.deepEqual(pieTabs.map(({ label }) => label), [
+    "Data",
+    "Appearance",
+    "Advanced",
+  ]);
+  assert.match(pieHtml, />Data</);
+  assert.match(pieHtml, />Appearance</);
+  assert.doesNotMatch(pieHtml, />Axes</);
+  assert.doesNotMatch(pieHtml, />Map</);
+  assert.doesNotMatch(pieHtml, />Timeline</);
+  assert.doesNotMatch(pieHtml, />Series</);
+
+  const line = validLineChart();
+  const lineRuntime = createWizardPreparation({
+    chart: line,
+    rows: [{ period: "May", capacity: 4 }],
+  });
+  const lineModel = buildEditorFormModel({
+    chart: line,
+    profile: lineRuntime.profile,
+    prepared: lineRuntime.prepared,
+  });
+  assert.deepEqual(
+    buildContextualTabs(lineModel.sections).map(({ label }) => label),
+    ["Data", "Appearance", "Axes", "Interactions", "Advanced"],
+  );
+});
+
+test("editor keeps title repair reachable before preview readiness", () => {
+  const chart = createChartDraft("line", {
+    id: "repair-title",
+    title: "",
+    sourceId: "exercise-data",
+  });
+  const html = render(React.createElement(ChartEditorV3, {
+    chart,
+    rows: [{ period: "May", capacity: 4 }],
+    timeSyncGroups: [],
+    existingCharts: [],
+    loadedData: {
+      "exercise-data": [{ period: "May", capacity: 4 }],
+    },
+    onSave() {},
+    onReset() {},
+    onCancel() {},
+  }));
+
+  assert.match(html, /Chart title/);
+  assert.match(html, />Data</);
+  assert.match(html, />Appearance</);
+});
+
+test("save and reset are adjacent and reset confirmation is accessible", () => {
+  const html = render(React.createElement(EditSessionActions, {
+    valid: true,
+    resetConfirmationOpen: true,
+    onSave() {},
+    onRequestReset() {},
+    onConfirmReset() {},
+    onCancelReset() {},
+    onCancel() {},
+  }));
+
+  assert.match(
+    html,
+    /<button[^>]*>Save<\/button><button[^>]*>Reset changes<\/button>/,
+  );
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /Discard these edits\?/);
+  assert.match(html, /Reset changes\?/);
+});
+
+test("editor state isolates mutation and same-authority rerenders preserve the draft", () => {
+  const saved = validLineChart();
+  const state = createChartEditorState({
+    chart: saved,
+    timeSyncGroups: [],
+    revision: 7,
+  });
+  const edited = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["title"],
+    value: "Locally edited",
+  });
+  const rerendered = rebaseChartEditorState(edited, {
+    chart: structuredClone(saved),
+    timeSyncGroups: [],
+    revision: 7,
+  });
+
+  assert.equal(saved.title, "Contract line");
+  assert.equal(edited.draft.title, "Locally edited");
+  assert.notEqual(edited.draft, saved);
+  assert.equal(rerendered, edited);
+});
+
+test("a new saved revision rebases and reset restores that most recent saved state", () => {
+  const first = validLineChart({ title: "First saved title" });
+  let state = createChartEditorState({
+    chart: first,
+    timeSyncGroups: [],
+    revision: 1,
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["title"],
+    value: "Unsaved first edit",
+  });
+  const second = validLineChart({ title: "Second saved title" });
+  state = rebaseChartEditorState(state, {
+    chart: second,
+    timeSyncGroups: [],
+    revision: 2,
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["title"],
+    value: "Unsaved second edit",
+  });
+  const beforeCancel = state.draft;
+  state = reduceChartEditorState(state, { type: "requestReset" });
+  state = reduceChartEditorState(state, { type: "cancelConfirmation" });
+  assert.equal(state.draft, beforeCancel);
+
+  state = reduceChartEditorState(state, { type: "requestReset" });
+  state = reduceChartEditorState(state, { type: "confirmReset" });
+  assert.equal(state.draft.title, "Second saved title");
+  assert.notEqual(state.draft, second);
+});
+
+test("editor discards a stale prepared correlation and recomputes readiness for the current draft", () => {
+  const rows = [
+    { period: "May", capacity: 4, occupied: 3 },
+    { period: "June", capacity: 6, occupied: 5 },
+  ];
+  const oldChart = validLineChart();
+  const currentChart = validLineChart({
+    roles: {
+      measurements: [{ field: "occupied", axis: "primary" }],
+      observation: { field: "period", interpretation: "category" },
+    },
+  });
+  const stale = createWizardPreparation({
+    chart: oldChart,
+    rows,
+  });
+  const current = createWizardPreparation({
+    chart: currentChart,
+    rows,
+  });
+  const html = render(React.createElement(ChartEditorV3, {
+    chart: currentChart,
+    rows,
+    profile: current.profile,
+    prepared: stale.prepared,
+    timeSyncGroups: [],
+    existingCharts: [],
+    loadedData: { "exercise-data": rows },
+    onSave() {},
+    onReset() {},
+    onCancel() {},
+  }));
+
+  assert.match(html, /chart-authoring-preview-ready/);
+  assert.doesNotMatch(html, /<button[^>]*type="submit"[^>]*disabled/);
+});
+
+test("editor save normalizes, validates, and accepts the full synchronization group collection", () => {
+  const rows = [
+    { observed: "2027-05-01", capacity: 4 },
+    { observed: "2027-05-02", capacity: 6 },
+  ];
+  const chart = synchronizedLineChart();
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal" },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "observed",
+    },
+    matching: { policy: "exact" },
+    members: [{
+      chartId: chart.id,
+      timeRole: "observation",
+    }],
+  }];
+  let state = createChartEditorState({
+    chart,
+    timeSyncGroups: groups,
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateTimeSyncGroups",
+    value: [{
+      ...groups[0],
+      members: [{
+        ...groups[0].members[0],
+        matching: { policy: "nearest", toleranceMs: 3_600_000 },
+      }],
+    }],
+  }, {
+    existingCharts: [chart],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+  });
+  const result = saveChartEditorState(state, {
+    existingCharts: [chart],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  });
+
+  assert.deepEqual(result.chart.interaction.timeSync, {
+    groupId: "exercise-clock",
+  });
+  assert.equal("temporalMatch" in result.chart.transformations, false);
+  assert.deepEqual(
+    result.timeSyncGroups[0].members[0].matching,
+    { policy: "nearest", toleranceMs: 3_600_000 },
+  );
+  const accepted = acceptEditorSave(state, result);
+  assert.notEqual(accepted.savedChart, result.chart);
+  assert.deepEqual(accepted.savedChart, result.chart);
+
+  const invalid = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["title"],
+    value: "",
+  });
+  assert.throws(
+    () => saveChartEditorState(invalid, {
+      existingCharts: [chart],
+      loadedData: { "exercise-data": rows },
+      profiles: { "exercise-data": profile },
+      profile,
+    }),
+    /title/i,
+  );
+});
+
+test("moving the sole synchronized chart to another group removes only the empty old group", () => {
+  const rows = [
+    { observed: "2027-05-01", capacity: 4 },
+    { observed: "2027-05-02", capacity: 6 },
+  ];
+  const chart = synchronizedLineChart();
+  const other = synchronizedLineChart({
+    id: "other-line",
+    interaction: { timeSync: { groupId: "secondary-clock" } },
+  });
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal" },
+  });
+  const group = (id, chartId) => ({
+    id,
+    name: id,
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "observed",
+    },
+    matching: { policy: "exact" },
+    members: [{ chartId, timeRole: "observation" }],
+  });
+  const state = createChartEditorState({
+    chart,
+    timeSyncGroups: [
+      group("exercise-clock", chart.id),
+      group("secondary-clock", other.id),
+    ],
+  });
+  const moved = reduceChartEditorState(state, {
+    type: "updateTimeSyncMembership",
+    groupId: "secondary-clock",
+    timeRole: "observation",
+  }, {
+    existingCharts: [chart, other],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+  });
+
+  assert.deepEqual(
+    moved.timeSyncGroups.map(({ id }) => id),
+    ["secondary-clock"],
+  );
+  assert.deepEqual(
+    moved.timeSyncGroups[0].members.map(({ chartId }) => chartId),
+    ["other-line", "synchronized-line"],
+  );
+  assert.deepEqual(moved.draft.interaction.timeSync, {
+    groupId: "secondary-clock",
+  });
+});
+
+test("conversion dialog distinguishes compatible and remapped changes and cancel preserves the exact draft", () => {
+  const line = validLineChart({
+    presentation: {
+      axes: { primary: { title: "Capacity" } },
+    },
+  });
+  let state = createChartEditorState({
+    chart: line,
+    timeSyncGroups: [],
+  });
+  state = reduceChartEditorState(state, {
+    type: "requestConversion",
+    targetTypeId: "area",
+  });
+  assert.equal(state.conversion.plan.kind, "compatible");
+  assert.deepEqual(state.conversion.plan.preservedRoles, line.roles);
+  const compatibleHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    columns: [...columnTypes().values()],
+    onRoleAssignment() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.match(compatibleHtml, /Compatible change/);
+  assert.match(compatibleHtml, /Preserved data roles/);
+
+  const draftBeforeCancel = state.draft;
+  state = reduceChartEditorState(state, { type: "cancelConversion" });
+  assert.equal(state.draft, draftBeforeCancel);
+  assert.equal(state.conversion, null);
+
+  state = reduceChartEditorState(state, {
+    type: "requestConversion",
+    targetTypeId: "pie",
+  });
+  const remapHtml = render(React.createElement(ChartConversionDialog, {
+    conversion: state.conversion,
+    columns: [...columnTypes().values()],
+    onRoleAssignment() {},
+    onConfirm() {},
+    onCancel() {},
+  }));
+  assert.equal(state.conversion.plan.kind, "remap");
+  assert.deepEqual(
+    state.conversion.plan.requiredRoles.map(({ id }) => id),
+    ["category", "value"],
+  );
+  assert.match(remapHtml, /Role remapping required/);
+  assert.match(remapHtml, /Required role remapping/);
+  assert.match(remapHtml, /presentation\.axes/);
+  assert.match(remapHtml, /Apply chart type change/);
+  assert.match(remapHtml, /disabled/);
+});
+
+test("destructive conversion applies only after complete direct role assignments and removes disclosed time sync membership", () => {
+  const rows = [
+    { observed: "2027-05-01", capacity: 4 },
+    { observed: "2027-05-02", capacity: 6 },
+  ];
+  const chart = synchronizedLineChart({
+    presentation: {
+      axes: { primary: { title: "Capacity" } },
+    },
+  });
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal" },
+  });
+  const groups = [{
+    id: "exercise-clock",
+    name: "Exercise clock",
+    primaryClock: {
+      sourceId: "exercise-data",
+      timeField: "observed",
+    },
+    matching: { policy: "exact" },
+    members: [{
+      chartId: chart.id,
+      timeRole: "observation",
+    }],
+  }];
+  let state = createChartEditorState({
+    chart,
+    timeSyncGroups: groups,
+  });
+  state = reduceChartEditorState(state, {
+    type: "requestConversion",
+    targetTypeId: "pie",
+  });
+  assert.ok(state.conversion.plan.removedSettings.some(
+    ({ path }) => path === "interaction.timeSync",
+  ));
+  const beforeIncompleteApply = state.draft;
+  state = reduceChartEditorState(state, {
+    type: "applyConversion",
+  }, {
+    existingCharts: [chart],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  });
+  assert.equal(state.draft, beforeIncompleteApply);
+  assert.match(state.error, /required data roles/i);
+
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "category",
+    value: { field: "observed", interpretation: "category" },
+  });
+  state = reduceChartEditorState(state, {
+    type: "updateConversionRole",
+    roleId: "value",
+    value: { field: "capacity" },
+  });
+  state = reduceChartEditorState(state, {
+    type: "applyConversion",
+  }, {
+    existingCharts: [chart],
+    loadedData: { "exercise-data": rows },
+    profiles: { "exercise-data": profile },
+    profile,
+  });
+
+  assert.equal(state.draft.typeId, "pie");
+  assert.equal(state.draft.interaction.timeSync, null);
+  assert.deepEqual(state.timeSyncGroups, []);
+  assert.equal(state.conversion, null);
+  assert.equal(state.previewRevision, 1);
+});
+
+test("dashboard editor routing uses ChartEditorV3 for version-3 charts and preserves legacy fallback", () => {
+  const chart = validPieChart();
+  const v3 = render(React.createElement(SelectedChartEditor, {
+    panel: chart,
+    dashboard: {
+      pages: [{
+        id: "page",
+        sections: [{ id: "section", panels: [chart] }],
+      }],
+      dataSources: {
+        "exercise-data": { kind: "dataset" },
+      },
+      loadedData: {
+        "exercise-data": [{ category: "Ready", value: 6 }],
+      },
+      timeSyncGroups: [],
+    },
+    onSave() {},
+    onCancel() {},
+    onRemove() {},
+    onLegacyChange() {},
+  }));
+  assert.match(v3, /chart-editor-v3/);
+  assert.doesNotMatch(v3, /chart-settings-panel-v2/);
+
+  const legacy = render(React.createElement(SelectedChartEditor, {
+    panel: {
+      id: "legacy",
+      title: "Legacy line",
+      type: "line",
+      dataSource: "exercise-data",
+    },
+    dashboard: {
+      dataSources: {
+        "exercise-data": { kind: "dataset" },
+      },
+      loadedData: {
+        "exercise-data": [{ period: "May", capacity: 4 }],
+      },
+    },
+    onSave() {},
+    onCancel() {},
+    onRemove() {},
+    onLegacyChange() {},
+  }));
+  assert.match(legacy, /chart-settings-panel-v2/);
+});
+
 function findElement(node, predicate) {
   if (!React.isValidElement(node)) return null;
   if (predicate(node)) return node;
@@ -1353,6 +1874,51 @@ function validLineChart(overrides = {}) {
     roles: {
       measurements: [{ field: "capacity", axis: "primary" }],
       observation: { field: "period", interpretation: "category" },
+    },
+    ...overrides,
+    transformations: {
+      ...(overrides.transformations ?? {}),
+    },
+    presentation: {
+      ...(overrides.presentation ?? {}),
+    },
+  });
+}
+
+function validPieChart(overrides = {}) {
+  return createChartDraft("pie", {
+    id: "contract-pie",
+    title: "Contract pie",
+    sourceId: "exercise-data",
+    roles: {
+      category: { field: "category" },
+      value: { field: "value" },
+    },
+    ...overrides,
+    transformations: {
+      ...(overrides.transformations ?? {}),
+    },
+    presentation: {
+      ...(overrides.presentation ?? {}),
+    },
+  });
+}
+
+function synchronizedLineChart(overrides = {}) {
+  return createChartDraft("line", {
+    id: "synchronized-line",
+    title: "Synchronized line",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "capacity", axis: "primary" }],
+      observation: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    interaction: {
+      timeSync: { groupId: "exercise-clock" },
     },
     ...overrides,
     transformations: {

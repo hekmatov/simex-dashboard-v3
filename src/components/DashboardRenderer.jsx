@@ -1,7 +1,9 @@
 ﻿import React from "react";
 
 import AddChartWizard from "./AddChartWizard.jsx";
+import { SelectedChartEditor } from "./chart-authoring/ChartEditorV3.jsx";
 import ColorField from "./ColorField.jsx";
+import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
@@ -61,6 +63,8 @@ export default function DashboardRenderer({
   const [filterValues, setFilterValues] = React.useState(() =>
     collectFilterDefaults(dashboard),
   );
+  const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
+    React.useState(false);
 
   React.useEffect(() => {
     setFilterValues((current) => ({
@@ -74,10 +78,6 @@ export default function DashboardRenderer({
   const landingActive = hasLandingPresentation(activePage);
   const selectedPanel = findPanel(dashboard, selectedPanelId);
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
-  const selectedPanelData = dashboard.loadedData[selectedPanel?.dataSource] ?? [];
-  const selectedPanelColumns = Array.isArray(selectedPanelData)
-    ? Object.keys(selectedPanelData[0] ?? {})
-    : [];
 
   React.useEffect(() => {
     setSelectedPanelDraft(selectedPanel ? structuredClone(selectedPanel) : null);
@@ -244,6 +244,15 @@ export default function DashboardRenderer({
     setSelectedPanelId(null);
   }
 
+  function saveSelectedChartV3({ chart, timeSyncGroups }) {
+    const nextDashboard = dashboardWithCurrentDrafts(chart);
+    nextDashboard.timeSyncGroups = structuredClone(timeSyncGroups ?? []);
+    onPanelEditCommit(nextDashboard);
+    setSelectedPanelDraft(null);
+    setChartEditBaseline(null);
+    setSelectedPanelId(null);
+  }
+
   function cancelSelectedPanel() {
     if (chartEditBaseline) {
       onPanelEditCancel(chartEditBaseline);
@@ -346,7 +355,7 @@ export default function DashboardRenderer({
     onToggleEditMode();
   }
 
-  function dashboardWithCurrentDrafts() {
+  function dashboardWithCurrentDrafts(panelOverride = selectedPanelDraft) {
     const nextDashboard = structuredClone(dashboard);
     Object.assign(nextDashboard, dashboardDraft);
 
@@ -361,7 +370,7 @@ export default function DashboardRenderer({
           return {
             ...nextSection,
             panels: (nextSection.panels ?? []).map((panel) =>
-              selectedPanelDraft && panel.id === selectedPanelDraft.id ? selectedPanelDraft : panel,
+              panelOverride && panel.id === panelOverride.id ? panelOverride : panel,
             ),
           };
         }),
@@ -452,15 +461,26 @@ export default function DashboardRenderer({
           </dl>
         </div>
         <div className="header-floating-actions">
-          <button
-            type="button"
-            className="header-edit-floating-button"
-            aria-label={editMode ? "Save edit mode" : "Open edit mode"}
-            title={editMode ? "Save" : "Edit mode"}
-            onClick={editMode ? saveEditMode : onToggleEditMode}
-          >
-            {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
-          </button>
+          <div className="header-edit-primary-actions">
+            <button
+              type="button"
+              className="header-edit-floating-button"
+              aria-label={editMode ? "Save edit mode" : "Open edit mode"}
+              title={editMode ? "Save" : "Edit mode"}
+              onClick={editMode ? saveEditMode : onToggleEditMode}
+            >
+              {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
+            </button>
+            {editMode && (
+              <button
+                type="button"
+                className="header-edit-floating-button secondary"
+                onClick={() => setResetEditSessionConfirmation(true)}
+              >
+                Reset edits
+              </button>
+            )}
+          </div>
         </div>
       </header>
       {editMode && (
@@ -479,7 +499,6 @@ export default function DashboardRenderer({
             <button type="button" className="secondary" onClick={() => csvInputRef.current?.click()}>Upload CSV</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
-            <button type="button" className="secondary" onClick={onResetEditSession}>Reset edits</button>
             {multiSelectMode && (
               <>
                 <button type="button" disabled={multiPanelIds.length < 2} onClick={openMultiFullscreen}>Multi-fullscreen ({multiPanelIds.length})</button>
@@ -644,16 +663,19 @@ export default function DashboardRenderer({
         </div>
 
         {editMode && selectedPanel && (
-          <ChartSettingsPanel
+          <SelectedChartEditor
             panel={selectedPanelDraft ?? selectedPanel}
-            dataSources={dashboard.dataSources}
-            dataColumns={selectedPanelColumns}
-            dataRows={Array.isArray(selectedPanelData) ? selectedPanelData : []}
+            dashboard={dashboard}
             globalPanelColors={globalPanelColors}
-            onSave={saveSelectedPanel}
+            onSave={(payload) => (
+              selectedPanel?.configVersion === 3
+                ? saveSelectedChartV3(payload)
+                : saveSelectedPanel()
+            )}
             onCancel={cancelSelectedPanel}
             onRemove={() => removePanel(selectedPanel.id)}
-            onChange={changeSelectedPanel}
+            onLegacyChange={changeSelectedPanel}
+            LegacyEditor={ChartSettingsPanel}
           />
         )}
       </section>
@@ -663,6 +685,18 @@ export default function DashboardRenderer({
         loadedData={dashboard.loadedData}
         onClose={() => setChartWizardTarget(null)}
         onCreate={({ panel, uploadedSource }) => onPanelAdd(chartWizardTarget.pageId, chartWizardTarget.sectionId, panel, uploadedSource)}
+      />
+      <ConfirmDialog
+        open={resetEditSessionConfirmation}
+        title="Discard these edits?"
+        message="Reset changes? All unsaved dashboard edits will be replaced by the most recently saved dashboard."
+        confirmLabel="Reset edits"
+        cancelLabel="Keep editing"
+        onConfirm={() => {
+          setResetEditSessionConfirmation(false);
+          onResetEditSession();
+        }}
+        onCancel={() => setResetEditSessionConfirmation(false)}
       />
       <FullscreenDisplay
         dashboard={dashboard}
