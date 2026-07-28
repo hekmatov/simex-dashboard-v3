@@ -1,5 +1,12 @@
-export function buildRelationshipRenderModel({ chart, prepared }) {
-  const bubble = chart.typeId === "bubble";
+import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+
+export function buildRelationshipRenderModel({ chart, prepared }, schema) {
+  const mark = validateSeriesRendererMark(
+    "relationship",
+    schema?.semantics?.mark,
+  );
+  const bubble = mark === "bubble";
+  const colors = chart.presentation?.series?.colors;
   return {
     kind: "echarts",
     option: {
@@ -7,6 +14,7 @@ export function buildRelationshipRenderModel({ chart, prepared }) {
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "item" },
       legend: { show: chart.presentation?.legend?.visible !== false },
+      ...(Array.isArray(colors) ? { color: [...colors] } : {}),
       grid: { containLabel: true, left: 48, right: 28, top: 76, bottom: 52 },
       xAxis: { type: "value", name: chart.presentation?.axes?.primary?.xTitle ?? "" },
       yAxis: { type: "value", name: chart.presentation?.axes?.primary?.yTitle ?? "" },

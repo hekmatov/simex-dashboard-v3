@@ -622,6 +622,188 @@ test("chart validation rejects unknown roles and invalid schema capabilities", (
   );
 });
 
+test("chart and bundle boundaries preserve detached schema-applicable series appearance", () => {
+  const expectedSeries = {
+    colors: ["#043BCB", "#36BDEB"],
+    lineWidth: 2.5,
+  };
+  const authoredSeries = structuredClone(expectedSeries);
+  const styled = lineChart({
+    presentation: {
+      title: { align: "left" },
+      collection: null,
+      series: authoredSeries,
+    },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance(styled));
+  const normalized = normalizeChartInstance(styled);
+  authoredSeries.colors[0] = "#FFFFFF";
+  assert.deepEqual(normalized.presentation.series, expectedSeries);
+
+  const dashboard = version3Dashboard();
+  dashboard.pages[0].sections[0].panels[0] = lineChart({
+    presentation: {
+      title: { align: "left" },
+      collection: null,
+      series: structuredClone(expectedSeries),
+    },
+  });
+  const parsed = parseDashboardBundle(JSON.stringify(serializeDashboardBundle(dashboard, {
+    now: "2026-07-26T12:00:00.000Z",
+  })));
+
+  assert.deepEqual(
+    parsed.pages[0].sections[0].panels[0].presentation.series,
+    expectedSeries,
+  );
+});
+
+test("series appearance validation accepts finite fractional widths within inclusive bounds", () => {
+  const cases = [
+    lineChart({
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { colors: ["#043BCB"], lineWidth: 1 },
+      },
+    }),
+    lineChart({
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { colors: ["#043BCB"], lineWidth: 12 },
+      },
+    }),
+    lineChart({
+      typeId: "bar",
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { colors: ["#043BCB"], barWidth: 4 },
+      },
+    }),
+    lineChart({
+      typeId: "bar",
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { colors: ["#043BCB"], barWidth: 18.5 },
+      },
+    }),
+    lineChart({
+      typeId: "mixed",
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: {
+          colors: ["#043BCB", "#36BDEB"],
+          lineWidth: 2.5,
+          barWidth: 120,
+        },
+      },
+    }),
+    pieChart({
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { colors: ["#043BCB"] },
+      },
+    }),
+  ];
+
+  for (const chart of cases) {
+    assert.doesNotThrow(() => validateChartInstance(chart), chart.typeId);
+  }
+});
+
+test("series appearance validation rejects malformed and unknown nested values", () => {
+  const invalidSeries = [
+    null,
+    [],
+    "not-an-object",
+    { colors: [] },
+    { colors: Array.from({ length: 13 }, () => "#043BCB") },
+    { colors: ["#12345G"] },
+    { colors: "#043BCB" },
+    { lineWidth: 0 },
+    { lineWidth: 13 },
+    { lineWidth: Number.NaN },
+    { lineWidth: Number.POSITIVE_INFINITY },
+    { lineWidth: "2.5" },
+    { madeUp: true },
+  ];
+
+  for (const series of invalidSeries) {
+    assert.throws(
+      () => validateChartInstance(lineChart({
+        presentation: {
+          title: { align: "left" },
+          collection: null,
+          series,
+        },
+      })),
+      /series|color|lineWidth|unknown/i,
+    );
+  }
+
+  for (const barWidth of [3.9, 121, Number.NaN, Number.POSITIVE_INFINITY, "18.5"]) {
+    assert.throws(
+      () => validateChartInstance(lineChart({
+        typeId: "bar",
+        presentation: {
+          title: { align: "left" },
+          collection: null,
+          series: { barWidth },
+        },
+      })),
+      /series|barWidth|unknown/i,
+    );
+  }
+});
+
+test("series appearance validation rejects style keys unsupported by the chart schema", () => {
+  const cases = [
+    lineChart({
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { barWidth: 24 },
+      },
+    }),
+    lineChart({
+      typeId: "bar",
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { lineWidth: 2.5 },
+      },
+    }),
+    pieChart({
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { lineWidth: 2.5 },
+      },
+    }),
+    kpiChart({
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { colors: ["#043BCB"] },
+      },
+    }),
+  ];
+
+  for (const chart of cases) {
+    assert.throws(
+      () => validateChartInstance(chart),
+      /series|lineWidth|barWidth|color|support|unknown/i,
+      chart.typeId,
+    );
+  }
+});
+
 test("eligible numeric role bindings preserve strict interpolation permission", () => {
   const chart = lineChart({
     roles: {

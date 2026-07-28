@@ -6,6 +6,9 @@ import {
 } from "../data/bindings.js";
 import { normalizeCollectionSettings } from "../collection/collectionModel.js";
 import { parseTemporalValue } from "../data/temporal.js";
+import {
+  normalizeSeriesStyle,
+} from "../presentation/seriesStyleContract.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
   CHART_COMPARISON_MATCHING_POLICIES,
@@ -17,7 +20,7 @@ export const CHART_CONFIG_VERSION = 3;
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
-const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced"]);
+const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced", "series"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
@@ -395,6 +398,12 @@ function validatePresentation(chart, schema) {
   validateLegend(descriptors.legend?.value);
   validateAccessibility(descriptors.accessibility?.value);
   optionalObject(descriptors.advanced?.value, "Chart presentation advanced", new Set());
+  if (Object.hasOwn(descriptors, "series")) {
+    normalizeSeriesStyle(
+      descriptors.series.value,
+      schema.form.appearance,
+    );
+  }
 }
 
 function validateLabels(labels) {
@@ -554,9 +563,23 @@ export function normalizeChartInstance(chart) {
         }
         return normalizeCollectionSettings(collection);
       })();
+  const seriesProperty = ownEnumerableDataValue(
+    presentation,
+    "series",
+    "Chart presentation",
+  );
+  const normalizedSeries = seriesProperty.present
+    ? normalizeSeriesStyle(
+        seriesProperty.value,
+        schema.form.appearance,
+      )
+    : undefined;
   const normalized = structuredClone(chart);
   if (collectionProperty.present) {
     normalized.presentation.collection = normalizedCollection;
+  }
+  if (seriesProperty.present) {
+    normalized.presentation.series = normalizedSeries;
   }
   return normalized;
 }

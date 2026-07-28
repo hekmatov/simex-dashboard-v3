@@ -12,7 +12,7 @@ export function buildRenderModel(input = {}) {
     return { kind: "error", message: readinessMessage(input.prepared) };
   }
   const schema = getChartSchema(input.chart?.typeId);
-  const model = getRenderAdapter(schema.renderer)(input);
+  const model = getRenderAdapter(schema.renderer)(input, schema);
   if (model.kind === "targetCollection") {
     return attachTargetCollectionAccessibility(
       model,

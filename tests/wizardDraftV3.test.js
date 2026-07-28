@@ -117,6 +117,45 @@ test("every wizard tab is directly navigable before prerequisites are complete",
   );
 });
 
+test("wizard style clears delete optional leaves and prune an empty series object", () => {
+  const chart = createChartDraft("line", {
+    id: "style-reset-line",
+    title: "Style reset line",
+    sourceId: "exercise-data",
+    roles: {
+      measurements: [{ field: "value", axis: "primary" }],
+      observation: {
+        field: "reportedAt",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    presentation: {
+      series: {
+        colors: ["#043BCB", "#36BDEB"],
+        lineWidth: 2.5,
+      },
+    },
+  });
+  let state = createWizardState({ draft: chart });
+
+  state = reduceWizardState(state, {
+    type: "updateChart",
+    path: ["presentation", "series", "lineWidth"],
+    value: undefined,
+  });
+  assert.deepEqual(state.draft.presentation.series, {
+    colors: ["#043BCB", "#36BDEB"],
+  });
+
+  state = reduceWizardState(state, {
+    type: "updateChart",
+    path: ["presentation", "series", "colors"],
+    value: undefined,
+  });
+  assert.equal(Object.hasOwn(state.draft.presentation, "series"), false);
+});
+
 test("schema roles update immutably without a chart-type branch", () => {
   for (const fixture of [
     {

@@ -1215,6 +1215,28 @@ th {
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
+.chart-authoring-series-color-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.chart-authoring-series-color {
+  align-content: start;
+  background: #f8fbff;
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.chart-authoring-series-color > .secondary,
+.chart-authoring-add-series-color,
+.chart-authoring-default-series-colors {
+  justify-self: start;
+}
+
 .chart-authoring-control-grid > label,
 .chart-authoring-role-row > label {
   display: grid;

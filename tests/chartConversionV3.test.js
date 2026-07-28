@@ -300,6 +300,113 @@ test("a guided temporal remap keeps time-sync planning and application aligned",
   validateChartInstance(converted);
 });
 
+test("conversion preserves colors and retains only target-applicable widths", () => {
+  const source = lineChart();
+  source.typeId = "mixed";
+  source.presentation.series = {
+    colors: ["#043BCB", "#36BDEB"],
+    lineWidth: 2.5,
+    barWidth: 18.5,
+  };
+
+  for (const {
+    targetTypeId,
+    removedPath,
+    retainedSeries,
+  } of [
+    {
+      targetTypeId: "line",
+      removedPath: "presentation.series.barWidth",
+      retainedSeries: {
+        colors: ["#043BCB", "#36BDEB"],
+        lineWidth: 2.5,
+      },
+    },
+    {
+      targetTypeId: "bar",
+      removedPath: "presentation.series.lineWidth",
+      retainedSeries: {
+        colors: ["#043BCB", "#36BDEB"],
+        barWidth: 18.5,
+      },
+    },
+  ]) {
+    const plan = planChartConversion(source, targetTypeId);
+    const seriesRemovals = plan.removedSettings
+      .map(({ path }) => path)
+      .filter((path) => path.startsWith("presentation.series."));
+
+    assert.deepEqual(seriesRemovals, [removedPath], targetTypeId);
+    const converted = applyChartConversion(source, targetTypeId, {});
+    assert.notEqual(converted, source, targetTypeId);
+    assert.deepEqual(converted.presentation.series, retainedSeries, targetTypeId);
+    validateChartInstance(converted);
+  }
+});
+
+test("conversion preserves colors across composition variants without reporting a removal", () => {
+  const source = createChartDraft("pie", {
+    id: "exercise-composition",
+    title: "Exercise composition",
+    sourceId: "exercise-data",
+    roles: {
+      category: { field: "region" },
+      value: { field: "value" },
+    },
+    presentation: {
+      title: { align: "center" },
+      series: { colors: ["#043BCB", "#36BDEB"] },
+    },
+  });
+  const plan = planChartConversion(source, "donut");
+
+  assert.equal(
+    plan.removedSettings.some(({ path }) => path.startsWith("presentation.series.")),
+    false,
+  );
+  const converted = applyChartConversion(source, "donut", {});
+  assert.notEqual(converted, source);
+  assert.deepEqual(converted.presentation.series, {
+    colors: ["#043BCB", "#36BDEB"],
+  });
+  validateChartInstance(converted);
+});
+
+test("conversion reports and removes every series appearance leaf unsupported by the target", () => {
+  const source = lineChart();
+  source.typeId = "mixed";
+  source.presentation.series = {
+    colors: ["#043BCB", "#36BDEB"],
+    lineWidth: 2.5,
+    barWidth: 18.5,
+  };
+  const assignments = {
+    value: { field: "value" },
+    time: {
+      field: "reportedAt",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  };
+  const plan = planChartConversion(source, "kpi", assignments);
+
+  assert.deepEqual(
+    plan.removedSettings
+      .map(({ path }) => path)
+      .filter((path) => path.startsWith("presentation.series."))
+      .sort(),
+    [
+      "presentation.series.barWidth",
+      "presentation.series.colors",
+      "presentation.series.lineWidth",
+    ],
+  );
+  const converted = applyChartConversion(source, "kpi", assignments);
+  assert.notEqual(converted, source);
+  assert.equal(Object.hasOwn(converted.presentation, "series"), false);
+  validateChartInstance(converted);
+});
+
 test("conversion boundaries reject accessors without evaluating them", () => {
   const chart = lineChart();
   let chartReads = 0;

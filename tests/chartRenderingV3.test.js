@@ -4,8 +4,11 @@ import { register } from "node:module";
 
 import * as echarts from "echarts";
 
+import { buildAxisRenderModel } from "../src/charting/rendering/axisAdapter.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
+import { buildCompositionRenderModel } from "../src/charting/rendering/compositionAdapter.js";
 import { getRenderAdapter } from "../src/charting/rendering/renderAdapterRegistry.js";
+import { buildRelationshipRenderModel } from "../src/charting/rendering/relationshipAdapter.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -117,6 +120,147 @@ test("line, area, and mixed options preserve axis types and primary or secondary
   assert.equal(mixed.option.series.find(({ name }) => name.startsWith("Cases")).type, "bar");
   assert.equal(mixed.option.series.find(({ name }) => name.startsWith("Rate")).type, "line");
   assert.equal(mixed.option.series.find(({ name }) => name.startsWith("Rate")).yAxisIndex, 1);
+});
+
+test("axis rendering follows validated schema marks instead of chart type identifiers", () => {
+  const model = buildAxisRenderModel({
+    chart: chart("futureStepLine", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: { lineWidth: 2.5 },
+      },
+    }),
+    prepared: axisMarks,
+  }, {
+    semantics: { mark: "line" },
+  });
+
+  assert.ok(model.option.series.every(({ type }) => type === "line"));
+  assert.ok(
+    model.option.series.every(({ lineStyle }) => lineStyle?.width === 2.5),
+  );
+});
+
+test("composition and relationship rendering follows validated schema marks instead of chart type identifiers", () => {
+  const composition = buildCompositionRenderModel({
+    chart: chart("futureRing"),
+    prepared: ready([
+      { category: "Ready", value: 3, share: 0.75, group: null, groupKey: "" },
+      { category: "Delayed", value: 1, share: 0.25, group: null, groupKey: "" },
+    ]),
+  }, {
+    semantics: { mark: "donut" },
+  });
+  const relationship = buildRelationshipRenderModel({
+    chart: chart("futureSizedPoint"),
+    prepared: ready([
+      { x: 1, y: 2, size: 9, label: "A", cluster: null, clusterKey: "", group: null, groupKey: "" },
+    ]),
+  }, {
+    semantics: { mark: "bubble" },
+  });
+
+  assert.ok(Array.isArray(composition.option.series[0].radius));
+  assert.ok(composition.option.series[0].radius[0] !== "0%");
+  assert.deepEqual(relationship.option.series[0].data[0].value, [1, 2, 9]);
+  assert.equal(typeof relationship.option.series[0].symbolSize, "function");
+});
+
+test("axis render models apply only the series widths supported by each chart type", () => {
+  for (const typeId of ["bar", "groupedBar", "stackedBar", "horizontalBar", "horizontalStackedBar"]) {
+    const model = buildRenderModel({
+      chart: chart(typeId, {
+        presentation: {
+          title: { align: "left" },
+          collection: null,
+          series: {
+            colors: ["#043BCB", "#36BDEB"],
+            barWidth: 18.5,
+          },
+        },
+      }),
+      prepared: axisMarks,
+    });
+
+    assert.deepEqual(model.option.color, ["#043BCB", "#36BDEB"], typeId);
+    assert.ok(model.option.series.every(({ barWidth }) => barWidth === 18.5), typeId);
+    assert.ok(model.option.series.every((series) => !Object.hasOwn(series, "lineStyle")), typeId);
+  }
+
+  for (const typeId of ["line", "area"]) {
+    const model = buildRenderModel({
+      chart: chart(typeId, {
+        presentation: {
+          title: { align: "left" },
+          collection: null,
+          series: {
+            colors: ["#043BCB", "#36BDEB"],
+            lineWidth: 2.5,
+          },
+        },
+      }),
+      prepared: axisMarks,
+    });
+
+    assert.deepEqual(model.option.color, ["#043BCB", "#36BDEB"], typeId);
+    assert.ok(model.option.series.every(({ lineStyle }) => lineStyle?.width === 2.5), typeId);
+    assert.ok(model.option.series.every((series) => !Object.hasOwn(series, "barWidth")), typeId);
+  }
+
+  const mixed = buildRenderModel({
+    chart: chart("mixed", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        series: {
+          colors: ["#043BCB", "#36BDEB"],
+          lineWidth: 2.5,
+          barWidth: 18.5,
+        },
+      },
+    }),
+    prepared: axisMarks,
+  });
+  const barSeries = mixed.option.series.find(({ type }) => type === "bar");
+  const lineSeries = mixed.option.series.find(({ type }) => type === "line");
+
+  assert.deepEqual(mixed.option.color, ["#043BCB", "#36BDEB"]);
+  assert.equal(barSeries.barWidth, 18.5);
+  assert.equal(lineSeries.lineStyle.width, 2.5);
+});
+
+test("composition and relationship render models honor configured series colors", () => {
+  const colors = ["#043BCB", "#36BDEB"];
+  const cases = [
+    {
+      typeId: "pie",
+      prepared: ready([
+        { category: "Ready", value: 3, share: 1, group: null, groupKey: "" },
+      ]),
+    },
+    {
+      typeId: "scatter",
+      prepared: ready([
+        { x: 1, y: 2, size: null, label: "A", cluster: "North", clusterKey: "North", group: null, groupKey: "" },
+      ]),
+    },
+  ];
+
+  for (const { typeId, prepared } of cases) {
+    const model = buildRenderModel({
+      chart: chart(typeId, {
+        presentation: {
+          title: { align: "left" },
+          collection: null,
+          series: { colors },
+        },
+      }),
+      prepared,
+    });
+
+    assert.deepEqual(model.option.color, colors, typeId);
+  }
 });
 
 test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts options", () => {

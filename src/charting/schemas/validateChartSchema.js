@@ -1,4 +1,10 @@
 import {
+  hasSeriesRendererMarkContract,
+  SERIES_APPEARANCE_FIELD_IDS,
+  seriesAppearanceForMark,
+  validateSeriesRendererMark,
+} from "../presentation/seriesStyleContract.js";
+import {
   CHART_COLUMN_TYPES,
   CHART_COMPARISON_MATCHING_POLICIES,
   CHART_COMPARISON_MODES,
@@ -71,13 +77,12 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   if (!Array.isArray(schema.transforms)) throw new Error("Chart schema transforms must be an array.");
   for (const transform of schema.transforms) known(transform, CHART_TRANSFORMS, "transform");
   const comparison = validateComparisonDescriptor(schema);
-  if (!schema.form || !Array.isArray(schema.form.sections) || schema.form.sections.length === 0) throw new Error("Chart schema form requires at least one section.");
-  for (const section of schema.form.sections) known(section, CHART_FORM_SECTIONS, "form section");
+  const form = validateFormDescriptor(schema);
   known(schema.dataFamily, CHART_DATA_FAMILIES, "data family"); known(schema.renderer, Object.keys(CHART_RENDERERS), "renderer");
   if (CHART_RENDERERS[schema.renderer] !== schema.dataFamily) throw new Error(`Renderer "${schema.renderer}" is incompatible with data family "${schema.dataFamily}".`);
   if (!schema.capabilities || typeof schema.capabilities !== "object") throw new Error("Chart schema capabilities are required.");
   for (const capability of ["timeSync", "collection", "zoom"]) if (typeof schema.capabilities[capability] !== "boolean") throw new Error(`Chart schema capability "${capability}" must be boolean.`);
-  if (schema.capabilities.collection && !schema.form.sections.includes("collection")) throw new Error("Collection-capable chart schemas require a collection form section.");
+  if (schema.capabilities.collection && !form.sections.includes("collection")) throw new Error("Collection-capable chart schemas require a collection form section.");
   if (schema.capabilities.timeSync && !schema.roles.some(({ accepts }) => accepts.includes("temporal"))) throw new Error("Time-synchronized chart schemas require a role that accepts temporal data.");
   if (!Array.isArray(schema.conversions)) throw new Error("Chart schema conversions must be an array.");
   for (const target of schema.conversions) {
@@ -87,7 +92,68 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   }
   if (!schema.semantics || typeof schema.semantics !== "object") throw new Error("Chart schema semantics are required.");
   requiredString(schema.semantics.purpose, "semantics purpose"); requiredString(schema.semantics.mark, "semantics mark");
-  return comparison === undefined ? schema : { ...schema, comparison };
+  validateAppearanceForMark(
+    form.appearance,
+    schema.semantics.mark,
+    schema.renderer,
+  );
+  const validated = { ...schema, form };
+  return comparison === undefined
+    ? validated
+    : { ...validated, comparison };
+}
+
+function validateFormDescriptor(schema) {
+  if (!schema.form) {
+    throw new Error("Chart schema form requires at least one section.");
+  }
+  const descriptors = strictRecordDescriptors(schema.form, "Chart schema form");
+  checkKnownDescriptorKeys(
+    descriptors,
+    new Set(["sections", "appearance"]),
+    "chart schema form",
+  );
+  const sections = validateKnownUniqueList(
+    requiredDescriptorValue(descriptors, "sections", "Chart schema form"),
+    CHART_FORM_SECTIONS,
+    "form section",
+    "Chart schema form sections",
+  );
+  const appearance = Object.hasOwn(descriptors, "appearance")
+    ? validateKnownUniqueList(
+        descriptors.appearance.value,
+        SERIES_APPEARANCE_FIELD_IDS,
+        "appearance field",
+        "Chart schema appearance fields",
+        { allowEmpty: true },
+      )
+    : [];
+  if (appearance.length > 0 && !sections.includes("appearance")) {
+    throw new Error(
+      "Chart schema appearance fields require the appearance form section.",
+    );
+  }
+  return { sections, appearance };
+}
+
+function validateAppearanceForMark(appearance, mark, renderer) {
+  const supportedFields = seriesAppearanceForMark(mark);
+  const hasMarkContract = hasSeriesRendererMarkContract(renderer);
+  if (appearance.length > 0 && !hasMarkContract) {
+    const label = `${renderer[0].toUpperCase()}${renderer.slice(1)}`;
+    throw new Error(`${label} renderer does not support series appearance.`);
+  }
+  if (hasMarkContract) {
+    validateSeriesRendererMark(renderer, mark);
+  }
+  const supported = new Set(supportedFields);
+  for (const fieldId of appearance) {
+    if (!supported.has(fieldId)) {
+      throw new Error(
+        `Chart schema appearance field "${fieldId}" is incompatible with mark "${mark}".`,
+      );
+    }
+  }
 }
 
 function validateComparisonDescriptor(schema) {
@@ -148,9 +214,15 @@ function validateComparisonDescriptor(schema) {
   return { defaultMode, modes, matchingPolicies };
 }
 
-function validateKnownUniqueList(value, supported, description, arrayDescription) {
+function validateKnownUniqueList(
+  value,
+  supported,
+  description,
+  arrayDescription,
+  { allowEmpty = false } = {},
+) {
   const values = strictArrayValues(value, arrayDescription);
-  if (values.length === 0) {
+  if (!allowEmpty && values.length === 0) {
     throw new Error(`Chart schema ${description}s must be a non-empty array.`);
   }
   const seen = new Set();

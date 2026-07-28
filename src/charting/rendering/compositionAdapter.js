@@ -1,6 +1,13 @@
-export function buildCompositionRenderModel({ chart, prepared }) {
+import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+
+export function buildCompositionRenderModel({ chart, prepared }, schema) {
+  const mark = validateSeriesRendererMark(
+    "composition",
+    schema?.semantics?.mark,
+  );
   const groups = groupMarks(prepared.marks);
   const layout = compositionLayout(groups.length);
+  const colors = chart.presentation?.series?.colors;
   return {
     kind: "echarts",
     option: {
@@ -8,11 +15,14 @@ export function buildCompositionRenderModel({ chart, prepared }) {
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "item" },
       legend: { show: chart.presentation?.legend?.visible !== false },
+      ...(Array.isArray(colors) ? { color: [...colors] } : {}),
       series: groups.map(({ name, marks }, index) => ({
         name,
         type: "pie",
         center: layout.centers[index],
-        radius: chart.typeId === "donut" ? [layout.innerRadius, layout.outerRadius] : ["0%", layout.outerRadius],
+        radius: mark === "donut"
+          ? [layout.innerRadius, layout.outerRadius]
+          : ["0%", layout.outerRadius],
         avoidLabelOverlap: true,
         label: { show: chart.presentation?.labels?.visible !== false },
         data: marks.map(({ category, value, share }) => ({ name: String(category), value, share })),

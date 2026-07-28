@@ -1231,19 +1231,30 @@ function setAtPath(object, path, value) {
   const root = Array.isArray(object) ? [...object] : { ...object };
   let next = root;
   let current = object;
+  const ancestors = [];
   for (let index = 0; index < path.length - 1; index += 1) {
     const segment = path[index];
     const currentValue = current?.[segment];
     const child = Array.isArray(currentValue)
       ? [...currentValue]
-      : isRecord(currentValue)
-        ? { ...currentValue }
-        : {};
+        : isRecord(currentValue)
+          ? { ...currentValue }
+          : {};
     next[segment] = child;
+    ancestors.push({ parent: next, key: segment, child });
     next = child;
     current = currentValue;
   }
-  next[path.at(-1)] = structuredClone(value);
+  if (value === undefined) {
+    delete next[path.at(-1)];
+    for (let index = ancestors.length - 1; index >= 0; index -= 1) {
+      const { parent, key, child } = ancestors[index];
+      if (!isRecord(child) || Object.keys(child).length > 0) break;
+      delete parent[key];
+    }
+  } else {
+    next[path.at(-1)] = structuredClone(value);
+  }
   return root;
 }
 

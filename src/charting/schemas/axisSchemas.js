@@ -1,8 +1,11 @@
 import { chartSchema, role } from "./schemaTypes.js";
+import {
+  seriesAppearanceForMark,
+} from "../presentation/seriesStyleContract.js";
 const form = { sections: ["data", "appearance", "labels", "axes", "interactions", "advanced"] };
 const roles = () => [role("measurements", "Measurements", ["number"], 1, null), role("observation", "Observation / X-axis", ["category", "temporal"], 1), role("cluster", "Cluster", ["category", "text"], 0), role("label", "Label", ["text", "category"], 0)];
 const capabilities = { timeSync: true, collection: false, zoom: true };
-const definition = (typeId, label, group, description, conversions, mark) => chartSchema({ typeId, label, group, description, roles: roles(), form, dataFamily: "axis", renderer: "axis", capabilities, conversions, semantics: { purpose: group === "trends" ? "trend" : "comparison", mark } });
+const definition = (typeId, label, group, description, conversions, mark) => chartSchema({ typeId, label, group, description, roles: roles(), form: { ...form, appearance: seriesAppearanceForMark(mark) }, dataFamily: "axis", renderer: "axis", capabilities, conversions, semantics: { purpose: group === "trends" ? "trend" : "comparison", mark } });
 export const axisSchemas = [
   definition("bar", "Bar", "comparison", "Compare values across categories.", ["groupedBar", "stackedBar", "horizontalBar", "line", "area"], "bar"),
   definition("groupedBar", "Grouped bar", "comparison", "Compare series side by side across categories.", ["bar", "stackedBar", "horizontalBar", "horizontalStackedBar"], "grouped-bar"),

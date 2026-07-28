@@ -536,6 +536,108 @@ test("appearance begins with the required chart title field", () => {
   );
 });
 
+test("ready appearance fields follow each schema without leaking inapplicable series controls", () => {
+  const profile = datasetProfile();
+  const axisRoles = {
+    measurements: [{ field: "value", axis: "primary" }],
+    observation: {
+      field: "reportedAt",
+      interpretation: "temporal",
+      format: "YYYY-MM-DD",
+    },
+  };
+  const cases = [
+    {
+      typeId: "line",
+      roles: axisRoles,
+      expected: ["seriesColors", "lineWidth"],
+    },
+    {
+      typeId: "bar",
+      roles: axisRoles,
+      expected: ["seriesColors", "barWidth"],
+    },
+    {
+      typeId: "mixed",
+      roles: axisRoles,
+      expected: ["seriesColors", "lineWidth", "barWidth"],
+    },
+    {
+      typeId: "pie",
+      roles: {
+        category: { field: "reportedAt", interpretation: "category" },
+        value: { field: "value" },
+      },
+      expected: ["seriesColors"],
+    },
+    {
+      typeId: "kpi",
+      roles: { value: { field: "value" } },
+      expected: [],
+    },
+  ];
+  const styleIds = new Set(["seriesColors", "lineWidth", "barWidth"]);
+  const styleValues = {
+    seriesColors: ["#043BCB", "#36BDEB"],
+    lineWidth: 2.5,
+    barWidth: 18.5,
+  };
+  const stylePaths = {
+    seriesColors: ["presentation", "series", "colors"],
+    lineWidth: ["presentation", "series", "lineWidth"],
+    barWidth: ["presentation", "series", "barWidth"],
+  };
+
+  for (const { typeId, roles, expected } of cases) {
+    const series = Object.fromEntries(expected.map((id) => [
+      id === "seriesColors" ? "colors" : id,
+      styleValues[id],
+    ]));
+    const chart = createChartDraft(typeId, {
+      id: `${typeId}-appearance`,
+      title: `${typeId} appearance`,
+      sourceId: "exercise-data",
+      roles,
+      ...(expected.length > 0 ? { presentation: { series } } : {}),
+    });
+    const model = buildEditorFormModel({
+      chart,
+      profile,
+      prepared: preparedFor(chart, profile),
+    });
+    const appearance = model.sections.find(({ id }) => id === "appearance");
+
+    assert.deepEqual(
+      appearance.fields
+        .filter(({ id }) => styleIds.has(id))
+        .map(({ id, path, value }) => ({ id, path, value })),
+      expected.map((id) => ({
+        id,
+        path: stylePaths[id],
+        value: styleValues[id],
+      })),
+      `${typeId} materialized the wrong series controls`,
+    );
+  }
+});
+
+test("out-of-range series widths expose an associated form error", () => {
+  const profile = datasetProfile();
+  const chart = structuredClone(lineChart());
+  chart.presentation.series = { lineWidth: 13 };
+  const model = buildEditorFormModel({
+    chart,
+    profile,
+    prepared: preparedFor(chart, profile),
+  });
+  const lineWidth = model.sections
+    .find(({ id }) => id === "appearance")
+    .fields.find(({ id }) => id === "lineWidth");
+
+  assert.equal(model.valid, false);
+  assert.equal(lineWidth.error, "Enter a number from 1 through 12.");
+});
+
 test("only a matching current preparation completes style and permits creation", () => {
   const chart = lineChart();
   const profile = datasetProfile();

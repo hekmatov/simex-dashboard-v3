@@ -57,6 +57,110 @@ test("validation rejects unknown form sections", () => {
   );
 });
 
+test("schemas declare only the appearance fields their renderers can apply", () => {
+  const expectedAppearance = new Map([
+    ["bar", ["seriesColors", "barWidth"]],
+    ["groupedBar", ["seriesColors", "barWidth"]],
+    ["stackedBar", ["seriesColors", "barWidth"]],
+    ["horizontalBar", ["seriesColors", "barWidth"]],
+    ["horizontalStackedBar", ["seriesColors", "barWidth"]],
+    ["line", ["seriesColors", "lineWidth"]],
+    ["area", ["seriesColors", "lineWidth"]],
+    ["mixed", ["seriesColors", "lineWidth", "barWidth"]],
+    ["pie", ["seriesColors"]],
+    ["donut", ["seriesColors"]],
+    ["scatter", ["seriesColors"]],
+    ["bubble", ["seriesColors"]],
+  ]);
+
+  for (const schema of listChartSchemas()) {
+    assert.ok(
+      Array.isArray(schema.form.appearance),
+      `${schema.typeId} must declare form.appearance`,
+    );
+    assert.deepEqual(
+      schema.form.appearance,
+      expectedAppearance.get(schema.typeId) ?? [],
+      `${schema.typeId} exposed an inapplicable appearance field`,
+    );
+  }
+});
+
+test("schema validation rejects unknown, duplicate, and inapplicable appearance fields", () => {
+  const line = getChartSchema("line");
+  for (const appearance of [
+    ["seriesColors", "madeUp"],
+    ["seriesColors", "seriesColors"],
+    ["seriesColors", "barWidth"],
+  ]) {
+    assert.throws(
+      () => validateChartSchema({
+        ...line,
+        form: {
+          ...line.form,
+          appearance,
+        },
+      }),
+      /appearance/i,
+    );
+  }
+});
+
+test("schema validation rejects an axis mark the renderer cannot implement", () => {
+  const line = getChartSchema("line");
+  assert.throws(
+    () => validateChartSchema({
+      ...line,
+      form: {
+        ...line.form,
+        appearance: [],
+      },
+      semantics: {
+        ...line.semantics,
+        mark: "future-unknown-axis-mark",
+      },
+    }),
+    /axis renderer.*mark/i,
+  );
+});
+
+test("schema validation rejects composition and relationship marks their renderers cannot implement", () => {
+  for (const [typeId, unsupportedMark] of [
+    ["pie", "point"],
+    ["scatter", "pie"],
+  ]) {
+    const schema = getChartSchema(typeId);
+    assert.throws(
+      () => validateChartSchema({
+        ...schema,
+        semantics: {
+          ...schema.semantics,
+          mark: unsupportedMark,
+        },
+      }),
+      new RegExp(`${schema.renderer} renderer.*mark`, "i"),
+    );
+  }
+});
+
+test("schema validation rejects series appearance on renderers without a mark contract", () => {
+  const kpi = getChartSchema("kpi");
+  assert.throws(
+    () => validateChartSchema({
+      ...kpi,
+      form: {
+        ...kpi.form,
+        appearance: ["seriesColors", "lineWidth"],
+      },
+      semantics: {
+        ...kpi.semantics,
+        mark: "line",
+      },
+    }),
+    /target renderer.*series appearance/i,
+  );
+});
+
 test("validation rejects impossible role cardinality", () => {
   assert.throws(
     () => validateChartSchema({

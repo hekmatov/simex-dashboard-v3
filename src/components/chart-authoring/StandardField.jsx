@@ -72,10 +72,15 @@ function StandardField({
         {
           ...shared,
           type: field.control === "number" ? "number" : "text",
+          min: field.control === "number" ? field.min : void 0,
+          max: field.control === "number" ? field.max : void 0,
+          step: field.control === "number" ? field.step ?? "any" : void 0,
           required: field.required === true,
           value: field.control === "number" ? numeric(value) : text(value),
           onChange: (event) => onChange(
-            field.control === "number" ? Number(event.target.value) : event.target.value
+            field.control === "number"
+              ? optionalNumber(event.target.value)
+              : event.target.value
           )
         }
       );

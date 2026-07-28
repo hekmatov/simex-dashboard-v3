@@ -3,6 +3,10 @@ import {
   normalizeChartInstance,
   validateChartInstance,
 } from "../config/chartConfigV3.js";
+import {
+  SERIES_STYLE_PROPERTIES,
+  seriesStylePropertySupported,
+} from "../presentation/seriesStyleContract.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
   chartConversionKind,
@@ -223,6 +227,7 @@ function removedSettings(chart, target, preserved, effectiveRoles = preserved) {
       ));
     }
   }
+  removed.push(...removedSeriesSettings(presentation.series, target));
 
   const interaction = isRecord(chart.interaction) ? chart.interaction : {};
   if (
@@ -320,12 +325,46 @@ function targetPresentation(sourceValue, target) {
     && Object.hasOwn(source, "collection")
     ? clonePlainData(source.collection, "Chart collection presentation")
     : null;
+  const series = targetSeriesPresentation(source.series, target);
+  if (series !== undefined) {
+    presentation.series = series;
+  }
   return presentation;
 }
 
 function presentationAllowed(target, key, section) {
   if (key === "collection") return target.capabilities.collection;
   return target.form.sections.includes(section);
+}
+
+function removedSeriesSettings(series, target) {
+  if (!isRecord(series)) return [];
+  return SERIES_STYLE_PROPERTIES.flatMap((property) => (
+    Object.hasOwn(series, property)
+      && !seriesStylePropertySupported(target.form.appearance, property)
+      ? [setting(
+          `presentation.series.${property}`,
+          "Series appearance setting is not used by the target chart.",
+        )]
+      : []
+  ));
+}
+
+function targetSeriesPresentation(series, target) {
+  if (!isRecord(series)) return undefined;
+  const retained = {};
+  for (const property of SERIES_STYLE_PROPERTIES) {
+    if (
+      Object.hasOwn(series, property)
+      && seriesStylePropertySupported(target.form.appearance, property)
+    ) {
+      retained[property] = clonePlainData(
+        series[property],
+        `Chart presentation series "${property}"`,
+      );
+    }
+  }
+  return Object.keys(retained).length > 0 ? retained : undefined;
 }
 
 function targetInteraction(sourceValue, target, roles) {

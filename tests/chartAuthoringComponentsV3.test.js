@@ -90,6 +90,9 @@ const {
 const { default: SchemaField } = await import(
   "../src/components/chart-authoring/SchemaField.jsx"
 );
+const { default: SeriesColorsField } = await import(
+  "../src/components/chart-authoring/SeriesColorsField.jsx"
+);
 const {
   default: ConfirmDialog,
 } = await import("../src/components/common/ConfirmDialog.jsx");
@@ -173,6 +176,21 @@ function render(element) {
   return renderToStaticMarkup(element);
 }
 
+function findElementsByType(element, type) {
+  const found = [];
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (!React.isValidElement(value)) return;
+    if (value.type === type) found.push(value);
+    visit(value.props.children);
+  };
+  visit(element);
+  return found;
+}
+
 async function trackedGeographyFixture(chartId) {
   const dashboard = JSON.parse(await readFile(
     path.join(ROOT, "public/config/dashboard.json"),
@@ -243,7 +261,7 @@ test("chart types render in searchable registry purpose groups", () => {
   assert.doesNotMatch(filtered, />Bar</);
 });
 
-test("background uses the same identified color field contract as series color", () => {
+test("background uses the shared identified color field contract", () => {
   const html = render(React.createElement(GeneratedFormSection, {
     section: backgroundSection,
     onChange() {},
@@ -867,7 +885,7 @@ test("background colors support valid transparency and accessible contrast guida
   assert.match(low, /role="status"[^>]*aria-live="polite"[^>]*>Low contrast/);
 });
 
-test("background transparency emits the validator-approved object while series remains a color scalar", () => {
+test("background transparency emits the validator-approved object", () => {
   const calls = [];
   const chart = validLineChart({
     presentation: {
@@ -883,33 +901,119 @@ test("background transparency emits the validator-approved object while series r
     },
   });
   background.props.onTransparencyChange(true);
-  const series = SchemaField({
-    field: {
-      id: "seriesColor",
-      label: "Series color",
-      control: "color",
-      path: ["presentation", "advanced", "seriesColor"],
-      value: "#043BCB",
-    },
-    value: "#043BCB",
-    chart,
-    onChange(path, value) {
-      calls.push({ path, value });
-    },
-  });
-  series.props.onChange("#36BDEB");
 
   assert.deepEqual(calls[0], {
     path: ["presentation", "background"],
     value: { color: "#FFFFFF", transparent: true },
   });
-  assert.deepEqual(calls[1], {
-    path: ["presentation", "advanced", "seriesColor"],
-    value: "#36BDEB",
-  });
   const withBackground = structuredClone(chart);
   withBackground.presentation.background = calls[0].value;
   assert.doesNotThrow(() => validateChartInstance(withBackground, {
+    columnTypes: columnTypes(),
+  }));
+});
+
+test("series palette fields reuse ColorField interactions and emit detached arrays", () => {
+  const authored = ["#043BCB", "#36BDEB"];
+  const emissions = [];
+  const element = SchemaField({
+    field: {
+      id: "seriesColors",
+      label: "Series colors",
+      control: "palette",
+      path: ["presentation", "series", "colors"],
+      value: authored,
+    },
+    value: authored,
+    onChange(path, value) {
+      emissions.push({ path, value });
+    },
+  });
+  assert.equal(element.type, SeriesColorsField);
+  const palette = SeriesColorsField(element.props);
+  const colorFields = findElementsByType(palette, ColorField);
+  const buttons = findElementsByType(palette, "button");
+  const addButton = buttons.find(
+    ({ props }) => props.children === "Add color",
+  );
+  const removeButton = buttons.find(
+    ({ props }) => props.children === "Remove",
+  );
+  const defaultButton = buttons.find(
+    ({ props }) => props.children === "Use default colors",
+  );
+
+  assert.equal(colorFields.length, 2);
+  assert.ok(addButton);
+  assert.ok(removeButton);
+  assert.ok(defaultButton);
+  assert.deepEqual(
+    colorFields.map(({ props }) => props.dataColorField),
+    ["seriesColors-0", "seriesColors-1"],
+  );
+  assert.ok(
+    colorFields.every(({ props }) => props.pickerRevision === authored),
+  );
+  colorFields[0].props.onChange("#DC2626");
+  removeButton.props.onClick();
+  addButton.props.onClick();
+  defaultButton.props.onClick();
+  authored[1] = "#FFFFFF";
+
+  assert.deepEqual(emissions, [
+    {
+      path: ["presentation", "series", "colors"],
+      value: ["#DC2626", "#36BDEB"],
+    },
+    {
+      path: ["presentation", "series", "colors"],
+      value: ["#36BDEB"],
+    },
+    {
+      path: ["presentation", "series", "colors"],
+      value: ["#043BCB", "#36BDEB", "#2BAA7B"],
+    },
+    {
+      path: ["presentation", "series", "colors"],
+      value: undefined,
+    },
+  ]);
+  assert.notEqual(emissions[0].value, authored);
+});
+
+test("editor style clears delete optional leaves and prune an empty series object", () => {
+  const chart = validLineChart({
+    presentation: {
+      series: {
+        colors: ["#043BCB", "#36BDEB"],
+        lineWidth: 2.5,
+      },
+    },
+  });
+  let state = createChartEditorState({
+    chart,
+    timeSyncGroups: [],
+  });
+
+  state = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["presentation", "series", "lineWidth"],
+    value: undefined,
+  });
+  assert.deepEqual(state.draft.presentation.series, {
+    colors: ["#043BCB", "#36BDEB"],
+  });
+
+  state = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["presentation", "series", "colors"],
+    value: undefined,
+  });
+  assert.equal(
+    Object.hasOwn(state.draft.presentation, "series"),
+    false,
+  );
+  assert.doesNotThrow(() => validateChartInstance(state.draft, {
     columnTypes: columnTypes(),
   }));
 });
@@ -1293,6 +1397,9 @@ test("style step hides presentation and interaction controls until the current p
 
   assert.match(ready, /Title alignment/);
   assert.match(ready, /Background/);
+  assert.match(ready, /Series colors/);
+  assert.match(ready, /Line width/);
+  assert.doesNotMatch(ready, /Bar width/);
   assert.match(ready, /Zoom/);
   assert.match(ready, /Advanced/);
 });

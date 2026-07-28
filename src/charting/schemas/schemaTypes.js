@@ -94,5 +94,21 @@ export function role(id, label, accepts, min, max = 1) { return { id, label, acc
 export function chartSchema(definition) {
   const groupable = !["target", "operational"].includes(definition.dataFamily);
   const transforms = ["filter", ...(groupable ? ["group"] : []), "aggregate", "duplicates", "missing"];
-  return { version: CHART_SCHEMA_VERSION, sources: ["dataset"], transforms, manualData: null, ...definition };
+  const schema = {
+    version: CHART_SCHEMA_VERSION,
+    sources: ["dataset"],
+    transforms,
+    manualData: null,
+    ...definition,
+  };
+  return {
+    ...schema,
+    form: schema.form
+      ? {
+          ...schema.form,
+          sections: [...schema.form.sections],
+          appearance: [...(schema.form.appearance ?? [])],
+        }
+      : schema.form,
+  };
 }

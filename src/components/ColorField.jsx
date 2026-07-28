@@ -37,17 +37,23 @@ function ColorField({
   allowTransparency = false,
   transparent = false,
   onTransparencyChange,
-  showContrast = false
+  showContrast = false,
+  pickerRevision
 }) {
   const normalizedValue = normalizeHexColor(value, fallback);
   const [draft, setDraft] = React.useState(normalizedValue);
   const [message, setMessage] = React.useState("");
   const pickerActiveRef = React.useRef(false);
+  const pickerCleanupRef = React.useRef(noop);
   const controlId = id || `settings-color-${safeId(label)}`;
   const contrast = describeColorContrast(normalizedValue, { transparent });
   React.useEffect(() => {
+    pickerCleanupRef.current();
     setDraft(normalizedValue);
-  }, [normalizedValue]);
+  }, [normalizedValue, pickerRevision]);
+  React.useEffect(() => (
+    () => pickerCleanupRef.current()
+  ), []);
   function commitColor(nextColor) {
     const normalized = normalizeHexColor(nextColor, "");
     setDraft(nextColor);
@@ -75,10 +81,15 @@ function ColorField({
     }
     pickerActiveRef.current = true;
     setMessage("Picker window opened. Use it to start the native picker.");
-    function cleanup() {
+    let cleaned = false;
+    function cleanup({ closeWindow = false } = {}) {
+      if (cleaned) return;
+      cleaned = true;
       window.removeEventListener("message", handlePickerMessage);
       clearInterval(closeCheck);
       pickerActiveRef.current = false;
+      pickerCleanupRef.current = noop;
+      if (closeWindow && !pickerWindow.closed) pickerWindow.close();
     }
     function handlePickerMessage(event) {
       if (event.origin !== window.location.origin || event.data?.type !== "simex-color-picked" || event.data.requestId !== requestId) {
@@ -96,6 +107,7 @@ function ColorField({
         cleanup();
       }
     }, 500);
+    pickerCleanupRef.current = () => cleanup({ closeWindow: true });
     window.addEventListener("message", handlePickerMessage);
     pickerWindow.document.open();
     pickerWindow.document.write(pickerWindowHtml(requestId, window.location.origin));
@@ -177,6 +189,8 @@ function ColorField({
 }
 function PipetteIcon() {
   return /* @__PURE__ */ React.createElement("svg", { className: "settings-pipette-icon", viewBox: "0 0 24 24", "aria-hidden": "true", focusable: "false" }, /* @__PURE__ */ React.createElement("path", { d: "M14.5 4.5 19.5 9.5" }), /* @__PURE__ */ React.createElement("path", { d: "M8 16 4.5 19.5" }), /* @__PURE__ */ React.createElement("path", { d: "M6.5 17.5 16.5 7.5" }), /* @__PURE__ */ React.createElement("path", { d: "M14 5 19 10 16 13 11 8z" }), /* @__PURE__ */ React.createElement("path", { d: "M5 20h5" }));
+}
+function noop() {
 }
 function makePickerRequestId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;

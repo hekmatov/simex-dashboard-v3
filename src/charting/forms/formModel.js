@@ -1,5 +1,8 @@
 import { normalizeCollectionSettings } from "../collection/collectionModel.js";
 import { validateChartInstance } from "../config/chartConfigV3.js";
+import {
+  SERIES_STYLE_LIMITS,
+} from "../presentation/seriesStyleContract.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
@@ -289,8 +292,8 @@ function dataFields({
   return fields;
 }
 
-function appearanceFields({ chart }) {
-  return [
+function appearanceFields({ chart, schema }) {
+  const common = [
     {
       id: "title",
       label: "Chart title",
@@ -315,6 +318,50 @@ function appearanceFields({ chart }) {
       value: chart.presentation?.background?.color ?? "",
     },
   ];
+  const series = chart.presentation?.series ?? {};
+  return [
+    ...common,
+    ...schema.form.appearance.map((fieldId) => (
+      seriesAppearanceField(fieldId, series)
+    )),
+  ];
+}
+
+function seriesAppearanceField(fieldId, series) {
+  if (fieldId === "seriesColors") {
+    return {
+      id: fieldId,
+      label: "Series colors",
+      control: "palette",
+      path: ["presentation", "series", "colors"],
+      value: series.colors,
+      min: SERIES_STYLE_LIMITS.colors.min,
+      max: SERIES_STYLE_LIMITS.colors.max,
+    };
+  }
+  const limits = SERIES_STYLE_LIMITS[fieldId];
+  const value = series[fieldId];
+  const invalid = value !== undefined && (
+    !Number.isFinite(value)
+    || value < limits.min
+    || value > limits.max
+  );
+  return {
+    id: fieldId,
+    label: fieldId === "lineWidth" ? "Line width" : "Bar width",
+    control: "number",
+    path: ["presentation", "series", fieldId],
+    value,
+    min: limits.min,
+    max: limits.max,
+    step: "any",
+    help: `Choose a width from ${limits.min} through ${limits.max}.`,
+    ...(invalid
+      ? {
+          error: `Enter a number from ${limits.min} through ${limits.max}.`,
+        }
+      : {}),
+  };
 }
 
 function labelsFields({ chart }) {

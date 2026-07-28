@@ -1,10 +1,27 @@
-const HORIZONTAL_TYPES = new Set(["horizontalBar", "horizontalStackedBar"]);
-const STACKED_TYPES = new Set(["stackedBar", "horizontalStackedBar"]);
+import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
 
-export function buildAxisRenderModel({ chart, prepared }) {
-  const horizontal = HORIZONTAL_TYPES.has(chart.typeId);
+const BAR_MARKS = new Set([
+  "bar",
+  "grouped-bar",
+  "stacked-bar",
+  "horizontal-bar",
+  "horizontal-stacked-bar",
+]);
+const HORIZONTAL_MARKS = new Set([
+  "horizontal-bar",
+  "horizontal-stacked-bar",
+]);
+const STACKED_MARKS = new Set([
+  "stacked-bar",
+  "horizontal-stacked-bar",
+]);
+
+export function buildAxisRenderModel({ chart, prepared }, schema) {
+  const mark = validateSeriesRendererMark("axis", schema?.semantics?.mark);
+  const horizontal = HORIZONTAL_MARKS.has(mark);
   const temporal = !horizontal && prepared.meta?.axisInterpretation === "temporal";
   const activeTime = prepared.meta?.activeTime ?? null;
+  const seriesStyle = chart.presentation?.series;
   const categories = unique(prepared.marks.map(({ x }) => x));
   const categoryIndexes = new Map(categories.map((category, index) => [category, index]));
   const grouped = groupSeries(prepared.marks);
@@ -16,7 +33,7 @@ export function buildAxisRenderModel({ chart, prepared }) {
   const primaryAxis = valueAxis(chart.presentation?.axes?.primary);
   const secondaryAxis = valueAxis(chart.presentation?.axes?.secondary, true);
   const series = grouped.map((group, index) => {
-    const type = seriesType(chart.typeId, group, index);
+    const type = seriesType(mark, group, index);
     const values = temporal
       ? [...group.marks]
           .sort((left, right) => String(left.x).localeCompare(String(right.x)))
@@ -28,11 +45,17 @@ export function buildAxisRenderModel({ chart, prepared }) {
       type,
       data: values,
       yAxisIndex: horizontal ? undefined : group.axis === "secondary" ? 1 : 0,
-      stack: STACKED_TYPES.has(chart.typeId) ? "total" : undefined,
-      areaStyle: chart.typeId === "area" ? { opacity: 0.24 } : undefined,
+      stack: STACKED_MARKS.has(mark) ? "total" : undefined,
+      areaStyle: mark === "area" ? { opacity: 0.24 } : undefined,
       showSymbol: type === "line",
       label: axisLabelOption(chart, horizontal),
       emphasis: { focus: "series" },
+      ...(type === "line" && Number.isFinite(seriesStyle?.lineWidth)
+        ? { lineStyle: { width: seriesStyle.lineWidth } }
+        : {}),
+      ...(type === "bar" && Number.isFinite(seriesStyle?.barWidth)
+        ? { barWidth: seriesStyle.barWidth }
+        : {}),
       ...(marker ? { markPoint: marker } : {}),
     };
   });
@@ -44,6 +67,9 @@ export function buildAxisRenderModel({ chart, prepared }) {
       aria: ariaOption(chart),
       tooltip: { trigger: "axis" },
       legend: { show: chart.presentation?.legend?.visible !== false },
+      ...(Array.isArray(seriesStyle?.colors)
+        ? { color: [...seriesStyle.colors] }
+        : {}),
       grid: { containLabel: true, left: 48, right: hasSecondary ? 56 : 28, top: 76, bottom: 52 },
       xAxis: horizontal ? primaryAxis : categoryAxis,
       yAxis: horizontal ? { ...categoryAxis, type: "category" } : hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis,
@@ -104,11 +130,13 @@ function seriesName(mark) {
   ].filter((value) => value !== null && value !== undefined && value !== "").map(String)).join(" · ");
 }
 
-function seriesType(typeId, group, index) {
-  if (typeId === "line" || typeId === "area") return "line";
-  if (typeId !== "mixed") return "bar";
-  if (group.axis === "secondary" || index > 0) return "line";
-  return "bar";
+function seriesType(mark, group, index) {
+  if (mark === "line" || mark === "area") return "line";
+  if (mark === "mixed-axis") {
+    return group.axis === "secondary" || index > 0 ? "line" : "bar";
+  }
+  if (BAR_MARKS.has(mark)) return "bar";
+  throw new Error(`Unsupported axis renderer mark "${mark}".`);
 }
 
 function zoomOption(chart, horizontal) {

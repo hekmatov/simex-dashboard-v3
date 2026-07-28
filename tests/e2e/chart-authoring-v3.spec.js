@@ -69,6 +69,11 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toBeVisible();
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(1);
+  await expect(
+    wizard.getByRole("group", { name: "Series colors" }),
+  ).toBeVisible();
+  await wizard.getByRole("button", { name: "Add color" }).click();
+  await wizard.getByLabel("Color 1", { exact: true }).fill("#DC2626");
   await wizard.getByLabel("Chart title").fill("E2E mortality composition");
   await wizard.getByRole("button", { name: "Create chart" }).click();
 
@@ -78,13 +83,14 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await expect(page.getByText("E2E mortality composition")).toBeVisible();
   await expect.poll(() => page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
-    return dashboard.pages
+    const chart = dashboard.pages
       .flatMap(({ sections }) => sections)
       .flatMap(({ panels }) => panels)
-      .some(({ title, typeId }) => (
+      .find(({ title, typeId }) => (
         title === "E2E mortality composition" && typeId === "pie"
       ));
-  }, STORAGE_KEY)).toBe(true);
+    return chart?.presentation?.series?.colors ?? null;
+  }, STORAGE_KEY)).toEqual(["#DC2626"]);
 });
 
 for (const scenario of [
@@ -318,6 +324,14 @@ test("editor reset, save race, title alignment, and shared background color stay
   await title.fill("Race-safe centered cases");
   await editor.getByLabel("Title alignment").selectOption("center");
   await editor.getByLabel("Background", { exact: true }).fill("#F5F8FB");
+  await expect(
+    editor.getByRole("group", { name: "Series colors" }),
+  ).toBeVisible();
+  await expect(editor.getByLabel("Line width")).toBeVisible();
+  await expect(editor.getByLabel("Bar width")).toHaveCount(0);
+  await editor.getByLabel("Line width").fill("3.5");
+  await editor.getByRole("button", { name: "Add color" }).click();
+  await editor.getByLabel("Color 1", { exact: true }).fill("#2BAA7B");
   await editor.getByRole("button", { name: "Save", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await panel.getByRole("button", { name: "Edit chart" }).click();
@@ -340,10 +354,15 @@ test("editor reset, save race, title alignment, and shared background color stay
     return {
       align: chart.presentation.title.align,
       background: chart.presentation.background.color,
+      series: chart.presentation.series,
     };
   }, STORAGE_KEY)).toEqual({
     align: "center",
     background: "#F5F8FB",
+    series: {
+      colors: ["#2BAA7B"],
+      lineWidth: 3.5,
+    },
   });
 });
 

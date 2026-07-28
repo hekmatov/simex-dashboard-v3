@@ -3,6 +3,7 @@ import ColorField from "../ColorField.jsx";
 import CollectionSettingsField from "./CollectionSettingsField.jsx";
 import DeltaComparisonField from "./DeltaComparisonField.jsx";
 import RoleField from "./RoleField.jsx";
+import SeriesColorsField from "./SeriesColorsField.jsx";
 import StandardField, {
   fieldControlId,
   fieldDescribedBy
@@ -33,6 +34,9 @@ function SchemaField({
   const shared = { field: decoratedField, value, onChange: emit };
   if (field.control === "role") {
     return /* @__PURE__ */ React.createElement(RoleField, { ...shared, columns });
+  }
+  if (field.control === "palette") {
+    return /* @__PURE__ */ React.createElement(SeriesColorsField, shared);
   }
   if (field.control === "color") {
     const background = isBackgroundColorField(field);
