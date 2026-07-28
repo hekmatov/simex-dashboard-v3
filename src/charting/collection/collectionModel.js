@@ -1,5 +1,28 @@
 import { normalizePriorityExpression } from "./priorityExpression.js";
 
+export const COLLECTION_LAYOUT_MODES = Object.freeze([
+  "fixed",
+  "scroll",
+  "carousel",
+]);
+export const COLLECTION_RANKING_MODES = Object.freeze([
+  "fixed",
+  "sort",
+  "priority",
+]);
+export const COLLECTION_PRIORITY_METHODS = Object.freeze([
+  "highestCurrent",
+  "lowestCurrent",
+  "largestAbsoluteChange",
+  "largestPercentageChange",
+  "furthestFromTarget",
+  "riskScore",
+]);
+export const COLLECTION_GRID_LIMITS = Object.freeze({
+  min: 1,
+  max: 4,
+});
+
 const SETTINGS_KEYS = new Set([
   "layout",
   "rows",
@@ -17,7 +40,7 @@ const RANKING_KEYS = {
 };
 const CAROUSEL_KEYS = new Set(["intervalMs", "loop", "pauseOnHover", "transition"]);
 const PLAYBACK_KEYS = new Set(["rerank", "pauseCarousel"]);
-const LAYOUTS = new Set(["fixed", "scroll", "carousel"]);
+const LAYOUTS = new Set(COLLECTION_LAYOUT_MODES);
 const OVERFLOWS_BY_LAYOUT = {
   fixed: new Set(["manualPages", "limit"]),
   scroll: new Set(["scroll", "limit"]),
@@ -28,14 +51,7 @@ const DEFAULT_OVERFLOW = {
   scroll: "scroll",
   carousel: "autoRotate",
 };
-const PRIORITY_METHODS = new Set([
-  "highestCurrent",
-  "lowestCurrent",
-  "largestAbsoluteChange",
-  "largestPercentageChange",
-  "furthestFromTarget",
-  "riskScore",
-]);
+const PRIORITY_METHODS = new Set(COLLECTION_PRIORITY_METHODS);
 const DANGEROUS_FIELDS = new Set(["__proto__", "prototype", "constructor"]);
 
 function recordDescriptors(value, description) {
@@ -80,8 +96,15 @@ function valueType(value) {
 }
 
 function boundedInteger(value, name) {
-  if (!Number.isInteger(value) || value < 1 || value > 4) {
-    throw new Error(`Collection ${name} must be an integer between 1 and 4.`);
+  if (
+    !Number.isInteger(value)
+    || value < COLLECTION_GRID_LIMITS.min
+    || value > COLLECTION_GRID_LIMITS.max
+  ) {
+    throw new Error(
+      `Collection ${name} must be an integer between `
+      + `${COLLECTION_GRID_LIMITS.min} and ${COLLECTION_GRID_LIMITS.max}.`,
+    );
   }
   return value;
 }

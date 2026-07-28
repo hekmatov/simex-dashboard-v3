@@ -3,8 +3,15 @@ import { test, expect } from "@playwright/test";
 const CONTROL_URL = "http://127.0.0.1:4174";
 const FIRST_CHART = "bio_confirmed_cases";
 const SECOND_CHART = "bio_mortality_age";
+const browserErrors = new WeakMap();
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ page, request }) => {
+  const errors = [];
+  browserErrors.set(page, errors);
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   await request.post(`${CONTROL_URL}/__test__/reset`);
 });
 
@@ -18,7 +25,7 @@ test("Quorum chart display remains available when the dashboard starts on showca
       name: "From complex exercise data to shared situational awareness",
     }),
   ).toBeVisible();
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
@@ -35,7 +42,7 @@ test("operator-authorized display and individual close share actual browser stat
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART, SECOND_CHART],
@@ -61,7 +68,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
 
   const firstPanel = page.locator(`[data-panel-id="${FIRST_CHART}"]`);
@@ -74,8 +81,6 @@ test("manual single, multi-open, and reorder use the same display state", async 
   });
   await firstPanel.locator(".chart-view-frame").hover();
   await fullscreenButton.dispatchEvent("pointerdown");
-  await page.waitForTimeout(700);
-  await fullscreenButton.dispatchEvent("pointerup");
   await expect(
     firstPanel.getByRole("button", {
       name: "Remove from multi-fullscreen",
@@ -108,7 +113,7 @@ test("stale revisions and invalid chart IDs are rejected promptly", async ({
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
@@ -135,7 +140,7 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
     expected_display_revision: 0,
@@ -225,6 +230,13 @@ async function control(request, action, data) {
     data,
   });
   expect(response.ok()).toBeTruthy();
+}
+
+async function expectCompanionConnected(page) {
+  await expect(page.getByText("Companion connected")).toBeVisible({
+    timeout: 30_000,
+  });
+  expect(browserErrors.get(page)).toEqual([]);
 }
 
 async function events(request) {

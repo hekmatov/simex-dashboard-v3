@@ -1,49 +1,3001 @@
 {
-  "contract_version": "1",
+  "contract_version": "2",
   "catalogue_id": "simex-dashboard",
-  "catalogue_revision": "2026-06-27",
+  "catalogue_revision": "2026-07-27",
+  "chart_schema_version": 3,
+  "chart_types": [
+    {
+      "type_id": "area",
+      "label": "Area",
+      "description": "Show how a measurement changes and accumulates over time.",
+      "group_id": "trends",
+      "purpose": "trend",
+      "mark": "area",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "line",
+          "mixed"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "bar",
+      "label": "Bar",
+      "description": "Compare values across categories.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "area",
+          "groupedBar",
+          "horizontalBar",
+          "line",
+          "stackedBar"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "bubble",
+      "label": "Bubble",
+      "description": "Show a relationship with a third measurement encoded by size.",
+      "group_id": "relationships",
+      "purpose": "relationship",
+      "mark": "bubble",
+      "data_family": "relationship",
+      "renderer": "relationship",
+      "role_ids": [
+        "x",
+        "y",
+        "size",
+        "label",
+        "cluster"
+      ],
+      "roles": [
+        {
+          "role_id": "x",
+          "label": "X measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "y",
+          "label": "Y measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "size",
+          "label": "Size",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": true
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "bullet",
+      "label": "Bullet / target",
+      "description": "Compare actual performance against a target and performance ranges.",
+      "group_id": "targets",
+      "purpose": "target",
+      "mark": "bullet",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "actual",
+        "target",
+        "entity",
+        "label",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "actual",
+          "label": "Actual",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "gauge",
+          "kpi"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "targets",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "choroplethMap",
+      "label": "Choropleth",
+      "description": "Show a value by geographic region.",
+      "group_id": "geography",
+      "purpose": "geography",
+      "mark": "region",
+      "data_family": "geography",
+      "renderer": "geography",
+      "role_ids": [
+        "geography",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "geography",
+          "label": "Geographic identifier",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "geographic",
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": {
+        "geojson_source_required": true,
+        "geography_role_id": "geography",
+        "join_field_required": false,
+        "default_join": "feature_id",
+        "property_join_supported": true
+      },
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "map",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "chronoChoroplethMap",
+      "label": "Chronological choropleth",
+      "description": "Show how geographic values change over time.",
+      "group_id": "geography",
+      "purpose": "geography",
+      "mark": "temporal-region",
+      "data_family": "geography",
+      "renderer": "geography",
+      "role_ids": [
+        "geography",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "geography",
+          "label": "Geographic identifier",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "geographic",
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": {
+        "geojson_source_required": true,
+        "geography_role_id": "geography",
+        "join_field_required": false,
+        "default_join": "feature_id",
+        "property_join_supported": true
+      },
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "map",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "deltaCard",
+      "label": "Delta card",
+      "description": "Show change between observations for a single measurement.",
+      "group_id": "targets",
+      "purpose": "change",
+      "mark": "delta-card",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "measurement",
+        "entity",
+        "time",
+        "target"
+      ],
+      "roles": [
+        {
+          "role_id": "measurement",
+          "label": "Measurement",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "comparison"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "deltaList",
+          "kpi"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "targets",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "deltaList",
+      "label": "Delta list",
+      "description": "Compare change across multiple entities.",
+      "group_id": "targets",
+      "purpose": "change",
+      "mark": "delta-list",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "measurement",
+        "entity",
+        "time",
+        "target"
+      ],
+      "roles": [
+        {
+          "role_id": "measurement",
+          "label": "Measurement",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing",
+          "comparison"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "deltaCard"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "targets",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "donut",
+      "label": "Donut",
+      "description": "Show category shares while leaving room for a central summary.",
+      "group_id": "composition",
+      "purpose": "composition",
+      "mark": "donut",
+      "data_family": "composition",
+      "renderer": "composition",
+      "role_ids": [
+        "category",
+        "value"
+      ],
+      "roles": [
+        {
+          "role_id": "category",
+          "label": "Category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "pie"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": false
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "gauge",
+      "label": "Gauge",
+      "description": "Show a current value against configured threshold ranges.",
+      "group_id": "targets",
+      "purpose": "status",
+      "mark": "gauge",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "value",
+        "target",
+        "entity",
+        "label",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bullet",
+          "kpi"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "targets",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "groupedBar",
+      "label": "Grouped bar",
+      "description": "Compare series side by side across categories.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "grouped-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "horizontalBar",
+          "horizontalStackedBar",
+          "stackedBar"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "heatmap",
+      "label": "Heatmap",
+      "description": "Show the intensity of values across two categories.",
+      "group_id": "readiness",
+      "purpose": "readiness",
+      "mark": "heatmap-cell",
+      "data_family": "matrix",
+      "renderer": "matrix",
+      "role_ids": [
+        "row",
+        "column",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "row",
+          "label": "Row category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "column",
+          "label": "Column category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "column",
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "horizontalBar",
+      "label": "Horizontal bar",
+      "description": "Compare category values when labels need more room.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "horizontal-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "groupedBar",
+          "horizontalStackedBar"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "horizontalStackedBar",
+      "label": "Horizontal stacked bar",
+      "description": "Compare horizontal totals and their composition.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "horizontal-stacked-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "groupedBar",
+          "horizontalBar",
+          "stackedBar"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "image",
+      "label": "Image",
+      "description": "Display an annotated operational image with accessible alternative text.",
+      "group_id": "operational",
+      "purpose": "operational-context",
+      "mark": "image",
+      "data_family": "operational",
+      "renderer": "operational",
+      "role_ids": [],
+      "roles": [],
+      "data_constraints": {
+        "source_kinds": [
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "minRows": 1,
+          "maxRows": 1,
+          "fields": [
+            "src",
+            "alt",
+            "fit"
+          ]
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": true
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "kpi",
+      "label": "KPI card",
+      "description": "Display one key measurement with optional context.",
+      "group_id": "targets",
+      "purpose": "status",
+      "mark": "kpi",
+      "data_family": "target",
+      "renderer": "target",
+      "role_ids": [
+        "value",
+        "target",
+        "entity",
+        "label",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "target",
+          "label": "Target",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "entity",
+          "label": "Entity",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bullet",
+          "deltaCard",
+          "gauge"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": true,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": {
+        "layout_modes": [
+          "fixed",
+          "scroll",
+          "carousel"
+        ],
+        "ranking_modes": [
+          "fixed",
+          "sort",
+          "priority"
+        ],
+        "priority_methods": [
+          "highestCurrent",
+          "lowestCurrent",
+          "largestAbsoluteChange",
+          "largestPercentageChange",
+          "furthestFromTarget",
+          "riskScore"
+        ],
+        "grid": {
+          "min_rows": 1,
+          "max_rows": 4,
+          "min_columns": 1,
+          "max_columns": 4
+        }
+      },
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "targets",
+        "collection",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "line",
+      "label": "Line",
+      "description": "Show how one or more measurements change.",
+      "group_id": "trends",
+      "purpose": "trend",
+      "mark": "line",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "area",
+          "bar",
+          "mixed"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "mapScatter",
+      "label": "Map scatter",
+      "description": "Show measured points or values at geographic locations.",
+      "group_id": "geography",
+      "purpose": "geography",
+      "mark": "map-point",
+      "data_family": "geography",
+      "renderer": "geography",
+      "role_ids": [
+        "geography",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "geography",
+          "label": "Geographic identifier",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "geographic",
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": {
+        "geojson_source_required": true,
+        "geography_role_id": "geography",
+        "join_field_required": false,
+        "default_join": "feature_id",
+        "property_join_supported": true
+      },
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "map",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "mixed",
+      "label": "Mixed axis",
+      "description": "Compare measures using bars and lines with primary or secondary axes.",
+      "group_id": "trends",
+      "purpose": "trend",
+      "mark": "mixed-axis",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "area",
+          "bar",
+          "line"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "pie",
+      "label": "Pie",
+      "description": "Show how categories contribute to a whole.",
+      "group_id": "composition",
+      "purpose": "composition",
+      "mark": "pie",
+      "data_family": "composition",
+      "renderer": "composition",
+      "role_ids": [
+        "category",
+        "value"
+      ],
+      "roles": [
+        {
+          "role_id": "category",
+          "label": "Category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset",
+          "inline"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": {
+          "maxRows": 20
+        }
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "donut"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": false
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "readinessMatrix",
+      "label": "Readiness matrix",
+      "description": "Show readiness states across entities and criteria.",
+      "group_id": "readiness",
+      "purpose": "readiness",
+      "mark": "matrix-cell",
+      "data_family": "matrix",
+      "renderer": "matrix",
+      "role_ids": [
+        "row",
+        "column",
+        "value",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "row",
+          "label": "Row category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "column",
+          "label": "Column category",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "value",
+          "label": "Value",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "column",
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "scatter",
+      "label": "Scatter",
+      "description": "Show the relationship between two measurements.",
+      "group_id": "relationships",
+      "purpose": "relationship",
+      "mark": "point",
+      "data_family": "relationship",
+      "renderer": "relationship",
+      "role_ids": [
+        "x",
+        "y",
+        "size",
+        "label",
+        "cluster"
+      ],
+      "roles": [
+        {
+          "role_id": "x",
+          "label": "X measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "y",
+          "label": "Y measure",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "size",
+          "label": "Size",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": false,
+        "zoom": true
+      },
+      "temporal": null,
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "stackedBar",
+      "label": "Stacked bar",
+      "description": "Compare totals and their composition across categories.",
+      "group_id": "comparison",
+      "purpose": "comparison",
+      "mark": "stacked-bar",
+      "data_family": "axis",
+      "renderer": "axis",
+      "role_ids": [
+        "measurements",
+        "observation",
+        "cluster",
+        "label"
+      ],
+      "roles": [
+        {
+          "role_id": "measurements",
+          "label": "Measurements",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "number"
+          ]
+        },
+        {
+          "role_id": "observation",
+          "label": "Observation / X-axis",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "cluster",
+          "label": "Cluster",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "label",
+          "label": "Label",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [
+          "bar",
+          "groupedBar",
+          "horizontalStackedBar"
+        ],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "observation"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest",
+          "interpolate"
+        ],
+        "interpolation_eligible": true,
+        "interpolation_requires_explicit_permission": true
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "axes",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "swimlane",
+      "label": "Swimlane",
+      "description": "Show events over time organized into lanes.",
+      "group_id": "timeline",
+      "purpose": "sequence",
+      "mark": "swimlane-event",
+      "data_family": "timeline",
+      "renderer": "timeline",
+      "role_ids": [
+        "event",
+        "start",
+        "end",
+        "lane",
+        "status"
+      ],
+      "roles": [
+        {
+          "role_id": "event",
+          "label": "Event",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "start",
+          "label": "Start",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "end",
+          "label": "End",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "lane",
+          "label": "Lane",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "status",
+          "label": "Status",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "start",
+          "end"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "timeline",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "table",
+      "label": "Table",
+      "description": "Show detailed operational records in rows and columns.",
+      "group_id": "operational",
+      "purpose": "operational-detail",
+      "mark": "row",
+      "data_family": "operational",
+      "renderer": "operational",
+      "role_ids": [
+        "columns",
+        "time"
+      ],
+      "roles": [
+        {
+          "role_id": "columns",
+          "label": "Columns",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": null
+          },
+          "accepted_semantic_types": [
+            "any"
+          ]
+        },
+        {
+          "role_id": "time",
+          "label": "Time",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": false
+      },
+      "temporal": {
+        "time_role_ids": [
+          "time"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "advanced"
+      ]
+    },
+    {
+      "type_id": "timeline",
+      "label": "Timeline",
+      "description": "Show events and intervals over time.",
+      "group_id": "timeline",
+      "purpose": "sequence",
+      "mark": "event",
+      "data_family": "timeline",
+      "renderer": "timeline",
+      "role_ids": [
+        "event",
+        "start",
+        "end",
+        "lane",
+        "status"
+      ],
+      "roles": [
+        {
+          "role_id": "event",
+          "label": "Event",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "text",
+            "category"
+          ]
+        },
+        {
+          "role_id": "start",
+          "label": "Start",
+          "required": true,
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "end",
+          "label": "End",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "temporal"
+          ]
+        },
+        {
+          "role_id": "lane",
+          "label": "Lane",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        },
+        {
+          "role_id": "status",
+          "label": "Status",
+          "required": false,
+          "cardinality": {
+            "min": 0,
+            "max": 1
+          },
+          "accepted_semantic_types": [
+            "category",
+            "text"
+          ]
+        }
+      ],
+      "data_constraints": {
+        "source_kinds": [
+          "dataset"
+        ],
+        "transforms": [
+          "filter",
+          "group",
+          "aggregate",
+          "duplicates",
+          "missing"
+        ],
+        "manual_data": null
+      },
+      "conversion": {
+        "compatible_type_ids": [],
+        "remap_required_for_other_types": true
+      },
+      "capabilities": {
+        "collection": false,
+        "time_sync": true,
+        "zoom": true
+      },
+      "temporal": {
+        "time_role_ids": [
+          "start",
+          "end"
+        ],
+        "matching_policies": [
+          "exact",
+          "lastKnown",
+          "nearest"
+        ],
+        "interpolation_eligible": false,
+        "interpolation_requires_explicit_permission": false
+      },
+      "collection": null,
+      "geography": null,
+      "presentation_section_ids": [
+        "appearance",
+        "labels",
+        "timeline",
+        "advanced"
+      ]
+    }
+  ],
   "charts": [
     {
       "chart_id": "bio_admissions",
-      "title": "ICU and Hospital Admissions per Day",
-      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "type_id": "groupedBar",
+      "title": "New ICU and hospital admissions",
+      "description": "Daily new ICU and clinic admissions.",
       "page_id": "biomedical",
-      "section_id": "healthcare",
+      "section_id": "health_system",
       "aliases": [
-        "icu and hospital admissions",
-        "new admissions",
-        "opnames",
-        "ziekenhuisopnames"
+        "new icu and hospital admissions"
       ],
       "keywords": [
-        "ICU",
         "admissions",
-        "hospital",
-        "opnames"
+        "bio",
+        "groupedBar"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
       "chart_id": "bio_case_deltas",
-      "title": "Change Since Previous Day",
-      "description": "National case surveillance, province snapshots, and mortality.",
+      "type_id": "deltaList",
+      "title": "Change in cases by province",
+      "description": "Latest cumulative provincial cases compared with each province's preceding observation.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "case deltas",
-        "change since previous day",
-        "dagelijkse verandering",
-        "daily change"
+        "change in cases by province"
       ],
       "keywords": [
-        "delta",
-        "increase",
-        "previous day",
-        "stijging"
+        "bio",
+        "case",
+        "deltaList",
+        "deltas"
       ],
+      "role_ids": [
+        "entity",
+        "measurement",
+        "time"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -51,142 +3003,226 @@
     },
     {
       "chart_id": "bio_confirmed_cases",
-      "title": "Confirmed Cases (cumulative)",
-      "description": "National case surveillance, province snapshots, and mortality.",
+      "type_id": "line",
+      "title": "Confirmed cases",
+      "description": "Cumulative confirmed HeV-A26 cases over time.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "bevestigde gevallen",
-        "confirmed cases",
-        "cumulatieve besmettingen",
-        "cumulative cases"
+        "confirmed cases"
       ],
       "keywords": [
-        "besmettingen",
+        "bio",
         "cases",
-        "infecties",
-        "infection",
-        "surveillance"
+        "confirmed",
+        "line"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
+      ]
+    },
+    {
+      "chart_id": "bio_current_cases_kpi",
+      "type_id": "kpi",
+      "title": "Current confirmed cases",
+      "description": "Time-indexed national cumulative confirmed-case snapshots; playback selects the active date.",
+      "page_id": "biomedical",
+      "section_id": "outbreak_dynamics",
+      "aliases": [
+        "current confirmed cases"
+      ],
+      "keywords": [
+        "bio",
+        "cases",
+        "current",
+        "kpi"
+      ],
+      "role_ids": [
+        "label",
+        "time",
+        "value"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": true,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen",
+        "playback"
+      ]
+    },
+    {
+      "chart_id": "bio_daily_cases_bar",
+      "type_id": "bar",
+      "title": "Daily confirmed cases",
+      "description": "Daily national new confirmed cases for discrete day-by-day comparison.",
+      "page_id": "biomedical",
+      "section_id": "outbreak_dynamics",
+      "aliases": [
+        "daily confirmed cases"
+      ],
+      "keywords": [
+        "bar",
+        "bio",
+        "cases",
+        "daily"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
       "chart_id": "bio_delayed_healthcare",
-      "title": "Surgeries Performed per Month",
-      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "type_id": "groupedBar",
+      "title": "Delayed-care activity",
+      "description": "Treatment activity by month and specialty during the exercise year.",
       "page_id": "biomedical",
-      "section_id": "healthcare",
+      "section_id": "health_system",
       "aliases": [
-        "delayed healthcare",
-        "operaties",
-        "surgeries performed",
-        "uitgestelde zorg"
+        "delayed-care activity"
       ],
       "keywords": [
+        "bio",
         "delayed",
-        "healthcare",
-        "operaties",
-        "surgery",
-        "zorg"
+        "groupedBar",
+        "healthcare"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_hospital_capacity_bullet",
+      "type_id": "bullet",
+      "title": "Hospital occupancy against capacity",
+      "description": "Time-indexed hospital capacity snapshots; playback selects one active occupancy value.",
+      "page_id": "biomedical",
+      "section_id": "health_system",
+      "aliases": [
+        "hospital occupancy against capacity"
+      ],
+      "keywords": [
+        "bio",
+        "bullet",
+        "capacity",
+        "hospital"
+      ],
+      "role_ids": [
+        "actual",
+        "label",
+        "target",
+        "time"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": true,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
       "chart_id": "bio_hospital_occupancy",
-      "title": "Total Hospital Occupancy",
-      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "type_id": "line",
+      "title": "Hospital occupancy",
+      "description": "HeV-A26 and other hospital occupancy alongside capacity.",
       "page_id": "biomedical",
-      "section_id": "healthcare",
+      "section_id": "health_system",
       "aliases": [
-        "clinic occupancy",
-        "hospital occupancy over time",
-        "ziekenhuis bezetting verloop"
+        "hospital occupancy"
       ],
       "keywords": [
-        "beds",
-        "capacity",
-        "clinic",
+        "bio",
         "hospital",
-        "ziekenhuis"
+        "line",
+        "occupancy"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
       ]
     },
     {
-      "chart_id": "bio_hospital_occupancy_gauge",
-      "title": "Current Hospital Occupancy",
-      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "chart_id": "bio_icu_capacity_bullet",
+      "type_id": "bullet",
+      "title": "ICU occupancy against capacity",
+      "description": "Time-indexed ICU capacity snapshots; playback selects one active occupancy value.",
       "page_id": "biomedical",
-      "section_id": "healthcare",
+      "section_id": "health_system",
       "aliases": [
-        "current hospital occupancy",
-        "hospital pressure",
-        "kliniek druk",
-        "ziekenhuisbezetting"
+        "icu occupancy against capacity"
       ],
       "keywords": [
-        "beds",
-        "bezetting",
+        "bio",
+        "bullet",
         "capacity",
-        "hospital",
-        "ziekenhuis"
+        "icu"
       ],
+      "role_ids": [
+        "actual",
+        "label",
+        "target",
+        "time"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
       "chart_id": "bio_icu_occupancy",
-      "title": "Total ICU Occupancy",
-      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
+      "type_id": "line",
+      "title": "ICU occupancy",
+      "description": "HeV-A26 and other ICU occupancy alongside capacity.",
       "page_id": "biomedical",
-      "section_id": "healthcare",
+      "section_id": "health_system",
       "aliases": [
-        "ic bezetting verloop",
-        "icu capacity",
-        "icu occupancy over time",
-        "intensive care bezetting"
+        "icu occupancy"
       ],
       "keywords": [
-        "ICU",
-        "beds",
-        "bezetting",
-        "capacity",
-        "pressure"
+        "bio",
+        "icu",
+        "line",
+        "occupancy"
       ],
-      "supported_display_modes": [
-        "fullscreen",
-        "multi_fullscreen"
-      ]
-    },
-    {
-      "chart_id": "bio_icu_occupancy_gauge",
-      "title": "Current ICU Occupancy",
-      "description": "ICU and hospital occupancy, admissions, and delayed healthcare indicators.",
-      "page_id": "biomedical",
-      "section_id": "healthcare",
-      "aliases": [
-        "current icu occupancy",
-        "huidige ic druk",
-        "ic bezetting",
-        "icu pressure"
+      "role_ids": [
+        "measurements",
+        "observation"
       ],
-      "keywords": [
-        "ICU",
-        "beds",
-        "bezetting",
-        "capacity",
-        "intensive care"
-      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -194,80 +3230,170 @@
     },
     {
       "chart_id": "bio_mortality_age",
-      "title": "Age Distribution of HeV-A26 Mortality",
-      "description": "National case surveillance, province snapshots, and mortality.",
+      "type_id": "pie",
+      "title": "Mortality by age group",
+      "description": "Share of reported deaths across age groups at the mortality snapshot.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "age distribution",
-        "leeftijdsverdeling",
-        "mortality by age",
-        "sterfte naar leeftijd"
+        "mortality by age group"
       ],
       "keywords": [
         "age",
-        "leeftijd",
+        "bio",
         "mortality",
-        "older people",
-        "sterfte"
+        "pie"
       ],
+      "role_ids": [
+        "category",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
+      ]
+    },
+    {
+      "chart_id": "bio_municipality_aggregate",
+      "type_id": "line",
+      "title": "Aggregate municipal infections",
+      "description": "Sum of cumulative infections represented by the harmonized municipality series.",
+      "page_id": "biomedical",
+      "section_id": "outbreak_dynamics",
+      "aliases": [
+        "aggregate municipal infections"
+      ],
+      "keywords": [
+        "aggregate",
+        "bio",
+        "line",
+        "municipality"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": "municipal_outbreak",
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
       "chart_id": "bio_municipality_choropleth_animation",
-      "title": "Municipality Infection Rate Timelapse",
-      "description": "Animated daily view of infections per 10,000 population. Data are harmonized to Cartomap 2021 municipality boundaries; missing source municipalities are imputed using same-day province population-weighted infection rates.",
+      "type_id": "chronoChoroplethMap",
+      "title": "Municipal infection rate over time",
+      "description": "Cumulative infections per 10,000 residents on harmonized 2021 municipality boundaries.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "animatie",
-        "choropleth",
-        "gemeente infecties",
-        "gemeente verloop",
-        "gemeentekaart",
-        "infection timelapse",
-        "municipality animation",
-        "municipality infection rate",
-        "tijdlijn"
+        "municipal infection rate over time"
       ],
       "keywords": [
         "animation",
-        "gemeente",
-        "infecties",
-        "infection rate",
-        "municipality",
-        "over time",
-        "population",
-        "timelapse"
+        "bio",
+        "choropleth",
+        "chronoChoroplethMap",
+        "municipality"
       ],
+      "role_ids": [
+        "geography",
+        "time",
+        "value"
+      ],
+      "time_sync_group_id": "municipal_outbreak",
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen",
+        "playback"
+      ]
+    },
+    {
+      "chart_id": "bio_new_cases_deaths",
+      "type_id": "mixed",
+      "title": "Daily cases and deaths",
+      "description": "Daily new cases and deaths on separate axes.",
+      "page_id": "biomedical",
+      "section_id": "outbreak_dynamics",
+      "aliases": [
+        "daily cases and deaths"
+      ],
+      "keywords": [
+        "bio",
+        "cases",
+        "deaths",
+        "mixed",
+        "new"
+      ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": false,
+      "supported_display_modes": [
+        "fullscreen",
+        "multi_fullscreen",
+        "playback"
+      ]
+    },
+    {
+      "chart_id": "bio_occupancy_collection",
+      "type_id": "gauge",
+      "title": "Current occupancy pressure",
+      "description": "Current ICU and hospital occupancy percentages as a shared gauge collection.",
+      "page_id": "biomedical",
+      "section_id": "health_system",
+      "aliases": [
+        "current occupancy pressure"
+      ],
+      "keywords": [
+        "bio",
+        "collection",
+        "gauge",
+        "occupancy"
+      ],
+      "role_ids": [
+        "entity",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
       ]
     },
     {
-      "chart_id": "bio_new_cases_deaths",
-      "title": "Confirmed Cases and Deaths per Day",
-      "description": "National case surveillance, province snapshots, and mortality.",
+      "chart_id": "bio_population_infection_bubble",
+      "type_id": "bubble",
+      "title": "Population and municipal infection burden",
+      "description": "Municipal population, infection rate, and cumulative infections at the latest harmonized observation.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "daily cases",
-        "deaths per day",
-        "new cases and deaths",
-        "nieuwe gevallen",
-        "sterfgevallen"
+        "population and municipal infection burden"
       ],
       "keywords": [
-        "cases",
-        "deaths",
-        "mortality",
-        "overlijden",
-        "sterfte"
+        "bio",
+        "bubble",
+        "infection",
+        "population"
       ],
+      "role_ids": [
+        "cluster",
+        "label",
+        "size",
+        "x",
+        "y"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -275,46 +3401,53 @@
     },
     {
       "chart_id": "bio_r_values",
-      "title": "Estimated R-value Over Time",
-      "description": "National case surveillance, province snapshots, and mortality.",
+      "type_id": "line",
+      "title": "Reproduction value",
+      "description": "Estimated reproduction value through the exercise period.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "r value",
-        "r waarde",
-        "reproductiegetal",
-        "reproduction number"
+        "reproduction value"
       ],
       "keywords": [
-        "R",
-        "besmettelijkheid",
-        "spread",
-        "transmission"
+        "bio",
+        "line",
+        "values"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": "national_outbreak",
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen"
+        "multi_fullscreen",
+        "playback"
       ]
     },
     {
       "chart_id": "bio_region_comparison",
-      "title": "Confirmed Cases per Province",
-      "description": "National case surveillance, province snapshots, and mortality.",
+      "type_id": "horizontalBar",
+      "title": "Cases by province",
+      "description": "Latest cumulative infections compared across provinces.",
       "page_id": "biomedical",
-      "section_id": "cases_mortality",
+      "section_id": "outbreak_dynamics",
       "aliases": [
-        "cases per province",
-        "gevallen per provincie",
-        "province comparison",
-        "provincies vergelijken"
+        "cases by province"
       ],
       "keywords": [
-        "cases",
-        "province",
-        "provincie",
-        "regionaal",
-        "regional"
+        "bio",
+        "comparison",
+        "horizontalBar",
+        "region"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -322,24 +3455,26 @@
     },
     {
       "chart_id": "bio_testing_overlay",
-      "title": "Tests Conducted and Test Positivity per Day",
-      "description": "Testing volume and positivity rate.",
+      "type_id": "mixed",
+      "title": "Testing and positivity",
+      "description": "Tests per day and test positivity rate on separate axes.",
       "page_id": "biomedical",
-      "section_id": "testing",
+      "section_id": "health_system",
       "aliases": [
-        "positiviteitspercentage",
-        "test positivity",
-        "testen en positiviteit",
-        "testing and positivity",
-        "tests conducted"
+        "testing and positivity"
       ],
       "keywords": [
-        "RIVM",
-        "positive tests",
-        "positiviteit",
-        "testen",
+        "bio",
+        "mixed",
+        "overlay",
         "testing"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -347,22 +3482,25 @@
     },
     {
       "chart_id": "bio_vaccination_current",
-      "title": "Current Vaccination Status",
-      "description": "Current vaccination status and vaccination rate over time.",
+      "type_id": "table",
+      "title": "Current vaccination status",
+      "description": "Current first- and second-dose percentages and operational status by group.",
       "page_id": "biomedical",
       "section_id": "vaccination",
       "aliases": [
-        "current vaccination status",
-        "huidige vaccinatie",
-        "vaccinatiestatus",
-        "vaccination groups"
+        "current vaccination status"
       ],
       "keywords": [
-        "groups",
-        "vaccinatie",
-        "vaccination",
-        "vaccine"
+        "bio",
+        "current",
+        "table",
+        "vaccination"
       ],
+      "role_ids": [
+        "columns"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -370,21 +3508,27 @@
     },
     {
       "chart_id": "bio_vaccination_rate",
-      "title": "Vaccination Rate Over Time",
-      "description": "Current vaccination status and vaccination rate over time.",
+      "type_id": "line",
+      "title": "Vaccination rate over time",
+      "description": "Vaccination rate over time for each operational population group.",
       "page_id": "biomedical",
       "section_id": "vaccination",
       "aliases": [
-        "vaccinatie verloop",
-        "vaccinatiegraad",
         "vaccination rate over time"
       ],
       "keywords": [
+        "bio",
+        "line",
         "rate",
-        "vaccinatiegraad",
-        "vaccination",
-        "vaccine uptake"
+        "vaccination"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -392,23 +3536,27 @@
     },
     {
       "chart_id": "bio_wastewater_map",
-      "title": "Geographic Spread",
-      "description": "Wastewater surveillance by province.",
+      "type_id": "mapScatter",
+      "title": "Current wastewater signal",
+      "description": "Latest virus-particle concentration by province.",
       "page_id": "biomedical",
-      "section_id": "wastewater",
+      "section_id": "environmental_surveillance",
       "aliases": [
-        "afvalwater verspreiding",
-        "rioolwater kaart",
-        "wastewater map",
-        "wastewater spread"
+        "current wastewater signal"
       ],
       "keywords": [
-        "deeltjes",
-        "province",
-        "rioolwater",
-        "virus particles",
+        "bio",
+        "map",
+        "mapScatter",
         "wastewater"
       ],
+      "role_ids": [
+        "geography",
+        "time",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -416,21 +3564,26 @@
     },
     {
       "chart_id": "bio_wastewater_province",
-      "title": "HeV-A26 Virus Particles per Province",
-      "description": "Wastewater surveillance by province.",
+      "type_id": "horizontalBar",
+      "title": "Wastewater signal by province",
+      "description": "Latest virus-particle concentration compared across provinces.",
       "page_id": "biomedical",
-      "section_id": "wastewater",
+      "section_id": "environmental_surveillance",
       "aliases": [
-        "rioolwater per provincie",
-        "virus particles per province",
-        "wastewater per province"
+        "wastewater signal by province"
       ],
       "keywords": [
+        "bio",
+        "horizontalBar",
         "province",
-        "rioolwater",
-        "virus particles",
         "wastewater"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -438,54 +3591,55 @@
     },
     {
       "chart_id": "home_case_map",
-      "title": "Geographic case spread",
-      "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
+      "type_id": "mapScatter",
+      "title": "Wastewater early-warning preview",
+      "description": "Latest wastewater virus-particle signal by province for an immediate geographic overview.",
       "page_id": "home",
       "section_id": "home_overview",
       "aliases": [
-        "case map",
-        "case spread map",
-        "geografische verspreiding",
-        "geographic spread",
-        "infectiekaart",
-        "kaart",
-        "provinciekaart",
-        "provincies",
-        "verspreiding"
+        "wastewater early-warning preview"
       ],
       "keywords": [
-        "cases",
-        "infected",
-        "infecties",
+        "case",
+        "home",
         "map",
-        "province",
-        "verspreiding"
+        "mapScatter"
       ],
+      "role_ids": [
+        "geography",
+        "time",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
       ]
     },
     {
-      "chart_id": "home_status_cards",
-      "title": "Dashboard areas",
-      "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
+      "chart_id": "home_operational_pressure_kpis",
+      "type_id": "kpi",
+      "title": "Operational pressure at a glance",
+      "description": "Current ICU and hospital occupancy percentages for rapid orientation.",
       "page_id": "home",
       "section_id": "home_overview",
       "aliases": [
-        "dashboard areas",
-        "home",
-        "hoofdpagina",
-        "overview",
-        "overzicht",
-        "start page"
+        "operational pressure at a glance"
       ],
       "keywords": [
-        "biomedical",
-        "runtime",
-        "socio-economic",
-        "static app"
+        "home",
+        "kpi",
+        "kpis",
+        "operational",
+        "pressure"
       ],
+      "role_ids": [
+        "entity",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -493,23 +3647,26 @@
     },
     {
       "chart_id": "socio_adherence",
-      "title": "Adherence to Health Measures",
-      "description": "Values, risk perception, and adherence by measurement moment.",
+      "type_id": "stackedBar",
+      "title": "Adherence to public-health measures",
+      "description": "Latest response composition for each adherence measure.",
       "page_id": "socio_economic",
-      "section_id": "behaviour",
+      "section_id": "public_response",
       "aliases": [
-        "adherence to health measures",
-        "gezondheidsmaatregelen",
-        "measure compliance",
-        "naleving maatregelen"
+        "adherence to public-health measures"
       ],
       "keywords": [
         "adherence",
-        "behaviour",
-        "compliance",
-        "maatregelen",
-        "naleving"
+        "socio",
+        "stackedBar"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -517,22 +3674,27 @@
     },
     {
       "chart_id": "socio_business_closures",
-      "title": "Business Closures",
-      "description": "Business closures and unemployment.",
+      "type_id": "groupedBar",
+      "title": "Business closures by sector",
+      "description": "Closure rate by sector and reporting year.",
       "page_id": "socio_economic",
-      "section_id": "economy",
+      "section_id": "economy_staffing",
       "aliases": [
-        "bedrijfssluitingen",
-        "business closures",
-        "company closures",
-        "ondernemingen sluiten"
+        "business closures by sector"
       ],
       "keywords": [
         "business",
         "closures",
-        "economie",
-        "economy"
+        "groupedBar",
+        "socio"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -540,23 +3702,26 @@
     },
     {
       "chart_id": "socio_education_absenteeism",
-      "title": "School Absenteeism",
-      "description": "Healthcare and school absenteeism.",
+      "type_id": "line",
+      "title": "School absenteeism",
+      "description": "Monthly absenteeism percentage across the education system.",
       "page_id": "socio_economic",
-      "section_id": "absenteeism",
+      "section_id": "economy_staffing",
       "aliases": [
-        "education absenteeism",
-        "onderwijsverzuim",
-        "school absenteeism",
-        "schoolverzuim"
+        "school absenteeism"
       ],
       "keywords": [
         "absenteeism",
         "education",
-        "onderwijs",
-        "schools",
-        "verzuim"
+        "line",
+        "socio"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -564,23 +3729,26 @@
     },
     {
       "chart_id": "socio_healthcare_absenteeism",
-      "title": "Absenteeism in Healthcare",
-      "description": "Healthcare and school absenteeism.",
+      "type_id": "line",
+      "title": "Healthcare staff absenteeism",
+      "description": "Monthly absenteeism percentage among healthcare staff.",
       "page_id": "socio_economic",
-      "section_id": "absenteeism",
+      "section_id": "economy_staffing",
       "aliases": [
-        "care staff absence",
-        "healthcare absenteeism",
-        "verzuim in de zorg",
-        "zorgverzuim"
+        "healthcare staff absenteeism"
       ],
       "keywords": [
         "absenteeism",
         "healthcare",
-        "staff",
-        "verzuim",
-        "zorg"
+        "line",
+        "socio"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -588,21 +3756,26 @@
     },
     {
       "chart_id": "socio_lifestyle",
-      "title": "Lifestyle",
-      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "type_id": "stackedBar",
+      "title": "Current lifestyle changes",
+      "description": "Latest response composition for tracked lifestyle behaviours.",
       "page_id": "socio_economic",
-      "section_id": "subjective_wellbeing",
+      "section_id": "trust_wellbeing",
       "aliases": [
-        "health behaviour",
-        "leefstijl",
-        "lifestyle"
+        "current lifestyle changes"
       ],
       "keywords": [
-        "behaviour",
-        "leefstijl",
         "lifestyle",
-        "wellbeing"
+        "socio",
+        "stackedBar"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -610,23 +3783,26 @@
     },
     {
       "chart_id": "socio_loneliness",
-      "title": "Loneliness",
-      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "type_id": "line",
+      "title": "Loneliness by age group",
+      "description": "Reported loneliness through successive survey waves by age group.",
       "page_id": "socio_economic",
-      "section_id": "subjective_wellbeing",
+      "section_id": "trust_wellbeing",
       "aliases": [
-        "eenzaamheid",
-        "ernstige eenzaamheid",
-        "loneliness",
-        "severe loneliness"
+        "loneliness by age group"
       ],
       "keywords": [
-        "age group",
-        "eenzaamheid",
+        "line",
         "loneliness",
-        "wellbeing",
-        "welzijn"
+        "socio"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -634,23 +3810,27 @@
     },
     {
       "chart_id": "socio_mental_wellbeing",
-      "title": "Wellbeing",
-      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "type_id": "stackedBar",
+      "title": "Current anxiety profile",
+      "description": "Latest anxiety response composition by age group.",
       "page_id": "socio_economic",
-      "section_id": "subjective_wellbeing",
+      "section_id": "trust_wellbeing",
       "aliases": [
-        "angst stress slaap",
-        "anxiety stress sleep",
-        "mentaal welzijn",
-        "mental wellbeing"
+        "current anxiety profile"
       ],
       "keywords": [
-        "mental health",
-        "sleep",
-        "stress",
-        "wellbeing",
-        "welzijn"
+        "mental",
+        "socio",
+        "stackedBar",
+        "wellbeing"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -658,22 +3838,26 @@
     },
     {
       "chart_id": "socio_resilience",
-      "title": "Resilience",
-      "description": "Wellbeing, lifestyle, and resilience survey indicators.",
+      "type_id": "stackedBar",
+      "title": "Current resilience profile",
+      "description": "Latest response composition for tracked resilience statements.",
       "page_id": "socio_economic",
-      "section_id": "subjective_wellbeing",
+      "section_id": "trust_wellbeing",
       "aliases": [
-        "resilience",
-        "social resilience",
-        "sociale veerkracht",
-        "veerkracht"
+        "current resilience profile"
       ],
       "keywords": [
-        "community",
         "resilience",
-        "veerkracht",
-        "wellbeing"
+        "socio",
+        "stackedBar"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -681,22 +3865,27 @@
     },
     {
       "chart_id": "socio_risk_deltas",
-      "title": "Risk Perception: Change Compared to Previous Measurement",
-      "description": "Values, risk perception, and adherence by measurement moment.",
+      "type_id": "deltaList",
+      "title": "Change in risk perception",
+      "description": "Agreement with each risk statement compared with its preceding survey wave.",
       "page_id": "socio_economic",
-      "section_id": "behaviour",
+      "section_id": "public_response",
       "aliases": [
-        "risk perception changes",
-        "risk perception deltas",
-        "verandering risicoperceptie"
+        "change in risk perception"
       ],
       "keywords": [
-        "change",
-        "delta",
-        "risico",
+        "deltaList",
+        "deltas",
         "risk",
-        "verandering"
+        "socio"
       ],
+      "role_ids": [
+        "entity",
+        "measurement",
+        "time"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -704,23 +3893,28 @@
     },
     {
       "chart_id": "socio_risk_perception",
-      "title": "Risk Perception",
-      "description": "Values, risk perception, and adherence by measurement moment.",
+      "type_id": "heatmap",
+      "title": "Risk perception over time",
+      "description": "Strong agreement with risk statements across survey waves.",
       "page_id": "socio_economic",
-      "section_id": "behaviour",
+      "section_id": "public_response",
       "aliases": [
-        "public risk perception",
-        "risico inschatting",
-        "risicoperceptie",
-        "risk perception"
+        "risk perception over time"
       ],
       "keywords": [
-        "behaviour",
-        "gedrag",
+        "heatmap",
         "perception",
-        "risico",
-        "risk"
+        "risk",
+        "socio"
       ],
+      "role_ids": [
+        "column",
+        "row",
+        "time",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -728,22 +3922,27 @@
     },
     {
       "chart_id": "socio_trust_meter",
-      "title": "Current Trust",
-      "description": "Trust in institutions over time and current trust meter.",
+      "type_id": "gauge",
+      "title": "Current trust by institution",
+      "description": "Latest trust score for each tracked institution.",
       "page_id": "socio_economic",
-      "section_id": "trust",
+      "section_id": "trust_wellbeing",
       "aliases": [
-        "current trust",
-        "huidig vertrouwen",
-        "trust meter",
-        "vertrouwensmeter"
+        "current trust by institution"
       ],
       "keywords": [
-        "institution",
+        "gauge",
         "meter",
-        "trust",
-        "vertrouwen"
+        "socio",
+        "trust"
       ],
+      "role_ids": [
+        "entity",
+        "time",
+        "value"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -751,22 +3950,27 @@
     },
     {
       "chart_id": "socio_trust_trend",
-      "title": "Trust",
-      "description": "Trust in institutions over time and current trust meter.",
+      "type_id": "line",
+      "title": "Trust in institutions over time",
+      "description": "Public trust trend for each tracked institution.",
       "page_id": "socio_economic",
-      "section_id": "trust",
+      "section_id": "trust_wellbeing",
       "aliases": [
-        "public trust over time",
-        "publiek vertrouwen",
-        "trust in institutions",
-        "vertrouwen in instituties"
+        "trust in institutions over time"
       ],
       "keywords": [
-        "confidence",
-        "institutions",
-        "trust",
-        "vertrouwen"
+        "line",
+        "socio",
+        "trend",
+        "trust"
       ],
+      "role_ids": [
+        "cluster",
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -774,22 +3978,25 @@
     },
     {
       "chart_id": "socio_unemployment",
-      "title": "Unemployment",
-      "description": "Business closures and unemployment.",
+      "type_id": "line",
+      "title": "Unemployment rate",
+      "description": "Monthly unemployment rate over the exercise horizon.",
       "page_id": "socio_economic",
-      "section_id": "economy",
+      "section_id": "economy_staffing",
       "aliases": [
-        "unemployment",
-        "unemployment rate",
-        "werkloosheid",
-        "werkloosheidspercentage"
+        "unemployment rate"
       ],
       "keywords": [
-        "economy",
-        "employment",
-        "jobs",
-        "werkloosheid"
+        "line",
+        "socio",
+        "unemployment"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -797,23 +4004,25 @@
     },
     {
       "chart_id": "socio_values",
-      "title": "Key Considerations from Citizens in Current Phase",
-      "description": "Values, risk perception, and adherence by measurement moment.",
+      "type_id": "horizontalBar",
+      "title": "Citizen priorities",
+      "description": "Latest importance assigned to public-policy considerations.",
       "page_id": "socio_economic",
-      "section_id": "behaviour",
+      "section_id": "public_response",
       "aliases": [
-        "citizen values",
-        "overwegingen burgers",
-        "public considerations",
-        "waarden"
+        "citizen priorities"
       ],
       "keywords": [
-        "advice",
-        "burgers",
-        "citizens",
-        "values",
-        "waarden"
+        "horizontalBar",
+        "socio",
+        "values"
       ],
+      "role_ids": [
+        "measurements",
+        "observation"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
@@ -821,28 +4030,33 @@
     },
     {
       "chart_id": "socio_values_deltas",
-      "title": "Values: Change Compared to Previous Phase",
-      "description": "Values, risk perception, and adherence by measurement moment.",
+      "type_id": "deltaList",
+      "title": "Change in citizen priorities",
+      "description": "Importance of each policy consideration compared with its preceding survey wave.",
       "page_id": "socio_economic",
-      "section_id": "behaviour",
+      "section_id": "public_response",
       "aliases": [
-        "values changes",
-        "values compared to previous phase",
-        "verandering waarden"
+        "change in citizen priorities"
       ],
       "keywords": [
-        "change",
-        "delta",
-        "values",
-        "verandering",
-        "waarden"
+        "deltaList",
+        "deltas",
+        "socio",
+        "values"
       ],
+      "role_ids": [
+        "entity",
+        "measurement",
+        "time"
+      ],
+      "time_sync_group_id": null,
+      "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
         "multi_fullscreen"
       ]
     }
   ],
-  "dashboard_semantic_digest": "f14d12f8b84315a015de54436795d2ffdfa191de889b9a47e0d83d8f009b2de2",
-  "digest": "82c91bcb1294c8778a06720a992f8c2b4cfacf2cff06421a1f6259d91af1abc6"
+  "dashboard_semantic_digest": "84a85c779a340ca2c37386c25c4bc2cb7553f823c6e396924017a41974bd264f",
+  "digest": "86e59769682ebed8ccee2a50228db4f65da0005470b21a9dd83ab1ed94c0fb5c"
 }

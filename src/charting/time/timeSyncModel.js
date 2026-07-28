@@ -17,12 +17,13 @@ const GROUP_KEYS = new Set([
 const PRIMARY_CLOCK_KEYS = new Set(["sourceId", "timeField"]);
 const MEMBER_KEYS = new Set(["chartId", "timeRole", "matching"]);
 const MATCHING_KEYS = new Set(["policy", "toleranceMs"]);
-const MATCHING_POLICIES = new Set([
+export const TIME_SYNC_MATCHING_POLICIES = Object.freeze([
   "exact",
   "lastKnown",
   "nearest",
   "interpolate",
 ]);
+const MATCHING_POLICIES = new Set(TIME_SYNC_MATCHING_POLICIES);
 const NON_INTERPOLATABLE_FAMILIES = new Set([
   "matrix",
   "timeline",
@@ -134,6 +135,15 @@ export function assertTimeSyncInterpolationAllowed({
     unwrapProfile(profile),
   );
   return true;
+}
+
+export function isTimeSyncInterpolationEligible(schema) {
+  const semanticMark = schema?.semantics?.mark ?? "";
+  return Boolean(
+    schema?.capabilities?.timeSync === true
+    && !NON_INTERPOLATABLE_FAMILIES.has(schema?.dataFamily)
+    && !/(?:event|cell|row)/i.test(semanticMark),
+  );
 }
 
 /**
@@ -441,10 +451,7 @@ function validateMemberEligibility({
 
 function validateInterpolationPermission(chart, schema, member, profile) {
   const semanticMark = schema.semantics?.mark ?? "";
-  if (
-    NON_INTERPOLATABLE_FAMILIES.has(schema.dataFamily)
-    || /(?:event|cell|row)/i.test(semanticMark)
-  ) {
+  if (!isTimeSyncInterpolationEligible(schema)) {
     const reason = /event/i.test(semanticMark)
       ? "event"
       : "discrete";

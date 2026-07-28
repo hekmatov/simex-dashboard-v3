@@ -1,56 +1,82 @@
-const CONTRACT_VERSION = "1";
+import {
+  COLLECTION_GRID_LIMITS,
+  COLLECTION_LAYOUT_MODES,
+  COLLECTION_PRIORITY_METHODS,
+  COLLECTION_RANKING_MODES,
+} from "../charting/collection/collectionModel.js";
+import {
+  CHART_CONFIG_VERSION,
+  validateChartInstance,
+} from "../charting/config/chartConfigV3.js";
+import {
+  CHART_SCHEMA_VERSION,
+  getChartSchema,
+  listChartSchemas,
+} from "../charting/schemas/chartSchemaRegistry.js";
+import {
+  isTimeSyncInterpolationEligible,
+  TIME_SYNC_MATCHING_POLICIES,
+  validateEffectiveTimeSyncMatching,
+} from "../charting/time/timeSyncModel.js";
+import { validateDataSourceDescriptor } from "./loadDashboard.js";
+
+const CONTRACT_VERSION = "2";
 const CATALOGUE_ID = "simex-dashboard";
 const DISPLAY_MODES = Object.freeze(["fullscreen", "multi_fullscreen"]);
+const PLAYBACK_DISPLAY_MODE = "playback";
+const PRESENTATION_EXCLUDED_SECTIONS = new Set(["data", "interactions"]);
+const TIME_GROUP_KEYS = new Set([
+  "id",
+  "name",
+  "primaryClock",
+  "matching",
+  "members",
+]);
+const PRIMARY_CLOCK_KEYS = new Set(["sourceId", "timeField"]);
+const TIME_MEMBER_KEYS = new Set(["chartId", "timeRole", "matching"]);
+const ALIAS_KEYS = new Set(["aliases", "keywords"]);
 
 export function buildChartCatalogue(dashboard, aliasConfig) {
-  if (!dashboard || typeof dashboard !== "object" || Array.isArray(dashboard)) {
-    throw new Error("dashboard must be an object");
-  }
-  if (!aliasConfig || typeof aliasConfig !== "object" || Array.isArray(aliasConfig)) {
-    throw new Error("chart aliases must be an object");
-  }
+  const context = buildDashboardContext(dashboard);
+  const aliases = requiredRecord(aliasConfig, "chart aliases");
+  const chartTypes = semanticChartTypes(listChartSchemas());
+  const charts = context.charts.map((entry) => {
+    const metadata = requiredRecord(
+      aliases[entry.chart.id],
+      `alias metadata for chart ${entry.chart.id}`,
+    );
+    rejectUnknownKeys(
+      metadata,
+      ALIAS_KEYS,
+      `alias metadata for chart ${entry.chart.id}`,
+    );
+    const timeSyncGroupId = context.membershipByChartId.get(entry.chart.id) ?? null;
+    return {
+      chart_id: entry.chart.id,
+      type_id: entry.chart.typeId,
+      title: requiredText(entry.chart.title, `title for chart ${entry.chart.id}`),
+      description: chartDescription(entry),
+      page_id: entry.pageId,
+      section_id: entry.sectionId,
+      aliases: normalizedTerms(
+        metadata.aliases,
+        `aliases for chart ${entry.chart.id}`,
+      ),
+      keywords: normalizedTerms(
+        metadata.keywords,
+        `keywords for chart ${entry.chart.id}`,
+      ),
+      role_ids: Object.keys(entry.chart.roles).sort(compareText),
+      time_sync_group_id: timeSyncGroupId,
+      collection_capability: entry.schema.capabilities.collection,
+      supported_display_modes: timeSyncGroupId === null
+        ? [...DISPLAY_MODES]
+        : [...DISPLAY_MODES, PLAYBACK_DISPLAY_MODE],
+    };
+  });
 
-  const catalogueRevision = requiredText(
-    dashboard.catalogueRevision ?? dashboard.lastUpdated,
-    "catalogue revision",
-  );
-  const charts = [];
-  const chartIds = new Set();
-
-  for (const page of requiredArray(dashboard.pages, "dashboard pages")) {
-    const pageId = requiredText(page?.id, "page ID");
-    for (const section of requiredArray(page?.sections, `sections for page ${pageId}`)) {
-      const sectionId = requiredText(section?.id, `section ID for page ${pageId}`);
-      for (const panel of requiredArray(
-        section?.panels,
-        `panels for section ${sectionId}`,
-      )) {
-        const chartId = requiredText(panel?.id, "chart ID");
-        if (chartIds.has(chartId)) {
-          throw new Error(`duplicate chart ID: ${chartId}`);
-        }
-        chartIds.add(chartId);
-
-        const metadata = aliasConfig[chartId];
-        if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-          throw new Error(`missing alias metadata for chart: ${chartId}`);
-        }
-
-        charts.push({
-          chart_id: chartId,
-          title: requiredText(panel.title, `title for chart ${chartId}`),
-          description: chartDescription(panel, section, page),
-          page_id: pageId,
-          section_id: sectionId,
-          aliases: normalizedTerms(metadata.aliases, `aliases for chart ${chartId}`),
-          keywords: normalizedTerms(metadata.keywords, `keywords for chart ${chartId}`),
-          supported_display_modes: [...DISPLAY_MODES],
-        });
-      }
-    }
-  }
-
-  const orphanIds = Object.keys(aliasConfig)
+  const chartIds = new Set(context.charts.map(({ chart }) => chart.id));
+  const orphanIds = Object.keys(aliases)
     .filter((chartId) => !chartIds.has(chartId))
     .sort(compareText);
   if (orphanIds.length > 0) {
@@ -61,62 +87,32 @@ export function buildChartCatalogue(dashboard, aliasConfig) {
   return {
     contract_version: CONTRACT_VERSION,
     catalogue_id: CATALOGUE_ID,
-    catalogue_revision: catalogueRevision,
+    catalogue_revision: context.catalogueRevision,
+    chart_schema_version: CHART_SCHEMA_VERSION,
+    chart_types: chartTypes,
     charts,
   };
 }
 
 export function canonicalCatalogueBytes(catalogue) {
-  return new TextEncoder().encode(JSON.stringify(sortObjectKeys(catalogue)));
+  return canonicalBytes(catalogue);
 }
 
 export function canonicalDashboardSemanticsBytes(dashboard) {
-  if (!dashboard || typeof dashboard !== "object" || Array.isArray(dashboard)) {
-    throw new Error("dashboard must be an object");
-  }
-  return new TextEncoder().encode(
-    JSON.stringify(
-      sortObjectKeys({
-        catalogue_revision: requiredText(
-          dashboard.catalogueRevision ?? dashboard.lastUpdated,
-          "catalogue revision",
-        ),
-        pages: semanticPages(dashboard.pages),
-      }),
-    ),
-  );
-}
-
-function semanticPages(pages) {
-  return requiredArray(pages, "dashboard pages").map((page) => ({
-    ...page,
-    sections: requiredArray(page?.sections, `sections for page ${page?.id}`).map(
-      (section) => ({
-        ...section,
-        panels: requiredArray(
-          section?.panels,
-          `panels for section ${section?.id}`,
-        ).map(semanticPanel),
-      }),
-    ),
-  }));
-}
-
-function semanticPanel({
-  sourceSchema: _runtimeCompatibility,
-  ...panel
-}) {
-  if (!panel.dataBinding?.x) {
-    return panel;
-  }
-  const { type: _profiledAxisType, ...semanticXAxis } = panel.dataBinding.x;
-  return {
-    ...panel,
-    dataBinding: {
-      ...panel.dataBinding,
-      x: semanticXAxis,
-    },
-  };
+  const context = buildDashboardContext(dashboard);
+  return canonicalBytes({
+    catalogue_revision: context.catalogueRevision,
+    chart_schema_version: CHART_SCHEMA_VERSION,
+    data_sources: cloneJson(context.dataSources),
+    time_sync_groups: cloneJson(context.timeSyncGroups),
+    pages: context.pages.map((page) => ({
+      page_id: page.pageId,
+      sections: page.sections.map((section) => ({
+        section_id: section.sectionId,
+        charts: section.charts.map(({ chart }) => semanticChartInstance(chart)),
+      })),
+    })),
+  });
 }
 
 export async function buildChartCatalogueSnapshot(
@@ -144,33 +140,384 @@ export async function catalogueMatchesDashboardSnapshot(
   snapshot,
   digestBytes = sha256Hex,
 ) {
-  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
-    return false;
-  }
   try {
+    if (!isRecord(snapshot)) return false;
     const active = await buildChartCatalogueSnapshot(
       dashboard,
       aliasConfig,
       digestBytes,
     );
-    return (
-      active.catalogue_id === snapshot.catalogue_id &&
-      active.dashboard_semantic_digest === snapshot.dashboard_semantic_digest &&
-      active.digest === snapshot.digest
+    return bytesEqual(
+      canonicalCatalogueBytes(active),
+      canonicalCatalogueBytes(snapshot),
     );
   } catch {
     return false;
   }
 }
 
-function chartDescription(panel, section, page) {
+function semanticChartTypes(schemas) {
+  const knownTypeIds = new Set();
+  const descriptors = schemas.map((schema) => {
+    const typeId = requiredText(schema.typeId, "chart schema typeId");
+    if (knownTypeIds.has(typeId)) {
+      throw new Error(`duplicate chart type: ${typeId}`);
+    }
+    knownTypeIds.add(typeId);
+    return semanticChartType(schema);
+  });
+
+  for (const schema of schemas) {
+    for (const conversionTypeId of schema.conversions) {
+      if (!knownTypeIds.has(conversionTypeId)) {
+        throw new Error(
+          `chart type ${schema.typeId} references unknown conversion ${conversionTypeId}`,
+        );
+      }
+    }
+  }
+
+  return descriptors.sort((left, right) => (
+    compareText(left.type_id, right.type_id)
+  ));
+}
+
+function semanticChartType(schema) {
+  const roleIds = new Set();
+  const roles = schema.roles.map((role) => {
+    const roleId = requiredText(
+      role.id,
+      `role ID for chart type ${schema.typeId}`,
+    );
+    if (roleIds.has(roleId)) {
+      throw new Error(`duplicate role ${roleId} for chart type ${schema.typeId}`);
+    }
+    roleIds.add(roleId);
+    return {
+      role_id: roleId,
+      label: requiredText(
+        role.label,
+        `role label ${roleId} for chart type ${schema.typeId}`,
+      ),
+      required: role.min > 0,
+      cardinality: {
+        min: role.min,
+        max: role.max,
+      },
+      accepted_semantic_types: [...role.accepts],
+    };
+  });
+  const timeRoleIds = schema.roles
+    .filter((role) => role.accepts.includes("temporal"))
+    .map((role) => role.id);
+  const interpolationEligible = isTimeSyncInterpolationEligible(schema);
+  const collection = schema.capabilities.collection
+    ? {
+        layout_modes: [...COLLECTION_LAYOUT_MODES],
+        ranking_modes: [...COLLECTION_RANKING_MODES],
+        priority_methods: [...COLLECTION_PRIORITY_METHODS],
+        grid: {
+          min_rows: COLLECTION_GRID_LIMITS.min,
+          max_rows: COLLECTION_GRID_LIMITS.max,
+          min_columns: COLLECTION_GRID_LIMITS.min,
+          max_columns: COLLECTION_GRID_LIMITS.max,
+        },
+      }
+    : null;
+  const geographyRole = schema.roles.find((role) => (
+    role.accepts.includes("geographic")
+  ));
+
+  if (schema.capabilities.timeSync && timeRoleIds.length === 0) {
+    throw new Error(
+      `time-synchronized chart type ${schema.typeId} has no temporal role`,
+    );
+  }
+  if (schema.dataFamily === "geography" && !geographyRole) {
+    throw new Error(`geography chart type ${schema.typeId} has no geography role`);
+  }
+
+  return {
+    type_id: schema.typeId,
+    label: schema.label,
+    description: schema.description,
+    group_id: schema.group,
+    purpose: schema.semantics.purpose,
+    mark: schema.semantics.mark,
+    data_family: schema.dataFamily,
+    renderer: schema.renderer,
+    role_ids: schema.roles.map(({ id }) => id),
+    roles,
+    data_constraints: {
+      source_kinds: [...schema.sources].sort(compareText),
+      transforms: [...schema.transforms],
+      manual_data: cloneJson(schema.manualData),
+    },
+    conversion: {
+      compatible_type_ids: [...schema.conversions].sort(compareText),
+      remap_required_for_other_types: true,
+    },
+    capabilities: {
+      collection: schema.capabilities.collection,
+      time_sync: schema.capabilities.timeSync,
+      zoom: schema.capabilities.zoom,
+    },
+    temporal: schema.capabilities.timeSync
+      ? {
+          time_role_ids: timeRoleIds,
+          matching_policies: TIME_SYNC_MATCHING_POLICIES.filter(
+            (policy) => policy !== "interpolate" || interpolationEligible,
+          ),
+          interpolation_eligible: interpolationEligible,
+          interpolation_requires_explicit_permission: interpolationEligible,
+        }
+      : null,
+    collection,
+    geography: schema.dataFamily === "geography"
+      ? {
+          geojson_source_required: true,
+          geography_role_id: geographyRole.id,
+          join_field_required: false,
+          default_join: "feature_id",
+          property_join_supported: true,
+        }
+      : null,
+    presentation_section_ids: schema.form.sections.filter(
+      (sectionId) => !PRESENTATION_EXCLUDED_SECTIONS.has(sectionId),
+    ),
+  };
+}
+
+function buildDashboardContext(dashboard) {
+  const root = requiredRecord(dashboard, "dashboard");
+  if (root.configVersion !== CHART_CONFIG_VERSION) {
+    throw new Error(`dashboard configuration version ${CHART_CONFIG_VERSION} is required`);
+  }
+  const catalogueRevision = requiredText(
+    root.catalogueRevision ?? root.lastUpdated,
+    "catalogue revision",
+  );
+  const dataSources = requiredRecord(root.dataSources, "dashboard dataSources");
+  for (const sourceId of Object.keys(dataSources)) {
+    validateDataSourceDescriptor(sourceId, dataSources[sourceId]);
+  }
+
+  const chartIds = new Set();
+  const charts = [];
+  const pages = requiredArray(root.pages, "dashboard pages").map((page) => {
+    const pageObject = requiredRecord(page, "dashboard page");
+    const pageId = requiredText(pageObject.id, "page ID");
+    const sections = requiredArray(
+      pageObject.sections,
+      `sections for page ${pageId}`,
+    ).map((section) => {
+      const sectionObject = requiredRecord(
+        section,
+        `section for page ${pageId}`,
+      );
+      const sectionId = requiredText(
+        sectionObject.id,
+        `section ID for page ${pageId}`,
+      );
+      const sectionCharts = requiredArray(
+        sectionObject.panels,
+        `panels for section ${sectionId}`,
+      ).map((panel) => {
+        const panelObject = requiredRecord(
+          panel,
+          `chart panel for section ${sectionId}`,
+        );
+        const chart = panelObject.chart ?? panelObject;
+        validateChartInstance(chart);
+        if (!Object.hasOwn(dataSources, chart.sourceId)) {
+          throw new Error(
+            `chart ${chart.id} references unknown data source ${chart.sourceId}`,
+          );
+        }
+        if (chartIds.has(chart.id)) {
+          throw new Error(`duplicate chart ID: ${chart.id}`);
+        }
+        chartIds.add(chart.id);
+        const schema = getChartSchema(chart.typeId);
+        const entry = {
+          chart,
+          schema,
+          page: pageObject,
+          section: sectionObject,
+          pageId,
+          sectionId,
+        };
+        charts.push(entry);
+        return entry;
+      });
+      return { sectionId, charts: sectionCharts };
+    });
+    return { pageId, sections };
+  });
+  const chartsById = new Map(charts.map((entry) => [entry.chart.id, entry]));
+  const timeSyncGroups = root.timeSyncGroups === undefined
+    ? []
+    : requiredArray(root.timeSyncGroups, "dashboard timeSyncGroups");
+  const membershipByChartId = validateTimeMembership(
+    timeSyncGroups,
+    chartsById,
+    dataSources,
+  );
+
+  return {
+    catalogueRevision,
+    dataSources,
+    timeSyncGroups,
+    pages,
+    charts,
+    membershipByChartId,
+  };
+}
+
+function validateTimeMembership(groups, chartsById, dataSources) {
+  const groupIds = new Set();
+  const membershipByChartId = new Map();
+
+  for (const rawGroup of groups) {
+    const group = requiredRecord(rawGroup, "time synchronization group");
+    rejectUnknownKeys(group, TIME_GROUP_KEYS, "time synchronization group");
+    const groupId = requiredText(group.id, "time synchronization group ID");
+    if (groupIds.has(groupId)) {
+      throw new Error(`duplicate time synchronization group ID: ${groupId}`);
+    }
+    groupIds.add(groupId);
+    requiredText(group.name, `name for time synchronization group ${groupId}`);
+    const primaryClock = requiredRecord(
+      group.primaryClock,
+      `primary clock for time synchronization group ${groupId}`,
+    );
+    rejectUnknownKeys(
+      primaryClock,
+      PRIMARY_CLOCK_KEYS,
+      `primary clock for time synchronization group ${groupId}`,
+    );
+    const primarySourceId = requiredText(
+      primaryClock.sourceId,
+      `primary clock source for time synchronization group ${groupId}`,
+    );
+    requiredText(
+      primaryClock.timeField,
+      `primary clock field for time synchronization group ${groupId}`,
+    );
+    if (!Object.hasOwn(dataSources, primarySourceId)) {
+      throw new Error(
+        `time synchronization group ${groupId} references unknown primary source ${primarySourceId}`,
+      );
+    }
+    validateEffectiveTimeSyncMatching(
+      group.matching,
+      `time synchronization group ${groupId}`,
+    );
+
+    const memberIds = new Set();
+    for (const rawMember of requiredArray(
+      group.members,
+      `members for time synchronization group ${groupId}`,
+    )) {
+      const member = requiredRecord(
+        rawMember,
+        `member for time synchronization group ${groupId}`,
+      );
+      rejectUnknownKeys(
+        member,
+        TIME_MEMBER_KEYS,
+        `member for time synchronization group ${groupId}`,
+      );
+      const chartId = requiredText(
+        member.chartId,
+        `member chart ID for time synchronization group ${groupId}`,
+      );
+      const timeRole = requiredText(
+        member.timeRole,
+        `member time role for chart ${chartId}`,
+      );
+      if (memberIds.has(chartId)) {
+        throw new Error(
+          `duplicate member chart ${chartId} in time synchronization group ${groupId}`,
+        );
+      }
+      if (membershipByChartId.has(chartId)) {
+        throw new Error(
+          `chart ${chartId} belongs to more than one time synchronization group`,
+        );
+      }
+      memberIds.add(chartId);
+      membershipByChartId.set(chartId, groupId);
+
+      const chartEntry = chartsById.get(chartId);
+      if (!chartEntry) {
+        throw new Error(
+          `time synchronization member chart ${chartId} does not exist`,
+        );
+      }
+      if (!chartEntry.schema.capabilities.timeSync) {
+        throw new Error(`chart ${chartId} does not support time synchronization`);
+      }
+      const role = chartEntry.schema.roles.find(({ id }) => id === timeRole);
+      if (!role || !role.accepts.includes("temporal")) {
+        throw new Error(
+          `chart ${chartId} time role ${timeRole} is not a temporal role`,
+        );
+      }
+      if (!Object.hasOwn(chartEntry.chart.roles, timeRole)) {
+        throw new Error(
+          `chart ${chartId} has no configured binding for time role ${timeRole}`,
+        );
+      }
+      if (member.matching !== undefined) {
+        validateEffectiveTimeSyncMatching(
+          member.matching,
+          `time synchronization member ${chartId}`,
+        );
+      }
+      if (chartEntry.chart.interaction.timeSync?.groupId !== groupId) {
+        throw new Error(
+          `chart ${chartId} time synchronization membership does not match ${groupId}`,
+        );
+      }
+    }
+  }
+
+  for (const { chart } of chartsById.values()) {
+    const configuredGroupId = chart.interaction.timeSync?.groupId ?? null;
+    const memberGroupId = membershipByChartId.get(chart.id) ?? null;
+    if (configuredGroupId !== memberGroupId) {
+      throw new Error(
+        `chart ${chart.id} time synchronization membership is inconsistent`,
+      );
+    }
+  }
+  return membershipByChartId;
+}
+
+function semanticChartInstance(chart) {
+  return {
+    configVersion: chart.configVersion,
+    id: chart.id,
+    typeId: chart.typeId,
+    title: chart.title,
+    description: chart.description,
+    sourceId: chart.sourceId,
+    roles: cloneJson(chart.roles),
+    transformations: cloneJson(chart.transformations),
+    presentation: cloneJson(chart.presentation),
+    interaction: cloneJson(chart.interaction),
+    layout: cloneJson(chart.layout),
+  };
+}
+
+function chartDescription({ chart, section, page }) {
   const description =
-    panel.description ??
-    panel.infoSource ??
-    section.description ??
-    page.description ??
-    panel.title;
-  return requiredText(description, `description for chart ${panel.id}`);
+    chart.description
+    || section.description
+    || page.description
+    || chart.title;
+  return requiredText(description, `description for chart ${chart.id}`);
 }
 
 function normalizedTerms(value, label) {
@@ -192,9 +539,55 @@ function normalizedTerms(value, label) {
   return unique;
 }
 
+function requiredRecord(value, label) {
+  if (!isRecord(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  assertEnumerableDataProperties(value, label);
+  return value;
+}
+
+function isRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function rejectUnknownKeys(value, allowed, label) {
+  const keys = Object.keys(value);
+  for (const key of keys) {
+    if (!allowed.has(key)) {
+      throw new Error(`unknown ${label} property: ${key}`);
+    }
+  }
+}
+
 function requiredArray(value, label) {
   if (!Array.isArray(value)) {
     throw new Error(`${label} must be an array`);
+  }
+  if (
+    Object.getPrototypeOf(value) !== Array.prototype
+    || Object.getOwnPropertySymbols(value).length > 0
+  ) {
+    throw new Error(`${label} must be an ordinary array`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  for (let index = 0; index < value.length; index += 1) {
+    const descriptor = descriptors[index];
+    if (
+      !descriptor
+      || !Object.hasOwn(descriptor, "value")
+      || !descriptor.enumerable
+    ) {
+      throw new Error(`${label} must be a dense data array`);
+    }
+  }
+  const namedKeys = Object.keys(descriptors).filter((key) => (
+    key !== "length" && !/^(?:0|[1-9]\d*)$/.test(key)
+  ));
+  if (namedKeys.length > 0) {
+    throw new Error(`${label} cannot contain named properties`);
   }
   return value;
 }
@@ -206,18 +599,69 @@ function requiredText(value, label) {
   return value.trim().normalize("NFC");
 }
 
-function sortObjectKeys(value) {
-  if (Array.isArray(value)) {
-    return value.map(sortObjectKeys);
+function cloneJson(value) {
+  return value === undefined ? null : structuredClone(value);
+}
+
+function canonicalBytes(value) {
+  return new TextEncoder().encode(
+    JSON.stringify(canonicalJsonValue(value, "canonical value")),
+  );
+}
+
+function canonicalJsonValue(value, label) {
+  if (
+    value === null
+    || typeof value === "string"
+    || typeof value === "boolean"
+  ) {
+    return value;
   }
-  if (value && typeof value === "object") {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(`${label} must contain only finite numbers`);
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return requiredArray(value, label).map((entry, index) => (
+      canonicalJsonValue(entry, `${label}[${index}]`)
+    ));
+  }
+  if (isRecord(value)) {
+    assertEnumerableDataProperties(value, label);
     return Object.fromEntries(
       Object.keys(value)
         .sort(compareText)
-        .map((key) => [key, sortObjectKeys(value[key])]),
+        .map((key) => [
+          key,
+          canonicalJsonValue(value[key], `${label}.${key}`),
+        ]),
     );
   }
-  return value;
+  throw new Error(`${label} must contain only JSON data`);
+}
+
+function assertEnumerableDataProperties(value, label) {
+  if (Object.getOwnPropertySymbols(value).length > 0) {
+    throw new Error(`${label} cannot contain symbol properties`);
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (!Object.hasOwn(descriptor, "value") || !descriptor.enumerable) {
+      throw new Error(
+        `${label} property ${key} must be an enumerable data property`,
+      );
+    }
+  }
+}
+
+function bytesEqual(left, right) {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
 }
 
 function compareText(left, right) {
