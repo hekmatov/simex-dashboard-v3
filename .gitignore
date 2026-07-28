@@ -9,3 +9,4 @@ packaged-dashboard-bundle.json
 voice-logs/
 playwright-report/
 test-results/
+.superpowers/

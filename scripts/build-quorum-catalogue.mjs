@@ -25,5 +25,6 @@ await writeFile(
 );
 
 console.log(
-  `Wrote public/integration/quorum-chart-catalogue.json with ${output.charts.length} chart(s).`,
+  `Wrote Quorum catalogue v${output.contract_version} with `
+  + `${output.chart_types.length} chart type(s) and ${output.charts.length} configured chart(s).`,
 );

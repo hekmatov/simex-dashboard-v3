@@ -1,0 +1,396 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  CHART_SCHEMA_VERSION,
+  createChartSchemaRegistry,
+  getChartSchema,
+  listChartSchemaGroups,
+  listChartSchemas,
+} from "../src/charting/schemas/chartSchemaRegistry.js";
+import { validateChartSchema } from "../src/charting/schemas/validateChartSchema.js";
+
+const typeIdsInPurposeOrder = [
+  "bar", "groupedBar", "stackedBar", "horizontalBar",
+  "horizontalStackedBar", "line", "area", "mixed", "pie", "donut",
+  "kpi", "gauge", "bullet", "deltaCard", "deltaList", "scatter",
+  "bubble", "heatmap", "readinessMatrix", "timeline", "swimlane",
+  "choroplethMap", "chronoChoroplethMap", "mapScatter", "table", "image",
+];
+
+test("version 3 exposes every approved chart type in purpose order", () => {
+  assert.equal(CHART_SCHEMA_VERSION, 3);
+  assert.deepEqual(
+    listChartSchemas().map(({ typeId }) => typeId),
+    typeIdsInPurposeOrder,
+  );
+});
+
+test("schemas are grouped by their communication purpose", () => {
+  assert.deepEqual(
+    listChartSchemaGroups().map(({ id, charts }) => [id, charts.map(({ typeId }) => typeId)]),
+    [
+      ["comparison", ["bar", "groupedBar", "stackedBar", "horizontalBar", "horizontalStackedBar"]],
+      ["trends", ["line", "area", "mixed"]],
+      ["composition", ["pie", "donut"]],
+      ["targets", ["kpi", "gauge", "bullet", "deltaCard", "deltaList"]],
+      ["relationships", ["scatter", "bubble"]],
+      ["readiness", ["heatmap", "readinessMatrix"]],
+      ["timeline", ["timeline", "swimlane"]],
+      ["geography", ["choroplethMap", "chronoChoroplethMap", "mapScatter"]],
+      ["operational", ["table", "image"]],
+    ],
+  );
+});
+
+test("invalid schemas fail before the application renders", () => {
+  assert.throws(
+    () => validateChartSchema({ version: 3, typeId: "broken", roles: [] }),
+    /label/,
+  );
+});
+
+test("validation rejects unknown form sections", () => {
+  assert.throws(
+    () => validateChartSchema({ ...getChartSchema("line"), form: { sections: ["data", "madeUp"] } }),
+    /Unknown form section "madeUp"/,
+  );
+});
+
+test("schemas declare only the appearance fields their renderers can apply", () => {
+  const expectedAppearance = new Map([
+    ["bar", ["seriesColors", "barWidth"]],
+    ["groupedBar", ["seriesColors", "barWidth"]],
+    ["stackedBar", ["seriesColors", "barWidth"]],
+    ["horizontalBar", ["seriesColors", "barWidth"]],
+    ["horizontalStackedBar", ["seriesColors", "barWidth"]],
+    ["line", ["seriesColors", "lineWidth"]],
+    ["area", ["seriesColors", "lineWidth"]],
+    ["mixed", ["seriesColors", "lineWidth", "barWidth"]],
+    ["pie", ["seriesColors"]],
+    ["donut", ["seriesColors"]],
+    ["scatter", ["seriesColors"]],
+    ["bubble", ["seriesColors"]],
+  ]);
+
+  for (const schema of listChartSchemas()) {
+    assert.ok(
+      Array.isArray(schema.form.appearance),
+      `${schema.typeId} must declare form.appearance`,
+    );
+    assert.deepEqual(
+      schema.form.appearance,
+      expectedAppearance.get(schema.typeId) ?? [],
+      `${schema.typeId} exposed an inapplicable appearance field`,
+    );
+  }
+});
+
+test("schema validation rejects unknown, duplicate, and inapplicable appearance fields", () => {
+  const line = getChartSchema("line");
+  for (const appearance of [
+    ["seriesColors", "madeUp"],
+    ["seriesColors", "seriesColors"],
+    ["seriesColors", "barWidth"],
+  ]) {
+    assert.throws(
+      () => validateChartSchema({
+        ...line,
+        form: {
+          ...line.form,
+          appearance,
+        },
+      }),
+      /appearance/i,
+    );
+  }
+});
+
+test("schema validation rejects an axis mark the renderer cannot implement", () => {
+  const line = getChartSchema("line");
+  assert.throws(
+    () => validateChartSchema({
+      ...line,
+      form: {
+        ...line.form,
+        appearance: [],
+      },
+      semantics: {
+        ...line.semantics,
+        mark: "future-unknown-axis-mark",
+      },
+    }),
+    /axis renderer.*mark/i,
+  );
+});
+
+test("schema validation rejects composition and relationship marks their renderers cannot implement", () => {
+  for (const [typeId, unsupportedMark] of [
+    ["pie", "point"],
+    ["scatter", "pie"],
+  ]) {
+    const schema = getChartSchema(typeId);
+    assert.throws(
+      () => validateChartSchema({
+        ...schema,
+        semantics: {
+          ...schema.semantics,
+          mark: unsupportedMark,
+        },
+      }),
+      new RegExp(`${schema.renderer} renderer.*mark`, "i"),
+    );
+  }
+});
+
+test("schema validation rejects series appearance on renderers without a mark contract", () => {
+  const kpi = getChartSchema("kpi");
+  assert.throws(
+    () => validateChartSchema({
+      ...kpi,
+      form: {
+        ...kpi.form,
+        appearance: ["seriesColors", "lineWidth"],
+      },
+      semantics: {
+        ...kpi.semantics,
+        mark: "line",
+      },
+    }),
+    /target renderer.*series appearance/i,
+  );
+});
+
+test("validation rejects impossible role cardinality", () => {
+  assert.throws(
+    () => validateChartSchema({
+      ...getChartSchema("line"),
+      roles: [{ id: "value", label: "Value", accepts: ["number"], min: 2, max: 1 }],
+    }),
+    /max.*at least min/,
+  );
+});
+
+test("validation rejects schemas without a registered renderer", () => {
+  assert.throws(
+    () => validateChartSchema({ ...getChartSchema("line"), renderer: "missing" }),
+    /Unknown renderer "missing"/,
+  );
+});
+
+test("validation rejects conversions outside its supplied catalogue", () => {
+  assert.throws(
+    () => validateChartSchema(
+      { ...getChartSchema("line"), conversions: ["notAChart"] },
+      { conversionTargetIds: new Set(["line"]) },
+    ),
+    /Unknown conversion target "notAChart"/,
+  );
+});
+
+test("a registry rejects an approved conversion target it does not register", () => {
+  const line = structuredClone(getChartSchema("line"));
+  line.conversions = ["area"];
+  assert.throws(
+    () => createChartSchemaRegistry([line]),
+    /Unknown conversion target "area"/,
+  );
+});
+
+test("validation requires collection controls for collection-capable charts", () => {
+  assert.throws(
+    () => validateChartSchema({
+      ...getChartSchema("deltaList"),
+      form: { sections: ["data", "appearance", "labels", "targets", "interactions", "advanced"] },
+    }),
+    /Collection-capable chart schemas require a collection form section/,
+  );
+});
+
+test("validation requires a temporal role for time-synchronized charts", () => {
+  assert.throws(
+    () => validateChartSchema({
+      ...getChartSchema("line"),
+      roles: getChartSchema("line").roles.map((role) => ({
+        ...role,
+        accepts: role.accepts.filter((type) => type !== "temporal"),
+      })),
+    }),
+    /Time-synchronized chart schemas require a role that accepts temporal data/,
+  );
+});
+
+test("only Delta schemas expose the immutable analytical comparison contract", () => {
+  const expected = {
+    defaultMode: "previousObservation",
+    modes: ["previousObservation", "fixedTime"],
+    matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+  };
+
+  for (const schema of listChartSchemas()) {
+    if (schema.typeId === "deltaCard" || schema.typeId === "deltaList") {
+      assert.deepEqual(schema.comparison, expected);
+      assert.equal(Object.isFrozen(schema.comparison), true);
+      assert.equal(Object.isFrozen(schema.comparison.modes), true);
+      assert.equal(Object.isFrozen(schema.comparison.matchingPolicies), true);
+      assert.ok(schema.transforms.includes("comparison"));
+    } else {
+      assert.equal(Object.hasOwn(schema, "comparison"), false, schema.typeId);
+      assert.equal(schema.transforms.includes("comparison"), false, schema.typeId);
+    }
+  }
+});
+
+test("comparison schemas reject malformed modes, policies, roles, and transform declarations", () => {
+  const delta = structuredClone(getChartSchema("deltaCard"));
+  const malformed = [
+    {
+      schema: {
+        ...delta,
+        comparison: {
+          defaultMode: "latest",
+          modes: ["previousObservation", "fixedTime"],
+          matchingPolicies: ["exact"],
+        },
+      },
+      message: /unknown comparison default mode "latest"/i,
+    },
+    {
+      schema: {
+        ...delta,
+        comparison: {
+          defaultMode: "previousObservation",
+          modes: ["previousObservation", "futureObservation"],
+          matchingPolicies: ["exact"],
+        },
+      },
+      message: /unknown comparison mode "futureObservation"/i,
+    },
+    {
+      schema: {
+        ...delta,
+        comparison: {
+          defaultMode: "previousObservation",
+          modes: ["previousObservation"],
+          matchingPolicies: ["closest"],
+        },
+      },
+      message: /unknown comparison matching policy "closest"/i,
+    },
+    {
+      schema: {
+        ...delta,
+        roles: delta.roles.map((role) => (
+          role.id === "measurement"
+            ? { ...role, accepts: ["category"] }
+            : role
+        )),
+      },
+      message: /numeric measurement role/i,
+    },
+    {
+      schema: {
+        ...delta,
+        transforms: delta.transforms.filter((transform) => transform !== "comparison"),
+      },
+      message: /comparison transform/i,
+    },
+  ];
+
+  for (const { schema, message } of malformed) {
+    assert.throws(() => validateChartSchema(schema), message);
+  }
+});
+
+test("comparison schema descriptors accept only owned inert data on plain objects and ordinary arrays", () => {
+  const delta = structuredClone(getChartSchema("deltaCard"));
+  const validDescriptor = () => ({
+    defaultMode: "previousObservation",
+    modes: ["previousObservation", "fixedTime"],
+    matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+  });
+  let accessorReads = 0;
+  const accessorDescriptor = validDescriptor();
+  Object.defineProperty(accessorDescriptor, "defaultMode", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return "previousObservation";
+    },
+  });
+  const inheritedDescriptor = Object.create({
+    defaultMode: "previousObservation",
+  });
+  inheritedDescriptor.modes = ["previousObservation", "fixedTime"];
+  inheritedDescriptor.matchingPolicies = ["exact"];
+  const symbolDescriptor = validDescriptor();
+  symbolDescriptor[Symbol("hidden")] = true;
+  const nonOrdinaryModes = class ComparisonModes extends Array {};
+  const symbolPolicies = ["exact"];
+  symbolPolicies[Symbol("hidden")] = true;
+
+  for (const [comparison, message] of [
+    [inheritedDescriptor, /comparison must be a plain object/i],
+    [accessorDescriptor, /defaultMode.*data property/i],
+    [symbolDescriptor, /comparison.*symbol/i],
+    [{ ...validDescriptor(), modes: new nonOrdinaryModes("previousObservation") }, /modes.*ordinary array/i],
+    [{ ...validDescriptor(), matchingPolicies: symbolPolicies }, /matchingPolicies.*symbol/i],
+  ]) {
+    assert.throws(
+      () => validateChartSchema({ ...delta, comparison }),
+      message,
+    );
+  }
+  assert.equal(accessorReads, 0);
+});
+
+test("registry detaches validated comparison descriptors before freezing them", () => {
+  const delta = structuredClone(getChartSchema("deltaCard"));
+  delta.conversions = [];
+  const authoredComparison = delta.comparison;
+  const authoredModes = authoredComparison.modes;
+  const registry = createChartSchemaRegistry([delta]);
+
+  assert.notEqual(registry.get("deltaCard").comparison, authoredComparison);
+  assert.notEqual(registry.get("deltaCard").comparison.modes, authoredModes);
+  assert.equal(Object.isFrozen(authoredComparison), false);
+  assert.equal(Object.isFrozen(authoredModes), false);
+
+  authoredComparison.defaultMode = "fixedTime";
+  authoredModes[0] = "fixedTime";
+  assert.deepEqual(registry.get("deltaCard").comparison, {
+    defaultMode: "previousObservation",
+    modes: ["previousObservation", "fixedTime"],
+    matchingPolicies: ["exact", "lastKnown", "nearest", "interpolate"],
+  });
+});
+
+test("a registry rejects duplicate type identifiers", () => {
+  const line = structuredClone(getChartSchema("line"));
+  assert.throws(
+    () => createChartSchemaRegistry([line, { ...line, label: "Another line" }]),
+    /Duplicate chart type "line"/,
+  );
+});
+
+test("registry schemas and discovery results are immutable", () => {
+  const line = getChartSchema("line");
+  assert.throws(() => { line.label = "Changed"; }, TypeError);
+  assert.throws(() => { line.roles[0].label = "Changed"; }, TypeError);
+  assert.throws(() => { listChartSchemas().push(line); }, TypeError);
+  assert.throws(() => { listChartSchemaGroups()[0].charts.pop(); }, TypeError);
+});
+
+test("registry deep-freezes nested data from a shallow-frozen schema", () => {
+  const line = structuredClone(getChartSchema("line"));
+  line.conversions = [];
+  Object.freeze(line);
+
+  const registry = createChartSchemaRegistry([line]);
+  assert.throws(() => { line.roles[0].label = "Changed after registration"; }, TypeError);
+  assert.equal(registry.get("line").roles[0].label, "Measurements");
+});
+
+test("unknown chart type lookups fail with an actionable message", () => {
+  assert.throws(() => getChartSchema("notAChart"), /Unknown chart type "notAChart"/);
+});

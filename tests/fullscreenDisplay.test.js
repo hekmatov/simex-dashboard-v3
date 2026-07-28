@@ -16,7 +16,20 @@ const displayModule = await vite
 await vite.close();
 
 const dashboard = {
-  loadedData: {},
+  dataSources: {
+    status: { kind: "inline", rows: [{ entity: "A", value: 1 }, { entity: "B", value: 2 }] },
+  },
+  datasetProfiles: {
+    status: {
+      columns: [
+        { name: "entity", type: "category" },
+        { name: "value", type: "numeric" },
+      ],
+    },
+  },
+  loadedData: {
+    status: [{ entity: "A", value: 1 }, { entity: "B", value: 2 }],
+  },
   pages: [
     {
       id: "page",
@@ -25,16 +38,30 @@ const dashboard = {
           id: "section",
           panels: [
             {
+              configVersion: 3,
               id: "chart-a",
-              type: "kpi",
+              typeId: "kpi",
               title: "Chart A",
-              items: [{ label: "A", value: "1" }],
+              description: "Chart A status.",
+              sourceId: "status",
+              roles: { value: { field: "value" }, entity: { field: "entity" } },
+              transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
+              presentation: { title: { align: "left" }, collection: null },
+              interaction: { zoom: { enabled: false }, timeSync: null },
+              layout: { size: "standard" },
             },
             {
+              configVersion: 3,
               id: "chart-b",
-              type: "kpi",
+              typeId: "kpi",
               title: "Chart B",
-              items: [{ label: "B", value: "2" }],
+              description: "Chart B status.",
+              sourceId: "status",
+              roles: { value: { field: "value" }, entity: { field: "entity" } },
+              transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
+              presentation: { title: { align: "left" }, collection: null },
+              interaction: { zoom: { enabled: false }, timeSync: null },
+              layout: { size: "standard" },
             },
           ],
         },
@@ -67,6 +94,8 @@ test("fullscreen display renders the exact ordered visible chart set", () => {
   );
 
   assert.equal((html.match(/multi-fullscreen-cell/g) ?? []).length, 2);
+  assert.equal((html.match(/chart-view-frame/g) ?? []).length, 2);
+  assert.equal((html.match(/chart-card-view/g) ?? []).length, 2);
   assert.ok(html.indexOf("Chart B") < html.indexOf("Chart A"));
   assert.match(html, /aria-label="Close chart-b"/);
   assert.match(html, /aria-label="Close chart-a"/);

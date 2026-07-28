@@ -1,0 +1,63 @@
+import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+
+export function buildRelationshipRenderModel({ chart, prepared }, schema) {
+  const mark = validateSeriesRendererMark(
+    "relationship",
+    schema?.semantics?.mark,
+  );
+  const bubble = mark === "bubble";
+  const colors = chart.presentation?.series?.colors;
+  return {
+    kind: "echarts",
+    option: {
+      title: titleOption(chart),
+      aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
+      tooltip: { trigger: "item" },
+      legend: { show: chart.presentation?.legend?.visible !== false },
+      ...(Array.isArray(colors) ? { color: [...colors] } : {}),
+      grid: { containLabel: true, left: 48, right: 28, top: 76, bottom: 52 },
+      xAxis: { type: "value", name: chart.presentation?.axes?.primary?.xTitle ?? "" },
+      yAxis: { type: "value", name: chart.presentation?.axes?.primary?.yTitle ?? "" },
+      series: groupMarks(prepared.marks).map(({ name, marks }) => ({
+        name,
+        type: "scatter",
+        data: marks.map((mark) => ({
+          name: mark.label == null ? "" : String(mark.label),
+          value: bubble ? [mark.x, mark.y, mark.size] : [mark.x, mark.y],
+          cluster: mark.cluster,
+          group: mark.group,
+        })),
+        symbolSize: bubble ? bubbleSize : undefined,
+        emphasis: { focus: "series" },
+      })),
+      dataZoom: chart.interaction?.zoom?.enabled
+        ? [
+            { type: "inside", xAxisIndex: 0, zoomOnMouseWheel: "ctrl", moveOnMouseWheel: false, moveOnMouseMove: false },
+            { type: "slider", xAxisIndex: 0 },
+          ]
+        : undefined,
+    },
+  };
+}
+
+function groupMarks(marks) {
+  const groups = new Map();
+  for (const mark of marks) {
+    const key = JSON.stringify([mark.clusterKey ?? mark.cluster ?? "", mark.groupKey ?? mark.group ?? ""]);
+    if (!groups.has(key)) {
+      const name = [mark.cluster, mark.group].filter((value) => value !== null && value !== undefined && value !== "").join(" · ") || "Values";
+      groups.set(key, { name, marks: [] });
+    }
+    groups.get(key).marks.push(mark);
+  }
+  return [...groups.values()];
+}
+
+function bubbleSize(value) {
+  const size = Number(value?.[2]);
+  return Number.isFinite(size) ? Math.max(8, Math.min(64, 8 + Math.sqrt(Math.abs(size)) * 4)) : 8;
+}
+
+function titleOption(chart) {
+  return { text: chart.title ?? "", left: chart.presentation?.title?.align ?? "left" };
+}

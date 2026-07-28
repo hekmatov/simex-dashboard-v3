@@ -3,9 +3,38 @@ import { test, expect } from "@playwright/test";
 const CONTROL_URL = "http://127.0.0.1:4174";
 const FIRST_CHART = "bio_confirmed_cases";
 const SECOND_CHART = "bio_mortality_age";
+const browserErrors = new WeakMap();
 
-test.beforeEach(async ({ request }) => {
+test.beforeEach(async ({ page, request }) => {
+  const errors = [];
+  browserErrors.set(page, errors);
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   await request.post(`${CONTROL_URL}/__test__/reset`);
+});
+
+test("Quorum chart display remains available when the dashboard starts on showcase Home", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", {
+      name: "From complex exercise data to shared situational awareness",
+    }),
+  ).toBeVisible();
+  await expectCompanionConnected(page);
+
+  await control(request, "display-set", {
+    chart_ids: [FIRST_CHART],
+    expected_display_revision: 0,
+  });
+
+  await expect(
+    page.locator(`[data-displayed-chart-id="${FIRST_CHART}"]`),
+  ).toBeVisible();
 });
 
 test("operator-authorized display and individual close share actual browser state", async ({
@@ -13,7 +42,7 @@ test("operator-authorized display and individual close share actual browser stat
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART, SECOND_CHART],
@@ -39,7 +68,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
 
   const firstPanel = page.locator(`[data-panel-id="${FIRST_CHART}"]`);
@@ -50,14 +79,16 @@ test("manual single, multi-open, and reorder use the same display state", async 
   const fullscreenButton = firstPanel.getByRole("button", {
     name: "Fullscreen chart",
   });
-  await firstPanel.locator(".chart-canvas").hover();
-  await fullscreenButton.hover();
-  await page.mouse.down();
-  await page.waitForTimeout(700);
-  await page.mouse.up();
+  await firstPanel.locator(".chart-view-frame").hover();
+  await fullscreenButton.dispatchEvent("pointerdown");
+  await expect(
+    firstPanel.getByRole("button", {
+      name: "Remove from multi-fullscreen",
+    }),
+  ).toBeVisible();
   await page
     .locator(`[data-panel-id="${SECOND_CHART}"]`)
-    .getByRole("button", { name: "Select" })
+    .getByRole("button", { name: "Add to multi-fullscreen" })
     .click();
   await page
     .getByRole("button", { name: /^Multi-fullscreen$/ })
@@ -82,7 +113,7 @@ test("stale revisions and invalid chart IDs are rejected promptly", async ({
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
@@ -109,7 +140,7 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
   request,
 }) => {
   await page.goto("/");
-  await expect(page.getByText("Companion connected")).toBeVisible();
+  await expectCompanionConnected(page);
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
     expected_display_revision: 0,
@@ -152,18 +183,23 @@ test("runtime chart-definition drift disables companion commands", async ({
     "http://127.0.0.1:4173/config/dashboard.json",
   );
   const config = await configResponse.json();
-  config.pages[1].sections[0].panels[1].title =
-    "Locally changed chart meaning";
+  const chart = config.pages
+    .flatMap(({ sections }) => sections)
+    .flatMap(({ panels }) => panels)
+    .find(({ id }) => id === SECOND_CHART);
+  chart.title = "Locally changed chart meaning";
   await page.addInitScript((savedConfig) => {
     localStorage.setItem(
-      "simex-dashboard-v2-config-pages-v2",
+      "simex-dashboard-config-v3",
       JSON.stringify(savedConfig),
     );
   }, config);
 
   await page.goto("/");
 
-  await expect(page.getByText("Companion unavailable")).toBeVisible();
+  await expect(page.getByText("Companion unavailable")).toBeVisible({
+    timeout: 20_000,
+  });
   await expect
     .poll(async () =>
       (await events(request)).some(
@@ -194,6 +230,13 @@ async function control(request, action, data) {
     data,
   });
   expect(response.ok()).toBeTruthy();
+}
+
+async function expectCompanionConnected(page) {
+  await expect(page.getByText("Companion connected")).toBeVisible({
+    timeout: 30_000,
+  });
+  expect(browserErrors.get(page)).toEqual([]);
 }
 
 async function events(request) {

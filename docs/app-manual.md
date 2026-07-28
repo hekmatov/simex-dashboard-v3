@@ -2,377 +2,430 @@
 
 ## Purpose and scope
 
-SimEx Dashboard V2 is a static, configurable web dashboard for presenting simulation-exercise data. It combines prepared epidemiological and socio-economic data with configurable charts, maps, tables, indicators, and comparison panels.
+SimEx Dashboard V2 is a static, configurable web application for displaying
+and communicating simulation-exercise information. Its Chart Data System,
+dashboard configuration, and portable bundle contracts are version 3.
 
-This manual describes the published dashboard and its supported configuration and deployment model. It intentionally excludes development history, personal workflows, local-machine details, and experimental features.
+The default HeV-A26 content demonstrates current biomedical and socio-economic
+needs. It is an example built from real exercise datasets, not a permanent
+template for every future exercise.
 
 ## Dashboard at a glance
 
 The default dashboard has three pages:
 
-- **HeV-A26 Dashboard Home** for scenario overview and headline indicators.
-- **HeV-A26 Dashboard: Epidemiological overview** for cases and mortality, healthcare, testing, wastewater surveillance, and vaccination.
-- **HeV-A26 Dashboard: Socio-economic overview** for behaviour, public trust, subjective wellbeing, economy, and absenteeism.
+- **Home** introduces SimEx and routes visitors into the two live domains.
+- **Biomedical** covers transmission, mortality, healthcare pressure,
+  testing, wastewater, vaccination, and geography.
+- **Socio-economic** covers behaviour, trust, wellbeing, business disruption,
+  unemployment, and absenteeism.
 
-Each page contains sections, which in turn contain panels. A panel is an independently configured visualisation or display component.
-
-## Using the dashboard
+Each operational page contains sections and chart panels. Use the page tabs to
+move between pages and scroll through each section.
 
 ### View mode
 
-Use the page tabs to move between dashboard pages, then scroll through the sections and panels. Hover a chart point or map feature to inspect values where a tooltip is available.
+Available panel actions can include:
 
-Panel actions can include:
+- open one chart fullscreen;
+- select two to four charts for a shared fullscreen view;
+- export an image;
+- inspect source information;
+- inspect source rows where configured.
 
-- Fullscreen display for one panel.
-- Multi-panel fullscreen selection for two to four panels.
-- Image export as PNG or JPEG at 96, 150, or 300 DPI-equivalent scales.
-- Source information and an in-app view of the source CSV, where configured.
+Hover a plotted mark or map feature for its tooltip. Charts scale typography
+and visual weight for tall, large, and fullscreen panels.
 
-Charts automatically increase text and visual weight when shown in tall, large, or fullscreen panels.
+Charts that support wheel zoom require **Ctrl+wheel**. Plain scrolling keeps
+the page moving and displays a short Ctrl guidance tooltip. The same rule
+applies in the dashboard and fullscreen views.
 
-### Edit mode
+### Standalone and Quorum modes
 
-Edit mode provides browser-based controls for changing the dashboard without manually modifying JSON or source code. It can be used to:
+The hosted or portable dashboard works normally in **Standalone** mode. A
+local Quorum companion is optional. “Quorum integration-ready” means that the
+metadata catalogue and same-origin protocol are present; it does not mean a
+public dashboard is actively connected.
 
-- Edit dashboard header text, page titles, scenario metadata, and section text.
-- Add, rename, or remove pages.
-- Add, reorder, resize, or remove panels.
-- Configure panel data, filters, chart series, axes, colours, labels, legends, and reference lines.
-- Upload a CSV as a dashboard data source.
-- Import or export a portable dashboard bundle.
-- Configure global and panel-specific visual surfaces.
+Quorum can request configured chart IDs for operator-authorized display. It
+does not send discussion text to the dashboard, and the dashboard does not
+send transcripts, summaries, speaker data, or evidence text to Quorum.
 
-Edits are stored in the browser while the dashboard is in use. Export a bundle to preserve or share a configured dashboard.
+## Edit mode
 
-## Panel types
+Edit mode changes dashboard content without requiring manual JSON editing. It
+supports:
 
-The application supports the following panel types:
+- dashboard and scenario text;
+- pages and sections;
+- chart creation, editing, conversion, ordering, sizing, and removal;
+- tracked, uploaded, and concise inline data sources;
+- global and chart-specific surfaces;
+- synchronized time groups;
+- portable bundle import and export.
 
-- Line, area, bar, grouped-bar, stacked-bar, horizontal-bar, and horizontal-stacked-bar charts.
-- Mixed bar-and-line charts.
-- Gauge indicators.
-- Point/scatter maps and choropleth maps.
-- Animated choropleth maps with timeline controls.
-- Tables.
-- KPI/statistic cards.
-- Delta or comparison lists.
-- Image panels.
-
-The visible default dashboard contains the panel types appropriate to its prepared data. Additional supported panel types can be selected in edit mode.
-
-## Data, filters, and chart construction
-
-### Data sources
-
-The dashboard is data-driven. Its default configuration is in `public/config/dashboard.json`; prepared data is held under `public/data/`.
-
-| Content | Repository location |
-| --- | --- |
-| Dashboard configuration | `public/config/dashboard.json` |
-| Biomedical data | `public/data/biomedical/` |
-| Socio-economic data | `public/data/socio-economic/` |
-| Geographic boundaries | `public/data/geo/` |
-| Promoted uploaded CSVs | `public/data/uploaded/` |
-| Visual assets | `public/assets/` |
-
-CSV files provide chart and table data. JSON and GeoJSON files provide geographic boundaries and other structured content. Runtime data processing is deliberately limited: data is expected to be prepared before it is added to the dashboard.
-
-### Chart Data System V2
-
-Axis-based charts use the version 2 chart data-binding model. It makes chart meaning explicit instead of relying on separate configuration paths for long and wide CSVs.
-
-A binding describes:
-
-- **X observation**: the category or date/time value shown along the x-axis.
-- **Measurements**: one or more numeric fields to plot.
-- **Cluster dimensions**: categorical fields whose values form separate series.
-- **Filters**: conditions that retain only relevant rows.
-- **Aggregation**: how duplicate observations are combined.
-- **Missing-value treatment**: whether missing values remain gaps or are shown as zero.
-
-The same field cannot be both the x observation and a cluster dimension. This avoids ambiguous chart definitions and makes a chart's interpretation easier to inspect.
-
-For example, with `date`, `age group`, and `deaths` columns:
-
-- To plot deaths over time by age group, use `date` as x, `deaths` as the measurement, and `age group` as the cluster dimension.
-- To plot an age distribution on one date, use `age group` as x, `deaths` as the measurement, and a date filter. Do not use a cluster dimension.
-
-Supported duplicate-observation rules are sum, mean, first, last, minimum, maximum, and count.
-
-### Filters and ordering
-
-Every panel controls its own data selection. Common options are:
-
-- Date selections or date ranges.
-- Category selections.
-- Multiple independent filters.
-- Category ordering by source-file order, alphabetically, or values from a selected data field.
-
-One panel's filters do not silently change another panel's data. This permits several panels to show distinct views of the same source file.
-
-### Data validation and compatibility
-
-The dashboard validates panel configuration against loaded source data. It detects missing fields, invalid numeric measurements, empty filter results, invalid role combinations, and unsupported panel types.
-
-For data-backed panels, the compatibility model can compare source columns, inferred field types, row counts, and a content fingerprint. Clear case- or punctuation-only field renames can be repaired; ambiguous replacements are not guessed. A panel is instead marked for review, protecting against a plausible but incorrect visualisation.
-
-## Editing charts and layout
+Browser edits are local to that browser until exported. Export a version 3
+bundle to preserve or share them.
 
 ### Adding a chart
 
-The Add chart workflow has three stages:
+The **Add chart** wizard has four directly clickable tabs. You may inspect any
+tab at any time; an early destination explains the unmet prerequisites rather
+than exposing invalid controls.
 
-1. **Source** — choose an existing CSV or upload a new one.
-2. **Data roles** — choose x, measurements, cluster dimensions, filters, aggregation, and missing-value behaviour.
-3. **Chart and review** — select the title, panel type, panel size, and legend settings, then review the generated chart summary.
+#### 1. Chart type
 
-The editor reports retained rows, x values, generated series, and configuration diagnostics before a chart is created.
+Choose the communication purpose first, then the chart type. Search matches
+the registered name, description, and purpose metadata.
 
-### Series, axes, and style
+This choice defines the remaining form. A line chart and a bar chart can share
+axis roles; a pie, KPI, choropleth, timeline, or gauge exposes a different
+schema.
 
-Depending on the panel type, edit mode supports:
+#### 2. Data source
 
-- Manual colours and named colour palettes.
-- Reversible Likert-style and other sequential palettes.
-- Line width, line style, markers, area fills, and shadows.
-- Bar width, gaps, grouping, and stacking.
-- Primary and secondary y-axes.
-- Legend visibility, placement, symbols, and font size.
-- Axis titles, label rotation, ranges, and zero/automatic scaling.
-- Reference lines with configurable value, label, colour, axis, and line style.
-- Panel size, panel background, chart-area background, and border styling.
+Choose one of the source modes permitted by the selected chart schema:
 
-Mixed charts keep line series above bar series to preserve visibility.
+- an existing tracked CSV;
+- a local CSV upload stored with the dashboard configuration;
+- concise manual entry when the schema explicitly permits inline rows.
+
+Manual entry is intentionally unavailable for schemas that require a richer
+dataset. Current inline limits are bounded by the schema and a global
+50-row ceiling. Most concise composition and target inputs allow no more than
+20 rows; image input is exactly one row.
+
+After selecting a CSV, the wizard shows the row and column shape, detected
+column types, examples, and relevant warnings. Temporal diagnostics are used
+to prevent date-looking text from being silently interpreted as a valid clock.
+
+Geography charts also require a valid GeoJSON source and an explicit or safely
+inferred feature join.
+
+#### 3. Data roles
+
+Bind the semantic roles declared by the selected chart type:
+
+- measurements appear first and can permit multiple numeric columns;
+- axis measurements can use the primary or secondary y-axis;
+- the x observation follows, with the detected interpretation shown;
+- an alternative x interpretation is offered only when it changes practical
+  chart behavior;
+- optional cluster, filter, label, entity, target, time, geography, and other
+  roles appear only when the schema declares them.
+
+Filters are chart-local. Missing-value handling is explicit.
+
+Duplicate-observation controls appear only when the current source and role
+combination actually produces correlated duplicate marks. An unresolved
+collision blocks preview instead of silently selecting or aggregating a row.
+When detected, choose **Flag as an error**, **Use first observation**,
+**Use last observation**, or **Aggregate observations**; aggregation also
+requires an explicit aggregation method.
+
+#### 4. Style and layout
+
+The final step begins with the real chart preview, using the same preparation
+and renderer as the dashboard. The chart title remains reachable for repair;
+other relevant visual controls unlock only after the source and roles produce
+at least one renderer-ready mark.
+
+Controls are chart-specific:
+
+- bar variants expose series colors and bar width;
+- line and area charts expose series colors and line width;
+- mixed charts expose series colors plus both widths;
+- pie, donut, scatter, and bubble charts expose series colors;
+- chart types whose renderers cannot apply those settings do not expose them.
+
+Series colors follow plotted order. Add up to 12 exact `#RRGGBB` colors, remove
+individual colors, or choose **Use default colors** to return to the renderer
+palette. Line width accepts 1 through 12; bar width accepts 4 through 120.
+Out-of-range values show an associated error instead of silently blocking
+creation or saving.
+
+Other applicable controls include labels, title alignment, target ranges, map
+fields, collection presentation, and zoom. A generic “Series” tab is not
+shown when it has no meaning for the selected chart type.
+
+Title alignment is applied by the chart renderer. Background surfaces and
+chart-specific color fields use the same color-picker format, so the value and
+picker behavior stay consistent across appearance controls. Background fields
+also offer their curated preset and gradient choices.
+
+Selecting **Close** opens a **Discard chart?** confirmation. Confirming
+discards the draft; cancelling returns to the wizard. Removing a selected
+source always asks for confirmation and clears its role assignments. Changing
+to a source with incompatible mappings asks separately before clearing them.
+
+## Editing an existing chart
+
+The editor uses the same schema, preparation pipeline, preview, and validation
+as the wizard. Tabs are materialized from applicable fields and can include:
+
+- Data
+- Appearance
+- Axes
+- Map
+- Timeline
+- Collection
+- Interactions
+- Advanced
+
+There is no unconditional Series tab.
+
+**Save** and **Reset changes** are adjacent. Reset asks for confirmation and
+returns to the most recently saved chart revision. A failed or incomplete
+preview keeps the title and responsible repair field reachable.
+
+### Changing chart type
+
+Changing type opens a guided conversion dialog:
+
+- a compatible conversion preserves roles accepted by the target schema;
+- an incompatible conversion requires explicit role remapping;
+- fields and settings that cannot survive are disclosed before application;
+- missing target roles block application;
+- cancelling leaves the exact draft unchanged;
+- applying a conversion is atomic.
+
+Time-group membership is retained only when the target has a valid mapped
+temporal role. Collection settings are retained only when supported by the
+target.
+
+## Supported chart families
+
+The registry currently exposes 26 chart types in nine purpose groups.
+
+| Purpose | Chart types |
+| --- | --- |
+| Comparison | Bar, grouped bar, stacked bar, horizontal bar, horizontal stacked bar |
+| Trends | Line, area, mixed axis |
+| Composition | Pie, donut |
+| Targets | KPI card, gauge, bullet/target, delta card, delta list |
+| Relationships | Scatter, bubble |
+| Readiness | Heatmap, readiness matrix |
+| Timeline | Timeline, swimlane |
+| Geography | Choropleth, chronological choropleth, map scatter |
+| Operational | Table, image |
 
 ### Maps
 
-Point maps use a map base layer with local overlay data. They support pan, wheel zoom, zoom buttons, reset/recenter controls, and configurable location, label, and value fields.
+Choropleths join prepared values to local GeoJSON. The join can use feature
+IDs or a selected feature property when the match is unique. Ambiguous or
+missing matches identify the geography field that needs repair.
 
-Choropleth panels join prepared data to local GeoJSON boundaries. Their configuration selects the geometry source, join field, value field, label field, colour scale, and boundary appearance. Animated choropleths add a play/pause timeline.
+Chronological choropleths retain their full history but render a bounded frame
+for the active playback time. Map scatter uses point coordinates or derived
+polygon centroids.
 
-Map base tiles may require internet access. Boundary geometry and thematic data remain part of the static dashboard package.
+Local boundary geometry and thematic data remain part of the static package.
 
-### Other panels
+### KPI, gauge, and bullet collections
 
-- **Gauges** display a value against configurable maximum, range colours, arc width, unit, and alert range.
-- **Tables** show selected fields from a data source.
-- **KPI cards** present a primary value with supporting text.
-- **Delta/comparison lists** show configurable rows of values or changes.
-- **Image panels** support uploaded browser image formats, fit/crop/stretch display, zoom, positioning, and alt text.
+A single observation uses the ordinary KPI, gauge, or bullet view. Repeated
+entities use the shared Collection Display framework and require stable,
+unique semantic identities.
 
-## Dashboard files
+### Delta charts
 
-A dashboard file is a JSON file containing the dashboard configuration together with uploaded CSV text. It preserves panel data bindings, page structure, layout, and styling.
+A delta chart displays:
 
-Use **Export dashboard** to create a portable, shareable copy of the configured dashboard. Use **Import dashboard** to restore it in another dashboard instance.
+- the displayed value;
+- its comparison value;
+- the absolute difference;
+- the percentage difference when analytically defined.
 
-To share a scenario-specific version:
+**Previous observation** selects the latest distinct valid measurement before
+the displayed value. **Specific point in time** uses an explicitly selected
+earlier timestamp with exact, last-known, or bounded-nearest matching as
+configured.
+Interpolation is available only under the same numeric permission rules as
+synchronized playback.
 
-1. Make and save edits in edit mode.
-2. Export a dashboard file.
-3. Share the JSON file.
-4. Import it into another copy of the dashboard.
+Delta cards show one entity; filter the source first when it contains several.
+Delta lists apply the comparison independently per entity and can use
+Collection Display.
 
-The application accepts supported earlier bundle formats and upgrades them to the current model when loading.
+## Synchronized time playback
 
-## Technical architecture
+Time synchronization is configured as a dashboard-level group:
 
-### Architecture overview
+- one profiled temporal field supplies the primary clock;
+- eligible charts join the group through a declared temporal role;
+- the group supplies default matching;
+- a member can use a validated override;
+- a chart stores only its group membership.
 
-SimEx Dashboard V2 is a client-side single-page application. A browser loads a static HTML, JavaScript, CSS, configuration, and data package; React then renders the dashboard from configuration and loaded data.
+Open the playback view to move all eligible charts across the same exercise
+time. Family-specific behavior includes:
 
-```text
-Static files
-  ├─ dashboard configuration and data sources
-  ├─ React application
-  └─ CSS and local assets
-          ↓
-Configuration and data loader
-          ↓
-Dashboard state, validation, migration, and reconciliation
-          ↓
-Page, section, and panel React components
-          ↓
-Apache ECharts options or specialised panel renderers
-          ↓
-Interactive dashboard in the browser
+- line and area charts retain history and trace an active point;
+- bar charts show the active snapshot per series;
+- choropleths show the active geographic frame;
+- heatmaps highlight the active cell;
+- timelines and swimlanes identify active events;
+- KPIs, gauges, bullets, and their collections show active values;
+- delta charts keep displayed and baseline provenance distinct.
+
+### Matching policies
+
+| Policy | Behavior |
+| --- | --- |
+| Exact | Use only a measurement at the active time. |
+| Last known | Carry the latest earlier measurement. |
+| Nearest | Use the unique nearest measurement within the configured tolerance. |
+| Interpolate | Calculate between valid numeric bounds when explicitly authorized. |
+
+Nearest matching fails closed on an equidistant tie. Interpolation never
+extrapolates, never treats categorical data as continuous, and requires:
+
+- an interpolation-capable chart schema;
+- numeric profile evidence;
+- valid observations on both sides of the active time;
+- explicit author permission.
+
+The playback view distinguishes observed, carried, nearest, interpolated,
+missing, and unavailable values so facilitators can see how each value was
+obtained.
+
+## Collection Display
+
+Collection Display separates a repeated visualization from the way its items
+are arranged. KPI grids, delta lists, bullet collections, and gauge
+collections share one contract.
+
+### Fixed grid
+
+Displays a stable number of rows and columns. This is the default for
+facilitator familiarity and predictable wall layouts.
+
+### Scrollable grid
+
+Keeps the panel fixed while its contents scroll vertically.
+
+### Auto carousel
+
+Moves through collection pages at a configured interval. Settings include
+looping, pause on hover, manual navigation, transition, and the relationship
+between carousel rotation and synchronized playback.
+
+### Priority mode
+
+Ranks operationally important entities into the visible grid. Available
+methods include:
+
+- highest or lowest current value;
+- largest absolute or percentage change;
+- furthest from target;
+- calculated risk score;
+- approved weighted metrics.
+
+The dashboard does not evaluate arbitrary executable expressions. During
+playback, priority collections can rerank at each timestamp or preserve their
+opening order. Carousel rotation can continue independently or pause.
+
+Shared controls include rows, columns, card gap, overflow, sorting, ranking,
+carousel behavior, and playback behavior.
+
+## Portable dashboard bundles
+
+Use **Export dashboard** to save configuration plus uploaded CSV text and
+inline rows. Use **Import dashboard** to restore that state in another copy of
+the application.
+
+An accepted bundle has exactly four outer keys. This schematic is not itself
+importable: an actual export includes a canonical timestamp or `null`, a
+fingerprint entry for every data source, and the complete validated dashboard
+configuration.
+
+```json
+{
+  "bundleType": "simex-dashboard-bundle",
+  "version": 3,
+  "metadata": {
+    "exportedAt": "<canonical ISO-8601 timestamp or null>",
+    "sourceFingerprints": {
+      "<source-id>": "<deterministic fingerprint or null>"
+    }
+  },
+  "config": {
+    "configVersion": 3,
+    "...": "<complete dashboard configuration>"
+  }
+}
 ```
 
-This design separates **content** (configuration and prepared data) from **application behaviour** (React components and chart-rendering code). In many cases, dashboard content can therefore be changed through the editor or configuration files without changing the application code.
+Version 2 bundles are deliberately rejected with:
 
-### Technology versions
+```text
+This dashboard supports version 3 bundles only.
+```
 
-The project declares the following package versions:
+The application does not migrate earlier dashboard formats. Legacy content
+must be separately re-authored as a validated version 3 configuration.
 
-| Technology | Declared version | Role |
-| --- | --- | --- |
-| React | `^19.1.0` | User-interface components and state updates |
-| React DOM | `^19.1.0` | Browser rendering for React |
-| Vite | `^6.3.5` | Development server and static production build |
-| Vite React plugin | `^4.6.0` | JSX and React integration for Vite |
-| Apache ECharts | `^5.6.0` | Chart, gauge, and choropleth rendering |
-| echarts-for-react | `^3.0.2` | React-oriented ECharts component integration |
-| Papa Parse | `^5.5.3` | CSV parsing in the browser |
+Runtime-loaded rows are excluded from serialization. Tracked sources retain
+their safe relative paths; uploaded CSV text and inline rows remain portable.
 
-`^` means compatible updates within the same major version may be installed. The exact installed package versions are recorded in the project lockfile.
+## Persistence and safe editing
 
-The dashboard configuration schema is `schemaVersion: 2`, chart bindings use `dataBinding.version: 2`, and exported dashboard bundles use version 2.
+The application stores a strict version 3 working configuration in browser
+storage. It does not treat browser persistence as a durable publication
+system.
 
-### React implementation
+Recommended workflow:
 
-The application entry point is `src/main.jsx`. It creates the React root, loads global styles, and registers a service worker when the browser supports one. Rendering is wrapped in `React.StrictMode`, which helps expose unsafe lifecycle patterns during development.
+1. export the current bundle before substantial edits;
+2. make and preview one logical change at a time;
+3. save the chart or dashboard;
+4. export a new bundle;
+5. keep the previous bundle until the new one is reviewed.
 
-`src/App.jsx` owns the top-level dashboard state. Its principal responsibilities are:
+## Static and portable use
 
-- Load the default dashboard configuration.
-- Restore compatible browser-saved edits.
-- Load and cache all referenced data sources.
-- Migrate older configuration structures to the current chart data model.
-- Reconcile configured panels with newly loaded source data.
-- Persist safe configuration changes to browser storage.
-- Manage edit sessions, preview changes, save, reset, import, and export.
-
-The application keeps configuration and runtime data separate. Saved configuration contains pages, panels, data-source definitions, and settings; loaded rows and GeoJSON are attached at runtime as `loadedData`. This prevents large parsed datasets from being copied into browser persistence with every edit.
-
-React components are structured by dashboard responsibility:
-
-| Component or module | Responsibility |
-| --- | --- |
-| `src/App.jsx` | Application state, persistence, import/export, and configuration updates |
-| `src/components/DashboardRenderer.jsx` | Header, tabs, pages, sections, editing controls, and panel placement |
-| `src/components/ChartPanel.jsx` | A single panel's renderer, actions, fullscreen behaviour, and specialised displays |
-| `src/components/ChartSettingsPanel.jsx` | Point-and-click panel editing interface |
-| `src/components/ChartSettingsPanelV2.jsx` | Tabbed editor implementation used by the settings interface |
-| `src/components/LayoutGrid.jsx` | Edit-mode panel ordering and drag behaviour |
-| `src/lib/chartOptionRegistry.js` | Registry of editor tabs, option groups, and panel-specific controls |
-
-State updates are configuration-first: a panel edit creates an updated configuration, validates it, reloads data only when data sources have changed, and then re-renders the affected dashboard. This keeps ordinary style and layout edits responsive while correctly reloading data after a data-source change.
-
-### Browser persistence and reconciliation
-
-The dashboard stores browser edits in `localStorage`. Browser state is useful for continuing edits on the same device, but it is not a substitute for an exported bundle.
-
-On startup, the app loads the default configuration and merges compatible saved browser edits into it. Matching page, section, and panel identifiers retain their edits; newly published default content can be added; uploaded and custom data sources are preserved. This approach lets the baseline dashboard evolve without unnecessarily discarding local configuration work.
-
-The app also stores a device layout preference separately, allowing display-oriented choices to remain local to the browser.
-
-### Vite and static build model
-
-Vite supplies the development server and produces the production-ready static site. The Vite configuration uses a relative base path (`./`), allowing the built application to work from a subdirectory as well as from a portable package.
-
-Relevant scripts are:
-
-| Command | Purpose |
-| --- | --- |
-| `pnpm.cmd dev -- --host 0.0.0.0 --port 5173` | Start a local development server |
-| `pnpm.cmd build` | Produce a static build in `dist/` |
-| `pnpm.cmd preview` | Preview the production build |
-| `pnpm.cmd build:cloudflare` | Windows-oriented Cloudflare build |
-| `pnpm run build:cloudflare:linux` | Linux-oriented Cloudflare build |
-| `pnpm.cmd package:flashdrive` | Create a portable package under `release/` |
-
-Before ordinary development and production builds, a build step prepares portable dashboard data. For a normal static or portable build, configuration and prepared source data can be embedded in `portable-dashboard-data.js`. This makes the dashboard usable when opened directly from a file system, where browser security rules can prevent normal `fetch` requests for nearby CSV or JSON files.
-
-For Cloudflare Pages, the dedicated build leaves configuration and data as separate static resources instead of producing one large embedded-data file. This avoids static-host file-size limits and lets the hosted site load its data normally.
-
-### Data loading and portable operation
-
-`src/lib/loadDashboard.js` implements the data-loading strategy.
-
-1. It checks whether a portable embedded dashboard is available.
-2. It loads `config/dashboard.json` when running from a web server.
-3. It loads each configured source as CSV, JSON, GeoJSON, or an uploaded CSV.
-4. It caches loaded sources to avoid repeated parsing and network requests.
-5. When direct-file loading is used, it reads embedded portable sources rather than relying on fetch requests.
-
-CSV parsing is performed in the browser by Papa Parse. Uploaded CSVs are represented as configuration data containing their file name and text, so an exported bundle can carry both a panel definition and the source data it needs.
-
-### Apache ECharts implementation
-
-Apache ECharts is the primary visualisation engine. `src/lib/buildEchartsOption.js` translates a panel's configuration and prepared data into the option object expected by ECharts.
-
-For an axis chart, the option builder creates:
-
-- A category or time x-axis.
-- One or two value axes.
-- Series for bars, lines, areas, and mixed charts.
-- Tooltip, legend, title, grid, palette, and animation settings.
-- Optional data labels and reference lines.
-
-The Chart Data System V2 prepares a canonical list of x values and series values before the option builder runs. This is an important design decision: ECharts receives already-interpreted chart data, rather than being responsible for resolving CSV structure, filters, and aggregation rules. The same rendering path can then support both long and wide source data.
-
-The option builder also:
-
-- Registers and caches map geometry for choropleths.
-- Builds ECharts gauge options.
-- Uses panel dimensions to scale fonts, grid spacing, marker sizes, line weights, and map elements.
-- Keeps line series above bar series in mixed charts.
-- Supports palettes, explicit series colours, transparent chart surfaces, and value formatters.
-
-`ResizeObserver` is used where needed to react to real rendered panel dimensions. This is why a chart in a tall or fullscreen panel can use its added space rather than retaining the typography of a normal panel.
-
-### Styling and visual design
-
-Global styling is defined in `src/styles.css`. The dashboard uses CSS for the page layout, panel grid, edit controls, fullscreen overlays, responsive behaviour, and visual states such as dragging and panel selection.
-
-The visual design separates:
-
-- Panel surface colour and border.
-- Inner chart-area colour and border.
-- Edit-mode highlight colour.
-- Multi-panel fullscreen selection highlight.
-
-Panels inherit global surface settings by default, while individual panels can use their own overrides. This preserves visual consistency while allowing an important chart or map to be distinguished.
-
-The application also supports an optional animated background using locally included browser assets. Its values are clamped to safe ranges before use, and background updates are isolated from ordinary chart edits so the effect does not restart unnecessarily.
-
-### Configuration and validation design decisions
-
-Several implementation decisions make the dashboard safer to maintain:
-
-- **Configuration-driven content:** pages, sections, panels, source references, and most chart settings live outside React component code.
-- **Prepared-data model:** intensive data transformation is expected before data enters the dashboard, keeping browser rendering predictable.
-- **Explicit field roles:** Chart Data System V2 prevents a field from having conflicting roles.
-- **Specialised panel models:** maps, gauges, tables, KPIs, comparison lists, and images retain their own configurations because their data semantics differ from x/y charts.
-- **Validation before rendering:** missing fields and unsupported configurations are reported instead of producing misleading results.
-- **Conservative source reconciliation:** unambiguous renames may be repaired, but semantic substitutions are never guessed.
-- **Portable bundles:** configuration and uploaded CSV data can travel together without needing a server-side database.
-- **Static deployment:** the deployed app does not require a runtime API, database, Python process, or container.
-
-## Deployment
-
-Build the static site with:
+Build the site:
 
 ```powershell
 pnpm.cmd build
 ```
 
-Deploy the resulting `dist/` directory to any static host, such as GitHub Pages, Netlify, Cloudflare Pages, SharePoint static hosting, or an internal web server.
-
-Viewers need only a modern web browser. Node.js and package tools are required only by maintainers who build or package the dashboard.
-
-For a portable folder, run:
+The `dist/` directory can be served by a static host or internal web server.
+For portable media:
 
 ```powershell
 pnpm.cmd package:flashdrive
 ```
 
-Open the packaged `index.html`. If a browser blocks scripts opened directly from portable storage, use the supplied `START_DASHBOARD.bat` launcher to serve the package locally.
+The package embeds the default configuration and prepared sources in
+`portable-dashboard-data.js`. If a browser blocks direct `file://` scripts,
+use the included `START_DASHBOARD.bat` local-server fallback.
 
-## Practical guidance
+No deployment, Cloudflare update, or repository integration is implied by a
+local build.
 
-- Give every panel a descriptive title and, where appropriate, source information.
-- Keep CSV column names stable and data types consistent.
-- Check panel filters first when a chart is empty.
-- Use a table alongside a chart when viewers need exact values.
-- Keep units consistent across titles, axes, labels, and source data.
-- Test a map after changing its data-to-boundary join field.
-- Export a dashboard file before a substantial round of browser edits or before importing another dashboard file.
-- Use 150 or 300 DPI-equivalent exports for reports and presentation slides.
+## Troubleshooting
+
+- **Empty chart:** inspect the preview diagnostic, selected source, role
+  bindings, filters, missing-value policy, and duplicate-resolution state.
+  “Ready to plot” now requires at least one renderer-ready mark.
+- **Style controls are missing:** complete the source and role prerequisites
+  until the live preview is ready.
+- **Duplicate controls are missing:** they appear only when the current
+  binding produces duplicate observations.
+- **Map does not render:** verify the GeoJSON source, the selected join field,
+  and unmatched or ambiguous identifiers.
+- **Playback value is missing:** inspect the chart's group membership,
+  temporal role, matching policy, nearest tolerance, and interpolation
+  permission.
+- **Wheel does not zoom:** hold Ctrl while scrolling over a zoom-capable
+  chart.
+- **Import is rejected:** confirm both bundle `version` and config
+  `configVersion` are `3`.
 
 ## Further technical references
 
-- `docs/chart-data-system-v2.md` explains the Chart Data System V2 model and migration details.
-- `docs/municipality-choropleth.md` documents the municipal choropleth data join.
-- `README.md` contains a concise project and deployment overview.
+- [Chart Data System V3](chart-data-system-v3.md)
+- [Quorum companion](quorum-companion.md)
+- [Municipality choropleth](municipality-choropleth.md)
+- [Final chart-system verification](verification/2026-07-26-chart-system-v3.md)
