@@ -2,7 +2,7 @@
 
 Date: 2026-07-28
 
-Status: Locally verified and published for review; pull requests and integration
+Status: Locally verified with draft pull requests open; merge and deployment
 remain unapproved
 
 ## Candidate lineage
@@ -73,9 +73,12 @@ catalogue bytes matched at SHA-256:
 - The original chart feature worktree remains clean at `24dd188`.
 - The showcase worktree remains clean at exact `8abca5e`.
 - Dashboard and Quorum candidate branches were pushed after explicit approval.
-- No pull request was opened.
+- Draft dashboard PR
+  [#4](https://github.com/hekmatov/simex-dashboard-private/pull/4) and Quorum
+  PR [#9](https://github.com/hekmatov/quorum/pull/9) were opened after separate
+  explicit approval.
 - No shared branch was merged.
 - No deployment or Cloudflare branch update was performed.
 
-The next action requires explicit user approval: open draft dashboard and
-Quorum pull requests for review.
+The next action is review and check triage. Merging either pull request, changing
+the Cloudflare branch, or deploying requires separate explicit user approval.
