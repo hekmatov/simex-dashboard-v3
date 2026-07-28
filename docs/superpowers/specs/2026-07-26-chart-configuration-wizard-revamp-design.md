@@ -1,8 +1,8 @@
 # SimEx Dashboard Chart Configuration and Wizard Revamp
 
-**Date:** 2026-07-26  
-**Status:** Approved design  
-**Target branch:** `codex/chart-wizard-revamp`  
+- **Date:** 2026-07-26
+- **Status:** Approved design
+- **Target branch:** `codex/chart-wizard-revamp`
 **Base:** `codex/showcase-home` at `8abca5e`
 
 ## Purpose
