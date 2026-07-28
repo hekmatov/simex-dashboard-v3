@@ -5,7 +5,12 @@ import { register } from "node:module";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import {
+  canReuseChartRendering,
+  resolveChartRendering,
+} from "../src/charting/rendering/resolveChartRendering.js";
 import {
   initialPlaybackState,
   reducePlaybackState,
@@ -105,6 +110,66 @@ test("playback surface mounts the special view only while playback view is open"
   assert.match(open, /class="playback-view"/);
   assert.match(open, /data-chart-id="primary-chart"/);
   assert.doesNotMatch(open, /data-static-dashboard="true"/);
+});
+
+test("playback entry is disabled with associated guidance while chart authoring is active", () => {
+  const blocked = renderPlayback(
+    React.createElement(
+      PlaybackSurface,
+      {
+        entryBlocked: true,
+        entryBlockedReason:
+          "Finish, save, or discard chart authoring before opening Playback view.",
+      },
+      React.createElement("div", { "data-static-dashboard": "true" }),
+    ),
+  );
+  const unblocked = renderPlayback(
+    React.createElement(
+      PlaybackSurface,
+      null,
+      React.createElement("div", { "data-static-dashboard": "true" }),
+    ),
+  );
+  const alreadyOpen = renderPlayback(
+    React.createElement(
+      PlaybackSurface,
+      {
+        entryBlocked: true,
+        entryBlockedReason:
+          "Finish, save, or discard chart authoring before opening Playback view.",
+      },
+      React.createElement("div", { "data-static-dashboard": "true" }),
+    ),
+    {
+      initialState: {
+        activeGroupId: "exercise",
+        activeIndex: 1,
+        playing: false,
+        speed: 1,
+        playbackView: true,
+      },
+    },
+  );
+
+  assert.match(
+    blocked,
+    /aria-label="Open playback view"[^>]*aria-describedby="playback-entry-blocked-reason"[^>]*disabled/,
+  );
+  assert.match(
+    blocked,
+    /id="playback-entry-blocked-reason"[^>]*>Finish, save, or discard chart authoring before opening Playback view\./,
+  );
+  assert.match(blocked, /data-static-dashboard="true"/);
+  assert.doesNotMatch(unblocked, /playback-entry-blocked-reason/);
+  assert.doesNotMatch(
+    unblocked,
+    /aria-label="Open playback view"[^>]*disabled/,
+  );
+  assert.doesNotMatch(
+    alreadyOpen,
+    /aria-label="Close playback view"[^>]*disabled/,
+  );
 });
 
 test("transport actions are disabled for absent, empty, and boundary clocks", () => {
@@ -253,9 +318,16 @@ test("playback view renders eligible members and explicit missing and unavailabl
     ),
   );
 
-  assert.match(html, /3 participating charts/);
+  assert.match(
+    html,
+    /3 participating charts\. 1 available; 2 unavailable\./,
+  );
   assert.match(html, /No measurement at this time/);
   assert.match(html, /Data source unavailable is unavailable/);
+  assert.match(
+    html,
+    /class="playback-member playback-member--unavailable" data-chart-id="missing-chart"/,
+  );
   assert.match(html, /class="playback-member/);
   assert.doesNotMatch(html, /Static reference/);
   assert.doesNotMatch(html, /ineligible-static-chart/);
@@ -315,13 +387,155 @@ test("playback view resolves only the map chart's configured GeoJSON source", ()
     "unrelated-geo": geo,
   });
 
+  assert.match(
+    configured,
+    /1 participating charts\. 1 available; 0 unavailable\./,
+  );
+  assert.doesNotMatch(configured, /playback-member--unavailable/);
   assert.match(configured, /A: 20 at 2027-05-02, joined/);
   assert.doesNotMatch(configured, /GeoJSON source/);
+  assert.match(
+    missing,
+    /1 participating charts\. 0 available; 1 unavailable\./,
+  );
+  assert.match(
+    missing,
+    /class="playback-member playback-member--unavailable"/,
+  );
   assert.match(
     missing,
     /GeoJSON source &quot;missing-configured-geo&quot; is unavailable or invalid/,
   );
   assert.doesNotMatch(missing, /A: 20 at 2027-05-02, joined/);
+});
+
+test("playback availability includes renderer preflight failures", () => {
+  const rows = [
+    {
+      observed: "2027-05-01",
+      ward: "Ward A",
+      actual: 4,
+      capacity: 8,
+    },
+    {
+      observed: "2027-05-01",
+      ward: " Ward A ",
+      actual: 6,
+      capacity: 8,
+    },
+  ];
+  const chart = createChartDraft("bullet", {
+    id: "colliding-targets",
+    title: "Colliding target identities",
+    sourceId: "targets",
+    roles: {
+      actual: { field: "actual" },
+      target: { field: "capacity" },
+      entity: { field: "ward" },
+      time: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    interaction: {
+      zoom: { enabled: false },
+      timeSync: { groupId: "exercise" },
+    },
+  });
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
+  });
+  const html = renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups: [{
+          id: "exercise",
+          name: "Exercise timeline",
+          primaryClock: { sourceId: "targets", timeField: "observed" },
+          matching: { policy: "exact" },
+          members: [{ chartId: chart.id, timeRole: "time" }],
+        }],
+        charts: [chart],
+        loadedData: { targets: rows },
+        profiles: { targets: profile },
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 0,
+          playing: false,
+          speed: 1,
+          playbackView: true,
+        },
+      },
+      React.createElement(PlaybackView),
+    ),
+  );
+
+  assert.match(
+    html,
+    /1 participating charts\. 0 available; 1 unavailable\./,
+  );
+  assert.match(
+    html,
+    /class="playback-member playback-member--unavailable"/,
+  );
+  assert.match(
+    html,
+    /Repeated bullet observations have duplicate collection identity &quot;Ward A&quot;/,
+  );
+});
+
+test("a current shared resolution is reused while changed inputs are rejected", () => {
+  const rows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-02", cases: 20 },
+  ];
+  const chart = lineChart();
+  const datasetProfile = temporalProfile(rows);
+  let rowReads = 0;
+  const trackedRows = new Proxy(rows, {
+    get(target, property, receiver) {
+      if (property === "0" || property === "1") rowReads += 1;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const props = { chart, rows: trackedRows, datasetProfile };
+  const resolution = resolveChartRendering(props);
+
+  assert.equal(resolution.status, "available");
+  assert.equal(canReuseChartRendering(resolution, props), true);
+  assert.equal(
+    canReuseChartRendering(resolution, { ...props, rows: [...trackedRows] }),
+    false,
+  );
+  rowReads = 0;
+  const html = renderToStaticMarkup(
+    React.createElement(ChartView, {
+      ...props,
+      resolvedRendering: resolution,
+    }),
+  );
+
+  assert.equal(rowReads, 0);
+  assert.match(html, /Cases over time/);
+});
+
+test("shared rendering resolution converts preparation exceptions to bounded unavailable state", () => {
+  const resolution = resolveChartRendering({
+    chart: {
+      id: "unknown-chart",
+      typeId: "not-a-chart-type",
+      sourceId: "unknown",
+    },
+    rows: [],
+    datasetProfile: { columns: [], diagnostics: [] },
+  });
+
+  assert.equal(resolution.status, "unavailable");
+  assert.equal(resolution.model.kind, "error");
+  assert.equal(resolution.message, "This chart cannot be displayed.");
+  assert.ok(resolution.message.length <= 240);
 });
 
 test("playback view reports no group and empty primary clocks without claiming participation", () => {

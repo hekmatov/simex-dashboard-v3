@@ -1,8 +1,9 @@
 import React from "react";
 
-import { prepareChartData } from "../../charting/data/prepareChartData.js";
-import { buildAccessibilityCompanionForFamily } from "../../charting/rendering/accessibilityRows.js";
-import { buildRenderModel } from "../../charting/rendering/buildRenderModel.js";
+import {
+  canReuseChartRendering,
+  resolveChartRendering,
+} from "../../charting/rendering/resolveChartRendering.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import CardChartView from "./CardChartView.jsx";
@@ -18,14 +19,13 @@ export default function ChartView(props) {
   const playback = useOptionalPlayback();
   const playbackProps = withPlaybackTimeContext(props, playback);
   try {
-    const schema = getChartSchema(playbackProps.chart?.typeId);
-    const prepared = prepareChartData(playbackProps);
-    const model = withPlaybackPresentation(
-      buildRenderModel({ ...playbackProps, prepared }),
-      prepared,
-      playbackProps.timeContext,
-      playbackProps.chart,
-    );
+    const resolved = canReuseChartRendering(
+      props.resolvedRendering,
+      playbackProps,
+    )
+      ? props.resolvedRendering
+      : resolveChartRendering(playbackProps);
+    const { model, prepared, schema } = resolved;
     const provenance = resolveProvenance(props);
     let view;
     const zoomEnabled = chartZoomEnabled(props.chart, schema);
@@ -44,7 +44,10 @@ export default function ChartView(props) {
       provenance,
       zoomEnabled,
     });
-    else return React.createElement(ChartStatus, { message: model.message, empty: prepared.status === "empty" });
+    else return React.createElement(ChartStatus, {
+      message: resolved.message ?? model.message,
+      empty: prepared?.status === "empty",
+    });
     const framedView = React.createElement("div", presentationFrameProps(props.chart), view);
     return zoomEnabled
       ? React.createElement(ZoomGuard, null, framedView)
@@ -99,82 +102,6 @@ function withPlaybackTimeContext(props, playback) {
     return { ...props, timeContext: memberTimeContext };
   }
   return props;
-}
-
-function withPlaybackPresentation(model, prepared, timeContext, chart) {
-  if (!timeContext || prepared.meta?.activeTime === undefined) return model;
-  const activeMarks = prepared.marks?.filter(({ active }) => active === true) ?? [];
-  if (prepared.meta.activeTime.status === "missing" && activeMarks.length === 0) {
-    const message = prepared.diagnostics?.find(({ message: text }) => (
-      /No measurement at this time/.test(text)
-    ))?.message ?? "No measurement at this time.";
-    return { kind: "error", message };
-  }
-  if (
-    model.kind !== "echarts"
-    || prepared.meta.activeTime.mode !== "trace"
-    || !["axis", "timeline"].includes(model.accessibility?.family)
-    || activeMarks.length === 0
-  ) {
-    return model;
-  }
-  const activeCanonical = prepared.meta.activeTime.canonical;
-  const overlayMarks = activeMarks.map((mark) => ({
-    ...mark,
-    ...(model.accessibility.family === "axis"
-      ? { x: activeCanonical }
-      : {}),
-  }));
-  const activeCompanion = buildAccessibilityCompanionForFamily(
-    model.accessibility.family,
-    overlayMarks,
-    chart,
-  );
-  const activeRows = activeCompanion.rows.map((row, index) => {
-    const playbackProvenance = playbackProvenanceLabel(
-      activeMarks[index]?.temporalProvenance,
-    );
-    return playbackProvenance ? { ...row, playbackProvenance } : row;
-  });
-  return {
-    ...model,
-    accessibility: {
-      ...activeCompanion,
-      rows: activeCompanion.family === "axis" && activeRows.length === 1
-        ? [{ ...activeRows[0], series: "value" }]
-        : activeRows,
-    },
-  };
-}
-
-function playbackProvenanceLabel(provenance) {
-  const status = provenance?.status;
-  const sourceTime = canonicalEpoch(provenance?.sourceEpochMs);
-  const lowerTime = canonicalEpoch(provenance?.lowerEpochMs);
-  const upperTime = canonicalEpoch(provenance?.upperEpochMs);
-  if (status === "observed") {
-    return sourceTime ? `observed measurement from ${sourceTime}` : null;
-  }
-  if (status === "carried") {
-    return sourceTime ? `last known from ${sourceTime}` : "last known value";
-  }
-  if (status === "nearest") {
-    return sourceTime ? `nearest measurement from ${sourceTime}` : "nearest measurement";
-  }
-  if (status === "interpolated") {
-    return lowerTime && upperTime
-      ? `interpolated between ${lowerTime} and ${upperTime}`
-      : "interpolated value";
-  }
-  return null;
-}
-
-function canonicalEpoch(epochMs) {
-  if (!Number.isFinite(epochMs)) return null;
-  const canonical = new Date(epochMs).toISOString();
-  return canonical.endsWith("T00:00:00.000Z")
-    ? canonical.slice(0, 10)
-    : canonical;
 }
 
 function resolveProvenance({ chart = {}, renderContext = {}, datasetProfile } = {}) {

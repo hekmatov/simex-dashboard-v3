@@ -4,13 +4,20 @@ import PlaybackControls from "./PlaybackControls.jsx";
 import { usePlayback } from "./PlaybackProvider.jsx";
 import PlaybackView from "./PlaybackView.jsx";
 
-export default function PlaybackSurface({ children }) {
+export default function PlaybackSurface({
+  children,
+  entryBlocked = false,
+  entryBlockedReason,
+}) {
   const playback = usePlayback();
   return React.createElement(
     React.Fragment,
     null,
     playback.groups.length > 0
-      ? React.createElement(PlaybackControls)
+      ? React.createElement(PlaybackControls, {
+          entryBlocked,
+          entryBlockedReason,
+        })
       : null,
     playback.playbackView === true
       ? React.createElement(PlaybackView)

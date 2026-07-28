@@ -1,5 +1,6 @@
 import React from "react";
 
+import { resolveChartRendering } from "../../charting/rendering/resolveChartRendering.js";
 import ChartView from "../charts/ChartView.jsx";
 import { usePlayback } from "./PlaybackProvider.jsx";
 
@@ -30,11 +31,14 @@ export default function PlaybackView() {
     .filter((chart) => (
       chart?.interaction?.timeSync?.groupId === activeGroup.id
     ));
-  const unavailableCount = members.filter((chart) => (
-    readEntry(loadedData, chart.sourceId) === undefined
-    || readEntry(loadedData, chart.sourceId) === null
-    || readEntry(profiles, chart.sourceId) === undefined
-    || readEntry(profiles, chart.sourceId) === null
+  const resolvedMembers = members.map((chart) => resolveMember({
+    chart,
+    loadedData,
+    profiles,
+    timeContext: playback.timeContextForChart(chart.id),
+  }));
+  const unavailableCount = resolvedMembers.filter(({ resolution }) => (
+    resolution.status === "unavailable"
   )).length;
   const availableCount = members.length - unavailableCount;
 
@@ -50,48 +54,56 @@ export default function PlaybackView() {
       "aria-live": "polite",
     }, `${members.length} participating charts. ${availableCount} available; ${unavailableCount} unavailable.`)),
   React.createElement("div", { className: "playback-members" },
-    members.map((chart) => React.createElement(PlaybackMember, {
-      key: chart.id,
-      chart,
-      loadedData,
-      profiles,
+    resolvedMembers.map((member) => React.createElement(PlaybackMember, {
+      key: member.chart.id,
+      ...member,
     }))));
 }
 
-function PlaybackMember({ chart, loadedData, profiles }) {
-  const rows = readEntry(loadedData, chart.sourceId);
-  const datasetProfile = readEntry(profiles, chart.sourceId);
-  const geoSourceId = chart.presentation?.map?.geoSource;
-  const geoData = geoSourceId
-    ? readEntry(loadedData, geoSourceId)
-    : undefined;
-  const unavailable = rows === undefined
-    || rows === null
-    || datasetProfile === undefined
-    || datasetProfile === null;
+function PlaybackMember({ chart, chartProps, resolution }) {
+  const unavailable = resolution.status === "unavailable";
 
   return React.createElement("article", {
     className: `playback-member${unavailable ? " playback-member--unavailable" : ""}`,
     "data-chart-id": chart.id,
   },
-  unavailable
-    ? React.createElement(React.Fragment, null,
-        React.createElement("h3", null, chart.title || "Untitled chart"),
-        React.createElement("p", {
-          className: "playback-member-status",
-          role: "status",
-        }, `Data source ${chart.sourceId} is unavailable.`))
-    : React.createElement(ChartView, {
-        chart,
-        rows,
-        datasetProfile: datasetProfile?.datasetProfile
-          ?? datasetProfile?.profile
-          ?? datasetProfile,
-        geoData,
-        renderContext: {
-          mapName: geoSourceId ?? chart.id,
-        },
-      }));
+  React.createElement(ChartView, {
+    ...chartProps,
+    resolvedRendering: resolution,
+  }));
+}
+
+function resolveMember({
+  chart,
+  loadedData,
+  profiles,
+  timeContext,
+}) {
+  const rows = readEntry(loadedData, chart.sourceId);
+  const profileEntry = readEntry(profiles, chart.sourceId);
+  const datasetProfile = profileEntry?.datasetProfile
+    ?? profileEntry?.profile
+    ?? profileEntry;
+  const geoSourceId = chart.presentation?.map?.geoSource;
+  const geoData = geoSourceId
+    ? readEntry(loadedData, geoSourceId)
+    : undefined;
+  const renderContext = {
+    mapName: geoSourceId ?? chart.id,
+  };
+  const chartProps = {
+    chart,
+    rows,
+    datasetProfile,
+    geoData,
+    timeContext,
+    renderContext,
+  };
+  return {
+    chart,
+    chartProps,
+    resolution: resolveChartRendering(chartProps),
+  };
 }
 
 function PlaybackViewStatus({ message }) {

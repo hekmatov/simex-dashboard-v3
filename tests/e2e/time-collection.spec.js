@@ -12,6 +12,76 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("playback entry preserves editor and wizard authoring until each workflow is resolved", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const controls = page.getByRole("region", {
+    name: "Synchronized playback controls",
+  });
+  const openPlayback = controls.getByRole("button", {
+    name: "Open playback view",
+  });
+  await page.getByRole("button", { name: "Open edit mode" }).click();
+
+  const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await panel.getByRole("button", { name: "Edit chart" }).click();
+  const editor = page.locator(".chart-editor-v3");
+  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  const editorTitle = editor.getByLabel("Chart title");
+  await editorTitle.fill("Playback-safe unsaved editor title");
+
+  await expect(openPlayback).toBeDisabled();
+  await expect(openPlayback).toHaveAttribute(
+    "aria-describedby",
+    "playback-entry-blocked-reason",
+  );
+  await expect(page.locator("#playback-entry-blocked-reason")).toContainText(
+    "Finish, save, or discard chart authoring",
+  );
+  await openPlayback.evaluate((button) => button.click());
+  await expect(page.locator(".playback-view")).toHaveCount(0);
+  await expect(editor).toBeVisible();
+  await expect(editorTitle).toHaveValue("Playback-safe unsaved editor title");
+
+  await editor.getByRole("button", { name: "Reset changes" }).click();
+  let reset = page.getByRole("dialog", { name: "Discard these edits?" });
+  await reset.getByRole("button", { name: "Keep editing" }).click();
+  await expect(editorTitle).toHaveValue("Playback-safe unsaved editor title");
+  await editor.getByRole("button", { name: "Reset changes" }).click();
+  reset = page.getByRole("dialog", { name: "Discard these edits?" });
+  await reset.getByRole("button", { name: "Reset changes" }).click();
+  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  await expect(editorTitle).toHaveValue("Confirmed cases");
+  await editorTitle.fill("Playback-safe saved editor title");
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(openPlayback).toBeEnabled();
+
+  await page.getByRole("button", { name: "Add chart" }).first().click();
+  const wizard = page.locator(".chart-wizard-backdrop");
+  await wizard.getByLabel("Search chart types").fill("pie");
+  await wizard.getByRole("button", { name: /^Pie\b/i }).click();
+  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  const wizardTitle = wizard.getByLabel("Chart title");
+  await wizardTitle.fill("Playback-safe unsaved wizard title");
+
+  await expect(openPlayback).toBeDisabled();
+  await openPlayback.evaluate((button) => button.click());
+  await expect(page.locator(".playback-view")).toHaveCount(0);
+  await expect(wizard).toBeVisible();
+  await expect(wizardTitle).toHaveValue("Playback-safe unsaved wizard title");
+
+  await wizard.getByRole("button", { name: "Close" }).click();
+  const discard = page.getByRole("dialog", { name: "Discard chart?" });
+  await discard.getByRole("button", { name: "Continue editing" }).click();
+  await expect(wizardTitle).toHaveValue("Playback-safe unsaved wizard title");
+  await wizard.getByRole("button", { name: "Close" }).click();
+  await discard.getByRole("button", { name: "Discard" }).click();
+  await expect(wizard).toHaveCount(0);
+  await expect(openPlayback).toBeEnabled();
+});
+
 test("default synchronized playback keeps line history, bar and map snapshots, and reopens at the same time", async ({
   page,
 }) => {

@@ -84,6 +84,9 @@ export default function DashboardRenderer({
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const landingActive = hasLandingPresentation(activePage);
   const selectedPanel = findPanel(dashboard, selectedPanelId);
+  const chartAuthoringActive = Boolean(
+    chartWizardTarget || (editMode && selectedPanel),
+  );
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const geoDataSources = React.useMemo(
     () => validatedGeoDataSources(dashboard),
@@ -556,7 +559,10 @@ export default function DashboardRenderer({
           )
         ))}
       </nav>
-      <PlaybackSurface>
+      <PlaybackSurface
+        entryBlocked={chartAuthoringActive}
+        entryBlockedReason="Finish, save, or discard chart authoring before opening Playback view."
+      >
       <section
         className={`dashboard-workspace ${
           editMode && selectedPanel ? "dashboard-workspace-with-settings" : ""

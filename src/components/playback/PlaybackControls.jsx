@@ -2,7 +2,12 @@ import React from "react";
 
 import { usePlayback } from "./PlaybackProvider.jsx";
 
-export default function PlaybackControls() {
+const ENTRY_BLOCKED_REASON_ID = "playback-entry-blocked-reason";
+
+export default function PlaybackControls({
+  entryBlocked = false,
+  entryBlockedReason,
+} = {}) {
   const playback = usePlayback();
   const {
     activeEpochMs,
@@ -19,6 +24,10 @@ export default function PlaybackControls() {
   const hasClock = activeGroupId !== null && clock.length > 0;
   const atStart = !hasClock || activeIndex <= 0;
   const atEnd = !hasClock || activeIndex >= clock.length - 1;
+  const playbackEntryBlocked = playbackView !== true && entryBlocked === true;
+  const blockedReason = playbackEntryBlocked
+    ? boundedReason(entryBlockedReason)
+    : null;
 
   return React.createElement("section", {
     className: "playback-controls",
@@ -118,10 +127,20 @@ export default function PlaybackControls() {
     className: "playback-view-toggle",
     "aria-label": playbackView ? "Close playback view" : "Open playback view",
     "aria-expanded": playbackView,
+    ...(blockedReason
+      ? { "aria-describedby": ENTRY_BLOCKED_REASON_ID }
+      : {}),
+    disabled: playbackEntryBlocked,
     onClick: () => dispatch({
       type: playbackView ? "closeView" : "openView",
     }),
   }, playbackView ? "Close playback view" : "Open playback view"),
+  blockedReason
+    ? React.createElement("p", {
+        id: ENTRY_BLOCKED_REASON_ID,
+        className: "playback-entry-blocked-reason",
+      }, blockedReason)
+    : null,
   React.createElement("p", {
     className: "playback-live-status",
     role: "status",
@@ -157,4 +176,11 @@ function LabeledSelect({
 function canonicalTime(epochMs) {
   const iso = new Date(epochMs).toISOString();
   return iso.endsWith("T00:00:00.000Z") ? iso.slice(0, 10) : iso;
+}
+
+function boundedReason(reason) {
+  const text = typeof reason === "string" && reason.trim()
+    ? reason.trim()
+    : "Finish, save, or discard chart authoring before opening Playback view.";
+  return text.length <= 240 ? text : `${text.slice(0, 239)}\u2026`;
 }
