@@ -9,10 +9,22 @@ import {
   validateChartInstance,
 } from "../charting/config/chartConfigV3.js";
 import {
+  validateDashboardStructure,
+} from "../charting/config/dashboardConfigStructure.js";
+import {
+  GEOGRAPHY_BINDING_CONTRACT,
+} from "../charting/data/geographyBindingContract.js";
+import {
+  CHART_CONVERSION_CONTRACT,
+} from "../charting/forms/conversionContract.js";
+import {
   CHART_SCHEMA_VERSION,
   getChartSchema,
   listChartSchemas,
 } from "../charting/schemas/chartSchemaRegistry.js";
+import {
+  getChartFormSectionDefinition,
+} from "../charting/schemas/schemaTypes.js";
 import {
   isTimeSyncInterpolationEligible,
   TIME_SYNC_MATCHING_POLICIES,
@@ -24,7 +36,6 @@ const CONTRACT_VERSION = "2";
 const CATALOGUE_ID = "simex-dashboard";
 const DISPLAY_MODES = Object.freeze(["fullscreen", "multi_fullscreen"]);
 const PLAYBACK_DISPLAY_MODE = "playback";
-const PRESENTATION_EXCLUDED_SECTIONS = new Set(["data", "interactions"]);
 const TIME_GROUP_KEYS = new Set([
   "id",
   "name",
@@ -38,7 +49,7 @@ const ALIAS_KEYS = new Set(["aliases", "keywords"]);
 
 export function buildChartCatalogue(dashboard, aliasConfig) {
   const context = buildDashboardContext(dashboard);
-  const aliases = requiredRecord(aliasConfig, "chart aliases");
+  const aliases = validateAliasConfig(context, aliasConfig);
   const chartTypes = semanticChartTypes(listChartSchemas());
   const charts = context.charts.map((entry) => {
     const metadata = requiredRecord(
@@ -98,21 +109,16 @@ export function canonicalCatalogueBytes(catalogue) {
   return canonicalBytes(catalogue);
 }
 
-export function canonicalDashboardSemanticsBytes(dashboard) {
+export function canonicalDashboardSemanticsBytes(dashboard, aliasConfig) {
   const context = buildDashboardContext(dashboard);
-  return canonicalBytes({
-    catalogue_revision: context.catalogueRevision,
-    chart_schema_version: CHART_SCHEMA_VERSION,
-    data_sources: cloneJson(context.dataSources),
-    time_sync_groups: cloneJson(context.timeSyncGroups),
-    pages: context.pages.map((page) => ({
-      page_id: page.pageId,
-      sections: page.sections.map((section) => ({
-        section_id: section.sectionId,
-        charts: section.charts.map(({ chart }) => semanticChartInstance(chart)),
-      })),
-    })),
-  });
+  const semantics = {
+    dashboard: cloneJson(dashboard),
+  };
+  if (aliasConfig !== undefined) {
+    validateAliasConfig(context, aliasConfig);
+    semantics.aliases = cloneJson(aliasConfig);
+  }
+  return canonicalBytes(semantics);
 }
 
 export async function buildChartCatalogueSnapshot(
@@ -122,7 +128,7 @@ export async function buildChartCatalogueSnapshot(
 ) {
   const catalogue = buildChartCatalogue(dashboard, aliasConfig);
   const dashboardSemanticDigest = await digestBytes(
-    canonicalDashboardSemanticsBytes(dashboard),
+    canonicalDashboardSemanticsBytes(dashboard, aliasConfig),
   );
   const body = {
     ...catalogue,
@@ -236,6 +242,15 @@ function semanticChartType(schema) {
   if (schema.dataFamily === "geography" && !geographyRole) {
     throw new Error(`geography chart type ${schema.typeId} has no geography role`);
   }
+  if (
+    schema.dataFamily === "geography"
+    && geographyRole.id
+      !== GEOGRAPHY_BINDING_CONTRACT.geography_role_id
+  ) {
+    throw new Error(
+      `geography chart type ${schema.typeId} role must match the geography binding contract`,
+    );
+  }
 
   return {
     type_id: schema.typeId,
@@ -255,7 +270,7 @@ function semanticChartType(schema) {
     },
     conversion: {
       compatible_type_ids: [...schema.conversions].sort(compareText),
-      remap_required_for_other_types: true,
+      rules: cloneJson(CHART_CONVERSION_CONTRACT),
     },
     capabilities: {
       collection: schema.capabilities.collection,
@@ -274,27 +289,25 @@ function semanticChartType(schema) {
       : null,
     collection,
     geography: schema.dataFamily === "geography"
-      ? {
-          geojson_source_required: true,
-          geography_role_id: geographyRole.id,
-          join_field_required: false,
-          default_join: "feature_id",
-          property_join_supported: true,
-        }
+      ? cloneJson(GEOGRAPHY_BINDING_CONTRACT)
       : null,
     presentation_section_ids: schema.form.sections.filter(
-      (sectionId) => !PRESENTATION_EXCLUDED_SECTIONS.has(sectionId),
+      (sectionId) => (
+        getChartFormSectionDefinition(sectionId)
+          ?.cataloguePresentation === true
+      ),
     ),
   };
 }
 
 function buildDashboardContext(dashboard) {
   const root = requiredRecord(dashboard, "dashboard");
+  const structure = validateDashboardStructure(root);
   if (root.configVersion !== CHART_CONFIG_VERSION) {
     throw new Error(`dashboard configuration version ${CHART_CONFIG_VERSION} is required`);
   }
   const catalogueRevision = requiredText(
-    root.catalogueRevision ?? root.lastUpdated,
+    root.lastUpdated,
     "catalogue revision",
   );
   const dataSources = requiredRecord(root.dataSources, "dashboard dataSources");
@@ -302,58 +315,37 @@ function buildDashboardContext(dashboard) {
     validateDataSourceDescriptor(sourceId, dataSources[sourceId]);
   }
 
-  const chartIds = new Set();
   const charts = [];
-  const pages = requiredArray(root.pages, "dashboard pages").map((page) => {
-    const pageObject = requiredRecord(page, "dashboard page");
-    const pageId = requiredText(pageObject.id, "page ID");
-    const sections = requiredArray(
-      pageObject.sections,
-      `sections for page ${pageId}`,
-    ).map((section) => {
-      const sectionObject = requiredRecord(
-        section,
-        `section for page ${pageId}`,
-      );
-      const sectionId = requiredText(
-        sectionObject.id,
-        `section ID for page ${pageId}`,
-      );
-      const sectionCharts = requiredArray(
-        sectionObject.panels,
-        `panels for section ${sectionId}`,
-      ).map((panel) => {
-        const panelObject = requiredRecord(
-          panel,
-          `chart panel for section ${sectionId}`,
-        );
-        const chart = panelObject.chart ?? panelObject;
+  const entriesByPlacement = new Map();
+  for (const placement of structure.panels) {
+        const { chart, page, pageId, section, sectionId } = placement;
         validateChartInstance(chart);
         if (!Object.hasOwn(dataSources, chart.sourceId)) {
           throw new Error(
             `chart ${chart.id} references unknown data source ${chart.sourceId}`,
           );
         }
-        if (chartIds.has(chart.id)) {
-          throw new Error(`duplicate chart ID: ${chart.id}`);
-        }
-        chartIds.add(chart.id);
         const schema = getChartSchema(chart.typeId);
         const entry = {
           chart,
           schema,
-          page: pageObject,
-          section: sectionObject,
+          page,
+          section,
           pageId,
           sectionId,
         };
         charts.push(entry);
-        return entry;
-      });
-      return { sectionId, charts: sectionCharts };
-    });
-    return { pageId, sections };
-  });
+        entriesByPlacement.set(placement, entry);
+  }
+  const pages = structure.pages.map((pageEntry) => ({
+    pageId: pageEntry.pageId,
+    sections: pageEntry.sections.map((sectionEntry) => ({
+      sectionId: sectionEntry.sectionId,
+      charts: sectionEntry.panels.map((placement) => (
+        entriesByPlacement.get(placement)
+      )),
+    })),
+  }));
   const chartsById = new Map(charts.map((entry) => [entry.chart.id, entry]));
   const timeSyncGroups = root.timeSyncGroups === undefined
     ? []
@@ -372,6 +364,31 @@ function buildDashboardContext(dashboard) {
     charts,
     membershipByChartId,
   };
+}
+
+function validateAliasConfig(context, aliasConfig) {
+  const aliases = requiredRecord(aliasConfig, "chart aliases");
+  const chartIds = new Set(context.charts.map(({ chart }) => chart.id));
+  for (const chartId of chartIds) {
+    const metadata = requiredRecord(
+      aliases[chartId],
+      `alias metadata for chart ${chartId}`,
+    );
+    rejectUnknownKeys(
+      metadata,
+      ALIAS_KEYS,
+      `alias metadata for chart ${chartId}`,
+    );
+    normalizedTerms(metadata.aliases, `aliases for chart ${chartId}`);
+    normalizedTerms(metadata.keywords, `keywords for chart ${chartId}`);
+  }
+  const orphanIds = Object.keys(aliases)
+    .filter((chartId) => !chartIds.has(chartId))
+    .sort(compareText);
+  if (orphanIds.length > 0) {
+    throw new Error(`orphan alias record: ${orphanIds.join(", ")}`);
+  }
+  return aliases;
 }
 
 function validateTimeMembership(groups, chartsById, dataSources) {
@@ -493,22 +510,6 @@ function validateTimeMembership(groups, chartsById, dataSources) {
     }
   }
   return membershipByChartId;
-}
-
-function semanticChartInstance(chart) {
-  return {
-    configVersion: chart.configVersion,
-    id: chart.id,
-    typeId: chart.typeId,
-    title: chart.title,
-    description: chart.description,
-    sourceId: chart.sourceId,
-    roles: cloneJson(chart.roles),
-    transformations: cloneJson(chart.transformations),
-    presentation: cloneJson(chart.presentation),
-    interaction: cloneJson(chart.interaction),
-    layout: cloneJson(chart.layout),
-  };
 }
 
 function chartDescription({ chart, section, page }) {

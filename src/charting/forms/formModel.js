@@ -2,6 +2,9 @@ import { normalizeCollectionSettings } from "../collection/collectionModel.js";
 import { validateChartInstance } from "../config/chartConfigV3.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import {
+  getChartFormSectionDefinition,
+} from "../schemas/schemaTypes.js";
 
 const STEP_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "type", label: "Chart type" }),
@@ -9,19 +12,6 @@ const STEP_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "roles", label: "Data roles" }),
   Object.freeze({ id: "style", label: "Style and layout" }),
 ]);
-
-const SECTION_LABELS = Object.freeze({
-  data: "Data",
-  appearance: "Appearance",
-  labels: "Labels",
-  axes: "Axes",
-  targets: "Targets",
-  map: "Map",
-  timeline: "Timeline",
-  collection: "Collection",
-  interactions: "Interactions",
-  advanced: "Advanced",
-});
 
 const INTERPRETATION_LABELS = Object.freeze({
   any: "Automatic",
@@ -127,14 +117,15 @@ export function buildEditorFormModel({
       previewReady || sectionId === "data" || sectionId === "appearance"
     ))
     .map((sectionId) => {
+      const definition = getChartFormSectionDefinition(sectionId);
       const fields = materializeSection(sectionId, context);
       return {
         id: sectionId,
-        label: SECTION_LABELS[sectionId] ?? sectionId,
+        label: definition?.label ?? sectionId,
         fields: !previewReady && sectionId === "appearance"
           ? fields.filter(({ id }) => id === "title")
           : fields,
-        advanced: sectionId === "advanced",
+        advanced: definition?.advanced === true,
       };
     })
     .filter(({ fields }) => fields.length > 0);
@@ -257,7 +248,7 @@ function dataFields({
         value: chart.presentation?.map?.joinField ?? "",
         help: "Choose the GeoJSON property whose values match the selected geographic identifier column.",
         options: [
-          { value: "", label: "Use GeoJSON feature IDs" },
+          { value: "", label: "Detect feature ID or property automatically" },
           ...geoJoinFields,
         ],
       });

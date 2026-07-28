@@ -1634,7 +1634,10 @@ test("property-only GeoJSON joins stay reachable and renderer-ready for both geo
       "joinField",
     ], typeId);
     assert.deepEqual(joinField?.options, [
-      { value: "", label: "Use GeoJSON feature IDs" },
+      {
+        value: "",
+        label: "Detect feature ID or property automatically",
+      },
       { value: "areaCode", label: "areaCode" },
       { value: "label", label: "label" },
     ], typeId);

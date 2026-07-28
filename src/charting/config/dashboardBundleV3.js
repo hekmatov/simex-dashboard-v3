@@ -8,6 +8,7 @@ import {
   normalizeChartInstance,
   validateChartInstance,
 } from "./chartConfigV3.js";
+import { validateDashboardStructure } from "./dashboardConfigStructure.js";
 import {
   safePublicPath,
   validateDatasetProfiles,
@@ -29,29 +30,12 @@ const TEMPORAL_FORMATS = new Set(["YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "ISO
 const TIMEZONES = new Set(["date-only"]);
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
-const DASHBOARD_KEYS = new Set([
-  "configVersion",
-  "dataSources",
-  "datasetProfiles",
-  "description",
-  "globalStyles",
-  "id",
-  "lastUpdated",
-  "layout",
-  "pages",
-  "programLabel",
-  "scenarioLabel",
-  "timeSyncGroups",
-  "title",
-  "vantaBackground",
-]);
 const CANONICAL_ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function requiredString(value, description) { if (typeof value !== "string" || value.trim() === "") throw new Error(`${description} is required.`); }
 function ensureObject(value, description) { if (!isRecord(value)) throw new Error(`${description} must be an object.`); }
 function checkKnownKeys(value, keys, description) { for (const key of Object.keys(value)) if (!keys.has(key)) throw new Error(`Unknown ${description} property "${key}".`); }
-function ensureUnique(ids, value, description) { requiredString(value, description); if (ids.has(value)) throw new Error(`Duplicate ${description.toLowerCase()} "${value}".`); ids.add(value); }
 
 function plainDataEntries(value, description) {
   if (
@@ -245,22 +229,6 @@ function validateSource(sourceId, source) {
   validateFingerprint(entryValue(entries, "sourceFingerprint"), `Data source "${sourceId}" sourceFingerprint`);
 }
 
-function configuredPanels(config) {
-  const pageIds = new Set(); const panels = [];
-  if (!Array.isArray(config.pages) || config.pages.length === 0) throw new Error("Dashboard pages must be a non-empty array.");
-  for (const page of config.pages) {
-    ensureObject(page, "Dashboard page"); ensureUnique(pageIds, page.id, "Dashboard page id");
-    if (!Array.isArray(page.sections) || page.sections.length === 0) throw new Error(`Dashboard page "${page.id}" sections must be a non-empty array.`);
-    const sectionIds = new Set();
-    for (const section of page.sections) {
-      ensureObject(section, "Dashboard section"); ensureUnique(sectionIds, section.id, "Dashboard section id");
-      if (!Array.isArray(section.panels)) throw new Error(`Dashboard section "${section.id}" panels must be an array.`);
-      for (const panel of section.panels) { ensureObject(panel, "Dashboard chart panel"); panels.push(panel.chart ?? panel); }
-    }
-  }
-  return panels;
-}
-
 function validateManualData(chart, source) {
   if (source.kind !== "inline") return;
   const schema = getChartSchema(chart.typeId);
@@ -350,8 +318,9 @@ function validCanonicalInstant(now) {
 
 /** Validates all configured charts, source records, and page/section placement in a v3 dashboard. */
 export function validateDashboardConfig(config) {
-  const configEntries = plainDataEntries(config, "Dashboard configuration");
-  rejectUnknownEntries(configEntries, DASHBOARD_KEYS, "dashboard configuration");
+  const structure = validateDashboardStructure(config, {
+    allowRuntimeState: true,
+  });
   if (config.configVersion !== DASHBOARD_CONFIG_VERSION) throw new Error("Dashboard configuration version 3 is required.");
   requiredString(config.id, "Dashboard id"); requiredString(config.title, "Dashboard title");
   const sourceEntries = plainDataEntries(config.dataSources, "Dashboard dataSources");
@@ -360,8 +329,7 @@ export function validateDashboardConfig(config) {
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) { validateSource(sourceId, source); sources.set(sourceId, source); }
   validateDatasetProfiles(config.dataSources, profiles);
-  const charts = configuredPanels(config);
-  const chartIds = new Set();
+  const charts = structure.panels.map(({ chart }) => chart);
   for (const chart of charts) {
     const source = sources.get(chart.sourceId);
     if (!source) { validateChartInstance(chart); throw new Error(`Chart "${chart.id}" references unknown source "${chart.sourceId}".`); }
@@ -369,7 +337,6 @@ export function validateDashboardConfig(config) {
     const schemaSourceKind = source.kind === "inline" ? "inline" : "dataset";
     if (!schema.sources.includes(schemaSourceKind)) throw new Error(`Chart "${chart.id}" does not support ${source.kind} source "${chart.sourceId}".`);
     validateChartInstance(chart, { columnTypes: sourceColumnTypes(chart.sourceId, source, profiles) });
-    ensureUnique(chartIds, chart.id, "Chart id");
     validateManualData(chart, source);
   }
   const loadedData = {};

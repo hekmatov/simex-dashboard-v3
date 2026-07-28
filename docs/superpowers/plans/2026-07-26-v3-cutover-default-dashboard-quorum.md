@@ -579,7 +579,7 @@ export function buildChartCatalogue(dashboard, aliases) {
 }
 ```
 
-Keep runtime metadata, loaded rows, preview state, and compatibility timestamps outside the semantic digest.
+Reject runtime metadata, loaded rows, generated profiles, preview state, and compatibility timestamps at the packaged semantic boundary so they cannot be silently omitted from or confused with the semantic digest.
 
 - [ ] **Step 4: Generate and verify the snapshot**
 

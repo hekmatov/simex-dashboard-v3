@@ -6,6 +6,15 @@ import { readFile } from "node:fs/promises";
 import {
   listChartSchemas,
 } from "../src/charting/schemas/chartSchemaRegistry.js";
+import {
+  GEOGRAPHY_BINDING_CONTRACT,
+} from "../src/charting/data/geographyBindingContract.js";
+import {
+  CHART_CONVERSION_CONTRACT,
+} from "../src/charting/forms/conversionContract.js";
+import {
+  getChartFormSectionDefinition,
+} from "../src/charting/schemas/schemaTypes.js";
 
 const catalogueModule = await import("../src/lib/quorumCatalogue.js");
 
@@ -125,9 +134,9 @@ test("chart type descriptors mirror schema roles, constraints, and capabilities"
       descriptor.conversion.compatible_type_ids,
       [...schema.conversions].toSorted(),
     );
-    assert.equal(
-      descriptor.conversion.remap_required_for_other_types,
-      true,
+    assert.deepEqual(
+      descriptor.conversion.rules,
+      CHART_CONVERSION_CONTRACT,
     );
     assert.deepEqual(descriptor.capabilities, {
       collection: schema.capabilities.collection,
@@ -137,7 +146,10 @@ test("chart type descriptors mirror schema roles, constraints, and capabilities"
     assert.deepEqual(
       descriptor.presentation_section_ids,
       schema.form.sections.filter(
-        (sectionId) => !["data", "interactions"].includes(sectionId),
+        (sectionId) => (
+          getChartFormSectionDefinition(sectionId)
+            ?.cataloguePresentation === true
+        ),
       ),
     );
 
@@ -202,13 +214,10 @@ test("time, collection, geography, and source contracts are explicit but bounded
   });
   assert.equal(byType.get("line").collection, null);
 
-  assert.deepEqual(byType.get("chronoChoroplethMap").geography, {
-    geojson_source_required: true,
-    geography_role_id: "geography",
-    join_field_required: false,
-    default_join: "feature_id",
-    property_join_supported: true,
-  });
+  assert.deepEqual(
+    byType.get("chronoChoroplethMap").geography,
+    GEOGRAPHY_BINDING_CONTRACT,
+  );
   assert.equal(byType.get("line").geography, null);
   assert.deepEqual(byType.get("pie").data_constraints.manual_data, {
     maxRows: 20,
@@ -294,17 +303,17 @@ test("generation and canonical digests are deterministic and match the persisted
   assert.deepEqual(persisted, snapshot);
 });
 
-test("dashboard semantic digest includes chart, time, collection, and source semantics only", async () => {
-  const { dashboard } = await trackedInputs();
+test("dashboard semantic digest includes all packaged semantics and rejects runtime state", async () => {
+  const { dashboard, aliases } = await trackedInputs();
   const original = Buffer.from(
-    catalogueModule.canonicalDashboardSemanticsBytes(dashboard),
+    catalogueModule.canonicalDashboardSemanticsBytes(dashboard, aliases),
   );
 
   const changedTime = structuredClone(dashboard);
   changedTime.timeSyncGroups[0].matching.policy = "lastKnown";
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedTime),
+      catalogueModule.canonicalDashboardSemanticsBytes(changedTime, aliases),
     ),
     original,
   );
@@ -315,7 +324,10 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
   };
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedMemberPolicy),
+      catalogueModule.canonicalDashboardSemanticsBytes(
+        changedMemberPolicy,
+        aliases,
+      ),
     ),
     original,
   );
@@ -324,7 +336,10 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
   changedMembershipOrder.timeSyncGroups[1].members.reverse();
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedMembershipOrder),
+      catalogueModule.canonicalDashboardSemanticsBytes(
+        changedMembershipOrder,
+        aliases,
+      ),
     ),
     original,
   );
@@ -338,7 +353,10 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
   changedCollectionPresentation.overflow = "scroll";
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedCollection),
+      catalogueModule.canonicalDashboardSemanticsBytes(
+        changedCollection,
+        aliases,
+      ),
     ),
     original,
   );
@@ -348,7 +366,7 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
     .roles.measurements[0].field = "deaths";
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedRole),
+      catalogueModule.canonicalDashboardSemanticsBytes(changedRole, aliases),
     ),
     original,
   );
@@ -358,7 +376,7 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
     "data/biomedical/cases-revised.csv";
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedSource),
+      catalogueModule.canonicalDashboardSemanticsBytes(changedSource, aliases),
     ),
     original,
   );
@@ -368,7 +386,10 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
     .presentation.title.align = "left";
   assert.notDeepEqual(
     Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(changedPresentation),
+      catalogueModule.canonicalDashboardSemanticsBytes(
+        changedPresentation,
+        aliases,
+      ),
     ),
     original,
   );
@@ -378,12 +399,9 @@ test("dashboard semantic digest includes chart, time, collection, and source sem
   runtimeOnly.datasetProfiles = { bio_cases: { fingerprint: "runtime" } };
   runtimeOnly.previewState = { selectedChartId: "bio_confirmed_cases" };
   runtimeOnly.compatibilityCheckedAt = "2099-01-01T00:00:00.000Z";
-  assert.deepEqual(
-    Buffer.from(
-      catalogueModule.canonicalDashboardSemanticsBytes(runtimeOnly),
-    ),
-    original,
-  );
+  assert.throws(() => (
+    catalogueModule.canonicalDashboardSemanticsBytes(runtimeOnly, aliases)
+  ), /unknown dashboard configuration property/i);
 });
 
 test("canonical bytes sort object keys, preserve array order, and distinguish JSON scalar types", () => {

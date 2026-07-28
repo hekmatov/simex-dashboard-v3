@@ -34,6 +34,18 @@ titles, descriptions, page and section IDs, aliases, keywords, and supported
 display modes. It contains no data rows, discussion content, local file paths,
 or runtime dashboard state.
 
+Chart-type records also publish three bounded authoring contracts from the
+same declarative authorities used by the dashboard:
+
+- conversion classification, target-role preservation, and required remapping;
+- GeoJSON source selection and explicit or inferred feature joins, with no
+  assumed default join;
+- the presentation sections that apply to each chart type.
+
+These are type-level rules, not an all-pairs conversion matrix. Quorum can
+combine a source type's compatible targets, the target schema's roles, and the
+published preservation rule to explain the work required for a conversion.
+
 Generate it directly with:
 
 ```powershell
@@ -47,11 +59,19 @@ is the explicit local catalogue snapshot for protocol v1; a future catalogue
 exchange API can preserve the same versioned contract.
 
 The snapshot also contains `dashboard_semantic_digest`, an opaque SHA-256 digest
-of the packaged page, section, and panel definitions. Before discovery, the
-browser regenerates both digests from its active configuration and aliases. A
-saved, imported, or edited chart definition therefore disables companion
-commands until a new catalogue is deliberately generated and deployed. This
-prevents a stable chart ID from silently acquiring a different meaning.
+of the complete packaged dashboard configuration and aliases. This covers
+source descriptors and packaged payloads, time groups, page and section
+semantics, landing and layout settings, and every chart definition without
+publishing those values into the catalogue. The semantic producer accepts only
+the strict version-3 configuration shape; unknown fields and hydrated runtime
+state such as loaded rows, generated profiles, preview state, and timestamps
+are rejected instead of silently omitted.
+
+Before discovery, the browser regenerates both digests from its active
+configuration and aliases. A saved, imported, or edited chart definition
+therefore disables companion commands until a new catalogue is deliberately
+generated and deployed. This prevents a stable chart ID from silently
+acquiring a different meaning.
 
 ## Discovery and Connection
 

@@ -1,9 +1,15 @@
+import {
+  GEOGRAPHY_BINDING_CONTRACT,
+} from "./geographyBindingContract.js";
+
 export function analyzeGeographyJoin({ chart, rows = [], geoData } = {}) {
   const features = Array.isArray(geoData?.features)
     ? geoData.features
     : [];
   const propertyFields = geographyPropertyFields(geoData);
-  const geographyField = chart?.roles?.geography?.field;
+  const geographyField = chart?.roles?.[
+    GEOGRAPHY_BINDING_CONTRACT.geography_role_id
+  ]?.field;
   if (
     typeof geographyField !== "string"
     || geographyField.trim() === ""
@@ -20,7 +26,9 @@ export function analyzeGeographyJoin({ chart, rows = [], geoData } = {}) {
     return { status: "pending", joinField: null, propertyFields };
   }
 
-  const selected = chart?.presentation?.map?.joinField;
+  const selected = chart?.presentation?.map?.[
+    GEOGRAPHY_BINDING_CONTRACT.join.presentation_field
+  ];
   if (typeof selected === "string" && selected.trim() !== "") {
     if (!propertyFields.includes(selected)) {
       return {

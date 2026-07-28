@@ -3,8 +3,13 @@ import {
   normalizeChartInstance,
   validateChartInstance,
 } from "../config/chartConfigV3.js";
-import { canonicalColumnType } from "../data/bindings.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import {
+  chartConversionKind,
+  preservedTargetRoleAssignments,
+  targetRoleAssignmentAccepted,
+  targetRoleAssignmentCount,
+} from "./conversionContract.js";
 
 const TRANSFORMATION_SETTINGS = Object.freeze([
   Object.freeze({ capability: "filter", key: "filters", fallback: [] }),
@@ -63,16 +68,17 @@ export function planChartConversion(
   }
 
   return {
-    kind: sourceTypeId === targetId || source.conversions.includes(targetId)
-      ? "compatible"
-      : "remap",
+    kind: chartConversionKind(source, target),
     sourceTypeId,
     targetTypeId: targetId,
     preservedRoles: clonePlainData(roles, "Preserved roles"),
     requiredRoles: target.roles
       .filter((role) => (
-        role.min > assignmentCount(effectiveRoles[role.id], role)
-        || !assignmentCompatible(effectiveRoles[role.id], role)
+        role.min > targetRoleAssignmentCount(
+          effectiveRoles[role.id],
+          role,
+        )
+        || !targetRoleAssignmentAccepted(effectiveRoles[role.id], role)
       ))
       .map((role) => clonePlainData(role, `Target role "${role.id}"`)),
     removedSettings: removedSettings(
@@ -136,20 +142,12 @@ function cloneRoleAssignments(roleAssignments) {
 }
 
 function preservedRoles(sourceRoles, target) {
-  if (!isRecord(sourceRoles)) return {};
-  const retained = {};
-  for (const role of target.roles) {
-    if (
-      Object.hasOwn(sourceRoles, role.id)
-      && assignmentCompatible(sourceRoles[role.id], role)
-    ) {
-      retained[role.id] = clonePlainData(
-        sourceRoles[role.id],
-        `Role "${role.id}" assignment`,
-      );
-    }
-  }
-  return retained;
+  return preservedTargetRoleAssignments(sourceRoles, target, {
+    cloneAssignment: (assignment, role) => clonePlainData(
+      assignment,
+      `Role "${role.id}" assignment`,
+    ),
+  });
 }
 
 function mergeTargetRoles(retained, supplied, target) {
@@ -173,36 +171,9 @@ function mergeTargetRoles(retained, supplied, target) {
 
 function requiredRolesComplete(roles, target) {
   return target.roles.every((role) => (
-    assignmentCount(roles[role.id], role) >= role.min
-    && assignmentCompatible(roles[role.id], role)
+    targetRoleAssignmentCount(roles[role.id], role) >= role.min
+    && targetRoleAssignmentAccepted(roles[role.id], role)
   ));
-}
-
-function assignmentCount(assignment, role) {
-  if (assignment === undefined || assignment === null) return 0;
-  if (role.max === null) return Array.isArray(assignment) ? assignment.length : 0;
-  return Array.isArray(assignment) ? assignment.length : 1;
-}
-
-function assignmentCompatible(assignment, role) {
-  const count = assignmentCount(assignment, role);
-  if (count < role.min || (role.max !== null && count > role.max)) return false;
-  if (count === 0) return true;
-  if (role.max === null && !Array.isArray(assignment)) return false;
-  if (role.max !== null && Array.isArray(assignment)) return false;
-  const bindings = Array.isArray(assignment) ? assignment : [assignment];
-  return bindings.every((binding) => bindingCompatible(binding, role));
-}
-
-function bindingCompatible(binding, role) {
-  if (!isRecord(binding)) return false;
-  if (typeof binding.field !== "string" || binding.field.trim() === "") {
-    return false;
-  }
-  if (binding.interpretation === undefined) return true;
-  if (typeof binding.interpretation !== "string") return false;
-  const interpretation = canonicalColumnType(binding.interpretation);
-  return role.accepts.includes("any") || role.accepts.includes(interpretation);
 }
 
 function removedSettings(chart, target, preserved, effectiveRoles = preserved) {

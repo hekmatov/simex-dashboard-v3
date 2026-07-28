@@ -3,13 +3,22 @@ import {
   analyzeGeographyJoin,
   geographyPropertyFields,
 } from "../data/geographyJoin.js";
+import {
+  GEOGRAPHY_BINDING_CONTRACT,
+} from "../data/geographyBindingContract.js";
+
+const GEO_SOURCE_FIELD =
+  GEOGRAPHY_BINDING_CONTRACT.data_source.presentation_field;
+const JOIN_FIELD =
+  GEOGRAPHY_BINDING_CONTRACT.join.presentation_field;
 
 export function validatedGeoSourceOptions(dataSources, geoDataSources) {
   const sources = collectionEntries(dataSources);
   return sources.flatMap(([sourceId, source]) => {
     const geoData = readEntry(geoDataSources, sourceId);
     if (
-      source?.kind !== "geojson"
+      source?.kind
+        !== GEOGRAPHY_BINDING_CONTRACT.data_source.descriptor_kind
       || geoData?.type !== "FeatureCollection"
       || !Array.isArray(geoData.features)
       || geoData.features.length === 0
@@ -47,7 +56,7 @@ export function applyGeographySourceSelection(chart, {
   }
   const current = chart.presentation?.map ?? {};
   const mapWithoutJoin = {
-    geoSource: sourceId,
+    [GEO_SOURCE_FIELD]: sourceId,
     scale: typeof current.scale === "string" && current.scale.trim()
       ? current.scale
       : "sequential",
@@ -59,7 +68,7 @@ export function applyGeographySourceSelection(chart, {
     geoData,
   });
   const map = analysis.status === "ready" && analysis.joinField
-    ? { ...mapWithoutJoin, joinField: analysis.joinField }
+    ? { ...mapWithoutJoin, [JOIN_FIELD]: analysis.joinField }
     : mapWithoutJoin;
   return chartWithMap(chart, map);
 }
@@ -72,8 +81,8 @@ export function applyGeographyRoleSelection(chart, {
   if (schema.dataFamily !== "geography") return structuredClone(chart);
   const current = chart?.presentation?.map;
   if (
-    typeof current?.geoSource !== "string"
-    || current.geoSource.trim() === ""
+    typeof current?.[GEO_SOURCE_FIELD] !== "string"
+    || current[GEO_SOURCE_FIELD].trim() === ""
   ) {
     return structuredClone(chart);
   }
@@ -81,11 +90,11 @@ export function applyGeographyRoleSelection(chart, {
   if (analysis.status === "ready") {
     return chartWithMap(chart, {
       ...current,
-      ...(analysis.joinField ? { joinField: analysis.joinField } : {}),
+      ...(analysis.joinField ? { [JOIN_FIELD]: analysis.joinField } : {}),
     });
   }
   const mapWithoutJoin = { ...current };
-  delete mapWithoutJoin.joinField;
+  delete mapWithoutJoin[JOIN_FIELD];
   const fallback = analyzeGeographyJoin({
     chart: chartWithMap(chart, mapWithoutJoin),
     rows,
@@ -94,7 +103,7 @@ export function applyGeographyRoleSelection(chart, {
   return chartWithMap(chart, {
     ...mapWithoutJoin,
     ...(fallback.status === "ready" && fallback.joinField
-      ? { joinField: fallback.joinField }
+      ? { [JOIN_FIELD]: fallback.joinField }
       : {}),
   });
 }

@@ -1,5 +1,6 @@
 import { parseTemporalValue } from "../charting/data/temporal.js";
 import { profileDataset } from "../charting/data/profileDataset.js";
+import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 
 const dataSourceCache = new Map();
@@ -151,6 +152,10 @@ export async function loadDashboardConfig(
   datasetProfiles,
   portableSources = null,
 ) {
+  validateDashboardStructure(dashboard, {
+    allowRuntimeState: true,
+    requireComplete: false,
+  });
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
   const reusableProfiles = mergeDatasetProfiles(
