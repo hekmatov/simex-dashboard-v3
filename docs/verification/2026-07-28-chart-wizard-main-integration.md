@@ -2,7 +2,8 @@
 
 Date: 2026-07-28
 
-Status: Locally verified; publication and integration remain unapproved
+Status: Locally verified and published for review; pull requests and integration
+remain unapproved
 
 ## Candidate lineage
 
@@ -71,10 +72,10 @@ catalogue bytes matched at SHA-256:
 
 - The original chart feature worktree remains clean at `24dd188`.
 - The showcase worktree remains clean at exact `8abca5e`.
-- No branch was pushed.
+- Dashboard and Quorum candidate branches were pushed after explicit approval.
 - No pull request was opened.
 - No shared branch was merged.
 - No deployment or Cloudflare branch update was performed.
 
-The next action requires explicit user approval: publish the dashboard
-integration branch and Quorum contract branch for review.
+The next action requires explicit user approval: open draft dashboard and
+Quorum pull requests for review.
