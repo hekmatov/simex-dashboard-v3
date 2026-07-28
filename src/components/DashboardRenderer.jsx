@@ -83,7 +83,8 @@ export default function DashboardRenderer({
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const landingActive = hasLandingPresentation(activePage);
-  const selectedPanel = findPanel(dashboard, selectedPanelId);
+  const selectedPlacement = findPanel(dashboard, selectedPanelId);
+  const selectedPanel = selectedPlacement?.chart ?? null;
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
   );
@@ -624,32 +625,36 @@ export default function DashboardRenderer({
                 )}
               </div>
               <LayoutGrid>
-                {section.panels.map((panel) => (
-                  <ChartPanel
-                    key={panel.id}
-                    panel={panel}
-                    rows={dashboard.loadedData[panel.sourceId] ?? []}
-                    datasetProfile={dashboard.datasetProfiles?.[panel.sourceId]}
-                    geoData={geoDataSources[panel.presentation?.map?.geoSource]}
-                    dataSources={dashboard.dataSources}
-                    editMode={editMode}
-                    isDragging={draggingPanelId === panel.id}
-                    isDragTarget={dragOverPanelId === panel.id}
-                    isSelected={editMode && selectedPanelId === panel.id}
-                    multiSelectMode={multiSelectMode}
-                    isMultiSelected={multiPanelIds.includes(panel.id)}
-                    onEdit={() => openPanelEditor(panel.id)}
-                    onRemove={() => removePanel(panel.id)}
-                    onToggleMultiSelect={() => toggleMultiPanel(panel.id)}
-                    onFullScreenHold={() => startMultiFullscreenSelection(panel.id)}
-                    onDisplayAction={onDisplayAction}
-                    onDragStart={(event) => handlePanelDragStart(event, panel.id)}
-                    onDragOver={(event) => handlePanelDragOver(event, panel.id)}
-                    onDrop={(event) => handlePanelDrop(event, panel.id)}
-                    onDragEnd={clearDragState}
-                    onStartSection={() => startSectionAtPanel(section, panel)}
-                  />
-                ))}
+                {section.panels.map((placement) => {
+                  const panelId = placement.id;
+                  const chart = placement.chart ?? placement;
+                  return (
+                    <ChartPanel
+                      key={panelId}
+                      panel={chart}
+                      rows={dashboard.loadedData[chart.sourceId] ?? []}
+                      datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
+                      geoData={geoDataSources[chart.presentation?.map?.geoSource]}
+                      dataSources={dashboard.dataSources}
+                      editMode={editMode}
+                      isDragging={draggingPanelId === panelId}
+                      isDragTarget={dragOverPanelId === panelId}
+                      isSelected={editMode && selectedPanelId === panelId}
+                      multiSelectMode={multiSelectMode}
+                      isMultiSelected={multiPanelIds.includes(chart.id)}
+                      onEdit={() => openPanelEditor(panelId)}
+                      onRemove={() => removePanel(panelId)}
+                      onToggleMultiSelect={() => toggleMultiPanel(chart.id)}
+                      onFullScreenHold={() => startMultiFullscreenSelection(chart.id)}
+                      onDisplayAction={onDisplayAction}
+                      onDragStart={(event) => handlePanelDragStart(event, panelId)}
+                      onDragOver={(event) => handlePanelDragOver(event, panelId)}
+                      onDrop={(event) => handlePanelDrop(event, panelId)}
+                      onDragEnd={clearDragState}
+                      onStartSection={() => startSectionAtPanel(section, placement)}
+                    />
+                  );
+                })}
               </LayoutGrid>
             </section>
             ))
@@ -671,7 +676,7 @@ export default function DashboardRenderer({
             parsingMetadata={dashboard.dataSources?.[selectedPanel.sourceId]?.parsingMetadata ?? {}}
             onSave={saveSelectedChartV3}
             onCancel={cancelSelectedPanel}
-            onRemove={() => removePanel(selectedPanel.id)}
+            onRemove={() => removePanel(selectedPlacement.panelId)}
           />
         )}
       </section>
@@ -684,9 +689,9 @@ export default function DashboardRenderer({
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
         onClose={() => setChartWizardTarget(null)}
-        onCreate={(payload) => {
-          void pendingEdits.flush();
-          onChartCreate(payload, chartWizardTarget);
+        onCreate={async (payload) => {
+          await pendingEdits.flush();
+          await onChartCreate(payload, chartWizardTarget);
           setChartWizardTarget(null);
         }}
       />
@@ -958,7 +963,10 @@ function findPanel(dashboard, panelId) {
     for (const section of page.sections ?? []) {
       const panel = section.panels.find((candidate) => candidate.id === panelId);
       if (panel) {
-        return panel;
+        return {
+          panelId: panel.id,
+          chart: panel.chart ?? panel,
+        };
       }
     }
   }

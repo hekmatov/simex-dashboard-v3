@@ -44,6 +44,7 @@ export default function App() {
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
   const displayStateRef = React.useRef(displayState);
   const dashboardRef = React.useRef(null);
+  const trackedDatasetProfilesRef = React.useRef({});
   const dashboardCommitControllerRef = React.useRef(null);
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
@@ -78,12 +79,16 @@ export default function App() {
     let disposed = false;
     loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then(async (tracked) => {
+        trackedDatasetProfilesRef.current = tracked.datasetProfiles ?? {};
         const stored = readDashboardStorage(
           localStorage,
           DASHBOARD_STORAGE_KEY,
           { profiles: tracked.datasetProfiles },
         );
-        const selected = stored ?? configurationForStorage(tracked);
+        const selected = stored ?? configurationForStorage(
+          tracked,
+          trackedDatasetProfilesRef.current,
+        );
         const loaded = await loadDashboardConfig(
           selected,
           selected.datasetProfiles ?? tracked.datasetProfiles,
@@ -148,7 +153,7 @@ export default function App() {
     ])
       .then(async ([catalogue, aliases]) => {
         const matches = await catalogueMatchesDashboardSnapshot(
-          configurationForStorage(dashboard),
+          configurationForSemanticUse(dashboard),
           aliases,
           catalogue,
         );
@@ -193,24 +198,41 @@ export default function App() {
 
   async function persistConfiguration(nextConfig) {
     try {
+      const trackedProfiles = trackedDatasetProfilesRef.current;
       const profiles = nextConfig.datasetProfiles
         ?? dashboardRef.current?.datasetProfiles
         ?? {};
-      const stored = configurationForStorage(nextConfig);
+      const stored = configurationForStorage(
+        { ...nextConfig, datasetProfiles: profiles },
+        trackedProfiles,
+      );
       validateDashboardConfig({
         ...stored,
-        datasetProfiles: profiles,
+        datasetProfiles: {
+          ...trackedProfiles,
+          ...(stored.datasetProfiles ?? {}),
+        },
       });
-      const loaded = await loadDashboardConfig(stored, profiles);
+      const loaded = await loadDashboardConfig(stored, trackedProfiles);
       localStorage.setItem(
         DASHBOARD_STORAGE_KEY,
-        JSON.stringify(configurationForStorage(loaded), null, 2),
+        JSON.stringify(
+          configurationForStorage(loaded, trackedProfiles),
+          null,
+          2,
+        ),
       );
       dashboardRef.current = loaded;
       setDashboard(loaded);
       setError(null);
       return configurationForPortableUse(loaded);
     } catch (commitError) {
+      if (isStorageQuotaError(commitError)) {
+        throw new Error(
+          "Browser storage is full. Remove an uploaded dataset or choose a smaller CSV, then try again.",
+          { cause: commitError },
+        );
+      }
       setError(commitError);
       throw commitError;
     }
@@ -245,11 +267,9 @@ export default function App() {
   }
 
   function createChart(payload, target) {
-    ignoreCommitFailure(
-      ensureDashboardCommitController().mutate((current) => (
-        integrateCreatedChart(current, payload, target)
-      )),
-    );
+    return ensureDashboardCommitController().mutate((current) => (
+      integrateCreatedChart(current, payload, target)
+    ));
   }
 
   function saveChart(payload) {
@@ -260,17 +280,23 @@ export default function App() {
     );
   }
 
-  function removeChart(chartId) {
+  function removeChart(panelId) {
     mutateDashboard((next) => {
+      let removedChartId = null;
       for (const page of next.pages ?? []) {
         for (const section of page.sections ?? []) {
-          section.panels = section.panels.filter(
-            (panel) => (panel.chart ?? panel).id !== chartId,
-          );
+          section.panels = section.panels.filter((panel) => {
+            if (panel.id !== panelId) return true;
+            removedChartId = (panel.chart ?? panel).id;
+            return false;
+          });
         }
       }
+      if (removedChartId === null) return;
       next.timeSyncGroups = (next.timeSyncGroups ?? []).flatMap((group) => {
-        const members = group.members.filter(({ chartId: id }) => id !== chartId);
+        const members = group.members.filter(
+          ({ chartId }) => chartId !== removedChartId,
+        );
         return members.length > 0 ? [{ ...group, members }] : [];
       });
     });
@@ -345,7 +371,43 @@ export default function App() {
       onChartSave={saveChart}
       onPageAdd={(page) => mutateDashboard((next) => next.pages.push(page))}
       onPageRemove={(pageId) => mutateDashboard((next) => {
+        const removedChartIds = new Set(
+          next.pages
+            .filter(({ id }) => id === pageId)
+            .flatMap(({ sections }) => sections ?? [])
+            .flatMap(({ panels }) => panels ?? [])
+            .map((panel) => (panel.chart ?? panel).id),
+        );
         next.pages = next.pages.filter(({ id }) => id !== pageId);
+        next.timeSyncGroups = (next.timeSyncGroups ?? []).flatMap((group) => {
+          const members = group.members.filter(
+            ({ chartId }) => !removedChartIds.has(chartId),
+          );
+          return members.length > 0 ? [{ ...group, members }] : [];
+        });
+        const remainingPageIds = new Set(next.pages.map(({ id }) => id));
+        for (const page of next.pages) {
+          if (!page.landing) continue;
+          const previousRoutes = page.landing.domainRoutes;
+          const retainedRoutes = previousRoutes.filter(
+            ({ pageId: targetId }) => remainingPageIds.has(targetId),
+          );
+          if (retainedRoutes.length === 0) {
+            const fallbackTarget = next.pages.find(
+              ({ id }) => id !== page.id,
+            )?.id ?? page.id;
+            retainedRoutes.push({
+              ...previousRoutes[0],
+              pageId: fallbackTarget,
+            });
+          }
+          page.landing.domainRoutes = retainedRoutes;
+          if (
+            !remainingPageIds.has(page.landing.hero.primaryAction.pageId)
+          ) {
+            page.landing.hero.primaryAction.pageId = retainedRoutes[0].pageId;
+          }
+        }
       })}
       onPageChange={(pageId, updates) => mutateDashboard((next) => {
         Object.assign(next.pages.find(({ id }) => id === pageId), updates);
@@ -377,7 +439,24 @@ export default function App() {
   );
 }
 
-export function configurationForStorage(dashboard) {
+export function configurationForStorage(dashboard, fallbackProfiles = {}) {
+  const config = structuredClone(dashboard);
+  delete config.loadedData;
+  const retainedProfiles = Object.fromEntries(
+    Object.entries(config.datasetProfiles ?? {}).filter(([sourceId, profile]) => {
+      if (config.dataSources?.[sourceId]?.kind !== "csv") return false;
+      return JSON.stringify(profile) !== JSON.stringify(fallbackProfiles[sourceId]);
+    }),
+  );
+  if (Object.keys(retainedProfiles).length > 0) {
+    config.datasetProfiles = retainedProfiles;
+  } else {
+    delete config.datasetProfiles;
+  }
+  return config;
+}
+
+function configurationForSemanticUse(dashboard) {
   const config = structuredClone(dashboard);
   delete config.loadedData;
   delete config.datasetProfiles;
@@ -403,7 +482,7 @@ function insertSectionAtPanel(config, pageId, sectionId, panelId, section) {
   const index = page.sections.findIndex(({ id }) => id === sectionId);
   const current = page.sections[index];
   const panelIndex = current.panels.findIndex(
-    (panel) => (panel.chart ?? panel).id === panelId,
+    (panel) => panel.id === panelId,
   );
   if (panelIndex < 0) return;
   const before = current.panels.slice(0, panelIndex);
@@ -416,15 +495,15 @@ function reorderPanels(config, sourceId, targetId) {
   const panels = config.pages.flatMap(({ sections }) =>
     sections.flatMap(({ panels: entries }) => entries),
   );
-  const source = panels.find((panel) => (panel.chart ?? panel).id === sourceId);
+  const source = panels.find((panel) => panel.id === sourceId);
   if (!source) return;
   for (const page of config.pages) {
     for (const section of page.sections) {
       section.panels = section.panels.filter(
-        (panel) => (panel.chart ?? panel).id !== sourceId,
+        (panel) => panel.id !== sourceId,
       );
       const targetIndex = section.panels.findIndex(
-        (panel) => (panel.chart ?? panel).id === targetId,
+        (panel) => panel.id === targetId,
       );
       if (targetIndex >= 0) section.panels.splice(targetIndex, 0, source);
     }
@@ -447,6 +526,16 @@ function companionStatusLabel(status) {
     return "Companion unavailable";
   }
   return "Standalone";
+}
+
+function isStorageQuotaError(error) {
+  return error instanceof DOMException
+    && (
+      error.name === "QuotaExceededError"
+      || error.name === "NS_ERROR_DOM_QUOTA_REACHED"
+      || error.code === 22
+      || error.code === 1014
+    );
 }
 
 function loadDeviceLayout() {

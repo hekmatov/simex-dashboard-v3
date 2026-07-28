@@ -379,12 +379,17 @@ export function readDashboardStorage(storage, storageKey, { profiles } = {}) {
   } catch {
     throw new Error("Saved dashboard configuration must be valid JSON.");
   }
-  validateDashboardConfig(
-    config.datasetProfiles === undefined && profiles !== undefined
-      ? { ...config, datasetProfiles: profiles }
-      : config,
-  );
-  return structuredClone(config);
+  const candidate = profiles === undefined
+    ? config
+    : {
+        ...config,
+        datasetProfiles: {
+          ...structuredClone(profiles),
+          ...structuredClone(config.datasetProfiles ?? {}),
+        },
+      };
+  validateDashboardConfig(candidate);
+  return structuredClone(candidate);
 }
 
 /** Adds a normalized chart, optional new source, and group proposal atomically. */
@@ -428,7 +433,9 @@ export function integrateSavedChart(dashboard, payload) {
       section.panels = (section.panels ?? []).map((panel) => {
         if ((panel.chart ?? panel).id !== chart.id) return panel;
         replaced = true;
-        return structuredClone(chart);
+        return Object.hasOwn(panel, "chart")
+          ? { ...panel, chart: structuredClone(chart) }
+          : structuredClone(chart);
       });
     }
   }

@@ -94,8 +94,20 @@ test("bar variants preserve canonical series, groups, stacking, and orientation"
   assert.deepEqual(grouped.option.xAxis.data, ["May", "June"]);
   assert.equal(grouped.option.series.length, 2);
   assert.equal(stacked.option.series[0].stack, "total");
-  assert.equal(horizontal.option.xAxis.type, "value");
+  assert.equal(horizontal.option.xAxis.length, 2);
+  assert.equal(horizontal.option.xAxis[0].type, "value");
+  assert.equal(horizontal.option.xAxis[1].type, "value");
   assert.equal(horizontal.option.yAxis.type, "category");
+  assert.equal(
+    horizontal.option.series.find(({ name }) => name.startsWith("Cases"))
+      .xAxisIndex,
+    0,
+  );
+  assert.equal(
+    horizontal.option.series.find(({ name }) => name.startsWith("Rate"))
+      .xAxisIndex,
+    1,
+  );
   assert.equal(horizontalStacked.option.series[0].stack, "total");
 });
 

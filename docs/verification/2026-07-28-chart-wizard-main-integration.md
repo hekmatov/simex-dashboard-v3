@@ -33,17 +33,41 @@ The candidate adds a bounded `.gitattributes` policy for generated JSON under
 `a1b029c` contained LF-only dashboard configuration, aliases, dataset profiles,
 and Quorum catalogue files.
 
+## Pull-request review remediation
+
+The first independent review of draft PR #4 found no critical issues and five
+important issues. All five were reproduced and fixed:
+
+- wrapped panel placements now preserve their stable placement identity while
+  rendering, editing, saving, reordering, and removing the contained chart;
+- imported CSV dataset profiles persist across edits and browser reloads,
+  while tracked built-in profiles remain a fallback rather than being copied
+  into browser storage;
+- removing a page also removes its chart memberships from synchronized
+  playback groups and repairs landing-page routes that referenced that page;
+- horizontal charts now bind primary and secondary measurements to distinct
+  horizontal value axes; and
+- CSV uploads are bounded before reading, row counts are bounded after parsing,
+  and browser-storage quota failures remain recoverable inside the wizard.
+
+Review regression coverage was added at both unit and Chromium levels. Two
+resource-intensive browser scenarios also received scenario-specific timeout
+budgets after retained traces showed forward progress on the heavily loaded
+Windows host rather than application deadlock.
+
 ## Verification results
 
 - Refreshed-main baseline: 45/45 unit tests passed.
 - Focused clean-checkout regressions: 27/27 passed.
-- Full dashboard unit suite: 750/750 passed in 21.03 seconds.
-- Production build: passed in 14.35 seconds; 697 modules transformed.
+- Full dashboard unit suite: 753/753 passed in 24.19 seconds.
+- Canonical production build: passed; 697 modules transformed.
 - Generated catalogue: 26 chart types and 40 configured charts.
-- Chromium E2E: 40/40 journeys passed in 18.5 minutes.
+- Focused review-regression Chromium gate: 3/3 journeys passed.
+- Quorum companion Chromium gate: 8/8 journeys passed.
+- Full Chromium E2E: 43/43 journeys passed in 20.0 minutes.
 - Full `origin/main..HEAD` diff check: passed.
-- Verification checkout and integration branch: clean after the run.
-- Ports 4173, 4175, and the cross-repository smoke port closed after use.
+- Dashboard and Quorum catalogue artifacts remained byte-identical at
+  `51b5c2b673ed0a07552c9ec8430befcaa8b73ba781b31a956b6a57365132f25c`.
 
 The build retained the known non-failing notices for three classic scripts and
 the approximately 1.7 MB minified application chunk.
@@ -80,5 +104,7 @@ catalogue bytes matched at SHA-256:
 - No shared branch was merged.
 - No deployment or Cloudflare branch update was performed.
 
-The next action is review and check triage. Merging either pull request, changing
-the Cloudflare branch, or deploying requires separate explicit user approval.
+The accepted first-pass review findings are remediated and locally verified.
+The exact committed remediation tip still requires final independent
+re-review. Merging either pull request, changing the Cloudflare branch, or
+deploying requires separate explicit user approval.

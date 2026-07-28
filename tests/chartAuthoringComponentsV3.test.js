@@ -1210,6 +1210,22 @@ test("local CSV upload uses the existing parser and returns a profiled dataset s
   );
 });
 
+test("local CSV upload rejects oversized files before reading them", async () => {
+  let read = false;
+  await assert.rejects(
+    parseUploadedCsvFile({
+      name: "oversized.csv",
+      size: Number.MAX_SAFE_INTEGER,
+      async text() {
+        read = true;
+        return "region,value\nNorth,12\n";
+      },
+    }),
+    /too large|maximum/i,
+  );
+  assert.equal(read, false);
+});
+
 test("manual entry is offered only when the selected schema permits concise inline data", () => {
   const common = {
     dataSources: {},

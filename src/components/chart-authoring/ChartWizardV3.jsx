@@ -33,6 +33,9 @@ import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
 
+export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
+export const MAX_UPLOADED_CSV_ROWS = 50_000;
+
 const STEP_TITLES = Object.freeze({
   type: "Choose the chart format",
   source: "Select data to show",
@@ -389,10 +392,10 @@ export default function ChartWizardV3({
       setSubmissionError(safeMessage(error));
     }
   };
-  const finish = () => {
+  const finish = async () => {
     if (!canCreate) return;
     try {
-      submitWizardDraft(syncedWizard, onCreate);
+      await submitWizardDraft(syncedWizard, onCreate);
       setSubmissionError("");
     } catch (error) {
       setSubmissionError(safeMessage(error));
@@ -741,8 +744,10 @@ export function submitWizardDraft(state, onCreate) {
   if (typeof onCreate !== "function") {
     throw new TypeError("Chart creation requires an onCreate callback.");
   }
-  onCreate(result);
-  return result;
+  const creation = onCreate(result);
+  return creation && typeof creation.then === "function"
+    ? creation.then(() => result)
+    : result;
 }
 
 export async function parseUploadedCsvFile(file, existingSources = {}) {
@@ -752,8 +757,26 @@ export async function parseUploadedCsvFile(file, existingSources = {}) {
   const fileName = typeof file.name === "string" && file.name.trim()
     ? file.name.trim()
     : "uploaded.csv";
+  if (
+    Number.isFinite(file.size)
+    && file.size > MAX_UPLOADED_CSV_BYTES
+  ) {
+    throw new Error(
+      `CSV upload is too large. The maximum file size is ${MAX_UPLOADED_CSV_BYTES} bytes.`,
+    );
+  }
   const csvText = await file.text();
+  if (new TextEncoder().encode(csvText).byteLength > MAX_UPLOADED_CSV_BYTES) {
+    throw new Error(
+      `CSV upload is too large. The maximum file size is ${MAX_UPLOADED_CSV_BYTES} bytes.`,
+    );
+  }
   const rows = parseCsvText(csvText, fileName);
+  if (rows.length > MAX_UPLOADED_CSV_ROWS) {
+    throw new Error(
+      `CSV upload has too many rows. The maximum is ${MAX_UPLOADED_CSV_ROWS}.`,
+    );
+  }
   const sourceId = uniqueSourceId(fileName, isRecord(existingSources)
     ? existingSources
     : {});

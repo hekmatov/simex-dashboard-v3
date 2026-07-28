@@ -44,6 +44,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       name: group.name,
       type,
       data: values,
+      xAxisIndex: horizontal ? group.axis === "secondary" ? 1 : 0 : undefined,
       yAxisIndex: horizontal ? undefined : group.axis === "secondary" ? 1 : 0,
       stack: STACKED_MARKS.has(mark) ? "total" : undefined,
       areaStyle: mark === "area" ? { opacity: 0.24 } : undefined,
@@ -71,7 +72,9 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
         ? { color: [...seriesStyle.colors] }
         : {}),
       grid: { containLabel: true, left: 48, right: hasSecondary ? 56 : 28, top: 76, bottom: 52 },
-      xAxis: horizontal ? primaryAxis : categoryAxis,
+      xAxis: horizontal
+        ? hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis
+        : categoryAxis,
       yAxis: horizontal ? { ...categoryAxis, type: "category" } : hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis,
       series,
       dataZoom: zoomOption(chart, horizontal),

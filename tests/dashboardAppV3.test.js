@@ -127,6 +127,63 @@ test("chart creation and saving are immutable whole-dashboard mutations", async 
   assert.equal(saved.pages[0].sections[0].panels[1].title, "Updated capacity");
 });
 
+test("saving a wrapped chart preserves its stable panel placement", async () => {
+  const {
+    integrateSavedChart,
+  } = await import("../src/charting/config/dashboardBundleV3.js");
+  const dashboard = minimalDashboard();
+  const chart = dashboard.pages[0].sections[0].panels[0];
+  dashboard.pages[0].sections[0].panels[0] = {
+    id: "status-placement",
+    chart,
+  };
+
+  const saved = integrateSavedChart(dashboard, {
+    chart: { ...chart, title: "Updated wrapped chart" },
+    timeSyncGroups: [],
+  });
+
+  assert.equal(saved.pages[0].sections[0].panels[0].id, "status-placement");
+  assert.equal(
+    saved.pages[0].sections[0].panels[0].chart.title,
+    "Updated wrapped chart",
+  );
+});
+
+test("stored dashboards merge embedded profile overrides with tracked profiles", async () => {
+  const {
+    readDashboardStorage,
+  } = await import("../src/charting/config/dashboardBundleV3.js");
+  const dashboard = minimalDashboard();
+  dashboard.dataSources.external = {
+    kind: "csv",
+    path: "data/external.csv",
+    provenance: { label: "Imported exercise data" },
+  };
+  dashboard.datasetProfiles = {
+    external: csvDatasetProfile({
+      sourceId: "external",
+      path: "data/external.csv",
+      provenance: { label: "Imported exercise data" },
+    }),
+  };
+  const trackedProfiles = {
+    status: { sourceId: "status" },
+  };
+  const storage = {
+    getItem() {
+      return JSON.stringify(dashboard);
+    },
+  };
+
+  const stored = readDashboardStorage(storage, "simex-dashboard-config-v3", {
+    profiles: trackedProfiles,
+  });
+
+  assert.equal(stored.datasetProfiles.external.sourceId, "external");
+  assert.equal(stored.datasetProfiles.status.sourceId, "status");
+});
+
 test("tracked descriptors and profiles round-trip through the portable v3 bundle", async () => {
   const {
     parseDashboardBundle,
@@ -516,6 +573,26 @@ function minimalDashboard() {
         panels: [pieChart()],
       }],
     }],
+  };
+}
+
+function csvDatasetProfile(overrides = {}) {
+  return {
+    sourceId: "dataset",
+    kind: "csv",
+    path: "data/dataset.csv",
+    provenance: { label: "Simulation exercise dataset" },
+    rowCount: 1,
+    fingerprint: "a".repeat(64),
+    columns: [{
+      name: "value",
+      type: "numeric",
+      missingCount: 0,
+      uniqueCount: 1,
+      examples: [1],
+      geographicHint: null,
+    }],
+    ...overrides,
   };
 }
 

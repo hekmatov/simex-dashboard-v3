@@ -24,6 +24,7 @@ test.beforeEach(async ({ page, request }) => {
 test("fresh pie authoring progressively reveals schema fields and persists the created chart", async ({
   page,
 }) => {
+  test.setTimeout(240_000);
   await openWizard(page);
   let wizard = chartWizard(page);
 

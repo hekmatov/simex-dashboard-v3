@@ -67,6 +67,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
   page,
   request,
 }) => {
+  test.setTimeout(60_000);
   await page.goto("/");
   await expectCompanionConnected(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
