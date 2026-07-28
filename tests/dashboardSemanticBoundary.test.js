@@ -13,6 +13,9 @@ import {
   validateDashboardConfig,
 } from "../src/charting/config/dashboardBundleV3.js";
 import {
+  createChartDraft,
+} from "../src/charting/config/chartConfigV3.js";
+import {
   loadDashboardConfig,
 } from "../src/lib/loadDashboard.js";
 
@@ -409,46 +412,110 @@ test("the producer rejects duplicate structural identities and broken landing re
 });
 
 test("bundle validation and runtime loading enforce the same dashboard structure boundary", async (t) => {
-  const { dashboard } = await trackedInputs();
+  const { dashboard, profiles } = await trackedInputs();
   const cases = {
-    "unknown page field": (value) => {
-      value.pages[0].legacyPage = {};
+    "unknown page field": {
+      mutate(value) {
+        value.pages[0].legacyPage = {};
+      },
+      error: /Unknown dashboard page property "legacyPage"\./,
     },
-    "duplicate page ID": (value) => {
-      value.pages[2].id = value.pages[1].id;
+    "duplicate page ID": {
+      mutate(value) {
+        value.pages[2].id = value.pages[1].id;
+      },
+      error: /Duplicate dashboard page id "biomedical"\./,
     },
-    "broken landing reference": (value) => {
-      landing(value).domainRoutes[0].pageId = "missing-page";
+    "broken landing reference": {
+      mutate(value) {
+        landing(value).domainRoutes[0].pageId = "missing-page";
+      },
+      error: /Landing domain route for page "home" references unknown page "missing-page"\./,
     },
-    "cyclic landing data": (value) => {
-      landing(value).hero = landing(value);
+    "cyclic landing data": {
+      mutate(value) {
+        landing(value).hero = landing(value);
+      },
+      error: /Unknown landing hero for page "home" property "hero"\./,
     },
   };
 
-  for (const [name, mutate] of Object.entries(cases)) {
+  for (const [name, { mutate, error }] of Object.entries(cases)) {
     await t.test(name, async () => {
       const changed = structuredClone(dashboard);
       mutate(changed);
       assert.throws(
         () => validateDashboardConfig(changed),
-        undefined,
+        error,
         `${name} at bundle boundary`,
       );
       await assert.rejects(
-        loadDashboardConfig(changed, {}),
-        undefined,
+        loadDashboardConfig(changed, profiles),
+        error,
         `${name} at runtime loader boundary`,
       );
     });
   }
 });
 
+test("runtime loading rejects an absent version 3 dashboard contract", async () => {
+  await assert.rejects(
+    loadDashboardConfig({}, {}),
+    /dashboard configuration property "configVersion" is required/i,
+  );
+});
+
+test("runtime loading requires configured pages instead of synthesizing a legacy page", async () => {
+  const missingPages = runtimeDashboard();
+  delete missingPages.pages;
+  await assert.rejects(
+    loadDashboardConfig(missingPages, {}),
+    /dashboard configuration property "pages" is required/i,
+  );
+});
+
+test("runtime loading rejects broken chart, source, and time references", async (t) => {
+  const cases = {
+    "chart source": {
+      mutate(value) {
+        value.pages[0].sections[0].panels[0].sourceId = "missing-source";
+      },
+      error: /Chart "runtime-line" references unknown source "missing-source"\./,
+    },
+    "primary clock source": {
+      mutate(value) {
+        value.timeSyncGroups[0].primaryClock.sourceId = "missing-source";
+      },
+      error: /Time synchronization group "runtime-clock" primary source "missing-source" is not loaded\./,
+    },
+    "member chart": {
+      mutate(value) {
+        value.timeSyncGroups[0].members[0].chartId = "missing-chart";
+      },
+      error: /Time synchronization member chart "missing-chart" does not exist\./,
+    },
+  };
+
+  for (const [name, { mutate, error }] of Object.entries(cases)) {
+    await t.test(name, async () => {
+      const dashboard = runtimeDashboard();
+      mutate(dashboard);
+      await assert.rejects(
+        loadDashboardConfig(dashboard, {}),
+        error,
+        name,
+      );
+    });
+  }
+});
+
 async function trackedInputs() {
-  const [dashboard, aliases] = await Promise.all([
+  const [dashboard, aliases, profiles] = await Promise.all([
     readJson("public/config/dashboard.json"),
     readJson("public/config/chart-aliases.json"),
+    readJson("public/config/dataset-profiles.json"),
   ]);
-  return { dashboard, aliases };
+  return { dashboard, aliases, profiles };
 }
 
 async function readJson(path) {
@@ -503,6 +570,68 @@ function configuredChart(dashboard, chartId) {
     .flatMap((section) => section.panels)
     .map((panel) => panel.chart ?? panel)
     .find(({ id }) => id === chartId);
+}
+
+function runtimeDashboard() {
+  const chart = createChartDraft("line", {
+    id: "runtime-line",
+    title: "Runtime line",
+    sourceId: "measurements",
+    roles: {
+      measurements: [{
+        field: "value",
+        interpretation: "number",
+        axis: "primary",
+      }],
+      observation: {
+        field: "date",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+        timezone: "date-only",
+      },
+    },
+  });
+  chart.interaction.timeSync = { groupId: "runtime-clock" };
+  return {
+    configVersion: 3,
+    id: "runtime-dashboard",
+    title: "Runtime dashboard",
+    dataSources: {
+      measurements: {
+        kind: "dataset",
+        type: "uploadedCsv",
+        fileName: "measurements.csv",
+        csvText: "date,value\n2027-05-01,4\n2027-05-02,7\n",
+        parsingMetadata: {
+          date: {
+            interpretation: "temporal",
+            format: "YYYY-MM-DD",
+            timezone: "date-only",
+          },
+        },
+      },
+    },
+    timeSyncGroups: [{
+      id: "runtime-clock",
+      name: "Runtime clock",
+      primaryClock: {
+        sourceId: "measurements",
+        timeField: "date",
+      },
+      matching: { policy: "exact" },
+      members: [{
+        chartId: "runtime-line",
+        timeRole: "observation",
+      }],
+    }],
+    pages: [{
+      id: "runtime-page",
+      sections: [{
+        id: "runtime-section",
+        panels: [chart],
+      }],
+    }],
+  };
 }
 
 function nodeSha256(bytes) {

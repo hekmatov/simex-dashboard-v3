@@ -6,9 +6,11 @@ import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
 import {
   normalizeChartInstance,
-  validateChartInstance,
 } from "./chartConfigV3.js";
 import { validateDashboardStructure } from "./dashboardConfigStructure.js";
+import {
+  validateDashboardChartReferences,
+} from "./dashboardSemanticReferences.js";
 import {
   safePublicPath,
   validateDatasetProfiles,
@@ -329,14 +331,17 @@ export function validateDashboardConfig(config) {
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) { validateSource(sourceId, source); sources.set(sourceId, source); }
   validateDatasetProfiles(config.dataSources, profiles);
-  const charts = structure.panels.map(({ chart }) => chart);
-  for (const chart of charts) {
-    const source = sources.get(chart.sourceId);
-    if (!source) { validateChartInstance(chart); throw new Error(`Chart "${chart.id}" references unknown source "${chart.sourceId}".`); }
-    const schema = getChartSchema(chart.typeId);
-    const schemaSourceKind = source.kind === "inline" ? "inline" : "dataset";
-    if (!schema.sources.includes(schemaSourceKind)) throw new Error(`Chart "${chart.id}" does not support ${source.kind} source "${chart.sourceId}".`);
-    validateChartInstance(chart, { columnTypes: sourceColumnTypes(chart.sourceId, source, profiles) });
+  const chartReferences = validateDashboardChartReferences(
+    structure,
+    config.dataSources,
+    {
+      columnTypesForSource: (sourceId, source) => (
+        sourceColumnTypes(sourceId, source, profiles)
+      ),
+    },
+  );
+  const charts = chartReferences.map(({ chart }) => chart);
+  for (const { chart, source } of chartReferences) {
     validateManualData(chart, source);
   }
   const loadedData = {};

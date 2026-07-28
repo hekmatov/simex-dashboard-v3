@@ -68,6 +68,22 @@ function reusableProfile(sourceId, source, rows) {
   };
 }
 
+function sourceLoadingDashboard(dataSources) {
+  return {
+    configVersion: 3,
+    id: "runtime-loader-fixture",
+    title: "Runtime loader fixture",
+    dataSources,
+    pages: [{
+      id: "runtime",
+      sections: [{
+        id: "sources",
+        panels: [],
+      }],
+    }],
+  };
+}
+
 function lineChart(sourceId, groupId = "national-outbreak") {
   return {
     id: "tracked-cases",
@@ -407,26 +423,26 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   const validProfile = reusableProfile("cases", source, rows);
 
   await assert.rejects(
-    loadDashboardConfig({ dataSources: { cases: source } }, {}),
+    loadDashboardConfig(sourceLoadingDashboard({ cases: source }), {}),
     /missing dataset profile/i,
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       { cases: validProfile, extra: validProfile },
     ),
     /unexpected dataset profile/i,
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       { cases: { ...validProfile, path: "data/other.csv" } },
     ),
     /profile path does not match/i,
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       {
         cases: {
           ...validProfile,
@@ -448,7 +464,7 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       {
         cases: {
           ...validProfile,
@@ -462,7 +478,7 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       {
         cases: {
           ...validProfile,
@@ -474,7 +490,7 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       {
         cases: {
           ...validProfile,
@@ -496,7 +512,7 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       {
         cases: {
           ...validProfile,
@@ -523,7 +539,7 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   );
   await assert.rejects(
     loadDashboardConfig(
-      { dataSources: { cases: source } },
+      sourceLoadingDashboard({ cases: source }),
       {
         cases: {
           ...validProfile,
@@ -549,11 +565,9 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
   );
   await assert.rejects(
     loadDashboardConfig(
-      {
-        dataSources: {
-          cases: { ...source, path: "../cases.csv" },
-        },
-      },
+      sourceLoadingDashboard({
+        cases: { ...source, path: "../cases.csv" },
+      }),
       { cases: { ...validProfile, path: "../cases.csv" } },
     ),
     /safe relative public path/i,
@@ -579,7 +593,7 @@ test("runtime validation rejects accessors without invoking them", async () => {
   });
 
   await assert.rejects(
-    loadDashboardConfig({ dataSources: { cases: source } }, {}),
+    loadDashboardConfig(sourceLoadingDashboard({ cases: source }), {}),
     /data propert/i,
   );
   assert.equal(invocations, 0);
@@ -593,7 +607,7 @@ test("runtime validation rejects accessors without invoking them", async () => {
     },
   });
   await assert.rejects(
-    loadDashboardConfig({ dataSources }, {}),
+    loadDashboardConfig(sourceLoadingDashboard(dataSources), {}),
     /data propert/i,
   );
   assert.equal(invocations, 0);
@@ -634,16 +648,14 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
 
   try {
     const loaded = await loadDashboardConfig(
-      {
-        dataSources: {
-          cases: source,
-          regions: {
-            kind: "geojson",
-            path: "data/regions.geojson",
-            provenance: { label: "Fixture boundaries" },
-          },
+      sourceLoadingDashboard({
+        cases: source,
+        regions: {
+          kind: "geojson",
+          path: "data/regions.geojson",
+          provenance: { label: "Fixture boundaries" },
         },
-      },
+      }),
       { cases: profile },
     );
 
@@ -680,15 +692,13 @@ test("runtime rejects malformed GeoJSON before exposing it to charts", async () 
   try {
     for (const fixtureIndex of fixtures.keys()) {
       await assert.rejects(
-        loadDashboardConfig({
-          dataSources: {
-            [`regions-${fixtureIndex}`]: {
-              kind: "geojson",
-              path: `data/regions-${fixtureIndex}.geojson`,
-              provenance: { label: "Malformed fixture" },
-            },
+        loadDashboardConfig(sourceLoadingDashboard({
+          [`regions-${fixtureIndex}`]: {
+            kind: "geojson",
+            path: `data/regions-${fixtureIndex}.geojson`,
+            provenance: { label: "Malformed fixture" },
           },
-        }, {}),
+        }), {}),
         /geojson/i,
       );
     }

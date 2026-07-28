@@ -6,11 +6,13 @@ import {
 } from "../charting/collection/collectionModel.js";
 import {
   CHART_CONFIG_VERSION,
-  validateChartInstance,
 } from "../charting/config/chartConfigV3.js";
 import {
   validateDashboardStructure,
 } from "../charting/config/dashboardConfigStructure.js";
+import {
+  validateDashboardChartReferences,
+} from "../charting/config/dashboardSemanticReferences.js";
 import {
   GEOGRAPHY_BINDING_CONTRACT,
 } from "../charting/data/geographyBindingContract.js";
@@ -19,7 +21,6 @@ import {
 } from "../charting/forms/conversionContract.js";
 import {
   CHART_SCHEMA_VERSION,
-  getChartSchema,
   listChartSchemas,
 } from "../charting/schemas/chartSchemaRegistry.js";
 import {
@@ -317,25 +318,27 @@ function buildDashboardContext(dashboard) {
 
   const charts = [];
   const entriesByPlacement = new Map();
-  for (const placement of structure.panels) {
-        const { chart, page, pageId, section, sectionId } = placement;
-        validateChartInstance(chart);
-        if (!Object.hasOwn(dataSources, chart.sourceId)) {
-          throw new Error(
-            `chart ${chart.id} references unknown data source ${chart.sourceId}`,
-          );
-        }
-        const schema = getChartSchema(chart.typeId);
-        const entry = {
-          chart,
-          schema,
-          page,
-          section,
-          pageId,
-          sectionId,
-        };
-        charts.push(entry);
-        entriesByPlacement.set(placement, entry);
+  for (
+    const {
+      chart,
+      page,
+      pageId,
+      placement,
+      schema,
+      section,
+      sectionId,
+    } of validateDashboardChartReferences(structure, dataSources)
+  ) {
+    const entry = {
+      chart,
+      schema,
+      page,
+      section,
+      pageId,
+      sectionId,
+    };
+    charts.push(entry);
+    entriesByPlacement.set(placement, entry);
   }
   const pages = structure.pages.map((pageEntry) => ({
     pageId: pageEntry.pageId,

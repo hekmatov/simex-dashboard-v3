@@ -1,6 +1,10 @@
 import { parseTemporalValue } from "../charting/data/temporal.js";
 import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
+import {
+  validateDashboardChartReferences,
+} from "../charting/config/dashboardSemanticReferences.js";
+import { validateTimeSyncGroups } from "../charting/time/timeSyncModel.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 
 const dataSourceCache = new Map();
@@ -152,9 +156,8 @@ export async function loadDashboardConfig(
   datasetProfiles,
   portableSources = null,
 ) {
-  validateDashboardStructure(dashboard, {
+  const structure = validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
-    requireComplete: false,
   });
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
@@ -163,6 +166,10 @@ export async function loadDashboardConfig(
     entryValue(dashboardEntries, "datasetProfiles"),
   );
   validateDatasetProfiles(dataSources, reusableProfiles);
+  const chartReferences = validateDashboardChartReferences(
+    structure,
+    dataSources,
+  );
   const hydratedProfiles = structuredClone(reusableProfiles);
 
   const loadedData = {};
@@ -183,9 +190,14 @@ export async function loadDashboardConfig(
     }
   }
 
+  validateTimeSyncGroups(dashboard.timeSyncGroups ?? [], {
+    charts: chartReferences.map(({ chart }) => chart),
+    loadedData,
+    profiles: hydratedProfiles,
+  });
+
   return {
     ...dashboard,
-    pages: normalizePages(dashboard),
     dataSources,
     datasetProfiles: hydratedProfiles,
     loadedData,
@@ -1035,23 +1047,4 @@ function stableStringify(value) {
   return `{${Object.keys(value).sort().map((key) => (
     `${JSON.stringify(key)}:${stableStringify(value[key])}`
   )).join(",")}}`;
-}
-
-function normalizePages(dashboard) {
-  if (Array.isArray(dashboard.pages)) {
-    return dashboard.pages;
-  }
-  return [{
-    id: "dashboard",
-    label: "Dashboard",
-    title: dashboard.title,
-    description: dashboard.description,
-    sections: [{
-      id: "main",
-      title: dashboard.title,
-      description: dashboard.description,
-      layout: dashboard.layout,
-      panels: dashboard.charts ?? [],
-    }],
-  }];
 }
