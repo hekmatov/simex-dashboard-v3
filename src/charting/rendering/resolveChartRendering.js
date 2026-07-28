@@ -6,58 +6,74 @@ import { buildRenderModel } from "./buildRenderModel.js";
 const MAX_MESSAGE_LENGTH = 240;
 
 export function resolveChartRendering(input = {}) {
-  const inputKey = renderingInputKey(input);
   try {
-    const schema = getChartSchema(input.chart?.typeId);
-    const dependencyError = sourceDependencyError(input);
+    if (!isRenderingInput(input)) return invalidRenderingResolution();
+    const renderingInput = captureRenderingInput(input);
+    const schema = getChartSchema(renderingInput.chart?.typeId);
+    const dependencyError = sourceDependencyError(renderingInput);
     if (dependencyError) {
       return renderingResolution({
         status: "unavailable",
         schema,
         prepared: null,
         model: { kind: "error", message: dependencyError },
-        inputKey,
+        inputKey: renderingInput,
       });
     }
-    const prepared = prepareChartData(input);
+    const prepared = prepareChartData(renderingInput);
     const model = withPlaybackPresentation(
-      buildRenderModel({ ...input, prepared }),
+      buildRenderModel({ ...renderingInput, prepared }),
       prepared,
-      input.timeContext,
-      input.chart,
+      renderingInput.timeContext,
+      renderingInput.chart,
     );
     return renderingResolution({
       status: model.kind === "error" ? "unavailable" : "available",
       schema,
       prepared,
       model,
-      inputKey,
+      inputKey: renderingInput,
     });
   } catch {
-    return renderingResolution({
-      status: "unavailable",
-      schema: null,
-      prepared: null,
-      model: {
-        kind: "error",
-        message: "This chart cannot be displayed.",
-      },
-      inputKey,
-    });
+    return invalidRenderingResolution();
   }
 }
 
 export function canReuseChartRendering(resolution, input = {}) {
-  const key = resolution?.inputKey;
-  return (
-    (resolution?.status === "available" || resolution?.status === "unavailable")
-    && key?.chart === input.chart
-    && key?.rows === input.rows
-    && key?.datasetProfile === input.datasetProfile
-    && key?.geoData === input.geoData
-    && key?.timeContext === input.timeContext
-    && key?.renderContext === input.renderContext
-  );
+  try {
+    const key = resolution?.inputKey;
+    if (
+      (resolution?.status !== "available" && resolution?.status !== "unavailable")
+      || key === null
+      || typeof key !== "object"
+      || !isRenderingInput(input)
+    ) {
+      return false;
+    }
+    return (
+      key.chart === input.chart
+      && key.rows === input.rows
+      && key.datasetProfile === input.datasetProfile
+      && key.geoData === input.geoData
+      && key.timeContext === input.timeContext
+      && key.renderContext === input.renderContext
+    );
+  } catch {
+    return false;
+  }
+}
+
+function invalidRenderingResolution() {
+  return renderingResolution({
+    status: "unavailable",
+    schema: null,
+    prepared: null,
+    model: {
+      kind: "error",
+      message: "This chart cannot be displayed.",
+    },
+    inputKey: null,
+  });
 }
 
 function renderingResolution({
@@ -82,7 +98,7 @@ function renderingResolution({
   });
 }
 
-function renderingInputKey(input) {
+function captureRenderingInput(input) {
   return Object.freeze({
     chart: input.chart,
     rows: input.rows,
@@ -91,6 +107,10 @@ function renderingInputKey(input) {
     timeContext: input.timeContext,
     renderContext: input.renderContext,
   });
+}
+
+function isRenderingInput(input) {
+  return input !== null && typeof input === "object";
 }
 
 function sourceDependencyError(input) {

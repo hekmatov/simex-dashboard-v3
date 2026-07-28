@@ -521,6 +521,129 @@ test("a current shared resolution is reused while changed inputs are rejected", 
   assert.match(html, /Cases over time/);
 });
 
+test("shared rendering resolution contains throwing top-level accessors without rereading them", async (t) => {
+  const properties = [
+    "chart",
+    "rows",
+    "datasetProfile",
+    "geoData",
+    "timeContext",
+    "renderContext",
+  ];
+
+  for (const property of properties) {
+    await t.test(property, () => {
+      const rows = [
+        { observed: "2027-05-01", cases: 10 },
+        { observed: "2027-05-02", cases: 20 },
+      ];
+      const input = {
+        chart: lineChart(),
+        rows,
+        datasetProfile: temporalProfile(rows),
+        geoData: null,
+        timeContext: null,
+        renderContext: {},
+      };
+      let reads = 0;
+      Object.defineProperty(input, property, {
+        configurable: true,
+        get() {
+          reads += 1;
+          throw new Error(`hostile ${property} accessor`);
+        },
+      });
+
+      let resolution;
+      assert.doesNotThrow(() => {
+        resolution = resolveChartRendering(input);
+      });
+      assert.equal(resolution.status, "unavailable");
+      assert.equal(resolution.model.kind, "error");
+      assert.equal(resolution.message, "This chart cannot be displayed.");
+      assert.equal(resolution.inputKey, null);
+      assert.equal(canReuseChartRendering(resolution, input), false);
+      assert.equal(reads, 1);
+    });
+  }
+});
+
+test("shared rendering resolution fails closed for null, primitive, and hostile proxy inputs", () => {
+  const validRows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-02", cases: 20 },
+  ];
+  const validInput = {
+    chart: lineChart(),
+    rows: validRows,
+    datasetProfile: temporalProfile(validRows),
+  };
+  const invalidInputs = [null, 0, "chart", true, Symbol("chart")];
+
+  for (const input of invalidInputs) {
+    let resolution;
+    assert.doesNotThrow(() => {
+      resolution = resolveChartRendering(input);
+    });
+    assert.equal(resolution.status, "unavailable");
+    assert.equal(resolution.model.kind, "error");
+    assert.equal(resolution.message, "This chart cannot be displayed.");
+    assert.equal(resolution.inputKey, null);
+    assert.equal(canReuseChartRendering(resolution, validInput), false);
+  }
+
+  let proxyReads = 0;
+  const hostileProxy = new Proxy({}, {
+    get() {
+      proxyReads += 1;
+      throw new Error("hostile proxy accessor");
+    },
+  });
+  let proxyResolution;
+  assert.doesNotThrow(() => {
+    proxyResolution = resolveChartRendering(hostileProxy);
+  });
+  assert.equal(proxyResolution.status, "unavailable");
+  assert.equal(proxyResolution.model.kind, "error");
+  assert.equal(proxyResolution.message, "This chart cannot be displayed.");
+  assert.equal(proxyResolution.inputKey, null);
+  assert.equal(canReuseChartRendering(proxyResolution, hostileProxy), false);
+  assert.equal(proxyReads, 1);
+});
+
+test("rendering reuse checks fail closed when a candidate accessor throws", () => {
+  const rows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-02", cases: 20 },
+  ];
+  const input = {
+    chart: lineChart(),
+    rows,
+    datasetProfile: temporalProfile(rows),
+  };
+  const resolution = resolveChartRendering(input);
+  let reads = 0;
+  const hostileCandidate = new Proxy(input, {
+    get(target, property, receiver) {
+      if (property === "chart") {
+        reads += 1;
+        throw new Error("hostile reuse accessor");
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+
+  assert.equal(resolution.status, "available");
+  assert.doesNotThrow(() => {
+    assert.equal(
+      canReuseChartRendering(resolution, hostileCandidate),
+      false,
+    );
+  });
+  assert.equal(reads, 1);
+  assert.equal(canReuseChartRendering(resolution, input), true);
+});
+
 test("shared rendering resolution converts preparation exceptions to bounded unavailable state", () => {
   const resolution = resolveChartRendering({
     chart: {
@@ -536,6 +659,15 @@ test("shared rendering resolution converts preparation exceptions to bounded una
   assert.equal(resolution.model.kind, "error");
   assert.equal(resolution.message, "This chart cannot be displayed.");
   assert.ok(resolution.message.length <= 240);
+  assert.equal(resolution.inputKey, null);
+  assert.equal(
+    canReuseChartRendering(resolution, {
+      chart: lineChart(),
+      rows: [],
+      datasetProfile: { columns: [], diagnostics: [] },
+    }),
+    false,
+  );
 });
 
 test("playback view reports no group and empty primary clocks without claiming participation", () => {
