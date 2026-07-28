@@ -1,0 +1,7 @@
+import { chartSchema, role } from "./schemaTypes.js";
+import {
+  seriesAppearanceForMark,
+} from "../presentation/seriesStyleContract.js";
+const roles = () => [role("x", "X measure", ["number"], 1), role("y", "Y measure", ["number"], 1), role("size", "Size", ["number"], 0), role("label", "Label", ["text", "category"], 0), role("cluster", "Cluster", ["category", "text"], 0)];
+const base = { group: "relationships", form: { sections: ["data", "appearance", "labels", "axes", "interactions", "advanced"] }, dataFamily: "relationship", renderer: "relationship", capabilities: { timeSync: false, collection: false, zoom: true }, conversions: [] };
+export const relationshipSchemas = [chartSchema({ ...base, form: { ...base.form, appearance: seriesAppearanceForMark("point") }, typeId: "scatter", label: "Scatter", description: "Show the relationship between two measurements.", roles: roles(), semantics: { purpose: "relationship", mark: "point" } }), chartSchema({ ...base, form: { ...base.form, appearance: seriesAppearanceForMark("bubble") }, typeId: "bubble", label: "Bubble", description: "Show a relationship with a third measurement encoded by size.", roles: roles(), semantics: { purpose: "relationship", mark: "bubble" } })];

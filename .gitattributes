@@ -1,0 +1,3 @@
+# Generated dashboard contracts are byte-validated and shared across repositories.
+public/config/*.json text eol=lf
+public/integration/*.json text eol=lf

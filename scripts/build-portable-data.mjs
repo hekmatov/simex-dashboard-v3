@@ -1,65 +1,103 @@
-import fs from "node:fs/promises";
+import {
+  mkdir,
+  readFile,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const publicDir = path.join(rootDir, "public");
-const configPath = path.join(publicDir, "config", "dashboard.json");
-const outputPath = path.join(publicDir, "portable-dashboard-data.js");
-const embedPortableData = process.env.SIMEX_EMBED_PORTABLE_DATA !== "0";
+import {
+  validateDataSourceDescriptor,
+  validateDatasetProfiles,
+  validateGeoJson,
+} from "../src/lib/loadDashboard.js";
 
-if (!embedPortableData) {
-  const payload = {
-    type: "simex-dashboard-v2-portable-data",
-    generatedAt: new Date().toISOString(),
-    config: null,
-    sources: {},
-  };
-  const js = `window.SIMEX_PORTABLE_DASHBOARD = ${JSON.stringify(payload)};\n`;
-  await fs.writeFile(outputPath, js, "utf8");
-  console.log(`Wrote ${path.relative(rootDir, outputPath)} as a cloud-hosting stub without embedded data.`);
-  process.exit(0);
+const defaultRootDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
+
+export async function buildPortableData({
+  rootDir = defaultRootDir,
+  configPath = path.join(rootDir, "public", "config", "dashboard.json"),
+  profilesPath = path.join(
+    rootDir,
+    "public",
+    "config",
+    "dataset-profiles.json",
+  ),
+  outputPath = path.join(rootDir, "public", "portable-dashboard-data.js"),
+  embedPortableData = process.env.SIMEX_EMBED_PORTABLE_DATA !== "0",
+} = {}) {
+  const publicDir = path.join(rootDir, "public");
+  const config = JSON.parse(stripBom(await readFile(configPath, "utf8")));
+  const datasetProfiles = JSON.parse(
+    stripBom(await readFile(profilesPath, "utf8")),
+  );
+  validateDatasetProfiles(config.dataSources, datasetProfiles);
+
+  const dataSources = sortValue(config.dataSources);
+  const sources = {};
+  if (embedPortableData) {
+    for (const sourceId of Object.keys(dataSources)) {
+      const source = dataSources[sourceId];
+      const sourcePath = validateDataSourceDescriptor(sourceId, source);
+      const absoluteSourcePath = path.join(publicDir, sourcePath);
+      if (source.kind === "geojson") {
+        const data = JSON.parse(
+          stripBom(await readFile(absoluteSourcePath, "utf8")),
+        );
+        validateGeoJson(data, `Data source "${sourceId}" GeoJSON`);
+        sources[sourceId] = {
+          kind: "geojson",
+          data,
+        };
+      } else {
+        sources[sourceId] = {
+          kind: "csv",
+          text: await readFile(absoluteSourcePath, "utf8"),
+        };
+      }
+    }
+  }
+
+  const payload = sortValue({
+    type: "simex-dashboard-v3-portable-data",
+    config: embedPortableData ? config : null,
+    dataSources: embedPortableData ? dataSources : {},
+    datasetProfiles: embedPortableData ? datasetProfiles : {},
+    sources,
+  });
+  const output = `window.SIMEX_PORTABLE_DASHBOARD = ${JSON.stringify(payload)};\n`;
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, output, "utf8");
+  return { payload, output };
 }
 
-const config = JSON.parse(stripBom(await fs.readFile(configPath, "utf8")));
-const sources = {};
-
-for (const source of Object.values(config.dataSources ?? {})) {
-  if (!source || typeof source !== "string") {
-    continue;
-  }
-
-  const normalizedSource = source.replaceAll("\\", "/");
-  const absoluteSourcePath = path.join(publicDir, normalizedSource);
-  const extension = path.extname(normalizedSource).toLowerCase();
-
-  if (extension === ".json" || extension === ".geojson") {
-    sources[normalizedSource] = {
-      kind: "json",
-      data: JSON.parse(stripBom(await fs.readFile(absoluteSourcePath, "utf8"))),
-    };
-    continue;
-  }
-
-  if (extension === ".csv") {
-    sources[normalizedSource] = {
-      kind: "csv",
-      text: await fs.readFile(absoluteSourcePath, "utf8"),
-    };
-  }
+function sortValue(value) {
+  if (Array.isArray(value)) return value.map(sortValue);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, sortValue(value[key])]),
+  );
 }
-
-const payload = {
-  type: "simex-dashboard-v2-portable-data",
-  generatedAt: new Date().toISOString(),
-  config,
-  sources,
-};
-
-const js = `window.SIMEX_PORTABLE_DASHBOARD = ${JSON.stringify(payload)};\n`;
-await fs.writeFile(outputPath, js, "utf8");
-console.log(`Wrote ${path.relative(rootDir, outputPath)} with ${Object.keys(sources).length} embedded data source(s).`);
 
 function stripBom(text) {
   return text.replace(/^\uFEFF/, "");
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+if (
+  process.argv[1]
+  && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url
+) {
+  const { payload } = await buildPortableData();
+  console.log(
+    `Wrote public/portable-dashboard-data.js with ${Object.keys(payload.sources).length} embedded data source(s).`,
+  );
 }
