@@ -41,6 +41,9 @@ function targetCollectionModel(chart, marks, activeTime) {
         severity: "error",
         code: "target-collection-identity-invalid",
         message,
+        fieldId: "entity",
+        path: ["roles", "entity"],
+        relatedFieldIds: ["label", "filters"],
       }],
     };
   }
@@ -309,7 +312,7 @@ function targetIdentity(mark, index) {
   const label = identityValue(mark.label, "label", index);
   if (entity === null && label === null) {
     throw new Error(
-      `Repeated target item ${index + 1} requires a stable entity or label identity.`,
+      `Repeated target item ${index + 1} requires a stable entity or label identity. Assign an Entity or Label role, or filter to one item.`,
     );
   }
   const displayLabel = identityLabel(entity, label);

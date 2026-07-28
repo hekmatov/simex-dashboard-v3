@@ -61,6 +61,10 @@ export default function PlaybackView() {
 function PlaybackMember({ chart, loadedData, profiles }) {
   const rows = readEntry(loadedData, chart.sourceId);
   const datasetProfile = readEntry(profiles, chart.sourceId);
+  const geoSourceId = chart.presentation?.map?.geoSource;
+  const geoData = geoSourceId
+    ? readEntry(loadedData, geoSourceId)
+    : undefined;
   const unavailable = rows === undefined
     || rows === null
     || datasetProfile === undefined
@@ -83,6 +87,10 @@ function PlaybackMember({ chart, loadedData, profiles }) {
         datasetProfile: datasetProfile?.datasetProfile
           ?? datasetProfile?.profile
           ?? datasetProfile,
+        geoData,
+        renderContext: {
+          mapName: geoSourceId ?? chart.id,
+        },
       }));
 }
 

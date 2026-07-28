@@ -169,6 +169,107 @@ test("card values render non-finite values as unavailable while retaining zero a
   assert.match(html, /Not available/);
 });
 
+test("temporal KPI collections show one latest observation per entity outside playback", () => {
+  const rows = [
+    { observed: "2027-05-01", entity: "Clinic A", value: 10 },
+    { observed: "2027-05-01", entity: "Clinic B", value: 20 },
+    { observed: "2027-05-02", entity: "Clinic A", value: 30 },
+    { observed: "2027-05-02", entity: "Clinic B", value: 5 },
+  ];
+  const html = renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "kpi",
+      title: "Current clinic pressure",
+      roles: {
+        value: { field: "value" },
+        entity: { field: "entity" },
+        time: { field: "observed", interpretation: "temporal" },
+      },
+      presentation: {
+        collection: {
+          layout: "fixed",
+          rows: 1,
+          columns: 2,
+          ranking: { mode: "priority", method: "highestCurrent" },
+        },
+      },
+    },
+    rows,
+    datasetProfile: profileDataset(rows, {
+      observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
+    }),
+  }));
+
+  assert.equal((html.match(/<h4>Clinic A<\/h4>/g) ?? []).length, 1);
+  assert.equal((html.match(/<h4>Clinic B<\/h4>/g) ?? []).length, 1);
+  assert.match(html, /<h4>Clinic A<\/h4><dl><div[^>]*><dt>Value<\/dt><dd>30<\/dd>/);
+  assert.match(html, /<h4>Clinic B<\/h4><dl><div[^>]*><dt>Value<\/dt><dd>5<\/dd>/);
+  assert.doesNotMatch(html, /Duplicate collection entityId|This chart cannot be displayed/);
+});
+
+test("time-series playback summaries place resolved overlays at the shared clock and disclose source policy", () => {
+  const rows = [
+    { observed: "2027-02-20", value: 1 },
+    { observed: "2027-02-23", value: 7 },
+  ];
+  const datasetProfile = profileDataset(rows, {
+    observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
+  });
+  const render = (matching) => renderToStaticMarkup(React.createElement(ChartView, {
+    chart: {
+      typeId: "line",
+      title: "Transmission",
+      roles: {
+        measurements: [{
+          field: "value",
+          axis: "primary",
+          ...(matching.policy === "interpolate"
+            ? { interpolationAllowed: true }
+            : {}),
+        }],
+        observation: {
+          field: "observed",
+          interpretation: "temporal",
+        },
+      },
+      transformations: {
+        filters: [],
+        grouping: [],
+        aggregation: null,
+        duplicates: null,
+        missingValues: "gap",
+      },
+      presentation: {
+        axes: { primary: {}, secondary: {} },
+        title: { align: "left" },
+        legend: { visible: true },
+      },
+      interaction: {
+        zoom: { enabled: false },
+        timeSync: { groupId: "exercise" },
+      },
+    },
+    rows,
+    datasetProfile,
+    timeContext: {
+      groupId: "exercise",
+      activeEpochMs: Date.UTC(2027, 1, 22),
+      matching,
+    },
+  }));
+
+  const lastKnown = render({ policy: "lastKnown" });
+  const nearest = render({
+    policy: "nearest",
+    toleranceMs: 2 * 24 * 60 * 60 * 1_000,
+  });
+  const interpolated = render({ policy: "interpolate" });
+
+  assert.match(lastKnown, /value at 2027-02-22: 1 \(last known from 2027-02-20\)/i);
+  assert.match(nearest, /value at 2027-02-22: 7 \(nearest measurement from 2027-02-23\)/i);
+  assert.match(interpolated, /value at 2027-02-22: 5 \(interpolated between 2027-02-20 and 2027-02-23\)/i);
+});
+
 test("ECharts semantic summaries render non-finite target values as unavailable", () => {
   const html = renderToStaticMarkup(React.createElement(EChartsChartView, {
     chart: { title: "Supply readiness" },

@@ -32,6 +32,7 @@ const TARGET_DIRECTIONS = new Set(["increase-is-good", "decrease-is-good", "neut
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
 const COMPARISON_MODES = new Set(CHART_COMPARISON_MODES);
 const COMPARISON_MATCHING_POLICIES = new Set(CHART_COMPARISON_MATCHING_POLICIES);
+const INTERPOLATION_BINDING_ROLES = new Set(["measurements", "measurement", "value", "actual", "target"]);
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function requiredString(value, description) { if (typeof value !== "string" || value.trim() === "") throw new Error(`${description} is required.`); }
@@ -160,9 +161,15 @@ function validateBinding(binding, role, schema, columnTypes) {
   ensureObject(binding, `Role "${role.id}" binding`);
   const allowed = new Set(["field", "interpretation", "format", "timezone"]);
   if (schema.dataFamily === "axis" && role.id === "measurements") allowed.add("axis");
+  if (INTERPOLATION_BINDING_ROLES.has(role.id) && role.accepts.includes("number")) {
+    allowed.add("interpolationAllowed");
+  }
   checkKnownKeys(binding, allowed, `role "${role.id}" binding`);
   requiredString(binding.field, `Role "${role.id}" field`);
   if (binding.axis !== undefined && !["primary", "secondary"].includes(binding.axis)) throw new Error(`Role "${role.id}" axis must be primary or secondary.`);
+  if (binding.interpolationAllowed !== undefined && typeof binding.interpolationAllowed !== "boolean") {
+    throw new Error(`Role "${role.id}" interpolationAllowed must be a boolean.`);
+  }
   if (binding.interpretation !== undefined) {
     const normalized = bindingType(binding.interpretation);
     if (typeof binding.interpretation !== "string" || !COLUMN_TYPES.has(normalized)) throw new Error(`Role "${role.id}" interpretation is unsupported.`);

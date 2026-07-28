@@ -79,7 +79,13 @@ function accessibilityRow(family, mark, chart) {
 }
 
 function describeRow(family, row) {
-  if (family === "axis") return `${row.series} at ${display(row.category)}: ${display(row.value)}`;
+  if (family === "axis") {
+    const provenance = typeof row.playbackProvenance === "string"
+      && row.playbackProvenance.trim()
+      ? ` (${row.playbackProvenance.trim()})`
+      : "";
+    return `${row.series} at ${display(row.category)}: ${display(row.value)}${provenance}`;
+  }
   if (family === "composition") return `${display(row.category)}: ${display(row.value)}${row.share === null ? "" : ` (${formatShare(row.share)})`}`;
   if (family === "relationship") return `${row.label ?? "Point"}: x ${display(row.x)}, y ${display(row.y)}${row.size === null ? "" : `, size ${display(row.size)}`}`;
   if (family === "matrix") return `${display(row.row)}, ${display(row.column)}: ${display(row.value)}`;

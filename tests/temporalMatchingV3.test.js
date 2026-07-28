@@ -223,6 +223,53 @@ test("numeric interpolation reports both bounds and uses the active timestamp", 
   assert.equal(match.observation.value, 15);
 });
 
+test("numeric interpolation does not expose binary floating-point artifacts", () => {
+  const match = matchTemporalObservation({
+    observations: [
+      { epochMs: Date.UTC(2027, 1, 20), value: 1 },
+      { epochMs: Date.UTC(2027, 1, 23), value: 7 },
+    ],
+    activeEpochMs: Date.UTC(2027, 1, 22),
+    policy: "interpolate",
+    interpolationAllowed: true,
+  });
+
+  assert.equal(match.observation.value, 5);
+});
+
+test("interpolation normalization preserves endpoints and legitimate decimal, negative, large, small, and recurring precision", () => {
+  const interpolate = (lower, upper, activeEpochMs = 1, upperEpochMs = 2) => (
+    matchTemporalObservation({
+      observations: [
+        { epochMs: 0, value: lower },
+        { epochMs: upperEpochMs, value: upper },
+      ],
+      activeEpochMs,
+      policy: "interpolate",
+      interpolationAllowed: true,
+    }).observation.value
+  );
+  const preciseEndpoint = 1.234567890123456;
+  const endpoint = { epochMs: 0, value: preciseEndpoint };
+  const exact = matchTemporalObservation({
+    observations: [endpoint, { epochMs: 2, value: 2 }],
+    activeEpochMs: 0,
+    policy: "interpolate",
+    interpolationAllowed: true,
+  });
+
+  assert.strictEqual(exact.observation, endpoint);
+  assert.equal(exact.observation.value, preciseEndpoint);
+  assert.equal(interpolate(0.1, 0.5), 0.3);
+  assert.equal(interpolate(-7, -1), -4);
+  assert.equal(
+    interpolate(1_000_000_000_000.25, 1_000_000_000_000.75),
+    1_000_000_000_000.5,
+  );
+  assert.equal(interpolate(1e-12, 3e-12), 2e-12);
+  assert.equal(interpolate(0, 1, 1, 3), 0.3333333333333333);
+});
+
 test("interpolation fails closed unless the schema explicitly permits it", () => {
   for (const interpolationAllowed of [undefined, false]) {
     assert.throws(

@@ -81,6 +81,125 @@ test("a chart outside the active group remains semantically byte-for-byte unchan
   assert.equal(Object.hasOwn(outsideGroup.meta, "activeTime"), false);
 });
 
+test("temporal KPI, Gauge, and Bullet collections use latest static values and active playback snapshots per entity", () => {
+  const rows = [
+    { at: "2027-05-01", entity: "A", value: 10, target: 40 },
+    { at: "2027-05-01", entity: "B", value: 20, target: 40 },
+    { at: "2027-05-02", entity: "A", value: 30, target: 40 },
+    { at: "2027-05-02", entity: "B", value: 5, target: 40 },
+  ];
+  const datasetProfile = profiled(rows, {
+    at: { interpretation: "temporal", format: "YYYY-MM-DD" },
+  });
+
+  for (const typeId of ["kpi", "gauge", "bullet"]) {
+    const primaryRole = typeId === "bullet" ? "actual" : "value";
+    const chart = playbackChart(typeId, {
+      [primaryRole]: { field: "value" },
+      target: { field: "target" },
+      entity: { field: "entity" },
+      time: { field: "at", interpretation: "temporal" },
+    });
+    const staticResult = prepareChartData({ chart, rows, datasetProfile });
+    const playbackResult = prepare({
+      chart,
+      rows,
+      metadata: {
+        at: { interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+      activeEpochMs: MAY_1,
+    });
+    const primaryField = typeId === "bullet" ? "actual" : "value";
+
+    assert.equal(staticResult.status, "ready", `${typeId} static status`);
+    assert.deepEqual(
+      staticResult.marks.map((mark) => [mark.entity, mark[primaryField], mark.time]),
+      [["A", 30, "2027-05-02"], ["B", 5, "2027-05-02"]],
+      `${typeId} static latest values`,
+    );
+    assert.equal(playbackResult.status, "ready", `${typeId} playback status`);
+    assert.deepEqual(
+      playbackResult.marks.map((mark) => [mark.entity, mark[primaryField], mark.time]),
+      [["A", 10, "2027-05-01"], ["B", 20, "2027-05-01"]],
+      `${typeId} active snapshot`,
+    );
+    assert.ok(playbackResult.marks.every(({ active }) => active === true));
+  }
+});
+
+test("same-time target collection duplicates remain fail-closed", () => {
+  const rows = [
+    { at: "2027-05-01", entity: "A", actual: 10, target: 40 },
+    { at: "2027-05-01", entity: "A", actual: 20, target: 40 },
+  ];
+  const result = prepareChartData({
+    chart: playbackChart("bullet", {
+      actual: { field: "actual" },
+      target: { field: "target" },
+      entity: { field: "entity" },
+      time: { field: "at", interpretation: "temporal" },
+    }),
+    rows,
+    datasetProfile: profiled(rows, {
+      at: { interpretation: "temporal", format: "YYYY-MM-DD" },
+    }),
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.deepEqual(result.marks, []);
+  assert.ok(result.diagnostics.some(({ message }) => /duplicate/i.test(message)));
+});
+
+test("Delta Card and Delta List retain prior history for static and playback comparisons", () => {
+  const cardRows = [
+    { at: "2027-05-01", value: 10 },
+    { at: "2027-05-02", value: 14 },
+  ];
+  const listRows = [
+    { at: "2027-05-01", entity: "A", value: 10 },
+    { at: "2027-05-02", entity: "A", value: 14 },
+    { at: "2027-05-01", entity: "B", value: 20 },
+    { at: "2027-05-02", entity: "B", value: 15 },
+  ];
+  for (const [typeId, rows, entityRole] of [
+    ["deltaCard", cardRows, {}],
+    ["deltaList", listRows, { entity: { field: "entity" } }],
+  ]) {
+    const chart = playbackChart(typeId, {
+      measurement: { field: "value" },
+      time: { field: "at", interpretation: "temporal" },
+      ...entityRole,
+    }, {
+      transformOverrides: {
+        comparison: { mode: "previousObservation" },
+      },
+    });
+    const metadata = {
+      at: { interpretation: "temporal", format: "YYYY-MM-DD" },
+    };
+    const staticResult = prepareChartData({
+      chart,
+      rows,
+      datasetProfile: profiled(rows, metadata),
+    });
+    const playbackResult = prepare({ chart, rows, metadata });
+    const expected = typeId === "deltaCard"
+      ? [[null, 14, 10, 4]]
+      : [["A", 14, 10, 4], ["B", 15, 20, -5]];
+    const select = ({ entity = null, displayed, comparison, delta }) => [
+      entity,
+      displayed,
+      comparison,
+      delta.absolute,
+    ];
+
+    assert.equal(staticResult.status, "ready", `${typeId} static status`);
+    assert.deepEqual(staticResult.marks.map(select), expected);
+    assert.equal(playbackResult.status, "ready", `${typeId} playback status`);
+    assert.deepEqual(playbackResult.marks.map(select), expected);
+  }
+});
+
 test("snapshot bars match each series independently and preserve carried provenance", () => {
   const rows = [
     { at: "2027-05-01", clinic: "A", value: 10 },
@@ -180,6 +299,30 @@ test("trace charts retain history while exposing observed and missing active ser
   assert.ok(clinicB.every(({ temporalProvenance }) => temporalProvenance.status === "missing"));
   assert.equal(result.meta.activeTime.mode, "trace");
   assert.equal(result.meta.activeTime.status, "mixed");
+});
+
+test("large duplicate-aggregated traces project rows without argument-stack overflow", () => {
+  const rows = Array.from({ length: 150_000 }, (_, index) => ({
+    at: index % 2 === 0 ? "2027-05-01" : "2027-05-02",
+    value: 1,
+  }));
+  const result = prepare({
+    chart: playbackChart("line", {
+      measurements: { field: "value" },
+      observation: { field: "at", interpretation: "temporal" },
+    }, {
+      transformOverrides: {
+        aggregation: "sum",
+        duplicates: "aggregate",
+      },
+    }),
+    rows,
+  });
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.marks.length, 2);
+  assert.equal(result.meta.activeTime.mode, "trace");
+  assert.deepEqual(result.marks.map(({ value }) => value), [75_000, 75_000]);
 });
 
 test("multi-measure traces retain measurement-specific observed and missing provenance", () => {

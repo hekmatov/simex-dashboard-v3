@@ -622,6 +622,67 @@ test("chart validation rejects unknown roles and invalid schema capabilities", (
   );
 });
 
+test("eligible numeric role bindings preserve strict interpolation permission", () => {
+  const chart = lineChart({
+    roles: {
+      measurements: [{
+        field: "cases",
+        axis: "primary",
+        interpolationAllowed: true,
+      }],
+      observation: { field: "reportedAt", interpretation: "temporal" },
+    },
+  });
+
+  assert.doesNotThrow(() => validateChartInstance(chart));
+  assert.equal(
+    normalizeChartInstance(chart).roles.measurements[0].interpolationAllowed,
+    true,
+  );
+  const parsed = parseDashboardBundle(JSON.stringify(serializeDashboardBundle({
+    ...version3Dashboard(),
+    pages: [{
+      ...version3Dashboard().pages[0],
+      sections: [{
+        ...version3Dashboard().pages[0].sections[0],
+        panels: [chart],
+      }],
+    }],
+  })));
+  assert.equal(
+    parsed.pages[0].sections[0].panels[0]
+      .roles.measurements[0].interpolationAllowed,
+    true,
+  );
+
+  assert.throws(
+    () => validateChartInstance(lineChart({
+      roles: {
+        measurements: [{
+          field: "cases",
+          axis: "primary",
+          interpolationAllowed: "yes",
+        }],
+        observation: { field: "reportedAt", interpretation: "temporal" },
+      },
+    })),
+    /interpolationAllowed.*boolean/i,
+  );
+  assert.throws(
+    () => validateChartInstance(lineChart({
+      roles: {
+        measurements: [{ field: "cases", axis: "primary" }],
+        observation: {
+          field: "reportedAt",
+          interpretation: "temporal",
+          interpolationAllowed: true,
+        },
+      },
+    })),
+    /unknown role "observation" binding property "interpolationAllowed"/i,
+  );
+});
+
 test("chart validation requires the complete version 3 identity shape", () => {
   const chart = lineChart();
   delete chart.description;

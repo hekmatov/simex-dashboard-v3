@@ -1,5 +1,6 @@
 import React from "react";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
+import { enforceRenderReadiness } from "../../charting/rendering/buildRenderModel.js";
 import ChartView from "../charts/ChartView.jsx";
 const MAX_DIAGNOSTICS = 4;
 const MAX_MESSAGE_LENGTH = 240;
@@ -14,12 +15,15 @@ function ChartPreview({
 } = {}) {
   let prepared;
   try {
-    prepared = prepareChartData({
+    prepared = enforceRenderReadiness({
       chart,
-      rows: Array.isArray(rows) ? rows : [],
-      datasetProfile,
-      geoData,
-      timeContext
+      prepared: prepareChartData({
+        chart,
+        rows: Array.isArray(rows) ? rows : [],
+        datasetProfile,
+        geoData,
+        timeContext
+      })
     });
   } catch (error) {
     return /* @__PURE__ */ React.createElement(
@@ -90,10 +94,11 @@ function buildPreviewDiagnostics(diagnostics, { namespace = "chart" } = {}) {
   });
 }
 function responsibleField(diagnostic) {
+  if (typeof diagnostic.fieldId === "string") return diagnostic.fieldId;
   if (typeof diagnostic.role === "string") return diagnostic.role;
   if (typeof diagnostic.field === "string") return diagnostic.field;
   if (Array.isArray(diagnostic.path)) {
-    const known = ["measurements", "measurement", "observation", "category", "value", "filters", "duplicates", "map", "timeline", "target"];
+    const known = ["measurements", "measurement", "observation", "category", "value", "entity", "label", "filters", "duplicates", "map", "timeline", "target"];
     const match = diagnostic.path.find((part) => known.includes(part));
     if (match) return match;
   }

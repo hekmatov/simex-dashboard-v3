@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-v2-config-pages-v2";
+const STORAGE_KEY = "simex-dashboard-config-v3";
 const LANDING_HEADLINE = "From complex exercise data to shared situational awareness";
 
 test.describe.configure({ timeout: 60_000 });
@@ -38,27 +38,28 @@ test("standalone Home orients visitors and routes into both domains", async ({ p
   ).toBeVisible();
 });
 
-test("saved beta configuration receives the new Home presentation", async ({ page, request }) => {
+test("saved v3 configuration preserves Home and authored dashboard changes", async ({ page, request }) => {
   const response = await request.get("http://127.0.0.1:4173/config/dashboard.json");
-  const savedBeta = await response.json();
-  delete savedBeta.pages[0].pageType;
-  delete savedBeta.pages[0].landing;
-  savedBeta.pages[1].title = "Saved biomedical briefing";
-  savedBeta.pages[1].sections[0].panels[0].title = "Saved cumulative case view";
-  savedBeta.pages[1].sections[0].panels[0].size = "wide";
+  const savedV3 = await response.json();
+  const biomedical = savedV3.pages.find(({ id }) => id === "biomedical");
+  biomedical.title = "Saved biomedical briefing";
+  biomedical.sections[0].panels[0].title = "Saved cumulative case view";
+  biomedical.sections[0].panels[0].layout.size = "wide";
 
   await page.addInitScript(({ key, config }) => {
     localStorage.setItem(key, JSON.stringify(config));
-  }, { key: STORAGE_KEY, config: savedBeta });
+  }, { key: STORAGE_KEY, config: savedV3 });
   await page.goto("/");
 
   await expectLandingReady(page);
   const persisted = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY);
+  expect(persisted.configVersion).toBe(3);
   expect(persisted.pages[0].pageType).toBe("landing");
   expect(persisted.pages[0].landing.hero.primaryAction.pageId).toBe("biomedical");
-  expect(persisted.pages[1].title).toBe("Saved biomedical briefing");
-  expect(persisted.pages[1].sections[0].panels[0].title).toBe("Saved cumulative case view");
-  expect(persisted.pages[1].sections[0].panels[0].size).toBe("wide");
+  const persistedBiomedical = persisted.pages.find(({ id }) => id === "biomedical");
+  expect(persistedBiomedical.title).toBe("Saved biomedical briefing");
+  expect(persistedBiomedical.sections[0].panels[0].title).toBe("Saved cumulative case view");
+  expect(persistedBiomedical.sections[0].panels[0].layout.size).toBe("wide");
 
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Saved biomedical briefing" })).toBeVisible();

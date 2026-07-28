@@ -22,6 +22,7 @@ import {
 } from "../../charting/forms/geographySource.js";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { profileDataset } from "../../charting/data/profileDataset.js";
+import { enforceRenderReadiness } from "../../charting/rendering/buildRenderModel.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
 import { parseCsvText } from "../../lib/loadCsv.js";
@@ -643,11 +644,14 @@ export function createWizardPreparation({
   );
   if (!chart) return { profile, prepared: null };
   try {
-    const prepared = prepareChartData({
+    const prepared = enforceRenderReadiness({
       chart,
-      rows: safeRows,
-      datasetProfile: profile,
-      geoData,
+      prepared: prepareChartData({
+        chart,
+        rows: safeRows,
+        datasetProfile: profile,
+        geoData,
+      }),
     });
     return {
       profile,

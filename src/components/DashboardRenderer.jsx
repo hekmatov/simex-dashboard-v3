@@ -10,8 +10,8 @@ import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
 import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
-import PlaybackControls from "./playback/PlaybackControls.jsx";
 import { PlaybackProvider } from "./playback/PlaybackProvider.jsx";
+import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
 
@@ -556,10 +556,7 @@ export default function DashboardRenderer({
           )
         ))}
       </nav>
-      {(dashboard.timeSyncGroups?.length ?? 0) > 0 && (
-        <PlaybackControls />
-      )}
-
+      <PlaybackSurface>
       <section
         className={`dashboard-workspace ${
           editMode && selectedPanel ? "dashboard-workspace-with-settings" : ""
@@ -672,6 +669,7 @@ export default function DashboardRenderer({
           />
         )}
       </section>
+      </PlaybackSurface>
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         dataSources={dashboard.dataSources}

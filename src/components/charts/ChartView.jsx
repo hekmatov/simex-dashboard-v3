@@ -118,20 +118,63 @@ function withPlaybackPresentation(model, prepared, timeContext, chart) {
   ) {
     return model;
   }
+  const activeCanonical = prepared.meta.activeTime.canonical;
+  const overlayMarks = activeMarks.map((mark) => ({
+    ...mark,
+    ...(model.accessibility.family === "axis"
+      ? { x: activeCanonical }
+      : {}),
+  }));
   const activeCompanion = buildAccessibilityCompanionForFamily(
     model.accessibility.family,
-    activeMarks,
+    overlayMarks,
     chart,
   );
+  const activeRows = activeCompanion.rows.map((row, index) => {
+    const playbackProvenance = playbackProvenanceLabel(
+      activeMarks[index]?.temporalProvenance,
+    );
+    return playbackProvenance ? { ...row, playbackProvenance } : row;
+  });
   return {
     ...model,
     accessibility: {
       ...activeCompanion,
-      rows: activeCompanion.family === "axis" && activeCompanion.rows.length === 1
-        ? [{ ...activeCompanion.rows[0], series: "value" }]
-        : activeCompanion.rows,
+      rows: activeCompanion.family === "axis" && activeRows.length === 1
+        ? [{ ...activeRows[0], series: "value" }]
+        : activeRows,
     },
   };
+}
+
+function playbackProvenanceLabel(provenance) {
+  const status = provenance?.status;
+  const sourceTime = canonicalEpoch(provenance?.sourceEpochMs);
+  const lowerTime = canonicalEpoch(provenance?.lowerEpochMs);
+  const upperTime = canonicalEpoch(provenance?.upperEpochMs);
+  if (status === "observed") {
+    return sourceTime ? `observed measurement from ${sourceTime}` : null;
+  }
+  if (status === "carried") {
+    return sourceTime ? `last known from ${sourceTime}` : "last known value";
+  }
+  if (status === "nearest") {
+    return sourceTime ? `nearest measurement from ${sourceTime}` : "nearest measurement";
+  }
+  if (status === "interpolated") {
+    return lowerTime && upperTime
+      ? `interpolated between ${lowerTime} and ${upperTime}`
+      : "interpolated value";
+  }
+  return null;
+}
+
+function canonicalEpoch(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const canonical = new Date(epochMs).toISOString();
+  return canonical.endsWith("T00:00:00.000Z")
+    ? canonical.slice(0, 10)
+    : canonical;
 }
 
 function resolveProvenance({ chart = {}, renderContext = {}, datasetProfile } = {}) {

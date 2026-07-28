@@ -699,6 +699,48 @@ test("preview uses the shared chart renderer for ready data and bounds actionabl
   assert.ok(invalid.length < 1600);
 });
 
+test("renderer preflight blocks target collections that cannot establish stable identity", () => {
+  const rows = [
+    { ward: "Ward A", actual: 4, capacity: 8 },
+    { ward: " Ward A ", actual: 6, capacity: 8 },
+  ];
+  const chart = createChartDraft("bullet", {
+    id: "identity-free-bullet",
+    title: "Time-indexed capacity",
+    sourceId: "capacity-data",
+    roles: {
+      actual: { field: "actual" },
+      target: { field: "capacity" },
+      entity: { field: "ward" },
+    },
+  });
+  const runtime = createWizardPreparation({ chart, rows });
+  const form = buildWizardFormModel({
+    draft: chart,
+    profile: runtime.profile,
+    prepared: runtime.prepared,
+    timeSyncGroups: [],
+  });
+  const html = render(React.createElement(ChartPreview, {
+    chart,
+    rows,
+    datasetProfile: runtime.profile,
+  }));
+
+  assert.equal(runtime.prepared.status, "invalid");
+  assert.equal(runtime.prepared.meta.rendererReady, false);
+  assert.match(
+    runtime.prepared.diagnostics[0].message,
+    /duplicate collection identity "Ward A"/i,
+  );
+  assert.equal(runtime.prepared.diagnostics[0].fieldId, "entity");
+  assert.deepEqual(runtime.prepared.diagnostics[0].path, ["roles", "entity"]);
+  assert.equal(form.canCreate, false);
+  assert.match(html, /chart-authoring-preview-invalid/);
+  assert.match(html, /data-responsible-field="entity"/);
+  assert.doesNotMatch(html, /chart-authoring-preview-ready/);
+});
+
 test("preview diagnostics are stable and programmatically describe the responsible field", () => {
   const rows = [{ period: "May", capacity: 4 }];
   const chart = createChartDraft("bar", {

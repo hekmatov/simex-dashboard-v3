@@ -6,6 +6,7 @@ import {
 } from "../../charting/config/chartConfigV3.js";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { profileDataset } from "../../charting/data/profileDataset.js";
+import { enforceRenderReadiness } from "../../charting/rendering/buildRenderModel.js";
 import {
   buildEditorFormModel,
   buildFormPreparationKey,
@@ -1149,11 +1150,14 @@ function removeChartFromGroups(groups, chartId) {
 
 function createEditorPreparation({ chart, rows, profile, geoData }) {
   try {
-    const prepared = prepareChartData({
+    const prepared = enforceRenderReadiness({
       chart,
-      rows,
-      datasetProfile: profile,
-      geoData,
+      prepared: prepareChartData({
+        chart,
+        rows,
+        datasetProfile: profile,
+        geoData,
+      }),
     });
     return {
       ...prepared,

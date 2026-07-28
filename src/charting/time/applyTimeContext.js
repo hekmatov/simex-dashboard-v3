@@ -476,7 +476,7 @@ function appendDeltaHistory(target, buckets, displayedEpochMs, includeDisplayed)
       bucket.epochMs < displayedEpochMs
       || (includeDisplayed && bucket.epochMs === displayedEpochMs)
     ) {
-      target.push(...bucket.rows);
+      appendRows(target, bucket.rows);
     }
   }
 }
@@ -577,7 +577,7 @@ function appendProjectedSourceRows({
   projectedSourceRows,
 }) {
   if (familyForType(chart.typeId) !== "axis" || measurements.length <= 1 || !measure) {
-    projectedRows.push(...rows);
+    appendRows(projectedRows, rows);
     return;
   }
   for (const row of rows) {
@@ -629,7 +629,12 @@ function measurementOnlyRow(row, measurements, selectedMeasure) {
 
 function appendMeasureRows(measureRows, measure, rows) {
   if (!measureRows || !measure) return;
-  measureRows.get(bindingField(measure))?.rows.push(...rows);
+  const target = measureRows.get(bindingField(measure))?.rows;
+  if (target) appendRows(target, rows);
+}
+
+function appendRows(target, rows) {
+  for (const row of rows) target.push(row);
 }
 
 function roleValue(row, chart, roleId, profile) {

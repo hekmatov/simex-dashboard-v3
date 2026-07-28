@@ -1,5 +1,6 @@
 import { normalizeCollectionSettings } from "../collection/collectionModel.js";
 import { validateChartInstance } from "../config/chartConfigV3.js";
+import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 
 const STEP_DEFINITIONS = Object.freeze([
@@ -594,7 +595,7 @@ function rendererReady(prepared) {
 }
 
 function preparationMatchesDraft({ chart, profile, prepared }) {
-  if (!rendererReady(prepared)) return false;
+  if (!rendererReady(enforceRenderReadiness({ chart, prepared }))) return false;
   return preparationCorrelatesDraft({ chart, profile, prepared });
 }
 

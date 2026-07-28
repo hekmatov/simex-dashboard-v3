@@ -773,6 +773,62 @@ test("line playback retains history and adds one status-aware active marker per 
   assert.equal(missing.markPoint, undefined);
 });
 
+test("line playback overlays carried and nearest values at the shared clock without moving source history", () => {
+  const activeTime = {
+    groupId: "exercise",
+    epochMs: MAY_2,
+    canonical: "2027-05-02",
+    mode: "trace",
+    status: "mixed",
+  };
+  const model = buildRenderModel({
+    chart: chart("line"),
+    prepared: ready([
+      {
+        x: "2027-05-01",
+        value: 1,
+        measure: "carried",
+        measureLabel: "Carried",
+        clusterKey: "",
+        groupKey: "",
+        axis: "primary",
+        active: true,
+        temporalProvenance: {
+          status: "carried",
+          activeEpochMs: MAY_2,
+          activeCanonical: "2027-05-02",
+          sourceEpochMs: MAY_1,
+        },
+      },
+      {
+        x: "2027-05-03",
+        value: 7,
+        measure: "nearest",
+        measureLabel: "Nearest",
+        clusterKey: "",
+        groupKey: "",
+        axis: "primary",
+        active: true,
+        temporalProvenance: {
+          status: "nearest",
+          activeEpochMs: MAY_2,
+          activeCanonical: "2027-05-02",
+          sourceEpochMs: MAY_3,
+        },
+      },
+    ], { axisInterpretation: "temporal", activeTime }),
+  });
+  const carried = model.option.series.find(({ name }) => name === "Carried");
+  const nearest = model.option.series.find(({ name }) => name === "Nearest");
+
+  assert.deepEqual(carried.data, [["2027-05-01", 1]]);
+  assert.deepEqual(carried.markPoint.data[0].coord, ["2027-05-02", 1]);
+  assert.equal(carried.markPoint.data[0].provenance.label, "Last measured 2027-05-01");
+  assert.deepEqual(nearest.data, [["2027-05-03", 7]]);
+  assert.deepEqual(nearest.markPoint.data[0].coord, ["2027-05-02", 7]);
+  assert.equal(nearest.markPoint.data[0].provenance.label, "Nearest measurement 2027-05-03");
+});
+
 test("snapshot bars annotate prepared active values without duplicating series or inventing points", () => {
   const activeTime = {
     groupId: "exercise",

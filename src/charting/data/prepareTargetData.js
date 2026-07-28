@@ -52,7 +52,7 @@ export function prepareTargetData({ schema, chart, rows, datasetProfile, transfo
         }
     );
   }
-  return consolidateCandidates(
+  const consolidated = consolidateCandidates(
     marks,
     (mark) => stableKey(mark.time, mark.entity, mark.label),
     transformed,
@@ -67,9 +67,38 @@ export function prepareTargetData({ schema, chart, rows, datasetProfile, transfo
             ...duplicates[0],
             value: aggregateNumbers(duplicates.map(({ value }) => value), method),
             target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
-          }
+        }
     ),
   );
+  if (
+    consolidated.diagnostics.some(({ severity }) => severity === "error")
+    || !timeRole
+  ) {
+    return consolidated;
+  }
+  return {
+    ...consolidated,
+    marks: latestTargetMarks(consolidated.marks),
+  };
+}
+
+function latestTargetMarks(marks) {
+  const latestByEntity = new Map();
+  for (const mark of marks) {
+    const entityKey = stableKey(mark.entity, mark.label);
+    const epochMs = canonicalEpochMs(mark.time);
+    const previous = latestByEntity.get(entityKey);
+    if (
+      !previous
+      || (
+        Number.isFinite(epochMs)
+        && (!Number.isFinite(previous.epochMs) || epochMs >= previous.epochMs)
+      )
+    ) {
+      latestByEntity.set(entityKey, { epochMs, mark });
+    }
+  }
+  return [...latestByEntity.values()].map(({ mark }) => mark);
 }
 
 function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) {

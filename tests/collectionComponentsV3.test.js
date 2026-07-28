@@ -498,6 +498,46 @@ test("carousel pause rules cover manual, hover, focus, hidden, motion, and playb
   );
 });
 
+test("carousel surfaces expose stable rotation policy and effective pause state", () => {
+  const settings = {
+    layout: "carousel",
+    rows: 1,
+    columns: 1,
+    overflow: "autoRotate",
+    carousel: {
+      intervalMs: 5000,
+      loop: true,
+      pauseOnHover: true,
+      transition: "fade",
+    },
+    playback: {
+      rerank: true,
+      pauseCarousel: true,
+    },
+  };
+  const paused = renderCollection(
+    settings,
+    collectionItems(2),
+    { playing: true },
+  );
+  const independent = renderCollection(
+    {
+      ...settings,
+      playback: { ...settings.playback, pauseCarousel: false },
+    },
+    collectionItems(2),
+    { playing: true },
+  );
+
+  assert.match(paused, /data-collection-interval-ms="5000"/);
+  assert.match(paused, /data-collection-loop="true"/);
+  assert.match(paused, /data-collection-pause-on-hover="true"/);
+  assert.match(paused, /data-collection-pause-on-playback="true"/);
+  assert.match(paused, /data-collection-rotation-paused="true"/);
+  assert.match(independent, /data-collection-pause-on-playback="false"/);
+  assert.match(independent, /data-collection-rotation-paused="false"/);
+});
+
 test("carousel owns one timer and cleans it completely", () => {
   const calls = [];
   const intervals = new Map();

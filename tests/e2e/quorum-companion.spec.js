@@ -178,11 +178,14 @@ test("runtime chart-definition drift disables companion commands", async ({
     "http://127.0.0.1:4173/config/dashboard.json",
   );
   const config = await configResponse.json();
-  config.pages[1].sections[0].panels[1].title =
-    "Locally changed chart meaning";
+  const chart = config.pages
+    .flatMap(({ sections }) => sections)
+    .flatMap(({ panels }) => panels)
+    .find(({ id }) => id === SECOND_CHART);
+  chart.title = "Locally changed chart meaning";
   await page.addInitScript((savedConfig) => {
     localStorage.setItem(
-      "simex-dashboard-v2-config-pages-v2",
+      "simex-dashboard-config-v3",
       JSON.stringify(savedConfig),
     );
   }, config);

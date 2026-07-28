@@ -29,6 +29,7 @@ const {
   usePlayback,
 } = await import("../src/components/playback/PlaybackProvider.jsx");
 const { default: PlaybackControls } = await import("../src/components/playback/PlaybackControls.jsx");
+const { default: PlaybackSurface } = await import("../src/components/playback/PlaybackSurface.jsx");
 const { default: PlaybackView } = await import("../src/components/playback/PlaybackView.jsx");
 const { default: ChartView } = await import("../src/components/charts/ChartView.jsx");
 
@@ -61,6 +62,49 @@ test("playback controls expose semantic transport, time selection, speed, and vi
   assert.match(html, />1×</);
   assert.match(html, /aria-label="Close playback view"/);
   assert.match(html, /aria-live="polite"/);
+});
+
+test("playback surface mounts the special view only while playback view is open", () => {
+  const closed = renderPlayback(
+    React.createElement(
+      PlaybackSurface,
+      null,
+      React.createElement("div", { "data-static-dashboard": "true" }),
+    ),
+    {
+      initialState: {
+        activeGroupId: "exercise",
+        activeIndex: 1,
+        playing: false,
+        speed: 1,
+        playbackView: false,
+      },
+    },
+  );
+  const open = renderPlayback(
+    React.createElement(
+      PlaybackSurface,
+      null,
+      React.createElement("div", { "data-static-dashboard": "true" }),
+    ),
+    {
+      initialState: {
+        activeGroupId: "exercise",
+        activeIndex: 1,
+        playing: false,
+        speed: 1,
+        playbackView: true,
+      },
+    },
+  );
+
+  assert.match(closed, /aria-label="Open playback view"/);
+  assert.match(closed, /data-static-dashboard="true"/);
+  assert.doesNotMatch(closed, /class="playback-view"/);
+  assert.match(open, /aria-label="Close playback view"/);
+  assert.match(open, /class="playback-view"/);
+  assert.match(open, /data-chart-id="primary-chart"/);
+  assert.doesNotMatch(open, /data-static-dashboard="true"/);
 });
 
 test("transport actions are disabled for absent, empty, and boundary clocks", () => {
@@ -215,6 +259,69 @@ test("playback view renders eligible members and explicit missing and unavailabl
   assert.match(html, /class="playback-member/);
   assert.doesNotMatch(html, /Static reference/);
   assert.doesNotMatch(html, /ineligible-static-chart/);
+});
+
+test("playback view resolves only the map chart's configured GeoJSON source", () => {
+  const rows = [
+    { observed: "2027-05-01", region: "A", value: 10 },
+    { observed: "2027-05-02", region: "A", value: 20 },
+  ];
+  const chart = chronoChart();
+  const group = {
+    id: "exercise",
+    name: "Exercise timeline",
+    primaryClock: { sourceId: "geo-values", timeField: "observed" },
+    matching: { policy: "exact" },
+    members: [{ chartId: chart.id, timeRole: "time" }],
+  };
+  const profile = profileDataset(rows, {
+    observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
+  });
+  const geo = geoFixture("A");
+  const render = (geoSource, loadedData) => renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups: [group],
+        charts: [{
+          ...chart,
+          presentation: {
+            ...chart.presentation,
+            map: {
+              ...chart.presentation.map,
+              geoSource,
+            },
+          },
+        }],
+        loadedData: { "geo-values": rows, ...loadedData },
+        profiles: { "geo-values": profile },
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 1,
+          playing: false,
+          speed: 1,
+          playbackView: true,
+        },
+      },
+      React.createElement(PlaybackView),
+    ),
+  );
+
+  const configured = render("configured-geo", {
+    "configured-geo": geo,
+    "unrelated-geo": geoFixture("WRONG"),
+  });
+  const missing = render("missing-configured-geo", {
+    "unrelated-geo": geo,
+  });
+
+  assert.match(configured, /A: 20 at 2027-05-02, joined/);
+  assert.doesNotMatch(configured, /GeoJSON source/);
+  assert.match(
+    missing,
+    /GeoJSON source &quot;missing-configured-geo&quot; is unavailable or invalid/,
+  );
+  assert.doesNotMatch(missing, /A: 20 at 2027-05-02, joined/);
 });
 
 test("playback view reports no group and empty primary clocks without claiming participation", () => {
@@ -806,6 +913,64 @@ function lineChart(overrides = {}) {
     presentation: { collection: null, labels: null, accessibility: null },
     ...overrides,
     interaction,
+  };
+}
+
+function chronoChart() {
+  return {
+    id: "geo-chart",
+    typeId: "chronoChoroplethMap",
+    title: "Regional playback",
+    sourceId: "geo-values",
+    roles: {
+      geography: { field: "region" },
+      value: { field: "value" },
+      time: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    transformations: {
+      filters: [],
+      grouping: null,
+      aggregation: null,
+      duplicates: null,
+      missingValues: "gap",
+    },
+    presentation: {
+      collection: null,
+      labels: null,
+      accessibility: null,
+      map: {
+        geoSource: "configured-geo",
+        featureProperty: "code",
+      },
+    },
+    interaction: {
+      zoom: { enabled: false },
+      timeSync: { groupId: "exercise" },
+    },
+  };
+}
+
+function geoFixture(code) {
+  return {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { code },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [4, 52],
+          [5, 52],
+          [5, 53],
+          [4, 53],
+          [4, 52],
+        ]],
+      },
+    }],
   };
 }
 

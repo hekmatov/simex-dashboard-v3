@@ -32,6 +32,54 @@ export function buildRenderModel(input = {}) {
   };
 }
 
+export function enforceRenderReadiness(input = {}) {
+  const prepared = input.prepared;
+  if (prepared?.status !== "ready") return prepared;
+
+  try {
+    const model = buildRenderModel(input);
+    if (model.kind !== "error") {
+      return {
+        ...prepared,
+        meta: {
+          ...prepared.meta,
+          rendererReady: true,
+        },
+      };
+    }
+    return renderInvalidPreparation(prepared, model);
+  } catch (error) {
+    return renderInvalidPreparation(prepared, {
+      message: error instanceof Error
+        ? error.message
+        : "The selected data cannot be rendered.",
+    });
+  }
+}
+
+function renderInvalidPreparation(prepared, model) {
+  const diagnostics = Array.isArray(model.diagnostics) && model.diagnostics.length > 0
+    ? model.diagnostics
+    : [{
+        severity: "error",
+        code: "renderer-preflight-invalid",
+        message: model.message || "The selected data cannot be rendered.",
+      }];
+  return {
+    ...prepared,
+    status: "invalid",
+    diagnostics: [
+      ...diagnostics,
+      ...(Array.isArray(prepared.diagnostics) ? prepared.diagnostics : []),
+    ],
+    meta: {
+      ...prepared.meta,
+      renderableMarkCount: 0,
+      rendererReady: false,
+    },
+  };
+}
+
 function attachTargetCollectionAccessibility(model, schema, marks, chart) {
   const items = model.items.map((item, index) => {
     const companion = buildAccessibilityCompanion(schema, [marks[index]], chart);

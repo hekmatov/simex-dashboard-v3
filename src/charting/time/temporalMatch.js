@@ -126,7 +126,9 @@ function interpolateNumeric(observations, insertionIndex, activeEpochMs) {
   }
 
   const ratio = (activeEpochMs - lower.epochMs) / (upper.epochMs - lower.epochMs);
-  const value = lower.value * (1 - ratio) + upper.value * ratio;
+  const value = normalizedFinite(
+    lower.value * (1 - ratio) + upper.value * ratio,
+  );
   if (!Number.isFinite(value)) {
     throw new RangeError("Interpolation did not produce a finite numeric observation value.");
   }
@@ -138,6 +140,22 @@ function interpolateNumeric(observations, insertionIndex, activeEpochMs) {
     lowerEpochMs: lower.epochMs,
     upperEpochMs: upper.epochMs,
   });
+}
+
+function normalizedFinite(value) {
+  if (!Number.isFinite(value)) return value;
+  if (value === 0) return 0;
+  const tolerance = Number.EPSILON * Math.abs(value);
+  for (let decimalPlaces = 0; decimalPlaces <= 15; decimalPlaces += 1) {
+    const factor = 10 ** decimalPlaces;
+    const scaled = value * factor;
+    if (!Number.isFinite(scaled)) continue;
+    const candidate = Math.round(scaled) / factor;
+    if (Math.abs(value - candidate) <= tolerance) {
+      return Object.is(candidate, -0) ? 0 : candidate;
+    }
+  }
+  return value;
 }
 
 function matched(status, observation) {
