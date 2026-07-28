@@ -12,6 +12,7 @@ import {
   validateDashboardChartReferences,
 } from "./dashboardSemanticReferences.js";
 import {
+  profilesForConfiguredCsvSources,
   safePublicPath,
   validateDatasetProfiles,
 } from "../../lib/loadDashboard.js";
@@ -384,7 +385,10 @@ export function readDashboardStorage(storage, storageKey, { profiles } = {}) {
     : {
         ...config,
         datasetProfiles: {
-          ...structuredClone(profiles),
+          ...profilesForConfiguredCsvSources(
+            config.dataSources,
+            profiles,
+          ),
           ...structuredClone(config.datasetProfiles ?? {}),
         },
       };

@@ -162,7 +162,7 @@ export async function loadDashboardConfig(
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
   const reusableProfiles = mergeDatasetProfiles(
-    datasetProfiles,
+    profilesForConfiguredCsvSources(dataSources, datasetProfiles),
     entryValue(dashboardEntries, "datasetProfiles"),
   );
   validateDatasetProfiles(dataSources, reusableProfiles);
@@ -202,6 +202,26 @@ export async function loadDashboardConfig(
     datasetProfiles: hydratedProfiles,
     loadedData,
   };
+}
+
+export function profilesForConfiguredCsvSources(
+  dataSources,
+  datasetProfiles = {},
+) {
+  const sourcesById = new Map(
+    plainDataEntries(dataSources ?? {}, "Dashboard dataSources"),
+  );
+  return Object.fromEntries(
+    plainDataEntries(
+      datasetProfiles ?? {},
+      "External dataset profiles",
+    )
+      .filter(([sourceId]) => sourcesById.get(sourceId)?.kind === "csv")
+      .map(([sourceId, profile]) => [
+        sourceId,
+        structuredClone(profile),
+      ]),
+  );
 }
 
 function mergeDatasetProfiles(externalProfiles, embeddedProfiles) {

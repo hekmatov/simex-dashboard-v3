@@ -160,6 +160,11 @@ test("stored dashboards merge embedded profile overrides with tracked profiles",
     path: "data/external.csv",
     provenance: { label: "Imported exercise data" },
   };
+  dashboard.dataSources.tracked = {
+    kind: "csv",
+    path: "data/tracked.csv",
+    provenance: { label: "Tracked exercise data" },
+  };
   dashboard.datasetProfiles = {
     external: csvDatasetProfile({
       sourceId: "external",
@@ -168,7 +173,11 @@ test("stored dashboards merge embedded profile overrides with tracked profiles",
     }),
   };
   const trackedProfiles = {
-    status: { sourceId: "status" },
+    tracked: csvDatasetProfile({
+      sourceId: "tracked",
+      path: "data/tracked.csv",
+      provenance: { label: "Tracked exercise data" },
+    }),
   };
   const storage = {
     getItem() {
@@ -181,7 +190,76 @@ test("stored dashboards merge embedded profile overrides with tracked profiles",
   });
 
   assert.equal(stored.datasetProfiles.external.sourceId, "external");
-  assert.equal(stored.datasetProfiles.status.sourceId, "status");
+  assert.equal(stored.datasetProfiles.tracked.sourceId, "tracked");
+});
+
+test("replacement dashboards ignore fallback profiles for absent sources", async () => {
+  const {
+    readDashboardStorage,
+  } = await import("../src/charting/config/dashboardBundleV3.js");
+  const { loadDashboardConfig } = await import("../src/lib/loadDashboard.js");
+  const dashboard = minimalDashboard();
+  dashboard.dataSources = {
+    external: {
+      kind: "csv",
+      path: "data/external.csv",
+      provenance: { label: "Imported exercise data" },
+    },
+  };
+  dashboard.pages[0].sections[0].panels[0].sourceId = "external";
+  dashboard.datasetProfiles = {
+    external: csvDatasetProfile({
+      sourceId: "external",
+      path: "data/external.csv",
+      provenance: { label: "Imported exercise data" },
+      columns: [
+        {
+          name: "label",
+          type: "category",
+          missingCount: 0,
+          uniqueCount: 1,
+          examples: ["Ready"],
+          geographicHint: null,
+        },
+        {
+          name: "value",
+          type: "numeric",
+          missingCount: 0,
+          uniqueCount: 1,
+          examples: [12],
+          geographicHint: null,
+        },
+      ],
+    }),
+  };
+  const fallbackProfiles = {
+    orphan: csvDatasetProfile({
+      sourceId: "orphan",
+      path: "data/orphan.csv",
+    }),
+  };
+  const storage = {
+    getItem() {
+      return JSON.stringify(dashboard);
+    },
+  };
+
+  const stored = readDashboardStorage(storage, "simex-dashboard-config-v3", {
+    profiles: fallbackProfiles,
+  });
+  const loaded = await loadDashboardConfig(stored, fallbackProfiles, {
+    external: {
+      kind: "csv",
+      text: "label,value\nReady,12\n",
+    },
+  });
+
+  assert.deepEqual(Object.keys(stored.datasetProfiles), ["external"]);
+  assert.deepEqual(Object.keys(loaded.datasetProfiles), ["external"]);
+  assert.deepEqual(loaded.loadedData.external, [{
+    label: "Ready",
+    value: 12,
+  }]);
 });
 
 test("tracked descriptors and profiles round-trip through the portable v3 bundle", async () => {

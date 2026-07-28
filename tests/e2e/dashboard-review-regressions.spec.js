@@ -70,7 +70,120 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   await expect(updated).toHaveCount(0);
 });
 
-test("imported tracked profiles survive an edit and browser reload", async ({
+test("replacement bundle profiles survive import, edit, save, and reload", async ({
+  page,
+  request,
+}) => {
+  const [dashboard, profiles] = await Promise.all([
+    fetchJson(request, "/config/dashboard.json"),
+    fetchJson(request, "/config/dataset-profiles.json"),
+  ]);
+  const source = {
+    ...structuredClone(dashboard.dataSources.bio_cases),
+    provenance: { label: "Imported exercise cases" },
+  };
+  const profile = {
+    ...structuredClone(profiles.bio_cases),
+    sourceId: "external_cases",
+    provenance: { label: "Imported exercise cases" },
+  };
+  const sourcePage = dashboard.pages.find(({ id }) => id === "biomedical");
+  const sourceSection = sourcePage.sections.find(
+    ({ id }) => id === "outbreak_dynamics",
+  );
+  const sourceChart = sourceSection.panels.find(
+    ({ id }) => id === "bio_confirmed_cases",
+  );
+  const chart = {
+    ...structuredClone(sourceChart),
+    id: "external_cases_chart",
+    title: "Imported replacement chart",
+    sourceId: "external_cases",
+    interaction: {
+      ...structuredClone(sourceChart.interaction),
+      timeSync: null,
+    },
+  };
+  const replacement = {
+    ...structuredClone(dashboard),
+    id: "replacement-dashboard",
+    programLabel: "Imported replacement",
+    dataSources: {
+      external_cases: source,
+    },
+    datasetProfiles: {
+      external_cases: profile,
+    },
+    timeSyncGroups: [],
+    pages: [{
+      ...structuredClone(sourcePage),
+      id: "replacement",
+      title: "Replacement",
+      sections: [{
+        ...structuredClone(sourceSection),
+        id: "replacement-overview",
+        title: "Overview",
+        panels: [chart],
+      }],
+    }],
+  };
+  const bundle = {
+    bundleType: "simex-dashboard-bundle",
+    version: 3,
+    metadata: {
+      exportedAt: null,
+      sourceFingerprints: {
+        external_cases: null,
+      },
+    },
+    config: replacement,
+  };
+
+  await openDashboard(page);
+  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.locator('input[type="file"][accept="application/json,.json"]')
+    .setInputFiles({
+      name: "replacement-dashboard.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(bundle)),
+    });
+  await expect(page.getByLabel("Program label")).toHaveValue(
+    "Imported replacement",
+  );
+  await expect(page.getByText("Imported replacement chart")).toBeVisible();
+
+  await page.getByLabel("Program label").fill("Imported profile retained");
+  await page.getByRole("button", { name: "Save edit mode" }).click();
+
+  await expect.poll(() => page.evaluate((key) => {
+    const stored = JSON.parse(localStorage.getItem(key));
+    return {
+      profileIds: Object.keys(stored.datasetProfiles ?? {}),
+      sourceIds: Object.keys(stored.dataSources ?? {}),
+      programLabel: stored.programLabel,
+    };
+  }, STORAGE_KEY)).toEqual({
+    profileIds: ["external_cases"],
+    sourceIds: ["external_cases"],
+    programLabel: "Imported profile retained",
+  });
+
+  await page.reload();
+  await expect(page.getByRole("heading", {
+    name: "Dashboard configuration error",
+  })).toHaveCount(0);
+  await expect(page.getByRole("heading", {
+    name: "Replacement",
+    exact: true,
+  })).toBeVisible();
+  await expect(page.getByText("Imported replacement chart")).toBeVisible();
+  await expect.poll(() => page.evaluate((key) => {
+    const stored = JSON.parse(localStorage.getItem(key));
+    return stored.datasetProfiles?.external_cases?.sourceId;
+  }, STORAGE_KEY)).toBe("external_cases");
+});
+
+test("additive imported tracked profiles survive an edit and browser reload", async ({
   page,
   request,
 }) => {
@@ -146,7 +259,10 @@ async function fetchJson(request, path) {
 
 async function installDashboard(page, dashboard) {
   await page.addInitScript(({ key, value }) => {
+    const marker = `${key}:test-seed-installed`;
+    if (sessionStorage.getItem(marker) === "true") return;
     localStorage.setItem(key, JSON.stringify(value));
+    sessionStorage.setItem(marker, "true");
   }, {
     key: STORAGE_KEY,
     value: dashboard,

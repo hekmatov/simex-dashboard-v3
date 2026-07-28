@@ -17,7 +17,11 @@ import {
   applyDashboardEdits,
   createSerializedDashboardCommitController,
 } from "./lib/dashboardCommitController.js";
-import { loadDashboard, loadDashboardConfig } from "./lib/loadDashboard.js";
+import {
+  loadDashboard,
+  loadDashboardConfig,
+  profilesForConfiguredCsvSources,
+} from "./lib/loadDashboard.js";
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 
@@ -206,14 +210,21 @@ export default function App() {
         { ...nextConfig, datasetProfiles: profiles },
         trackedProfiles,
       );
+      const configuredFallbackProfiles = profilesForConfiguredCsvSources(
+        stored.dataSources,
+        trackedProfiles,
+      );
       validateDashboardConfig({
         ...stored,
         datasetProfiles: {
-          ...trackedProfiles,
+          ...configuredFallbackProfiles,
           ...(stored.datasetProfiles ?? {}),
         },
       });
-      const loaded = await loadDashboardConfig(stored, trackedProfiles);
+      const loaded = await loadDashboardConfig(
+        stored,
+        configuredFallbackProfiles,
+      );
       localStorage.setItem(
         DASHBOARD_STORAGE_KEY,
         JSON.stringify(

@@ -55,16 +55,23 @@ resource-intensive browser scenarios also received scenario-specific timeout
 budgets after retained traces showed forward progress on the heavily loaded
 Windows host rather than application deadlock.
 
+The first exact-tip re-review then identified a replacement-bundle edge case:
+fallback profiles for built-in CSV sources were merged even when those sources
+were absent from the imported source catalogue. Fallback profiles are now
+filtered to CSV source IDs present in the candidate dashboard, while embedded
+profiles remain authoritative. A real replacement bundle is imported through
+the UI, edited, saved, and reloaded without test reseeding.
+
 ## Verification results
 
 - Refreshed-main baseline: 45/45 unit tests passed.
 - Focused clean-checkout regressions: 27/27 passed.
-- Full dashboard unit suite: 753/753 passed in 24.19 seconds.
+- Full dashboard unit suite: 754/754 passed in 19.61 seconds.
 - Canonical production build: passed; 697 modules transformed.
 - Generated catalogue: 26 chart types and 40 configured charts.
-- Focused review-regression Chromium gate: 3/3 journeys passed.
+- Focused review-regression Chromium gate: 4/4 journeys passed.
 - Quorum companion Chromium gate: 8/8 journeys passed.
-- Full Chromium E2E: 43/43 journeys passed in 20.0 minutes.
+- Full Chromium E2E: 44/44 journeys passed in 21.3 minutes.
 - Full `origin/main..HEAD` diff check: passed.
 - Dashboard and Quorum catalogue artifacts remained byte-identical at
   `51b5c2b673ed0a07552c9ec8430befcaa8b73ba781b31a956b6a57365132f25c`.
@@ -104,7 +111,8 @@ catalogue bytes matched at SHA-256:
 - No shared branch was merged.
 - No deployment or Cloudflare branch update was performed.
 
-The accepted first-pass review findings are remediated and locally verified.
-The exact committed remediation tip still requires final independent
-re-review. Merging either pull request, changing the Cloudflare branch, or
-deploying requires separate explicit user approval.
+The accepted review findings and the replacement-bundle re-review finding are
+remediated and locally verified. Final exact-tip review is an external gate
+recorded in the pull-request handoff rather than by changing this immutable
+candidate after review. Merging either pull request, changing the Cloudflare
+branch, or deploying requires separate explicit user approval.

@@ -406,7 +406,7 @@ test("descriptor parsing rules accept only temporal-authority enums", () => {
   }
 });
 
-test("runtime loading fails closed for missing, extra, invalid, or mismatched profiles", async () => {
+test("runtime loading filters fallback extras and fails closed for invalid embedded profiles", async () => {
   const source = {
     kind: "csv",
     path: "data/cases.csv",
@@ -426,10 +426,24 @@ test("runtime loading fails closed for missing, extra, invalid, or mismatched pr
     loadDashboardConfig(sourceLoadingDashboard({ cases: source }), {}),
     /missing dataset profile/i,
   );
+  const loaded = await loadDashboardConfig(
+    sourceLoadingDashboard({ cases: source }),
+    { cases: validProfile, extra: validProfile },
+    {
+      cases: {
+        kind: "csv",
+        text: "date,cases\n2027-01-01,7\n",
+      },
+    },
+  );
+  assert.deepEqual(Object.keys(loaded.datasetProfiles), ["cases"]);
+
+  const embeddedExtra = sourceLoadingDashboard({ cases: source });
+  embeddedExtra.datasetProfiles = { extra: validProfile };
   await assert.rejects(
     loadDashboardConfig(
-      sourceLoadingDashboard({ cases: source }),
-      { cases: validProfile, extra: validProfile },
+      embeddedExtra,
+      { cases: validProfile },
     ),
     /unexpected dataset profile/i,
   );
