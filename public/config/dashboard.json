@@ -8,6 +8,9 @@
   "lastUpdated": "2026-07-27",
   "layout": "two-column",
   "globalStyles": {
+    "accessibility": {
+      "enabled": false
+    },
     "panelColors": {
       "panelBackgroundColor": "#f5f8fb",
       "panelBorderColor": "#d8e2ec",
@@ -1240,6 +1243,11 @@
                     "field": "date",
                     "operator": "equals",
                     "value": "2027-05-02"
+                  },
+                  {
+                    "field": "Age group",
+                    "operator": "notEquals",
+                    "value": "total_deaths"
                   }
                 ],
                 "grouping": null,

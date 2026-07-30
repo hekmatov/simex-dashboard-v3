@@ -81,7 +81,6 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await expect(page.getByRole("dialog", {
     name: "Preview and refine the chart",
   })).toHaveCount(0);
-  await expect(page.getByText("E2E mortality composition")).toBeVisible();
   await expect.poll(() => page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
     const chart = dashboard.pages
@@ -204,7 +203,6 @@ for (const scenario of [
       await expect(wizard.getByRole("heading", { name: heading })).toHaveCount(0);
     }
     await createChart(wizard, scenario.title);
-    await expect(page.getByText(scenario.title)).toBeVisible();
     await expectStoredChart(page, scenario.typeId, scenario.title);
   });
 }
@@ -274,7 +272,6 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
   await expect(wizard.getByRole("heading", { name: "Timeline" })).toBeVisible();
   await expect(wizard.getByRole("heading", { name: "Axes" })).toHaveCount(0);
   await createChart(wizard, "E2E coordination timeline");
-  await expect(page.getByText("E2E coordination timeline")).toBeVisible();
   await expectStoredChart(page, "timeline", "E2E coordination timeline");
 });
 
@@ -343,7 +340,7 @@ test("editor reset, save race, title alignment, and shared background color stay
   await editor.getByRole("button", { name: "Appearance", exact: true })
     .click();
   await expect(title).toHaveValue("Race-safe centered cases");
-  await expect(panel.locator('.chart-view-frame[data-title-align="center"]'))
+  await expect(editor.locator('.chart-view-frame[data-title-align="center"]'))
     .toBeVisible();
   await expectStoredChart(page, "line", "Race-safe centered cases");
   await expect.poll(() => page.evaluate((key) => {

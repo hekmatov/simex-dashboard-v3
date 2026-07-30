@@ -14,14 +14,28 @@ export function buildRenderModel(input = {}) {
   const schema = getChartSchema(input.chart?.typeId);
   const model = getRenderAdapter(schema.renderer)(input, schema);
   if (model.kind === "targetCollection") {
-    return attachTargetCollectionAccessibility(
-      model,
-      schema,
-      input.prepared.marks,
-      input.chart,
-    );
+    return input.renderContext?.accessibilityEnabled === true
+      ? attachTargetCollectionAccessibility(
+          model,
+          schema,
+          input.prepared.marks,
+          input.chart,
+        )
+      : disableTargetCollectionAccessibility(model);
   }
   if (model.kind !== "echarts") return model;
+  if (input.renderContext?.accessibilityEnabled !== true) {
+    return {
+      ...model,
+      option: {
+        ...model.option,
+        aria: {
+          ...(model.option?.aria ?? {}),
+          enabled: false,
+        },
+      },
+    };
+  }
   return {
     ...model,
     accessibility: buildAccessibilityCompanion(
@@ -29,6 +43,25 @@ export function buildRenderModel(input = {}) {
       model.accessibilityMarks ?? input.prepared.marks,
       input.chart,
     ),
+  };
+}
+
+function disableTargetCollectionAccessibility(model) {
+  return {
+    ...model,
+    items: model.items.map((item) => ({
+      ...item,
+      model: {
+        ...item.model,
+        option: {
+          ...item.model.option,
+          aria: {
+            ...(item.model.option?.aria ?? {}),
+            enabled: false,
+          },
+        },
+      },
+    })),
   };
 }
 

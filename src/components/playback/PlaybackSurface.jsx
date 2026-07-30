@@ -8,6 +8,7 @@ export default function PlaybackSurface({
   children,
   entryBlocked = false,
   entryBlockedReason,
+  accessibilityEnabled = false,
 }) {
   const playback = usePlayback();
   return React.createElement(
@@ -20,7 +21,7 @@ export default function PlaybackSurface({
         })
       : null,
     playback.playbackView === true
-      ? React.createElement(PlaybackView)
+      ? React.createElement(PlaybackView, { accessibilityEnabled })
       : children,
   );
 }

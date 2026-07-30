@@ -711,7 +711,8 @@ test("preview uses the shared chart renderer for ready data and bounds actionabl
 
   assert.match(ready, /chart-authoring-preview-ready/);
   assert.match(ready, /class="chart-echarts-view"/);
-  assert.match(ready, /role="img"/);
+  assert.doesNotMatch(ready, /role="img"/);
+  assert.match(ready, /class="chart-echarts-host" aria-hidden="true"/);
   assert.match(invalid, /chart-authoring-preview-invalid/);
   assert.match(invalid, /data-responsible-field="measurements"/);
   assert.ok(invalid.length < 1600);

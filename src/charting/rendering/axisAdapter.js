@@ -1,4 +1,8 @@
 import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+import {
+  buildEChartsDataZoom,
+  rangeSelectorVisible,
+} from "./zoomOptions.js";
 
 const BAR_MARKS = new Set([
   "bar",
@@ -15,6 +19,9 @@ const STACKED_MARKS = new Set([
   "stacked-bar",
   "horizontal-stacked-bar",
 ]);
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+});
 
 export function buildAxisRenderModel({ chart, prepared }, schema) {
   const mark = validateSeriesRendererMark("axis", schema?.semantics?.mark);
@@ -48,8 +55,14 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       yAxisIndex: horizontal ? undefined : group.axis === "secondary" ? 1 : 0,
       stack: STACKED_MARKS.has(mark) ? "total" : undefined,
       areaStyle: mark === "area" ? { opacity: 0.24 } : undefined,
-      showSymbol: type === "line",
-      label: axisLabelOption(chart, horizontal),
+      showSymbol: type === "line" && group.marks.length <= 48,
+      symbolSize: type === "line" ? 5 : undefined,
+      label: axisLabelOption(
+        chart,
+        horizontal,
+        type,
+        prepared.marks.length,
+      ),
       emphasis: { focus: "series" },
       ...(type === "line" && Number.isFinite(seriesStyle?.lineWidth)
         ? { lineStyle: { width: seriesStyle.lineWidth } }
@@ -71,25 +84,45 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       ...(Array.isArray(seriesStyle?.colors)
         ? { color: [...seriesStyle.colors] }
         : {}),
-      grid: { containLabel: true, left: 48, right: hasSecondary ? 56 : 28, top: 76, bottom: 52 },
+      grid: {
+        containLabel: true,
+        left: 48,
+        right: hasSecondary ? 56 : 28,
+        top: 76,
+        bottom: rangeSelectorVisible(chart) ? 52 : 32,
+      },
       xAxis: horizontal
         ? hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis
         : categoryAxis,
       yAxis: horizontal ? { ...categoryAxis, type: "category" } : hasSecondary ? [primaryAxis, secondaryAxis] : primaryAxis,
       series,
-      dataZoom: zoomOption(chart, horizontal),
+      dataZoom: buildEChartsDataZoom(chart, horizontal ? "y" : "x"),
     },
   };
 }
 
-function axisLabelOption(chart, horizontal) {
+function axisLabelOption(chart, horizontal, seriesType, totalMarkCount) {
   const labels = chart.presentation?.labels;
   if (!labels) return undefined;
+  const densityLimit = seriesType === "line"
+    ? 14
+    : horizontal
+      ? 24
+      : 18;
+  const show = labels.visible === true && totalMarkCount <= densityLimit;
   return {
-    show: labels.visible === true,
+    show,
     position: labels.position ?? (horizontal ? "right" : "top"),
-    formatter: labels.format,
+    ...(show ? { formatter: labels.format ?? formatSeriesLabel } : {}),
   };
+}
+
+function formatSeriesLabel(params) {
+  const raw = Array.isArray(params?.value)
+    ? params.value[params.value.length - 1]
+    : params?.value?.value ?? params?.value;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? NUMBER_FORMATTER.format(numeric) : String(raw ?? "");
 }
 
 function valueAxis(settings = {}, secondary = false) {
@@ -140,21 +173,6 @@ function seriesType(mark, group, index) {
   }
   if (BAR_MARKS.has(mark)) return "bar";
   throw new Error(`Unsupported axis renderer mark "${mark}".`);
-}
-
-function zoomOption(chart, horizontal) {
-  if (!chart.interaction?.zoom?.enabled) return undefined;
-  const axisIndex = horizontal ? { yAxisIndex: 0 } : { xAxisIndex: 0 };
-  return [
-    {
-      type: "inside",
-      ...axisIndex,
-      zoomOnMouseWheel: "ctrl",
-      moveOnMouseWheel: false,
-      moveOnMouseMove: false,
-    },
-    { type: "slider", ...axisIndex },
-  ];
 }
 
 function titleOption(chart) {

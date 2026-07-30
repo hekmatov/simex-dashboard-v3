@@ -9,7 +9,26 @@
     <title>SimEx Dashboard V2</title>
     <script src="%BASE_URL%vendor/three.min.js"></script>
     <script src="%BASE_URL%vendor/vanta.net.min.js"></script>
-    <script src="%BASE_URL%portable-dashboard-data.js"></script>
+    <script>
+      if (window.location.port === "5173" && "serviceWorker" in navigator) {
+        Promise.all([
+          navigator.serviceWorker.getRegistrations()
+            .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister()))),
+          "caches" in window
+            ? caches.keys().then((keys) => Promise.all(
+                keys
+                  .filter((key) => key.startsWith("simex-dashboard"))
+                  .map((key) => caches.delete(key)),
+              ))
+            : Promise.resolve(),
+        ]).then(() => {
+          if (navigator.serviceWorker.controller) window.location.reload();
+        });
+      }
+      if (window.location.protocol === "file:") {
+        document.write('<script src="%BASE_URL%portable-dashboard-data.js"><\/script>');
+      }
+    </script>
   </head>
   <body>
     <div id="vanta-background"></div>

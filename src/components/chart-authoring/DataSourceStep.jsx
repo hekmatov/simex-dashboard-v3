@@ -1,9 +1,11 @@
 import React from "react";
+import SourceCsvViewerButton from "../source-data/SourceCsvViewerButton.jsx";
 
 export default function DataSourceStep({
   dataSources = {},
   loadedData = {},
   selectedSourceId = "",
+  selectedSource = null,
   selectedSourceKind = "",
   profile = null,
   manualAllowed = false,
@@ -168,9 +170,17 @@ export default function DataSourceStep({
               ),
             ),
             React.createElement(
-              "button",
-              { type: "button", className: "secondary", onClick: onRequestClear },
-              "Remove source",
+              "div",
+              { className: "wizard-source-profile-actions" },
+              React.createElement(SourceCsvViewerButton, {
+                sourceId: selectedSourceId,
+                source: selectedSource,
+              }),
+              React.createElement(
+                "button",
+                { type: "button", className: "secondary", onClick: onRequestClear },
+                "Remove source",
+              ),
             ),
           ),
           React.createElement(ProfileTable, { profile }),

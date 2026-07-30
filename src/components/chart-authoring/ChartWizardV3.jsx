@@ -164,6 +164,7 @@ export default function ChartWizardV3({
         timeSyncGroups: wizard.timeSyncGroups,
         geoSources,
         geoJoinFields,
+        includeCitation: false,
       })
     : { sections: [], valid: false };
   const active = form.steps.find(({ id }) => id === wizard.activeStep)
@@ -494,6 +495,7 @@ export default function ChartWizardV3({
               dataSources: safeDataSources,
               loadedData: safeLoadedData,
               selectedSourceId: wizard.draft?.sourceId ?? "",
+              selectedSource: source,
               selectedSourceKind: sourceKind,
               profile: runtime.profile,
               manualAllowed: wizard.draft

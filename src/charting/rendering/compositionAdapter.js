@@ -24,7 +24,10 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
           ? [layout.innerRadius, layout.outerRadius]
           : ["0%", layout.outerRadius],
         avoidLabelOverlap: true,
-        label: { show: chart.presentation?.labels?.visible !== false },
+        label: {
+          show: chart.presentation?.labels?.visible !== false && marks.length <= 8,
+          formatter: "{b}",
+        },
         data: marks.map(({ category, value, share }) => ({ name: String(category), value, share })),
       })),
     },
@@ -34,11 +37,11 @@ export function buildCompositionRenderModel({ chart, prepared }, schema) {
 function compositionLayout(count) {
   const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
   const rows = Math.max(1, Math.ceil(count / columns));
-  const outer = count === 1 ? 72 : Math.max(12, Math.min(32, 38 / Math.max(columns, rows)));
+  const outer = count === 1 ? 58 : Math.max(12, Math.min(30, 36 / Math.max(columns, rows)));
   return {
     centers: Array.from({ length: count }, (_, index) => [
       `${((index % columns + 0.5) / columns) * 100}%`,
-      `${((Math.floor(index / columns) + 0.5) / rows) * 100}%`,
+      `${30 + ((Math.floor(index / columns) + 0.5) / rows) * 65}%`,
     ]),
     innerRadius: `${Math.round(outer * 0.58)}%`,
     outerRadius: `${outer}%`,

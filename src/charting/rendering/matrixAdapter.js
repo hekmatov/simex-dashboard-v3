@@ -1,3 +1,7 @@
+const NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+});
+
 export function buildMatrixRenderModel({ chart, prepared }) {
   const activeTime = prepared.meta?.activeTime ?? null;
   const rows = unique(prepared.marks.map(({ row }) => row));
@@ -18,17 +22,32 @@ export function buildMatrixRenderModel({ chart, prepared }) {
       visualMap: readiness
         ? {
             type: "piecewise",
-            pieces: [...new Set(values)].sort(numericSort).map((value) => ({ value, label: String(value) })),
+            pieces: [...new Set(values)].sort(numericSort).map((value) => ({
+              value,
+              label: NUMBER_FORMATTER.format(value),
+            })),
           }
         : {
             type: "continuous",
             min: values.length ? Math.min(...values) : 0,
             max: values.length ? Math.max(...values) : 0,
+            precision: 2,
           },
       series: [{
         name: chart.title ?? "",
         type: "heatmap",
-        label: { show: readiness || chart.presentation?.labels?.visible === true },
+        label: {
+          show: readiness || (
+            chart.presentation?.labels?.visible === true
+            && prepared.marks.length <= 30
+          ),
+          formatter: (params) => {
+            const value = Array.isArray(params?.value) ? params.value[2] : params?.value;
+            return Number.isFinite(Number(value))
+              ? NUMBER_FORMATTER.format(Number(value))
+              : String(value ?? "");
+          },
+        },
         data: prepared.marks.map((mark) => matrixDataItem(
           mark,
           columnIndexes.get(mark.column),

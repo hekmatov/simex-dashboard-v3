@@ -3,6 +3,7 @@ import { validateChartInstance } from "../config/chartConfigV3.js";
 import {
   SERIES_STYLE_LIMITS,
 } from "../presentation/seriesStyleContract.js";
+import { chartDescriptionVisible } from "../presentation/chartCitation.js";
 import { enforceRenderReadiness } from "../rendering/buildRenderModel.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import {
@@ -44,14 +45,15 @@ export function buildWizardFormModel({
     prepared,
   });
   const editor = hasType
-    ? buildEditorFormModel({
-        chart: draft,
+      ? buildEditorFormModel({
+          chart: draft,
         profile,
         prepared,
         timeSyncGroups,
         geoSources,
-        geoJoinFields,
-      })
+          geoJoinFields,
+          includeCitation: false,
+        })
     : null;
 
   const prerequisiteSets = {
@@ -96,6 +98,7 @@ export function buildEditorFormModel({
   timeSyncGroups = [],
   geoSources = [],
   geoJoinFields = [],
+  includeCitation = true,
 } = {}) {
   if (!chart || typeof chart !== "object") {
     throw new TypeError("A chart draft is required to build its form.");
@@ -109,6 +112,7 @@ export function buildEditorFormModel({
     timeSyncGroups: Array.isArray(timeSyncGroups) ? timeSyncGroups : [],
     geoSources: normalizedGeoSources(geoSources),
     geoJoinFields: normalizedGeoSources(geoJoinFields),
+    includeCitation,
   };
   const previewReady = preparationMatchesDraft({
     chart,
@@ -198,6 +202,7 @@ function dataFields({
   schema,
   geoSources,
   geoJoinFields,
+  includeCitation,
 }) {
   const fields = schema.roles.map((role) => {
     const supportsAxisAssignment = schema.dataFamily === "axis"
@@ -219,6 +224,17 @@ function dataFields({
         : {}),
     };
   });
+
+  if (includeCitation) {
+    fields.unshift({
+      id: "citation",
+      label: "Source citation",
+      control: "citation",
+      path: ["presentation", "citation", "label"],
+      value: chart.presentation?.citation?.label ?? "",
+      help: "Shown from the information icon. Leave blank to inherit the data-source citation.",
+    });
+  }
 
   for (const role of schema.roles) {
     const interpretation = interpretationField(role, chart, profile);
@@ -301,6 +317,20 @@ function appearanceFields({ chart, schema }) {
       path: ["title"],
       value: chart.title ?? "",
       required: true,
+    },
+    {
+      id: "description",
+      label: "Description",
+      control: "textarea",
+      path: ["description"],
+      value: chart.description ?? "",
+    },
+    {
+      id: "descriptionVisible",
+      label: "Show description",
+      control: "toggle",
+      path: ["presentation", "description", "visible"],
+      value: chartDescriptionVisible(chart),
     },
     {
       id: "titleAlignment",
@@ -440,6 +470,16 @@ function interactionFields({
       path: ["interaction", "zoom", "enabled"],
       value: chart.interaction?.zoom?.enabled ?? false,
     });
+    if (chart.interaction?.zoom?.enabled === true) {
+      fields.push({
+        id: "rangeSelector",
+        label: "Show range selector",
+        control: "toggle",
+        path: ["interaction", "zoom", "rangeSelector"],
+        value: chart.interaction?.zoom?.rangeSelector === true,
+        help: "Show a draggable overview slider below the plot.",
+      });
+    }
   }
   if (schema.capabilities.timeSync) {
     const groupId = chart.interaction?.timeSync?.groupId ?? null;
@@ -469,13 +509,6 @@ function interactionFields({
 
 function advancedFields({ chart }) {
   return [
-    {
-      id: "description",
-      label: "Description",
-      control: "textarea",
-      path: ["description"],
-      value: chart.description ?? "",
-    },
     {
       id: "accessibility",
       label: "Accessible description",

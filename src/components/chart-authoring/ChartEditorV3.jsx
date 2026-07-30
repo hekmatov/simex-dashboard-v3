@@ -28,6 +28,7 @@ import {
 import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
 import { validateGeoJson } from "../../lib/loadDashboard.js";
 import ChartConversionDialog from "./ChartConversionDialog.jsx";
+import ChartEditorModal from "./ChartEditorModal.jsx";
 import ChartPreview from "./ChartPreview.jsx";
 import ContextualTabs from "./ContextualTabs.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
@@ -249,6 +250,7 @@ export default function ChartEditorV3({
   onReset = noop,
   onCancel = noop,
   onRemove,
+  onApplyCitationToSourceCharts,
 } = {}) {
   const incomingKey = editorAuthorityKey({
     chart,
@@ -286,15 +288,24 @@ export default function ChartEditorV3({
     chart: state.draft,
     profile,
   });
-  const prepared = preparationKey !== null
-    && providedPrepared?.meta?.formPreparationKey === preparationKey
-    ? providedPrepared
-    : createEditorPreparation({
-        chart: state.draft,
-        rows: safeRows,
-        profile,
-        geoData: selectedGeoData,
-      });
+  const prepared = React.useMemo(() => (
+    preparationKey !== null
+      && providedPrepared?.meta?.formPreparationKey === preparationKey
+      ? providedPrepared
+      : createEditorPreparation({
+          chart: state.draft,
+          rows: safeRows,
+          profile,
+          geoData: selectedGeoData,
+        })
+  ), [
+    preparationKey,
+    providedPrepared,
+    state.draft,
+    safeRows,
+    profile,
+    selectedGeoData,
+  ]);
   const runtimeLoadedData = collectionWithEntry(
     loadedData,
     state.draft.sourceId,
@@ -461,134 +472,141 @@ export default function ChartEditorV3({
   };
 
   return React.createElement(
-    "aside",
-    {
-      className: "chart-editor-v3",
-      "aria-labelledby": "chart-editor-title",
-    },
+    ChartEditorModal,
+    { onClose: onCancel },
     React.createElement(
-      "form",
-      { onSubmit: submit },
+      "aside",
+      {
+        className: "chart-editor-v3",
+        "aria-labelledby": "chart-editor-title",
+      },
       React.createElement(
-        "header",
-        { className: "chart-editor-header" },
+        "form",
+        { onSubmit: submit },
         React.createElement(
-          "div",
-          null,
-          React.createElement("p", { className: "eyebrow" }, "Chart editor"),
+          "header",
+          { className: "chart-editor-header" },
           React.createElement(
-            "h2",
-            { id: "chart-editor-title" },
-            state.draft.title || "Untitled chart",
+            "div",
+            null,
+            React.createElement("p", { className: "eyebrow" }, "Chart editor"),
+            React.createElement(
+              "h2",
+              { id: "chart-editor-title" },
+              state.draft.title || "Untitled chart",
+            ),
           ),
-        ),
-        React.createElement(
-          "label",
-          { className: "chart-editor-type-select" },
-          React.createElement("span", null, "Chart type"),
           React.createElement(
-            "select",
-            {
-              value: state.draft.typeId,
-              onChange: (event) => {
-                if (event.target.value !== state.draft.typeId) {
-                  dispatch({
-                    type: "requestConversion",
-                    targetTypeId: event.target.value,
-                  });
-                }
+            "label",
+            { className: "chart-editor-type-select" },
+            React.createElement("span", null, "Chart type"),
+            React.createElement(
+              "select",
+              {
+                value: state.draft.typeId,
+                onChange: (event) => {
+                  if (event.target.value !== state.draft.typeId) {
+                    dispatch({
+                      type: "requestConversion",
+                      targetTypeId: event.target.value,
+                    });
+                  }
+                },
               },
-            },
-            listChartSchemas().map((schema) => React.createElement(
-              "option",
-              { key: schema.typeId, value: schema.typeId },
-              schema.label,
-            )),
+              listChartSchemas().map((schema) => React.createElement(
+                "option",
+                { key: schema.typeId, value: schema.typeId },
+                schema.label,
+              )),
+            ),
           ),
         ),
-      ),
-      React.createElement(
-        "div",
-        { className: "chart-editor-layout" },
         React.createElement(
           "div",
-          { className: "chart-editor-preview" },
-          React.createElement(ChartPreview, {
-            key: `${state.draft.id}:${state.previewRevision}`,
+          { className: "chart-editor-layout" },
+          React.createElement(
+            "div",
+            { className: "chart-editor-preview" },
+            React.createElement(ChartPreview, {
+              key: `${state.draft.id}:${state.previewRevision}`,
+              chart: state.draft,
+              rows: safeRows,
+              geoData: selectedGeoData,
+              datasetProfile: profile,
+              prepared,
+              diagnosticNamespace: state.draft.id,
+            }),
+          ),
+          React.createElement(ContextualTabs, {
+            sections: model.sections,
+            activeTabId: state.activeTabId,
+            onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
+            onChange: updateChartPath,
             chart: state.draft,
-            rows: safeRows,
-            geoData: selectedGeoData,
-            datasetProfile: profile,
+            charts: allCharts,
+            columns: profile?.columns ?? [],
+            profile,
+            diagnostics: prepared?.diagnostics ?? [],
             diagnosticNamespace: state.draft.id,
+            loadedData: runtimeLoadedData,
+            profiles: runtimeProfiles,
+            dataSources,
+            onApplyCitationToSourceCharts,
+            onMembershipChange: changeMembership,
+            onGroupsChange: (value) => dispatch({
+              type: "updateTimeSyncGroups",
+              value,
+            }),
+            onValidationError: (error) => setState((current) => ({
+              ...current,
+              error: safeMessage(error),
+            })),
           }),
         ),
-        React.createElement(ContextualTabs, {
-          sections: model.sections,
-          activeTabId: state.activeTabId,
-          onSelect: (tabId) => dispatch({ type: "selectTab", tabId }),
-          onChange: updateChartPath,
-          chart: state.draft,
-          charts: allCharts,
-          columns: profile?.columns ?? [],
-          profile,
-          diagnostics: prepared?.diagnostics ?? [],
-          diagnosticNamespace: state.draft.id,
-          loadedData: runtimeLoadedData,
-          profiles: runtimeProfiles,
-          onMembershipChange: changeMembership,
-          onGroupsChange: (value) => dispatch({
-            type: "updateTimeSyncGroups",
-            value,
-          }),
-          onValidationError: (error) => setState((current) => ({
-            ...current,
-            error: safeMessage(error),
-          })),
+        state.error && !state.conversion
+          ? React.createElement(
+              "p",
+              { className: "wizard-error chart-editor-error", role: "alert" },
+              state.error,
+            )
+          : null,
+        React.createElement(EditSessionActions, {
+          valid: model.valid,
+          resetConfirmationOpen: state.confirmation === "reset",
+          onRequestReset: () => dispatch({ type: "requestReset" }),
+          onConfirmReset: confirmReset,
+          onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
+          onCancel,
         }),
+        typeof onRemove === "function"
+          ? React.createElement(
+              "button",
+              {
+                type: "button",
+                className: "danger chart-editor-remove",
+                onClick: onRemove,
+              },
+              "Remove chart",
+            )
+          : null,
       ),
-      state.error && !state.conversion
-        ? React.createElement(
-            "p",
-            { className: "wizard-error chart-editor-error", role: "alert" },
-            state.error,
-          )
-        : null,
-      React.createElement(EditSessionActions, {
-        valid: model.valid,
-        resetConfirmationOpen: state.confirmation === "reset",
-        onRequestReset: () => dispatch({ type: "requestReset" }),
-        onConfirmReset: confirmReset,
-        onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
-        onCancel,
+      React.createElement(ChartConversionDialog, {
+        conversion: state.conversion,
+        error: state.conversion ? state.error : "",
+        columns: profile?.columns ?? [],
+        onRoleAssignment: (roleId, value) => dispatch({
+          type: "updateConversionRole",
+          roleId,
+          value,
+        }),
+        onPlaybackSelection: (selection) => dispatch({
+          type: "updateConversionPlayback",
+          selection,
+        }),
+        onConfirm: () => dispatch({ type: "applyConversion" }),
+        onCancel: () => dispatch({ type: "cancelConversion" }),
       }),
-      typeof onRemove === "function"
-        ? React.createElement(
-            "button",
-            {
-              type: "button",
-              className: "danger chart-editor-remove",
-              onClick: onRemove,
-            },
-            "Remove chart",
-          )
-        : null,
     ),
-    React.createElement(ChartConversionDialog, {
-      conversion: state.conversion,
-      error: state.conversion ? state.error : "",
-      columns: profile?.columns ?? [],
-      onRoleAssignment: (roleId, value) => dispatch({
-        type: "updateConversionRole",
-        roleId,
-        value,
-      }),
-      onPlaybackSelection: (selection) => dispatch({
-        type: "updateConversionPlayback",
-        selection,
-      }),
-      onConfirm: () => dispatch({ type: "applyConversion" }),
-      onCancel: () => dispatch({ type: "cancelConversion" }),
-    }),
   );
 }
 

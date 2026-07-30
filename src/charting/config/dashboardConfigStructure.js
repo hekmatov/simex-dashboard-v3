@@ -75,7 +75,8 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
     ]),
     landingDeliveryStatus: shape(["description", "label", "state"]),
     landingPreviewAsset: shape(["alt", "src"]),
-    globalStyles: shape(["panelColors"]),
+    globalStyles: shape(["panelColors"], ["accessibility"]),
+    accessibility: shape(["enabled"]),
     panelColors: shape([
       "chartAreaBorderColor",
       "chartAreaColor",
@@ -519,6 +520,16 @@ function validateGlobalStyles(value) {
   );
   for (const key of DASHBOARD_CONFIG_STRUCTURE.shapes.panelColors.required) {
     requiredText(colors[key], `Dashboard panel color "${key}"`);
+  }
+  if (styles.accessibility !== undefined) {
+    const accessibility = strictShape(
+      styles.accessibility,
+      DASHBOARD_CONFIG_STRUCTURE.shapes.accessibility,
+      "dashboard accessibility settings",
+    );
+    if (typeof accessibility.enabled !== "boolean") {
+      throw new TypeError("Dashboard accessibility enabled must be boolean.");
+    }
   }
 }
 

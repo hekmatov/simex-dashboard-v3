@@ -34,9 +34,15 @@ export default function ChartView(props) {
       chart: props.chart,
       provenance,
       zoomEnabled,
+      accessibilityEnabled: props.accessibilityEnabled === true,
     });
     else if (model.kind === "cards") view = React.createElement(CardChartView, { model, chart: props.chart, provenance });
-    else if (model.kind === "targetCollection") view = React.createElement(TargetCollectionChartView, { model, chart: props.chart, provenance });
+    else if (model.kind === "targetCollection") view = React.createElement(TargetCollectionChartView, {
+      model,
+      chart: props.chart,
+      provenance,
+      accessibilityEnabled: props.accessibilityEnabled === true,
+    });
     else if (model.kind === "table") view = React.createElement(TableChartView, { model, chart: props.chart, provenance });
     else if (model.kind === "image") view = React.createElement(ImageChartView, {
       model,

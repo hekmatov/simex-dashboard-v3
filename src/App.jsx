@@ -1,6 +1,7 @@
 import React from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
   integrateCreatedChart,
   integrateSavedChart,
@@ -380,6 +381,10 @@ export default function App() {
       onToggleEditMode={toggleEditMode}
       onChartCreate={createChart}
       onChartSave={saveChart}
+      onApplyCitationToSourceCharts={(updates) => mutateDashboard((next) => {
+        const result = applyCitationToSourceCharts(next, updates);
+        Object.assign(next, result.dashboard);
+      })}
       onPageAdd={(page) => mutateDashboard((next) => next.pages.push(page))}
       onPageRemove={(pageId) => mutateDashboard((next) => {
         const removedChartIds = new Set(
@@ -451,8 +456,8 @@ export default function App() {
 }
 
 export function configurationForStorage(dashboard, fallbackProfiles = {}) {
-  const config = structuredClone(dashboard);
-  delete config.loadedData;
+  const { loadedData: _runtimeData, ...portableDashboard } = dashboard;
+  const config = structuredClone(portableDashboard);
   const retainedProfiles = Object.fromEntries(
     Object.entries(config.datasetProfiles ?? {}).filter(([sourceId, profile]) => {
       if (config.dataSources?.[sourceId]?.kind !== "csv") return false;
@@ -468,16 +473,17 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
 }
 
 function configurationForSemanticUse(dashboard) {
-  const config = structuredClone(dashboard);
-  delete config.loadedData;
-  delete config.datasetProfiles;
-  return config;
+  const {
+    loadedData: _runtimeData,
+    datasetProfiles: _runtimeProfiles,
+    ...semanticDashboard
+  } = dashboard;
+  return structuredClone(semanticDashboard);
 }
 
 function configurationForPortableUse(dashboard) {
-  const config = structuredClone(dashboard);
-  delete config.loadedData;
-  return config;
+  const { loadedData: _runtimeData, ...portableDashboard } = dashboard;
+  return structuredClone(portableDashboard);
 }
 
 function configuredCharts(dashboard) {

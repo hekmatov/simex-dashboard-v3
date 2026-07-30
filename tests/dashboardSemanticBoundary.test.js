@@ -82,7 +82,8 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   ],
   deliveryStatus: ["description", "label", "state"],
   previewAsset: ["alt", "src"],
-  globalStyles: ["panelColors"],
+  globalStyles: ["accessibility", "panelColors"],
+  accessibility: ["enabled"],
   panelColors: [
     "chartAreaBorderColor",
     "chartAreaColor",
@@ -541,6 +542,7 @@ function structureInventory(dashboard) {
     deliveryStatus: keysOf(landingPage.landing.deliveryStatus),
     previewAsset: keysOf([landingPage.landing.previewAsset]),
     globalStyles: keysOf([dashboard.globalStyles]),
+    accessibility: keysOf([dashboard.globalStyles.accessibility]),
     panelColors: keysOf([dashboard.globalStyles.panelColors]),
     vantaBackground: keysOf([
       dashboard.vantaBackground,

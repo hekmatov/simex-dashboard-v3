@@ -135,10 +135,24 @@ function gaugeModel(chart, mark, activeTime, embedded = false) {
           type: "gauge",
           min: 0,
           max: maximum,
-          ...(embedded ? {} : { center: ["50%", "50%"], radius: "36%" }),
+          center: ["50%", embedded ? "58%" : "54%"],
+          radius: embedded ? "68%" : "52%",
           axisLine: { lineStyle: { color: gaugeSegments(ranges, maximum) } },
-          detail: { valueAnimation: true },
-          title: { show: Boolean(name) },
+          axisLabel: { show: false },
+          axisTick: { show: false },
+          splitLine: { distance: -9, length: 8 },
+          pointer: { length: "56%", width: 4 },
+          detail: {
+            valueAnimation: false,
+            fontSize: embedded ? 26 : 32,
+            offsetCenter: [0, "38%"],
+            ...(embedded ? {} : { formatter: formatTargetValue }),
+          },
+          title: {
+            show: !embedded && Boolean(name),
+            fontSize: 12,
+            offsetCenter: [0, "76%"],
+          },
           data: [targetDataItem(
             mark,
             {
@@ -382,6 +396,13 @@ function rangeEnd(range) {
 
 function finite(value) {
   return Number.isFinite(value) ? value : 0;
+}
+
+function formatTargetValue(value) {
+  if (!Number.isFinite(Number(value))) return String(value ?? "");
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(Number(value));
 }
 
 function titleOption(chart) {

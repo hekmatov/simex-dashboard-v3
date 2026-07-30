@@ -1,6 +1,7 @@
 import React from "react";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { enforceRenderReadiness } from "../../charting/rendering/buildRenderModel.js";
+import { resolvePreparedChartRendering } from "../../charting/rendering/resolveChartRendering.js";
 import ChartView from "../charts/ChartView.jsx";
 const MAX_DIAGNOSTICS = 4;
 const MAX_MESSAGE_LENGTH = 240;
@@ -11,20 +12,21 @@ function ChartPreview({
   geoData,
   timeContext,
   renderContext,
+  prepared: suppliedPrepared,
   diagnosticNamespace = chart?.id
 } = {}) {
   let prepared;
   try {
-    prepared = enforceRenderReadiness({
-      chart,
-      prepared: prepareChartData({
+    prepared = suppliedPrepared ?? enforceRenderReadiness({
         chart,
-        rows: Array.isArray(rows) ? rows : [],
-        datasetProfile,
-        geoData,
-        timeContext
-      })
-    });
+        prepared: prepareChartData({
+          chart,
+          rows: Array.isArray(rows) ? rows : [],
+          datasetProfile,
+          geoData,
+          timeContext
+        })
+      });
   } catch (error) {
     return /* @__PURE__ */ React.createElement(
       PreviewState,
@@ -42,6 +44,18 @@ function ChartPreview({
       diagnostics: buildPreviewDiagnostics(prepared.diagnostics, { namespace: diagnosticNamespace })
     });
   }
+  const renderingInput = {
+    chart,
+    rows,
+    datasetProfile,
+    geoData,
+    timeContext,
+    renderContext
+  };
+  const resolvedRendering = resolvePreparedChartRendering(
+    renderingInput,
+    prepared
+  );
   return /* @__PURE__ */ React.createElement("section", { className: "chart-authoring-preview chart-authoring-preview-ready", "aria-label": "Chart preview" }, /* @__PURE__ */ React.createElement(
     ChartView,
     {
@@ -50,7 +64,8 @@ function ChartPreview({
       datasetProfile,
       geoData,
       timeContext,
-      renderContext
+      renderContext,
+      resolvedRendering
     }
   ));
 }

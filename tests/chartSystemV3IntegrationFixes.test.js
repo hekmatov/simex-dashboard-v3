@@ -890,6 +890,7 @@ test("ECharts models carry bounded family-aware accessibility rows, never raw re
         ...chart,
       },
       prepared: { status: "ready", marks, diagnostics: [], meta: { dataFamily: family } },
+      renderContext: { accessibilityEnabled: true },
     });
     assert.equal(model.accessibility.family, family);
     assert.deepEqual(model.accessibility.rows[0], expected);
@@ -995,6 +996,7 @@ test("custom and ECharts views honor left, center, and right title alignment wit
     const echarts = renderToStaticMarkup(React.createElement(EChartsChartView, {
       chart,
       model: { option: { title: { text: "Aligned title", left: align }, series: [] } },
+      accessibilityEnabled: true,
     }));
 
     for (const html of [card, table, image, echarts]) {
@@ -1187,6 +1189,8 @@ test("all 26 validated chart types remain reachable through bundle, profile, pre
       rows,
       datasetProfile,
       geoData,
+      accessibilityEnabled: true,
+      renderContext: { accessibilityEnabled: true },
     }));
     reachability.push([
       chart.typeId,

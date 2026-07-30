@@ -73,28 +73,42 @@ test("manual single, multi-open, and reorder use the same display state", async 
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
 
   const firstPanel = page.locator(`[data-panel-id="${FIRST_CHART}"]`);
-  await firstPanel.getByRole("button", { name: "Fullscreen chart" }).click();
+  await firstPanel.getByRole("button", {
+    name: "Open chart fullscreen",
+  }).click();
   await expect(page.locator(`[data-displayed-chart-id="${FIRST_CHART}"]`)).toBeVisible();
   await page.getByRole("button", { name: "Close all displayed charts" }).click();
 
   const fullscreenButton = firstPanel.getByRole("button", {
-    name: "Fullscreen chart",
+    name: "Open chart fullscreen",
   });
   await firstPanel.locator(".chart-view-frame").hover();
   await fullscreenButton.dispatchEvent("pointerdown");
   await expect(
     firstPanel.getByRole("button", {
-      name: "Remove from multi-fullscreen",
+      name: "Remove chart from multi-fullscreen",
     }),
   ).toBeVisible();
+  await expect(firstPanel.getByRole("button", {
+    name: "Remove chart from multi-fullscreen",
+  })).toHaveAttribute("aria-pressed", "true");
   await page
     .locator(`[data-panel-id="${SECOND_CHART}"]`)
-    .getByRole("button", { name: "Add to multi-fullscreen" })
+    .getByRole("button", { name: "Add chart to multi-fullscreen" })
     .click();
   await page
-    .getByRole("button", { name: /^Multi-fullscreen$/ })
+    .getByRole("button", { name: "Enter multi-fullscreen" })
     .click();
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(2);
+  const fullscreen = page.getByRole("dialog", { name: "Displayed charts" });
+  await expect(fullscreen.getByRole("button", {
+    name: "Use side by side layout",
+  })).toBeVisible();
+  await expect(fullscreen.getByRole("button", {
+    name: "Use over-under layout",
+  })).toBeVisible();
+  await expect(fullscreen.getByText("Displayed charts", { exact: true }))
+    .toHaveCount(0);
 
   await page
     .getByRole("button", { name: `Move ${SECOND_CHART} previous` })
@@ -107,6 +121,49 @@ test("manual single, multi-open, and reorder use the same display state", async 
         displayed_chart_ids: [SECOND_CHART, FIRST_CHART],
       },
     });
+});
+
+test("multi-fullscreen selection caps at four charts and Escape cancels selection", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+
+  const panels = page.locator(".chart-panel");
+  await expect(panels.nth(4)).toBeAttached();
+  const first = panels.nth(0);
+  await first.locator(".chart-view-frame").hover();
+  await first.getByRole("button", {
+    name: "Open chart fullscreen",
+  }).dispatchEvent("pointerdown");
+  await expect(page.getByRole("button", {
+    name: "Enter multi-fullscreen",
+  })).toBeVisible();
+
+  for (let index = 1; index < 4; index += 1) {
+    const panel = panels.nth(index);
+    await panel.hover();
+    await panel.getByRole("button", {
+      name: "Add chart to multi-fullscreen",
+    }).click();
+  }
+
+  const fifth = panels.nth(4);
+  await fifth.hover();
+  await fifth.getByRole("button", {
+    name: "Add chart to multi-fullscreen",
+  }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Maximum 4 charts allowed",
+  );
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", {
+    name: "Enter multi-fullscreen",
+  })).toHaveCount(0);
+  await expect(page.locator(
+    '.chart-panel-icon-button[aria-pressed="true"]',
+  )).toHaveCount(0);
 });
 
 test("stale revisions and invalid chart IDs are rejected promptly", async ({
@@ -221,7 +278,7 @@ test("missing bootstrap preserves standalone dashboard behavior", async ({
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await page
     .locator(`[data-panel-id="${FIRST_CHART}"]`)
-    .getByRole("button", { name: "Fullscreen chart" })
+    .getByRole("button", { name: "Open chart fullscreen" })
     .click();
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(1);
 });

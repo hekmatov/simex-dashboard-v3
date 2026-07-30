@@ -279,7 +279,7 @@ test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts
   const model = buildRenderModel({
     chart: chart("line", {
       presentation: { title: { align: "center" }, collection: null },
-      interaction: { zoom: { enabled: true } },
+      interaction: { zoom: { enabled: true, rangeSelector: true } },
     }),
     prepared: axisMarks,
   });
@@ -287,6 +287,22 @@ test("title alignment and ctrl-wheel-compatible zoom are normalized into ECharts
   assert.equal(model.option.title.left, "center");
   assert.deepEqual(model.option.dataZoom.map(({ type }) => type), ["inside", "slider"]);
   assert.equal(model.option.dataZoom[0].zoomOnMouseWheel, "ctrl");
+});
+
+test("accessibility companion work is opt-in on the chart rendering hot path", () => {
+  const chartConfig = chart("line");
+  const disabled = buildRenderModel({
+    chart: chartConfig,
+    prepared: axisMarks,
+  });
+  const enabled = buildRenderModel({
+    chart: chartConfig,
+    prepared: axisMarks,
+    renderContext: { accessibilityEnabled: true },
+  });
+
+  assert.equal(disabled.accessibility, undefined);
+  assert.equal(enabled.accessibility.family, "axis");
 });
 
 test("the mounted ECharts option applies every valid title alignment and opaque background", () => {
@@ -365,7 +381,6 @@ test("axis series honor validated label visibility, position, and formatting", (
   assert.deepEqual(disabled.option.series[0].label, {
     show: false,
     position: "top",
-    formatter: undefined,
   });
 });
 
@@ -422,8 +437,8 @@ test("grouped composition lays out non-overlapping pie series", () => {
   });
 
   assert.deepEqual(model.option.series.map(({ center }) => center), [
-    ["25%", "50%"],
-    ["75%", "50%"],
+    ["25%", "62.5%"],
+    ["75%", "62.5%"],
   ]);
   const svg = renderSvg(model.option, 800, 400);
   assert.match(svg, /Alpha/);
@@ -515,8 +530,8 @@ test("gauge and bullet encode actual, target, and configured ranges", () => {
   assert.equal(gauge.option.series[0].type, "gauge");
   assert.deepEqual(gauge.option.series[0].data[0], { value: 72, name: "gauge title", target: 80, time: "2027-05-02" });
   assert.equal(gauge.option.series[0].max, 100);
-  assert.deepEqual(gauge.option.series[0].center, ["50%", "50%"]);
-  assert.equal(gauge.option.series[0].radius, "36%");
+  assert.deepEqual(gauge.option.series[0].center, ["50%", "54%"]);
+  assert.equal(gauge.option.series[0].radius, "52%");
   assert.equal(gauge.option.title.left, "right");
   assert.deepEqual(gauge.semanticSummary.items, [{ label: "gauge title", actual: 72, target: 80, time: "2027-05-02" }]);
   assert.equal(bullet.option.series[0].type, "bar");
@@ -563,7 +578,9 @@ test("multi-item gauges preserve every prepared mark as renderer-neutral collect
     { value: 55, name: "Clinic B", target: 70, time: "2027-05-03" },
   ]);
   assert.equal(model.items.every(({ model: itemModel }) => itemModel.option.series.length === 1), true);
-  assert.equal(model.items.every(({ model: itemModel }) => itemModel.option.series[0].center === undefined), true);
+  assert.equal(model.items.every(({ model: itemModel }) => (
+    itemModel.option.series[0].center[1] === "58%"
+  )), true);
   assert.deepEqual(model.presentation.collection, collection);
   assert.deepEqual(
     model.items.map(({ model: itemModel }) => itemModel.semanticSummary.items[0]),

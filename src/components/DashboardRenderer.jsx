@@ -36,6 +36,7 @@ export default function DashboardRenderer({
   onVantaBackgroundChange,
   onChartCreate,
   onChartSave,
+  onApplyCitationToSourceCharts,
   onPanelRemove,
   onPanelReorder,
   onImportConfig,
@@ -79,6 +80,7 @@ export default function DashboardRenderer({
   const pendingEdits = pendingEditsRef.current;
   const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
     React.useState(false);
+  const [multiSelectNotice, setMultiSelectNotice] = React.useState(null);
 
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
@@ -89,6 +91,7 @@ export default function DashboardRenderer({
     chartWizardTarget || (editMode && selectedPanel),
   );
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
+  const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
   const geoDataSources = React.useMemo(
     () => validatedGeoDataSources(dashboard),
     [dashboard.dataSources, dashboard.loadedData],
@@ -102,6 +105,28 @@ export default function DashboardRenderer({
   }, [editMode]);
 
   React.useEffect(() => () => pendingEdits.dispose(), [pendingEdits]);
+
+  React.useEffect(() => {
+    if (!multiSelectMode) return undefined;
+    const cancelOnEscape = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setMultiSelectMode(false);
+      setMultiPanelIds([]);
+      setMultiSelectNotice(null);
+    };
+    window.addEventListener("keydown", cancelOnEscape);
+    return () => window.removeEventListener("keydown", cancelOnEscape);
+  }, [multiSelectMode]);
+
+  React.useEffect(() => {
+    if (!multiSelectNotice) return undefined;
+    const timeoutId = window.setTimeout(
+      () => setMultiSelectNotice(null),
+      2400,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [multiSelectNotice]);
 
   React.useEffect(() => {
     setDashboardDraft(dashboardTextDraftFromDashboard(dashboard));
@@ -156,19 +181,23 @@ export default function DashboardRenderer({
 
   function startMultiFullscreenSelection(panelId) {
     setMultiSelectMode(true);
-    setMultiPanelIds((current) => (current.includes(panelId) ? current : [...current, panelId].slice(0, 4)));
+    setMultiPanelIds([panelId]);
+    setMultiSelectNotice(null);
   }
 
   function toggleMultiPanel(panelId) {
-    setMultiPanelIds((current) => {
-      if (current.includes(panelId)) {
-        return current.filter((id) => id !== panelId);
-      }
-      if (current.length >= 4) {
-        return current;
-      }
-      return [...current, panelId];
-    });
+    if (multiPanelIds.includes(panelId)) {
+      setMultiPanelIds((current) => current.filter((id) => id !== panelId));
+      return;
+    }
+    if (multiPanelIds.length >= 4) {
+      setMultiSelectNotice({
+        id: Date.now(),
+        message: "Maximum 4 charts allowed",
+      });
+      return;
+    }
+    setMultiPanelIds((current) => [...current, panelId]);
   }
 
   function openMultiFullscreen() {
@@ -178,11 +207,13 @@ export default function DashboardRenderer({
     onDisplayAction({ type: "manual_set", chart_ids: multiPanelIds });
     setMultiSelectMode(false);
     setMultiPanelIds([]);
+    setMultiSelectNotice(null);
   }
 
   function cancelMultiSelection() {
     setMultiSelectMode(false);
     setMultiPanelIds([]);
+    setMultiSelectNotice(null);
   }
 
   function addPage() {
@@ -306,6 +337,16 @@ export default function DashboardRenderer({
     });
   }
 
+  function changeAccessibilityEnabled(enabled) {
+    void pendingEdits.flush();
+    onDashboardChange({
+      globalStyles: {
+        ...(dashboard.globalStyles ?? {}),
+        accessibility: { enabled },
+      },
+    });
+  }
+
   function startSectionAtPanel(section, panel) {
     const title = window.prompt("Section title", "New section");
     if (!title) {
@@ -355,7 +396,8 @@ export default function DashboardRenderer({
   }
 
   function dashboardWithCurrentDrafts(panelOverride = null) {
-    const nextDashboard = structuredClone(dashboard);
+    const { loadedData: _runtimeData, ...portableDashboard } = dashboard;
+    const nextDashboard = structuredClone(portableDashboard);
     Object.assign(nextDashboard, dashboardDraft);
 
     nextDashboard.pages = (nextDashboard.pages ?? []).map((page) => {
@@ -503,13 +545,18 @@ export default function DashboardRenderer({
             <button type="button" onClick={() => importInputRef.current?.click()}>Import dashboard</button>
             <button type="button" onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
             <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
+            <label className="accessibility-edit-toggle">
+              <input
+                type="checkbox"
+                checked={accessibilityEnabled}
+                onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
+              />
+              <span>
+                Chart accessibility
+                <small>Generate screen-reader chart descriptions</small>
+              </span>
+            </label>
             <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
-            {multiSelectMode && (
-              <>
-                <button type="button" disabled={multiPanelIds.length < 2} onClick={openMultiFullscreen}>Multi-fullscreen ({multiPanelIds.length})</button>
-                <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel multi</button>
-              </>
-            )}
             <input
               ref={importInputRef}
               className="visually-hidden"
@@ -524,12 +571,36 @@ export default function DashboardRenderer({
         </section>
       )}
 
-      {multiSelectMode && !editMode && (
-        <section className="multi-select-banner" aria-label="Multi-fullscreen selection">
-          <strong>{multiPanelIds.length} selected</strong>
-          <button type="button" disabled={multiPanelIds.length < 2} onClick={openMultiFullscreen}>Multi-fullscreen</button>
-          <button type="button" className="secondary" onClick={cancelMultiSelection}>Cancel</button>
+      {multiSelectMode && (
+        <section className="multi-select-dock" aria-label="Multi-fullscreen selection">
+          <span className="multi-select-count">
+            <strong>{multiPanelIds.length}</strong>
+            <span>of 4 selected</span>
+          </span>
+          <button
+            type="button"
+            disabled={multiPanelIds.length < 2}
+            onClick={openMultiFullscreen}
+          >
+            Enter multi-fullscreen
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={cancelMultiSelection}
+          >
+            Cancel
+          </button>
         </section>
+      )}
+      {multiSelectNotice && (
+        <div
+          className="multi-select-limit-notice"
+          role="alert"
+          key={multiSelectNotice.id}
+        >
+          {multiSelectNotice.message}
+        </div>
       )}
 
       <nav className="page-tabs" aria-label="Dashboard pages">
@@ -563,12 +634,9 @@ export default function DashboardRenderer({
       <PlaybackSurface
         entryBlocked={chartAuthoringActive}
         entryBlockedReason="Finish, save, or discard chart authoring before opening Playback view."
+        accessibilityEnabled={accessibilityEnabled}
       >
-      <section
-        className={`dashboard-workspace ${
-          editMode && selectedPanel ? "dashboard-workspace-with-settings" : ""
-        }`}
-      >
+      <section className="dashboard-workspace">
         <div className="page-stack">
           {landingActive ? (
             <LandingPage
@@ -636,6 +704,8 @@ export default function DashboardRenderer({
                       datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
                       geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                       dataSources={dashboard.dataSources}
+                      accessibilityEnabled={accessibilityEnabled}
+                      suspended={chartAuthoringActive}
                       editMode={editMode}
                       isDragging={draggingPanelId === panelId}
                       isDragTarget={dragOverPanelId === panelId}
@@ -675,6 +745,7 @@ export default function DashboardRenderer({
             profiles={dashboard.datasetProfiles ?? {}}
             parsingMetadata={dashboard.dataSources?.[selectedPanel.sourceId]?.parsingMetadata ?? {}}
             onSave={saveSelectedChartV3}
+            onApplyCitationToSourceCharts={onApplyCitationToSourceCharts}
             onCancel={cancelSelectedPanel}
             onRemove={() => removePanel(selectedPlacement.panelId)}
           />
@@ -712,6 +783,7 @@ export default function DashboardRenderer({
         dashboard={dashboard}
         displayState={displayState}
         onDisplayAction={onDisplayAction}
+        accessibilityEnabled={accessibilityEnabled}
       />
       <DashboardFooter dashboard={dashboard} />
       <div className="dashboard-device-tools">

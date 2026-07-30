@@ -314,7 +314,7 @@ test("playback view renders eligible members and explicit missing and unavailabl
           playbackView: true,
         },
       },
-      React.createElement(PlaybackView),
+      React.createElement(PlaybackView, { accessibilityEnabled: true }),
     ),
   );
 
@@ -375,7 +375,7 @@ test("playback view resolves only the map chart's configured GeoJSON source", ()
           playbackView: true,
         },
       },
-      React.createElement(PlaybackView),
+      React.createElement(PlaybackView, { accessibilityEnabled: true }),
     ),
   );
 
@@ -500,7 +500,13 @@ test("a current shared resolution is reused while changed inputs are rejected", 
       return Reflect.get(target, property, receiver);
     },
   });
-  const props = { chart, rows: trackedRows, datasetProfile };
+  const props = {
+    chart,
+    rows: trackedRows,
+    datasetProfile,
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
+  };
   const resolution = resolveChartRendering(props);
 
   assert.equal(resolution.status, "available");
@@ -695,6 +701,8 @@ test("ChartView receives active time only when its configured group matches", ()
     chart: staticChart,
     rows: fixture.loadedData.primary,
     datasetProfile: fixture.profiles.primary,
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   };
   const outsideProvider = renderToStaticMarkup(
     React.createElement(ChartView, staticProps),
@@ -718,6 +726,8 @@ test("ChartView receives active time only when its configured group matches", ()
       chart: fixture.charts[0],
       rows: fixture.loadedData.primary,
       datasetProfile: fixture.profiles.primary,
+      accessibilityEnabled: true,
+      renderContext: { accessibilityEnabled: true },
     }),
     {
       ...fixture,
@@ -744,6 +754,8 @@ test("closing playback removes chart time context and restores static line and l
     chart,
     rows: fixture.loadedData.primary,
     datasetProfile: fixture.profiles.primary,
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   };
   const outsideProvider = renderToStaticMarkup(
     React.createElement(ChartView, chartProps),
@@ -817,6 +829,8 @@ test("closing playback removes chart time context and restores static line and l
         rows: geographyRows,
         datasetProfile: geographyProfile,
         geoData: oneAreaGeoJson(),
+        accessibilityEnabled: true,
+        renderContext: { accessibilityEnabled: true },
       }),
     ),
   );
@@ -1005,6 +1019,8 @@ test("ChartView announces an active trace point beyond the 50-row accessibility 
       chart,
       rows,
       datasetProfile: fixture.profiles.primary,
+      accessibilityEnabled: true,
+      renderContext: { accessibilityEnabled: true },
     }),
     {
       ...fixture,
@@ -1040,6 +1056,8 @@ test("timeline and swimlane playback companions announce only active events", ()
         chart,
         rows,
         datasetProfile: profile,
+        accessibilityEnabled: true,
+        renderContext: { accessibilityEnabled: true },
       }),
       {
         groups: [{
