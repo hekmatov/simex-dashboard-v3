@@ -1,3 +1,8 @@
+import {
+  buildEChartsDataZoom,
+  rangeSelectorVisible,
+} from "./zoomOptions.js";
+
 export function buildTimelineRenderModel({ chart, prepared }) {
   const swimlane = chart.typeId === "swimlane";
   const activeTime = prepared.meta?.activeTime ?? null;
@@ -10,7 +15,13 @@ export function buildTimelineRenderModel({ chart, prepared }) {
       title: titleOption(chart),
       aria: { enabled: true, description: chart.description ?? chart.title ?? "" },
       tooltip: { trigger: "item" },
-      grid: { containLabel: true, left: 72, right: 28, top: 76, bottom: 52 },
+      grid: {
+        containLabel: true,
+        left: 72,
+        right: 28,
+        top: 76,
+        bottom: rangeSelectorVisible(chart) ? 52 : 32,
+      },
       xAxis: { type: "time" },
       yAxis: { type: "category", data: lanes },
       series: [{
@@ -20,12 +31,7 @@ export function buildTimelineRenderModel({ chart, prepared }) {
         encode: { x: [0, 1], y: 2 },
         data: prepared.marks.map((mark) => timelineDataItem(mark, swimlane, activeTime)),
       }],
-      dataZoom: chart.interaction?.zoom?.enabled
-        ? [
-            { type: "inside", xAxisIndex: 0, zoomOnMouseWheel: "ctrl", moveOnMouseWheel: false, moveOnMouseMove: false },
-            { type: "slider", xAxisIndex: 0 },
-          ]
-        : undefined,
+      dataZoom: buildEChartsDataZoom(chart),
     },
   };
 }

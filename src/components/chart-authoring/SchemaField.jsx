@@ -1,6 +1,7 @@
 import React from "react";
 import ColorField from "../ColorField.jsx";
 import CollectionSettingsField from "./CollectionSettingsField.jsx";
+import CitationField from "./CitationField.jsx";
 import DeltaComparisonField from "./DeltaComparisonField.jsx";
 import RoleField from "./RoleField.jsx";
 import SeriesColorsField from "./SeriesColorsField.jsx";
@@ -23,7 +24,9 @@ function SchemaField({
   diagnostics = [],
   onMembershipChange,
   onGroupsChange,
-  onValidationError
+  onValidationError,
+  dataSources = {},
+  onApplyCitationToSourceCharts,
 } = {}) {
   if (!validField(field)) return null;
   const diagnosticIds = Array.isArray(diagnostics)
@@ -37,6 +40,16 @@ function SchemaField({
   }
   if (field.control === "palette") {
     return /* @__PURE__ */ React.createElement(SeriesColorsField, shared);
+  }
+  if (field.control === "citation") {
+    return /* @__PURE__ */ React.createElement(CitationField, {
+      ...shared,
+      chart,
+      charts,
+      dataSources,
+      profile,
+      onApplyCitationToSourceCharts,
+    });
   }
   if (field.control === "color") {
     const background = isBackgroundColorField(field);

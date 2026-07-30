@@ -4,10 +4,27 @@ import { buildAccessibilityCompanionForFamily } from "./accessibilityRows.js";
 import { buildRenderModel } from "./buildRenderModel.js";
 
 const MAX_MESSAGE_LENGTH = 240;
+const STATIC_RENDERING_CACHE = new WeakMap();
 
 export function resolveChartRendering(input = {}) {
   try {
     if (!isRenderingInput(input)) return invalidRenderingResolution();
+    const renderingInput = captureRenderingInput(input);
+    const cached = readStaticRenderingCache(renderingInput);
+    if (cached) return cached;
+    const resolved = resolveCapturedChartRendering(renderingInput);
+    writeStaticRenderingCache(renderingInput, resolved);
+    return resolved;
+  } catch {
+    return invalidRenderingResolution();
+  }
+}
+
+export function resolvePreparedChartRendering(input = {}, prepared) {
+  try {
+    if (!isRenderingInput(input) || !isPreparedChartData(prepared)) {
+      return invalidRenderingResolution();
+    }
     const renderingInput = captureRenderingInput(input);
     const schema = getChartSchema(renderingInput.chart?.typeId);
     const dependencyError = sourceDependencyError(renderingInput);
@@ -20,7 +37,6 @@ export function resolveChartRendering(input = {}) {
         inputKey: renderingInput,
       });
     }
-    const prepared = prepareChartData(renderingInput);
     const model = withPlaybackPresentation(
       buildRenderModel({ ...renderingInput, prepared }),
       prepared,
@@ -37,6 +53,73 @@ export function resolveChartRendering(input = {}) {
   } catch {
     return invalidRenderingResolution();
   }
+}
+
+function resolveCapturedChartRendering(renderingInput) {
+  const schema = getChartSchema(renderingInput.chart?.typeId);
+  const dependencyError = sourceDependencyError(renderingInput);
+  if (dependencyError) {
+    return renderingResolution({
+      status: "unavailable",
+      schema,
+      prepared: null,
+      model: { kind: "error", message: dependencyError },
+      inputKey: renderingInput,
+    });
+  }
+  const prepared = prepareChartData(renderingInput);
+  const model = withPlaybackPresentation(
+    buildRenderModel({ ...renderingInput, prepared }),
+    prepared,
+    renderingInput.timeContext,
+    renderingInput.chart,
+  );
+  return renderingResolution({
+    status: model.kind === "error" ? "unavailable" : "available",
+    schema,
+    prepared,
+    model,
+    inputKey: renderingInput,
+  });
+}
+
+function readStaticRenderingCache(input) {
+  if (!cacheableRenderingInput(input)) return null;
+  const cached = STATIC_RENDERING_CACHE.get(input.chart);
+  return cached && matchingStaticRenderingInput(cached, input)
+    ? cached.resolution
+    : null;
+}
+
+function writeStaticRenderingCache(input, resolution) {
+  if (!cacheableRenderingInput(input)) return;
+  STATIC_RENDERING_CACHE.set(input.chart, {
+    rows: input.rows,
+    datasetProfile: input.datasetProfile,
+    geoData: input.geoData,
+    sources: input.renderContext?.sources,
+    sourceMetadata: input.renderContext?.sourceMetadata,
+    mapName: input.renderContext?.mapName,
+    accessibilityEnabled: input.renderContext?.accessibilityEnabled === true,
+    resolution,
+  });
+}
+
+function cacheableRenderingInput(input) {
+  return input?.chart !== null
+    && typeof input?.chart === "object"
+    && (input.timeContext === null || input.timeContext === undefined);
+}
+
+function matchingStaticRenderingInput(cached, input) {
+  return cached.rows === input.rows
+    && cached.datasetProfile === input.datasetProfile
+    && cached.geoData === input.geoData
+    && cached.sources === input.renderContext?.sources
+    && cached.sourceMetadata === input.renderContext?.sourceMetadata
+    && cached.mapName === input.renderContext?.mapName
+    && cached.accessibilityEnabled
+      === (input.renderContext?.accessibilityEnabled === true);
 }
 
 export function canReuseChartRendering(resolution, input = {}) {
@@ -111,6 +194,13 @@ function captureRenderingInput(input) {
 
 function isRenderingInput(input) {
   return input !== null && typeof input === "object";
+}
+
+function isPreparedChartData(prepared) {
+  return prepared !== null
+    && typeof prepared === "object"
+    && typeof prepared.status === "string"
+    && Array.isArray(prepared.marks);
 }
 
 function sourceDependencyError(input) {

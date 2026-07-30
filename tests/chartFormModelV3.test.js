@@ -510,7 +510,7 @@ test("before renderer readiness only data and the required title remain editable
   assert.ok(ready.sections.some(({ id }) => id === "interactions"));
 });
 
-test("appearance begins with the required chart title field", () => {
+test("appearance begins with the required title and optional description controls", () => {
   const chart = lineChart({ title: "" });
   const profile = datasetProfile();
   const model = buildEditorFormModel({
@@ -521,9 +521,14 @@ test("appearance begins with the required chart title field", () => {
   const appearance = model.sections.find(({ id }) => id === "appearance");
 
   assert.deepEqual(
-    appearance.fields.slice(0, 3).map(({ id, path }) => ({ id, path })),
+    appearance.fields.slice(0, 5).map(({ id, path }) => ({ id, path })),
     [
       { id: "title", path: ["title"] },
+      { id: "description", path: ["description"] },
+      {
+        id: "descriptionVisible",
+        path: ["presentation", "description", "visible"],
+      },
       {
         id: "titleAlignment",
         path: ["presentation", "title", "align"],

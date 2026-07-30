@@ -20,7 +20,7 @@ export const CHART_CONFIG_VERSION = 3;
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
-const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced", "series"]);
+const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced", "series", "description", "citation"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
@@ -397,6 +397,8 @@ function validatePresentation(chart, schema) {
   validateBackground(descriptors.background?.value);
   validateLegend(descriptors.legend?.value);
   validateAccessibility(descriptors.accessibility?.value);
+  validateDescription(descriptors.description?.value);
+  validateCitation(descriptors.citation?.value);
   optionalObject(descriptors.advanced?.value, "Chart presentation advanced", new Set());
   if (Object.hasOwn(descriptors, "series")) {
     normalizeSeriesStyle(
@@ -474,13 +476,36 @@ function validateAccessibility(accessibility) {
   for (const field of ["description", "summary"]) if (accessibility?.[field] !== undefined && typeof accessibility[field] !== "string") throw new Error(`Chart presentation accessibility ${field} must be a string.`);
 }
 
+function validateDescription(description) {
+  optionalObject(description, "Chart presentation description", new Set(["visible"]));
+  if (
+    description?.visible !== undefined
+    && typeof description.visible !== "boolean"
+  ) {
+    throw new Error("Chart presentation description visible must be boolean.");
+  }
+}
+
+function validateCitation(citation) {
+  optionalObject(citation, "Chart presentation citation", new Set(["label"]));
+  if (citation?.label !== undefined && typeof citation.label !== "string") {
+    throw new Error("Chart presentation citation label must be a string.");
+  }
+}
+
 function validateInteraction(chart, schema, temporalRoles) {
   ensureObject(chart.interaction, "Chart interaction");
   checkKnownKeys(chart.interaction, INTERACTION_KEYS, "chart interaction");
   checkRequiredKeys(chart.interaction, INTERACTION_KEYS, "Chart interaction");
   ensureObject(chart.interaction.zoom, "Chart zoom interaction");
-  checkKnownKeys(chart.interaction.zoom, new Set(["enabled"]), "chart zoom interaction");
+  checkKnownKeys(chart.interaction.zoom, new Set(["enabled", "rangeSelector"]), "chart zoom interaction");
   if (typeof chart.interaction.zoom.enabled !== "boolean") throw new Error("Chart zoom interaction enabled must be boolean.");
+  if (
+    chart.interaction.zoom.rangeSelector !== undefined
+    && typeof chart.interaction.zoom.rangeSelector !== "boolean"
+  ) {
+    throw new Error("Chart zoom interaction rangeSelector must be boolean.");
+  }
   if (chart.interaction.zoom.enabled && !schema.capabilities.zoom) throw new Error(`Chart type "${schema.typeId}" does not support zoom.`);
   const { timeSync } = chart.interaction;
   if (timeSync === null) return;
@@ -527,7 +552,11 @@ export function createChartDraft(typeOrOptions, overrides = {}) {
     },
     interaction: {
       ...options.interaction,
-      zoom: { enabled: schema.capabilities.zoom, ...(options.interaction?.zoom ?? {}) },
+      zoom: {
+        enabled: schema.capabilities.zoom,
+        rangeSelector: false,
+        ...(options.interaction?.zoom ?? {}),
+      },
       timeSync: options.interaction?.timeSync ?? null,
     },
     layout: { size: "standard", ...(options.layout ?? {}) },

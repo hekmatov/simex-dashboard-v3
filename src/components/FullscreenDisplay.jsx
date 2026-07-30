@@ -1,11 +1,14 @@
 import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
+import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 export default function FullscreenDisplay({
   dashboard,
   displayState,
   onDisplayAction,
+  accessibilityEnabled = false,
 }) {
   const panelIds = displayState.displayed_chart_ids;
   const panels = panelIds
@@ -29,12 +32,14 @@ export default function FullscreenDisplay({
     >
       <article className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}>
         <div className="multi-fullscreen-controls">
-          <strong>Displayed charts</strong>
           {layoutOptions.map((option) => (
             <button
               key={option.value}
               type="button"
-              className={resolvedLayout === option.value ? "active" : "secondary"}
+              className={[
+                "fullscreen-layout-button",
+                resolvedLayout === option.value ? "active" : "secondary",
+              ].join(" ")}
               onClick={() => onDisplayAction({
                 type: "layout_changed",
                 layout: option.value,
@@ -42,16 +47,17 @@ export default function FullscreenDisplay({
               aria-label={`Use ${option.label.toLowerCase()} layout`}
               title={option.label}
             >
-              {option.icon}
+              <LayoutIcon layout={option.value} />
             </button>
           ))}
           <button
             type="button"
-            className="secondary"
+            className="secondary fullscreen-toolbar-close"
             onClick={() => onDisplayAction({ type: "manual_close_all" })}
             aria-label="Close all displayed charts"
+            title="Close all"
           >
-            Close all
+            <span aria-hidden="true">{"\u00D7"}</span>
           </button>
         </div>
         <div className={`multi-fullscreen-grid multi-count-${panels.length} layout-${resolvedLayout}`}>
@@ -67,40 +73,43 @@ export default function FullscreenDisplay({
                   <>
                     <button
                       type="button"
-                      className="secondary"
+                      className="secondary multi-cell-icon-button"
                       disabled={index === 0}
                       onClick={() => onDisplayAction({
                         type: "manual_reorder",
                         chart_ids: moveItem(panelIds, index, index - 1),
                       })}
                       aria-label={`Move ${chart.id} previous`}
+                      title="Move previous"
                     >
-                      Prev
+                      <span aria-hidden="true">{"\u2039"}</span>
                     </button>
                     <button
                       type="button"
-                      className="secondary"
+                      className="secondary multi-cell-icon-button"
                       disabled={index === panels.length - 1}
                       onClick={() => onDisplayAction({
                         type: "manual_reorder",
                         chart_ids: moveItem(panelIds, index, index + 1),
                       })}
                       aria-label={`Move ${chart.id} next`}
+                      title="Move next"
                     >
-                      Next
+                      <span aria-hidden="true">{"\u203A"}</span>
                     </button>
                   </>
                 )}
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary multi-cell-icon-button multi-cell-close-button"
                   onClick={() => onDisplayAction({
                     type: "manual_close",
                     chart_id: chart.id,
                   })}
                   aria-label={`Close ${chart.id}`}
+                  title="Close chart"
                 >
-                  Close
+                  <span aria-hidden="true">{"\u00D7"}</span>
                 </button>
               </div>
               <ChartView
@@ -108,10 +117,21 @@ export default function FullscreenDisplay({
                 rows={dashboard.loadedData?.[chart.sourceId] ?? []}
                 datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
                 geoData={dashboard.loadedData?.[chart.presentation?.map?.geoSource]}
+                accessibilityEnabled={accessibilityEnabled}
                 renderContext={{
                   sources: dashboard.dataSources ?? {},
                   mapName: chart.presentation?.map?.geoSource ?? chart.id,
+                  accessibilityEnabled,
                 }}
+              />
+              <ChartPanelActions
+                chartId={`fullscreen-${chart.id}`}
+                citation={resolveChartCitation({
+                  chart,
+                  dataSources: dashboard.dataSources ?? {},
+                  datasetProfile: dashboard.datasetProfiles?.[chart.sourceId],
+                })}
+                showFullscreen={false}
               />
             </section>
           ))}
@@ -141,20 +161,46 @@ function moveItem(items, fromIndex, toIndex) {
 }
 
 function multiLayoutOptions(count) {
-  if (count === 1) return [{ value: "solo", label: "Single chart", icon: "1" }];
+  if (count === 1) return [{ value: "solo", label: "Single chart" }];
   if (count === 2) {
     return [
-      { value: "sideBySide", label: "Side by side", icon: "||" },
-      { value: "overUnder", label: "Over-under", icon: "=" },
+      { value: "sideBySide", label: "Side by side" },
+      { value: "overUnder", label: "Over-under" },
     ];
   }
   if (count === 3) {
     return [
-      { value: "topFocus", label: "One on top", icon: "T" },
-      { value: "bottomFocus", label: "One on bottom", icon: "B" },
-      { value: "leftFocus", label: "One on left", icon: "L" },
-      { value: "rightFocus", label: "One on right", icon: "R" },
+      { value: "topFocus", label: "One on top" },
+      { value: "bottomFocus", label: "One on bottom" },
+      { value: "leftFocus", label: "One on left" },
+      { value: "rightFocus", label: "One on right" },
     ];
   }
-  return [{ value: "grid2x2", label: "2 by 2", icon: "2x2" }];
+  return [{ value: "grid2x2", label: "2 by 2" }];
+}
+
+function LayoutIcon({ layout }) {
+  const dividerPaths = {
+    solo: [],
+    sideBySide: ["M12 2v14"],
+    overUnder: ["M2 9h20"],
+    topFocus: ["M2 9h20", "M12 9v7"],
+    bottomFocus: ["M2 9h20", "M12 2v7"],
+    leftFocus: ["M12 2v14", "M12 9h10"],
+    rightFocus: ["M12 2v14", "M2 9h10"],
+    grid2x2: ["M12 2v14", "M2 9h20"],
+  }[layout] ?? [];
+
+  return (
+    <svg
+      className="fullscreen-layout-icon"
+      viewBox="0 0 24 18"
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="14" rx="1.5" />
+      {dividerPaths.map((path) => (
+        <path d={path} key={path} />
+      ))}
+    </svg>
+  );
 }

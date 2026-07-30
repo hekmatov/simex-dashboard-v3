@@ -3,6 +3,7 @@ import * as echarts from "echarts";
 
 import { describeAccessibilityCompanion } from "../../charting/rendering/accessibilityRows.js";
 import { titleContainerProps } from "./chartViewPresentation.js";
+import { chartDescriptionVisible } from "./chartViewPresentation.js";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
 
@@ -11,6 +12,7 @@ export default function EChartsChartView({
   chart = {},
   provenance,
   zoomEnabled = false,
+  accessibilityEnabled = false,
   runtimeError: suppliedRuntimeError = null,
 }) {
   const hostRef = React.useRef(null);
@@ -22,10 +24,10 @@ export default function EChartsChartView({
   const title = chart.title || "Chart";
   const description = chart.description || model.option?.aria?.description || "Interactive chart.";
   const presentedModel = React.useMemo(
-    () => applyEChartsPresentation(model, chart),
-    [model, chart],
+    () => applyEChartsPresentation(model, chart, accessibilityEnabled),
+    [model, chart, accessibilityEnabled],
   );
-  const summary = summaryFor(presentedModel, chart);
+  const summary = accessibilityEnabled ? summaryFor(presentedModel, chart) : null;
   const activeError = suppliedRuntimeError ?? runtimeError;
 
   React.useEffect(() => {
@@ -60,26 +62,43 @@ export default function EChartsChartView({
 
   return React.createElement("section", {
     className: "chart-echarts-view",
-    role: "img",
-    "aria-labelledby": titleId,
-    "aria-describedby": `${descriptionId} ${summaryId}`,
+    ...(accessibilityEnabled
+      ? {
+          role: "img",
+          "aria-labelledby": titleId,
+          "aria-describedby": `${descriptionId} ${summaryId}`,
+        }
+      : {}),
     "data-zoom-modifier": zoomEnabled
       ? presentedModel.interaction?.zoom?.modifierKey ?? "Control"
       : undefined,
     ...titleContainerProps(chart),
   },
-  React.createElement("h3", {
-    id: titleId,
-    className: "chart-view-title chart-view-title--visually-hidden",
-  }, title),
-  React.createElement("p", { id: descriptionId, className: "chart-view-description" }, description),
-  React.createElement("p", { id: summaryId, className: "chart-view-summary" }, summary),
-  React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
-  provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null,
+  accessibilityEnabled
+    ? React.createElement("h3", {
+        id: titleId,
+        className: "chart-view-title chart-view-title--visually-hidden",
+      }, title)
+    : null,
+  chartDescriptionVisible(chart)
+    ? React.createElement("p", { id: descriptionId, className: "chart-view-description" }, description)
+    : accessibilityEnabled
+      ? React.createElement("p", {
+          id: descriptionId,
+          className: "chart-view-title--visually-hidden",
+        }, description)
+    : null,
+  accessibilityEnabled
+    ? React.createElement("p", { id: summaryId, className: "chart-view-summary" }, summary)
+    : null,
   React.createElement("div", { ref: hostRef, className: "chart-echarts-host", "aria-hidden": true }));
 }
 
-export function applyEChartsPresentation(model = {}, chart = {}) {
+export function applyEChartsPresentation(
+  model = {},
+  chart = {},
+  accessibilityEnabled = false,
+) {
   const option = model.option && typeof model.option === "object" && !Array.isArray(model.option)
     ? model.option
     : {};
@@ -100,6 +119,13 @@ export function applyEChartsPresentation(model = {}, chart = {}) {
               ? option.title.map((title) => normalizedTitle(title, align))
               : normalizedTitle(option.title, align),
           }),
+      ...(option.legend === undefined
+        ? {}
+        : { legend: normalizedLegend(option.legend) }),
+      aria: {
+        ...(option.aria ?? {}),
+        enabled: accessibilityEnabled,
+      },
       ...(backgroundColor ? { backgroundColor } : {}),
     },
   };
@@ -180,8 +206,35 @@ function registerMap(echartsApi, registration) {
 
 function normalizedTitle(value, align) {
   return value && typeof value === "object" && !Array.isArray(value)
-    ? { ...value, left: align }
-    : { text: "", left: align };
+    ? {
+        ...value,
+        left: align,
+        top: value.top ?? 0,
+        textStyle: {
+          color: "#18334e",
+          fontSize: 16,
+          fontWeight: 600,
+          ...(value.textStyle ?? {}),
+        },
+      }
+    : { text: "", left: align, top: 0 };
+}
+
+function normalizedLegend(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  return {
+    ...value,
+    type: value.type ?? "scroll",
+    left: value.left ?? "center",
+    top: value.top ?? 32,
+    width: value.width ?? "88%",
+    itemWidth: value.itemWidth ?? 16,
+    itemHeight: value.itemHeight ?? 10,
+    textStyle: {
+      fontSize: 11,
+      ...(value.textStyle ?? {}),
+    },
+  };
 }
 
 function normalizedTitleAlignment(value) {

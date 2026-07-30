@@ -1,5 +1,8 @@
 import React from "react";
-import { titleContainerProps } from "./chartViewPresentation.js";
+import {
+  chartDescriptionVisible,
+  titleContainerProps,
+} from "./chartViewPresentation.js";
 
 export default function TableChartView({ model, chart = {}, provenance }) {
   const columns = Array.isArray(model.columns) ? model.columns : [];
@@ -19,10 +22,10 @@ export default function TableChartView({ model, chart = {}, provenance }) {
     ...titleContainerProps(chart),
   },
     React.createElement("h3", { className: "chart-view-title" }, title),
-    chart.description ? React.createElement("p", { className: "chart-view-description" }, chart.description) : null,
-    React.createElement("div", { className: "chart-table-scroll" }, table),
-    React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
-    provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null);
+    chartDescriptionVisible(chart) && chart.description
+      ? React.createElement("p", { className: "chart-view-description" }, chart.description)
+      : null,
+    React.createElement("div", { className: "chart-table-scroll" }, table));
 }
 
 function formatValue(value) {

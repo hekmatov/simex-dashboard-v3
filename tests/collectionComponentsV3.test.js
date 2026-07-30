@@ -242,13 +242,14 @@ test("target collections use shared fixed, scroll, carousel, and priority presen
             },
           },
         },
+        accessibilityEnabled: true,
       },
     ));
 
     assert.match(html, new RegExp(`data-collection-layout="${layout}"`));
     assert.equal((html.match(/>Facility targets</g) ?? []).length, 1);
-    assert.equal((html.match(/Source: Target register/g) ?? []).length, 1);
-    assert.equal((html.match(/Captured: 2027-05-02/g) ?? []).length, 1);
+    assert.equal((html.match(/Source: Target register/g) ?? []).length, 0);
+    assert.equal((html.match(/Captured: 2027-05-02/g) ?? []).length, 0);
     assert.match(html, /data-title-align="center"/);
   }
 
@@ -268,6 +269,7 @@ test("target collections use shared fixed, scroll, carousel, and priority presen
           },
         },
       },
+      accessibilityEnabled: true,
     },
   ));
   assertTextOrder(
@@ -321,6 +323,7 @@ test("target collections preserve playback order locking and embedded provenance
           },
         },
       },
+      accessibilityEnabled: true,
     },
   ));
 
@@ -638,7 +641,10 @@ test("CardChartView delegates repeated cards and preserves card semantics and pr
     chart: {
       title: "Facility capacity",
       description: "Current capacity by facility.",
-      presentation: { title: { align: "right" } },
+      presentation: {
+        title: { align: "right" },
+        description: { visible: true },
+      },
     },
     model: {
       items: [
@@ -666,8 +672,7 @@ test("CardChartView delegates repeated cards and preserves card semantics and pr
   assertTextOrder(html, ["Clinic B", "Clinic C"], "card priority");
   assert.doesNotMatch(html, /Clinic A/);
   assert.match(html, /role="listitem"/);
-  assert.match(html, /Source: Capacity register/);
-  assert.match(html, /Captured: 2027-05-02/);
+  assert.doesNotMatch(html, /Source: Capacity register|Captured: 2027-05-02/);
 });
 
 test("CardChartView preserves the static single-item card path", () => {

@@ -98,8 +98,16 @@ test("repeated gauges become stable detached one-mark collection models with ran
   const chartBefore = structuredClone(sourceChart);
   const preparedBefore = structuredClone(sourcePrepared);
 
-  const model = buildRenderModel({ chart: sourceChart, prepared: sourcePrepared });
-  const repeated = buildRenderModel({ chart: sourceChart, prepared: sourcePrepared });
+  const model = buildRenderModel({
+    chart: sourceChart,
+    prepared: sourcePrepared,
+    renderContext: { accessibilityEnabled: true },
+  });
+  const repeated = buildRenderModel({
+    chart: sourceChart,
+    prepared: sourcePrepared,
+    renderContext: { accessibilityEnabled: true },
+  });
 
   assert.equal(model.kind, "targetCollection");
   assert.equal(model.items.length, 2);
@@ -125,7 +133,7 @@ test("repeated gauges become stable detached one-mark collection models with ran
     assert.equal(item.model.kind, "echarts");
     assert.equal(item.model.option.series.length, 1);
     assert.equal(item.model.option.series[0].data.length, 1);
-    assert.equal(item.model.option.series[0].center, undefined);
+    assert.deepEqual(item.model.option.series[0].center, ["50%", "58%"]);
     assert.equal(item.model.option.title, undefined);
     assert.equal(item.model.semanticSummary.items.length, 1);
     assert.match(item.accessibleSummary, new RegExp(item.label));
@@ -154,6 +162,7 @@ test("repeated bullets isolate one prepared observation per item and expose norm
       { entity: "Clinic A", actual: 8, target: 10, time: "2027-05-02" },
       { entity: "Clinic B", actual: 6, target: 9, time: "2027-05-02", riskScore: 4 },
     ]),
+    renderContext: { accessibilityEnabled: true },
   });
 
   assert.equal(model.kind, "targetCollection");
@@ -274,6 +283,7 @@ test("playback accessibility distinguishes the playback time from carried, neare
         },
       },
     ], { activeTime }),
+    renderContext: { accessibilityEnabled: true },
   });
 
   assert.equal(model.items[0].temporalStatus, "carried");
@@ -317,6 +327,7 @@ test("single Gauge and Bullet observations retain the ordinary ECharts path", ()
         presentation: { collection: null, targets: { ranges: [50, 80, 100] } },
       }),
       prepared: ready([mark]),
+      renderContext: { accessibilityEnabled: true },
     });
 
     assert.equal(model.kind, "echarts");
@@ -445,6 +456,7 @@ test("the target collection view renders detached model identity and semantic su
       { entity: "Clinic A", value: 72, target: 80, time: "2027-05-02" },
       { entity: "Clinic B", value: 55, target: 70, time: "2027-05-02" },
     ]),
+    renderContext: { accessibilityEnabled: true },
   });
   const modelBefore = structuredClone(model);
   const html = renderToStaticMarkup(React.createElement(
@@ -453,6 +465,7 @@ test("the target collection view renders detached model identity and semantic su
       model,
       chart: chart("gauge"),
       provenance: { label: "Operations register" },
+      accessibilityEnabled: true,
     },
   ));
 
@@ -463,6 +476,6 @@ test("the target collection view renders detached model identity and semantic su
   assert.equal((html.match(/role="group"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /role="img"/);
   assert.equal((html.match(/class="chart-view-title"/g) ?? []).length, 1);
-  assert.equal((html.match(/Source: Operations register/g) ?? []).length, 1);
+  assert.equal((html.match(/Source: Operations register/g) ?? []).length, 0);
   assert.deepEqual(model, modelBefore);
 });

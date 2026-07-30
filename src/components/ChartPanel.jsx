@@ -1,6 +1,8 @@
 import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
+import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 function ChartPanel({
   panel,
@@ -8,6 +10,8 @@ function ChartPanel({
   datasetProfile,
   geoData,
   dataSources = {},
+  accessibilityEnabled = false,
+  suspended = false,
   editMode = false,
   isDragging = false,
   isDragTarget = false,
@@ -26,7 +30,18 @@ function ChartPanel({
   onStartSection,
 }) {
   const chart = panel?.chart ?? panel;
+  const citation = resolveChartCitation({
+    chart,
+    dataSources,
+    datasetProfile,
+  });
   const holdTimer = React.useRef(null);
+  const suppressFullscreenClickUntil = React.useRef(0);
+  const panelRef = React.useRef(null);
+  const [chartVisible, setChartVisible] = React.useState(
+    () => typeof IntersectionObserver === "undefined",
+  );
+  const shouldRenderChart = !suspended && (chartVisible || isSelected);
 
   const clearHold = () => {
     if (holdTimer.current !== null) {
@@ -36,20 +51,53 @@ function ChartPanel({
   };
   const beginFullscreenHold = () => {
     clearHold();
+    suppressFullscreenClickUntil.current = 0;
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null;
+      suppressFullscreenClickUntil.current = Date.now() + 1200;
       onFullScreenHold?.();
     }, 650);
   };
+  const handleFullscreenClick = () => {
+    if (Date.now() < suppressFullscreenClickUntil.current) {
+      suppressFullscreenClickUntil.current = 0;
+      return;
+    }
+    if (multiSelectMode) {
+      onToggleMultiSelect?.();
+      return;
+    }
+    onDisplayAction?.({
+      type: "manual_open",
+      chart_id: chart.id,
+    });
+  };
   React.useEffect(() => clearHold, []);
+  React.useEffect(() => {
+    if (chartVisible || isSelected) return undefined;
+    const panelElement = panelRef.current;
+    if (!panelElement || typeof IntersectionObserver === "undefined") {
+      setChartVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      setChartVisible(true);
+      observer.disconnect();
+    }, { rootMargin: "520px 0px" });
+    observer.observe(panelElement);
+    return () => observer.disconnect();
+  }, [chartVisible, isSelected]);
 
   return (
     <article
+      ref={panelRef}
       className={[
         "chart-panel",
         `chart-panel-${chart.layout?.size ?? "standard"}`,
+        editMode ? "chart-panel-has-actions" : "",
         isSelected ? "selected" : "",
-        isMultiSelected ? "multi-selected" : "",
+        isMultiSelected ? "chart-panel-multi-selected" : "",
         isDragging ? "dragging" : "",
         isDragTarget ? "drag-target" : "",
       ].filter(Boolean).join(" ")}
@@ -60,7 +108,7 @@ function ChartPanel({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
     >
-      <div className="panel-actions" aria-label={`${chart.title} actions`}>
+      {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
             <button type="button" className="secondary" onClick={onEdit} aria-label="Edit chart">
@@ -74,44 +122,38 @@ function ChartPanel({
             </button>
           </>
         )}
-        {multiSelectMode ? (
-          <button
-            type="button"
-            className={isMultiSelected ? "active" : "secondary"}
-            onClick={onToggleMultiSelect}
-            aria-label={isMultiSelected ? "Remove from multi-fullscreen" : "Add to multi-fullscreen"}
-          >
-            Multi-fullscreen
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="secondary"
-            aria-label="Fullscreen chart"
-            title="Fullscreen chart"
-            onPointerDown={beginFullscreenHold}
-            onPointerUp={clearHold}
-            onPointerCancel={clearHold}
-            onPointerLeave={clearHold}
-            onClick={() => onDisplayAction?.({
-              type: "manual_open",
-              chart_id: chart.id,
-            })}
-          >
-            Fullscreen
-          </button>
-        )}
-      </div>
-      <ChartView
-        chart={chart}
-        rows={Array.isArray(rows) ? rows : []}
-        datasetProfile={datasetProfile}
-        geoData={geoData}
-        renderContext={{
-          sources: dataSources,
-          mapName: chart.presentation?.map?.geoSource ?? chart.id,
-        }}
-      />
+      </div>}
+      {shouldRenderChart ? (
+        <ChartView
+          chart={chart}
+          rows={Array.isArray(rows) ? rows : []}
+          datasetProfile={datasetProfile}
+          geoData={geoData}
+          accessibilityEnabled={accessibilityEnabled}
+          renderContext={{
+            sources: dataSources,
+            mapName: chart.presentation?.map?.geoSource ?? chart.id,
+            accessibilityEnabled,
+          }}
+        />
+      ) : (
+        <div className="chart-deferred-placeholder" aria-hidden="true">
+          <span>
+            {suspended
+              ? "Chart paused while the editor is open"
+              : "Chart loads when it enters the viewport"}
+          </span>
+        </div>
+      )}
+      {React.createElement(ChartPanelActions, {
+        chartId: chart.id,
+        citation,
+        selectionMode: multiSelectMode,
+        fullscreenSelected: isMultiSelected,
+        onFullscreenHoldStart: multiSelectMode ? undefined : beginFullscreenHold,
+        onFullscreenHoldEnd: clearHold,
+        onFullscreen: handleFullscreenClick,
+      })}
     </article>
   );
 }

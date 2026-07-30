@@ -56,8 +56,7 @@ export default function ImageChartView({
             onClick: () => setScale(MIN_IMAGE_SCALE),
           }, "Reset image zoom"))
       : null,
-    React.createElement("p", { className: "chart-view-provenance" }, `Source: ${provenance?.label ?? "Unavailable"}`),
-    provenance?.capturedAt ? React.createElement("p", { className: "chart-view-provenance" }, `Captured: ${provenance.capturedAt}`) : null);
+  );
 }
 
 export function nextImageZoomScale(currentScale, event) {

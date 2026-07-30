@@ -84,7 +84,9 @@ test("playback entry preserves editor and wizard authoring until each workflow i
 
 test("default synchronized playback keeps line history, bar and map snapshots, and reopens at the same time", async ({
   page,
+  request,
 }) => {
+  await installAccessibilityEnabledDashboard(page, request);
   await openDashboard(page);
   const controls = page.getByRole("region", {
     name: "Synchronized playback controls",
@@ -170,7 +172,9 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
     .toBe(beforeCtrlWheel);
   await expect(guard.locator('[data-zoom-modifier="Control"]')).toBeVisible();
 
-  await panel.getByRole("button", { name: "Fullscreen chart" }).click();
+  await panel.getByRole("button", {
+    name: "Open chart fullscreen",
+  }).click();
   const fullscreen = page.getByRole("dialog", { name: "Displayed charts" });
   guard = fullscreen.locator(
     '[data-displayed-chart-id="bio_confirmed_cases"] .chart-zoom-guard',
@@ -183,6 +187,24 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   await fullscreen.getByRole("button", {
     name: "Close all displayed charts",
   }).click();
+});
+
+test("chart accessibility is off by default and controlled from edit mode", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const chart = page.locator('[data-panel-id="bio_confirmed_cases"]');
+  await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Open edit mode" }).click();
+  const toggle = page.getByRole("checkbox", {
+    name: /Chart accessibility/,
+  });
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await expect(chart.locator(".chart-view-summary")).toHaveCount(1);
+  await toggle.uncheck();
+  await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
 });
 
 test("matching policies produce policy-specific live values", async ({
@@ -257,6 +279,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   await openDashboard(page);
 
   const fixed = page.locator('[data-panel-id="e2e_collection_fixed"]');
+  await fixed.scrollIntoViewIfNeeded();
   await expect(fixed.locator(
     '[data-collection-layout="fixed"][data-collection-rows="1"][data-collection-columns="2"]',
   )).toBeVisible();
@@ -272,6 +295,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   expect((await fixedGrid.boundingBox()).height).toBe(fixedHeight);
 
   const scroll = page.locator('[data-panel-id="e2e_collection_scroll"]');
+  await scroll.scrollIntoViewIfNeeded();
   const scrollRegion = scroll.getByRole("region", {
     name: "Scrollable collection",
   });
@@ -288,6 +312,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   const carousel = page.locator(
     '[data-panel-id="e2e_collection_carousel"]',
   );
+  await carousel.scrollIntoViewIfNeeded();
   const carouselRegion = carousel.getByRole("region", {
     name: "Collection carousel",
   });
@@ -345,6 +370,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   const priority = page.locator(
     '[data-panel-id="e2e_collection_priority"]',
   );
+  await priority.scrollIntoViewIfNeeded();
   await expect(firstCollectionItem(priority)).toHaveAttribute(
     "data-collection-entity-id",
     "Bravo",
@@ -418,6 +444,7 @@ async function installScenarioDashboard(page, request, configure) {
 }
 
 function addTemporalMatchingScenarios(dashboard) {
+  dashboard.globalStyles.accessibility = { enabled: true };
   const sparseSourceId = "e2e_sparse_r_values";
   dashboard.dataSources[sparseSourceId] = uploadedCsv(
     "sparse-r-values.csv",
@@ -454,6 +481,19 @@ function addTemporalMatchingScenarios(dashboard) {
       matching,
     });
   }
+}
+
+async function installAccessibilityEnabledDashboard(page, request) {
+  const response = await request.get("/config/dashboard.json");
+  expect(response.ok()).toBe(true);
+  const dashboard = await response.json();
+  dashboard.globalStyles.accessibility = { enabled: true };
+  await page.addInitScript(({ key, value }) => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, {
+    key: STORAGE_KEY,
+    value: dashboard,
+  });
 }
 
 function addPriorityPlaybackScenarios(dashboard) {

@@ -4,7 +4,7 @@ import { resolveChartRendering } from "../../charting/rendering/resolveChartRend
 import ChartView from "../charts/ChartView.jsx";
 import { usePlayback } from "./PlaybackProvider.jsx";
 
-export default function PlaybackView() {
+export default function PlaybackView({ accessibilityEnabled = false } = {}) {
   const playback = usePlayback();
   const {
     activeGroup,
@@ -36,6 +36,7 @@ export default function PlaybackView() {
     loadedData,
     profiles,
     timeContext: playback.timeContextForChart(chart.id),
+    accessibilityEnabled,
   }));
   const unavailableCount = resolvedMembers.filter(({ resolution }) => (
     resolution.status === "unavailable"
@@ -78,6 +79,7 @@ function resolveMember({
   loadedData,
   profiles,
   timeContext,
+  accessibilityEnabled,
 }) {
   const rows = readEntry(loadedData, chart.sourceId);
   const profileEntry = readEntry(profiles, chart.sourceId);
@@ -90,6 +92,7 @@ function resolveMember({
     : undefined;
   const renderContext = {
     mapName: geoSourceId ?? chart.id,
+    accessibilityEnabled,
   };
   const chartProps = {
     chart,
@@ -98,6 +101,7 @@ function resolveMember({
     geoData,
     timeContext,
     renderContext,
+    accessibilityEnabled,
   };
   return {
     chart,

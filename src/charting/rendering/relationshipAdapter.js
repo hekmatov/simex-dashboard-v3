@@ -1,4 +1,8 @@
 import { validateSeriesRendererMark } from "../presentation/seriesStyleContract.js";
+import {
+  buildEChartsDataZoom,
+  rangeSelectorVisible,
+} from "./zoomOptions.js";
 
 export function buildRelationshipRenderModel({ chart, prepared }, schema) {
   const mark = validateSeriesRendererMark(
@@ -15,7 +19,13 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
       tooltip: { trigger: "item" },
       legend: { show: chart.presentation?.legend?.visible !== false },
       ...(Array.isArray(colors) ? { color: [...colors] } : {}),
-      grid: { containLabel: true, left: 48, right: 28, top: 76, bottom: 52 },
+      grid: {
+        containLabel: true,
+        left: 48,
+        right: 28,
+        top: 76,
+        bottom: rangeSelectorVisible(chart) ? 52 : 32,
+      },
       xAxis: { type: "value", name: chart.presentation?.axes?.primary?.xTitle ?? "" },
       yAxis: { type: "value", name: chart.presentation?.axes?.primary?.yTitle ?? "" },
       series: groupMarks(prepared.marks).map(({ name, marks }) => ({
@@ -30,12 +40,7 @@ export function buildRelationshipRenderModel({ chart, prepared }, schema) {
         symbolSize: bubble ? bubbleSize : undefined,
         emphasis: { focus: "series" },
       })),
-      dataZoom: chart.interaction?.zoom?.enabled
-        ? [
-            { type: "inside", xAxisIndex: 0, zoomOnMouseWheel: "ctrl", moveOnMouseWheel: false, moveOnMouseMove: false },
-            { type: "slider", xAxisIndex: 0 },
-          ]
-        : undefined,
+      dataZoom: buildEChartsDataZoom(chart),
     },
   };
 }

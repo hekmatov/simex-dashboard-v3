@@ -1,4 +1,5 @@
 import React from "react";
+import { pickColorFromPage } from "./color/EyeDropperCoordinator.js";
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const COLOR_GROUPS = [
   {
@@ -43,17 +44,12 @@ function ColorField({
   const normalizedValue = normalizeHexColor(value, fallback);
   const [draft, setDraft] = React.useState(normalizedValue);
   const [message, setMessage] = React.useState("");
-  const pickerActiveRef = React.useRef(false);
-  const pickerCleanupRef = React.useRef(noop);
+  const [pickerActive, setPickerActive] = React.useState(false);
   const controlId = id || `settings-color-${safeId(label)}`;
   const contrast = describeColorContrast(normalizedValue, { transparent });
   React.useEffect(() => {
-    pickerCleanupRef.current();
     setDraft(normalizedValue);
   }, [normalizedValue, pickerRevision]);
-  React.useEffect(() => (
-    () => pickerCleanupRef.current()
-  ), []);
   function commitColor(nextColor) {
     const normalized = normalizeHexColor(nextColor, "");
     setDraft(nextColor);
@@ -64,55 +60,25 @@ function ColorField({
     setMessage("");
     onChange(normalized);
   }
-  function startPicking() {
-    if (pickerActiveRef.current) {
-      setMessage("A picker window is already open.");
+  async function startPicking() {
+    if (pickerActive) {
+      setMessage("The picker is already active.");
       return;
     }
-    if (typeof window === "undefined" || !("EyeDropper" in window)) {
-      setMessage("Native picker is unavailable in this browser.");
-      return;
+    setPickerActive(true);
+    setMessage("Pick any color visible on the page. Press Esc to cancel.");
+    try {
+      const color = await pickColorFromPage();
+      if (color) commitColor(color);
+    } catch (error) {
+      setMessage(
+        error?.name === "AbortError"
+          ? "Picker cancelled."
+          : error?.message || "Native picker could not start.",
+      );
+    } finally {
+      setPickerActive(false);
     }
-    const requestId = makePickerRequestId();
-    const pickerWindow = window.open("", `simex-color-picker-${requestId}`, "popup,width=320,height=210,left=120,top=120");
-    if (!pickerWindow) {
-      setMessage("Popup blocked. Allow popups or type the hex color.");
-      return;
-    }
-    pickerActiveRef.current = true;
-    setMessage("Picker window opened. Use it to start the native picker.");
-    let cleaned = false;
-    function cleanup({ closeWindow = false } = {}) {
-      if (cleaned) return;
-      cleaned = true;
-      window.removeEventListener("message", handlePickerMessage);
-      clearInterval(closeCheck);
-      pickerActiveRef.current = false;
-      pickerCleanupRef.current = noop;
-      if (closeWindow && !pickerWindow.closed) pickerWindow.close();
-    }
-    function handlePickerMessage(event) {
-      if (event.origin !== window.location.origin || event.data?.type !== "simex-color-picked" || event.data.requestId !== requestId) {
-        return;
-      }
-      if (event.data.color) {
-        commitColor(event.data.color);
-      } else if (event.data.error) {
-        setMessage(event.data.error);
-      }
-      cleanup();
-    }
-    const closeCheck = setInterval(() => {
-      if (pickerWindow.closed) {
-        cleanup();
-      }
-    }, 500);
-    pickerCleanupRef.current = () => cleanup({ closeWindow: true });
-    window.addEventListener("message", handlePickerMessage);
-    pickerWindow.document.open();
-    pickerWindow.document.write(pickerWindowHtml(requestId, window.location.origin));
-    pickerWindow.document.close();
-    pickerWindow.focus();
   }
   return /* @__PURE__ */ React.createElement(
     "div",
@@ -148,6 +114,7 @@ function ColorField({
         type: "button",
         className: "secondary settings-pipette-button",
         onClick: startPicking,
+        disabled: pickerActive,
         "aria-label": `Pick ${String(label).toLowerCase()} from dashboard`,
         title: "Pick color from screen"
       },
@@ -189,80 +156,6 @@ function ColorField({
 }
 function PipetteIcon() {
   return /* @__PURE__ */ React.createElement("svg", { className: "settings-pipette-icon", viewBox: "0 0 24 24", "aria-hidden": "true", focusable: "false" }, /* @__PURE__ */ React.createElement("path", { d: "M14.5 4.5 19.5 9.5" }), /* @__PURE__ */ React.createElement("path", { d: "M8 16 4.5 19.5" }), /* @__PURE__ */ React.createElement("path", { d: "M6.5 17.5 16.5 7.5" }), /* @__PURE__ */ React.createElement("path", { d: "M14 5 19 10 16 13 11 8z" }), /* @__PURE__ */ React.createElement("path", { d: "M5 20h5" }));
-}
-function noop() {
-}
-function makePickerRequestId() {
-  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-function pickerWindowHtml(requestId, origin) {
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Pick color</title>
-    <style>
-      body {
-        align-items: center;
-        background: #f5f8fb;
-        color: #08224a;
-        display: grid;
-        font-family: Inter, Arial, sans-serif;
-        gap: 12px;
-        justify-items: center;
-        margin: 0;
-        min-height: 100vh;
-        padding: 18px;
-        text-align: center;
-      }
-      button {
-        background: #043bcb;
-        border: 0;
-        border-radius: 7px;
-        color: white;
-        cursor: pointer;
-        font: inherit;
-        font-weight: 700;
-        padding: 10px 14px;
-      }
-      p {
-        font-size: 13px;
-        line-height: 1.35;
-        margin: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <button id="pick" type="button" autofocus>Start native picker</button>
-    <p>Click a screen pixel to apply it. Press Esc or close this window to cancel.</p>
-    <script>
-      const requestId = ${JSON.stringify(requestId)};
-      const origin = ${JSON.stringify(origin)};
-      const send = (payload) => window.opener?.postMessage({ type: "simex-color-picked", requestId, ...payload }, origin);
-      document.getElementById("pick").addEventListener("click", async () => {
-        if (!("EyeDropper" in window)) {
-          send({ error: "Native picker is unavailable in this browser." });
-          window.close();
-          return;
-        }
-        try {
-          const result = await new EyeDropper().open();
-          send({ color: result?.sRGBHex });
-          window.close();
-        } catch (error) {
-          send({ error: error?.name === "AbortError" ? "Picker cancelled." : error?.message || "Native picker could not start." });
-          window.close();
-        }
-      });
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          send({ error: "Picker cancelled." });
-          window.close();
-        }
-      });
-    <\/script>
-  </body>
-</html>`;
 }
 function normalizeHexColor(value, fallback) {
   const color = String(value ?? "").trim();

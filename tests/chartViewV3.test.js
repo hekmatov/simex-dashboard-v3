@@ -112,7 +112,7 @@ test("invalid prepared data renders a bounded chart error", () => {
   assert.ok(fallback.length <= 240);
 });
 
-test("table render models retain headers, values, observation time, and provenance", () => {
+test("table render models retain headers, values, and observation time while citation stays hidden", () => {
   const rows = [{ facility: "Clinic A", score: 7, observed: "2027-05-02" }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: {
@@ -131,11 +131,10 @@ test("table render models retain headers, values, observation time, and provenan
   assert.match(html, /scope="col">facility/);
   assert.match(html, /Clinic A/);
   assert.match(html, /aria-label="Observed 2027-05-02"/);
-  assert.match(html, /Source: Readiness register/);
-  assert.match(html, /Captured: 2027-05-02/);
+  assert.doesNotMatch(html, /Source: Readiness register|Captured: 2027-05-02/);
 });
 
-test("chart sourceId is rendered as the exact provenance fallback when source metadata is unavailable", () => {
+test("chart sourceId provenance fallback is not rendered inline by default", () => {
   const rows = [{ value: 0 }];
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: { typeId: "kpi", title: "Zero capacity", sourceId: "capacity-feed", roles: { value: { field: "value" } } },
@@ -143,7 +142,7 @@ test("chart sourceId is rendered as the exact provenance fallback when source me
     datasetProfile: profileDataset(rows),
   }));
 
-  assert.match(html, /Source: capacity-feed/);
+  assert.doesNotMatch(html, /Source: capacity-feed/);
   assert.doesNotMatch(html, /Configured data|\[object Object\]/);
 });
 
@@ -256,6 +255,8 @@ test("time-series playback summaries place resolved overlays at the shared clock
       activeEpochMs: Date.UTC(2027, 1, 22),
       matching,
     },
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   }));
 
   const lastKnown = render({ policy: "lastKnown" });
@@ -274,6 +275,7 @@ test("ECharts semantic summaries render non-finite target values as unavailable"
   const html = renderToStaticMarkup(React.createElement(EChartsChartView, {
     chart: { title: "Supply readiness" },
     model: { semanticSummary: { items: [{ label: "Clinic A", actual: Number.NaN, target: Number.POSITIVE_INFINITY, time: null }] } },
+    accessibilityEnabled: true,
   }));
 
   assert.match(html, /Clinic A: actual Unavailable; target Unavailable/);
@@ -323,6 +325,8 @@ test("image zoom affordances consume ChartView's authoritative schema and intera
     },
     rows,
     datasetProfile: profileDataset(rows),
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   }));
   const authoritativeDisabled = renderToStaticMarkup(React.createElement(ImageChartView, {
     chart: {
@@ -355,6 +359,8 @@ test("ECharts render models remain SSR-safe and describe their content", () => {
     },
     rows,
     datasetProfile: profileDataset(rows),
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   }));
 
   assert.match(html, /role="img"/);
@@ -378,6 +384,8 @@ test("non-zoom schema capabilities cannot be bypassed by chart-local input", () 
     },
     rows,
     datasetProfile: profileDataset(rows),
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   }));
 
   assert.doesNotMatch(html, /chart-zoom-guard|Hold Ctrl while scrolling to zoom/);
@@ -468,6 +476,8 @@ test("gauge render models expose their value and target in the accessible summar
     },
     rows,
     datasetProfile: profileDataset(rows),
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   }));
 
   assert.match(html, /Supply readiness: actual 8; target 10/);
@@ -490,6 +500,8 @@ test("a single bullet summary exposes its exact label, actual, target, and time"
     },
     rows,
     datasetProfile: profileDataset(rows, { observed: { interpretation: "temporal" } }),
+    accessibilityEnabled: true,
+    renderContext: { accessibilityEnabled: true },
   }));
 
   assert.match(html, /Clinic A: actual 8; target 10; observed 2027-05-01/);
@@ -558,12 +570,14 @@ test("repeated Gauge and Bullet charts dispatch through one accessible collectio
       datasetProfile: profileDataset(rows, {
         observed: { interpretation: "temporal" },
       }),
+      accessibilityEnabled: true,
+      renderContext: { accessibilityEnabled: true },
     }));
 
     assert.match(html, /class="chart-target-collection-view"/);
     assert.match(html, /data-collection-layout="fixed"/);
     assert.equal((html.match(new RegExp(`>${title}<`, "g")) ?? []).length, 1);
-    assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 1);
+    assert.equal((html.match(new RegExp(`Source: ${source}`, "g")) ?? []).length, 0);
     assert.equal((html.match(/class="chart-target-collection-item"/g) ?? []).length, 2);
     assert.equal((html.match(/role="group"/g) ?? []).length, 2);
     assert.doesNotMatch(html, /role="img"/);

@@ -369,7 +369,10 @@ test("chart drafts start with the version 3 defaults for the chosen schema", () 
       filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap",
     },
     presentation: { title: { align: "left" }, collection: null },
-    interaction: { zoom: { enabled: true }, timeSync: null },
+    interaction: {
+      zoom: { enabled: true, rangeSelector: false },
+      timeSync: null,
+    },
     layout: { size: "standard" },
   });
 });

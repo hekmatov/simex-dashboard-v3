@@ -42,6 +42,20 @@ For user guidance, see [the app manual](docs/app-manual.md). For the data and
 configuration architecture, see
 [Chart Data System V3](docs/chart-data-system-v3.md).
 
+## Design priorities
+
+Runtime performance is the dashboard's first architectural priority. Normal
+rendering and interaction paths should minimize repeated data preparation,
+chart reconstruction, memory retention, and defensive work. Strict validation
+belongs at configuration, import, and authoring boundaries rather than inside
+frequently repeated display operations.
+
+The operational dashboard is offline-first by design. Any participant-facing
+online edition is a separately hosted, static, read-only build and has no
+connection to the Quorum engine. Quorum integration belongs to the local
+authoring and analysis environment; the participant display runtime must not
+depend on it.
+
 ## Development
 
 Install dependencies:

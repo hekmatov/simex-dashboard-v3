@@ -35,9 +35,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
 
   await openDashboard(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
-  const panel = page.locator(".chart-panel").filter({
-    hasText: chart.title,
-  });
+  const panel = page.locator('[data-panel-id="bio_current_cases_kpi"]');
   await expect(panel).toBeVisible();
 
   await page.getByRole("button", { name: "Open edit mode" }).click();
@@ -63,11 +61,8 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
     title: "Updated wrapped KPI",
   });
 
-  const updated = page.locator(".chart-panel").filter({
-    hasText: "Updated wrapped KPI",
-  });
-  await updated.getByRole("button", { name: "Remove chart" }).click();
-  await expect(updated).toHaveCount(0);
+  await panel.getByRole("button", { name: "Remove chart" }).click();
+  await expect(panel).toHaveCount(0);
 });
 
 test("replacement bundle profiles survive import, edit, save, and reload", async ({
@@ -150,7 +145,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   await expect(page.getByLabel("Program label")).toHaveValue(
     "Imported replacement",
   );
-  await expect(page.getByText("Imported replacement chart")).toBeVisible();
+  await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
 
   await page.getByLabel("Program label").fill("Imported profile retained");
   await page.getByRole("button", { name: "Save edit mode" }).click();
@@ -176,7 +171,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
     name: "Replacement",
     exact: true,
   })).toBeVisible();
-  await expect(page.getByText("Imported replacement chart")).toBeVisible();
+  await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
     return stored.datasetProfiles?.external_cases?.sourceId;
