@@ -517,6 +517,122 @@ test("debounced edits flush before chart saves and cancellation prevents stale c
   assert.equal(committed.at(-1).title, "Exercise dashboard");
 });
 
+test("failed debounced flush requeues the draft for the same-action retry", async () => {
+  const {
+    applyDashboardEdits,
+    createDebouncedDashboardEdits,
+    createSerializedDashboardCommitController,
+  } = await import("../src/lib/dashboardCommitController.js");
+  let rejectCommit = true;
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: minimalDashboard(),
+    commit: async (candidate) => {
+      if (rejectCommit) throw new Error("storage failed");
+      return structuredClone(candidate);
+    },
+  });
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: fakeClock(),
+    onCommit: (pending) => controller.mutate((dashboard) => (
+      applyDashboardEdits(dashboard, pending)
+    )),
+  });
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Retried exercise label" },
+  });
+  await assert.rejects(edits.flush(), /storage failed/);
+  assert.equal(edits.pendingCount(), 1);
+
+  rejectCommit = false;
+  await edits.flush();
+  assert.equal(edits.pendingCount(), 0);
+  assert.equal(controller.getCurrent().programLabel, "Retried exercise label");
+});
+
+test("an older rejected flush never replaces a newer same-key retry draft", async () => {
+  const { createDebouncedDashboardEdits } = await import(
+    "../src/lib/dashboardCommitController.js"
+  );
+  const commits = [];
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: fakeClock(),
+    onCommit: (pending) => new Promise((resolve, reject) => {
+      commits.push({ pending, resolve, reject });
+    }),
+  });
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Older label" },
+  });
+  const olderFlush = edits.flush();
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Newer label" },
+  });
+  const newerFlush = edits.flush();
+
+  commits[0].reject(new Error("older failed"));
+  await assert.rejects(olderFlush, /older failed/);
+  commits[1].reject(new Error("newer failed"));
+  await assert.rejects(newerFlush, /newer failed/);
+  assert.equal(edits.pendingCount(), 1);
+
+  const retry = edits.flush();
+  assert.equal(
+    commits[2].pending[0].updates.programLabel,
+    "Newer label",
+  );
+  commits[2].resolve();
+  await retry;
+  assert.equal(edits.pendingCount(), 0);
+});
+
+test("failed reset can restore cancelled edits for a later save", async () => {
+  const {
+    applyDashboardEdits,
+    createDebouncedDashboardEdits,
+    createSerializedDashboardCommitController,
+  } = await import("../src/lib/dashboardCommitController.js");
+  let rejectCommit = true;
+  const baseline = minimalDashboard();
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: baseline,
+    commit: async (candidate) => {
+      if (rejectCommit) throw new Error("reset failed");
+      return structuredClone(candidate);
+    },
+  });
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: fakeClock(),
+    onCommit: (pending) => controller.mutate((dashboard) => (
+      applyDashboardEdits(dashboard, pending)
+    )),
+  });
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Draft retained after reset failure" },
+  });
+
+  const cancelled = edits.takePending();
+  assert.equal(edits.pendingCount(), 0);
+  await assert.rejects(controller.replace(baseline), /reset failed/);
+  edits.restore(cancelled);
+  assert.equal(edits.pendingCount(), 1);
+
+  rejectCommit = false;
+  await edits.flush();
+  assert.equal(
+    controller.getCurrent().programLabel,
+    "Draft retained after reset failure",
+  );
+});
+
 test("serialized dashboard commits compose rapid mutations and retain the last good state after validation failure", async () => {
   const {
     createSerializedDashboardCommitController,

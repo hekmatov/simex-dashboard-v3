@@ -73,6 +73,7 @@ export default function ChartWizardV3({
   geoDataSources,
   timeSyncGroups,
   existingCharts = [],
+  disabled = false,
   onClose,
   onCreate,
 }) {
@@ -105,8 +106,11 @@ export default function ChartWizardV3({
   }
   const [submitting, setSubmitting] = React.useState(false);
   const [pendingSourceUi, setPendingSourceUi] = React.useState(null);
+  const operationLocked = () => (
+    disabled || submissionGateRef.current.isActive()
+  );
   const closeHandlers = createWizardCloseHandlers({
-    isSubmitting: () => submitting,
+    isSubmitting: operationLocked,
     onRequestClose: requestClose,
     onConfirmClose: confirmClose,
   });
@@ -117,11 +121,11 @@ export default function ChartWizardV3({
   });
 
   function requestClose() {
-    if (submitting) return;
-      setWizard((current) => reduceWizardState(current, {
-        type: "requestClose",
-      }));
-      setSubmissionError("");
+    if (operationLocked()) return;
+    setWizard((current) => reduceWizardState(current, {
+      type: "requestClose",
+    }));
+    setSubmissionError("");
   }
 
   React.useEffect(() => {
@@ -424,7 +428,7 @@ export default function ChartWizardV3({
     }
   };
   const finish = async () => {
-    if (!canCreate) return;
+    if (!canCreate || disabled) return;
     return submissionGateRef.current.run(async () => {
       setSubmitting(true);
       try {
@@ -438,7 +442,7 @@ export default function ChartWizardV3({
     });
   };
   function confirmClose() {
-    if (submitting) return;
+    if (operationLocked()) return;
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
     if (closed.closed && typeof onClose === "function") onClose();
@@ -451,6 +455,8 @@ export default function ChartWizardV3({
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": "chart-wizard-title",
+      "aria-busy": disabled || submitting ? "true" : undefined,
+      inert: disabled || submitting ? "" : undefined,
       tabIndex: -1,
       ref: wizardDialogRef,
     },
@@ -475,7 +481,7 @@ export default function ChartWizardV3({
           {
             type: "button",
             className: "secondary",
-            disabled: submitting,
+            disabled: disabled || submitting,
             onClick: closeHandlers.requestClose,
           },
           "Close",
@@ -497,6 +503,7 @@ export default function ChartWizardV3({
               wizard.activeStep === step.id ? "true" : undefined,
             "aria-current": wizard.activeStep === step.id ? "step" : undefined,
             "data-complete": step.complete ? "true" : "false",
+            disabled: disabled || submitting,
             onClick: () => dispatch({ type: "navigate", step: step.id }),
           },
           step.label,
@@ -613,7 +620,7 @@ export default function ChartWizardV3({
           "button",
           {
             type: "button",
-            disabled: !canCreate || submitting,
+            disabled: disabled || !canCreate || submitting,
             onClick: finish,
           },
           submitting ? "Creating..." : "Create chart",
@@ -628,9 +635,9 @@ export default function ChartWizardV3({
       cancelLabel: "Continue editing",
       onConfirm: confirmClose,
       onCancel: () => {
-        if (!submitting) dispatch({ type: "cancelConfirmation" });
+        if (!operationLocked()) dispatch({ type: "cancelConfirmation" });
       },
-      disabled: submitting,
+      disabled: disabled || submitting,
     }),
     React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "clearSource",
@@ -639,12 +646,16 @@ export default function ChartWizardV3({
       confirmLabel: "Remove source",
       cancelLabel: "Keep source",
       onConfirm: () => {
+        if (operationLocked()) return;
         dispatch({ type: "confirmClearSource" });
         setSourceKind("");
         setManualTable(null);
         setManualErrors([]);
       },
-      onCancel: () => dispatch({ type: "cancelConfirmation" }),
+      onCancel: () => {
+        if (!operationLocked()) dispatch({ type: "cancelConfirmation" });
+      },
+      disabled: disabled || submitting,
     }),
     React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "changeSource",
@@ -654,6 +665,7 @@ export default function ChartWizardV3({
       confirmLabel: "Change source",
       cancelLabel: "Keep current source",
       onConfirm: () => {
+        if (operationLocked()) return;
         let next = reduceWizardState(wizard, {
           type: "confirmSourceChange",
         });
@@ -669,9 +681,11 @@ export default function ChartWizardV3({
         setPendingSourceUi(null);
       },
       onCancel: () => {
+        if (operationLocked()) return;
         dispatch({ type: "cancelConfirmation" });
         setPendingSourceUi(null);
       },
+      disabled: disabled || submitting,
     }),
   );
 }

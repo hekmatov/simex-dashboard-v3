@@ -14,6 +14,7 @@ function ChartPanel({
   accessibilityEnabled = false,
   suspended = false,
   editMode = false,
+  editDisabled = false,
   isDragging = false,
   isDragTarget = false,
   isSelected = false,
@@ -103,7 +104,7 @@ function ChartPanel({
         isDragTarget ? "drag-target" : "",
       ].filter(Boolean).join(" ")}
       data-panel-id={chart.id}
-      draggable={editMode}
+      draggable={editMode && !editDisabled}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
@@ -112,13 +113,19 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <button type="button" className="secondary" onClick={onEdit} aria-label="Edit chart">
+            <button type="button" className="secondary" disabled={editDisabled} onClick={() => {
+              if (!editDisabled) onEdit?.();
+            }} aria-label="Edit chart">
               Edit
             </button>
-            <button type="button" className="secondary" onClick={onStartSection} aria-label="Start section here">
+            <button type="button" className="secondary" disabled={editDisabled} onClick={() => {
+              if (!editDisabled) onStartSection?.();
+            }} aria-label="Start section here">
               Section
             </button>
-            <button type="button" className="danger" onClick={onRemove} aria-label="Remove chart">
+            <button type="button" className="danger" disabled={editDisabled} onClick={() => {
+              if (!editDisabled) onRemove?.();
+            }} aria-label="Remove chart">
               Remove
             </button>
           </>

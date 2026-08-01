@@ -247,6 +247,7 @@ export default function ChartEditorV3({
   loadedData = {},
   profiles = {},
   parsingMetadata = {},
+  disabled = false,
   onSave = noop,
   onReset = noop,
   onCancel = noop,
@@ -453,6 +454,7 @@ export default function ChartEditorV3({
   };
   const submit = async (event) => {
     event?.preventDefault?.();
+    if (disabled) return undefined;
     return submissionGateRef.current.run(async () => {
       setSubmitting(true);
       try {
@@ -474,7 +476,12 @@ export default function ChartEditorV3({
       }
     });
   };
+  const dismissEditor = () => {
+    if (disabled || submissionGateRef.current.isActive()) return;
+    onCancel();
+  };
   const confirmReset = () => {
+    if (disabled || submissionGateRef.current.isActive()) return;
     setState((current) => reduceChartEditorState(
       reduceChartEditorState(current, { type: "confirmReset" }),
       { type: "cancelConfirmation" },
@@ -484,12 +491,14 @@ export default function ChartEditorV3({
 
   return React.createElement(
     ChartEditorModal,
-    { onClose: onCancel },
+    { onClose: dismissEditor },
     React.createElement(
       "aside",
       {
         className: "chart-editor-v3",
         "aria-labelledby": "chart-editor-title",
+        "aria-busy": disabled || submitting ? "true" : undefined,
+        inert: disabled || submitting ? "" : undefined,
       },
       React.createElement(
         "form",
@@ -515,6 +524,7 @@ export default function ChartEditorV3({
               "select",
               {
                 value: state.draft.typeId,
+                disabled: disabled || submitting,
                 onChange: (event) => {
                   if (event.target.value !== state.draft.typeId) {
                     dispatch({
@@ -584,12 +594,13 @@ export default function ChartEditorV3({
         React.createElement(EditSessionActions, {
           valid: model.valid,
           submitting,
+          disabled,
           resetConfirmationOpen: state.confirmation === "reset",
           onRequestReset: () => dispatch({ type: "requestReset" }),
           onConfirmReset: confirmReset,
           onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
           onSave: submit,
-          onCancel,
+          onCancel: dismissEditor,
           onRemove,
         }),
       ),

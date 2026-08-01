@@ -6,6 +6,7 @@ export default function ConfirmDialog({
   open = false,
   title = "Are you sure?",
   message = "",
+  error = "",
   confirmLabel = "Yes",
   cancelLabel = "No",
   onConfirm = noop,
@@ -16,6 +17,10 @@ export default function ConfirmDialog({
   if (!open) return null;
   const id = `confirm-${safeId(title)}`;
   const dismiss = disabled ? noop : onCancel;
+  const describedBy = [
+    message ? `${id}-message` : null,
+    error ? `${id}-error` : null,
+  ].filter(Boolean).join(" ") || undefined;
   return React.createElement(
     ModalFocusScope,
     {
@@ -27,7 +32,7 @@ export default function ConfirmDialog({
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": `${id}-title`,
-      "aria-describedby": message ? `${id}-message` : undefined,
+      "aria-describedby": describedBy,
       tabIndex: -1,
     },
     React.createElement(
@@ -36,6 +41,17 @@ export default function ConfirmDialog({
       React.createElement("h2", { id: `${id}-title` }, title),
       message
         ? React.createElement("p", { id: `${id}-message` }, message)
+        : null,
+      error
+        ? React.createElement(
+            "p",
+            {
+              id: `${id}-error`,
+              className: "confirm-dialog-error",
+              role: "alert",
+            },
+            error,
+          )
         : null,
       React.createElement(
         "div",

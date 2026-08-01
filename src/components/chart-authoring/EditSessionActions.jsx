@@ -5,6 +5,7 @@ import ConfirmDialog from "../common/ConfirmDialog.jsx";
 export default function EditSessionActions({
   valid = false,
   submitting = false,
+  disabled = false,
   resetConfirmationOpen = false,
   onSave = noop,
   onRequestReset = noop,
@@ -23,7 +24,7 @@ export default function EditSessionActions({
         "button",
         {
           type: "submit",
-          disabled: !valid || submitting,
+          disabled: disabled || !valid || submitting,
           onClick: onSave,
         },
         submitting ? "Saving..." : "Save",
@@ -33,7 +34,7 @@ export default function EditSessionActions({
         {
           type: "button",
           className: "secondary",
-          disabled: submitting,
+          disabled: disabled || submitting,
           onClick: onRequestReset,
         },
         "Reset changes",
@@ -43,7 +44,7 @@ export default function EditSessionActions({
         {
           type: "button",
           className: "secondary",
-          disabled: submitting,
+          disabled: disabled || submitting,
           onClick: onCancel,
         },
         "Cancel",
@@ -54,9 +55,9 @@ export default function EditSessionActions({
             {
               type: "button",
               className: "danger chart-editor-remove",
-              disabled: submitting,
+              disabled: disabled || submitting,
               onClick: () => {
-                if (!submitting) onRemove();
+                if (!disabled && !submitting) onRemove();
               },
             },
             "Remove chart",
@@ -71,6 +72,7 @@ export default function EditSessionActions({
       cancelLabel: "Keep editing",
       onConfirm: onConfirmReset,
       onCancel: onCancelReset,
+      disabled: disabled || submitting,
     }),
   );
 }

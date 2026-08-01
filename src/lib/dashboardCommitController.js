@@ -75,8 +75,11 @@ export function createDebouncedDashboardEdits({
     throw new TypeError("Dashboard edits require an onCommit callback.");
   }
   const pending = new Map();
+  const latestRevision = new Map();
   let timerId = null;
   let disposed = false;
+  let revision = 0;
+  let restorationGeneration = 0;
 
   const clearTimer = () => {
     if (timerId === null) return;
@@ -84,14 +87,53 @@ export function createDebouncedDashboardEdits({
     timerId = null;
   };
 
+  const snapshotPending = () => ({
+    generation: restorationGeneration,
+    entries: [...pending.entries()].map(([key, value]) => ({
+      key,
+      revision: value.revision,
+      edit: structuredClone(value.edit),
+    })),
+  });
+
+  const restoreBatch = (batch) => {
+    if (
+      disposed
+      || batch?.generation !== restorationGeneration
+      || !Array.isArray(batch?.entries)
+    ) {
+      return 0;
+    }
+    let restored = 0;
+    for (const entry of batch.entries) {
+      if (
+        latestRevision.get(entry.key) !== entry.revision
+        || pending.has(entry.key)
+      ) {
+        continue;
+      }
+      pending.set(entry.key, {
+        revision: entry.revision,
+        edit: structuredClone(entry.edit),
+      });
+      restored += 1;
+    }
+    return restored;
+  };
+
   const flush = () => {
     clearTimer();
     if (disposed || pending.size === 0) return Promise.resolve(null);
-    const edits = [...pending.values()].map((edit) => structuredClone(edit));
+    const batch = snapshotPending();
+    const edits = batch.entries.map(({ edit }) => structuredClone(edit));
     pending.clear();
     try {
-      return Promise.resolve(onCommit(edits));
+      return Promise.resolve(onCommit(edits)).catch((error) => {
+        restoreBatch(batch);
+        throw error;
+      });
     } catch (error) {
+      restoreBatch(batch);
       return Promise.reject(error);
     }
   };
@@ -102,7 +144,12 @@ export function createDebouncedDashboardEdits({
       if (typeof key !== "string" || key.trim() === "") {
         throw new TypeError("Dashboard edit key is required.");
       }
-      pending.set(key, structuredClone(edit));
+      revision += 1;
+      latestRevision.set(key, revision);
+      pending.set(key, {
+        revision,
+        edit: structuredClone(edit),
+      });
       clearTimer();
       timerId = scheduler.setTimeout(() => {
         timerId = null;
@@ -110,15 +157,25 @@ export function createDebouncedDashboardEdits({
       }, delay);
     },
     flush,
+    takePending() {
+      clearTimer();
+      const batch = snapshotPending();
+      pending.clear();
+      return batch;
+    },
+    restore: restoreBatch,
     cancel() {
       clearTimer();
       const count = pending.size;
       pending.clear();
+      restorationGeneration += 1;
       return count;
     },
     dispose() {
       clearTimer();
       pending.clear();
+      latestRevision.clear();
+      restorationGeneration += 1;
       disposed = true;
     },
     pendingCount() {

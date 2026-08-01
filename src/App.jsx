@@ -245,7 +245,6 @@ export default function App() {
           { cause: commitError },
         );
       }
-      setError(commitError);
       throw commitError;
     }
   }
@@ -258,7 +257,7 @@ export default function App() {
 
   function mutateDashboard(mutator) {
     const transaction = ensureDashboardCommitController().mutate(mutator);
-    ignoreCommitFailure(transaction);
+    void transaction.catch((commitError) => setError(commitError));
     return transaction;
   }
 
@@ -268,15 +267,18 @@ export default function App() {
       setEditMode(true);
       return;
     }
-    await commitConfiguration(configurationForPortableUse(dashboardRef.current ?? dashboard));
+    await ensureDashboardCommitController().mutate((current) => current);
     setEditBaseline(null);
     setEditMode(false);
   }
 
   async function resetEditSession() {
-    if (editBaseline) await commitConfiguration(editBaseline);
+    const resetDashboard = editBaseline
+      ? await commitConfiguration(editBaseline)
+      : configurationForPortableUse(dashboardRef.current ?? dashboard);
     setEditBaseline(null);
     setEditMode(false);
+    return resetDashboard;
   }
 
   function createChart(payload, target) {
@@ -384,7 +386,9 @@ export default function App() {
         const result = applyCitationToSourceCharts(next, updates);
         Object.assign(next, result.dashboard);
       })}
-      onPageAdd={(page) => mutateDashboard((next) => next.pages.push(page))}
+      onPageAdd={(page) => mutateDashboard((next) => {
+        next.pages.push(page);
+      })}
       onPageRemove={(pageId) => mutateDashboard((next) => {
         const removedChartIds = new Set(
           next.pages
@@ -428,9 +432,9 @@ export default function App() {
         Object.assign(next.pages.find(({ id }) => id === pageId), updates);
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
-      onApplyPendingEdits={(edits) => mutateDashboard((next) => (
-        applyDashboardEdits(next, edits)
-      ))}
+      onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
+        (next) => applyDashboardEdits(next, edits),
+      )}
       onPanelEditCommit={(config) => ignoreCommitFailure(commitConfiguration(config))}
       onPanelEditCancel={(config) => ignoreCommitFailure(commitConfiguration(config))}
       onSectionChange={(pageId, sectionId, updates) => mutateDashboard((next) => {

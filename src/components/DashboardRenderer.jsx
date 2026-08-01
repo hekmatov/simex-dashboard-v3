@@ -14,7 +14,10 @@ import { PlaybackProvider } from "./playback/PlaybackProvider.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
-import { runModeratorTransaction } from "../lib/moderatorTransaction.js";
+import {
+  createSubmissionGate,
+  runModeratorTransaction,
+} from "../lib/moderatorTransaction.js";
 
 export default function DashboardRenderer({
   dashboard,
@@ -82,8 +85,13 @@ export default function DashboardRenderer({
   const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
     React.useState(false);
   const [pendingRemovalPanelId, setPendingRemovalPanelId] = React.useState(null);
+  const moderatorOperationGateRef = React.useRef(null);
+  if (moderatorOperationGateRef.current === null) {
+    moderatorOperationGateRef.current = createSubmissionGate();
+  }
   const [moderatorOperation, setModeratorOperation] = React.useState({
     kind: null,
+    errorKind: null,
     error: "",
   });
   const [multiSelectNotice, setMultiSelectNotice] = React.useState(null);
@@ -96,6 +104,7 @@ export default function DashboardRenderer({
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
   );
+  const moderatorMutationLocked = moderatorOperation.kind !== null;
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
   const geoDataSources = React.useMemo(
@@ -110,7 +119,7 @@ export default function DashboardRenderer({
     }
   }, [editMode]);
 
-  React.useEffect(() => () => pendingEdits.dispose(), [pendingEdits]);
+  React.useEffect(() => () => pendingEdits.cancel(), [pendingEdits]);
 
   React.useEffect(() => {
     if (!multiSelectMode) return undefined;
@@ -139,6 +148,7 @@ export default function DashboardRenderer({
   }, [dashboard.programLabel, dashboard.scenarioLabel, dashboard.lastUpdated]);
 
   function navigateToPage(pageId) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     if (!(dashboard.pages ?? []).some((page) => page.id === pageId)) {
       return;
     }
@@ -147,21 +157,35 @@ export default function DashboardRenderer({
   }
 
   function removePanel(panelId) {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    clearModeratorError("remove-chart");
     setPendingRemovalPanelId(panelId);
   }
 
-  async function performModeratorOperation(kind, transaction) {
-    if (moderatorOperation.kind !== null) return;
-    setModeratorOperation({ kind, error: "" });
-    try {
-      await transaction();
-      setModeratorOperation({ kind: null, error: "" });
-    } catch (error) {
-      setModeratorOperation({
-        kind: null,
-        error: error instanceof Error ? error.message : "The dashboard could not be saved.",
-      });
-    }
+  function performModeratorOperation(kind, transaction) {
+    return moderatorOperationGateRef.current.run(async () => {
+      setModeratorOperation({ kind, errorKind: null, error: "" });
+      try {
+        const result = await transaction();
+        setModeratorOperation({ kind: null, errorKind: null, error: "" });
+        return result;
+      } catch (error) {
+        setModeratorOperation({
+          kind: null,
+          errorKind: kind,
+          error: boundedModeratorMessage(error),
+        });
+        return null;
+      }
+    });
+  }
+
+  function clearModeratorError(kind) {
+    setModeratorOperation((current) => (
+      kind && current.errorKind !== kind
+        ? current
+        : { ...current, errorKind: null, error: "" }
+    ));
   }
 
   function confirmPanelRemoval() {
@@ -170,24 +194,34 @@ export default function DashboardRenderer({
     void performModeratorOperation("remove-chart", async () => {
       await pendingEdits.flush();
       await onPanelRemove(panelId);
+      setChartEditBaseline(null);
       setSelectedPanelId((current) => (current === panelId ? null : current));
       setPendingRemovalPanelId(null);
     });
   }
 
   function cancelPanelRemoval() {
-    if (moderatorOperation.kind === "remove-chart") return;
+    if (moderatorOperationGateRef.current.isActive()) return;
     setPendingRemovalPanelId(null);
+    clearModeratorError("remove-chart");
   }
 
   function handlePanelDragStart(event, panelId) {
+    if (moderatorOperationGateRef.current.isActive()) {
+      event.preventDefault();
+      return;
+    }
     setDraggingPanelId(panelId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", panelId);
   }
 
   function handlePanelDragOver(event, panelId) {
-    if (!editMode || !draggingPanelId) {
+    if (
+      moderatorOperationGateRef.current.isActive()
+      || !editMode
+      || !draggingPanelId
+    ) {
       return;
     }
     event.preventDefault();
@@ -201,6 +235,7 @@ export default function DashboardRenderer({
 
   function handlePanelDrop(event, targetPanelId) {
     event.preventDefault();
+    if (moderatorOperationGateRef.current.isActive()) return;
     const sourcePanelId = event.dataTransfer.getData("text/plain") || draggingPanelId;
     void pendingEdits.flush();
     onPanelReorder(sourcePanelId, targetPanelId);
@@ -251,6 +286,7 @@ export default function DashboardRenderer({
   }
 
   function addPage() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     const label = window.prompt("Name this new tab", "New tab");
     if (!label) {
       return;
@@ -267,7 +303,7 @@ export default function DashboardRenderer({
         {
           id: `${pageId}_section`,
           title: "New section",
-          description: "",
+          description: "New dashboard section.",
           panels: [],
         },
       ],
@@ -277,17 +313,20 @@ export default function DashboardRenderer({
   }
 
   function openBackgroundSettings() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     setBackgroundDraft(sanitizeVantaSettings(dashboard.vantaBackground));
     setShowVantaSettings(true);
   }
 
   function saveBackgroundSettings() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     void pendingEdits.flush();
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
     setShowVantaSettings(false);
   }
 
   function resetBackgroundSettings() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     const defaults = sanitizeVantaSettings();
     setBackgroundDraft(defaults);
     void pendingEdits.flush();
@@ -296,10 +335,14 @@ export default function DashboardRenderer({
   }
 
   function changeBackgroundDraft(updates) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     setBackgroundDraft((current) => ({ ...current, ...updates }));
   }
 
   function saveSelectedChartV3(payload) {
+    if (moderatorOperationGateRef.current.isActive()) {
+      return Promise.reject(new Error("Wait for the current dashboard operation to finish."));
+    }
     return runModeratorTransaction({
       flush: () => pendingEdits.flush(),
       commit: () => onChartSave(payload),
@@ -311,6 +354,7 @@ export default function DashboardRenderer({
   }
 
   function cancelSelectedPanel() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     pendingEdits.cancel();
     if (chartEditBaseline) {
       onPanelEditCancel(chartEditBaseline);
@@ -320,6 +364,7 @@ export default function DashboardRenderer({
   }
 
   function changePage(pageId, updates) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     setPageDrafts((current) => ({
       ...current,
       [pageId]: { ...(current[pageId] ?? pageDraftFromPage(dashboard.pages.find((page) => page.id === pageId))), ...updates },
@@ -334,6 +379,7 @@ export default function DashboardRenderer({
   }
 
   function changeDashboardText(updates) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     const nextDraft = { ...dashboardDraft, ...updates };
     setDashboardDraft(nextDraft);
     pendingEdits.schedule("dashboard", {
@@ -343,6 +389,7 @@ export default function DashboardRenderer({
   }
 
   function changeSection(section, updates) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     const baseSection = sectionDrafts[section.id] ?? sectionDraftFromSection(section);
     const nextDraft = { ...baseSection, ...updates };
     setSectionDrafts((current) => ({
@@ -358,11 +405,13 @@ export default function DashboardRenderer({
   }
 
   function applyBackgroundSettings() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     void pendingEdits.flush();
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
   }
 
   function changeGlobalPanelColors(updates) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     void pendingEdits.flush();
     onDashboardChange({
       globalStyles: {
@@ -376,6 +425,7 @@ export default function DashboardRenderer({
   }
 
   function changeAccessibilityEnabled(enabled) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     void pendingEdits.flush();
     onDashboardChange({
       globalStyles: {
@@ -386,6 +436,7 @@ export default function DashboardRenderer({
   }
 
   function startSectionAtPanel(section, panel) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     const title = window.prompt("Section title", "New section");
     if (!title) {
       return;
@@ -400,11 +451,13 @@ export default function DashboardRenderer({
   }
 
   function removeSectionTitle(section) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     void pendingEdits.flush();
     onSectionChange(activePage.id, section.id, { title: "", description: "" });
   }
 
   function removeActivePage() {
+    if (moderatorOperationGateRef.current.isActive()) return;
     if ((dashboard.pages ?? []).length <= 1) {
       return;
     }
@@ -421,6 +474,7 @@ export default function DashboardRenderer({
   }
 
   function openPanelEditor(panelId) {
+    if (moderatorOperationGateRef.current.isActive()) return;
     if (!chartEditBaseline) {
       setChartEditBaseline(dashboardWithCurrentDrafts());
     }
@@ -436,11 +490,54 @@ export default function DashboardRenderer({
   }
 
   function resetEditMode() {
-    pendingEdits.cancel();
+    if (moderatorOperationGateRef.current.isActive()) return;
+    const cancelled = pendingEdits.takePending();
+    const retryDrafts = {
+      dashboard: structuredClone(dashboardDraft),
+      pages: structuredClone(pageDrafts),
+      sections: structuredClone(sectionDrafts),
+    };
     void performModeratorOperation("reset-session", async () => {
-      await onResetEditSession();
-      setResetEditSessionConfirmation(false);
+      try {
+        const resetDashboard = await onResetEditSession();
+        pendingEdits.cancel();
+        setDashboardDraft(dashboardTextDraftFromDashboard(resetDashboard ?? dashboard));
+        setPageDrafts({});
+        setSectionDrafts({});
+        setChartEditBaseline(null);
+        setResetEditSessionConfirmation(false);
+      } catch (error) {
+        pendingEdits.restore(cancelled);
+        scheduleRendererDrafts(retryDrafts);
+        throw error;
+      }
     });
+  }
+
+  function scheduleRendererDrafts(drafts) {
+    pendingEdits.schedule("dashboard", {
+      type: "dashboard",
+      updates: drafts.dashboard,
+    });
+    for (const [pageId, updates] of Object.entries(drafts.pages)) {
+      pendingEdits.schedule(`page:${pageId}`, {
+        type: "page",
+        pageId,
+        updates,
+      });
+    }
+    for (const page of dashboard.pages ?? []) {
+      for (const section of page.sections ?? []) {
+        const updates = drafts.sections[section.id];
+        if (!updates) continue;
+        pendingEdits.schedule(`section:${page.id}:${section.id}`, {
+          type: "section",
+          pageId: page.id,
+          sectionId: section.id,
+          updates,
+        });
+      }
+    }
   }
 
   function dashboardWithCurrentDrafts(panelOverride = null) {
@@ -506,16 +603,19 @@ export default function DashboardRenderer({
               <div className="header-text-edit-fields">
                 <input
                   aria-label="Program label"
+                  disabled={moderatorMutationLocked}
                   value={dashboardDraft.programLabel ?? ""}
                   onChange={(event) => changeDashboardText({ programLabel: event.target.value })}
                 />
                 <input
                   aria-label="Page title"
+                  disabled={moderatorMutationLocked}
                   value={(pageDrafts[activePage.id]?.title ?? activePage?.title) ?? dashboard.title}
                   onChange={(event) => changePage(activePage.id, { title: event.target.value })}
                 />
                 <input
                   aria-label="Page subtitle"
+                  disabled={moderatorMutationLocked}
                   value={(pageDrafts[activePage.id]?.description ?? activePage?.description) ?? dashboard.description}
                   onChange={(event) => changePage(activePage.id, { description: event.target.value })}
                 />
@@ -538,7 +638,7 @@ export default function DashboardRenderer({
               <dt>Scenario</dt>
               <dd>
                 {editMode ? (
-                  <input value={dashboardDraft.scenarioLabel ?? ""} onChange={(event) => changeDashboardText({ scenarioLabel: event.target.value })} />
+                  <input disabled={moderatorMutationLocked} value={dashboardDraft.scenarioLabel ?? ""} onChange={(event) => changeDashboardText({ scenarioLabel: event.target.value })} />
                 ) : (
                   dashboard.scenarioLabel
                 )}
@@ -548,7 +648,7 @@ export default function DashboardRenderer({
               <dt>Updated</dt>
               <dd>
                 {editMode ? (
-                  <input value={dashboardDraft.lastUpdated ?? ""} onChange={(event) => changeDashboardText({ lastUpdated: event.target.value })} />
+                  <input disabled={moderatorMutationLocked} value={dashboardDraft.lastUpdated ?? ""} onChange={(event) => changeDashboardText({ lastUpdated: event.target.value })} />
                 ) : (
                   dashboard.lastUpdated
                 )}
@@ -574,7 +674,11 @@ export default function DashboardRenderer({
               <button
                 type="button"
                 className="header-edit-floating-button secondary"
-                onClick={() => setResetEditSessionConfirmation(true)}
+                onClick={() => {
+                  if (moderatorOperationGateRef.current.isActive()) return;
+                  clearModeratorError("reset-session");
+                  setResetEditSessionConfirmation(true);
+                }}
                 disabled={moderatorOperation.kind !== null}
               >
                 {moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
@@ -583,7 +687,7 @@ export default function DashboardRenderer({
           </div>
         </div>
       </header>
-      {moderatorOperation.error && (
+      {moderatorOperation.errorKind === "save-session" && moderatorOperation.error && (
         <p role="alert" className="edit-operation-error">{moderatorOperation.error}</p>
       )}
       {editMode && (
@@ -594,15 +698,16 @@ export default function DashboardRenderer({
           </div>
           <div className="header-edit-controls">
             <div className="tab-edit-controls">
-              <button type="button" onClick={addPage}>Add tab</button>
-              <button type="button" className="secondary" disabled={(dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
+              <button type="button" disabled={moderatorMutationLocked} onClick={addPage}>Add tab</button>
+              <button type="button" className="secondary" disabled={moderatorMutationLocked || (dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
             </div>
-            <button type="button" onClick={() => importInputRef.current?.click()}>Import dashboard</button>
-            <button type="button" onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
-            <GlobalPanelColorControls colors={globalPanelColors} onChange={changeGlobalPanelColors} />
+            <button type="button" disabled={moderatorMutationLocked} onClick={() => importInputRef.current?.click()}>Import dashboard</button>
+            <button type="button" disabled={moderatorMutationLocked} onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
+            <GlobalPanelColorControls disabled={moderatorMutationLocked} colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <label className="accessibility-edit-toggle">
               <input
                 type="checkbox"
+                disabled={moderatorMutationLocked}
                 checked={accessibilityEnabled}
                 onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
               />
@@ -611,11 +716,12 @@ export default function DashboardRenderer({
                 <small>Generate screen-reader chart descriptions</small>
               </span>
             </label>
-            <button type="button" className="secondary" onClick={openBackgroundSettings}>Background</button>
+            <button type="button" className="secondary" disabled={moderatorMutationLocked} onClick={openBackgroundSettings}>Background</button>
             <input
               ref={importInputRef}
               className="visually-hidden"
               type="file"
+              disabled={moderatorMutationLocked}
               accept="application/json,.json"
               onChange={(event) => {
                 onImportConfig(event.target.files?.[0]);
@@ -664,12 +770,14 @@ export default function DashboardRenderer({
             <label className={`page-tab-edit ${page.id === activePage.id ? "active" : ""}`} key={page.id}>
               <button
                 type="button"
+                disabled={moderatorMutationLocked}
                 className={page.id === activePage.id ? "active" : "secondary"}
                 onClick={() => navigateToPage(page.id)}
               >
                 Open
               </button>
               <input
+                disabled={moderatorMutationLocked}
                 value={(pageDrafts[page.id]?.label ?? page.label) ?? ""}
                 onChange={(event) => changePage(page.id, { label: event.target.value })}
               />
@@ -709,6 +817,7 @@ export default function DashboardRenderer({
                       <label className="section-edit-field">
                         <span>Section title</span>
                         <input
+                          disabled={moderatorMutationLocked}
                           value={(sectionDrafts[section.id]?.title ?? section.title) ?? ""}
                           onChange={(event) => changeSection(section, { title: event.target.value })}
                         />
@@ -716,6 +825,7 @@ export default function DashboardRenderer({
                       <label className="section-edit-field">
                         <span>Section subtext</span>
                         <input
+                          disabled={moderatorMutationLocked}
                           value={(sectionDrafts[section.id]?.description ?? section.description) ?? ""}
                           onChange={(event) => changeSection(section, { description: event.target.value })}
                         />
@@ -733,13 +843,18 @@ export default function DashboardRenderer({
                     <button
                       type="button"
                       className="secondary add-panel-button"
-                      onClick={() => setChartWizardTarget({ pageId: activePage.id, sectionId: section.id })}
+                      disabled={moderatorMutationLocked}
+                      onClick={() => {
+                        if (moderatorOperationGateRef.current.isActive()) return;
+                        setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
+                      }}
                     >
                       Add chart
                     </button>
                     <button
                       type="button"
                       className="secondary add-panel-button"
+                      disabled={moderatorMutationLocked}
                       onClick={() => removeSectionTitle(section)}
                     >
                       Remove title
@@ -762,6 +877,7 @@ export default function DashboardRenderer({
                       accessibilityEnabled={accessibilityEnabled}
                       suspended={chartAuthoringActive}
                       editMode={editMode}
+                      editDisabled={moderatorMutationLocked}
                       isDragging={draggingPanelId === panelId}
                       isDragTarget={dragOverPanelId === panelId}
                       isSelected={editMode && selectedPanelId === panelId}
@@ -788,6 +904,7 @@ export default function DashboardRenderer({
 
         {editMode && selectedPanel && (
           <ChartEditorV3
+            disabled={moderatorMutationLocked}
             chart={selectedPanel}
             timeSyncGroups={dashboard.timeSyncGroups ?? []}
             existingCharts={configuredCharts(dashboard)}
@@ -809,15 +926,23 @@ export default function DashboardRenderer({
       </PlaybackSurface>
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
+        disabled={moderatorMutationLocked}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
         geoDataSources={geoDataSources}
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
-        onClose={() => setChartWizardTarget(null)}
+        onClose={() => {
+          if (moderatorOperationGateRef.current.isActive()) return;
+          setChartWizardTarget(null);
+        }}
         onCreate={async (payload) => {
+          if (moderatorOperationGateRef.current.isActive()) {
+            throw new Error("Wait for the current dashboard operation to finish.");
+          }
+          const target = chartWizardTarget;
           await pendingEdits.flush();
-          await onChartCreate(payload, chartWizardTarget);
+          await onChartCreate(payload, target);
           setChartWizardTarget(null);
         }}
       />
@@ -829,8 +954,13 @@ export default function DashboardRenderer({
         confirmLabel={moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
         disabled={moderatorOperation.kind === "reset-session"}
         confirmDisabled={moderatorOperation.kind === "reset-session"}
+        error={moderatorOperation.errorKind === "reset-session" ? moderatorOperation.error : ""}
         onConfirm={resetEditMode}
-        onCancel={() => setResetEditSessionConfirmation(false)}
+        onCancel={() => {
+          if (moderatorOperationGateRef.current.isActive()) return;
+          setResetEditSessionConfirmation(false);
+          clearModeratorError("reset-session");
+        }}
       />
       <ConfirmDialog
         open={pendingRemovalPanelId !== null}
@@ -838,7 +968,9 @@ export default function DashboardRenderer({
         message="The chart will be removed from this dashboard and any synchronized playback group."
         confirmLabel={moderatorOperation.kind === "remove-chart" ? "Removing..." : "Remove chart"}
         cancelLabel="Keep chart"
+        disabled={moderatorOperation.kind === "remove-chart"}
         confirmDisabled={moderatorOperation.kind === "remove-chart"}
+        error={moderatorOperation.errorKind === "remove-chart" ? moderatorOperation.error : ""}
         onConfirm={confirmPanelRemoval}
         onCancel={cancelPanelRemoval}
       />
@@ -891,18 +1023,18 @@ function feedbackMailtoUrl(contactEmail) {
   return `mailto:${email}?subject=${encodeURIComponent("SimEx Dashboard feedback")}`;
 }
 
-function GlobalPanelColorControls({ colors, onChange }) {
+function GlobalPanelColorControls({ colors, onChange, disabled = false }) {
   return (
     <details className="global-color-controls">
       <summary>Global panel colors</summary>
-      <div className="global-color-grid">
+      <fieldset className="global-color-grid" disabled={disabled}>
         <ColorField label="Panel background" value={colors.panelBackgroundColor} fallback="#f5f8fb" onChange={(color) => onChange({ panelBackgroundColor: color })} />
         <ColorField label="Panel border" value={colors.panelBorderColor} fallback="#d8e2ec" onChange={(color) => onChange({ panelBorderColor: color })} />
         <ColorField label="Chart background" value={colors.chartAreaColor} fallback="#eaf1f6" onChange={(color) => onChange({ chartAreaColor: color })} />
         <ColorField label="Chart border" value={colors.chartAreaBorderColor} fallback="#d8e2ec" onChange={(color) => onChange({ chartAreaBorderColor: color })} />
         <ColorField label="Edit highlight" value={colors.editHighlightColor} fallback="#043bcb" onChange={(color) => onChange({ editHighlightColor: color })} />
         <ColorField label="Multi-fullscreen highlight" value={colors.multiSelectHighlightColor} fallback="#00a676" onChange={(color) => onChange({ multiSelectHighlightColor: color })} />
-      </div>
+      </fieldset>
     </details>
   );
 }
@@ -938,6 +1070,13 @@ function sectionDraftFromSection(section) {
     title: section?.title ?? "",
     description: section?.description ?? "",
   };
+}
+
+function boundedModeratorMessage(error) {
+  const message = typeof error?.message === "string" && error.message.trim()
+    ? error.message.trim()
+    : "The dashboard could not be saved.";
+  return message.length <= 240 ? message : `${message.slice(0, 237)}...`;
 }
 
 function VantaSettingsPanel({ settings = {}, onChange }) {
