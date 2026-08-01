@@ -39,3 +39,40 @@ test("failed chart save keeps the editor and draft open for retry", async ({ pag
   await page.locator(".chart-editor-v3").getByRole("button", { name: "Save" }).click();
   await expect(page.locator(".chart-editor-v3")).toBeHidden();
 });
+
+test("failed chart removal keeps confirmation and chart available for retry", async ({ page }) => {
+  await openFirstChartEditor(page);
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
+  const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
+  await expect(confirmation).toBeVisible();
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
+  await confirmation.getByRole("button", { name: "Remove chart" }).click();
+  await expect(confirmation).toBeVisible();
+  await expect(page.locator(".chart-editor-v3")).toBeVisible();
+  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
+  await confirmation.getByRole("button", { name: "Remove chart" }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+});
+
+test("failed edit-session save and reset keep edit mode available for retry", async ({ page }) => {
+  await openDashboardEditMode(page);
+  await page.getByLabel("Program label").fill("Unsaved exercise label");
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
+  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+
+  await page.getByRole("button", { name: "Reset edits" }).click();
+  const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
+  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await expect(confirmation).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
+  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+});

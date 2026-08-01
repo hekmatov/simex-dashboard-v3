@@ -11,6 +11,7 @@ export default function ConfirmDialog({
   onConfirm = noop,
   onCancel = noop,
   disabled = false,
+  confirmDisabled = false,
 } = {}) {
   if (!open) return null;
   const id = `confirm-${safeId(title)}`;
@@ -54,7 +55,7 @@ export default function ConfirmDialog({
           {
             type: "button",
             className: "danger",
-            disabled,
+            disabled: disabled || confirmDisabled,
             onClick: onConfirm,
           },
           confirmLabel,

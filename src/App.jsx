@@ -257,23 +257,24 @@ export default function App() {
   }
 
   function mutateDashboard(mutator) {
-    ignoreCommitFailure(
-      ensureDashboardCommitController().mutate(mutator),
-    );
+    const transaction = ensureDashboardCommitController().mutate(mutator);
+    ignoreCommitFailure(transaction);
+    return transaction;
   }
 
-  function toggleEditMode() {
+  async function toggleEditMode() {
     if (!editMode) {
       setEditBaseline(configurationForPortableUse(dashboard));
       setEditMode(true);
       return;
     }
+    await commitConfiguration(configurationForPortableUse(dashboardRef.current ?? dashboard));
     setEditBaseline(null);
     setEditMode(false);
   }
 
-  function resetEditSession() {
-    if (editBaseline) ignoreCommitFailure(commitConfiguration(editBaseline));
+  async function resetEditSession() {
+    if (editBaseline) await commitConfiguration(editBaseline);
     setEditBaseline(null);
     setEditMode(false);
   }
@@ -291,7 +292,7 @@ export default function App() {
   }
 
   function removeChart(panelId) {
-    mutateDashboard((next) => {
+    return ensureDashboardCommitController().mutate((next) => {
       let removedChartId = null;
       for (const page of next.pages ?? []) {
         for (const section of page.sections ?? []) {

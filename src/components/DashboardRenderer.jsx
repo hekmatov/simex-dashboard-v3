@@ -81,6 +81,11 @@ export default function DashboardRenderer({
   const pendingEdits = pendingEditsRef.current;
   const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
     React.useState(false);
+  const [pendingRemovalPanelId, setPendingRemovalPanelId] = React.useState(null);
+  const [moderatorOperation, setModeratorOperation] = React.useState({
+    kind: null,
+    error: "",
+  });
   const [multiSelectNotice, setMultiSelectNotice] = React.useState(null);
 
   const activePage =
@@ -142,9 +147,37 @@ export default function DashboardRenderer({
   }
 
   function removePanel(panelId) {
-    setSelectedPanelId((current) => (current === panelId ? null : current));
-    void pendingEdits.flush();
-    onPanelRemove(panelId);
+    setPendingRemovalPanelId(panelId);
+  }
+
+  async function performModeratorOperation(kind, transaction) {
+    if (moderatorOperation.kind !== null) return;
+    setModeratorOperation({ kind, error: "" });
+    try {
+      await transaction();
+      setModeratorOperation({ kind: null, error: "" });
+    } catch (error) {
+      setModeratorOperation({
+        kind: null,
+        error: error instanceof Error ? error.message : "The dashboard could not be saved.",
+      });
+    }
+  }
+
+  function confirmPanelRemoval() {
+    const panelId = pendingRemovalPanelId;
+    if (panelId === null) return;
+    void performModeratorOperation("remove-chart", async () => {
+      await pendingEdits.flush();
+      await onPanelRemove(panelId);
+      setSelectedPanelId((current) => (current === panelId ? null : current));
+      setPendingRemovalPanelId(null);
+    });
+  }
+
+  function cancelPanelRemoval() {
+    if (moderatorOperation.kind === "remove-chart") return;
+    setPendingRemovalPanelId(null);
   }
 
   function handlePanelDragStart(event, panelId) {
@@ -395,9 +428,19 @@ export default function DashboardRenderer({
   }
 
   function saveEditMode() {
-    void pendingEdits.flush();
-    setChartEditBaseline(null);
-    onToggleEditMode();
+    void performModeratorOperation("save-session", async () => {
+      await pendingEdits.flush();
+      setChartEditBaseline(null);
+      await onToggleEditMode();
+    });
+  }
+
+  function resetEditMode() {
+    pendingEdits.cancel();
+    void performModeratorOperation("reset-session", async () => {
+      await onResetEditSession();
+      setResetEditSessionConfirmation(false);
+    });
   }
 
   function dashboardWithCurrentDrafts(panelOverride = null) {
@@ -521,21 +564,28 @@ export default function DashboardRenderer({
               aria-label={editMode ? "Save edit mode" : "Open edit mode"}
               title={editMode ? "Save" : "Edit mode"}
               onClick={editMode ? saveEditMode : onToggleEditMode}
+              disabled={moderatorOperation.kind !== null}
             >
-              {editMode ? "Save" : <span className="edit-sliders-icon" aria-hidden="true" />}
+              {editMode
+                ? (moderatorOperation.kind === "save-session" ? "Saving..." : "Save")
+                : <span className="edit-sliders-icon" aria-hidden="true" />}
             </button>
             {editMode && (
               <button
                 type="button"
                 className="header-edit-floating-button secondary"
                 onClick={() => setResetEditSessionConfirmation(true)}
+                disabled={moderatorOperation.kind !== null}
               >
-                Reset edits
+                {moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
               </button>
             )}
           </div>
         </div>
       </header>
+      {moderatorOperation.error && (
+        <p role="alert" className="edit-operation-error">{moderatorOperation.error}</p>
+      )}
       {editMode && (
         <section className="edit-command-banner" aria-label="Edit commands">
           <div className="edit-command-title">
@@ -775,14 +825,21 @@ export default function DashboardRenderer({
         open={resetEditSessionConfirmation}
         title="Discard these edits?"
         message="Reset changes? All unsaved dashboard edits will be replaced by the most recently saved dashboard."
-        confirmLabel="Reset edits"
         cancelLabel="Keep editing"
-        onConfirm={() => {
-          setResetEditSessionConfirmation(false);
-          pendingEdits.cancel();
-          onResetEditSession();
-        }}
+        confirmLabel={moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
+        confirmDisabled={moderatorOperation.kind === "reset-session"}
+        onConfirm={resetEditMode}
         onCancel={() => setResetEditSessionConfirmation(false)}
+      />
+      <ConfirmDialog
+        open={pendingRemovalPanelId !== null}
+        title="Remove this chart?"
+        message="The chart will be removed from this dashboard and any synchronized playback group."
+        confirmLabel={moderatorOperation.kind === "remove-chart" ? "Removing..." : "Remove chart"}
+        cancelLabel="Keep chart"
+        confirmDisabled={moderatorOperation.kind === "remove-chart"}
+        onConfirm={confirmPanelRemoval}
+        onCancel={cancelPanelRemoval}
       />
       <FullscreenDisplay
         dashboard={dashboard}
