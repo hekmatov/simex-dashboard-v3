@@ -11,6 +11,7 @@ export default function EditSessionActions({
   onConfirmReset = noop,
   onCancelReset = noop,
   onCancel = noop,
+  onRemove,
 } = {}) {
   return React.createElement(
     React.Fragment,
@@ -47,6 +48,20 @@ export default function EditSessionActions({
         },
         "Cancel",
       ),
+      typeof onRemove === "function"
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              className: "danger chart-editor-remove",
+              disabled: submitting,
+              onClick: () => {
+                if (!submitting) onRemove();
+              },
+            },
+            "Remove chart",
+          )
+        : null,
     ),
     React.createElement(ConfirmDialog, {
       open: resetConfirmationOpen,

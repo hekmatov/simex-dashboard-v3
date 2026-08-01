@@ -10,6 +10,7 @@ export default function ConfirmDialog({
   cancelLabel = "No",
   onConfirm = noop,
   onCancel = noop,
+  disabled = false,
 } = {}) {
   if (!open) return null;
   const id = `confirm-${safeId(title)}`;
@@ -43,6 +44,7 @@ export default function ConfirmDialog({
             type: "button",
             className: "secondary",
             "data-modal-initial-focus": "true",
+            disabled,
             onClick: onCancel,
           },
           cancelLabel,
@@ -52,6 +54,7 @@ export default function ConfirmDialog({
           {
             type: "button",
             className: "danger",
+            disabled,
             onClick: onConfirm,
           },
           confirmLabel,

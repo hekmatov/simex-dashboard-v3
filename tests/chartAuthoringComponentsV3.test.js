@@ -115,6 +115,7 @@ const {
   default: ChartWizardV3,
   applyWizardMembership,
   createChartWizardState,
+  createWizardCloseHandlers,
   createWizardPreparation,
   parseUploadedCsvFile,
   submitWizardDraft,
@@ -2167,6 +2168,42 @@ test("chart editor actions lock while persistence is pending", () => {
   }));
   assert.match(html, />Saving\.\.\.</);
   assert.equal((html.match(/disabled=""/g) ?? []).length, 3);
+});
+
+test("pending chart persistence disables and guards removal", () => {
+  let removals = 0;
+  const tree = EditSessionActions({
+    valid: true,
+    submitting: true,
+    onRemove() {
+      removals += 1;
+    },
+  });
+  const remove = findElement(tree, (element) => (
+    element.type === "button" && element.props.children === "Remove chart"
+  ));
+
+  assert.ok(remove);
+  assert.equal(remove.props.disabled, true);
+  remove.props.onClick();
+  assert.equal(removals, 0);
+});
+
+test("pending chart creation guards Escape, Close, and discard", () => {
+  const calls = [];
+  const controls = createWizardCloseHandlers({
+    isSubmitting: () => true,
+    onRequestClose() {
+      calls.push("request");
+    },
+    onConfirmClose() {
+      calls.push("confirm");
+    },
+  });
+
+  assert.equal(controls.requestClose(), false);
+  assert.equal(controls.confirmClose(), false);
+  assert.deepEqual(calls, []);
 });
 
 test("editor state isolates mutation and same-authority rerenders preserve the draft", () => {

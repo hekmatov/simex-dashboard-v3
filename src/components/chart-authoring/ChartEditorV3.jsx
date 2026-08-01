@@ -590,18 +590,8 @@ export default function ChartEditorV3({
           onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
           onSave: submit,
           onCancel,
+          onRemove,
         }),
-        typeof onRemove === "function"
-          ? React.createElement(
-              "button",
-              {
-                type: "button",
-                className: "danger chart-editor-remove",
-                onClick: onRemove,
-              },
-              "Remove chart",
-            )
-          : null,
       ),
       React.createElement(ChartConversionDialog, {
         conversion: state.conversion,

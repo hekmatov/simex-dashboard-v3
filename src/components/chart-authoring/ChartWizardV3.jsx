@@ -44,6 +44,22 @@ const STEP_TITLES = Object.freeze({
   style: "Preview and refine the chart",
 });
 
+export function createWizardCloseHandlers({
+  isSubmitting = () => false,
+  onRequestClose = noop,
+  onConfirmClose = noop,
+} = {}) {
+  const run = (operation) => () => {
+    if (isSubmitting()) return false;
+    operation();
+    return true;
+  };
+  return Object.freeze({
+    requestClose: run(onRequestClose),
+    confirmClose: run(onConfirmClose),
+  });
+}
+
 /**
  * Schema-generated chart authoring flow.
  *
@@ -89,16 +105,24 @@ export default function ChartWizardV3({
   }
   const [submitting, setSubmitting] = React.useState(false);
   const [pendingSourceUi, setPendingSourceUi] = React.useState(null);
+  const closeHandlers = createWizardCloseHandlers({
+    isSubmitting: () => submitting,
+    onRequestClose: requestClose,
+    onConfirmClose: confirmClose,
+  });
   const wizardDialogRef = useModalFocus({
     open,
     initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
-    onEscape: () => {
+    onEscape: () => closeHandlers.requestClose(),
+  });
+
+  function requestClose() {
+    if (submitting) return;
       setWizard((current) => reduceWizardState(current, {
         type: "requestClose",
       }));
       setSubmissionError("");
-    },
-  });
+  }
 
   React.useEffect(() => {
     if (!open) return;
@@ -413,11 +437,12 @@ export default function ChartWizardV3({
       }
     });
   };
-  const confirmClose = () => {
+  function confirmClose() {
+    if (submitting) return;
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
     if (closed.closed && typeof onClose === "function") onClose();
-  };
+  }
 
   return React.createElement(
     "div",
@@ -450,7 +475,8 @@ export default function ChartWizardV3({
           {
             type: "button",
             className: "secondary",
-            onClick: () => dispatch({ type: "requestClose" }),
+            disabled: submitting,
+            onClick: closeHandlers.requestClose,
           },
           "Close",
         ),
@@ -601,7 +627,10 @@ export default function ChartWizardV3({
       confirmLabel: "Discard",
       cancelLabel: "Continue editing",
       onConfirm: confirmClose,
-      onCancel: () => dispatch({ type: "cancelConfirmation" }),
+      onCancel: () => {
+        if (!submitting) dispatch({ type: "cancelConfirmation" });
+      },
+      disabled: submitting,
     }),
     React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "clearSource",
