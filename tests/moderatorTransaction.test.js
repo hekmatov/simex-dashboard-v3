@@ -42,3 +42,39 @@ test("submission gate coalesces duplicate activation and reopens", async () => {
   assert.equal(await first, "saved");
   assert.equal(await gate.run(async () => "again"), "again");
 });
+
+test("submission gate coalesces synchronous failures and reopens after rejection", async () => {
+  const gate = createSubmissionGate();
+  let calls = 0;
+  const operation = () => {
+    calls += 1;
+    throw new Error("sync failure");
+  };
+  const first = gate.run(operation);
+  const second = gate.run(operation);
+  assert.equal(first, second);
+  assert.equal(calls, 1);
+  assert.equal(gate.isActive(), true);
+  await assert.rejects(first, /sync failure/);
+  assert.equal(gate.isActive(), false);
+  assert.equal(await gate.run(async () => "again"), "again");
+});
+
+test("submission gate coalesces asynchronous rejections and reopens after settlement", async () => {
+  const gate = createSubmissionGate();
+  let calls = 0;
+  let reject;
+  const operation = () => {
+    calls += 1;
+    return new Promise((resolve, rejectOperation) => { reject = rejectOperation; });
+  };
+  const first = gate.run(operation);
+  const second = gate.run(operation);
+  assert.equal(first, second);
+  assert.equal(calls, 1);
+  assert.equal(gate.isActive(), true);
+  reject(new Error("async failure"));
+  await assert.rejects(first, /async failure/);
+  assert.equal(gate.isActive(), false);
+  assert.equal(await gate.run(async () => "again"), "again");
+});

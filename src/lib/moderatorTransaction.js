@@ -15,10 +15,11 @@ export function createSubmissionGate() {
       if (active) return active;
       if (typeof operation !== "function") return Promise.reject(new TypeError("Submission operation must be a function."));
       try {
-        active = Promise.resolve(operation()).finally(() => { active = null; });
+        active = Promise.resolve(operation());
       } catch (error) {
-        return Promise.reject(error);
+        active = Promise.reject(error);
       }
+      active = active.finally(() => { active = null; });
       return active;
     },
     isActive() { return active !== null; },
