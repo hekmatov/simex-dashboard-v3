@@ -33,7 +33,7 @@
 - Consumes: `chart.layout.size` validated as `compact | standard | wide | full`.
 - Produces: `chartPanelLayoutClass(size): string`, returning one of `chart-panel-compact`, `chart-panel-standard`, `chart-panel-wide`, or `chart-panel-full`.
 
-- [ ] **Step 1: Write the failing layout contract test**
+- [x] **Step 1: Write the failing layout contract test**
 
 ```js
 import assert from "node:assert/strict";
@@ -55,7 +55,7 @@ test("version-3 chart sizes map to their panel layout classes", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run:
 
@@ -65,7 +65,7 @@ node --test tests/chartPanelLayout.test.js
 
 Expected: FAIL because `src/components/chartPanelLayout.js` does not exist.
 
-- [ ] **Step 3: Implement the authoritative class mapping**
+- [x] **Step 3: Implement the authoritative class mapping**
 
 ```js
 const PANEL_LAYOUT_CLASSES = Object.freeze({
@@ -83,7 +83,7 @@ export function chartPanelLayoutClass(size = "standard") {
 Import this function in `ChartPanel.jsx` and replace the interpolated
 `chart-panel-${size}` expression with `chartPanelLayoutClass(chart.layout?.size)`.
 
-- [ ] **Step 4: Replace obsolete CSS size selectors**
+- [x] **Step 4: Replace obsolete CSS size selectors**
 
 Use these exact grid contracts:
 
@@ -103,7 +103,7 @@ collapse their grid columns to `auto`, and retain the larger intrinsic height
 only for `.chart-panel-full`. Remove the version-2 `chart-size-half`,
 `chart-size-normal`, `chart-size-tall`, and `chart-size-large` selectors.
 
-- [ ] **Step 5: Run the focused test and verify GREEN**
+- [x] **Step 5: Run the focused test and verify GREEN**
 
 Run:
 
@@ -113,7 +113,7 @@ node --test tests/chartPanelLayout.test.js
 
 Expected: PASS with one test and no warnings.
 
-- [ ] **Step 6: Commit the layout contract**
+- [x] **Step 6: Commit the layout contract**
 
 ```powershell
 git add src/components/chartPanelLayout.js src/components/ChartPanel.jsx src/styles.css tests/chartPanelLayout.test.js
@@ -135,7 +135,7 @@ git commit -m "fix: restore chart panel layout sizes"
   operation never invokes success, concurrent gate calls share one in-flight
   promise, and the gate reopens after either settlement.
 
-- [ ] **Step 1: Write failing transaction-order tests**
+- [x] **Step 1: Write failing transaction-order tests**
 
 ```js
 import assert from "node:assert/strict";
@@ -184,7 +184,7 @@ test("submission gate coalesces duplicate activation and reopens", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run:
 
@@ -194,7 +194,7 @@ node --test tests/moderatorTransaction.test.js
 
 Expected: FAIL because `src/lib/moderatorTransaction.js` does not exist.
 
-- [ ] **Step 3: Implement the minimal transaction utility**
+- [x] **Step 3: Implement the minimal transaction utility**
 
 ```js
 export async function runModeratorTransaction({ flush, commit, onCommitted } = {}) {
@@ -221,7 +221,7 @@ export function createSubmissionGate() {
 }
 ```
 
-- [ ] **Step 4: Run the focused tests and verify GREEN**
+- [x] **Step 4: Run the focused tests and verify GREEN**
 
 Run:
 
@@ -231,7 +231,7 @@ node --test tests/moderatorTransaction.test.js
 
 Expected: PASS with three tests and no warnings.
 
-- [ ] **Step 5: Commit the transaction primitive**
+- [x] **Step 5: Commit the transaction primitive**
 
 ```powershell
 git add src/lib/moderatorTransaction.js tests/moderatorTransaction.test.js
@@ -259,7 +259,7 @@ git commit -m "feat: add moderator transaction primitive"
 - Changes: `EditSessionActions` accepts `submitting` and uses it to disable all
   editing commands and render `Saving...`.
 
-- [ ] **Step 1: Add failing authoring-state assertions**
+- [x] **Step 1: Add failing authoring-state assertions**
 
 Extend the existing component tests with server-rendered pending states:
 
@@ -327,7 +327,7 @@ test("failed chart save keeps the editor and draft open for retry", async ({ pag
 });
 ```
 
-- [ ] **Step 2: Run the focused authoring tests and verify RED**
+- [x] **Step 2: Run the focused authoring tests and verify RED**
 
 Run:
 
@@ -339,7 +339,7 @@ pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chr
 Expected: FAIL because pending actions do not yet render or lock and chart save
 closes the editor before its rejected commit is reported.
 
-- [ ] **Step 3: Return chart-save promises from App**
+- [x] **Step 3: Return chart-save promises from App**
 
 Change `saveChart` to:
 
@@ -353,7 +353,7 @@ function saveChart(payload) {
 
 Do not change background, drag, or text-debounce mutations in this task.
 
-- [ ] **Step 4: Await chart save before closing the editor**
+- [x] **Step 4: Await chart save before closing the editor**
 
 Use `runModeratorTransaction` in `saveSelectedChartV3`:
 
@@ -372,7 +372,7 @@ Make the editor `submit` handler async, guard it with one `createSubmissionGate`
 stored in a ref, set `submitting` for presentation, and assign any rejection to
 the existing bounded editor error without closing.
 
-- [ ] **Step 5: Lock wizard creation**
+- [x] **Step 5: Lock wizard creation**
 
 Store a `createSubmissionGate` in the wizard, expose `submitting`, and render:
 
@@ -387,7 +387,7 @@ React.createElement("button", {
 The parent's existing async `onCreate` closes the wizard only after both
 pending edits and chart creation resolve. A rejected promise retains the wizard.
 
-- [ ] **Step 6: Run the focused tests and verify GREEN**
+- [x] **Step 6: Run the focused tests and verify GREEN**
 
 Run:
 
@@ -398,7 +398,7 @@ pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chr
 
 Expected: PASS with no unhandled rejection or warning.
 
-- [ ] **Step 7: Commit transactional chart authoring**
+- [x] **Step 7: Commit transactional chart authoring**
 
 ```powershell
 git add src/App.jsx src/components/DashboardRenderer.jsx src/components/chart-authoring/ChartEditorV3.jsx src/components/chart-authoring/EditSessionActions.jsx src/components/chart-authoring/ChartWizardV3.jsx tests/chartAuthoringComponentsV3.test.js tests/e2e/moderator-transactions.spec.js
@@ -422,7 +422,7 @@ git commit -m "fix: await chart authoring persistence"
   `save-session | reset-session | remove-chart | null`.
 - Produces: shared chart-removal confirmation through `ConfirmDialog`.
 
-- [ ] **Step 1: Add failing edit-session and removal transaction coverage**
+- [x] **Step 1: Add failing edit-session and removal transaction coverage**
 
 Append this real-browser removal failure and retry scenario:
 
@@ -465,7 +465,7 @@ test("failed edit-session save and reset keep edit mode available for retry", as
 });
 ```
 
-- [ ] **Step 2: Run the focused browser test and verify RED**
+- [x] **Step 2: Run the focused browser test and verify RED**
 
 Run:
 
@@ -476,7 +476,7 @@ pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chr
 Expected: FAIL because chart removal has no confirmation and edit-session
 operations do not await rejected persistence before closing.
 
-- [ ] **Step 3: Return reset and removal commit promises from App**
+- [x] **Step 3: Return reset and removal commit promises from App**
 
 Implement reset as:
 
@@ -492,7 +492,7 @@ Return the `ensureDashboardCommitController().mutate(...)` promise from
 `removeChart`, preserving the existing time-sync membership cleanup inside the
 mutator.
 
-- [ ] **Step 4: Await whole-session save and reset in DashboardRenderer**
+- [x] **Step 4: Await whole-session save and reset in DashboardRenderer**
 
 Create one state object and one runner in `DashboardRenderer`:
 
@@ -524,7 +524,7 @@ its confirmation only after success. Render `Saving...` or `Resetting...` in
 the initiating button and render `moderatorOperation.error` inside
 `<p role="alert" className="edit-operation-error">`.
 
-- [ ] **Step 5: Add shared chart-removal confirmation**
+- [x] **Step 5: Add shared chart-removal confirmation**
 
 Replace direct `removePanel(panelId)` calls with a pending panel ID. Render:
 
@@ -545,7 +545,7 @@ Add optional `confirmDisabled = false` to `ConfirmDialog` and apply it as the
 confirm button's `disabled` property. Existing callers retain the current
 enabled default.
 
-- [ ] **Step 6: Run the focused verification**
+- [x] **Step 6: Run the focused verification**
 
 Run:
 
@@ -559,7 +559,7 @@ Expected: PASS with no failures or warnings.
 Run only this focused two-test browser file during the implementation cycle.
 The complete E2E suite remains deferred to the visual-signoff gate.
 
-- [ ] **Step 7: Commit transactional edit sessions**
+- [x] **Step 7: Commit transactional edit sessions**
 
 ```powershell
 git add src/App.jsx src/components/DashboardRenderer.jsx src/components/chart-authoring/ChartEditorV3.jsx src/components/common/ConfirmDialog.jsx tests/e2e/moderator-transactions.spec.js
@@ -577,7 +577,7 @@ git commit -m "fix: make moderator edit operations transactional"
 - Consumes: Tasks 1-4.
 - Produces: an implementation checkpoint ready for user visual examination.
 
-- [ ] **Step 1: Run the focused Node tests once**
+- [x] **Step 1: Run the focused Node tests once**
 
 ```powershell
 node --test tests/chartPanelLayout.test.js tests/moderatorTransaction.test.js tests/chartAuthoringComponentsV3.test.js tests/dashboardAppV3.test.js
@@ -585,7 +585,7 @@ node --test tests/chartPanelLayout.test.js tests/moderatorTransaction.test.js te
 
 Expected: all selected tests pass.
 
-- [ ] **Step 2: Check patch hygiene**
+- [x] **Step 2: Check patch hygiene**
 
 ```powershell
 git diff --check
@@ -595,7 +595,7 @@ git status --short
 Expected: no whitespace errors; only the intended refinement and plan-status
 files appear.
 
-- [ ] **Step 3: Record task completion**
+- [x] **Step 3: Record task completion**
 
 Check the completed plan boxes and commit only that bookkeeping change:
 
