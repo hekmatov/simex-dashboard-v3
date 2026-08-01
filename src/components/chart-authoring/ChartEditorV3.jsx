@@ -32,6 +32,7 @@ import ChartEditorModal from "./ChartEditorModal.jsx";
 import ChartPreview from "./ChartPreview.jsx";
 import ContextualTabs from "./ContextualTabs.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
+import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
 
 const DANGEROUS_PATH_SEGMENTS = new Set([
   "__proto__",
@@ -262,6 +263,11 @@ export default function ChartEditorV3({
     timeSyncGroups,
     revision: savedRevision,
   }));
+  const submissionGateRef = React.useRef(null);
+  if (submissionGateRef.current === null) {
+    submissionGateRef.current = createSubmissionGate();
+  }
+  const [submitting, setSubmitting] = React.useState(false);
   React.useEffect(() => {
     setState((current) => rebaseChartEditorState(current, {
       chart,
@@ -445,23 +451,28 @@ export default function ChartEditorV3({
       value,
     });
   };
-  const submit = (event) => {
+  const submit = async (event) => {
     event?.preventDefault?.();
-    try {
-      const payload = saveChartEditorState(state, {
-        existingCharts,
-        loadedData: runtimeLoadedData,
-        profiles: runtimeProfiles,
-        profile,
-      });
-      onSave(payload);
-      setState((current) => acceptEditorSave(current, payload));
-    } catch (error) {
-      setState((current) => ({
-        ...current,
-        error: safeMessage(error),
-      }));
-    }
+    return submissionGateRef.current.run(async () => {
+      setSubmitting(true);
+      try {
+        const payload = saveChartEditorState(state, {
+          existingCharts,
+          loadedData: runtimeLoadedData,
+          profiles: runtimeProfiles,
+          profile,
+        });
+        await onSave(payload);
+        setState((current) => acceptEditorSave(current, payload));
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          error: safeMessage(error),
+        }));
+      } finally {
+        setSubmitting(false);
+      }
+    });
   };
   const confirmReset = () => {
     setState((current) => reduceChartEditorState(
@@ -572,10 +583,12 @@ export default function ChartEditorV3({
           : null,
         React.createElement(EditSessionActions, {
           valid: model.valid,
+          submitting,
           resetConfirmationOpen: state.confirmation === "reset",
           onRequestReset: () => dispatch({ type: "requestReset" }),
           onConfirmReset: confirmReset,
           onCancelReset: () => dispatch({ type: "cancelConfirmation" }),
+          onSave: submit,
           onCancel,
         }),
         typeof onRemove === "function"

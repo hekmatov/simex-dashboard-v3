@@ -4,6 +4,7 @@ import ConfirmDialog from "../common/ConfirmDialog.jsx";
 
 export default function EditSessionActions({
   valid = false,
+  submitting = false,
   resetConfirmationOpen = false,
   onSave = noop,
   onRequestReset = noop,
@@ -21,16 +22,17 @@ export default function EditSessionActions({
         "button",
         {
           type: "submit",
-          disabled: !valid,
+          disabled: !valid || submitting,
           onClick: onSave,
         },
-        "Save",
+        submitting ? "Saving..." : "Save",
       ),
       React.createElement(
         "button",
         {
           type: "button",
           className: "secondary",
+          disabled: submitting,
           onClick: onRequestReset,
         },
         "Reset changes",
@@ -40,6 +42,7 @@ export default function EditSessionActions({
         {
           type: "button",
           className: "secondary",
+          disabled: submitting,
           onClick: onCancel,
         },
         "Cancel",

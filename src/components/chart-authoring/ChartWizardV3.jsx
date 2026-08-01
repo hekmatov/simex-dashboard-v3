@@ -32,6 +32,7 @@ import ChartTypePicker from "./ChartTypePicker.jsx";
 import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
+import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
@@ -82,6 +83,11 @@ export default function ChartWizardV3({
   const [manualErrors, setManualErrors] = React.useState([]);
   const [uploadError, setUploadError] = React.useState("");
   const [submissionError, setSubmissionError] = React.useState("");
+  const submissionGateRef = React.useRef(null);
+  if (submissionGateRef.current === null) {
+    submissionGateRef.current = createSubmissionGate();
+  }
+  const [submitting, setSubmitting] = React.useState(false);
   const [pendingSourceUi, setPendingSourceUi] = React.useState(null);
   const wizardDialogRef = useModalFocus({
     open,
@@ -395,12 +401,17 @@ export default function ChartWizardV3({
   };
   const finish = async () => {
     if (!canCreate) return;
-    try {
-      await submitWizardDraft(syncedWizard, onCreate);
-      setSubmissionError("");
-    } catch (error) {
-      setSubmissionError(safeMessage(error));
-    }
+    return submissionGateRef.current.run(async () => {
+      setSubmitting(true);
+      try {
+        await submitWizardDraft(syncedWizard, onCreate);
+        setSubmissionError("");
+      } catch (error) {
+        setSubmissionError(safeMessage(error));
+      } finally {
+        setSubmitting(false);
+      }
+    });
   };
   const confirmClose = () => {
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
@@ -576,10 +587,10 @@ export default function ChartWizardV3({
           "button",
           {
             type: "button",
-            disabled: !canCreate,
+            disabled: !canCreate || submitting,
             onClick: finish,
           },
-          "Create chart",
+          submitting ? "Creating..." : "Create chart",
         ),
       ),
     ),

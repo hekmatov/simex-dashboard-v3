@@ -2160,6 +2160,15 @@ test("save and reset are adjacent and reset confirmation is accessible", () => {
   assert.match(html, /Reset changes\?/);
 });
 
+test("chart editor actions lock while persistence is pending", () => {
+  const html = render(React.createElement(EditSessionActions, {
+    valid: true,
+    submitting: true,
+  }));
+  assert.match(html, />Saving\.\.\.</);
+  assert.equal((html.match(/disabled=""/g) ?? []).length, 3);
+});
+
 test("editor state isolates mutation and same-authority rerenders preserve the draft", () => {
   const saved = validLineChart();
   const state = createChartEditorState({

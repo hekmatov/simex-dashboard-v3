@@ -285,11 +285,9 @@ export default function App() {
   }
 
   function saveChart(payload) {
-    ignoreCommitFailure(
-      ensureDashboardCommitController().mutate((current) => (
-        integrateSavedChart(current, payload)
-      )),
-    );
+    return ensureDashboardCommitController().mutate((current) => (
+      integrateSavedChart(current, payload)
+    ));
   }
 
   function removeChart(panelId) {

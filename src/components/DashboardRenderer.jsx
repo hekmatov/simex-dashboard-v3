@@ -14,6 +14,7 @@ import { PlaybackProvider } from "./playback/PlaybackProvider.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
+import { runModeratorTransaction } from "../lib/moderatorTransaction.js";
 
 export default function DashboardRenderer({
   dashboard,
@@ -266,10 +267,14 @@ export default function DashboardRenderer({
   }
 
   function saveSelectedChartV3(payload) {
-    void pendingEdits.flush();
-    onChartSave(payload);
-    setChartEditBaseline(null);
-    setSelectedPanelId(null);
+    return runModeratorTransaction({
+      flush: () => pendingEdits.flush(),
+      commit: () => onChartSave(payload),
+      onCommitted: () => {
+        setChartEditBaseline(null);
+        setSelectedPanelId(null);
+      },
+    });
   }
 
   function cancelSelectedPanel() {
