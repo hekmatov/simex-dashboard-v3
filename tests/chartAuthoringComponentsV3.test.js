@@ -1160,6 +1160,26 @@ test("discard and source-removal confirmations call only the approved callbacks"
   assert.match(source, /Remove source/);
 });
 
+test("a generically locked confirmation ignores both cancel activation and Escape", () => {
+  const calls = [];
+  const dialog = ConfirmDialog({
+    open: true,
+    disabled: true,
+    cancelLabel: "Keep editing",
+    onCancel() {
+      calls.push("cancel");
+    },
+  });
+  const keep = findElement(dialog, (element) => (
+    element.type === "button" && element.props.children === "Keep editing"
+  ));
+
+  assert.equal(keep.props.disabled, true);
+  keep.props.onClick();
+  dialog.props.onEscape();
+  assert.deepEqual(calls, []);
+});
+
 test("selected data sources show detected types, examples, and warnings", () => {
   const rows = [
     { reported_at: "01/02/2027", capacity: 12, region: "North" },

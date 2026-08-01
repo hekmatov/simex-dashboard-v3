@@ -430,8 +430,8 @@ export default function DashboardRenderer({
   function saveEditMode() {
     void performModeratorOperation("save-session", async () => {
       await pendingEdits.flush();
-      setChartEditBaseline(null);
       await onToggleEditMode();
+      setChartEditBaseline(null);
     });
   }
 
@@ -827,6 +827,7 @@ export default function DashboardRenderer({
         message="Reset changes? All unsaved dashboard edits will be replaced by the most recently saved dashboard."
         cancelLabel="Keep editing"
         confirmLabel={moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
+        disabled={moderatorOperation.kind === "reset-session"}
         confirmDisabled={moderatorOperation.kind === "reset-session"}
         onConfirm={resetEditMode}
         onCancel={() => setResetEditSessionConfirmation(false)}

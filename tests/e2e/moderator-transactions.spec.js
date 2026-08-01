@@ -9,7 +9,11 @@ test.beforeEach(async ({ request, page }) => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function patchedSetItem(key, value) {
       if (key === storageKey && globalThis.__SIMEX_FAIL_SAVE__ === true) {
+        globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
         throw new DOMException("Storage full", "QuotaExceededError");
+      }
+      if (key === storageKey) {
+        globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
       }
       return setItem.call(this, key, value);
     };
@@ -75,4 +79,21 @@ test("failed edit-session save and reset keep edit mode available for retry", as
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
   await confirmation.getByRole("button", { name: "Reset edits" }).click();
   await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+});
+
+test("failed final edit-session commit keeps the chart edit context available", async ({ page }) => {
+  await openFirstChartEditor(page);
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
+  await page.getByRole("button", { name: "Save edit mode" }).evaluate((button) => button.click());
+  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await expect(page.locator(".chart-editor-v3")).toBeVisible();
+  await expect(page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" })).toBeVisible();
+  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+
+  const failedSaveAttempts = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__);
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
+  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__), { timeout: 5_000 })
+    .toBe(failedSaveAttempts + 1);
 });

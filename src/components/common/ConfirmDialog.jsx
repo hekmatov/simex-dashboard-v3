@@ -15,13 +15,14 @@ export default function ConfirmDialog({
 } = {}) {
   if (!open) return null;
   const id = `confirm-${safeId(title)}`;
+  const dismiss = disabled ? noop : onCancel;
   return React.createElement(
     ModalFocusScope,
     {
       as: "div",
       open,
       initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
-      onEscape: onCancel,
+      onEscape: dismiss,
       className: "confirm-dialog-backdrop",
       role: "dialog",
       "aria-modal": "true",
@@ -46,7 +47,7 @@ export default function ConfirmDialog({
             className: "secondary",
             "data-modal-initial-focus": "true",
             disabled,
-            onClick: onCancel,
+            onClick: dismiss,
           },
           cancelLabel,
         ),
