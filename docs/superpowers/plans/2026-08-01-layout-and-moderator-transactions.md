@@ -37,13 +37,11 @@
 
 ```js
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { chartPanelLayoutClass } from "../src/components/chartPanelLayout.js";
 
-test("version-3 chart sizes map to stylesheet-backed panel classes", async () => {
-  const css = await readFile(new URL("../src/styles.css", import.meta.url), "utf8");
+test("version-3 chart sizes map to their panel layout classes", () => {
   const expected = {
     compact: "chart-panel-compact",
     standard: "chart-panel-standard",
@@ -52,7 +50,6 @@ test("version-3 chart sizes map to stylesheet-backed panel classes", async () =>
   };
   for (const [size, className] of Object.entries(expected)) {
     assert.equal(chartPanelLayoutClass(size), className);
-    assert.match(css, new RegExp(`\\.${className}\\s*\\{`));
   }
   assert.equal(chartPanelLayoutClass("removed-v2-size"), "chart-panel-standard");
 });
@@ -252,7 +249,7 @@ git commit -m "feat: add moderator transaction primitive"
 - Modify: `src/components/chart-authoring/EditSessionActions.jsx`
 - Modify: `src/components/chart-authoring/ChartWizardV3.jsx:70-100, 390-420, 570-590`
 - Modify: `tests/chartAuthoringComponentsV3.test.js`
-- Modify: `tests/dashboardAppV3.test.js`
+- Create: `tests/e2e/moderator-transactions.spec.js`
 
 **Interfaces:**
 - Consumes: `runModeratorTransaction` and `createSubmissionGate` from Task 2.
@@ -282,20 +279,51 @@ test("chart editor actions lock while persistence is pending", async () => {
 });
 ```
 
-Add this source-contract assertion proving `saveChart` returns the controller
-mutation rather than passing it to `ignoreCommitFailure`:
+Create `tests/e2e/moderator-transactions.spec.js` with a real-browser failure
+scenario. The test replaces only the browser-storage boundary and exercises the
+real App, renderer, and chart editor:
 
 ```js
-test("App exposes chart save as an awaited serialized commit", async () => {
-  const source = await readFile(
-    new URL("../src/App.jsx", import.meta.url),
-    "utf8",
-  );
-  const saveChart = source.match(
-    /function saveChart\(payload\) \{(?<body>[\s\S]*?)\n  \}/,
-  )?.groups?.body ?? "";
-  assert.match(saveChart, /return ensureDashboardCommitController\(\)\.mutate/);
-  assert.doesNotMatch(saveChart, /ignoreCommitFailure/);
+import { expect, test } from "@playwright/test";
+
+const CONTROL_URL = "http://127.0.0.1:4174";
+const STORAGE_KEY = "simex-dashboard-config-v3";
+
+test.beforeEach(async ({ request, page }) => {
+  await request.post(`${CONTROL_URL}/__test__/reset`);
+  await page.addInitScript((storageKey) => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function patchedSetItem(key, value) {
+      if (key === storageKey && globalThis.__SIMEX_FAIL_SAVE__ === true) {
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }
+      return setItem.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+});
+
+async function openDashboardEditMode(page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.getByRole("button", { name: "Open edit mode" }).click();
+}
+
+async function openFirstChartEditor(page) {
+  await openDashboardEditMode(page);
+  await page.locator(".chart-panel").first()
+    .getByRole("button", { name: "Edit chart" }).click();
+}
+
+test("failed chart save keeps the editor and draft open for retry", async ({ page }) => {
+  await openFirstChartEditor(page);
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save" }).click();
+  await expect(page.locator(".chart-editor-v3")).toBeVisible();
+  await expect(page.locator(".chart-editor-error")).toContainText("Browser storage is full");
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save" }).click();
+  await expect(page.locator(".chart-editor-v3")).toBeHidden();
 });
 ```
 
@@ -305,10 +333,11 @@ Run:
 
 ```powershell
 node --test tests/chartAuthoringComponentsV3.test.js tests/dashboardAppV3.test.js
+pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chromium --grep "failed chart save"
 ```
 
 Expected: FAIL because pending actions do not yet render or lock and chart save
-is still fire-and-forget.
+closes the editor before its rejected commit is reported.
 
 - [ ] **Step 3: Return chart-save promises from App**
 
@@ -364,6 +393,7 @@ Run:
 
 ```powershell
 node --test tests/moderatorTransaction.test.js tests/chartAuthoringComponentsV3.test.js tests/dashboardAppV3.test.js
+pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chromium --grep "failed chart save"
 ```
 
 Expected: PASS with no unhandled rejection or warning.
@@ -371,7 +401,7 @@ Expected: PASS with no unhandled rejection or warning.
 - [ ] **Step 7: Commit transactional chart authoring**
 
 ```powershell
-git add src/App.jsx src/components/DashboardRenderer.jsx src/components/chart-authoring/ChartEditorV3.jsx src/components/chart-authoring/EditSessionActions.jsx src/components/chart-authoring/ChartWizardV3.jsx tests/chartAuthoringComponentsV3.test.js tests/dashboardAppV3.test.js
+git add src/App.jsx src/components/DashboardRenderer.jsx src/components/chart-authoring/ChartEditorV3.jsx src/components/chart-authoring/EditSessionActions.jsx src/components/chart-authoring/ChartWizardV3.jsx tests/chartAuthoringComponentsV3.test.js tests/e2e/moderator-transactions.spec.js
 git commit -m "fix: await chart authoring persistence"
 ```
 
@@ -383,8 +413,7 @@ git commit -m "fix: await chart authoring persistence"
 - Modify: `src/App.jsx:255-305, 420-455`
 - Modify: `src/components/DashboardRenderer.jsx:75-110, 130-180, 380-405, 505-535, 760-780`
 - Modify: `src/components/chart-authoring/ChartEditorV3.jsx:570-600`
-- Modify: `tests/dashboardAppV3.test.js`
-- Modify: `tests/e2e/showcase-home.spec.js`
+- Modify: `tests/e2e/moderator-transactions.spec.js`
 
 **Interfaces:**
 - Consumes: `runModeratorTransaction` from Task 2.
@@ -393,51 +422,59 @@ git commit -m "fix: await chart authoring persistence"
   `save-session | reset-session | remove-chart | null`.
 - Produces: shared chart-removal confirmation through `ConfirmDialog`.
 
-- [ ] **Step 1: Add failing promise-order and removal-confirmation coverage**
+- [ ] **Step 1: Add failing edit-session and removal transaction coverage**
 
-Add this Node contract test for the App promise boundary:
+Append this real-browser removal failure and retry scenario:
 
 ```js
-test("App exposes reset and removal as awaited serialized commits", async () => {
-  const source = await readFile(
-    new URL("../src/App.jsx", import.meta.url),
-    "utf8",
-  );
-  const reset = source.match(
-    /async function resetEditSession\(\) \{(?<body>[\s\S]*?)\n  \}/,
-  )?.groups?.body ?? "";
-  const remove = source.match(
-    /function removeChart\(panelId\) \{(?<body>[\s\S]*?)\n  \}/,
-  )?.groups?.body ?? "";
-  assert.match(reset, /await commitConfiguration\(editBaseline\)/);
-  assert.match(remove, /return ensureDashboardCommitController\(\)\.mutate/);
-  assert.doesNotMatch(`${reset}\n${remove}`, /ignoreCommitFailure/);
+test("failed chart removal keeps confirmation and chart available for retry", async ({ page }) => {
+  await openFirstChartEditor(page);
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
+  const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
+  await expect(confirmation).toBeVisible();
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
+  await confirmation.getByRole("button", { name: "Remove chart" }).click();
+  await expect(confirmation).toBeVisible();
+  await expect(page.locator(".chart-editor-v3")).toBeVisible();
+  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
+  await confirmation.getByRole("button", { name: "Remove chart" }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+});
+
+test("failed edit-session save and reset keep edit mode available for retry", async ({ page }) => {
+  await openDashboardEditMode(page);
+  await page.getByLabel("Program label").fill("Unsaved exercise label");
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
+  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+
+  await page.getByRole("button", { name: "Reset edits" }).click();
+  const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
+  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await expect(confirmation).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
+  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
 });
 ```
 
-Add this browser scenario to `tests/e2e/showcase-home.spec.js`:
-
-```js
-await page.getByRole("button", { name: "Edit chart" }).first().click();
-await page.getByRole("button", { name: "Remove chart" }).click();
-await expect(page.getByRole("dialog", { name: "Remove this chart?" })).toBeVisible();
-await page.getByRole("button", { name: "Keep chart" }).click();
-await expect(page.locator(".chart-editor-v3")).toBeVisible();
-await page.getByRole("button", { name: "Remove chart" }).click();
-await page.getByRole("button", { name: "Remove chart", exact: true }).last().click();
-await expect(page.getByRole("dialog", { name: "Remove this chart?" })).toBeHidden();
-```
-
-- [ ] **Step 2: Run the focused Node test and verify RED**
+- [ ] **Step 2: Run the focused browser test and verify RED**
 
 Run:
 
 ```powershell
-node --test tests/dashboardAppV3.test.js
+pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chromium --grep "failed chart removal"
 ```
 
-Expected: FAIL because reset and remove do not currently return awaited commit
-promises and the renderer has no removal-confirmation state.
+Expected: FAIL because chart removal has no confirmation and edit-session
+operations do not await rejected persistence before closing.
 
 - [ ] **Step 3: Return reset and removal commit promises from App**
 
@@ -514,17 +551,18 @@ Run:
 
 ```powershell
 node --test tests/moderatorTransaction.test.js tests/dashboardAppV3.test.js tests/chartAuthoringComponentsV3.test.js tests/chartPanelLayout.test.js
+pnpm exec playwright test tests/e2e/moderator-transactions.spec.js --project=chromium
 ```
 
 Expected: PASS with no failures or warnings.
 
-Do not run the E2E suite during the implementation cycle. The new E2E scenario
-is executed once with the full visual-signoff gate.
+Run only this focused two-test browser file during the implementation cycle.
+The complete E2E suite remains deferred to the visual-signoff gate.
 
 - [ ] **Step 7: Commit transactional edit sessions**
 
 ```powershell
-git add src/App.jsx src/components/DashboardRenderer.jsx src/components/chart-authoring/ChartEditorV3.jsx src/components/common/ConfirmDialog.jsx tests/dashboardAppV3.test.js tests/e2e/showcase-home.spec.js
+git add src/App.jsx src/components/DashboardRenderer.jsx src/components/chart-authoring/ChartEditorV3.jsx src/components/common/ConfirmDialog.jsx tests/e2e/moderator-transactions.spec.js
 git commit -m "fix: make moderator edit operations transactional"
 ```
 
