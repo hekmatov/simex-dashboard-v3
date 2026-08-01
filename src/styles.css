@@ -157,20 +157,20 @@ body::before {
   grid-template-columns: 1fr;
 }
 
-.app-shell[data-device-layout="phone"] .chart-size-half,
-.app-shell[data-device-layout="phone"] .chart-size-normal,
-.app-shell[data-device-layout="phone"] .chart-size-standard,
-.app-shell[data-device-layout="phone"] .chart-size-wide,
-.app-shell[data-device-layout="phone"] .chart-size-tall,
-.app-shell[data-device-layout="phone"] .chart-size-large {
+.app-shell[data-device-layout="phone"] .chart-panel-compact,
+.app-shell[data-device-layout="phone"] .chart-panel-standard,
+.app-shell[data-device-layout="phone"] .chart-panel-wide,
+.app-shell[data-device-layout="phone"] .chart-panel-full {
   grid-column: auto;
   grid-row: auto;
+}
+
+.app-shell[data-device-layout="phone"] .chart-panel-full {
   min-height: 420px;
 }
 
 .app-shell[data-device-layout="phone"] .chart-canvas,
-.app-shell[data-device-layout="phone"] .chart-size-tall .chart-canvas,
-.app-shell[data-device-layout="phone"] .chart-size-large .chart-canvas {
+.app-shell[data-device-layout="phone"] .chart-panel-full .chart-canvas {
   height: 420px;
 }
 
@@ -700,40 +700,31 @@ textarea {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.chart-size-half {
+.chart-panel-compact {
   grid-column: span 1;
   grid-row: span 1;
 }
 
-.chart-size-normal,
-.chart-size-standard {
+.chart-panel-standard {
   grid-column: span 2;
   grid-row: span 1;
 }
 
-.chart-size-wide {
+.chart-panel-wide {
   grid-column: span 4;
   grid-row: span 1;
 }
 
-.chart-size-tall {
-  grid-column: span 2;
-  grid-row: span 2;
-  min-height: 736px;
-}
-
-.chart-size-large {
+.chart-panel-full {
   grid-column: span 4;
   grid-row: span 2;
   min-height: 736px;
 }
 
-.chart-size-half .chart-canvas,
-.chart-size-normal .chart-canvas,
-.chart-size-standard .chart-canvas,
-.chart-size-wide .chart-canvas,
-.chart-size-tall .chart-canvas,
-.chart-size-large .chart-canvas {
+.chart-panel-compact .chart-canvas,
+.chart-panel-standard .chart-canvas,
+.chart-panel-wide .chart-canvas,
+.chart-panel-full .chart-canvas {
   height: 100%;
 }
 
@@ -1486,24 +1477,20 @@ th {
     position: static;
   }
 
-  .chart-size-half,
-  .chart-size-normal,
-  .chart-size-standard,
-  .chart-size-wide,
-  .chart-size-tall,
-  .chart-size-large,
+  .chart-panel-compact,
+  .chart-panel-standard,
+  .chart-panel-wide,
+  .chart-panel-full,
   .layout-focus-plus-grid > :first-child {
     grid-column: auto;
     grid-row: auto;
   }
 
-  .chart-size-tall,
-  .chart-size-large {
+  .chart-panel-full {
     min-height: 520px;
   }
 
-  .chart-size-tall .chart-canvas,
-  .chart-size-large .chart-canvas {
+  .chart-panel-full .chart-canvas {
     height: 520px;
   }
 

@@ -2,6 +2,7 @@ import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import { chartPanelLayoutClass } from "./chartPanelLayout.js";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 function ChartPanel({
@@ -94,7 +95,7 @@ function ChartPanel({
       ref={panelRef}
       className={[
         "chart-panel",
-        `chart-panel-${chart.layout?.size ?? "standard"}`,
+        chartPanelLayoutClass(chart.layout?.size),
         editMode ? "chart-panel-has-actions" : "",
         isSelected ? "selected" : "",
         isMultiSelected ? "chart-panel-multi-selected" : "",
