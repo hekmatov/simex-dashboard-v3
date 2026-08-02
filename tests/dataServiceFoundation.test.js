@@ -10,6 +10,7 @@ import {
   createDataService,
   createSourceCache,
 } from "../src/data/dataService.js";
+import { createDashboardSourceProviders } from "../src/data/dashboardSourceProviders.js";
 
 function deferred() {
   let resolve;
@@ -394,4 +395,106 @@ test("hydrateAll preserves deterministic source order and legacy output shape", 
   assert.deepEqual(Object.keys(hydrated.loadedData), ["first", "second"]);
   assert.equal(hydrated.loadedData.first[0].sourceId, "first");
   assert.equal(hydrated.profiles.second.fingerprint, "f".repeat(64));
+});
+
+test("dashboard providers load tracked, uploaded, inline, and GeoJSON sources", async () => {
+  const calls = [];
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv: async (url) => {
+      calls.push(["csv", url]);
+      return [{ date: "2027-01-01", cases: 7 }];
+    },
+    parseCsvText: (text, label) => {
+      calls.push(["parse", label]);
+      return [{ text }];
+    },
+    profileDataset: (rows) => ({ rowCount: rows.length, fingerprint: "p".repeat(64) }),
+    fetchJson: async (url) => {
+      calls.push(["geojson", url]);
+      return {
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          properties: { name: "North" },
+          geometry: { type: "Point", coordinates: [4.9, 52.3] },
+        }],
+      };
+    },
+    sourceUrl: (path) => `/base/${path}`,
+    validateGeoJson: (data) => data,
+  }));
+
+  const csv = await providers.resolve("csv").load({
+    sourceId: "cases",
+    descriptor: { kind: "csv", path: "data/cases.csv" },
+    portableSource: null,
+  });
+  const uploaded = await providers.resolve("uploadedCsv").load({
+    sourceId: "upload",
+    descriptor: {
+      kind: "dataset",
+      type: "uploadedCsv",
+      fileName: "upload.csv",
+      csvText: "value\n4\n",
+    },
+    portableSource: null,
+  });
+  const manualRows = [{ value: 5 }];
+  const inline = await providers.resolve("inline").load({
+    sourceId: "manual",
+    descriptor: { kind: "inline", rows: manualRows },
+    portableSource: null,
+  });
+  const geo = await providers.resolve("geojson").load({
+    sourceId: "regions",
+    descriptor: { kind: "geojson", path: "data/regions.geojson" },
+    portableSource: null,
+  });
+
+  assert.equal(csv.data[0].cases, 7);
+  assert.equal(uploaded.profile.rowCount, 1);
+  assert.deepEqual(inline.data, manualRows);
+  assert.notEqual(inline.data, manualRows);
+  assert.notEqual(inline.data[0], manualRows[0]);
+  assert.equal(geo.data.type, "FeatureCollection");
+  assert.deepEqual(calls, [
+    ["csv", "/base/data/cases.csv"],
+    ["parse", "upload.csv"],
+    ["geojson", "/base/data/regions.geojson"],
+  ]);
+});
+
+test("dashboard providers parse the existing portable payload without network access", async () => {
+  let networkCalls = 0;
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv: async () => {
+      networkCalls += 1;
+      return [];
+    },
+    parseCsvText: (text) => [{ text }],
+    profileDataset: () => ({ rowCount: 1, fingerprint: "q".repeat(64) }),
+    fetchJson: async () => {
+      networkCalls += 1;
+      return {};
+    },
+    sourceUrl: (path) => path,
+    validateGeoJson: (data) => data,
+  }));
+
+  const csv = await providers.resolve("csv").load({
+    sourceId: "cases",
+    descriptor: { kind: "csv", path: "data/cases.csv" },
+    portableSource: { kind: "csv", text: "cases\n7\n" },
+  });
+  const geoPayload = { type: "FeatureCollection", features: [{ id: "north" }] };
+  const geo = await providers.resolve("geojson").load({
+    sourceId: "regions",
+    descriptor: { kind: "geojson", path: "data/regions.geojson" },
+    portableSource: { kind: "geojson", data: geoPayload },
+  });
+
+  assert.equal(csv.data[0].text, "cases\n7\n");
+  assert.deepEqual(geo.data, geoPayload);
+  assert.notEqual(geo.data, geoPayload);
+  assert.equal(networkCalls, 0);
 });

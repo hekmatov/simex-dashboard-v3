@@ -643,7 +643,9 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
   };
   const rows = [{ date: "2027-01-01", cases: 7 }];
   const profile = reusableProfile("cases", source, rows);
+  const requestedUrls = [];
   globalThis.fetch = async (url) => {
+    requestedUrls.push(String(url));
     if (String(url).endsWith("data/cases.csv")) {
       return new Response("date,cases\n2027-01-01,7\n");
     }
@@ -681,9 +683,89 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
       loaded.datasetProfiles.cases.columns[0].temporal.values.length,
       rows.length,
     );
+    assert.deepEqual(requestedUrls, [
+      "/data/cases.csv",
+      "/data/regions.geojson",
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("runtime eagerly hydrates uploaded and inline temporal sources with the public shape", async () => {
+  const inlineRows = [{ reportDate: "2027-02-01", cases: 5 }];
+  const dashboard = sourceLoadingDashboard({
+    uploaded: {
+      kind: "dataset",
+      type: "uploadedCsv",
+      fileName: "uploaded-cases.csv",
+      csvText: "reportDate,cases\n31/01/2027,4\n",
+      provenance: { label: "Uploaded cases" },
+      parsingMetadata: {
+        reportDate: {
+          interpretation: "temporal",
+          format: "DD/MM/YYYY",
+          timezone: "date-only",
+        },
+      },
+    },
+    manual: {
+      kind: "inline",
+      rows: inlineRows,
+      provenance: { label: "Manual cases" },
+      parsingMetadata: {
+        reportDate: {
+          interpretation: "temporal",
+          format: "YYYY-MM-DD",
+          timezone: "date-only",
+        },
+      },
+    },
+  });
+
+  const loaded = await loadDashboardConfig(dashboard, {});
+
+  assert.deepEqual(loaded.loadedData.uploaded, [{
+    reportDate: "31/01/2027",
+    cases: 4,
+  }]);
+  assert.deepEqual(loaded.loadedData.manual, inlineRows);
+  assert.notEqual(loaded.loadedData.manual, inlineRows);
+  assert.notEqual(loaded.loadedData.manual[0], inlineRows[0]);
+  assert.deepEqual(Object.keys(loaded.datasetProfiles), ["uploaded", "manual"]);
+
+  const uploadedDate = loaded.datasetProfiles.uploaded.columns.find(
+    ({ name }) => name === "reportDate",
+  );
+  assert.equal(uploadedDate.type, "temporal");
+  assert.deepEqual(uploadedDate.temporal.values, ["2027-01-31"]);
+  assert.deepEqual(uploadedDate.temporal.parsingMetadata, {
+    interpretation: "temporal",
+    format: "DD/MM/YYYY",
+    timezone: "date-only",
+  });
+
+  const manualDate = loaded.datasetProfiles.manual.columns.find(
+    ({ name }) => name === "reportDate",
+  );
+  assert.equal(manualDate.type, "temporal");
+  assert.deepEqual(manualDate.temporal.values, ["2027-02-01"]);
+  assert.deepEqual(manualDate.temporal.parsingMetadata, {
+    interpretation: "temporal",
+    format: "YYYY-MM-DD",
+    timezone: "date-only",
+  });
+
+  assert.deepEqual(Object.keys(loaded), [
+    "configVersion",
+    "id",
+    "title",
+    "dataSources",
+    "pages",
+    "datasetProfiles",
+    "loadedData",
+  ]);
+  assert.equal(loaded.dataSources, dashboard.dataSources);
 });
 
 test("runtime rejects malformed GeoJSON before exposing it to charts", async () => {
