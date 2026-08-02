@@ -76,8 +76,8 @@ export function createDebouncedDashboardEdits({
   }
   const pending = new Map();
   const latestRevision = new Map();
+  const activeFlushes = new Set();
   let timerId = null;
-  let activeFlush = null;
   let disposed = false;
   let revision = 0;
   let restorationGeneration = 0;
@@ -122,28 +122,29 @@ export function createDebouncedDashboardEdits({
     return restored;
   };
 
-  const trackActiveFlush = (promise, claimed) => {
-    const tracked = { claimed, promise };
-    activeFlush = tracked;
+  const trackActiveFlush = (promise, background) => {
+    const tracked = { background, claimed: !background, promise };
+    activeFlushes.add(tracked);
     void promise.then(
       () => {
-        if (activeFlush === tracked) activeFlush = null;
+        activeFlushes.delete(tracked);
       },
       () => {
-        if (activeFlush === tracked) activeFlush = null;
+        activeFlushes.delete(tracked);
       },
     );
     return tracked;
   };
 
-  const flushPending = ({ background = false } = {}) => {
-    clearTimer();
-    if (disposed) return Promise.resolve(null);
-    if (pending.size === 0) {
-      if (activeFlush === null) return Promise.resolve(null);
-      if (!background) activeFlush.claimed = true;
-      return activeFlush.promise;
-    }
+  const waitForFlushes = (records) => {
+    if (records.length === 0) return Promise.resolve(null);
+    if (records.length === 1) return records[0].promise;
+    return Promise.all(records.map(({ promise }) => promise))
+      .then((results) => results.at(-1) ?? null);
+  };
+
+  const commitPending = ({ background = false } = {}) => {
+    if (disposed || pending.size === 0) return Promise.resolve(null);
     const batch = snapshotPending();
     const edits = batch.entries.map(({ edit }) => structuredClone(edit));
     pending.clear();
@@ -152,10 +153,10 @@ export function createDebouncedDashboardEdits({
       record = trackActiveFlush(Promise.resolve(onCommit(edits)).catch((error) => {
         restoreBatch(batch);
         throw error;
-      }), !background);
+      }), background);
     } catch (error) {
       restoreBatch(batch);
-      record = trackActiveFlush(Promise.reject(error), !background);
+      record = trackActiveFlush(Promise.reject(error), background);
     }
     if (background) {
       void record.promise.catch((error) => {
@@ -165,7 +166,18 @@ export function createDebouncedDashboardEdits({
     return record.promise;
   };
 
-  const flush = () => flushPending();
+  const flush = () => {
+    clearTimer();
+    if (disposed) return Promise.resolve(null);
+    const active = [...activeFlushes];
+    const background = active.filter((record) => record.background);
+    for (const record of background) record.claimed = true;
+    if (pending.size === 0) return waitForFlushes(active);
+    if (background.length > 0) {
+      return waitForFlushes(background).then(() => commitPending());
+    }
+    return commitPending();
+  };
 
   return Object.freeze({
     schedule(key, edit) {
@@ -182,7 +194,7 @@ export function createDebouncedDashboardEdits({
       clearTimer();
       timerId = scheduler.setTimeout(() => {
         timerId = null;
-        void flushPending({ background: true });
+        void commitPending({ background: true });
       }, delay);
     },
     flush,

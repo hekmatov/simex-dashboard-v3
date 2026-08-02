@@ -591,6 +591,50 @@ test("a moderator flush observes a timer-started failure and retains the draft f
   assert.equal(edits.pendingCount(), 0);
 });
 
+test("a moderator flush preserves active and newer distinct-key edits for one retry", async () => {
+  const { createDebouncedDashboardEdits } = await import(
+    "../src/lib/dashboardCommitController.js"
+  );
+  const clock = fakeClock();
+  const commits = [];
+  const timerErrors = [];
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: clock,
+    onCommit: (pending) => new Promise((resolve, reject) => {
+      commits.push({ pending, resolve, reject });
+    }),
+    onError: (error) => timerErrors.push(error),
+  });
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Active timer edit" },
+  });
+  await clock.advance(650);
+  edits.schedule("page:overview", {
+    type: "page",
+    pageId: "overview",
+    updates: { title: "Newer pending page edit" },
+  });
+
+  const moderatorFlush = edits.flush();
+  assert.equal(commits.length, 1);
+  commits[0].reject(new Error("active timer batch failed"));
+  await assert.rejects(moderatorFlush, /active timer batch failed/);
+  assert.equal(timerErrors.length, 0);
+  assert.equal(edits.pendingCount(), 2);
+
+  const retry = edits.flush();
+  assert.deepEqual(
+    commits[1].pending.map(({ type }) => type),
+    ["page", "dashboard"],
+  );
+  commits[1].resolve();
+  await retry;
+  assert.equal(edits.pendingCount(), 0);
+});
+
 test("an older rejected flush never replaces a newer same-key retry draft", async () => {
   const { createDebouncedDashboardEdits } = await import(
     "../src/lib/dashboardCommitController.js"
