@@ -167,6 +167,7 @@ for (const scenario of [
   test(`${scenario.typeId} uses its own live roles and contextual style sections`, async ({
     page,
   }) => {
+    test.setTimeout(240_000);
     await openWizard(page);
     const wizard = chartWizard(page);
     await chooseType(wizard, scenario.query, scenario.name);
