@@ -635,6 +635,50 @@ test("a moderator flush preserves active and newer distinct-key edits for one re
   assert.equal(edits.pendingCount(), 0);
 });
 
+test("a renderer-owned background flush is claimable by a later moderator flush", async () => {
+  const { createDebouncedDashboardEdits } = await import(
+    "../src/lib/dashboardCommitController.js"
+  );
+  const commits = [];
+  const backgroundErrors = [];
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: fakeClock(),
+    onCommit: (pending) => new Promise((resolve, reject) => {
+      commits.push({ pending, resolve, reject });
+    }),
+    onError: (error) => backgroundErrors.push(error),
+  });
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Renderer-owned active edit" },
+  });
+  const backgroundFlush = edits.flushInBackground();
+  edits.schedule("page:overview", {
+    type: "page",
+    pageId: "overview",
+    updates: { title: "Newer moderator edit" },
+  });
+
+  const moderatorFlush = edits.flush();
+  assert.equal(commits.length, 1);
+  commits[0].reject(new Error("renderer-owned flush failed"));
+  await assert.rejects(moderatorFlush, /renderer-owned flush failed/);
+  await assert.rejects(backgroundFlush, /renderer-owned flush failed/);
+  assert.equal(backgroundErrors.length, 0);
+  assert.equal(edits.pendingCount(), 2);
+
+  const retry = edits.flush();
+  assert.deepEqual(
+    commits[1].pending.map(({ type }) => type),
+    ["page", "dashboard"],
+  );
+  commits[1].resolve();
+  await retry;
+  assert.equal(edits.pendingCount(), 0);
+});
+
 test("an older rejected flush never replaces a newer same-key retry draft", async () => {
   const { createDebouncedDashboardEdits } = await import(
     "../src/lib/dashboardCommitController.js"

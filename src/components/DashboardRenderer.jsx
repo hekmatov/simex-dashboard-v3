@@ -194,9 +194,7 @@ export default function DashboardRenderer({
   }
 
   function flushPendingEditsInBackground() {
-    void pendingEdits.flush().catch((error) => {
-      pendingEditCallbacksRef.current.onBackgroundPersistenceError?.(error);
-    });
+    void pendingEdits.flushInBackground();
   }
 
   function confirmPanelRemoval() {

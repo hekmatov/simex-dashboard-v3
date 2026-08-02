@@ -179,6 +179,11 @@ export function createDebouncedDashboardEdits({
     return commitPending();
   };
 
+  const flushInBackground = () => {
+    clearTimer();
+    return commitPending({ background: true });
+  };
+
   return Object.freeze({
     schedule(key, edit) {
       if (disposed) throw new Error("Dashboard edit scheduler is disposed.");
@@ -198,6 +203,7 @@ export function createDebouncedDashboardEdits({
       }, delay);
     },
     flush,
+    flushInBackground,
     takePending() {
       clearTimer();
       const batch = snapshotPending();
