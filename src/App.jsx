@@ -257,8 +257,18 @@ export default function App() {
 
   function mutateDashboard(mutator) {
     const transaction = ensureDashboardCommitController().mutate(mutator);
-    void transaction.catch((commitError) => setError(commitError));
+    reportBackgroundPersistence(transaction);
     return transaction;
+  }
+
+  function reportBackgroundPersistence(promise) {
+    void promise.catch((commitError) => {
+      setError(boundedBackgroundPersistenceError(commitError));
+    });
+  }
+
+  function reportBackgroundPersistenceError(commitError) {
+    setError(boundedBackgroundPersistenceError(commitError));
   }
 
   async function toggleEditMode() {
@@ -432,11 +442,12 @@ export default function App() {
         Object.assign(next.pages.find(({ id }) => id === pageId), updates);
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
+      onBackgroundPersistenceError={reportBackgroundPersistenceError}
       onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
         (next) => applyDashboardEdits(next, edits),
       )}
-      onPanelEditCommit={(config) => ignoreCommitFailure(commitConfiguration(config))}
-      onPanelEditCancel={(config) => ignoreCommitFailure(commitConfiguration(config))}
+      onPanelEditCommit={(config) => reportBackgroundPersistence(commitConfiguration(config))}
+      onPanelEditCancel={(config) => reportBackgroundPersistence(commitConfiguration(config))}
       onSectionChange={(pageId, sectionId, updates) => mutateDashboard((next) => {
         const page = next.pages.find(({ id }) => id === pageId);
         Object.assign(page.sections.find(({ id }) => id === sectionId), updates);
@@ -659,6 +670,15 @@ function dateStamp() {
   ].join("");
 }
 
-function ignoreCommitFailure(promise) {
-  void promise.catch(() => {});
+function boundedBackgroundPersistenceError(error) {
+  const rawMessage = typeof error?.message === "string"
+    ? error.message.trim()
+    : typeof error === "string"
+      ? error.trim()
+      : "";
+  const message = rawMessage || "The dashboard could not be saved.";
+  const boundedMessage = message.length <= 240
+    ? message
+    : `${message.slice(0, 237)}...`;
+  return new Error(boundedMessage, { cause: error });
 }

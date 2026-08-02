@@ -77,6 +77,7 @@ export function createDebouncedDashboardEdits({
   const pending = new Map();
   const latestRevision = new Map();
   let timerId = null;
+  let activeFlush = null;
   let disposed = false;
   let revision = 0;
   let restorationGeneration = 0;
@@ -121,22 +122,50 @@ export function createDebouncedDashboardEdits({
     return restored;
   };
 
-  const flush = () => {
+  const trackActiveFlush = (promise, claimed) => {
+    const tracked = { claimed, promise };
+    activeFlush = tracked;
+    void promise.then(
+      () => {
+        if (activeFlush === tracked) activeFlush = null;
+      },
+      () => {
+        if (activeFlush === tracked) activeFlush = null;
+      },
+    );
+    return tracked;
+  };
+
+  const flushPending = ({ background = false } = {}) => {
     clearTimer();
-    if (disposed || pending.size === 0) return Promise.resolve(null);
+    if (disposed) return Promise.resolve(null);
+    if (pending.size === 0) {
+      if (activeFlush === null) return Promise.resolve(null);
+      if (!background) activeFlush.claimed = true;
+      return activeFlush.promise;
+    }
     const batch = snapshotPending();
     const edits = batch.entries.map(({ edit }) => structuredClone(edit));
     pending.clear();
+    let record;
     try {
-      return Promise.resolve(onCommit(edits)).catch((error) => {
+      record = trackActiveFlush(Promise.resolve(onCommit(edits)).catch((error) => {
         restoreBatch(batch);
         throw error;
-      });
+      }), !background);
     } catch (error) {
       restoreBatch(batch);
-      return Promise.reject(error);
+      record = trackActiveFlush(Promise.reject(error), !background);
     }
+    if (background) {
+      void record.promise.catch((error) => {
+        if (!record.claimed) onError(error);
+      });
+    }
+    return record.promise;
   };
+
+  const flush = () => flushPending();
 
   return Object.freeze({
     schedule(key, edit) {
@@ -153,7 +182,7 @@ export function createDebouncedDashboardEdits({
       clearTimer();
       timerId = scheduler.setTimeout(() => {
         timerId = null;
-        void flush().catch(onError);
+        void flushPending({ background: true });
       }, delay);
     },
     flush,

@@ -552,6 +552,45 @@ test("failed debounced flush requeues the draft for the same-action retry", asyn
   assert.equal(controller.getCurrent().programLabel, "Retried exercise label");
 });
 
+test("a moderator flush observes a timer-started failure and retains the draft for retry", async () => {
+  const { createDebouncedDashboardEdits } = await import(
+    "../src/lib/dashboardCommitController.js"
+  );
+  const clock = fakeClock();
+  const commits = [];
+  const timerErrors = [];
+  const edits = createDebouncedDashboardEdits({
+    delay: 650,
+    scheduler: clock,
+    onCommit: (pending) => new Promise((resolve, reject) => {
+      commits.push({ pending, resolve, reject });
+    }),
+    onError: (error) => timerErrors.push(error),
+  });
+
+  edits.schedule("dashboard", {
+    type: "dashboard",
+    updates: { programLabel: "Timer-started retry draft" },
+  });
+  await clock.advance(650);
+  assert.equal(commits.length, 1);
+
+  const moderatorFlush = edits.flush();
+  commits[0].reject(new Error("timer-started storage failed"));
+  await assert.rejects(moderatorFlush, /timer-started storage failed/);
+  assert.equal(timerErrors.length, 0);
+  assert.equal(edits.pendingCount(), 1);
+
+  const retry = edits.flush();
+  assert.equal(
+    commits[1].pending[0].updates.programLabel,
+    "Timer-started retry draft",
+  );
+  commits[1].resolve();
+  await retry;
+  assert.equal(edits.pendingCount(), 0);
+});
+
 test("an older rejected flush never replaces a newer same-key retry draft", async () => {
   const { createDebouncedDashboardEdits } = await import(
     "../src/lib/dashboardCommitController.js"

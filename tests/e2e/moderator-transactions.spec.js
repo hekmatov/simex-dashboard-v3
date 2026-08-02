@@ -12,6 +12,10 @@ test.beforeEach(async ({ request, page }) => {
         globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
         throw new Error("Dashboard persistence is temporarily unavailable.");
       }
+      if (key === storageKey && globalThis.__SIMEX_FAIL_SAVE_LONG__ === true) {
+        globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
+        throw new Error(`Dashboard persistence is unavailable: ${"x".repeat(600)}`);
+      }
       if (key === storageKey && globalThis.__SIMEX_FAIL_SAVE__ === true) {
         globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
         throw new DOMException("Storage full", "QuotaExceededError");
@@ -421,6 +425,30 @@ test("non-quota chart removal failure remains local and retryable", async ({ pag
   await confirmation.getByRole("button", { name: "Remove chart" }).click();
   await expect(confirmation).toBeHidden();
   await expect(page.locator(".chart-editor-v3")).toBeHidden();
+});
+
+test("timer-owned fire-and-forget persistence failure uses the application fallback", async ({ page }) => {
+  await openDashboardEditMode(page);
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_LONG__ = true; });
+  await page.getByLabel("Program label").fill("Timer-owned failed edit");
+
+  await expect(page.getByRole("heading", { name: "Dashboard configuration error" }))
+    .toBeVisible();
+  const message = await page.locator(".status-panel-error p").textContent();
+  expect(message).toContain("Dashboard persistence is unavailable:");
+  expect(message.length).toBeLessThanOrEqual(240);
+});
+
+test("cancelled panel baseline fire-and-forget failure uses the application fallback", async ({ page }) => {
+  await openFirstChartEditor(page);
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_NON_QUOTA__ = true; });
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
+
+  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Dashboard configuration error" }))
+    .toBeVisible();
+  await expect(page.locator(".status-panel-error p"))
+    .toContainText("Dashboard persistence is temporarily unavailable.");
 });
 
 test("removal followed by another editor cancel does not resurrect the chart", async ({ page }) => {

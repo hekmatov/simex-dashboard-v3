@@ -32,6 +32,7 @@ export default function DashboardRenderer({
   onPageRemove,
   onPageChange,
   onDashboardChange,
+  onBackgroundPersistenceError,
   onApplyPendingEdits,
   onPanelEditCommit,
   onPanelEditCancel,
@@ -69,6 +70,7 @@ export default function DashboardRenderer({
     onDashboardChange,
     onPageChange,
     onSectionChange,
+    onBackgroundPersistenceError,
   };
   const pendingEditsRef = React.useRef(null);
   if (pendingEditsRef.current === null) {
@@ -79,6 +81,9 @@ export default function DashboardRenderer({
         edits,
         pendingEditCallbacksRef.current,
       ),
+      onError: (error) => {
+        pendingEditCallbacksRef.current.onBackgroundPersistenceError?.(error);
+      },
     });
   }
   const pendingEdits = pendingEditsRef.current;
@@ -188,6 +193,12 @@ export default function DashboardRenderer({
     ));
   }
 
+  function flushPendingEditsInBackground() {
+    void pendingEdits.flush().catch((error) => {
+      pendingEditCallbacksRef.current.onBackgroundPersistenceError?.(error);
+    });
+  }
+
   function confirmPanelRemoval() {
     const panelId = pendingRemovalPanelId;
     if (panelId === null) return;
@@ -237,7 +248,7 @@ export default function DashboardRenderer({
     event.preventDefault();
     if (moderatorOperationGateRef.current.isActive()) return;
     const sourcePanelId = event.dataTransfer.getData("text/plain") || draggingPanelId;
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onPanelReorder(sourcePanelId, targetPanelId);
     setDraggingPanelId(null);
     setDragOverPanelId(null);
@@ -293,7 +304,7 @@ export default function DashboardRenderer({
     }
 
     const pageId = uniquePageId(dashboard, label);
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onPageAdd({
       id: pageId,
       label,
@@ -320,7 +331,7 @@ export default function DashboardRenderer({
 
   function saveBackgroundSettings() {
     if (moderatorOperationGateRef.current.isActive()) return;
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
     setShowVantaSettings(false);
   }
@@ -329,7 +340,7 @@ export default function DashboardRenderer({
     if (moderatorOperationGateRef.current.isActive()) return;
     const defaults = sanitizeVantaSettings();
     setBackgroundDraft(defaults);
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onVantaBackgroundChange(defaults);
     setShowVantaSettings(false);
   }
@@ -406,13 +417,13 @@ export default function DashboardRenderer({
 
   function applyBackgroundSettings() {
     if (moderatorOperationGateRef.current.isActive()) return;
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
   }
 
   function changeGlobalPanelColors(updates) {
     if (moderatorOperationGateRef.current.isActive()) return;
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onDashboardChange({
       globalStyles: {
         ...(dashboard.globalStyles ?? {}),
@@ -426,7 +437,7 @@ export default function DashboardRenderer({
 
   function changeAccessibilityEnabled(enabled) {
     if (moderatorOperationGateRef.current.isActive()) return;
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onDashboardChange({
       globalStyles: {
         ...(dashboard.globalStyles ?? {}),
@@ -442,7 +453,7 @@ export default function DashboardRenderer({
       return;
     }
     const description = window.prompt("Section subtext", "") ?? "";
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onSectionInsert(activePage.id, section.id, panel.id, {
       id: `${section.id}_${Date.now()}`,
       title,
@@ -452,7 +463,7 @@ export default function DashboardRenderer({
 
   function removeSectionTitle(section) {
     if (moderatorOperationGateRef.current.isActive()) return;
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onSectionChange(activePage.id, section.id, { title: "", description: "" });
   }
 
@@ -467,7 +478,7 @@ export default function DashboardRenderer({
 
     const activeIndex = dashboard.pages.findIndex((page) => page.id === activePage.id);
     const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
-    void pendingEdits.flush();
+    flushPendingEditsInBackground();
     onPageRemove(activePage.id);
     setActivePageId(fallbackPage.id);
     setSelectedPanelId(null);
