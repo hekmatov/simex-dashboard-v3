@@ -188,6 +188,12 @@ export async function loadDashboardConfig(
     providers,
     cache: dashboardSourceCache,
   });
+  for (const sourceId of Object.keys(dataSources)) {
+    const request = { sourceId, purpose: "compatibility" };
+    if (dataService.getSnapshot(request).status === "error") {
+      await dataService.retry(request);
+    }
+  }
   const {
     loadedData,
     profiles: hydratedProfiles,

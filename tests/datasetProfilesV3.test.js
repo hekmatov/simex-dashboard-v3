@@ -692,6 +692,49 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
   }
 });
 
+test("compatibility loading retries a tracked source that failed on the prior call", async () => {
+  const originalFetch = globalThis.fetch;
+  const source = {
+    kind: "csv",
+    path: "data/task-3-transient-cases.csv",
+    provenance: { label: "Transient cases" },
+    parsingMetadata: {
+      date: {
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+        timezone: "date-only",
+      },
+    },
+  };
+  const rows = [{ date: "2027-03-01", cases: 9 }];
+  const profile = reusableProfile("task3TransientCases", source, rows);
+  const dashboard = sourceLoadingDashboard({ task3TransientCases: source });
+  let attempts = 0;
+  globalThis.fetch = async (url) => {
+    assert.equal(String(url), "/data/task-3-transient-cases.csv");
+    attempts += 1;
+    if (attempts === 1) return new Response("", { status: 503 });
+    return new Response("date,cases\n2027-03-01,9\n");
+  };
+
+  try {
+    await assert.rejects(
+      loadDashboardConfig(dashboard, { task3TransientCases: profile }),
+      /could not load data file/i,
+    );
+
+    const loaded = await loadDashboardConfig(
+      dashboard,
+      { task3TransientCases: profile },
+    );
+
+    assert.equal(attempts, 2);
+    assert.deepEqual(loaded.loadedData.task3TransientCases, rows);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("runtime eagerly hydrates uploaded and inline temporal sources with the public shape", async () => {
   const inlineRows = [{ reportDate: "2027-02-01", cases: 5 }];
   const dashboard = sourceLoadingDashboard({

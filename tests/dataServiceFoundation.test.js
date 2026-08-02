@@ -11,6 +11,7 @@ import {
   createSourceCache,
 } from "../src/data/dataService.js";
 import { createDashboardSourceProviders } from "../src/data/dashboardSourceProviders.js";
+import { validateGeoJson } from "../src/lib/loadDashboard.js";
 
 function deferred() {
   let resolve;
@@ -497,4 +498,38 @@ test("dashboard providers parse the existing portable payload without network ac
   assert.deepEqual(geo.data, geoPayload);
   assert.notEqual(geo.data, geoPayload);
   assert.equal(networkCalls, 0);
+});
+
+test("portable GeoJSON is validated with its legacy label before cloning", async () => {
+  const unexpected = () => {
+    throw new Error("Unexpected provider dependency call.");
+  };
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv: unexpected,
+    parseCsvText: unexpected,
+    profileDataset: unexpected,
+    fetchJson: unexpected,
+    sourceUrl: (path) => path,
+    validateGeoJson,
+  }));
+  const malformedPayload = {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "Point",
+        coordinates: [() => 4.9, 52.3],
+      },
+    }],
+  };
+
+  await assert.rejects(
+    providers.resolve("geojson").load({
+      sourceId: "regions",
+      descriptor: { kind: "geojson", path: "data/regions.geojson" },
+      portableSource: { kind: "geojson", data: malformedPayload },
+    }),
+    /Portable data source "regions" GeoJSON feature 0 geometry coordinates must be a position of finite numbers/,
+  );
 });

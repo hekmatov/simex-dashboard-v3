@@ -52,12 +52,19 @@ export function createDashboardSourceProviders({
       kind: "geojson",
       async load(request) {
         const { sourceId, descriptor, portableSource } = request;
-        const data = portableSource
-          ? portableGeoJson(sourceId, portableSource)
-          : await fetchJson(
-              sourceUrl(descriptor.path),
-              `data file: ${descriptor.path}`,
-            );
+        if (portableSource) {
+          return {
+            data: portableGeoJson(
+              sourceId,
+              portableSource,
+              validateGeoJson,
+            ),
+          };
+        }
+        const data = await fetchJson(
+          sourceUrl(descriptor.path),
+          `data file: ${descriptor.path}`,
+        );
         validateGeoJson(data, `Data source "${sourceId}" GeoJSON`);
         return { data };
       },
@@ -73,7 +80,11 @@ function requirePortableKind(sourceId, portableSource, expectedKind) {
   }
 }
 
-function portableGeoJson(sourceId, portableSource) {
+function portableGeoJson(sourceId, portableSource, validateGeoJson) {
   requirePortableKind(sourceId, portableSource, "geojson");
+  validateGeoJson(
+    portableSource.data,
+    `Portable data source "${sourceId}" GeoJSON`,
+  );
   return structuredClone(portableSource.data);
 }
