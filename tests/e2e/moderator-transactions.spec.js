@@ -16,6 +16,11 @@ test.beforeEach(async ({ request, page }) => {
         globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
         throw new Error(`Dashboard persistence is unavailable: ${"x".repeat(600)}`);
       }
+      if (key === storageKey && globalThis.__SIMEX_FAIL_SAVE_ONCE__ === true) {
+        globalThis.__SIMEX_FAIL_SAVE_ONCE__ = false;
+        globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }
       if (key === storageKey && globalThis.__SIMEX_FAIL_SAVE__ === true) {
         globalThis.__SIMEX_SAVE_ATTEMPTS__ = (globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0) + 1;
         throw new DOMException("Storage full", "QuotaExceededError");
@@ -493,10 +498,14 @@ test("failed reset reports inside its confirmation and preserves the draft for s
   await openDashboardEditMode(page);
   const editedLabel = "Draft retained after reset failure";
   await page.getByLabel("Program label").fill(editedLabel);
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
   await page.getByRole("button", { name: "Reset edits", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
-  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "Reset edits" })
+    .evaluate((button) => {
+      globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
+      button.click();
+    });
 
   await expect(confirmation).toBeVisible();
   await expect(confirmation.getByRole("alert"))
@@ -506,7 +515,6 @@ test("failed reset reports inside its confirmation and preserves the draft for s
   await expect(confirmation).toBeHidden();
   await expect(page.locator(".edit-operation-error")).toHaveCount(0);
 
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
   await page.getByRole("button", { name: "Save edit mode" }).click();
   await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
   await page.reload();
@@ -621,18 +629,22 @@ test("wizard create transaction coalesces, locks dismissal, retains mappings, an
 test("failed edit-session save and reset keep edit mode available for retry", async ({ page }) => {
   await openDashboardEditMode(page);
   await page.getByLabel("Program label").fill("Unsaved exercise label");
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await page.getByRole("button", { name: "Save edit mode" }).evaluate((button) => {
+    globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
+    button.click();
+  });
   await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
   await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
 
   await page.getByRole("button", { name: "Reset edits" }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
-  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await confirmation.getByRole("button", { name: "Reset edits" }).evaluate((button) => {
+    globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
+    button.click();
+  });
   await expect(confirmation).toBeVisible();
   await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
 
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
   await confirmation.getByRole("button", { name: "Reset edits" }).click();
   await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
 });

@@ -329,6 +329,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
     "data-collection-pause-on-hover",
     "true",
   );
+  await fixed.hover();
   await expect(carouselRegion).toHaveAttribute(
     "data-collection-rotation-paused",
     "false",

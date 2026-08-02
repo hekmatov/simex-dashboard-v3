@@ -301,6 +301,7 @@ test("editor reset, save race, title alignment, and shared background color stay
     "Save",
     "Reset changes",
     "Cancel",
+    "Remove chart",
   ]);
 
   await editor.getByRole("button", { name: "Appearance", exact: true })

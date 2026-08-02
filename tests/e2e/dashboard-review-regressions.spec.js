@@ -62,6 +62,8 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   });
 
   await panel.getByRole("button", { name: "Remove chart" }).click();
+  await page.getByRole("dialog", { name: "Remove this chart?" })
+    .getByRole("button", { name: "Remove chart" }).click();
   await expect(panel).toHaveCount(0);
 });
 
