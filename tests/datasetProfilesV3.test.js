@@ -692,12 +692,12 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
   }
 });
 
-test("compatibility loading retries a tracked source that failed on the prior call", async () => {
+test("compatibility loading recovers a cached failure in configured source order", async () => {
   const originalFetch = globalThis.fetch;
-  const source = {
+  const laterSource = {
     kind: "csv",
-    path: "data/task-3-transient-cases.csv",
-    provenance: { label: "Transient cases" },
+    path: "data/task-3-round-2-later.csv",
+    provenance: { label: "Later transient cases" },
     parsingMetadata: {
       date: {
         interpretation: "temporal",
@@ -706,30 +706,68 @@ test("compatibility loading retries a tracked source that failed on the prior ca
       },
     },
   };
-  const rows = [{ date: "2027-03-01", cases: 9 }];
-  const profile = reusableProfile("task3TransientCases", source, rows);
-  const dashboard = sourceLoadingDashboard({ task3TransientCases: source });
-  let attempts = 0;
+  const earlierSource = {
+    ...laterSource,
+    path: "data/task-3-round-2-earlier.csv",
+    provenance: { label: "Earlier uncached cases" },
+  };
+  const laterRows = [{ date: "2027-03-02", cases: 10 }];
+  const earlierRows = [{ date: "2027-03-01", cases: 9 }];
+  const laterProfile = reusableProfile(
+    "task3CachedFailureLater",
+    laterSource,
+    laterRows,
+  );
+  const earlierProfile = reusableProfile(
+    "task3UncachedEarlier",
+    earlierSource,
+    earlierRows,
+  );
+  const requestedUrls = [];
+  let laterAttempts = 0;
   globalThis.fetch = async (url) => {
-    assert.equal(String(url), "/data/task-3-transient-cases.csv");
-    attempts += 1;
-    if (attempts === 1) return new Response("", { status: 503 });
-    return new Response("date,cases\n2027-03-01,9\n");
+    const requestUrl = String(url);
+    requestedUrls.push(requestUrl);
+    if (requestUrl === "/data/task-3-round-2-later.csv") {
+      laterAttempts += 1;
+      if (laterAttempts === 1) return new Response("", { status: 503 });
+      return new Response("date,cases\n2027-03-02,10\n");
+    }
+    if (requestUrl === "/data/task-3-round-2-earlier.csv") {
+      return new Response("date,cases\n2027-03-01,9\n");
+    }
+    return new Response("", { status: 404 });
   };
 
   try {
     await assert.rejects(
-      loadDashboardConfig(dashboard, { task3TransientCases: profile }),
+      loadDashboardConfig(
+        sourceLoadingDashboard({ task3CachedFailureLater: laterSource }),
+        { task3CachedFailureLater: laterProfile },
+      ),
       /could not load data file/i,
     );
+    assert.deepEqual(requestedUrls, ["/data/task-3-round-2-later.csv"]);
+    requestedUrls.length = 0;
 
     const loaded = await loadDashboardConfig(
-      dashboard,
-      { task3TransientCases: profile },
+      sourceLoadingDashboard({
+        task3UncachedEarlier: earlierSource,
+        task3CachedFailureLater: laterSource,
+      }),
+      {
+        task3UncachedEarlier: earlierProfile,
+        task3CachedFailureLater: laterProfile,
+      },
     );
 
-    assert.equal(attempts, 2);
-    assert.deepEqual(loaded.loadedData.task3TransientCases, rows);
+    assert.deepEqual(requestedUrls, [
+      "/data/task-3-round-2-earlier.csv",
+      "/data/task-3-round-2-later.csv",
+    ]);
+    assert.equal(laterAttempts, 2);
+    assert.deepEqual(loaded.loadedData.task3UncachedEarlier, earlierRows);
+    assert.deepEqual(loaded.loadedData.task3CachedFailureLater, laterRows);
   } finally {
     globalThis.fetch = originalFetch;
   }

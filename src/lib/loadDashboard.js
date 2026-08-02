@@ -191,7 +191,7 @@ export async function loadDashboardConfig(
   for (const sourceId of Object.keys(dataSources)) {
     const request = { sourceId, purpose: "compatibility" };
     if (dataService.getSnapshot(request).status === "error") {
-      await dataService.retry(request);
+      dataService.evict(request);
     }
   }
   const {
