@@ -20,6 +20,9 @@
 - Do not recursively clone or freeze large provider payloads; freeze snapshot wrappers and treat payloads as read-only by contract.
 - Preserve `loadDashboardConfig(dashboard, datasetProfiles, portableSources)` and its returned `loadedData` and `datasetProfiles` behavior during this foundation.
 - Preserve deterministic sequential eager hydration in `hydrateAll` to avoid changing load ordering or causing a parse-memory spike.
+- Treat one service instance's validated descriptors as immutable. Replacing a descriptor creates a new service/request identity rather than mutating a live cache entry.
+- Do not hash or canonicalize entire CSV or GeoJSON payloads merely to form cache keys. Always include tracked paths; use an existing descriptor/profile fingerprint where available; otherwise isolate runtime and portable payloads to the service scope.
+- Cache provider payload state separately from the tracked profile catalogue supplied by each dashboard. A shared raw-data hit must not replace the current dashboard's tracked profile.
 - Use tests first for every behavior change and commit each task atomically.
 
 ## File Structure
@@ -48,6 +51,7 @@
 - Consumes: validated version-3 source descriptors and optional tracked profiles/portable payloads.
 - Produces: `providerKindForDescriptor(descriptor)`, `normalizeSourceRequest(request, context)`, and `createProviderRegistry(initialProviders)`.
 - `normalizeSourceRequest` returns a frozen `{ sourceId, purpose, providerKind, cacheKey, descriptor, portableSource }` record.
+- Cache identity always includes `sourceId`, provider kind, tracked path, parsing metadata, and transport. Network sources may share across service instances when those fields and an available fingerprint match. Portable sources and unfingerprinted uploaded/inline sources include `scopeId`, avoiding stale cross-dashboard reuse without hashing full payloads.
 - A provider is `{ kind: string, load(request): Promise<{ data, profile?, estimatedBytes? }> }`.
 
 - [ ] **Step 1: Write failing normalization and registry tests**
@@ -68,6 +72,7 @@ test("source requests normalize purpose, provider kind, and stable cache identit
   const descriptor = {
     kind: "csv",
     path: "data/cases.csv",
+    provenance: { label: "Cases" },
     parsingMetadata: {
       date: { interpretation: "temporal", format: "YYYY-MM-DD" },
     },
@@ -94,6 +99,41 @@ test("source requests normalize purpose, provider kind, and stable cache identit
   assert.equal(first.cacheKey, second.cacheKey);
   assert.equal(second.purpose, "wizard");
   assert.ok(Object.isFrozen(first));
+});
+
+test("cache identity changes with tracked paths and isolates portable payloads", () => {
+  const profile = { fingerprint: "a".repeat(64) };
+  const base = {
+    kind: "csv",
+    path: "data/cases.csv",
+    provenance: { label: "Cases" },
+  };
+  const first = normalizeSourceRequest("cases", {
+    descriptor: base,
+    profile,
+    scopeId: "scope-a",
+  });
+  const changedPath = normalizeSourceRequest("cases", {
+    descriptor: { ...base, path: "data/revised-cases.csv" },
+    profile,
+    scopeId: "scope-a",
+  });
+  const portableA = normalizeSourceRequest("cases", {
+    descriptor: base,
+    profile,
+    portableSource: { kind: "csv", text: "cases\n7\n" },
+    scopeId: "scope-a",
+  });
+  const portableB = normalizeSourceRequest("cases", {
+    descriptor: base,
+    profile,
+    portableSource: { kind: "csv", text: "cases\n7\n" },
+    scopeId: "scope-b",
+  });
+
+  assert.notEqual(first.cacheKey, changedPath.cacheKey);
+  assert.notEqual(first.cacheKey, portableA.cacheKey);
+  assert.notEqual(portableA.cacheKey, portableB.cacheKey);
 });
 
 test("descriptor forms map to the four initial provider kinds", () => {
@@ -219,20 +259,26 @@ export function normalizeSourceRequest(
   const fingerprint = descriptor.sourceFingerprint
     ?? descriptor.fingerprint
     ?? profile?.fingerprint
-    ?? (descriptor.path ? `path:${descriptor.path}` : `scope:${scopeId}`);
+    ?? null;
   const parsingIdentity = stableStringify(descriptor.parsingMetadata ?? {});
-  const transport = portableSource ? "portable" : "network";
+  const portable = portableSource !== null && portableSource !== undefined;
+  const transport = portable ? `portable:${scopeId}` : "network";
+  const runtimeScope = fingerprint === null && !descriptor.path
+    ? scopeId
+    : null;
   return Object.freeze({
     sourceId,
     purpose,
     providerKind,
-    cacheKey: [
+    cacheKey: stableStringify({
       sourceId,
       providerKind,
+      path: descriptor.path ?? null,
       fingerprint,
       parsingIdentity,
+      runtimeScope,
       transport,
-    ].join(":"),
+    }),
     descriptor,
     portableSource,
   });
@@ -318,6 +364,8 @@ git commit -m "feat: define data source request and provider contracts"
 - Consumes: `normalizeSourceRequest`, a validated `dataSources` record, a provider registry, optional profiles/portable sources, and an optional shared cache.
 - Produces: `createSourceCache()`, `createDataService(options)`, and `DataService` methods `getSnapshot`, `load`, `acquire`, `retry`, `evict`, `hydrateAll`, and `inspect`.
 - A snapshot is a frozen `{ sourceId, status, revision, data, profile, error, leaseCount, loadedAt, loadDurationMs, estimatedBytes }` wrapper.
+- Shared cache entries own provider state, payloads, provider-derived profiles, promises, revisions, and leases. A service overlays its own tracked profile when it publishes a snapshot, so raw-data reuse cannot leak another dashboard's profile metadata.
+- `#startLoad` assigns the guarded in-flight promise before emitting `source-load-start`, and provider resolution occurs inside that guarded chain. Re-entrant loads therefore reuse a real promise, and a missing provider publishes a normal retryable error snapshot.
 - `hydrateAll` produces `{ loadedData, profiles }` without cloning provider payloads.
 
 - [ ] **Step 1: Add failing service-state and in-flight reuse tests**
@@ -404,6 +452,90 @@ test("shared cache reuses a ready descriptor revision across service instances",
   assert.equal(loads, 1);
   assert.equal(firstReady.data, secondReady.data);
   assert.equal(secondReady.revision, 1);
+});
+
+test("shared payload reuse preserves each service's tracked profile authority", async () => {
+  const cache = createSourceCache();
+  const rows = [{ value: 11 }];
+  let loads = 0;
+  const providers = createProviderRegistry([{
+    kind: "csv",
+    async load() {
+      loads += 1;
+      return { data: rows };
+    },
+  }]);
+  const dataSources = {
+    cases: { kind: "csv", path: "data/cases.csv" },
+  };
+  const firstProfile = {
+    fingerprint: "g".repeat(64),
+    columns: [{ name: "value", examples: [11] }],
+  };
+  const secondProfile = {
+    fingerprint: "g".repeat(64),
+    columns: [{ name: "value", examples: ["current dashboard"] }],
+  };
+  const first = createDataService({
+    dataSources,
+    profiles: { cases: firstProfile },
+    providers,
+    cache,
+    scopeId: "first-profile",
+  });
+  const second = createDataService({
+    dataSources,
+    profiles: { cases: secondProfile },
+    providers,
+    cache,
+    scopeId: "second-profile",
+  });
+
+  const firstReady = await first.load("cases");
+  const secondReady = await second.load("cases");
+  assert.equal(loads, 1);
+  assert.equal(firstReady.data, rows);
+  assert.equal(secondReady.data, rows);
+  assert.equal(firstReady.profile, firstProfile);
+  assert.equal(secondReady.profile, secondProfile);
+});
+
+test("start events can re-enter load and receive the registered in-flight promise", async () => {
+  let reentrantLoad = null;
+  let service;
+  service = serviceFixture({
+    onEvent(event) {
+      if (event.type === "source-load-start" && reentrantLoad === null) {
+        reentrantLoad = service.load("cases");
+      }
+    },
+  });
+
+  const first = service.load("cases");
+  assert.ok(reentrantLoad instanceof Promise);
+  const [firstReady, reentrantReady] = await Promise.all([first, reentrantLoad]);
+  assert.equal(firstReady.data, reentrantReady.data);
+});
+
+test("missing providers publish a retryable source-local error", async () => {
+  const registry = createProviderRegistry();
+  const service = createDataService({
+    dataSources: { cases: { kind: "csv", path: "data/cases.csv" } },
+    profiles: { cases: { fingerprint: "h".repeat(64), columns: [] } },
+    providers: registry,
+    scopeId: "missing-provider",
+  });
+
+  await assert.rejects(service.load("cases"), /no data provider/i);
+  assert.equal(service.getSnapshot("cases").status, "error");
+  registry.register({
+    kind: "csv",
+    async load() {
+      return { data: [{ value: 12 }] };
+    },
+  });
+  const recovered = await service.retry("cases");
+  assert.equal(recovered.status, "ready");
 });
 ```
 
@@ -530,6 +662,16 @@ Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `src/data/dataService.js`.
 
 Create `src/data/dataService.js` with the following implementation. Keep event
 payloads metadata-only and do not clone `result.data`:
+
+> **Approved preflight correction:** The code below is an implementation
+> outline, not permission to cache caller-owned tracked profiles. Cache the
+> provider state and provider-derived profile, and materialize each service's
+> frozen snapshot with that service's tracked profile when the provider did not
+> return one. Assign the complete guarded `entry.promise` before emitting
+> `source-load-start`, and resolve the provider inside that promise chain so
+> registry failures follow the normal error/retry path. In-flight reuse means
+> one provider operation and one payload reference; service-specific snapshot
+> wrappers do not need to be reference-equal across service instances.
 
 ```js
 import { normalizeSourceRequest } from "./sourceRequest.js";
@@ -840,7 +982,7 @@ Run:
 node --test tests/dataServiceFoundation.test.js
 ```
 
-Expected: PASS with 9 tests and 0 failures. If the count differs because Node
+Expected: PASS with 14 tests and 0 failures. If the count differs because Node
 reports nested assertions differently, require every named test above to pass.
 
 - [ ] **Step 6: Commit the service state machine**
@@ -865,7 +1007,7 @@ git commit -m "feat: add immutable demand-driven data service"
 - Consumes: current `loadCsv`, `parseCsvText`, `profileDataset`, `fetchJson`, `sourceUrl`, and `validateGeoJson` authorities through explicit dependencies.
 - Produces: `createDashboardSourceProviders(dependencies)` returning providers for `csv`, `uploadedCsv`, `inline`, and `geojson`.
 - `loadDashboardConfig` constructs a service, calls `hydrateAll({ purpose: "compatibility" })`, validates time-sync groups with the returned rows/profiles, and returns the same public hydrated dashboard shape as before.
-- One module-scoped `dashboardSourceCache` preserves the current cross-call reuse behavior while moving ownership from the legacy loader to the service.
+- One module-scoped `dashboardSourceCache` reuses tracked and explicitly fingerprinted sources across loader calls while moving ownership from the legacy loader to the service. Unfingerprinted uploaded/inline and portable payloads remain service-scoped in this foundation so stale content cannot cross dashboard instances without adding payload hashing.
 
 - [ ] **Step 1: Add failing provider tests**
 
@@ -1168,6 +1310,16 @@ After the existing profile assertions, add:
     ]);
 ```
 
+Add one focused loader integration test containing both an uploaded CSV source
+and an inline source with temporal parsing metadata. Assert that
+`loadDashboardConfig` returns their parsed/cloned rows, derives their current
+profiles with the configured temporal interpretation, and preserves the public
+`{ ...dashboard, dataSources, datasetProfiles, loadedData }` shape. This is a
+compatibility test, not a new validation or caching subsystem.
+
+Keep the provider's existing kind, CSV text, and GeoJSON validation. Do not add
+new hostile-object/accessor hardening or payload hashing in this task.
+
 - [ ] **Step 7: Run focused compatibility tests**
 
 Run:
@@ -1293,7 +1445,7 @@ Run:
 
 ```powershell
 git diff --check
-git diff --stat origin/main...HEAD
+git diff --stat b7de939..HEAD
 git status --short
 ```
 
