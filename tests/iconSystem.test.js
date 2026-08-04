@@ -114,7 +114,7 @@ test("interaction metadata preserves the approved accessibility and state semant
       tooltip: "Fullscreen",
       renderMode: "icon",
       tone: "standard",
-      status: "planned",
+      status: "live",
     },
   );
   assert.equal(getInteraction("chart.remove").tone, "danger");
@@ -183,6 +183,23 @@ test("version 3 global styles accept one icon accent and reject malformed values
     () => validateDashboardStructure(dashboard),
     /icon accent/i,
   );
+});
+
+test("selected application icon surfaces contain no private SVG implementations", async () => {
+  for (const relativePath of [
+    "src/components/charts/ChartPanelActions.jsx",
+    "src/components/FullscreenDisplay.jsx",
+    "src/components/ColorField.jsx",
+  ]) {
+    const file = await readFile(new URL(`../${relativePath}`, import.meta.url), "utf8");
+    assert.doesNotMatch(file, /<svg|createElement\(\s*["']svg["']/);
+    assert.match(file, /SimExIcon|IconControl/);
+  }
+  const dashboardRenderer = await readFile(
+    new URL("../src/components/DashboardRenderer.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(dashboardRenderer, /edit-sliders-icon/);
 });
 
 function pick(value, keys) {

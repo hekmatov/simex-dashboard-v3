@@ -1,4 +1,5 @@
 import React from "react";
+import { IconControl } from "../common/SimExIcon.js";
 
 const POPOVER_EVENT = "simex:chart-source-popover";
 
@@ -8,6 +9,7 @@ export default function ChartPanelActions({
   showFullscreen = true,
   selectionMode = false,
   fullscreenSelected = false,
+  fullscreenSelectionIndex = 0,
   onFullscreen,
   onFullscreenHoldStart,
   onFullscreenHoldEnd,
@@ -66,83 +68,44 @@ export default function ChartPanelActions({
         )
       : null,
     !selectionMode
-      ? React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "chart-panel-icon-button",
-            "aria-label": "Show source information",
-            "aria-expanded": infoOpen,
-            title: "Source information",
-            onClick: toggleInfo,
-          },
-          React.createElement(InfoIcon),
-        )
+      ? React.createElement(IconControl, {
+          interactionId: "panel.view-source-information",
+          className: "chart-panel-icon-button",
+          "aria-label": "Show source information",
+          "aria-expanded": infoOpen,
+          title: "Source information",
+          onClick: toggleInfo,
+        })
       : null,
-    showFullscreen ? React.createElement(
-      "button",
-      {
-        type: "button",
-        className: [
-          "chart-panel-icon-button",
-          fullscreenSelected ? "chart-panel-icon-button--selected" : "",
-        ].filter(Boolean).join(" "),
-        "aria-label": selectionMode
-          ? fullscreenSelected
-            ? "Remove chart from multi-fullscreen"
-            : "Add chart to multi-fullscreen"
-          : "Open chart fullscreen",
-        "aria-pressed": selectionMode ? fullscreenSelected : undefined,
-        title: selectionMode
-          ? fullscreenSelected
-            ? "Selected for multi-fullscreen"
-            : "Add to multi-fullscreen"
-          : "Fullscreen",
-        onPointerDown: selectionMode ? undefined : onFullscreenHoldStart,
-        onPointerUp: selectionMode ? undefined : onFullscreenHoldEnd,
-        onPointerCancel: selectionMode ? undefined : onFullscreenHoldEnd,
-        onPointerLeave: selectionMode ? undefined : onFullscreenHoldEnd,
-        onClick: onFullscreen,
-      },
-      fullscreenSelected
-        ? React.createElement(FullscreenSelectedIcon)
-        : React.createElement(FullscreenIcon),
-    ) : null,
-  );
-}
-
-function InfoIcon() {
-  return React.createElement(
-    "svg",
-    { viewBox: "0 0 24 24", "aria-hidden": "true" },
-    React.createElement("circle", { cx: 12, cy: 12, r: 9 }),
-    React.createElement("path", { d: "M12 10v6" }),
-    React.createElement("path", { d: "M12 7h.01" }),
-  );
-}
-
-function FullscreenIcon() {
-  return React.createElement(
-    "svg",
-    { viewBox: "0 0 24 24", "aria-hidden": "true" },
-    React.createElement("path", { d: "M8 3H3v5" }),
-    React.createElement("path", { d: "M16 3h5v5" }),
-    React.createElement("path", { d: "M21 16v5h-5" }),
-    React.createElement("path", { d: "M3 16v5h5" }),
-  );
-}
-
-function FullscreenSelectedIcon() {
-  return React.createElement(
-    "svg",
-    { viewBox: "0 0 24 24", "aria-hidden": "true" },
-    React.createElement("path", { d: "M8 3H3v5" }),
-    React.createElement("path", { d: "M16 3h5v5" }),
-    React.createElement("path", { d: "M21 16v5h-5" }),
-    React.createElement("path", { d: "M3 16v5h5" }),
-    React.createElement("path", {
-      className: "chart-fullscreen-checkmark",
-      d: "m7.5 12 3 3 6-7",
-    }),
+    showFullscreen ? React.createElement(IconControl, {
+      interactionId: fullscreenSelected
+        ? `fullscreen.select.${Math.min(4, Math.max(1, fullscreenSelectionIndex))}`
+        : "fullscreen.open",
+      className: [
+        "chart-panel-icon-button",
+        fullscreenSelected ? "chart-panel-icon-button--selected" : "",
+      ].filter(Boolean).join(" "),
+      "aria-label": selectionMode
+        ? fullscreenSelected
+          ? "Remove chart from multi-fullscreen"
+          : "Add chart to multi-fullscreen"
+        : "Open chart fullscreen",
+      "aria-pressed": selectionMode ? fullscreenSelected : undefined,
+      tooltip: selectionMode
+        ? fullscreenSelected
+          ? `${fullscreenSelectionIndex} of 4 selected`
+          : "Add to multi-fullscreen"
+        : "Fullscreen",
+      title: selectionMode
+        ? fullscreenSelected
+          ? "Selected for multi-fullscreen"
+          : "Add to multi-fullscreen"
+        : "Fullscreen",
+      onPointerDown: selectionMode ? undefined : onFullscreenHoldStart,
+      onPointerUp: selectionMode ? undefined : onFullscreenHoldEnd,
+      onPointerCancel: selectionMode ? undefined : onFullscreenHoldEnd,
+      onPointerLeave: selectionMode ? undefined : onFullscreenHoldEnd,
+      onClick: onFullscreen,
+    }) : null,
   );
 }

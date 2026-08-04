@@ -358,39 +358,6 @@ h1 {
   width: 32px;
 }
 
-.edit-sliders-icon {
-  background: currentColor;
-  border-radius: 999px;
-  box-shadow:
-    0 -7px 0 currentColor,
-    0 7px 0 currentColor;
-  display: block;
-  height: 2px;
-  position: relative;
-  width: 18px;
-}
-
-.edit-sliders-icon::before,
-.edit-sliders-icon::after {
-  background: #043bcb;
-  border: 2px solid currentColor;
-  border-radius: 999px;
-  content: "";
-  height: 4px;
-  position: absolute;
-  width: 4px;
-}
-
-.edit-sliders-icon::before {
-  left: 2px;
-  top: -10px;
-}
-
-.edit-sliders-icon::after {
-  right: 2px;
-  top: 3px;
-}
-
 .header-edit-title-row {
   align-items: start;
   display: flex;
@@ -4608,6 +4575,32 @@ button.danger {
   }
 }
 
+.header-edit-floating-button.simex-icon-control {
+  background: rgb(255 255 255 / 18%);
+  border-color: rgb(255 255 255 / 24%);
+  color: #fff;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.header-edit-floating-button.simex-icon-control:hover:not(:disabled) {
+  background: rgb(255 255 255 / 28%);
+  border-color: rgb(255 255 255 / 48%);
+}
+
+.settings-pipette-button.simex-icon-control {
+  height: 32px;
+  min-height: 32px;
+  width: 34px;
+}
+
+.playback-controls .simex-icon-control {
+  height: 40px;
+  width: 40px;
+}
+
 .confirm-dialog .confirm-dialog-error {
   background: #fff1f2;
   border: 1px solid #fecdd3;
@@ -4977,15 +4970,25 @@ html[data-simex-eyedropper-active="true"] .chart-editor-backdrop {
   color: #fff;
 }
 
-.chart-panel-icon-button--selected,
-.chart-panel-icon-button--selected:hover,
-.chart-panel-icon-button--selected:focus-visible {
+.chart-panel-icon-button.chart-panel-icon-button--selected,
+.chart-panel-icon-button.chart-panel-icon-button--selected:hover,
+.chart-panel-icon-button.chart-panel-icon-button--selected:focus-visible {
   background: #00a676;
   border-color: #008f66;
   box-shadow:
     0 0 0 3px rgb(0 166 118 / 22%),
     0 7px 20px rgb(0 109 78 / 26%);
   color: #fff;
+}
+
+.chart-panel-icon-button:is(:hover, :focus-visible) .accent-fill,
+.chart-panel-icon-button.chart-panel-icon-button--selected .accent-fill {
+  fill: var(--simex-icon-accent-on-dark);
+}
+
+.chart-panel-icon-button:is(:hover, :focus-visible) .accent-stroke,
+.chart-panel-icon-button.chart-panel-icon-button--selected .accent-stroke {
+  stroke: var(--simex-icon-accent-on-dark);
 }
 
 .chart-fullscreen-checkmark {

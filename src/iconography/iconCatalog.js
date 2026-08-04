@@ -38,7 +38,33 @@ const REFERENCE_INTERACTION_IDS = new Set([
 ]);
 
 // A control becomes live only after its application surface renders this registry.
-export const LIVE_INTERACTION_IDS = Object.freeze([]);
+export const LIVE_INTERACTION_IDS = Object.freeze([
+  "shell.open-editable-tab",
+  "playback.open-synchronized-playback",
+  "playback.previous-time-point",
+  "playback.play",
+  "playback.pause",
+  "playback.next-time-point",
+  "fullscreen.open",
+  "fullscreen.select.1",
+  "fullscreen.select.2",
+  "fullscreen.select.3",
+  "fullscreen.select.4",
+  "fullscreen.previous-displayed-chart",
+  "fullscreen.next-displayed-chart",
+  "fullscreen.close-chart",
+  "fullscreen.close-all-fullscreen-charts",
+  "layout.solo",
+  "layout.side-by-side",
+  "layout.over-and-under",
+  "layout.top-dominant",
+  "layout.bottom-dominant",
+  "layout.left-dominant",
+  "layout.right-dominant",
+  "layout.2-2-grid",
+  "panel.view-source-information",
+  "editor.pick-color-from-dashboard",
+]);
 const liveInteractionIds = new Set(LIVE_INTERACTION_IDS);
 
 const canonicalInteractionId = (id) => CANONICAL_INTERACTION_IDS[id] ?? id;
@@ -220,6 +246,9 @@ export function validateIconCatalog() {
 
   for (const [alias, id] of Object.entries(INTERACTION_ALIASES)) {
     if (!INTERACTIONS[id]) errors.push(`Unknown interaction alias target: ${alias} -> ${id}`);
+  }
+  for (const id of LIVE_INTERACTION_IDS) {
+    if (!INTERACTIONS[id]) errors.push(`Unknown live interaction: ${id}`);
   }
 
   for (const [id, interaction] of Object.entries(INTERACTIONS)) {

@@ -68,7 +68,7 @@ export const IconControl = React.memo(function IconControl({
       "aria-disabled": isDisabled || undefined,
       "aria-label": resolvedLabel,
       "aria-pressed": isPressed,
-      "data-icon-control": interactionId,
+      "data-icon-control": interaction.id,
       "data-icon-tooltip": resolvedTooltip,
       "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
       "data-icon-tone": interaction.tone ?? "standard",

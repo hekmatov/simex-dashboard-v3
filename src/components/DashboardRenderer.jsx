@@ -4,7 +4,7 @@ import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
-import { SimExIcon } from "./common/SimExIcon.js";
+import { IconControl, SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
@@ -697,18 +697,29 @@ export default function DashboardRenderer({
         </div>
         <div className="header-floating-actions">
           <div className="header-edit-primary-actions">
-            <button
-              type="button"
-              className="header-edit-floating-button"
-              aria-label={editMode ? "Save edit mode" : "Open edit mode"}
-              title={editMode ? "Save" : "Edit mode"}
-              onClick={editMode ? saveEditMode : onToggleEditMode}
-              disabled={moderatorOperation.kind !== null}
-            >
-              {editMode
-                ? (moderatorOperation.kind === "save-session" ? "Saving..." : "Save")
-                : <span className="edit-sliders-icon" aria-hidden="true" />}
-            </button>
+            {editMode ? (
+              <button
+                type="button"
+                className="header-edit-floating-button"
+                aria-label="Save edit mode"
+                title="Save"
+                onClick={saveEditMode}
+                disabled={moderatorOperation.kind !== null}
+              >
+                {moderatorOperation.kind === "save-session" ? "Saving..." : "Save"}
+              </button>
+            ) : (
+              <IconControl
+                interactionId="shell.open-editable-tab"
+                className="header-edit-floating-button"
+                aria-label="Open edit mode"
+                tooltip="Edit mode"
+                title="Edit mode"
+                data-icon-surface="dark"
+                onClick={onToggleEditMode}
+                disabled={moderatorOperation.kind !== null}
+              />
+            )}
             {editMode && (
               <button
                 type="button"
@@ -927,6 +938,7 @@ export default function DashboardRenderer({
                       isSelected={editMode && selectedPanelId === panelId}
                       multiSelectMode={multiSelectMode}
                       isMultiSelected={multiPanelIds.includes(chart.id)}
+                      multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
                       onEdit={() => openPanelEditor(panelId)}
                       onRemove={() => removePanel(panelId)}
                       onToggleMultiSelect={() => toggleMultiPanel(chart.id)}
