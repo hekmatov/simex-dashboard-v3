@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-08-04T08:16:44.057Z",
+  "phase": null,
+  "phase_name": "dashboard-icon-language-design",
+  "phase_dir": ".planning",
+  "plan": 1,
+  "task": 3,
+  "total_tasks": 5,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Explore current dashboard context, docs, and recent changes",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 2,
+      "name": "Inventory visible controls across shell, wizard/editor, playback, collections, and fullscreen",
+      "status": "done",
+      "commit": null
+    },
+    {
+      "id": 3,
+      "name": "Synthesize icon replacements, state variants, and accessibility rules",
+      "status": "done",
+      "commit": null
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 4,
+      "name": "Build and visually inspect the complete icon catalog in the companion",
+      "status": "not_started"
+    },
+    {
+      "id": 5,
+      "name": "Present the catalog for visual feedback, then record the approved design contract",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "rg.exe is present but execution is denied in this environment.",
+      "type": "technical",
+      "workaround": "Use PowerShell Get-ChildItem plus Select-String for code searches."
+    },
+    {
+      "description": "The approved worktree is outside the session's default writable sandbox root.",
+      "type": "technical",
+      "workaround": "Use apply_patch for edits and scoped escalation for necessary mechanical file operations. Never redirect work into OneDrive."
+    }
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {
+      "action": "Restart the system, then ask Codex to resume from the dashboard icon-atlas checkpoint.",
+      "context": "The pause occurred after the complete audit and synthesis and before atlas creation.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Use the approved data-native hybrid language for all future interface glyphs: neutral or white structural stroke plus one customizable accent focal element.",
+      "rationale": "This preserves modern visual character, makes active data/state legible, and supports one dashboard-wide accent token with derived light/dark variants.",
+      "phase": null
+    },
+    {
+      "decision": "Apply iconography in three tiers: icon-only for universal reversible actions, icon plus short text for primary or ambiguous actions, and explicit text for confirmations and analytical choices.",
+      "rationale": "Maximum word reduction without sacrificing moderator comprehension or misrepresenting consequences.",
+      "phase": null
+    },
+    {
+      "decision": "Show currently implemented controls separately from future-only glyphs such as true rewind, fast-forward, reference-line actions, and continuous-scroll controls.",
+      "rationale": "The current playback reducer only supports previous, next, seek, and tick; the atlas must not imply unsupported behavior.",
+      "phase": null
+    },
+    {
+      "decision": "Keep semantic colors outside the customizable accent rule: destructive actions use danger red and selected multi-fullscreen panels retain selection green.",
+      "rationale": "Safety and state meaning take precedence over decorative consistency.",
+      "phase": null
+    },
+    {
+      "decision": "The final approved reset glyph is accent-color-editor-v11: a 7-degree clockwise adjustment, approximately 5.6 by 6.2 rendered pixels at a 21-pixel icon size.",
+      "rationale": "The user visually approved its orientation, weight, and arc overlap as perfect.",
+      "phase": null
+    }
+  ],
+  "uncommitted_files": [
+    ".superpowers/brainstorm/1309-1785817774/content/accent-color-editor-v1.html through accent-color-editor-v11.html (ignored visual companions)",
+    ".superpowers/brainstorm/1309-1785817774/content/reset-arrow-alignment-v5.svg through reset-arrow-alignment-v11.svg (ignored visual checks)"
+  ],
+  "next_action": "Check or restart the existing visual-companion server for the same project directory, then create a new semantic file named icon-language-atlas-v1.html in session 1309-1785817774/content. Build the audited layered catalog and inspect it in the browser before showing the user.",
+  "context_notes": "Branch codex/dashboard-refinement-round-2 at c8563d1; git was clean before these handoff files. No production code was changed and no tests were run. The existing companion URL is http://localhost:56139/?key=d804ba36709c67b22e39b8cc530917ab3fda765472ce919cfd360468bfb2a0d0. Before restart the server-info file existed and server-stopped did not. All three audit agents completed after one transient stream-disconnect retry. The catalog should cover shell/edit controls, wizard/editor actions and 26 chart-type pictograms, playback and optional transport states, fullscreen layouts and selected-panel counts, collection display modes, chart-panel utilities, source-data controls, and accessibility/state rules. Do not implement production changes until the visual catalog is reviewed."
+}
