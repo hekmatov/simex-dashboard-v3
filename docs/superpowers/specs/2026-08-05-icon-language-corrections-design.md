@@ -33,7 +33,7 @@ Consequences for the requested controls:
 
 - `panel.hold-ctrl-while-scrolling-to-zoom` remains text-only.
 - `editor.save-changes` and `editor.reset-changes` become icon-only.
-- `playback.playback-speed` remains text-only, displays `1×`, and retains `Playback speed · 1×` as its descriptive tooltip. Runtime values can replace `1` without needing a new pictogram.
+- `playback.playback-speed` remains text-only, displays `1×`, and uses `Playback speed` as its descriptive tooltip. Runtime values can replace `1` without needing a new pictogram.
 - `fullscreen.selection-count` becomes an icon-only collection-status glyph rather than reusing a selected-panel action glyph.
 
 ## Glyph corrections

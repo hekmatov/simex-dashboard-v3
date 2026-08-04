@@ -145,6 +145,127 @@ test("accent variants preserve the approved default contrast treatment", () => {
   });
 });
 
+test("custom accent variants preserve the selected color when it is already readable", () => {
+  assert.equal(deriveIconAccentVariants("#2E6BD3").onLight, "#2E6BD3");
+  assert.equal(deriveIconAccentVariants("#F4C542").onDark, "#F4C542");
+});
+
+test("requested icon corrections resolve to distinct semantic contracts", () => {
+  assert.deepEqual(
+    [1, 2, 3, 4].map((count) => (
+      getInteraction(`fullscreen.select.${count}`).glyphId
+    )),
+    ["selectPanel1", "selectPanel2", "selectPanel3", "selectPanel4"],
+  );
+  for (const glyphId of [
+    "selectPanel1",
+    "selectPanel2",
+    "selectPanel3",
+    "selectPanel4",
+  ]) {
+    assert.match(ICON_GLYPHS[glyphId], /accent-stroke/);
+    assert.doesNotMatch(ICON_GLYPHS[glyphId], /success-fill|<circle/);
+  }
+
+  assert.deepEqual(
+    pick(getInteraction("shell.install"), ["glyphId", "renderMode"]),
+    { glyphId: "install", renderMode: "icon" },
+  );
+  assert.deepEqual(
+    pick(getInteraction("shell.report-an-issue"), ["glyphId", "renderMode"]),
+    { glyphId: "reportIssue", renderMode: "icon" },
+  );
+  assert.deepEqual(
+    pick(getInteraction("playback.choose-synchronized-time"), [
+      "glyphId",
+      "renderMode",
+    ]),
+    { glyphId: "timeSelect", renderMode: "icon" },
+  );
+  assert.equal(
+    getInteraction("fullscreen.close-all-fullscreen-charts").glyphId,
+    "closeAll",
+  );
+  assert.deepEqual(
+    pick(getInteraction("fullscreen.selection-count"), [
+      "glyphId",
+      "label",
+      "renderMode",
+    ]),
+    {
+      glyphId: "selectionCount",
+      label: "3 charts selected",
+      renderMode: "icon",
+    },
+  );
+
+  assert.match(ICON_GLYPHS.periodic, /M15\.6 6\.2V3\.4h2\.8/);
+  assert.match(ICON_GLYPHS.rerank, /M20 6h-3v3/);
+  assert.match(ICON_GLYPHS.chartMapTime, /r="(?:5\.[6-9]|6)"/);
+  assert.doesNotMatch(ICON_GLYPHS.chartMapTime, /M13 7v13/);
+  assert.match(ICON_GLYPHS.eyedropper, /accent-fill/);
+});
+
+test("requested concise interactions use literal icon-only and text-only modes", () => {
+  assert.deepEqual(
+    pick(getInteraction("editor.save-changes"), ["glyphId", "renderMode", "status"]),
+    { glyphId: "save", renderMode: "icon", status: "live" },
+  );
+  assert.deepEqual(
+    pick(getInteraction("editor.reset-changes"), ["glyphId", "renderMode", "status"]),
+    { glyphId: "reset", renderMode: "icon", status: "live" },
+  );
+  assert.deepEqual(
+    pick(getInteraction("panel.hold-ctrl-while-scrolling-to-zoom"), [
+      "glyphId",
+      "renderMode",
+    ]),
+    { glyphId: null, renderMode: "text" },
+  );
+  assert.deepEqual(
+    pick(getInteraction("playback.playback-speed"), [
+      "glyphId",
+      "label",
+      "tooltip",
+      "renderMode",
+    ]),
+    {
+      glyphId: null,
+      label: "1×",
+      tooltip: "Playback speed",
+      renderMode: "text",
+    },
+  );
+});
+
+test("the generated atlas binds live swatches and keeps text references glyphless", async () => {
+  const { renderIconAtlas } = await import("../scripts/build-icon-reference.mjs");
+  const atlas = renderIconAtlas();
+
+  assert.match(
+    atlas,
+    /data-token-swatch="accentBase" style="--swatch:var\(--accent-base\)"/,
+  );
+  assert.match(
+    atlas,
+    /data-token-swatch="accentOnLight" style="--swatch:var\(--accent-on-light\)"/,
+  );
+  assert.match(
+    atlas,
+    /data-token-swatch="accentOnDark" style="--swatch:var\(--accent-on-dark\)"/,
+  );
+
+  const ctrlHintCard = interactionCardMarkup(
+    atlas,
+    "panel.hold-ctrl-while-scrolling-to-zoom",
+  );
+  const speedCard = interactionCardMarkup(atlas, "playback.playback-speed");
+  assert.doesNotMatch(ctrlHintCard, /<svg/);
+  assert.match(ctrlHintCard, />Hold Ctrl while scrolling</);
+  assert.doesNotMatch(speedCard, /<svg/);
+  assert.match(speedCard, />1×</);
+});
+
 test("IconControl derives its visual and accessibility contract from metadata", () => {
   const fullscreen = renderToStaticMarkup(React.createElement(IconControl, {
     interactionId: "fullscreen.open",
@@ -225,4 +346,13 @@ test("canonical icon references match deterministic generation", async () => {
 
 function pick(value, keys) {
   return Object.fromEntries(keys.map((key) => [key, value[key]]));
+}
+
+function interactionCardMarkup(atlas, interactionId) {
+  const startToken = `data-interaction-id="${interactionId}"`;
+  const start = atlas.indexOf(startToken);
+  assert.notEqual(start, -1, `Missing atlas card for ${interactionId}`);
+  const articleStart = atlas.lastIndexOf("<article", start);
+  const articleEnd = atlas.indexOf("</article>", start);
+  return atlas.slice(articleStart, articleEnd + "</article>".length);
 }

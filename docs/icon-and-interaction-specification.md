@@ -1,6 +1,6 @@
 # Icon & Interaction Specification
 
-Version: **1.0.0**
+Version: **1.0.1**
 
 > This document is generated. Do not edit it directly.
 >
@@ -40,7 +40,7 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 
 | Measure | Count |
 | --- | ---: |
-| Approved glyphs | 108 |
+| Approved glyphs | 112 |
 | Unique interaction records | 126 |
 | Surface interaction references | 137 |
 | Surfaces | 13 |
@@ -105,7 +105,7 @@ Surface ID: `refinements` · 12 references
 | shell.open-editable-tab | open | Open editable tab | Open editable tab | icon | standard | live | none | Arrow spacing balanced above and beside the box |
 | image.zoom-reset | zoomReset | Reset image zoom | Reset image zoom | icon | standard | planned | none | Approved reset arc with inset magnifier |
 | transport.fast-forward | fastForward | Fast forward | Fast forward | icon | standard | planned | none | Exact horizontal mirror of rewind |
-| fullscreen.select.1 | selectPanel1 | 1 of 4 selected | 1 of 4 selected | icon | standard | live | none | Number offset upper-left of the semantic check |
+| fullscreen.select.1 | selectPanel1 | 1 of 4 selected | 1 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
 | fullscreen.open | fullscreen | Open chart fullscreen | Fullscreen | icon | standard | live | none | Complete top-right corner uses the accent |
 | panel.description | description | Description | Description | icon | standard | planned | none | Top and bottom lines accented |
 | collection.loop | loop | Loop | Loop | icon | standard | planned | none | Arrowheads terminate the path and point down/up |
@@ -143,8 +143,8 @@ Surface ID: `shell` · 26 references
 | shell.reset-background | reset | Reset background | Reset background | text | standard | reference | none | — |
 | shell.remove-title | trash | Remove title | Remove title | icon | danger | planned | required | Content-changing confirmation |
 | shell.start-section | section | Start section | Start section | text | standard | reference | none | — |
-| shell.install | open | Install | Install | text | standard | reference | none | — |
-| shell.report-an-issue | open | Report an issue | Report an issue | text | standard | reference | none | — |
+| shell.install | install | Install | Install | icon | standard | reference | none | — |
+| shell.report-an-issue | reportIssue | Report an issue | Report an issue | icon | standard | reference | none | — |
 | shell.contact | open | Contact | Contact | text | standard | reference | none | — |
 | shell.repository | open | Repository | Repository | text | standard | reference | none | — |
 
@@ -160,10 +160,10 @@ Surface ID: `playback` · 11 references
 | playback.pause | pause | Pause | Pause | icon | standard | live | none | — |
 | playback.next-time-point | next | Next | Next | icon | standard | live | none | — |
 | playback.playback-group | group | Playback group | Playback group | text | standard | reference | none | — |
-| playback.choose-synchronized-time | time | Choose synchronized time | Choose synchronized time | text | standard | reference | none | — |
+| playback.choose-synchronized-time | timeSelect | Choose synchronized time | Choose synchronized time | icon | standard | reference | none | — |
 | playback.playback-time | time | Playback time | Playback time | text | standard | reference | none | — |
 | playback.current-time | time | Current time: 2027-04-17 | Current time: 2027-04-17 | text | standard | reference | none | — |
-| playback.playback-speed | speed | Playback speed · 1× | Playback speed · 1× | text | standard | reference | none | — |
+| playback.playback-speed | — | 1× | Playback speed | text | standard | reference | none | Runtime value uses {speed}× |
 | playback.live-playback-status | playback | Live playback status | Live playback status | text | standard | reference | none | — |
 
 ## Planned transport
@@ -184,18 +184,18 @@ Surface ID: `fullscreen` · 13 references
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | fullscreen.open | fullscreen | Open chart fullscreen | Fullscreen | icon | standard | live | none | Complete top-right corner uses the accent |
-| fullscreen.select.1 | selectPanel1 | 1 of 4 selected | 1 of 4 selected | icon | standard | live | none | Number offset upper-left of the semantic check |
-| fullscreen.select.2 | selectPanel2 | 2 of 4 selected | 2 of 4 selected | icon | standard | live | none | Green check + announced count |
-| fullscreen.select.3 | selectPanel3 | 3 of 4 selected | 3 of 4 selected | icon | standard | live | none | Green check + announced count |
-| fullscreen.select.4 | selectPanel4 | 4 of 4 selected | 4 of 4 selected | icon | standard | live | none | Maximum reached |
+| fullscreen.select.1 | selectPanel1 | 1 of 4 selected | 1 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
+| fullscreen.select.2 | selectPanel2 | 2 of 4 selected | 2 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
+| fullscreen.select.3 | selectPanel3 | 3 of 4 selected | 3 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
+| fullscreen.select.4 | selectPanel4 | 4 of 4 selected | 4 of 4 selected | icon | standard | live | none | Accent check; maximum selection reached |
 | fullscreen.enter-multi-fullscreen | enterMulti | Enter multi-fullscreen | Enter multi-fullscreen | icon | standard | planned | none | — |
 | fullscreen.cancel-multi-selection | close | Cancel | Cancel | text | standard | reference | none | — |
 | fullscreen.previous-displayed-chart | reorderPrevious | Previous | Previous | icon | standard | live | none | Reorder, not time step |
 | fullscreen.next-displayed-chart | reorderNext | Next | Next | icon | standard | live | none | Reorder, not time step |
 | fullscreen.close-chart | close | Close | Close | icon | standard | live | none | — |
-| fullscreen.close-all-fullscreen-charts | close | Close all | Close all | icon | standard | live | none | — |
+| fullscreen.close-all-fullscreen-charts | closeAll | Close all | Close all | icon | standard | live | none | — |
 | fullscreen.displayed-chart-position | layoutGrid | 1 of 4 | 1 of 4 | text | standard | reference | none | Numeric badge retained |
-| fullscreen.selection-count | selectPanel | 3 charts selected | 3 charts selected | text | standard | reference | none | Numeric status retained |
+| fullscreen.selection-count | selectionCount | 3 charts selected | 3 charts selected | icon | standard | reference | none | Numeric status remains dynamic |
 
 ## Layouts
 
@@ -224,7 +224,7 @@ Surface ID: `panels` · 7 references
 | panel.description | description | Description | Description | icon | standard | planned | none | Top and bottom lines accented |
 | panel.edit-chart | edit | Edit chart | Edit chart | icon | standard | planned | none | — |
 | chart.remove | trash | Remove chart | Remove chart | icon | danger | planned | required | Destructive chart action; confirmation required |
-| panel.hold-ctrl-while-scrolling-to-zoom | zoomReset | Hold Ctrl while scrolling | Hold Ctrl while scrolling | text | standard | reference | none | Inconspicuous top-left hint |
+| panel.hold-ctrl-while-scrolling-to-zoom | — | Hold Ctrl while scrolling | Hold Ctrl while scrolling | text | standard | reference | none | Inconspicuous top-left hint |
 
 ## Chart wizard
 
@@ -275,8 +275,8 @@ Surface ID: `editor-actions` · 16 references
 | editor.pick-color-from-dashboard | eyedropper | Eyedropper | Eyedropper | icon | standard | live | none | — |
 | editor.use-default-colors | palette | Use default colors | Use default colors | text | standard | reference | none | — |
 | editor.apply-to-source-sharing-charts | dataSource | Apply to source-sharing charts | Apply to source-sharing charts | text | standard | reference | none | Cross-chart propagation must stay explicit |
-| editor.save-changes | save | Save changes | Save changes | text | standard | reference | none | — |
-| editor.reset-changes | reset | Reset changes | Reset changes | text | standard | reference | none | — |
+| editor.save-changes | save | Save changes | Save changes | icon | standard | live | none | — |
+| editor.reset-changes | reset | Reset changes | Reset changes | icon | standard | live | none | — |
 | editor.cancel | close | Cancel | Cancel | text | standard | reference | none | — |
 | chart.remove | trash | Remove chart | Remove chart | icon | danger | planned | required | Destructive chart action; confirmation required |
 | editor.previous-source-page | previous | Previous | Previous | icon | standard | planned | none | — |

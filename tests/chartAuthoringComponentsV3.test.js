@@ -2172,10 +2172,15 @@ test("save and reset are adjacent and reset confirmation is accessible", () => {
     onCancel() {},
   }));
 
-  assert.match(
-    html,
-    /<button[^>]*>Save<\/button><button[^>]*>Reset changes<\/button>/,
-  );
+  const saveIndex = html.indexOf('data-icon-control="editor.save-changes"');
+  const resetIndex = html.indexOf('data-icon-control="editor.reset-changes"');
+  const dialogIndex = html.indexOf('role="dialog"');
+  const actionMarkup = html.slice(0, dialogIndex);
+  assert.ok(saveIndex >= 0);
+  assert.ok(resetIndex > saveIndex);
+  assert.match(actionMarkup, /aria-label="Save changes"/);
+  assert.match(actionMarkup, /aria-label="Reset changes"/);
+  assert.doesNotMatch(actionMarkup, />Save<\/button>|>Reset changes<\/button>/);
   assert.match(html, /role="dialog"/);
   assert.match(html, /Discard these edits\?/);
   assert.match(html, /Reset changes\?/);
@@ -2186,7 +2191,7 @@ test("chart editor actions lock while persistence is pending", () => {
     valid: true,
     submitting: true,
   }));
-  assert.match(html, />Saving\.\.\.</);
+  assert.match(html, /aria-label="Saving changes"/);
   assert.equal((html.match(/disabled=""/g) ?? []).length, 3);
 });
 

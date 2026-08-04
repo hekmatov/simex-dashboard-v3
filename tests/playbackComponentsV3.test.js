@@ -63,6 +63,10 @@ test("playback controls expose semantic transport, time selection, speed, and vi
   assert.match(html, /type="range"/);
   assert.match(html, /aria-label="Choose synchronized time"/);
   assert.match(html, /<select[^>]*aria-label="Playback speed"/);
+  assert.match(html, /<span class="visually-hidden">Playback speed<\/span>/);
+  assert.match(html, />1\u00d7</);
+  assert.match(html, />2\u00d7</);
+  assert.match(html, />3\u00d7</);
   assert.match(html, /2027-05-02/);
   assert.match(html, />1×</);
   assert.match(html, /aria-label="Close playback view"/);

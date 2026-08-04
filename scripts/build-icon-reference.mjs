@@ -62,7 +62,7 @@ const interactionPreview = (interaction) => {
   const button = `<button class="${classes}" type="button" aria-label="${escapeHtml(interaction.label)}" data-tooltip="${escapeHtml(interaction.tooltip)}">${iconSvg(interaction.glyphId)}</button>`;
 
   if (interaction.renderMode === "text") {
-    return `<div class="reference-value" data-tooltip="${escapeHtml(interaction.tooltip)}" tabindex="0">${iconSvg(interaction.glyphId, "reference-glyph")}<span>${escapeHtml(interaction.label)}</span></div>`;
+    return `<div class="reference-value" data-tooltip="${escapeHtml(interaction.tooltip)}" tabindex="0"><span>${escapeHtml(interaction.label)}</span></div>`;
   }
   return button;
 };
@@ -81,7 +81,7 @@ const interactionCard = (interaction) => {
   ].join(" ").toLowerCase();
 
   return `
-          <article class="reference-card filter-card" data-search="${escapeHtml(searchText)}">
+          <article class="reference-card filter-card" data-interaction-id="${escapeHtml(interaction.id)}" data-search="${escapeHtml(searchText)}">
             <div class="card-preview ${interaction.tone === "danger" ? "danger-preview" : ""}">
               ${interactionPreview(interaction)}
             </div>
@@ -100,7 +100,7 @@ const interactionCard = (interaction) => {
                 )}
               </div>
               <dl>
-                <div><dt>Glyph</dt><dd><code>${escapeHtml(interaction.glyphId)}</code></dd></div>
+                <div><dt>Glyph</dt><dd><code>${interaction.glyphId ? escapeHtml(interaction.glyphId) : "—"}</code></dd></div>
                 <div><dt>Tooltip</dt><dd>${escapeHtml(interaction.tooltip)}</dd></div>
                 ${interaction.note ? `<div><dt>Note</dt><dd>${escapeHtml(interaction.note)}</dd></div>` : ""}
               </dl>
@@ -197,6 +197,12 @@ const glyphCard = ([glyphId]) => `
             <code>${escapeHtml(glyphId)}</code>
           </article>`;
 
+const liveTokenVariables = Object.freeze({
+  accentBase: "--accent-base",
+  accentOnLight: "--accent-on-light",
+  accentOnDark: "--accent-on-dark",
+});
+
 const tokenSwatches = () => [
   ["base", ICON_TOKENS.base, "Base icon on light surfaces"],
   ["accentBase", ICON_TOKENS.accentBase, "Primary accent"],
@@ -204,15 +210,20 @@ const tokenSwatches = () => [
   ["accentOnDark", ICON_TOKENS.accentOnDark, "Accent on dark"],
   ["danger", ICON_TOKENS.danger, "Destructive base"],
   ["success", ICON_TOKENS.success, "Selected state"],
-].map(([token, value, label]) => `
+].map(([token, value, label]) => {
+  const swatch = liveTokenVariables[token]
+    ? `var(${liveTokenVariables[token]})`
+    : escapeHtml(value);
+  return `
           <article class="token-card">
-            <span class="token-swatch" style="--swatch:${escapeHtml(value)}"></span>
+            <span class="token-swatch" data-token-swatch="${escapeHtml(token)}" style="--swatch:${swatch}"></span>
             <div>
               <strong>${escapeHtml(label)}</strong>
               <code>${escapeHtml(token)}</code>
               <span data-token-value="${escapeHtml(token)}">${escapeHtml(value)}</span>
             </div>
-          </article>`).join("\n");
+          </article>`;
+}).join("\n");
 
 const navigationLinks = () => ATLAS_SURFACES
   .map((surface) => `<a href="#atlas-${escapeHtml(surface.id)}">${escapeHtml(surface.title)}</a>`)
@@ -868,6 +879,7 @@ ${glyphs}
         / (Math.min(luminance(a), luminance(b)) + 0.05)
       );
       const readable = (base, background, target) => {
+        if (contrast(base, background) >= 4.5) return base;
         for (let step = 2; step <= 20; step += 1) {
           const mix = {
             r: base.r + (target.r - base.r) * step / 20,

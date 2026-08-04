@@ -1,6 +1,7 @@
 import React from "react";
 
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 
 export default function EditSessionActions({
   valid = false,
@@ -20,25 +21,20 @@ export default function EditSessionActions({
     React.createElement(
       "div",
       { className: "chart-editor-actions" },
-      React.createElement(
-        "button",
-        {
-          type: "submit",
-          disabled: disabled || !valid || submitting,
-          onClick: onSave,
-        },
-        submitting ? "Saving..." : "Save",
-      ),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "secondary",
-          disabled: disabled || submitting,
-          onClick: onRequestReset,
-        },
-        "Reset changes",
-      ),
+      React.createElement(IconControl, {
+        interactionId: "editor.save-changes",
+        type: "submit",
+        ariaLabel: submitting ? "Saving changes" : "Save changes",
+        tooltip: submitting ? "Saving changes" : "Save changes",
+        disabled: disabled || !valid || submitting,
+        onClick: onSave,
+      }),
+      React.createElement(IconControl, {
+        interactionId: "editor.reset-changes",
+        className: "secondary",
+        disabled: disabled || submitting,
+        onClick: onRequestReset,
+      }),
       React.createElement(
         "button",
         {

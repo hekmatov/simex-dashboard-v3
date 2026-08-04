@@ -116,6 +116,7 @@ export default function PlaybackControls({
         }, canonicalTime(activeEpochMs))),
   React.createElement(LabeledSelect, {
     label: "Playback speed",
+    labelClassName: "visually-hidden",
     value: String(speed),
     onChange: (event) => dispatch({
       type: "setSpeed",
@@ -156,6 +157,7 @@ export default function PlaybackControls({
 
 function LabeledSelect({
   label,
+  labelClassName,
   value,
   onChange,
   options,
@@ -163,7 +165,7 @@ function LabeledSelect({
   emptyLabel,
 }) {
   return React.createElement("label", { className: "playback-select" },
-    React.createElement("span", null, label),
+    React.createElement("span", { className: labelClassName || undefined }, label),
     React.createElement("select", {
       "aria-label": label,
       value,
