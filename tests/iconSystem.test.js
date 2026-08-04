@@ -202,6 +202,27 @@ test("selected application icon surfaces contain no private SVG implementations"
   assert.doesNotMatch(dashboardRenderer, /edit-sliders-icon/);
 });
 
+test("canonical icon references match deterministic generation", async () => {
+  const {
+    renderIconAtlas,
+    renderIconSpecification,
+  } = await import("../scripts/build-icon-reference.mjs");
+  assert.equal(
+    await readFile(
+      new URL("../docs/icon-language-atlas.html", import.meta.url),
+      "utf8",
+    ),
+    renderIconAtlas(),
+  );
+  assert.equal(
+    await readFile(
+      new URL("../docs/icon-and-interaction-specification.md", import.meta.url),
+      "utf8",
+    ),
+    renderIconSpecification(),
+  );
+});
+
 function pick(value, keys) {
   return Object.fromEntries(keys.map((key) => [key, value[key]]));
 }
