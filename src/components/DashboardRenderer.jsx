@@ -4,6 +4,7 @@ import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
+import { SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
@@ -18,6 +19,10 @@ import {
   createSubmissionGate,
   runModeratorTransaction,
 } from "../lib/moderatorTransaction.js";
+import {
+  ICON_TOKENS,
+  deriveIconAccentVariants,
+} from "../iconography/iconCatalog.js";
 
 export default function DashboardRenderer({
   dashboard,
@@ -112,6 +117,19 @@ export default function DashboardRenderer({
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
+  const iconAccent = dashboard.globalStyles?.iconAccent ?? ICON_TOKENS.accentBase;
+  const iconAccentVariants = React.useMemo(
+    () => deriveIconAccentVariants(iconAccent),
+    [iconAccent],
+  );
+  const iconLanguageStyles = React.useMemo(() => ({
+    "--simex-icon-base": ICON_TOKENS.base,
+    "--simex-icon-accent": iconAccentVariants.base,
+    "--simex-icon-accent-on-light": iconAccentVariants.onLight,
+    "--simex-icon-accent-on-dark": iconAccentVariants.onDark,
+    "--simex-icon-danger": ICON_TOKENS.danger,
+    "--simex-icon-selected": ICON_TOKENS.success,
+  }), [iconAccentVariants]);
   const geoDataSources = React.useMemo(
     () => validatedGeoDataSources(dashboard),
     [dashboard.dataSources, dashboard.loadedData],
@@ -498,6 +516,17 @@ export default function DashboardRenderer({
     });
   }
 
+  function changeIconAccent(nextAccent) {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    flushPendingEditsInBackground();
+    onDashboardChange({
+      globalStyles: {
+        ...(dashboard.globalStyles ?? {}),
+        iconAccent: nextAccent,
+      },
+    });
+  }
+
   function resetEditMode() {
     if (moderatorOperationGateRef.current.isActive()) return;
     const cancelled = pendingEdits.takePending();
@@ -577,7 +606,7 @@ export default function DashboardRenderer({
 
   if (editMode && showVantaSettings) {
     return (
-      <main className="app-shell background-editor-shell">
+      <main className="app-shell background-editor-shell" style={iconLanguageStyles}>
         <section className="background-editor-bar">
           <VantaSettingsPanel settings={backgroundDraft} onChange={changeBackgroundDraft} />
           <div className="background-editor-actions">
@@ -602,6 +631,7 @@ export default function DashboardRenderer({
       className="app-shell"
       data-device-layout={deviceLayout}
       data-page-type={landingActive ? "landing" : "analytical"}
+      style={iconLanguageStyles}
     >
       <header className="dashboard-header">
         <div className="dashboard-brand-block">
@@ -713,6 +743,11 @@ export default function DashboardRenderer({
             <button type="button" disabled={moderatorMutationLocked} onClick={() => importInputRef.current?.click()}>Import dashboard</button>
             <button type="button" disabled={moderatorMutationLocked} onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
             <GlobalPanelColorControls disabled={moderatorMutationLocked} colors={globalPanelColors} onChange={changeGlobalPanelColors} />
+            <GlobalIconAccentControl
+              disabled={moderatorMutationLocked}
+              value={iconAccentVariants.base}
+              onChange={changeIconAccent}
+            />
             <label className="accessibility-edit-toggle">
               <input
                 type="checkbox"
@@ -1079,6 +1114,41 @@ function sectionDraftFromSection(section) {
     title: section?.title ?? "",
     description: section?.description ?? "",
   };
+}
+
+function GlobalIconAccentControl({ value, onChange, disabled = false }) {
+  return (
+    <details className="global-color-controls global-icon-accent-controls">
+      <summary>Icon accent</summary>
+      <fieldset className="global-color-grid" disabled={disabled}>
+        <ColorField
+          label="Accent color"
+          value={value}
+          fallback={ICON_TOKENS.accentBase}
+          onChange={onChange}
+          showPresets={false}
+          showContrast
+        />
+        <div className="global-icon-accent-preview" aria-label="Icon accent preview">
+          <span className="global-icon-accent-preview-light">
+            <SimExIcon iconId="playback" />
+            Light
+          </span>
+          <span className="global-icon-accent-preview-dark" data-icon-surface="dark">
+            <SimExIcon iconId="playback" className="simex-icon--on-dark" />
+            Dark
+          </span>
+        </div>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => onChange(ICON_TOKENS.accentBase)}
+        >
+          Reset accent
+        </button>
+      </fieldset>
+    </details>
+  );
 }
 
 function boundedModeratorMessage(error) {

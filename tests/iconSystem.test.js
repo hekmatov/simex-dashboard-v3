@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
+import { validateDashboardStructure } from "../src/charting/config/dashboardConfigStructure.js";
 import {
   IconControl,
   SimExIcon,
@@ -166,6 +168,21 @@ test("SimExIcon uses the deterministic unknown glyph for dynamic misses", () => 
   }));
   assert.match(html, /data-icon-id="unknown"/);
   assert.match(html, /aria-hidden="true"/);
+});
+
+test("version 3 global styles accept one icon accent and reject malformed values", async () => {
+  const dashboard = JSON.parse(await readFile(
+    new URL("../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  dashboard.globalStyles.iconAccent = "#19D3C5";
+  assert.doesNotThrow(() => validateDashboardStructure(dashboard));
+
+  dashboard.globalStyles.iconAccent = "teal";
+  assert.throws(
+    () => validateDashboardStructure(dashboard),
+    /icon accent/i,
+  );
 });
 
 function pick(value, keys) {

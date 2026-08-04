@@ -4406,6 +4406,34 @@ button.danger {
   margin: 0;
 }
 
+.global-icon-accent-preview {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.global-icon-accent-preview span {
+  align-items: center;
+  border: 1px solid rgb(8 34 74 / 14%);
+  border-radius: 10px;
+  display: flex;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 7px;
+  justify-content: center;
+  padding: 9px;
+}
+
+.global-icon-accent-preview-light {
+  background: #f8fbff;
+  color: var(--simex-icon-base);
+}
+
+.global-icon-accent-preview-dark {
+  background: #08224a;
+  color: #fff;
+}
+
 /* Canonical icon-language runtime primitives */
 :root {
   --simex-icon-base: #08224a;
