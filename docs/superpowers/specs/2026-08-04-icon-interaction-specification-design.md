@@ -34,8 +34,8 @@ Generated artifacts carry the registry version and a generated-file warning. The
 
 Two focused React primitives consume the registry:
 
-- `Icon` renders one registered glyph. It accepts an icon ID, decorative/accessibility mode, size, and class name. SVG fragments are static project-owned strings, never user input.
-- `IconButton` renders an icon-only button from an interaction ID. It derives the glyph, accessible name, tooltip, destructive tone, and pressed/disabled state styling from the registry while forwarding normal button events and context-specific class names.
+- `SimExIcon` renders one registered glyph. It accepts an icon ID, decorative/accessibility mode, size, and class name. SVG fragments are static project-owned strings, never user input.
+- `IconControl` renders an icon-only button from an interaction ID. It derives the glyph, accessible name, tooltip, destructive tone, and pressed/disabled state styling from the registry while forwarding normal button events and context-specific class names.
 
 Dynamic controls choose between stable interaction IDs rather than overriding registry copy. Examples include `playback.play` versus `playback.pause`, or `fullscreen.select.1` through `fullscreen.select.4`.
 
@@ -91,24 +91,24 @@ Focused validation also checks:
 - destructive interactions declare the destructive tone;
 - every atlas group references a known interaction;
 - SVG fragments use only approved tags and attributes;
-- application-owned inline SVG does not reappear outside the canonical `Icon` renderer;
-- every application `Icon` or `IconButton` reference resolves to the registry.
+- application-owned inline SVG does not reappear outside the canonical `SimExIcon` renderer;
+- every application `SimExIcon` or `IconControl` reference resolves to the registry.
 
 `package.json` exposes `icons:build` and `icons:check`. The existing full test and E2E cadence remains unchanged; only the focused icon-language check runs during this implementation. The normal production build performs the inexpensive drift check before compiling so stale generated references cannot ship.
 
 ## Error handling
 
-- Development builds throw a precise error for an unknown icon or interaction ID.
+- Unknown dynamic icon IDs render the registered `unknown` glyph; static application references are caught by focused validation before shipping.
 - Registry validation reports every invalid entry in one run rather than failing at the first typo.
 - Generated-file drift reports the exact regeneration command.
-- Production rendering falls back to a registered `unknown` glyph only if a dynamic call bypasses development validation; static application references are caught by the drift check.
+- Unknown interaction IDs fail with a precise component error because they would otherwise lose their accessible name and tooltip.
 
 ## Performance constraints
 
 - No network requests and no external icon dependency.
 - No runtime registry parsing, document generation, or filesystem access.
 - Registry imports are static; the complete approved glyph catalogue adds only project-owned SVG fragment strings and no executable dependency.
-- `Icon` and `IconButton` are memoized, and SVG fragments contain no scripts, IDs, filters, or external references.
+- `SimExIcon` and `IconControl` are memoized, and SVG fragments contain no scripts, IDs, filters, or external references.
 - Documentation generation occurs only when requested or checked during a build.
 
 ## Non-goals
