@@ -4406,6 +4406,180 @@ button.danger {
   margin: 0;
 }
 
+/* Canonical icon-language runtime primitives */
+:root {
+  --simex-icon-base: #08224a;
+  --simex-icon-accent: #19d3c5;
+  --simex-icon-accent-on-light: #0d746d;
+  --simex-icon-accent-on-dark: #32ded1;
+  --simex-icon-danger: #d64545;
+  --simex-icon-selected: #2aa876;
+}
+
+.simex-icon {
+  color: inherit;
+  display: block;
+  flex: 0 0 auto;
+  fill: none;
+  overflow: visible;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.simex-icon .accent-fill {
+  fill: var(--simex-icon-accent-on-light);
+  stroke: none;
+}
+
+.simex-icon .accent-stroke {
+  stroke: var(--simex-icon-accent-on-light);
+}
+
+.simex-icon .success-fill {
+  fill: var(--simex-icon-selected);
+  stroke: none;
+}
+
+.simex-icon .success-stroke {
+  stroke: var(--simex-icon-selected);
+}
+
+.simex-icon .danger-fill {
+  fill: var(--simex-icon-danger);
+  stroke: none;
+}
+
+.simex-icon .soft-fill {
+  fill: #dce8f3;
+  stroke: none;
+}
+
+.simex-icon--on-dark .accent-fill,
+[data-icon-surface="dark"] .simex-icon .accent-fill {
+  fill: var(--simex-icon-accent-on-dark);
+}
+
+.simex-icon--on-dark .accent-stroke,
+[data-icon-surface="dark"] .simex-icon .accent-stroke {
+  stroke: var(--simex-icon-accent-on-dark);
+}
+
+.simex-icon-control {
+  align-items: center;
+  background: #f5f9fd;
+  border: 1px solid #cbd9e7;
+  border-radius: 999px;
+  color: var(--simex-icon-base);
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  overflow: visible;
+  padding: 0;
+  position: relative;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+  width: 36px;
+}
+
+.simex-icon-control:hover:not(:disabled) {
+  border-color: #83a3c3;
+  box-shadow: 0 7px 16px rgb(12 46 83 / 15%);
+  transform: translateY(-1px);
+}
+
+.simex-icon-control:active:not(:disabled) {
+  background: var(--simex-icon-base);
+  border-color: var(--simex-icon-base);
+  color: #fff;
+  transform: translateY(0);
+}
+
+.simex-icon-control:active:not(:disabled) .accent-fill,
+.simex-icon-control[data-icon-surface="dark"] .accent-fill {
+  fill: var(--simex-icon-accent-on-dark);
+}
+
+.simex-icon-control:active:not(:disabled) .accent-stroke,
+.simex-icon-control[data-icon-surface="dark"] .accent-stroke {
+  stroke: var(--simex-icon-accent-on-dark);
+}
+
+.simex-icon-control:focus-visible {
+  outline: 3px solid rgb(4 59 203 / 38%);
+  outline-offset: 3px;
+}
+
+.simex-icon-control[aria-pressed="true"],
+.simex-icon-control[data-icon-selected="true"] {
+  background: #e8f8f1;
+  border-color: #72cca7;
+  box-shadow: 0 0 0 3px rgb(42 168 118 / 13%);
+  color: #0b6445;
+}
+
+.simex-icon-control[data-icon-tone="danger"] {
+  background: #fff1f3;
+  border-color: #f2a8b2;
+  color: var(--simex-icon-danger);
+}
+
+.simex-icon-control:disabled,
+.simex-icon-control[data-icon-status="planned"] {
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.46;
+  transform: none;
+}
+
+.simex-icon-control::after {
+  background: var(--simex-icon-base);
+  border-radius: 7px;
+  bottom: calc(100% + 9px);
+  color: #fff;
+  content: attr(data-icon-tooltip);
+  font-size: 0.72rem;
+  font-weight: 700;
+  left: 50%;
+  line-height: 1.25;
+  max-width: min(240px, calc(100vw - 24px));
+  opacity: 0;
+  padding: 6px 8px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  transform: translate(-50%, 3px);
+  transition: opacity 100ms ease, transform 100ms ease;
+  visibility: hidden;
+  white-space: nowrap;
+  width: max-content;
+  z-index: 100;
+}
+
+.simex-icon-control[data-icon-tooltip-placement="below"]::after {
+  bottom: auto;
+  top: calc(100% + 9px);
+  transform: translate(-50%, -3px);
+}
+
+.simex-icon-control:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simex-icon-control,
+  .simex-icon-control::after {
+    transition: none;
+  }
+}
+
 .confirm-dialog .confirm-dialog-error {
   background: #fff1f2;
   border: 1px solid #fecdd3;

@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { listChartSchemas } from "../src/charting/schemas/chartSchemaRegistry.js";
+import {
+  IconControl,
+  SimExIcon,
+} from "../src/components/common/SimExIcon.js";
 import {
   ICON_GLYPHS,
   getIconGlyph,
@@ -135,6 +141,31 @@ test("accent variants preserve the approved default contrast treatment", () => {
     onLight: "#0D746D",
     onDark: "#32DED1",
   });
+});
+
+test("IconControl derives its visual and accessibility contract from metadata", () => {
+  const fullscreen = renderToStaticMarkup(React.createElement(IconControl, {
+    interactionId: "fullscreen.open",
+    disabled: false,
+  }));
+  const danger = renderToStaticMarkup(React.createElement(IconControl, {
+    interactionId: "chart.remove",
+  }));
+
+  assert.match(fullscreen, /aria-label="Open chart fullscreen"/);
+  assert.match(fullscreen, /data-icon-tooltip="Fullscreen"/);
+  assert.match(fullscreen, /data-icon-id="fullscreen"/);
+  assert.match(danger, /data-icon-tone="danger"/);
+  assert.match(danger, /data-icon-id="trash"/);
+});
+
+test("SimExIcon uses the deterministic unknown glyph for dynamic misses", () => {
+  const html = renderToStaticMarkup(React.createElement(SimExIcon, {
+    iconId: "not-registered",
+    decorative: true,
+  }));
+  assert.match(html, /data-icon-id="unknown"/);
+  assert.match(html, /aria-hidden="true"/);
 });
 
 function pick(value, keys) {
