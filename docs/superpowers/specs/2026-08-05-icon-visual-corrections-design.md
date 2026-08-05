@@ -6,7 +6,7 @@ Correct the five glyphs rejected during visual review and require rendered-image
 
 ## Root causes
 
-- `selectPanel1` changed from 7.5px to only 9px, while its check retained a partial-quadrant footprint. Font metrics also make the digit `1` too narrow for deterministic occupancy.
+- `selectPanel1` changed from 7.5px to only 9px, while its check retained a partial-quadrant footprint. A subsequent custom-path experiment filled the quadrant but made the numerals look hand drawn and let the check collide visually with the frame.
 - `save` accents a U-shaped notch, but the base disk outline still supplies the top edge in the base color.
 - `chartMapTime` was reconstructed as detached map fragments rather than derived from the complete three-fold `chartMap` geometry.
 - `eyedropper` uses a shelf-ended outline, a detached rectangular liquid insert, and a drop offset left of the tip.
@@ -14,7 +14,7 @@ Correct the five glyphs rejected during visual review and require rendered-image
 
 ## Corrected geometry
 
-- **Selected-panel family:** replace all four font-dependent count labels with deterministic base-color digit paths sized to occupy the upper-left quadrant, and enlarge the shared lower-right accent check to span the lower-right quadrant. The one-through-four family must use the same bounds, stroke weight, and check geometry.
+- **Selected-panel family:** use the dashboard's professional UI font stack (`Inter`, `Segoe UI`, sans-serif) at a bold weight for all four counts, centered in the upper-left quadrant. Use a shared lower-right accent check that remains large but is inset far enough that its stroke never overlaps the outer corner frame.
 - **Save:** overlay the full upper rectangle—including its top edge—with the accent stroke while retaining the disk body and lower rectangle in the base color.
 - **Chronological choropleth:** begin with the standard three-fold map coordinates. Remove only line segments mathematically inside the foreground clock and terminate every surviving map segment at the clock circumference so the clock reads as sitting over one continuous map.
 - **Eyedropper:** use a rounded diagonal base-color bulb, tapered base-color glass outline, elongated tapered accent liquid contained within the glass, and an accent drop centered directly below the tip with visible separation.

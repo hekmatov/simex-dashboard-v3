@@ -15,10 +15,10 @@
 **Files:**
 - Modify: `src/iconography/iconGlyphs.js`
 
-1. Replace `selectPanel1` through `selectPanel4` font text with deterministic stroke paths. Use common quadrant bounds, `stroke-width="2"`, and the shared full-quadrant check `m13 16.3 2.7 2.8 3.6-5.9` at `stroke-width="2.3"`.
-2. Close the save icon's accent upper rectangle by including its top horizontal edge in the accent path.
-3. Rebuild `chartMapTime` from the three-fold map, clipping surviving strokes at the clock circumference: top intersection `(12.12,5.04)`, center divider endpoint `(15,12.55)`, and right-edge endpoint `(20,12.25)`.
-4. Replace the eyedropper with a solid rounded base-color bulb, tapered outlined glass, tapered contained accent liquid, and an accent drop centered beneath the tip.
+1. Keep `selectPanel1` through `selectPanel4` as real text. Center each count at `x="8" y="12"` with `font-family:Inter,Segoe UI,sans-serif`, `font-size:10.5px`, and `font-weight:800`. Give all four the same inset accent check `m13.4 15.2 2.2 2.2 3-4.9` at `stroke-width="2.1"`, leaving visible clearance from the outer frame.
+2. Close the save icon's accent upper rectangle with `M8 3.5h8M8 3.5V9h8V3.5M13 4.5v3`.
+3. Use the clipped-map fragment `M12.12 5.04 9 4 4 6v14l5-2 6 2 5-2v-5.75`, plus dividers `M9 4v14M15 12.55V20`, followed by the existing foreground clock.
+4. Use the visually accepted eyedropper fragments: solid bulb `M15.6 12.6 20.1 8.1A3 3 0 0 0 15.9 3.9l-4.5 4.5a3 3 0 0 0 4.2 4.2Z`; glass `m12 6.8 4 4-7.6 7.6-3.2.8.8-3.2z`; contained liquid `m12.7 11.6 1.7 1.7-5.9 4.6-1.7.5.5-1.7z`; and drop `M3.95 22.7c0-.9 1.25-2.1 1.25-2.1s1.25 1.2 1.25 2.1a1.25 1.25 0 1 1-2.5 0Z`.
 5. Rotate the re-rank arrowhead 180 degrees in place by restoring `M20 6h-3v3`.
 
 ### Task 2: Perform rendered visual inspection
