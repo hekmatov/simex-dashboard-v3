@@ -1,4 +1,5 @@
 import React from "react";
+import { IconControl } from "../common/SimExIcon.js";
 const STRUCTURED_CONTROLS = new Set(["labels", "axes", "targets", "map", "timeline"]);
 const AXIS_PROPERTIES = new Set(["title", "name", "min", "max", "grid", "xTitle", "yTitle"]);
 const FILTER_OPERATORS = new Set(["equals", "notEquals", "contains", "in", "notIn", "range"]);
@@ -165,29 +166,23 @@ function filterControls(value, columns, onChange) {
         )
       ),
       filterOperandControl(filter, (nextFilter) => replace(index, nextFilter)),
-      /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "secondary",
-          onClick: () => onChange(filters.filter((_, itemIndex) => itemIndex !== index))
-        },
-        "Remove"
-      )
-    )),
-    /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
+      /* @__PURE__ */ React.createElement(IconControl, {
+        interactionId: "editor.remove-measurement",
         className: "secondary",
-        disabled: options.length === 0,
-        onClick: () => onChange([
+        ariaLabel: `Remove filter ${index + 1}`,
+        tooltip: `Remove filter ${index + 1}`,
+        onClick: () => onChange(filters.filter((_, itemIndex) => itemIndex !== index))
+      })
+    )),
+    /* @__PURE__ */ React.createElement(IconControl, {
+      interactionId: "editor.add-filter",
+      className: "secondary",
+      disabled: options.length === 0,
+      onClick: () => onChange([
           ...filters,
           { field: options[0]?.value ?? "", operator: "equals", value: "" }
         ])
-      },
-      "Add filter"
-    )
+    })
   );
 }
 function filterForOperator(filter, operator) {

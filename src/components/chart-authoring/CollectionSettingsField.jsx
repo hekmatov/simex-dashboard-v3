@@ -1,5 +1,6 @@
 import React from "react";
 import { normalizeCollectionSettings } from "../../charting/collection/collectionModel.js";
+import { IconControl } from "../common/SimExIcon.js";
 import {
   GroupShell,
   fieldControlId
@@ -39,7 +40,7 @@ function CollectionSettingsField({
   const rankingSelection = settings.ranking.mode === "priority" && settings.ranking.expression
     ? "custom"
     : settings.ranking.mode;
-  return /* @__PURE__ */ React.createElement(GroupShell, { field, className: "chart-authoring-collection" }, /* @__PURE__ */ React.createElement("div", { id, className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Display mode", /* @__PURE__ */ React.createElement("select", { value: settings.layout, onChange: (event) => emit(["layout"], event.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "fixed" }, "Fixed grid"), /* @__PURE__ */ React.createElement("option", { value: "scroll" }, "Scrollable grid"), /* @__PURE__ */ React.createElement("option", { value: "carousel" }, "Auto carousel"))), /* @__PURE__ */ React.createElement("label", null, "Rows", /* @__PURE__ */ React.createElement("input", { type: "number", min: "1", max: "4", value: settings.rows, onChange: (event) => emit(["rows"], Number(event.target.value)) })), /* @__PURE__ */ React.createElement("label", null, "Columns", /* @__PURE__ */ React.createElement("input", { type: "number", min: "1", max: "4", value: settings.columns, onChange: (event) => emit(["columns"], Number(event.target.value)) })), /* @__PURE__ */ React.createElement("label", null, "Card spacing", /* @__PURE__ */ React.createElement("input", { type: "number", min: "0", max: "64", value: settings.gap, onChange: (event) => emit(["gap"], Number(event.target.value)) })), overflowControl(settings, emit), /* @__PURE__ */ React.createElement("label", null, "Ranking", /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement(GroupShell, { field, className: "chart-authoring-collection" }, /* @__PURE__ */ React.createElement("div", { id, className: "chart-authoring-control-grid" }, collectionLayoutControls(settings.layout, (value) => emit(["layout"], value)), /* @__PURE__ */ React.createElement("label", null, "Rows", /* @__PURE__ */ React.createElement("input", { type: "number", min: "1", max: "4", value: settings.rows, onChange: (event) => emit(["rows"], Number(event.target.value)) })), /* @__PURE__ */ React.createElement("label", null, "Columns", /* @__PURE__ */ React.createElement("input", { type: "number", min: "1", max: "4", value: settings.columns, onChange: (event) => emit(["columns"], Number(event.target.value)) })), /* @__PURE__ */ React.createElement("label", null, "Card spacing", /* @__PURE__ */ React.createElement("input", { type: "number", min: "0", max: "64", value: settings.gap, onChange: (event) => emit(["gap"], Number(event.target.value)) })), overflowControl(settings, emit), /* @__PURE__ */ React.createElement("label", null, "Ranking", /* @__PURE__ */ React.createElement(
     "select",
     {
       value: rankingSelection,
@@ -52,11 +53,12 @@ function CollectionSettingsField({
     /* @__PURE__ */ React.createElement("option", { value: "sort" }, "Sort by field"),
     /* @__PURE__ */ React.createElement("option", { value: "priority" }, "Priority"),
     /* @__PURE__ */ React.createElement("option", { value: "custom" }, "Custom priority")
-  )), settings.ranking.mode === "sort" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Sort field", /* @__PURE__ */ React.createElement("input", { value: settings.ranking.field, onChange: (event) => emit(["ranking", "field"], event.target.value) })), /* @__PURE__ */ React.createElement("label", null, "Sort direction", /* @__PURE__ */ React.createElement("select", { value: settings.ranking.direction, onChange: (event) => emit(["ranking", "direction"], event.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "asc" }, "Ascending"), /* @__PURE__ */ React.createElement("option", { value: "desc" }, "Descending")))) : null, rankingSelection === "priority" ? /* @__PURE__ */ React.createElement("label", null, "Priority method", /* @__PURE__ */ React.createElement("select", { value: settings.ranking.method ?? "highestCurrent", onChange: (event) => emit(["ranking"], {
+  )), settings.ranking.mode === "sort" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Sort field", /* @__PURE__ */ React.createElement("input", { value: settings.ranking.field, onChange: (event) => emit(["ranking", "field"], event.target.value) })), sortDirectionControls(settings.ranking.direction, (value) => emit(["ranking", "direction"], value))) : null, rankingSelection === "priority" ? /* @__PURE__ */ React.createElement("label", null, "Priority method", /* @__PURE__ */ React.createElement("select", { value: settings.ranking.method ?? "highestCurrent", onChange: (event) => emit(["ranking"], {
     mode: "priority",
     method: event.target.value,
     stabilize: settings.ranking.stabilize
-  }) }, PRIORITY_METHODS.map(([method, label]) => /* @__PURE__ */ React.createElement("option", { key: method, value: method }, label)))) : null, rankingSelection === "custom" ? customPriorityControls(settings.ranking, emit) : null, ["sort", "priority", "custom"].includes(rankingSelection) ? toggle(
+  }) }, PRIORITY_METHODS.map(([method, label]) => /* @__PURE__ */ React.createElement("option", { key: method, value: method }, label)))) : null, rankingSelection === "custom" ? customPriorityControls(settings.ranking, emit) : null, ["sort", "priority", "custom"].includes(rankingSelection) ? iconToggle(
+    "collection.keep-stable-order",
     "Keep positions stable for ties",
     settings.ranking.stabilize,
     (checked) => emit(["ranking", "stabilize"], checked)
@@ -68,7 +70,7 @@ function CollectionSettingsField({
       value: settings.carousel.intervalMs / 1e3,
       onChange: (event) => emit(["carousel", "intervalMs"], Number(event.target.value) * 1e3)
     }
-  )), /* @__PURE__ */ React.createElement("label", null, "Transition", /* @__PURE__ */ React.createElement("select", { value: settings.carousel.transition, onChange: (event) => emit(["carousel", "transition"], event.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "none" }, "None"), /* @__PURE__ */ React.createElement("option", { value: "fade" }, "Fade"), /* @__PURE__ */ React.createElement("option", { value: "slide" }, "Slide"))), toggle("Loop continuously", settings.carousel.loop, (checked) => emit(["carousel", "loop"], checked)), toggle("Pause on hover", settings.carousel.pauseOnHover, (checked) => emit(["carousel", "pauseOnHover"], checked))) : null, toggle("Re-rank during playback", settings.playback.rerank, (checked) => emit(["playback", "rerank"], checked)), toggle("Pause carousel during playback", settings.playback.pauseCarousel, (checked) => emit(["playback", "pauseCarousel"], checked))));
+  )), /* @__PURE__ */ React.createElement("label", null, "Transition", /* @__PURE__ */ React.createElement("select", { value: settings.carousel.transition, onChange: (event) => emit(["carousel", "transition"], event.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "none" }, "None"), /* @__PURE__ */ React.createElement("option", { value: "fade" }, "Fade"), /* @__PURE__ */ React.createElement("option", { value: "slide" }, "Slide"))), iconToggle("collection.loop", "Loop continuously", settings.carousel.loop, (checked) => emit(["carousel", "loop"], checked)), toggle("Pause on hover", settings.carousel.pauseOnHover, (checked) => emit(["carousel", "pauseOnHover"], checked))) : null, iconToggle("collection.re-rank-now", "Re-rank during playback", settings.playback.rerank, (checked) => emit(["playback", "rerank"], checked)), iconToggle("collection.pause-carousel", "Pause carousel during playback", settings.playback.pauseCarousel, (checked) => emit(["playback", "pauseCarousel"], checked))));
 }
 function updateCollectionSettings(current, path, value) {
   const normalized = normalizeCollectionSettings(current ?? {});
@@ -147,15 +149,50 @@ function customPriorityControls(ranking, emit) {
     step: "0.1",
     value: term.weight,
     onChange: (event) => replaceTerm(index, "weight", Number(event.target.value))
-  })), terms.length > 1 ? /* @__PURE__ */ React.createElement("button", {
-    type: "button",
+  })), terms.length > 1 ? /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "editor.remove-measurement",
     className: "secondary",
+    ariaLabel: `Remove factor ${index + 1}`,
+    tooltip: `Remove factor ${index + 1}`,
     onClick: () => emitTerms(terms.filter((_, itemIndex) => itemIndex !== index))
-  }, "Remove factor") : null)), terms.length < 64 ? /* @__PURE__ */ React.createElement("button", {
-    type: "button",
+  }) : null)), terms.length < 64 ? /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "editor.add-factor",
     className: "secondary",
     onClick: () => emitTerms([...terms, { metric: "current", weight: 1 }])
-  }, "Add factor") : null);
+  }) : null);
+}
+function collectionLayoutControls(value, onChange) {
+  const options = [
+    ["fixed", "collection.mode.fixed-grid"],
+    ["scroll", "collection.mode.scrollable-grid"],
+    ["carousel", "collection.mode.auto-carousel"]
+  ];
+  return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-icon-choice", role: "group", "aria-label": "Display mode" }, options.map(([layout, interactionId]) => /* @__PURE__ */ React.createElement(IconControl, {
+    key: layout,
+    interactionId,
+    pressed: value === layout,
+    onClick: () => onChange(layout)
+  })));
+}
+function sortDirectionControls(value, onChange) {
+  return /* @__PURE__ */ React.createElement("div", { className: "chart-authoring-icon-choice", role: "group", "aria-label": "Sort direction" }, /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "collection.sort-ascending",
+    pressed: value !== "desc",
+    onClick: () => onChange("asc")
+  }), /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "collection.sort-descending",
+    pressed: value === "desc",
+    onClick: () => onChange("desc")
+  }));
+}
+function iconToggle(interactionId, label, checked, onChange) {
+  return /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId,
+    ariaLabel: label,
+    tooltip: label,
+    pressed: checked === true,
+    onClick: () => onChange(checked !== true)
+  });
 }
 function toggle(label, checked, onChange) {
   return /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked, onChange: (event) => onChange(event.target.checked) }), label);

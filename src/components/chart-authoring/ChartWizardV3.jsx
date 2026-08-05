@@ -27,6 +27,7 @@ import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
 import { parseCsvText } from "../../lib/loadCsv.js";
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 import { useModalFocus } from "../common/ModalFocusScope.jsx";
 import ChartTypePicker from "./ChartTypePicker.jsx";
 import DataRolesStep from "./DataRolesStep.jsx";
@@ -42,6 +43,13 @@ const STEP_TITLES = Object.freeze({
   source: "Select data to show",
   roles: "Tell the chart what each column means",
   style: "Preview and refine the chart",
+});
+
+const STEP_INTERACTIONS = Object.freeze({
+  type: "wizard.select-chart-type",
+  source: "wizard.select-data-source",
+  roles: "wizard.configure-data-roles",
+  style: "wizard.style-and-layout",
 });
 
 export function createWizardCloseHandlers({
@@ -476,16 +484,12 @@ export default function ChartWizardV3({
             STEP_TITLES[wizard.activeStep],
           ),
         ),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "secondary",
-            disabled: disabled || submitting,
-            onClick: closeHandlers.requestClose,
-          },
-          "Close",
-        ),
+        React.createElement(IconControl, {
+          interactionId: "wizard.close-wizard",
+          className: "secondary chart-wizard-close",
+          disabled: disabled || submitting,
+          onClick: closeHandlers.requestClose,
+        }),
       ),
       React.createElement(
         "nav",
@@ -493,21 +497,21 @@ export default function ChartWizardV3({
           className: "chart-wizard-step-tabs",
           "aria-label": "Chart creation steps",
         },
-        form.steps.map((step) => React.createElement(
-          "button",
-          {
-            key: step.id,
-            type: "button",
-            className: "chart-wizard-step-button",
-            "data-modal-initial-focus":
-              wizard.activeStep === step.id ? "true" : undefined,
-            "aria-current": wizard.activeStep === step.id ? "step" : undefined,
-            "data-complete": step.complete ? "true" : "false",
-            disabled: disabled || submitting,
-            onClick: () => dispatch({ type: "navigate", step: step.id }),
-          },
-          step.label,
-        )),
+        form.steps.map((step) => React.createElement(IconControl, {
+          key: step.id,
+          interactionId: STEP_INTERACTIONS[step.id],
+          className: "chart-wizard-step-button",
+          ariaLabel: step.label,
+          tooltip: step.label,
+          tooltipPlacement: "below",
+          "data-modal-initial-focus":
+            wizard.activeStep === step.id ? "true" : undefined,
+          "aria-current": wizard.activeStep === step.id ? "step" : undefined,
+          "data-complete": step.complete ? "true" : "false",
+          pressed: wizard.activeStep === step.id,
+          disabled: disabled || submitting,
+          onClick: () => dispatch({ type: "navigate", step: step.id }),
+        })),
       ),
       React.createElement(
         "div",
@@ -616,15 +620,13 @@ export default function ChartWizardV3({
           { role: "status" },
           active.prerequisites[0] ?? "",
         ),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            disabled: disabled || !canCreate || submitting,
-            onClick: finish,
-          },
-          submitting ? "Creating..." : "Create chart",
-        ),
+        React.createElement(IconControl, {
+          interactionId: "wizard.create-chart",
+          ariaLabel: submitting ? "Creating chart" : "Create chart",
+          tooltip: submitting ? "Creating chart" : "Create chart",
+          disabled: disabled || !canCreate || submitting,
+          onClick: finish,
+        }),
       ),
     ),
     React.createElement(ConfirmDialog, {

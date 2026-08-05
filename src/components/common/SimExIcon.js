@@ -84,6 +84,45 @@ export const IconControl = React.memo(function IconControl({
   );
 });
 
+export const IconSummary = React.memo(function IconSummary({
+  interactionId,
+  ariaLabel,
+  tooltip,
+  tooltipPlacement = "above",
+  iconSize = 20,
+  iconClassName = "",
+  className = "",
+  ...summaryProps
+} = {}) {
+  const interaction = getInteraction(interactionId);
+  if (!interaction) {
+    throw new Error(`Unknown icon interaction: ${String(interactionId)}`);
+  }
+
+  const resolvedLabel = ariaLabel ?? interaction.label;
+  const resolvedTooltip = tooltip ?? interaction.tooltip ?? resolvedLabel;
+
+  return React.createElement(
+    "summary",
+    {
+      ...summaryProps,
+      className: joinClassNames("simex-icon-control", className),
+      "aria-label": resolvedLabel,
+      "data-icon-control": interaction.id,
+      "data-icon-tooltip": resolvedTooltip,
+      "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
+      "data-icon-tone": interaction.tone ?? "standard",
+      "data-icon-status": interaction.status,
+    },
+    React.createElement(SimExIcon, {
+      iconId: interaction.glyphId,
+      size: iconSize,
+      className: iconClassName,
+      decorative: true,
+    }),
+  );
+});
+
 function joinClassNames(...values) {
   return values.filter(Boolean).join(" ");
 }

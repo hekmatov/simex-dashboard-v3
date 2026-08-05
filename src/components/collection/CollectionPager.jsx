@@ -1,4 +1,5 @@
 import React from "react";
+import { IconControl } from "../common/SimExIcon.js";
 
 export function nextManualCollectionPage(
   page,
@@ -31,8 +32,8 @@ export default function CollectionPager({
     className: `collection-pager${className ? ` ${className}` : ""}`,
     "aria-label": "Collection pages",
   },
-  React.createElement("button", {
-    type: "button",
+  React.createElement(IconControl, {
+    interactionId: "collection.previous-page",
     "aria-label": "Previous collection page",
     disabled: previousDisabled,
     onClick: () => onPageChange(nextManualCollectionPage(
@@ -41,15 +42,15 @@ export default function CollectionPager({
       -1,
       loop,
     )),
-  }, "Previous"),
+  }),
   React.createElement("span", {
     className: "collection-page-status",
     role: "status",
     "aria-live": "polite",
     "aria-atomic": "true",
   }, `Page ${page + 1} of ${pageCount}`),
-  React.createElement("button", {
-    type: "button",
+  React.createElement(IconControl, {
+    interactionId: "collection.next-page",
     "aria-label": "Next collection page",
     disabled: nextDisabled,
     onClick: () => onPageChange(nextManualCollectionPage(
@@ -58,5 +59,5 @@ export default function CollectionPager({
       1,
       loop,
     )),
-  }, "Next"));
+  }));
 }

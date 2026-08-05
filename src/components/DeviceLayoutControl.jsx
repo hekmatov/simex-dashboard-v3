@@ -1,9 +1,10 @@
 import React from "react";
+import { IconControl } from "./common/SimExIcon.js";
 
 const OPTIONS = [
-  ["auto", "Auto"],
-  ["tablet", "Tablet"],
-  ["phone", "Phone"],
+  ["auto", "shell.auto-viewport"],
+  ["tablet", "shell.tablet-preview"],
+  ["phone", "shell.phone-preview"],
 ];
 
 export default function DeviceLayoutControl({ value, onChange }) {
@@ -11,16 +12,14 @@ export default function DeviceLayoutControl({ value, onChange }) {
     <div className="device-layout-control" aria-label="Device layout">
       <span>Layout</span>
       <div role="group" aria-label="Choose a layout for this device">
-        {OPTIONS.map(([id, label]) => (
-          <button
+        {OPTIONS.map(([id, interactionId]) => (
+          <IconControl
             key={id}
-            type="button"
+            interactionId={interactionId}
             className={value === id ? "active" : "secondary"}
-            aria-pressed={value === id}
+            pressed={value === id}
             onClick={() => onChange(id)}
-          >
-            {label}
-          </button>
+          />
         ))}
       </div>
     </div>

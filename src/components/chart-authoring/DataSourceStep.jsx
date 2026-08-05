@@ -1,5 +1,6 @@
 import React from "react";
 import SourceCsvViewerButton from "../source-data/SourceCsvViewerButton.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 
 export default function DataSourceStep({
   dataSources = {},
@@ -97,16 +98,12 @@ export default function DataSourceStep({
                   errors: manualErrors,
                   onChange: onManualTableChange,
                 })
-              : React.createElement(
-                  "button",
-                  {
-                    type: "button",
-                    className: "secondary",
-                    disabled: blocked,
-                    onClick: onSelectManual,
-                  },
-                  "Enter data manually",
-                ),
+              : React.createElement(IconControl, {
+                  interactionId: "wizard.enter-data-manually",
+                  className: "secondary",
+                  disabled: blocked,
+                  onClick: onSelectManual,
+                }),
           )
         : null,
     ),
@@ -175,12 +172,13 @@ export default function DataSourceStep({
               React.createElement(SourceCsvViewerButton, {
                 sourceId: selectedSourceId,
                 source: selectedSource,
+                interactionId: "wizard.view-source-csv",
               }),
-              React.createElement(
-                "button",
-                { type: "button", className: "secondary", onClick: onRequestClear },
-                "Remove source",
-              ),
+              React.createElement(IconControl, {
+                interactionId: "wizard.remove-data-source",
+                className: "secondary",
+                onClick: onRequestClear,
+              }),
             ),
           ),
           React.createElement(ProfileTable, { profile }),
@@ -260,43 +258,36 @@ function ManualDataTable({ table, errors, onChange }) {
             React.createElement(
               "td",
               null,
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className: "secondary",
-                  "aria-label": `Remove row ${rowIndex + 1}`,
-                  disabled: rows.length <= 1,
-                  onClick: () => onChange({
-                    ...table,
-                    rows: rows
-                      .filter((_, index) => index !== rowIndex)
-                      .map((current) => ({ ...current })),
-                  }),
-                },
-                "Remove",
-              ),
+              React.createElement(IconControl, {
+                interactionId: "wizard.remove-row",
+                ariaLabel: `Remove row ${rowIndex + 1}`,
+                tooltip: `Remove row ${rowIndex + 1}`,
+                className: "secondary",
+                disabled: rows.length <= 1,
+                onClick: () => onChange({
+                  ...table,
+                  rows: rows
+                    .filter((_, index) => index !== rowIndex)
+                    .map((current) => ({ ...current })),
+                }),
+              }),
             ),
           )),
         ),
       ),
     ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "secondary",
-        disabled: rows.length >= maxRows,
-        onClick: () => onChange({
-          ...table,
-          rows: [
-            ...rows.map((row) => ({ ...row })),
-            Object.fromEntries(columns.map(({ fieldId }) => [fieldId, ""])),
-          ],
-        }),
-      },
-      "Add row",
-    ),
+    React.createElement(IconControl, {
+      interactionId: "wizard.add-row",
+      className: "secondary",
+      disabled: rows.length >= maxRows,
+      onClick: () => onChange({
+        ...table,
+        rows: [
+          ...rows.map((row) => ({ ...row })),
+          Object.fromEntries(columns.map(({ fieldId }) => [fieldId, ""])),
+        ],
+      }),
+    }),
     Array.isArray(errors) && errors.length > 0
       ? React.createElement(
           "ul",

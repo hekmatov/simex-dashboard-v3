@@ -3,6 +3,7 @@ import {
   SERIES_STYLE_LIMITS,
 } from "../../charting/presentation/seriesStyleContract.js";
 import ColorField from "../ColorField.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 import {
   GroupShell,
   fieldControlId,
@@ -72,39 +73,27 @@ function SeriesColorsField({
           dataColorField: `${field.id}-${index}`,
           pickerRevision: value,
         }),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "secondary",
-            onClick: () => remove(index),
-            "aria-label": `Remove color ${index + 1}`,
-            title: "Remove this color",
-          },
-          "Remove",
-        ),
+        React.createElement(IconControl, {
+          interactionId: "editor.remove-measurement",
+          className: "secondary",
+          onClick: () => remove(index),
+          ariaLabel: `Remove color ${index + 1}`,
+          tooltip: `Remove color ${index + 1}`,
+        }),
       )),
     ),
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "secondary chart-authoring-add-series-color",
-        disabled: colors.length >= MAX_SERIES_COLORS,
-        onClick: add,
-      },
-      "Add color",
-    ),
+    React.createElement(IconControl, {
+      interactionId: "editor.add-color",
+      className: "secondary chart-authoring-add-series-color",
+      disabled: colors.length >= MAX_SERIES_COLORS,
+      onClick: add,
+    }),
     colors.length > 0
-      ? React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "secondary chart-authoring-default-series-colors",
-            onClick: () => onChange(undefined),
-          },
-          "Use default colors",
-        )
+      ? React.createElement(IconControl, {
+          interactionId: "editor.use-default-colors",
+          className: "secondary chart-authoring-default-series-colors",
+          onClick: () => onChange(undefined),
+        })
       : null,
     React.createElement(
       "small",

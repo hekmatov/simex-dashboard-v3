@@ -1,4 +1,5 @@
 import React from "react";
+import { IconControl } from "../common/SimExIcon.js";
 
 import {
   buildSourceViewerDescriptor,
@@ -9,29 +10,26 @@ export default function SourceCsvViewerButton({
   sourceId,
   source,
   className = "secondary",
+  interactionId = "panel.view-source-csv",
 }) {
   const [error, setError] = React.useState("");
   const available = Boolean(buildSourceViewerDescriptor(sourceId, source));
   return React.createElement(
     "div",
     { className: "source-csv-viewer-action" },
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className,
-        disabled: !available,
-        onClick: () => {
-          setError("");
-          openSourceViewer({
-            sourceId,
-            source,
-            onError: setError,
-          });
-        },
+    React.createElement(IconControl, {
+      interactionId,
+      className,
+      disabled: !available,
+      onClick: () => {
+        setError("");
+        openSourceViewer({
+          sourceId,
+          source,
+          onError: setError,
+        });
       },
-      "View source CSV",
-    ),
+    }),
     !available
       ? React.createElement(
           "small",

@@ -58,7 +58,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
         + (surface.chartTypeIds?.length ?? 0),
       0,
     ),
-    163,
+    164,
   );
   for (const duplicateId of [
     "shell.open-editable-tab.1",
@@ -200,7 +200,10 @@ test("requested icon corrections resolve to distinct semantic contracts", () => 
   );
 
   assert.match(ICON_GLYPHS.periodic, /M15\.6 6\.2V3\.4h2\.8/);
-  assert.match(ICON_GLYPHS.rerank, /M20 6h-3v3/);
+  assert.match(
+    ICON_GLYPHS.rerank,
+    /M15\.52 15\.88a3\.52 3\.52 0 1 0 \.88-5\.28M17\.41 8\.65 16\.4 10\.6l1\.95 1\.01/,
+  );
   assert.match(ICON_GLYPHS.chartMapTime, /r="(?:5\.[6-9]|6)"/);
   assert.doesNotMatch(ICON_GLYPHS.chartMapTime, /M13 7v13/);
   assert.match(ICON_GLYPHS.eyedropper, /accent-fill/);
@@ -236,6 +239,33 @@ test("requested concise interactions use literal icon-only and text-only modes",
       renderMode: "text",
     },
   );
+});
+
+test("approved compact dashboard actions are live icon-only interactions", () => {
+  for (const interactionId of [
+    "shell.auto-viewport",
+    "shell.add-chart",
+    "shell.global-panel-colors",
+    "shell.icon-accent",
+    "shell.start-section",
+    "image.zoom-reset",
+    "panel.edit-chart",
+    "panel.view-source-csv",
+    "wizard.close-wizard",
+    "wizard.create-chart",
+    "editor.tab.data",
+    "editor.add-filter",
+    "editor.cancel",
+    "collection.mode.fixed-grid",
+    "collection.pause-carousel",
+    "collection.re-rank-now",
+  ]) {
+    assert.deepEqual(
+      pick(getInteraction(interactionId), ["renderMode", "status"]),
+      { renderMode: "icon", status: "live" },
+      interactionId,
+    );
+  }
 });
 
 test("the generated atlas binds live swatches and keeps text references glyphless", async () => {

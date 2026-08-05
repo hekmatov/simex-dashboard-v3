@@ -3621,6 +3621,20 @@ button.danger {
   padding: 8px 12px;
 }
 
+.global-color-controls summary.global-color-summary {
+  height: 34px;
+  justify-content: center;
+  list-style: none;
+  min-width: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.global-color-controls summary.global-color-summary::marker,
+.global-color-controls summary.global-color-summary::-webkit-details-marker {
+  display: none;
+}
+
 .global-color-grid {
   background: #f8fbff;
   border: 1px solid rgb(8 34 74 / 12%);
@@ -4086,6 +4100,7 @@ button.danger {
   background: #f5f8fb;
   border: 1px solid #d8e2ec;
   border-radius: 18px;
+  box-sizing: border-box;
   box-shadow: 0 28px 80px rgb(4 24 48 / 34%);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -4599,6 +4614,115 @@ button.danger {
 .playback-controls .simex-icon-control {
   height: 40px;
   width: 40px;
+}
+
+/* Canonical icon-only adoption surfaces */
+.device-layout-control .simex-icon-control,
+.install-dashboard-button.simex-icon-control {
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  width: 34px;
+}
+
+.chart-wizard-step-button.simex-icon-control {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: #506a82;
+  height: 46px;
+  padding: 0;
+  width: 46px;
+}
+
+.chart-wizard-step-button.simex-icon-control:hover:not(:disabled),
+.chart-wizard-step-button.simex-icon-control:focus-visible {
+  background: rgb(255 255 255 / 68%);
+  border-bottom-color: #7f9fbd;
+  box-shadow: none;
+  color: #043bcb;
+  transform: none;
+}
+
+.chart-wizard-step-button.simex-icon-control[aria-current="step"] {
+  background: #eef4ff;
+  border-bottom-color: #043bcb;
+  color: #043bcb;
+}
+
+.chart-wizard-step-button.simex-icon-control[data-complete="true"]:not([aria-current="step"]) {
+  color: #007854;
+}
+
+.chart-editor-tab.simex-icon-control {
+  background: #eef5fb;
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  color: #173f69;
+  flex: 0 0 40px;
+  height: 40px;
+  padding: 0;
+  width: 40px;
+}
+
+.chart-editor-tab.simex-icon-control[aria-current="page"] {
+  background: #043bcb;
+  border-color: #043bcb;
+  color: #fff;
+}
+
+.chart-editor-tab.simex-icon-control[aria-current="page"] .accent-fill {
+  fill: var(--simex-icon-accent-on-dark);
+}
+
+.chart-editor-tab.simex-icon-control[aria-current="page"] .accent-stroke {
+  stroke: var(--simex-icon-accent-on-dark);
+}
+
+.chart-type-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+}
+
+.chart-type-card.simex-icon-control {
+  align-items: center;
+  background: #f8fbff;
+  border: 1px solid #d8e2ec;
+  border-radius: 14px;
+  display: inline-flex;
+  height: 56px;
+  justify-self: center;
+  min-height: 56px;
+  padding: 0;
+  text-align: center;
+  width: 56px;
+}
+
+.chart-type-card.simex-icon-control[aria-pressed="true"] {
+  background: #eef4ff;
+  border-color: #043bcb;
+  box-shadow: 0 0 0 2px rgb(4 59 203 / 12%);
+  color: #043bcb;
+}
+
+.chart-authoring-icon-choice {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chart-authoring-icon-choice .simex-icon-control,
+.panel-actions .simex-icon-control,
+.section-actions .simex-icon-control,
+.chart-wizard-footer .simex-icon-control,
+.background-editor-actions .simex-icon-control {
+  flex: 0 0 36px;
+}
+
+.source-csv-viewer-action > .simex-icon-control {
+  flex: 0 0 36px;
 }
 
 .confirm-dialog .confirm-dialog-error {

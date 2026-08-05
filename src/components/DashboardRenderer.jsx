@@ -4,7 +4,7 @@ import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
-import { IconControl, SimExIcon } from "./common/SimExIcon.js";
+import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
@@ -610,9 +610,9 @@ export default function DashboardRenderer({
         <section className="background-editor-bar">
           <VantaSettingsPanel settings={backgroundDraft} onChange={changeBackgroundDraft} />
           <div className="background-editor-actions">
-            <button type="button" className="secondary" onClick={applyBackgroundSettings}>Apply</button>
-            <button type="button" onClick={saveBackgroundSettings}>Save</button>
-            <button type="button" className="secondary" onClick={resetBackgroundSettings}>Reset</button>
+            <IconControl interactionId="shell.apply-background" className="secondary" onClick={applyBackgroundSettings} />
+            <IconControl interactionId="shell.save-background" onClick={saveBackgroundSettings} />
+            <IconControl interactionId="shell.reset-background" className="secondary" onClick={resetBackgroundSettings} />
           </div>
         </section>
       </main>
@@ -698,16 +698,15 @@ export default function DashboardRenderer({
         <div className="header-floating-actions">
           <div className="header-edit-primary-actions">
             {editMode ? (
-              <button
-                type="button"
+              <IconControl
+                interactionId="shell.save-edits"
                 className="header-edit-floating-button"
-                aria-label="Save edit mode"
-                title="Save"
+                ariaLabel={moderatorOperation.kind === "save-session" ? "Saving edits" : "Save edits"}
+                tooltip={moderatorOperation.kind === "save-session" ? "Saving edits" : "Save edits"}
+                data-icon-surface="dark"
                 onClick={saveEditMode}
                 disabled={moderatorOperation.kind !== null}
-              >
-                {moderatorOperation.kind === "save-session" ? "Saving..." : "Save"}
-              </button>
+              />
             ) : (
               <IconControl
                 interactionId="shell.open-editable-tab"
@@ -721,18 +720,19 @@ export default function DashboardRenderer({
               />
             )}
             {editMode && (
-              <button
-                type="button"
+              <IconControl
+                interactionId="shell.reset-edits"
                 className="header-edit-floating-button secondary"
+                ariaLabel={moderatorOperation.kind === "reset-session" ? "Resetting edits" : "Reset edits"}
+                tooltip={moderatorOperation.kind === "reset-session" ? "Resetting edits" : "Reset edits"}
+                data-icon-surface="dark"
                 onClick={() => {
                   if (moderatorOperationGateRef.current.isActive()) return;
                   clearModeratorError("reset-session");
                   setResetEditSessionConfirmation(true);
                 }}
                 disabled={moderatorOperation.kind !== null}
-              >
-                {moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset edits"}
-              </button>
+              />
             )}
           </div>
         </div>
@@ -748,11 +748,11 @@ export default function DashboardRenderer({
           </div>
           <div className="header-edit-controls">
             <div className="tab-edit-controls">
-              <button type="button" disabled={moderatorMutationLocked} onClick={addPage}>Add tab</button>
-              <button type="button" className="secondary" disabled={moderatorMutationLocked || (dashboard.pages ?? []).length <= 1} onClick={removeActivePage}>Remove tab</button>
+              <IconControl interactionId="shell.add-tab" disabled={moderatorMutationLocked} onClick={addPage} />
+              <IconControl interactionId="shell.remove-tab" className="secondary" disabled={moderatorMutationLocked || (dashboard.pages ?? []).length <= 1} onClick={removeActivePage} />
             </div>
-            <button type="button" disabled={moderatorMutationLocked} onClick={() => importInputRef.current?.click()}>Import dashboard</button>
-            <button type="button" disabled={moderatorMutationLocked} onClick={() => onExportConfig(dashboardWithCurrentDrafts())}>Export dashboard</button>
+            <IconControl interactionId="shell.import" disabled={moderatorMutationLocked} onClick={() => importInputRef.current?.click()} />
+            <IconControl interactionId="shell.export" disabled={moderatorMutationLocked} onClick={() => onExportConfig(dashboardWithCurrentDrafts())} />
             <GlobalPanelColorControls disabled={moderatorMutationLocked} colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <GlobalIconAccentControl
               disabled={moderatorMutationLocked}
@@ -771,7 +771,7 @@ export default function DashboardRenderer({
                 <small>Generate screen-reader chart descriptions</small>
               </span>
             </label>
-            <button type="button" className="secondary" disabled={moderatorMutationLocked} onClick={openBackgroundSettings}>Background</button>
+            <IconControl interactionId="shell.background" className="secondary" disabled={moderatorMutationLocked} onClick={openBackgroundSettings} />
             <input
               ref={importInputRef}
               className="visually-hidden"
@@ -793,20 +793,18 @@ export default function DashboardRenderer({
             <strong>{multiPanelIds.length}</strong>
             <span>of 4 selected</span>
           </span>
-          <button
-            type="button"
+          <IconControl
+            interactionId="fullscreen.enter-multi-fullscreen"
             disabled={multiPanelIds.length < 2}
             onClick={openMultiFullscreen}
-          >
-            Enter multi-fullscreen
-          </button>
-          <button
-            type="button"
+          />
+          <IconControl
+            interactionId="editor.cancel"
             className="secondary"
+            ariaLabel="Cancel multi-fullscreen selection"
+            tooltip="Cancel multi-fullscreen selection"
             onClick={cancelMultiSelection}
-          >
-            Cancel
-          </button>
+          />
         </section>
       )}
       {multiSelectNotice && (
@@ -823,14 +821,15 @@ export default function DashboardRenderer({
         {dashboard.pages.map((page) => (
           editMode ? (
             <label className={`page-tab-edit ${page.id === activePage.id ? "active" : ""}`} key={page.id}>
-              <button
-                type="button"
+              <IconControl
+                interactionId="shell.open-editable-tab"
                 disabled={moderatorMutationLocked}
                 className={page.id === activePage.id ? "active" : "secondary"}
+                ariaLabel={`Open ${page.label}`}
+                tooltip={`Open ${page.label}`}
+                pressed={page.id === activePage.id}
                 onClick={() => navigateToPage(page.id)}
-              >
-                Open
-              </button>
+              />
               <input
                 disabled={moderatorMutationLocked}
                 value={(pageDrafts[page.id]?.label ?? page.label) ?? ""}
@@ -895,25 +894,21 @@ export default function DashboardRenderer({
                 </div>
                 {editMode && (
                   <div className="section-actions">
-                    <button
-                      type="button"
+                    <IconControl
+                      interactionId="shell.add-chart"
                       className="secondary add-panel-button"
                       disabled={moderatorMutationLocked}
                       onClick={() => {
                         if (moderatorOperationGateRef.current.isActive()) return;
                         setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
                       }}
-                    >
-                      Add chart
-                    </button>
-                    <button
-                      type="button"
+                    />
+                    <IconControl
+                      interactionId="shell.remove-title"
                       className="secondary add-panel-button"
                       disabled={moderatorMutationLocked}
                       onClick={() => removeSectionTitle(section)}
-                    >
-                      Remove title
-                    </button>
+                    />
                   </div>
                 )}
               </div>
@@ -1082,7 +1077,11 @@ function feedbackMailtoUrl(contactEmail) {
 function GlobalPanelColorControls({ colors, onChange, disabled = false }) {
   return (
     <details className="global-color-controls">
-      <summary>Global panel colors</summary>
+      <IconSummary
+        interactionId="shell.global-panel-colors"
+        className="global-color-summary"
+        tooltipPlacement="below"
+      />
       <fieldset className="global-color-grid" disabled={disabled}>
         <ColorField label="Panel background" value={colors.panelBackgroundColor} fallback="#f5f8fb" onChange={(color) => onChange({ panelBackgroundColor: color })} />
         <ColorField label="Panel border" value={colors.panelBorderColor} fallback="#d8e2ec" onChange={(color) => onChange({ panelBorderColor: color })} />
@@ -1131,7 +1130,11 @@ function sectionDraftFromSection(section) {
 function GlobalIconAccentControl({ value, onChange, disabled = false }) {
   return (
     <details className="global-color-controls global-icon-accent-controls">
-      <summary>Icon accent</summary>
+      <IconSummary
+        interactionId="shell.icon-accent"
+        className="global-color-summary"
+        tooltipPlacement="below"
+      />
       <fieldset className="global-color-grid" disabled={disabled}>
         <ColorField
           label="Accent color"
@@ -1151,13 +1154,13 @@ function GlobalIconAccentControl({ value, onChange, disabled = false }) {
             Dark
           </span>
         </div>
-        <button
-          type="button"
+        <IconControl
+          interactionId="shell.reset-background"
           className="secondary"
+          ariaLabel="Reset icon accent"
+          tooltip="Reset icon accent"
           onClick={() => onChange(ICON_TOKENS.accentBase)}
-        >
-          Reset accent
-        </button>
+        />
       </fieldset>
     </details>
   );

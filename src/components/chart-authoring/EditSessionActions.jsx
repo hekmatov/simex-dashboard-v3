@@ -35,29 +35,21 @@ export default function EditSessionActions({
         disabled: disabled || submitting,
         onClick: onRequestReset,
       }),
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "secondary",
-          disabled: disabled || submitting,
-          onClick: onCancel,
-        },
-        "Cancel",
-      ),
+      React.createElement(IconControl, {
+        interactionId: "editor.cancel",
+        className: "secondary",
+        disabled: disabled || submitting,
+        onClick: onCancel,
+      }),
       typeof onRemove === "function"
-        ? React.createElement(
-            "button",
-            {
-              type: "button",
-              className: "danger chart-editor-remove",
-              disabled: disabled || submitting,
-              onClick: () => {
-                if (!disabled && !submitting) onRemove();
-              },
+        ? React.createElement(IconControl, {
+            interactionId: "chart.remove",
+            className: "chart-editor-remove",
+            disabled: disabled || submitting,
+            onClick: () => {
+              if (!disabled && !submitting) onRemove();
             },
-            "Remove chart",
-          )
+          })
         : null,
     ),
     React.createElement(ConfirmDialog, {

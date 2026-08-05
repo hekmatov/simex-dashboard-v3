@@ -2,6 +2,7 @@ import React from "react";
 
 import { resolveChartCitation } from "../../charting/presentation/chartCitation.js";
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 import SourceCsvViewerButton from "../source-data/SourceCsvViewerButton.jsx";
 import {
   fieldControlId,
@@ -62,19 +63,19 @@ export default function CitationField({
           sourceId: chart.sourceId,
           source,
         }),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            className: "secondary",
-            disabled: otherChartCount === 0
-              || typeof onApplyCitationToSourceCharts !== "function",
-            onClick: () => setConfirmationOpen(true),
-          },
-          otherChartCount === 0
+        React.createElement(IconControl, {
+          interactionId: "editor.apply-to-source-sharing-charts",
+          className: "secondary",
+          ariaLabel: otherChartCount === 0
+            ? "No other charts share this source"
+            : `Apply citation to ${otherChartCount} source-sharing chart${otherChartCount === 1 ? "" : "s"}`,
+          tooltip: otherChartCount === 0
             ? "No other charts share this source"
             : `Apply to ${otherChartCount} source-sharing chart${otherChartCount === 1 ? "" : "s"}`,
-        ),
+          disabled: otherChartCount === 0
+            || typeof onApplyCitationToSourceCharts !== "function",
+          onClick: () => setConfirmationOpen(true),
+        }),
       ),
     ),
     React.createElement(ConfirmDialog, {

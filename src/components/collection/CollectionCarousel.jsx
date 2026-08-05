@@ -5,6 +5,7 @@ import CollectionGrid, {
   resolveCollectionPage,
 } from "./CollectionGrid.jsx";
 import CollectionPager from "./CollectionPager.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 
 const STATIC_ENVIRONMENT = Object.freeze({
   documentHidden: false,
@@ -206,8 +207,10 @@ export default function CollectionCarousel({
     ? React.createElement("div", {
         className: "collection-carousel-controls",
       },
-      React.createElement("button", {
-        type: "button",
+      React.createElement(IconControl, {
+        interactionId: canResume
+          ? "collection.resume-carousel"
+          : "collection.pause-carousel",
         "aria-label": canResume
           ? "Resume collection rotation"
           : "Pause collection rotation",
@@ -215,7 +218,7 @@ export default function CollectionCarousel({
           if (stoppedAtEnd) setPage(0);
           setManualPaused(!canResume);
         },
-      }, canResume ? "Resume" : "Pause"),
+      }),
       React.createElement(CollectionPager, {
         page: currentPage,
         pageCount,

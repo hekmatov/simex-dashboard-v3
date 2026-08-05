@@ -1,6 +1,6 @@
 # Icon & Interaction Specification
 
-Version: **1.0.1**
+Version: **1.1.0**
 
 > This document is generated. Do not edit it directly.
 >
@@ -41,8 +41,8 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 | Measure | Count |
 | --- | ---: |
 | Approved glyphs | 112 |
-| Unique interaction records | 126 |
-| Surface interaction references | 137 |
+| Unique interaction records | 127 |
+| Surface interaction references | 138 |
 | Surfaces | 13 |
 | Chart pictograms | 26 |
 | Visual states | 7 |
@@ -103,12 +103,12 @@ Surface ID: `refinements` · 12 references
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | shell.open-editable-tab | open | Open editable tab | Open editable tab | icon | standard | live | none | Arrow spacing balanced above and beside the box |
-| image.zoom-reset | zoomReset | Reset image zoom | Reset image zoom | icon | standard | planned | none | Approved reset arc with inset magnifier |
+| image.zoom-reset | zoomReset | Reset image zoom | Reset image zoom | icon | standard | live | none | Approved reset arc with inset magnifier |
 | transport.fast-forward | fastForward | Fast forward | Fast forward | icon | standard | planned | none | Exact horizontal mirror of rewind |
 | fullscreen.select.1 | selectPanel1 | 1 of 4 selected | 1 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
 | fullscreen.open | fullscreen | Open chart fullscreen | Fullscreen | icon | standard | live | none | Complete top-right corner uses the accent |
 | panel.description | description | Description | Description | icon | standard | planned | none | Top and bottom lines accented |
-| collection.loop | loop | Loop | Loop | icon | standard | planned | none | Arrowheads terminate the path and point down/up |
+| collection.loop | loop | Loop | Loop | icon | standard | live | none | Arrowheads terminate the path and point down/up |
 | collection.periodic | periodic | Periodic rotation | Periodic rotation | icon | standard | planned | none | Arrowhead follows the circular direction |
 | chart.mixed-axis | chartMixed | Mixed axis | Mixed axis | icon | standard | reference | none | Three bars with a lower accent line |
 | chart.pie | chartPie | Pie | Pie | icon | standard | reference | none | Equal horizontal and vertical slice separation |
@@ -117,36 +117,37 @@ Surface ID: `refinements` · 12 references
 
 ## Dashboard shell
 
-Surface ID: `shell` · 26 references
+Surface ID: `shell` · 27 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | shell.open-editable-tab | open | Open editable tab | Open editable tab | icon | standard | live | none | Arrow spacing balanced above and beside the box |
-| shell.auto-viewport | auto | Auto | Auto | icon | standard | planned | none | — |
-| shell.tablet-preview | tablet | Tablet | Tablet | icon | standard | planned | none | — |
-| shell.phone-preview | phone | Phone | Phone | icon | standard | planned | none | — |
-| shell.background | background | Background | Background | icon | standard | planned | none | — |
-| shell.add-chart | addChart | Add chart | Add chart | icon | standard | planned | none | — |
-| shell.edit-chart | edit | Edit chart | Edit chart | icon | standard | planned | none | — |
-| chart.remove | trash | Remove chart | Remove chart | icon | danger | planned | required | Destructive chart action; confirmation required |
-| shell.add-tab | addTab | Add tab | Add tab | icon | standard | planned | none | — |
-| image.zoom-reset | zoomReset | Reset image zoom | Reset image zoom | icon | standard | planned | none | Approved reset arc with inset magnifier |
-| shell.save-edits | save | Save edits | Save edits | text | standard | reference | none | — |
-| shell.reset-edits | reset | Reset edits | Reset edits | text | standard | reference | none | — |
-| shell.remove-tab | trash | Remove tab | Remove tab | icon | danger | planned | required | Scope-changing confirmation |
-| shell.import | import | Import | Import | text | standard | reference | none | — |
-| shell.export | export | Export | Export | text | standard | reference | none | — |
-| shell.global-panel-colors | palette | Global panel colors | Global panel colors | text | standard | reference | none | — |
+| shell.auto-viewport | auto | Auto | Auto | icon | standard | live | none | — |
+| shell.tablet-preview | tablet | Tablet | Tablet | icon | standard | live | none | — |
+| shell.phone-preview | phone | Phone | Phone | icon | standard | live | none | — |
+| shell.background | background | Background | Background | icon | standard | live | none | — |
+| shell.add-chart | addChart | Add chart | Add chart | icon | standard | live | none | — |
+| shell.edit-chart | edit | Edit chart | Edit chart | icon | standard | live | none | — |
+| chart.remove | trash | Remove chart | Remove chart | icon | danger | live | required | Destructive chart action; confirmation required |
+| shell.add-tab | addTab | Add tab | Add tab | icon | standard | live | none | — |
+| image.zoom-reset | zoomReset | Reset image zoom | Reset image zoom | icon | standard | live | none | Approved reset arc with inset magnifier |
+| shell.save-edits | save | Save edits | Save edits | icon | standard | live | none | — |
+| shell.reset-edits | reset | Reset edits | Reset edits | icon | standard | live | none | — |
+| shell.remove-tab | trash | Remove tab | Remove tab | icon | danger | live | required | Scope-changing confirmation |
+| shell.import | import | Import | Import | icon | standard | live | none | — |
+| shell.export | export | Export | Export | icon | standard | live | none | — |
+| shell.global-panel-colors | palette | Global panel colors | Global panel colors | icon | standard | live | none | — |
 | shell.chart-accessibility | accessibility | Chart accessibility | Chart accessibility | text | standard | reference | none | — |
-| shell.apply-background | check | Apply background | Apply background | text | standard | reference | none | — |
-| shell.save-background | save | Save background | Save background | text | standard | reference | none | — |
-| shell.reset-background | reset | Reset background | Reset background | text | standard | reference | none | — |
-| shell.remove-title | trash | Remove title | Remove title | icon | danger | planned | required | Content-changing confirmation |
-| shell.start-section | section | Start section | Start section | text | standard | reference | none | — |
-| shell.install | install | Install | Install | icon | standard | reference | none | — |
+| shell.apply-background | check | Apply background | Apply background | icon | standard | live | none | — |
+| shell.save-background | save | Save background | Save background | icon | standard | live | none | — |
+| shell.reset-background | reset | Reset background | Reset background | icon | standard | live | none | — |
+| shell.remove-title | trash | Remove title | Remove title | icon | danger | live | required | Content-changing confirmation |
+| shell.start-section | section | Start section | Start section | icon | standard | live | none | — |
+| shell.install | install | Install | Install | icon | standard | live | none | — |
 | shell.report-an-issue | reportIssue | Report an issue | Report an issue | icon | standard | reference | none | — |
 | shell.contact | open | Contact | Contact | text | standard | reference | none | — |
 | shell.repository | open | Repository | Repository | text | standard | reference | none | — |
+| shell.icon-accent | palette | Icon accent | Icon accent | icon | standard | live | none | Sets the dashboard-wide secondary icon accent |
 
 ## Synchronized playback
 
@@ -188,7 +189,7 @@ Surface ID: `fullscreen` · 13 references
 | fullscreen.select.2 | selectPanel2 | 2 of 4 selected | 2 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
 | fullscreen.select.3 | selectPanel3 | 3 of 4 selected | 3 of 4 selected | icon | standard | live | none | Accent check; number offset upper-left |
 | fullscreen.select.4 | selectPanel4 | 4 of 4 selected | 4 of 4 selected | icon | standard | live | none | Accent check; maximum selection reached |
-| fullscreen.enter-multi-fullscreen | enterMulti | Enter multi-fullscreen | Enter multi-fullscreen | icon | standard | planned | none | — |
+| fullscreen.enter-multi-fullscreen | enterMulti | Enter multi-fullscreen | Enter multi-fullscreen | icon | standard | live | none | — |
 | fullscreen.cancel-multi-selection | close | Cancel | Cancel | text | standard | reference | none | — |
 | fullscreen.previous-displayed-chart | reorderPrevious | Previous | Previous | icon | standard | live | none | Reorder, not time step |
 | fullscreen.next-displayed-chart | reorderNext | Next | Next | icon | standard | live | none | Reorder, not time step |
@@ -219,11 +220,11 @@ Surface ID: `panels` · 7 references
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | panel.view-source-information | info | Source information | Source information | icon | standard | live | none | Hover-revealed lower-right action |
-| panel.view-source-csv | table | View source CSV | View source CSV | icon | standard | planned | none | Opens bare table window |
+| panel.view-source-csv | table | View source CSV | View source CSV | icon | standard | live | none | Opens bare table window |
 | fullscreen.open | fullscreen | Open chart fullscreen | Fullscreen | icon | standard | live | none | Complete top-right corner uses the accent |
 | panel.description | description | Description | Description | icon | standard | planned | none | Top and bottom lines accented |
-| panel.edit-chart | edit | Edit chart | Edit chart | icon | standard | planned | none | — |
-| chart.remove | trash | Remove chart | Remove chart | icon | danger | planned | required | Destructive chart action; confirmation required |
+| panel.edit-chart | edit | Edit chart | Edit chart | icon | standard | live | none | — |
+| chart.remove | trash | Remove chart | Remove chart | icon | danger | live | required | Destructive chart action; confirmation required |
 | panel.hold-ctrl-while-scrolling-to-zoom | — | Hold Ctrl while scrolling | Hold Ctrl while scrolling | text | standard | reference | none | Inconspicuous top-left hint |
 
 ## Chart wizard
@@ -232,18 +233,18 @@ Surface ID: `wizard` · 12 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| wizard.close-wizard | close | Close | Close | icon | standard | planned | none | — |
-| wizard.select-chart-type | chartType | Chart type | Chart type | icon | standard | planned | none | — |
-| wizard.select-data-source | dataSource | Data source | Data source | icon | standard | planned | none | — |
-| wizard.configure-data-roles | roles | Data roles | Data roles | icon | standard | planned | none | — |
-| wizard.style-and-layout | style | Style & layout | Style & layout | icon | standard | planned | none | — |
-| wizard.create-chart | addChart | Create chart | Create chart | text | standard | reference | none | — |
+| wizard.close-wizard | close | Close | Close | icon | standard | live | none | — |
+| wizard.select-chart-type | chartType | Chart type | Chart type | icon | standard | live | none | — |
+| wizard.select-data-source | dataSource | Data source | Data source | icon | standard | live | none | — |
+| wizard.configure-data-roles | roles | Data roles | Data roles | icon | standard | live | none | — |
+| wizard.style-and-layout | style | Style & layout | Style & layout | icon | standard | live | none | — |
+| wizard.create-chart | addChart | Create chart | Create chart | icon | standard | live | none | — |
 | wizard.upload-csv | upload | Upload CSV | Upload CSV | text | standard | reference | none | — |
-| wizard.enter-data-manually | manual | Enter data manually | Enter data manually | text | standard | reference | none | — |
-| wizard.view-source-csv | table | View source CSV | View source CSV | text | standard | reference | none | — |
-| wizard.remove-data-source | trash | Remove source | Remove source | icon | danger | planned | required | Scope-changing |
-| wizard.add-row | addRow | Add row | Add row | text | standard | reference | none | — |
-| wizard.remove-row | removeRow | Remove row | Remove row | icon | danger | planned | required | Destructive row action |
+| wizard.enter-data-manually | manual | Enter data manually | Enter data manually | icon | standard | live | none | — |
+| wizard.view-source-csv | table | View source CSV | View source CSV | icon | standard | live | none | — |
+| wizard.remove-data-source | trash | Remove source | Remove source | icon | danger | live | required | Scope-changing |
+| wizard.add-row | addRow | Add row | Add row | icon | standard | live | none | — |
+| wizard.remove-row | removeRow | Remove row | Remove row | icon | danger | live | required | Destructive row action |
 
 ## Editor tabs
 
@@ -251,14 +252,14 @@ Surface ID: `editor-tabs` · 8 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| editor.tab.data | dataTab | Data | Data | icon | standard | planned | none | — |
-| editor.tab.appearance | palette | Appearance | Appearance | icon | standard | planned | none | — |
-| editor.tab.axes | axes | Axes | Axes | icon | standard | planned | none | — |
-| editor.tab.map | map | Map | Map | icon | standard | planned | none | — |
-| editor.tab.timeline | timeline | Timeline | Timeline | icon | standard | planned | none | — |
-| editor.tab.collection | collection | Collection | Collection | icon | standard | planned | none | — |
-| editor.tab.interactions | interactions | Interactions | Interactions | icon | standard | planned | none | — |
-| editor.tab.advanced | advanced | Advanced | Advanced | icon | standard | planned | none | — |
+| editor.tab.data | dataTab | Data | Data | icon | standard | live | none | — |
+| editor.tab.appearance | palette | Appearance | Appearance | icon | standard | live | none | — |
+| editor.tab.axes | axes | Axes | Axes | icon | standard | live | none | — |
+| editor.tab.map | map | Map | Map | icon | standard | live | none | — |
+| editor.tab.timeline | timeline | Timeline | Timeline | icon | standard | live | none | — |
+| editor.tab.collection | collection | Collection | Collection | icon | standard | live | none | — |
+| editor.tab.interactions | interactions | Interactions | Interactions | icon | standard | live | none | — |
+| editor.tab.advanced | advanced | Advanced | Advanced | icon | standard | live | none | — |
 
 ## Editor actions
 
@@ -266,19 +267,19 @@ Surface ID: `editor-actions` · 16 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| editor.add-measurement | addChart | Add measurement | Add measurement | text | standard | reference | none | — |
+| editor.add-measurement | addChart | Add measurement | Add measurement | icon | standard | live | none | — |
 | editor.add-column | addRow | Add column | Add column | text | standard | reference | none | — |
-| editor.add-filter | addTab | Add filter | Add filter | text | standard | reference | none | — |
-| editor.add-factor | roles | Add factor | Add factor | text | standard | reference | none | — |
-| editor.add-color | palette | Add color | Add color | text | standard | reference | none | — |
-| editor.remove-measurement | trash | Remove measurement | Remove measurement | icon | danger | planned | required | Destructive field action |
+| editor.add-filter | addTab | Add filter | Add filter | icon | standard | live | none | — |
+| editor.add-factor | roles | Add factor | Add factor | icon | standard | live | none | — |
+| editor.add-color | palette | Add color | Add color | icon | standard | live | none | — |
+| editor.remove-measurement | trash | Remove measurement | Remove measurement | icon | danger | live | required | Destructive field action |
 | editor.pick-color-from-dashboard | eyedropper | Eyedropper | Eyedropper | icon | standard | live | none | — |
-| editor.use-default-colors | palette | Use default colors | Use default colors | text | standard | reference | none | — |
-| editor.apply-to-source-sharing-charts | dataSource | Apply to source-sharing charts | Apply to source-sharing charts | text | standard | reference | none | Cross-chart propagation must stay explicit |
+| editor.use-default-colors | palette | Use default colors | Use default colors | icon | standard | live | none | — |
+| editor.apply-to-source-sharing-charts | dataSource | Apply to source-sharing charts | Apply to source-sharing charts | icon | standard | live | none | Cross-chart propagation must stay explicit |
 | editor.save-changes | save | Save changes | Save changes | icon | standard | live | none | — |
 | editor.reset-changes | reset | Reset changes | Reset changes | icon | standard | live | none | — |
-| editor.cancel | close | Cancel | Cancel | text | standard | reference | none | — |
-| chart.remove | trash | Remove chart | Remove chart | icon | danger | planned | required | Destructive chart action; confirmation required |
+| editor.cancel | close | Cancel | Cancel | icon | standard | live | none | — |
+| chart.remove | trash | Remove chart | Remove chart | icon | danger | live | required | Destructive chart action; confirmation required |
 | editor.previous-source-page | previous | Previous | Previous | icon | standard | planned | none | — |
 | editor.next-source-page | next | Next | Next | icon | standard | planned | none | — |
 | editor.add-reference-line | referenceLine | Reference line | Reference line | icon | standard | planned | none | Planned for line graphs |
@@ -289,9 +290,9 @@ Surface ID: `collection-modes` · 4 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| collection.mode.fixed-grid | fixedGrid | Fixed Grid | Fixed Grid | icon | standard | planned | none | — |
-| collection.mode.scrollable-grid | scrollGrid | Scrollable Grid | Scrollable Grid | icon | standard | planned | none | — |
-| collection.mode.auto-carousel | carousel | Auto Carousel | Auto Carousel | icon | standard | planned | none | — |
+| collection.mode.fixed-grid | fixedGrid | Fixed Grid | Fixed Grid | icon | standard | live | none | — |
+| collection.mode.scrollable-grid | scrollGrid | Scrollable Grid | Scrollable Grid | icon | standard | live | none | — |
+| collection.mode.auto-carousel | carousel | Auto Carousel | Auto Carousel | icon | standard | live | none | — |
 | collection.mode.priority-mode | priority | Priority Mode | Priority Mode | icon | standard | planned | none | — |
 
 ## Collection controls
@@ -300,15 +301,15 @@ Surface ID: `collection-controls` · 16 references
 
 | Interaction ID | Glyph | Accessible label | Tooltip | Rendering | Tone | Status | Confirmation | Implementation note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| collection.pause-carousel | pause | Pause | Pause | icon | standard | planned | none | — |
-| collection.resume-carousel | play | Resume | Resume | icon | standard | planned | none | — |
-| collection.previous-page | previous | Previous | Previous | icon | standard | planned | none | — |
-| collection.next-page | next | Next | Next | icon | standard | planned | none | — |
-| collection.loop | loop | Loop | Loop | icon | standard | planned | none | Arrowheads terminate the path and point down/up |
-| collection.sort-ascending | sortAsc | Ascending | Ascending | icon | standard | planned | none | — |
-| collection.sort-descending | sortDesc | Descending | Descending | icon | standard | planned | none | — |
-| collection.re-rank-now | rerank | Re-rank | Re-rank | icon | standard | planned | none | — |
-| collection.keep-stable-order | lock | Stable order | Stable order | icon | standard | planned | none | — |
+| collection.pause-carousel | pause | Pause | Pause | icon | standard | live | none | — |
+| collection.resume-carousel | play | Resume | Resume | icon | standard | live | none | — |
+| collection.previous-page | previous | Previous | Previous | icon | standard | live | none | — |
+| collection.next-page | next | Next | Next | icon | standard | live | none | — |
+| collection.loop | loop | Loop | Loop | icon | standard | live | none | Arrowheads terminate the path and point down/up |
+| collection.sort-ascending | sortAsc | Ascending | Ascending | icon | standard | live | none | — |
+| collection.sort-descending | sortDesc | Descending | Descending | icon | standard | live | none | — |
+| collection.re-rank-now | rerank | Re-rank | Re-rank | icon | standard | live | none | — |
+| collection.keep-stable-order | lock | Stable order | Stable order | icon | standard | live | none | — |
 | collection.continuous-scroll | continuous | Continuous | Continuous | icon | standard | planned | none | — |
 | collection.periodic | periodic | Periodic rotation | Periodic rotation | icon | standard | planned | none | Arrowhead follows the circular direction |
 | collection.page-status | carousel | Page 1 of 4 | Page 1 of 4 | text | standard | reference | none | — |

@@ -2,6 +2,7 @@ import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import { IconControl } from "./common/SimExIcon.js";
 import { chartPanelLayoutClass } from "./chartPanelLayout.js";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
@@ -114,21 +115,15 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <button type="button" className="secondary" disabled={editDisabled} onClick={() => {
+            <IconControl interactionId="panel.edit-chart" className="secondary" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onEdit?.();
-            }} aria-label="Edit chart">
-              Edit
-            </button>
-            <button type="button" className="secondary" disabled={editDisabled} onClick={() => {
+            }} />
+            <IconControl interactionId="shell.start-section" className="secondary" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onStartSection?.();
-            }} aria-label="Start section here">
-              Section
-            </button>
-            <button type="button" className="danger" disabled={editDisabled} onClick={() => {
+            }} ariaLabel="Start section here" tooltip="Start section here" />
+            <IconControl interactionId="chart.remove" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onRemove?.();
-            }} aria-label="Remove chart">
-              Remove
-            </button>
+            }} />
           </>
         )}
       </div>}

@@ -1,6 +1,7 @@
 import React from "react";
 
 import GeneratedFormSection from "./GeneratedFormSection.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 
 const SECTION_TABS = Object.freeze({
   data: Object.freeze({ id: "data", label: "Data" }),
@@ -69,17 +70,16 @@ export default function ContextualTabs({
         className: "chart-editor-tab-list",
         "aria-label": "Chart settings",
       },
-      tabs.map((tab) => React.createElement(
-        "button",
-        {
-          key: tab.id,
-          type: "button",
-          className: "chart-editor-tab",
-          "aria-current": active.id === tab.id ? "page" : undefined,
-          onClick: () => onSelect(tab.id),
-        },
-        tab.label,
-      )),
+      tabs.map((tab) => React.createElement(IconControl, {
+        key: tab.id,
+        interactionId: `editor.tab.${tab.id}`,
+        className: "chart-editor-tab",
+        ariaLabel: tab.label,
+        tooltip: tab.label,
+        "aria-current": active.id === tab.id ? "page" : undefined,
+        pressed: active.id === tab.id,
+        onClick: () => onSelect(tab.id),
+      })),
     ),
     React.createElement(
       "div",
