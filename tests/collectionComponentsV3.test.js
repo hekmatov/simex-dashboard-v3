@@ -54,7 +54,7 @@ test("fixed 3 by 3 collections expose exact dimensions and manual pages for over
   assert.match(html, /grid-template-rows:repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(html, /gap:12px/);
   assert.match(html, /Page 1 of 2/);
-  assert.match(html, /aria-label="Previous collection page"[^>]*disabled/);
+  assert.match(buttonMarkupByAriaLabel(html, "Previous collection page"), /\sdisabled=""/);
   assert.match(html, /aria-label="Next collection page"/);
   assert.equal((html.match(/role="listitem"/g) ?? []).length, 9);
   assert.match(html, /Item 9/);
@@ -118,8 +118,8 @@ test("carousel SSR is static, accessible, manually operable, and does not alloca
     assert.match(html, /data-collection-transition="slide"/);
     assert.match(html, /aria-label="Pause collection rotation"/);
     assert.doesNotMatch(
-      html,
-      /aria-label="Previous collection page"[^>]*disabled/,
+      buttonMarkupByAriaLabel(html, "Previous collection page"),
+      /\sdisabled=""/,
     );
     assert.match(html, /aria-label="Next collection page"/);
     assert.match(html, /Page 1 of 2/);
@@ -142,7 +142,7 @@ test("non-looping carousel keeps boundary controls clamped and disabled", () => 
     },
   }, collectionItems(6));
 
-  assert.match(html, /aria-label="Previous collection page"[^>]*disabled/);
+  assert.match(buttonMarkupByAriaLabel(html, "Previous collection page"), /\sdisabled=""/);
   assert.match(html, /aria-label="Next collection page"/);
 });
 
@@ -813,4 +813,11 @@ function assertTextOrder(html, labels, description) {
     positions,
     `${description}: expected ${labels.join(", ")}`,
   );
+}
+
+function buttonMarkupByAriaLabel(html, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = html.match(new RegExp(`<button\\b[^>]*aria-label="${escapedLabel}"[^>]*>`));
+  assert.ok(match, `expected button labelled ${label} in ${html}`);
+  return match[0];
 }

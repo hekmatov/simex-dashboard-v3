@@ -151,6 +151,9 @@ const {
 } = await import(
   "../src/components/chart-authoring/EditSessionActions.jsx"
 );
+const { IconControl } = await import(
+  "../src/components/common/SimExIcon.js"
+);
 
 const backgroundSection = {
   id: "appearance",
@@ -505,8 +508,8 @@ test("filter controls select a source column and emit the curated filter contrac
     },
   });
   const add = findElement(tree, (element) => (
-    element.type === "button"
-    && element.props.children === "Add filter"
+    element.type === IconControl
+    && element.props.interactionId === "editor.add-filter"
   ));
 
   assert.ok(add);
@@ -934,15 +937,15 @@ test("series palette fields reuse ColorField interactions and emit detached arra
   assert.equal(element.type, SeriesColorsField);
   const palette = SeriesColorsField(element.props);
   const colorFields = findElementsByType(palette, ColorField);
-  const buttons = findElementsByType(palette, "button");
+  const buttons = findElementsByType(palette, IconControl);
   const addButton = buttons.find(
-    ({ props }) => props.children === "Add color",
+    ({ props }) => props.interactionId === "editor.add-color",
   );
   const removeButton = buttons.find(
-    ({ props }) => props.children === "Remove",
+    ({ props }) => props.interactionId === "editor.remove-measurement",
   );
   const defaultButton = buttons.find(
-    ({ props }) => props.children === "Use default colors",
+    ({ props }) => props.interactionId === "editor.use-default-colors",
   );
 
   assert.equal(colorFields.length, 2);
@@ -1043,18 +1046,19 @@ test("wizard exposes four directly clickable button tabs in the approved order",
     onClose() {},
     onCreate() {},
   }));
-  const labels = [
-    "Chart type",
-    "Data source",
-    "Data roles",
-    "Style and layout",
+  const tabs = [
+    ["wizard.select-chart-type", "Chart type"],
+    ["wizard.select-data-source", "Data source"],
+    ["wizard.configure-data-roles", "Data roles"],
+    ["wizard.style-and-layout", "Style and layout"],
   ];
   let lastIndex = -1;
-  for (const label of labels) {
-    const match = new RegExp(`<button[^>]*>${label}</button>`).exec(html);
-    assert.ok(match, `${label} should be a button`);
-    assert.ok(match.index > lastIndex, `${label} should be in order`);
-    lastIndex = match.index;
+  for (const [interactionId, label] of tabs) {
+    const markup = buttonMarkupByInteraction(html, interactionId);
+    const index = html.indexOf(markup);
+    assert.match(markup, new RegExp(`aria-label="${label}"`));
+    assert.ok(index > lastIndex, `${label} should be in order`);
+    lastIndex = index;
   }
   assert.doesNotMatch(
     html.slice(html.indexOf("Choose a chart type")),
@@ -1090,8 +1094,14 @@ test("every wizard tab remains enabled and explains unmet prerequisites", () => 
     onCreate() {},
   }));
 
-  assert.equal((html.match(/class="chart-wizard-step-button/g) ?? []).length, 4);
-  assert.doesNotMatch(html, /chart-wizard-step-button[^>]*disabled/);
+  for (const interactionId of [
+    "wizard.select-chart-type",
+    "wizard.select-data-source",
+    "wizard.configure-data-roles",
+    "wizard.style-and-layout",
+  ]) {
+    assert.doesNotMatch(buttonMarkupByInteraction(html, interactionId), /disabled=""/);
+  }
   assert.match(html, /Choose a chart type/);
 });
 
@@ -1117,7 +1127,10 @@ test("an early destination explains prerequisites without exposing crashing cont
   assert.match(html, /<select[^>]*disabled/);
   assert.match(html, /type="file"[^>]*disabled/);
   assert.match(html, /Enter data manually/);
-  assert.match(html, /<button[^>]*disabled[^>]*>Enter data manually<\/button>/);
+  assert.match(
+    buttonMarkupByInteraction(html, "wizard.enter-data-manually"),
+    /disabled=""/,
+  );
 });
 
 test("discard and source-removal confirmations call only the approved callbacks", () => {
@@ -2114,12 +2127,12 @@ test("contextual editor tabs are derived from materialized sections without a ge
     "Appearance",
     "Advanced",
   ]);
-  assert.match(pieHtml, />Data</);
-  assert.match(pieHtml, />Appearance</);
-  assert.doesNotMatch(pieHtml, />Axes</);
-  assert.doesNotMatch(pieHtml, />Map</);
-  assert.doesNotMatch(pieHtml, />Timeline</);
-  assert.doesNotMatch(pieHtml, />Series</);
+  assert.match(pieHtml, /data-icon-control="editor\.tab\.data"/);
+  assert.match(pieHtml, /data-icon-control="editor\.tab\.appearance"/);
+  assert.doesNotMatch(pieHtml, /data-icon-control="editor\.tab\.axes"/);
+  assert.doesNotMatch(pieHtml, /data-icon-control="editor\.tab\.map"/);
+  assert.doesNotMatch(pieHtml, /data-icon-control="editor\.tab\.timeline"/);
+  assert.doesNotMatch(pieHtml, /aria-label="Series"/);
 
   const line = validLineChart();
   const lineRuntime = createWizardPreparation({
@@ -2157,8 +2170,8 @@ test("editor keeps title repair reachable before preview readiness", () => {
   }));
 
   assert.match(html, /Chart title/);
-  assert.match(html, />Data</);
-  assert.match(html, />Appearance</);
+  assert.match(html, /data-icon-control="editor\.tab\.data"/);
+  assert.match(html, /data-icon-control="editor\.tab\.appearance"/);
 });
 
 test("save and reset are adjacent and reset confirmation is accessible", () => {
@@ -2205,7 +2218,7 @@ test("pending chart persistence disables and guards removal", () => {
     },
   });
   const remove = findElement(tree, (element) => (
-    element.type === "button" && element.props.children === "Remove chart"
+    element.type === IconControl && element.props.interactionId === "chart.remove"
   ));
 
   assert.ok(remove);
@@ -3319,6 +3332,16 @@ function findElement(node, predicate) {
     if (found) return found;
   }
   return null;
+}
+
+function buttonMarkupByInteraction(html, interactionId) {
+  const marker = `data-icon-control="${interactionId}"`;
+  const markerIndex = html.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `Missing icon control ${interactionId}`);
+  const start = html.lastIndexOf("<button", markerIndex);
+  const end = html.indexOf("</button>", markerIndex);
+  assert.ok(start >= 0 && end >= markerIndex, `Malformed icon control ${interactionId}`);
+  return html.slice(start, end + "</button>".length);
 }
 
 function validLineChart(overrides = {}) {

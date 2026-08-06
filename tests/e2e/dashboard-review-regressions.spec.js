@@ -42,7 +42,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   await panel.getByRole("button", { name: "Edit chart" }).click();
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   await page.getByLabel("Chart title").fill("Updated wrapped KPI");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
 
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
@@ -150,7 +150,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
 
   await page.getByLabel("Program label").fill("Imported profile retained");
-  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await page.getByRole("button", { name: "Save edits" }).click();
 
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
@@ -204,7 +204,7 @@ test("additive imported tracked profiles survive an edit and browser reload", as
   await openDashboard(page);
   await page.getByRole("button", { name: "Open edit mode" }).click();
   await page.getByLabel("Program label").fill("Imported profile retained");
-  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await page.getByRole("button", { name: "Save edits" }).click();
 
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
@@ -233,7 +233,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
     name: "Dashboard configuration error",
   })).toHaveCount(0);
   await expect(page.getByRole("button", {
-    name: "Biomedical",
+    name: "Open Biomedical",
     exact: true,
   })).toHaveCount(0);
   await expect.poll(() => page.evaluate((key) => {

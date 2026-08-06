@@ -156,10 +156,9 @@ test("playback entry is disabled with associated guidance while chart authoring 
     },
   );
 
-  assert.match(
-    blocked,
-    /aria-label="Open playback view"[^>]*aria-describedby="playback-entry-blocked-reason"[^>]*disabled/,
-  );
+  const blockedEntry = buttonMarkupByAriaLabel(blocked, "Open playback view");
+  assert.match(blockedEntry, /aria-describedby="playback-entry-blocked-reason"/);
+  assert.match(blockedEntry, /disabled=""/);
   assert.match(
     blocked,
     /id="playback-entry-blocked-reason"[^>]*>Finish, save, or discard chart authoring before opening Playback view\./,
@@ -167,12 +166,12 @@ test("playback entry is disabled with associated guidance while chart authoring 
   assert.match(blocked, /data-static-dashboard="true"/);
   assert.doesNotMatch(unblocked, /playback-entry-blocked-reason/);
   assert.doesNotMatch(
-    unblocked,
-    /aria-label="Open playback view"[^>]*disabled/,
+    buttonMarkupByAriaLabel(unblocked, "Open playback view"),
+    /disabled=""/,
   );
   assert.doesNotMatch(
-    alreadyOpen,
-    /aria-label="Close playback view"[^>]*disabled/,
+    buttonMarkupByAriaLabel(alreadyOpen, "Close playback view"),
+    /disabled=""/,
   );
 });
 
@@ -210,12 +209,12 @@ test("transport actions are disabled for absent, empty, and boundary clocks", ()
     },
   );
 
-  assert.match(noGroup, /aria-label="Play synchronized charts"[^>]*disabled/);
+  assert.match(buttonMarkupByAriaLabel(noGroup, "Play synchronized charts"), /disabled=""/);
   assert.match(noGroup, /No playback group is available/);
-  assert.match(atStart, /aria-label="Previous time"[^>]*disabled/);
-  assert.match(atEnd, /aria-label="Play synchronized charts"[^>]*disabled/);
-  assert.match(atEnd, /aria-label="Next time"[^>]*disabled/);
-  assert.match(closedView, /aria-label="Play synchronized charts"[^>]*disabled/);
+  assert.match(buttonMarkupByAriaLabel(atStart, "Previous time"), /disabled=""/);
+  assert.match(buttonMarkupByAriaLabel(atEnd, "Play synchronized charts"), /disabled=""/);
+  assert.match(buttonMarkupByAriaLabel(atEnd, "Next time"), /disabled=""/);
+  assert.match(buttonMarkupByAriaLabel(closedView, "Play synchronized charts"), /disabled=""/);
 });
 
 test("the provider exposes a frozen context and optional consumption is safe outside it", () => {
@@ -1393,6 +1392,16 @@ function timelineChart(typeId) {
       timeSync: { groupId: "exercise" },
     },
   };
+}
+
+function buttonMarkupByAriaLabel(html, label) {
+  const marker = `aria-label="${label}"`;
+  const markerIndex = html.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `Missing button ${label}`);
+  const start = html.lastIndexOf("<button", markerIndex);
+  const end = html.indexOf("</button>", markerIndex);
+  assert.ok(start >= 0 && end >= markerIndex, `Malformed button ${label}`);
+  return html.slice(start, end + "</button>".length);
 }
 
 function chronoChoroplethChart() {

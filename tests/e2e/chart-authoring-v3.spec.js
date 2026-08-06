@@ -298,8 +298,10 @@ test("editor reset, save race, title alignment, and shared background color stay
     .toHaveCount(0);
   await expect(editor.getByRole("button", { name: "Map", exact: true }))
     .toHaveCount(0);
-  await expect(editor.locator(".chart-editor-actions button")).toHaveText([
-    "Save",
+  await expect.poll(() => editor.locator(".chart-editor-actions button").evaluateAll(
+    (buttons) => buttons.map((button) => button.getAttribute("aria-label")),
+  )).toEqual([
+    "Save changes",
     "Reset changes",
     "Cancel",
     "Remove chart",
@@ -332,7 +334,7 @@ test("editor reset, save race, title alignment, and shared background color stay
   await editor.getByLabel("Line width").fill("3.5");
   await editor.getByRole("button", { name: "Add color" }).click();
   await editor.getByLabel("Color 1", { exact: true }).fill("#2BAA7B");
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await panel.getByRole("button", { name: "Edit chart" }).click();
   await editor.getByRole("button", { name: "Appearance", exact: true })
@@ -381,7 +383,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   await conversion.getByRole("button", { name: "Apply chart type change" })
     .click();
   await expect(type).toHaveValue("bar");
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expectStoredChart(page, "bar", "Confirmed cases");
   await panel.getByRole("button", { name: "Edit chart" }).click();
 
@@ -406,7 +408,7 @@ test("editor chart conversion supports compatible changes and recoverable remapp
   await expect(editor.getByLabel("Duplicate observations")).toBeVisible();
   await editor.getByLabel("Duplicate observations").selectOption("last");
   await expect(editor.locator(".chart-authoring-preview-ready")).toBeVisible();
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expectStoredChart(page, "scatter", "Confirmed cases");
 });
 
@@ -416,7 +418,7 @@ async function openWizard(page) {
 
 async function openBiomedicalPage(page) {
   await page.getByRole("navigation", { name: "Dashboard pages" })
-    .getByRole("button", { name: "Biomedical", exact: true })
+    .getByRole("button", { name: "Open Biomedical", exact: true })
     .click();
 }
 

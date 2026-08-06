@@ -137,7 +137,10 @@ async function armPendingMutationSurfaceObservation(page, pendingLabel) {
       );
       const inspect = () => {
         const pending = [...document.querySelectorAll("button")]
-          .find((button) => button.textContent?.trim() === label);
+          .find((button) => (
+            button.getAttribute("aria-label") === label
+            || button.textContent?.trim() === label
+          ));
         if (!pending) return;
         clearTimeout(timeoutId);
         observer.disconnect();
@@ -188,8 +191,7 @@ async function armPendingChartDismissal(page, dismissal) {
       );
       const inspect = () => {
         const editor = document.querySelector(".chart-editor-v3");
-        const saving = [...(editor?.querySelectorAll("button") ?? [])]
-          .find((button) => button.textContent?.trim() === "Saving...");
+        const saving = editor?.querySelector('button[aria-label="Saving changes"]');
         if (!saving) return;
         clearTimeout(timeoutId);
         observer.disconnect();
@@ -227,8 +229,7 @@ async function armWizardPendingObservation(page) {
       );
       const inspect = () => {
         const wizard = document.querySelector(".chart-wizard-backdrop");
-        const creating = [...(wizard?.querySelectorAll("button") ?? [])]
-          .find((button) => button.textContent?.trim() === "Creating...");
+        const creating = wizard?.querySelector('button[aria-label="Creating chart"]');
         if (!creating) return;
         clearTimeout(timeoutId);
         observer.disconnect();
@@ -238,8 +239,7 @@ async function armWizardPendingObservation(page) {
         const discardButtons = [...(discard?.querySelectorAll("button") ?? [])];
         resolve({
           creatingDisabled: creating.matches(":disabled"),
-          closeDisabled: [...wizard.querySelectorAll("button")]
-            .find((button) => button.textContent?.trim() === "Close")
+          closeDisabled: wizard.querySelector('button[aria-label="Close"]')
             ?.matches(":disabled") ?? false,
           discardVisible: Boolean(discard),
           discardButtonsDisabled: discardButtons.length === 2
@@ -279,9 +279,8 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
   const actionState = await page.evaluate(() => {
-    const addTab = [...document.querySelectorAll("button")]
-      .find((button) => button.textContent === "Add tab");
-    const save = document.querySelector('[aria-label="Save edit mode"]');
+    const addTab = document.querySelector('button[aria-label="Add tab"]');
+    const save = document.querySelector('[aria-label="Save edits"]');
     const prompt = window.prompt;
     let promptCalls = 0;
     window.prompt = () => {
@@ -322,13 +321,13 @@ test("pending final save locks the edit mutation surface", async ({ page }) => {
   test.setTimeout(90_000);
   await openDashboardEditMode(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await armPendingMutationSurfaceObservation(page, "Saving...");
-  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await armPendingMutationSurfaceObservation(page, "Saving edits");
+  await page.getByRole("button", { name: "Save edits" }).click();
   const observed = await readPendingMutationSurfaceObservation(page);
 
-  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await page.getByRole("button", { name: "Save edits" }).click();
   await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
   expect(observed.pendingDisabled).toBe(true);
   expect(observed.controlCount).toBeGreaterThan(20);
@@ -359,12 +358,12 @@ test("pending reset locks the edit mutation surface", async ({ page }) => {
 test("failed chart save keeps the editor and draft open for retry", async ({ page }) => {
   await openFirstChartEditor(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save" }).click();
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save changes" }).click();
   await expect(page.locator(".chart-editor-v3")).toBeVisible();
   await expect(page.locator(".chart-editor-error")).toContainText("Browser storage is full");
 
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save" }).click();
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save changes" }).click();
   await expect(page.locator(".chart-editor-v3")).toBeHidden();
 });
 
@@ -375,12 +374,12 @@ for (const dismissal of ["Escape", "backdrop"]) {
     const editor = page.locator(".chart-editor-v3");
     await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
     await armPendingChartDismissal(page, dismissal);
-    await editor.getByRole("button", { name: "Save" }).click();
+    await editor.getByRole("button", { name: "Save changes" }).click();
     await page.evaluate(() => globalThis.__SIMEX_PENDING_DISMISSAL__);
     await expect(editor).toBeVisible();
     await expect(editor.getByRole("alert")).toContainText("Browser storage is full");
     await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-    await editor.getByRole("button", { name: "Save" }).click();
+    await editor.getByRole("button", { name: "Save changes" }).click();
     await expect(editor).toBeHidden();
   });
 }
@@ -515,7 +514,7 @@ test("failed reset reports inside its confirmation and preserves the draft for s
   await expect(confirmation).toBeHidden();
   await expect(page.locator(".edit-operation-error")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Save edit mode" }).click();
+  await page.getByRole("button", { name: "Save edits" }).click();
   await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
   await page.reload();
   await expect(page.locator(".dashboard-brand-block .eyebrow")).toHaveText(
@@ -584,8 +583,9 @@ test("wizard create transaction coalesces, locks dismissal, retains mappings, an
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
   await armWizardPendingObservation(page);
   await page.evaluate(() => {
-    const create = [...document.querySelectorAll(".chart-wizard-backdrop button")]
-      .find((button) => button.textContent?.trim() === "Create chart");
+    const create = document.querySelector(
+      '.chart-wizard-backdrop button[aria-label="Create chart"]',
+    );
     create.click();
     create.click();
     document.dispatchEvent(new KeyboardEvent("keydown", {
@@ -629,11 +629,11 @@ test("wizard create transaction coalesces, locks dismissal, retains mappings, an
 test("failed edit-session save and reset keep edit mode available for retry", async ({ page }) => {
   await openDashboardEditMode(page);
   await page.getByLabel("Program label").fill("Unsaved exercise label");
-  await page.getByRole("button", { name: "Save edit mode" }).evaluate((button) => {
+  await page.getByRole("button", { name: "Save edits" }).evaluate((button) => {
     globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
     button.click();
   });
-  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
   await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
 
   await page.getByRole("button", { name: "Reset edits" }).click();
@@ -643,7 +643,7 @@ test("failed edit-session save and reset keep edit mode available for retry", as
     button.click();
   });
   await expect(confirmation).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
 
   await confirmation.getByRole("button", { name: "Reset edits" }).click();
   await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
@@ -652,8 +652,8 @@ test("failed edit-session save and reset keep edit mode available for retry", as
 test("failed final edit-session commit keeps the chart edit context available", async ({ page }) => {
   await openFirstChartEditor(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await page.getByRole("button", { name: "Save edit mode" }).evaluate((button) => button.click());
-  await expect(page.getByRole("button", { name: "Save edit mode" })).toBeVisible();
+  await page.getByRole("button", { name: "Save edits" }).evaluate((button) => button.click());
+  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
   await expect(page.locator(".chart-editor-v3")).toBeVisible();
   await expect(page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" })).toBeVisible();
   await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
