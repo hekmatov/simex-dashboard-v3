@@ -643,7 +643,9 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
   };
   const rows = [{ date: "2027-01-01", cases: 7 }];
   const profile = reusableProfile("cases", source, rows);
+  const requestedUrls = [];
   globalThis.fetch = async (url) => {
+    requestedUrls.push(String(url));
     if (String(url).endsWith("data/cases.csv")) {
       return new Response("date,cases\n2027-01-01,7\n");
     }
@@ -681,9 +683,170 @@ test("runtime loads descriptors with faithfully hydrated reusable profiles", asy
       loaded.datasetProfiles.cases.columns[0].temporal.values.length,
       rows.length,
     );
+    assert.deepEqual(requestedUrls, [
+      "/data/cases.csv",
+      "/data/regions.geojson",
+    ]);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("compatibility loading recovers a cached failure in configured source order", async () => {
+  const originalFetch = globalThis.fetch;
+  const laterSource = {
+    kind: "csv",
+    path: "data/task-3-round-2-later.csv",
+    provenance: { label: "Later transient cases" },
+    parsingMetadata: {
+      date: {
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+        timezone: "date-only",
+      },
+    },
+  };
+  const earlierSource = {
+    ...laterSource,
+    path: "data/task-3-round-2-earlier.csv",
+    provenance: { label: "Earlier uncached cases" },
+  };
+  const laterRows = [{ date: "2027-03-02", cases: 10 }];
+  const earlierRows = [{ date: "2027-03-01", cases: 9 }];
+  const laterProfile = reusableProfile(
+    "task3CachedFailureLater",
+    laterSource,
+    laterRows,
+  );
+  const earlierProfile = reusableProfile(
+    "task3UncachedEarlier",
+    earlierSource,
+    earlierRows,
+  );
+  const requestedUrls = [];
+  let laterAttempts = 0;
+  globalThis.fetch = async (url) => {
+    const requestUrl = String(url);
+    requestedUrls.push(requestUrl);
+    if (requestUrl === "/data/task-3-round-2-later.csv") {
+      laterAttempts += 1;
+      if (laterAttempts === 1) return new Response("", { status: 503 });
+      return new Response("date,cases\n2027-03-02,10\n");
+    }
+    if (requestUrl === "/data/task-3-round-2-earlier.csv") {
+      return new Response("date,cases\n2027-03-01,9\n");
+    }
+    return new Response("", { status: 404 });
+  };
+
+  try {
+    await assert.rejects(
+      loadDashboardConfig(
+        sourceLoadingDashboard({ task3CachedFailureLater: laterSource }),
+        { task3CachedFailureLater: laterProfile },
+      ),
+      /could not load data file/i,
+    );
+    assert.deepEqual(requestedUrls, ["/data/task-3-round-2-later.csv"]);
+    requestedUrls.length = 0;
+
+    const loaded = await loadDashboardConfig(
+      sourceLoadingDashboard({
+        task3UncachedEarlier: earlierSource,
+        task3CachedFailureLater: laterSource,
+      }),
+      {
+        task3UncachedEarlier: earlierProfile,
+        task3CachedFailureLater: laterProfile,
+      },
+    );
+
+    assert.deepEqual(requestedUrls, [
+      "/data/task-3-round-2-earlier.csv",
+      "/data/task-3-round-2-later.csv",
+    ]);
+    assert.equal(laterAttempts, 2);
+    assert.deepEqual(loaded.loadedData.task3UncachedEarlier, earlierRows);
+    assert.deepEqual(loaded.loadedData.task3CachedFailureLater, laterRows);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("runtime eagerly hydrates uploaded and inline temporal sources with the public shape", async () => {
+  const inlineRows = [{ reportDate: "2027-02-01", cases: 5 }];
+  const dashboard = sourceLoadingDashboard({
+    uploaded: {
+      kind: "dataset",
+      type: "uploadedCsv",
+      fileName: "uploaded-cases.csv",
+      csvText: "reportDate,cases\n31/01/2027,4\n",
+      provenance: { label: "Uploaded cases" },
+      parsingMetadata: {
+        reportDate: {
+          interpretation: "temporal",
+          format: "DD/MM/YYYY",
+          timezone: "date-only",
+        },
+      },
+    },
+    manual: {
+      kind: "inline",
+      rows: inlineRows,
+      provenance: { label: "Manual cases" },
+      parsingMetadata: {
+        reportDate: {
+          interpretation: "temporal",
+          format: "YYYY-MM-DD",
+          timezone: "date-only",
+        },
+      },
+    },
+  });
+
+  const loaded = await loadDashboardConfig(dashboard, {});
+
+  assert.deepEqual(loaded.loadedData.uploaded, [{
+    reportDate: "31/01/2027",
+    cases: 4,
+  }]);
+  assert.deepEqual(loaded.loadedData.manual, inlineRows);
+  assert.notEqual(loaded.loadedData.manual, inlineRows);
+  assert.notEqual(loaded.loadedData.manual[0], inlineRows[0]);
+  assert.deepEqual(Object.keys(loaded.datasetProfiles), ["uploaded", "manual"]);
+
+  const uploadedDate = loaded.datasetProfiles.uploaded.columns.find(
+    ({ name }) => name === "reportDate",
+  );
+  assert.equal(uploadedDate.type, "temporal");
+  assert.deepEqual(uploadedDate.temporal.values, ["2027-01-31"]);
+  assert.deepEqual(uploadedDate.temporal.parsingMetadata, {
+    interpretation: "temporal",
+    format: "DD/MM/YYYY",
+    timezone: "date-only",
+  });
+
+  const manualDate = loaded.datasetProfiles.manual.columns.find(
+    ({ name }) => name === "reportDate",
+  );
+  assert.equal(manualDate.type, "temporal");
+  assert.deepEqual(manualDate.temporal.values, ["2027-02-01"]);
+  assert.deepEqual(manualDate.temporal.parsingMetadata, {
+    interpretation: "temporal",
+    format: "YYYY-MM-DD",
+    timezone: "date-only",
+  });
+
+  assert.deepEqual(Object.keys(loaded), [
+    "configVersion",
+    "id",
+    "title",
+    "dataSources",
+    "pages",
+    "datasetProfiles",
+    "loadedData",
+  ]);
+  assert.equal(loaded.dataSources, dashboard.dataSources);
 });
 
 test("runtime rejects malformed GeoJSON before exposing it to charts", async () => {

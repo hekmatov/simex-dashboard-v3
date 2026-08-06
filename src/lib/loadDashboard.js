@@ -5,9 +5,12 @@ import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
 import { validateTimeSyncGroups } from "../charting/time/timeSyncModel.js";
+import { createDashboardSourceProviders } from "../data/dashboardSourceProviders.js";
+import { createDataService, createSourceCache } from "../data/dataService.js";
+import { createProviderRegistry } from "../data/providerRegistry.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 
-const dataSourceCache = new Map();
+const dashboardSourceCache = createSourceCache();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
 const SOURCE_KEYS = new Set(["kind", "path", "provenance", "parsingMetadata"]);
 const INLINE_SOURCE_KEYS = new Set([
@@ -170,25 +173,31 @@ export async function loadDashboardConfig(
     structure,
     dataSources,
   );
-  const hydratedProfiles = structuredClone(reusableProfiles);
-
-  const loadedData = {};
-  for (const [sourceId, source] of plainDataEntries(
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv,
+    parseCsvText,
+    profileDataset,
+    fetchJson,
+    sourceUrl,
+    validateGeoJson,
+  }));
+  const dataService = createDataService({
     dataSources,
-    "Dashboard dataSources",
-  )) {
-    loadedData[sourceId] = await loadDataSource(
-      sourceId,
-      source,
-      portableSources?.[sourceId],
-    );
-    if (source.kind === "inline" || source.type === "uploadedCsv") {
-      hydratedProfiles[sourceId] = profileDataset(
-        loadedData[sourceId],
-        source.parsingMetadata ?? {},
-      );
+    profiles: reusableProfiles,
+    portableSources,
+    providers,
+    cache: dashboardSourceCache,
+  });
+  for (const sourceId of Object.keys(dataSources)) {
+    const request = { sourceId, purpose: "compatibility" };
+    if (dataService.getSnapshot(request).status === "error") {
+      dataService.evict(request);
     }
   }
+  const {
+    loadedData,
+    profiles: hydratedProfiles,
+  } = await dataService.hydrateAll({ purpose: "compatibility" });
 
   validateTimeSyncGroups(dashboard.timeSyncGroups ?? [], {
     charts: chartReferences.map(({ chart }) => chart),
@@ -416,45 +425,6 @@ export function validateGeoJson(value, description = "GeoJSON source") {
     validateGeoJsonFeature(feature, `${description} feature ${index}`);
   }
   return value;
-}
-
-async function loadDataSource(sourceId, source, portableSource) {
-  const cacheKey = dataSourceCacheKey(sourceId, source, portableSource);
-  if (dataSourceCache.has(cacheKey)) {
-    return dataSourceCache.get(cacheKey);
-  }
-
-  const loadPromise = loadDataSourceFresh(sourceId, source, portableSource);
-  dataSourceCache.set(cacheKey, loadPromise);
-  try {
-    const loaded = await loadPromise;
-    dataSourceCache.set(cacheKey, loaded);
-    return loaded;
-  } catch (error) {
-    dataSourceCache.delete(cacheKey);
-    throw error;
-  }
-}
-
-async function loadDataSourceFresh(sourceId, source, portableSource) {
-  validateDataSourceDescriptor(sourceId, source);
-  if (source.kind === "inline") {
-    return structuredClone(source.rows);
-  }
-  if (source.type === "uploadedCsv") {
-    return parseCsvText(source.csvText, source.fileName ?? `${sourceId}.csv`);
-  }
-  if (portableSource) {
-    return parsePortableSource(sourceId, source, portableSource);
-  }
-
-  const url = sourceUrl(source.path);
-  if (source.kind === "geojson") {
-    const geoJson = await fetchJson(url, `data file: ${source.path}`);
-    validateGeoJson(geoJson, `Data source "${sourceId}" GeoJSON`);
-    return geoJson;
-  }
-  return loadCsv(url);
 }
 
 function validateDatasetProfile(sourceId, source, profile) {
@@ -928,20 +898,6 @@ function validateTabularRows(value, description) {
   }
 }
 
-function dataSourceCacheKey(sourceId, source, portableSource) {
-  return [
-    sourceId,
-    source.kind,
-    source.path,
-    stableStringify(source.parsingMetadata ?? {}),
-    source.sourceFingerprint
-      ?? source.fingerprint
-      ?? source.csvText
-      ?? stableStringify(source.rows ?? null),
-    portableSource ? "portable" : "network",
-  ].join(":");
-}
-
 function sourceUrl(sourcePath) {
   const baseUrl = import.meta.env?.BASE_URL ?? "/";
   return `${baseUrl}${sourcePath}`;
@@ -949,28 +905,6 @@ function sourceUrl(sourcePath) {
 
 function portableDashboard() {
   return globalThis.window?.SIMEX_PORTABLE_DASHBOARD ?? null;
-}
-
-function parsePortableSource(sourceId, source, portableSource) {
-  const entries = plainDataEntries(
-    portableSource,
-    `Portable data source "${sourceId}"`,
-  );
-  if (entryValue(entries, "kind") !== source.kind) {
-    throw new Error(
-      `Portable data source "${sourceId}" does not match its descriptor.`,
-    );
-  }
-  if (source.kind === "geojson") {
-    const data = entryValue(entries, "data");
-    validateGeoJson(data, `Portable data source "${sourceId}" GeoJSON`);
-    return structuredClone(data);
-  }
-  const text = entryValue(entries, "text");
-  if (typeof text !== "string") {
-    throw new Error(`Portable CSV source "${sourceId}" is invalid.`);
-  }
-  return parseCsvText(text, source.path);
 }
 
 function usingFileProtocol() {

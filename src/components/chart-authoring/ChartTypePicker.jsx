@@ -1,5 +1,7 @@
 import React from "react";
 import { listChartSchemaGroups } from "../../charting/schemas/chartSchemaRegistry.js";
+import { CHART_TYPE_GLYPHS } from "../../iconography/iconCatalog.js";
+import { SimExIcon } from "../common/SimExIcon.js";
 function ChartTypePicker({
   value = "",
   query = "",
@@ -31,14 +33,19 @@ function ChartTypePicker({
     /* @__PURE__ */ React.createElement("div", { className: "chart-type-card-grid" }, group.charts.map((chart) => /* @__PURE__ */ React.createElement(
       "button",
       {
-        className: "chart-type-card",
+        className: "simex-icon-control chart-type-card",
         key: chart.typeId,
         type: "button",
+        "aria-label": `${chart.label}. ${chart.description}`,
         "aria-pressed": value === chart.typeId,
+        "data-icon-tooltip": chart.label,
+        "data-icon-tooltip-placement": "below",
         onClick: () => onChange(chart.typeId)
       },
-      /* @__PURE__ */ React.createElement("strong", null, chart.label),
-      /* @__PURE__ */ React.createElement("span", null, chart.description)
+      /* @__PURE__ */ React.createElement(SimExIcon, {
+        iconId: CHART_TYPE_GLYPHS[chart.typeId],
+        size: 28
+      })
     )))
   ))), groups.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "chart-authoring-empty", role: "status" }, "No chart types match this search.") : null);
 }

@@ -2,7 +2,19 @@ import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import { IconControl } from "./common/SimExIcon.js";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
+
+const LAYOUT_INTERACTION_IDS = Object.freeze({
+  solo: "layout.solo",
+  sideBySide: "layout.side-by-side",
+  overUnder: "layout.over-and-under",
+  topFocus: "layout.top-dominant",
+  bottomFocus: "layout.bottom-dominant",
+  leftFocus: "layout.left-dominant",
+  rightFocus: "layout.right-dominant",
+  grid2x2: "layout.2-2-grid",
+});
 
 export default function FullscreenDisplay({
   dashboard,
@@ -33,32 +45,32 @@ export default function FullscreenDisplay({
       <article className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}>
         <div className="multi-fullscreen-controls">
           {layoutOptions.map((option) => (
-            <button
+            <IconControl
               key={option.value}
-              type="button"
+              interactionId={LAYOUT_INTERACTION_IDS[option.value]}
               className={[
                 "fullscreen-layout-button",
                 resolvedLayout === option.value ? "active" : "secondary",
               ].join(" ")}
+              iconClassName="fullscreen-layout-icon"
+              pressed={resolvedLayout === option.value}
               onClick={() => onDisplayAction({
                 type: "layout_changed",
                 layout: option.value,
               })}
-              aria-label={`Use ${option.label.toLowerCase()} layout`}
+              ariaLabel={`Use ${option.label.toLowerCase()} layout`}
+              tooltip={option.label}
               title={option.label}
-            >
-              <LayoutIcon layout={option.value} />
-            </button>
+            />
           ))}
-          <button
-            type="button"
+          <IconControl
+            interactionId="fullscreen.close-all-fullscreen-charts"
             className="secondary fullscreen-toolbar-close"
             onClick={() => onDisplayAction({ type: "manual_close_all" })}
-            aria-label="Close all displayed charts"
+            ariaLabel="Close all displayed charts"
+            tooltip="Close all"
             title="Close all"
-          >
-            <span aria-hidden="true">{"\u00D7"}</span>
-          </button>
+          />
         </div>
         <div className={`multi-fullscreen-grid multi-count-${panels.length} layout-${resolvedLayout}`}>
           {panels.map((chart, index) => (
@@ -71,46 +83,46 @@ export default function FullscreenDisplay({
                 <strong>{index + 1}</strong>
                 {panels.length > 1 && (
                   <>
-                    <button
-                      type="button"
+                    <IconControl
+                      interactionId="fullscreen.previous-displayed-chart"
                       className="secondary multi-cell-icon-button"
                       disabled={index === 0}
                       onClick={() => onDisplayAction({
                         type: "manual_reorder",
                         chart_ids: moveItem(panelIds, index, index - 1),
                       })}
-                      aria-label={`Move ${chart.id} previous`}
+                      ariaLabel={`Move ${chart.id} previous`}
+                      tooltip="Move previous"
+                      tooltipPlacement="below"
                       title="Move previous"
-                    >
-                      <span aria-hidden="true">{"\u2039"}</span>
-                    </button>
-                    <button
-                      type="button"
+                    />
+                    <IconControl
+                      interactionId="fullscreen.next-displayed-chart"
                       className="secondary multi-cell-icon-button"
                       disabled={index === panels.length - 1}
                       onClick={() => onDisplayAction({
                         type: "manual_reorder",
                         chart_ids: moveItem(panelIds, index, index + 1),
                       })}
-                      aria-label={`Move ${chart.id} next`}
+                      ariaLabel={`Move ${chart.id} next`}
+                      tooltip="Move next"
+                      tooltipPlacement="below"
                       title="Move next"
-                    >
-                      <span aria-hidden="true">{"\u203A"}</span>
-                    </button>
+                    />
                   </>
                 )}
-                <button
-                  type="button"
+                <IconControl
+                  interactionId="fullscreen.close-chart"
                   className="secondary multi-cell-icon-button multi-cell-close-button"
                   onClick={() => onDisplayAction({
                     type: "manual_close",
                     chart_id: chart.id,
                   })}
-                  aria-label={`Close ${chart.id}`}
+                  ariaLabel={`Close ${chart.id}`}
+                  tooltip="Close chart"
+                  tooltipPlacement="below"
                   title="Close chart"
-                >
-                  <span aria-hidden="true">{"\u00D7"}</span>
-                </button>
+                />
               </div>
               <ChartView
                 chart={chart}
@@ -177,30 +189,4 @@ function multiLayoutOptions(count) {
     ];
   }
   return [{ value: "grid2x2", label: "2 by 2" }];
-}
-
-function LayoutIcon({ layout }) {
-  const dividerPaths = {
-    solo: [],
-    sideBySide: ["M12 2v14"],
-    overUnder: ["M2 9h20"],
-    topFocus: ["M2 9h20", "M12 9v7"],
-    bottomFocus: ["M2 9h20", "M12 2v7"],
-    leftFocus: ["M12 2v14", "M12 9h10"],
-    rightFocus: ["M12 2v14", "M2 9h10"],
-    grid2x2: ["M12 2v14", "M2 9h20"],
-  }[layout] ?? [];
-
-  return (
-    <svg
-      className="fullscreen-layout-icon"
-      viewBox="0 0 24 18"
-      aria-hidden="true"
-    >
-      <rect x="2" y="2" width="20" height="14" rx="1.5" />
-      {dividerPaths.map((path) => (
-        <path d={path} key={path} />
-      ))}
-    </svg>
-  );
 }

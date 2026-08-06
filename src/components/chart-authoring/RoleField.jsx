@@ -1,4 +1,5 @@
 import React from "react";
+import { IconControl } from "../common/SimExIcon.js";
 import {
   FieldShell,
   GroupShell,
@@ -59,32 +60,26 @@ function RoleField({
       ))
     },
     field.axisOptions.map((axis) => /* @__PURE__ */ React.createElement("option", { key: axis, value: axis }, sentence(axis)))
-  )) : null, /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "secondary",
-      "aria-label": `Remove ${field.label} ${index + 1}`,
-      disabled: bindings.length <= (field.min ?? 0),
-      onClick: () => onChange(bindings.filter((_, itemIndex) => itemIndex !== index))
-    },
-    "Remove"
-  ))), canAdd ? /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      className: "secondary",
-      onClick: () => onChange([
+  )) : null, /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "editor.remove-measurement",
+    className: "secondary",
+    ariaLabel: `Remove ${field.label} ${index + 1}`,
+    tooltip: `Remove ${singular(field.label).toLocaleLowerCase()} ${index + 1}`,
+    disabled: bindings.length <= (field.min ?? 0),
+    onClick: () => onChange(bindings.filter((_, itemIndex) => itemIndex !== index))
+  }))), canAdd ? /* @__PURE__ */ React.createElement(IconControl, {
+    interactionId: "editor.add-measurement",
+    className: "secondary",
+    ariaLabel: `Add ${singular(field.label).toLocaleLowerCase()}`,
+    tooltip: `Add ${singular(field.label).toLocaleLowerCase()}`,
+    onClick: () => onChange([
         ...bindings,
         {
           field: firstUnused(options, bindings),
           ...Array.isArray(field.axisOptions) ? { axis: field.axisOptions[0] } : {}
         }
       ])
-    },
-    "Add ",
-    singular(field.label).toLocaleLowerCase()
-  ) : null));
+  }) : null));
 }
 function bindingList(value, multiple) {
   if (multiple) return Array.isArray(value) ? value.filter(isRecord) : [];

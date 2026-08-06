@@ -6,25 +6,33 @@ export default function ConfirmDialog({
   open = false,
   title = "Are you sure?",
   message = "",
+  error = "",
   confirmLabel = "Yes",
   cancelLabel = "No",
   onConfirm = noop,
   onCancel = noop,
+  disabled = false,
+  confirmDisabled = false,
 } = {}) {
   if (!open) return null;
   const id = `confirm-${safeId(title)}`;
+  const dismiss = disabled ? noop : onCancel;
+  const describedBy = [
+    message ? `${id}-message` : null,
+    error ? `${id}-error` : null,
+  ].filter(Boolean).join(" ") || undefined;
   return React.createElement(
     ModalFocusScope,
     {
       as: "div",
       open,
       initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
-      onEscape: onCancel,
+      onEscape: dismiss,
       className: "confirm-dialog-backdrop",
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": `${id}-title`,
-      "aria-describedby": message ? `${id}-message` : undefined,
+      "aria-describedby": describedBy,
       tabIndex: -1,
     },
     React.createElement(
@@ -33,6 +41,17 @@ export default function ConfirmDialog({
       React.createElement("h2", { id: `${id}-title` }, title),
       message
         ? React.createElement("p", { id: `${id}-message` }, message)
+        : null,
+      error
+        ? React.createElement(
+            "p",
+            {
+              id: `${id}-error`,
+              className: "confirm-dialog-error",
+              role: "alert",
+            },
+            error,
+          )
         : null,
       React.createElement(
         "div",
@@ -43,7 +62,8 @@ export default function ConfirmDialog({
             type: "button",
             className: "secondary",
             "data-modal-initial-focus": "true",
-            onClick: onCancel,
+            disabled,
+            onClick: dismiss,
           },
           cancelLabel,
         ),
@@ -52,6 +72,7 @@ export default function ConfirmDialog({
           {
             type: "button",
             className: "danger",
+            disabled: disabled || confirmDisabled,
             onClick: onConfirm,
           },
           confirmLabel,

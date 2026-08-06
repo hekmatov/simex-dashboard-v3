@@ -30,7 +30,7 @@ test("a pending header edit and immediate chart save commit in order", async ({
     exact: true,
   }).click();
   await page.getByLabel("Chart title").fill("Race-safe chart title");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
 
   await expect.poll(() => page.evaluate((key) => {
     const config = JSON.parse(localStorage.getItem(key));

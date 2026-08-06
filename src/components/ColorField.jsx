@@ -1,5 +1,6 @@
 import React from "react";
 import { pickColorFromPage } from "./color/EyeDropperCoordinator.js";
+import { IconControl } from "./common/SimExIcon.js";
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const COLOR_GROUPS = [
   {
@@ -108,18 +109,16 @@ function ColorField({
         onBlur: (event) => setDraft(normalizeHexColor(event.target.value, normalizedValue)),
         spellCheck: "false"
       }
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "secondary settings-pipette-button",
-        onClick: startPicking,
-        disabled: pickerActive,
-        "aria-label": `Pick ${String(label).toLowerCase()} from dashboard`,
-        title: "Pick color from screen"
-      },
-      /* @__PURE__ */ React.createElement(PipetteIcon, null)
-    )),
+    ), /* @__PURE__ */ React.createElement(IconControl, {
+      interactionId: "editor.pick-color-from-dashboard",
+      className: "secondary settings-pipette-button",
+      iconClassName: "settings-pipette-icon",
+      onClick: startPicking,
+      disabled: pickerActive,
+      "aria-label": `Pick ${String(label).toLowerCase()} from dashboard`,
+      tooltip: "Pick color from screen",
+      title: "Pick color from screen"
+    })),
     allowTransparency ? /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle settings-color-transparency" }, /* @__PURE__ */ React.createElement("input", {
       type: "checkbox",
       checked: transparent === true,
@@ -153,9 +152,6 @@ function ColorField({
     help ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-help` }, help) : null,
     error ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-error`, role: "alert" }, error) : null
   );
-}
-function PipetteIcon() {
-  return /* @__PURE__ */ React.createElement("svg", { className: "settings-pipette-icon", viewBox: "0 0 24 24", "aria-hidden": "true", focusable: "false" }, /* @__PURE__ */ React.createElement("path", { d: "M14.5 4.5 19.5 9.5" }), /* @__PURE__ */ React.createElement("path", { d: "M8 16 4.5 19.5" }), /* @__PURE__ */ React.createElement("path", { d: "M6.5 17.5 16.5 7.5" }), /* @__PURE__ */ React.createElement("path", { d: "M14 5 19 10 16 13 11 8z" }), /* @__PURE__ */ React.createElement("path", { d: "M5 20h5" }));
 }
 function normalizeHexColor(value, fallback) {
   const color = String(value ?? "").trim();

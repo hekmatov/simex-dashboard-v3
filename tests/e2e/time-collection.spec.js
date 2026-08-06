@@ -54,7 +54,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await editor.getByRole("button", { name: "Appearance", exact: true }).click();
   await expect(editorTitle).toHaveValue("Confirmed cases");
   await editorTitle.fill("Playback-safe saved editor title");
-  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await expect(openPlayback).toBeEnabled();
 
@@ -329,6 +329,7 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
     "data-collection-pause-on-hover",
     "true",
   );
+  await fixed.hover();
   await expect(carouselRegion).toHaveAttribute(
     "data-collection-rotation-paused",
     "false",

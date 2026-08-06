@@ -30,8 +30,16 @@ To update dashboard data from the original `sree2712/pdpcDashApp` repository:
 3. Commit the resulting generated CSV changes under `public/data/`.
 4. Apply the data commit to other branches only when the user explicitly approves that propagation.
 
-## Verification
+## Test and Verification Cadence
 
-- Run `pnpm.cmd build` before pushing branch updates.
+Performance and implementation progress take priority during active development.
+
+- Do not run the complete unit, integration, E2E, visual-regression, or build-verification suites during implementation.
+- During implementation, run only the smallest targeted check needed to diagnose a specific failure or validate the directly changed behavior.
+- Never rerun a previously green test or build when no relevant production code has changed.
+- Preserve the complete test suites, but defer running them until the user explicitly declares the branch ready for pre-merge verification.
+- At the pre-merge stage, run each required full gate once: `pnpm.cmd test`, `pnpm.cmd build`, and `pnpm.cmd test:e2e -- --project=chromium`.
+- If a pre-merge gate fails, use focused tests while correcting it. Rerun the complete affected gate only once after its focused failures are green.
+- Do not expand test coverage or add process-oriented tests unless required by changed product behavior or explicitly requested by the user.
+- This project policy overrides default TDD, E2E, and workflow verification cadence. A direct user instruction may override it for a specific task.
 - The Vite large-bundle warning is expected and is not a failed build.
-- Run the focused version 3 chart-system tests and a Chromium smoke test before requesting approval for a deployable branch update.

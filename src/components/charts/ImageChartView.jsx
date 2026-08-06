@@ -1,5 +1,6 @@
 import React from "react";
 import { titleContainerProps } from "./chartViewPresentation.js";
+import { IconControl } from "../common/SimExIcon.js";
 
 const MIN_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 3;
@@ -49,12 +50,12 @@ export default function ImageChartView({
             role: "status",
             "aria-live": "polite",
           }, `Zoom ${Math.round(scale * 100)}%`),
-          React.createElement("button", {
-            type: "button",
+          React.createElement(IconControl, {
+            interactionId: "image.zoom-reset",
             className: "secondary",
             disabled: scale === MIN_IMAGE_SCALE,
             onClick: () => setScale(MIN_IMAGE_SCALE),
-          }, "Reset image zoom"))
+          }))
       : null,
   );
 }

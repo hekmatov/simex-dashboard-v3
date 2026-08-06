@@ -245,7 +245,6 @@ export default function App() {
           { cause: commitError },
         );
       }
-      setError(commitError);
       throw commitError;
     }
   }
@@ -257,25 +256,39 @@ export default function App() {
   }
 
   function mutateDashboard(mutator) {
-    ignoreCommitFailure(
-      ensureDashboardCommitController().mutate(mutator),
-    );
+    const transaction = ensureDashboardCommitController().mutate(mutator);
+    reportBackgroundPersistence(transaction);
+    return transaction;
   }
 
-  function toggleEditMode() {
+  function reportBackgroundPersistence(promise) {
+    void promise.catch((commitError) => {
+      setError(boundedBackgroundPersistenceError(commitError));
+    });
+  }
+
+  function reportBackgroundPersistenceError(commitError) {
+    setError(boundedBackgroundPersistenceError(commitError));
+  }
+
+  async function toggleEditMode() {
     if (!editMode) {
       setEditBaseline(configurationForPortableUse(dashboard));
       setEditMode(true);
       return;
     }
+    await ensureDashboardCommitController().mutate((current) => current);
     setEditBaseline(null);
     setEditMode(false);
   }
 
-  function resetEditSession() {
-    if (editBaseline) ignoreCommitFailure(commitConfiguration(editBaseline));
+  async function resetEditSession() {
+    const resetDashboard = editBaseline
+      ? await commitConfiguration(editBaseline)
+      : configurationForPortableUse(dashboardRef.current ?? dashboard);
     setEditBaseline(null);
     setEditMode(false);
+    return resetDashboard;
   }
 
   function createChart(payload, target) {
@@ -285,15 +298,13 @@ export default function App() {
   }
 
   function saveChart(payload) {
-    ignoreCommitFailure(
-      ensureDashboardCommitController().mutate((current) => (
-        integrateSavedChart(current, payload)
-      )),
-    );
+    return ensureDashboardCommitController().mutate((current) => (
+      integrateSavedChart(current, payload)
+    ));
   }
 
   function removeChart(panelId) {
-    mutateDashboard((next) => {
+    return ensureDashboardCommitController().mutate((next) => {
       let removedChartId = null;
       for (const page of next.pages ?? []) {
         for (const section of page.sections ?? []) {
@@ -385,7 +396,9 @@ export default function App() {
         const result = applyCitationToSourceCharts(next, updates);
         Object.assign(next, result.dashboard);
       })}
-      onPageAdd={(page) => mutateDashboard((next) => next.pages.push(page))}
+      onPageAdd={(page) => mutateDashboard((next) => {
+        next.pages.push(page);
+      })}
       onPageRemove={(pageId) => mutateDashboard((next) => {
         const removedChartIds = new Set(
           next.pages
@@ -429,11 +442,12 @@ export default function App() {
         Object.assign(next.pages.find(({ id }) => id === pageId), updates);
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
-      onApplyPendingEdits={(edits) => mutateDashboard((next) => (
-        applyDashboardEdits(next, edits)
-      ))}
-      onPanelEditCommit={(config) => ignoreCommitFailure(commitConfiguration(config))}
-      onPanelEditCancel={(config) => ignoreCommitFailure(commitConfiguration(config))}
+      onBackgroundPersistenceError={reportBackgroundPersistenceError}
+      onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
+        (next) => applyDashboardEdits(next, edits),
+      )}
+      onPanelEditCommit={(config) => reportBackgroundPersistence(commitConfiguration(config))}
+      onPanelEditCancel={(config) => reportBackgroundPersistence(commitConfiguration(config))}
       onSectionChange={(pageId, sectionId, updates) => mutateDashboard((next) => {
         const page = next.pages.find(({ id }) => id === pageId);
         Object.assign(page.sections.find(({ id }) => id === sectionId), updates);
@@ -656,6 +670,15 @@ function dateStamp() {
   ].join("");
 }
 
-function ignoreCommitFailure(promise) {
-  void promise.catch(() => {});
+function boundedBackgroundPersistenceError(error) {
+  const rawMessage = typeof error?.message === "string"
+    ? error.message.trim()
+    : typeof error === "string"
+      ? error.trim()
+      : "";
+  const message = rawMessage || "The dashboard could not be saved.";
+  const boundedMessage = message.length <= 240
+    ? message
+    : `${message.slice(0, 237)}...`;
+  return new Error(boundedMessage, { cause: error });
 }

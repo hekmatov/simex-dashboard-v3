@@ -2,6 +2,8 @@ import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import { IconControl } from "./common/SimExIcon.js";
+import { chartPanelLayoutClass } from "./chartPanelLayout.js";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 function ChartPanel({
@@ -13,11 +15,13 @@ function ChartPanel({
   accessibilityEnabled = false,
   suspended = false,
   editMode = false,
+  editDisabled = false,
   isDragging = false,
   isDragTarget = false,
   isSelected = false,
   multiSelectMode = false,
   isMultiSelected = false,
+  multiSelectionIndex = 0,
   onEdit,
   onRemove,
   onToggleMultiSelect,
@@ -94,7 +98,7 @@ function ChartPanel({
       ref={panelRef}
       className={[
         "chart-panel",
-        `chart-panel-${chart.layout?.size ?? "standard"}`,
+        chartPanelLayoutClass(chart.layout?.size),
         editMode ? "chart-panel-has-actions" : "",
         isSelected ? "selected" : "",
         isMultiSelected ? "chart-panel-multi-selected" : "",
@@ -102,7 +106,7 @@ function ChartPanel({
         isDragTarget ? "drag-target" : "",
       ].filter(Boolean).join(" ")}
       data-panel-id={chart.id}
-      draggable={editMode}
+      draggable={editMode && !editDisabled}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
@@ -111,15 +115,15 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <button type="button" className="secondary" onClick={onEdit} aria-label="Edit chart">
-              Edit
-            </button>
-            <button type="button" className="secondary" onClick={onStartSection} aria-label="Start section here">
-              Section
-            </button>
-            <button type="button" className="danger" onClick={onRemove} aria-label="Remove chart">
-              Remove
-            </button>
+            <IconControl interactionId="panel.edit-chart" className="secondary" disabled={editDisabled} onClick={() => {
+              if (!editDisabled) onEdit?.();
+            }} />
+            <IconControl interactionId="shell.start-section" className="secondary" disabled={editDisabled} onClick={() => {
+              if (!editDisabled) onStartSection?.();
+            }} ariaLabel="Start section here" tooltip="Start section here" />
+            <IconControl interactionId="chart.remove" disabled={editDisabled} onClick={() => {
+              if (!editDisabled) onRemove?.();
+            }} />
           </>
         )}
       </div>}
@@ -150,6 +154,7 @@ function ChartPanel({
         citation,
         selectionMode: multiSelectMode,
         fullscreenSelected: isMultiSelected,
+        fullscreenSelectionIndex: multiSelectionIndex,
         onFullscreenHoldStart: multiSelectMode ? undefined : beginFullscreenHold,
         onFullscreenHoldEnd: clearHold,
         onFullscreen: handleFullscreenClick,

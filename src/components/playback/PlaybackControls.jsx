@@ -1,5 +1,6 @@
 import React from "react";
 
+import { IconControl } from "../common/SimExIcon.js";
 import { usePlayback } from "./PlaybackProvider.jsx";
 
 const ENTRY_BLOCKED_REASON_ID = "playback-entry-blocked-reason";
@@ -48,29 +49,32 @@ export default function PlaybackControls({
       })
     : null,
   React.createElement("div", { className: "playback-transport" },
-    React.createElement("button", {
-      type: "button",
-      "aria-label": "Previous time",
+    React.createElement(IconControl, {
+      interactionId: "playback.previous-time-point",
+      ariaLabel: "Previous time",
+      tooltip: "Previous",
       disabled: atStart,
       onClick: () => dispatch({ type: "previous", clockLength: clock.length }),
-    }, "Previous"),
-    React.createElement("button", {
-      type: "button",
-      "aria-label": playing
+    }),
+    React.createElement(IconControl, {
+      interactionId: playing ? "playback.pause" : "playback.play",
+      ariaLabel: playing
         ? "Pause synchronized charts"
         : "Play synchronized charts",
+      tooltip: playing ? "Pause" : "Play",
       disabled: !playbackView || !hasClock || (!playing && atEnd),
       onClick: () => dispatch({
         type: playing ? "pause" : "play",
         ...(playing ? {} : { clockLength: clock.length }),
       }),
-    }, playing ? "Pause" : "Play"),
-    React.createElement("button", {
-      type: "button",
-      "aria-label": "Next time",
+    }),
+    React.createElement(IconControl, {
+      interactionId: "playback.next-time-point",
+      ariaLabel: "Next time",
+      tooltip: "Next",
       disabled: atEnd,
       onClick: () => dispatch({ type: "next", clockLength: clock.length }),
-    }, "Next")),
+    })),
   React.createElement("div", { className: "playback-time-controls" },
     React.createElement("label", null,
       React.createElement("span", null, "Playback time"),
@@ -112,6 +116,7 @@ export default function PlaybackControls({
         }, canonicalTime(activeEpochMs))),
   React.createElement(LabeledSelect, {
     label: "Playback speed",
+    labelClassName: "visually-hidden",
     value: String(speed),
     onChange: (event) => dispatch({
       type: "setSpeed",
@@ -122,10 +127,11 @@ export default function PlaybackControls({
       label: `${value}\u00d7`,
     })),
   }),
-  React.createElement("button", {
-    type: "button",
+  React.createElement(IconControl, {
+    interactionId: "playback.open-synchronized-playback",
     className: "playback-view-toggle",
-    "aria-label": playbackView ? "Close playback view" : "Open playback view",
+    ariaLabel: playbackView ? "Close playback view" : "Open playback view",
+    tooltip: playbackView ? "Close playback view" : "Open playback view",
     "aria-expanded": playbackView,
     ...(blockedReason
       ? { "aria-describedby": ENTRY_BLOCKED_REASON_ID }
@@ -134,7 +140,7 @@ export default function PlaybackControls({
     onClick: () => dispatch({
       type: playbackView ? "closeView" : "openView",
     }),
-  }, playbackView ? "Close playback view" : "Open playback view"),
+  }),
   blockedReason
     ? React.createElement("p", {
         id: ENTRY_BLOCKED_REASON_ID,
@@ -151,6 +157,7 @@ export default function PlaybackControls({
 
 function LabeledSelect({
   label,
+  labelClassName,
   value,
   onChange,
   options,
@@ -158,7 +165,7 @@ function LabeledSelect({
   emptyLabel,
 }) {
   return React.createElement("label", { className: "playback-select" },
-    React.createElement("span", null, label),
+    React.createElement("span", { className: labelClassName || undefined }, label),
     React.createElement("select", {
       "aria-label": label,
       value,

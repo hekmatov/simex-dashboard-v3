@@ -40,6 +40,10 @@ does not weaken or replace the chart, dashboard, or bundle version 3 boundary.
 | Dashboard and bundle validation | `src/charting/config/dashboardBundleV3.js` |
 | Cross-record references | `src/charting/config/dashboardSemanticReferences.js` |
 | Dataset profiling | `src/charting/data/profileDataset.js` |
+| Runtime source readiness and caching | `src/data/dataService.js` |
+| Source request normalization | `src/data/sourceRequest.js` |
+| Runtime provider registration | `src/data/providerRegistry.js` |
+| Packaged/manual source providers | `src/data/dashboardSourceProviders.js` |
 | Source-role bindings | `src/charting/data/bindings.js` |
 | Transformations | `src/charting/data/transforms.js` |
 | Family-neutral preparation | `src/charting/data/prepareChartData.js` |
@@ -118,6 +122,31 @@ clocks, reconciliation, and reproducibility.
 Manual data is capability-based rather than hard-coded by chart type. A schema
 must declare its inline shape and row bounds. The form layer applies a global
 50-row ceiling in addition to the schema limit.
+
+## Runtime source lifecycle
+
+All runtime source loading passes through `DataService`. The service publishes
+immutable `unloaded`, `loading`, `ready`, and `error` snapshot wrappers, reuses
+equivalent in-flight and ready loads, and records active consumer leases. Large
+row and GeoJSON payloads are read-only by contract rather than recursively
+frozen or cloned.
+
+Providers translate transport-specific source records into tabular rows or a
+validated GeoJSON `FeatureCollection`. Providers do not filter, aggregate,
+interpolate, consolidate duplicates, or produce chart marks. Those operations
+remain in `prepareChartData.js` and the family preparers.
+
+The initial compatibility stage still calls `hydrateAll()` and exposes
+`dashboard.loadedData` so existing dashboard, authoring, fullscreen, and
+playback consumers behave unchanged. `loadedData` is a temporary runtime
+compatibility object, not a persisted contract. Consumer migrations will
+replace direct reads with explicit page, wizard, editor, fullscreen, and
+playback demand before the compatibility object is removed.
+
+Tracked profiles remain available before their CSV rows are loaded. Uploaded
+CSV and inline sources receive a profile when their first ready revision is
+published. Measurement events are local metadata-only hooks; they never include
+source rows and do not perform network telemetry.
 
 ## Four-step authoring flow
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { IconControl } from "./common/SimExIcon.js";
 
 export default function InstallDashboardPrompt() {
   const [installPrompt, setInstallPrompt] = React.useState(null);
@@ -48,8 +49,12 @@ export default function InstallDashboardPrompt() {
   if (!installPrompt) return null;
 
   return (
-    <button type="button" className="install-dashboard-button" onClick={installApp}>
-      Install dashboard app
-    </button>
+    <IconControl
+      interactionId="shell.install"
+      className="install-dashboard-button"
+      ariaLabel="Install dashboard app"
+      tooltip="Install dashboard app"
+      onClick={installApp}
+    />
   );
 }

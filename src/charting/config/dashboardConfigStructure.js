@@ -75,7 +75,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
     ]),
     landingDeliveryStatus: shape(["description", "label", "state"]),
     landingPreviewAsset: shape(["alt", "src"]),
-    globalStyles: shape(["panelColors"], ["accessibility"]),
+    globalStyles: shape(["panelColors"], ["accessibility", "iconAccent"]),
     accessibility: shape(["enabled"]),
     panelColors: shape([
       "chartAreaBorderColor",
@@ -530,6 +530,12 @@ function validateGlobalStyles(value) {
     if (typeof accessibility.enabled !== "boolean") {
       throw new TypeError("Dashboard accessibility enabled must be boolean.");
     }
+  }
+  if (
+    styles.iconAccent !== undefined
+    && !/^#[0-9a-f]{6}$/i.test(styles.iconAccent)
+  ) {
+    throw new TypeError("Dashboard icon accent must use #RRGGBB.");
   }
 }
 
