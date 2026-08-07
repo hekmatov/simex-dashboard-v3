@@ -69,7 +69,6 @@ function SeriesColorsField({
             index % DEFAULT_SERIES_COLORS.length
           ],
           onChange: (nextColor) => replace(index, nextColor),
-          showPresets: false,
           dataColorField: `${field.id}-${index}`,
           pickerRevision: value,
         }),

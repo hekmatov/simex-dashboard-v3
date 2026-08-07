@@ -671,16 +671,30 @@ test("all declared presentation subshapes reject malformed values before renderi
     ["legend", { position: "corner" }],
     ["accessibility", { description: 4 }],
     ["accessibility", { summary: [] }],
+    ["referenceLine", { visible: "yes" }, "reference line"],
+    ["referenceLine", { value: "five" }, "reference line"],
+    ["referenceLine", { color: "red" }, "reference line"],
+    ["referenceLine", { lineStyle: "wavy" }, "reference line"],
   ];
 
-  for (const [key, value] of cases) {
+  for (const [key, value, expected = key] of cases) {
     const chart = configuredChart("line", {
       measurements: [{ field: "value" }],
       observation: { field: "category" },
     });
     chart.presentation[key] = value;
-    assert.throws(() => validateChartInstance(chart), new RegExp(key, "i"), `${key}: ${JSON.stringify(value)}`);
+    assert.throws(() => validateChartInstance(chart), new RegExp(expected, "i"), `${key}: ${JSON.stringify(value)}`);
   }
+
+  const area = configuredChart("area", {
+    measurements: [{ field: "value" }],
+    observation: { field: "category" },
+  });
+  area.presentation.referenceLine = { visible: true, value: 5 };
+  assert.throws(
+    () => validateChartInstance(area),
+    /does not support a reference line/i,
+  );
 });
 
 test("former chart-local temporal matching locations are rejected", () => {

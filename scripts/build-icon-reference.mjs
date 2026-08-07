@@ -1158,6 +1158,10 @@ async function readOrNull(filePath) {
   }
 }
 
+function normalizeNewlines(value) {
+  return typeof value === "string" ? value.replace(/\r\n/g, "\n") : value;
+}
+
 async function checkGeneratedReferences() {
   const expected = {
     atlas: renderIconAtlas(),
@@ -1165,7 +1169,12 @@ async function checkGeneratedReferences() {
   };
   const stale = [];
   for (const [name, filePath] of Object.entries(outputFiles)) {
-    if (await readOrNull(filePath) !== expected[name]) stale.push(filePath);
+    if (
+      normalizeNewlines(await readOrNull(filePath))
+      !== normalizeNewlines(expected[name])
+    ) {
+      stale.push(filePath);
+    }
   }
   return stale;
 }

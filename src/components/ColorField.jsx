@@ -46,11 +46,30 @@ function ColorField({
   const [draft, setDraft] = React.useState(normalizedValue);
   const [message, setMessage] = React.useState("");
   const [pickerActive, setPickerActive] = React.useState(false);
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
+  const [activePalette, setActivePalette] = React.useState(() => colorGroupFor(normalizedValue));
+  const colorFieldRef = React.useRef(null);
   const controlId = id || `settings-color-${safeId(label)}`;
+  const paletteId = `${controlId}-palette`;
   const contrast = describeColorContrast(normalizedValue, { transparent });
   React.useEffect(() => {
     setDraft(normalizedValue);
   }, [normalizedValue, pickerRevision]);
+  React.useEffect(() => {
+    if (!paletteOpen) return undefined;
+    function closeOnOutsidePointer(event) {
+      if (!colorFieldRef.current?.contains(event.target)) setPaletteOpen(false);
+    }
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setPaletteOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [paletteOpen]);
   function commitColor(nextColor) {
     const normalized = normalizeHexColor(nextColor, "");
     setDraft(nextColor);
@@ -75,7 +94,7 @@ function ColorField({
       setMessage(
         error?.name === "AbortError"
           ? "Picker cancelled."
-          : error?.message || "Native picker could not start.",
+          : error?.message || "Color picker could not start.",
       );
     } finally {
       setPickerActive(false);
@@ -85,19 +104,23 @@ function ColorField({
     "div",
     {
       className: "settings-color-field",
+      ref: colorFieldRef,
       "data-color-field": dataColorField,
       "data-invalid": error || invalid ? "true" : void 0
     },
     /* @__PURE__ */ React.createElement("label", { htmlFor: controlId }, label),
-    /* @__PURE__ */ React.createElement("div", { className: "settings-color-row" }, /* @__PURE__ */ React.createElement("label", { className: "settings-color-swatch", style: { backgroundColor: normalizedValue }, title: "Open color picker" }, /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        "aria-label": `Pick ${label}`,
-        type: "color",
-        value: normalizedValue,
-        onChange: (event) => commitColor(event.target.value)
+    /* @__PURE__ */ React.createElement("div", { className: "settings-color-row" }, /* @__PURE__ */ React.createElement("button", {
+      type: "button",
+      className: "settings-color-swatch",
+      style: { backgroundColor: normalizedValue },
+      "aria-label": `${paletteOpen ? "Close" : "Open"} ${label} color options`,
+      "aria-expanded": paletteOpen,
+      "aria-controls": paletteId,
+      onClick: () => {
+        setActivePalette(colorGroupFor(normalizedValue));
+        setPaletteOpen((open) => !open);
       }
-    )), /* @__PURE__ */ React.createElement(
+    }), /* @__PURE__ */ React.createElement(
       "input",
       {
         id: controlId,
@@ -119,39 +142,96 @@ function ColorField({
       tooltip: "Pick color from screen",
       title: "Pick color from screen"
     })),
+    paletteOpen ? /* @__PURE__ */ React.createElement(ColorPalettePanel, {
+      id: paletteId,
+      label,
+      activePalette,
+      normalizedValue,
+      onSelectPalette: setActivePalette,
+      onSelectColor: commitColor
+    }) : null,
     allowTransparency ? /* @__PURE__ */ React.createElement("label", { className: "chart-authoring-inline-toggle settings-color-transparency" }, /* @__PURE__ */ React.createElement("input", {
       type: "checkbox",
       checked: transparent === true,
       onChange: (event) => onTransparencyChange?.(event.target.checked)
     }), "Transparent background") : null,
-    showPresets ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "settings-color-palette", "aria-label": `${label} color presets` }, COLOR_GROUPS.map((group) => /* @__PURE__ */ React.createElement("div", { className: "settings-color-palette-group", key: group.label }, /* @__PURE__ */ React.createElement("small", null, group.label), /* @__PURE__ */ React.createElement("div", { className: "settings-color-preset-grid" }, group.colors.map((color) => /* @__PURE__ */ React.createElement(
-      "button",
-      {
+    showContrast || allowTransparency ? /* @__PURE__ */ React.createElement("small", { role: "status", "aria-live": "polite", className: `settings-color-contrast settings-color-contrast-${contrast.level}` }, contrast.message) : null,
+    message ? /* @__PURE__ */ React.createElement("small", null, message) : null,
+    help ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-help` }, help) : null,
+    error ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-error`, role: "alert" }, error) : null
+  );
+}
+function ColorPalettePanel({
+  id,
+  label,
+  activePalette,
+  normalizedValue,
+  onSelectPalette,
+  onSelectColor
+}) {
+  const tabs = [...COLOR_GROUPS.map((group) => group.label), "Gradients"];
+  const activeColors = COLOR_GROUPS.find((group) => group.label === activePalette)?.colors ?? [];
+  const paletteContent = activePalette === "Gradients"
+    ? React.createElement(
+      "div",
+      { className: "settings-gradient-grid", "aria-label": `${label} gradient maps` },
+      GRADIENT_MAPS.map((map) => React.createElement(
+        "button",
+        {
+          type: "button",
+          key: map.label,
+          title: `${map.label}: use middle color`,
+          "aria-label": `${map.label} gradient map`,
+          onClick: () => onSelectColor(map.colors[Math.floor(map.colors.length / 2)]),
+        },
+        React.createElement("span", {
+          style: { background: `linear-gradient(90deg, ${map.colors.join(", ")})` },
+        }),
+        React.createElement("small", null, map.label),
+      )),
+    )
+    : React.createElement(
+      "div",
+      { className: "settings-color-preset-grid", "aria-label": `${activePalette} colors` },
+      activeColors.map((color) => React.createElement("button", {
         type: "button",
         key: color,
         className: color.toUpperCase() === normalizedValue ? "active" : "",
         style: { backgroundColor: color },
         title: color,
         "aria-label": `Use ${color} for ${label}`,
-        onClick: () => commitColor(color)
-      }
-    )))))), /* @__PURE__ */ React.createElement("div", { className: "settings-gradient-grid", "aria-label": `${label} gradient maps` }, GRADIENT_MAPS.map((map) => /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        key: map.label,
-        title: `${map.label}: use middle color`,
-        "aria-label": `${map.label} gradient map`,
-        onClick: () => commitColor(map.colors[Math.floor(map.colors.length / 2)])
-      },
-      /* @__PURE__ */ React.createElement("span", { style: { background: `linear-gradient(90deg, ${map.colors.join(", ")})` } }),
-      /* @__PURE__ */ React.createElement("small", null, map.label)
-    )))) : null,
-    showContrast || allowTransparency ? /* @__PURE__ */ React.createElement("small", { role: "status", "aria-live": "polite", className: `settings-color-contrast settings-color-contrast-${contrast.level}` }, contrast.message) : null,
-    message ? /* @__PURE__ */ React.createElement("small", null, message) : null,
-    help ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-help` }, help) : null,
-    error ? /* @__PURE__ */ React.createElement("small", { id: `${controlId}-error`, role: "alert" }, error) : null
+        onClick: () => onSelectColor(color),
+      })),
+    );
+  return React.createElement(
+    "div",
+    {
+      className: "settings-color-popover",
+      id,
+      role: "dialog",
+      "aria-label": `${label} color options`,
+    },
+    React.createElement(
+      "div",
+      { className: "settings-color-tabs", role: "tablist", "aria-label": "Color classes" },
+      tabs.map((tab) => React.createElement(
+        "button",
+        {
+          type: "button",
+          key: tab,
+          role: "tab",
+          "aria-selected": activePalette === tab,
+          onClick: () => onSelectPalette(tab),
+        },
+        tab,
+      )),
+    ),
+    React.createElement("div", { className: "settings-color-tab-panel", role: "tabpanel" }, paletteContent),
   );
+}
+function colorGroupFor(value) {
+  const normalized = normalizeHexColor(value, "");
+  return COLOR_GROUPS.find((group) => group.colors.includes(normalized))?.label ?? "PDPC";
 }
 function normalizeHexColor(value, fallback) {
   const color = String(value ?? "").trim();

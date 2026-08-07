@@ -61,6 +61,8 @@ export default function DashboardRenderer({
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
   const [multiSelectMode, setMultiSelectMode] = React.useState(false);
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
+  const multiPanelIdsRef = React.useRef(multiPanelIds);
+  multiPanelIdsRef.current = multiPanelIds;
   const importInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
@@ -150,6 +152,7 @@ export default function DashboardRenderer({
       if (event.key !== "Escape") return;
       event.preventDefault();
       setMultiSelectMode(false);
+      multiPanelIdsRef.current = [];
       setMultiPanelIds([]);
       setMultiSelectNotice(null);
     };
@@ -277,23 +280,29 @@ export default function DashboardRenderer({
 
   function startMultiFullscreenSelection(panelId) {
     setMultiSelectMode(true);
+    multiPanelIdsRef.current = [panelId];
     setMultiPanelIds([panelId]);
     setMultiSelectNotice(null);
   }
 
   function toggleMultiPanel(panelId) {
-    if (multiPanelIds.includes(panelId)) {
-      setMultiPanelIds((current) => current.filter((id) => id !== panelId));
+    const current = multiPanelIdsRef.current;
+    if (current.includes(panelId)) {
+      const next = current.filter((id) => id !== panelId);
+      multiPanelIdsRef.current = next;
+      setMultiPanelIds(next);
       return;
     }
-    if (multiPanelIds.length >= 4) {
+    if (current.length >= 4) {
       setMultiSelectNotice({
         id: Date.now(),
         message: "Maximum 4 charts allowed",
       });
       return;
     }
-    setMultiPanelIds((current) => [...current, panelId]);
+    const next = [...current, panelId];
+    multiPanelIdsRef.current = next;
+    setMultiPanelIds(next);
   }
 
   function openMultiFullscreen() {
@@ -302,12 +311,14 @@ export default function DashboardRenderer({
     }
     onDisplayAction({ type: "manual_set", chart_ids: multiPanelIds });
     setMultiSelectMode(false);
+    multiPanelIdsRef.current = [];
     setMultiPanelIds([]);
     setMultiSelectNotice(null);
   }
 
   function cancelMultiSelection() {
     setMultiSelectMode(false);
+    multiPanelIdsRef.current = [];
     setMultiPanelIds([]);
     setMultiSelectNotice(null);
   }
@@ -925,7 +936,6 @@ export default function DashboardRenderer({
                       geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                       dataSources={dashboard.dataSources}
                       accessibilityEnabled={accessibilityEnabled}
-                      suspended={chartAuthoringActive}
                       editMode={editMode}
                       editDisabled={moderatorMutationLocked}
                       isDragging={draggingPanelId === panelId}
@@ -980,6 +990,7 @@ export default function DashboardRenderer({
         disabled={moderatorMutationLocked}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
+        datasetProfiles={dashboard.datasetProfiles ?? {}}
         geoDataSources={geoDataSources}
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
@@ -1141,7 +1152,6 @@ function GlobalIconAccentControl({ value, onChange, disabled = false }) {
           value={value}
           fallback={ICON_TOKENS.accentBase}
           onChange={onChange}
-          showPresets={false}
           showContrast
         />
         <div className="global-icon-accent-preview" aria-label="Icon accent preview">

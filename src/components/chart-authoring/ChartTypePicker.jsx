@@ -38,14 +38,13 @@ function ChartTypePicker({
         type: "button",
         "aria-label": `${chart.label}. ${chart.description}`,
         "aria-pressed": value === chart.typeId,
-        "data-icon-tooltip": chart.label,
-        "data-icon-tooltip-placement": "below",
         onClick: () => onChange(chart.typeId)
       },
       /* @__PURE__ */ React.createElement(SimExIcon, {
         iconId: CHART_TYPE_GLYPHS[chart.typeId],
         size: 28
-      })
+      }),
+      /* @__PURE__ */ React.createElement("span", { className: "chart-type-card-label" }, chart.label)
     )))
   ))), groups.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "chart-authoring-empty", role: "status" }, "No chart types match this search.") : null);
 }

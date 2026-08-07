@@ -1004,6 +1004,7 @@ th {
 }
 
 .settings-color-swatch {
+  appearance: none;
   border: 1px solid rgb(8 34 74 / 22%);
   border-radius: 10px;
   box-shadow: inset 0 0 0 2px rgb(255 255 255 / 80%), 0 2px 8px rgb(8 34 74 / 12%);
@@ -1015,13 +1016,10 @@ th {
   width: 36px;
 }
 
-.settings-color-swatch input {
-  cursor: pointer;
-  height: 140%;
-  inset: -20%;
-  opacity: 0;
-  position: absolute;
-  width: 140%;
+.settings-color-swatch[aria-expanded="true"] {
+  box-shadow:
+    0 0 0 3px rgb(4 59 203 / 18%),
+    inset 0 0 0 2px rgb(255 255 255 / 82%);
 }
 
 .settings-color-row input {
@@ -1062,6 +1060,52 @@ th {
   color: #49627a;
   font-size: 11px;
   font-weight: 600;
+}
+
+.settings-color-popover {
+  background: #ffffff;
+  border: 1px solid #cbd9e7;
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgb(8 34 74 / 14%);
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.settings-color-tabs {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.settings-color-tabs button {
+  background: #f3f7fb;
+  border: 1px solid #d3deea;
+  border-radius: 8px;
+  color: #38536d;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 750;
+  min-height: 32px;
+  padding: 5px 7px;
+}
+
+.settings-color-tabs button[aria-selected="true"] {
+  background: #e9f1ff;
+  border-color: #5276b8;
+  color: #08224a;
+  box-shadow: inset 0 -2px 0 var(--simex-icon-accent-on-light);
+}
+
+.settings-color-tab-panel {
+  background: #f8fbff;
+  border: 1px solid rgb(8 34 74 / 8%);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.settings-color-tab-panel .settings-gradient-grid {
+  margin-top: 0;
 }
 
 .chart-type-picker,
@@ -2655,6 +2699,19 @@ button.danger {
   display: flex;
   gap: 8px;
   min-height: 38px;
+  position: relative;
+  z-index: 10;
+}
+
+.panel-actions .simex-icon-control[data-icon-tooltip]::after,
+.panel-actions .simex-icon-control[data-icon-tooltip-placement="below"]::after {
+  left: 0;
+  right: auto;
+  transform: translateY(-3px);
+}
+
+.panel-actions .simex-icon-control[data-icon-tooltip]:is(:hover, :focus-visible)::after {
+  transform: translateY(0);
 }
 
 .chart-deferred-placeholder {
@@ -4547,7 +4604,7 @@ button.danger {
   transform: none;
 }
 
-.simex-icon-control::after {
+.simex-icon-control[data-icon-tooltip]::after {
   background: var(--simex-icon-base);
   border-radius: 7px;
   bottom: calc(100% + 9px);
@@ -4571,13 +4628,13 @@ button.danger {
   z-index: 100;
 }
 
-.simex-icon-control[data-icon-tooltip-placement="below"]::after {
+.simex-icon-control[data-icon-tooltip][data-icon-tooltip-placement="below"]::after {
   bottom: auto;
   top: calc(100% + 9px);
   transform: translate(-50%, -3px);
 }
 
-.simex-icon-control:is(:hover, :focus-visible)::after {
+.simex-icon-control[data-icon-tooltip]:is(:hover, :focus-visible)::after {
   opacity: 1;
   transform: translate(-50%, 0);
   visibility: visible;
@@ -4585,7 +4642,7 @@ button.danger {
 
 @media (prefers-reduced-motion: reduce) {
   .simex-icon-control,
-  .simex-icon-control::after {
+  .simex-icon-control[data-icon-tooltip]::after {
     transition: none;
   }
 }
@@ -4682,7 +4739,7 @@ button.danger {
 }
 
 .chart-type-card-grid {
-  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .chart-type-card.simex-icon-control {
@@ -4691,12 +4748,21 @@ button.danger {
   border: 1px solid #d8e2ec;
   border-radius: 14px;
   display: inline-flex;
-  height: 56px;
-  justify-self: center;
+  gap: 10px;
+  height: auto;
+  justify-content: flex-start;
+  justify-self: stretch;
   min-height: 56px;
-  padding: 0;
-  text-align: center;
-  width: 56px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.chart-type-card-label {
+  color: currentColor !important;
+  font-size: 0.88rem !important;
+  font-weight: 750;
+  line-height: 1.2;
 }
 
 .chart-type-card.simex-icon-control[aria-pressed="true"] {
@@ -4711,6 +4777,23 @@ button.danger {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.chart-wizard-footer-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.chart-authoring-reference-line {
+  grid-column: 1 / -1;
+}
+
+.chart-authoring-reference-line-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .chart-authoring-icon-choice .simex-icon-control,
@@ -5043,6 +5126,52 @@ button.danger {
 html[data-simex-eyedropper-active="true"] .chart-editor-backdrop {
   opacity: 0;
   pointer-events: none;
+}
+
+html[data-simex-eyedropper-active="true"],
+html[data-simex-eyedropper-active="true"] body,
+html[data-simex-eyedropper-active="true"] body * {
+  cursor: crosshair !important;
+}
+
+.simex-page-color-sampler {
+  align-items: center;
+  background: #08224a;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgb(8 34 74 / 28%);
+  color: #ffffff;
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 750;
+  gap: 3px 8px;
+  grid-template-columns: 28px auto;
+  left: 12px;
+  max-width: 240px;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: fixed;
+  top: 12px;
+  z-index: 10000;
+}
+
+.simex-page-color-sampler-swatch {
+  border: 2px solid #ffffff;
+  border-radius: 7px;
+  box-shadow: 0 0 0 1px rgb(8 34 74 / 32%);
+  grid-row: 1 / span 2;
+  height: 28px;
+  width: 28px;
+}
+
+.simex-page-color-sampler-value {
+  line-height: 1.1;
+}
+
+.simex-page-color-sampler-help {
+  color: #c9d9e8;
+  font-size: 0.64rem;
+  font-weight: 650;
 }
 
 /* Compact chart source and fullscreen actions */

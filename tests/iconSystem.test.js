@@ -359,18 +359,18 @@ test("canonical icon references match deterministic generation", async () => {
     renderIconSpecification,
   } = await import("../scripts/build-icon-reference.mjs");
   assert.equal(
-    await readFile(
+    (await readFile(
       new URL("../docs/icon-language-atlas.html", import.meta.url),
       "utf8",
-    ),
-    renderIconAtlas(),
+    )).replace(/\r\n/g, "\n"),
+    renderIconAtlas().replace(/\r\n/g, "\n"),
   );
   assert.equal(
-    await readFile(
+    (await readFile(
       new URL("../docs/icon-and-interaction-specification.md", import.meta.url),
       "utf8",
-    ),
-    renderIconSpecification(),
+    )).replace(/\r\n/g, "\n"),
+    renderIconSpecification().replace(/\r\n/g, "\n"),
   );
 });
 

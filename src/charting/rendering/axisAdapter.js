@@ -29,6 +29,7 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
   const temporal = !horizontal && prepared.meta?.axisInterpretation === "temporal";
   const activeTime = prepared.meta?.activeTime ?? null;
   const seriesStyle = chart.presentation?.series;
+  const referenceLine = chart.presentation?.referenceLine;
   const categories = unique(prepared.marks.map(({ x }) => x));
   const categoryIndexes = new Map(categories.map((category, index) => [category, index]));
   const grouped = groupSeries(prepared.marks);
@@ -71,6 +72,10 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
         ? { barWidth: seriesStyle.barWidth }
         : {}),
       ...(marker ? { markPoint: marker } : {}),
+      ...(index === 0 && type === "line" && referenceLine?.visible === true
+        && Number.isFinite(referenceLine.value)
+        ? { markLine: referenceLineOption(referenceLine) }
+        : {}),
     };
   });
 
@@ -98,6 +103,28 @@ export function buildAxisRenderModel({ chart, prepared }, schema) {
       series,
       dataZoom: buildEChartsDataZoom(chart, horizontal ? "y" : "x"),
     },
+  };
+}
+
+function referenceLineOption(referenceLine) {
+  const color = /^#[0-9a-f]{6}$/i.test(referenceLine.color ?? "")
+    ? referenceLine.color
+    : "#E56B2F";
+  return {
+    silent: true,
+    symbol: "none",
+    lineStyle: {
+      color,
+      type: referenceLine.lineStyle ?? "dashed",
+      width: 2,
+    },
+    label: {
+      show: true,
+      color,
+      formatter: referenceLine.label?.trim() || String(referenceLine.value),
+      position: "insideEndTop",
+    },
+    data: [{ yAxis: referenceLine.value }],
   };
 }
 

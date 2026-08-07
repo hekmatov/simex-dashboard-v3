@@ -115,13 +115,13 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <IconControl interactionId="panel.edit-chart" className="secondary" disabled={editDisabled} onClick={() => {
+            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onEdit?.();
             }} />
-            <IconControl interactionId="shell.start-section" className="secondary" disabled={editDisabled} onClick={() => {
+            <IconControl interactionId="shell.start-section" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onStartSection?.();
             }} ariaLabel="Start section here" tooltip="Start section here" />
-            <IconControl interactionId="chart.remove" disabled={editDisabled} onClick={() => {
+            <IconControl interactionId="chart.remove" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onRemove?.();
             }} />
           </>
@@ -163,4 +163,22 @@ function ChartPanel({
   );
 }
 
-export default React.memo(ChartPanel);
+function chartPanelPropsEqual(previous, next) {
+  return previous.panel === next.panel
+    && previous.rows === next.rows
+    && previous.datasetProfile === next.datasetProfile
+    && previous.geoData === next.geoData
+    && previous.dataSources === next.dataSources
+    && previous.accessibilityEnabled === next.accessibilityEnabled
+    && previous.suspended === next.suspended
+    && previous.editMode === next.editMode
+    && previous.editDisabled === next.editDisabled
+    && previous.isDragging === next.isDragging
+    && previous.isDragTarget === next.isDragTarget
+    && previous.isSelected === next.isSelected
+    && previous.multiSelectMode === next.multiSelectMode
+    && previous.isMultiSelected === next.isMultiSelected
+    && previous.multiSelectionIndex === next.multiSelectionIndex;
+}
+
+export default React.memo(ChartPanel, chartPanelPropsEqual);

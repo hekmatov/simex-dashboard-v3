@@ -64,7 +64,7 @@ test("schemas declare only the appearance fields their renderers can apply", () 
     ["stackedBar", ["seriesColors", "barWidth"]],
     ["horizontalBar", ["seriesColors", "barWidth"]],
     ["horizontalStackedBar", ["seriesColors", "barWidth"]],
-    ["line", ["seriesColors", "lineWidth"]],
+    ["line", ["seriesColors", "lineWidth", "referenceLine"]],
     ["area", ["seriesColors", "lineWidth"]],
     ["mixed", ["seriesColors", "lineWidth", "barWidth"]],
     ["pie", ["seriesColors"]],

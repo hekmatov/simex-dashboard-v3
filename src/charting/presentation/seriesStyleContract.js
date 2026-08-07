@@ -2,6 +2,7 @@ export const SERIES_APPEARANCE_FIELD_IDS = Object.freeze([
   "seriesColors",
   "lineWidth",
   "barWidth",
+  "referenceLine",
 ]);
 
 export const SERIES_STYLE_PROPERTIES = Object.freeze([
@@ -28,7 +29,7 @@ const APPEARANCE_BY_MARK = Object.freeze({
   "stacked-bar": Object.freeze(["seriesColors", "barWidth"]),
   "horizontal-bar": Object.freeze(["seriesColors", "barWidth"]),
   "horizontal-stacked-bar": Object.freeze(["seriesColors", "barWidth"]),
-  line: Object.freeze(["seriesColors", "lineWidth"]),
+  line: Object.freeze(["seriesColors", "lineWidth", "referenceLine"]),
   area: Object.freeze(["seriesColors", "lineWidth"]),
   "mixed-axis": Object.freeze([
     "seriesColors",
