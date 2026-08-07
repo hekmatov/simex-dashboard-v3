@@ -5123,7 +5123,8 @@ button.danger {
   z-index: 1;
 }
 
-html[data-simex-eyedropper-active="true"] .chart-editor-backdrop {
+html[data-simex-eyedropper-active="true"] .chart-editor-backdrop,
+html[data-simex-eyedropper-active="true"] .chart-wizard-backdrop {
   opacity: 0;
   pointer-events: none;
 }

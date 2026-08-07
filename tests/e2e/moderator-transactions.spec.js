@@ -128,6 +128,44 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full can
   ))).toBe(true);
 });
 
+test("edit-mode panel drag reorders through the memoized chart boundary", async ({ page }) => {
+  await openDashboardEditMode(page);
+  const panels = page.locator(".chart-panel");
+  const initial = await panels.evaluateAll((items) => items.slice(0, 2).map((item) => (
+    item.getAttribute("data-panel-id")
+  )));
+
+  await panels.evaluateAll((items) => {
+    const source = items[1];
+    const target = items[0];
+    const dataTransfer = new DataTransfer();
+    source.dispatchEvent(new DragEvent("dragstart", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer,
+    }));
+    target.dispatchEvent(new DragEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer,
+    }));
+    target.dispatchEvent(new DragEvent("drop", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer,
+    }));
+    source.dispatchEvent(new DragEvent("dragend", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer,
+    }));
+  });
+
+  await expect.poll(() => panels.evaluateAll((items) => items.slice(0, 2).map((item) => (
+    item.getAttribute("data-panel-id")
+  )))).toEqual([initial[1], initial[0]]);
+});
+
 async function armPendingMutationSurfaceObservation(page, pendingLabel) {
   await page.evaluate((label) => {
     globalThis.__SIMEX_PENDING_OBSERVATION__ = new Promise((resolve, reject) => {

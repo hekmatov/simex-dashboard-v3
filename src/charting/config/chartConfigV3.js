@@ -507,6 +507,9 @@ function validateReferenceLine(referenceLine, schema) {
   if (referenceLine.visible !== undefined && typeof referenceLine.visible !== "boolean") {
     throw new Error("Chart presentation reference line visible must be boolean.");
   }
+  if (referenceLine.visible === true && !Number.isFinite(referenceLine.value)) {
+    throw new Error("A visible chart presentation reference line requires a finite value.");
+  }
   if (referenceLine.value !== undefined && !Number.isFinite(referenceLine.value)) {
     throw new Error("Chart presentation reference line value must be finite.");
   }

@@ -163,22 +163,4 @@ function ChartPanel({
   );
 }
 
-function chartPanelPropsEqual(previous, next) {
-  return previous.panel === next.panel
-    && previous.rows === next.rows
-    && previous.datasetProfile === next.datasetProfile
-    && previous.geoData === next.geoData
-    && previous.dataSources === next.dataSources
-    && previous.accessibilityEnabled === next.accessibilityEnabled
-    && previous.suspended === next.suspended
-    && previous.editMode === next.editMode
-    && previous.editDisabled === next.editDisabled
-    && previous.isDragging === next.isDragging
-    && previous.isDragTarget === next.isDragTarget
-    && previous.isSelected === next.isSelected
-    && previous.multiSelectMode === next.multiSelectMode
-    && previous.isMultiSelected === next.isMultiSelected
-    && previous.multiSelectionIndex === next.multiSelectionIndex;
-}
-
-export default React.memo(ChartPanel, chartPanelPropsEqual);
+export default React.memo(ChartPanel);

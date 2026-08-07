@@ -35,7 +35,6 @@ function pickColorFromDocument(ownerDocument) {
   const swatch = indicator.querySelector(".simex-page-color-sampler-swatch");
   const value = indicator.querySelector(".simex-page-color-sampler-value");
   let currentColor = "#FFFFFF";
-  const escapeArmedAt = ownerWindow.performance.now() + 350;
 
   function updateAt(clientX, clientY) {
     currentColor = samplePageColor(ownerDocument, clientX, clientY) ?? currentColor;
@@ -72,7 +71,6 @@ function pickColorFromDocument(ownerDocument) {
 
     function handleKeyDown(event) {
       if (event.key !== "Escape") return;
-      if (ownerWindow.performance.now() < escapeArmedAt) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       cleanup();

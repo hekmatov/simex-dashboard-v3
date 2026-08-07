@@ -672,6 +672,7 @@ test("all declared presentation subshapes reject malformed values before renderi
     ["accessibility", { description: 4 }],
     ["accessibility", { summary: [] }],
     ["referenceLine", { visible: "yes" }, "reference line"],
+    ["referenceLine", { visible: true }, "reference line.*finite value"],
     ["referenceLine", { value: "five" }, "reference line"],
     ["referenceLine", { color: "red" }, "reference line"],
     ["referenceLine", { lineStyle: "wavy" }, "reference line"],

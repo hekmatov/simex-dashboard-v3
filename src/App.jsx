@@ -523,22 +523,25 @@ function insertSectionAtPanel(config, pageId, sectionId, panelId, section) {
 }
 
 function reorderPanels(config, sourceId, targetId) {
-  const panels = config.pages.flatMap(({ sections }) =>
-    sections.flatMap(({ panels: entries }) => entries),
-  );
-  const source = panels.find((panel) => panel.id === sourceId);
-  if (!source) return;
+  if (!sourceId || !targetId || sourceId === targetId) return;
+  let sourceLocation = null;
+  let targetLocation = null;
   for (const page of config.pages) {
     for (const section of page.sections) {
-      section.panels = section.panels.filter(
-        (panel) => panel.id !== sourceId,
-      );
-      const targetIndex = section.panels.findIndex(
-        (panel) => panel.id === targetId,
-      );
-      if (targetIndex >= 0) section.panels.splice(targetIndex, 0, source);
+      const sourceIndex = section.panels.findIndex((panel) => panel.id === sourceId);
+      const targetIndex = section.panels.findIndex((panel) => panel.id === targetId);
+      if (sourceIndex >= 0) sourceLocation = { section, index: sourceIndex };
+      if (targetIndex >= 0) targetLocation = { section, index: targetIndex };
     }
   }
+  if (!sourceLocation || !targetLocation) return;
+
+  const [source] = sourceLocation.section.panels.splice(sourceLocation.index, 1);
+  const targetIndex = sourceLocation.section === targetLocation.section
+    && sourceLocation.index < targetLocation.index
+    ? targetLocation.index - 1
+    : targetLocation.index;
+  targetLocation.section.panels.splice(targetIndex, 0, source);
 }
 
 function displayActionReason(action) {
