@@ -4,6 +4,7 @@ import CollectionSettingsField from "./CollectionSettingsField.jsx";
 import CitationField from "./CitationField.jsx";
 import DeltaComparisonField from "./DeltaComparisonField.jsx";
 import RoleField from "./RoleField.jsx";
+import ReferenceLineField from "./ReferenceLineField.jsx";
 import SeriesColorsField from "./SeriesColorsField.jsx";
 import StandardField, {
   fieldControlId,
@@ -40,6 +41,9 @@ function SchemaField({
   }
   if (field.control === "palette") {
     return /* @__PURE__ */ React.createElement(SeriesColorsField, shared);
+  }
+  if (field.control === "referenceLine") {
+    return /* @__PURE__ */ React.createElement(ReferenceLineField, shared);
   }
   if (field.control === "citation") {
     return /* @__PURE__ */ React.createElement(CitationField, {

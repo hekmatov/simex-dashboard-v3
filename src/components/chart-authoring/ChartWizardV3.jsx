@@ -8,6 +8,7 @@ import {
   createWizardState,
   finalizeWizardDraft,
   reduceWizardState,
+  WIZARD_STEPS,
 } from "../../charting/forms/wizardDraft.js";
 import {
   createManualDataTemplate,
@@ -78,6 +79,7 @@ export default function ChartWizardV3({
   open,
   dataSources,
   loadedData,
+  datasetProfiles,
   geoDataSources,
   timeSyncGroups,
   existingCharts = [],
@@ -87,6 +89,7 @@ export default function ChartWizardV3({
 }) {
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
   const safeLoadedData = collectionOrEmpty(loadedData);
+  const safeDatasetProfiles = collectionOrEmpty(datasetProfiles);
   const safeGeoDataSources = collectionOrEmpty(geoDataSources);
   const geoSources = validatedGeoSourceOptions(
     safeDataSources,
@@ -98,6 +101,7 @@ export default function ChartWizardV3({
     : [];
   const [wizard, setWizard] = React.useState(() => createChartWizardState({
     loadedData: safeLoadedData,
+    profiles: safeDatasetProfiles,
     timeSyncGroups: safeGroups,
     existingCharts: safeExistingCharts,
   }));
@@ -140,6 +144,7 @@ export default function ChartWizardV3({
     if (!open) return;
     setWizard(createChartWizardState({
       loadedData: safeLoadedData,
+      profiles: safeDatasetProfiles,
       timeSyncGroups: safeGroups,
       existingCharts: safeExistingCharts,
     }));
@@ -161,9 +166,10 @@ export default function ChartWizardV3({
     selectedStep?.focus?.({ preventScroll: true });
   }, [open, wizard.activeStep, wizardDialogRef]);
 
-  if (!open) return null;
-
-  const runtimeLoadedData = mergeCollections(safeLoadedData, localRows);
+  const runtimeLoadedData = React.useMemo(
+    () => mergeCollections(safeLoadedData, localRows),
+    [safeLoadedData, localRows],
+  );
   const rows = readEntry(runtimeLoadedData, wizard.draft?.sourceId) ?? [];
   const source = wizard.source
     ?? readEntry(safeDataSources, wizard.draft?.sourceId);
@@ -172,17 +178,25 @@ export default function ChartWizardV3({
     wizard.draft?.presentation?.map?.geoSource,
   );
   const geoJoinFields = geoJoinFieldOptions(geoData);
-  const runtime = createWizardPreparation({
-    chart: wizard.draft,
-    rows,
-    geoData,
-    authorMetadata: source?.parsingMetadata
-      ?? manualParsingMetadata(manualTable),
-  });
-  const profiles = profileCollection(runtimeLoadedData, safeDataSources, {
-    sourceId: wizard.draft?.sourceId,
-    profile: runtime.profile,
-  });
+  const authorMetadata = React.useMemo(
+    () => source?.parsingMetadata ?? manualParsingMetadata(manualTable),
+    [source?.parsingMetadata, manualTable],
+  );
+  const runtime = React.useMemo(() => createWizardPreparation({
+      chart: wizard.draft,
+      rows,
+      geoData,
+      authorMetadata,
+    }), [wizard.draft, rows, geoData, authorMetadata]);
+  const profiles = React.useMemo(() => {
+    const cached = mergeCollections(safeDatasetProfiles, wizard.profiles);
+    const sourceId = wizard.draft?.sourceId;
+    return sourceId
+      ? { ...cached, [sourceId]: runtime.profile }
+      : cached;
+  }, [safeDatasetProfiles, wizard.profiles, wizard.draft?.sourceId, runtime.profile]);
+
+  if (!open) return null;
   const syncedWizard = {
     ...wizard,
     loadedData: runtimeLoadedData,
@@ -211,6 +225,7 @@ export default function ChartWizardV3({
     : { sections: [], valid: false };
   const active = form.steps.find(({ id }) => id === wizard.activeStep)
     ?? form.steps[0];
+  const activeStepIndex = WIZARD_STEPS.indexOf(wizard.activeStep);
   const dataSection = editor.sections.find(({ id }) => id === "data") ?? null;
   const timeSyncField = editor.sections
     .flatMap(({ fields }) => fields)
@@ -620,13 +635,37 @@ export default function ChartWizardV3({
           { role: "status" },
           active.prerequisites[0] ?? "",
         ),
-        React.createElement(IconControl, {
-          interactionId: "wizard.create-chart",
-          ariaLabel: submitting ? "Creating chart" : "Create chart",
-          tooltip: submitting ? "Creating chart" : "Create chart",
-          disabled: disabled || !canCreate || submitting,
-          onClick: finish,
-        }),
+        React.createElement(
+          "div",
+          { className: "chart-wizard-footer-actions" },
+          React.createElement(IconControl, {
+            interactionId: "collection.previous-page",
+            ariaLabel: "Previous step",
+            tooltip: "Previous step",
+            disabled: disabled || submitting || activeStepIndex <= 0,
+            onClick: () => dispatch({
+              type: "navigate",
+              step: WIZARD_STEPS[activeStepIndex - 1],
+            }),
+          }),
+          React.createElement(IconControl, {
+            interactionId: "collection.next-page",
+            ariaLabel: "Next step",
+            tooltip: "Next step",
+            disabled: disabled || submitting || activeStepIndex >= WIZARD_STEPS.length - 1,
+            onClick: () => dispatch({
+              type: "navigate",
+              step: WIZARD_STEPS[activeStepIndex + 1],
+            }),
+          }),
+          React.createElement(IconControl, {
+            interactionId: "wizard.create-chart",
+            ariaLabel: submitting ? "Creating chart" : "Create chart",
+            tooltip: submitting ? "Creating chart" : "Create chart",
+            disabled: disabled || !canCreate || submitting,
+            onClick: finish,
+          }),
+        ),
       ),
     ),
     React.createElement(ConfirmDialog, {
@@ -853,12 +892,13 @@ export async function parseUploadedCsvFile(file, existingSources = {}) {
 
 export function createChartWizardState({
   loadedData,
+  profiles = {},
   timeSyncGroups,
   existingCharts = [],
 }) {
   return createWizardState({
     loadedData,
-    profiles: profileCollection(loadedData),
+    profiles,
     timeSyncGroups,
     charts: existingCharts,
   });
@@ -897,22 +937,6 @@ function manualParsingMetadata(table) {
       }[column.expectedType] ?? "category",
     },
   ]));
-}
-
-function profileCollection(loadedData, dataSources = {}, selected = {}) {
-  const entries = loadedData instanceof Map
-    ? [...loadedData.entries()]
-    : isRecord(loadedData)
-      ? Object.entries(loadedData)
-      : [];
-  return Object.fromEntries(entries.flatMap(([sourceId, rows]) => {
-    if (!Array.isArray(rows)) return [];
-    const source = readEntry(dataSources, sourceId);
-    const profile = sourceId === selected.sourceId && selected.profile
-      ? selected.profile
-      : profileDataset(rows, source?.parsingMetadata ?? {});
-    return [[sourceId, profile]];
-  }));
 }
 
 function mergeCollections(base, additions) {

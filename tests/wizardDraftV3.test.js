@@ -117,6 +117,18 @@ test("every wizard tab is directly navigable before prerequisites are complete",
   );
 });
 
+test("choosing a chart type advances directly to data-source selection", () => {
+  const initial = createWizardState();
+  const selected = reduceWizardState(initial, {
+    type: "selectType",
+    typeId: "line",
+  });
+
+  assert.equal(initial.activeStep, "type");
+  assert.equal(selected.activeStep, "source");
+  assert.equal(selected.draft.typeId, "line");
+});
+
 test("wizard style clears delete optional leaves and prune an empty series object", () => {
   const chart = createChartDraft("line", {
     id: "style-reset-line",

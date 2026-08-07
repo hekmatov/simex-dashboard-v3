@@ -139,6 +139,7 @@ function selectType(state, action) {
     : state.timeSyncGroups;
   return {
     ...state,
+    activeStep: "source",
     draft: createChartDraft(action.typeId, {
       ...overrides,
       ...(draftId ? { id: draftId } : {}),

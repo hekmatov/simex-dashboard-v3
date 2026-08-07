@@ -352,12 +352,25 @@ function appearanceFields({ chart, schema }) {
   return [
     ...common,
     ...schema.form.appearance.map((fieldId) => (
-      seriesAppearanceField(fieldId, series)
+      seriesAppearanceField(
+        fieldId,
+        series,
+        chart.presentation?.referenceLine,
+      )
     )),
   ];
 }
 
-function seriesAppearanceField(fieldId, series) {
+function seriesAppearanceField(fieldId, series, referenceLine) {
+  if (fieldId === "referenceLine") {
+    return {
+      id: fieldId,
+      label: "Reference line",
+      control: "referenceLine",
+      path: ["presentation", "referenceLine"],
+      value: referenceLine,
+    };
+  }
   if (fieldId === "seriesColors") {
     return {
       id: fieldId,

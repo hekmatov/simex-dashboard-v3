@@ -134,6 +134,39 @@ test("line, area, and mixed options preserve axis types and primary or secondary
   assert.equal(mixed.option.series.find(({ name }) => name.startsWith("Rate")).yAxisIndex, 1);
 });
 
+test("line charts render one configured horizontal reference line without duplicating it per series", () => {
+  const model = buildRenderModel({
+    chart: chart("line", {
+      presentation: {
+        title: { align: "left" },
+        collection: null,
+        referenceLine: {
+          visible: true,
+          value: 5,
+          label: "Preparedness threshold",
+          color: "#DC2626",
+          lineStyle: "dotted",
+        },
+      },
+    }),
+    prepared: axisMarks,
+  });
+
+  assert.deepEqual(model.option.series[0].markLine, {
+    silent: true,
+    symbol: "none",
+    lineStyle: { color: "#DC2626", type: "dotted", width: 2 },
+    label: {
+      show: true,
+      color: "#DC2626",
+      formatter: "Preparedness threshold",
+      position: "insideEndTop",
+    },
+    data: [{ yAxis: 5 }],
+  });
+  assert.equal(model.option.series.slice(1).some(({ markLine }) => markLine), false);
+});
+
 test("axis rendering follows validated schema marks instead of chart type identifiers", () => {
   const model = buildAxisRenderModel({
     chart: chart("futureStepLine", {

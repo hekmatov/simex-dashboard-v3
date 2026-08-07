@@ -20,7 +20,7 @@ export const CHART_CONFIG_VERSION = 3;
 const CHART_KEYS = new Set(["configVersion", "id", "typeId", "title", "description", "sourceId", "roles", "transformations", "presentation", "interaction", "layout"]);
 const TRANSFORMATION_KEYS = new Set(["filters", "grouping", "aggregation", "duplicates", "missingValues", "comparison"]);
 const REQUIRED_TRANSFORMATION_KEYS = new Set(["filters", "grouping", "duplicates", "missingValues"]);
-const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced", "series", "description", "citation"]);
+const PRESENTATION_KEYS = new Set(["title", "collection", "labels", "axes", "targets", "map", "timeline", "background", "legend", "accessibility", "advanced", "series", "description", "citation", "referenceLine"]);
 const INTERACTION_KEYS = new Set(["zoom", "timeSync"]);
 const LAYOUT_KEYS = new Set(["size", "x", "y", "width", "height"]);
 const LAYOUT_SIZES = new Set(["compact", "standard", "wide", "full"]);
@@ -399,6 +399,7 @@ function validatePresentation(chart, schema) {
   validateAccessibility(descriptors.accessibility?.value);
   validateDescription(descriptors.description?.value);
   validateCitation(descriptors.citation?.value);
+  validateReferenceLine(descriptors.referenceLine?.value, schema);
   optionalObject(descriptors.advanced?.value, "Chart presentation advanced", new Set());
   if (Object.hasOwn(descriptors, "series")) {
     normalizeSeriesStyle(
@@ -490,6 +491,39 @@ function validateCitation(citation) {
   optionalObject(citation, "Chart presentation citation", new Set(["label"]));
   if (citation?.label !== undefined && typeof citation.label !== "string") {
     throw new Error("Chart presentation citation label must be a string.");
+  }
+}
+
+function validateReferenceLine(referenceLine, schema) {
+  if (referenceLine === undefined) return;
+  if (schema.semantics?.mark !== "line") {
+    throw new Error(`Chart type "${schema.typeId}" does not support a reference line.`);
+  }
+  optionalObject(
+    referenceLine,
+    "Chart presentation reference line",
+    new Set(["visible", "value", "label", "color", "lineStyle"]),
+  );
+  if (referenceLine.visible !== undefined && typeof referenceLine.visible !== "boolean") {
+    throw new Error("Chart presentation reference line visible must be boolean.");
+  }
+  if (referenceLine.visible === true && !Number.isFinite(referenceLine.value)) {
+    throw new Error("A visible chart presentation reference line requires a finite value.");
+  }
+  if (referenceLine.value !== undefined && !Number.isFinite(referenceLine.value)) {
+    throw new Error("Chart presentation reference line value must be finite.");
+  }
+  if (referenceLine.label !== undefined && typeof referenceLine.label !== "string") {
+    throw new Error("Chart presentation reference line label must be a string.");
+  }
+  if (referenceLine.color !== undefined && !/^#[0-9a-f]{6}$/i.test(referenceLine.color)) {
+    throw new Error("Chart presentation reference line color must use #RRGGBB format.");
+  }
+  if (
+    referenceLine.lineStyle !== undefined
+    && !["solid", "dashed", "dotted"].includes(referenceLine.lineStyle)
+  ) {
+    throw new Error("Chart presentation reference line style is unsupported.");
   }
 }
 

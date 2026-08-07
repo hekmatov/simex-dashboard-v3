@@ -150,6 +150,12 @@ function registryFor(ownerDocument) {
 function handleModalKeyDown(registry, event) {
   const top = registry.entries.at(-1);
   if (!top) return;
+  if (
+    event.key === "Escape"
+    && top.node.ownerDocument.documentElement.dataset.simexEyedropperActive === "true"
+  ) {
+    return;
+  }
   if (event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();

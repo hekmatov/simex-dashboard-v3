@@ -93,6 +93,38 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   }, STORAGE_KEY)).toEqual(["#DC2626"]);
 });
 
+test("wizard eyedropper reveals the dashboard and Escape preserves the draft", async ({ page }) => {
+  await openWizard(page);
+  const wizard = chartWizard(page);
+  await chooseType(wizard, "pie", /^Pie\b/i);
+  await selectExistingSource(wizard, "bio_mortality");
+  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await selectRole(wizard, "category", "Age group");
+  await selectRole(wizard, "value", "deaths");
+  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
+
+  const picker = wizard.getByRole("button", {
+    name: "Pick background from dashboard",
+  });
+  await picker.click();
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-simex-eyedropper-active",
+    "true",
+  );
+  await expect(wizard).toHaveCSS("opacity", "0");
+  await expect(wizard).toHaveCSS("pointer-events", "none");
+
+  await page.keyboard.press("Escape");
+
+  await expect(page.locator("html")).not.toHaveAttribute(
+    "data-simex-eyedropper-active",
+    "true",
+  );
+  await expect(wizard).toBeVisible();
+  await expect(wizard.getByLabel("Chart title")).toBeVisible();
+});
+
 for (const scenario of [
   {
     typeId: "scatter",
