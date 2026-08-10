@@ -12,7 +12,7 @@ Status: Approved prototype reference
 ## Header and page navigation
 
 - The application-frame bar is 64 px high with 16 px horizontal padding and a 12 px gap. It contains, in order, SimEx identity, mode switch, flexible space, scenario name, and updated date.
-- The page header follows the frame: scenario/program eyebrow, page title, concise subtitle, then scenario and updated metadata. View uses a 136 px header; Build uses an 88 px compact header; the Present controller uses a 72 px summary header.
+- The page header follows the frame: scenario/program eyebrow, page title, concise subtitle, then scenario and updated metadata. View uses a 136 px header and Build uses an 88 px compact header. Present uses the shared frame followed directly by its 64 px status strip.
 - Page navigation is a distinct 52 px row immediately below the header. It contains Home, Biomedical, and Socio-economic in configured order; the active page uses text plus programmatic current state, never color alone.
 - Build adds one 52 px utility row after page navigation for workspace context and Save/Add actions. It is part of the Build shell, not a fourth navigation layer.
 
@@ -31,7 +31,7 @@ Status: Approved prototype reference
 ## Present controller regions
 
 - Below the shared 64 px frame, constrain the controller to 1440 px with 24 px padding. Put connection state and `Open audience display` in a full-width 64 px status strip.
-- The controller body uses `360px minmax(0, 1fr)` with a 20 px gutter. The left region holds current page, audience status, title visibility, and return/close actions. The right region holds the one-to-four-chart scene list, ordering, and layout preview.
+- The controller body uses `360px minmax(0, 1fr)` with a 20 px gutter. The left region holds current page, audience status, and title visibility. The right region holds the one-to-four-chart scene list, ordering, and layout preview; return/close actions follow the action dock in DOM and visual order.
 - A 72 px sticky action dock spans the body for synchronized time, `Blackout`, and `Restore`; blackout remains visually separated from scene editing.
 
 ## Audience title and chart layouts
