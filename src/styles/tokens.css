@@ -1,0 +1,9 @@
+:root {
+  --simex-surface-canvas: #f7f9fc;
+  --simex-surface-panel: #f8fbff;
+  --simex-text-strong: #08224a;
+  --simex-text-muted: #49627a;
+  --simex-border-subtle: #d8e2ec;
+  --simex-focus: #f4b942;
+  --simex-control-min: 44px;
+}

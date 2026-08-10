@@ -12,6 +12,11 @@ import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
+import ViewShell from "./view/ViewShell.jsx";
+import {
+  configuredCharts,
+  findPanelPlacement,
+} from "../lib/dashboardSelectors.js";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
 import {
@@ -112,7 +117,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const landingActive = hasLandingPresentation(activePage);
-  const selectedPlacement = findPanel(dashboard, selectedPanelId);
+  const selectedPlacement = findPanelPlacement(dashboard, selectedPanelId);
   const selectedPanel = selectedPlacement?.chart ?? null;
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
@@ -641,6 +646,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           </div>
         </section>
       </main>
+    );
+  }
+
+  if (!editMode) {
+    return (
+      <ViewShell
+        activePage={activePage}
+        dashboard={dashboard}
+        displayState={displayState}
+        companionStatusLabel={companionStatusLabel}
+        iconLanguageStyles={iconLanguageStyles}
+        geoDataSources={geoDataSources}
+        onActivePageChange={navigateToPage}
+        onDisplayAction={onDisplayAction}
+      />
     );
   }
 
@@ -1339,32 +1359,6 @@ export function commitPendingDashboardEdits(edits, callbacks = {}) {
     }
   }
   return undefined;
-}
-
-function findPanel(dashboard, panelId) {
-  if (!panelId) {
-    return null;
-  }
-  for (const page of dashboard.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      const panel = section.panels.find((candidate) => candidate.id === panelId);
-      if (panel) {
-        return {
-          panelId: panel.id,
-          chart: panel.chart ?? panel,
-        };
-      }
-    }
-  }
-  return null;
-}
-
-function configuredCharts(dashboard) {
-  return (dashboard?.pages ?? []).flatMap((page) =>
-    (page.sections ?? []).flatMap((section) =>
-      (section.panels ?? []).map((panel) => panel.chart ?? panel),
-    ),
-  );
 }
 
 function uniquePageId(dashboard, label) {
