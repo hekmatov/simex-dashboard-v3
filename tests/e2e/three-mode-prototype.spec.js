@@ -103,15 +103,24 @@ test("Present opens an audience window and sends a two-chart layout", async ({ p
 
 test("Present retains synchronized time through blackout, reload, disconnect, and reopen", async ({ page }) => {
   await enterPresent(page);
+  await installAudienceStateObserver(page.context());
   const audience = await openAudience(page);
   await selectTwoAudienceCharts(page);
 
   await page.getByLabel("Synchronized time").selectOption({ index: 1 });
+  await expect.poll(async () => Number.isFinite(
+    await observedAudienceEpoch(audience),
+  )).toBe(true);
+  const previousEpoch = await observedAudienceEpoch(audience);
   const presentationTime = page.getByLabel("Presentation time");
   await expect(presentationTime).toBeEnabled();
   const previousTime = await presentationTime.inputValue();
-  await presentationTime.press("ArrowRight");
+  await presentationTime.press("ArrowLeft");
   await expect(presentationTime).not.toHaveValue(previousTime);
+  await expect.poll(() => observedAudienceEpoch(audience))
+    .not.toBe(previousEpoch);
+  const activeEpochMs = await observedAudienceEpoch(audience);
+  expect(Number.isFinite(activeEpochMs)).toBe(true);
 
   await page.getByRole("button", { name: "Blackout" }).click();
   await expect(audience.locator(".audience-blackout")).toBeVisible();
@@ -119,6 +128,7 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
   await audience.reload();
   await expect(audience.locator(".audience-blackout")).toBeVisible();
   await expect(audience.locator("[data-displayed-chart-id]")).toHaveCount(2);
+  await expect.poll(() => observedAudienceEpoch(audience)).toBe(activeEpochMs);
 
   await page.getByRole("button", { name: "Restore" }).click();
   await expect(audience.locator(".audience-blackout")).toHaveCount(0);
@@ -128,6 +138,7 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
 
   const reopened = await reopenAudience(page);
   await expect(reopened.locator("[data-displayed-chart-id]")).toHaveCount(2);
+  await expect.poll(() => observedAudienceEpoch(reopened)).toBe(activeEpochMs);
 });
 
 test("iPad View and Build plus a 1920 by 1080 audience have no horizontal overflow", async ({ page }) => {
@@ -194,4 +205,32 @@ async function expectNoHorizontalOverflow(page) {
   await expect.poll(() => page.evaluate(() => (
     document.documentElement.scrollWidth <= document.documentElement.clientWidth
   ))).toBe(true);
+}
+
+async function installAudienceStateObserver(context) {
+  await context.addInitScript(() => {
+    const parameters = new URLSearchParams(globalThis.location.search);
+    const channelId = parameters.get("channel");
+    if (parameters.get("surface") !== "audience" || !channelId) return;
+
+    const observation = { latestState: null };
+    const channel = new BroadcastChannel(`simex-presentation-${channelId}`);
+    channel.addEventListener("message", ({ data }) => {
+      if (
+        data?.protocol_version === 1
+        && data.session_id === channelId
+        && data.type === "state"
+      ) {
+        observation.latestState = structuredClone(data.payload);
+      }
+    });
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = observation;
+  });
+}
+
+async function observedAudienceEpoch(audience) {
+  return audience.evaluate(() => (
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState?.time?.active_epoch_ms
+      ?? null
+  ));
 }
