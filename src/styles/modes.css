@@ -194,9 +194,9 @@
 @media (min-width: 1200px) and (max-width: 1319px) {
   .build-region-grid {
     grid-template-columns:
-      clamp(216px, calc(53.333vw - 424px), 280px)
+      clamp(216px, calc(53vw - 420px), 280px)
       minmax(640px, 1fr)
-      clamp(280px, calc(46.667vw - 280px), 336px);
+      clamp(280px, calc(47vw - 284px), 336px);
   }
 }
 
