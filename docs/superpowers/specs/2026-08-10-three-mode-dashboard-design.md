@@ -1,7 +1,7 @@
 # Three-Mode Dashboard Redesign
 
 Date: 2026-08-10
-Status: Proposed for review
+Status: Approved for implementation planning
 Branch: `codex/three-mode-dashboard-design`
 Baseline: `main` at `9f0878e`
 
@@ -66,7 +66,8 @@ The capability set is stronger than its current operating model:
 7. **Preserve working contracts.** Existing transaction guarantees, fullscreen
    selection, synchronized time, icon semantics, static hosting, PWA behavior,
    and standalone Quorum fallback remain intact unless a later reviewed plan
-   explicitly changes them.
+   explicitly changes them. This does not promise compatibility with browser-
+   saved dashboard state or package files created before the redesign.
 8. **Evidence before ornament.** Visual changes must improve hierarchy,
    comprehension, touch use, or presentation clarity—not merely make the
    dashboard look newer.
@@ -317,18 +318,26 @@ No essential action may rely on right-click, hover, or color alone.
 - Companion absence continues to be a normal standalone condition and does not
   block any of the three modes.
 
-## Compatibility and Migration
+## Versioning and Cutover
 
 - Version 3 remains the only configuration contract. No version-2 compatibility
   or migration path is added.
-- Existing saved dashboards and packaged bundles continue to load without a
-  required mode field.
+- The redesign may revise the version-3 configuration, browser-persistence, and
+  package shapes where that produces a cleaner mode architecture.
+- Browser-saved dashboards and packaged bundles created before the redesign
+  have no compatibility guarantee. No automatic migration, reconciliation, or
+  adapter path is required for them.
+- If an old saved state or package cannot be safely interpreted, the application
+  rejects or ignores it explicitly and starts from the new source configuration
+  rather than partially merging stale data. Users can then make new edits and
+  export a new package.
 - Existing page, panel, fullscreen, filtering, data-source, and Quorum behaviors
-  remain available through the shared runtime.
+  remain available through the shared runtime when represented in the new
+  source configuration.
 - The redesign may reorganize controls, but destructive or closing authoring
   actions retain their transactional guarantees.
-- Mode preference uses a new namespaced local key and tolerates absent or
-  unknown values.
+- Mode preference and redesigned saved state use new namespaced keys or an
+  explicit schema revision so pre-redesign values cannot be silently applied.
 - Presentation state is never written into the dashboard bundle.
 
 ## Alternatives Rejected
@@ -403,7 +412,7 @@ its step begins; listing it here does not authorize unrelated changes.
 | 3 | Convert this architecture into a UI contract covering navigation, tokens, component states, responsive behavior, accessibility, Build workspace, View shell, and Present controller/display. | `gsd-ui-phase`; `superpowers:brainstorming` only if a new material decision emerges | Reviewed `UI-SPEC.md` with no unresolved structural decisions. |
 | 4 | Create disposable HTML sketches for the application frame and the three mode shells; compare at realistic widths before touching production components. | `gsd-sketch`; optional pinned UI/UX Pro Max reference | Approved sketch direction for View, Build, controller, and audience display. |
 | 5 | Translate the approved UI contract and sketches into a file-by-file implementation plan with small vertical slices and focused verification. | `superpowers:writing-plans` | Reviewed implementation plan naming files, dependencies, behaviors, and acceptance checks. |
-| 6 | Add the shared mode foundation: typed/validated mode model, app-frame switcher, mode persistence, shared-state preservation, and display-entry parsing. | `gsd-execute-phase`; project test policy; `superpowers:test-driven-development` scaled to focused changed behavior | All three shells are reachable by every user; no permission or bundle-schema change; focused mode-state checks pass. |
+| 6 | Add the shared mode foundation: typed/validated mode model, app-frame switcher, mode persistence, shared-state preservation, saved-state cutover, and display-entry parsing. | `gsd-execute-phase`; project test policy; `superpowers:test-driven-development` scaled to focused changed behavior | All three shells are reachable by every user; no permission model is introduced; any persisted-state cutover is explicit; focused mode-state checks pass. |
 | 7 | Refine View and build the Build workspace around the existing transactional authoring flows. Introduce semantic tokens and compact/comfortable density without replacing the icon or chart systems. | `gsd-execute-phase`; `browser:control-in-app-browser`; focused component tests | Core exploration and authoring tasks work on desktop and tablet; failed edits retain context; accepted sketches are faithfully implemented. |
 | 8 | Implement Present controller and audience window with handshake, full snapshot, incremental state, selection/reorder, synchronized time, blackout, and reconnect behavior. | `gsd-execute-phase`; `superpowers:systematic-debugging` only for observed failures; focused Playwright checks | A moderator controls a separate 16:9 audience window on one computer; reload/reconnect and blocked-popup paths are understandable. |
 | 9 | Validate the complete experience proportionally across the three tasks, then address only findings that affect acceptance. | `gsd-add-tests`; `gsd-ui-review`; `gsd-verify-work`; `superpowers:verification-before-completion`; JavaScript `@axe-core/playwright` | Task-based UAT, keyboard/touch checks, realistic audience-display review, and the repository's explicitly requested pre-merge gates pass once. |
@@ -431,8 +440,9 @@ its step begins; listing it here does not authorize unrelated changes.
   stable chart and status semantics.
 - Keyboard, touch, reduced-motion, focus, and large-room legibility checks cover
   the interactions each mode actually requires.
-- Static hosting, PWA/offline behavior, portable bundles, standalone operation,
-  Quorum compatibility, and the generated icon authority remain intact.
+- Static hosting, PWA/offline behavior, new-package export, standalone operation,
+  Quorum compatibility, and the generated icon authority remain intact. Loading
+  pre-redesign browser saves and package files is not required.
 
 ## Explicit Non-goals
 
@@ -441,6 +451,8 @@ its step begins; listing it here does not authorize unrelated changes.
 - Participant rosters, invitations, scheduling, or exercise administration
   beyond dashboard and package preparation
 - A second dashboard configuration version or version-2 compatibility
+- Automatic migration or reconciliation for pre-redesign browser-saved
+  dashboards or packaged bundles
 - React Router, a backend service, or a new frontend framework
 - Replacing ECharts, the chart registry, or the generated icon system
 - Redesigning the Quorum protocol
