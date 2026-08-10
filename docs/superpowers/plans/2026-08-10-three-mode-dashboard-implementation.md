@@ -1,5 +1,9 @@
 # Three-Mode Dashboard Implementation Plan
 
+> **Superseded for execution:** The user subsequently made agile educational
+> prototype delivery and minimum safeguards explicit requirements. Execute
+> docs/superpowers/plans/2026-08-10-three-mode-dashboard-prototype.md instead.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking.
 
 **Goal:** Deliver universally available View, Build, and Present modes over one shared SimEx V3 runtime, including a moderator-controlled same-computer audience display.

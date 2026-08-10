@@ -25,6 +25,33 @@ operate while preserving the dashboard's strict version-3 configuration,
 offline/static deployment, portable package, ECharts rendering, generated icon
 authority, and optional Quorum companion boundary.
 
+## Prototype Delivery Constraint
+
+This work is an educational and training prototype. It is non-commercial and
+is supplied without guarantees of availability, accuracy, suitability,
+security, support, or continued compatibility.
+
+Agile prototype delivery is an explicit product requirement:
+
+- Implement the smallest direct behavior that satisfies the acceptance tasks.
+- Do not add speculative abstractions, generic frameworks, feature flags,
+  analytics, telemetry, observability, audit infrastructure, deployment
+  automation, or release-grade documentation.
+- Safety and security work is limited to the minimum needed for correct local
+  browser behavior and preservation of existing repository boundaries: basic
+  input/message validation, same-origin browser APIs, bounded chart selection,
+  and keeping datasets out of presentation messages.
+- Do not add authentication, authorization, encryption, security tokens,
+  threat-model infrastructure, rate limiting, security scanning, compliance
+  claims, or privacy certification.
+- Do not weaken or remove security behavior that already exists. Simply avoid
+  expanding it beyond what the prototype requires.
+- A newly discovered idea is out of scope unless it blocks an approved
+  acceptance criterion. Record it for possible future work instead of
+  implementing it.
+- Tests and review must be proportional and acceptance-driven. Do not create
+  extra test infrastructure or duplicate deterministic checks.
+
 ## Current Baseline
 
 At the selected baseline, SimEx is a React 19 and Vite single-page application
@@ -208,7 +235,9 @@ Session lifecycle:
    in the same user gesture so browser popup rules are satisfied.
 3. The display loads the normal application assets and sends a `ready` message.
 4. The controller responds with one complete, versioned presentation snapshot.
-5. Subsequent controller actions send small state updates.
+5. Subsequent controller actions send the complete lightweight presentation
+   state. The state is small enough that a patch protocol is unnecessary for
+   this prototype.
 6. If the display reloads, it sends `ready` again and receives a fresh snapshot.
 7. If the channel is interrupted, the display retains the last valid scene;
    the controller shows the reconnection problem and offers to reopen it.
@@ -221,8 +250,8 @@ authoring command is sent through the channel.
 
 Cross-device remote control is deliberately excluded. It would require a
 transport, discovery, session-security, and failure model that is unnecessary
-for the first useful large-screen workflow. The message schema should remain
-transport-neutral enough that a reviewed future phase can add that capability.
+for the first useful large-screen workflow. This prototype schema is designed
+only for the direct same-origin BroadcastChannel implementation.
 
 ## Navigation and State
 
@@ -251,8 +280,8 @@ template wholesale.
 
 - Retain the existing institutional navy/blue foundation, restrained amber
   emphasis, and biomedical/socio-economic domain identities.
-- Consolidate raw values into semantic tokens for surfaces, text, borders,
-  focus, status, spacing, radius, elevation, motion, and chart-adjacent UI.
+- Add semantic tokens only for values used by the new or directly touched mode
+  shells. Do not refactor unrelated chart or legacy component styling.
 - Keep the generated SimEx glyph registry as the icon authority. New icons must
   follow its geometry, naming, accessible-label, and tooltip contracts.
 - Keep chart color semantics stable across modes. Shell styling must not make
@@ -389,10 +418,9 @@ produce artifacts tied to its actual V3, ECharts, icon, and offline contracts.
   its exact version is inspected and pinned. Its generated guidance must be
   reconciled with tablet touch targets, presentation distance, chart semantics,
   and the existing icon authority.
-- A Playwright integration using the JavaScript `@axe-core/playwright` package
-  is the most useful external repository pattern from the report for runtime
-  accessibility checks. The cited .NET wrapper is not a direct dependency for
-  this React repository.
+- Existing Playwright checks plus direct keyboard, touch, and projected-display
+  review are sufficient for this prototype. Do not add an accessibility
+  dependency or claim comprehensive conformance.
 - Screenshot heuristic review is suitable for cheap comparison of visual
   hierarchy across modes, but it cannot validate keyboard, touch, state
   transitions, or moderator/display synchronization.
@@ -415,8 +443,8 @@ its step begins; listing it here does not authorize unrelated changes.
 | 6 | Add the shared mode foundation: typed/validated mode model, app-frame switcher, mode persistence, shared-state preservation, saved-state cutover, and display-entry parsing. | `gsd-execute-phase`; project test policy; `superpowers:test-driven-development` scaled to focused changed behavior | All three shells are reachable by every user; no permission model is introduced; any persisted-state cutover is explicit; focused mode-state checks pass. |
 | 7 | Refine View and build the Build workspace around the existing transactional authoring flows. Introduce semantic tokens and compact/comfortable density without replacing the icon or chart systems. | `gsd-execute-phase`; `browser:control-in-app-browser`; focused component tests | Core exploration and authoring tasks work on desktop and tablet; failed edits retain context; accepted sketches are faithfully implemented. |
 | 8 | Implement Present controller and audience window with handshake, full snapshot, incremental state, selection/reorder, synchronized time, blackout, and reconnect behavior. | `gsd-execute-phase`; `superpowers:systematic-debugging` only for observed failures; focused Playwright checks | A moderator controls a separate 16:9 audience window on one computer; reload/reconnect and blocked-popup paths are understandable. |
-| 9 | Validate the complete experience proportionally across the three tasks, then address only findings that affect acceptance. | `gsd-add-tests`; `gsd-ui-review`; `gsd-verify-work`; `superpowers:verification-before-completion`; JavaScript `@axe-core/playwright` | Task-based UAT, keyboard/touch checks, realistic audience-display review, and the repository's explicitly requested pre-merge gates pass once. |
-| 10 | Capture durable dashboard-specific guidance, update user documentation, and prepare the reviewed branch for integration without deploying it. | `skill-creator`; `gsd-docs-update`; `gsd-ship` | Project skill references code/docs rather than duplicating them; manuals explain all three modes; approved PR candidate is ready. |
+| 9 | Validate the complete experience proportionally across the three tasks, then address only findings that affect acceptance. | `gsd-ui-review`; `gsd-verify-work`; `superpowers:verification-before-completion` | Task-based UAT, keyboard/touch checks, realistic audience-display review, and the repository's explicitly requested pre-merge gates pass once. |
+| 10 | Update concise user documentation and prepare the reviewed branch for integration without deploying it. | `gsd-docs-update`; `gsd-ship` | Manuals explain all three modes and the prototype disclaimer; approved PR candidate is ready. |
 
 ## Acceptance Criteria
 
@@ -457,3 +485,5 @@ its step begins; listing it here does not authorize unrelated changes.
 - Replacing ECharts, the chart registry, or the generated icon system
 - Redesigning the Quorum protocol
 - Deploying, merging, or advancing the Cloudflare branch as part of design work
+- Commercialization, production hardening, warranties, service guarantees,
+  compliance work, or release-grade security infrastructure
