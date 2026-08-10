@@ -36,15 +36,12 @@ export default function PresentWorkspace({
   const activePage = (dashboard?.pages ?? []).find(({ id }) => id === activePageId)
     ?? dashboard?.pages?.[0]
     ?? null;
-  const displayedChartIds = displayState?.displayed_chart_ids ?? [];
-  const layout = displayState?.layout ?? "solo";
+  const displayedChartIds = displayState.displayed_chart_ids;
+  const layout = displayState.layout;
   const selectedCharts = displayedChartIds
     .map((chartId) => chartsById.get(chartId))
     .filter(Boolean);
   const layoutOptions = layoutChoices(displayedChartIds.length);
-  const resolvedLayout = layoutOptions.some(({ value }) => value === layout)
-    ? layout
-    : layoutOptions[0].value;
   const hasClock = playback.activeGroupId !== null && playback.clock.length > 0;
   const atFirstTime = !hasClock || playback.activeIndex <= 0;
   const atLastTime = !hasClock || playback.activeIndex >= playback.clock.length - 1;
@@ -52,7 +49,7 @@ export default function PresentWorkspace({
   const presentationState = React.useMemo(() => ({
     active_page_id: activePage?.id ?? "dashboard",
     displayed_chart_ids: displayedChartIds,
-    layout: resolvedLayout,
+    layout,
     time: playback.activeGroupId !== null && Number.isFinite(playback.activeEpochMs)
       ? {
           group_id: playback.activeGroupId,
@@ -67,7 +64,7 @@ export default function PresentWorkspace({
     displayedChartIds,
     playback.activeEpochMs,
     playback.activeGroupId,
-    resolvedLayout,
+    layout,
     showSceneTitle,
   ]);
 
@@ -141,7 +138,6 @@ export default function PresentWorkspace({
       onDisplayAction?.({ type: "manual_close", chart_id: chartId });
       return;
     }
-    if (displayedChartIds.length >= 4) return;
     onDisplayAction?.({ type: "manual_open", chart_id: chartId });
   }
 
@@ -213,7 +209,7 @@ export default function PresentWorkspace({
               <span>Scene layout</span>
               <select
                 aria-label="Scene layout"
-                value={resolvedLayout}
+                value={layout}
                 onChange={(event) => onDisplayAction?.({
                   type: "layout_changed",
                   layout: event.target.value,
@@ -275,7 +271,6 @@ export default function PresentWorkspace({
                       <input
                         type="checkbox"
                         checked={selected}
-                        disabled={!selected && displayedChartIds.length >= 4}
                         onChange={() => toggleChart(chart.id)}
                       />
                       <span>{chart.title ?? chart.id}</span>

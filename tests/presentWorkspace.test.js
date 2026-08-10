@@ -34,6 +34,9 @@ const dashboard = {
         panels: [
           { id: "chart-a", title: "Cases" },
           { id: "chart-b", title: "Capacity" },
+          { id: "chart-c", title: "Coordination" },
+          { id: "chart-d", title: "Demand" },
+          { id: "chart-e", title: "Escalation" },
         ],
       }],
     },
@@ -47,7 +50,7 @@ const displayState = {
   layout: "sideBySide",
 };
 
-function renderPresent(Component) {
+function renderPresent(Component, overrides = {}) {
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   Object.defineProperty(globalThis, "window", {
@@ -76,6 +79,7 @@ function renderPresent(Component) {
           onDisplayAction: () => {},
           accessibilityEnabled: false,
           ...(Component === rendererModule?.default ? { mode: "present" } : {}),
+          ...overrides,
         }),
       ),
     );
@@ -130,3 +134,57 @@ test("DashboardRenderer composes Present without mounting the fullscreen display
   assert.match(html, /present-workspace/);
   assert.doesNotMatch(html, /fullscreen-backdrop/);
 });
+
+test("Present forwards display state without substituting layout or enforcing capacity", () => {
+  const mismatchedLayoutHtml = renderPresent(presentModule.default, {
+    displayState: {
+      display_revision: 2,
+      displayed_chart_ids: ["chart-a", "chart-b"],
+      layout: "grid2x2",
+    },
+  });
+  const sceneLayout = elementMarkupByAriaLabel(
+    mismatchedLayoutHtml,
+    "select",
+    "Scene layout",
+  );
+  assert.doesNotMatch(
+    sceneLayout,
+    /selected=""/,
+    "Present must not substitute a count-derived layout for displayState.layout",
+  );
+
+  const fullSceneHtml = renderPresent(presentModule.default, {
+    displayState: {
+      display_revision: 3,
+      displayed_chart_ids: ["chart-a", "chart-b", "chart-c", "chart-d"],
+      layout: "grid2x2",
+    },
+  });
+  const escalationChoice = labeledControlMarkup(fullSceneHtml, "Escalation");
+  assert.doesNotMatch(
+    escalationChoice,
+    /disabled=""/,
+    "Present must dispatch selection and let displayController enforce capacity",
+  );
+});
+
+function elementMarkupByAriaLabel(html, tagName, label) {
+  const marker = `aria-label="${label}"`;
+  const markerIndex = html.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `Missing ${label}`);
+  const start = html.lastIndexOf(`<${tagName}`, markerIndex);
+  const end = html.indexOf(`</${tagName}>`, markerIndex);
+  assert.ok(start >= 0 && end >= markerIndex, `Malformed ${label}`);
+  return html.slice(start, end + tagName.length + 3);
+}
+
+function labeledControlMarkup(html, label) {
+  const marker = `<span>${label}</span>`;
+  const markerIndex = html.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `Missing ${label}`);
+  const start = html.lastIndexOf("<label", markerIndex);
+  const end = html.indexOf("</label>", markerIndex);
+  assert.ok(start >= 0 && end >= markerIndex, `Malformed ${label} control`);
+  return html.slice(start, end + "</label>".length);
+}
