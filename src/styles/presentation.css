@@ -125,6 +125,196 @@
   z-index: 1;
 }
 
+.present-workspace {
+  box-sizing: border-box;
+  color: #08224a;
+  margin: 0 auto;
+  max-width: 1440px;
+  min-height: calc(100dvh - 64px);
+  padding: 0 24px 24px;
+}
+
+.present-status-strip {
+  align-items: center;
+  border-bottom: 1px solid #d8e2ec;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 64px;
+}
+
+.present-status-strip p,
+.present-scene-summary,
+.present-holding-scene {
+  color: #49627a;
+  margin: 4px 0 0;
+}
+
+.present-connection-error {
+  grid-column: 1 / -1;
+  margin-top: -8px;
+}
+
+.present-workspace-body {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 360px minmax(0, 1fr);
+  padding: 24px 0 96px;
+}
+
+.present-context-panel,
+.present-scene-panel {
+  background: #f7f9fc;
+  border: 1px solid #d8e2ec;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.present-context-panel {
+  align-content: start;
+  display: grid;
+  gap: 20px;
+}
+
+.present-scene-panel {
+  min-width: 0;
+}
+
+.present-panel-heading {
+  align-items: end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.present-panel-heading h1 {
+  font-size: 24px;
+  line-height: 32px;
+  margin: 4px 0 0;
+}
+
+.present-field {
+  display: grid;
+  gap: 8px;
+}
+
+.present-field > span,
+.present-title-toggle {
+  font-weight: 700;
+}
+
+.present-field select,
+.present-field input {
+  min-height: 44px;
+}
+
+.present-layout-field {
+  min-width: 176px;
+}
+
+.present-title-toggle,
+.present-chart-choice {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.present-title-toggle input,
+.present-chart-choice input {
+  block-size: 20px;
+  inline-size: 20px;
+}
+
+.present-selected-charts,
+.present-chart-groups {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.present-selected-chart {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d8e2ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 56px;
+  padding: 8px 12px;
+}
+
+.present-chart-order {
+  align-items: center;
+  background: #08224a;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-weight: 700;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.present-chart-actions,
+.present-session-actions,
+.present-time-controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.present-chart-actions button,
+.present-session-actions button,
+.present-time-controls > button {
+  min-height: 44px;
+}
+
+.present-chart-group {
+  border: 1px solid #d8e2ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.present-chart-group legend {
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.present-action-dock {
+  align-items: center;
+  background: #fff;
+  border-top: 1px solid #d8e2ec;
+  bottom: 0;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 12px 0;
+  position: sticky;
+}
+
+.present-time-slider {
+  min-width: min(280px, 45vw);
+}
+
+@media (max-width: 899px) {
+  .present-workspace {
+    padding-inline: 16px;
+  }
+
+  .present-workspace-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .present-context-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 767px) {
   .audience-display {
     gap: 16px;
@@ -153,5 +343,35 @@
 
   .displayed-chart-grid[data-display-surface="audience"].displayed-count-3 .displayed-cell-1 {
     grid-row: auto;
+  }
+
+  .present-status-strip,
+  .present-action-dock,
+  .present-panel-heading,
+  .present-selected-chart {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .present-status-strip,
+  .present-action-dock,
+  .present-panel-heading {
+    display: grid;
+  }
+
+  .present-context-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .present-chart-actions,
+  .present-session-actions,
+  .present-time-controls {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .present-time-slider {
+    min-width: 0;
   }
 }

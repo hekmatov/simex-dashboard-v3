@@ -14,6 +14,7 @@ import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
+import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import ViewShell from "./view/ViewShell.jsx";
 import {
   configuredCharts,
@@ -726,6 +727,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           </div>
         </section>
       </main>
+    );
+  }
+
+  if (mode === "present") {
+    return (
+      <PresentWorkspace
+        dashboard={dashboard}
+        activePageId={activePage?.id}
+        onActivePageChange={onActivePageChange}
+        displayState={displayState}
+        onDisplayAction={onDisplayAction}
+        accessibilityEnabled={accessibilityEnabled}
+      />
     );
   }
 
