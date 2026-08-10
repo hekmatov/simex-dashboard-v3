@@ -155,7 +155,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   React.useEffect(() => {
     if (!editMode) {
-      setShowVantaSettings(false);
       setSelectedPanelId(null);
     }
   }, [editMode]);

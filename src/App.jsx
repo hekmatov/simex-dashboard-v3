@@ -60,7 +60,7 @@ export default function App() {
   const [error, setError] = React.useState(null);
   const [mode, setMode] = React.useState(() => resolveInitialDashboardMode({
     storedMode: dashboardEntry.surface === "workspace"
-      ? readDashboardModePreference(typeof window === "undefined" ? null : window.localStorage)
+      ? readDashboardModePreference()
       : null,
     requestedMode: dashboardEntry.requestedMode,
   }));
@@ -310,7 +310,7 @@ export default function App() {
     setBlockedReason("");
     try {
       if (mode === "build") {
-        const result = await dashboardRendererRef.current?.prepareToLeaveBuild?.();
+        const result = await prepareToLeaveBuild();
         if (!result?.ok) {
           setBlockedReason(result?.reason ?? "Finish the current Build operation before changing mode.");
           return;
@@ -321,7 +321,7 @@ export default function App() {
         setEditBaseline(configurationForPortableUse(dashboardRef.current ?? dashboard));
       }
       setMode(nextMode);
-      persistDashboardModePreference(nextMode, window.localStorage);
+      persistDashboardModePreference(nextMode);
     } catch (modeError) {
       setBlockedReason(boundedBackgroundPersistenceError(modeError).message);
     } finally {
@@ -329,14 +329,25 @@ export default function App() {
     }
   }
 
+  async function prepareToLeaveBuild() {
+    return dashboardRendererRef.current?.prepareToLeaveBuild?.()
+      ?? { ok: true };
+  }
+
   async function resetEditSession() {
+    const result = await prepareToLeaveBuild();
+    if (!result.ok) {
+      throw new Error(
+        result.reason ?? "Finish the current Build operation before changing mode.",
+      );
+    }
     const resetDashboard = editBaseline
       ? await commitConfiguration(editBaseline)
       : configurationForPortableUse(dashboardRef.current ?? dashboard);
     setEditBaseline(null);
     setMode("view");
     if (dashboardEntry.surface === "workspace") {
-      persistDashboardModePreference("view", window.localStorage);
+      persistDashboardModePreference("view");
     }
     return resetDashboard;
   }

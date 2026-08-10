@@ -20,18 +20,21 @@ export function resolveInitialDashboardMode({ storedMode, requestedMode } = {}) 
   return DEFAULT_DASHBOARD_MODE;
 }
 
-export function readDashboardModePreference(storage) {
+export function readDashboardModePreference() {
   try {
+    const storage = globalThis.localStorage;
     return storage?.getItem(DASHBOARD_MODE_STORAGE_KEY) ?? null;
   } catch {
     return null;
   }
 }
 
-export function persistDashboardModePreference(mode, storage) {
+export function persistDashboardModePreference(mode) {
   if (!isDashboardMode(mode)) return false;
   try {
-    storage?.setItem(DASHBOARD_MODE_STORAGE_KEY, mode);
+    const storage = globalThis.localStorage;
+    if (!storage) return false;
+    storage.setItem(DASHBOARD_MODE_STORAGE_KEY, mode);
     return true;
   } catch {
     return false;
