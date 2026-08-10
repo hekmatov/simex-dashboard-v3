@@ -2,6 +2,7 @@ import React from "react";
 
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "../InstallDashboardPrompt.jsx";
+import { IconControl } from "../common/SimExIcon.js";
 import { hasLandingPresentation } from "../LandingPage.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
@@ -15,13 +16,31 @@ export default function ViewShell({
   companionStatusLabel,
   iconLanguageStyles,
   geoDataSources,
+  multiSelectMode = false,
+  multiPanelIds = [],
+  multiSelectNotice,
   onActivePageChange,
+  onCompareCharts,
   onDisplayAction,
+  onToggleMultiPanel,
+  onStartMultiFullscreenSelection,
+  onOpenMultiFullscreen,
+  onCancelMultiSelection,
 }) {
   return (
     <main className="app-shell view-shell" data-page-type={hasLandingPresentation(activePage) ? "landing" : "analytical"} style={iconLanguageStyles}>
       <DashboardHeader activePage={activePage} dashboard={dashboard} />
       <PageNavigation activePageId={activePage?.id} pages={dashboard.pages} onPageChange={onActivePageChange} />
+      <div className="view-comparison-controls">
+        <button
+          type="button"
+          className="secondary view-comparison-button"
+          disabled={multiSelectMode}
+          onClick={onCompareCharts}
+        >
+          Compare charts
+        </button>
+      </div>
       <PlaybackSurface accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}>
         <DashboardCanvas
           activePage={activePage}
@@ -29,11 +48,40 @@ export default function ViewShell({
           surface="view"
           buildState={null}
           displayState={displayState}
+          multiSelectMode={multiSelectMode}
+          multiPanelIds={multiPanelIds}
           geoDataSources={geoDataSources}
           onNavigate={onActivePageChange}
           onDisplayAction={onDisplayAction}
+          onToggleMultiPanel={onToggleMultiPanel}
+          onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
         />
       </PlaybackSurface>
+      {multiSelectMode && (
+        <section className="multi-select-dock" aria-label="Multi-fullscreen selection">
+          <span className="multi-select-count">
+            <strong>{multiPanelIds.length}</strong>
+            <span>of 4 selected</span>
+          </span>
+          <IconControl
+            interactionId="fullscreen.enter-multi-fullscreen"
+            disabled={multiPanelIds.length < 2}
+            onClick={onOpenMultiFullscreen}
+          />
+          <IconControl
+            interactionId="editor.cancel"
+            className="secondary"
+            ariaLabel="Cancel multi-fullscreen selection"
+            tooltip="Cancel multi-fullscreen selection"
+            onClick={onCancelMultiSelection}
+          />
+        </section>
+      )}
+      {multiSelectNotice && (
+        <div className="multi-select-limit-notice" role="alert" key={multiSelectNotice.id}>
+          {multiSelectNotice.message}
+        </div>
+      )}
       <FullscreenDisplay
         dashboard={dashboard}
         displayState={displayState}

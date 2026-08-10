@@ -13,6 +13,12 @@ const vite = await createServer({
 const displayModule = await vite
   .ssrLoadModule("/src/components/FullscreenDisplay.jsx")
   .catch(() => null);
+const viewModule = await vite
+  .ssrLoadModule("/src/components/view/ViewShell.jsx")
+  .catch(() => null);
+const playbackModule = await vite
+  .ssrLoadModule("/src/components/playback/PlaybackProvider.jsx")
+  .catch(() => null);
 await vite.close();
 
 const dashboard = {
@@ -78,7 +84,7 @@ test("fullscreen display component is available", () => {
   );
 });
 
-test("fullscreen display renders the exact ordered visible chart set", () => {
+test("fullscreen display preserves ordered charts in a labeled focus-scoped dialog", () => {
   assert.ok(displayModule, "fullscreen display must be implemented");
   const html = renderToStaticMarkup(
     React.createElement(displayModule.default, {
@@ -96,11 +102,61 @@ test("fullscreen display renders the exact ordered visible chart set", () => {
   assert.equal((html.match(/multi-fullscreen-cell/g) ?? []).length, 2);
   assert.equal((html.match(/chart-view-frame/g) ?? []).length, 2);
   assert.equal((html.match(/chart-card-view/g) ?? []).length, 2);
-  assert.ok(html.indexOf("Chart B") < html.indexOf("Chart A"));
+  assert.ok(html.indexOf('data-displayed-chart-id="chart-b"') < html.indexOf('data-displayed-chart-id="chart-a"'));
   assert.match(html, /aria-label="Close chart-b"/);
   assert.match(html, /aria-label="Close chart-a"/);
-  assert.match(html, /aria-label="Close all displayed charts"/);
+  assert.match(html, /aria-label="Displayed charts"/);
+  assert.match(html, /tabindex="-1"/);
+  assert.match(html, />Close all<\/button>/);
   assert.match(html, /layout-sideBySide/);
+});
+
+test("View provides a visible Compare charts entry to the existing multi-select flow", () => {
+  assert.equal(typeof viewModule?.default, "function", "ViewShell must be implemented");
+  assert.equal(typeof playbackModule?.PlaybackProvider, "function", "PlaybackProvider must be implemented");
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { matchMedia: () => ({ matches: false }), navigator: { standalone: false } },
+  });
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { userAgent: "" },
+  });
+  let html;
+  try {
+    html = renderToStaticMarkup(
+      React.createElement(
+        playbackModule.PlaybackProvider,
+        { groups: [], charts: [], loadedData: dashboard.loadedData, profiles: dashboard.datasetProfiles },
+        React.createElement(viewModule.default, {
+          activePage: dashboard.pages[0],
+          dashboard,
+          displayState: { displayed_chart_ids: [], layout: "solo" },
+          companionStatusLabel: "Companion unavailable",
+          iconLanguageStyles: {},
+          geoDataSources: {},
+          multiSelectMode: false,
+          multiPanelIds: [],
+          onActivePageChange: () => {},
+          onCompareCharts: () => {},
+          onDisplayAction: () => {},
+          onToggleMultiPanel: () => {},
+          onStartMultiFullscreenSelection: () => {},
+          onOpenMultiFullscreen: () => {},
+          onCancelMultiSelection: () => {},
+        }),
+      ),
+    );
+  } finally {
+    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+    else delete globalThis.window;
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+  }
+
+  assert.match(html, />Compare charts<\/button>/);
 });
 
 test("fullscreen display renders nothing for an empty visible set", () => {

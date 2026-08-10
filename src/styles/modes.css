@@ -44,6 +44,24 @@
   outline-offset: 2px;
 }
 
+.view-comparison-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px auto 0;
+  max-width: 1500px;
+  padding: 0 16px;
+}
+
+.view-comparison-button,
+.view-shell .page-tabs button,
+.view-shell .chart-panel-icon-button,
+.view-shell .multi-select-dock button,
+.view-shell .multi-fullscreen-controls button,
+.view-shell .multi-cell-icon-button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 .mode-switch-error {
   color: #a42d2d;
   margin: 12px auto 0;

@@ -3790,6 +3790,11 @@ button.danger {
   margin-left: 2px;
 }
 
+.fullscreen-close-all-button {
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
 .multi-fullscreen-title {
   display: grid;
   gap: 2px;

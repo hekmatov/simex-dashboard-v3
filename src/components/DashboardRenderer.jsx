@@ -324,9 +324,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function startMultiFullscreenSelection(panelId) {
+    const initialPanelIds = panelId ? [panelId] : [];
     setMultiSelectMode(true);
-    multiPanelIdsRef.current = [panelId];
-    setMultiPanelIds([panelId]);
+    multiPanelIdsRef.current = initialPanelIds;
+    setMultiPanelIds(initialPanelIds);
     setMultiSelectNotice(null);
   }
 
@@ -737,8 +738,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         companionStatusLabel={companionStatusLabel}
         iconLanguageStyles={iconLanguageStyles}
         geoDataSources={geoDataSources}
+        multiSelectMode={multiSelectMode}
+        multiPanelIds={multiPanelIds}
+        multiSelectNotice={multiSelectNotice}
         onActivePageChange={navigateToPage}
+        onCompareCharts={() => startMultiFullscreenSelection()}
         onDisplayAction={onDisplayAction}
+        onToggleMultiPanel={toggleMultiPanel}
+        onStartMultiFullscreenSelection={startMultiFullscreenSelection}
+        onOpenMultiFullscreen={openMultiFullscreen}
+        onCancelMultiSelection={cancelMultiSelection}
       />
     );
   }

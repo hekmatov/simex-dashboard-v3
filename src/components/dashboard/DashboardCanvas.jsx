@@ -11,9 +11,13 @@ export default function DashboardCanvas({
   surface,
   buildState,
   displayState,
+  multiSelectMode = false,
+  multiPanelIds = [],
   geoDataSources = {},
   onNavigate,
   onDisplayAction,
+  onToggleMultiPanel,
+  onStartMultiFullscreenSelection,
 }) {
   if (!activePage) return null;
   const landingActive = hasLandingPresentation(activePage);
@@ -60,6 +64,11 @@ export default function DashboardCanvas({
                         },
                       ) : undefined}
                       onDisplayAction={onDisplayAction}
+                      multiSelectMode={multiSelectMode}
+                      isMultiSelected={multiPanelIds.includes(chart.id)}
+                      multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
+                      onToggleMultiSelect={() => onToggleMultiPanel?.(chart.id)}
+                      onFullScreenHold={() => onStartMultiFullscreenSelection?.(chart.id)}
                     />
                   );
                 })}

@@ -3,6 +3,7 @@ import React from "react";
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
 import { IconControl } from "./common/SimExIcon.js";
+import ModalFocusScope from "./common/ModalFocusScope.jsx";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 const LAYOUT_INTERACTION_IDS = Object.freeze({
@@ -34,13 +35,17 @@ export default function FullscreenDisplay({
   )
     ? displayState.layout
     : layoutOptions[0].value;
+  const closeAll = () => onDisplayAction?.({ type: "manual_close_all" });
 
   return (
-    <div
+    <ModalFocusScope
+      as="div"
       className="fullscreen-backdrop"
       role="dialog"
       aria-modal="true"
       aria-label="Displayed charts"
+      initialFocusSelector="[data-fullscreen-close-all]"
+      onEscape={closeAll}
     >
       <article className={`multi-fullscreen-panel multi-fullscreen-${resolvedLayout}`}>
         <div className="multi-fullscreen-controls">
@@ -63,14 +68,14 @@ export default function FullscreenDisplay({
               title={option.label}
             />
           ))}
-          <IconControl
-            interactionId="fullscreen.close-all-fullscreen-charts"
-            className="secondary fullscreen-toolbar-close"
-            onClick={() => onDisplayAction({ type: "manual_close_all" })}
-            ariaLabel="Close all displayed charts"
-            tooltip="Close all"
-            title="Close all"
-          />
+          <button
+            type="button"
+            className="secondary fullscreen-close-all-button"
+            data-fullscreen-close-all
+            onClick={closeAll}
+          >
+            Close all
+          </button>
         </div>
         <div className={`multi-fullscreen-grid multi-count-${panels.length} layout-${resolvedLayout}`}>
           {panels.map((chart, index) => (
@@ -149,7 +154,7 @@ export default function FullscreenDisplay({
           ))}
         </div>
       </article>
-    </div>
+    </ModalFocusScope>
   );
 }
 
