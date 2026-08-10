@@ -18,7 +18,7 @@ Status: Approved prototype reference
 
 ## Desktop Build geometry
 
-- At viewport widths of 1200 px and above, use a full-width grid below page navigation with 16 px outer padding and 16 px gutters: `280px minmax(640px, 1fr) 336px`.
+- At viewport widths of 1200 px and above, use a full-width grid below page navigation with 16 px outer padding and 16 px gutters. From 1200 through 1319 px, fluid rails preserve a 640 px canvas; at 1320 px and above the grid is `280px minmax(640px, 1fr) 336px`.
 - The 280 px structure rail lists scenario, pages, sections, panels, and time groups. The center is the live dashboard canvas. The 336 px inspector contains Content, Data, Chart, Interaction, and Layout sections for the selected item.
 - Rail and inspector are independently scrollable beneath the 64 px frame, 88 px Build header, 52 px page row, and 52 px utility row. The canvas owns document scrolling and never becomes a second renderer.
 

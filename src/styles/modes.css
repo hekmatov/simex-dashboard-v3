@@ -191,6 +191,15 @@
   grid-template-columns: 280px minmax(640px, 1fr) 336px;
 }
 
+@media (min-width: 1200px) and (max-width: 1319px) {
+  .build-region-grid {
+    grid-template-columns:
+      clamp(216px, calc(53.333vw - 424px), 280px)
+      minmax(640px, 1fr)
+      clamp(280px, calc(46.667vw - 280px), 336px);
+  }
+}
+
 .build-side-sheet,
 .build-live-canvas {
   background: rgb(255 255 255 / 94%);

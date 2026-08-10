@@ -141,12 +141,15 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
   await expect.poll(() => observedAudienceEpoch(reopened)).toBe(activeEpochMs);
 });
 
-test("iPad View and Build plus a 1920 by 1080 audience have no horizontal overflow", async ({ page }) => {
+test("iPad and 1200px Build plus a 1920 by 1080 audience have no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole("button", { name: "Build" }).click();
   await expect(page.locator(".build-workspace")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  await page.setViewportSize({ width: 1200, height: 1024 });
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole("button", { name: "Present" }).click();
