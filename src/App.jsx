@@ -66,6 +66,7 @@ export default function App() {
     requestedMode: dashboardEntry.requestedMode,
   }));
   const [modeDisabled, setModeDisabled] = React.useState(false);
+  const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
   const [editBaseline, setEditBaseline] = React.useState(null);
@@ -462,7 +463,7 @@ export default function App() {
     <AppFrame
       mode={mode}
       onModeRequest={requestMode}
-      modeDisabled={modeDisabled}
+      modeDisabled={modeDisabled || buildDraftLocked}
       blockedReason={blockedReason}
       density={densityForDashboardMode(mode)}
     >
@@ -473,6 +474,7 @@ export default function App() {
       activePageId={activePageId}
       onActivePageChange={setActivePageId}
       onModeRequest={requestMode}
+      onBuildDraftLockChange={setBuildDraftLocked}
       onCommitPendingConfiguration={() => ensureDashboardCommitController().mutate(
         (current) => current,
       )}

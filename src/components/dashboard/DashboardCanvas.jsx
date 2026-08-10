@@ -3,6 +3,7 @@ import React from "react";
 import ChartPanel from "../ChartPanel.jsx";
 import LandingPage, { hasLandingPresentation } from "../LandingPage.jsx";
 import LayoutGrid from "../LayoutGrid.jsx";
+import { requestBuildChartSelection } from "../build/buildSelectionModel.js";
 
 export default function DashboardCanvas({
   activePage,
@@ -46,7 +47,18 @@ export default function DashboardCanvas({
                       geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                       dataSources={dashboard.dataSources}
                       accessibilityEnabled={accessibilityEnabled}
+                      editMode={Boolean(buildState)}
+                      editDisabled={Boolean(buildState?.disabled)}
                       isSelected={selected}
+                      onEdit={buildState ? () => requestBuildChartSelection(
+                        buildState,
+                        {
+                          pageId: activePage.id,
+                          sectionId: section.id,
+                          placementId: placement.id,
+                          chartId: chart.id,
+                        },
+                      ) : undefined}
                       onDisplayAction={onDisplayAction}
                     />
                   );

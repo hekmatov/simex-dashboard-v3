@@ -36,6 +36,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   activePageId,
   onActivePageChange,
   onModeRequest,
+  onBuildDraftLockChange,
   onCommitPendingConfiguration,
   displayState,
   onDisplayAction,
@@ -171,6 +172,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setSelectedPanelId(null);
     }
   }, [editMode]);
+
+  React.useEffect(() => {
+    onBuildDraftLockChange?.(buildMode && chartAuthoringActive);
+  }, [buildMode, chartAuthoringActive, onBuildDraftLockChange]);
+
+  React.useEffect(() => () => {
+    onBuildDraftLockChange?.(false);
+  }, [onBuildDraftLockChange]);
 
   React.useEffect(() => () => pendingEdits.cancel(), [pendingEdits]);
 

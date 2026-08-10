@@ -42,6 +42,9 @@ export default function BuildWorkspace({
   const [openSheet, setOpenSheet] = React.useState(null);
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
+  const inspectorFocusKey = tablet
+    ? (openSheet === "inspector" ? focusLabelKey : 0)
+    : focusLabelKey;
 
   React.useEffect(() => {
     const query = window.matchMedia?.("(min-width: 768px) and (max-width: 1199px)");
@@ -95,7 +98,7 @@ export default function BuildWorkspace({
       sectionDrafts={sectionDrafts}
       disabled={locked}
       chartEditor={chartEditor}
-      focusLabelKey={focusLabelKey}
+      focusLabelKey={inspectorFocusKey}
       onDashboardChange={onDashboardChange}
       onPageChange={onPageChange}
       onSectionChange={onSectionChange}

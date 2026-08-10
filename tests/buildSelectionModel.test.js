@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  requestBuildChartSelection,
   reconcileBuildSelection,
 } from "../src/components/build/buildSelectionModel.js";
 
@@ -107,4 +108,42 @@ test("keeps a chart selection anchored to the wrapped placement id", () => {
       chartId: "chart-alerts",
     },
   );
+});
+
+test("routes a Build chart request with placement and chart ids", () => {
+  let selected = null;
+  const accepted = requestBuildChartSelection({
+    disabled: false,
+    onSelect(next) { selected = next; },
+  }, {
+    pageId: "overview",
+    sectionId: "overview-section",
+    placementId: "placement-overview-alerts",
+    chartId: "chart-alerts",
+  });
+
+  assert.equal(accepted, true);
+  assert.deepEqual(selected, {
+    kind: "chart",
+    pageId: "overview",
+    sectionId: "overview-section",
+    placementId: "placement-overview-alerts",
+    chartId: "chart-alerts",
+  });
+});
+
+test("blocks a Build chart request while disabled", () => {
+  let selections = 0;
+  const accepted = requestBuildChartSelection({
+    disabled: true,
+    onSelect() { selections += 1; },
+  }, {
+    pageId: "overview",
+    sectionId: "overview-section",
+    placementId: "placement-overview-alerts",
+    chartId: "chart-alerts",
+  });
+
+  assert.equal(accepted, false);
+  assert.equal(selections, 0);
 });

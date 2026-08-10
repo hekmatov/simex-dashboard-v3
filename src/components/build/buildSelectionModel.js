@@ -43,3 +43,22 @@ export function reconcileBuildSelection(selection, dashboard = {}, activePageId)
     chartId: chart.id,
   };
 }
+
+export function requestBuildChartSelection(buildState, {
+  pageId,
+  sectionId,
+  placementId,
+  chartId,
+} = {}) {
+  if (buildState?.disabled || typeof buildState?.onSelect !== "function") {
+    return false;
+  }
+  buildState.onSelect({
+    kind: "chart",
+    pageId,
+    sectionId,
+    placementId,
+    chartId,
+  });
+  return true;
+}
