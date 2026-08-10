@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reference-Driven Icons"
+  short_description: "Create faithful SVG icons from references"
+  default_prompt: "Use $creating-reference-driven-icons to reconstruct an SVG icon from a visual reference and verify fidelity before integration."
