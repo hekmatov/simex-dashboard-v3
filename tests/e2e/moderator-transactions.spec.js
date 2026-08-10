@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-config-v3";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
 test.beforeEach(async ({ request, page }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -36,7 +36,7 @@ test.beforeEach(async ({ request, page }) => {
 async function openDashboardEditMode(page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
 }
 
 async function openFirstChartEditor(page) {
@@ -337,7 +337,7 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
       window.prompt = prompt;
     }
   });
-  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
 
   const saved = await storedDashboard(page);
   const attempts = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
@@ -366,7 +366,7 @@ test("pending final save locks the edit mutation surface", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
   await page.getByRole("button", { name: "Save edits" }).click();
-  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
   expect(observed.pendingDisabled).toBe(true);
   expect(observed.controlCount).toBeGreaterThan(20);
   expect(observed.enabledControls).toEqual([]);
@@ -386,7 +386,7 @@ test("pending reset locks the edit mutation surface", async ({ page }) => {
   await expect(confirmation).toBeVisible();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
   await confirmation.getByRole("button", { name: "Reset edits" }).click();
-  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
   expect(observed.pendingDisabled).toBe(true);
   expect(observed.controlCount).toBeGreaterThan(20);
   expect(observed.enabledControls).toEqual([]);
@@ -553,7 +553,7 @@ test("failed reset reports inside its confirmation and preserves the draft for s
   await expect(page.locator(".edit-operation-error")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Save edits" }).click();
-  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
   await page.reload();
   await expect(page.locator(".dashboard-brand-block .eyebrow")).toHaveText(
     editedLabel,
@@ -582,9 +582,9 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
     .evaluate((button) => button.click());
   await page.getByRole("dialog", { name: "Discard these edits?" })
     .getByRole("button", { name: "Reset edits" }).click();
-  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   await expect(page.getByLabel("Program label")).toHaveValue(baseline.program);
   await expect(page.getByLabel("Page title")).toHaveValue(baseline.pageTitle);
   await expect(page.locator(".section-edit-field input").first())
@@ -684,7 +684,7 @@ test("failed edit-session save and reset keep edit mode available for retry", as
   await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
 
   await confirmation.getByRole("button", { name: "Reset edits" }).click();
-  await expect(page.getByRole("button", { name: "Open edit mode" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
 });
 
 test("failed final edit-session commit keeps the chart edit context available", async ({ page }) => {

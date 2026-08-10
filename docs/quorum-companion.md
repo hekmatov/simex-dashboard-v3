@@ -5,6 +5,12 @@ remaining a fully usable standalone dashboard. The integration is a non-voice,
 metadata-only control channel: the dashboard never receives transcripts,
 speaker data, summaries, topics, evidence text, or other discussion content.
 
+Prototype for education and training only. Non-commercial. No guarantees of availability, accuracy, suitability, security, support, or compatibility.
+
+**Standalone** and **Connected** are Quorum connection statuses, not UI modes.
+The dashboard's workspace modes are View, Build, and Present; Present's
+same-computer audience window does not start or use Quorum.
+
 ## Responsibility Boundary
 
 Quorum owns recommendation ranking, operator authorization, the current top

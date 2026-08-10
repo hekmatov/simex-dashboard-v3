@@ -10,6 +10,26 @@ The default HeV-A26 content demonstrates current biomedical and socio-economic
 needs. It is an example built from real exercise datasets, not a permanent
 template for every future exercise.
 
+Prototype for education and training only. Non-commercial. No guarantees of availability, accuracy, suitability, security, support, or compatibility.
+
+## View, Build, and Present
+
+The mode switcher is always available in the workspace:
+
+- **View** is the shared operational dashboard. Use **Compare charts** to
+  select two to four charts for fullscreen and press Escape to close it.
+- **Build** is the local authoring workspace for scenario metadata, pages,
+  sections, charts, appearance, and bundles. Finish Build after reviewing
+  changes; a failed save keeps the current Build draft available for repair.
+- **Present** is the local controller for a same-computer, same-origin
+  audience window. Open or reopen the audience display, choose up to four
+  charts, set its layout and synchronized time, then use Blackout or Restore
+  as needed.
+
+Browser edits use `simex-dashboard-config-v3-three-mode-v1`. Earlier browser
+saves and pre-redesign packages are not migrated. Start from the supplied
+dashboard or re-author the configuration before saving it again.
+
 ## Dashboard at a glance
 
 The default dashboard has three pages:
@@ -40,20 +60,23 @@ Charts that support wheel zoom require **Ctrl+wheel**. Plain scrolling keeps
 the page moving and displays a short Ctrl guidance tooltip. The same rule
 applies in the dashboard and fullscreen views.
 
-### Standalone and Quorum modes
+### Quorum connection status
 
-The hosted or portable dashboard works normally in **Standalone** mode. A
+The hosted or portable dashboard works normally with **Standalone** status. A
 local Quorum companion is optional. “Quorum integration-ready” means that the
 metadata catalogue and same-origin protocol are present; it does not mean a
 public dashboard is actively connected.
+
+Standalone and Connected describe the optional companion connection; they are
+not UI modes. The workspace modes are View, Build, and Present.
 
 Quorum can request configured chart IDs for operator-authorized display. It
 does not send discussion text to the dashboard, and the dashboard does not
 send transcripts, summaries, speaker data, or evidence text to Quorum.
 
-## Edit mode
+## Build mode
 
-Edit mode changes dashboard content without requiring manual JSON editing. It
+Build changes dashboard content without requiring manual JSON editing. It
 supports:
 
 - dashboard and scenario text;

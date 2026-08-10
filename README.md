@@ -8,6 +8,8 @@ The default HeV-A26 dashboard demonstrates biomedical and socio-economic
 monitoring. The application is a reusable authoring and display system rather
 than a fixed copy of the dashboard used in an earlier exercise.
 
+Prototype for education and training only. Non-commercial. No guarantees of availability, accuracy, suitability, security, support, or compatibility.
+
 ## What the dashboard supports
 
 - A showcase Home page plus configurable operational dashboard pages.
@@ -42,6 +44,18 @@ For user guidance, see [the app manual](docs/app-manual.md). For the data and
 configuration architecture, see
 [Chart Data System V3](docs/chart-data-system-v3.md).
 
+## Three-mode training prototype
+
+Every workspace exposes **View**, **Build**, and **Present**. View is the
+shared operational dashboard, Build is the local authoring workspace, and
+Present controls a same-computer, same-origin audience window. The audience
+window is chrome-free and receives only the current scene controls; it loads
+the dashboard locally.
+
+Browser edits use `simex-dashboard-config-v3-three-mode-v1`. Earlier browser
+saves and pre-redesign packages are not migrated; start from the supplied
+dashboard or re-author the configuration before saving it again.
+
 ## Design priorities
 
 Runtime performance is the dashboard's first architectural priority. Normal
@@ -50,10 +64,9 @@ chart reconstruction, memory retention, and defensive work. Strict validation
 belongs at configuration, import, and authoring boundaries rather than inside
 frequently repeated display operations.
 
-The operational dashboard is offline-first by design. Any participant-facing
-online edition is a separately hosted, static, read-only build and has no
-connection to the Quorum engine. Quorum integration belongs to the local
-authoring and analysis environment; the participant display runtime must not
+The operational dashboard is offline-first by design. Present's audience
+window is a same-computer training display and has no Quorum connection.
+Quorum remains optional for the local workspace; the audience runtime does not
 depend on it.
 
 ## Development

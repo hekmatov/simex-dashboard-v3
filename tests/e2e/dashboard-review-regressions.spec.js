@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const APP_URL = "http://127.0.0.1:4173";
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-config-v3";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -38,7 +38,7 @@ test("wrapped panels render, edit, save, and remove without losing placement ide
   const panel = page.locator('[data-panel-id="bio_current_cases_kpi"]');
   await expect(panel).toBeVisible();
 
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   await panel.getByRole("button", { name: "Edit chart" }).click();
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   await page.getByLabel("Chart title").fill("Updated wrapped KPI");
@@ -137,7 +137,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   };
 
   await openDashboard(page);
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   await page.locator('input[type="file"][accept="application/json,.json"]')
     .setInputFiles({
       name: "replacement-dashboard.json",
@@ -202,7 +202,7 @@ test("additive imported tracked profiles survive an edit and browser reload", as
   await installDashboard(page, dashboard);
 
   await openDashboard(page);
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   await page.getByLabel("Program label").fill("Imported profile retained");
   await page.getByRole("button", { name: "Save edits" }).click();
 
@@ -225,7 +225,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
 }) => {
   await openDashboard(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Remove tab" }).click();
 

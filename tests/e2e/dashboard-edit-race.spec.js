@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-config-v3";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
 test.describe.configure({ timeout: 60_000 });
 
@@ -15,14 +15,14 @@ test.beforeEach(async ({ page, request }) => {
     name: "Explore the live dashboard",
   }).click();
   await expect(page.getByRole("button", {
-    name: "Open edit mode",
+    name: "Build",
   })).toBeVisible();
 });
 
 test("a pending header edit and immediate chart save commit in order", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   await page.getByLabel("Program label").fill("Race-safe exercise");
   await page.getByRole("button", { name: "Edit chart" }).first().click();
   await page.getByRole("button", {
@@ -54,7 +54,7 @@ test("reset cancels a pending header callback so it cannot reappear", async ({
 }) => {
   const baseline = await page.locator(".dashboard-brand-block .eyebrow")
     .textContent();
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   await page.getByLabel("Program label").fill("Must never reappear");
   await page.getByRole("button", { name: "Reset edits" }).click();
   await page.getByRole("dialog", { name: "Discard these edits?" })

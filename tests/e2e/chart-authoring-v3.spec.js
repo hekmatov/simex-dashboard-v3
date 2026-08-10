@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-config-v3";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const TIMELINE_FIXTURE = fileURLToPath(
   new URL("../fixtures/timeline-events.csv", import.meta.url),
 );
@@ -18,7 +18,7 @@ test.beforeEach(async ({ page, request }) => {
   await page.getByRole("button", {
     name: "Explore the live dashboard",
   }).click();
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
 });
 
 test("fresh pie authoring progressively reveals schema fields and persists the created chart", async ({

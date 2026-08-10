@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-config-v3";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 
 test.describe.configure({ timeout: 150_000 });
 
@@ -22,7 +22,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   const openPlayback = controls.getByRole("button", {
     name: "Open playback view",
   });
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
 
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await panel.getByRole("button", { name: "Edit chart" }).click();
@@ -196,7 +196,7 @@ test("chart accessibility is off by default and controlled from edit mode", asyn
   const chart = page.locator('[data-panel-id="bio_confirmed_cases"]');
   await expect(chart.locator(".chart-view-summary")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
   const toggle = page.getByRole("checkbox", {
     name: /Chart accessibility/,
   });

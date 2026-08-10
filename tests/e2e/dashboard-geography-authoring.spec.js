@@ -13,7 +13,7 @@ test.beforeEach(async ({ page, request }) => {
   await page.getByRole("button", {
     name: "Explore the live dashboard",
   }).click();
-  await page.getByRole("button", { name: "Open edit mode" }).click();
+  await page.getByRole("button", { name: "Build" }).click();
 });
 
 test("a fresh chronological choropleth reaches preview through the early GeoJSON selector", async ({

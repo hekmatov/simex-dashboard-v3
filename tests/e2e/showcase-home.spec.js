@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
-const STORAGE_KEY = "simex-dashboard-config-v3";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const LANDING_HEADLINE = "From complex exercise data to shared situational awareness";
 
 test.describe.configure({ timeout: 60_000 });

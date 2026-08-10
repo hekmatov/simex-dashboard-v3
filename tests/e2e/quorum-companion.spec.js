@@ -248,7 +248,7 @@ test("runtime chart-definition drift disables companion commands", async ({
   chart.title = "Locally changed chart meaning";
   await page.addInitScript((savedConfig) => {
     localStorage.setItem(
-      "simex-dashboard-config-v3",
+    "simex-dashboard-config-v3-three-mode-v1",
       JSON.stringify(savedConfig),
     );
   }, config);
