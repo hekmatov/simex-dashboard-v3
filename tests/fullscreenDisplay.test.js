@@ -19,6 +19,9 @@ const viewModule = await vite
 const playbackModule = await vite
   .ssrLoadModule("/src/components/playback/PlaybackProvider.jsx")
   .catch(() => null);
+const gridModule = await vite
+  .ssrLoadModule("/src/components/display/DisplayedChartGrid.jsx")
+  .catch(() => null);
 await vite.close();
 
 const dashboard = {
@@ -109,6 +112,14 @@ test("fullscreen display preserves ordered charts in a labeled focus-scoped dial
   assert.match(html, /tabindex="-1"/);
   assert.match(html, />Close all<\/button>/);
   assert.match(html, /layout-sideBySide/);
+});
+
+test("the shared displayed-chart grid is available to the fullscreen surface", () => {
+  assert.equal(
+    typeof gridModule?.default,
+    "function",
+    "DisplayedChartGrid must be implemented",
+  );
 });
 
 test("View provides a visible Compare charts entry to the existing multi-select flow", () => {

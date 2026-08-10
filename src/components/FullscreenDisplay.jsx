@@ -1,9 +1,9 @@
 import React from "react";
 
-import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
 import { IconControl } from "./common/SimExIcon.js";
 import ModalFocusScope from "./common/ModalFocusScope.jsx";
+import DisplayedChartGrid from "./display/DisplayedChartGrid.jsx";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 const LAYOUT_INTERACTION_IDS = Object.freeze({
@@ -21,15 +21,11 @@ export default function FullscreenDisplay({
   dashboard,
   displayState,
   onDisplayAction,
-  accessibilityEnabled = false,
 }) {
   const panelIds = displayState.displayed_chart_ids;
-  const panels = panelIds
-    .map((panelId) => findPanel(dashboard, panelId))
-    .filter(Boolean);
-  if (panels.length === 0) return null;
+  if (panelIds.length === 0) return null;
 
-  const layoutOptions = multiLayoutOptions(panels.length);
+  const layoutOptions = multiLayoutOptions(panelIds.length);
   const resolvedLayout = layoutOptions.some(
     ({ value }) => value === displayState.layout,
   )
@@ -77,16 +73,16 @@ export default function FullscreenDisplay({
             Close all
           </button>
         </div>
-        <div className={`multi-fullscreen-grid multi-count-${panels.length} layout-${resolvedLayout}`}>
-          {panels.map((chart, index) => (
-            <section
-              className={`multi-fullscreen-cell multi-cell-${index + 1}`}
-              key={chart.id}
-              data-displayed-chart-id={chart.id}
-            >
+        <DisplayedChartGrid
+          dashboard={dashboard}
+          chartIds={panelIds}
+          layout={resolvedLayout}
+          surface="fullscreen"
+          renderCellControls={(chart, index, displayedCharts) => (
+            <>
               <div className="multi-cell-controls">
                 <strong>{index + 1}</strong>
-                {panels.length > 1 && (
+                {displayedCharts.length > 1 && (
                   <>
                     <IconControl
                       interactionId="fullscreen.previous-displayed-chart"
@@ -104,7 +100,7 @@ export default function FullscreenDisplay({
                     <IconControl
                       interactionId="fullscreen.next-displayed-chart"
                       className="secondary multi-cell-icon-button"
-                      disabled={index === panels.length - 1}
+                      disabled={index === displayedCharts.length - 1}
                       onClick={() => onDisplayAction({
                         type: "manual_reorder",
                         chart_ids: moveItem(panelIds, index, index + 1),
@@ -129,18 +125,6 @@ export default function FullscreenDisplay({
                   title="Close chart"
                 />
               </div>
-              <ChartView
-                chart={chart}
-                rows={dashboard.loadedData?.[chart.sourceId] ?? []}
-                datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
-                geoData={dashboard.loadedData?.[chart.presentation?.map?.geoSource]}
-                accessibilityEnabled={accessibilityEnabled}
-                renderContext={{
-                  sources: dashboard.dataSources ?? {},
-                  mapName: chart.presentation?.map?.geoSource ?? chart.id,
-                  accessibilityEnabled,
-                }}
-              />
               <ChartPanelActions
                 chartId={`fullscreen-${chart.id}`}
                 citation={resolveChartCitation({
@@ -150,24 +134,12 @@ export default function FullscreenDisplay({
                 })}
                 showFullscreen={false}
               />
-            </section>
-          ))}
-        </div>
+            </>
+          )}
+        />
       </article>
     </ModalFocusScope>
   );
-}
-
-function findPanel(dashboard, panelId) {
-  for (const page of dashboard.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      const panel = (section.panels ?? []).find(
-        (candidate) => (candidate.chart ?? candidate).id === panelId,
-      );
-      if (panel) return panel.chart ?? panel;
-    }
-  }
-  return null;
 }
 
 function moveItem(items, fromIndex, toIndex) {

@@ -18,6 +18,7 @@ const MAX_STATUS_LENGTH = 240;
 export default function ChartView(props) {
   const playback = useOptionalPlayback();
   const playbackProps = withPlaybackTimeContext(props, playback);
+  const interactionMode = props.interactionMode === "passive" ? "passive" : "active";
   try {
     const resolved = canReuseChartRendering(
       props.resolvedRendering,
@@ -28,7 +29,8 @@ export default function ChartView(props) {
     const { model, prepared, schema } = resolved;
     const provenance = resolveProvenance(props);
     let view;
-    const zoomEnabled = chartZoomEnabled(props.chart, schema);
+    const zoomEnabled = interactionMode === "active"
+      && chartZoomEnabled(props.chart, schema);
     if (model.kind === "echarts") view = React.createElement(EChartsChartView, {
       model,
       chart: props.chart,
@@ -54,7 +56,10 @@ export default function ChartView(props) {
       message: resolved.message ?? model.message,
       empty: prepared?.status === "empty",
     });
-    const framedView = React.createElement("div", presentationFrameProps(props.chart), view);
+    const framedView = React.createElement("div", {
+      ...presentationFrameProps(props.chart),
+      "data-chart-interaction-mode": interactionMode,
+    }, view);
     return zoomEnabled
       ? React.createElement(ZoomGuard, null, framedView)
       : framedView;

@@ -3,6 +3,7 @@ import React from "react";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
+import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
   integrateCreatedChart,
@@ -38,6 +39,7 @@ import {
 } from "./lib/loadDashboard.js";
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
+import { createPresentationAudienceChannel } from "./lib/presentationChannel.js";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
@@ -73,6 +75,8 @@ export default function App() {
   const [deviceLayout, setDeviceLayout] = React.useState(() => loadDeviceLayout());
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
+  const [audiencePresentationState, setAudiencePresentationState] = React.useState(null);
+  const [audienceConnectionStatus, setAudienceConnectionStatus] = React.useState("waiting");
   const displayStateRef = React.useRef(displayState);
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
@@ -109,7 +113,6 @@ export default function App() {
   }, [Boolean(dashboard), dashboardEntry.surface, vantaSettingsKey]);
 
   React.useEffect(() => {
-    if (dashboardEntry.surface === "audience") return undefined;
     let disposed = false;
     loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then(async (tracked) => {
@@ -129,7 +132,9 @@ export default function App() {
         );
         if (!disposed) {
           dashboardRef.current = loaded;
-          ensureDashboardCommitController(loaded);
+          if (dashboardEntry.surface === "workspace") {
+            ensureDashboardCommitController(loaded);
+          }
           setDashboard(loaded);
         }
       })
@@ -140,6 +145,29 @@ export default function App() {
       disposed = true;
     };
   }, [dashboardEntry.surface]);
+
+  React.useEffect(() => {
+    if (
+      dashboardEntry.surface !== "audience"
+      || !dashboardEntry.channelId
+      || !dashboard
+    ) {
+      return undefined;
+    }
+    let channel;
+    try {
+      channel = createPresentationAudienceChannel({
+        sessionId: dashboardEntry.channelId,
+        validChartIds,
+        onStateChange: setAudiencePresentationState,
+        onConnectionChange: setAudienceConnectionStatus,
+      });
+      channel.start();
+    } catch {
+      setAudienceConnectionStatus("waiting");
+    }
+    return () => channel?.dispose();
+  }, [dashboard, dashboardEntry.channelId, dashboardEntry.surface, validChartIds]);
 
   React.useEffect(() => () => {
     dashboardCommitControllerRef.current?.dispose();
@@ -424,11 +452,11 @@ export default function App() {
   }
 
   if (dashboardEntry.surface === "audience") {
-    return (
-      <main className="audience-waiting">
-        <p>Waiting for the moderator.</p>
-      </main>
-    );
+    return <AudienceDisplay
+      dashboard={dashboard}
+      connectionStatus={audienceConnectionStatus}
+      presentationState={audiencePresentationState}
+    />;
   }
 
   if (error) {

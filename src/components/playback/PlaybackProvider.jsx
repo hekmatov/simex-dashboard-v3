@@ -206,7 +206,7 @@ export function createPlaybackTimer({
   };
 }
 
-function buildMemberTimeContexts(group, activeEpochMs) {
+export function buildMemberTimeContexts(group, activeEpochMs) {
   const contexts = Object.create(null);
   if (!group || !Number.isFinite(activeEpochMs)) return Object.freeze(contexts);
   for (const member of group.members) {

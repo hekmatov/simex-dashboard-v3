@@ -28,6 +28,7 @@ export async function load(url, context, nextLoad) {
 
 const {
   PlaybackProvider,
+  buildMemberTimeContexts,
   createPlaybackTimer,
   prefersReducedMotion,
   useOptionalPlayback,
@@ -265,6 +266,38 @@ test("a live provider can initialize paused synchronized charts at the latest gr
   });
 
   assert.equal(html, `<output>2|${MAY_3}|paused</output>`);
+});
+
+test("presentation can derive immutable member time contexts without mounting playback", () => {
+  assert.equal(
+    typeof buildMemberTimeContexts,
+    "function",
+    "buildMemberTimeContexts must be exported for the audience display",
+  );
+  const contexts = buildMemberTimeContexts({
+    id: "exercise",
+    matching: { policy: "exact" },
+    members: [
+      { chartId: "primary-chart", timeRole: "observation" },
+      {
+        chartId: "secondary-chart",
+        timeRole: "observation",
+        matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
+      },
+    ],
+  }, MAY_2);
+
+  assert.equal(Object.isFrozen(contexts), true);
+  assert.deepEqual(contexts["primary-chart"], {
+    groupId: "exercise",
+    activeEpochMs: MAY_2,
+    matching: { policy: "exact" },
+  });
+  assert.deepEqual(contexts["secondary-chart"], {
+    groupId: "exercise",
+    activeEpochMs: MAY_2,
+    matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
+  });
 });
 
 test("playback view renders eligible members and explicit missing and unavailable states", () => {
