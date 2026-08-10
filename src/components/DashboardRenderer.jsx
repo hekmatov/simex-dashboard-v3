@@ -11,7 +11,6 @@ import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
 import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
-import { PlaybackProvider } from "./playback/PlaybackProvider.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
@@ -24,15 +23,18 @@ import {
   deriveIconAccentVariants,
 } from "../iconography/iconCatalog.js";
 
-export default function DashboardRenderer({
+const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
+  mode,
+  activePageId,
+  onActivePageChange,
+  onModeRequest,
+  onCommitPendingConfiguration,
   displayState,
   onDisplayAction,
   companionStatusLabel,
   deviceLayout,
   onDeviceLayoutChange,
-  editMode,
-  onToggleEditMode,
   onPageAdd,
   onPageRemove,
   onPageChange,
@@ -52,10 +54,9 @@ export default function DashboardRenderer({
   onImportConfig,
   onExportConfig,
   onResetEditSession,
-}) {
-  const [activePageId, setActivePageId] = React.useState(
-    dashboard.pages?.[0]?.id ?? "dashboard",
-  );
+}, ref) {
+  const buildMode = mode === "build";
+  const editMode = buildMode;
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
@@ -137,6 +138,21 @@ export default function DashboardRenderer({
     [dashboard.dataSources, dashboard.loadedData],
   );
 
+  React.useImperativeHandle(ref, () => ({
+    async prepareToLeaveBuild() {
+      if (!buildMode) return { ok: true };
+      if (chartAuthoringActive) {
+        return {
+          ok: false,
+          reason: "Finish or cancel the open chart editor before leaving Build.",
+        };
+      }
+      await pendingEdits.flush();
+      await onCommitPendingConfiguration?.();
+      return { ok: true };
+    },
+  }), [buildMode, chartAuthoringActive, onCommitPendingConfiguration, pendingEdits]);
+
   React.useEffect(() => {
     if (!editMode) {
       setShowVantaSettings(false);
@@ -178,7 +194,7 @@ export default function DashboardRenderer({
     if (!(dashboard.pages ?? []).some((page) => page.id === pageId)) {
       return;
     }
-    setActivePageId(pageId);
+    onActivePageChange(pageId);
     setSelectedPanelId(null);
   }
 
@@ -346,7 +362,7 @@ export default function DashboardRenderer({
         },
       ],
     });
-    setActivePageId(pageId);
+    onActivePageChange(pageId);
     setSelectedPanelId(null);
   }
 
@@ -507,7 +523,7 @@ export default function DashboardRenderer({
     const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
     flushPendingEditsInBackground();
     onPageRemove(activePage.id);
-    setActivePageId(fallbackPage.id);
+    onActivePageChange(fallbackPage.id);
     setSelectedPanelId(null);
   }
 
@@ -521,8 +537,7 @@ export default function DashboardRenderer({
 
   function saveEditMode() {
     void performModeratorOperation("save-session", async () => {
-      await pendingEdits.flush();
-      await onToggleEditMode();
+      await onModeRequest("view");
       setChartEditBaseline(null);
     });
   }
@@ -631,13 +646,6 @@ export default function DashboardRenderer({
   }
 
   return (
-    <PlaybackProvider
-      groups={dashboard.timeSyncGroups ?? []}
-      charts={configuredCharts(dashboard)}
-      loadedData={dashboard.loadedData ?? {}}
-      profiles={dashboard.datasetProfiles ?? {}}
-      initialPosition="latest"
-    >
     <main
       className="app-shell"
       data-device-layout={deviceLayout}
@@ -722,11 +730,11 @@ export default function DashboardRenderer({
               <IconControl
                 interactionId="shell.open-editable-tab"
                 className="header-edit-floating-button"
-                aria-label="Open edit mode"
-                tooltip="Edit mode"
-                title="Edit mode"
+                aria-label="Open Build mode"
+                tooltip="Build mode"
+                title="Build mode"
                 data-icon-surface="dark"
-                onClick={onToggleEditMode}
+                onClick={() => onModeRequest("build")}
                 disabled={moderatorOperation.kind !== null}
               />
             )}
@@ -1051,9 +1059,10 @@ export default function DashboardRenderer({
         <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
       </div>
     </main>
-    </PlaybackProvider>
   );
-}
+});
+
+export default DashboardRenderer;
 
 function DashboardFooter({ dashboard }) {
   const feedbackUrl = dashboard.feedbackUrl || feedbackMailtoUrl(dashboard.contactEmail);

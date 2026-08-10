@@ -29,7 +29,9 @@ async function source(relativePath) {
 
 test("the live shell is version 3 only", async () => {
   const app = await source("src/App.jsx");
-  assert.match(app, /simex-dashboard-config-v3/);
+  const dashboardMode = await source("src/lib/dashboardMode.js");
+  assert.match(dashboardMode, /simex-dashboard-config-v3-three-mode-v1/);
+  assert.doesNotMatch(app, /DASHBOARD_STORAGE_KEY = "simex-dashboard-config-v3"/);
   assert.match(app, /parseDashboardBundle/);
   assert.match(app, /serializeDashboardBundle/);
   assert.doesNotMatch(app, /migrateDashboardToDataModel/);
@@ -37,11 +39,13 @@ test("the live shell is version 3 only", async () => {
   assert.doesNotMatch(app, /simex-dashboard-v2-config/);
 });
 
-test("the live renderer exposes only version 3 authoring and playback", async () => {
+test("the shared runtime keeps version 3 authoring while App owns playback", async () => {
+  const app = await source("src/App.jsx");
   const renderer = await source("src/components/DashboardRenderer.jsx");
+  assert.match(app, /PlaybackProvider/);
   assert.match(renderer, /ChartWizardV3/);
   assert.match(renderer, /ChartEditorV3/);
-  assert.match(renderer, /PlaybackProvider/);
+  assert.doesNotMatch(renderer, /PlaybackProvider/);
   assert.doesNotMatch(renderer, /AddChartWizard/);
   assert.doesNotMatch(renderer, /ChartSettingsPanelV2/);
   assert.doesNotMatch(renderer, /LegacyEditor/);

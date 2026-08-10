@@ -1,6 +1,8 @@
 import React from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import AppFrame from "./components/app-shell/AppFrame.jsx";
+import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
   integrateCreatedChart,
@@ -19,6 +21,17 @@ import {
   createSerializedDashboardCommitController,
 } from "./lib/dashboardCommitController.js";
 import {
+  DASHBOARD_STORAGE_KEY,
+  densityForDashboardMode,
+  persistDashboardModePreference,
+  readDashboardModePreference,
+  resolveInitialDashboardMode,
+} from "./lib/dashboardMode.js";
+import {
+  parseDashboardEntry,
+  reconcileActivePageId,
+} from "./lib/dashboardNavigation.js";
+import {
   loadDashboard,
   loadDashboardConfig,
   profilesForConfiguredCsvSources,
@@ -26,7 +39,7 @@ import {
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 
-export const DASHBOARD_STORAGE_KEY = "simex-dashboard-config-v3";
+export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
 const DEFAULT_VANTA_BACKGROUND = {
   backgroundColor: "#f7f9fc",
@@ -40,9 +53,20 @@ const DEFAULT_VANTA_BACKGROUND = {
 };
 
 export default function App() {
+  const [dashboardEntry] = React.useState(() => parseDashboardEntry(
+    typeof window === "undefined" ? "" : window.location.search,
+  ));
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
-  const [editMode, setEditMode] = React.useState(false);
+  const [mode, setMode] = React.useState(() => resolveInitialDashboardMode({
+    storedMode: dashboardEntry.surface === "workspace"
+      ? readDashboardModePreference(typeof window === "undefined" ? null : window.localStorage)
+      : null,
+    requestedMode: dashboardEntry.requestedMode,
+  }));
+  const [modeDisabled, setModeDisabled] = React.useState(false);
+  const [blockedReason, setBlockedReason] = React.useState("");
+  const [activePageId, setActivePageId] = React.useState(null);
   const [editBaseline, setEditBaseline] = React.useState(null);
   const [deviceLayout, setDeviceLayout] = React.useState(() => loadDeviceLayout());
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
@@ -53,6 +77,7 @@ export default function App() {
   const dashboardCommitControllerRef = React.useRef(null);
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
+  const dashboardRendererRef = React.useRef(null);
 
   const validChartIds = React.useMemo(
     () => new Set(configuredCharts(dashboard).map(({ id }) => id)),
@@ -63,6 +88,7 @@ export default function App() {
   const vantaSettingsKey = JSON.stringify(vantaSettings);
 
   React.useEffect(() => {
+    if (dashboardEntry.surface === "audience") return undefined;
     if (!dashboard) return undefined;
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     let effect = null;
@@ -78,9 +104,10 @@ export default function App() {
       reducedMotion?.removeEventListener?.("change", applyMotionPreference);
       effect?.destroy?.();
     };
-  }, [Boolean(dashboard), vantaSettingsKey]);
+  }, [Boolean(dashboard), dashboardEntry.surface, vantaSettingsKey]);
 
   React.useEffect(() => {
+    if (dashboardEntry.surface === "audience") return undefined;
     let disposed = false;
     loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
       .then(async (tracked) => {
@@ -110,7 +137,7 @@ export default function App() {
     return () => {
       disposed = true;
     };
-  }, []);
+  }, [dashboardEntry.surface]);
 
   React.useEffect(() => () => {
     dashboardCommitControllerRef.current?.dispose();
@@ -149,6 +176,7 @@ export default function App() {
   }, []);
 
   React.useEffect(() => {
+    if (dashboardEntry.surface === "audience") return undefined;
     if (!dashboard) return undefined;
     let disposed = false;
     let client = null;
@@ -188,7 +216,12 @@ export default function App() {
       }
       client?.stop();
     };
-  }, [dashboard, dispatchDisplayAction]);
+  }, [dashboard, dashboardEntry.surface, dispatchDisplayAction]);
+
+  React.useEffect(() => {
+    if (!dashboard) return;
+    setActivePageId((current) => reconcileActivePageId(dashboard.pages, current));
+  }, [dashboard]);
 
   function ensureDashboardCommitController(initialDashboard = dashboardRef.current) {
     if (dashboardCommitControllerRef.current === null) {
@@ -271,15 +304,29 @@ export default function App() {
     setError(boundedBackgroundPersistenceError(commitError));
   }
 
-  async function toggleEditMode() {
-    if (!editMode) {
-      setEditBaseline(configurationForPortableUse(dashboard));
-      setEditMode(true);
-      return;
+  async function requestMode(nextMode) {
+    if (nextMode === mode || dashboardEntry.surface !== "workspace") return;
+    setModeDisabled(true);
+    setBlockedReason("");
+    try {
+      if (mode === "build") {
+        const result = await dashboardRendererRef.current?.prepareToLeaveBuild?.();
+        if (!result?.ok) {
+          setBlockedReason(result?.reason ?? "Finish the current Build operation before changing mode.");
+          return;
+        }
+        setEditBaseline(null);
+      }
+      if (nextMode === "build") {
+        setEditBaseline(configurationForPortableUse(dashboardRef.current ?? dashboard));
+      }
+      setMode(nextMode);
+      persistDashboardModePreference(nextMode, window.localStorage);
+    } catch (modeError) {
+      setBlockedReason(boundedBackgroundPersistenceError(modeError).message);
+    } finally {
+      setModeDisabled(false);
     }
-    await ensureDashboardCommitController().mutate((current) => current);
-    setEditBaseline(null);
-    setEditMode(false);
   }
 
   async function resetEditSession() {
@@ -287,7 +334,10 @@ export default function App() {
       ? await commitConfiguration(editBaseline)
       : configurationForPortableUse(dashboardRef.current ?? dashboard);
     setEditBaseline(null);
-    setEditMode(false);
+    setMode("view");
+    if (dashboardEntry.surface === "workspace") {
+      persistDashboardModePreference("view", window.localStorage);
+    }
     return resetDashboard;
   }
 
@@ -356,6 +406,14 @@ export default function App() {
     }
   }
 
+  if (dashboardEntry.surface === "audience") {
+    return (
+      <main className="audience-waiting">
+        <p>Waiting for the moderator.</p>
+      </main>
+    );
+  }
+
   if (error) {
     return (
       <main className="app-shell">
@@ -378,8 +436,30 @@ export default function App() {
   }
 
   return (
+    <PlaybackProvider
+      groups={dashboard.timeSyncGroups ?? []}
+      charts={configuredCharts(dashboard)}
+      loadedData={dashboard.loadedData ?? {}}
+      profiles={dashboard.datasetProfiles ?? {}}
+      initialPosition="latest"
+    >
+    <AppFrame
+      mode={mode}
+      onModeRequest={requestMode}
+      modeDisabled={modeDisabled}
+      blockedReason={blockedReason}
+      density={densityForDashboardMode(mode)}
+    >
     <DashboardRenderer
+      ref={dashboardRendererRef}
       dashboard={dashboard}
+      mode={mode}
+      activePageId={activePageId}
+      onActivePageChange={setActivePageId}
+      onModeRequest={requestMode}
+      onCommitPendingConfiguration={() => ensureDashboardCommitController().mutate(
+        (current) => current,
+      )}
       displayState={displayState}
       onDisplayAction={dispatchDisplayAction}
       companionStatusLabel={companionStatusLabel(companionStatus)}
@@ -388,8 +468,6 @@ export default function App() {
         setDeviceLayout(layout);
         localStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
       }}
-      editMode={editMode}
-      onToggleEditMode={toggleEditMode}
       onChartCreate={createChart}
       onChartSave={saveChart}
       onApplyCitationToSourceCharts={(updates) => mutateDashboard((next) => {
@@ -466,6 +544,8 @@ export default function App() {
       onExportConfig={exportConfig}
       onResetEditSession={resetEditSession}
     />
+    </AppFrame>
+    </PlaybackProvider>
   );
 }
 

@@ -1,0 +1,61 @@
+.app-frame {
+  min-height: 100vh;
+}
+
+.app-frame-bar {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #d8e2ec;
+  display: flex;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 16px;
+}
+
+.app-frame-identity {
+  color: #08224a;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.mode-switcher {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.mode-switcher button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #08224a;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.mode-switcher button[aria-pressed="true"] {
+  background: #08224a;
+  color: #ffffff;
+}
+
+.mode-switcher button:focus-visible {
+  outline: 3px solid #f2b541;
+  outline-offset: 2px;
+}
+
+.mode-switch-error {
+  color: #a42d2d;
+  margin: 12px auto 0;
+  max-width: 1500px;
+  padding: 0 24px;
+}
+
+.audience-waiting {
+  align-items: center;
+  background: #020816;
+  color: #ffffff;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+}

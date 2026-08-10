@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App.jsx";
 import "./styles.css";
+import "./styles/modes.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {
