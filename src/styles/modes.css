@@ -59,3 +59,316 @@
   min-height: 100vh;
   place-items: center;
 }
+
+.build-mode-shell {
+  margin: 0 auto;
+  max-width: 1600px;
+  min-height: calc(100vh - 64px);
+  padding: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.build-workspace {
+  display: grid;
+  gap: 16px;
+}
+
+.build-header,
+.build-command-area,
+.build-page-tabs,
+.build-canvas-toolbar {
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+}
+
+.build-header {
+  align-items: start;
+  display: flex;
+  justify-content: space-between;
+  min-height: 88px;
+  padding: 14px 16px;
+}
+
+.build-header h1,
+.build-header p {
+  margin: 0;
+}
+
+.build-header h1 {
+  font-size: 28px;
+  line-height: 34px;
+}
+
+.build-header > span {
+  color: #49627a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.build-page-tabs,
+.build-command-area,
+.build-canvas-toolbar,
+.build-structure-actions,
+.build-structure-row,
+.build-appearance-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.build-page-tabs,
+.build-command-area {
+  min-height: 52px;
+  padding: 4px 8px;
+}
+
+.build-command-area {
+  gap: 10px;
+}
+
+.build-command-title {
+  margin-right: 4px;
+}
+
+.build-command-title p,
+.build-command-title strong {
+  display: block;
+}
+
+.build-command-title p {
+  margin: 0;
+}
+
+.build-appearance-controls {
+  margin-left: auto;
+}
+
+.build-command-area .device-layout-control {
+  margin: 0;
+}
+
+.build-device-layout-fieldset,
+.build-appearance-controls {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.build-operation-error {
+  background: #fff4f4;
+  border: 1px solid #d37777;
+  border-radius: 8px;
+  color: #8f1d2c;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.build-region-grid {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 280px minmax(640px, 1fr) 336px;
+}
+
+.build-side-sheet,
+.build-live-canvas {
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid #d8e2ec;
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.build-side-sheet {
+  align-self: stretch;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+  padding: 16px;
+}
+
+.build-structure-rail,
+.build-inspector {
+  display: grid;
+  gap: 12px;
+}
+
+.build-region-heading h2,
+.build-inspector h2,
+.build-inspector h3,
+.build-time-groups h3 {
+  margin: 0;
+}
+
+.build-structure-list,
+.build-structure-list ul,
+.build-time-group-summary ul {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding-left: 14px;
+}
+
+.build-structure-list > li {
+  display: grid;
+  gap: 6px;
+}
+
+.build-structure-list button {
+  text-align: left;
+  width: 100%;
+}
+
+.build-structure-row {
+  align-items: stretch;
+}
+
+.build-structure-row > :first-child {
+  flex: 1;
+}
+
+.build-structure-remove {
+  width: auto !important;
+}
+
+.build-time-groups {
+  border-top: 1px solid #d8e2ec;
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+}
+
+.build-inspector label {
+  color: #49627a;
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.build-inspector input,
+.build-inspector textarea {
+  width: 100%;
+}
+
+.build-inspector textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.build-time-group-summary dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.build-time-group-summary dl div {
+  display: grid;
+  gap: 2px;
+}
+
+.build-time-group-summary dt {
+  color: #49627a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.build-time-group-summary dd {
+  margin: 0;
+}
+
+.build-live-canvas {
+  min-height: 640px;
+}
+
+.build-live-canvas .dashboard-workspace {
+  margin: 0;
+  padding: 16px;
+}
+
+.chart-editor-inspector .chart-editor-v3 {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  max-height: none;
+  max-width: none;
+  position: static;
+  width: 100%;
+}
+
+.chart-editor-inspector .chart-editor-v3 > form {
+  max-height: none;
+}
+
+.build-canvas-toolbar,
+.build-sheet-close {
+  display: none;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .build-region-grid {
+    display: block;
+  }
+
+  .build-canvas-toolbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px;
+    position: sticky;
+    top: 64px;
+    z-index: 20;
+  }
+
+  .build-live-canvas {
+    min-height: 0;
+  }
+
+  .build-side-sheet {
+    display: none;
+  }
+
+  .build-side-sheet.build-sheet-open {
+    background: #fff;
+    border-radius: 20px 20px 0 0;
+    bottom: 0;
+    display: block;
+    left: 0;
+    max-height: min(70vh, 760px);
+    overflow: auto;
+    padding: 20px;
+    position: fixed;
+    right: 0;
+    z-index: 100;
+  }
+
+  .build-sheet-close {
+    display: inline-flex;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  .build-mode-shell {
+    padding: 12px;
+  }
+
+  .build-header,
+  .build-command-area {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .build-appearance-controls {
+    margin-left: 0;
+  }
+
+  .build-region-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .build-live-canvas {
+    min-height: 0;
+  }
+}

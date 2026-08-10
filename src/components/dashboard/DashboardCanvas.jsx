@@ -35,6 +35,8 @@ export default function DashboardCanvas({
               <LayoutGrid>
                 {(section.panels ?? []).map((placement) => {
                   const chart = placement.chart ?? placement;
+                  const selected = buildState?.selection?.kind === "chart"
+                    && buildState.selection.placementId === placement.id;
                   return (
                     <ChartPanel
                       key={placement.id}
@@ -44,6 +46,7 @@ export default function DashboardCanvas({
                       geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                       dataSources={dashboard.dataSources}
                       accessibilityEnabled={accessibilityEnabled}
+                      isSelected={selected}
                       onDisplayAction={onDisplayAction}
                     />
                   );

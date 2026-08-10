@@ -248,6 +248,7 @@ export default function ChartEditorV3({
   profiles = {},
   parsingMetadata = {},
   disabled = false,
+  surface = "dialog",
   onSave = noop,
   onReset = noop,
   onCancel = noop,
@@ -489,10 +490,7 @@ export default function ChartEditorV3({
     onReset();
   };
 
-  return React.createElement(
-    ChartEditorModal,
-    { onClose: dismissEditor },
-    React.createElement(
+  const content = React.createElement(
       "aside",
       {
         className: "chart-editor-v3",
@@ -620,8 +618,10 @@ export default function ChartEditorV3({
         onConfirm: () => dispatch({ type: "applyConversion" }),
         onCancel: () => dispatch({ type: "cancelConversion" }),
       }),
-    ),
   );
+  return surface === "inspector"
+    ? React.createElement("div", { className: "chart-editor-inspector" }, content)
+    : React.createElement(ChartEditorModal, { onClose: dismissEditor }, content);
 }
 
 export function SelectedChartEditor({

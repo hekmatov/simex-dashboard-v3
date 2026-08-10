@@ -58,6 +58,7 @@ export default function App() {
   ));
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
+  const [operationError, setOperationError] = React.useState("");
   const [mode, setMode] = React.useState(() => resolveInitialDashboardMode({
     storedMode: dashboardEntry.surface === "workspace"
       ? readDashboardModePreference()
@@ -270,6 +271,7 @@ export default function App() {
       dashboardRef.current = loaded;
       setDashboard(loaded);
       setError(null);
+      setOperationError("");
       return configurationForPortableUse(loaded);
     } catch (commitError) {
       if (isStorageQuotaError(commitError)) {
@@ -295,13 +297,15 @@ export default function App() {
   }
 
   function reportBackgroundPersistence(promise) {
-    void promise.catch((commitError) => {
-      setError(boundedBackgroundPersistenceError(commitError));
-    });
+    void promise
+      .then(() => setOperationError(""))
+      .catch((commitError) => {
+        setOperationError(boundedBackgroundPersistenceError(commitError).message);
+      });
   }
 
   function reportBackgroundPersistenceError(commitError) {
-    setError(boundedBackgroundPersistenceError(commitError));
+    setOperationError(boundedBackgroundPersistenceError(commitError).message);
   }
 
   async function requestMode(nextMode) {
@@ -391,9 +395,10 @@ export default function App() {
     file.text()
       .then((text) => parseDashboardBundle(text))
       .then((config) => commitConfiguration(config))
-      .catch((importError) => setError(new Error(
+      .then(() => setOperationError(""))
+      .catch((importError) => setOperationError(
         `Could not import dashboard bundle: ${importError.message}`,
-      )));
+      ));
   }
 
   function exportConfig(configOverride) {
@@ -413,7 +418,7 @@ export default function App() {
         chosenName.endsWith(".json") ? chosenName : `${chosenName}.json`,
       );
     } catch (exportError) {
-      setError(exportError);
+      setOperationError(exportError.message || "Could not export dashboard bundle.");
     }
   }
 
@@ -554,6 +559,7 @@ export default function App() {
       onImportConfig={importConfig}
       onExportConfig={exportConfig}
       onResetEditSession={resetEditSession}
+      operationError={operationError}
     />
     </AppFrame>
     </PlaybackProvider>
@@ -606,7 +612,10 @@ function insertSectionAtPanel(config, pageId, sectionId, panelId, section) {
   const panelIndex = current.panels.findIndex(
     (panel) => panel.id === panelId,
   );
-  if (panelIndex < 0) return;
+  if (panelIndex < 0) {
+    page.sections.splice(index + 1, 0, { ...section, panels: [] });
+    return;
+  }
   const before = current.panels.slice(0, panelIndex);
   const after = current.panels.slice(panelIndex);
   current.panels = before;

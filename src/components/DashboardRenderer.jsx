@@ -2,6 +2,8 @@
 
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
+import BuildWorkspace from "./build/BuildWorkspace.jsx";
+import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
@@ -59,10 +61,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onImportConfig,
   onExportConfig,
   onResetEditSession,
+  operationError = "",
 }, ref) {
   const buildMode = mode === "build";
   const editMode = buildMode;
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
+  const [buildSelection, setBuildSelection] = React.useState(null);
+  const [focusInspectorLabelKey, setFocusInspectorLabelKey] = React.useState(0);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
   const [multiSelectMode, setMultiSelectMode] = React.useState(false);
@@ -117,7 +122,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
   const landingActive = hasLandingPresentation(activePage);
-  const selectedPlacement = findPanelPlacement(dashboard, selectedPanelId);
+  const selectedPlacement = findPanelPlacement(
+    dashboard,
+    buildSelection?.kind === "chart" ? buildSelection.placementId : selectedPanelId,
+  );
   const selectedPanel = selectedPlacement?.chart ?? null;
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
@@ -192,6 +200,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   React.useEffect(() => {
     setDashboardDraft(dashboardTextDraftFromDashboard(dashboard));
   }, [dashboard.programLabel, dashboard.scenarioLabel, dashboard.lastUpdated]);
+
+  React.useEffect(() => {
+    setBuildSelection((current) => reconcileBuildSelection(
+      current,
+      dashboard,
+      activePage?.id,
+    ));
+  }, [dashboard, activePage?.id]);
 
   function navigateToPage(pageId) {
     if (moderatorOperationGateRef.current.isActive()) return;
@@ -345,29 +361,28 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function addPage() {
     if (moderatorOperationGateRef.current.isActive()) return;
-    const label = window.prompt("Name this new tab", "New tab");
-    if (!label) {
-      return;
-    }
-
+    const label = "New page";
     const pageId = uniquePageId(dashboard, label);
-    flushPendingEditsInBackground();
-    onPageAdd({
-      id: pageId,
-      label,
-      title: label,
-      description: "New dashboard page.",
-      sections: [
-        {
-          id: `${pageId}_section`,
-          title: "New section",
-          description: "New dashboard section.",
-          panels: [],
-        },
-      ],
+    void performModeratorOperation("add-page", async () => {
+      await pendingEdits.flush();
+      await onPageAdd({
+        id: pageId,
+        label,
+        title: label,
+        description: "New dashboard page.",
+        sections: [
+          {
+            id: `${pageId}_section`,
+            title: "New section",
+            description: "New dashboard section.",
+            panels: [],
+          },
+        ],
+      });
+      onActivePageChange(pageId);
+      setBuildSelection({ kind: "page", pageId });
+      setFocusInspectorLabelKey((current) => current + 1);
     });
-    onActivePageChange(pageId);
-    setSelectedPanelId(null);
   }
 
   function openBackgroundSettings() {
@@ -406,7 +421,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       commit: () => onChartSave(payload),
       onCommitted: () => {
         setChartEditBaseline(null);
-        setSelectedPanelId(null);
+        setBuildSelection({ kind: "page", pageId: activePage?.id });
       },
     });
   }
@@ -418,7 +433,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onPanelEditCancel(chartEditBaseline);
     }
     setChartEditBaseline(null);
-    setSelectedPanelId(null);
+    setBuildSelection({ kind: "page", pageId: activePage?.id });
   }
 
   function changePage(pageId, updates) {
@@ -508,27 +523,51 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
+  function addSection() {
+    if (moderatorOperationGateRef.current.isActive() || !activePage) return;
+    const targetSection = buildSelection?.kind === "section"
+      ? activePage.sections?.find(({ id }) => id === buildSelection.sectionId)
+      : activePage.sections?.at(-1);
+    if (!targetSection) return;
+    const sectionId = `${activePage.id}_section_${Date.now()}`;
+    void performModeratorOperation("add-section", async () => {
+      await pendingEdits.flush();
+      await onSectionInsert(activePage.id, targetSection.id, null, {
+        id: sectionId,
+        title: "New section",
+        description: "New dashboard section.",
+      });
+      setBuildSelection({
+        kind: "section",
+        pageId: activePage.id,
+        sectionId,
+      });
+      setFocusInspectorLabelKey((current) => current + 1);
+    });
+  }
+
   function removeSectionTitle(section) {
     if (moderatorOperationGateRef.current.isActive()) return;
     flushPendingEditsInBackground();
     onSectionChange(activePage.id, section.id, { title: "", description: "" });
   }
 
-  function removeActivePage() {
+  function removeActivePage(pageId = activePage?.id) {
     if (moderatorOperationGateRef.current.isActive()) return;
     if ((dashboard.pages ?? []).length <= 1) {
       return;
     }
-    if (!window.confirm(`Remove the "${activePage.label}" tab?`)) {
+    const page = dashboard.pages.find(({ id }) => id === pageId);
+    if (!page || !window.confirm(`Remove the "${page.label}" tab?`)) {
       return;
     }
 
-    const activeIndex = dashboard.pages.findIndex((page) => page.id === activePage.id);
+    const activeIndex = dashboard.pages.findIndex(({ id }) => id === pageId);
     const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
     flushPendingEditsInBackground();
-    onPageRemove(activePage.id);
+    onPageRemove(pageId);
     onActivePageChange(fallbackPage.id);
-    setSelectedPanelId(null);
+    setBuildSelection({ kind: "page", pageId: fallbackPage.id });
   }
 
   function openPanelEditor(panelId) {
@@ -536,7 +575,38 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (!chartEditBaseline) {
       setChartEditBaseline(dashboardWithCurrentDrafts());
     }
-    setSelectedPanelId(panelId);
+    const placement = findPanelPlacement(dashboard, panelId);
+    const page = dashboard.pages.find((candidate) => (
+      candidate.sections?.some((section) => section.panels?.some(({ id }) => id === panelId))
+    ));
+    const section = page?.sections?.find((candidate) => (
+      candidate.panels?.some(({ id }) => id === panelId)
+    ));
+    if (!placement || !page || !section) return;
+    setBuildSelection({
+      kind: "chart",
+      pageId: page.id,
+      sectionId: section.id,
+      placementId: panelId,
+      chartId: placement.chart.id,
+    });
+  }
+
+  function selectBuildItem(nextSelection) {
+    if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
+    if (nextSelection?.kind === "chart" && !chartEditBaseline) {
+      setChartEditBaseline(dashboardWithCurrentDrafts());
+    }
+    setBuildSelection(nextSelection);
+  }
+
+  function openChartWizard() {
+    if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
+    const section = buildSelection?.kind === "section"
+      ? activePage?.sections?.find(({ id }) => id === buildSelection.sectionId)
+      : activePage?.sections?.[0];
+    if (!activePage || !section) return;
+    setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
   }
 
   function saveEditMode() {
@@ -663,6 +733,144 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       />
     );
   }
+
+  const buildControlsDisabled = moderatorMutationLocked || chartAuthoringActive;
+  const selectedChartEditor = selectedPanel ? (
+    <ChartEditorV3
+      surface="inspector"
+      disabled={moderatorMutationLocked}
+      chart={selectedPanel}
+      timeSyncGroups={dashboard.timeSyncGroups ?? []}
+      existingCharts={configuredCharts(dashboard)}
+      rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
+      geoData={geoDataSources[selectedPanel.presentation?.map?.geoSource]}
+      geoDataSources={geoDataSources}
+      dataSources={dashboard.dataSources ?? {}}
+      profile={dashboard.datasetProfiles?.[selectedPanel.sourceId]}
+      loadedData={dashboard.loadedData ?? {}}
+      profiles={dashboard.datasetProfiles ?? {}}
+      parsingMetadata={dashboard.dataSources?.[selectedPanel.sourceId]?.parsingMetadata ?? {}}
+      onSave={saveSelectedChartV3}
+      onApplyCitationToSourceCharts={onApplyCitationToSourceCharts}
+      onCancel={cancelSelectedPanel}
+      onRemove={() => removePanel(selectedPlacement.panelId)}
+    />
+  ) : null;
+  return (
+    <>
+      <div className="build-mode-shell" style={iconLanguageStyles}>
+        <BuildWorkspace
+          dashboard={dashboard}
+          activePage={activePage}
+          selection={buildSelection}
+          dashboardDraft={dashboardDraft}
+          pageDrafts={pageDrafts}
+          sectionDrafts={sectionDrafts}
+          chartEditor={selectedChartEditor}
+          chartDraftOpen={chartAuthoringActive}
+          mutationsDisabled={moderatorMutationLocked}
+          deviceLayout={deviceLayout}
+          focusLabelKey={focusInspectorLabelKey}
+          operationError={operationError || moderatorOperation.error}
+          geoDataSources={geoDataSources}
+          appearanceControls={(
+            <>
+              <GlobalPanelColorControls
+                disabled={buildControlsDisabled}
+                colors={globalPanelColors}
+                onChange={changeGlobalPanelColors}
+              />
+              <GlobalIconAccentControl
+                disabled={buildControlsDisabled}
+                value={iconAccentVariants.base}
+                onChange={changeIconAccent}
+              />
+              <label className="accessibility-edit-toggle">
+                <input
+                  type="checkbox"
+                  disabled={buildControlsDisabled}
+                  checked={accessibilityEnabled}
+                  onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
+                />
+                <span>Chart accessibility</span>
+              </label>
+            </>
+          )}
+          onActivePageChange={onActivePageChange}
+          onSelectionChange={selectBuildItem}
+          onDashboardChange={changeDashboardText}
+          onPageChange={changePage}
+          onSectionChange={changeSection}
+          onAddPage={addPage}
+          onAddSection={addSection}
+          onAddChart={openChartWizard}
+          onRemovePage={removeActivePage}
+          onFinish={saveEditMode}
+          onReset={() => setResetEditSessionConfirmation(true)}
+          onImport={onImportConfig}
+          onExport={() => onExportConfig(dashboardWithCurrentDrafts())}
+          onOpenBackground={openBackgroundSettings}
+          onDeviceLayoutChange={onDeviceLayoutChange}
+          onDisplayAction={onDisplayAction}
+        />
+      </div>
+      <ChartWizardV3
+        open={Boolean(chartWizardTarget)}
+        disabled={moderatorMutationLocked}
+        dataSources={dashboard.dataSources}
+        loadedData={dashboard.loadedData}
+        datasetProfiles={dashboard.datasetProfiles ?? {}}
+        geoDataSources={geoDataSources}
+        timeSyncGroups={dashboard.timeSyncGroups ?? []}
+        existingCharts={configuredCharts(dashboard)}
+        onClose={() => {
+          if (!moderatorOperationGateRef.current.isActive()) setChartWizardTarget(null);
+        }}
+        onCreate={async (payload) => {
+          if (moderatorOperationGateRef.current.isActive()) {
+            throw new Error("Wait for the current dashboard operation to finish.");
+          }
+          await pendingEdits.flush();
+          await onChartCreate(payload, chartWizardTarget);
+          setChartWizardTarget(null);
+        }}
+      />
+      <ConfirmDialog
+        open={resetEditSessionConfirmation}
+        title="Discard these edits?"
+        message="Reset changes? All unsaved dashboard edits will be replaced by the most recently saved dashboard."
+        cancelLabel="Keep editing"
+        confirmLabel={moderatorOperation.kind === "reset-session" ? "Resetting..." : "Reset"}
+        disabled={moderatorOperation.kind === "reset-session"}
+        confirmDisabled={moderatorOperation.kind === "reset-session"}
+        error={moderatorOperation.errorKind === "reset-session" ? moderatorOperation.error : ""}
+        onConfirm={resetEditMode}
+        onCancel={() => {
+          if (moderatorOperationGateRef.current.isActive()) return;
+          setResetEditSessionConfirmation(false);
+          clearModeratorError("reset-session");
+        }}
+      />
+      <ConfirmDialog
+        open={pendingRemovalPanelId !== null}
+        title="Remove this chart?"
+        message="The chart will be removed from this dashboard and any synchronized playback group."
+        confirmLabel={moderatorOperation.kind === "remove-chart" ? "Removing..." : "Remove chart"}
+        cancelLabel="Keep chart"
+        disabled={moderatorOperation.kind === "remove-chart"}
+        confirmDisabled={moderatorOperation.kind === "remove-chart"}
+        error={moderatorOperation.errorKind === "remove-chart" ? moderatorOperation.error : ""}
+        onConfirm={confirmPanelRemoval}
+        onCancel={cancelPanelRemoval}
+      />
+      <FullscreenDisplay
+        dashboard={dashboard}
+        displayState={displayState}
+        onDisplayAction={onDisplayAction}
+        accessibilityEnabled={accessibilityEnabled}
+      />
+    </>
+  );
 
   return (
     <main

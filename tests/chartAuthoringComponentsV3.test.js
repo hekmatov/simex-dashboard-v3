@@ -180,6 +180,20 @@ function render(element) {
   return renderToStaticMarkup(element);
 }
 
+test("chart editor uses inspector content without dialog semantics", () => {
+  const html = render(React.createElement(ChartEditorV3, {
+    chart: validPieChart(),
+    rows: [{ category: "Ready", value: 6 }],
+    surface: "inspector",
+    onSave() {},
+    onCancel() {},
+  }));
+
+  assert.match(html, /class="chart-editor-inspector"/);
+  assert.doesNotMatch(html, /chart-editor-backdrop/);
+  assert.doesNotMatch(html, /aria-modal="true"/);
+});
+
 function findElementsByType(element, type) {
   const found = [];
   const visit = (value) => {
