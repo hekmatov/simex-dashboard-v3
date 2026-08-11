@@ -1,0 +1,24 @@
+{
+  "name": "simex-dashboard-v3",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.16.0",
+  "scripts": {
+    "predev": "node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs",
+    "dev": "vite --host 0.0.0.0",
+    "build": "node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs && vite build",
+    "build:cloudflare": "SIMEX_EMBED_PORTABLE_DATA=0 VITE_SHOW_COMPATIBILITY_REPORTS=false node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "echarts": "^5.6.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
+    "vite": "^6.3.5"
+  }
+}

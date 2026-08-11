@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.pnpm-store/
+.env
+.env.*
+public/config/dataset-profiles.json
+public/integration/
+public/portable-dashboard-data.js

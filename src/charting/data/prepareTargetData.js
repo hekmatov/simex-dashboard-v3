@@ -1,0 +1,235 @@
+import {
+  aggregateNumbers,
+  applyMissingStrategy,
+  consolidateCandidates,
+  error,
+  firstRoleBinding,
+  readRoleValue,
+  stableKey,
+} from "./transforms.js";
+import { resolveDeltaComparison } from "./resolveDeltaComparison.js";
+
+const CANONICAL_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
+
+export function prepareTargetData({ schema, chart, rows, datasetProfile, transformed }) {
+  if (schema.typeId === "deltaCard" || schema.typeId === "deltaList") {
+    return prepareDeltaData({ schema, chart, rows, datasetProfile, transformed });
+  }
+  const valueRole = firstRoleBinding(chart, "value");
+  const actualRole = firstRoleBinding(chart, "actual");
+  const targetRole = firstRoleBinding(chart, "target");
+  const entityRole = firstRoleBinding(chart, "entity");
+  const labelRole = firstRoleBinding(chart, "label");
+  const timeRole = firstRoleBinding(chart, "time");
+  const marks = [];
+  for (const row of rows) {
+    const primaryBinding = schema.typeId === "bullet" ? actualRole : valueRole;
+    const primary = applyMissingStrategy(
+      readRoleValue(row, primaryBinding, datasetProfile),
+      transformed.config.missingStrategy,
+    );
+    const targetValue = targetRole
+      ? applyMissingStrategy(readRoleValue(row, targetRole, datasetProfile), transformed.config.missingStrategy)
+      : { keep: true, value: null };
+    if (!primary.keep || !targetValue.keep) continue;
+    const identity = {
+      entity: readRoleValue(row, entityRole, datasetProfile),
+      label: readRoleValue(row, labelRole, datasetProfile),
+    };
+    marks.push(schema.typeId === "bullet"
+      ? {
+          actual: primary.value,
+          target: targetValue.value,
+          ...identity,
+          time: readRoleValue(row, timeRole, datasetProfile),
+        }
+      : {
+          value: primary.value,
+          target: targetValue.value,
+          ...identity,
+          time: readRoleValue(row, timeRole, datasetProfile),
+        }
+    );
+  }
+  const consolidated = consolidateCandidates(
+    marks,
+    (mark) => stableKey(mark.time, mark.entity, mark.label),
+    transformed,
+    (duplicates, method) => (
+      schema.typeId === "bullet"
+        ? {
+            ...duplicates[0],
+            actual: aggregateNumbers(duplicates.map(({ actual }) => actual), method),
+            target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
+          }
+        : {
+            ...duplicates[0],
+            value: aggregateNumbers(duplicates.map(({ value }) => value), method),
+            target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
+        }
+    ),
+  );
+  if (
+    consolidated.diagnostics.some(({ severity }) => severity === "error")
+    || !timeRole
+  ) {
+    return consolidated;
+  }
+  return {
+    ...consolidated,
+    marks: latestTargetMarks(consolidated.marks),
+  };
+}
+
+function latestTargetMarks(marks) {
+  const latestByEntity = new Map();
+  for (const mark of marks) {
+    const entityKey = stableKey(mark.entity, mark.label);
+    const epochMs = canonicalEpochMs(mark.time);
+    const previous = latestByEntity.get(entityKey);
+    if (
+      !previous
+      || (
+        Number.isFinite(epochMs)
+        && (!Number.isFinite(previous.epochMs) || epochMs >= previous.epochMs)
+      )
+    ) {
+      latestByEntity.set(entityKey, { epochMs, mark });
+    }
+  }
+  return [...latestByEntity.values()].map(({ mark }) => mark);
+}
+
+function prepareDeltaData({ schema, chart, rows, datasetProfile, transformed }) {
+  const measurement = firstRoleBinding(chart, "measurement");
+  const entity = firstRoleBinding(chart, "entity");
+  const time = firstRoleBinding(chart, "time");
+  const target = firstRoleBinding(chart, "target");
+  const candidates = [];
+  for (const row of rows) {
+    const primary = applyMissingStrategy(
+      readRoleValue(row, measurement, datasetProfile),
+      transformed.config.missingStrategy,
+    );
+    const targetValue = target
+      ? readRoleValue(row, target, datasetProfile)
+      : null;
+    if (!primary.keep || !Number.isFinite(primary.value)) continue;
+    const entityValue = readRoleValue(row, entity, datasetProfile);
+    const timeValue = readRoleValue(row, time, datasetProfile);
+    if (timeValue === null) continue;
+    candidates.push({
+      entity: entityValue,
+      value: primary.value,
+      time: timeValue,
+      canonical: timeValue,
+      epochMs: canonicalEpochMs(timeValue),
+      target: Number.isFinite(targetValue) ? targetValue : null,
+    });
+  }
+  if (schema.typeId === "deltaCard" && entity) {
+    const entities = new Set(candidates.map(({ entity: value }) => stableKey(value)));
+    if (entities.size > 1) {
+      return {
+        marks: [],
+        diagnostics: [error(
+          "delta-card-multiple-entities",
+          "Filter one entity for a delta card, or use a delta list to compare multiple entities.",
+          { entityCount: entities.size },
+        )],
+        duplicateGroupCount: 0,
+      };
+    }
+  }
+  const consolidated = consolidateCandidates(
+    candidates,
+    (observation) => stableKey(observation.entity, observation.time),
+    transformed,
+    (duplicates, method) => ({
+      ...duplicates[0],
+      value: aggregateNumbers(duplicates.map(({ value }) => value), method),
+      target: aggregateNumbers(duplicates.map(({ target: value }) => value), method),
+    }),
+  );
+  if (consolidated.diagnostics.some(({ severity }) => severity === "error")) return consolidated;
+
+  const groups = new Map();
+  for (const observation of consolidated.marks) {
+    const key = stableKey(observation.entity);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(observation);
+  }
+  const marks = [];
+  const diagnostics = [...consolidated.diagnostics];
+  for (const observations of groups.values()) {
+    observations.sort((left, right) => left.epochMs - right.epochMs);
+    if (observations.length === 0) continue;
+    const displayed = observations.at(-1);
+    const resolved = resolveDeltaComparison({
+      observations,
+      displayed,
+      comparison: transformed.config.comparison,
+      chart,
+      timeRole: "time",
+      profile: datasetProfile,
+    });
+    if (resolved.status !== "matched") {
+      diagnostics.push(resolved.diagnostic);
+      continue;
+    }
+    const baseline = resolved.observation;
+    const comparable = Number.isFinite(displayed.value) && Number.isFinite(baseline.value);
+    const absolute = comparable ? displayed.value - baseline.value : null;
+    marks.push({
+      entity: displayed.entity,
+      time: displayed.time,
+      displayedTime: displayed.time,
+      comparisonTime: baseline.canonical,
+      displayed: displayed.value,
+      comparison: baseline.value,
+      target: displayed.target,
+      delta: {
+        absolute,
+        percentage: !comparable || baseline.value === 0
+          ? null
+          : (absolute / Math.abs(baseline.value)) * 100,
+      },
+      displayedProvenance: {
+        status: "observed",
+        activeEpochMs: displayed.epochMs,
+        activeCanonical: displayed.canonical,
+        sourceEpochMs: displayed.epochMs,
+        sourceCanonical: displayed.canonical,
+      },
+      comparisonProvenance: resolved.provenance,
+    });
+  }
+  return {
+    marks,
+    diagnostics,
+    duplicateGroupCount: consolidated.duplicateGroupCount,
+  };
+}
+
+function canonicalEpochMs(value) {
+  if (typeof value !== "string") return Number.NaN;
+  const dateOnly = CANONICAL_DATE_ONLY.exec(value);
+  if (dateOnly) {
+    return utcEpoch(dateOnly.slice(1).map(Number), [0, 0, 0, 0]);
+  }
+  const instant = CANONICAL_INSTANT.exec(value);
+  return instant
+    ? utcEpoch(
+        instant.slice(1, 4).map(Number),
+        instant.slice(4).map(Number),
+      )
+    : Number.NaN;
+}
+
+function utcEpoch([year, month, day], [hour, minute, second, milliseconds]) {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hour, minute, second, milliseconds);
+  return date.valueOf();
+}

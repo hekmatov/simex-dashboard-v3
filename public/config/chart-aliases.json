@@ -1,0 +1,437 @@
+{
+  "home_operational_pressure_kpis": {
+    "aliases": [
+      "operational pressure at a glance"
+    ],
+    "keywords": [
+      "kpi",
+      "home",
+      "operational",
+      "pressure",
+      "kpis"
+    ]
+  },
+  "home_case_map": {
+    "aliases": [
+      "wastewater early-warning preview"
+    ],
+    "keywords": [
+      "mapScatter",
+      "home",
+      "case",
+      "map"
+    ]
+  },
+  "bio_confirmed_cases": {
+    "aliases": [
+      "confirmed cases"
+    ],
+    "keywords": [
+      "line",
+      "bio",
+      "confirmed",
+      "cases"
+    ]
+  },
+  "bio_daily_cases_bar": {
+    "aliases": [
+      "daily confirmed cases"
+    ],
+    "keywords": [
+      "bar",
+      "bio",
+      "daily",
+      "cases"
+    ]
+  },
+  "bio_new_cases_deaths": {
+    "aliases": [
+      "daily cases and deaths"
+    ],
+    "keywords": [
+      "mixed",
+      "bio",
+      "new",
+      "cases",
+      "deaths"
+    ]
+  },
+  "bio_r_values": {
+    "aliases": [
+      "reproduction value"
+    ],
+    "keywords": [
+      "line",
+      "bio",
+      "values"
+    ]
+  },
+  "bio_region_comparison": {
+    "aliases": [
+      "cases by province"
+    ],
+    "keywords": [
+      "horizontalBar",
+      "bio",
+      "region",
+      "comparison"
+    ]
+  },
+  "bio_mortality_age": {
+    "aliases": [
+      "mortality by age group"
+    ],
+    "keywords": [
+      "pie",
+      "bio",
+      "mortality",
+      "age"
+    ]
+  },
+  "bio_case_deltas": {
+    "aliases": [
+      "change in cases by province"
+    ],
+    "keywords": [
+      "deltaList",
+      "bio",
+      "case",
+      "deltas"
+    ]
+  },
+  "bio_municipality_choropleth_animation": {
+    "aliases": [
+      "municipal infection rate over time"
+    ],
+    "keywords": [
+      "chronoChoroplethMap",
+      "bio",
+      "municipality",
+      "choropleth",
+      "animation"
+    ]
+  },
+  "bio_municipality_aggregate": {
+    "aliases": [
+      "aggregate municipal infections"
+    ],
+    "keywords": [
+      "line",
+      "bio",
+      "municipality",
+      "aggregate"
+    ]
+  },
+  "bio_population_infection_bubble": {
+    "aliases": [
+      "population and municipal infection burden"
+    ],
+    "keywords": [
+      "bubble",
+      "bio",
+      "population",
+      "infection"
+    ]
+  },
+  "bio_current_cases_kpi": {
+    "aliases": [
+      "current confirmed cases"
+    ],
+    "keywords": [
+      "kpi",
+      "bio",
+      "current",
+      "cases"
+    ]
+  },
+  "bio_icu_capacity_bullet": {
+    "aliases": [
+      "icu occupancy against capacity"
+    ],
+    "keywords": [
+      "bullet",
+      "bio",
+      "icu",
+      "capacity"
+    ]
+  },
+  "bio_hospital_capacity_bullet": {
+    "aliases": [
+      "hospital occupancy against capacity"
+    ],
+    "keywords": [
+      "bullet",
+      "bio",
+      "hospital",
+      "capacity"
+    ]
+  },
+  "bio_icu_occupancy": {
+    "aliases": [
+      "icu occupancy"
+    ],
+    "keywords": [
+      "line",
+      "bio",
+      "icu",
+      "occupancy"
+    ]
+  },
+  "bio_hospital_occupancy": {
+    "aliases": [
+      "hospital occupancy"
+    ],
+    "keywords": [
+      "line",
+      "bio",
+      "hospital",
+      "occupancy"
+    ]
+  },
+  "bio_admissions": {
+    "aliases": [
+      "new icu and hospital admissions"
+    ],
+    "keywords": [
+      "groupedBar",
+      "bio",
+      "admissions"
+    ]
+  },
+  "bio_delayed_healthcare": {
+    "aliases": [
+      "delayed-care activity"
+    ],
+    "keywords": [
+      "groupedBar",
+      "bio",
+      "delayed",
+      "healthcare"
+    ]
+  },
+  "bio_testing_overlay": {
+    "aliases": [
+      "testing and positivity"
+    ],
+    "keywords": [
+      "mixed",
+      "bio",
+      "testing",
+      "overlay"
+    ]
+  },
+  "bio_occupancy_collection": {
+    "aliases": [
+      "current occupancy pressure"
+    ],
+    "keywords": [
+      "gauge",
+      "bio",
+      "occupancy",
+      "collection"
+    ]
+  },
+  "bio_wastewater_map": {
+    "aliases": [
+      "current wastewater signal"
+    ],
+    "keywords": [
+      "mapScatter",
+      "bio",
+      "wastewater",
+      "map"
+    ]
+  },
+  "bio_wastewater_province": {
+    "aliases": [
+      "wastewater signal by province"
+    ],
+    "keywords": [
+      "horizontalBar",
+      "bio",
+      "wastewater",
+      "province"
+    ]
+  },
+  "bio_vaccination_current": {
+    "aliases": [
+      "current vaccination status"
+    ],
+    "keywords": [
+      "table",
+      "bio",
+      "vaccination",
+      "current"
+    ]
+  },
+  "bio_vaccination_rate": {
+    "aliases": [
+      "vaccination rate over time"
+    ],
+    "keywords": [
+      "line",
+      "bio",
+      "vaccination",
+      "rate"
+    ]
+  },
+  "socio_risk_perception": {
+    "aliases": [
+      "risk perception over time"
+    ],
+    "keywords": [
+      "heatmap",
+      "socio",
+      "risk",
+      "perception"
+    ]
+  },
+  "socio_risk_deltas": {
+    "aliases": [
+      "change in risk perception"
+    ],
+    "keywords": [
+      "deltaList",
+      "socio",
+      "risk",
+      "deltas"
+    ]
+  },
+  "socio_adherence": {
+    "aliases": [
+      "adherence to public-health measures"
+    ],
+    "keywords": [
+      "stackedBar",
+      "socio",
+      "adherence"
+    ]
+  },
+  "socio_values": {
+    "aliases": [
+      "citizen priorities"
+    ],
+    "keywords": [
+      "horizontalBar",
+      "socio",
+      "values"
+    ]
+  },
+  "socio_values_deltas": {
+    "aliases": [
+      "change in citizen priorities"
+    ],
+    "keywords": [
+      "deltaList",
+      "socio",
+      "values",
+      "deltas"
+    ]
+  },
+  "socio_trust_trend": {
+    "aliases": [
+      "trust in institutions over time"
+    ],
+    "keywords": [
+      "line",
+      "socio",
+      "trust",
+      "trend"
+    ]
+  },
+  "socio_trust_meter": {
+    "aliases": [
+      "current trust by institution"
+    ],
+    "keywords": [
+      "gauge",
+      "socio",
+      "trust",
+      "meter"
+    ]
+  },
+  "socio_loneliness": {
+    "aliases": [
+      "loneliness by age group"
+    ],
+    "keywords": [
+      "line",
+      "socio",
+      "loneliness"
+    ]
+  },
+  "socio_mental_wellbeing": {
+    "aliases": [
+      "current anxiety profile"
+    ],
+    "keywords": [
+      "stackedBar",
+      "socio",
+      "mental",
+      "wellbeing"
+    ]
+  },
+  "socio_lifestyle": {
+    "aliases": [
+      "current lifestyle changes"
+    ],
+    "keywords": [
+      "stackedBar",
+      "socio",
+      "lifestyle"
+    ]
+  },
+  "socio_resilience": {
+    "aliases": [
+      "current resilience profile"
+    ],
+    "keywords": [
+      "stackedBar",
+      "socio",
+      "resilience"
+    ]
+  },
+  "socio_business_closures": {
+    "aliases": [
+      "business closures by sector"
+    ],
+    "keywords": [
+      "groupedBar",
+      "socio",
+      "business",
+      "closures"
+    ]
+  },
+  "socio_unemployment": {
+    "aliases": [
+      "unemployment rate"
+    ],
+    "keywords": [
+      "line",
+      "socio",
+      "unemployment"
+    ]
+  },
+  "socio_healthcare_absenteeism": {
+    "aliases": [
+      "healthcare staff absenteeism"
+    ],
+    "keywords": [
+      "line",
+      "socio",
+      "healthcare",
+      "absenteeism"
+    ]
+  },
+  "socio_education_absenteeism": {
+    "aliases": [
+      "school absenteeism"
+    ],
+    "keywords": [
+      "line",
+      "socio",
+      "education",
+      "absenteeism"
+    ]
+  }
+}
