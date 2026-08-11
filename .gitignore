@@ -3,6 +3,8 @@ dist/
 .pnpm-store/
 .env
 .env.*
+.dev.vars
+.dev.vars.*
 public/config/dataset-profiles.json
 public/integration/
 public/portable-dashboard-data.js
