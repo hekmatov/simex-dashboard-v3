@@ -4,7 +4,8 @@
 - **Scope:** Reopened V3 redesign, Step 2 only
 - **Branch baseline:** `codex/three-mode-dashboard-design` at `adb6b84`
 - **Surfaces:** View, Build, Present/controller, Audience, and the existing static prototype
-- **Status:** Evidence complete; ready for user review
+- **Status:** Accepted; Step 2 complete
+- **Accepted:** 2026-08-12
 
 This is an evidence-first audit, not a redesign. No production component, CSS, application state, presentation behavior, or test was changed. The current implementation and the existing UI specification are audit subjects rather than design authority.
 
@@ -186,6 +187,6 @@ After that contract is revised, Step 4 can compare the five editing hypotheses a
 - [x] Observed findings separated from source facts and source-derived inference.
 - [x] Immutable constraints and unresolved choices made explicit.
 - [x] No production redesign implemented.
-- [ ] User review and acceptance.
+- [x] User review and acceptance (2026-08-12).
 
-Step 2 remains open until the user accepts this audit.
+Step 2 is complete. Steps 3 and 4 have not begun.
