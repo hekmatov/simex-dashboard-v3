@@ -15,6 +15,7 @@ import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
+import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
 import ViewShell from "./view/ViewShell.jsx";
 import {
   configuredCharts,
@@ -123,6 +124,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
+  const presentationValidChartIds = React.useMemo(
+    () => configuredCharts(dashboard)
+      .map((chart) => chart?.id)
+      .filter((chartId) => typeof chartId === "string" && chartId.length > 0),
+    [dashboard],
+  );
+  const presentationRuntime = usePresentationRuntime(presentationValidChartIds);
   const landingActive = hasLandingPresentation(activePage);
   const selectedPlacement = findPanelPlacement(
     dashboard,
@@ -736,8 +744,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboard={dashboard}
         activePageId={activePage?.id}
         onActivePageChange={onActivePageChange}
-        displayState={displayState}
-        onDisplayAction={onDisplayAction}
+        runtime={presentationRuntime}
         accessibilityEnabled={accessibilityEnabled}
       />
     );

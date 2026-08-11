@@ -1,33 +1,34 @@
 import React from "react";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
-import { createPresentationControllerChannel } from "../../lib/presentationChannel.js";
-import { openAudienceWindow } from "../../lib/presentationWindow.js";
+import AudienceSceneMonitor from "./AudienceSceneMonitor.jsx";
 
 export default function PresentWorkspace({
   dashboard,
   activePageId,
   onActivePageChange,
-  displayState,
-  onDisplayAction,
+  runtime,
   accessibilityEnabled,
 }) {
   const playback = usePlayback();
-  const controllerRef = React.useRef(null);
-  const sessionIdRef = React.useRef(null);
-  const audienceWindowRef = React.useRef(null);
-  const [connectionStatus, setConnectionStatus] = React.useState("not-open");
-  const [connectionError, setConnectionError] = React.useState("");
-  const [showSceneTitle, setShowSceneTitle] = React.useState(true);
-  const [blackout, setBlackout] = React.useState(false);
+  const {
+    displayState,
+    onDisplayAction,
+    connectionStatus,
+    connectionError,
+    hasSession,
+    showSceneTitle,
+    setShowSceneTitle,
+    blackout,
+    setBlackout,
+    publish,
+    open,
+    end,
+  } = runtime;
 
   const chartGroups = React.useMemo(
     () => configuredChartGroups(dashboard),
     [dashboard],
-  );
-  const validChartIds = React.useMemo(
-    () => chartGroups.flatMap(({ charts }) => charts.map(({ id }) => id)),
-    [chartGroups],
   );
   const chartsById = React.useMemo(
     () => new Map(chartGroups.flatMap(({ charts }) => charts.map((chart) => [chart.id, chart]))),
@@ -69,68 +70,11 @@ export default function PresentWorkspace({
   ]);
 
   React.useEffect(() => {
-    controllerRef.current?.publish(presentationState);
-  }, [presentationState]);
-
-  const endPresentation = React.useCallback(() => {
-    const controller = controllerRef.current;
-    controllerRef.current = null;
-    sessionIdRef.current = null;
-    controller?.end();
-
-    const audienceWindow = audienceWindowRef.current;
-    audienceWindowRef.current = null;
-    if (audienceWindow && audienceWindow.closed !== true) {
-      audienceWindow.close?.();
-    }
-
-    setConnectionError("");
-    setConnectionStatus("ended");
-  }, []);
-
-  React.useEffect(() => () => endPresentation(), [endPresentation]);
+    publish(presentationState);
+  }, [presentationState, publish]);
 
   function openDisplay() {
-    let controller = controllerRef.current;
-    let sessionId = sessionIdRef.current;
-
-    if (!controller || !sessionId) {
-      sessionId = globalThis.crypto?.randomUUID?.();
-      if (!sessionId) {
-        setConnectionError("Audience display is unavailable in this browser.");
-        setConnectionStatus("error");
-        return;
-      }
-
-      try {
-        controller = createPresentationControllerChannel({
-          sessionId,
-          validChartIds,
-          onConnectionChange: setConnectionStatus,
-        });
-        controller.start();
-      } catch {
-        controller?.dispose();
-        setConnectionError("Audience display is unavailable in this browser.");
-        setConnectionStatus("error");
-        return;
-      }
-
-      controllerRef.current = controller;
-      sessionIdRef.current = sessionId;
-    }
-
-    controller.publish(presentationState);
-    const result = openAudienceWindow({ channelId: sessionId });
-    if (result.status !== "opened") {
-      setConnectionError("The audience display window was blocked.");
-      setConnectionStatus("blocked");
-      return;
-    }
-
-    audienceWindowRef.current = result.windowRef;
-    setConnectionError("");
-    setConnectionStatus("opening");
+    open(presentationState);
   }
 
   function toggleChart(chartId) {
@@ -152,8 +96,6 @@ export default function PresentWorkspace({
     onDisplayAction?.({ type: "manual_reorder", chart_ids: nextChartIds });
   }
 
-  const hasSession = sessionIdRef.current !== null;
-
   return (
     <main
       className="present-workspace"
@@ -173,6 +115,14 @@ export default function PresentWorkspace({
       <div className="present-workspace-body">
         <aside className="present-context-panel" aria-label="Presentation context">
           <div className="present-context-controls">
+            <AudienceSceneMonitor
+              connectionLabel={connectionStatusLabel(connectionStatus)}
+              sceneTitle={activePage?.title ?? activePage?.label ?? activePage?.id}
+              showSceneTitle={showSceneTitle}
+              charts={selectedCharts}
+              layout={layout}
+              blackout={blackout}
+            />
             <label className="present-field">
               <span>Current page</span>
               <select
@@ -363,7 +313,7 @@ export default function PresentWorkspace({
           >
             Restore
           </button>
-          <button type="button" className="secondary" onClick={endPresentation}>
+          <button type="button" className="secondary" onClick={end}>
             End presentation
           </button>
         </div>
