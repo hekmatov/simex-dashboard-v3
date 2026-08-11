@@ -80,12 +80,55 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-2.layout-sideBySide {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-2.layout-overUnder {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
 .displayed-chart-grid[data-display-surface="audience"].displayed-count-3 {
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .displayed-chart-grid[data-display-surface="audience"].displayed-count-3 .displayed-cell-1 {
+  grid-row: 1 / span 2;
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-topFocus {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-topFocus .displayed-cell-1 {
+  grid-column: 1 / span 2;
+  grid-row: auto;
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus .displayed-cell-1 {
+  grid-row: auto;
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus .displayed-cell-3 {
+  grid-column: 1 / span 2;
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-leftFocus {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-rightFocus {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-rightFocus .displayed-cell-1 {
+  grid-column: 2;
   grid-row: 1 / span 2;
 }
 
@@ -176,6 +219,12 @@
   gap: 20px;
 }
 
+.present-context-controls,
+.present-displayed-panel {
+  display: grid;
+  gap: 20px;
+}
+
 .present-scene-panel {
   min-width: 0;
 }
@@ -232,6 +281,10 @@
   margin-top: 24px;
 }
 
+.present-displayed-panel .present-selected-charts {
+  margin-top: 4px;
+}
+
 .present-selected-chart {
   align-items: center;
   background: #fff;
@@ -269,6 +322,37 @@
 .present-session-actions button,
 .present-time-controls > button {
   min-height: 44px;
+}
+
+@media (min-width: 900px) {
+  .present-context-panel {
+    align-self: start;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: calc(100dvh - 120px);
+    overflow: hidden;
+    position: sticky;
+    top: 16px;
+  }
+
+  .present-displayed-panel {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .present-displayed-panel .present-selected-chart {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .present-displayed-panel .present-chart-actions {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .present-displayed-panel .present-chart-actions button {
+    min-width: 0;
+  }
 }
 
 .present-chart-group {
@@ -342,6 +426,13 @@
   }
 
   .displayed-chart-grid[data-display-surface="audience"].displayed-count-3 .displayed-cell-1 {
+    grid-row: auto;
+  }
+
+  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-topFocus .displayed-cell-1,
+  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus .displayed-cell-3,
+  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-rightFocus .displayed-cell-1 {
+    grid-column: auto;
     grid-row: auto;
   }
 

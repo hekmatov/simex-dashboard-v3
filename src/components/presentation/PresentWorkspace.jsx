@@ -172,95 +172,98 @@ export default function PresentWorkspace({
 
       <div className="present-workspace-body">
         <aside className="present-context-panel" aria-label="Presentation context">
-          <label className="present-field">
-            <span>Current page</span>
-            <select
-              aria-label="Current page"
-              value={activePage?.id ?? ""}
-              onChange={(event) => onActivePageChange?.(event.target.value)}
-            >
-              {(dashboard?.pages ?? []).map((page) => (
-                <option key={page.id} value={page.id}>
-                  {page.label ?? page.title ?? page.id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="present-title-toggle">
-            <input
-              type="checkbox"
-              checked={showSceneTitle}
-              onChange={(event) => setShowSceneTitle(event.target.checked)}
-            />
-            <span>Show scene title</span>
-          </label>
-
-          <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
-        </aside>
-
-        <section className="present-scene-panel" aria-label="Audience scene">
-          <div className="present-panel-heading">
-            <div>
-              <p className="eyebrow">Audience scene</p>
-              <h1>Displayed charts</h1>
-            </div>
-            <label className="present-field present-layout-field">
-              <span>Scene layout</span>
+          <div className="present-context-controls">
+            <label className="present-field">
+              <span>Current page</span>
               <select
-                aria-label="Scene layout"
-                value={layout}
-                onChange={(event) => onDisplayAction?.({
-                  type: "layout_changed",
-                  layout: event.target.value,
-                })}
+                aria-label="Current page"
+                value={activePage?.id ?? ""}
+                onChange={(event) => onActivePageChange?.(event.target.value)}
               >
-                {layoutOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {(dashboard?.pages ?? []).map((page) => (
+                  <option key={page.id} value={page.id}>
+                    {page.label ?? page.title ?? page.id}
+                  </option>
                 ))}
               </select>
             </label>
-          </div>
 
-          <div className="present-selected-charts" aria-label="Displayed chart order">
-            {selectedCharts.length === 0 ? (
-              <p className="present-holding-scene">Holding scene — no charts selected.</p>
-            ) : selectedCharts.map((chart, index) => (
-              <article className="present-selected-chart" key={chart.id}>
-                <span className="present-chart-order">{index + 1}</span>
-                <strong>{chart.title ?? chart.id}</strong>
-                <div className="present-chart-actions">
-                  <button
-                    type="button"
-                    className="secondary"
-                    aria-label={`Move ${chart.title ?? chart.id} up`}
-                    disabled={index === 0}
-                    onClick={() => reorderChart(index, -1)}
-                  >
-                    Move up
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    aria-label={`Move ${chart.title ?? chart.id} down`}
-                    disabled={index === selectedCharts.length - 1}
-                    onClick={() => reorderChart(index, 1)}
-                  >
-                    Move down
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => toggleChart(chart.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+            <label className="present-title-toggle">
+              <input
+                type="checkbox"
+                checked={showSceneTitle}
+                onChange={(event) => setShowSceneTitle(event.target.checked)}
+              />
+              <span>Show scene title</span>
+            </label>
 
-          <div className="present-chart-groups" aria-label="Choose charts for the audience scene">
+            <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
+          </div>
+          <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
+            <div className="present-panel-heading">
+              <div>
+                <p className="eyebrow">Audience scene</p>
+                <h1 id="displayed-charts-heading">Displayed charts</h1>
+              </div>
+              <label className="present-field present-layout-field">
+                <span>Scene layout</span>
+                <select
+                  aria-label="Scene layout"
+                  value={layout}
+                  onChange={(event) => onDisplayAction?.({
+                    type: "layout_changed",
+                    layout: event.target.value,
+                  })}
+                >
+                  {layoutOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="present-selected-charts" aria-label="Displayed chart order">
+              {selectedCharts.length === 0 ? (
+                <p className="present-holding-scene">Holding scene — no charts selected.</p>
+              ) : selectedCharts.map((chart, index) => (
+                <article className="present-selected-chart" key={chart.id}>
+                  <span className="present-chart-order">{index + 1}</span>
+                  <strong>{chart.title ?? chart.id}</strong>
+                  <div className="present-chart-actions">
+                    <button
+                      type="button"
+                      className="secondary"
+                      aria-label={`Move ${chart.title ?? chart.id} up`}
+                      disabled={index === 0}
+                      onClick={() => reorderChart(index, -1)}
+                    >
+                      Move up
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      aria-label={`Move ${chart.title ?? chart.id} down`}
+                      disabled={index === selectedCharts.length - 1}
+                      onClick={() => reorderChart(index, 1)}
+                    >
+                      Move down
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => toggleChart(chart.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        <section className="present-scene-panel" aria-label="Choose charts for the audience scene">
+          <div className="present-chart-groups">
             {chartGroups.map((group) => (
               <fieldset className="present-chart-group" key={group.id}>
                 <legend>{group.label}</legend>
