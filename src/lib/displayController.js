@@ -1,4 +1,4 @@
-const MAX_DISPLAYED_CHARTS = 4;
+export const MAX_DISPLAYED_CHARTS = 4;
 const LAYOUTS_BY_COUNT = Object.freeze({
   0: Object.freeze(["solo"]),
   1: Object.freeze(["solo"]),

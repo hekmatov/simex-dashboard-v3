@@ -12,6 +12,11 @@
   position: relative;
 }
 
+.audience-display[data-show-scene-title="false"] {
+  gap: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+
 .audience-waiting {
   align-items: center;
   background: #f7f9fc;
@@ -69,6 +74,7 @@
 .displayed-chart-grid[data-display-surface="audience"] {
   display: grid;
   gap: 24px;
+  height: 100%;
   min-height: 0;
 }
 
@@ -82,6 +88,7 @@
 
 .displayed-chart-grid[data-display-surface="audience"].displayed-count-2.layout-sideBySide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .displayed-chart-grid[data-display-surface="audience"].displayed-count-2.layout-overUnder {
@@ -337,6 +344,11 @@
   gap: 8px;
 }
 
+.present-chart-choice.is-unavailable {
+  color: #74879a;
+  cursor: not-allowed;
+}
+
 .present-title-toggle input,
 .present-chart-choice input {
   block-size: 20px;
@@ -348,6 +360,11 @@
   display: grid;
   gap: 12px;
   margin-top: 24px;
+}
+
+.present-chart-limit-status {
+  color: #49627a;
+  margin: 0;
 }
 
 .present-displayed-panel .present-selected-charts {
@@ -421,6 +438,12 @@
 
   .present-displayed-panel .present-chart-actions button {
     min-width: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .displayed-chart-grid[data-display-surface="audience"] .chart-echarts-host {
+    min-height: 0;
   }
 }
 

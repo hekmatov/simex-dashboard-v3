@@ -15,6 +15,7 @@ export default function AudienceDisplay({
   const activePage = (dashboard.pages ?? []).find(
     ({ id }) => id === presentationState.active_page_id,
   );
+  const showSceneTitle = Boolean(presentationState.show_scene_title && activePage);
   const timeGroup = presentationState.time
     ? (dashboard.timeSyncGroups ?? []).find(
       ({ id }) => id === presentationState.time.group_id,
@@ -29,8 +30,9 @@ export default function AudienceDisplay({
     <main
       className="audience-display"
       data-connection-status={connectionStatus ?? "waiting"}
+      data-show-scene-title={showSceneTitle ? "true" : "false"}
     >
-      {presentationState.show_scene_title && activePage && (
+      {showSceneTitle && (
         <header className="audience-scene-title">
           <h1>{activePage.title ?? activePage.label ?? activePage.id}</h1>
           {dashboard.scenarioLabel && <p>{dashboard.scenarioLabel}</p>}
@@ -50,7 +52,10 @@ export default function AudienceDisplay({
 
 function AudienceWaiting() {
   return (
-    <main className="audience-display audience-waiting">
+    <main
+      className="audience-display audience-waiting"
+      data-show-scene-title="false"
+    >
       <div className="audience-waiting-content">
         <span className="audience-waiting-mark" aria-hidden="true">SimEx</span>
         <p className="audience-waiting-ready">Audience display ready</p>

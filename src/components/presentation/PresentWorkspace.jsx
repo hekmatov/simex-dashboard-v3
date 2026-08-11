@@ -1,6 +1,7 @@
 import React from "react";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
+import { MAX_DISPLAYED_CHARTS } from "../../lib/displayController.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
 
 export default function PresentWorkspace({
@@ -42,6 +43,7 @@ export default function PresentWorkspace({
   const selectedCharts = displayedChartIds
     .map((chartId) => chartsById.get(chartId))
     .filter(Boolean);
+  const atChartCapacity = displayedChartIds.length >= MAX_DISPLAYED_CHARTS;
   const layoutOptions = layoutChoices(displayedChartIds.length);
   const hasClock = playback.activeGroupId !== null && playback.clock.length > 0;
   const atFirstTime = !hasClock || playback.activeIndex <= 0;
@@ -82,6 +84,7 @@ export default function PresentWorkspace({
       onDisplayAction?.({ type: "manual_close", chart_id: chartId });
       return;
     }
+    if (atChartCapacity) return;
     onDisplayAction?.({ type: "manual_open", chart_id: chartId });
   }
 
@@ -211,17 +214,28 @@ export default function PresentWorkspace({
         </aside>
 
         <section className="present-scene-panel" aria-label="Choose charts for the audience scene">
+          <p id="present-chart-limit-status" className="present-chart-limit-status" aria-live="polite">
+            {atChartCapacity
+              ? `${MAX_DISPLAYED_CHARTS} of ${MAX_DISPLAYED_CHARTS} charts selected. Remove a displayed chart before selecting another.`
+              : `Choose up to ${MAX_DISPLAYED_CHARTS} charts. ${displayedChartIds.length} of ${MAX_DISPLAYED_CHARTS} selected.`}
+          </p>
           <div className="present-chart-groups">
             {chartGroups.map((group) => (
               <fieldset className="present-chart-group" key={group.id}>
                 <legend>{group.label}</legend>
                 {group.charts.map((chart) => {
                   const selected = displayedChartIds.includes(chart.id);
+                  const unavailable = atChartCapacity && !selected;
                   return (
-                    <label className="present-chart-choice" key={chart.id}>
+                    <label
+                      className={`present-chart-choice${unavailable ? " is-unavailable" : ""}`}
+                      key={chart.id}
+                    >
                       <input
                         type="checkbox"
+                        aria-describedby="present-chart-limit-status"
                         checked={selected}
+                        disabled={unavailable}
                         onChange={() => toggleChart(chart.id)}
                       />
                       <span>{chart.title ?? chart.id}</span>
