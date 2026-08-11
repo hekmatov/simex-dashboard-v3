@@ -1,7 +1,7 @@
 import React from "react";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
-import AudienceSceneMonitor from "./AudienceSceneMonitor.jsx";
+import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
 
 export default function PresentWorkspace({
   dashboard,
@@ -115,13 +115,11 @@ export default function PresentWorkspace({
       <div className="present-workspace-body">
         <aside className="present-context-panel" aria-label="Presentation context">
           <div className="present-context-controls">
-            <AudienceSceneMonitor
+            <AudienceSnapshotMonitor
+              dashboard={dashboard}
               connectionLabel={connectionStatusLabel(connectionStatus)}
-              sceneTitle={activePage?.title ?? activePage?.label ?? activePage?.id}
-              showSceneTitle={showSceneTitle}
-              charts={selectedCharts}
-              layout={layout}
-              blackout={blackout}
+              presentationState={presentationState}
+              playing={playback.playing}
             />
             <label className="present-field">
               <span>Current page</span>

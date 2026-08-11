@@ -225,13 +225,13 @@
   gap: 20px;
 }
 
-.audience-scene-monitor {
+.audience-snapshot-monitor {
   display: grid;
   gap: 8px;
   pointer-events: none;
 }
 
-.audience-monitor-heading {
+.audience-snapshot-heading {
   align-items: baseline;
   display: flex;
   font-size: 12px;
@@ -239,151 +239,59 @@
   justify-content: space-between;
 }
 
-.audience-monitor-heading > span {
+.audience-snapshot-heading > span {
   color: #49627a;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.audience-monitor-heading > strong {
+.audience-snapshot-heading > strong {
   overflow: hidden;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.audience-monitor-stage {
+.audience-snapshot-frame {
+  align-items: center;
   aspect-ratio: 16 / 9;
   background: #eaf1f6;
   border: 1px solid #c8d6e3;
   border-radius: 8px;
-  display: grid;
-  gap: 6px;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-width: 0;
-  overflow: hidden;
-  padding: 8px;
-  position: relative;
-}
-
-.audience-monitor-stage[data-show-title="false"] {
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.audience-monitor-title {
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 14px;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.audience-monitor-grid {
-  display: grid;
-  gap: 4px;
-  min-height: 0;
-}
-
-.audience-monitor-stage[data-chart-count="1"] .audience-monitor-grid {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.audience-monitor-stage[data-chart-count="2"] .audience-monitor-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.audience-monitor-stage[data-chart-count="2"].layout-overUnder .audience-monitor-grid {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-}
-
-.audience-monitor-stage[data-chart-count="3"] .audience-monitor-grid {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-}
-
-.audience-monitor-stage[data-chart-count="3"] .audience-monitor-tile-1 {
-  grid-row: 1 / span 2;
-}
-
-.audience-monitor-stage[data-chart-count="3"].layout-topFocus .audience-monitor-grid,
-.audience-monitor-stage[data-chart-count="3"].layout-bottomFocus .audience-monitor-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.audience-monitor-stage[data-chart-count="3"].layout-topFocus .audience-monitor-tile-1 {
-  grid-column: 1 / span 2;
-  grid-row: auto;
-}
-
-.audience-monitor-stage[data-chart-count="3"].layout-bottomFocus .audience-monitor-tile-1 {
-  grid-row: auto;
-}
-
-.audience-monitor-stage[data-chart-count="3"].layout-bottomFocus .audience-monitor-tile-3 {
-  grid-column: 1 / span 2;
-}
-
-.audience-monitor-stage[data-chart-count="3"].layout-rightFocus .audience-monitor-grid {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-}
-
-.audience-monitor-stage[data-chart-count="3"].layout-rightFocus .audience-monitor-tile-1 {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
-
-.audience-monitor-stage[data-chart-count="4"] .audience-monitor-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-}
-
-.audience-monitor-tile {
-  align-content: center;
-  background: #fff;
-  border: 1px solid #d8e2ec;
-  border-radius: 4px;
-  display: grid;
-  font-size: 9px;
-  gap: 2px;
-  grid-template-columns: auto minmax(0, 1fr);
-  line-height: 11px;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  padding: 4px;
-}
-
-.audience-monitor-tile > span {
-  color: #49627a;
-}
-
-.audience-monitor-tile > strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.audience-monitor-holding {
-  align-self: center;
-  color: #49627a;
-  font-size: 12px;
-  margin: 0;
-  text-align: center;
-}
-
-.audience-monitor-blackout {
-  align-items: center;
-  background: #020816;
-  color: #fff;
   display: flex;
-  font-size: 12px;
-  font-weight: 700;
-  inset: 0;
   justify-content: center;
-  position: absolute;
+  overflow: hidden;
+}
+
+.audience-snapshot-frame img {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.audience-snapshot-frame p {
+  color: #49627a;
+  font-size: 12px;
+  margin: 0;
+}
+
+.audience-snapshot-source {
+  height: 720px;
+  left: -10000px;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 1280px;
+  z-index: -1;
+}
+
+.audience-snapshot-source > .audience-display {
+  height: 720px;
+  max-height: 720px;
+  min-height: 720px;
+  width: 1280px;
 }
 
 .present-scene-panel {
