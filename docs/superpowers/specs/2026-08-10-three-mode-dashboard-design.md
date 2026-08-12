@@ -5,6 +5,8 @@ Status: Approved for implementation planning
 Branch: `codex/three-mode-dashboard-design`
 Baseline: `main` at `9f0878e`
 
+> **Partially superseded on 2026-08-12.** The [V3 Three-Mode Dashboard UI Contract](./2026-08-12-three-mode-dashboard-ui-spec.md) overrides this document for visual, responsive, and interaction details. This document remains authoritative for architecture, scope, non-goals, universal mode access, shared V3 state, transactional editing, and the same-computer presentation channel.
+
 ## Purpose
 
 Refine the SimEx Dashboard into one coherent product that supports three tasks

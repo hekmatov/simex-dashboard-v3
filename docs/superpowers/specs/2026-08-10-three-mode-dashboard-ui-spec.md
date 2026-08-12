@@ -3,6 +3,8 @@
 Date: 2026-08-10
 Status: Approved prototype reference
 
+> **Superseded on 2026-08-12.** This historical UI contract is preserved as evidence of the assumptions that produced the prototype. The current visual, responsive, and interaction authority is the [V3 Three-Mode Dashboard UI Contract](./2026-08-12-three-mode-dashboard-ui-spec.md).
+
 ## Mode switch position and states
 
 - Place the `View | Build | Present` segmented switch in the 64 px application-frame bar, after the SimEx identity and before the scenario summary. The bar is above page navigation on every controller surface; the audience surface has neither bar nor switch.
