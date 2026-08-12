@@ -3,7 +3,7 @@
 - **Audit date:** 2026-08-12
 - **Scope:** bounded supplement to the accepted Three-Mode Dashboard Step 2 visual baseline
 - **Runtime evidence origin:** this worktree served by Vite at `http://127.0.0.1:4187/`
-- **Status:** evidence sufficient for user review; **not accepted**
+- **Status:** **accepted by the user on 2026-08-12**
 - **Authority boundary:** the accepted baseline remains valid. This supplement neither re-scores it nor starts Step 3A, Step 4, or production implementation.
 
 ## 1. Scope and method
@@ -232,4 +232,4 @@ Step 3A must also amend companion clauses whose temporal vocabulary is supersede
 - Only one tablet boundary and no phone wizard state were captured.
 - The Home placement inconsistency is a single observed path and needs a deterministic fixture before it can be generalized.
 
-**Exit assessment:** the evidence is sufficient to present Step 2A to the user for review and to inform a later Step 3A amendment. It does **not** mark Step 2A accepted. Acceptance remains a user decision after reviewing this supplement and its stated limitations.
+**Exit assessment:** Step 2A is accepted. Its evidence and stated limitations are sufficient inputs for the Step 3A chart-creation contract amendment.
