@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-12
 
-**Status:** Approved in design discussion; awaiting written-spec review
+**Status:** Approved
 
 **Applies to:** V3 dashboard Build, View, Present, and Audience surfaces
 
