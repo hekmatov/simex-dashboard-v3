@@ -1,12 +1,13 @@
 # Screenshot evidence manifest
 
-- **Date captured:** 2026-08-11
-- **Total:** 46 PNG files
+- **Dates captured:** 2026-08-11 and 2026-08-12
+- **Total:** 52 PNG files
 - **Directory:** [`screenshots/`](screenshots/)
 
 ## Provenance and method
 
-- **Runtime evidence** was captured from the current application on branch `codex/three-mode-dashboard-design`, starting from HEAD `adb6b84`, using a clean Vite session and the in-app browser. The transient local audit server used port 4187.
+- **Baseline runtime evidence** was captured from the current application on branch `codex/three-mode-dashboard-design`, starting from HEAD `adb6b84`, using a clean Vite session and the in-app browser. The transient local audit server used port 4187.
+- **Step 2A runtime evidence** was captured on the same branch from HEAD `35c5eb5`, using the actual dashboard in a clean Vite session at `http://127.0.0.1:4187/` and the in-app browser. The disposable charts created during the walkthrough were removed through the product UI after capture.
 - **Prototype evidence** was captured from the existing static artifact at `docs/superpowers/sketches/2026-08-10-three-mode-dashboard/index.html`, served locally for browser inspection on transient port 4188.
 - View and Build runtime pairs use the same Biomedical representative page/content and the same requested viewport for direct comparison.
 - Browser viewport emulation, DOM bounding boxes, computed grid styles, scroll dimensions, control actions, focus state, and screenshots were recorded together. Geometry conclusions belong in the accompanying tables; screenshots provide visual corroboration.
@@ -26,7 +27,8 @@ The static prototype and the existing UI specification are audit subjects, not v
 | Runtime controller | 6 | Empty, connected four-chart, playback, disconnect, and ended states at required controller sizes |
 | Runtime Audience | 10 | Empty/title states, one through four charts, layout variants, blackout, reload waiting, and reopen at 1920 × 1080 |
 | Static prototype | 13 | Non-authoritative comparison across View, Build, inspector, controller, and Audience |
-| **Total** | **46** | Complete required screenshot set |
+| Step 2A runtime supplement | 6 | Create-chart validation, ready preview, placement, cancellation, tablet behavior, and View playback |
+| **Total** | **52** | Complete baseline plus bounded Step 2A screenshot set |
 
 ## Runtime View/Build matched pairs (10)
 
@@ -101,6 +103,17 @@ All files in this group were captured at the required 1920 × 1080 Audience view
 | [prototype-controller-1440x900-default-two-chart.png](screenshots/prototype-controller-1440x900-default-two-chart.png) | 1440 × 900 | 1425 × 891 | Prototype connected two-chart controller | Earlier control hierarchy and 1462 px document; mostly inert |
 | [prototype-audience-1920x1080-two-chart.png](screenshots/prototype-audience-1920x1080-two-chart.png) | 1920 × 1080 | 1920 × 1080 | Prototype two-chart Audience | Earlier 900 × 860 card geometry; same-document swap, not runtime lifecycle |
 
+## Step 2A runtime supplement (6)
+
+| File | Requested viewport | PNG px | State | Evidence use |
+| --- | ---: | ---: | --- | --- |
+| [step2a-wizard-1440x900-prerequisite-validation.png](screenshots/step2a-wizard-1440x900-prerequisite-validation.png) | 1440 × 900 | 1425 × 891 | Data source opened before chart type selection | Direct step navigation, prerequisite explanation, disabled source controls, and modal occlusion |
+| [step2a-wizard-1440x900-preview-ready.png](screenshots/step2a-wizard-1440x900-preview-ready.png) | 1440 × 900 | 1425 × 891 | Valid Line chart on Style and layout | Live preview, schema-driven appearance controls, internal scrolling, and create-ready state |
+| [step2a-wizard-1440x900-created-placement.png](screenshots/step2a-wizard-1440x900-created-placement.png) | 1440 × 900 | 1425 × 891 | Created Biomedical chart after scrolling to its section end | Successful placement, panel geometry, and separation from the creation viewport |
+| [step2a-wizard-1440x900-discard-confirmation.png](screenshots/step2a-wizard-1440x900-discard-confirmation.png) | 1440 × 900 | 1425 × 891 | Nested discard confirmation over a partial Bar draft | Dirty cancellation copy, retained underlying draft, destructive differentiation, and initial focus |
+| [step2a-wizard-768x1024-preview-ready.png](screenshots/step2a-wizard-768x1024-preview-ready.png) | 768 × 1024 | 753 × 1004 | Valid Line chart at the tablet boundary | Side-by-side preview/settings retention and internal horizontal overflow |
+| [step2a-view-1440x900-playback-group-open.png](screenshots/step2a-view-1440x900-playback-group-open.png) | 1440 × 900 | 1425 × 891 | National time group in open View playback | Group-only surface, transport/seek/time/speed controls, aggregate availability, and trace/snapshot coexistence |
+
 ## Completeness check
 
 - Five matched runtime View/Build viewport pairs: 10 files.
@@ -109,4 +122,5 @@ All files in this group were captured at the required 1920 × 1080 Audience view
 - Controller evidence at 1440 × 900 and 1024 × 768, including empty, dense, playback, disconnect, and end: 6 files.
 - Audience evidence at 1920 × 1080, including 0/1/2/3/4 charts, title on/off, layout alternatives, blackout, reload, and reopen: 10 files.
 - Static prototype comparison: 13 files.
-- **Total: 46 files.**
+- Step 2A runtime supplement at 1440 × 900 and 768 × 1024: 6 files.
+- **Total: 52 files.**
