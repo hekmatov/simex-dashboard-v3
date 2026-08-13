@@ -1,0 +1,1437 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sketch 001 — Audience output</title>
+    <link rel="stylesheet" href="../themes/default.css">
+    <style>
+      body {
+        background: var(--sketch-bg);
+      }
+
+      .skip-link {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        z-index: 20;
+        padding: 10px 14px;
+        color: #fff;
+        background: #17191b;
+        transform: translateY(-160%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .review-shell {
+        width: min(100%, 1680px);
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .review-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+
+      .eyebrow {
+        margin: 0 0 6px;
+        color: var(--sketch-text-muted);
+        font-size: 0.78rem;
+        font-weight: 750;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.55rem, 3vw, 2.4rem);
+        line-height: 1.1;
+      }
+
+      .question {
+        max-width: 72ch;
+        margin: 8px 0 0;
+        color: var(--sketch-text-muted);
+        line-height: 1.5;
+      }
+
+      .logical-badge {
+        display: grid;
+        gap: 3px;
+        min-width: 210px;
+        padding: 12px 14px;
+        border: 1px solid var(--sketch-border);
+        border-radius: var(--sketch-radius-sm);
+        background: var(--sketch-surface);
+        text-align: right;
+      }
+
+      .logical-badge strong {
+        font-size: 0.95rem;
+      }
+
+      .logical-badge span {
+        color: var(--sketch-text-muted);
+        font-size: 0.78rem;
+      }
+
+      .review-controls {
+        display: grid;
+        gap: 14px;
+        padding: 16px;
+        border: 1px solid var(--sketch-border);
+        border-radius: var(--sketch-radius-md);
+        background: var(--sketch-surface);
+        box-shadow: var(--sketch-shadow);
+      }
+
+      .control-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 18px;
+        align-items: end;
+      }
+
+      fieldset {
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      legend,
+      .control-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--sketch-text-muted);
+        font-size: 0.76rem;
+        font-weight: 750;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .segmented {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--sketch-border);
+        border-radius: 8px;
+        background: var(--sketch-surface-subtle);
+      }
+
+      .segmented button {
+        min-width: 44px;
+        padding: 8px 12px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        color: var(--sketch-text);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .segmented button:hover:not(:disabled) {
+        border-color: var(--sketch-border-strong);
+        background: #fff;
+      }
+
+      .segmented button[aria-pressed="true"],
+      .segmented button[aria-selected="true"] {
+        color: var(--sketch-control-active-text);
+        background: var(--sketch-control-active);
+      }
+
+      label.control {
+        display: grid;
+        gap: 0;
+        min-width: 180px;
+      }
+
+      select {
+        height: 44px;
+        padding: 0 38px 0 12px;
+        border: 1px solid var(--sketch-border-strong);
+        border-radius: 6px;
+        color: var(--sketch-text);
+        background: #fff;
+      }
+
+      .checkbox-control {
+        display: inline-flex;
+        min-height: 44px;
+        gap: 9px;
+        align-items: center;
+        padding: 0 12px;
+        border: 1px solid var(--sketch-border-strong);
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .checkbox-control input {
+        width: 20px;
+        height: 20px;
+        min-height: 20px;
+        margin: 0;
+      }
+
+      .action-button {
+        min-height: 44px;
+        padding: 8px 14px;
+        border: 1px solid var(--sketch-border-strong);
+        border-radius: 6px;
+        color: var(--sketch-text);
+        background: #fff;
+        cursor: pointer;
+      }
+
+      .action-button:hover {
+        background: var(--sketch-surface-subtle);
+      }
+
+      .action-button.primary {
+        color: #fff;
+        background: #202428;
+      }
+
+      .exercise-status {
+        display: flex;
+        flex: 1 1 320px;
+        gap: 10px;
+        align-items: center;
+        min-height: 44px;
+        padding: 8px 12px;
+        border-left: 3px solid #555b61;
+        background: var(--sketch-surface-subtle);
+        line-height: 1.35;
+      }
+
+      .exercise-status strong {
+        white-space: nowrap;
+      }
+
+      .hypothesis {
+        display: grid;
+        grid-template-columns: minmax(190px, 0.35fr) minmax(0, 1fr) minmax(240px, 0.8fr);
+        gap: 14px 20px;
+        align-items: start;
+        padding: 14px 16px;
+        border-top: 1px solid var(--sketch-border);
+      }
+
+      .hypothesis h2,
+      .hypothesis p {
+        margin: 0;
+      }
+
+      .hypothesis h2 {
+        font-size: 1rem;
+      }
+
+      .hypothesis p,
+      .hypothesis ul {
+        color: var(--sketch-text-muted);
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .hypothesis ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .audience-frame {
+        position: relative;
+        width: 100%;
+        min-height: 1px;
+        margin-top: 20px;
+        overflow: hidden;
+        border: 1px solid #4e5357;
+        background: #1a1c1e;
+        box-shadow: 0 16px 44px rgb(0 0 0 / 20%);
+      }
+
+      .audience-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        transform-origin: top left;
+        color: #111315;
+        background: #e6e7e6;
+      }
+
+      .audience-output {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        padding: 48px;
+        gap: 24px;
+        background: #e6e7e6;
+      }
+
+      .audience-output.variant-top {
+        display: grid;
+        grid-template-rows: 92px minmax(0, 1fr);
+      }
+
+      .audience-output.variant-rail {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+      }
+
+      .audience-output.variant-bottom {
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) 92px;
+      }
+
+      .audience-output.title-off {
+        display: block;
+      }
+
+      .audience-output.title-off .chart-field {
+        width: 100%;
+        height: 100%;
+      }
+
+      .title-zone {
+        display: flex;
+        min-width: 0;
+        min-height: 0;
+        gap: 18px;
+        align-items: center;
+        padding: 14px 22px;
+        border: 2px solid #3c4145;
+        background: #f7f7f5;
+      }
+
+      .variant-rail .title-zone {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 24px 20px;
+      }
+
+      .shared-title {
+        min-width: 0;
+      }
+
+      .scene-kicker {
+        color: #4f555a;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .scene-title {
+        margin-top: 5px;
+        font-size: 28px;
+        font-weight: 760;
+        line-height: 1.08;
+      }
+
+      .scene-context,
+      .title-support {
+        margin-top: 5px;
+        color: #404549;
+        font-size: 17px;
+        line-height: 1.25;
+      }
+
+      .variant-rail .scene-title {
+        font-size: 29px;
+        line-height: 1.12;
+      }
+
+      .scene-date {
+        position: absolute;
+        z-index: 8;
+        left: var(--date-x, 72%);
+        top: var(--date-y, 8%);
+        min-width: 174px;
+        padding: 12px 16px;
+        border: 2px solid #171a1c;
+        border-radius: 8px;
+        color: #111315;
+        background: rgb(255 255 255 / 94%);
+        box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+        font-size: 22px;
+        font-weight: 820;
+        line-height: 1;
+        text-align: center;
+        touch-action: none;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .scene-date:hover {
+        box-shadow: 0 6px 20px rgb(0 0 0 / 24%);
+      }
+
+      .scene-date:focus-visible {
+        outline: 5px solid #1458c4;
+        outline-offset: 4px;
+      }
+
+      .scene-date.is-dragging {
+        cursor: grabbing;
+      }
+
+      .date-save-group {
+        display: grid;
+        min-width: min(100%, 330px);
+        gap: 5px;
+      }
+
+      .date-save-status {
+        min-height: 1.2em;
+        color: var(--sketch-text-muted);
+        font-size: 0.76rem;
+      }
+
+      .status-cell {
+        position: absolute;
+        z-index: 9;
+        top: 58px;
+        right: 58px;
+        display: grid;
+        width: 52px;
+        height: 52px;
+        place-items: center;
+      }
+
+      .connection-icon {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border: 3px solid #111315;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .connection-icon svg {
+        width: 25px;
+        height: 25px;
+      }
+
+      .chart-field {
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+        gap: 24px;
+      }
+
+      .layout-solo {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+      }
+
+      .layout-side-by-side {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: minmax(0, 1fr);
+      }
+
+      .layout-over-under {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+      }
+
+      .layout-one-top,
+      .layout-one-bottom {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: 1.2fr 0.8fr;
+      }
+
+      .layout-one-top .chart-panel:first-child {
+        grid-column: 1 / -1;
+      }
+
+      .layout-one-bottom {
+        grid-template-rows: 0.8fr 1.2fr;
+      }
+
+      .layout-one-bottom .chart-panel:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .layout-one-left,
+      .layout-one-right {
+        grid-template-columns: 1.2fr 0.8fr;
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+      }
+
+      .layout-one-left .chart-panel:first-child {
+        grid-row: 1 / -1;
+      }
+
+      .layout-one-right {
+        grid-template-columns: 0.8fr 1.2fr;
+      }
+
+      .layout-one-right .chart-panel:last-child {
+        grid-column: 2;
+        grid-row: 1 / -1;
+      }
+
+      .layout-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-panel {
+        position: relative;
+        display: grid;
+        grid-template-rows: auto auto minmax(100px, 1fr) auto;
+        min-width: 0;
+        min-height: 0;
+        gap: 10px;
+        padding: 20px 22px 16px;
+        overflow: hidden;
+        border: 2px solid #4e5357;
+        background: #fff;
+      }
+
+      .chart-title-row {
+        min-width: 0;
+        padding-right: 190px;
+      }
+
+      .chart-title {
+        margin: 0;
+        font-size: 25px;
+        font-weight: 780;
+        line-height: 1.18;
+      }
+
+      .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px 18px;
+        align-items: center;
+        min-height: 26px;
+        margin: 0;
+        padding-left: 0;
+        list-style: none;
+        font-size: 16px;
+        line-height: 1.2;
+      }
+
+      .chart-legend li {
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+      }
+
+      .chart-temporal-status {
+        position: absolute;
+        z-index: 2;
+        top: 16px;
+        right: 18px;
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        max-width: 178px;
+        padding: 6px 9px;
+        border: 1px solid #747a7f;
+        border-radius: 999px;
+        color: #353a3e;
+        background: #f5f6f5;
+        font-size: 14px;
+        font-weight: 760;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .chart-temporal-status .status-symbol {
+        display: grid;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 auto;
+        border: 1px solid currentColor;
+        border-radius: 50%;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .legend-marker {
+        display: inline-block;
+        flex: 0 0 auto;
+        width: 22px;
+        height: 8px;
+        border: 2px solid #202326;
+        background: #202326;
+      }
+
+      .legend-marker.dash {
+        height: 0;
+        border-width: 2px 0 0;
+        border-style: dashed;
+        background: transparent;
+      }
+
+      .legend-marker.dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .legend-marker.light {
+        background: #a9adb0;
+      }
+
+      .legend-marker.hatch {
+        background: repeating-linear-gradient(135deg, #303438 0 3px, #fff 3px 6px);
+      }
+
+      .chart-plot {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .chart-plot svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 120px;
+        overflow: visible;
+      }
+
+      .chart-plot text {
+        fill: #33383c;
+        font-family: var(--sketch-font-sans);
+        font-size: 18px;
+      }
+
+      .plot-grid {
+        stroke: #c7cacc;
+        stroke-width: 1;
+      }
+
+      .plot-axis {
+        stroke: #303437;
+        stroke-width: 2;
+      }
+
+      .plot-primary {
+        fill: none;
+        stroke: #181b1e;
+        stroke-width: 5;
+      }
+
+      .plot-secondary {
+        fill: none;
+        stroke: #6b7176;
+        stroke-width: 4;
+        stroke-dasharray: 11 8;
+      }
+
+      .annotation {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        align-items: center;
+        min-height: 34px;
+        padding: 7px 10px;
+        border: 2px solid #5b6166;
+        background: #f1f2f1;
+        font-size: 17px;
+        font-weight: 760;
+        line-height: 1.15;
+      }
+
+      .annotation .time {
+        margin-left: auto;
+        color: #4c5257;
+        font-weight: 650;
+      }
+
+      .count-1 .chart-panel {
+        padding: 30px 36px 24px;
+      }
+
+      .count-1 .chart-title {
+        font-size: 36px;
+      }
+
+      .count-1 .chart-legend,
+      .count-1 .annotation {
+        font-size: 22px;
+      }
+
+      .count-2.layout-over-under .chart-panel,
+      .count-3 .chart-panel,
+      .count-4 .chart-panel {
+        padding-block: 15px 13px;
+      }
+
+      .count-2.layout-over-under .chart-title,
+      .count-3 .chart-title,
+      .count-4 .chart-title {
+        font-size: 22px;
+      }
+
+      .count-2.layout-over-under .chart-title-row,
+      .count-3 .chart-title-row,
+      .count-4 .chart-title-row {
+        padding-right: 164px;
+      }
+
+      .count-2.layout-over-under .chart-temporal-status,
+      .count-3 .chart-temporal-status,
+      .count-4 .chart-temporal-status {
+        top: 12px;
+        right: 14px;
+        max-width: 154px;
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+
+      .count-2.layout-over-under .chart-legend,
+      .count-3 .chart-legend,
+      .count-4 .chart-legend {
+        gap: 5px 12px;
+        font-size: 14px;
+      }
+
+      .count-2.layout-over-under .annotation,
+      .count-3 .annotation,
+      .count-4 .annotation {
+        min-height: 30px;
+        font-size: 15px;
+      }
+
+      .count-3 .chart-plot text,
+      .count-4 .chart-plot text {
+        font-size: 17px;
+      }
+
+      .chart-message {
+        display: grid;
+        min-height: 120px;
+        padding: 24px;
+        border: 2px dashed #646a6f;
+        place-items: center;
+        background: #f2f3f2;
+        text-align: center;
+        font-size: 22px;
+        font-weight: 720;
+        line-height: 1.35;
+      }
+
+      .partial-note {
+        position: absolute;
+        right: 18px;
+        bottom: 18px;
+        max-width: 320px;
+        padding: 10px 12px 10px 40px;
+        border: 2px solid #33383c;
+        background: #fff;
+        font-size: 16px;
+        font-weight: 720;
+      }
+
+      .partial-note::before {
+        content: "!";
+        position: absolute;
+        top: 8px;
+        left: 10px;
+        display: grid;
+        width: 22px;
+        height: 22px;
+        border: 2px solid #222629;
+        border-radius: 50%;
+        place-items: center;
+      }
+
+      .passive-state {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        padding: 80px;
+        place-items: center;
+        background: #e6e7e6;
+      }
+
+      .passive-message {
+        display: grid;
+        max-width: 980px;
+        gap: 24px;
+        justify-items: center;
+        text-align: center;
+      }
+
+      .passive-message .scene-title {
+        max-width: 900px;
+        font-size: 52px;
+      }
+
+      .passive-copy {
+        font-size: 38px;
+        font-weight: 650;
+      }
+
+      .deliberate-blank {
+        width: 100%;
+        height: 100%;
+        background: #d1d2d1;
+      }
+
+      .blackout {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      .blackout .connection-icon {
+        position: absolute;
+        top: 48px;
+        right: 48px;
+        border-color: #fff;
+        color: #fff;
+        background: #000;
+      }
+
+      .blackout .connection-icon svg path,
+      .blackout .connection-icon svg line {
+        stroke: currentColor;
+      }
+
+      .stage-caption {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        justify-content: space-between;
+        padding: 10px 2px 0;
+        color: var(--sketch-text-muted);
+        font-size: 0.8rem;
+      }
+
+      @media (max-width: 900px) {
+        .review-shell {
+          padding: 14px;
+        }
+
+        .review-header,
+        .hypothesis {
+          grid-template-columns: 1fr;
+        }
+
+        .logical-badge {
+          text-align: left;
+        }
+
+        .control-row > * {
+          flex: 1 1 220px;
+        }
+
+        .segmented {
+          width: 100%;
+        }
+
+        .segmented button {
+          flex: 1 1 auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#audiencePreview">Skip to Audience preview</a>
+    <main class="review-shell">
+      <header class="review-header">
+        <div>
+          <p class="eyebrow">Sketch 001 · Approved synthesis · Neutral visual treatment</p>
+          <h1>Audience output</h1>
+          <p class="question">What composition and visual hierarchy make the fixed 16:9 Audience output legible and calm?</p>
+        </div>
+        <div class="logical-badge" aria-label="Audience canvas dimensions and browser scale">
+          <strong>Logical canvas 1920 × 1080</strong>
+          <span id="scaleReadout">Scaled to fit browser · calculating</span>
+        </div>
+      </header>
+
+      <section class="review-controls" aria-label="Prototype review controls">
+        <div class="control-row">
+          <fieldset>
+            <legend>Shared-title placement</legend>
+            <div class="segmented" role="tablist" aria-label="Shared-title placement settings">
+              <button type="button" role="tab" data-variant="top" aria-selected="true">A · Top (default) ★ Approved</button>
+              <button type="button" role="tab" data-variant="rail" aria-selected="false">B · Left</button>
+              <button type="button" role="tab" data-variant="bottom" aria-selected="false">C · Bottom</button>
+            </div>
+          </fieldset>
+
+          <label class="control">
+            <span class="control-label">Audience state</span>
+            <select id="stateSelect">
+              <option value="active">Active output</option>
+              <option value="waiting">Waiting / handshake</option>
+              <option value="empty">Connected, no scene</option>
+              <option value="blank">Deliberate blank</option>
+              <option value="partial">Partial chart data</option>
+              <option value="zero">Zero-row chart</option>
+              <option value="disconnected">Disconnected — retain output</option>
+              <option value="reconnecting">Reconnecting — retain output</option>
+              <option value="blackout">Blackout</option>
+              <option value="blackout-disconnected">Blackout + disconnected</option>
+              <option value="ended">Session ended</option>
+            </select>
+          </label>
+
+          <label class="checkbox-control">
+            <input id="titleToggle" type="checkbox" checked>
+            <span>Show configured title</span>
+          </label>
+
+          <fieldset>
+            <legend>Chart count</legend>
+            <div class="segmented" aria-label="Chart count">
+              <button type="button" data-count="1" aria-pressed="false">1</button>
+              <button type="button" data-count="2" aria-pressed="false">2</button>
+              <button type="button" data-count="3" aria-pressed="false">3</button>
+              <button type="button" data-count="4" aria-pressed="true">4</button>
+            </div>
+          </fieldset>
+
+          <label class="control">
+            <span class="control-label">Supported layout</span>
+            <select id="layoutSelect" aria-label="Supported layout"></select>
+          </label>
+        </div>
+
+        <div class="control-row">
+          <button class="action-button primary" id="nextExercise" type="button">Next exercise state</button>
+          <button class="action-button" id="resetExercise" type="button">Reset four-up comparison</button>
+          <div class="date-save-group">
+            <button class="action-button" id="saveDatePosition" type="button" disabled>Save date position to Scene</button>
+            <span class="date-save-status" id="dateSaveStatus" role="status">Date position is saved for this Scene.</span>
+          </div>
+          <div class="exercise-status" aria-live="polite">
+            <strong id="exerciseStep">Free exploration</strong>
+            <span id="stateSummary">Approved synthesis · Title placement A · Active output · 4 charts · 2 × 2 grid · title on</span>
+          </div>
+        </div>
+
+        <div class="hypothesis" id="hypothesisPanel">
+          <h2 id="hypothesisTitle">A — Top shared title (default)</h2>
+          <p id="hypothesisBody">The configured title uses a compact masthead. The Scene date floats independently and chart-local temporal badges replace the redundant chart ledger.</p>
+          <ul id="hypothesisCompare">
+            <li>Drag the Scene date, then save its position explicitly.</li>
+            <li>Turn the title off and confirm charts reclaim the full field.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="audiencePreview" aria-labelledby="previewHeading">
+        <h2 class="visually-hidden" id="previewHeading">Scaled Audience preview</h2>
+        <div class="audience-frame" id="audienceFrame">
+          <div class="audience-canvas" id="audienceCanvas"></div>
+        </div>
+        <div class="stage-caption">
+          <span>The date is draggable here as a Presenter live preview; the projected Audience remains passive.</span>
+          <span>Fixed comparison constants: 48 px logical inset · 24 px logical gaps.</span>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const layoutsByCount = {
+        1: [{ value: 'solo', label: 'Solo' }],
+        2: [
+          { value: 'side-by-side', label: 'Side by side' },
+          { value: 'over-under', label: 'Over-under' }
+        ],
+        3: [
+          { value: 'one-top', label: 'One on top' },
+          { value: 'one-bottom', label: 'One on bottom' },
+          { value: 'one-left', label: 'One on left' },
+          { value: 'one-right', label: 'One on right' }
+        ],
+        4: [{ value: 'grid', label: '2 × 2 grid' }]
+      };
+
+      const variantDetails = {
+        top: {
+          letter: 'A',
+          title: 'A — Top shared title (default)',
+          body: 'A compact masthead is the default when a configured title is shown. Date and per-chart temporal status remain independent overlays.',
+          compare: ['Check orientation speed without a context ledger.', 'Turn the title off and confirm the chart field reclaims all available space.']
+        },
+        rail: {
+          letter: 'B',
+          title: 'B — Left shared title (setting)',
+          body: 'The same configured title may occupy a compact left band. No chart list or frame ledger is added.',
+          compare: ['Check the title against long chart names.', 'Check whether protected plot height offsets the narrower field.']
+        },
+        bottom: {
+          letter: 'C',
+          title: 'C — Bottom shared title (setting)',
+          body: 'The same configured title may sit below the charts as a broadcast-like footer. Date and chart statuses remain in their visual context.',
+          compare: ['Check whether charts-first improves distance viewing.', 'Check whether the band competes with chart x-axes.']
+        }
+      };
+
+      const stateLabels = {
+        active: 'Active output',
+        waiting: 'Waiting / handshake',
+        empty: 'Connected, no scene',
+        blank: 'Deliberate blank',
+        partial: 'Partial chart data',
+        zero: 'Zero-row chart',
+        disconnected: 'Disconnected — retained output',
+        reconnecting: 'Reconnecting — retained output',
+        blackout: 'Blackout',
+        'blackout-disconnected': 'Blackout + disconnected',
+        ended: 'Session ended'
+      };
+
+      const appState = {
+        variant: 'top',
+        audienceState: 'active',
+        titleOn: true,
+        count: 4,
+        layout: 'grid',
+        exerciseIndex: -1,
+        datePosition: { x: 0.72, y: 0.08 },
+        savedDatePosition: { x: 0.72, y: 0.08 },
+        dateDirty: false,
+        dateSaveState: 'saved'
+      };
+
+      const exercise = [
+        { audienceState: 'waiting', titleOn: true, count: 1, layout: 'solo', label: '1 of 8 · Waiting' },
+        { audienceState: 'active', titleOn: true, count: 1, layout: 'solo', label: '2 of 8 · One chart' },
+        { audienceState: 'active', titleOn: false, count: 2, layout: 'side-by-side', label: '3 of 8 · Title off' },
+        { audienceState: 'active', titleOn: true, count: 2, layout: 'over-under', label: '4 of 8 · Alternate two-up' },
+        { audienceState: 'active', titleOn: true, count: 3, layout: 'one-left', label: '5 of 8 · Three-chart focus' },
+        { audienceState: 'active', titleOn: true, count: 4, layout: 'grid', label: '6 of 8 · Four-up stress test' },
+        { audienceState: 'disconnected', titleOn: true, count: 4, layout: 'grid', label: '7 of 8 · Retained on disconnect' },
+        { audienceState: 'blackout', titleOn: true, count: 4, layout: 'grid', label: '8 of 8 · Blackout' }
+      ];
+
+      const chartData = [
+        {
+          id: 'bio_confirmed_cases',
+          title: 'Confirmed cases',
+          legend: [['solid', 'Total confirmed cases']],
+          annotation: '79,547 confirmed cases',
+          time: '15 Aug 2027',
+          temporalStatus: 'Concurrent',
+          temporalSymbol: '↔',
+          plot: 'confirmed'
+        },
+        {
+          id: 'bio_new_cases_deaths',
+          title: 'Daily cases and deaths',
+          legend: [['light', 'Daily new cases'], ['dash', 'New deaths']],
+          annotation: '319 new cases · 9 deaths',
+          time: '15 Aug 2027',
+          temporalStatus: 'Interpolated',
+          temporalSymbol: '≈',
+          plot: 'mixed'
+        },
+        {
+          id: 'bio_vaccination_rate',
+          title: 'Vaccination progress across all operational population groups, including adults with medical risk, at the current exercise frame',
+          legend: [
+            ['solid', 'Adults aged 60+'],
+            ['dash', 'Adults aged 18-60 with medical risk — priority vaccination group'],
+            ['dot', 'Healthcare personnel'],
+            ['hatch', 'General population aged 0–60']
+          ],
+          annotation: 'Adults aged 60+: 79%',
+          time: '15 Aug 2027',
+          temporalStatus: 'Closest · 0d',
+          temporalSymbol: '◉',
+          plot: 'vaccination'
+        },
+        {
+          id: 'socio_risk_deltas',
+          title: 'Change in risk perception',
+          legend: [['solid', 'Agreement change since 19 Jul']],
+          annotation: 'Impact on Society +8 pp · Healthcare capacity −4 pp',
+          time: '09 Aug 2027',
+          temporalStatus: 'Static · 09 Aug',
+          temporalSymbol: '■',
+          plot: 'delta'
+        }
+      ];
+
+      const plotTemplates = {
+        confirmed: `
+          <svg viewBox="0 0 720 300" role="img" aria-label="Cumulative confirmed cases rose to 79,547 on 15 August 2027">
+            <g class="plot-grid"><line x1="72" y1="30" x2="692" y2="30"/><line x1="72" y1="85" x2="692" y2="85"/><line x1="72" y1="140" x2="692" y2="140"/><line x1="72" y1="195" x2="692" y2="195"/><line x1="72" y1="250" x2="692" y2="250"/></g>
+            <g font-size="16" text-anchor="end"><text x="62" y="255">0</text><text x="62" y="200">20,000</text><text x="62" y="145">40,000</text><text x="62" y="90">60,000</text><text x="62" y="35">80,000</text></g>
+            <g class="plot-axis"><line x1="72" y1="24" x2="72" y2="250"/><line x1="72" y1="250" x2="692" y2="250"/></g>
+            <path class="plot-primary" d="M72 244 C140 242,160 237,205 226 S280 205,326 180 S410 143,455 115 S545 72,610 52 S670 35,692 31"/>
+            <circle cx="692" cy="31" r="7" fill="#181b1e"/>
+            <g font-size="16"><text x="72" y="276">20 Feb</text><text x="362" y="276" text-anchor="middle">18 May</text><text x="692" y="276" text-anchor="end">15 Aug</text><text x="382" y="298" text-anchor="middle">Date</text><text transform="translate(16 145) rotate(-90)" text-anchor="middle">Cumulative confirmed cases (cases)</text></g>
+          </svg>`,
+        mixed: `
+          <svg viewBox="0 0 720 300" role="img" aria-label="Daily new cases are 319 and new deaths are 9 on 15 August 2027">
+            <g class="plot-grid"><line x1="72" y1="42" x2="650" y2="42"/><line x1="72" y1="105" x2="650" y2="105"/><line x1="72" y1="168" x2="650" y2="168"/><line x1="72" y1="232" x2="650" y2="232"/></g>
+            <g fill="#a9adb0"><rect x="92" y="181" width="28" height="51"/><rect x="140" y="157" width="28" height="75"/><rect x="188" y="125" width="28" height="107"/><rect x="236" y="145" width="28" height="87"/><rect x="284" y="104" width="28" height="128"/><rect x="332" y="78" width="28" height="154"/><rect x="380" y="96" width="28" height="136"/><rect x="428" y="62" width="28" height="170"/><rect x="476" y="84" width="28" height="148"/><rect x="524" y="46" width="28" height="186"/><rect x="572" y="70" width="28" height="162"/><rect x="620" y="58" width="28" height="174"/></g>
+            <path class="plot-secondary" d="M106 200 L154 190 L202 182 L250 189 L298 160 L346 151 L394 168 L442 125 L490 143 L538 107 L586 116 L634 104"/>
+            <g class="plot-axis"><line x1="72" y1="34" x2="72" y2="232"/><line x1="650" y1="34" x2="650" y2="232"/><line x1="72" y1="232" x2="650" y2="232"/></g>
+            <g font-size="15"><text x="62" y="237" text-anchor="end">0</text><text x="62" y="173" text-anchor="end">150</text><text x="62" y="110" text-anchor="end">300</text><text x="62" y="47" text-anchor="end">450</text><text x="660" y="237">0</text><text x="660" y="173">4</text><text x="660" y="110">8</text><text x="660" y="47">12</text><text x="72" y="260">05 Aug</text><text x="650" y="260" text-anchor="end">15 Aug</text><text x="360" y="286" text-anchor="middle">Date</text><text transform="translate(17 142) rotate(-90)" text-anchor="middle">Daily new cases (cases/day)</text><text transform="translate(706 142) rotate(-90)" text-anchor="middle">New deaths (deaths/day)</text></g>
+          </svg>`,
+        vaccination: `
+          <svg viewBox="0 0 720 300" role="img" aria-label="Vaccination rates are 79, 30, 21, and 0 percent across four groups on 15 August 2027">
+            <g class="plot-grid"><line x1="70" y1="34" x2="690" y2="34"/><line x1="70" y1="83" x2="690" y2="83"/><line x1="70" y1="132" x2="690" y2="132"/><line x1="70" y1="181" x2="690" y2="181"/><line x1="70" y1="230" x2="690" y2="230"/></g>
+            <g class="plot-axis"><line x1="70" y1="28" x2="70" y2="230"/><line x1="70" y1="230" x2="690" y2="230"/></g>
+            <path class="plot-primary" d="M70 230 L165 218 L260 184 L355 143 L450 103 L545 73 L620 51 L690 44"/>
+            <path class="plot-secondary" d="M70 230 L165 229 L260 222 L355 208 L450 194 L545 181 L620 170 L690 157"/>
+            <path d="M70 230 L165 230 L260 227 L355 219 L450 209 L545 198 L620 190 L690 188" fill="none" stroke="#50565b" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+            <path d="M70 230 L690 230" fill="none" stroke="#878c90" stroke-width="5"/>
+            <g font-size="15"><text x="60" y="235" text-anchor="end">0%</text><text x="60" y="186" text-anchor="end">20%</text><text x="60" y="137" text-anchor="end">40%</text><text x="60" y="88" text-anchor="end">60%</text><text x="60" y="39" text-anchor="end">80%</text><text x="70" y="258">22 Jun</text><text x="690" y="258" text-anchor="end">15 Aug</text><text x="380" y="286" text-anchor="middle">Date</text><text transform="translate(18 132) rotate(-90)" text-anchor="middle">Vaccination rate (%)</text></g>
+          </svg>`,
+        delta: `
+          <svg viewBox="0 0 720 300" role="img" aria-label="Risk perception changes include plus 8, plus 3, minus 4, plus 3, zero, and plus 1 percentage points">
+            <line class="plot-axis" x1="365" y1="22" x2="365" y2="268"/>
+            <g font-size="15" text-anchor="end"><text x="260" y="49">Impact on Society</text><text x="260" y="88">Neurological damage</text><text x="260" y="127">Healthcare capacity</text><text x="260" y="166">Vulnerable groups</text><text x="260" y="205">Miscarriages</text><text x="260" y="244">Duration of measures</text></g>
+            <g fill="#3a3f43"><rect x="365" y="30" width="230" height="24"/><rect x="365" y="69" width="86" height="24"/><rect x="250" y="108" width="115" height="24"/><rect x="365" y="147" width="86" height="24"/><rect x="360" y="186" width="10" height="24"/><rect x="365" y="225" width="29" height="24"/></g>
+            <g font-size="17" font-weight="700"><text x="605" y="49">+8 pp</text><text x="461" y="88">+3 pp</text><text x="240" y="127" text-anchor="end">−4 pp</text><text x="461" y="166">+3 pp</text><text x="380" y="205">0 pp</text><text x="404" y="244">+1 pp</text></g>
+            <g font-size="14"><text x="250" y="286" text-anchor="middle">Decrease</text><text x="365" y="286" text-anchor="middle">0</text><text x="515" y="286" text-anchor="middle">Increase in agreement since 19 Jul</text></g>
+          </svg>`
+      };
+
+      const audienceFrame = document.getElementById('audienceFrame');
+      const audienceCanvas = document.getElementById('audienceCanvas');
+      const layoutSelect = document.getElementById('layoutSelect');
+      const stateSelect = document.getElementById('stateSelect');
+      const titleToggle = document.getElementById('titleToggle');
+      const saveDatePosition = document.getElementById('saveDatePosition');
+      const dateSaveStatus = document.getElementById('dateSaveStatus');
+      const sceneSavedDateStorageKey = 'simex-sketch-001-hev-a26-scene-date-position';
+      const sceneSessionDateStorageKey = 'simex-sketch-001-hev-a26-session-date-position';
+      const passiveStates = ['waiting', 'empty', 'blank', 'blackout', 'blackout-disconnected', 'ended'];
+
+      function validDatePosition(value) {
+        return value && Number.isFinite(value.x) && Number.isFinite(value.y)
+          && value.x >= 0.02 && value.x <= 0.88 && value.y >= 0.02 && value.y <= 0.92;
+      }
+
+      function readPosition(storage, key) {
+        try {
+          const value = JSON.parse(storage.getItem(key));
+          return validDatePosition(value) ? value : null;
+        } catch {
+          return null;
+        }
+      }
+
+      function writePosition(storage, key, position) {
+        try {
+          storage.setItem(key, JSON.stringify(position));
+        } catch {
+          // Storage is a prototype convenience; the in-memory state still works.
+        }
+      }
+
+      function positionsMatch(a, b) {
+        return Math.abs(a.x - b.x) < 0.0005 && Math.abs(a.y - b.y) < 0.0005;
+      }
+
+      function hydrateDatePosition() {
+        const sceneSaved = readPosition(localStorage, sceneSavedDateStorageKey) || appState.savedDatePosition;
+        const sessionSaved = readPosition(sessionStorage, sceneSessionDateStorageKey) || sceneSaved;
+        appState.savedDatePosition = { ...sceneSaved };
+        appState.datePosition = { ...sessionSaved };
+        appState.dateDirty = !positionsMatch(sessionSaved, sceneSaved);
+        appState.dateSaveState = appState.dateDirty ? 'session' : 'saved';
+      }
+
+      function connectionIcon(kind) {
+        if (!kind) return '';
+        const label = kind === 'reconnecting' ? 'Audience display reconnecting' : 'Audience display disconnected';
+        const art = kind === 'reconnecting'
+          ? '<path d="M5 12a7 7 0 0 1 12-4l2 2m0-5v5h-5M19 12a7 7 0 0 1-12 4l-2-2m0 5v-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M5 7c4-3 10-3 14 0M8 11c2.5-1.8 5.5-1.8 8 0M11 15c.8-.5 1.2-.5 2 0M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>';
+        return `<span class="status-cell"><span class="connection-icon" role="img" aria-label="${label}"><svg viewBox="0 0 24 24" aria-hidden="true">${art}</svg></span></span>`;
+      }
+
+      function titleZone() {
+        return `
+          <header class="title-zone" aria-label="Configured Audience title">
+            <div class="shared-title">
+              <div class="scene-kicker">HeV-A26 Day 2 Simulation</div>
+              <div class="scene-title">HeV-A26 Dashboard: Epidemiological overview</div>
+              <div class="title-support">Biomedical page · Saved Scene</div>
+            </div>
+          </header>`;
+      }
+
+      function sceneDate() {
+        const x = (appState.datePosition.x * 100).toFixed(2);
+        const y = (appState.datePosition.y * 100).toFixed(2);
+        return `<div class="scene-date" id="sceneDate" role="button" tabindex="0" aria-label="Scene date 15 August 2027. Drag or use arrow keys to reposition, then save the position to this Scene." style="--date-x:${x}%;--date-y:${y}%">15 Aug 2027</div>`;
+      }
+
+      function legendItems(items) {
+        return items.map(([kind, label]) => `<li><span class="legend-marker ${kind === 'solid' ? '' : kind}" aria-hidden="true"></span><span>${label}</span></li>`).join('');
+      }
+
+      function chartPanel(chart, index) {
+        const zeroState = appState.audienceState === 'zero' && index === 3;
+        const partialState = appState.audienceState === 'partial' && index === 1;
+        const plot = zeroState
+          ? `<div class="chart-message">No data is available for ${chart.title}.</div>`
+          : `${plotTemplates[chart.plot]}${partialState ? '<div class="partial-note">New deaths is unavailable.</div>' : ''}`;
+        return `
+          <article class="chart-panel" aria-labelledby="chart-title-${index}">
+            <div class="chart-temporal-status" aria-label="Temporal status: ${chart.temporalStatus}"><span class="status-symbol" aria-hidden="true">${chart.temporalSymbol}</span><span>${chart.temporalStatus}</span></div>
+            <div class="chart-title-row">
+              <h3 class="chart-title" id="chart-title-${index}">${chart.title}</h3>
+            </div>
+            <ul class="chart-legend" aria-label="Legend">${legendItems(chart.legend)}</ul>
+            <div class="chart-plot">${plot}</div>
+            <div class="annotation"><span>${chart.annotation}</span><span class="time">Active value · ${chart.time}</span></div>
+          </article>`;
+      }
+
+      function renderActive() {
+        const connectionKind = appState.audienceState === 'disconnected'
+          ? 'disconnected'
+          : appState.audienceState === 'reconnecting' ? 'reconnecting' : '';
+        const charts = chartData.slice(0, appState.count).map(chartPanel).join('');
+        const title = appState.titleOn ? titleZone() : '';
+        const field = `<section class="chart-field count-${appState.count} layout-${appState.layout}" aria-label="Audience chart composition">${charts}</section>`;
+        const content = appState.titleOn && appState.variant === 'bottom' ? `${field}${title}` : `${title}${field}`;
+        return `<div class="audience-output variant-${appState.variant} ${appState.titleOn ? 'title-on' : 'title-off'}">${content}${sceneDate()}${connectionIcon(connectionKind)}</div>`;
+      }
+
+      function renderPassive() {
+        if (appState.audienceState === 'blank') return '<div class="deliberate-blank" aria-label="Deliberately blank Audience output"></div>';
+        if (appState.audienceState === 'blackout' || appState.audienceState === 'blackout-disconnected') {
+          const icon = appState.audienceState === 'blackout-disconnected' ? connectionIcon('disconnected').replace('status-cell', '') : '';
+          return `<div class="blackout" aria-label="Audience blackout">${icon}</div>`;
+        }
+        const copy = appState.audienceState === 'waiting'
+          ? 'Waiting for the moderator.'
+          : appState.audienceState === 'empty' ? 'Waiting for the next scene.' : 'The presentation has ended.';
+        const scene = appState.titleOn && appState.audienceState === 'empty'
+          ? '<div><div class="scene-kicker">HeV-A26 Day 2 Simulation</div><div class="scene-title">HeV-A26 Dashboard: Epidemiological overview</div></div>'
+          : '';
+        return `<div class="passive-state"><div class="passive-message">${scene}<div class="passive-copy">${copy}</div></div></div>`;
+      }
+
+      function updateLayoutOptions(preferred) {
+        const options = layoutsByCount[appState.count];
+        const valid = options.some(option => option.value === preferred);
+        appState.layout = valid ? preferred : options[0].value;
+        layoutSelect.innerHTML = options.map(option => `<option value="${option.value}" ${option.value === appState.layout ? 'selected' : ''}>${option.label}</option>`).join('');
+      }
+
+      function updateControls() {
+        document.querySelectorAll('[data-variant]').forEach(button => {
+          const selected = button.dataset.variant === appState.variant;
+          button.setAttribute('aria-selected', String(selected));
+          button.tabIndex = selected ? 0 : -1;
+        });
+        document.querySelectorAll('[data-count]').forEach(button => {
+          button.setAttribute('aria-pressed', String(Number(button.dataset.count) === appState.count));
+        });
+        stateSelect.value = appState.audienceState;
+        titleToggle.checked = appState.titleOn;
+        layoutSelect.value = appState.layout;
+
+        const details = variantDetails[appState.variant];
+        document.getElementById('hypothesisTitle').textContent = details.title;
+        document.getElementById('hypothesisBody').textContent = details.body;
+        document.getElementById('hypothesisCompare').innerHTML = details.compare.map(item => `<li>${item}</li>`).join('');
+        const layoutLabel = layoutsByCount[appState.count].find(item => item.value === appState.layout)?.label || appState.layout;
+        document.getElementById('stateSummary').textContent = `Approved synthesis · Title placement ${details.letter} · ${stateLabels[appState.audienceState]} · ${appState.count} chart${appState.count === 1 ? '' : 's'} · ${layoutLabel} · title ${appState.titleOn ? 'on' : 'off'}`;
+        document.getElementById('exerciseStep').textContent = appState.exerciseIndex >= 0 ? exercise[appState.exerciseIndex].label : 'Free exploration';
+
+        const sceneVisible = !passiveStates.includes(appState.audienceState);
+        saveDatePosition.disabled = !sceneVisible || !appState.dateDirty || appState.dateSaveState === 'saving';
+        saveDatePosition.textContent = appState.dateSaveState === 'saving' ? 'Saving date position…' : 'Save date position to Scene';
+        if (appState.dateSaveState === 'saving') {
+          dateSaveStatus.textContent = 'Saving the current session position to this Scene.';
+        } else if (appState.dateDirty) {
+          dateSaveStatus.textContent = 'Position retained in this session · not yet saved to Scene.';
+        } else {
+          dateSaveStatus.textContent = 'Date position is saved for this Scene.';
+        }
+      }
+
+      function setDatePosition(x, y, element) {
+        const next = {
+          x: Math.max(0.02, Math.min(0.88, x)),
+          y: Math.max(0.02, Math.min(0.92, y))
+        };
+        appState.datePosition = next;
+        appState.dateDirty = !positionsMatch(next, appState.savedDatePosition);
+        appState.dateSaveState = appState.dateDirty ? 'session' : 'saved';
+        writePosition(sessionStorage, sceneSessionDateStorageKey, next);
+        if (element) {
+          element.style.setProperty('--date-x', `${(next.x * 100).toFixed(2)}%`);
+          element.style.setProperty('--date-y', `${(next.y * 100).toFixed(2)}%`);
+        }
+        updateControls();
+      }
+
+      function bindSceneDate() {
+        const element = document.getElementById('sceneDate');
+        const output = audienceCanvas.querySelector('.audience-output');
+        if (!element || !output) return;
+
+        element.addEventListener('pointerdown', event => {
+          const outputRect = output.getBoundingClientRect();
+          const dateRect = element.getBoundingClientRect();
+          const offsetX = (event.clientX - dateRect.left) / outputRect.width;
+          const offsetY = (event.clientY - dateRect.top) / outputRect.height;
+          element.classList.add('is-dragging');
+          element.setPointerCapture(event.pointerId);
+
+          const move = moveEvent => {
+            const x = (moveEvent.clientX - outputRect.left) / outputRect.width - offsetX;
+            const y = (moveEvent.clientY - outputRect.top) / outputRect.height - offsetY;
+            setDatePosition(x, y, element);
+          };
+
+          const finish = finishEvent => {
+            element.classList.remove('is-dragging');
+            if (element.hasPointerCapture(finishEvent.pointerId)) element.releasePointerCapture(finishEvent.pointerId);
+            element.removeEventListener('pointermove', move);
+            element.removeEventListener('pointerup', finish);
+            element.removeEventListener('pointercancel', finish);
+          };
+
+          element.addEventListener('pointermove', move);
+          element.addEventListener('pointerup', finish);
+          element.addEventListener('pointercancel', finish);
+        });
+
+        element.addEventListener('keydown', event => {
+          const step = event.shiftKey ? 32 : 8;
+          const movement = {
+            ArrowLeft: [-step / 1920, 0],
+            ArrowRight: [step / 1920, 0],
+            ArrowUp: [0, -step / 1080],
+            ArrowDown: [0, step / 1080]
+          }[event.key];
+          if (!movement) return;
+          event.preventDefault();
+          setDatePosition(appState.datePosition.x + movement[0], appState.datePosition.y + movement[1], element);
+        });
+      }
+
+      function render() {
+        audienceCanvas.innerHTML = passiveStates.includes(appState.audienceState) ? renderPassive() : renderActive();
+        bindSceneDate();
+        updateControls();
+      }
+
+      function fitCanvas() {
+        const availableWidth = audienceFrame.clientWidth;
+        const scale = Math.min(1, availableWidth / 1920);
+        audienceFrame.style.height = `${1080 * scale}px`;
+        audienceCanvas.style.transform = `scale(${scale})`;
+        document.getElementById('scaleReadout').textContent = `Scaled to fit browser · ${Math.round(scale * 100)}%`;
+      }
+
+      document.querySelectorAll('[data-variant]').forEach(button => {
+        button.addEventListener('click', () => {
+          appState.variant = button.dataset.variant;
+          appState.exerciseIndex = -1;
+          render();
+        });
+
+        button.addEventListener('keydown', event => {
+          const tabs = [...document.querySelectorAll('[data-variant]')];
+          const current = tabs.indexOf(button);
+          const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+          let target = current;
+          if (direction) target = (current + direction + tabs.length) % tabs.length;
+          if (event.key === 'Home') target = 0;
+          if (event.key === 'End') target = tabs.length - 1;
+          if (target !== current) {
+            event.preventDefault();
+            tabs[target].click();
+            tabs[target].focus();
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-count]').forEach(button => {
+        button.addEventListener('click', () => {
+          appState.count = Number(button.dataset.count);
+          updateLayoutOptions(appState.layout);
+          appState.exerciseIndex = -1;
+          render();
+        });
+      });
+
+      stateSelect.addEventListener('change', event => {
+        appState.audienceState = event.target.value;
+        appState.exerciseIndex = -1;
+        render();
+      });
+
+      titleToggle.addEventListener('change', event => {
+        appState.titleOn = event.target.checked;
+        appState.exerciseIndex = -1;
+        render();
+      });
+
+      layoutSelect.addEventListener('change', event => {
+        appState.layout = event.target.value;
+        appState.exerciseIndex = -1;
+        render();
+      });
+
+      document.getElementById('nextExercise').addEventListener('click', () => {
+        appState.exerciseIndex = (appState.exerciseIndex + 1) % exercise.length;
+        Object.assign(appState, exercise[appState.exerciseIndex]);
+        updateLayoutOptions(appState.layout);
+        render();
+      });
+
+      document.getElementById('resetExercise').addEventListener('click', () => {
+        Object.assign(appState, { audienceState: 'active', titleOn: true, count: 4, layout: 'grid', exerciseIndex: -1 });
+        updateLayoutOptions('grid');
+        render();
+      });
+
+      saveDatePosition.addEventListener('click', () => {
+        if (!appState.dateDirty || appState.dateSaveState === 'saving') return;
+        const positionToSave = { ...appState.datePosition };
+        appState.dateSaveState = 'saving';
+        updateControls();
+        window.setTimeout(() => {
+          writePosition(localStorage, sceneSavedDateStorageKey, positionToSave);
+          writePosition(sessionStorage, sceneSessionDateStorageKey, appState.datePosition);
+          appState.savedDatePosition = positionToSave;
+          appState.dateDirty = !positionsMatch(appState.datePosition, positionToSave);
+          appState.dateSaveState = appState.dateDirty ? 'session' : 'saved';
+          updateControls();
+        }, 550);
+      });
+
+      hydrateDatePosition();
+      updateLayoutOptions('grid');
+      render();
+      fitCanvas();
+
+      if ('ResizeObserver' in window) {
+        new ResizeObserver(fitCanvas).observe(audienceFrame);
+      } else {
+        window.addEventListener('resize', fitCanvas);
+      }
+    </script>
+  </body>
+</html>
