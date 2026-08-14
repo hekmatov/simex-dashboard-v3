@@ -70,6 +70,14 @@
 
     .workspace { position: relative; max-width: 1500px; min-height: 710px; margin: 0 auto; }
     .dashboard-shell { background: var(--paper); border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; box-shadow: var(--sketch-shadow); }
+    .phone-mode-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 2px solid #9a6300; background: #fff3cd; color: #352400; }
+    .phone-mode-banner[hidden] { display: none; }
+    .phone-mode-banner-copy { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+    .phone-mode-banner-icon { flex: 0 0 24px; width: 24px; height: 24px; display: grid; place-items: center; border: 2px solid currentColor; border-radius: 50%; font-weight: 900; }
+    .phone-mode-banner strong, .phone-mode-banner span { display: block; }
+    .phone-mode-banner span { margin-top: 2px; font-size: 11px; line-height: 1.35; }
+    .phone-mode-banner button { flex: 0 0 auto; min-height: 44px; padding: 8px 11px; border: 2px solid currentColor; border-radius: 6px; background: white; color: inherit; font-weight: 850; }
+    .phone-mode-banner button:focus-visible { outline: 3px solid #2573b9; outline-offset: 2px; }
     .dash-header { min-height: 76px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); }
     .dash-heading { display: flex; align-items: center; gap: 12px; }
     .mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 7px; background: #222a30; color: white; font-weight: 900; }
@@ -279,6 +287,7 @@
       .concept-intro { align-items: flex-start; flex-direction: column; }
       .dashboard-shell { overflow-x: auto; }
       .dash-header, .mode-subheader, .dashboard-canvas { min-width: 820px; }
+      .phone-mode-banner { position: sticky; z-index: 60; top: 0; left: 0; width: 100%; min-width: 0; }
       .focus-bay { padding: 12px; grid-template-columns: 1fr !important; overflow: auto; }
       .focus-preview, .focus-editor { min-height: 520px; }
       .editor-card { max-height: calc(100vh - 24px); }
@@ -345,6 +354,13 @@
 
     <section class="workspace" id="workspace">
       <article class="dashboard-shell" id="dashboardShell" aria-label="FIX-DASH dashboard canvas">
+        <div class="phone-mode-banner" id="phoneModeBanner" role="status" aria-live="polite" hidden>
+          <div class="phone-mode-banner-copy">
+            <span class="phone-mode-banner-icon" aria-hidden="true">!</span>
+            <div><strong>Build is not supported on phones</strong><span>View remains available here. Use a tablet or larger screen for dashboard authoring.</span></div>
+          </div>
+          <button id="phoneSwitchViewButton">Switch to View</button>
+        </div>
         <header class="dash-header">
           <div class="dash-heading">
             <div class="mark" aria-hidden="true">F</div>
@@ -454,6 +470,8 @@
       const editorPort = $('#editorPort');
       const editorCard = $('#editorCard');
       const dirtyModal = $('#dirtyModal');
+      const phoneModeBanner = $('#phoneModeBanner');
+      const phoneSupportMedia = matchMedia('(max-width: 600px)');
       let toastTimer;
       let lastFocus = null;
       let dragSession = null;
@@ -514,6 +532,12 @@
         if(state.panelDirty) return `${currentValues().title || state.saved[state.selectedId].title} has unsaved chart changes`;
         if(state.layoutDirty) return 'Dashboard layout has unsaved changes';
         return 'No unsaved changes';
+      }
+
+      function syncPhoneModeSupport() {
+        const unsupported = phoneSupportMedia.matches && state.uiMode !== 'view';
+        phoneModeBanner.hidden = !unsupported;
+        phoneModeBanner.setAttribute('aria-hidden', String(!unsupported));
       }
       function chartDraftPill() {
         if(state.invalidSizeAttempt) return '<span class="step-pill dirty-dot">Chart footprint needs correction</span>';
@@ -799,7 +823,7 @@
       }
       function reopenEditor() {
         state.suspended=false; state.preview=false; state.uiMode='build'; body.dataset.suspended='false'; body.dataset.preview='false'; body.dataset.uiMode='build';
-        syncModeButtons(); renderEditor(!state.sizeActive);
+        syncModeButtons(); syncPhoneModeSupport(); renderEditor(!state.sizeActive);
         if(state.sizeActive) restoreOrbitContext(orbitPreviewContext||{selector:null,scrollTop:0},{validOptionFallback:!orbitPreviewContext?.selector});
       }
       function reopenEditorFromPreview() {
@@ -1085,6 +1109,13 @@
       function shortHash(s) { let h=2166136261; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(16).padStart(8,'0'); }
       function renderParity() {
         $('#parityCard').dataset.open=String(state.compare);
+        if(phoneSupportMedia.matches){
+          $('.parity-title').textContent='Phone fixture · View supported';
+          $('#parityMetrics').innerHTML='<span>Supported mode<b>View + Chrono</b></span><span>Build<b>Unsupported on phones</b></span><span>Present<b>Unsupported on phones</b></span><span>Draft resize<b>Preserved</b></span><span>Tablet floor fixture<b>768 × 1024</b></span>';
+          $('#compareButton').setAttribute('aria-pressed',String(state.compare));
+          return;
+        }
+        $('.parity-title').textContent='View ↔ Build geometry match';
         const sig=shortHash(geometrySignature());
         const canvas=grid.getBoundingClientRect(), selected=$(`#panel-${state.selectedId}`)?.getBoundingClientRect();
         const bounds=selected?`${Math.round(selected.left-canvas.left)},${Math.round(selected.top-canvas.top)},${Math.round(selected.width)},${Math.round(selected.height)}`:'—';
@@ -1169,7 +1200,7 @@
         state.uiMode=mode; state.dropInsertIndex=null; state.dropTargetId=null; state.draggingId=null; body.dataset.uiMode=mode; body.dataset.dragging='false';
         if(mode==='view'){ state.suspended=false; state.preview=false; body.dataset.suspended='false'; body.dataset.preview='false'; }
         else { state.suspended=true; body.dataset.suspended='true'; }
-        syncModeButtons(); renderBuildBar(); renderParity();
+        syncModeButtons(); syncPhoneModeSupport(); renderBuildBar(); renderParity();
       }
       function syncModeButtons(){ $$('.mode-button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.uiMode===state.uiMode))); }
       function syncGlobalAvailability(){
@@ -1186,7 +1217,7 @@
         Object.assign(body.dataset,{variant:'A',uiMode:'build',suspended:'true',preview:'false',dragging:'false',sizingActive:'false',sizingModel:'footprint'});
         grid.style.gridTemplateColumns='repeat(4,minmax(0,1fr))'; grid.style.gridTemplateRows='repeat(3,270px)';
         $('#targetSelect').value=state.selectedId; $('#taskStep').value='select'; dirtyModal.dataset.open='false';
-        setVariant('A'); syncModeButtons(); toast('Sketch reset to the shared Build baseline and Variant A.');
+        setVariant('A'); syncModeButtons(); syncPhoneModeSupport(); renderParity(); toast('Sketch reset to the shared Build baseline and Variant A.');
       }
 
       function toast(text) { const el=$('#toast'); el.textContent=text; el.dataset.show='true'; clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.dataset.show='false',2400); }
@@ -1216,6 +1247,7 @@
       $('#buildSaveButton').addEventListener('click',()=>saveLayoutChanges());
       $('#buildDiscardButton').addEventListener('click',discardLayoutChanges);
       $('#buildPreviewButton').addEventListener('click',()=>state.preview?reopenEditorFromPreview():enterPreview());
+      $('#phoneSwitchViewButton').addEventListener('click',()=>requestUiMode('view'));
       $('#savePresetButton').addEventListener('click',saveCurrentPreset);
       $('#loadPresetButton').addEventListener('click',loadSelectedPreset);
       $('#prototypeInvalidSizeButton').addEventListener('click',testInvalidSize);
@@ -1223,7 +1255,7 @@
       $('#modalDiscard').addEventListener('click',()=>resolvePending(true));
       $('#modalStay').addEventListener('click',closeDirtyModal);
       $$('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)));
-      addEventListener('resize',()=>{updateReviewHeight();positionEditor(true);renderCanonical();},{passive:true});
+      addEventListener('resize',()=>{updateReviewHeight();syncPhoneModeSupport();positionEditor(true);renderCanonical();renderParity();},{passive:true});
       addEventListener('scroll',()=>positionEditor(false),{passive:true});
       editorPort.addEventListener('transitionend',updateSubstituteVisibility);
       document.addEventListener('keydown',e=>{
@@ -1239,7 +1271,8 @@
         if(e.key!=='Tab') return; const controls=[...dirtyModal.querySelectorAll('button')]; const first=controls[0],last=controls.at(-1);
         if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();} else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
       });
-      updateReviewHeight(); populateTargets(); setVariant('A'); syncModeButtons(); renderParity();
+      phoneSupportMedia.addEventListener?.('change',()=>{syncPhoneModeSupport();renderParity();});
+      updateReviewHeight(); populateTargets(); setVariant('A'); syncModeButtons(); syncPhoneModeSupport(); renderParity();
     })();
   </script>
 </body>

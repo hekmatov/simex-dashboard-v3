@@ -30,6 +30,12 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 
 Sketches proceed in ascending order. Only the current sketch is built before review. Rejected variants remain in their sketch, and no winner is recorded before the representative task has been exercised.
 
+## Cross-sketch support boundary
+
+- **Phone-sized viewports support View only, including Chrono.** `390×844` is the canonical phone fixture. Build and Present may still open at phone width as best-effort surfaces, but neither mode has phone-layout acceptance requirements.
+- In unsupported Build and Present, show a persistent, non-dismissible notification above product chrome with a direct **Switch to View** action. Detection does not automatically redirect, disable controls, or discard state; resizing a dirty Build session to phone width preserves its drafts.
+- Audience output is unaffected by this product-controller support boundary. `768×1024` remains a supported tablet viewport for authoring. Sketch `009-shared-shell-and-product-chrome` owns the exact phone breakpoint and final banner presentation.
+
 ## Deferred product features
 
 | ID | Feature | Deferred boundary |
