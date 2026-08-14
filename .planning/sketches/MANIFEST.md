@@ -17,7 +17,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | # | Name | Design question | Status | Winner | Tags |
 |---:|---|---|---|---|---|
 | 001 | Audience output | What composition and hierarchy make the fixed 16:9 Audience output legible and calm? | Approved | Synthesis — A top default; B/C settings | Audience, 16:9, composition, legibility |
-| 002 | Contextual panel editing | How can a builder edit progressively without changing View-equivalent geometry or losing sight of the target? | Pending | Pending | Build, parity, contextual editing |
+| 002 | Contextual panel editing | How can a builder edit progressively without changing View-equivalent geometry or losing sight of the target? | Approved | A — Unit Orbit + universal 2×4 footprint picker | Build, parity, contextual editing, chart-owned sizing |
 | 003 | Dashboard visual language | What three complementary institutional aesthetic philosophies should V3 support? | Pending | Pending | themes, light/dark/system, style portfolio |
 | 004 | Chart creation | How should guided creation combine canonical preview with non-mutating placement proof? | Pending | Pending | Build, workflow, preview |
 | 005 | Time Group authoring | How should temporal availability and membership remain understandable at realistic density? | Pending | Pending | time groups, availability, authoring |

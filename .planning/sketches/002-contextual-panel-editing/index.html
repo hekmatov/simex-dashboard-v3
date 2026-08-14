@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 002 — Contextual panel editing</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --ink: #17191b;
+      --muted: #60666c;
+      --line: #c7cbcf;
+      --line-strong: #727980;
+      --paper: #fff;
+      --wash: #f2f3f3;
+      --canvas: #dfe1e2;
+      --accent: #1d252c;
+      --danger: #9d261f;
+      --success: #21643e;
+      --editor-w: 390px;
+    }
+
+    body { background: var(--sketch-bg); color: var(--ink); }
+    button, select, input { color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .58; }
+
+    .review-bar {
+      position: relative; z-index: 50;
+      display: grid; grid-template-columns: minmax(360px, 1fr) auto;
+      gap: 12px 20px; padding: 12px 18px;
+      background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line);
+      box-shadow: 0 4px 16px rgb(0 0 0 / 7%);
+    }
+    .review-main, .review-tools, .segmented, .status-row, .editor-actions,
+    .layout-actions, .panel-meta, .substitute-head, .preview-head {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .review-main { min-width: 0; }
+    .review-tools { justify-content: flex-end; }
+    .review-boundary { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 9px; border: 1px dashed var(--line-strong); border-radius: 5px; background: #fff8df; color: #5d4a08; font-size: 11px; font-weight: 800; }
+    .eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .review-title { margin: 0 6px 0 0; font-size: 16px; white-space: nowrap; }
+    .status-pill, .winner-pill, .mini-pill, .step-pill {
+      display: inline-flex; align-items: center; min-height: 28px; padding: 4px 9px;
+      border: 1px solid var(--line); border-radius: 999px; background: var(--wash);
+      font-size: 12px; font-weight: 700;
+    }
+    .status-pill::before { content: "◐"; margin-right: 6px; }
+    .winner-pill::before { content: "○"; margin-right: 6px; }
+    .variant-tabs { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--wash); }
+    .variant-tab, .mode-button { min-height: 38px; border: 0; border-radius: 6px; padding: 8px 11px; background: transparent; font-weight: 750; }
+    .variant-tab[aria-selected="true"], .mode-button[aria-pressed="true"] { color: white; background: var(--accent); }
+    .sizing-decision { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 3px; border: 1px solid #70777d; border-radius: 8px; background: white; }
+    .sizing-decision::before { content: "Sizing synthesis"; padding: 0 7px; color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; letter-spacing: .06em; }
+    .sizing-evidence { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 9px; border: 1px dashed var(--line); border-radius: 6px; background: var(--wash); color: var(--muted); font-size: 10px; font-weight: 800; }
+    .sizing-evidence[data-current="true"] { border-style: solid; border-color: var(--accent); background: #e9f2fb; color: #173f63; }
+    .prototype-invalid { min-height: 38px; border: 1px solid var(--line-strong); border-radius: 6px; background: white; padding: 7px 10px; font-size: 10px; font-weight: 800; }
+    .review-tools label { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .review-tools select { min-height: 40px; max-width: 230px; border: 1px solid var(--line); border-radius: 6px; background: white; padding: 0 30px 0 10px; }
+    .tool-button { min-height: 40px; border: 1px solid var(--line-strong); border-radius: 6px; background: white; padding: 7px 11px; font-weight: 700; }
+    .tool-button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+
+    main { padding: 18px; }
+    .concept-intro { max-width: 1500px; margin: 0 auto 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+    .concept-intro h2 { margin: 3px 0; font-size: 22px; }
+    .concept-intro p { margin: 0; color: var(--muted); max-width: 720px; font-size: 14px; }
+    .least-complex { display: none; padding: 7px 10px; border: 1px solid var(--line-strong); background: white; border-radius: 6px; font-size: 12px; font-weight: 800; }
+    body[data-variant="B"] .least-complex { display: inline-flex; }
+
+    .workspace { position: relative; max-width: 1500px; min-height: 710px; margin: 0 auto; }
+    .dashboard-shell { background: var(--paper); border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden; box-shadow: var(--sketch-shadow); }
+    .dash-header { min-height: 76px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 18px; border-bottom: 1px solid var(--line); }
+    .dash-heading { display: flex; align-items: center; gap: 12px; }
+    .mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 7px; background: #222a30; color: white; font-weight: 900; }
+    .dash-heading h1 { margin: 0; font-size: 19px; }
+    .dash-heading p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .dash-filters { display: flex; align-items: center; gap: 8px; }
+    .dash-filter { min-height: 38px; padding: 8px 11px; border: 1px solid var(--line); background: var(--wash); border-radius: 5px; font-size: 12px; font-weight: 700; }
+    .mode-subheader {
+      position: relative; z-index: 46;
+      display: flex; height: 112px; min-height: 112px; padding: 10px 14px; align-items: center; gap: 14px;
+      border-bottom: 1px solid var(--line); background: #f7f8f8; overflow: hidden;
+    }
+    .mode-subheader-copy { min-width: 230px; flex: 1 1 280px; }
+    .mode-subheader-copy strong, .mode-subheader-copy span { display: block; }
+    .mode-subheader-copy strong { margin-top: 2px; font-size: 13px; }
+    .mode-subheader-copy span { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .build-only, .view-only { display: none; }
+    body[data-ui-mode="build"] .build-only { display: flex; }
+    body[data-ui-mode="view"] .view-only { display: flex; }
+    .build-preset-tools, .build-commit-tools, .view-only { align-items: center; gap: 7px; flex-wrap: nowrap; }
+    .orbit-sizing { display: grid; gap: 12px; }
+    .orbit-sizing-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .orbit-sizing-head h4 { margin: 2px 0 0; font-size: 14px; }
+    .footprint-picker { display: grid; grid-template-columns: 54px minmax(0,1fr); grid-template-rows: auto auto; gap: 6px 8px; }
+    .footprint-corner { grid-column: 1; grid-row: 1; align-self: end; color: var(--muted); font-size: 9px; font-weight: 850; line-height: 1.25; text-transform: uppercase; letter-spacing: .04em; }
+    .footprint-column-cues { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(4,minmax(44px,1fr)); gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; text-align: center; }
+    .footprint-row-cues { grid-column: 1; grid-row: 2; display: grid; grid-template-rows: repeat(2,44px); gap: 5px; align-items: center; color: var(--muted); font-size: 10px; font-weight: 800; text-align: right; }
+    .footprint-grid { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(4,minmax(44px,1fr)); grid-template-rows: repeat(2,44px); gap: 5px; }
+    .footprint-cell { position: relative; min-width: 44px; min-height: 44px; border: 1px solid var(--line-strong); border-radius: 5px; background: white; color: #31383d; font: inherit; font-size: 10px; font-weight: 850; }
+    .footprint-cell[data-included="true"] { background: #dce9f5; border-color: #6c91b2; }
+    .footprint-grid[data-previewing="true"] .footprint-cell[data-preview="true"] { background: #a9cae7; border-color: #2d6c9e; box-shadow: inset 0 0 0 1px #2d6c9e; }
+    .footprint-grid[data-previewing="true"] .footprint-cell[data-preview="false"] { background: white; box-shadow: none; }
+    .footprint-cell[aria-pressed="true"] { border: 2px solid var(--accent); }
+    .footprint-cell:focus-visible { outline: 3px solid #2573b9; outline-offset: 2px; z-index: 2; }
+    .endpoint-marker { position: absolute; top: 2px; right: 3px; display: none; font-size: 12px; line-height: 1; }
+    .footprint-cell[aria-pressed="true"] .endpoint-marker { display: inline; }
+    .footprint-size-label { display: block; padding-top: 12px; }
+    .orbit-size-status { min-height: 38px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--wash); font-size: 11px; line-height: 1.35; }
+    .orbit-size-status[data-error="true"] { color: #741b17; border-color: #c96c66; background: #fff0ef; font-weight: 800; }
+    .build-preset-tools label { font-size: 11px; font-weight: 800; color: var(--muted); }
+    .build-preset-tools select { width: 145px; min-height: 42px; border: 1px solid var(--line-strong); border-radius: 6px; background: white; padding: 7px 28px 7px 9px; font-weight: 700; }
+    .subhead-button { min-height: 42px; border: 1px solid var(--line-strong); border-radius: 6px; background: white; padding: 7px 10px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .subhead-button.primary { color: white; background: var(--accent); border-color: var(--accent); }
+    .subhead-button:focus-visible, .panel-select:focus-visible { outline: 3px solid #2573b9; outline-offset: 2px; }
+    .build-dirty { min-width: 124px; justify-content: center; white-space: nowrap; }
+    .dashboard-canvas { position: relative; background: var(--canvas); padding: 12px; }
+    .dashboard-grid {
+      position: relative; display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+      grid-template-rows: repeat(3, 270px); gap: 10px; min-width: 0;
+    }
+    .dash-panel {
+      position: relative; min-width: 0; overflow: hidden; display: flex; flex-direction: column;
+      background: white; border: 1px solid #aeb3b7; border-radius: 7px;
+    }
+    .dash-panel[data-selected="true"]::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      border: 3px solid #17191b; border-radius: inherit;
+      box-shadow: inset 0 0 0 2px white;
+    }
+    body[data-ui-mode="view"] .dash-panel[data-selected="true"]::after,
+    body[data-ui-mode="view"] .selected-mark { display: none; }
+    .panel-select {
+      position: relative; width: 100%; min-height: 46px; padding: 10px 11px 28px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+      border: 0; border-bottom: 1px solid #dddfe1; background: white; text-align: left;
+    }
+    .panel-select > span:last-child { position: absolute; inset: auto 11px 8px 11px; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+    .panel-select:hover { background: #f5f6f6; }
+    .panel-title { display: block; font-size: 13px; font-weight: 800; line-height: 1.2; }
+    .panel-kicker { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); }
+    .selected-mark { font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .dash-panel:not([data-selected="true"]) .selected-mark { display: none; }
+    body[data-ui-mode="build"] .panel-select { cursor: grab; touch-action: none; user-select: none; }
+    body[data-ui-mode="build"] .panel-select:active { cursor: grabbing; }
+    body[data-dragging="true"] .dash-panel[data-dragging="true"] { opacity: .66; box-shadow: 0 8px 22px rgb(0 0 0 / 20%); }
+    body[data-dragging="true"] .dash-panel[data-drop="true"]::before { content: "Drop here"; position: absolute; z-index: 5; inset: 7px; display: grid; place-items: center; border: 2px dashed #1f5e8d; border-radius: 5px; background: rgb(235 246 255 / 88%); color: #17466a; font-size: 12px; font-weight: 850; pointer-events: none; }
+    .grid-drop-zones { display: none; position: absolute; inset: 0; z-index: 8; pointer-events: none; grid-template-columns: inherit; grid-template-rows: inherit; gap: inherit; }
+    body[data-dragging="true"] .grid-drop-zones { display: grid; }
+    .grid-drop-zone { min-width: 0; min-height: 44px; display: grid; place-items: center; padding: 6px; border: 2px dashed #1f5e8d; border-radius: 6px; background: rgb(235 246 255 / 90%); color: #17466a; font-size: 11px; font-weight: 850; text-align: center; pointer-events: auto; touch-action: none; }
+    .grid-drop-zone[data-active="true"] { border-style: solid; border-width: 4px; background: #fff; box-shadow: 0 0 0 3px #1f5e8d; }
+    .drag-hint { display: none; font-size: 9px; font-weight: 700; color: var(--muted); }
+    body[data-ui-mode="build"] .drag-hint { display: block; }
+    .panel-viz { flex: 1; min-height: 0; padding: 10px 11px; position: relative; }
+    .big-number { font-size: clamp(24px, 3vw, 42px); line-height: 1; font-weight: 850; letter-spacing: -.04em; }
+    .delta { margin-top: 7px; font-size: 11px; font-weight: 700; color: var(--success); }
+    .spark { height: 48px; margin-top: 12px; display: flex; align-items: end; gap: 3px; }
+    .spark i { flex: 1; min-width: 3px; background: #798087; border-radius: 2px 2px 0 0; }
+    .axis-label { position: absolute; right: 10px; bottom: 7px; color: var(--muted); font-size: 9px; }
+    .gauge { width: 110px; max-width: 75%; aspect-ratio: 2/1; margin: 13px auto 0; overflow: hidden; position: relative; }
+    .gauge::before { content: ""; position: absolute; inset: 0; border: 17px solid #d8dadd; border-bottom: 0; border-radius: 110px 110px 0 0; }
+    .gauge::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 44%; height: 3px; transform-origin: left; transform: rotate(-23deg); background: #30373d; }
+    .gauge-value { text-align: center; font-size: 25px; font-weight: 850; }
+    .map { height: 100%; min-height: 160px; border: 1px solid #c3c7ca; border-radius: 5px; background: #eef0f0; position: relative; overflow: hidden; }
+    .map svg { width: 100%; height: 100%; }
+    .map-legend { position: absolute; right: 8px; bottom: 8px; padding: 5px 7px; border: 1px solid #b7bcc0; background: white; border-radius: 4px; font-size: 9px; }
+    .rank-list { display: grid; gap: 9px; }
+    .rank-row { display: grid; grid-template-columns: minmax(70px, 1fr) 3fr 28px; align-items: center; gap: 6px; font-size: 10px; }
+    .bar { height: 8px; background: #e1e3e4; border-radius: 2px; overflow: hidden; }
+    .bar b { display: block; height: 100%; background: #626a71; }
+    .progress-ring { width: 88px; height: 88px; margin: 8px auto; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(#454d54 0 78%,#dde0e1 78%); }
+    .progress-ring::before { content: ""; width: 62px; height: 62px; border-radius: 50%; background: white; }
+    .progress-ring strong { position: absolute; font-size: 18px; }
+    .fine-print { color: var(--muted); font-size: 10px; line-height: 1.4; text-align: center; }
+    .table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .table td { padding: 6px 3px; border-bottom: 1px solid #e2e4e5; }
+    .table td:last-child { text-align: right; font-weight: 800; }
+
+    .parity-card { display: none; position: absolute; z-index: 9; top: 10px; left: 50%; transform: translateX(-50%); width: min(620px, calc(100% - 24px)); padding: 9px 12px; border: 2px solid var(--accent); border-radius: 7px; background: white; box-shadow: var(--sketch-shadow); }
+    .parity-card[data-open="true"] { display: block; }
+    .parity-title { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 850; }
+    .parity-title::before { content: "✓"; width: 20px; height: 20px; display: grid; place-items: center; color: white; background: var(--success); border-radius: 50%; }
+    .parity-metrics { margin-top: 5px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; font-size: 10px; color: var(--muted); }
+    .parity-metrics b { display: block; color: var(--ink); }
+
+    .editor-port { position: fixed; z-index: 40; width: var(--editor-w); max-width: calc(100vw - 24px); }
+    .editor-card { max-height: calc(100vh - var(--review-h, 150px) - 20px); border: 1px solid #555d64; border-radius: 10px; background: white; box-shadow: 0 18px 50px rgb(20 25 29 / 23%); overflow: hidden; display: flex; flex-direction: column; }
+    .editor-head { padding: 13px 14px; border-bottom: 1px solid var(--line); background: #f6f7f7; display: flex; justify-content: space-between; gap: 10px; }
+    .editor-head h3 { margin: 2px 0 0; font-size: 16px; }
+    .icon-button { min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 6px; background: white; font-size: 18px; }
+    .editor-body { flex: 1 1 auto; min-height: 0; max-height: min(62vh, 570px); overflow: auto; padding: 14px; }
+    .form-field { display: grid; gap: 6px; margin: 0 0 13px; }
+    .form-field label, .field-label { font-size: 12px; font-weight: 800; }
+    .form-field input, .form-field select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: white; }
+    .field-hint { margin: 0; font-size: 11px; color: var(--muted); }
+    .advanced-toggle { width: 100%; min-height: 44px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--wash); font-weight: 800; }
+    .advanced-toggle::after { content: "+"; font-size: 19px; }
+    .advanced-toggle[aria-expanded="true"]::after { content: "−"; }
+    .advanced { display: none; padding-top: 12px; }
+    .advanced[data-open="true"] { display: block; }
+    .check-field { min-height: 44px; display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 700; }
+    .check-field input { width: 20px; height: 20px; }
+    .message { display: none; margin: 0 0 12px; padding: 9px 10px; border: 1px solid; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .message[data-show="true"] { display: block; }
+    .message.error { color: #741b17; border-color: #c96c66; background: #fff0ef; }
+    .message.success { color: #1b5634; border-color: #75ad8d; background: #edf8f1; }
+    .message.info { color: #263d50; border-color: #8298aa; background: #eef4f8; }
+    .editor-actions { padding: 12px 14px; border-top: 1px solid var(--line); background: #f7f7f7; }
+    .primary, .secondary, .quiet { min-height: 44px; border-radius: 6px; padding: 8px 12px; font-weight: 800; }
+    .primary { border: 1px solid var(--accent); color: white; background: var(--accent); }
+    .secondary { border: 1px solid var(--line-strong); background: white; }
+    .quiet { border: 1px solid transparent; background: transparent; color: var(--muted); }
+    .editor-actions .quiet { margin-left: auto; }
+    .size-entry { width: 100%; margin: 0 0 13px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; border: 2px solid var(--accent); border-radius: 7px; padding: 9px 11px; background: white; font-weight: 850; }
+    .size-entry::after { content: "Open in grid →"; color: var(--muted); font-size: 10px; }
+    .dirty-dot::before { content: "●"; margin-right: 5px; font-size: 9px; }
+
+    /* A — collision-aware Unit Orbit */
+    body[data-variant="A"] .editor-port { transition: top .18s ease, left .18s ease; }
+    body[data-variant="A"] .editor-port[data-protected-chrome="true"] { transition: none; }
+    body[data-variant="A"] .editor-card { max-height: var(--orbit-max-h, calc(100vh - var(--review-h, 150px) - 20px)); }
+    body[data-variant="A"] .canonical-substitute { display: none !important; }
+    body[data-variant="A"] .editor-card::before { content: "Attached Unit Orbit · selected panel clear"; display: block; padding: 6px 12px; color: white; background: #424a51; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+
+    /* B — opposite-edge fixed HUD */
+    body[data-variant="B"] .editor-port { top: calc(var(--review-h, 150px) + 8px) !important; bottom: auto; }
+    body[data-variant="B"] .editor-card { border-radius: 3px; }
+    body[data-variant="B"] .editor-card::before { content: "PORTALLED HUD · fixed opposite selected unit"; display: block; padding: 7px 12px; color: white; background: #30383e; font-size: 10px; font-weight: 850; letter-spacing: .08em; }
+    .canonical-substitute { display: none; margin: 0 14px 12px; padding: 9px; border: 1px dashed var(--line-strong); background: var(--wash); border-radius: 5px; }
+    .canonical-substitute[data-show="true"] { display: block; }
+    .canonical-substitute .substitute-head { justify-content: space-between; margin-bottom: 7px; font-size: 10px; font-weight: 850; text-transform: uppercase; }
+    .canonical-mini { min-height: 110px; position: relative; overflow: hidden; border: 1px solid #aeb3b7; background: white; }
+    .canonical-mini .canonical-scaled { position: absolute; inset: 0 auto auto 0; transform-origin: 0 0; }
+    .canonical-mini .dash-panel { height: 100%; }
+
+    /* C — full viewport Focus Bay */
+    .focus-bay { display: none; position: fixed; inset: var(--review-h, 150px) 0 0; z-index: 35; padding: 12px 24px 24px; background: #e7e9ea; }
+    body[data-variant="C"][data-ui-mode="build"]:not([data-suspended="true"]):not([data-preview="true"]) .focus-bay { display: grid; grid-template-columns: minmax(280px,1.25fr) minmax(340px,.75fr); gap: 18px; }
+    body[data-variant="C"] .editor-port { display: none !important; }
+    .focus-preview, .focus-editor { min-height: 0; border: 1px solid var(--line-strong); border-radius: 10px; background: white; box-shadow: var(--sketch-shadow); overflow: auto; }
+    .preview-head { justify-content: space-between; padding: 13px 15px; border-bottom: 1px solid var(--line); }
+    .preview-head h3 { margin: 2px 0 0; font-size: 17px; }
+    .faithful-note { padding: 8px 15px; border-bottom: 1px solid var(--line); background: var(--wash); font-size: 11px; font-weight: 750; }
+    .focus-canonical { height: calc(100% - 103px); min-height: 300px; padding: 28px; display: grid; place-items: center; }
+    .focus-scale-box { position: relative; }
+    .focus-scaled-wrap { position: absolute; inset: 0 auto auto 0; transform-origin: 0 0; box-shadow: 0 10px 30px rgb(0 0 0 / 12%); }
+    .focus-scaled-wrap .dash-panel { height: 100%; }
+    .focus-editor .editor-card { border: 0; border-radius: 0; box-shadow: none; }
+    .focus-editor .editor-body { max-height: calc(100vh - 260px); }
+
+    .suspend-bar, .preview-bar { display: none; position: fixed; z-index: 45; left: 50%; bottom: 18px; transform: translateX(-50%); align-items: center; gap: 10px; padding: 9px 10px 9px 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: white; box-shadow: var(--sketch-shadow); font-size: 12px; font-weight: 800; }
+    body[data-suspended="true"]:not([data-sizing-active="true"]) .suspend-bar { display: flex; }
+    body[data-preview="true"] .preview-bar { display: flex; }
+    body[data-suspended="true"] .editor-port, body[data-preview="true"] .editor-port { display: none !important; }
+    body[data-ui-mode="view"] .editor-port, body[data-ui-mode="view"] .focus-bay { display: none !important; }
+
+    .modal-backdrop { display: none; position: absolute; inset: 0; z-index: 100; place-items: center; padding: 20px; background: rgb(20 23 26 / 54%); }
+    .modal-backdrop[data-open="true"] { display: grid; }
+    .modal { width: min(470px,100%); padding: 20px; border: 1px solid #4d555c; border-radius: 10px; background: white; box-shadow: 0 24px 70px rgb(0 0 0 / 30%); }
+    .modal h3 { margin: 0 0 7px; }
+    .modal p { margin: 0 0 17px; color: var(--muted); line-height: 1.45; }
+    .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-actions button { flex: 1 1 130px; }
+
+    .toast { position: absolute; z-index: 120; right: 18px; bottom: 18px; max-width: 340px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 7px; background: #222a30; color: white; box-shadow: var(--sketch-shadow); font-size: 12px; font-weight: 750; opacity: 0; transform: translateY(10px); pointer-events: none; transition: .18s ease; }
+    .toast[data-show="true"] { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1080px) {
+      .review-bar { grid-template-columns: 1fr; }
+      .review-tools { justify-content: flex-start; }
+      .dashboard-grid { grid-template-rows: repeat(2,240px); }
+      .dash-filter:nth-child(2) { display: none; }
+      .mode-subheader-copy { min-width: 190px; }
+      .build-preset-tools label, .build-dirty { display: none; }
+    }
+    @media (max-width: 760px) {
+      .review-bar { position: relative; padding: 10px; }
+      main { padding: 10px; }
+      .concept-intro { align-items: flex-start; flex-direction: column; }
+      .dashboard-shell { overflow-x: auto; }
+      .dash-header, .mode-subheader, .dashboard-canvas { min-width: 820px; }
+      .focus-bay { padding: 12px; grid-template-columns: 1fr !important; overflow: auto; }
+      .focus-preview, .focus-editor { min-height: 520px; }
+      .editor-card { max-height: calc(100vh - 24px); }
+      .editor-body { max-height: 48vh; }
+      .parity-metrics { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body[data-variant="A"] .editor-port, .toast { transition: none; }
+      .dash-panel { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body data-variant="A" data-ui-mode="build" data-suspended="true" data-preview="false" data-dragging="false" data-sizing-active="false" data-sizing-model="footprint">
+  <header class="review-bar" aria-label="Sketch review toolbar">
+    <div class="review-main">
+      <div>
+        <div class="eyebrow">Sketch 002 · Contextual panel editing</div>
+        <h1 class="review-title">Panel-as-unit → editor relationship</h1>
+      </div>
+      <span class="status-pill">✓ Approved</span>
+      <span class="winner-pill">★ Winner: A — Unit Orbit + 2 × 4 footprint</span>
+      <span class="review-boundary">Prototype controls · outside simulated app</span>
+      <nav class="variant-tabs" aria-label="Variant">
+        <button class="variant-tab" data-variant="A" aria-selected="true">A · Unit Orbit · Winner</button>
+        <button class="variant-tab" data-variant="B" aria-selected="false">B · Tactical HUD</button>
+        <button class="variant-tab" data-variant="C" aria-selected="false">C · Focus Bay</button>
+      </nav>
+      <div class="sizing-decision" aria-label="Sizing synthesis evidence">
+        <span class="sizing-evidence" data-current="true">4 × 2 footprint · approved</span>
+        <span class="sizing-evidence">S1 size presets · superseded</span>
+        <span class="sizing-evidence">S2 split controls · superseded</span>
+        <span class="sizing-evidence">S3 row templates · rejected</span>
+        <button class="prototype-invalid" id="prototypeInvalidSizeButton">Prototype only · test 5 × 2 rejection</button>
+      </div>
+    </div>
+    <div class="review-tools">
+      <label for="targetSelect">Target</label>
+      <select id="targetSelect"></select>
+      <label for="taskStep">Task step</label>
+      <select id="taskStep">
+        <option value="select">1 · Select target</option>
+        <option value="local">2 · Edit local property</option>
+        <option value="save">3 · Save / resolve dirty</option>
+        <option value="layout">4 · Direct reorder + order presets</option>
+      </select>
+      <div class="segmented" aria-label="Dashboard mode">
+        <button class="mode-button" data-ui-mode="view" aria-pressed="false">View</button>
+        <button class="mode-button" data-ui-mode="build" aria-pressed="true">Build</button>
+      </div>
+      <button class="tool-button" id="compareButton" aria-pressed="false">Compare parity</button>
+      <button class="tool-button" id="resetButton">Reset</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="concept-intro" aria-live="polite">
+      <div>
+        <div class="eyebrow" id="conceptEyebrow">Approved winner</div>
+        <h2 id="conceptTitle">Unit Orbit</h2>
+        <p id="conceptDescription">The chart-local editor owns the selected chart’s properties and footprint. Direct reorder and order-only dashboard presets remain in the shared Build foundation.</p>
+      </div>
+      <span class="least-complex">Least-complex challenger · B fixed portalled HUD</span>
+    </section>
+
+    <section class="workspace" id="workspace">
+      <article class="dashboard-shell" id="dashboardShell" aria-label="FIX-DASH dashboard canvas">
+        <header class="dash-header">
+          <div class="dash-heading">
+            <div class="mark" aria-hidden="true">F</div>
+            <div><h1>FIX-DASH · Biological incidents</h1><p>Region 3 command view · Data current 06:00</p></div>
+          </div>
+          <div class="dash-filters" aria-label="Dashboard filters">
+            <button class="dash-filter" data-toast="Time range would open">Last 28 days ▾</button>
+            <button class="dash-filter" data-toast="Region filter would open">All municipalities ▾</button>
+            <button class="dash-filter" data-toast="Dashboard exported">Export snapshot</button>
+          </div>
+        </header>
+        <section class="mode-subheader" id="modeSubheader" aria-label="Mode-specific dashboard controls">
+          <div class="mode-subheader-copy">
+            <div class="eyebrow" id="buildModeEyebrow">Build layout</div>
+            <strong id="buildModeStatus">Direct reorder is ready</strong>
+            <span id="buildModeHint">Drop on a chart title or highlighted empty insertion area. Keyboard: Alt + arrows, Home, or End.</span>
+          </div>
+          <div class="build-only build-preset-tools" aria-label="Order presets">
+            <label for="loadPresetSelect">Order preset</label>
+            <select id="loadPresetSelect" aria-label="Order preset"></select>
+            <button class="subhead-button" id="loadPresetButton">Load preset</button>
+            <button class="subhead-button" id="savePresetButton">Save order preset</button>
+          </div>
+          <div class="build-only build-commit-tools">
+            <button class="subhead-button primary" id="buildSaveButton">Save Layout Changes</button>
+            <button class="subhead-button" id="buildDiscardButton">Discard Layout Changes</button>
+            <button class="subhead-button" id="buildPreviewButton">Preview</button>
+            <span class="step-pill build-dirty" id="buildDirtyState">No unsaved changes</span>
+          </div>
+          <div class="view-only" aria-label="View status">
+            <span class="step-pill">View canvas</span>
+            <span class="field-hint">This reserved product-chrome row is the same height in View and Build, so the canvas starts at the same y-coordinate.</span>
+          </div>
+        </section>
+        <div class="dashboard-canvas">
+          <div class="parity-card" id="parityCard" data-open="false" role="status">
+            <div class="parity-title">View ↔ Build geometry match</div>
+            <div class="parity-metrics" id="parityMetrics"></div>
+          </div>
+          <div class="dashboard-grid" id="dashboardGrid"></div>
+        </div>
+      </article>
+
+      <div class="modal-backdrop" id="dirtyModal" data-open="false" role="presentation">
+        <section class="modal" role="dialog" aria-modal="true" aria-labelledby="dirtyTitle" aria-describedby="dirtyDescription">
+          <h3 id="dirtyTitle">Unsaved panel changes</h3>
+          <p id="dirtyDescription">Resolve changes before opening another dashboard unit.</p>
+          <div class="modal-actions">
+            <button class="primary" id="modalSave">Save Chart Changes</button>
+            <button class="secondary" id="modalDiscard">Discard Chart Changes</button>
+            <button class="quiet" id="modalStay">Keep Editing</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <aside class="editor-port" id="editorPort" aria-label="Contextual panel editor">
+    <div class="editor-card" id="editorCard"></div>
+  </aside>
+
+  <section class="focus-bay" id="focusBay" aria-label="Focus Bay editor">
+    <div class="focus-preview">
+      <div class="preview-head"><div><div class="eyebrow">Faithful canonical substitute</div><h3 id="focusPreviewTitle"></h3></div><span class="mini-pill">Same fixture + plot geometry</span></div>
+      <div class="faithful-note">Local edits happen here. The real grid remains mounted, unchanged, beneath the bay.</div>
+      <div class="focus-canonical" id="focusCanonical"></div>
+    </div>
+    <div class="focus-editor" id="focusEditor"></div>
+  </section>
+
+  <div class="suspend-bar" role="status" aria-live="polite"><span id="suspendStatus"></span><button class="primary" id="reopenButton"></button><button class="secondary" id="suspendSave">Save Chart Changes</button><button class="secondary" id="suspendDiscard">Discard Chart Changes</button></div>
+  <div class="preview-bar" role="status">Previewing dashboard without authoring chrome <button class="primary" id="exitPreviewButton">Return to Build</button></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const targets = [
+        { id:'bio_confirmed_cases', title:'Confirmed cases', kicker:'Incident total', type:'number', metric:'Confirmed', x:1, y:1, w:1, h:1, order:1, value:'12,842', delta:'↓ 6.2% vs prior period', subtitle:'Laboratory-confirmed cases', legend:true },
+        { id:'bio_r_values', title:'Effective reproduction rate', kicker:'Transmission signal', type:'gauge', metric:'R value', x:2, y:1, w:1, h:1, order:2, value:'0.86', delta:'Below intervention threshold', subtitle:'7-day posterior estimate', legend:false },
+        { id:'bio_municipality_choropleth_animation', title:'Municipality incidence over time', kicker:'Animated choropleth · Week 31', type:'map', metric:'7-day incidence', x:3, y:1, w:2, h:2, order:3, value:'', delta:'', subtitle:'Cases per 100,000 residents', legend:true },
+        { id:'bio_region_comparison', title:'Regional comparison', kicker:'Cases per 100k', type:'rank', metric:'Incidence', x:1, y:2, w:1, h:1, order:4, value:'', delta:'', subtitle:'Peer comparison', legend:true },
+        { id:'bio_vaccination_rate', title:'Vaccination rate', kicker:'Full primary course', type:'ring', metric:'Coverage', x:1, y:3, w:2, h:1, order:5, value:'78%', delta:'', subtitle:'Eligible population', legend:false },
+        { id:'bio_hospital_load', title:'Hospital demand signal', kicker:'Regional treatment capacity', type:'table', metric:'Occupancy', x:3, y:3, w:2, h:1, order:6, value:'', delta:'', subtitle:'Current load', legend:false }
+      ];
+      const editableIds = targets.map(p => p.id);
+      const initial = JSON.parse(JSON.stringify(targets));
+      const state = {
+        variant:'A', uiMode:'build', selectedId:editableIds[0], advanced:false,
+        suspended:true, preview:false, compare:false, dirty:false, panelDirty:false, contentDirty:false, sizeDirty:false, layoutDirty:false, pendingTarget:null, pendingMode:null, pendingScope:null, pendingPreset:null, saving:false,
+        draft:{}, saved:{}, savedOrder:null, layoutPreset:'balanced', savedLayoutPreset:'balanced', simulatedFailure:false,
+        saveFailed:false, layoutFocusId:editableIds[0], draggingId:null, dropTargetId:null, dropInsertIndex:null, userPresets:{}, presetCounter:0,
+        sizingModel:'footprint', packingModel:'footprint', sizeActive:false, sizeError:'', invalidSizeAttempt:false, sizeSpecs:{}, savedSizeSpecs:{}
+      };
+      targets.forEach(p => { state.saved[p.id] = pickEditable(p); });
+      state.sizeSpecs = makeSizeSpecs();
+      state.savedSizeSpecs = JSON.parse(JSON.stringify(state.sizeSpecs));
+      state.savedOrder = captureOrder();
+
+      const $ = s => document.querySelector(s);
+      const $$ = s => [...document.querySelectorAll(s)];
+      const body = document.body;
+      const reviewBar = $('.review-bar');
+      const grid = $('#dashboardGrid');
+      const editorPort = $('#editorPort');
+      const editorCard = $('#editorCard');
+      const dirtyModal = $('#dirtyModal');
+      let toastTimer;
+      let lastFocus = null;
+      let dragSession = null;
+      let suppressClickUntil = 0;
+      let orbitPreviewContext = null;
+      let orbitRecenterPending = false;
+
+      function captureOrbitContext(focused=document.activeElement) {
+        const bodyEl=editorPort.querySelector('.editor-body');
+        let selector=null;
+        if(focused?.classList?.contains('footprint-cell')) selector=`.footprint-cell[data-col="${focused.dataset.col}"][data-row="${focused.dataset.row}"]`;
+        else if(focused?.classList?.contains('orbit-invalid')) selector='.orbit-invalid';
+        else if(focused?.classList?.contains('orbit-done')) selector='.orbit-done';
+        else if(focused?.classList?.contains('save-button')) selector='.save-button';
+        else if(focused?.classList?.contains('discard-button')) selector='.discard-button';
+        else if(focused?.classList?.contains('preview-button')) selector='.preview-button';
+        return {selector,scrollTop:bodyEl?.scrollTop||0};
+      }
+
+      function restoreOrbitContext(context,{validOptionFallback=false}={}) {
+        if(!context) return;
+        requestAnimationFrame(()=>{
+          const bodyEl=editorPort.querySelector('.editor-body'); if(bodyEl) bodyEl.scrollTop=context.scrollTop;
+          let target=context.selector?editorPort.querySelector(context.selector):null;
+          if(!target||target.disabled||validOptionFallback) target=editorPort.querySelector('.footprint-cell[aria-pressed="true"], .footprint-cell[tabindex="0"]');
+          target?.focus({preventScroll:true});
+          if(bodyEl) bodyEl.scrollTop=context.scrollTop;
+        });
+      }
+
+      function pickEditable(p) { return { title:p.title, metric:p.metric, subtitle:p.subtitle, legend:p.legend }; }
+      function updateReviewHeight() { body.style.setProperty('--review-h',`${Math.ceil(reviewBar.getBoundingClientRect().height)}px`); }
+      function captureOrder() { return [...targets].sort((a,b)=>a.order-b.order).map(p=>p.id); }
+      function restoreOrder(snapshot) { snapshot.forEach((id,index)=>Object.assign(panel(id),{order:index+1})); }
+      function syncGridTemplateFromGeometry() {
+        const maxTrack=Math.max(...targets.map(p=>p.x+p.w-1)), tracks=maxTrack<=4?4:12, rows=Math.max(2,...targets.map(p=>p.y+p.h-1));
+        grid.style.gridTemplateColumns=`repeat(${tracks},minmax(0,1fr))`; grid.style.gridTemplateRows=`repeat(${rows},270px)`;
+      }
+      function makeSizeSpecs() {
+        return {footprint:{
+          bio_confirmed_cases:{w:1,h:1},bio_r_values:{w:1,h:1},
+          bio_municipality_choropleth_animation:{w:2,h:2},bio_region_comparison:{w:1,h:1},
+          bio_vaccination_rate:{w:2,h:1},bio_hospital_load:{w:2,h:1}
+        }};
+      }
+      function ensureDraft() { if (!Object.keys(state.draft).length) state.draft = {...state.saved[state.selectedId]}; }
+      function recomputeDirty() {
+        state.contentDirty = Object.keys(state.draft).length > 0 && JSON.stringify(state.draft) !== JSON.stringify(state.saved[state.selectedId]);
+        state.sizeDirty = JSON.stringify(state.sizeSpecs.footprint[state.selectedId]) !== JSON.stringify(state.savedSizeSpecs.footprint[state.selectedId]);
+        state.panelDirty = state.contentDirty || state.sizeDirty || state.invalidSizeAttempt;
+        state.layoutDirty = JSON.stringify(captureOrder()) !== JSON.stringify(state.savedOrder) || state.layoutPreset !== state.savedLayoutPreset;
+        state.dirty = state.panelDirty || state.layoutDirty;
+      }
+      function dirtyLabel() {
+        if(state.invalidSizeAttempt&&state.layoutDirty) return 'Chart footprint needs correction and layout changes are unsaved';
+        if(state.invalidSizeAttempt) return 'Chart footprint needs a supported size';
+        if(state.panelDirty&&state.layoutDirty) return 'Chart changes and layout changes are unsaved';
+        if(state.panelDirty) return `${currentValues().title || state.saved[state.selectedId].title} has unsaved chart changes`;
+        if(state.layoutDirty) return 'Dashboard layout has unsaved changes';
+        return 'No unsaved changes';
+      }
+      function chartDraftPill() {
+        if(state.invalidSizeAttempt) return '<span class="step-pill dirty-dot">Chart footprint needs correction</span>';
+        if(state.contentDirty&&state.sizeDirty) return '<span class="step-pill dirty-dot">Chart properties + footprint unsaved</span>';
+        if(state.sizeDirty) return '<span class="step-pill dirty-dot">Chart footprint unsaved</span>';
+        return '<span class="step-pill dirty-dot">Chart draft unsaved</span>';
+      }
+      function panel(id) { return targets.find(p => p.id === id); }
+      function currentValues() { return Object.keys(state.draft).length ? state.draft : state.saved[state.selectedId]; }
+      function esc(text) { return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+      function chartHTML(p) {
+        const v = p.id === state.selectedId ? currentValues() : state.saved[p.id];
+        const legend = v.legend;
+        if (p.type === 'number') return `<div class="big-number">${p.value}</div><div class="delta">${p.delta}</div><div class="spark" aria-label="28-day declining case trend">${[38,48,44,62,58,54,47,41,36,29,33,26].map(h=>`<i style="height:${h}px"></i>`).join('')}</div><span class="axis-label">28 days</span>`;
+        if (p.type === 'gauge') return `<div class="gauge" aria-hidden="true"></div><div class="gauge-value">${p.value}</div><div class="fine-print">${esc(v.subtitle)}</div>`;
+        if (p.type === 'map') return `<div class="map"><svg viewBox="0 0 440 270" role="img" aria-label="Municipality incidence choropleth"><g stroke="#fff" stroke-width="3"><path fill="#b9bec2" d="M24 46L104 22l62 42-18 74-91 11-34-50z"/><path fill="#777f86" d="M166 64l88-27 52 51-22 77-83 19-53-46z"/><path fill="#969da2" d="M306 88l91-32 28 67-27 81-86-7-28-32z"/><path fill="#d0d3d5" d="M57 149l91-11 53 46-20 68-105-7-42-52z"/><path fill="#5e676e" d="M201 184l83-19 28 32-18 59-113-4z"/><path fill="#a8adb1" d="M312 197l86 7-23 48-81 4z"/></g><g fill="#20262b" font-size="10" font-family="system-ui"><text x="54" y="88">Northfield</text><text x="194" y="110">Central</text><text x="325" y="130">East</text><text x="82" y="204">Westhaven</text><text x="222" y="225">South</text></g></svg>${legend?'<span class="map-legend">Low ░ ▒ ▓ High</span>':''}</div>`;
+        if (p.type === 'rank') return `<div class="rank-list">${[['Central',92],['East',76],['Northfield',61],['South',49],['Westhaven',32]].map((r,i)=>`<div class="rank-row"><span>${r[0]}</span><span class="bar"><b style="width:${r[1]}%"></b></span><b>${[184,151,122,98,64][i]}</b></div>`).join('')}</div>${legend?'<div class="fine-print" style="margin-top:12px">Ranked by current 7-day incidence</div>':''}`;
+        if (p.type === 'ring') return `<div class="progress-ring"><strong>${p.value}</strong></div><div class="fine-print">${esc(v.subtitle)} · Target 85%</div>`;
+        return `<table class="table" aria-label="Hospital load"><tr><td>Ward occupancy</td><td>73%</td></tr><tr><td>ICU occupancy</td><td>61%</td></tr><tr><td>Admissions / 24h</td><td>14</td></tr><tr><td>Trend</td><td>Stable →</td></tr></table>`;
+      }
+
+      function renderDashboard() {
+        grid.innerHTML = [...targets].sort((a,b)=>a.order-b.order).map(p => {
+          const saved = state.saved[p.id];
+          const shown = p.id === state.selectedId ? currentValues() : saved;
+          const selectable = editableIds.includes(p.id);
+          const directBuild=state.uiMode==='build';
+          const visualSelected=p.id===state.selectedId;
+          const label=directBuild?`${selectable?'Open panel controls for':'Reorder'} ${shown.title}. Drag to a chart or highlighted empty insertion area; Alt plus Arrow keys, Home, or End also reorder.`:`${selectable?'Select':'Inspect'} ${shown.title}`;
+          return `<article class="dash-panel" id="panel-${p.id}" data-panel-id="${p.id}" data-selected="${visualSelected}" data-layout-active="${p.id===state.layoutFocusId}" data-dragging="${p.id===state.draggingId}" data-drop="${p.id===state.dropTargetId}" style="grid-column:${p.x}/span ${p.w};grid-row:${p.y}/span ${p.h};order:${p.order}">
+            <button class="panel-select" ${state.saving?'disabled':''} aria-label="${esc(label)}" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown Alt+Home Alt+End">
+              <span><span class="panel-title">${esc(shown.title)}</span><span class="panel-kicker">${esc(p.kicker)} · ${esc(shown.metric)}</span></span>
+              <span><span class="selected-mark" aria-hidden="true">✓ Selected</span><span class="drag-hint" aria-hidden="true">Drag · Alt + arrows / Home / End</span></span>
+            </button><div class="panel-viz">${chartHTML(p)}</div></article>`;
+        }).join('')+'<div class="grid-drop-zones" id="gridDropZones" aria-hidden="true"></div>';
+        $$('.dash-panel').forEach(el => {
+          const handle=el.querySelector('.panel-select');
+          handle.addEventListener('click', () => {
+            if(performance.now()<suppressClickUntil) return;
+          const id = el.dataset.panelId;
+          if (state.uiMode === 'view') { toast('View keeps the same canvas; switch to Build to select an editing target.'); return; }
+          if (editableIds.includes(id)) requestTarget(id,!state.sizeActive); else {state.layoutFocusId=id;renderDashboard();toast('This chart can be reordered here; its panel controls are outside this fixture.');}
+          });
+          handle.addEventListener('pointerdown',e=>beginDirectPointer(e,el.dataset.panelId));
+          handle.addEventListener('keydown',e=>handleDirectKey(e,el.dataset.panelId));
+        });
+        if(state.draggingId) renderEmptyDropZones();
+        renderParity();
+        renderCanonical();
+        renderSuspendBar();
+        renderBuildBar();
+        requestAnimationFrame(()=>positionEditor(true));
+      }
+
+      function editorHTML() {
+        const p = panel(state.selectedId);
+        const v = currentValues();
+        const disabled=state.saving?'disabled':'';
+        return `<div class="editor-head"><div><div class="eyebrow">${esc(p.id)}</div><h3>Open ${esc(v.title)} Changes</h3></div><button class="icon-button close-editor" aria-label="Close ${esc(v.title)} Changes" title="Close ${esc(v.title)} Changes" ${disabled}>×</button></div>
+          <div class="canonical-substitute" data-show="false"><div class="substitute-head"><span>Faithful canonical substitute</span><span>Editor obscures target</span></div><div class="canonical-mini" aria-label="Uniformly scaled rendering of the selected panel"></div></div>
+          <div class="editor-body">
+            <div class="message error" id="errorMessage" data-show="false"></div><div class="message success" id="successMessage" data-show="false"></div>
+            <section class="local-panel" aria-label="Common panel controls">
+              ${state.sizeActive?orbitSizingHTML():`<button class="size-entry" id="sizeEntry">Choose chart footprint</button>`}
+              <div class="property-fields" ${state.sizeActive?'hidden':''}>
+              <div class="form-field"><label for="titleField">Visible title</label><input id="titleField" value="${esc(v.title)}" autocomplete="off" ${disabled}><p class="field-hint">Updates the real panel and faithful substitute live.</p></div>
+              <div class="form-field"><label for="metricField">Primary property</label><select id="metricField" ${disabled}>${['Confirmed','R value','7-day incidence','Incidence','Coverage','Occupancy'].map(x=>`<option ${x===v.metric?'selected':''}>${x}</option>`).join('')}</select></div>
+              <button class="advanced-toggle" id="advancedToggle" aria-expanded="${state.advanced}" ${disabled}>Advanced</button>
+              <div class="advanced" id="advancedPanel" data-open="${state.advanced}">
+                <div class="form-field"><label for="subtitleField">Supporting text</label><input id="subtitleField" value="${esc(v.subtitle)}" ${disabled}></div>
+                <label class="check-field"><input type="checkbox" id="legendField" ${v.legend?'checked':''} ${disabled}> Show plot legend</label>
+                <label class="check-field"><input type="checkbox" id="failureField" ${state.simulatedFailure?'checked':''} ${disabled}> Simulate save failure</label>
+              </div>
+              </div>
+            </section>
+          </div>
+          <div class="editor-actions"><button class="primary save-button" ${state.saving||!state.panelDirty||state.invalidSizeAttempt?'disabled':''} title="${state.invalidSizeAttempt?'Choose a supported chart footprint before saving':state.panelDirty?'Save this chart draft':'No unsaved chart changes'}">${state.saving?'Saving…':state.saveFailed?'Retry Chart Save':'Save Chart Changes'}</button><button class="secondary discard-button" ${state.panelDirty&&!state.saving?'':'disabled'}>Discard Chart Changes</button><button class="quiet preview-button">Preview</button>${state.panelDirty?chartDraftPill():state.layoutDirty?`<span class="step-pill">Layout order draft · save from Build bar</span>`:`<span class="step-pill">${esc(v.title)} selected</span>`}</div>`;
+      }
+
+      function orbitSizingHTML() {
+        const spec=state.sizeSpecs.footprint[state.selectedId];
+        const cells=[];
+        for(let row=1;row<=2;row++) for(let col=1;col<=4;col++) {
+          const committed=spec.w===col&&spec.h===row;
+          const included=col<=spec.w&&row<=spec.h;
+          cells.push(`<button class="footprint-cell" type="button" role="gridcell" data-col="${col}" data-row="${row}" data-included="${included}" data-preview="false" aria-label="Set chart size to ${col} column${col===1?'':'s'} by ${row} row${row===1?'':'s'}" aria-pressed="${committed}" tabindex="${committed?'0':'-1'}"><span class="endpoint-marker" aria-hidden="true">✓</span><span class="footprint-size-label">${col} × ${row}</span></button>`);
+        }
+        return `<section class="orbit-sizing" aria-label="Local Unit Orbit sizing controls">
+          <div class="orbit-sizing-head"><div><div class="eyebrow">Chart-owned size · Unit Orbit</div><h4>Footprint</h4></div><span class="mini-pill">4-column grid</span></div>
+          <p class="field-hint">Point to or focus a cell to preview its top-left rectangle. Click or press Enter / Space to apply; the dashboard does not reflow during preview.</p>
+          <div class="footprint-picker">
+            <div class="footprint-corner" aria-hidden="true">Width →<br>Height ↓</div>
+            <div class="footprint-column-cues" aria-hidden="true"><span>1 col</span><span>2 cols</span><span>3 cols</span><span>4 cols</span></div>
+            <div class="footprint-row-cues" aria-hidden="true"><span>1 row</span><span>2 rows</span></div>
+            <div class="footprint-grid" role="grid" aria-label="Choose width and height; arrow keys move without wrapping" data-previewing="false">${cells.join('')}</div>
+          </div>
+          <div class="orbit-size-status" data-error="${Boolean(state.sizeError)}" role="status" aria-live="polite">${esc(state.sizeError||`Current footprint: ${spec.w} column${spec.w===1?'':'s'} × ${spec.h} row${spec.h===1?'':'s'}. Size belongs to this chart draft.`)}</div>
+          <div class="layout-actions"><button class="secondary orbit-done" ${state.saving?'disabled':''}>Done sizing</button></div>
+        </section>`;
+      }
+
+      function renderSuspendBar() {
+        const name=currentValues().title;
+        $('#suspendStatus').textContent=state.invalidSizeAttempt?`${name} has an unsupported chart footprint.`:state.panelDirty?`${name} has unsaved chart changes.`:state.layoutDirty?'Layout order draft remains available in Build.':`${name} selected.`;
+        $('#reopenButton').textContent=`${state.panelDirty?'Reopen':'Open'} ${name} Changes`;
+        $('#suspendSave').hidden=!state.panelDirty; $('#suspendDiscard').hidden=!state.panelDirty;
+        $('#suspendSave').disabled=state.saving||state.invalidSizeAttempt; $('#suspendDiscard').disabled=state.saving;
+        $('#suspendSave').title=state.invalidSizeAttempt?'Choose a supported chart footprint before saving':'';
+        $('#suspendSave').textContent=state.saving?'Saving…':state.saveFailed?'Retry Chart Save':'Save Chart Changes';
+      }
+
+      function renderBuildBar() {
+        const select=$('#loadPresetSelect');
+        const builtin=[['balanced','Balanced order'],['map','Map lead order'],['signals','Signals lead order']];
+        const user=Object.entries(state.userPresets).map(([id,item])=>[id,item.name]);
+        const availableIds=[...builtin,...user].map(([id])=>id);
+        const selected=availableIds.includes(state.layoutPreset)?state.layoutPreset:'balanced';
+        select.innerHTML=[...builtin,...user].map(([id,name])=>`<option value="${id}">${esc(name)}</option>`).join('');
+        select.value=selected;
+        const ordered=[...targets].sort((a,b)=>a.order-b.order);
+        const focused=panel(state.layoutFocusId)||panel(state.selectedId);
+        $('#buildModeEyebrow').textContent=state.uiMode==='view'?'View dashboard':state.preview?'Build preview':'Build layout';
+        $('#buildModeStatus').textContent=state.preview?'Previewing the current dashboard draft':state.draggingId?`Moving ${state.saved[state.draggingId].title}`:`${focused.title} · slot ${ordered.findIndex(p=>p.id===focused.id)+1} of ${ordered.length}`;
+        $('#buildModeHint').textContent=state.preview?'Layout controls are hidden; chart order and footprints are unchanged.':state.draggingId?'Drop on a chart title or highlighted empty insertion area.':'Global order, order-preset and layout-draft controls. Chart footprints stay owned by Unit Orbit; keyboard reorder uses Alt + arrows, Home, or End.';
+        const save=$('#buildSaveButton'), discard=$('#buildDiscardButton'), dirty=$('#buildDirtyState');
+        save.textContent=state.saving?'Saving…':'Save Layout Changes';
+        discard.textContent='Discard Layout Changes';
+        save.disabled=state.saving||!state.layoutDirty; save.title=state.layoutDirty?'Save the layout order draft':'No unsaved layout changes';
+        discard.disabled=state.saving||!state.layoutDirty;
+        select.disabled=state.saving; $('#loadPresetButton').disabled=state.saving; $('#savePresetButton').disabled=state.saving;
+        $('#buildPreviewButton').textContent=state.preview?'Return to Build':'Preview';
+        dirty.textContent=state.layoutDirty?'Layout order draft unsaved':state.invalidSizeAttempt?'Chart footprint needs correction in Unit Orbit':state.panelDirty?'Chart draft open in Unit Orbit':'No unsaved layout changes';
+        dirty.className=`step-pill build-dirty${state.layoutDirty?' dirty-dot':''}`;
+      }
+
+      function renderEditor(focusField=false) {
+        editorCard.innerHTML = editorHTML();
+        $('#focusEditor').innerHTML = `<div class="editor-card">${editorHTML()}</div>`;
+        bindEditor(editorCard);
+        bindEditor($('#focusEditor'));
+        renderCanonical();
+        renderSuspendBar();
+        renderBuildBar();
+        syncGlobalAvailability();
+        requestAnimationFrame(()=>positionEditor(true));
+        if (focusField) requestAnimationFrame(() => activeEditorRoot()?.querySelector('#titleField')?.focus());
+      }
+
+      function activeEditorRoot() {
+        return state.variant === 'C' ? $('#focusEditor') : editorPort;
+      }
+
+      function bindEditor(root) {
+        const first = (s) => root.querySelector(s);
+        root.querySelectorAll('.close-editor').forEach(b => b.addEventListener('click', suspendEditor));
+        const title = first('#titleField'), metric = first('#metricField'), subtitle = first('#subtitleField'), legend = first('#legendField'), failure = first('#failureField');
+        if (title) title.addEventListener('input', e => { e.target.removeAttribute('aria-invalid'); updateDraft('title', e.target.value); });
+        if (metric) metric.addEventListener('change', e => updateDraft('metric', e.target.value));
+        if (subtitle) subtitle.addEventListener('input', e => updateDraft('subtitle', e.target.value));
+        if (legend) legend.addEventListener('change', e => updateDraft('legend', e.target.checked));
+        if (failure) failure.addEventListener('change', e => { state.simulatedFailure=e.target.checked; syncDuplicateFields('failureField','checked',e.target.checked); });
+        root.querySelectorAll('.advanced-toggle').forEach(b => b.addEventListener('click', () => { state.advanced=!state.advanced; renderEditor(); requestAnimationFrame(()=>activeEditorRoot()?.querySelector('#advancedToggle')?.focus()); }));
+        root.querySelectorAll('.save-button').forEach(b => b.addEventListener('click', () => savePanelChanges()));
+        root.querySelectorAll('.discard-button').forEach(b => b.addEventListener('click', discardPanelChanges));
+        root.querySelectorAll('.preview-button').forEach(b => b.addEventListener('click', enterPreview));
+        root.querySelectorAll('.size-entry').forEach(b => b.addEventListener('click', ()=>enterSizing()));
+        root.querySelectorAll('.orbit-done').forEach(b=>b.addEventListener('click',exitSizing));
+        renderLocalSizeControls(root);
+      }
+
+      function syncDuplicateFields(id, prop, value) { $$(`#${id}`).forEach(el => { if (el[prop] !== value) el[prop] = value; }); }
+
+      function updateDraft(key,value) {
+        ensureDraft();
+        state.draft[key] = value;
+        state.saveFailed = false;
+        recomputeDirty();
+        syncDuplicateFields(key==='title'?'titleField':key==='metric'?'metricField':key==='subtitle'?'subtitleField':'legendField', key==='legend'?'checked':'value', value);
+        renderDashboard();
+        updateDirtyUI();
+      }
+
+      function updateDirtyUI() {
+        $$('.save-button').forEach(b => {
+          b.textContent = state.saving?'Saving…':state.saveFailed?'Retry Chart Save':'Save Chart Changes';
+          b.disabled = state.saving || !state.panelDirty || state.invalidSizeAttempt;
+          b.title = state.invalidSizeAttempt ? 'Choose a supported chart footprint before saving' : state.panelDirty ? 'Save this chart draft' : 'No unsaved chart changes';
+        });
+        $$('.discard-button').forEach(b => b.disabled = !state.panelDirty||state.saving);
+        $$('.editor-actions .step-pill').forEach(x => x.remove());
+        const name=esc(currentValues().title);
+        $$('.editor-actions').forEach(a => a.insertAdjacentHTML('beforeend', state.panelDirty?chartDraftPill():state.layoutDirty?`<span class="step-pill">Layout order draft · save from Build bar</span>`:`<span class="step-pill">${name} selected</span>`));
+        renderSuspendBar();
+        renderBuildBar();
+      }
+
+      function savePanelChanges(afterSave) {
+        if(state.saving||!state.panelDirty)return;
+        if(state.invalidSizeAttempt){state.sizeError='Choose a supported chart footprint before saving chart changes.';renderEditor();toast(state.sizeError);afterSave?.(false);return;}
+        const values=currentValues();
+        if(!values.title.trim()){showMessage('error','Enter a visible chart title before saving.');const field=activeEditorRoot()?.querySelector('#titleField');if(field){field.setAttribute('aria-invalid','true');field.focus();}return;}
+        state.saving=true;renderEditor();showMessage('info','Saving chart changes…');
+        setTimeout(()=>{
+          state.saving=false;
+          if(state.simulatedFailure){state.saveFailed=true;renderEditor();showMessage('error','Chart changes couldn’t be saved. The chart draft and layout draft are still available.');afterSave?.(false);return;}
+          state.saved[state.selectedId]={...values,title:values.title.trim()};Object.assign(panel(state.selectedId),state.saved[state.selectedId]);
+          state.savedSizeSpecs.footprint[state.selectedId]={...state.sizeSpecs.footprint[state.selectedId]};
+          state.draft={};state.sizeError='';state.invalidSizeAttempt=false;state.saveFailed=false;packFootprints(false);recomputeDirty();renderDashboard();renderEditor();toast('Chart changes, including its footprint, saved. Layout order draft unchanged.');
+          if(afterSave)setTimeout(()=>afterSave(true),180);else requestAnimationFrame(()=>activeEditorRoot()?.querySelector('.save-button')?.focus());
+        },720);
+      }
+
+      function discardPanelChanges() {
+        state.draft={};state.sizeSpecs.footprint[state.selectedId]={...state.savedSizeSpecs.footprint[state.selectedId]};state.sizeError='';state.invalidSizeAttempt=false;state.saveFailed=false;state.simulatedFailure=false;
+        packFootprints(false);recomputeDirty();renderDashboard();renderEditor();toast('Chart changes discarded; its last saved footprint is restored. Layout order draft unchanged.');
+      }
+
+      function saveLayoutChanges(afterSave) {
+        if(state.saving||!state.layoutDirty)return;
+        state.saving=true;renderEditor();
+        setTimeout(()=>{
+          state.saving=false;
+          state.savedOrder=captureOrder();state.savedLayoutPreset=state.layoutPreset;packFootprints(false);
+          recomputeDirty();body.dataset.sizingModel=state.sizingModel;renderDashboard();renderEditor();toast('Layout order changes saved. Chart draft and footprint unchanged.');
+          if(afterSave)setTimeout(()=>afterSave(true),180);else requestAnimationFrame(()=>$('#buildSaveButton').focus());
+        },720);
+      }
+
+      function discardLayoutChanges() {
+        restoreOrder(state.savedOrder);state.layoutPreset=state.savedLayoutPreset;state.layoutFocusId=state.selectedId;
+        packFootprints(false);body.dataset.sizingModel=state.sizingModel;recomputeDirty();renderDashboard();renderEditor();toast('Layout order changes discarded. Chart draft and footprint unchanged.');
+      }
+
+      function showMessage(type,text) {
+        const root = activeEditorRoot();
+        const el = root?.querySelector(type==='error'?'#errorMessage':'#successMessage');
+        if (el) { el.textContent=text; el.className=`message ${type}`; el.dataset.show='true'; el.scrollIntoView({block:'nearest'}); }
+      }
+
+      function requestTarget(id,openPanel=false) {
+        if (id === state.selectedId) {
+          state.layoutFocusId=id;
+          if(openPanel&&!state.sizeActive) reopenEditor(); else $(`#panel-${id} .panel-select`)?.focus();
+          return;
+        }
+        if(state.panelDirty){state.pendingTarget=id;state.pendingMode=null;openScopeModal('panel',state.invalidSizeAttempt?`${currentValues().title} has an unsupported chart footprint. Discard it before opening ${state.saved[id].title}.`:`${currentValues().title} has unsaved chart properties or footprint. Resolve this chart draft before opening ${state.saved[id].title}.`);return;}
+        switchTarget(id,openPanel);
+      }
+
+      function switchTarget(id,openPanel=false) {
+        state.selectedId=id; state.layoutFocusId=id; state.pendingTarget=null; state.draft={}; state.simulatedFailure=false; state.saveFailed=false; state.suspended=state.sizeActive?false:!openPanel; state.preview=false;recomputeDirty();
+        body.dataset.suspended=String(state.suspended); body.dataset.preview='false';
+        $('#targetSelect').value=id; renderDashboard(); renderEditor(); toast(`${state.saved[id].title} selected.`);
+        requestAnimationFrame(()=>state.sizeActive?activeEditorRoot()?.querySelector('.footprint-cell[aria-pressed="true"]')?.focus():openPanel?activeEditorRoot()?.querySelector('#titleField')?.focus():$(`#panel-${id} .panel-select`)?.focus());
+      }
+
+      function openScopeModal(scope,description){
+        state.pendingScope=scope;lastFocus=document.activeElement;dirtyModal.dataset.open='true';$('#dirtyDescription').textContent=description;
+        const save=$('#modalSave'),discard=$('#modalDiscard'),stay=$('#modalStay');discard.hidden=false;
+        if(scope==='panel'){ $('#dirtyTitle').textContent=state.invalidSizeAttempt?'Unsupported chart footprint':'Unsaved chart changes';save.textContent='Save Chart Changes';discard.textContent='Discard Chart Changes';stay.textContent='Keep Editing';save.disabled=state.invalidSizeAttempt; }
+        if(scope==='layout'){ $('#dirtyTitle').textContent='Unsaved layout order';save.textContent='Save Layout Changes';discard.textContent='Discard Layout Changes';stay.textContent='Keep Editing';save.disabled=false; }
+        if(scope==='replaceLayout'){ $('#dirtyTitle').textContent='Replace layout changes?';save.textContent='Replace Layout Changes';discard.hidden=true;stay.textContent='Keep Current Layout';save.disabled=false; }
+        requestAnimationFrame(()=>(save.disabled?discard:save).focus());
+      }
+      function closeDirtyModal(){dirtyModal.dataset.open='false';state.pendingTarget=null;state.pendingMode=null;state.pendingScope=null;state.pendingPreset=null;$('#modalDiscard').hidden=false;$('#targetSelect').value=state.selectedId;renderBuildBar();lastFocus?.focus();}
+      function continueViewResolution(){
+        if(state.panelDirty){openScopeModal('panel',state.invalidSizeAttempt?'Discard the unsupported chart footprint before leaving Build. Any layout order changes will be resolved next.':'Save or discard chart properties and footprint before leaving Build. Any layout order changes will be resolved next.');return;}
+        if(state.layoutDirty){openScopeModal('layout','Save or discard layout order changes before leaving Build.');return;}
+        state.pendingMode=null;state.pendingScope=null;dirtyModal.dataset.open='false';setUiMode('view');
+      }
+      function resolvePending(discard){
+        const scope=state.pendingScope,target=state.pendingTarget,preset=state.pendingPreset,leavingView=state.pendingMode==='view';
+        if(scope==='replaceLayout'){dirtyModal.dataset.open='false';state.pendingScope=null;state.pendingPreset=null;if(!discard){discardLayoutChanges();performPresetLoad(preset);}return;}
+        const next=(success=true)=>{if(!success){openScopeModal(scope,scope==='panel'?'Chart save failed. The chart and layout drafts remain available.':'Layout save failed. Both draft scopes remain available.');return;}dirtyModal.dataset.open='false';state.pendingScope=null;if(target){state.pendingTarget=null;switchTarget(target,true);}else if(leavingView)continueViewResolution();};
+        if(scope==='panel'){if(discard){discardPanelChanges();next(true);}else savePanelChanges(next);}
+        else if(scope==='layout'){if(discard){discardLayoutChanges();next(true);}else saveLayoutChanges(next);}
+      }
+
+      function suspendEditor() {
+        state.suspended=true;
+        body.dataset.suspended='true'; renderSuspendBar(); renderBuildBar(); toast(state.invalidSizeAttempt?`${currentValues().title} has an unsupported chart footprint.`:state.panelDirty?`${currentValues().title} has unsaved chart changes.`:state.layoutDirty?'Layout order draft remains available in Build.':`${currentValues().title} selected.`); requestAnimationFrame(()=>$(`#panel-${state.selectedId} .panel-select`)?.focus());
+      }
+      function reopenEditor() {
+        state.suspended=false; state.preview=false; state.uiMode='build'; body.dataset.suspended='false'; body.dataset.preview='false'; body.dataset.uiMode='build';
+        syncModeButtons(); renderEditor(!state.sizeActive);
+        if(state.sizeActive) restoreOrbitContext(orbitPreviewContext||{selector:null,scrollTop:0},{validOptionFallback:!orbitPreviewContext?.selector});
+      }
+      function reopenEditorFromPreview() {
+        if(state.sizeActive){reopenEditor();return;}
+        state.preview=false; state.suspended=true; body.dataset.preview='false'; body.dataset.suspended='true';
+        renderEditor(); renderBuildBar(); requestAnimationFrame(()=>$(`#panel-${state.layoutFocusId} .panel-select`)?.focus());
+      }
+      function enterPreview() {
+        if(state.sizeActive) orbitPreviewContext=captureOrbitContext();
+        state.preview=true; body.dataset.preview='true'; renderEditor(); renderBuildBar();
+        requestAnimationFrame(()=>$('#buildPreviewButton').focus());
+      }
+
+      function sizeModelHint() {
+        return 'Four equal tracks · every chart may use any footprint from 1–4 columns by 1–2 rows · deterministic order-preserving first-fit packing.';
+      }
+
+      function enterSizing() {
+        state.variant='A'; state.sizingModel='footprint'; state.packingModel='footprint'; state.sizeActive=true; state.suspended=false; state.preview=false; state.sizeError='';
+        body.dataset.variant='A'; body.dataset.sizingActive='true'; body.dataset.sizingModel='footprint'; body.dataset.suspended='false'; body.dataset.preview='false';
+        $$('.variant-tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.variant==='A')));
+        $('#conceptEyebrow').textContent='Approved sizing synthesis · Unit Orbit'; $('#conceptTitle').textContent='Universal 4 × 2 footprint'; $('#conceptDescription').textContent=sizeModelHint();
+        recomputeDirty(); renderDashboard(); renderEditor();
+        requestAnimationFrame(()=>editorPort.querySelector('.footprint-cell[aria-pressed="true"]')?.focus());
+        toast('Footprint picker opened beside the selected chart. Pointing and focus preview; activation applies.');
+      }
+
+      function exitSizing() {
+        state.sizeActive=false; state.suspended=false; body.dataset.sizingActive='false'; body.dataset.suspended='false';
+        recomputeDirty();
+        renderDashboard(); renderEditor();
+        $('#conceptEyebrow').textContent='Approved winner'; $('#conceptTitle').textContent='Unit Orbit'; $('#conceptDescription').textContent='The chart-local editor owns the selected chart’s properties and footprint. Direct reorder and order-only dashboard presets remain in the shared Build foundation.';
+        requestAnimationFrame(()=>$(`#panel-${state.selectedId} .panel-select`)?.focus());
+      }
+
+      function renderLocalSizeControls(root) {
+        const host=root.querySelector('.footprint-grid'); if(!host||!state.sizeActive) return;
+        const status=root.querySelector('.orbit-size-status');
+        const preview=(col,row,source)=>{
+          host.dataset.previewing='true';
+          host.querySelectorAll('.footprint-cell').forEach(cell=>cell.dataset.preview=String(Number(cell.dataset.col)<=col&&Number(cell.dataset.row)<=row));
+          if(status&&!state.sizeError){
+            const committed=state.sizeSpecs.footprint[state.selectedId],isCurrent=committed.w===col&&committed.h===row;
+            status.textContent=isCurrent?`Current footprint applied: ${col} column${col===1?'':'s'} × ${row} row${row===1?'':'s'}. Move to another cell to preview a change.`:`Preview only: ${col} column${col===1?'':'s'} × ${row} row${row===1?'':'s'}. ${source==='focus'?'Press Enter or Space':'Click'} to apply.`;
+          }
+        };
+        const clearPreview=()=>{
+          host.dataset.previewing='false';host.querySelectorAll('.footprint-cell').forEach(cell=>cell.dataset.preview='false');
+          if(status&&!state.sizeError){const spec=state.sizeSpecs.footprint[state.selectedId];status.textContent=`Current footprint: ${spec.w} column${spec.w===1?'':'s'} × ${spec.h} row${spec.h===1?'':'s'}. Size belongs to this chart draft.`;}
+        };
+        host.querySelectorAll('.footprint-cell').forEach(button=>{
+          button.addEventListener('mouseenter',()=>preview(Number(button.dataset.col),Number(button.dataset.row),'pointer'));
+          button.addEventListener('focus',()=>preview(Number(button.dataset.col),Number(button.dataset.row),'focus'));
+          button.addEventListener('click',()=>applyFootprint(button));
+          button.addEventListener('keydown',event=>{
+            if(event.key==='Enter'||event.key===' '||event.key==='Spacebar'){event.preventDefault();applyFootprint(button);return;}
+            const movement={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];if(!movement)return;
+            event.preventDefault();const col=Number(button.dataset.col)+movement[0],row=Number(button.dataset.row)+movement[1];
+            if(col<1||col>4||row<1||row>2)return;
+            host.querySelector(`.footprint-cell[data-col="${col}"][data-row="${row}"]`)?.focus();
+          });
+        });
+        host.addEventListener('mouseleave',clearPreview);
+        host.addEventListener('focusout',()=>requestAnimationFrame(()=>{if(!host.contains(document.activeElement))clearPreview();}));
+      }
+
+      function applyFootprint(button) {
+        const orbitContext=captureOrbitContext(button),before=panelRects(),p=panel(state.selectedId),spec=state.sizeSpecs.footprint[p.id];
+        const w=Number(button.dataset.col),h=Number(button.dataset.row);
+        if(spec.w===w&&spec.h===h&&!state.invalidSizeAttempt){toast(`${w} × ${h} is already the current chart footprint; order unchanged.`);return;}
+        Object.assign(spec,{w,h});state.sizeError='';state.invalidSizeAttempt=false;state.saveFailed=false;state.packingModel='footprint';packFootprints(false);
+        recomputeDirty(); renderDashboard(); animateGridFrom(before); renderEditor();
+        positionEditor(true); requestAnimationFrame(()=>requestAnimationFrame(()=>positionEditor(true)));
+        restoreOrbitContext(orbitContext);
+        toast(`${state.saved[p.id].title} set to ${w} column${w===1?'':'s'} × ${h} row${h===1?'':'s'}. Chart draft updated; layout order unchanged.`);
+      }
+
+      function packFootprints(announce=true) {
+        const cols=4,occupied=[];
+        const fits=(x,y,w,h)=>{if(x+w-1>cols)return false;for(let row=y;row<y+h;row++)for(let col=x;col<x+w;col++)if(occupied[row]?.[col])return false;return true;};
+        const occupy=(x,y,w,h)=>{for(let row=y;row<y+h;row++){occupied[row]??=[];for(let col=x;col<x+w;col++)occupied[row][col]=true;}};
+        [...targets].sort((a,b)=>a.order-b.order).forEach(p=>{
+          const spec=state.sizeSpecs.footprint[p.id];let placed=false;
+          for(let y=1;!placed;y++)for(let x=1;x<=cols;x++)if(fits(x,y,spec.w,spec.h)){Object.assign(p,{x,y,w:spec.w,h:spec.h});occupy(x,y,spec.w,spec.h);placed=true;break;}
+        });
+        grid.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';grid.style.gridTemplateRows=`repeat(${Math.max(2,...targets.map(p=>p.y+p.h-1))},270px)`;
+        if(announce)toast('Charts repacked deterministically across four tracks while retaining order and individual footprints.');
+      }
+
+      function testInvalidSize() {
+        if(!state.sizeActive)enterSizing();
+        state.sizeError='5 columns × 2 rows exceeds the universal 4 × 2 footprint boundary. The last-good chart footprint is unchanged.';
+        state.invalidSizeAttempt=true;state.saveFailed=false;recomputeDirty();
+        const context=captureOrbitContext();renderBuildBar();renderEditor();restoreOrbitContext(context,{validOptionFallback:true});
+        toast(state.sizeError);
+      }
+
+      function panelRects() { return Object.fromEntries($$('.dash-panel').map(el=>[el.dataset.panelId,el.getBoundingClientRect()])); }
+      function animateGridFrom(before) {
+        if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        requestAnimationFrame(()=>$$('.dash-panel').forEach(el=>{
+          const a=before[el.dataset.panelId], b=el.getBoundingClientRect(); if(!a||!b.width||!b.height) return;
+          const dx=a.left-b.left, dy=a.top-b.top, sx=a.width/b.width, sy=a.height/b.height;
+          if(Math.abs(dx)<1&&Math.abs(dy)<1&&Math.abs(sx-1)<.01&&Math.abs(sy-1)<.01) return;
+          el.animate([{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,transformOrigin:'top left'},{transform:'none',transformOrigin:'top left'}],{duration:260,easing:'cubic-bezier(.2,.75,.2,1)'});
+        }));
+      }
+
+      function reorderPanelTo(movingId,destinationId,{announce=false}={}) {
+        const ordered=[...targets].sort((a,b)=>a.order-b.order),from=ordered.findIndex(p=>p.id===movingId),destination=ordered.findIndex(p=>p.id===destinationId);
+        const to=ordered.filter(p=>p.id!==movingId).findIndex(p=>p.id===destinationId)+(from<destination?1:0);
+        return reorderPanelToIndex(movingId,to,{announce,destinationId});
+      }
+
+      function reorderPanelToIndex(movingId,toIndex,{announce=false,destinationId=null}={}) {
+        const ordered=[...targets].sort((a,b)=>a.order-b.order), from=ordered.findIndex(p=>p.id===movingId), remaining=ordered.filter(p=>p.id!==movingId);
+        const to=Math.max(0,Math.min(remaining.length,toIndex));
+        if(from<0 || (to===from || (from===ordered.length-1&&to===remaining.length))) return false;
+        const before=panelRects();
+        const identities=remaining.map(p=>p.id); identities.splice(to,0,movingId);
+        identities.forEach((id,index)=>Object.assign(panel(id),{order:index+1}));
+        packFootprints(false);
+        state.layoutFocusId=movingId; state.layoutPreset='custom'; recomputeDirty();
+        renderDashboard(); animateGridFrom(before);
+        if(announce) {
+          toast(`${state.saved[movingId].title} moved to position ${to+1}. Other charts retain their relative order and semantic sizes.`);
+          requestAnimationFrame(()=>$(`#panel-${movingId} .panel-select`)?.focus());
+        }
+        return true;
+      }
+
+      function emptyDropRegions(movingId) {
+        const cols=state.packingModel==='footprint'?4:12, rows=Math.max(2,...targets.map(p=>p.y+p.h-1));
+        const occupied=Array.from({length:rows},()=>Array(cols).fill(false));
+        targets.filter(p=>p.id!==movingId).forEach(p=>{for(let y=p.y-1;y<p.y-1+p.h;y++)for(let x=p.x-1;x<p.x-1+p.w;x++)if(occupied[y])occupied[y][x]=true;});
+        const remaining=[...targets].filter(p=>p.id!==movingId).sort((a,b)=>a.order-b.order), regions=[];
+        occupied.forEach((row,y)=>{let x=0;while(x<cols){if(row[x]){x++;continue;}const start=x;while(x<cols&&!row[x])x++;const next=remaining.findIndex(p=>p.y-1>y||(p.y-1===y&&p.x-1>=start));const index=next<0?remaining.length:next;regions.push({x:start+1,y:y+1,w:x-start,index});}});
+        return regions;
+      }
+
+      function renderEmptyDropZones() {
+        const host=$('#gridDropZones'); if(!host||!state.draggingId)return;
+        const remainingCount=targets.length-1;
+        host.innerHTML=emptyDropRegions(state.draggingId).map((r,i)=>`<div class="grid-drop-zone" data-insert-index="${r.index}" data-active="${state.dropInsertIndex===r.index}" style="grid-column:${r.x}/span ${r.w};grid-row:${r.y}" aria-label="${r.index===remainingCount?'Append':`Move to position ${r.index+1}`}">${r.index===remainingCount?'Append':`Move to position ${r.index+1}`}</div>`).join('');
+      }
+
+      function beginDirectPointer(event,id) {
+        if(state.uiMode!=='build'||state.preview||state.saving||!state.suspended) return;
+        if(event.pointerType==='mouse'&&event.button!==0) return;
+        dragSession={pointerId:event.pointerId,id,startX:event.clientX,startY:event.clientY,moved:false,originalOrder:captureOrder(),originalPreset:state.layoutPreset,previewIndex:null,previewTargetId:null};
+        document.addEventListener('pointermove',trackDirectPointer,{passive:false});
+        document.addEventListener('pointerup',finishDirectPointer);
+        document.addEventListener('pointercancel',cancelDirectDrag);
+      }
+
+      function trackDirectPointer(event) {
+        if(!dragSession||event.pointerId!==dragSession.pointerId) return;
+        const distance=Math.hypot(event.clientX-dragSession.startX,event.clientY-dragSession.startY);
+        if(!dragSession.moved&&distance<7) return;
+        event.preventDefault();
+        if(!dragSession.moved){dragSession.moved=true;state.draggingId=dragSession.id;body.dataset.dragging='true';renderDashboard();}
+        const point=document.elementFromPoint(event.clientX,event.clientY);
+        const zone=point?.closest('.grid-drop-zone'), hit=point?.closest('.dash-panel');
+        let index=null,targetId=null;
+        if(zone&&grid.contains(zone)) index=Number(zone.dataset.insertIndex);
+        else if(hit&&grid.contains(hit)&&hit.dataset.panelId!==dragSession.id) {
+          targetId=hit.dataset.panelId;
+          const ordered=[...targets].sort((a,b)=>a.order-b.order),from=ordered.findIndex(p=>p.id===dragSession.id),destination=ordered.findIndex(p=>p.id===targetId);
+          index=ordered.filter(p=>p.id!==dragSession.id).findIndex(p=>p.id===targetId)+(from<destination?1:0);
+        }
+        if(index===null||index<0){
+          dragSession.previewIndex=null; dragSession.previewTargetId=null; state.dropInsertIndex=null; state.dropTargetId=null;
+          $$('.dash-panel').forEach(p=>p.dataset.drop='false'); $$('.grid-drop-zone').forEach(z=>z.dataset.active='false'); return;
+        }
+        dragSession.previewIndex=index; dragSession.previewTargetId=targetId; state.dropInsertIndex=index; state.dropTargetId=targetId;
+        $$('.dash-panel').forEach(p=>p.dataset.drop=String(p.dataset.panelId===targetId));
+        $$('.grid-drop-zone').forEach(z=>z.dataset.active=String(Number(z.dataset.insertIndex)===index&&!targetId));
+      }
+
+      function clearDirectPointerListeners() {
+        document.removeEventListener('pointermove',trackDirectPointer);
+        document.removeEventListener('pointerup',finishDirectPointer);
+        document.removeEventListener('pointercancel',cancelDirectDrag);
+      }
+
+      function finishDirectPointer(event) {
+        if(!dragSession||event.pointerId!==dragSession.pointerId) return;
+        const moved=dragSession.moved,id=dragSession.id,previewIndex=dragSession.previewIndex,previewTargetId=dragSession.previewTargetId; clearDirectPointerListeners(); dragSession=null;
+        if(!moved) return;
+        suppressClickUntil=performance.now()+450; state.draggingId=null; state.dropTargetId=null; state.dropInsertIndex=null; body.dataset.dragging='false';
+        const committed=previewIndex!==null&&reorderPanelToIndex(id,previewIndex,{announce:true,destinationId:previewTargetId});
+        if(!committed){renderDashboard();toast('Drop cancelled; chart order is unchanged.');}
+        renderEditor();
+        requestAnimationFrame(()=>$(`#panel-${id} .panel-select`)?.focus());
+      }
+
+      function cancelDirectDrag() {
+        if(!dragSession) return;
+        restoreOrder(dragSession.originalOrder); state.layoutPreset=dragSession.originalPreset; packFootprints(false); state.draggingId=null; state.dropTargetId=null; state.dropInsertIndex=null; body.dataset.dragging='false';
+        const id=dragSession.id; dragSession=null; clearDirectPointerListeners(); recomputeDirty(); renderDashboard(); renderEditor(); toast('Reorder cancelled; the previous draft arrangement is restored.');
+        requestAnimationFrame(()=>$(`#panel-${id} .panel-select`)?.focus());
+      }
+
+      function handleDirectKey(event,id) {
+        if(state.uiMode!=='build'||state.preview||state.saving||!state.suspended||!event.altKey) return;
+        const ordered=[...targets].sort((a,b)=>a.order-b.order),from=ordered.findIndex(p=>p.id===id);
+        if(event.key==='Home'||event.key==='End') {
+          event.preventDefault(); const to=event.key==='Home'?0:ordered.length-1;
+          if(from===to){toast(event.key==='Home'?'Already in the first position.':'Already in the last position.');return;}
+          reorderPanelToIndex(id,to,{announce:true}); renderEditor(); return;
+        }
+        const direction=['ArrowLeft','ArrowUp'].includes(event.key)?-1:['ArrowRight','ArrowDown'].includes(event.key)?1:0; if(!direction) return;
+        event.preventDefault();
+        const to=Math.max(0,Math.min(ordered.length-1,from+direction));
+        if(from===to){toast(direction<0?'Already in the first slot.':'Already in the last slot.');return;}
+        reorderPanelToIndex(id,to,{announce:true}); renderEditor();
+      }
+
+      const presets = {
+        balanced: ['bio_confirmed_cases','bio_r_values','bio_municipality_choropleth_animation','bio_region_comparison','bio_vaccination_rate','bio_hospital_load'],
+        map: ['bio_municipality_choropleth_animation','bio_confirmed_cases','bio_r_values','bio_region_comparison','bio_vaccination_rate','bio_hospital_load'],
+        signals: ['bio_r_values','bio_confirmed_cases','bio_hospital_load','bio_municipality_choropleth_animation','bio_region_comparison','bio_vaccination_rate']
+      };
+      function applyPreset(name) {
+        restoreOrder(presets[name]);state.packingModel='footprint';state.layoutPreset=name;packFootprints(false);recomputeDirty();
+        renderDashboard(); renderEditor(); toast(`${name[0].toUpperCase()+name.slice(1)} order preset applied. Chart footprints are preserved.`);
+      }
+
+      function saveCurrentPreset() {
+        const id=`session-${++state.presetCounter}`,name=`Session preset ${state.presetCounter}`;
+        state.userPresets[id]={name,order:captureOrder()};renderBuildBar();$('#loadPresetSelect').value=id;
+        toast(`${name} saved with chart order only. Footprints and the dashboard draft are unchanged.`);
+      }
+
+      function loadSelectedPreset() {
+        const id=$('#loadPresetSelect').value;
+        if(state.layoutDirty){state.pendingPreset=id;openScopeModal('replaceLayout','Loading this order preset replaces the current unsaved layout order. Chart properties and footprints are preserved.');return;}
+        performPresetLoad(id);
+      }
+
+      function performPresetLoad(id) {
+        if(presets[id]){applyPreset(id);return;}
+        const saved=state.userPresets[id]; if(!saved){toast('Choose an available order preset.');return;}
+        restoreOrder(saved.order);state.packingModel='footprint';state.layoutPreset=id;state.layoutFocusId=state.selectedId;packFootprints(false);recomputeDirty();renderDashboard();renderEditor();
+        toast(`${saved.name} loaded into the layout order draft. Chart footprints are preserved.`);
+      }
+
+      function renderCanonical() {
+        const p=panel(state.selectedId), v=currentValues();
+        $('#focusPreviewTitle').textContent=v.title;
+        $('#focusCanonical').replaceChildren();
+        requestAnimationFrame(()=>{renderFocusCanonical();renderHudCanonical();});
+      }
+
+      function canonicalClone(source) {
+        const clone=source.cloneNode(true); clone.removeAttribute('id'); clone.dataset.selected='false'; clone.setAttribute('aria-hidden','true');
+        clone.querySelectorAll('button').forEach(b=>{b.tabIndex=-1;b.style.pointerEvents='none';});
+        return clone;
+      }
+
+      function renderFocusCanonical() {
+        const source=$(`#panel-${state.selectedId}`), host=$('#focusCanonical'); if(!source||!host) return;
+        const rect=source.getBoundingClientRect(), scale=Math.min(1.35,Math.max(.2,(host.clientWidth-56)/rect.width),Math.max(.2,(host.clientHeight-56)/rect.height));
+        const fit=Math.min(scale,(host.clientWidth-56)/rect.width,(host.clientHeight-56)/rect.height);
+        const box=document.createElement('div'); box.className='focus-scale-box'; box.style.width=`${rect.width*fit}px`; box.style.height=`${rect.height*fit}px`;
+        const wrap=document.createElement('div'); wrap.className='focus-scaled-wrap'; wrap.style.width=`${rect.width}px`; wrap.style.height=`${rect.height}px`; wrap.style.transform=`scale(${fit})`; wrap.appendChild(canonicalClone(source)); box.appendChild(wrap);
+        host.replaceChildren(box);
+      }
+
+      function renderHudCanonical() {
+        const source=$(`#panel-${state.selectedId}`); if(!source) return;
+        const rect=source.getBoundingClientRect();
+        $$('.canonical-mini').forEach(el=>{
+          const available=Math.max(240,el.clientWidth||330), scale=Math.min(1,available/rect.width,190/rect.height);
+          el.style.height=`${Math.max(110,Math.round(rect.height*scale))}px`;
+          const clone=canonicalClone(source);
+          const wrap=document.createElement('div'); wrap.className='canonical-scaled'; wrap.style.width=`${rect.width}px`; wrap.style.height=`${rect.height}px`; wrap.style.transform=`scale(${scale})`; wrap.appendChild(clone);
+          el.replaceChildren(wrap);
+        });
+      }
+
+      function geometrySignature() { return targets.map(p=>`${p.id}:${p.x},${p.y},${p.w},${p.h},${p.order},${p.type}`).join('|'); }
+      function shortHash(s) { let h=2166136261; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(16).padStart(8,'0'); }
+      function renderParity() {
+        $('#parityCard').dataset.open=String(state.compare);
+        const sig=shortHash(geometrySignature());
+        const canvas=grid.getBoundingClientRect(), selected=$(`#panel-${state.selectedId}`)?.getBoundingClientRect();
+        const bounds=selected?`${Math.round(selected.left-canvas.left)},${Math.round(selected.top-canvas.top)},${Math.round(selected.width)},${Math.round(selected.height)}`:'—';
+        const tracks=state.packingModel==='footprint'?4:Math.max(...targets.map(p=>p.x+p.w-1)), rows=Math.max(2,...targets.map(p=>p.y+p.h-1));
+        $('#parityMetrics').innerHTML=`<span>Canvas DOMRect<b>${Math.round(canvas.width)} × ${Math.round(canvas.height)} px</b></span><span>Grid<b>${tracks} × ${rows}</b></span><span>Selected x/y/w/h<b>${bounds}</b></span><span>Model + order<b>${sig} = ${sig}</b></span><span>Plot fixtures<b>6 / 6 exact</b></span>`;
+        $('#compareButton').setAttribute('aria-pressed',String(state.compare));
+      }
+
+      function positionEditor(allowRecenter=false) {
+        if(state.variant==='C'||state.uiMode!=='build'||state.suspended||state.preview)return;
+        const selected=$(`#panel-${state.selectedId}`); if(!selected) return;
+        const gridRect=grid.getBoundingClientRect();
+        const r={left:gridRect.left+selected.offsetLeft,top:gridRect.top+selected.offsetTop,width:selected.offsetWidth,height:selected.offsetHeight}; r.right=r.left+r.width;r.bottom=r.top+r.height;
+        const ew=Math.min(390,innerWidth-24), gap=12, margin=12, reviewRect=reviewBar.getBoundingClientRect(), topSafe=Math.max(margin,Math.ceil(reviewRect.bottom)+8), bottomSafe=innerHeight-margin;
+        editorPort.style.setProperty('--orbit-max-h',`${Math.max(44,bottomSafe-topSafe)}px`);
+        const naturalHeight=Math.min(editorPort.scrollHeight||editorPort.offsetHeight||560,bottomSafe-topSafe), eh=Math.max(44,naturalHeight);
+        if(state.variant==='B') {
+          const panelMid=r.left+r.width/2; const left=panelMid>innerWidth/2?margin:innerWidth-ew-margin;
+          editorPort.style.left=`${Math.max(margin,left)}px`; editorPort.style.right='auto';
+          updateSubstituteVisibility(); requestAnimationFrame(updateSubstituteVisibility); return;
+        }
+        if(state.variant==='C') return;
+        const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+        const subheaderRect=$('#modeSubheader').getBoundingClientRect();
+        const protectedChrome=subheaderRect.width>0&&subheaderRect.height>0&&subheaderRect.bottom>topSafe&&subheaderRect.top<bottomSafe?subheaderRect:null;
+        editorPort.dataset.protectedChrome=String(Boolean(protectedChrome));
+        const blockers=protectedChrome?[r,protectedChrome]:[r];
+        const intersects=(c,b)=>!(c.left+ew<=b.left||c.left>=b.right||c.top+eh<=b.top||c.top>=b.bottom);
+        const candidates=[
+          {left:r.right+gap,top:clamp(r.top,topSafe,innerHeight-eh-margin)}, {left:r.left-ew-gap,top:clamp(r.top,topSafe,innerHeight-eh-margin)},
+          {left:clamp(r.left,margin,innerWidth-ew-margin),top:clamp(r.bottom+gap,topSafe,innerHeight-eh-margin)}, {left:clamp(r.left,margin,innerWidth-ew-margin),top:clamp(r.top-eh-gap,topSafe,innerHeight-eh-margin)},
+          {left:margin,top:clamp(r.top,topSafe,innerHeight-eh-margin)}, {left:innerWidth-ew-margin,top:clamp(r.top,topSafe,innerHeight-eh-margin)}
+        ];
+        const viable=candidates.filter(c=>c.left>=margin&&c.top>=topSafe&&c.left+ew<=innerWidth-margin&&c.top+eh<=innerHeight-margin);
+        const fit=viable.find(c=>blockers.every(b=>!intersects(c,b)));
+        let chosen=fit;
+        if(!chosen){
+          const bands=blockers.map(b=>({top:Math.max(topSafe,b.top-gap),bottom:Math.min(bottomSafe,b.bottom+gap)})).filter(b=>b.bottom>b.top).sort((a,b)=>a.top-b.top);
+          const merged=[];bands.forEach(b=>{const last=merged.at(-1);if(last&&b.top<=last.bottom)last.bottom=Math.max(last.bottom,b.bottom);else merged.push({...b});});
+          const clearRegions=[];let cursor=topSafe;merged.forEach(b=>{if(b.top>cursor)clearRegions.push({top:cursor,height:b.top-cursor});cursor=Math.max(cursor,b.bottom);});if(cursor<bottomSafe)clearRegions.push({top:cursor,height:bottomSafe-cursor});
+          const clear=clearRegions.sort((a,b)=>b.height-a.height)[0]||{top:topSafe,height:Math.max(1,bottomSafe-topSafe)};
+          const minimumUsableHeight=Math.min(280,bottomSafe-topSafe);
+          if(allowRecenter&&clear.height<minimumUsableHeight&&!orbitRecenterPending&&dirtyModal.dataset.open!=='true'&&r.top>margin+1){
+            orbitRecenterPending=true;scrollBy({top:r.top-margin,left:0,behavior:'auto'});
+            requestAnimationFrame(()=>{orbitRecenterPending=false;positionEditor(false);});return;
+          }
+          editorPort.style.setProperty('--orbit-max-h',`${clear.height}px`);
+          chosen={left:clamp(r.left,margin,innerWidth-ew-margin),top:clear.top};
+        }
+        editorPort.style.left=`${chosen.left}px`; editorPort.style.top=`${chosen.top}px`; editorPort.style.right='auto'; editorPort.style.bottom='auto';
+        editorPort.dataset.placement='selected-clear';
+      }
+
+      function updateSubstituteVisibility() {
+        const selected=$(`#panel-${state.selectedId}`), port=editorPort; if(!selected||!port) return;
+        const a=selected.getBoundingClientRect(), b=port.getBoundingClientRect();
+        const obscured=innerWidth<860 || !(b.right<=a.left||b.left>=a.right||b.bottom<=a.top||b.top>=a.bottom);
+        $$('.canonical-substitute').forEach(el=>el.dataset.show=String(obscured));
+        if(obscured) renderHudCanonical();
+      }
+
+      function setVariant(v) {
+        state.variant=v; state.sizeActive=false; state.dropInsertIndex=null; state.dropTargetId=null; body.dataset.variant=v; body.dataset.sizingActive='false';
+        $$('.variant-tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.variant===v)));
+        const concepts={
+          A:['Approved winner','Unit Orbit','The chart-local editor owns the selected chart’s properties and footprint. Direct reorder and order-only dashboard presets remain in the shared Build foundation.'],
+          B:['Preserved rejected alternative','Tactical HUD','A least-complex portalled HUD owns the selected chart’s properties and footprint. Direct reorder and order-only dashboard presets remain in the shared Build foundation.'],
+          C:['Preserved rejected alternative','Focus Bay','A full-viewport bay pairs a faithful canonical substitute with chart-owned properties and footprint. Direct reorder and order-only dashboard presets remain in the shared Build foundation.']
+        };
+        [$('#conceptEyebrow').textContent,$('#conceptTitle').textContent,$('#conceptDescription').textContent]=concepts[v];
+        renderEditor(); renderDashboard();
+      }
+
+      function requestUiMode(mode) {
+        if(mode===state.uiMode) return;
+        if(mode==='view' && state.dirty){
+          state.pendingTarget=null;state.pendingMode=mode;continueViewResolution();return;
+        }
+        setUiMode(mode);
+      }
+      function setUiMode(mode) {
+        state.uiMode=mode; state.dropInsertIndex=null; state.dropTargetId=null; state.draggingId=null; body.dataset.uiMode=mode; body.dataset.dragging='false';
+        if(mode==='view'){ state.suspended=false; state.preview=false; body.dataset.suspended='false'; body.dataset.preview='false'; }
+        else { state.suspended=true; body.dataset.suspended='true'; }
+        syncModeButtons(); renderBuildBar(); renderParity();
+      }
+      function syncModeButtons(){ $$('.mode-button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.uiMode===state.uiMode))); }
+      function syncGlobalAvailability(){
+        $('#targetSelect').disabled=state.saving; $('#taskStep').disabled=state.saving; $('#resetButton').disabled=state.saving;
+        $$('.mode-button').forEach(b=>b.disabled=state.saving);
+        $('#prototypeInvalidSizeButton').disabled=state.saving;
+        $$('.orbit-done,.footprint-cell').forEach(b=>b.disabled=state.saving);
+      }
+
+      function reset() {
+        initial.forEach(src=>Object.assign(panel(src.id),JSON.parse(JSON.stringify(src))));
+        targets.forEach(p=>state.saved[p.id]=pickEditable(p));
+        Object.assign(state,{variant:'A',uiMode:'build',selectedId:editableIds[0],advanced:false,suspended:true,preview:false,compare:false,dirty:false,panelDirty:false,contentDirty:false,sizeDirty:false,layoutDirty:false,pendingTarget:null,pendingMode:null,pendingScope:null,pendingPreset:null,saving:false,draft:{},savedOrder:captureOrder(),layoutPreset:'balanced',savedLayoutPreset:'balanced',simulatedFailure:false,saveFailed:false,layoutFocusId:editableIds[0],draggingId:null,dropTargetId:null,dropInsertIndex:null,userPresets:{},presetCounter:0,sizingModel:'footprint',packingModel:'footprint',sizeActive:false,sizeError:'',invalidSizeAttempt:false,sizeSpecs:makeSizeSpecs(),savedSizeSpecs:makeSizeSpecs()});
+        Object.assign(body.dataset,{variant:'A',uiMode:'build',suspended:'true',preview:'false',dragging:'false',sizingActive:'false',sizingModel:'footprint'});
+        grid.style.gridTemplateColumns='repeat(4,minmax(0,1fr))'; grid.style.gridTemplateRows='repeat(3,270px)';
+        $('#targetSelect').value=state.selectedId; $('#taskStep').value='select'; dirtyModal.dataset.open='false';
+        setVariant('A'); syncModeButtons(); toast('Sketch reset to the shared Build baseline and Variant A.');
+      }
+
+      function toast(text) { const el=$('#toast'); el.textContent=text; el.dataset.show='true'; clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.dataset.show='false',2400); }
+
+      function populateTargets() {
+        $('#targetSelect').innerHTML=editableIds.map(id=>`<option value="${id}">${id}</option>`).join('');
+        $('#targetSelect').value=state.selectedId;
+      }
+
+      function taskStep(value) {
+        if(value==='select') { state.suspended=true; body.dataset.suspended='true'; renderEditor(); requestAnimationFrame(()=>$('#targetSelect').focus()); }
+        if(value==='local') { reopenEditor(); requestAnimationFrame(()=>activeEditorRoot()?.querySelector('#titleField')?.focus()); }
+        if(value==='save') { reopenEditor(); requestAnimationFrame(()=>activeEditorRoot()?.querySelector('.save-button')?.focus()); }
+        if(value==='layout') { state.suspended=true;body.dataset.suspended='true';renderEditor();toast('Drag a chart title to another slot, or use Alt + Arrow keys. Order-only presets are in the Build subheader.');requestAnimationFrame(()=>$(`#panel-${state.layoutFocusId} .panel-select`)?.focus()); }
+      }
+
+      $$('.variant-tab').forEach(b=>b.addEventListener('click',()=>setVariant(b.dataset.variant)));
+      $$('.mode-button').forEach(b=>b.addEventListener('click',()=>requestUiMode(b.dataset.uiMode)));
+      $('#targetSelect').addEventListener('change',e=>requestTarget(e.target.value));
+      $('#taskStep').addEventListener('change',e=>taskStep(e.target.value));
+      $('#compareButton').addEventListener('click',()=>{state.compare=!state.compare;renderParity();});
+      $('#resetButton').addEventListener('click',reset);
+      $('#reopenButton').addEventListener('click',reopenEditor);
+      $('#suspendSave').addEventListener('click',()=>savePanelChanges());
+      $('#suspendDiscard').addEventListener('click',discardPanelChanges);
+      $('#exitPreviewButton').addEventListener('click',reopenEditor);
+      $('#buildSaveButton').addEventListener('click',()=>saveLayoutChanges());
+      $('#buildDiscardButton').addEventListener('click',discardLayoutChanges);
+      $('#buildPreviewButton').addEventListener('click',()=>state.preview?reopenEditorFromPreview():enterPreview());
+      $('#savePresetButton').addEventListener('click',saveCurrentPreset);
+      $('#loadPresetButton').addEventListener('click',loadSelectedPreset);
+      $('#prototypeInvalidSizeButton').addEventListener('click',testInvalidSize);
+      $('#modalSave').addEventListener('click',()=>resolvePending(false));
+      $('#modalDiscard').addEventListener('click',()=>resolvePending(true));
+      $('#modalStay').addEventListener('click',closeDirtyModal);
+      $$('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)));
+      addEventListener('resize',()=>{updateReviewHeight();positionEditor(true);renderCanonical();},{passive:true});
+      addEventListener('scroll',()=>positionEditor(false),{passive:true});
+      editorPort.addEventListener('transitionend',updateSubstituteVisibility);
+      document.addEventListener('keydown',e=>{
+        if(e.key!=='Escape') return;
+        if(dragSession){e.preventDefault();cancelDirectDrag();return;}
+        if(dirtyModal.dataset.open==='true'){ e.preventDefault(); closeDirtyModal(); return; }
+        if(state.preview){ e.preventDefault(); reopenEditorFromPreview(); return; }
+        if(state.suspended) return;
+        if(state.advanced){ e.preventDefault(); state.advanced=false; renderEditor(); requestAnimationFrame(()=>activeEditorRoot()?.querySelector('#advancedToggle')?.focus()); return; }
+        if(state.uiMode==='build'){ e.preventDefault(); suspendEditor(); }
+      });
+      dirtyModal.addEventListener('keydown',e=>{
+        if(e.key!=='Tab') return; const controls=[...dirtyModal.querySelectorAll('button')]; const first=controls[0],last=controls.at(-1);
+        if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();} else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+      });
+      updateReviewHeight(); populateTargets(); setVariant('A'); syncModeButtons(); renderParity();
+    })();
+  </script>
+</body>
+</html>
