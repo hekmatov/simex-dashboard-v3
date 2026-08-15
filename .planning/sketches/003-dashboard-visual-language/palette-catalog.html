@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 003 · Palette catalogue</title>
+  <meta name="description" content="Exact Light and Dark token tables for the 15 approved Sketch 003 dashboard palettes.">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #e9ecef;
+      --surface: #ffffff;
+      --surface-raised: #f7f8f9;
+      --ink: #1b2228;
+      --muted: #5b6670;
+      --rule: #bac2c9;
+      --rule-strong: #68747f;
+      --accent: #214f69;
+      --accent-soft: #dceaf1;
+      --focus: #006da3;
+      --shadow: 0 14px 40px rgb(25 34 40 / 12%);
+      --chip-bg: #f1f3f4;
+      --sticky: #f7f8f9;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #12171b;
+      --surface: #1c2328;
+      --surface-raised: #252d33;
+      --ink: #eef3f5;
+      --muted: #b5c0c6;
+      --rule: #4e5a62;
+      --rule-strong: #89969e;
+      --accent: #92c8df;
+      --accent-soft: #263f4b;
+      --focus: #7dd3fc;
+      --shadow: 0 18px 48px rgb(0 0 0 / 32%);
+      --chip-bg: #303940;
+      --sticky: #252d33;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-width: 0;
+      background: var(--page);
+    }
+
+    body {
+      min-width: 0;
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 56%, transparent), transparent 42rem),
+        var(--page);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    a,
+    button {
+      transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease,
+        transform 150ms ease;
+    }
+
+    a {
+      color: var(--accent);
+      text-underline-offset: 0.18em;
+    }
+
+    a:hover {
+      text-decoration-thickness: 0.14em;
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 20;
+      top: 0.75rem;
+      left: 0.75rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.4rem;
+      color: var(--surface);
+      background: var(--ink);
+      transform: translateY(-180%);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .page-shell {
+      width: min(100%, 1920px);
+      margin: 0 auto;
+      padding: clamp(1rem, 2.5vw, 2.75rem);
+    }
+
+    .masthead {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1.5rem;
+      align-items: start;
+      margin-bottom: 1.5rem;
+      padding: clamp(1.25rem, 2.4vw, 2.5rem);
+      border: 1px solid var(--rule);
+      border-radius: 0.8rem;
+      background: color-mix(in srgb, var(--surface) 96%, transparent);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.45rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 750;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 24ch;
+      margin-bottom: 0.65rem;
+      font-size: clamp(1.9rem, 4vw, 3.7rem);
+      font-weight: 720;
+      letter-spacing: -0.035em;
+      line-height: 1.02;
+    }
+
+    h2 {
+      margin-bottom: 0.35rem;
+      font-size: clamp(1.45rem, 2vw, 2rem);
+      letter-spacing: -0.02em;
+    }
+
+    h3 {
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+    }
+
+    .lede {
+      max-width: 82ch;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .masthead-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.65rem;
+    }
+
+    .button,
+    .mode-button {
+      min-height: 2.65rem;
+      padding: 0.58rem 0.82rem;
+      border: 1px solid var(--rule-strong);
+      border-radius: 0.45rem;
+      color: var(--ink);
+      background: var(--surface);
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 680;
+      line-height: 1.2;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .button:hover,
+    .mode-button:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .mode-button[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--surface);
+      background: var(--accent);
+    }
+
+    .appearance-control {
+      display: inline-flex;
+      gap: 0.25rem;
+      padding: 0.25rem;
+      border: 1px solid var(--rule);
+      border-radius: 0.6rem;
+      background: var(--surface-raised);
+    }
+
+    .appearance-control .mode-button {
+      min-height: 2.15rem;
+      border-color: transparent;
+    }
+
+    .support-grid {
+      display: grid;
+      grid-template-columns: minmax(18rem, 1.2fr) minmax(28rem, 2fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .support-card {
+      padding: 1.15rem 1.25rem;
+      border: 1px solid var(--rule);
+      border-radius: 0.7rem;
+      background: var(--surface);
+    }
+
+    .support-card p:last-child,
+    .support-card ul:last-child {
+      margin-bottom: 0;
+    }
+
+    .support-card ul {
+      margin-top: 0;
+      padding-left: 1.25rem;
+      color: var(--muted);
+    }
+
+    .legend-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem 1rem;
+      margin: 0;
+    }
+
+    .legend-list div {
+      min-width: 0;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .legend-list dt {
+      display: inline;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.77rem;
+      font-weight: 800;
+    }
+
+    .legend-list dd {
+      display: inline;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .catalogue-section {
+      margin: 0 0 2.5rem;
+      scroll-margin-top: 1rem;
+    }
+
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem 1.5rem;
+      align-items: end;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-heading p {
+      max-width: 68ch;
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .table-scroll {
+      max-width: 100%;
+      max-height: min(72vh, 760px);
+      overflow: auto;
+      overscroll-behavior: contain;
+      border: 1px solid var(--rule-strong);
+      border-radius: 0.65rem;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      scrollbar-color: var(--rule-strong) var(--surface-raised);
+    }
+
+    .table-scroll:focus-visible {
+      outline-offset: 4px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1440px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.86rem;
+    }
+
+    caption {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    th,
+    td {
+      padding: 0.85rem 1rem;
+      border-right: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    thead th {
+      position: sticky;
+      z-index: 4;
+      top: 0;
+      color: var(--ink);
+      background: var(--sticky);
+      box-shadow: inset 0 -1px var(--rule-strong);
+      font-size: 0.77rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    thead th:first-child {
+      z-index: 6;
+    }
+
+    tbody th {
+      position: sticky;
+      z-index: 2;
+      left: 0;
+      width: 15.5rem;
+      min-width: 15.5rem;
+      color: var(--ink);
+      background: var(--surface);
+      box-shadow: inset -1px 0 var(--rule);
+      font-size: 0.95rem;
+      line-height: 1.3;
+    }
+
+    tbody tr:hover td,
+    tbody tr:hover th {
+      background-color: color-mix(in srgb, var(--accent-soft) 42%, var(--surface));
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .surface-tokens {
+      min-width: 810px;
+    }
+
+    .series-tokens {
+      min-width: 410px;
+    }
+
+    code {
+      display: inline;
+      color: inherit;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .token {
+      display: inline-flex;
+      gap: 0.28rem;
+      align-items: center;
+      margin-inline: 0.08rem;
+      padding: 0.05rem 0.2rem 0.05rem 0.12rem;
+      border-radius: 0.25rem;
+      background: var(--chip-bg);
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 0.72rem;
+      height: 0.72rem;
+      flex: 0 0 auto;
+      border: 1px solid color-mix(in srgb, currentColor 44%, transparent);
+      border-radius: 0.16rem;
+      background: var(--swatch-color);
+    }
+
+    em {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .note {
+      padding: 1rem 1.15rem;
+      border-left: 0.35rem solid var(--accent);
+      color: var(--muted);
+      background: var(--accent-soft);
+    }
+
+    .page-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem 1.5rem;
+      padding: 1.25rem 0 0;
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 820px) {
+      .page-shell {
+        padding: 0.75rem;
+      }
+
+      .masthead {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .masthead-actions {
+        justify-content: flex-start;
+      }
+
+      .support-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .legend-list {
+        grid-template-columns: 1fr;
+      }
+
+      .table-scroll {
+        max-height: 68vh;
+      }
+
+      tbody th {
+        width: 12rem;
+        min-width: 12rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.001ms !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+
+    @media print {
+      :root,
+      html[data-theme="dark"] {
+        color-scheme: light;
+        --page: #ffffff;
+        --surface: #ffffff;
+        --surface-raised: #f5f5f5;
+        --ink: #111111;
+        --muted: #444444;
+        --rule: #aaaaaa;
+        --rule-strong: #555555;
+        --accent: #222222;
+        --accent-soft: #eeeeee;
+        --focus: #000000;
+        --shadow: none;
+        --chip-bg: #f4f4f4;
+        --sticky: #f5f5f5;
+      }
+
+      .appearance-control {
+        display: none;
+      }
+
+      .table-scroll {
+        max-height: none;
+        overflow: visible;
+        box-shadow: none;
+      }
+
+      table {
+        min-width: 0;
+        font-size: 7pt;
+      }
+
+      thead th,
+      tbody th {
+        position: static;
+      }
+
+      .surface-tokens,
+      .series-tokens {
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#catalogue-content">Skip to palette tables</a>
+  <div class="page-shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">V3 dashboard · Sketch 003 · Approved portfolio</p>
+        <h1>Dashboard palette catalogue</h1>
+        <p class="lede">The exact paint-token inventory for 15 approved, saveable palettes. Surface and UI colors remain independent of style grammar; Standard chart colors can independently override only D1–D6 in the dashboard.</p>
+      </div>
+      <nav class="masthead-actions" aria-label="Catalogue actions">
+        <a class="button" href="./index.html">Back to interactive sketch</a>
+        <a class="button" href="./PALETTE-CATALOG.md" download="PALETTE-CATALOG.md">Download Markdown source</a>
+        <div class="appearance-control" role="group" aria-label="Catalogue chrome appearance">
+          <button class="mode-button" type="button" data-theme-choice="light" aria-pressed="true">Light chrome</button>
+          <button class="mode-button" type="button" data-theme-choice="dark" aria-pressed="false">Dark chrome</button>
+        </div>
+      </nav>
+    </header>
+
+    <div class="support-grid">
+      <aside class="support-card" aria-labelledby="scope-heading">
+        <h2 id="scope-heading">Portfolio scope</h2>
+        <ul>
+          <li>15 approved, saveable palettes are included.</li>
+          <li>Original baseline is review-only and excluded.</li>
+          <li>Rejected Sunrise and Lakeside Contrast-tuned variants remain in the interactive sketch and are excluded here.</li>
+          <li>Inheritance notes identify palettes that share D1–D6 with another approved palette.</li>
+        </ul>
+      </aside>
+
+      <section class="support-card" aria-labelledby="legend-heading">
+        <h2 id="legend-heading">Token legend</h2>
+        <dl class="legend-list">
+          <div><dt>OUT</dt><dd> outer application</dd></div>
+          <div><dt>CAN</dt><dd> dashboard canvas</dd></div>
+          <div><dt>PAN</dt><dd> chart or panel</dd></div>
+          <div><dt>ALT</dt><dd> alternate panel</dd></div>
+          <div><dt>INK / INK-S / INK-F</dt><dd> primary, soft, and faint text</dd></div>
+          <div><dt>RULE / RULE+</dt><dd> standard and strong rules</dd></div>
+          <div><dt>ACC / ACC-S / ON-ACC</dt><dd> accent, soft accent, and content on accent</dd></div>
+          <div><dt>FOCUS</dt><dd> keyboard focus indicator</dd></div>
+          <div><dt>SEL / SEL-S</dt><dd> selected state pair</dd></div>
+          <div><dt>CHR / CHR-S</dt><dd> Chrono state pair</dd></div>
+          <div><dt>INFO / INFO-S</dt><dd> informational state pair</dd></div>
+          <div><dt>OK / OK-S</dt><dd> success state pair</dd></div>
+          <div><dt>WARN / WARN-S</dt><dd> warning state pair</dd></div>
+          <div><dt>ERR / ERR-S</dt><dd> error state pair</dd></div>
+          <div><dt>GRID / MARK</dt><dd> gridline and neutral chart-mark boundary</dd></div>
+          <div><dt>D1–D6</dt><dd> ordered chart-series slots</dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <main id="catalogue-content">
+      <section class="catalogue-section" id="light-variants" aria-labelledby="light-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">15 approved palettes</p>
+            <h2 id="light-heading">Light variants</h2>
+          </div>
+          <p>The dashboard appearance is Light; the catalogue chrome can be switched independently above.</p>
+        </div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Light palette token table. Scroll horizontally and vertically to inspect all values.">
+          <table id="palette-table-light">
+            <caption>Exact surface, UI, and chart-series colors for the 15 approved Light palette variants</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Surface/UI colors</th>
+                <th scope="col">Chart series colors</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="light-brighter-vellum">
+                <th scope="row">Brighter Vellum</th>
+                <td class="surface-tokens">Base: <code>OUT #eee9de · CAN #f7f2e8 · PAN #fffdf8 · ALT #faf6ec</code> Text/rules: <code>INK #1d2529 · INK-S #555a55 · INK-F #6d7069 · RULE #b7b0a2 · RULE+ #50595d</code> Controls: <code>ACC #2c383d · ACC-S #e8e4da · ON-ACC #fffdf8 · FOCUS #2c383d</code> States: <code>SEL #744740 · SEL-S #f0e2dc · CHR #62596b · CHR-S #e8e2e9 · INFO #58666b · INFO-S #e2e7e7 · OK #4e6655 · OK-S #e1e8e1 · WARN #7a6342 · WARN-S #eee7d8 · ERR #81514b · ERR-S #eee0dc</code> Chart frame: <code>GRID #ddd7cb · MARK #2c383d</code></td>
+                <td class="series-tokens"><code>D1 #667853 · D2 #8f704a · D3 #61746f · D4 #8b584e · D5 #77657e · D6 #7d7457</code></td>
+              </tr>
+              <tr id="light-ash-register">
+                <th scope="row">Ash Register</th>
+                <td class="surface-tokens">Base: <code>OUT #deded9 · CAN #e9e9e3 · PAN #faf9f4 · ALT #f1f0e9</code> Text/rules: <code>INK #202321 · INK-S #555a56 · INK-F #6e736e · RULE #aaa9a1 · RULE+ #4a4e4a</code> Controls: <code>ACC #303735 · ACC-S #e2e4df · ON-ACC #fbfaf5 · FOCUS #303735</code> States: <code>SEL #704b46 · SEL-S #e8ded9 · CHR #625c68 · CHR-S #e4e0e6 · INFO #59646a · INFO-S #e0e3e3 · OK #486252 · OK-S #dde6df · WARN #75603d · WARN-S #ede5d6 · ERR #794d49 · ERR-S #eadeda</code> Chart frame: <code>GRID #d4d3ca · MARK #303735</code></td>
+                <td class="series-tokens"><code>D1 #667853 · D2 #8f704a · D3 #61746f · D4 #8b584e · D5 #77657e · D6 #7d7457</code><br><em>Inherits Brighter Vellum for this appearance.</em></td>
+              </tr>
+              <tr id="light-cool-archive">
+                <th scope="row">Cool Archive</th>
+                <td class="surface-tokens">Base: <code>OUT #dfe3e1 · CAN #e9ece8 · PAN #fafaf6 · ALT #f1f3ef</code> Text/rules: <code>INK #1f2928 · INK-S #52605e · INK-F #687572 · RULE #a7b0ad · RULE+ #465551</code> Controls: <code>ACC #314743 · ACC-S #dce5e1 · ON-ACC #fafcf8 · FOCUS #314743</code> States: <code>SEL #73505d · SEL-S #e8dfe3 · CHR #5f5a73 · CHR-S #e3e1e9 · INFO #536a6c · INFO-S #dfe7e6 · OK #4d6758 · OK-S #dfe8e2 · WARN #786443 · WARN-S #ece6d9 · ERR #81544f · ERR-S #eddfdc</code> Chart frame: <code>GRID #d1d7d3 · MARK #314743</code></td>
+                <td class="series-tokens"><code>D1 #667853 · D2 #8f704a · D3 #61746f · D4 #8b584e · D5 #77657e · D6 #7d7457</code><br><em>Inherits Brighter Vellum for this appearance.</em></td>
+              </tr>
+              <tr id="light-common-ground">
+                <th scope="row">Common Ground</th>
+                <td class="surface-tokens">Base: <code>OUT #e6ece8 · CAN #f0f5f1 · PAN #fcfdfb · ALT #f2f7f3</code> Text/rules: <code>INK #1d2b2a · INK-S #52615e · INK-F #6d7975 · RULE #b7c5bf · RULE+ #61736d</code> Controls: <code>ACC #28635d · ACC-S #dcebe5 · ON-ACC #fafffc · FOCUS #155f91</code> States: <code>SEL #2c628e · SEL-S #dce9f4 · CHR #77618c · CHR-S #ebe3f0 · INFO #3c6a83 · INFO-S #e0ebf1 · OK #397059 · OK-S #dceae1 · WARN #8a641f · WARN-S #f4e9ce · ERR #9a4d52 · ERR-S #f4e0e1</code> Chart frame: <code>GRID #d6e0db · MARK #25423f</code></td>
+                <td class="series-tokens"><code>D1 #286b79 · D2 #a1693e · D3 #4f7b61 · D4 #9a5961 · D5 #6d66a0 · D6 #8b7944</code></td>
+              </tr>
+              <tr id="light-quiet-commons">
+                <th scope="row">Quiet Commons</th>
+                <td class="surface-tokens">Base: <code>OUT #e9e9e5 · CAN #f2f2ee · PAN #fcfbf8 · ALT #f5f4ef</code> Text/rules: <code>INK #252c2b · INK-S #59615f · INK-F #737a77 · RULE #c2c4be · RULE+ #69716e</code> Controls: <code>ACC #365e5a · ACC-S #e0e9e5 · ON-ACC #fbfdfa · FOCUS #205e86</code> States: <code>SEL #496b86 · SEL-S #e1e9ef · CHR #706779 · CHR-S #e9e5ec · INFO #536d7a · INFO-S #e4eaed · OK #4c6959 · OK-S #e1e9e3 · WARN #796337 · WARN-S #eee8d9 · ERR #80565a · ERR-S #eee1e2</code> Chart frame: <code>GRID #dadbd5 · MARK #344643</code></td>
+                <td class="series-tokens"><code>D1 #286b79 · D2 #a1693e · D3 #4f7b61 · D4 #9a5961 · D5 #6d66a0 · D6 #8b7944</code><br><em>Inherits Common Ground for this appearance.</em></td>
+              </tr>
+              <tr id="light-open-forum">
+                <th scope="row">Open Forum</th>
+                <td class="surface-tokens">Base: <code>OUT #e8e6ed · CAN #f2eff5 · PAN #fcfbfd · ALT #f5f2f8</code> Text/rules: <code>INK #282631 · INK-S #5d5968 · INK-F #777280 · RULE #c5bfcc · RULE+ #716a7c</code> Controls: <code>ACC #594f7e · ACC-S #e8e2f1 · ON-ACC #fdfbff · FOCUS #2d668e</code> States: <code>SEL #3f6f94 · SEL-S #deeaf2 · CHR #755c8d · CHR-S #ebe2f1 · INFO #4e6f84 · INFO-S #e0e9ee · OK #4d725f · OK-S #e0ebe5 · WARN #86632d · WARN-S #f1e8d5 · ERR #95545e · ERR-S #f1e0e3</code> Chart frame: <code>GRID #ddd8e2 · MARK #403a51</code></td>
+                <td class="series-tokens"><code>D1 #477b88 · D2 #a47149 · D3 #54806a · D4 #9a5e70 · D5 #705f9a · D6 #8d7a43</code></td>
+              </tr>
+              <tr id="light-calibrated-steel">
+                <th scope="row">Calibrated Steel</th>
+                <td class="surface-tokens">Base: <code>OUT #dce4e6 · CAN #e8edef · PAN #f8faf9 · ALT #edf2f2</code> Text/rules: <code>INK #17252b · INK-S #45585e · INK-F #5f7075 · RULE #aab9bd · RULE+ #536970</code> Controls: <code>ACC #285b67 · ACC-S #d7e6e8 · ON-ACC #ffffff · FOCUS #0b6f89</code> States: <code>SEL #8a4350 · SEL-S #f1dee2 · CHR #615484 · CHR-S #e6e1ef · INFO #3b6576 · INFO-S #dce9ed · OK #38705a · OK-S #dcebe2 · WARN #7a5b1a · WARN-S #f3e7c9 · ERR #93434a · ERR-S #f2dfe1</code> Chart frame: <code>GRID #d0dadd · MARK #253941</code></td>
+                <td class="series-tokens"><code>D1 #276f82 · D2 #a7602e · D3 #347557 · D4 #9c4f58 · D5 #665aa0 · D6 #7f6a25</code></td>
+              </tr>
+              <tr id="light-quiet-telemetry">
+                <th scope="row">Quiet Telemetry</th>
+                <td class="surface-tokens">Base: <code>OUT #e1e5e6 · CAN #ebeeef · PAN #fafbfb · ALT #f1f3f3</code> Text/rules: <code>INK #20292d · INK-S #505d61 · INK-F #687579 · RULE #b7c0c3 · RULE+ #5d6b70</code> Controls: <code>ACC #3d5b63 · ACC-S #dfe7e9 · ON-ACC #ffffff · FOCUS #2e6675</code> States: <code>SEL #73515a · SEL-S #eadfe2 · CHR #625d73 · CHR-S #e8e5ed · INFO #536a73 · INFO-S #e3e9eb · OK #4c6858 · OK-S #e0e8e3 · WARN #75613a · WARN-S #eee7d8 · ERR #7d5056 · ERR-S #ecdee1</code> Chart frame: <code>GRID #d8dcdd · MARK #354348</code></td>
+                <td class="series-tokens"><code>D1 #276f82 · D2 #a7602e · D3 #347557 · D4 #9c4f58 · D5 #665aa0 · D6 #7f6a25</code><br><em>Inherits Calibrated Steel for this appearance.</em></td>
+              </tr>
+              <tr id="light-amber-vector">
+                <th scope="row">Amber Vector</th>
+                <td class="surface-tokens">Base: <code>OUT #e2e3e5 · CAN #ececed · PAN #fbfaf9 · ALT #f2efed</code> Text/rules: <code>INK #2a2422 · INK-S #625650 · INK-F #7a6d66 · RULE #c1b6b0 · RULE+ #71615a</code> Controls: <code>ACC #6f4e43 · ACC-S #ebe0dc · ON-ACC #fffaf8 · FOCUS #205e79</code> States: <code>SEL #8a4054 · SEL-S #efdee3 · CHR #5f5680 · CHR-S #e7e2ef · INFO #42687a · INFO-S #dfe9ed · OK #416c59 · OK-S #dce9e1 · WARN #765c20 · WARN-S #f0e6cc · ERR #8c444b · ERR-S #f0dddf</code> Chart frame: <code>GRID #ded7d3 · MARK #493b36</code></td>
+                <td class="series-tokens"><code>D1 #2f7582 · D2 #a55f36 · D3 #397258 · D4 #9a4f65 · D5 #64589a · D6 #817022</code></td>
+              </tr>
+              <tr id="light-prismatic-index">
+                <th scope="row">Prismatic Index</th>
+                <td class="surface-tokens">Base: <code>OUT #e2e2e7 · CAN #eeeff2 · PAN #ffffff · ALT #f6f6f8</code> Text/rules: <code>INK #1e2028 · INK-S #545763 · INK-F #717480 · RULE #b8bbc4 · RULE+ #5c606c</code> Controls: <code>ACC #303745 · ACC-S #e5e7ec · ON-ACC #ffffff · FOCUS #005fcc</code> States: <code>SEL #47586b · SEL-S #e3e9ef · CHR #6b4d83 · CHR-S #eae2ef · INFO #27677b · INFO-S #e0eef2 · OK #2e6f50 · OK-S #dcede3 · WARN #7b5900 · WARN-S #f5e8be · ERR #a33b42 · ERR-S #f6dee1</code> Chart frame: <code>GRID #d7d8de · MARK #282b36</code></td>
+                <td class="series-tokens"><code>D1 #2f6db0 · D2 #b83d5a · D3 #26743f · D4 #7148a6 · D5 #9a6500 · D6 #007b80</code></td>
+              </tr>
+              <tr id="light-chromatic-polarity">
+                <th scope="row">Chromatic Polarity</th>
+                <td class="surface-tokens">Base: <code>OUT #ddd5cb · CAN #ebe2d7 · PAN #f7eee3 · ALT #e8ddd2</code> Text/rules: <code>INK #213238 · INK-S #4f5d5e · INK-F #626e6b · RULE #a9a390 · RULE+ #4e5b59</code> Controls: <code>ACC #6b3f68 · ACC-S #eadbe5 · ON-ACC #fff8eb · FOCUS #176f76</code> States: <code>SEL #8d3f65 · SEL-S #f0d8e4 · CHR #5d4c8a · CHR-S #e4def2 · INFO #246579 · INFO-S #d7e7e8 · OK #376c57 · OK-S #dbe9dd · WARN #875a12 · WARN-S #f4e4bb · ERR #9a3e47 · ERR-S #f3dadd</code> Chart frame: <code>GRID #d3cbb8 · MARK #23393d</code></td>
+                <td class="series-tokens"><code>D1 #0f6f78 · D2 #aa521b · D3 #7251a3 · D4 #41743f · D5 #a13c77 · D6 #806a18</code></td>
+              </tr>
+              <tr id="light-luminance-ladder">
+                <th scope="row">Luminance Ladder</th>
+                <td class="surface-tokens">Base: <code>OUT #ded8e7 · CAN #eae5ef · PAN #fffdf4 · ALT #f3efe0</code> Text/rules: <code>INK #201827 · INK-S #534a5c · INK-F #6f6478 · RULE #c4bacb · RULE+ #62556b</code> Controls: <code>ACC #5c2d82 · ACC-S #eadcf5 · ON-ACC #fff8ed · FOCUS #00718c</code> States: <code>SEL #a52d66 · SEL-S #f5dbe7 · CHR #006f72 · CHR-S #d9ece8 · INFO #3f568e · INFO-S #dfe6f5 · OK #3a7045 · OK-S #dfecdf · WARN #855800 · WARN-S #f4e5bd · ERR #9b3041 · ERR-S #f6dde0</code> Chart frame: <code>GRID #d8d0c6 · MARK #24182d</code></td>
+                <td class="series-tokens"><code>D1 #0a6c96 · D2 #560c34 · D3 #3ca21a · D4 #6d2b0b · D5 #8d5ede · D6 #5e5206</code></td>
+              </tr>
+              <tr id="light-sunrise-reference-faithful">
+                <th scope="row">Sunrise — Reference faithful</th>
+                <td class="surface-tokens">Base: <code>OUT #E8DDD2 · CAN #F4ECE3 · PAN #FFF9F2 · ALT #F7E8DD</code> Text/rules: <code>INK #2D1B23 · INK-S #65535A · INK-F #756168 · RULE #C9B5AE · RULE+ #735D65</code> Controls: <code>ACC #7F32BD · ACC-S #EADDF5 · ON-ACC #FFFFFF · FOCUS #2856A8</code> States: <code>SEL #9B3D35 · SEL-S #F5DDD8 · CHR #68458E · CHR-S #EADFF2 · INFO #345E9A · INFO-S #DEE8F5 · OK #3E6D49 · OK-S #DDEADF · WARN #785000 · WARN-S #F4E4BB · ERR #982F2C · ERR-S #F5DCD8</code> Chart frame: <code>GRID #D9C9C0 · MARK #37242C</code></td>
+                <td class="series-tokens"><code>D1 #FB8809 · D2 #D84420 · D3 #690001 · D4 #7F32BD · D5 #5770FF · D6 #87BEFF</code><br><em>Exact GraphPad solid-fill reference.</em></td>
+              </tr>
+              <tr id="light-lakeside-reference-faithful">
+                <th scope="row">Lakeside — Reference faithful</th>
+                <td class="surface-tokens">Base: <code>OUT #DDE4E3 · CAN #EAF0EE · PAN #F9FCF8 · ALT #EAF3EE</code> Text/rules: <code>INK #1E2E2B · INK-S #4D5E59 · INK-F #5F706B · RULE #B7C7C2 · RULE+ #526660</code> Controls: <code>ACC #2650CC · ACC-S #DDE5FA · ON-ACC #FFFFFF · FOCUS #8B4300</code> States: <code>SEL #246B72 · SEL-S #D9ECEC · CHR #526F3C · CHR-S #E1ECDA · INFO #2657A7 · INFO-S #DDE7F7 · OK #486A37 · OK-S #DFEAD9 · WARN #765500 · WARN-S #F4E6B7 · ERR #963E44 · ERR-S #F4DDDE</code> Chart frame: <code>GRID #CED9D4 · MARK #1F302D</code></td>
+                <td class="series-tokens"><code>D1 #2650CC · D2 #3D89DE · D3 #65C8E3 · D4 #81CE6D · D5 #5F7B49 · D6 #29331A</code><br><em>Exact GraphPad solid-fill reference.</em></td>
+              </tr>
+              <tr id="light-monochrome-reserve">
+                <th scope="row">Monochrome Reserve</th>
+                <td class="surface-tokens">Base: <code>OUT #d6d6d6 · CAN #eeeeee · PAN #ffffff · ALT #f6f6f6</code> Text/rules: <code>INK #151515 · INK-S #494949 · INK-F #5d5d5d · RULE #767676 · RULE+ #3e3e3e</code> Controls: <code>ACC #202020 · ACC-S #e2e2e2 · ON-ACC #ffffff · FOCUS #000000</code> States: <code>SEL #2e2e2e · SEL-S #e3e3e3 · CHR #424242 · CHR-S #ededed · INFO #4c4c4c · INFO-S #f0f0f0 · OK #373737 · OK-S #e6e6e6 · WARN #4a4a4a · WARN-S #ececec · ERR #272727 · ERR-S #e0e0e0</code> Chart frame: <code>GRID #c5c5c5 · MARK #222222</code></td>
+                <td class="series-tokens"><code>D1 #2f6db0 · D2 #b83d5a · D3 #26743f · D4 #7148a6 · D5 #9a6500 · D6 #007b80</code><br><em>Inherits Prismatic Index for this appearance.</em></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="catalogue-section" id="dark-variants" aria-labelledby="dark-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">15 approved palettes</p>
+            <h2 id="dark-heading">Dark variants</h2>
+          </div>
+          <p>The dashboard appearance is Dark; the catalogue chrome can be switched independently above.</p>
+        </div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Dark palette token table. Scroll horizontally and vertically to inspect all values.">
+          <table id="palette-table-dark">
+            <caption>Exact surface, UI, and chart-series colors for the 15 approved Dark palette variants</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Surface/UI colors</th>
+                <th scope="col">Chart series colors</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="dark-brighter-vellum">
+                <th scope="row">Brighter Vellum</th>
+                <td class="surface-tokens">Base: <code>OUT #181713 · CAN #211f1a · PAN #2b2922 · ALT #25231d</code> Text/rules: <code>INK #f5efe4 · INK-S #c9c1b3 · INK-F #aaa394 · RULE #746f64 · RULE+ #c2baab</code> Controls: <code>ACC #f0e9dc · ACC-S #3b3831 · ON-ACC #1d2428 · FOCUS #f5efe4</code> States: <code>SEL #d0a096 · SEL-S #493531 · CHR #c3b4ca · CHR-S #3f3944 · INFO #aab9bd · INFO-S #343e40 · OK #a8bda9 · OK-S #314035 · WARN #d1b482 · WARN-S #493d2c · ERR #d8a299 · ERR-S #4a3431</code> Chart frame: <code>GRID #4e4a40 · MARK #eee7da</code></td>
+                <td class="series-tokens"><code>D1 #a8b794 · D2 #c4aa82 · D3 #a2b2ad · D4 #c49a90 · D5 #b6a7bd · D6 #b9b08e</code></td>
+              </tr>
+              <tr id="dark-ash-register">
+                <th scope="row">Ash Register</th>
+                <td class="surface-tokens">Base: <code>OUT #151615 · CAN #1d1f1d · PAN #262825 · ALT #222421</code> Text/rules: <code>INK #ecebe4 · INK-S #c4c5bc · INK-F #a4a69c · RULE #686a63 · RULE+ #b8bab0</code> Controls: <code>ACC #e4e5dc · ACC-S #363a36 · ON-ACC #1b1d1b · FOCUS #ecebe4</code> States: <code>SEL #c59a91 · SEL-S #443733 · CHR #b8abbc · CHR-S #3c3740 · INFO #adb8bb · INFO-S #343b3d · OK #9eb5a3 · OK-S #2f3b32 · WARN #c3aa7e · WARN-S #443c2f · ERR #c99d96 · ERR-S #463533</code> Chart frame: <code>GRID #454841 · MARK #e2e2d9</code></td>
+                <td class="series-tokens"><code>D1 #a8b794 · D2 #c4aa82 · D3 #a2b2ad · D4 #c49a90 · D5 #b6a7bd · D6 #b9b08e</code><br><em>Inherits Brighter Vellum for this appearance.</em></td>
+              </tr>
+              <tr id="dark-cool-archive">
+                <th scope="row">Cool Archive</th>
+                <td class="surface-tokens">Base: <code>OUT #141817 · CAN #1c2220 · PAN #252c29 · ALT #202623</code> Text/rules: <code>INK #eef2ed · INK-S #c2cbc5 · INK-F #a1aca6 · RULE #65706b · RULE+ #b6c0ba</code> Controls: <code>ACC #e0e8e2 · ACC-S #343d39 · ON-ACC #19211f · FOCUS #eef2ed</code> States: <code>SEL #c39aaa · SEL-S #44343b · CHR #b2aac3 · CHR-S #393643 · INFO #9fb7b8 · INFO-S #2e3f40 · OK #9db7a8 · OK-S #2e4137 · WARN #c6b286 · WARN-S #443c2d · ERR #d0a09a · ERR-S #473431</code> Chart frame: <code>GRID #46504c · MARK #e2e9e3</code></td>
+                <td class="series-tokens"><code>D1 #a8b794 · D2 #c4aa82 · D3 #a2b2ad · D4 #c49a90 · D5 #b6a7bd · D6 #b9b08e</code><br><em>Inherits Brighter Vellum for this appearance.</em></td>
+              </tr>
+              <tr id="dark-common-ground">
+                <th scope="row">Common Ground</th>
+                <td class="surface-tokens">Base: <code>OUT #121a18 · CAN #19231f · PAN #222e29 · ALT #1d2824</code> Text/rules: <code>INK #eef5f1 · INK-S #becbc5 · INK-F #9caba4 · RULE #52655d · RULE+ #9aafa6</code> Controls: <code>ACC #8ed0c1 · ACC-S #2b4640 · ON-ACC #10211d · FOCUS #8fcaf0</code> States: <code>SEL #91c5ef · SEL-S #293f51 · CHR #c3add7 · CHR-S #40364a · INFO #9bcbe4 · INFO-S #2b414c · OK #98caae · OK-S #2b4234 · WARN #e1bd77 · WARN-S #4a3d26 · ERR #e8a0a7 · ERR-S #4c3034</code> Chart frame: <code>GRID #405149 · MARK #dcece5</code></td>
+                <td class="series-tokens"><code>D1 #7fc3cf · D2 #dfaa7e · D3 #91c2a2 · D4 #dfa0a7 · D5 #b8afe3 · D6 #c9ba7d</code></td>
+              </tr>
+              <tr id="dark-quiet-commons">
+                <th scope="row">Quiet Commons</th>
+                <td class="surface-tokens">Base: <code>OUT #171918 · CAN #202321 · PAN #292c29 · ALT #242724</code> Text/rules: <code>INK #f0f0eb · INK-S #c3c6c0 · INK-F #a2a7a0 · RULE #5b605b · RULE+ #a5aaa3</code> Controls: <code>ACC #a6cbc3 · ACC-S #33413d · ON-ACC #1a2320 · FOCUS #9ac9e8</code> States: <code>SEL #a9c8df · SEL-S #34424c · CHR #beb2c6 · CHR-S #403a43 · INFO #abc4d0 · INFO-S #354148 · OK #a4bda9 · OK-S #344039 · WARN #cfb782 · WARN-S #463f30 · ERR #d1a5a8 · ERR-S #49383a</code> Chart frame: <code>GRID #494d49 · MARK #e3e8e3</code></td>
+                <td class="series-tokens"><code>D1 #7fc3cf · D2 #dfaa7e · D3 #91c2a2 · D4 #dfa0a7 · D5 #b8afe3 · D6 #c9ba7d</code><br><em>Inherits Common Ground for this appearance.</em></td>
+              </tr>
+              <tr id="dark-open-forum">
+                <th scope="row">Open Forum</th>
+                <td class="surface-tokens">Base: <code>OUT #17151c · CAN #201d27 · PAN #292530 · ALT #24212b</code> Text/rules: <code>INK #f2eef5 · INK-S #c8c1cf · INK-F #a8a0b1 · RULE #605a69 · RULE+ #aba3b5</code> Controls: <code>ACC #c2b2e0 · ACC-S #3d364a · ON-ACC #211b2a · FOCUS #91c9ed</code> States: <code>SEL #99c8e7 · SEL-S #344657 · CHR #ceb2e0 · CHR-S #493852 · INFO #a8cbdd · INFO-S #34454e · OK #a2c7b1 · OK-S #304438 · WARN #dec080 · WARN-S #4b3f28 · ERR #e1a2ae · ERR-S #4c3238</code> Chart frame: <code>GRID #4b4554 · MARK #e5def0</code></td>
+                <td class="series-tokens"><code>D1 #86c0cc · D2 #dfae82 · D3 #91c0a5 · D4 #dea0b1 · D5 #b8abe1 · D6 #c9b873</code></td>
+              </tr>
+              <tr id="dark-calibrated-steel">
+                <th scope="row">Calibrated Steel</th>
+                <td class="surface-tokens">Base: <code>OUT #0d1518 · CAN #131e22 · PAN #1a272c · ALT #162126</code> Text/rules: <code>INK #edf4f5 · INK-S #bac8cb · INK-F #96a8ad · RULE #455a61 · RULE+ #8ca0a6</code> Controls: <code>ACC #86bbc4 · ACC-S #263f45 · ON-ACC #102126 · FOCUS #85ccd6</code> States: <code>SEL #e09aa7 · SEL-S #4a2e35 · CHR #c1afe4 · CHR-S #3a334b · INFO #99c9d7 · INFO-S #293e45 · OK #8bc7aa · OK-S #283f34 · WARN #e2bf72 · WARN-S #473a20 · ERR #f1a1a9 · ERR-S #4b2c31</code> Chart frame: <code>GRID #34484f · MARK #dbe8ea</code></td>
+                <td class="series-tokens"><code>D1 #72c0d0 · D2 #e3a170 · D3 #83c3a0 · D4 #e79ca7 · D5 #aea3e2 · D6 #ceb96b</code></td>
+              </tr>
+              <tr id="dark-quiet-telemetry">
+                <th scope="row">Quiet Telemetry</th>
+                <td class="surface-tokens">Base: <code>OUT #111719 · CAN #182024 · PAN #20292d · ALT #1b2327</code> Text/rules: <code>INK #edf1f2 · INK-S #bdc6c8 · INK-F #9ba6a9 · RULE #4a575b · RULE+ #929da0</code> Controls: <code>ACC #a7bcc1 · ACC-S #303c40 · ON-ACC #162023 · FOCUS #91c6d2</code> States: <code>SEL #cba4ad · SEL-S #41343a · CHR #b8b1c7 · CHR-S #39363f · INFO #a3bdc6 · INFO-S #323f44 · OK #a0baa9 · OK-S #304038 · WARN #ccb680 · WARN-S #443d2d · ERR #d1a2a7 · ERR-S #473538</code> Chart frame: <code>GRID #414b4e · MARK #dfe6e8</code></td>
+                <td class="series-tokens"><code>D1 #72c0d0 · D2 #e3a170 · D3 #83c3a0 · D4 #e79ca7 · D5 #aea3e2 · D6 #ceb96b</code><br><em>Inherits Calibrated Steel for this appearance.</em></td>
+              </tr>
+              <tr id="dark-amber-vector">
+                <th scope="row">Amber Vector</th>
+                <td class="surface-tokens">Base: <code>OUT #151314 · CAN #1d1a1b · PAN #282325 · ALT #211d1f</code> Text/rules: <code>INK #f2ece9 · INK-S #c9bbb5 · INK-F #aa9a93 · RULE #625451 · RULE+ #ae9b93</code> Controls: <code>ACC #d3a58f · ACC-S #49362f · ON-ACC #241711 · FOCUS #83c8df</code> States: <code>SEL #e3a0b1 · SEL-S #4b3039 · CHR #c0b2df · CHR-S #3c354b · INFO #9bc7d7 · INFO-S #2e4149 · OK #92c5aa · OK-S #2c4237 · WARN #dfbd75 · WARN-S #473c24 · ERR #eca3aa · ERR-S #4c2e33</code> Chart frame: <code>GRID #4c4140 · MARK #eaded9</code></td>
+                <td class="series-tokens"><code>D1 #78c1cc · D2 #e4a074 · D3 #88c1a0 · D4 #dfa0b0 · D5 #ada3df · D6 #cdbc6c</code></td>
+              </tr>
+              <tr id="dark-prismatic-index">
+                <th scope="row">Prismatic Index</th>
+                <td class="surface-tokens">Base: <code>OUT #111117 · CAN #181820 · PAN #202029 · ALT #272731</code> Text/rules: <code>INK #f1f1f6 · INK-S #c3c4ce · INK-F #9d9faa · RULE #4a4b58 · RULE+ #989aa7</code> Controls: <code>ACC #c8cbd6 · ACC-S #343741 · ON-ACC #181a23 · FOCUS #85b6ff</code> States: <code>SEL #acc0d4 · SEL-S #33414e · CHR #d0a8e3 · CHR-S #46374e · INFO #8dd1e0 · INFO-S #293f45 · OK #81cda1 · OK-S #294237 · WARN #e2c46a · WARN-S #493f25 · ERR #f09aa3 · ERR-S #4e2d34</code> Chart frame: <code>GRID #3b3b47 · MARK #e6e6ed</code></td>
+                <td class="series-tokens"><code>D1 #78a9e0 · D2 #e88498 · D3 #70b985 · D4 #b695de · D5 #c9a84f · D6 #60bdc1</code></td>
+              </tr>
+              <tr id="dark-chromatic-polarity">
+                <th scope="row">Chromatic Polarity</th>
+                <td class="surface-tokens">Base: <code>OUT #161319 · CAN #172126 · PAN #22272c · ALT #251f28</code> Text/rules: <code>INK #f1eadb · INK-S #c8c0b2 · INK-F #aaa599 · RULE #666873 · RULE+ #afb4b2</code> Controls: <code>ACC #e0abd6 · ACC-S #4b3048 · ON-ACC #271624 · FOCUS #75d0cf</code> States: <code>SEL #e898bf · SEL-S #4c2b3e · CHR #bdabf0 · CHR-S #3b3455 · INFO #7ec7d9 · INFO-S #243e46 · OK #8bc69e · OK-S #293f34 · WARN #e7bd68 · WARN-S #493b25 · ERR #f09ba4 · ERR-S #4a2c32</code> Chart frame: <code>GRID #434a4d · MARK #e9e0cf</code></td>
+                <td class="series-tokens"><code>D1 #4dc2c3 · D2 #f09b5a · D3 #ad8de1 · D4 #8dc786 · D5 #e47eaf · D6 #d5b750</code></td>
+              </tr>
+              <tr id="dark-luminance-ladder">
+                <th scope="row">Luminance Ladder</th>
+                <td class="surface-tokens">Base: <code>OUT #150d1b · CAN #1e1528 · PAN #2a2034 · ALT #241a2e</code> Text/rules: <code>INK #fff4df · INK-S #d6c4db · INK-F #b19db9 · RULE #594a64 · RULE+ #c0a9ca</code> Controls: <code>ACC #d8a4f1 · ACC-S #4a2d5c · ON-ACC #24102d · FOCUS #73d5ed</code> States: <code>SEL #ff86c1 · SEL-S #553044 · CHR #6fe0ca · CHR-S #254a44 · INFO #a8bcef · INFO-S #334060 · OK #93d69b · OK-S #2e4934 · WARN #f4c55a · WARN-S #51411c · ERR #ff9aa7 · ERR-S #58303a</code> Chart frame: <code>GRID #493d52 · MARK #fff2dc</code></td>
+                <td class="series-tokens"><code>D1 #1db1f1 · D2 #d41e7f · D3 #acee96 · D4 #db5716 · D5 #cbb5f0 · D6 #a7930b</code></td>
+              </tr>
+              <tr id="dark-sunrise-reference-faithful">
+                <th scope="row">Sunrise — Reference faithful</th>
+                <td class="surface-tokens">Base: <code>OUT #160F14 · CAN #21171E · PAN #2C2028 · ALT #251A21</code> Text/rules: <code>INK #FFF1E8 · INK-S #D8C0C9 · INK-F #B7A0A9 · RULE #66515B · RULE+ #C0A6B0</code> Controls: <code>ACC #FF9D4D · ACC-S #55301A · ON-ACC #2A1303 · FOCUS #9FC0FF</code> States: <code>SEL #FF8D76 · SEL-S #5B302C · CHR #D5A6F3 · CHR-S #493558 · INFO #A7C4FF · INFO-S #2F3B55 · OK #9BCB9D · OK-S #314538 · WARN #FFD080 · WARN-S #51401F · ERR #FFA192 · ERR-S #58302F</code> Chart frame: <code>GRID #5A4650 · MARK #FFF0E6</code></td>
+                <td class="series-tokens"><code>D1 #FF9A3D · D2 #F06A4A · D3 #D65C6A · D4 #B879E3 · D5 #7E95FF · D6 #9ACBFF</code><br><em>Approved local Dark adaptation.</em></td>
+              </tr>
+              <tr id="dark-lakeside-reference-faithful">
+                <th scope="row">Lakeside — Reference faithful</th>
+                <td class="surface-tokens">Base: <code>OUT #0E1515 · CAN #14201F · PAN #1C2B28 · ALT #182421</code> Text/rules: <code>INK #EFF8F2 · INK-S #C2D0CB · INK-F #9FAFA9 · RULE #435954 · RULE+ #94AAA3</code> Controls: <code>ACC #83AEFF · ACC-S #293F65 · ON-ACC #10203A · FOCUS #84DDEB</code> States: <code>SEL #7CCAD6 · SEL-S #26464A · CHR #A8D88E · CHR-S #35472D · INFO #93B7FF · INFO-S #2B3B5C · OK #A4D58D · OK-S #34482F · WARN #E5C36A · WARN-S #4B4022 · ERR #F1A0A7 · ERR-S #502F35</code> Chart frame: <code>GRID #3D514C · MARK #EDF8F1</code></td>
+                <td class="series-tokens"><code>D1 #6F91F2 · D2 #64ACEF · D3 #78D1E5 · D4 #9ADE88 · D5 #9FC68A · D6 #B5C996</code><br><em>Approved local Dark adaptation.</em></td>
+              </tr>
+              <tr id="dark-monochrome-reserve">
+                <th scope="row">Monochrome Reserve</th>
+                <td class="surface-tokens">Base: <code>OUT #0d0d0d · CAN #171717 · PAN #222222 · ALT #2c2c2c</code> Text/rules: <code>INK #f5f5f5 · INK-S #cacaca · INK-F #ababab · RULE #757575 · RULE+ #b9b9b9</code> Controls: <code>ACC #f0f0f0 · ACC-S #3c3c3c · ON-ACC #171717 · FOCUS #ffffff</code> States: <code>SEL #f0f0f0 · SEL-S #414141 · CHR #d7d7d7 · CHR-S #363636 · INFO #cacaca · INFO-S #303030 · OK #e7e7e7 · OK-S #3d3d3d · WARN #d0d0d0 · WARN-S #333333 · ERR #fafafa · ERR-S #454545</code> Chart frame: <code>GRID #4a4a4a · MARK #ededed</code></td>
+                <td class="series-tokens"><code>D1 #78a9e0 · D2 #e88498 · D3 #70b985 · D4 #b695de · D5 #c9a84f · D6 #60bdc1</code><br><em>Inherits Prismatic Index for this appearance.</em></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="note"><strong>Reference-palette note:</strong> The GraphPad reference-faithful Light series use solid, 100%-opaque reference colors. Neutral MARK boundaries, labels, legend order, shapes, dashes, and patterns provide redundant association where a reference fill has low direct contrast against the Light plot.</p>
+    </main>
+
+    <footer class="page-footer">
+      <span>Sketch 003 · Approved visual-language palette portfolio</span>
+      <span>30 appearance rows · 33 exact paint values per row</span>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const storageKey = 'simex-palette-catalogue-chrome';
+      const buttons = Array.from(document.querySelectorAll('[data-theme-choice]'));
+
+      function setTheme(theme, persist) {
+        const next = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = next;
+        buttons.forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.themeChoice === next));
+        });
+        if (persist) {
+          try {
+            localStorage.setItem(storageKey, next);
+          } catch (error) {
+            // The catalogue remains fully functional when storage is unavailable.
+          }
+        }
+      }
+
+      let initialTheme = 'light';
+      try {
+        initialTheme = localStorage.getItem(storageKey)
+          || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      } catch (error) {
+        initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      setTheme(initialTheme, false);
+
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => setTheme(button.dataset.themeChoice, true));
+      });
+
+      const hexPattern = /(#[0-9a-fA-F]{6})/g;
+      document.querySelectorAll('td code').forEach((code) => {
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        while ((match = hexPattern.exec(code.textContent)) !== null) {
+          fragment.append(document.createTextNode(code.textContent.slice(lastIndex, match.index)));
+          const token = document.createElement('span');
+          token.className = 'token';
+          const swatch = document.createElement('span');
+          swatch.className = 'swatch';
+          swatch.setAttribute('aria-hidden', 'true');
+          swatch.style.setProperty('--swatch-color', match[1]);
+          token.append(swatch, document.createTextNode(match[1]));
+          fragment.append(token);
+          lastIndex = match.index + match[1].length;
+        }
+        fragment.append(document.createTextNode(code.textContent.slice(lastIndex)));
+        code.replaceChildren(fragment);
+      });
+    })();
+  </script>
+</body>
+</html>

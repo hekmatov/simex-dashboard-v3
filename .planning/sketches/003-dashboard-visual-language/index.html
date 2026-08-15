@@ -1,0 +1,3831 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 003 · Dashboard visual language</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --review-bg: #eff1f3;
+      --review-surface: #ffffff;
+      --review-ink: #17191c;
+      --review-muted: #5d6268;
+      --review-rule: #bdc2c7;
+      --review-accent: #26333d;
+    }
+
+    body {
+      --review-rail-width: clamp(360px, 25vw, 480px);
+      --paper-outer: #e6e0d4;
+      --paper-canvas: #eee9dd;
+      --paper-panel: #fffdf5;
+      --paper-panel-alt: #f7f2e6;
+      --ink: #17212a;
+      --ink-soft: #525751;
+      --ink-faint: #73736b;
+      --rule: #aaa493;
+      --rule-strong: #4b555b;
+      --ui-accent: #26343b;
+      --ui-accent-soft: #e2ded2;
+      --ui-on-accent: #fffdf7;
+      --selected: #78352f;
+      --selected-soft: #f0dcd5;
+      --chrono: #5c4d6d;
+      --chrono-soft: #e7dfea;
+      --success: #3f6a4d;
+      --success-soft: #e1eadf;
+      --warning: #8b5c13;
+      --warning-soft: #f3e4bc;
+      --error: #963c35;
+      --error-soft: #f3dfda;
+      --focus: #26343b;
+      --data-1: #65714d;
+      --data-2: #9b6939;
+      --data-3: #60745d;
+      --data-4: #8a4a42;
+      --data-5: #75667d;
+      --data-6: #82785a;
+      --gridline: #d7d0c0;
+      --chart-mark: #26343b;
+      --panel-shadow: none;
+      margin: 0;
+      min-width: 0;
+      height: 100dvh;
+      display: grid;
+      grid-template-columns: var(--review-rail-width) minmax(0, 1fr);
+      overflow: hidden;
+      color: var(--ink);
+      background: var(--paper-outer);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body[data-resolved-appearance="dark"] {
+      color-scheme: dark;
+      --paper-outer: #171714;
+      --paper-canvas: #22211d;
+      --paper-panel: #2a2923;
+      --paper-panel-alt: #24231e;
+      --ink: #f3eddf;
+      --ink-soft: #c8c0ae;
+      --ink-faint: #aaa392;
+      --rule: #777267;
+      --rule-strong: #c1b9a8;
+      --ui-accent: #f0e8d9;
+      --ui-accent-soft: #3b3932;
+      --ui-on-accent: #182027;
+      --selected: #e1a49b;
+      --selected-soft: #4b302d;
+      --chrono: #d0b9da;
+      --chrono-soft: #403646;
+      --success: #a9c9aa;
+      --success-soft: #2d4130;
+      --warning: #e6c278;
+      --warning-soft: #4b3c22;
+      --error: #efa69d;
+      --error-soft: #4c2d2a;
+      --focus: #f3eddf;
+      --data-1: #a6b784;
+      --data-2: #dda46e;
+      --data-3: #93b494;
+      --data-4: #d98c83;
+      --data-5: #baa7c3;
+      --data-6: #bbb08b;
+      --gridline: #4f4c43;
+      --chart-mark: #eee5d5;
+    }
+
+    body[data-palette-profile="signature"] {
+      --paper-outer: #eee9de;
+      --paper-canvas: #f7f2e8;
+      --paper-panel: #fffdf8;
+      --paper-panel-alt: #faf6ec;
+      --ink: #1d2529;
+      --ink-soft: #555a55;
+      --ink-faint: #6d7069;
+      --rule: #b7b0a2;
+      --rule-strong: #50595d;
+      --ui-accent: #2c383d;
+      --ui-accent-soft: #e8e4da;
+      --ui-on-accent: #fffdf8;
+      --focus: #2c383d;
+      --selected: #744740;
+      --selected-soft: #f0e2dc;
+      --chrono: #62596b;
+      --chrono-soft: #e8e2e9;
+      --info: #58666b;
+      --info-soft: #e2e7e7;
+      --success: #4e6655;
+      --success-soft: #e1e8e1;
+      --warning: #7a6342;
+      --warning-soft: #eee7d8;
+      --error: #81514b;
+      --error-soft: #eee0dc;
+      --data-1: #667853;
+      --data-2: #8f704a;
+      --data-3: #61746f;
+      --data-4: #8b584e;
+      --data-5: #77657e;
+      --data-6: #7d7457;
+      --gridline: #ddd7cb;
+      --chart-mark: #2c383d;
+      --panel-shadow: none;
+    }
+
+    body[data-palette-profile="signature"][data-resolved-appearance="dark"] {
+      --paper-outer: #181713;
+      --paper-canvas: #211f1a;
+      --paper-panel: #2b2922;
+      --paper-panel-alt: #25231d;
+      --ink: #f5efe4;
+      --ink-soft: #c9c1b3;
+      --ink-faint: #aaa394;
+      --rule: #746f64;
+      --rule-strong: #c2baab;
+      --ui-accent: #f0e9dc;
+      --ui-accent-soft: #3b3831;
+      --ui-on-accent: #1d2428;
+      --focus: #f5efe4;
+      --selected: #d0a096;
+      --selected-soft: #493531;
+      --chrono: #c3b4ca;
+      --chrono-soft: #3f3944;
+      --info: #aab9bd;
+      --info-soft: #343e40;
+      --success: #a8bda9;
+      --success-soft: #314035;
+      --warning: #d1b482;
+      --warning-soft: #493d2c;
+      --error: #d8a299;
+      --error-soft: #4a3431;
+      --data-1: #a8b794;
+      --data-2: #c4aa82;
+      --data-3: #a2b2ad;
+      --data-4: #c49a90;
+      --data-5: #b6a7bd;
+      --data-6: #b9b08e;
+      --gridline: #4e4a40;
+      --chart-mark: #eee7da;
+      --panel-shadow: none;
+    }
+
+    body[data-palette-profile="restrained"] {
+      --paper-outer: #deded9;
+      --paper-canvas: #e9e9e3;
+      --paper-panel: #faf9f4;
+      --paper-panel-alt: #f1f0e9;
+      --ink: #202321;
+      --ink-soft: #555a56;
+      --ink-faint: #6e736e;
+      --rule: #aaa9a1;
+      --rule-strong: #4a4e4a;
+      --ui-accent: #303735;
+      --ui-accent-soft: #e2e4df;
+      --ui-on-accent: #fbfaf5;
+      --focus: #303735;
+      --selected: #704b46;
+      --selected-soft: #e8ded9;
+      --chrono: #625c68;
+      --chrono-soft: #e4e0e6;
+      --info: #59646a;
+      --info-soft: #e0e3e3;
+      --success: #486252;
+      --success-soft: #dde6df;
+      --warning: #75603d;
+      --warning-soft: #ede5d6;
+      --error: #794d49;
+      --error-soft: #eadeda;
+      --data-1: #667853;
+      --data-2: #8f704a;
+      --data-3: #61746f;
+      --data-4: #8b584e;
+      --data-5: #77657e;
+      --data-6: #7d7457;
+      --gridline: #d4d3ca;
+      --chart-mark: #303735;
+      --panel-shadow: none;
+    }
+
+    body[data-palette-profile="restrained"][data-resolved-appearance="dark"] {
+      --paper-outer: #151615;
+      --paper-canvas: #1d1f1d;
+      --paper-panel: #262825;
+      --paper-panel-alt: #222421;
+      --ink: #ecebe4;
+      --ink-soft: #c4c5bc;
+      --ink-faint: #a4a69c;
+      --rule: #686a63;
+      --rule-strong: #b8bab0;
+      --ui-accent: #e4e5dc;
+      --ui-accent-soft: #363a36;
+      --ui-on-accent: #1b1d1b;
+      --focus: #ecebe4;
+      --selected: #c59a91;
+      --selected-soft: #443733;
+      --chrono: #b8abbc;
+      --chrono-soft: #3c3740;
+      --info: #adb8bb;
+      --info-soft: #343b3d;
+      --success: #9eb5a3;
+      --success-soft: #2f3b32;
+      --warning: #c3aa7e;
+      --warning-soft: #443c2f;
+      --error: #c99d96;
+      --error-soft: #463533;
+      --data-1: #a8b794;
+      --data-2: #c4aa82;
+      --data-3: #a2b2ad;
+      --data-4: #c49a90;
+      --data-5: #b6a7bd;
+      --data-6: #b9b08e;
+      --gridline: #454841;
+      --chart-mark: #e2e2d9;
+      --panel-shadow: none;
+    }
+
+    body[data-palette-profile="counterpoint"] {
+      --paper-outer: #dfe3e1;
+      --paper-canvas: #e9ece8;
+      --paper-panel: #fafaf6;
+      --paper-panel-alt: #f1f3ef;
+      --ink: #1f2928;
+      --ink-soft: #52605e;
+      --ink-faint: #687572;
+      --rule: #a7b0ad;
+      --rule-strong: #465551;
+      --ui-accent: #314743;
+      --ui-accent-soft: #dce5e1;
+      --ui-on-accent: #fafcf8;
+      --focus: #314743;
+      --selected: #73505d;
+      --selected-soft: #e8dfe3;
+      --chrono: #5f5a73;
+      --chrono-soft: #e3e1e9;
+      --info: #536a6c;
+      --info-soft: #dfe7e6;
+      --success: #4d6758;
+      --success-soft: #dfe8e2;
+      --warning: #786443;
+      --warning-soft: #ece6d9;
+      --error: #81544f;
+      --error-soft: #eddfdc;
+      --data-1: #667853;
+      --data-2: #8f704a;
+      --data-3: #61746f;
+      --data-4: #8b584e;
+      --data-5: #77657e;
+      --data-6: #7d7457;
+      --gridline: #d1d7d3;
+      --chart-mark: #314743;
+      --panel-shadow: none;
+    }
+
+    body[data-palette-profile="counterpoint"][data-resolved-appearance="dark"] {
+      --paper-outer: #141817;
+      --paper-canvas: #1c2220;
+      --paper-panel: #252c29;
+      --paper-panel-alt: #202623;
+      --ink: #eef2ed;
+      --ink-soft: #c2cbc5;
+      --ink-faint: #a1aca6;
+      --rule: #65706b;
+      --rule-strong: #b6c0ba;
+      --ui-accent: #e0e8e2;
+      --ui-accent-soft: #343d39;
+      --ui-on-accent: #19211f;
+      --focus: #eef2ed;
+      --selected: #c39aaa;
+      --selected-soft: #44343b;
+      --chrono: #b2aac3;
+      --chrono-soft: #393643;
+      --info: #9fb7b8;
+      --info-soft: #2e3f40;
+      --success: #9db7a8;
+      --success-soft: #2e4137;
+      --warning: #c6b286;
+      --warning-soft: #443c2d;
+      --error: #d0a09a;
+      --error-soft: #473431;
+      --data-1: #a8b794;
+      --data-2: #c4aa82;
+      --data-3: #a2b2ad;
+      --data-4: #c49a90;
+      --data-5: #b6a7bd;
+      --data-6: #b9b08e;
+      --gridline: #46504c;
+      --chart-mark: #e2e9e3;
+      --panel-shadow: none;
+    }
+
+    body[data-palette-id="humanist-signature"] {
+      --paper-outer: #e6ece8;
+      --paper-canvas: #f0f5f1;
+      --paper-panel: #fcfdfb;
+      --paper-panel-alt: #f2f7f3;
+      --ink: #1d2b2a;
+      --ink-soft: #52615e;
+      --ink-faint: #6d7975;
+      --rule: #b7c5bf;
+      --rule-strong: #61736d;
+      --ui-accent: #28635d;
+      --ui-accent-soft: #dcebe5;
+      --ui-on-accent: #fafffc;
+      --focus: #155f91;
+      --selected: #2c628e;
+      --selected-soft: #dce9f4;
+      --chrono: #77618c;
+      --chrono-soft: #ebe3f0;
+      --info: #3c6a83;
+      --info-soft: #e0ebf1;
+      --success: #397059;
+      --success-soft: #dceae1;
+      --warning: #8a641f;
+      --warning-soft: #f4e9ce;
+      --error: #9a4d52;
+      --error-soft: #f4e0e1;
+      --data-1: #286b79;
+      --data-2: #a1693e;
+      --data-3: #4f7b61;
+      --data-4: #9a5961;
+      --data-5: #6d66a0;
+      --data-6: #8b7944;
+      --gridline: #d6e0db;
+      --chart-mark: #25423f;
+      --panel-shadow: 0 7px 18px rgb(32 61 53 / 9%);
+    }
+
+    body[data-palette-id="humanist-signature"][data-resolved-appearance="dark"] {
+      --paper-outer: #121a18;
+      --paper-canvas: #19231f;
+      --paper-panel: #222e29;
+      --paper-panel-alt: #1d2824;
+      --ink: #eef5f1;
+      --ink-soft: #becbc5;
+      --ink-faint: #9caba4;
+      --rule: #52655d;
+      --rule-strong: #9aafa6;
+      --ui-accent: #8ed0c1;
+      --ui-accent-soft: #2b4640;
+      --ui-on-accent: #10211d;
+      --focus: #8fcaf0;
+      --selected: #91c5ef;
+      --selected-soft: #293f51;
+      --chrono: #c3add7;
+      --chrono-soft: #40364a;
+      --info: #9bcbe4;
+      --info-soft: #2b414c;
+      --success: #98caae;
+      --success-soft: #2b4234;
+      --warning: #e1bd77;
+      --warning-soft: #4a3d26;
+      --error: #e8a0a7;
+      --error-soft: #4c3034;
+      --data-1: #7fc3cf;
+      --data-2: #dfaa7e;
+      --data-3: #91c2a2;
+      --data-4: #dfa0a7;
+      --data-5: #b8afe3;
+      --data-6: #c9ba7d;
+      --gridline: #405149;
+      --chart-mark: #dcece5;
+      --panel-shadow: 0 10px 24px rgb(0 0 0 / 24%);
+    }
+
+    body[data-palette-id="humanist-restrained"] {
+      --paper-outer: #e9e9e5;
+      --paper-canvas: #f2f2ee;
+      --paper-panel: #fcfbf8;
+      --paper-panel-alt: #f5f4ef;
+      --ink: #252c2b;
+      --ink-soft: #59615f;
+      --ink-faint: #737a77;
+      --rule: #c2c4be;
+      --rule-strong: #69716e;
+      --ui-accent: #365e5a;
+      --ui-accent-soft: #e0e9e5;
+      --ui-on-accent: #fbfdfa;
+      --focus: #205e86;
+      --selected: #496b86;
+      --selected-soft: #e1e9ef;
+      --chrono: #706779;
+      --chrono-soft: #e9e5ec;
+      --info: #536d7a;
+      --info-soft: #e4eaed;
+      --success: #4c6959;
+      --success-soft: #e1e9e3;
+      --warning: #796337;
+      --warning-soft: #eee8d9;
+      --error: #80565a;
+      --error-soft: #eee1e2;
+      --data-1: #286b79;
+      --data-2: #a1693e;
+      --data-3: #4f7b61;
+      --data-4: #9a5961;
+      --data-5: #6d66a0;
+      --data-6: #8b7944;
+      --gridline: #dadbd5;
+      --chart-mark: #344643;
+      --panel-shadow: 0 6px 16px rgb(39 54 50 / 7%);
+    }
+
+    body[data-palette-id="humanist-restrained"][data-resolved-appearance="dark"] {
+      --paper-outer: #171918;
+      --paper-canvas: #202321;
+      --paper-panel: #292c29;
+      --paper-panel-alt: #242724;
+      --ink: #f0f0eb;
+      --ink-soft: #c3c6c0;
+      --ink-faint: #a2a7a0;
+      --rule: #5b605b;
+      --rule-strong: #a5aaa3;
+      --ui-accent: #a6cbc3;
+      --ui-accent-soft: #33413d;
+      --ui-on-accent: #1a2320;
+      --focus: #9ac9e8;
+      --selected: #a9c8df;
+      --selected-soft: #34424c;
+      --chrono: #beb2c6;
+      --chrono-soft: #403a43;
+      --info: #abc4d0;
+      --info-soft: #354148;
+      --success: #a4bda9;
+      --success-soft: #344039;
+      --warning: #cfb782;
+      --warning-soft: #463f30;
+      --error: #d1a5a8;
+      --error-soft: #49383a;
+      --data-1: #7fc3cf;
+      --data-2: #dfaa7e;
+      --data-3: #91c2a2;
+      --data-4: #dfa0a7;
+      --data-5: #b8afe3;
+      --data-6: #c9ba7d;
+      --gridline: #494d49;
+      --chart-mark: #e3e8e3;
+      --panel-shadow: 0 9px 22px rgb(0 0 0 / 22%);
+    }
+
+    body[data-palette-id="humanist-counterpoint"] {
+      --paper-outer: #e8e6ed;
+      --paper-canvas: #f2eff5;
+      --paper-panel: #fcfbfd;
+      --paper-panel-alt: #f5f2f8;
+      --ink: #282631;
+      --ink-soft: #5d5968;
+      --ink-faint: #777280;
+      --rule: #c5bfcc;
+      --rule-strong: #716a7c;
+      --ui-accent: #594f7e;
+      --ui-accent-soft: #e8e2f1;
+      --ui-on-accent: #fdfbff;
+      --focus: #2d668e;
+      --selected: #3f6f94;
+      --selected-soft: #deeaf2;
+      --chrono: #755c8d;
+      --chrono-soft: #ebe2f1;
+      --info: #4e6f84;
+      --info-soft: #e0e9ee;
+      --success: #4d725f;
+      --success-soft: #e0ebe5;
+      --warning: #86632d;
+      --warning-soft: #f1e8d5;
+      --error: #95545e;
+      --error-soft: #f1e0e3;
+      --data-1: #477b88;
+      --data-2: #a47149;
+      --data-3: #54806a;
+      --data-4: #9a5e70;
+      --data-5: #705f9a;
+      --data-6: #8d7a43;
+      --gridline: #ddd8e2;
+      --chart-mark: #403a51;
+      --panel-shadow: 0 8px 20px rgb(54 45 72 / 9%);
+    }
+
+    body[data-palette-id="humanist-counterpoint"][data-resolved-appearance="dark"] {
+      --paper-outer: #17151c;
+      --paper-canvas: #201d27;
+      --paper-panel: #292530;
+      --paper-panel-alt: #24212b;
+      --ink: #f2eef5;
+      --ink-soft: #c8c1cf;
+      --ink-faint: #a8a0b1;
+      --rule: #605a69;
+      --rule-strong: #aba3b5;
+      --ui-accent: #c2b2e0;
+      --ui-accent-soft: #3d364a;
+      --ui-on-accent: #211b2a;
+      --focus: #91c9ed;
+      --selected: #99c8e7;
+      --selected-soft: #344657;
+      --chrono: #ceb2e0;
+      --chrono-soft: #493852;
+      --info: #a8cbdd;
+      --info-soft: #34454e;
+      --success: #a2c7b1;
+      --success-soft: #304438;
+      --warning: #dec080;
+      --warning-soft: #4b3f28;
+      --error: #e1a2ae;
+      --error-soft: #4c3238;
+      --data-1: #86c0cc;
+      --data-2: #dfae82;
+      --data-3: #91c0a5;
+      --data-4: #dea0b1;
+      --data-5: #b8abe1;
+      --data-6: #c9b873;
+      --gridline: #4b4554;
+      --chart-mark: #e5def0;
+      --panel-shadow: 0 10px 25px rgb(0 0 0 / 25%);
+    }
+
+    body[data-palette-id="signal-signature"] {
+      --paper-outer: #dce4e6;
+      --paper-canvas: #e8edef;
+      --paper-panel: #f8faf9;
+      --paper-panel-alt: #edf2f2;
+      --ink: #17252b;
+      --ink-soft: #45585e;
+      --ink-faint: #5f7075;
+      --rule: #aab9bd;
+      --rule-strong: #536970;
+      --ui-accent: #285b67;
+      --ui-accent-soft: #d7e6e8;
+      --ui-on-accent: #ffffff;
+      --focus: #0b6f89;
+      --selected: #8a4350;
+      --selected-soft: #f1dee2;
+      --chrono: #615484;
+      --chrono-soft: #e6e1ef;
+      --info: #3b6576;
+      --info-soft: #dce9ed;
+      --success: #38705a;
+      --success-soft: #dcebe2;
+      --warning: #7a5b1a;
+      --warning-soft: #f3e7c9;
+      --error: #93434a;
+      --error-soft: #f2dfe1;
+      --data-1: #276f82;
+      --data-2: #a7602e;
+      --data-3: #347557;
+      --data-4: #9c4f58;
+      --data-5: #665aa0;
+      --data-6: #7f6a25;
+      --gridline: #d0dadd;
+      --chart-mark: #253941;
+    }
+
+    body[data-palette-id="signal-signature"][data-resolved-appearance="dark"] {
+      --paper-outer: #0d1518;
+      --paper-canvas: #131e22;
+      --paper-panel: #1a272c;
+      --paper-panel-alt: #162126;
+      --ink: #edf4f5;
+      --ink-soft: #bac8cb;
+      --ink-faint: #96a8ad;
+      --rule: #455a61;
+      --rule-strong: #8ca0a6;
+      --ui-accent: #86bbc4;
+      --ui-accent-soft: #263f45;
+      --ui-on-accent: #102126;
+      --focus: #85ccd6;
+      --selected: #e09aa7;
+      --selected-soft: #4a2e35;
+      --chrono: #c1afe4;
+      --chrono-soft: #3a334b;
+      --info: #99c9d7;
+      --info-soft: #293e45;
+      --success: #8bc7aa;
+      --success-soft: #283f34;
+      --warning: #e2bf72;
+      --warning-soft: #473a20;
+      --error: #f1a1a9;
+      --error-soft: #4b2c31;
+      --data-1: #72c0d0;
+      --data-2: #e3a170;
+      --data-3: #83c3a0;
+      --data-4: #e79ca7;
+      --data-5: #aea3e2;
+      --data-6: #ceb96b;
+      --gridline: #34484f;
+      --chart-mark: #dbe8ea;
+    }
+
+    body[data-palette-id="signal-restrained"] {
+      --paper-outer: #e1e5e6;
+      --paper-canvas: #ebeeef;
+      --paper-panel: #fafbfb;
+      --paper-panel-alt: #f1f3f3;
+      --ink: #20292d;
+      --ink-soft: #505d61;
+      --ink-faint: #687579;
+      --rule: #b7c0c3;
+      --rule-strong: #5d6b70;
+      --ui-accent: #3d5b63;
+      --ui-accent-soft: #dfe7e9;
+      --ui-on-accent: #ffffff;
+      --focus: #2e6675;
+      --selected: #73515a;
+      --selected-soft: #eadfe2;
+      --chrono: #625d73;
+      --chrono-soft: #e8e5ed;
+      --info: #536a73;
+      --info-soft: #e3e9eb;
+      --success: #4c6858;
+      --success-soft: #e0e8e3;
+      --warning: #75613a;
+      --warning-soft: #eee7d8;
+      --error: #7d5056;
+      --error-soft: #ecdee1;
+      --data-1: #276f82;
+      --data-2: #a7602e;
+      --data-3: #347557;
+      --data-4: #9c4f58;
+      --data-5: #665aa0;
+      --data-6: #7f6a25;
+      --gridline: #d8dcdd;
+      --chart-mark: #354348;
+    }
+
+    body[data-palette-id="signal-restrained"][data-resolved-appearance="dark"] {
+      --paper-outer: #111719;
+      --paper-canvas: #182024;
+      --paper-panel: #20292d;
+      --paper-panel-alt: #1b2327;
+      --ink: #edf1f2;
+      --ink-soft: #bdc6c8;
+      --ink-faint: #9ba6a9;
+      --rule: #4a575b;
+      --rule-strong: #929da0;
+      --ui-accent: #a7bcc1;
+      --ui-accent-soft: #303c40;
+      --ui-on-accent: #162023;
+      --focus: #91c6d2;
+      --selected: #cba4ad;
+      --selected-soft: #41343a;
+      --chrono: #b8b1c7;
+      --chrono-soft: #39363f;
+      --info: #a3bdc6;
+      --info-soft: #323f44;
+      --success: #a0baa9;
+      --success-soft: #304038;
+      --warning: #ccb680;
+      --warning-soft: #443d2d;
+      --error: #d1a2a7;
+      --error-soft: #473538;
+      --data-1: #72c0d0;
+      --data-2: #e3a170;
+      --data-3: #83c3a0;
+      --data-4: #e79ca7;
+      --data-5: #aea3e2;
+      --data-6: #ceb96b;
+      --gridline: #414b4e;
+      --chart-mark: #dfe6e8;
+    }
+
+    body[data-palette-id="signal-counterpoint"] {
+      --paper-outer: #e2e3e5;
+      --paper-canvas: #ececed;
+      --paper-panel: #fbfaf9;
+      --paper-panel-alt: #f2efed;
+      --ink: #2a2422;
+      --ink-soft: #625650;
+      --ink-faint: #7a6d66;
+      --rule: #c1b6b0;
+      --rule-strong: #71615a;
+      --ui-accent: #6f4e43;
+      --ui-accent-soft: #ebe0dc;
+      --ui-on-accent: #fffaf8;
+      --focus: #205e79;
+      --selected: #8a4054;
+      --selected-soft: #efdee3;
+      --chrono: #5f5680;
+      --chrono-soft: #e7e2ef;
+      --info: #42687a;
+      --info-soft: #dfe9ed;
+      --success: #416c59;
+      --success-soft: #dce9e1;
+      --warning: #765c20;
+      --warning-soft: #f0e6cc;
+      --error: #8c444b;
+      --error-soft: #f0dddf;
+      --data-1: #2f7582;
+      --data-2: #a55f36;
+      --data-3: #397258;
+      --data-4: #9a4f65;
+      --data-5: #64589a;
+      --data-6: #817022;
+      --gridline: #ded7d3;
+      --chart-mark: #493b36;
+    }
+
+    body[data-palette-id="signal-counterpoint"][data-resolved-appearance="dark"] {
+      --paper-outer: #151314;
+      --paper-canvas: #1d1a1b;
+      --paper-panel: #282325;
+      --paper-panel-alt: #211d1f;
+      --ink: #f2ece9;
+      --ink-soft: #c9bbb5;
+      --ink-faint: #aa9a93;
+      --rule: #625451;
+      --rule-strong: #ae9b93;
+      --ui-accent: #d3a58f;
+      --ui-accent-soft: #49362f;
+      --ui-on-accent: #241711;
+      --focus: #83c8df;
+      --selected: #e3a0b1;
+      --selected-soft: #4b3039;
+      --chrono: #c0b2df;
+      --chrono-soft: #3c354b;
+      --info: #9bc7d7;
+      --info-soft: #2e4149;
+      --success: #92c5aa;
+      --success-soft: #2c4237;
+      --warning: #dfbd75;
+      --warning-soft: #473c24;
+      --error: #eca3aa;
+      --error-soft: #4c2e33;
+      --data-1: #78c1cc;
+      --data-2: #e4a074;
+      --data-3: #88c1a0;
+      --data-4: #dfa0b0;
+      --data-5: #ada3df;
+      --data-6: #cdbc6c;
+      --gridline: #4c4140;
+      --chart-mark: #eaded9;
+    }
+
+    body[data-palette-id="utility-prismatic"] {
+      --paper-outer: #e2e2e7;
+      --paper-canvas: #eeeff2;
+      --paper-panel: #ffffff;
+      --paper-panel-alt: #f6f6f8;
+      --ink: #1e2028;
+      --ink-soft: #545763;
+      --ink-faint: #717480;
+      --rule: #b8bbc4;
+      --rule-strong: #5c606c;
+      --ui-accent: #303745;
+      --ui-accent-soft: #e5e7ec;
+      --ui-on-accent: #ffffff;
+      --focus: #005fcc;
+      --selected: #47586b;
+      --selected-soft: #e3e9ef;
+      --chrono: #6b4d83;
+      --chrono-soft: #eae2ef;
+      --info: #27677b;
+      --info-soft: #e0eef2;
+      --success: #2e6f50;
+      --success-soft: #dcede3;
+      --warning: #7b5900;
+      --warning-soft: #f5e8be;
+      --error: #a33b42;
+      --error-soft: #f6dee1;
+      --data-1: #2f6db0;
+      --data-2: #b83d5a;
+      --data-3: #26743f;
+      --data-4: #7148a6;
+      --data-5: #9a6500;
+      --data-6: #007b80;
+      --gridline: #d7d8de;
+      --chart-mark: #282b36;
+    }
+
+    body[data-palette-id="utility-prismatic"][data-resolved-appearance="dark"] {
+      --paper-outer: #111117;
+      --paper-canvas: #181820;
+      --paper-panel: #202029;
+      --paper-panel-alt: #272731;
+      --ink: #f1f1f6;
+      --ink-soft: #c3c4ce;
+      --ink-faint: #9d9faa;
+      --rule: #4a4b58;
+      --rule-strong: #989aa7;
+      --ui-accent: #c8cbd6;
+      --ui-accent-soft: #343741;
+      --ui-on-accent: #181a23;
+      --focus: #85b6ff;
+      --selected: #acc0d4;
+      --selected-soft: #33414e;
+      --chrono: #d0a8e3;
+      --chrono-soft: #46374e;
+      --info: #8dd1e0;
+      --info-soft: #293f45;
+      --success: #81cda1;
+      --success-soft: #294237;
+      --warning: #e2c46a;
+      --warning-soft: #493f25;
+      --error: #f09aa3;
+      --error-soft: #4e2d34;
+      --data-1: #78a9e0;
+      --data-2: #e88498;
+      --data-3: #70b985;
+      --data-4: #b695de;
+      --data-5: #c9a84f;
+      --data-6: #60bdc1;
+      --gridline: #3b3b47;
+      --chart-mark: #e6e6ed;
+    }
+
+    body[data-palette-id="utility-polarity"] {
+      --paper-outer: #ddd5cb;
+      --paper-canvas: #ebe2d7;
+      --paper-panel: #f7eee3;
+      --paper-panel-alt: #e8ddd2;
+      --ink: #213238;
+      --ink-soft: #4f5d5e;
+      --ink-faint: #626e6b;
+      --rule: #a9a390;
+      --rule-strong: #4e5b59;
+      --ui-accent: #6b3f68;
+      --ui-accent-soft: #eadbe5;
+      --ui-on-accent: #fff8eb;
+      --focus: #176f76;
+      --selected: #8d3f65;
+      --selected-soft: #f0d8e4;
+      --chrono: #5d4c8a;
+      --chrono-soft: #e4def2;
+      --info: #246579;
+      --info-soft: #d7e7e8;
+      --success: #376c57;
+      --success-soft: #dbe9dd;
+      --warning: #875a12;
+      --warning-soft: #f4e4bb;
+      --error: #9a3e47;
+      --error-soft: #f3dadd;
+      --data-1: #0f6f78;
+      --data-2: #aa521b;
+      --data-3: #7251a3;
+      --data-4: #41743f;
+      --data-5: #a13c77;
+      --data-6: #806a18;
+      --gridline: #d3cbb8;
+      --chart-mark: #23393d;
+    }
+
+    body[data-palette-id="utility-polarity"][data-resolved-appearance="dark"] {
+      --paper-outer: #161319;
+      --paper-canvas: #172126;
+      --paper-panel: #22272c;
+      --paper-panel-alt: #251f28;
+      --ink: #f1eadb;
+      --ink-soft: #c8c0b2;
+      --ink-faint: #aaa599;
+      --rule: #666873;
+      --rule-strong: #afb4b2;
+      --ui-accent: #e0abd6;
+      --ui-accent-soft: #4b3048;
+      --ui-on-accent: #271624;
+      --focus: #75d0cf;
+      --selected: #e898bf;
+      --selected-soft: #4c2b3e;
+      --chrono: #bdabf0;
+      --chrono-soft: #3b3455;
+      --info: #7ec7d9;
+      --info-soft: #243e46;
+      --success: #8bc69e;
+      --success-soft: #293f34;
+      --warning: #e7bd68;
+      --warning-soft: #493b25;
+      --error: #f09ba4;
+      --error-soft: #4a2c32;
+      --data-1: #4dc2c3;
+      --data-2: #f09b5a;
+      --data-3: #ad8de1;
+      --data-4: #8dc786;
+      --data-5: #e47eaf;
+      --data-6: #d5b750;
+      --gridline: #434a4d;
+      --chart-mark: #e9e0cf;
+    }
+
+    body[data-palette-id="utility-luminance"] {
+      --paper-outer: #ded8e7;
+      --paper-canvas: #eae5ef;
+      --paper-panel: #fffdf4;
+      --paper-panel-alt: #f3efe0;
+      --ink: #201827;
+      --ink-soft: #534a5c;
+      --ink-faint: #6f6478;
+      --rule: #c4bacb;
+      --rule-strong: #62556b;
+      --ui-accent: #5c2d82;
+      --ui-accent-soft: #eadcf5;
+      --ui-on-accent: #fff8ed;
+      --focus: #00718c;
+      --selected: #a52d66;
+      --selected-soft: #f5dbe7;
+      --chrono: #006f72;
+      --chrono-soft: #d9ece8;
+      --info: #3f568e;
+      --info-soft: #dfe6f5;
+      --success: #3a7045;
+      --success-soft: #dfecdf;
+      --warning: #855800;
+      --warning-soft: #f4e5bd;
+      --error: #9b3041;
+      --error-soft: #f6dde0;
+      --data-1: #0a6c96;
+      --data-2: #560c34;
+      --data-3: #3ca21a;
+      --data-4: #6d2b0b;
+      --data-5: #8d5ede;
+      --data-6: #5e5206;
+      --gridline: #d8d0c6;
+      --chart-mark: #24182d;
+    }
+
+    body[data-palette-id="utility-luminance"][data-resolved-appearance="dark"] {
+      --paper-outer: #150d1b;
+      --paper-canvas: #1e1528;
+      --paper-panel: #2a2034;
+      --paper-panel-alt: #241a2e;
+      --ink: #fff4df;
+      --ink-soft: #d6c4db;
+      --ink-faint: #b19db9;
+      --rule: #594a64;
+      --rule-strong: #c0a9ca;
+      --ui-accent: #d8a4f1;
+      --ui-accent-soft: #4a2d5c;
+      --ui-on-accent: #24102d;
+      --focus: #73d5ed;
+      --selected: #ff86c1;
+      --selected-soft: #553044;
+      --chrono: #6fe0ca;
+      --chrono-soft: #254a44;
+      --info: #a8bcef;
+      --info-soft: #334060;
+      --success: #93d69b;
+      --success-soft: #2e4934;
+      --warning: #f4c55a;
+      --warning-soft: #51411c;
+      --error: #ff9aa7;
+      --error-soft: #58303a;
+      --data-1: #1db1f1;
+      --data-2: #d41e7f;
+      --data-3: #acee96;
+      --data-4: #db5716;
+      --data-5: #cbb5f0;
+      --data-6: #a7930b;
+      --gridline: #493d52;
+      --chart-mark: #fff2dc;
+    }
+
+    body[data-palette-id="graphpad-sunrise-reference"] {
+      --paper-outer: #E8DDD2;
+      --paper-canvas: #F4ECE3;
+      --paper-panel: #FFF9F2;
+      --paper-panel-alt: #F7E8DD;
+      --ink: #2D1B23;
+      --ink-soft: #65535A;
+      --ink-faint: #756168;
+      --rule: #C9B5AE;
+      --rule-strong: #735D65;
+      --ui-accent: #7F32BD;
+      --ui-accent-soft: #EADDF5;
+      --ui-on-accent: #FFFFFF;
+      --focus: #2856A8;
+      --selected: #9B3D35;
+      --selected-soft: #F5DDD8;
+      --chrono: #68458E;
+      --chrono-soft: #EADFF2;
+      --info: #345E9A;
+      --info-soft: #DEE8F5;
+      --success: #3E6D49;
+      --success-soft: #DDEADF;
+      --warning: #785000;
+      --warning-soft: #F4E4BB;
+      --error: #982F2C;
+      --error-soft: #F5DCD8;
+      --data-1: #FB8809;
+      --data-2: #D84420;
+      --data-3: #690001;
+      --data-4: #7F32BD;
+      --data-5: #5770FF;
+      --data-6: #87BEFF;
+      --gridline: #D9C9C0;
+      --chart-mark: #37242C;
+    }
+
+    body[data-palette-id="graphpad-sunrise-reference"][data-resolved-appearance="dark"] {
+      --paper-outer: #160F14;
+      --paper-canvas: #21171E;
+      --paper-panel: #2C2028;
+      --paper-panel-alt: #251A21;
+      --ink: #FFF1E8;
+      --ink-soft: #D8C0C9;
+      --ink-faint: #B7A0A9;
+      --rule: #66515B;
+      --rule-strong: #C0A6B0;
+      --ui-accent: #FF9D4D;
+      --ui-accent-soft: #55301A;
+      --ui-on-accent: #2A1303;
+      --focus: #9FC0FF;
+      --selected: #FF8D76;
+      --selected-soft: #5B302C;
+      --chrono: #D5A6F3;
+      --chrono-soft: #493558;
+      --info: #A7C4FF;
+      --info-soft: #2F3B55;
+      --success: #9BCB9D;
+      --success-soft: #314538;
+      --warning: #FFD080;
+      --warning-soft: #51401F;
+      --error: #FFA192;
+      --error-soft: #58302F;
+      --data-1: #FF9A3D;
+      --data-2: #F06A4A;
+      --data-3: #D65C6A;
+      --data-4: #B879E3;
+      --data-5: #7E95FF;
+      --data-6: #9ACBFF;
+      --gridline: #5A4650;
+      --chart-mark: #FFF0E6;
+    }
+
+    body[data-palette-id="graphpad-sunrise-contrast"] {
+      --paper-outer: #E8DDD2;
+      --paper-canvas: #F4ECE3;
+      --paper-panel: #FFF9F2;
+      --paper-panel-alt: #F7E8DD;
+      --ink: #2D1B23;
+      --ink-soft: #65535A;
+      --ink-faint: #756168;
+      --rule: #C9B5AE;
+      --rule-strong: #735D65;
+      --ui-accent: #7F32BD;
+      --ui-accent-soft: #EADDF5;
+      --ui-on-accent: #FFFFFF;
+      --focus: #2856A8;
+      --selected: #9B3D35;
+      --selected-soft: #F5DDD8;
+      --chrono: #68458E;
+      --chrono-soft: #EADFF2;
+      --info: #345E9A;
+      --info-soft: #DEE8F5;
+      --success: #3E6D49;
+      --success-soft: #DDEADF;
+      --warning: #785000;
+      --warning-soft: #F4E4BB;
+      --error: #982F2C;
+      --error-soft: #F5DCD8;
+      --data-1: #BC6403;
+      --data-2: #D84420;
+      --data-3: #690001;
+      --data-4: #7F32BD;
+      --data-5: #536CFF;
+      --data-6: #2572B5;
+      --gridline: #D9C9C0;
+      --chart-mark: #37242C;
+    }
+
+    body[data-palette-id="graphpad-sunrise-contrast"][data-resolved-appearance="dark"] {
+      --paper-outer: #160F14;
+      --paper-canvas: #21171E;
+      --paper-panel: #2C2028;
+      --paper-panel-alt: #251A21;
+      --ink: #FFF1E8;
+      --ink-soft: #D8C0C9;
+      --ink-faint: #B7A0A9;
+      --rule: #66515B;
+      --rule-strong: #C0A6B0;
+      --ui-accent: #FF9D4D;
+      --ui-accent-soft: #55301A;
+      --ui-on-accent: #2A1303;
+      --focus: #9FC0FF;
+      --selected: #FF8D76;
+      --selected-soft: #5B302C;
+      --chrono: #D5A6F3;
+      --chrono-soft: #493558;
+      --info: #A7C4FF;
+      --info-soft: #2F3B55;
+      --success: #9BCB9D;
+      --success-soft: #314538;
+      --warning: #FFD080;
+      --warning-soft: #51401F;
+      --error: #FFA192;
+      --error-soft: #58302F;
+      --data-1: #FB8809;
+      --data-2: #D84420;
+      --data-3: #D65C6A;
+      --data-4: #B879E3;
+      --data-5: #5770FF;
+      --data-6: #87BEFF;
+      --gridline: #5A4650;
+      --chart-mark: #FFF0E6;
+    }
+
+    body[data-palette-id="graphpad-lakeside-reference"] {
+      --paper-outer: #DDE4E3;
+      --paper-canvas: #EAF0EE;
+      --paper-panel: #F9FCF8;
+      --paper-panel-alt: #EAF3EE;
+      --ink: #1E2E2B;
+      --ink-soft: #4D5E59;
+      --ink-faint: #5F706B;
+      --rule: #B7C7C2;
+      --rule-strong: #526660;
+      --ui-accent: #2650CC;
+      --ui-accent-soft: #DDE5FA;
+      --ui-on-accent: #FFFFFF;
+      --focus: #8B4300;
+      --selected: #246B72;
+      --selected-soft: #D9ECEC;
+      --chrono: #526F3C;
+      --chrono-soft: #E1ECDA;
+      --info: #2657A7;
+      --info-soft: #DDE7F7;
+      --success: #486A37;
+      --success-soft: #DFEAD9;
+      --warning: #765500;
+      --warning-soft: #F4E6B7;
+      --error: #963E44;
+      --error-soft: #F4DDDE;
+      --data-1: #2650CC;
+      --data-2: #3D89DE;
+      --data-3: #65C8E3;
+      --data-4: #81CE6D;
+      --data-5: #5F7B49;
+      --data-6: #29331A;
+      --gridline: #CED9D4;
+      --chart-mark: #1F302D;
+    }
+
+    body[data-palette-id="graphpad-lakeside-reference"][data-resolved-appearance="dark"] {
+      --paper-outer: #0E1515;
+      --paper-canvas: #14201F;
+      --paper-panel: #1C2B28;
+      --paper-panel-alt: #182421;
+      --ink: #EFF8F2;
+      --ink-soft: #C2D0CB;
+      --ink-faint: #9FAFA9;
+      --rule: #435954;
+      --rule-strong: #94AAA3;
+      --ui-accent: #83AEFF;
+      --ui-accent-soft: #293F65;
+      --ui-on-accent: #10203A;
+      --focus: #84DDEB;
+      --selected: #7CCAD6;
+      --selected-soft: #26464A;
+      --chrono: #A8D88E;
+      --chrono-soft: #35472D;
+      --info: #93B7FF;
+      --info-soft: #2B3B5C;
+      --success: #A4D58D;
+      --success-soft: #34482F;
+      --warning: #E5C36A;
+      --warning-soft: #4B4022;
+      --error: #F1A0A7;
+      --error-soft: #502F35;
+      --data-1: #6F91F2;
+      --data-2: #64ACEF;
+      --data-3: #78D1E5;
+      --data-4: #9ADE88;
+      --data-5: #9FC68A;
+      --data-6: #B5C996;
+      --gridline: #3D514C;
+      --chart-mark: #EDF8F1;
+    }
+
+    body[data-palette-id="graphpad-lakeside-contrast"] {
+      --paper-outer: #DDE4E3;
+      --paper-canvas: #EAF0EE;
+      --paper-panel: #F9FCF8;
+      --paper-panel-alt: #EAF3EE;
+      --ink: #1E2E2B;
+      --ink-soft: #4D5E59;
+      --ink-faint: #5F706B;
+      --rule: #B7C7C2;
+      --rule-strong: #526660;
+      --ui-accent: #2650CC;
+      --ui-accent-soft: #DDE5FA;
+      --ui-on-accent: #FFFFFF;
+      --focus: #8B4300;
+      --selected: #246B72;
+      --selected-soft: #D9ECEC;
+      --chrono: #526F3C;
+      --chrono-soft: #E1ECDA;
+      --info: #2657A7;
+      --info-soft: #DDE7F7;
+      --success: #486A37;
+      --success-soft: #DFEAD9;
+      --warning: #765500;
+      --warning-soft: #F4E6B7;
+      --error: #963E44;
+      --error-soft: #F4DDDE;
+      --data-1: #2650CC;
+      --data-2: #2C7FDB;
+      --data-3: #197C94;
+      --data-4: #3B8736;
+      --data-5: #5F7B49;
+      --data-6: #29331A;
+      --gridline: #CED9D4;
+      --chart-mark: #1F302D;
+    }
+
+    body[data-palette-id="graphpad-lakeside-contrast"][data-resolved-appearance="dark"] {
+      --paper-outer: #0E1515;
+      --paper-canvas: #14201F;
+      --paper-panel: #1C2B28;
+      --paper-panel-alt: #182421;
+      --ink: #EFF8F2;
+      --ink-soft: #C2D0CB;
+      --ink-faint: #9FAFA9;
+      --rule: #435954;
+      --rule-strong: #94AAA3;
+      --ui-accent: #83AEFF;
+      --ui-accent-soft: #293F65;
+      --ui-on-accent: #10203A;
+      --focus: #84DDEB;
+      --selected: #7CCAD6;
+      --selected-soft: #26464A;
+      --chrono: #A8D88E;
+      --chrono-soft: #35472D;
+      --info: #93B7FF;
+      --info-soft: #2B3B5C;
+      --success: #A4D58D;
+      --success-soft: #34482F;
+      --warning: #E5C36A;
+      --warning-soft: #4B4022;
+      --error: #F1A0A7;
+      --error-soft: #502F35;
+      --data-1: #476DDD;
+      --data-2: #3D89DE;
+      --data-3: #65C8E3;
+      --data-4: #81CE6D;
+      --data-5: #607D4A;
+      --data-6: #B5C996;
+      --gridline: #3D514C;
+      --chart-mark: #EDF8F1;
+    }
+
+    body[data-palette-id="utility-monochrome"] {
+      --paper-outer: #d6d6d6;
+      --paper-canvas: #eeeeee;
+      --paper-panel: #ffffff;
+      --paper-panel-alt: #f6f6f6;
+      --ink: #151515;
+      --ink-soft: #494949;
+      --ink-faint: #5d5d5d;
+      --rule: #767676;
+      --rule-strong: #3e3e3e;
+      --ui-accent: #202020;
+      --ui-accent-soft: #e2e2e2;
+      --ui-on-accent: #ffffff;
+      --focus: #000000;
+      --selected: #2e2e2e;
+      --selected-soft: #e3e3e3;
+      --chrono: #424242;
+      --chrono-soft: #ededed;
+      --info: #4c4c4c;
+      --info-soft: #f0f0f0;
+      --success: #373737;
+      --success-soft: #e6e6e6;
+      --warning: #4a4a4a;
+      --warning-soft: #ececec;
+      --error: #272727;
+      --error-soft: #e0e0e0;
+      --data-1: #2f6db0;
+      --data-2: #b83d5a;
+      --data-3: #26743f;
+      --data-4: #7148a6;
+      --data-5: #9a6500;
+      --data-6: #007b80;
+      --gridline: #c5c5c5;
+      --chart-mark: #222222;
+    }
+
+    body[data-palette-id="utility-monochrome"][data-resolved-appearance="dark"] {
+      --paper-outer: #0d0d0d;
+      --paper-canvas: #171717;
+      --paper-panel: #222222;
+      --paper-panel-alt: #2c2c2c;
+      --ink: #f5f5f5;
+      --ink-soft: #cacaca;
+      --ink-faint: #ababab;
+      --rule: #757575;
+      --rule-strong: #b9b9b9;
+      --ui-accent: #f0f0f0;
+      --ui-accent-soft: #3c3c3c;
+      --ui-on-accent: #171717;
+      --focus: #ffffff;
+      --selected: #f0f0f0;
+      --selected-soft: #414141;
+      --chrono: #d7d7d7;
+      --chrono-soft: #363636;
+      --info: #cacaca;
+      --info-soft: #303030;
+      --success: #e7e7e7;
+      --success-soft: #3d3d3d;
+      --warning: #d0d0d0;
+      --warning-soft: #333333;
+      --error: #fafafa;
+      --error-soft: #454545;
+      --data-1: #78a9e0;
+      --data-2: #e88498;
+      --data-3: #70b985;
+      --data-4: #b695de;
+      --data-5: #c9a84f;
+      --data-6: #60bdc1;
+      --gridline: #4a4a4a;
+      --chart-mark: #ededed;
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) .map-svg path {
+      stroke: var(--chart-mark);
+      stroke-width: 1;
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) :is(.swatch, .legend-column) {
+      border-color: var(--chart-mark);
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) :is(.mini-bars i, .rank-bar i, .capacity i, .bullet-measure) {
+      box-shadow: inset 0 0 0 1px var(--chart-mark);
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) :is(.combo-chart .case-column, .admissions-chart .icu-bar, .admissions-chart .hospital-bar) {
+      stroke: var(--chart-mark);
+      stroke-width: 1;
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) :is(.line-chart .series-a, .line-chart .series-b, .line-chart .series-c, .combo-chart .death-line) {
+      filter: drop-shadow(1px 0 0 var(--chart-mark)) drop-shadow(-1px 0 0 var(--chart-mark)) drop-shadow(0 1px 0 var(--chart-mark)) drop-shadow(0 -1px 0 var(--chart-mark));
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) .donut-chart::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: 50%;
+      background: conic-gradient(
+        transparent 0 7.75%, var(--chart-mark) 7.75% 8.25%,
+        transparent 8.25% 14.75%, var(--chart-mark) 14.75% 15.25%,
+        transparent 15.25% 31.75%, var(--chart-mark) 31.75% 32.25%,
+        transparent 32.25% 50.75%, var(--chart-mark) 50.75% 51.25%,
+        transparent 51.25% 74.75%, var(--chart-mark) 74.75% 75.25%,
+        transparent 75.25% 99.75%, var(--chart-mark) 99.75% 100%
+      );
+      pointer-events: none;
+    }
+
+    body:is([data-palette-id="graphpad-sunrise-reference"], [data-palette-id="graphpad-lakeside-reference"]) .donut-chart::after {
+      z-index: 2;
+    }
+
+    body[data-chart-color-mode="standard"] {
+      --data-1: #32669a;
+      --data-2: #a64f22;
+      --data-3: #2f7554;
+      --data-4: #974653;
+      --data-5: #69569a;
+      --data-6: #786223;
+      --chart-mark: #24333d;
+    }
+
+    body[data-chart-color-mode="standard"][data-resolved-appearance="dark"] {
+      --data-1: #86b3dd;
+      --data-2: #e49a72;
+      --data-3: #83be9d;
+      --data-4: #de8b96;
+      --data-5: #b4a4db;
+      --data-6: #c8ae69;
+      --chart-mark: #edf2f5;
+    }
+
+    button, select, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+    .review-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 100dvh;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      color: var(--review-ink);
+      background: var(--review-bg);
+      border-right: 1px solid #8d949b;
+      box-shadow: 4px 0 14px rgb(0 0 0 / 10%);
+    }
+    .review-inner { padding: 22px 22px 30px; }
+    .review-heading { display: grid; gap: 12px; margin-bottom: 18px; }
+    .review-heading h1 { margin: 0; font-size: 18px; line-height: 1.25; }
+    .review-heading p { margin: 5px 0 0; color: var(--review-muted); font-size: 12px; line-height: 1.5; }
+    .preview-contract {
+      display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 2px 9px;
+      border: 1px solid #77818a; border-radius: 999px; background: white; font-size: 11px; font-weight: 750;
+    }
+    .preview-contract::before { content: "◇"; font-size: 16px; }
+    .review-controls { display: grid; gap: 18px; }
+    .control-cluster { min-width: 0; padding-bottom: 16px; border-bottom: 1px solid var(--review-rule); }
+    .control-label { display: block; margin-bottom: 4px; color: var(--review-muted); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .button-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .review-toolbar button {
+      min-height: 44px; padding: 8px 10px; border: 1px solid #949ba2; border-radius: 6px;
+      color: var(--review-ink); background: var(--review-surface); font-size: 11px; font-weight: 720; text-align: left;
+    }
+    .review-toolbar button:hover:not(:disabled):not([aria-pressed="true"]):not([aria-current="true"]) {
+      border-color: #252b30; background: #f8fafb;
+    }
+    .review-toolbar button[aria-pressed="true"], .review-toolbar button[aria-current="true"] {
+      color: white; background: #26333d; border-color: #26333d;
+    }
+    .review-toolbar :focus-visible { outline-color: #155f91; }
+    .style-button { position: relative; padding-right: 74px !important; }
+    .portfolio-status {
+      position: absolute; right: 8px; top: 8px; padding: 2px 5px; border: 1px solid currentColor;
+      border-radius: 999px; font-size: 8px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .palette-source { margin: 0 0 8px; font-size: 11px; font-weight: 820; }
+    .palette-source:not(:first-child) { margin-top: 13px; }
+    .profile-button, .chart-color-button { position: relative; padding-right: 28px !important; text-align: left; }
+    .profile-button .profile-check, .chart-color-button .profile-check {
+      position: absolute; top: 50%; right: 9px; translate: 0 -50%;
+      font-size: 14px; font-weight: 900; opacity: 0;
+    }
+    .profile-button[aria-pressed="true"] .profile-check, .chart-color-button[aria-pressed="true"] .profile-check { opacity: 1; }
+    .profile-button .decision-tag {
+      display: block; margin-top: 2px; font-size: 9px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .utility-source-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .utility-review-tag {
+      flex: none; padding: 2px 5px; border: 1px solid currentColor; border-radius: 999px;
+      font-size: 8px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .profile-description { display: block; margin-top: 2px; font-size: 9px; font-weight: 650; }
+    .chart-color-row { align-items: stretch; }
+    .chart-color-row .save-color-action { border-color: #26333d; }
+    .review-toolbar button:disabled { color: #787d82; background: #e1e4e6; border-style: dashed; }
+    .review-toolbar .primary-action { color: white; background: var(--review-accent); border-color: var(--review-accent); }
+    .review-actions { display: grid; grid-template-columns: 1fr; gap: 7px; }
+    .review-status {
+      display: grid; gap: 8px; margin-top: 18px; font-size: 11px;
+    }
+    .status-line, .geometry-digest {
+      box-sizing: border-box; min-height: 68px;
+      padding: 6px 9px; background: white; border: 1px solid var(--review-rule);
+    }
+    .status-line strong, .geometry-digest strong { margin-right: 6px; }
+    .status-line strong, .status-line span { display: block; }
+    .status-line strong { margin-bottom: 2px; }
+    .geometry-digest[data-pass="true"] strong { color: #1c6538; }
+
+    .product-viewport {
+      min-width: 0;
+      height: 100dvh;
+      overflow: auto;
+      scrollbar-gutter: stable;
+      background: var(--paper-outer);
+    }
+    .phone-mode-banner { display: none; }
+    main { box-sizing: border-box; min-width: min(1080px, 100%); padding: 22px 24px 80px; }
+    .style-intro {
+      display: flex; align-items: end; justify-content: space-between; gap: 24px;
+      min-height: 97px; max-width: 1392px; margin: 0 auto 12px;
+    }
+    .style-intro h2 {
+      margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 30px; line-height: 35px; font-weight: 500; letter-spacing: -.025em;
+    }
+    .style-intro p { max-width: 780px; margin: 5px 0 0; color: var(--ink-soft); font-size: 13px; line-height: 1.45; }
+    .style-signature {
+      padding: 8px 10px; border: 1px solid var(--rule-strong); background: var(--paper-panel);
+      font-size: 11px; font-weight: 750; letter-spacing: .025em;
+    }
+
+    .dashboard-shell {
+      position: relative; max-width: 1392px; margin: 0 auto; background: var(--paper-canvas);
+      border: 1px solid var(--rule-strong);
+    }
+    .dashboard-heading {
+      min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 28px;
+      padding: 14px 18px; border-bottom: 1px solid var(--rule-strong); background: var(--paper-panel);
+    }
+    .dashboard-heading h3 {
+      margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 23px; line-height: 26px; font-weight: 500; letter-spacing: -.018em;
+    }
+    .dashboard-heading p { margin: 4px 0 0; color: var(--ink-soft); font-size: 12px; }
+    .identity-line { display: flex; align-items: center; gap: 12px; }
+    .ledger-mark {
+      display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--rule-strong);
+      color: var(--ui-accent); background: var(--paper-panel-alt); font-family: Georgia, serif; font-size: 22px;
+    }
+    .dashboard-meta { display: flex; gap: 18px; text-align: right; }
+    .meta-cell { min-width: 112px; }
+    .meta-cell span { display: block; color: var(--ink-faint); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .meta-cell strong { display: block; margin-top: 3px; font-family: Georgia, serif; font-size: 15px; line-height: 17px; font-weight: 500; }
+
+    .mode-band {
+      min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      padding: 9px 18px; border-bottom: 1px solid var(--rule); background: var(--paper-panel-alt);
+    }
+    .mode-copy { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .mode-glyph {
+      flex: 0 0 auto; display: grid; place-items: center; width: 30px; height: 30px;
+      border: 1px solid var(--rule-strong); font-family: Georgia, serif; font-weight: 700;
+    }
+    .mode-copy strong { display: block; font-family: Georgia, serif; font-size: 15px; line-height: 17px; font-weight: 500; }
+    .mode-copy span { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 11px; }
+    .mode-actions { display: flex; align-items: center; gap: 7px; }
+    .ledger-button, .ledger-select, .ledger-input {
+      min-height: 44px; border: 1px solid var(--rule-strong); border-radius: 1px; color: var(--ink);
+      background: var(--paper-panel); padding: 8px 11px;
+    }
+    .ledger-button:hover { background: var(--ui-accent-soft); }
+    .ledger-button[aria-pressed="true"] { box-shadow: inset 4px 0 0 var(--ui-accent); background: var(--ui-accent-soft); }
+    .ledger-button.primary { color: var(--ui-on-accent); background: var(--ui-accent); border-color: var(--ui-accent); }
+    .mode-note { color: var(--ink-soft); font-size: 11px; }
+
+    .section-header {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end;
+      padding: 22px 18px 14px; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule);
+      background: var(--paper-canvas);
+    }
+    .mode-band + .section-header { border-top: 0; }
+    .section-kicker { color: var(--ink-faint); font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+    .section-header h4 { margin: 5px 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 21px; line-height: 24px; font-weight: 500; letter-spacing: -.015em; }
+    .section-header p { max-width: 800px; margin: 6px 0 0; color: var(--ink-soft); font-size: 11px; line-height: 1.5; }
+    .section-meta {
+      min-width: 94px; padding: 7px 9px; border: 1px solid var(--rule); background: var(--paper-panel);
+      color: var(--ink-soft); font-size: 10px; font-weight: 800; text-align: center;
+    }
+
+    .dashboard-stage { position: static; padding: 18px; overflow: visible; }
+    .dashboard-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, 270px);
+      gap: 16px; min-width: 0;
+    }
+    .dashboard-grid-secondary {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 310px);
+      gap: 16px; min-width: 0;
+    }
+    .chart-panel {
+      position: relative; min-width: 0; overflow: hidden; background: var(--paper-panel);
+      border: 1px solid var(--rule); border-radius: 2px; box-shadow: var(--panel-shadow);
+      transition: background-color 140ms ease, outline-color 140ms ease;
+    }
+    .chart-panel:hover, body[data-proof="true"] #panel-cases {
+      background: color-mix(in srgb, var(--paper-panel) 94%, var(--ui-accent) 6%);
+      outline: 1px solid var(--ui-accent); outline-offset: 2px;
+    }
+    .chart-panel:focus-visible, body[data-proof="true"] #panel-r {
+      outline: 3px double var(--focus); outline-offset: 3px;
+    }
+    .chart-panel[data-selected="true"] { border-color: var(--selected); box-shadow: inset 5px 0 0 var(--selected); }
+    .chart-panel[data-editing="true"] { border-color: var(--selected); outline: 1px dashed var(--selected); outline-offset: 3px; }
+    .chart-panel[data-chrono="true"] { box-shadow: inset 0 -5px 0 var(--chrono); }
+    .chart-panel[data-partial="true"] .plot::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in srgb, var(--warning) 13%, transparent) 8px 10px);
+    }
+    .chart-panel[data-error="true"] { border-color: var(--error); }
+    .chart-panel[data-loading="true"] .plot-inner { opacity: .36; }
+    .chart-panel[data-loading="true"] .plot::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(90deg, transparent 0 30%, color-mix(in srgb, var(--ui-accent) 18%, transparent) 48%, transparent 66%);
+      animation: ledger-scan 1.4s linear infinite;
+    }
+    @keyframes ledger-scan { from { transform: translateX(-90%); } to { transform: translateX(90%); } }
+
+    #panel-cases { grid-column: 1; grid-row: 1; }
+    #panel-r { grid-column: 2; grid-row: 1; }
+    #panel-map { grid-column: 3 / span 2; grid-row: 1 / span 2; }
+    #panel-region { grid-column: 1; grid-row: 2; }
+    #panel-vaccination { grid-column: 1 / span 2; grid-row: 3; }
+    #panel-hospital { grid-column: 3 / span 2; grid-row: 3; }
+    #panel-new-cases-deaths { grid-column: 1 / span 2; grid-row: 1; }
+    #panel-mortality-age { grid-column: 3 / span 2; grid-row: 1; }
+    #panel-capacity { grid-column: 1 / span 2; grid-row: 2; }
+    #panel-admissions { grid-column: 3 / span 2; grid-row: 2; }
+
+    .panel-heading {
+      position: relative; min-height: 76px; display: grid; grid-template-columns: minmax(0, 1fr) 44px;
+      gap: 8px; align-items: start; padding: 12px 12px 9px; border-bottom: 1px solid var(--rule);
+    }
+    .panel-kicker { color: var(--ink-faint); font-size: 9px; font-weight: 850; letter-spacing: .085em; text-transform: uppercase; }
+    .panel-heading h4 {
+      margin: 4px 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 16px; line-height: 1.18; font-weight: 500;
+    }
+    #panel-vaccination .panel-heading h4 { max-width: 520px; }
+    .panel-action {
+      width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--rule); border-radius: 1px;
+      color: var(--ink); background: var(--paper-panel); font-size: 18px;
+    }
+    .panel-action:hover { color: var(--ui-on-accent); background: var(--ui-accent); border-color: var(--ui-accent); }
+    body[data-scene="V0"] .panel-action, body[data-scene="C0"] .panel-action, body[data-scene="R0"] .panel-action {
+      visibility: hidden; pointer-events: none;
+    }
+    .state-tags { position: absolute; z-index: 6; top: 7px; right: 61px; display: flex; gap: 4px; pointer-events: none; }
+    .state-tag {
+      display: none; padding: 3px 6px; border: 1px solid currentColor; background: var(--paper-panel);
+      font-size: 9px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .chart-panel[data-selected="true"] .selected-tag { display: inline-flex; color: var(--selected); }
+    .chart-panel[data-editing="true"] .editing-tag { display: inline-flex; color: var(--selected); border-style: dashed; }
+    .chart-panel[data-chrono="true"] .chrono-tag { display: inline-flex; color: var(--chrono); }
+    body[data-proof="true"] #panel-cases .hover-tag,
+    body[data-proof="true"] #panel-r .focus-tag { display: inline-flex; color: var(--ui-accent); }
+
+    .plot { position: relative; height: calc(100% - 76px); min-height: 0; padding: 12px; }
+    .plot-inner { position: relative; width: 100%; height: 100%; min-height: 0; }
+    .chart-foot { position: absolute; left: 12px; right: 12px; bottom: 9px; display: flex; justify-content: space-between; color: var(--ink-faint); font-size: 9px; }
+    .big-number { font-family: Georgia, serif; font-size: 43px; line-height: 1; font-variant-numeric: tabular-nums; }
+    .delta { margin-top: 6px; color: var(--success); font-size: 11px; font-weight: 750; }
+    .mini-bars { position: absolute; inset: 78px 0 22px; display: flex; align-items: end; gap: 5px; border-bottom: 1px solid var(--gridline); }
+    .mini-bars i { flex: 1; min-width: 3px; background: var(--data-1); border-top: 2px solid var(--chart-mark); }
+    .r-value { display: grid; place-items: center; height: calc(100% - 24px); }
+    .r-value strong { font-family: Georgia, serif; font-size: 42px; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .r-gauge { width: 124px; height: 62px; overflow: hidden; border: 1px solid var(--rule); border-bottom: 0; border-radius: 124px 124px 0 0; background: conic-gradient(from 270deg at 50% 100%, var(--data-3) 0 30%, var(--data-2) 30% 50%, var(--gridline) 50% 100%); }
+    .r-needle { width: 2px; height: 49px; margin: -49px auto 0; background: var(--chart-mark); transform: rotate(-12deg); transform-origin: bottom; }
+    .map-svg { width: 100%; height: calc(100% - 46px); display: block; }
+    .map-svg path { stroke: var(--paper-panel); stroke-width: 3; }
+    .map-svg text {
+      fill: var(--ink);
+      stroke: var(--paper-panel);
+      stroke-width: 3px;
+      stroke-linejoin: round;
+      paint-order: stroke fill;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .legend {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 7px;
+      color: var(--ink-soft); font-size: 10px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .swatch { width: 13px; height: 9px; border: 1px solid var(--rule-strong); background: var(--swatch); }
+    .rank-list { display: grid; gap: 10px; margin-top: 4px; }
+    .rank-row { display: grid; grid-template-columns: 72px minmax(0,1fr) 30px; gap: 6px; align-items: center; font-size: 10px; }
+    .rank-bar { height: 8px; border-bottom: 1px solid var(--rule); background: var(--paper-panel-alt); }
+    .rank-bar i { display: block; height: 100%; width: var(--w); background: var(--data-2); border-right: 2px solid var(--chart-mark); }
+    .line-chart { width: 100%; height: 126px; }
+    .line-chart .grid { stroke: var(--gridline); stroke-width: 1; }
+    .line-chart .series-a { fill: none; stroke: var(--data-1); stroke-width: 3; }
+    .line-chart .series-b { fill: none; stroke: var(--data-2); stroke-width: 3; stroke-dasharray: 7 4; }
+    .line-chart .series-c { fill: none; stroke: var(--data-5); stroke-width: 3; stroke-dasharray: 2 4; }
+    .hospital-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .hospital-table th, .hospital-table td { padding: 8px 5px; border-bottom: 1px solid var(--gridline); text-align: left; }
+    .hospital-table th { color: var(--ink-faint); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+    .capacity { display: inline-block; width: 78px; height: 7px; margin-right: 6px; background: var(--paper-panel-alt); vertical-align: middle; }
+    .capacity i { display: block; width: var(--w); height: 100%; background: var(--data-4); }
+
+    .combo-chart, .admissions-chart { width: 100%; height: 154px; display: block; }
+    .combo-chart .grid, .admissions-chart .grid { stroke: var(--gridline); stroke-width: 1; }
+    .combo-chart text, .admissions-chart text {
+      fill: var(--ink-faint); font-family: Inter, system-ui, sans-serif; font-size: 9px; font-variant-numeric: tabular-nums;
+    }
+    .combo-chart .case-column { fill: var(--data-1); stroke: var(--chart-mark); stroke-width: .8; }
+    .combo-chart .death-line { fill: none; stroke: var(--data-4); stroke-width: 3; stroke-dasharray: 8 4; }
+    .combo-chart .death-point { fill: var(--paper-panel); stroke: var(--data-4); stroke-width: 2; }
+    .legend-line { width: 17px; height: 0; border-top: 3px dashed var(--swatch); }
+    .legend-column { width: 13px; height: 9px; border: 1px solid var(--chart-mark); background: var(--swatch); }
+
+    .donut-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 17px; align-items: center; height: 100%; }
+    .donut-chart {
+      position: relative; width: 152px; height: 152px; margin: 0 auto; border-radius: 50%;
+      background: conic-gradient(var(--data-1) 0 8%, var(--data-2) 8% 15%, var(--data-3) 15% 32%, var(--data-4) 32% 51%, var(--data-5) 51% 75%, var(--data-6) 75% 100%);
+      box-shadow: inset 0 0 0 1px var(--rule-strong);
+    }
+    .donut-chart::after {
+      content: "186\A deaths"; white-space: pre; position: absolute; inset: 34px; display: grid; place-items: center;
+      border-radius: 50%; border: 1px solid var(--rule); color: var(--ink); background: var(--paper-panel);
+      font-family: Georgia, serif; font-size: 16px; line-height: 1.2; text-align: center;
+    }
+    .donut-legend { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px 12px; margin: 0; }
+    .donut-legend span { min-width: 0; align-items: start; }
+    .donut-legend strong { display: block; color: var(--ink); font-size: 10px; }
+    .donut-legend small { display: block; margin-top: 2px; color: var(--ink-faint); font-size: 9px; }
+
+    .bullet-list { display: grid; gap: 21px; padding: 8px 5px 0; }
+    .bullet-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 48px; gap: 10px; align-items: center; }
+    .bullet-label strong { display: block; font-family: Georgia, serif; font-size: 13px; font-weight: 500; }
+    .bullet-label small { display: block; margin-top: 3px; color: var(--ink-faint); font-size: 9px; }
+    .bullet-track { position: relative; height: 26px; border: 1px solid var(--rule); background: var(--paper-panel-alt); }
+    .bullet-track::before {
+      content: ""; position: absolute; inset: 0 15% 0 0;
+      background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), var(--gridline) calc(20% - 1px) 20%);
+    }
+    .bullet-measure { position: absolute; z-index: 1; left: 0; top: 7px; width: var(--w); height: 12px; background: var(--swatch); border-right: 2px solid var(--chart-mark); }
+    .bullet-target { position: absolute; z-index: 2; left: var(--target); top: 2px; width: 3px; height: 22px; background: var(--chart-mark); }
+    .bullet-threshold { position: absolute; z-index: 1; left: 85%; top: 0; bottom: 0; border-left: 2px dashed var(--warning); }
+    .bullet-value { font-family: Georgia, serif; font-size: 17px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+    .bullet-key { display: flex; flex-wrap: wrap; gap: 7px 15px; margin-top: 16px; color: var(--ink-soft); font-size: 9px; }
+    .bullet-key span { display: inline-flex; align-items: center; gap: 6px; }
+    .target-symbol { width: 3px; height: 14px; background: var(--chart-mark); }
+    .threshold-symbol { width: 15px; height: 0; border-top: 2px dashed var(--warning); }
+
+    .admissions-chart .icu-bar { fill: var(--data-5); stroke: var(--chart-mark); stroke-width: .7; }
+    .admissions-chart .hospital-bar { fill: var(--data-2); stroke: var(--chart-mark); stroke-width: .7; }
+    .chart-annotation { margin-top: 6px; padding-left: 8px; border-left: 3px double var(--rule-strong); color: var(--ink-soft); font-size: 9px; line-height: 1.4; }
+
+    .support-section { border-top: 1px solid var(--rule-strong); background: var(--paper-canvas); }
+    .support-content { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr); gap: 16px; align-items: start; padding: 18px; }
+    .support-main, .support-side { display: grid; align-content: start; gap: 14px; }
+    .content-card { border: 1px solid var(--rule); background: var(--paper-panel); padding: 15px; }
+    .content-card h5, .management-notice h5 { margin: 0; font-family: Georgia, serif; font-size: 17px; line-height: 20px; font-weight: 500; }
+    .content-card h6 { margin: 15px 0 5px; color: var(--ink); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
+    .content-card p, .management-notice p { margin: 7px 0 0; color: var(--ink-soft); font-size: 11px; line-height: 1.6; }
+    .management-notice {
+      display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 10px; padding: 14px;
+      border: 1px solid var(--warning); border-left-width: 5px; background: var(--warning-soft);
+    }
+    .notice-symbol { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--warning); color: var(--warning); font-family: Georgia, serif; font-weight: 800; }
+    .method-details { border: 1px solid var(--rule); background: var(--paper-panel); }
+    .method-details summary { min-height: 44px; padding: 13px 42px 13px 15px; cursor: pointer; color: var(--ink); font-family: Georgia, serif; font-size: 15px; line-height: 18px; }
+    .method-details summary:hover { background: var(--ui-accent-soft); }
+    .method-details[open] summary { border-bottom: 1px solid var(--rule-strong); background: var(--paper-panel-alt); }
+    .details-body { padding: 2px 15px 15px; }
+    .details-body dl { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 7px 12px; margin: 12px 0 0; font-size: 10px; line-height: 1.5; }
+    .details-body dt { font-weight: 800; }
+    .details-body dd { margin: 0; color: var(--ink-soft); }
+    .source-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
+    .source-table th, .source-table td { padding: 8px 6px; border-bottom: 1px solid var(--gridline); text-align: left; vertical-align: top; }
+    .source-table th { color: var(--ink-faint); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+    .owner-list { display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 6px 10px; margin: 10px 0 0; font-size: 10px; }
+    .owner-list dt { color: var(--ink-faint); font-weight: 800; }
+    .owner-list dd { margin: 0; color: var(--ink); }
+    .resource-list { list-style: none; margin: 9px 0 0; padding: 0; }
+    .resource-list li + li { border-top: 1px solid var(--gridline); }
+    .resource-list a { display: block; padding: 10px 2px; color: var(--ui-accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .resource-list a:hover { background: var(--ui-accent-soft); text-decoration-thickness: 2px; }
+    .resource-list strong { display: block; font-size: 11px; }
+    .resource-list span { display: block; margin-top: 3px; color: var(--ink-faint); font-size: 9px; }
+    .support-resources { grid-column: 1 / -1; }
+    .support-resources .resource-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+    .support-resources .resource-list li { border-top: 1px solid var(--gridline); }
+    .support-resources .resource-list li + li { border-left: 1px solid var(--gridline); }
+    .support-resources .resource-list a { min-height: 66px; padding: 11px 12px; }
+
+    .page-footer {
+      position: relative; min-width: 1032px; max-width: 1392px; margin: -54px auto 34px; padding: 16px 18px;
+      border: 1px solid var(--rule-strong); border-top: 3px double var(--rule-strong); color: var(--ink); background: var(--paper-panel);
+    }
+    .footer-top { display: grid; grid-template-columns: minmax(250px, .8fr) minmax(420px, 1.2fr) auto; gap: 18px; align-items: center; }
+    .footer-identity strong { display: block; font-family: Georgia, serif; font-size: 14px; line-height: 16px; font-weight: 500; }
+    .footer-identity span, .footer-note { display: block; margin-top: 3px; color: var(--ink-faint); font-size: 9px; line-height: 1.45; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 8px 15px; }
+    .page-footer a { color: var(--ui-accent); font-size: 10px; font-weight: 750; text-underline-offset: 3px; }
+    .page-footer a:hover { text-decoration-thickness: 2px; background: var(--ui-accent-soft); }
+    .feedback-wrap { position: relative; justify-self: end; }
+    .feedback-button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--rule-strong); color: var(--ink); background: var(--paper-panel); padding: 8px 11px; }
+    .feedback-button:hover, .feedback-button[aria-expanded="true"] { background: var(--ui-accent-soft); box-shadow: inset 4px 0 0 var(--ui-accent); }
+    .feedback-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+    .feedback-menu { position: absolute; z-index: 20; right: 0; bottom: calc(100% + 7px); width: 210px; padding: 5px; border: 1px solid var(--rule-strong); background: var(--paper-panel); box-shadow: 5px 6px 0 rgb(0 0 0 / 12%); }
+    .feedback-menu button { width: 100%; min-height: 42px; border: 0; border-bottom: 1px solid var(--rule); color: var(--ink); background: transparent; text-align: left; }
+    .feedback-menu button:last-child { border-bottom: 0; }
+    .feedback-menu button:hover, .feedback-menu button:focus-visible { background: var(--ui-accent-soft); }
+    .feedback-confirmation { min-height: 18px; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--rule); color: var(--success); font-size: 10px; font-weight: 750; }
+
+    .state-overlay {
+      position: absolute; z-index: 8; inset: 76px 0 0; display: none; place-items: center;
+      padding: 18px; text-align: center; background: color-mix(in srgb, var(--paper-panel) 91%, transparent);
+    }
+    .chart-panel[data-loading="true"] .loading-overlay,
+    .chart-panel[data-error="true"] .error-overlay { display: grid; }
+    .state-overlay strong { display: block; font-family: Georgia, serif; font-size: 16px; font-weight: 500; }
+    .state-overlay p { max-width: 280px; margin: 5px 0 10px; color: var(--ink-soft); font-size: 10px; line-height: 1.4; }
+    .state-symbol {
+      display: grid; place-items: center; width: 30px; height: 30px; margin: 0 auto 8px;
+      border: 2px solid currentColor; font-family: Georgia, serif; font-size: 18px; font-weight: 700;
+    }
+    .error-overlay { color: var(--error); }
+    .loading-overlay .state-symbol { color: var(--ui-accent); border-style: dotted; animation: ledger-turn 1.2s linear infinite; }
+    @keyframes ledger-turn { to { transform: rotate(360deg); } }
+    .state-overlay .ledger-button { color: var(--ink); }
+    .partial-ribbon {
+      position: absolute; z-index: 7; left: 12px; bottom: 10px; display: none; align-items: center; gap: 8px;
+      padding: 6px 8px; border: 1px dashed var(--warning); color: var(--warning); background: var(--paper-panel);
+      font-size: 9px; font-weight: 800;
+    }
+    .chart-panel[data-partial="true"] .partial-ribbon { display: flex; }
+    .partial-ribbon button { min-height: 30px; padding: 4px 7px; }
+
+    .availability-overlay {
+      position: absolute; z-index: 5; inset: 76px 0 0; display: none; pointer-events: none;
+      background: repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 1px), color-mix(in srgb, var(--chrono) 34%, transparent) calc(12.5% - 1px) 12.5%);
+    }
+    body[data-availability="true"] .chart-panel[data-chrono="true"] .availability-overlay { display: block; }
+
+    .unit-orbit {
+      position: absolute; z-index: 30; width: 354px; height: 506px; display: none; overflow: hidden;
+      border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--paper-panel); box-shadow: 8px 10px 0 rgb(0 0 0 / 12%);
+    }
+    body[data-scene="B1"] .unit-orbit { display: grid; grid-template-rows: auto auto 1fr auto; }
+    .orbit-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 12px; border-bottom: 1px solid var(--rule-strong); background: var(--paper-panel-alt); }
+    .orbit-head h5 { margin: 2px 0 0; font-family: Georgia, serif; font-size: 16px; font-weight: 500; line-height: 1.18; }
+    .orbit-kicker { color: var(--ink-faint); font-size: 9px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .orbit-menu-button { flex: 0 0 auto; width: 44px; min-height: 44px; padding: 0; }
+    .orbit-menu { position: absolute; z-index: 4; top: 58px; right: 10px; width: 184px; padding: 5px; border: 1px solid var(--rule-strong); background: var(--paper-panel); }
+    .orbit-menu button { width: 100%; min-height: 40px; border: 0; border-bottom: 1px solid var(--rule); color: var(--ink); background: transparent; text-align: left; }
+    .orbit-menu button:hover { background: var(--ui-accent-soft); }
+    .orbit-tabs { display: grid; grid-template-columns: repeat(3,1fr); border-bottom: 1px solid var(--rule); }
+    .orbit-tab { min-height: 44px; border: 0; border-right: 1px solid var(--rule); color: var(--ink-soft); background: var(--paper-panel); font-size: 10px; font-weight: 800; }
+    .orbit-tab:last-child { border-right: 0; }
+    .orbit-tab[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -4px 0 var(--ui-accent); background: var(--ui-accent-soft); }
+    .orbit-body { overflow: auto; padding: 12px; }
+    .field { display: grid; gap: 5px; margin-bottom: 11px; }
+    .field label, .field-label { color: var(--ink-soft); font-size: 10px; font-weight: 820; }
+    .field small { color: var(--ink-faint); font-size: 9px; line-height: 1.35; }
+    .ledger-input, .ledger-select { width: 100%; }
+    .check-row { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 11px; }
+    .check-row input { width: 20px; height: 20px; accent-color: var(--ui-accent); }
+    .advanced-panel { margin-top: 9px; padding: 9px; border-left: 3px double var(--rule-strong); background: var(--paper-panel-alt); }
+    .advanced-toggle { width: 100%; text-align: left; }
+    .footprint-wrap { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule); }
+    .footprint-grid { display: grid; grid-template-columns: repeat(4,44px); grid-template-rows: repeat(2,44px); gap: 5px; margin-top: 7px; }
+    .footprint-cell {
+      position: relative; width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--rule-strong);
+      color: var(--ink); background: var(--paper-panel);
+    }
+    .footprint-cell[data-included="true"] { background: var(--ui-accent-soft); }
+    .footprint-cell[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--ui-accent); }
+    .footprint-cell[data-preview="true"] { outline: 2px dashed var(--selected); outline-offset: -4px; }
+    .footprint-cell span { font-size: 9px; font-weight: 850; }
+    .footprint-status { margin: 6px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.35; }
+    .orbit-actions {
+      display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; padding: 10px 12px;
+      border-top: 1px solid var(--rule-strong); background: var(--paper-panel-alt);
+    }
+    .orbit-actions button { min-height: 44px; }
+    .danger { color: var(--error) !important; border-color: var(--error) !important; background: var(--paper-panel) !important; }
+    .remove-confirm { margin-top: 10px; padding: 9px; border: 2px double var(--error); background: var(--error-soft); }
+    .remove-confirm p { margin: 0 0 8px; color: var(--ink); font-size: 10px; line-height: 1.4; }
+    .remove-confirm .button-row { display: flex; gap: 6px; }
+    .dirty-mark { color: var(--selected); font-size: 10px; font-weight: 850; }
+    .clean-mark { color: var(--success); font-size: 10px; font-weight: 850; }
+
+    .toast {
+      position: fixed; z-index: 120; left: calc(var(--review-rail-width) + (100vw - var(--review-rail-width)) / 2); bottom: 22px; translate: -50% 18px;
+      max-width: 620px; padding: 10px 14px; border: 1px solid var(--rule-strong);
+      color: var(--ink); background: var(--paper-panel); box-shadow: 4px 4px 0 rgb(0 0 0 / 16%);
+      opacity: 0; pointer-events: none; transition: opacity 150ms ease, translate 150ms ease;
+      font-size: 11px; font-weight: 700;
+    }
+    .toast[data-open="true"] { opacity: 1; translate: -50% 0; }
+
+    body[data-style="evidence-ledger"] {
+      --panel-shadow: none;
+    }
+    body[data-style="humanist-standard"] {
+      --panel-shadow: 0 8px 20px rgb(36 57 52 / 10%);
+      font-family: "Segoe UI Variable Text", "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    }
+    body[data-style="humanist-standard"][data-resolved-appearance="dark"] {
+      --panel-shadow: 0 10px 24px rgb(0 0 0 / 24%);
+    }
+    body[data-style="humanist-standard"] .style-intro h2,
+    body[data-style="humanist-standard"] .dashboard-heading h3,
+    body[data-style="humanist-standard"] .meta-cell strong,
+    body[data-style="humanist-standard"] .mode-copy strong,
+    body[data-style="humanist-standard"] .section-header h4,
+    body[data-style="humanist-standard"] .panel-heading h4,
+    body[data-style="humanist-standard"] .big-number,
+    body[data-style="humanist-standard"] .r-value strong,
+    body[data-style="humanist-standard"] .donut-chart::after,
+    body[data-style="humanist-standard"] .bullet-label strong,
+    body[data-style="humanist-standard"] .bullet-value,
+    body[data-style="humanist-standard"] .content-card h5,
+    body[data-style="humanist-standard"] .management-notice h5,
+    body[data-style="humanist-standard"] .method-details summary,
+    body[data-style="humanist-standard"] .state-overlay strong,
+    body[data-style="humanist-standard"] .orbit-head h5,
+    body[data-style="humanist-standard"] .footer-identity strong {
+      font-family: "Segoe UI Variable Display", "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      font-weight: 650;
+      letter-spacing: -.012em;
+    }
+    body[data-style="humanist-standard"] .ledger-mark,
+    body[data-style="humanist-standard"] .mode-glyph,
+    body[data-style="humanist-standard"] .notice-symbol,
+    body[data-style="humanist-standard"] .state-symbol {
+      font-family: "Segoe UI Variable Display", "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    }
+    body[data-style="humanist-standard"] .dashboard-shell {
+      overflow: hidden;
+      border-color: color-mix(in srgb, var(--rule-strong) 78%, transparent);
+      border-radius: 18px;
+      box-shadow: 0 16px 38px rgb(25 55 48 / 12%);
+    }
+    body[data-style="humanist-standard"] .dashboard-heading,
+    body[data-style="humanist-standard"] .mode-band {
+      border-color: color-mix(in srgb, var(--rule) 78%, transparent);
+    }
+    body[data-style="humanist-standard"] .ledger-mark,
+    body[data-style="humanist-standard"] .mode-glyph,
+    body[data-style="humanist-standard"] .notice-symbol {
+      border-radius: 10px;
+    }
+    body[data-style="humanist-standard"] .ledger-mark {
+      background: color-mix(in srgb, var(--ui-accent-soft) 72%, var(--paper-panel));
+    }
+    body[data-style="humanist-standard"] .section-header {
+      border-top-color: color-mix(in srgb, var(--rule-strong) 70%, transparent);
+      border-bottom-color: color-mix(in srgb, var(--rule) 75%, transparent);
+      background: color-mix(in srgb, var(--paper-canvas) 88%, var(--paper-panel));
+    }
+    body[data-style="humanist-standard"] .section-meta,
+    body[data-style="humanist-standard"] .style-signature {
+      border-radius: 999px;
+      border-color: var(--rule);
+      background: var(--paper-panel-alt);
+    }
+    body[data-style="humanist-standard"] .chart-panel {
+      border-color: color-mix(in srgb, var(--rule) 82%, transparent);
+      border-radius: 14px;
+      box-shadow: var(--panel-shadow);
+      transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, outline-color 180ms ease;
+    }
+    body[data-style="humanist-standard"] .chart-panel:hover,
+    body[data-style="humanist-standard"][data-proof="true"] #panel-cases {
+      background: color-mix(in srgb, var(--paper-panel) 92%, var(--ui-accent) 8%);
+      border-color: color-mix(in srgb, var(--ui-accent) 48%, var(--rule));
+      outline: 0;
+      box-shadow: 0 10px 26px rgb(29 67 58 / 16%);
+    }
+    body[data-style="humanist-standard"] .chart-panel:focus-visible,
+    body[data-style="humanist-standard"][data-proof="true"] #panel-r {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+    body[data-style="humanist-standard"] .chart-panel[data-selected="true"] {
+      border-color: var(--selected);
+      box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--selected) 35%, transparent), var(--panel-shadow);
+    }
+    body[data-style="humanist-standard"] .chart-panel[data-editing="true"] {
+      border-color: var(--selected);
+      outline: 2px dashed var(--selected);
+      outline-offset: 3px;
+    }
+    body[data-style="humanist-standard"] .chart-panel[data-chrono="true"] {
+      box-shadow: inset 0 -5px 0 var(--chrono), var(--panel-shadow);
+    }
+    body[data-style="humanist-standard"] .panel-heading {
+      box-sizing: border-box;
+      height: 76px;
+      border-bottom-color: color-mix(in srgb, var(--rule) 75%, transparent);
+    }
+    body[data-style="humanist-standard"] .ledger-button,
+    body[data-style="humanist-standard"] .ledger-select,
+    body[data-style="humanist-standard"] .ledger-input,
+    body[data-style="humanist-standard"] .panel-action,
+    body[data-style="humanist-standard"] .feedback-button,
+    body[data-style="humanist-standard"] .footprint-cell {
+      border-radius: 10px;
+    }
+    body[data-style="humanist-standard"] .ledger-button:hover,
+    body[data-style="humanist-standard"] .panel-action:hover,
+    body[data-style="humanist-standard"] .feedback-button:hover {
+      box-shadow: 0 4px 10px rgb(26 60 52 / 12%);
+    }
+    body[data-style="humanist-standard"] .ledger-button[aria-pressed="true"] {
+      box-shadow: inset 0 0 0 2px var(--ui-accent);
+    }
+    body[data-style="humanist-standard"] .state-tag,
+    body[data-style="humanist-standard"] .partial-ribbon {
+      border-radius: 999px;
+    }
+    body[data-style="humanist-standard"] .content-card,
+    body[data-style="humanist-standard"] .method-details,
+    body[data-style="humanist-standard"] .management-notice {
+      border-color: color-mix(in srgb, var(--rule) 82%, transparent);
+      border-radius: 12px;
+      box-shadow: 0 5px 14px rgb(31 61 54 / 6%);
+    }
+    body[data-style="humanist-standard"] .management-notice { border-left-width: 5px; }
+    body[data-style="humanist-standard"] .page-footer {
+      border: 1px solid color-mix(in srgb, var(--rule-strong) 75%, transparent);
+      border-top-width: 3px;
+      border-top-style: solid;
+      border-radius: 14px;
+      box-shadow: 0 8px 22px rgb(30 57 50 / 9%);
+    }
+    body[data-style="humanist-standard"] .feedback-menu,
+    body[data-style="humanist-standard"] .unit-orbit,
+    body[data-style="humanist-standard"] .orbit-menu {
+      border-radius: 14px;
+      box-shadow: 0 14px 34px rgb(16 37 32 / 20%);
+    }
+    body[data-style="humanist-standard"] .unit-orbit { overflow: hidden; }
+    body[data-style="humanist-standard"] .orbit-tab[aria-selected="true"] {
+      box-shadow: inset 0 -4px 0 var(--ui-accent);
+    }
+    body[data-style="humanist-standard"] .advanced-panel,
+    body[data-style="humanist-standard"] .chart-annotation {
+      border-left-style: solid;
+      border-left-width: 4px;
+      border-radius: 0 9px 9px 0;
+    }
+
+    body[data-style="signal-instrument"] {
+      --panel-shadow: 0 1px 2px rgb(19 38 45 / 14%), inset 0 1px 0 rgb(255 255 255 / 55%);
+      font-family: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+    body[data-style="signal-instrument"][data-resolved-appearance="dark"] {
+      --panel-shadow: 0 1px 2px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 6%);
+    }
+    body[data-style="signal-instrument"] .style-intro h2,
+    body[data-style="signal-instrument"] .dashboard-heading h3,
+    body[data-style="signal-instrument"] .mode-copy strong,
+    body[data-style="signal-instrument"] .section-header h4,
+    body[data-style="signal-instrument"] .panel-heading h4,
+    body[data-style="signal-instrument"] .content-card h5,
+    body[data-style="signal-instrument"] .management-notice h5,
+    body[data-style="signal-instrument"] .method-details summary,
+    body[data-style="signal-instrument"] .state-overlay strong,
+    body[data-style="signal-instrument"] .orbit-head h5,
+    body[data-style="signal-instrument"] .footer-identity strong {
+      font-family: Bahnschrift, "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      font-weight: 650;
+      letter-spacing: .012em;
+    }
+    body[data-style="signal-instrument"] .meta-cell strong,
+    body[data-style="signal-instrument"] .big-number,
+    body[data-style="signal-instrument"] .r-value strong,
+    body[data-style="signal-instrument"] .donut-chart::after,
+    body[data-style="signal-instrument"] .bullet-label strong,
+    body[data-style="signal-instrument"] .bullet-value,
+    body[data-style="signal-instrument"] .chart-foot,
+    body[data-style="signal-instrument"] .hospital-table td,
+    body[data-style="signal-instrument"] .source-table td {
+      font-family: "Cascadia Mono", "Segoe UI Mono", Consolas, ui-monospace, monospace;
+      font-variant-numeric: tabular-nums slashed-zero;
+    }
+    body[data-style="signal-instrument"] .section-meta {
+      line-height: 14px;
+    }
+    body[data-style="signal-instrument"] .section-kicker,
+    body[data-style="signal-instrument"] .panel-kicker,
+    body[data-style="signal-instrument"] .orbit-kicker,
+    body[data-style="signal-instrument"] .chart-foot {
+      line-height: 12px;
+    }
+    body[data-style="signal-instrument"] .hospital-table td,
+    body[data-style="signal-instrument"] .source-table td {
+      line-height: 14px;
+    }
+    body[data-style="signal-instrument"] .dashboard-shell {
+      overflow: hidden;
+      border-color: var(--rule-strong);
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgb(19 38 45 / 14%), inset 0 1px 0 rgb(255 255 255 / 45%);
+    }
+    body[data-style="signal-instrument"][data-resolved-appearance="dark"] .dashboard-shell {
+      box-shadow: 0 4px 12px rgb(0 0 0 / 32%), inset 0 1px 0 rgb(255 255 255 / 6%);
+    }
+    body[data-style="signal-instrument"] .dashboard-heading {
+      background:
+        linear-gradient(90deg, var(--ui-accent) 0 74px, var(--rule-strong) 74px 100%) top / 100% 3px no-repeat,
+        var(--paper-panel);
+    }
+    body[data-style="signal-instrument"] .mode-band {
+      background: color-mix(in srgb, var(--paper-panel-alt) 82%, var(--paper-canvas));
+    }
+    body[data-style="signal-instrument"] .section-header {
+      background:
+        linear-gradient(var(--ui-accent), var(--ui-accent)) left center / 3px calc(100% - 20px) no-repeat,
+        color-mix(in srgb, var(--paper-panel-alt) 82%, var(--paper-canvas));
+    }
+    body[data-style="signal-instrument"] .ledger-mark,
+    body[data-style="signal-instrument"] .mode-glyph,
+    body[data-style="signal-instrument"] .notice-symbol,
+    body[data-style="signal-instrument"] .state-symbol {
+      border-radius: 3px;
+      font-family: "Cascadia Mono", "Segoe UI Mono", Consolas, ui-monospace, monospace;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rule) 42%, transparent);
+    }
+    body[data-style="signal-instrument"] .style-signature,
+    body[data-style="signal-instrument"] .section-meta {
+      border-radius: 2px;
+      background: var(--paper-panel-alt);
+      font-family: "Cascadia Mono", "Segoe UI Mono", Consolas, ui-monospace, monospace;
+      letter-spacing: .035em;
+    }
+    body[data-style="signal-instrument"] .chart-panel {
+      border-color: var(--rule);
+      border-radius: 4px;
+      box-shadow: var(--panel-shadow);
+      transition: background-color 95ms cubic-bezier(.2, 0, 0, 1), border-color 95ms cubic-bezier(.2, 0, 0, 1), box-shadow 95ms cubic-bezier(.2, 0, 0, 1), outline-color 95ms cubic-bezier(.2, 0, 0, 1);
+    }
+    body[data-style="signal-instrument"] .panel-heading {
+      box-sizing: border-box;
+      height: 76px;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--ui-accent) 56%, var(--rule-strong)) 0 38px, var(--rule) 38px 100%) top / 100% 2px no-repeat,
+        color-mix(in srgb, var(--paper-panel-alt) 68%, var(--paper-panel));
+    }
+    body[data-style="signal-instrument"] .chart-panel:hover,
+    body[data-style="signal-instrument"][data-proof="true"] #panel-cases {
+      background: color-mix(in srgb, var(--paper-panel) 92%, var(--ui-accent) 8%);
+      border-color: var(--ui-accent);
+      outline: 0;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-accent) 50%, transparent), var(--panel-shadow);
+    }
+    body[data-style="signal-instrument"] .chart-panel:focus-visible,
+    body[data-style="signal-instrument"][data-proof="true"] #panel-r {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus) 62%, transparent), var(--panel-shadow);
+    }
+    body[data-style="signal-instrument"] .chart-panel[data-selected="true"] {
+      border-color: var(--selected);
+      box-shadow: inset 4px 0 0 var(--selected), inset 0 0 0 1px color-mix(in srgb, var(--selected) 38%, transparent), var(--panel-shadow);
+    }
+    body[data-style="signal-instrument"] .chart-panel[data-editing="true"] {
+      border-color: var(--selected);
+      outline: 2px dashed var(--selected);
+      outline-offset: 3px;
+    }
+    body[data-style="signal-instrument"] .chart-panel[data-chrono="true"] {
+      box-shadow: inset 0 -5px 0 var(--chrono), inset 0 0 0 1px color-mix(in srgb, var(--chrono) 34%, transparent), var(--panel-shadow);
+    }
+    body[data-style="signal-instrument"] .chart-panel[data-error="true"] {
+      box-shadow: inset 0 0 0 1px var(--error), var(--panel-shadow);
+    }
+    body[data-style="signal-instrument"] .chart-panel[data-loading="true"] .plot::after {
+      animation: none;
+      transform: none;
+      background: repeating-linear-gradient(90deg, transparent 0 13px, color-mix(in srgb, var(--ui-accent) 18%, transparent) 13px 17px);
+    }
+    body[data-style="signal-instrument"] .loading-overlay .state-symbol {
+      animation: none;
+      border-style: solid;
+      background: repeating-linear-gradient(90deg, transparent 0 5px, color-mix(in srgb, currentColor 16%, transparent) 5px 7px);
+    }
+    body[data-style="signal-instrument"] .state-tag,
+    body[data-style="signal-instrument"] .partial-ribbon {
+      border-radius: 2px;
+      background: var(--paper-panel-alt);
+      font-family: "Cascadia Mono", "Segoe UI Mono", Consolas, ui-monospace, monospace;
+    }
+    body[data-style="signal-instrument"] .ledger-button,
+    body[data-style="signal-instrument"] .ledger-select,
+    body[data-style="signal-instrument"] .ledger-input,
+    body[data-style="signal-instrument"] .panel-action,
+    body[data-style="signal-instrument"] .feedback-button,
+    body[data-style="signal-instrument"] .footprint-cell {
+      border-radius: 3px;
+      box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--rule-strong) 34%, transparent);
+      transition: background-color 90ms cubic-bezier(.2, 0, 0, 1), border-color 90ms cubic-bezier(.2, 0, 0, 1), box-shadow 90ms cubic-bezier(.2, 0, 0, 1);
+    }
+    body[data-style="signal-instrument"] .ledger-button[aria-pressed="true"] {
+      box-shadow: inset 0 0 0 2px var(--ui-accent);
+    }
+    body[data-style="signal-instrument"] .content-card,
+    body[data-style="signal-instrument"] .method-details,
+    body[data-style="signal-instrument"] .management-notice {
+      border-radius: 3px;
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--rule-strong) 18%, transparent), inset 0 1px 0 color-mix(in srgb, var(--paper-panel) 58%, transparent);
+    }
+    body[data-style="signal-instrument"] .feedback-menu,
+    body[data-style="signal-instrument"] .unit-orbit,
+    body[data-style="signal-instrument"] .orbit-menu {
+      border-radius: 4px;
+      box-shadow: 0 3px 7px color-mix(in srgb, var(--rule-strong) 28%, transparent), inset 0 1px 0 color-mix(in srgb, var(--paper-panel) 58%, transparent);
+    }
+    body[data-style="signal-instrument"] .unit-orbit { overflow: hidden; }
+    body[data-style="signal-instrument"] .orbit-head,
+    body[data-style="signal-instrument"] .orbit-actions {
+      background: color-mix(in srgb, var(--paper-panel-alt) 82%, var(--paper-canvas));
+    }
+    body[data-style="signal-instrument"] .orbit-tab[aria-selected="true"] {
+      box-shadow: inset 0 -4px 0 var(--ui-accent);
+    }
+    body[data-style="signal-instrument"] .panel-kicker,
+    body[data-style="signal-instrument"] .section-kicker,
+    body[data-style="signal-instrument"] .orbit-kicker {
+      font-family: "Cascadia Mono", "Segoe UI Mono", Consolas, ui-monospace, monospace;
+      letter-spacing: .075em;
+    }
+    body[data-style="signal-instrument"] .ledger-button,
+    body[data-style="signal-instrument"] .panel-action,
+    body[data-style="signal-instrument"] .feedback-button,
+    body[data-style="signal-instrument"] .orbit-tab {
+      font-family: Bahnschrift, "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+      font-weight: 650;
+      letter-spacing: .015em;
+    }
+    body[data-style="signal-instrument"] .toast {
+      translate: -50% 2px;
+      transition: opacity 140ms cubic-bezier(.2, 0, 0, 1), translate 140ms cubic-bezier(.2, 0, 0, 1);
+    }
+    body[data-style="signal-instrument"] .toast[data-open="true"] { translate: -50% 0; }
+
+    @media (max-width: 1279px) {
+      body { --review-rail-width: 0px; display: block; min-width: 0; overflow: hidden; }
+      .review-toolbar {
+        position: relative; width: auto; height: 42dvh; min-height: 300px;
+        border-right: 0; border-bottom: 1px solid #8d949b; box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+      }
+      .review-inner { max-width: 760px; margin: 0 auto; }
+      .product-viewport { height: 58dvh; min-height: 420px; }
+    }
+
+    @media (max-width: 1079px) {
+      .product-viewport { overflow-x: hidden; }
+      main { min-width: 0; padding: 18px 18px 80px; }
+      .style-intro { min-width: 0; min-height: 116px; }
+      .dashboard-shell { min-width: 0; }
+      .dashboard-grid, .dashboard-grid-secondary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: none;
+        grid-auto-flow: row;
+        grid-auto-rows: auto;
+      }
+      .dashboard-grid > .chart-panel,
+      .dashboard-grid-secondary > .chart-panel {
+        grid-column: auto;
+        grid-row: auto !important;
+        height: 310px;
+      }
+      #panel-cases, #panel-r {
+        grid-column: auto !important;
+        height: 290px;
+      }
+      #panel-map {
+        grid-column: 1 / -1 !important;
+        height: 556px;
+      }
+      #panel-region,
+      #panel-vaccination,
+      #panel-hospital,
+      #panel-new-cases-deaths,
+      #panel-mortality-age,
+      #panel-capacity,
+      #panel-admissions {
+        grid-column: 1 / -1 !important;
+      }
+      #panel-vaccination, #panel-hospital { height: 340px; }
+      .dashboard-grid-secondary > .chart-panel { height: 350px; }
+      body[data-scene] .panel-heading { height: auto; min-height: 92px; }
+      .plot { height: calc(100% - 92px); }
+      .support-content { grid-template-columns: minmax(0, 1fr) minmax(280px, .75fr); }
+      .page-footer { min-width: 0; margin: -54px 18px 34px; }
+      .footer-top { grid-template-columns: minmax(0, 1fr) auto; }
+      .footer-links { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 639px) {
+      body:is([data-scene="B0"], [data-scene="B1"], [data-scene^="P"]) .phone-mode-banner {
+        position: sticky;
+        z-index: 45;
+        top: 0;
+        box-sizing: border-box;
+        display: grid;
+        gap: 2px;
+        width: 100%;
+        padding: 10px 12px;
+        border-bottom: 2px solid var(--warning);
+        color: var(--ink);
+        background: var(--warning-soft);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+      .phone-mode-banner strong { font-size: 12px; }
+      main { padding: 12px 10px 72px; }
+      .style-intro {
+        display: grid;
+        align-items: start;
+        gap: 10px;
+        min-height: 168px;
+        margin-bottom: 10px;
+      }
+      .style-intro h2 { font-size: 25px; line-height: 29px; }
+      .style-signature { justify-self: start; }
+      .dashboard-heading {
+        box-sizing: border-box;
+        min-height: 153px;
+        display: grid;
+        align-items: start;
+        gap: 14px;
+        padding: 14px;
+      }
+      .dashboard-heading h3 { font-size: 20px; line-height: 23px; }
+      .dashboard-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        width: 100%;
+        text-align: left;
+      }
+      .meta-cell { min-width: 0; }
+      .mode-band {
+        display: grid;
+        align-items: start;
+        gap: 10px;
+        padding: 10px 14px;
+      }
+      .mode-actions { flex-wrap: wrap; }
+      .section-header {
+        box-sizing: border-box;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        min-height: 194px;
+        padding: 18px 14px 12px;
+      }
+      .section-meta { min-width: 0; justify-self: start; }
+      .dashboard-stage { padding: 12px; }
+      .dashboard-grid, .dashboard-grid-secondary {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+      }
+      .dashboard-grid > .chart-panel,
+      .dashboard-grid-secondary > .chart-panel {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        height: 330px;
+      }
+      #panel-cases,
+      #panel-r,
+      #panel-map,
+      #panel-region,
+      #panel-vaccination,
+      #panel-hospital,
+      #panel-new-cases-deaths,
+      #panel-mortality-age,
+      #panel-capacity,
+      #panel-admissions {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+      }
+      #panel-map { height: 440px; }
+      #panel-vaccination, #panel-hospital { height: 370px; }
+      #panel-mortality-age, #panel-capacity { height: 420px; }
+      #panel-new-cases-deaths, #panel-admissions { height: 390px; }
+      body[data-scene] .panel-heading { min-height: 104px; }
+      .plot { height: calc(100% - 104px); padding: 10px; }
+      .chart-foot { left: 10px; right: 10px; }
+      .donut-layout { grid-template-columns: 118px minmax(0, 1fr); gap: 10px; }
+      .donut-chart { width: 112px; height: 112px; }
+      .donut-chart::after { inset: 25px; font-size: 13px; }
+      .donut-legend { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+      .bullet-row { grid-template-columns: 112px minmax(0, 1fr) 42px; gap: 7px; }
+      .support-content { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; }
+      .support-section { box-sizing: border-box; min-height: 1445px; }
+      .source-table, .hospital-table { table-layout: fixed; overflow-wrap: anywhere; }
+      .page-footer { margin: -44px 10px 24px; padding: 14px; }
+      .footer-top { grid-template-columns: minmax(0, 1fr); gap: 13px; align-items: start; }
+      .footer-links { grid-column: auto; }
+      .feedback-wrap { justify-self: start; }
+      .feedback-menu { right: auto; left: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body id="top" data-scene="V0" data-style="signal-instrument" data-palette-id="graphpad-sunrise-reference" data-chart-color-mode="profile" data-resolved-appearance="light" data-proof="false" data-availability="false">
+  <header class="review-toolbar" data-review-chrome="external">
+    <div class="review-inner">
+      <div class="review-heading">
+        <div>
+          <h1>Sketch 003 · Dashboard visual language · Approved portfolio</h1>
+          <p>All three style grammars and 15 approved saveable palettes form the selected portfolio. One review-only baseline and two rejected contrast-tuned candidates remain interactive as preserved evidence; structure, geometry, data, interaction and state transitions stay unchanged.</p>
+        </div>
+        <span class="preview-contract">Approved · non-mutating preview</span>
+      </div>
+      <div class="review-controls">
+        <div class="control-cluster">
+          <span class="control-label">Style portfolio</span>
+          <div class="button-row" id="styleButtons" aria-label="Dashboard style grammar">
+            <button type="button" class="style-button" data-style-button="evidence-ledger" aria-pressed="false">Evidence Ledger<span class="portfolio-status">Approved</span></button>
+            <button type="button" class="style-button" data-style-button="humanist-standard" aria-pressed="false">Humanist Standard<span class="portfolio-status">Approved</span></button>
+            <button type="button" class="style-button" data-style-button="signal-instrument" aria-pressed="true">Signal Instrument<span class="portfolio-status">Approved</span></button>
+          </div>
+        </div>
+        <div class="control-cluster">
+          <span class="control-label">Deterministic review scene</span>
+          <div class="button-row" id="sceneButtons">
+            <button type="button" data-scene-button="V0" aria-pressed="true">V0 · Ordinary View</button>
+            <button type="button" data-scene-button="B0" aria-pressed="false">B0 · Selected Build</button>
+            <button type="button" data-scene-button="B1" aria-pressed="false">B1 · Editing + Orbit</button>
+            <button type="button" data-scene-button="C0" aria-pressed="false">C0 · Chrono</button>
+            <button type="button" data-scene-button="R0" aria-pressed="false">R0 · Resilience</button>
+          </div>
+        </div>
+        <div class="control-cluster">
+          <span class="control-label">Appearance preview</span>
+          <div class="button-row" id="appearanceButtons">
+            <button type="button" data-appearance="light" aria-pressed="true">Light</button>
+            <button type="button" data-appearance="dark" aria-pressed="false">Dark</button>
+            <button type="button" data-appearance="system" aria-pressed="false">System</button>
+          </div>
+        </div>
+        <div class="control-cluster profile-cluster">
+          <span class="control-label">Color source · applies across any approved style</span>
+          <p class="palette-source">Evidence Ledger palettes</p>
+          <div class="button-row" id="evidencePaletteButtons" aria-label="Evidence Ledger color profiles">
+            <button type="button" class="profile-button" data-palette-id-button="evidence-original" data-palette-decision="review-only" aria-pressed="false" title="Preserved original palette for comparison only; it cannot be saved with any style">
+              Original · baseline<span class="decision-tag">Review only</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="evidence-signature" data-palette-decision="approved" aria-pressed="false">
+              Signature · Brighter Vellum<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="evidence-restrained" data-palette-decision="approved" aria-pressed="false">
+              Restrained · Ash Register<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="evidence-counterpoint" data-palette-decision="approved" aria-pressed="false">
+              Counterpoint · Cool Archive<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+          <p class="palette-source">Humanist Standard palettes</p>
+          <div class="button-row" id="humanistPaletteButtons" aria-label="Humanist Standard color profiles">
+            <button type="button" class="profile-button" data-palette-id-button="humanist-signature" data-palette-decision="approved" aria-pressed="false">
+              Signature · Common Ground<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="humanist-restrained" data-palette-decision="approved" aria-pressed="false">
+              Restrained · Quiet Commons<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="humanist-counterpoint" data-palette-decision="approved" aria-pressed="false">
+              Counterpoint · Open Forum<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" id="useHumanistSignature">Use Humanist Signature</button>
+          </div>
+          <p class="palette-source">Signal Instrument palettes</p>
+          <div class="button-row" id="signalPaletteButtons" aria-label="Signal Instrument color profiles">
+            <button type="button" class="profile-button" data-palette-id-button="signal-signature" data-palette-decision="approved" aria-pressed="false">
+              Signature · Calibrated Steel<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="signal-restrained" data-palette-decision="approved" aria-pressed="false">
+              Restrained · Quiet Telemetry<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="signal-counterpoint" data-palette-decision="approved" aria-pressed="false">
+              Counterpoint · Amber Vector<span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" id="useSignalSignature">Use Signal Signature</button>
+          </div>
+          <p class="palette-source utility-source-line"><span>Portfolio utility palettes</span><span class="utility-review-tag">6 approved · 2 rejected/preserved</span></p>
+          <div class="button-row" id="utilityPaletteButtons" aria-label="Portfolio utility color palettes: six approved and two rejected candidates preserved as evidence">
+            <button type="button" class="profile-button" data-palette-id-button="utility-prismatic" data-palette-decision="approved" aria-pressed="false" aria-label="Prismatic Index — categorical separation — approved">
+              Prismatic Index<span class="profile-description">Categorical separation</span><span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="utility-polarity" data-palette-decision="approved" aria-pressed="false" aria-label="Chromatic Polarity — paired Light and Dark — approved">
+              Chromatic Polarity<span class="profile-description">Paired Light/Dark</span><span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="utility-luminance" data-palette-decision="approved" aria-pressed="false" aria-label="Luminance Ladder — projection and grayscale — approved">
+              Luminance Ladder<span class="profile-description">Projection and grayscale</span><span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="graphpad-sunrise-reference" data-palette-decision="approved" aria-pressed="true" aria-label="Sunrise — reference faithful — exact GraphPad Light series at 100 percent opacity — approved" title="Light uses GraphPad's published Sunrise series exactly; Dark uses a hue-preserving adaptation. Neutral boundaries support low-contrast fills.">
+              Sunrise — Reference faithful<span class="profile-description">Exact Light series · solid fills</span><span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="graphpad-sunrise-contrast" data-palette-decision="rejected" aria-pressed="false" aria-label="Sunrise — contrast tuned — rejected candidate preserved for comparison" title="Rejected: local retuning sacrifices source fidelity and offers insufficient advantage over the accepted reference-and-outline approach. Preserved for comparison and unavailable as a dashboard style.">
+              Sunrise — Contrast tuned<span class="profile-description">Local ≥3:1 adaptation · not GraphPad certified</span><span class="decision-tag">Rejected · Preserved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="graphpad-lakeside-reference" data-palette-decision="approved" aria-pressed="false" aria-label="Lakeside — reference faithful — exact GraphPad Light series at 100 percent opacity — approved" title="Light uses GraphPad's published Lakeside series exactly; Dark uses a hue-preserving adaptation. Neutral boundaries support low-contrast fills.">
+              Lakeside — Reference faithful<span class="profile-description">Exact Light series · solid fills</span><span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="graphpad-lakeside-contrast" data-palette-decision="rejected" aria-pressed="false" aria-label="Lakeside — contrast tuned — rejected candidate preserved for comparison" title="Rejected: local retuning sacrifices source fidelity and offers insufficient advantage over the accepted reference-and-outline approach. Preserved for comparison and unavailable as a dashboard style.">
+              Lakeside — Contrast tuned<span class="profile-description">Local ≥3:1 adaptation · not GraphPad certified</span><span class="decision-tag">Rejected · Preserved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="profile-button" data-palette-id-button="utility-monochrome" data-palette-decision="approved" aria-pressed="false" aria-label="Monochrome Reserve — achromatic interface with Prismatic Index chart series — approved">
+              Monochrome Reserve<span class="profile-description">Achromatic UI · Prismatic series</span><span class="decision-tag">Approved</span><span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+          </div>
+        </div>
+        <div class="control-cluster chart-color-cluster">
+          <span class="control-label">Chart color preview · independent dashboard setting</span>
+          <div class="button-row chart-color-row" id="chartColorButtons" aria-label="Chart color mode">
+            <button type="button" class="chart-color-button" data-chart-color-mode-button="profile" aria-pressed="true">
+              Profile colors<span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="chart-color-button" data-chart-color-mode-button="standard" aria-pressed="false">
+              Standard chart colors<span class="profile-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="save-color-action" id="setChartColorsButton" title="Save only the previewed chart color mode">Set chart colors</button>
+          </div>
+        </div>
+        <div class="review-actions">
+          <button type="button" id="proofButton" aria-pressed="false">Pin hover + focus proof</button>
+          <button type="button" class="primary-action" id="setStyleButton" title="Save the previewed style and color profile to this dashboard">Set as dashboard style</button>
+        </div>
+      </div>
+      <div class="review-status" aria-live="polite">
+        <div class="status-line"><strong id="previewStatus">Preview:</strong><span id="chartColorStatus">Chart colors:</span><span id="savedStatus">Saved dashboard style: Default neutral</span></div>
+        <div class="geometry-digest" id="geometryDigest" data-pass="true"><strong>Geometry parity · PASS</strong><span id="geometryDetails">Canvas 0.00 · Grid 0.00 · Panels 0.00 · Plots 0.00 · Orbit 0.00 px</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="product-viewport" id="productViewport">
+  <div class="phone-mode-banner" role="status" aria-live="polite">
+    <strong>Build and Present are not supported on phone-sized screens.</strong>
+    <span>View remains available here. Use a tablet or desktop to author or moderate this dashboard.</span>
+  </div>
+  <main id="fixtureTop">
+    <section class="style-intro" aria-labelledby="styleTitle">
+      <div>
+        <h2 id="styleTitle">Signal Instrument</h2>
+        <p>Status at a glance under pressure: crisp calibrated edges, low-glare tonal layers, tabular numeric emphasis and terse state responses make dense evidence feel dependable without turning the dashboard into a command-centre costume.</p>
+      </div>
+      <div class="style-signature">Calibrated instrument · explicit state · low-glare precision</div>
+    </section>
+
+    <article class="dashboard-shell" id="dashboardShell" aria-label="FIX-DASH representative dashboard">
+      <header class="dashboard-heading">
+        <div class="identity-line">
+          <span class="ledger-mark" aria-hidden="true">F</span>
+          <div>
+            <h3>FIX-DASH · Biological incidents</h3>
+            <p>Region 3 management review · Surveillance period 08 July–04 August 2026</p>
+          </div>
+        </div>
+        <div class="dashboard-meta" aria-label="Dashboard metadata">
+          <div class="meta-cell"><span>Evidence status</span><strong>Reviewed 06:00</strong></div>
+          <div class="meta-cell"><span>Geography</span><strong>All municipalities</strong></div>
+        </div>
+      </header>
+
+      <section class="mode-band" aria-live="polite">
+        <div class="mode-copy">
+          <span class="mode-glyph" id="modeGlyph" aria-hidden="true">V</span>
+          <div><strong id="modeTitle">Ordinary View</strong><span id="modeDescription">The published dashboard is readable without authoring emphasis.</span></div>
+        </div>
+        <div class="mode-actions" id="modeActions">
+          <span class="mode-note">10 charts · two fixed four-track analytical sections</span>
+        </div>
+      </section>
+
+      <header class="section-header" aria-labelledby="section-overview-title">
+        <div>
+          <div class="section-kicker">01 · Current situation</div>
+          <h4 id="section-overview-title">Surveillance and response overview</h4>
+          <p>Core surveillance, geographic spread, vaccination coverage and treatment demand for the current management-review period. Values retain their source timestamps and operational definitions.</p>
+        </div>
+        <div class="section-meta">6 charts</div>
+      </header>
+
+      <section class="dashboard-stage analytical-stage" id="dashboardStage" aria-labelledby="section-overview-title">
+        <div class="dashboard-grid" id="dashboardGrid" data-analytical-grid>
+          <article class="chart-panel" id="panel-cases" data-panel-id="bio_confirmed_cases" tabindex="0" aria-labelledby="title-cases">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Incident total</div><h4 id="title-cases">Confirmed cases</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_confirmed_cases" aria-label="Select Confirmed cases for editing">✎</button>
+              <div class="state-tags"><span class="state-tag hover-tag">Hover pinned</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <div class="big-number">12,842</div><div class="delta">↓ 6.2% versus prior period</div>
+                <div class="mini-bars" aria-label="Declining 28-day case trend">
+                  <i style="height:78%"></i><i style="height:92%"></i><i style="height:83%"></i><i style="height:74%"></i><i style="height:68%"></i><i style="height:61%"></i><i style="height:55%"></i><i style="height:47%"></i><i style="height:42%"></i><i style="height:35%"></i><i style="height:39%"></i><i style="height:31%"></i>
+                </div>
+                <div class="chart-foot"><span>08 Jul</span><span>04 Aug</span></div>
+              </div>
+            </div>
+            <div class="state-overlay loading-overlay" role="status"><div><span class="state-symbol" aria-hidden="true">↻</span><strong>Loading current case ledger</strong><p>Panel geometry and last-known plot remain reserved while evidence is refreshed.</p></div></div>
+          </article>
+
+          <article class="chart-panel" id="panel-r" data-panel-id="bio_r_values" tabindex="0" aria-labelledby="title-r">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Transmission signal</div><h4 id="title-r">Effective reproduction rate</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_r_values" aria-label="Select Effective reproduction rate for editing">✎</button>
+              <div class="state-tags"><span class="state-tag focus-tag">Focus pinned</span><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag chrono-tag">◷ Chrono member</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner r-value">
+                <div><div class="r-gauge" aria-hidden="true"></div><div class="r-needle" aria-hidden="true"></div><strong>0.86</strong></div>
+                <div class="chart-foot"><span>Intervention threshold</span><span>1.00</span></div>
+              </div>
+              <div class="availability-overlay" aria-hidden="true"></div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-map" data-panel-id="bio_municipality_choropleth_animation" tabindex="0" aria-labelledby="title-map">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Animated choropleth · Week 31</div><h4 id="title-map">Municipality incidence over time</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_municipality_choropleth_animation" aria-label="Select Municipality incidence over time for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag editing-tag">✎ Editing</span><span class="state-tag chrono-tag">◷ Chrono member</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <svg class="map-svg" viewBox="0 0 620 360" role="img" aria-label="Municipality incidence choropleth, week 31">
+                  <path fill="var(--data-6)" d="M31 65L151 25l86 63-26 99-133 16-49-72z"/>
+                  <path fill="var(--data-4)" d="M237 88l126-38 80 73-35 109-121 26-76-71z"/>
+                  <path fill="var(--data-2)" d="M443 123l130-48 37 96-40 116-124-9-38-46z"/>
+                  <path fill="var(--data-3)" d="M78 203l133-16 76 71-29 87-153-10-62-75z"/>
+                  <path fill="var(--data-1)" d="M287 258l121-26 38 46-26 79-162-12z"/>
+                  <path fill="var(--data-5)" d="M446 278l124 9-34 68-116 2z"/>
+                  <text x="77" y="118">Northfield · 61</text><text x="282" y="149">Central · 184</text><text x="480" y="181">East · 151</text>
+                  <text x="105" y="281">Westhaven · 64</text><text x="318" y="313">South · 102</text>
+                </svg>
+                <div class="legend" aria-label="Incidence legend">
+                  <span><i class="swatch" style="--swatch:var(--data-3)"></i>0–49</span>
+                  <span><i class="swatch" style="--swatch:var(--data-6)"></i>50–99</span>
+                  <span><i class="swatch" style="--swatch:var(--data-2)"></i>100–149</span>
+                  <span><i class="swatch" style="--swatch:var(--data-4)"></i>150+ per 100,000</span>
+                </div>
+              </div>
+              <div class="availability-overlay" aria-hidden="true"></div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-region" data-panel-id="bio_region_comparison" tabindex="0" aria-labelledby="title-region">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Cases per 100,000</div><h4 id="title-region">Regional comparison</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_region_comparison" aria-label="Select Regional comparison for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <div class="rank-list" aria-label="Municipal incidence ranking">
+                  <div class="rank-row"><span>Central</span><span class="rank-bar"><i style="--w:92%"></i></span><strong>184</strong></div>
+                  <div class="rank-row"><span>East</span><span class="rank-bar"><i style="--w:76%"></i></span><strong>151</strong></div>
+                  <div class="rank-row"><span>South</span><span class="rank-bar"><i style="--w:59%"></i></span><strong>102</strong></div>
+                  <div class="rank-row"><span>Westhaven</span><span class="rank-bar"><i style="--w:40%"></i></span><strong>64</strong></div>
+                  <div class="rank-row"><span>Northfield</span><span class="rank-bar"><i style="--w:38%"></i></span><strong>61</strong></div>
+                </div>
+                <div class="chart-foot"><span>Lower incidence</span><span>Higher incidence</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-vaccination" data-panel-id="bio_vaccination_rate" tabindex="0" aria-labelledby="title-vaccination">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Full primary course · eligible population</div><h4 id="title-vaccination">Vaccination coverage by age group and primary-course completion status</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_vaccination_rate" aria-label="Select Vaccination coverage for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag chrono-tag">◷ Chrono member</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <svg class="line-chart" viewBox="0 0 620 126" role="img" aria-label="Vaccination coverage trends by age group">
+                  <path class="grid" d="M30 20H610M30 54H610M30 88H610M30 120H610"/>
+                  <path class="series-a" d="M30 101L110 94L190 80L270 65L350 51L430 40L510 32L610 24"/>
+                  <path class="series-b" d="M30 112L110 106L190 96L270 85L350 75L430 63L510 55L610 46"/>
+                  <path class="series-c" d="M30 118L110 115L190 111L270 104L350 96L430 88L510 79L610 69"/>
+                </svg>
+                <div class="legend" aria-label="Vaccination age group legend">
+                  <span><i class="swatch" style="--swatch:var(--data-1)"></i>Adults 65 years and older</span>
+                  <span><i class="swatch" style="--swatch:var(--data-2)"></i>Adults 18–64 with clinical risk</span>
+                  <span><i class="swatch" style="--swatch:var(--data-5)"></i>All other eligible residents</span>
+                </div>
+              </div>
+              <div class="availability-overlay" aria-hidden="true"></div>
+              <div class="partial-ribbon"><span>△ Partial data · 3/5 municipalities current</span><button class="ledger-button" type="button" id="partialRetry">Refresh</button></div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-hospital" data-panel-id="bio_hospital_load" tabindex="0" aria-labelledby="title-hospital">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Regional treatment capacity</div><h4 id="title-hospital">Hospital demand signal</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_hospital_load" aria-label="Select Hospital demand signal for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <table class="hospital-table"><thead><tr><th>Service</th><th>Occupancy</th><th>Trend</th></tr></thead><tbody>
+                  <tr><td>General beds</td><td><span class="capacity"><i style="--w:78%"></i></span>78%</td><td>+4 pp</td></tr>
+                  <tr><td>Critical care</td><td><span class="capacity"><i style="--w:62%"></i></span>62%</td><td>Stable</td></tr>
+                  <tr><td>Isolation</td><td><span class="capacity"><i style="--w:44%"></i></span>44%</td><td>−3 pp</td></tr>
+                </tbody></table>
+                <div class="chart-foot"><span>Data current 06:00</span><span>Capacity plan v4</span></div>
+              </div>
+            </div>
+            <div class="state-overlay error-overlay" role="alert"><div><span class="state-symbol" aria-hidden="true">!</span><strong>Hospital feed unavailable</strong><p>The last valid table remains identifiable; source reconciliation failed at 06:00.</p><button class="ledger-button" type="button" id="errorRetry">Retry connection</button></div></div>
+          </article>
+        </div>
+
+        <aside class="unit-orbit" id="unitOrbit" aria-label="Unit Orbit editor for selected chart">
+          <div class="orbit-head">
+            <div><div class="orbit-kicker">Unit Orbit · selected chart remains visible</div><h5 id="orbitTitle">Municipality incidence over time</h5><span id="orbitDirty" class="clean-mark">✓ No unsaved chart changes</span></div>
+            <button type="button" class="ledger-button orbit-menu-button" id="orbitMenuButton" aria-expanded="false" aria-controls="orbitMenu" aria-label="Open chart actions">•••</button>
+            <div class="orbit-menu" id="orbitMenu" hidden>
+              <button type="button" data-orbit-menu-action="inspect">Inspect change history</button>
+              <button type="button" data-orbit-menu-action="duplicate">Prepare duplicate</button>
+              <button type="button" data-orbit-menu-action="reset">Reset chart draft</button>
+            </div>
+          </div>
+          <div class="orbit-tabs" role="tablist" aria-label="Chart editor sections">
+            <button type="button" class="orbit-tab" role="tab" data-orbit-tab="properties" aria-selected="true">Properties</button>
+            <button type="button" class="orbit-tab" role="tab" data-orbit-tab="data" aria-selected="false">Data</button>
+            <button type="button" class="orbit-tab" role="tab" data-orbit-tab="style" aria-selected="false">Style</button>
+          </div>
+          <div class="orbit-body" id="orbitBody"></div>
+          <div class="orbit-actions">
+            <button type="button" class="ledger-button primary" id="orbitSave">Save chart</button>
+            <button type="button" class="ledger-button" id="orbitCancel">Cancel</button>
+            <button type="button" class="ledger-button danger" id="orbitRemove">Remove…</button>
+          </div>
+        </aside>
+      </section>
+
+      <header class="section-header" aria-labelledby="section-outcomes-title">
+        <div>
+          <div class="section-kicker">02 · Clinical outcomes and capacity</div>
+          <h4 id="section-outcomes-title">Disease burden and service pressure</h4>
+          <p>Daily severity signals, mortality composition and staffed-capacity measures used to coordinate hospital and public-health response. Secondary axes, targets and thresholds are labelled directly.</p>
+        </div>
+        <div class="section-meta">4 charts</div>
+      </header>
+
+      <section class="dashboard-stage analytical-stage" id="secondaryDashboardStage" aria-labelledby="section-outcomes-title">
+        <div class="dashboard-grid-secondary" id="secondaryDashboardGrid" data-analytical-grid>
+          <article class="chart-panel" id="panel-new-cases-deaths" data-panel-id="bio_new_cases_deaths" tabindex="0" aria-labelledby="title-new-cases-deaths">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Daily surveillance · cases left axis · deaths right axis</div><h4 id="title-new-cases-deaths">Daily new cases and deaths</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_new_cases_deaths" aria-label="Select Daily new cases and deaths for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag editing-tag">✎ Editing</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <svg class="combo-chart" viewBox="0 0 620 170" role="img" aria-labelledby="combo-title combo-desc">
+                  <title id="combo-title">Daily new cases and deaths from 22 July to 4 August</title>
+                  <desc id="combo-desc">Blue-toned columns show daily new cases on the left axis from zero to 800. A dashed line with circular markers shows deaths on the right secondary axis from zero to 16.</desc>
+                  <path class="grid" d="M42 18H579M42 55H579M42 92H579M42 129H579"/>
+                  <text x="8" y="21">800</text><text x="13" y="58">600</text><text x="13" y="95">400</text><text x="13" y="132">200</text><text x="19" y="153">0</text>
+                  <text x="594" y="21">16</text><text x="594" y="58">12</text><text x="599" y="95">8</text><text x="599" y="132">4</text><text x="599" y="153">0</text>
+                  <rect class="case-column" x="49" y="67" width="25" height="80"/><rect class="case-column" x="86" y="52" width="25" height="95"/>
+                  <rect class="case-column" x="123" y="43" width="25" height="104"/><rect class="case-column" x="160" y="58" width="25" height="89"/>
+                  <rect class="case-column" x="197" y="76" width="25" height="71"/><rect class="case-column" x="234" y="83" width="25" height="64"/>
+                  <rect class="case-column" x="271" y="91" width="25" height="56"/><rect class="case-column" x="308" y="79" width="25" height="68"/>
+                  <rect class="case-column" x="345" y="98" width="25" height="49"/><rect class="case-column" x="382" y="104" width="25" height="43"/>
+                  <rect class="case-column" x="419" y="111" width="25" height="36"/><rect class="case-column" x="456" y="102" width="25" height="45"/>
+                  <rect class="case-column" x="493" y="116" width="25" height="31"/><rect class="case-column" x="530" y="121" width="25" height="26"/>
+                  <path class="death-line" d="M61 64L98 73L135 55L172 82L209 73L246 91L283 100L320 82L357 109L394 100L431 118L468 109L505 127L542 118"/>
+                  <circle class="death-point" cx="61" cy="64" r="3"/><circle class="death-point" cx="98" cy="73" r="3"/><circle class="death-point" cx="135" cy="55" r="3"/><circle class="death-point" cx="172" cy="82" r="3"/><circle class="death-point" cx="209" cy="73" r="3"/><circle class="death-point" cx="246" cy="91" r="3"/><circle class="death-point" cx="283" cy="100" r="3"/><circle class="death-point" cx="320" cy="82" r="3"/><circle class="death-point" cx="357" cy="109" r="3"/><circle class="death-point" cx="394" cy="100" r="3"/><circle class="death-point" cx="431" cy="118" r="3"/><circle class="death-point" cx="468" cy="109" r="3"/><circle class="death-point" cx="505" cy="127" r="3"/><circle class="death-point" cx="542" cy="118" r="3"/>
+                  <text x="47" y="165">22 Jul</text><text x="287" y="165">29 Jul</text><text x="523" y="165">04 Aug</text>
+                </svg>
+                <div class="legend" aria-label="Cases and deaths legend"><span><i class="legend-column" style="--swatch:var(--data-1)"></i>New cases · left axis</span><span><i class="legend-line" style="--swatch:var(--data-4)"></i>Deaths · right axis</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-mortality-age" data-panel-id="bio_mortality_age" tabindex="0" aria-labelledby="title-mortality-age">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Cumulative deaths · age at notification</div><h4 id="title-mortality-age">Mortality by age group</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_mortality_age" aria-label="Select Mortality by age group for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag editing-tag">✎ Editing</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner donut-layout">
+                <div class="donut-chart" role="img" aria-label="Mortality composition: under 1 year 8 percent, 1 to 17 years 7 percent, 18 to 39 years 17 percent, 40 to 59 years 19 percent, 60 to 79 years 24 percent, and 80 years and older 25 percent"></div>
+                <div class="legend donut-legend" aria-label="Mortality age group legend">
+                  <span><i class="swatch" style="--swatch:var(--data-1)"></i><span><strong>Under 1 year</strong><small>15 · 8%</small></span></span>
+                  <span><i class="swatch" style="--swatch:var(--data-2)"></i><span><strong>1–17 years</strong><small>13 · 7%</small></span></span>
+                  <span><i class="swatch" style="--swatch:var(--data-3)"></i><span><strong>18–39 years</strong><small>32 · 17%</small></span></span>
+                  <span><i class="swatch" style="--swatch:var(--data-4)"></i><span><strong>40–59 years</strong><small>35 · 19%</small></span></span>
+                  <span><i class="swatch" style="--swatch:var(--data-5)"></i><span><strong>60–79 years</strong><small>45 · 24%</small></span></span>
+                  <span><i class="swatch" style="--swatch:var(--data-6)"></i><span><strong>80 years and older</strong><small>46 · 25%</small></span></span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-capacity" data-panel-id="bio_icu_hospital_capacity" tabindex="0" aria-labelledby="title-capacity">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Staffed beds · target and escalation threshold</div><h4 id="title-capacity">ICU and hospital capacity</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_icu_hospital_capacity" aria-label="Select ICU and hospital capacity for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag editing-tag">✎ Editing</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <div class="bullet-list" aria-label="Capacity bullet charts">
+                  <div class="bullet-row">
+                    <div class="bullet-label"><strong>Critical care</strong><small>34 of 55 staffed beds</small></div>
+                    <div class="bullet-track" role="img" aria-label="Critical care occupancy 62 percent, operating target 70 percent, escalation threshold 85 percent"><i class="bullet-measure" style="--w:62%;--swatch:var(--data-5)"></i><i class="bullet-target" style="--target:70%"></i><i class="bullet-threshold"></i></div>
+                    <div class="bullet-value">62%</div>
+                  </div>
+                  <div class="bullet-row">
+                    <div class="bullet-label"><strong>General hospital</strong><small>312 of 400 staffed beds</small></div>
+                    <div class="bullet-track" role="img" aria-label="General hospital occupancy 78 percent, operating target 75 percent, escalation threshold 85 percent"><i class="bullet-measure" style="--w:78%;--swatch:var(--data-2)"></i><i class="bullet-target" style="--target:75%"></i><i class="bullet-threshold"></i></div>
+                    <div class="bullet-value">78%</div>
+                  </div>
+                </div>
+                <div class="bullet-key"><span><i class="legend-column" style="--swatch:var(--data-5)"></i>Current occupancy</span><span><i class="target-symbol"></i>Operating target</span><span><i class="threshold-symbol"></i>85% escalation threshold</span></div>
+                <div class="chart-foot"><span>Staffed capacity plan v4</span><span>Updated 06:00</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="chart-panel" id="panel-admissions" data-panel-id="bio_new_icu_hospital_admissions" tabindex="0" aria-labelledby="title-admissions">
+            <header class="panel-heading">
+              <div><div class="panel-kicker">Weekly admissions · grouped counts</div><h4 id="title-admissions">New ICU and hospital admissions</h4></div>
+              <button class="panel-action" type="button" data-select-panel="bio_new_icu_hospital_admissions" aria-label="Select New ICU and hospital admissions for editing">✎</button>
+              <div class="state-tags"><span class="state-tag selected-tag">◆ Selected</span><span class="state-tag editing-tag">✎ Editing</span></div>
+            </header>
+            <div class="plot">
+              <div class="plot-inner">
+                <svg class="admissions-chart" viewBox="0 0 620 170" role="img" aria-labelledby="admissions-title admissions-desc">
+                  <title id="admissions-title">New ICU and hospital admissions by week</title>
+                  <desc id="admissions-desc">Grouped bars compare new critical-care and hospital admissions for six reporting weeks. Hospital admissions decline from 92 to 54; critical-care admissions decline from 21 to 11.</desc>
+                  <path class="grid" d="M42 18H600M42 61H600M42 104H600M42 147H600"/>
+                  <text x="9" y="21">100</text><text x="14" y="64">75</text><text x="14" y="107">50</text><text x="14" y="150">25</text>
+                  <rect class="icu-bar" x="69" y="111" width="22" height="36"/><rect class="hospital-bar" x="93" y="25" width="34" height="122"/>
+                  <rect class="icu-bar" x="157" y="116" width="22" height="31"/><rect class="hospital-bar" x="181" y="40" width="34" height="107"/>
+                  <rect class="icu-bar" x="245" y="119" width="22" height="28"/><rect class="hospital-bar" x="269" y="55" width="34" height="92"/>
+                  <rect class="icu-bar" x="333" y="123" width="22" height="24"/><rect class="hospital-bar" x="357" y="67" width="34" height="80"/>
+                  <rect class="icu-bar" x="421" y="126" width="22" height="21"/><rect class="hospital-bar" x="445" y="73" width="34" height="74"/>
+                  <rect class="icu-bar" x="509" y="128" width="22" height="19"/><rect class="hospital-bar" x="533" y="76" width="34" height="71"/>
+                  <text x="71" y="164">W26</text><text x="159" y="164">W27</text><text x="247" y="164">W28</text><text x="335" y="164">W29</text><text x="423" y="164">W30</text><text x="511" y="164">W31</text>
+                </svg>
+                <div class="legend" aria-label="Admission type legend"><span><i class="legend-column" style="--swatch:var(--data-5)"></i>New ICU admissions</span><span><i class="legend-column" style="--swatch:var(--data-2)"></i>New hospital admissions</span></div>
+                <div class="chart-annotation"><strong>Direction:</strong> both series have declined for three consecutive reporting weeks; reporting lag is estimated below 24 hours.</div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="support-section" id="dashboard-documentation" aria-labelledby="section-reference-title">
+        <header class="section-header">
+          <div>
+            <div class="section-kicker">03 · Interpretation and stewardship</div>
+            <h4 id="section-reference-title">About, methods and source status</h4>
+            <p>Supporting information is part of the analytical page, so decision-makers can understand quality, scope and ownership without leaving the dashboard.</p>
+          </div>
+          <div class="section-meta">Reference</div>
+        </header>
+        <div class="support-content">
+          <div class="support-main">
+            <aside class="management-notice" role="note" aria-labelledby="quality-notice-title">
+              <span class="notice-symbol" aria-hidden="true">!</span>
+              <div><h5 id="quality-notice-title">Management and data-quality notice</h5><p>Northfield laboratory confirmations for 03–04 August are provisional. Regional totals include those records; municipality comparisons may shift after reconciliation at 14:00. The last fully reconciled period ended 02 August.</p></div>
+            </aside>
+            <article class="content-card" id="about-dashboard">
+              <h5>About this dashboard</h5>
+              <p>FIX-DASH supports the Region 3 biological-incident management review. It combines surveillance, vaccination, mortality and staffed-capacity evidence for operational coordination; it is not a patient-level clinical record or a substitute for statutory notifications.</p>
+              <p id="accessibility-note">Charts use labelled axes, text legends and redundant line or marker treatments. Keyboard focus remains visible, and status is never communicated by colour alone.</p>
+            </article>
+            <details class="method-details" id="methodology">
+              <summary>Methodology and operational definitions</summary>
+              <div class="details-body" id="definitions-body">
+                <p>Reporting uses notification date for case trends and admission date for capacity demand. Daily values close at 06:00 and remain labelled provisional until source reconciliation.</p>
+                <dl>
+                  <dt>Confirmed case</dt><dd>A laboratory-confirmed record de-duplicated by person, specimen date and notifying facility.</dd>
+                  <dt>Weekly incidence</dt><dd>Seven-day confirmed cases per 100,000 residents using the 2026 municipal population register.</dd>
+                  <dt>Staffed capacity</dt><dd>Beds available with the staff and equipment needed for safe operation during the reporting shift.</dd>
+                  <dt>Mortality attribution</dt><dd>Deaths where the incident pathogen is recorded as an underlying or contributing cause, pending final certification.</dd>
+                </dl>
+              </div>
+            </details>
+          </div>
+          <div class="support-side">
+            <section class="content-card" id="data-sources" aria-labelledby="sources-title">
+              <h5 id="sources-title">Data sources and freshness</h5>
+              <table class="source-table">
+                <thead><tr><th>Source</th><th>Current through</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td>Regional surveillance ledger</td><td>04 Aug · 06:00</td><td>Provisional</td></tr>
+                  <tr><td>Hospital capacity feed</td><td>04 Aug · 06:00</td><td>Current</td></tr>
+                  <tr><td>Vaccination registry</td><td>03 Aug · 23:00</td><td>3/5 current</td></tr>
+                  <tr><td>Mortality certification register</td><td>02 Aug · 17:00</td><td>Reconciled</td></tr>
+                </tbody>
+              </table>
+            </section>
+            <section class="content-card" aria-labelledby="owner-title">
+              <h5 id="owner-title">Dashboard owner</h5>
+              <dl class="owner-list"><dt>Accountable unit</dt><dd>Regional Incident Analytics Cell</dd><dt>Data steward</dt><dd>Dr. Mara Ilyan · Surveillance Lead</dd><dt>Review cycle</dt><dd>Daily at 06:30 and before management briefing</dd><dt>Package</dt><dd>FIX-DASH-BIO · revision 3.4</dd></dl>
+            </section>
+          </div>
+          <nav class="content-card support-resources" aria-labelledby="resources-title">
+              <h5 id="resources-title">Related resources</h5>
+              <ul class="resource-list">
+                <li><a href="#methodology"><strong>Surveillance operating definitions</strong><span>Reference · 6 minute read · revision 3.2</span></a></li>
+                <li><a href="#data-sources"><strong>Source reconciliation register</strong><span>Data record · four contributing systems</span></a></li>
+                <li><a href="#quality-notice-title"><strong>Management briefing caveats</strong><span>Briefing note · current reporting period</span></a></li>
+              </ul>
+            </nav>
+        </div>
+      </section>
+    </article>
+  </main>
+
+  <footer class="page-footer" aria-label="Dashboard footer">
+    <div class="footer-top">
+      <div class="footer-identity"><strong>© 2026 SimEx</strong><span>FIX-DASH-BIO · dashboard package 3.4 · visual-language review fixture</span></div>
+      <nav class="footer-links" aria-label="Dashboard information links">
+        <a href="#dashboard-documentation">Documentation</a>
+        <a href="#accessibility-note">Accessibility</a>
+        <a href="#data-sources">Data sources</a>
+        <a href="#privacy-session-note">Privacy/session note</a>
+        <a href="#fixtureTop">Back to top</a>
+      </nav>
+      <div class="feedback-wrap">
+        <button type="button" class="feedback-button" id="feedbackButton" aria-expanded="false" aria-controls="feedbackMenu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v10H10l-4.5 3v-3H4z"/></svg>
+          Feedback &amp; support
+        </button>
+        <div class="feedback-menu" id="feedbackMenu" role="menu" aria-label="Feedback and support choices" hidden>
+          <button type="button" role="menuitem" data-feedback-action="bug">Report a bug</button>
+          <button type="button" role="menuitem" data-feedback-action="feature">Request a feature</button>
+        </div>
+      </div>
+    </div>
+    <div class="feedback-confirmation" id="feedbackConfirmation" role="status" aria-live="polite">No feedback request started.</div>
+    <div class="footer-note" id="privacy-session-note">This disposable sketch sends no data and uses browser session storage only for the explicit dashboard-style, chart-colour and appearance demonstrations. No personal or clinical records are present. Legal and privacy wording remains subject to production review.</div>
+  </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var body = document.body;
+      var scene = "V0";
+      var appearanceChoice = "light";
+      var styleRegistry = {
+        "evidence-ledger": {
+          label: "Evidence Ledger",
+          status: "Approved",
+          intro: "Evidence before ornament: warm archival surfaces, ink-like hierarchy, fine rules, near-square containers and a restrained mineral data palette. Light and Night Ledger are deliberately authored counterparts, not inversions.",
+          signature: "Publication character · inspectable evidence · minimal elevation",
+          darkLabel: "Night Ledger"
+        },
+        "humanist-standard": {
+          label: "Humanist Standard",
+          status: "Approved",
+          intro: "Competence without coldness: softly layered matte surfaces, restrained rounded contours, humanist typography and supportive state motion make institutional evidence feel approachable without becoming casual.",
+          signature: "Approachable institution · calm guidance · shallow elevation",
+          darkLabel: "Dark"
+        },
+        "signal-instrument": {
+          label: "Signal Instrument",
+          status: "Approved",
+          intro: "Status at a glance under pressure: crisp calibrated edges, low-glare tonal layers, tabular numeric emphasis and terse state responses make dense evidence feel dependable without turning the dashboard into a command-centre costume.",
+          signature: "Calibrated instrument · explicit state · low-glare precision",
+          darkLabel: "Low-glare"
+        }
+      };
+      var paletteRegistry = {
+        "evidence-original": { source: "evidence-ledger", name: "Original baseline", legacyProfile: "original", reviewOnly: true },
+        "evidence-signature": { source: "evidence-ledger", name: "Signature — Brighter Vellum", legacyProfile: "signature" },
+        "evidence-restrained": { source: "evidence-ledger", name: "Restrained — Ash Register", legacyProfile: "restrained" },
+        "evidence-counterpoint": { source: "evidence-ledger", name: "Counterpoint — Cool Archive", legacyProfile: "counterpoint" },
+        "humanist-signature": { source: "humanist-standard", name: "Signature — Common Ground" },
+        "humanist-restrained": { source: "humanist-standard", name: "Restrained — Quiet Commons" },
+        "humanist-counterpoint": { source: "humanist-standard", name: "Counterpoint — Open Forum" },
+        "signal-signature": { source: "signal-instrument", name: "Signature — Calibrated Steel" },
+        "signal-restrained": { source: "signal-instrument", name: "Restrained — Quiet Telemetry" },
+        "signal-counterpoint": { source: "signal-instrument", name: "Counterpoint — Amber Vector" },
+        "utility-prismatic": { source: "portfolio-utility", sourceLabel: "Portfolio utility palettes", name: "Prismatic Index" },
+        "utility-polarity": { source: "portfolio-utility", sourceLabel: "Portfolio utility palettes", name: "Chromatic Polarity" },
+        "utility-luminance": { source: "portfolio-utility", sourceLabel: "Portfolio utility palettes", name: "Luminance Ladder" },
+        "graphpad-sunrise-reference": { source: "portfolio-utility", sourceLabel: "Portfolio utility palettes", name: "Sunrise — Reference faithful" },
+        "graphpad-sunrise-contrast": {
+          source: "portfolio-utility",
+          sourceLabel: "Portfolio utility palettes",
+          name: "Sunrise — Contrast tuned",
+          rejected: true,
+          rejectionReason: "Local retuning sacrifices source fidelity and offers insufficient advantage over the accepted reference-and-outline approach."
+        },
+        "graphpad-lakeside-reference": { source: "portfolio-utility", sourceLabel: "Portfolio utility palettes", name: "Lakeside — Reference faithful" },
+        "graphpad-lakeside-contrast": {
+          source: "portfolio-utility",
+          sourceLabel: "Portfolio utility palettes",
+          name: "Lakeside — Contrast tuned",
+          rejected: true,
+          rejectionReason: "Local retuning sacrifices source fidelity and offers insufficient advantage over the accepted reference-and-outline approach."
+        },
+        "utility-monochrome": { source: "portfolio-utility", sourceLabel: "Portfolio utility palettes", name: "Monochrome Reserve" }
+      };
+      var legacyStyleIds = {
+        "Evidence Ledger": "evidence-ledger",
+        "Humanist Standard": "humanist-standard",
+        "Signal Instrument": "signal-instrument",
+        "evidence-ledger": "evidence-ledger",
+        "humanist-standard": "humanist-standard",
+        "signal-instrument": "signal-instrument"
+      };
+      var legacyPaletteIds = {
+        "Original baseline": "evidence-original",
+        "Signature — Brighter Vellum": "evidence-signature",
+        "Restrained — Ash Register": "evidence-restrained",
+        "Counterpoint — Cool Archive": "evidence-counterpoint",
+        "Signature — Common Ground": "humanist-signature",
+        "Restrained — Quiet Commons": "humanist-restrained",
+        "Counterpoint — Open Forum": "humanist-counterpoint",
+        "Signature — Calibrated Steel": "signal-signature",
+        "Restrained — Quiet Telemetry": "signal-restrained",
+        "Counterpoint — Amber Vector": "signal-counterpoint",
+        "Prismatic Index": "utility-prismatic",
+        "Chromatic Polarity": "utility-polarity",
+        "Luminance Ladder": "utility-luminance",
+        "Sunrise — Reference faithful": "graphpad-sunrise-reference",
+        "Sunrise — Contrast tuned": "graphpad-sunrise-contrast",
+        "Lakeside — Reference faithful": "graphpad-lakeside-reference",
+        "Lakeside — Contrast tuned": "graphpad-lakeside-contrast",
+        "Monochrome Reserve": "utility-monochrome",
+        "portfolio-utility/prismatic-index": "utility-prismatic",
+        "portfolio-utility/chromatic-polarity": "utility-polarity",
+        "portfolio-utility/luminance-ladder": "utility-luminance",
+        "portfolio-utility/sunrise-reference-faithful": "graphpad-sunrise-reference",
+        "portfolio-utility/sunrise-contrast-tuned": "graphpad-sunrise-contrast",
+        "portfolio-utility/lakeside-reference-faithful": "graphpad-lakeside-reference",
+        "portfolio-utility/lakeside-contrast-tuned": "graphpad-lakeside-contrast",
+        "portfolio-utility/monochrome-reserve": "utility-monochrome",
+        "humanist-standard/common-ground": "humanist-signature",
+        "humanist-standard/quiet-commons": "humanist-restrained",
+        "humanist-standard/open-forum": "humanist-counterpoint",
+        "signal-instrument/calibrated-steel": "signal-signature",
+        "signal-instrument/quiet-telemetry": "signal-restrained",
+        "signal-instrument/amber-vector": "signal-counterpoint",
+        original: "evidence-original",
+        signature: "evidence-signature",
+        restrained: "evidence-restrained",
+        counterpoint: "evidence-counterpoint"
+      };
+      var styleChoice = body.dataset.style || "signal-instrument";
+      var paletteChoice = body.dataset.paletteId || "graphpad-sunrise-reference";
+      var chartColorChoice = body.dataset.chartColorMode || "profile";
+      var chartColorNames = {
+        profile: "Profile colors",
+        standard: "Standard chart colors"
+      };
+      var systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+      var proofPinned = false;
+      var availability = false;
+      var selectedPanelId = "bio_municipality_choropleth_animation";
+      var orbitTab = "properties";
+      var advancedOpen = false;
+      var menuOpen = false;
+      var feedbackMenuOpen = false;
+      var removeConfirm = false;
+      var toastTimer = null;
+      var retryTimers = [];
+      var footprint = { cols: 2, rows: 2 };
+      var previewFootprint = null;
+      var savedChart = {
+        title: "Municipality incidence over time",
+        subtitle: "Cases per 100,000 residents",
+        source: "Regional surveillance ledger",
+        temporal: "Observation date",
+        legend: true,
+        provenance: true,
+        annotation: false
+      };
+      var chartDraft = Object.assign({}, savedChart);
+      var dirty = false;
+
+      var panelMap = {
+        bio_confirmed_cases: "panel-cases",
+        bio_r_values: "panel-r",
+        bio_municipality_choropleth_animation: "panel-map",
+        bio_region_comparison: "panel-region",
+        bio_vaccination_rate: "panel-vaccination",
+        bio_hospital_load: "panel-hospital",
+        bio_new_cases_deaths: "panel-new-cases-deaths",
+        bio_mortality_age: "panel-mortality-age",
+        bio_icu_hospital_capacity: "panel-capacity",
+        bio_new_icu_hospital_admissions: "panel-admissions"
+      };
+      var panelDescriptions = {
+        bio_confirmed_cases: "Laboratory-confirmed cases",
+        bio_r_values: "7-day posterior estimate",
+        bio_municipality_choropleth_animation: "Cases per 100,000 residents",
+        bio_region_comparison: "Peer municipality comparison",
+        bio_vaccination_rate: "Eligible population",
+        bio_hospital_load: "Current regional treatment load",
+        bio_new_cases_deaths: "Daily notifications with deaths on an explicit secondary axis",
+        bio_mortality_age: "Cumulative mortality composition by age at notification",
+        bio_icu_hospital_capacity: "Staffed occupancy against operating targets and escalation thresholds",
+        bio_new_icu_hospital_admissions: "Grouped weekly critical-care and hospital admissions"
+      };
+
+      var sceneCopy = {
+        V0: ["V", "Ordinary View", "The published dashboard is readable without authoring emphasis."],
+        B0: ["B", "Build · selected chart", "Selection is explicit, chart geometry is unchanged and authoring controls stay contextual."],
+        B1: ["B", "Build · editing chart", "Unit Orbit relates to the selected chart without covering it; unrelated panels may sit beneath the editor."],
+        C0: ["C", "Default Chrono", "Time Group members carry a restrained clock cue; availability can be overlaid without changing plot bounds."],
+        R0: ["R", "Resilience states", "Loading, partial data and error states retain their chart identity and use symbols, words and patterns as well as colour."]
+      };
+
+      function q(selector, root) { return (root || document).querySelector(selector); }
+      function qa(selector, root) { return Array.prototype.slice.call((root || document).querySelectorAll(selector)); }
+      function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, function (character) {
+          return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[character];
+        });
+      }
+
+      function announce(message) {
+        var toast = q("#toast");
+        toast.textContent = message;
+        toast.dataset.open = "true";
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(function () { toast.dataset.open = "false"; }, 2600);
+      }
+
+      function setFeedbackMenu(open, returnFocus) {
+        feedbackMenuOpen = open;
+        q("#feedbackMenu").hidden = !feedbackMenuOpen;
+        q("#feedbackButton").setAttribute("aria-expanded", String(feedbackMenuOpen));
+        if (feedbackMenuOpen) {
+          q("[data-feedback-action]", q("#feedbackMenu")).focus();
+        } else if (returnFocus) {
+          q("#feedbackButton").focus();
+        }
+      }
+
+      function actualAppearance() {
+        return appearanceChoice === "system" ? (systemDark.matches ? "dark" : "light") : appearanceChoice;
+      }
+
+      function currentStyle() { return styleRegistry[styleChoice]; }
+      function currentPalette() { return paletteRegistry[paletteChoice]; }
+      function paletteDecision(palette) {
+        var resolvedPalette = palette || currentPalette();
+        if (resolvedPalette.rejected) return "REJECTED — PRESERVED";
+        if (resolvedPalette.reviewOnly) return "REVIEW ONLY";
+        return "APPROVED";
+      }
+      function paletteIsSaveable(palette) {
+        var resolvedPalette = palette || currentPalette();
+        return !resolvedPalette.reviewOnly && !resolvedPalette.rejected;
+      }
+      function paletteSourceLabel(palette) {
+        var resolvedPalette = palette || currentPalette();
+        if (!resolvedPalette) return "Unknown palette source";
+        if (resolvedPalette.sourceLabel) return resolvedPalette.sourceLabel;
+        return styleRegistry[resolvedPalette.source] ? styleRegistry[resolvedPalette.source].label : resolvedPalette.source;
+      }
+      function previewLabel() {
+        return currentStyle().label + " + colors from " + paletteSourceLabel() + " / " + currentPalette().name;
+      }
+
+      function syncStyleIntro() {
+        q("#styleTitle").textContent = currentStyle().label;
+        q("#styleTitle").nextElementSibling.textContent = currentStyle().intro;
+        q(".style-signature").textContent = currentStyle().signature;
+      }
+
+      function captureRect(element) {
+        if (!element || getComputedStyle(element).display === "none") return null;
+        var rect = element.getBoundingClientRect();
+        return [rect.x, rect.y, rect.width, rect.height];
+      }
+
+      function geometrySnapshot() {
+        return {
+          canvas: qa(".analytical-stage").map(captureRect),
+          grid: qa("[data-analytical-grid]").map(captureRect),
+          panels: qa(".chart-panel").map(captureRect),
+          plots: qa(".plot").map(captureRect),
+          orbit: [captureRect(q("#unitOrbit"))]
+        };
+      }
+
+      function categoryDelta(before, after, key) {
+        var a = before[key] || [];
+        var b = after[key] || [];
+        var maximum = 0;
+        for (var index = 0; index < Math.max(a.length, b.length); index += 1) {
+          var left = a[index];
+          var right = b[index];
+          if (left === null && right === null) continue;
+          if (!left || !right) return 999;
+          for (var part = 0; part < 4; part += 1) maximum = Math.max(maximum, Math.abs(left[part] - right[part]));
+        }
+        return maximum;
+      }
+
+      function publishGeometry(before, after) {
+        var values = {
+          Canvas: categoryDelta(before, after, "canvas"),
+          Grid: categoryDelta(before, after, "grid"),
+          Panels: categoryDelta(before, after, "panels"),
+          Plots: categoryDelta(before, after, "plots"),
+          Orbit: categoryDelta(before, after, "orbit")
+        };
+        var maximum = Math.max.apply(null, Object.keys(values).map(function (key) { return values[key]; }));
+        q("#geometryDigest").dataset.pass = String(maximum < 0.01);
+        q("#geometryDigest strong").textContent = maximum < 0.01 ? "Geometry parity · PASS" : "Geometry parity · CHECK";
+        q("#geometryDetails").textContent = Object.keys(values).map(function (key) {
+          return key + " " + values[key].toFixed(2);
+        }).join(" · ") + " px";
+      }
+
+      function applyAppearance(choice, announceChange) {
+        var before = geometrySnapshot();
+        appearanceChoice = choice;
+        body.dataset.resolvedAppearance = actualAppearance();
+        qa("[data-appearance]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.appearance === appearanceChoice));
+        });
+        updateStatus();
+        requestAnimationFrame(function () {
+          positionOrbit();
+          requestAnimationFrame(function () {
+            publishGeometry(before, geometrySnapshot());
+            if (announceChange) announce("Previewing " + previewLabel() + " · " + choiceLabel() + ". Saved dashboard style is unchanged.");
+          });
+        });
+      }
+
+      function applyStyle(styleId, announceChange) {
+        var before = geometrySnapshot();
+        styleChoice = styleId;
+        body.dataset.style = styleChoice;
+        qa("[data-style-button]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.styleButton === styleChoice));
+        });
+        syncStyleIntro();
+        if (scene === "B1") renderOrbit();
+        updateStatus();
+        requestAnimationFrame(function () {
+          positionOrbit();
+          requestAnimationFrame(function () {
+            publishGeometry(before, geometrySnapshot());
+            if (announceChange) announce("Previewing " + previewLabel() + ". The selected color source was preserved; saved dashboard style is unchanged.");
+          });
+        });
+      }
+
+      function applyPaletteProfile(paletteId, announceChange) {
+        var before = geometrySnapshot();
+        paletteChoice = paletteId;
+        body.dataset.paletteId = paletteChoice;
+        var legacyProfile = currentPalette().legacyProfile;
+        if (legacyProfile) body.dataset.paletteProfile = legacyProfile;
+        else delete body.dataset.paletteProfile;
+        qa("[data-palette-id-button]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.paletteIdButton === paletteChoice));
+        });
+        if (scene === "B1") renderOrbit();
+        updateStatus();
+        requestAnimationFrame(function () {
+          positionOrbit();
+          requestAnimationFrame(function () {
+            publishGeometry(before, geometrySnapshot());
+            if (announceChange) {
+              var qualification = currentPalette().rejected
+                ? " Rejected candidate preserved for evidence; Set as dashboard style is unavailable."
+                : currentPalette().reviewOnly
+                  ? " Review-only baseline; Set as dashboard style is unavailable."
+                  : " Approved palette; saved dashboard style is unchanged.";
+              announce("Previewing " + previewLabel() + " · " + choiceLabel() + "." + qualification);
+            }
+          });
+        });
+      }
+
+      function applyChartColorMode(mode, announceChange) {
+        var before = geometrySnapshot();
+        chartColorChoice = mode;
+        body.dataset.chartColorMode = chartColorChoice;
+        qa("[data-chart-color-mode-button]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.chartColorModeButton === chartColorChoice));
+        });
+        updateStatus();
+        requestAnimationFrame(function () {
+          positionOrbit();
+          requestAnimationFrame(function () {
+            publishGeometry(before, geometrySnapshot());
+            if (announceChange) announce("Previewing " + chartColorNames[chartColorChoice] + ". Dashboard chart-color setting and working state are unchanged.");
+          });
+        });
+      }
+
+      function choiceLabel() {
+        if (appearanceChoice !== "system") return appearanceChoice.charAt(0).toUpperCase() + appearanceChoice.slice(1);
+        return "System → " + (systemDark.matches ? currentStyle().darkLabel : "Light");
+      }
+
+      function updateStatus() {
+        var savedStyleRaw = sessionStorage.getItem("simex.dashboardStyle");
+        var savedProfileRaw = sessionStorage.getItem("simex.dashboardColorProfile");
+        var savedStyleId = legacyStyleIds[savedStyleRaw] || savedStyleRaw;
+        var savedPaletteId = legacyPaletteIds[savedProfileRaw] || savedProfileRaw;
+        var savedStyle = styleRegistry[savedStyleId] ? styleRegistry[savedStyleId].label : savedStyleRaw;
+        var savedPalette = paletteRegistry[savedPaletteId];
+        var savedChartColorMode = sessionStorage.getItem("simex.dashboardChartColorMode");
+        var savedAppearance = sessionStorage.getItem("simex.appearancePreference") || "System";
+        var palette = currentPalette();
+        var paletteSaveable = paletteIsSaveable(palette);
+        var decision = paletteDecision(palette);
+        var setButton = q("#setStyleButton");
+        q("#previewStatus").textContent = "Preview: " + previewLabel() + " · " + choiceLabel() + " · " + decision + (paletteSaveable ? "" : " — cannot be saved");
+        q("#chartColorStatus").textContent = "Chart colors: Preview " + chartColorNames[chartColorChoice] + " · Saved " + (savedChartColorMode && chartColorNames[savedChartColorMode] ? chartColorNames[savedChartColorMode] : "Profile colors (default)") + " · separate dashboard setting";
+        q("#savedStatus").textContent = savedStyle
+          ? "Saved dashboard: " + savedStyle + (savedPalette ? " + colors from " + paletteSourceLabel(savedPalette) + " / " + savedPalette.name : savedProfileRaw ? " · " + savedProfileRaw : " · profile not set") + " · Appearance preference: " + savedAppearance + " (separate user setting)"
+          : "Saved dashboard: Default neutral · Appearance preference: " + savedAppearance + " (separate user setting)";
+        setButton.disabled = !paletteSaveable;
+        setButton.title = palette.rejected
+          ? palette.name + " is rejected and preserved for comparison only. " + palette.rejectionReason
+          : palette.reviewOnly
+            ? "Evidence Ledger Original baseline is available for review only and cannot be saved with any style"
+          : "Save " + currentStyle().label + " with colors from " + paletteSourceLabel() + " / " + currentPalette().name + " as this dashboard's style";
+      }
+
+      function clearRetries() {
+        retryTimers.forEach(window.clearTimeout);
+        retryTimers = [];
+      }
+
+      function applyScene(nextScene, focusSceneButton) {
+        clearRetries();
+        scene = nextScene;
+        body.dataset.scene = scene;
+        body.dataset.availability = "false";
+        availability = false;
+        q("#modeGlyph").textContent = sceneCopy[scene][0];
+        q("#modeTitle").textContent = sceneCopy[scene][1];
+        q("#modeDescription").textContent = sceneCopy[scene][2];
+        qa("[data-scene-button]").forEach(function (button) {
+          button.setAttribute("aria-pressed", String(button.dataset.sceneButton === scene));
+        });
+
+        qa(".chart-panel").forEach(function (panel) {
+          panel.dataset.selected = "false";
+          panel.dataset.editing = "false";
+          panel.dataset.chrono = "false";
+          panel.dataset.loading = "false";
+          panel.dataset.partial = "false";
+          panel.dataset.error = "false";
+        });
+
+        if (scene === "B0") setSelectedPanel("bio_region_comparison", false);
+        if (scene === "B1") setSelectedPanel("bio_vaccination_rate", false);
+        if (scene === "B1") {
+          q("#" + panelMap[selectedPanelId]).dataset.editing = "true";
+          renderOrbit();
+        }
+        if (scene === "C0") {
+          ["panel-r", "panel-map", "panel-vaccination"].forEach(function (id) { q("#" + id).dataset.chrono = "true"; });
+        }
+        if (scene === "R0") {
+          q("#panel-cases").dataset.loading = "true";
+          q("#panel-vaccination").dataset.partial = "true";
+          q("#panel-hospital").dataset.error = "true";
+        }
+        renderModeActions();
+        requestAnimationFrame(function () {
+          positionOrbit();
+          var same = geometrySnapshot();
+          publishGeometry(same, same);
+          if (focusSceneButton) q('[data-scene-button="' + scene + '"]').focus();
+        });
+      }
+
+      function renderModeActions() {
+        var host = q("#modeActions");
+        if (scene === "C0") {
+          host.innerHTML = '<span class="mode-note">TEMP-FIX · Biological incident period</span><button type="button" class="ledger-button" id="availabilityButton" aria-pressed="false">▦ Availability overlay off</button>';
+          q("#availabilityButton").addEventListener("click", function () {
+            var before = geometrySnapshot();
+            availability = !availability;
+            body.dataset.availability = String(availability);
+            this.setAttribute("aria-pressed", String(availability));
+            this.textContent = availability ? "▦ Availability overlay on" : "▦ Availability overlay off";
+            requestAnimationFrame(function () { publishGeometry(before, geometrySnapshot()); });
+            announce("Availability overlay " + (availability ? "shown over Chrono members." : "hidden; chart data remains unchanged."));
+          });
+          return;
+        }
+        if (scene === "B0" || scene === "B1") {
+          host.innerHTML = '<span class="mode-note">Build draft · chart positions and footprints unchanged</span>';
+          return;
+        }
+        if (scene === "R0") {
+          host.innerHTML = '<span class="mode-note">Deterministic stress fixture · use Retry and Refresh, then reselect R0 to reset</span>';
+          return;
+        }
+        host.innerHTML = '<span class="mode-note">10 charts · two fixed four-track analytical sections</span>';
+      }
+
+      function setSelectedPanel(panelId, announceSelection) {
+        var changedTarget = selectedPanelId !== panelId;
+        selectedPanelId = panelId;
+        if (changedTarget) {
+          var targetHeading = q("#" + panelMap[selectedPanelId] + " h4").textContent;
+          savedChart = Object.assign({}, savedChart, {
+            title: targetHeading,
+            subtitle: panelDescriptions[selectedPanelId]
+          });
+          chartDraft = Object.assign({}, savedChart);
+          removeConfirm = false;
+        }
+        qa(".chart-panel").forEach(function (panel) { panel.dataset.selected = "false"; panel.dataset.editing = "false"; });
+        var panel = q("#" + panelMap[selectedPanelId]);
+        panel.dataset.selected = "true";
+        if (scene === "B1") panel.dataset.editing = "true";
+        if (scene === "B1") {
+          q("#orbitTitle").textContent = q("#" + panelMap[selectedPanelId] + " h4").textContent;
+          positionOrbit();
+        }
+        if (announceSelection) announce(q("#" + panelMap[selectedPanelId] + " h4").textContent + " selected. Dashboard geometry is unchanged.");
+      }
+
+      function positionOrbit() {
+        if (scene !== "B1") return;
+        var surface = q("#dashboardShell");
+        var panel = q("#" + panelMap[selectedPanelId]);
+        var orbit = q("#unitOrbit");
+        if (!surface || !panel || !orbit) return;
+        var surfaceRect = surface.getBoundingClientRect();
+        var panelRect = panel.getBoundingClientRect();
+        var width = orbit.offsetWidth || 354;
+        var height = orbit.offsetHeight || 506;
+        var gap = 12;
+        var surfaceWidth = surface.clientWidth;
+        var surfaceHeight = surface.scrollHeight;
+        var maxLeft = Math.max(0, surfaceWidth - width);
+        var maxTop = Math.max(0, surfaceHeight - height);
+        var panelBox = {
+          left: panelRect.left - surfaceRect.left,
+          right: panelRect.right - surfaceRect.left,
+          top: panelRect.top - surfaceRect.top,
+          bottom: panelRect.bottom - surfaceRect.top
+        };
+        function clamp(value, minimum, maximum) {
+          return Math.max(minimum, Math.min(maximum, value));
+        }
+        function fitsSurface(candidate) {
+          return candidate.left >= 0 && candidate.top >= 0 &&
+            candidate.left + width <= surfaceWidth && candidate.top + height <= surfaceHeight;
+        }
+        function intersectsSelected(candidate) {
+          return candidate.left < panelBox.right && candidate.left + width > panelBox.left &&
+            candidate.top < panelBox.bottom && candidate.top + height > panelBox.top;
+        }
+        var naturalTop = panelBox.top + 8;
+        var viewportTop = Math.max(0, 12 - surfaceRect.top);
+        var viewportBottom = Math.min(maxTop, window.innerHeight - surfaceRect.top - height - 12);
+        var sideTop = viewportBottom >= viewportTop
+          ? clamp(naturalTop, viewportTop, viewportBottom)
+          : clamp(naturalTop, 0, maxTop);
+        var sideCandidates = [
+          { left: panelBox.left - width - gap, top: sideTop },
+          { left: panelBox.right + gap, top: sideTop }
+        ];
+        var placement = sideCandidates.find(function (candidate) {
+          return fitsSurface(candidate) && !intersectsSelected(candidate);
+        });
+        if (!placement) {
+          var alignedLeft = clamp(panelBox.left + (panelBox.right - panelBox.left - width) / 2, 0, maxLeft);
+          var verticalCandidates = [
+            { left: alignedLeft, top: panelBox.top - height - gap },
+            { left: alignedLeft, top: panelBox.bottom + gap }
+          ];
+          placement = verticalCandidates.find(function (candidate) {
+            return fitsSurface(candidate) && !intersectsSelected(candidate);
+          });
+        }
+        if (!placement) return;
+        orbit.style.left = placement.left + "px";
+        orbit.style.top = placement.top + "px";
+      }
+
+      function computeDirty() {
+        dirty = JSON.stringify(chartDraft) !== JSON.stringify(savedChart) || removeConfirm;
+        q("#orbitDirty").className = dirty ? "dirty-mark" : "clean-mark";
+        q("#orbitDirty").textContent = dirty ? "◆ Unsaved chart draft" : "✓ No unsaved chart changes";
+      }
+
+      function propertyMarkup() {
+        var cells = "";
+        for (var row = 1; row <= 2; row += 1) {
+          for (var col = 1; col <= 4; col += 1) {
+            var included = col <= footprint.cols && row <= footprint.rows;
+            var pressed = col === footprint.cols && row === footprint.rows;
+            cells += '<button type="button" class="footprint-cell" data-col="' + col + '" data-row="' + row + '" data-included="' + included + '" data-preview="false" aria-pressed="' + pressed + '" aria-label="' + col + ' columns by ' + row + ' rows"><span>' + col + '×' + row + '</span></button>';
+          }
+        }
+        return '<div class="field"><label for="chartTitleInput">Chart title</label><input class="ledger-input" id="chartTitleInput" value="' + escapeHTML(chartDraft.title) + '"><small>Long titles keep the same two-line allocation across appearances.</small></div>' +
+          '<div class="field"><label for="chartSubtitleInput">Chart description</label><input class="ledger-input" id="chartSubtitleInput" value="' + escapeHTML(chartDraft.subtitle) + '"></div>' +
+          '<button type="button" class="ledger-button advanced-toggle" id="advancedToggle" aria-expanded="' + advancedOpen + '">' + (advancedOpen ? "− Hide advanced properties" : "+ Reveal advanced properties") + '</button>' +
+          (advancedOpen ? '<div class="advanced-panel"><label class="check-row"><input type="checkbox" id="provenanceCheck" ' + (chartDraft.provenance ? "checked" : "") + '> Show source provenance</label><label class="check-row"><input type="checkbox" id="annotationCheck" ' + (chartDraft.annotation ? "checked" : "") + '> Show key annotation</label></div>' : "") +
+          '<div class="footprint-wrap"><span class="field-label">Chart footprint · preview only</span><div class="footprint-grid" id="footprintGrid">' + cells + '</div><p class="footprint-status" id="footprintStatus">Current preview: ' + footprint.cols + ' columns × ' + footprint.rows + ' rows. The locked comparison fixture is not resized.</p></div>' +
+          (removeConfirm ? removeMarkup() : "");
+      }
+
+      function dataMarkup() {
+        return '<div class="field"><label for="sourceSelect">Evidence source</label><select class="ledger-select" id="sourceSelect"><option' + (chartDraft.source === "Regional surveillance ledger" ? " selected" : "") + '>Regional surveillance ledger</option><option' + (chartDraft.source === "Laboratory confirmations" ? " selected" : "") + '>Laboratory confirmations</option><option' + (chartDraft.source === "Municipal case register" ? " selected" : "") + '>Municipal case register</option></select><small>Changing source updates the chart draft only.</small></div>' +
+          '<div class="field"><label for="temporalSelect">Temporal field</label><select class="ledger-select" id="temporalSelect"><option' + (chartDraft.temporal === "Observation date" ? " selected" : "") + '>Observation date</option><option' + (chartDraft.temporal === "Report date" ? " selected" : "") + '>Report date</option><option' + (chartDraft.temporal === "Specimen date" ? " selected" : "") + '>Specimen date</option></select></div>' +
+          '<div class="advanced-panel"><span class="field-label">Data contract</span><p class="footprint-status">Daily observations · municipality code matched · 08 July–04 August 2026 inclusive.</p></div>' +
+          (removeConfirm ? removeMarkup() : "");
+      }
+
+      function styleMarkup() {
+        var grammarCopy = currentStyle().label + ' controls contour, typography, elevation and motion; colors come from ' + paletteSourceLabel() + ' / ' + currentPalette().name + '. Chart data mappings stay invariant.';
+        var inheritedTreatment = styleChoice === "evidence-ledger" && currentPalette().source === "evidence-ledger" ? "Inherited mineral palette" : "Inherited profile palette";
+        return '<div class="advanced-panel"><span class="field-label">Dashboard-owned visual language</span><p class="footprint-status">' + escapeHTML(grammarCopy) + '</p></div>' +
+          '<label class="check-row"><input type="checkbox" id="legendCheck" ' + (chartDraft.legend ? "checked" : "") + '> Show chart legend</label>' +
+          '<div class="field"><label for="seriesTreatment">Series treatment</label><select class="ledger-select" id="seriesTreatment"><option>' + inheritedTreatment + '</option><option>Inherited palette + redundant dashes</option></select><small>The same category-to-series mapping is retained.</small></div>' +
+          (removeConfirm ? removeMarkup() : "");
+      }
+
+      function removeMarkup() {
+        return '<div class="remove-confirm" role="alert"><p><strong>Stage chart removal?</strong> This destructive draft is demonstrated without deleting the locked portfolio fixture.</p><div class="button-row"><button type="button" class="ledger-button danger" id="confirmRemove">Stage removal</button><button type="button" class="ledger-button" id="keepChart">Keep chart</button></div></div>';
+      }
+
+      function renderOrbit() {
+        if (scene !== "B1") return;
+        q("#orbitTitle").textContent = q("#" + panelMap[selectedPanelId] + " h4").textContent;
+        qa("[data-orbit-tab]").forEach(function (button) {
+          button.setAttribute("aria-selected", String(button.dataset.orbitTab === orbitTab));
+        });
+        q("#orbitMenu").hidden = !menuOpen;
+        q("#orbitMenuButton").setAttribute("aria-expanded", String(menuOpen));
+        var host = q("#orbitBody");
+        host.innerHTML = orbitTab === "properties" ? propertyMarkup() : orbitTab === "data" ? dataMarkup() : styleMarkup();
+        bindOrbitBody();
+        computeDirty();
+        requestAnimationFrame(positionOrbit);
+      }
+
+      function markDraft(key, value) {
+        chartDraft[key] = value;
+        computeDirty();
+        if (key === "title") {
+          q("#" + panelMap[selectedPanelId] + " h4").textContent = value || "Untitled chart";
+          q("#orbitTitle").textContent = value || "Untitled chart";
+        }
+      }
+
+      function bindOrbitBody() {
+        var titleInput = q("#chartTitleInput");
+        if (titleInput) titleInput.addEventListener("input", function () { markDraft("title", this.value); });
+        var subtitleInput = q("#chartSubtitleInput");
+        if (subtitleInput) subtitleInput.addEventListener("input", function () { markDraft("subtitle", this.value); });
+        var source = q("#sourceSelect");
+        if (source) source.addEventListener("change", function () { markDraft("source", this.value); announce("Evidence source changed in the chart draft."); });
+        var temporal = q("#temporalSelect");
+        if (temporal) temporal.addEventListener("change", function () { markDraft("temporal", this.value); announce("Temporal field changed in the chart draft."); });
+        var legend = q("#legendCheck");
+        if (legend) legend.addEventListener("change", function () { markDraft("legend", this.checked); announce("Legend visibility updated in the chart draft."); });
+        var provenance = q("#provenanceCheck");
+        if (provenance) provenance.addEventListener("change", function () { markDraft("provenance", this.checked); });
+        var annotation = q("#annotationCheck");
+        if (annotation) annotation.addEventListener("change", function () { markDraft("annotation", this.checked); });
+        var treatment = q("#seriesTreatment");
+        if (treatment) treatment.addEventListener("change", function () { announce(this.value + " previewed; data mappings are unchanged."); });
+        var advanced = q("#advancedToggle");
+        if (advanced) advanced.addEventListener("click", function () {
+          advancedOpen = !advancedOpen;
+          renderOrbit();
+          q("#advancedToggle").focus();
+        });
+
+        var grid = q("#footprintGrid");
+        if (grid) {
+          qa(".footprint-cell", grid).forEach(function (button) {
+            function preview() {
+              previewFootprint = { cols: Number(button.dataset.col), rows: Number(button.dataset.row) };
+              qa(".footprint-cell", grid).forEach(function (cell) {
+                cell.dataset.preview = String(Number(cell.dataset.col) <= previewFootprint.cols && Number(cell.dataset.row) <= previewFootprint.rows);
+              });
+              q("#footprintStatus").textContent = "Preview: " + previewFootprint.cols + " columns × " + previewFootprint.rows + " rows. Press Enter, Space or click to select.";
+            }
+            button.addEventListener("mouseenter", preview);
+            button.addEventListener("focus", preview);
+            button.addEventListener("click", function () {
+              footprint = { cols: Number(this.dataset.col), rows: Number(this.dataset.row) };
+              renderOrbit();
+              q('.footprint-cell[data-col="' + footprint.cols + '"][data-row="' + footprint.rows + '"]').focus();
+              announce(footprint.cols + " × " + footprint.rows + " footprint selected in the chart draft preview; dashboard geometry remains locked.");
+            });
+            button.addEventListener("keydown", function (event) {
+              var moves = {ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+              if (!moves[event.key]) return;
+              event.preventDefault();
+              var col = Math.max(1, Math.min(4, Number(this.dataset.col) + moves[event.key][0]));
+              var row = Math.max(1, Math.min(2, Number(this.dataset.row) + moves[event.key][1]));
+              q('.footprint-cell[data-col="' + col + '"][data-row="' + row + '"]').focus();
+            });
+          });
+          grid.addEventListener("mouseleave", function () {
+            previewFootprint = null;
+            qa(".footprint-cell", grid).forEach(function (cell) { cell.dataset.preview = "false"; });
+            q("#footprintStatus").textContent = "Current preview: " + footprint.cols + " columns × " + footprint.rows + " rows. The locked comparison fixture is not resized.";
+          });
+        }
+        var confirm = q("#confirmRemove");
+        if (confirm) confirm.addEventListener("click", function () {
+          removeConfirm = true;
+          computeDirty();
+          announce("Removal staged as a destructive chart draft; the locked comparison fixture remains mounted.");
+          q("#orbitRemove").textContent = "Removal staged";
+        });
+        var keep = q("#keepChart");
+        if (keep) keep.addEventListener("click", function () {
+          removeConfirm = false;
+          renderOrbit();
+          q("#orbitRemove").focus();
+          announce("Chart retained. Destructive draft cleared.");
+        });
+      }
+
+      function resetDraft() {
+        chartDraft = Object.assign({}, savedChart);
+        removeConfirm = false;
+        q("#" + panelMap[selectedPanelId] + " h4").textContent = savedChart.title;
+        renderOrbit();
+      }
+
+      function retryPanel(type) {
+        var panel = type === "error" ? q("#panel-hospital") : q("#panel-vaccination");
+        panel.dataset.error = "false";
+        panel.dataset.partial = "false";
+        panel.dataset.loading = "true";
+        announce(type === "error" ? "Reconnecting to the hospital feed…" : "Refreshing municipal vaccination records…");
+        retryTimers.push(window.setTimeout(function () {
+          panel.dataset.loading = "false";
+          panel.dataset.error = "false";
+          panel.dataset.partial = "false";
+          announce(type === "error" ? "Hospital feed restored. Current table retained in place." : "Vaccination data refreshed. All 5 municipalities are current.");
+          panel.focus();
+        }, 1100));
+      }
+
+      qa("[data-scene-button]").forEach(function (button) {
+        button.addEventListener("click", function () { applyScene(this.dataset.sceneButton, false); announce("Review scene " + scene + " loaded."); });
+      });
+
+      qa("[data-appearance]").forEach(function (button) {
+        button.addEventListener("click", function () { applyAppearance(this.dataset.appearance, true); });
+      });
+
+      qa("[data-style-button]").forEach(function (button) {
+        button.addEventListener("click", function () { applyStyle(this.dataset.styleButton, true); });
+      });
+
+      qa("[data-palette-id-button]").forEach(function (button) {
+        button.addEventListener("click", function () { applyPaletteProfile(this.dataset.paletteIdButton, true); });
+      });
+
+      q("#useHumanistSignature").addEventListener("click", function () {
+        applyPaletteProfile("humanist-signature", true);
+      });
+
+      q("#useSignalSignature").addEventListener("click", function () {
+        applyPaletteProfile("signal-signature", true);
+      });
+
+      qa("[data-chart-color-mode-button]").forEach(function (button) {
+        button.addEventListener("click", function () { applyChartColorMode(this.dataset.chartColorModeButton, true); });
+      });
+
+      qa("[data-select-panel]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          setSelectedPanel(this.dataset.selectPanel, true);
+          if (scene === "B1") renderOrbit();
+        });
+      });
+
+      q("#proofButton").addEventListener("click", function () {
+        proofPinned = !proofPinned;
+        body.dataset.proof = String(proofPinned);
+        this.setAttribute("aria-pressed", String(proofPinned));
+        this.textContent = proofPinned ? "Unpin hover + focus proof" : "Pin hover + focus proof";
+        if (proofPinned) {
+          q("#panel-r").focus();
+          announce("Hover treatment is pinned on Confirmed cases; keyboard focus is pinned on Effective reproduction rate.");
+        } else {
+          announce("Pinned comparison states cleared. Hover and keyboard focus remain available normally.");
+        }
+      });
+
+      q("#setStyleButton").addEventListener("click", function () {
+        if (!paletteIsSaveable()) return;
+        sessionStorage.setItem("simex.dashboardStyle", styleChoice);
+        sessionStorage.setItem("simex.dashboardColorProfile", paletteChoice);
+        updateStatus();
+        var savedChartColorMode = sessionStorage.getItem("simex.dashboardChartColorMode");
+        announce(previewLabel() + " set as dashboard style. Chart colors remain " + (savedChartColorMode && chartColorNames[savedChartColorMode] ? chartColorNames[savedChartColorMode] : "Profile colors (default)") + "; appearance remains a separate user setting.");
+      });
+
+      q("#setChartColorsButton").addEventListener("click", function () {
+        sessionStorage.setItem("simex.dashboardChartColorMode", chartColorChoice);
+        updateStatus();
+        announce(chartColorNames[chartColorChoice] + " set for this dashboard. Style, color profile and appearance are unchanged.");
+      });
+
+      q("#feedbackButton").addEventListener("click", function () {
+        setFeedbackMenu(!feedbackMenuOpen, false);
+      });
+
+      qa("[data-feedback-action]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var isBug = this.dataset.feedbackAction === "bug";
+          q("#feedbackConfirmation").textContent = isBug
+            ? "Bug-report hand-off prepared for FIX-DASH-BIO 3.4; no information was sent from this disposable sketch."
+            : "Feature-request hand-off prepared with this dashboard package identity; no information was sent from this disposable sketch.";
+          setFeedbackMenu(false, true);
+          announce(isBug ? "Report a bug selected. Deterministic hand-off confirmation shown in the footer." : "Request a feature selected. Deterministic hand-off confirmation shown in the footer.");
+        });
+        button.addEventListener("keydown", function (event) {
+          if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          var choices = qa("[data-feedback-action]", q("#feedbackMenu"));
+          var current = choices.indexOf(this);
+          var next = event.key === "Home" ? 0 : event.key === "End" ? choices.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + choices.length) % choices.length;
+          choices[next].focus();
+        });
+      });
+
+      q("#orbitMenuButton").addEventListener("click", function () {
+        menuOpen = !menuOpen;
+        q("#orbitMenu").hidden = !menuOpen;
+        this.setAttribute("aria-expanded", String(menuOpen));
+        if (menuOpen) q("[data-orbit-menu-action]", q("#orbitMenu")).focus();
+      });
+
+      qa("[data-orbit-menu-action]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var action = this.dataset.orbitMenuAction;
+          menuOpen = false;
+          q("#orbitMenu").hidden = true;
+          q("#orbitMenuButton").setAttribute("aria-expanded", "false");
+          if (action === "reset") { resetDraft(); announce("Chart draft reset to its last saved evidence record."); }
+          if (action === "inspect") announce("Change history preview: created 08:00 · reviewed 09:15 · no unresolved provenance notes.");
+          if (action === "duplicate") announce("Duplicate hand-off prepared. The locked comparison fixture is intentionally unchanged.");
+          q("#orbitMenuButton").focus();
+        });
+      });
+
+      qa("[data-orbit-tab]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          orbitTab = this.dataset.orbitTab;
+          renderOrbit();
+          q('[data-orbit-tab="' + orbitTab + '"]').focus();
+        });
+        button.addEventListener("keydown", function (event) {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          var tabs = ["properties", "data", "style"];
+          var direction = event.key === "ArrowRight" ? 1 : -1;
+          orbitTab = tabs[(tabs.indexOf(orbitTab) + direction + tabs.length) % tabs.length];
+          renderOrbit();
+          q('[data-orbit-tab="' + orbitTab + '"]').focus();
+        });
+      });
+
+      q("#orbitSave").addEventListener("click", function () {
+        if (removeConfirm) {
+          removeConfirm = false;
+          announce("Destructive save demonstrated. Chart deletion is not applied to the locked comparison fixture.");
+        } else {
+          savedChart = Object.assign({}, chartDraft);
+          announce("Chart changes saved in the disposable session. Style preview remains non-mutating.");
+        }
+        computeDirty();
+        renderOrbit();
+        q("#orbitSave").focus();
+      });
+
+      q("#orbitCancel").addEventListener("click", function () {
+        resetDraft();
+        applyScene("B0", false);
+        q("#" + panelMap[selectedPanelId]).focus();
+        announce("Chart draft cancelled. Returned to selected Build state; layout and footprint are unchanged.");
+      });
+
+      q("#orbitRemove").addEventListener("click", function () {
+        removeConfirm = !removeConfirm;
+        renderOrbit();
+        var target = removeConfirm ? q("#confirmRemove") : q("#orbitRemove");
+        if (target) target.focus();
+      });
+
+      q("#errorRetry").addEventListener("click", function () { retryPanel("error"); });
+      q("#partialRetry").addEventListener("click", function () { retryPanel("partial"); });
+
+      systemDark.addEventListener("change", function () {
+        if (appearanceChoice === "system") applyAppearance("system", false);
+      });
+      window.addEventListener("resize", function () {
+        positionOrbit();
+        var same = geometrySnapshot();
+        publishGeometry(same, same);
+      });
+      q("#productViewport").addEventListener("scroll", positionOrbit, { passive: true });
+      document.addEventListener("click", function (event) {
+        if (menuOpen && !q("#orbitMenu").contains(event.target) && event.target !== q("#orbitMenuButton")) {
+          menuOpen = false;
+          q("#orbitMenu").hidden = true;
+          q("#orbitMenuButton").setAttribute("aria-expanded", "false");
+        }
+        if (feedbackMenuOpen && !q("#feedbackMenu").contains(event.target) && event.target !== q("#feedbackButton")) {
+          setFeedbackMenu(false, false);
+        }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && feedbackMenuOpen) {
+          event.preventDefault();
+          setFeedbackMenu(false, true);
+          return;
+        }
+        if (event.key === "Escape" && menuOpen) {
+          menuOpen = false;
+          q("#orbitMenu").hidden = true;
+          q("#orbitMenuButton").setAttribute("aria-expanded", "false");
+          q("#orbitMenuButton").focus();
+        }
+      });
+
+      applyScene("V0", false);
+      updateStatus();
+      requestAnimationFrame(function () {
+        var same = geometrySnapshot();
+        publishGeometry(same, same);
+      });
+    }());
+  </script>
+</body>
+</html>
