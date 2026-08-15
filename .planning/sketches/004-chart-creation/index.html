@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 004 · Chart creation</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper-outer: #dfe5df;
+      --paper-canvas: #eef1ec;
+      --paper-panel: #fffefa;
+      --paper-panel-alt: #f1f4ee;
+      --ink: #1f2d28;
+      --ink-soft: #50615a;
+      --ink-faint: #68766f;
+      --rule: #bdc9c1;
+      --rule-strong: #718179;
+      --accent: #315d50;
+      --accent-soft: #dceae2;
+      --accent-ink: #fff;
+      --focus: #166d79;
+      --selected: #8a4d3f;
+      --selected-soft: #f1ded8;
+      --info: #315f7b;
+      --info-soft: #dde9ef;
+      --warning: #815d16;
+      --warning-soft: #f3e8c8;
+      --error: #9a3f47;
+      --error-soft: #f4dfe1;
+      --success: #397055;
+      --success-soft: #dceadd;
+      --shadow: 0 18px 48px rgba(29, 43, 37, .18);
+      --radius-shell: 16px;
+      --radius-panel: 12px;
+      --radius-control: 8px;
+      --review-h: 88px;
+      --preview-width: 100%;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #cfd7d1; color: var(--ink); }
+    body { overflow-x: hidden; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button, select, input[type="text"], input[type="search"] {
+      min-height: 44px;
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-control);
+      background: var(--paper-panel);
+    }
+    button { cursor: pointer; padding: 9px 14px; font-weight: 650; }
+    button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { cursor: not-allowed; opacity: .52; }
+    button.primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+    button.primary:hover:not(:disabled) { color: var(--accent-ink); background: #244c40; }
+    button.quiet { background: transparent; border-color: transparent; }
+    button.danger { color: var(--error); border-color: var(--error); background: var(--paper-panel); }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    input[type="text"], input[type="search"], select { width: 100%; padding: 8px 11px; }
+    input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; accent-color: var(--accent); }
+    fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+    legend, label.field > span:first-child { display: block; margin-bottom: 7px; font-weight: 700; }
+    .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; }
+    .review-bar {
+      min-height: var(--review-h);
+      position: relative;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: minmax(260px, .8fr) minmax(520px, 1.7fr) minmax(260px, .8fr);
+      align-items: center;
+      gap: 18px;
+      padding: 12px 20px;
+      color: #f7faf7;
+      background: #202723;
+      border-bottom: 1px solid #56615a;
+    }
+    .review-title strong { display: block; font-size: 16px; }
+    .review-title small, .review-status small { color: #c6d0ca; line-height: 1.35; }
+    .variant-tabs { display: flex; gap: 8px; justify-content: center; }
+    .variant-tab {
+      min-height: 48px;
+      color: #eaf1ec;
+      border-color: #708078;
+      background: #303a34;
+    }
+    .variant-tab[aria-pressed="true"] {
+      color: #1d2923;
+      background: #edf4ef;
+      border-color: #edf4ef;
+      box-shadow: inset 0 -4px 0 #6f483c;
+    }
+    .review-status { text-align: right; }
+    .review-status strong { display: block; font-variant-numeric: tabular-nums; }
+    .viewport-frame {
+      width: min(var(--preview-width), 100%);
+      max-width: 100%;
+      margin-inline: auto;
+      min-height: calc(100vh - var(--review-h));
+      background: var(--paper-outer);
+      box-shadow: 0 0 0 1px rgba(29, 43, 37, .15);
+      position: relative;
+    }
+    .product-shell {
+      min-height: calc(100vh - var(--review-h));
+      position: relative;
+      overflow: hidden;
+      background: var(--paper-canvas);
+    }
+    .phone-banner {
+      display: none;
+      position: relative;
+      z-index: 80;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--warning-soft);
+      border-bottom: 2px solid var(--warning);
+      color: #4f3909;
+      font-weight: 700;
+    }
+    .phone-banner button { border-color: var(--warning); background: #fffaf0; }
+    .app-header {
+      height: 72px;
+      display: grid;
+      grid-template-columns: minmax(250px, 1fr) auto auto;
+      align-items: center;
+      gap: 20px;
+      padding: 10px 24px;
+      background: var(--paper-panel);
+      border-bottom: 1px solid var(--rule);
+    }
+    .identity small { display: block; color: var(--ink-faint); }
+    .identity strong { font-size: 18px; }
+    .mode-switch { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel-alt); }
+    .mode-switch button { min-width: 72px; border: 0; background: transparent; }
+    .mode-switch button[aria-pressed="true"] { background: var(--ink); color: white; }
+    .header-actions { display: flex; gap: 8px; }
+    .build-subheader {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 8px 24px;
+      background: #e5ece6;
+      border-bottom: 1px solid var(--rule);
+    }
+    .build-subheader .path { color: var(--ink-soft); }
+    .build-subheader .path strong { color: var(--ink); }
+    .dashboard-scroll { min-height: 720px; padding: 24px; overflow: auto; }
+    .dashboard-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 16px; }
+    .dashboard-heading h1 { margin: 0; font-size: clamp(24px, 2.3vw, 34px); letter-spacing: -.02em; }
+    .dashboard-heading p { margin: 5px 0 0; color: var(--ink-soft); }
+    .geometry-proof { padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper-panel); color: var(--ink-soft); font-size: 13px; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+    .dash-panel {
+      min-height: 250px;
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      background: var(--paper-panel);
+      box-shadow: 0 2px 6px rgba(34,48,40,.05);
+    }
+    .dash-panel.new-chart { border: 3px solid var(--selected); box-shadow: 0 0 0 4px var(--selected-soft); }
+    .panel-title { display: flex; justify-content: space-between; gap: 10px; align-items: start; margin-bottom: 12px; }
+    .panel-title h2 { margin: 0; font-size: 17px; }
+    .panel-title small { color: var(--ink-faint); }
+    .chart-surface { height: 165px; position: relative; border-top: 1px solid var(--rule); background:
+      linear-gradient(to bottom, transparent 32%, var(--rule) 33%, transparent 34%, transparent 65%, var(--rule) 66%, transparent 67%);
+    }
+    .chart-surface svg { width: 100%; height: 100%; display: block; }
+    .bars { height: 150px; display: flex; align-items: end; gap: 12px; padding: 18px 16px 0; }
+    .bars i { flex: 1; min-width: 12px; height: var(--h); background: #587c6c; border: 1px solid #35584a; border-radius: 4px 4px 0 0; }
+    .donut { width: 134px; height: 134px; margin: 12px auto; border-radius: 50%; background: conic-gradient(#4b7665 0 62%, #b98062 62% 81%, #80719a 81%); position: relative; }
+    .donut::after { content: "74%"; position: absolute; inset: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--paper-panel); font-size: 22px; font-weight: 750; }
+    .demand-lines { display: grid; gap: 16px; padding-top: 18px; }
+    .demand-lines > div { display: grid; grid-template-columns: 80px 1fr 44px; gap: 9px; align-items: center; }
+    .meter { height: 14px; background: #e5e9e2; border: 1px solid var(--rule); border-radius: 7px; overflow: hidden; }
+    .meter b { display: block; width: var(--w); height: 100%; background: #6f7d54; }
+    .creation-backdrop {
+      position: absolute;
+      z-index: 20;
+      inset: 0;
+      pointer-events: none;
+      background: rgba(31,45,40,.18);
+    }
+    .creation-surface {
+      position: absolute;
+      z-index: 30;
+      pointer-events: auto;
+      overflow: hidden;
+      background: var(--paper-canvas);
+      border: 1px solid var(--rule-strong);
+      box-shadow: var(--shadow);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .creation-surface[data-committing="true"] { cursor: progress; }
+    .creation-head {
+      min-height: 72px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper-panel);
+    }
+    .creation-head h2 { margin: 0; font-size: 20px; }
+    .creation-head p { margin: 3px 0 0; color: var(--ink-soft); font-size: 13px; }
+    .draft-actions { display: flex; gap: 8px; }
+    .stage-nav { background: var(--paper-panel-alt); border-color: var(--rule); }
+    .stage-button {
+      min-width: 0;
+      text-align: left;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 8px;
+      padding: 9px 10px;
+    }
+    .stage-button[aria-selected="true"] { background: var(--paper-panel); border-color: var(--selected); box-shadow: inset 4px 0 0 var(--selected); }
+    .stage-button .stage-index { display: inline-grid; width: 26px; height: 26px; place-items: center; margin-right: 7px; border: 1px solid var(--rule-strong); border-radius: 50%; font-size: 12px; }
+    .stage-button .stage-name { font-size: 13px; }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 5px 0 0 34px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-pill::before { content: "○"; font-size: 14px; }
+    .status-pill[data-status="Complete"]::before { content: "✓"; color: var(--success); }
+    .status-pill[data-status="Needs attention"]::before { content: "!"; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--error); }
+    .status-pill[data-status="Waiting on prerequisite"]::before { content: "⏳"; }
+    .status-pill[data-status="In progress"]::before { content: "◐"; color: var(--info); }
+    .stage-region { overflow: auto; background: var(--paper-canvas); }
+    .stage-card { max-width: 760px; margin: 0 auto; padding: 22px; }
+    .stage-card > header { margin-bottom: 20px; }
+    .stage-card h3 { margin: 0 0 6px; font-size: 24px; }
+    .stage-card header p { margin: 0; color: var(--ink-soft); line-height: 1.45; }
+    .field-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .field { min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    .choice-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .choice-card {
+      flex: 1 1 180px;
+      min-height: 76px;
+      text-align: left;
+      padding: 12px;
+      border-color: var(--rule);
+    }
+    .choice-card strong, .choice-card small { display: block; }
+    .choice-card small { margin-top: 4px; color: var(--ink-soft); font-weight: 400; }
+    .choice-card[aria-pressed="true"] { border: 2px solid var(--selected); background: var(--selected-soft); }
+    .inline-check { display: flex; align-items: start; gap: 9px; padding: 9px 0; }
+    .callout { display: flex; gap: 10px; align-items: start; padding: 12px; margin: 14px 0; border: 1px solid var(--info); border-radius: 9px; background: var(--info-soft); }
+    .callout.error { border-color: var(--error); background: var(--error-soft); }
+    .callout.warning { border-color: var(--warning); background: var(--warning-soft); }
+    .callout.success { border-color: var(--success); background: var(--success-soft); }
+    .callout strong { display: block; margin-bottom: 3px; }
+    .section-box { margin: 16px 0; padding: 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); }
+    .section-box h4 { margin: 0 0 10px; }
+    .footprint-wrap { display: grid; grid-template-columns: auto minmax(180px,1fr); gap: 18px; align-items: start; }
+    .footprint-grid { width: 248px; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 58px); gap: 5px; }
+    .footprint-cell { min-height: 58px; padding: 0; position: relative; background: var(--paper-panel); }
+    .footprint-cell[data-filled="true"] { background: var(--accent-soft); border-color: var(--accent); }
+    .footprint-cell[aria-pressed="true"]::after { content: "✓"; position: absolute; right: 6px; top: 4px; color: var(--accent); font-weight: 800; }
+    .stage-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 18px;
+      border-top: 1px solid var(--rule);
+      background: var(--paper-panel);
+    }
+    .stage-footer > div { display: flex; gap: 8px; }
+    .proof-deck { overflow: auto; background: #e7ebe6; }
+    .proof-card {
+      margin: 12px;
+      padding: 14px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 10px;
+      background: var(--paper-panel);
+    }
+    .proof-card > header { display: flex; justify-content: space-between; gap: 10px; align-items: start; margin-bottom: 10px; }
+    .proof-card h3 { margin: 0; font-size: 15px; }
+    .proof-card p { color: var(--ink-soft); }
+    .proof-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 999px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .proof-state::before { content: "●"; color: var(--success); }
+    .proof-state.stale::before { color: var(--warning); }
+    .proof-state.invalid::before { content: "!"; color: var(--error); }
+    .proof-chart { height: 170px; border: 1px solid var(--rule); background: var(--paper-panel-alt); position: relative; overflow: hidden; }
+    .proof-chart svg { width: 100%; height: 100%; display: block; }
+    .proof-chart .watermark { position: absolute; inset: 0; display: grid; place-items: center; color: var(--warning); background: rgba(255,254,250,.82); font-size: 16px; font-weight: 800; text-align: center; padding: 20px; }
+    .placement-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; min-height: 138px; padding: 8px; border: 1px solid var(--rule); background: var(--paper-panel-alt); }
+    .placement-slot { display: grid; place-items: center; min-height: 58px; padding: 6px; border: 1px solid var(--rule); background: var(--paper-panel); font-size: 11px; text-align: center; }
+    .placement-slot.draft { border: 2px dashed var(--selected); background: var(--selected-soft); color: #5b2d25; font-weight: 800; }
+    .placement-copy { margin: 9px 0 0; font-size: 12px; line-height: 1.45; }
+    .review-ledger { display: grid; gap: 8px; }
+    .ledger-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper-panel); }
+    .ledger-row b { font-size: 13px; }
+    .ledger-row small { color: var(--ink-soft); }
+    .modal-layer {
+      position: fixed;
+      z-index: 300;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(20,28,24,.48);
+    }
+    .modal {
+      width: min(560px, 100%);
+      padding: 20px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 14px;
+      background: var(--paper-panel);
+      box-shadow: var(--shadow);
+    }
+    .modal h2 { margin-top: 0; }
+    .modal-actions { display: flex; justify-content: end; gap: 9px; margin-top: 20px; }
+    .suspended-card {
+      position: absolute;
+      z-index: 22;
+      top: 156px;
+      right: 24px;
+      width: min(390px, calc(100% - 48px));
+      padding: 18px;
+      border: 2px solid var(--selected);
+      border-radius: 12px;
+      background: var(--paper-panel);
+      box-shadow: var(--shadow);
+    }
+    .suspended-card h2 { margin: 0 0 6px; }
+    .suspended-card p { color: var(--ink-soft); }
+    .unit-orbit {
+      position: fixed;
+      z-index: 240;
+      right: 28px;
+      top: 126px;
+      width: min(410px, calc(100vw - 40px));
+      max-height: calc(100vh - 150px);
+      overflow: auto;
+      padding: 16px;
+      border: 2px solid var(--selected);
+      border-radius: 16px;
+      background: var(--paper-panel);
+      box-shadow: var(--shadow);
+    }
+    .unit-orbit::before { content: ""; position: absolute; left: -16px; top: 42px; width: 16px; border-top: 2px solid var(--selected); }
+    .unit-orbit h2 { margin: 0; }
+    .unit-orbit .orbit-id { font-family: ui-monospace, monospace; color: var(--ink-soft); font-size: 12px; }
+    .unit-orbit .field { margin-top: 14px; }
+    .toast {
+      position: fixed;
+      z-index: 400;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      max-width: min(620px, calc(100vw - 32px));
+      padding: 12px 16px;
+      border-radius: 9px;
+      color: white;
+      background: #20352c;
+      box-shadow: var(--shadow);
+      font-weight: 700;
+    }
+    .sketch-tools {
+      position: fixed;
+      z-index: 500;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 7px;
+      color: white;
+      background: rgba(16,20,18,.88);
+      border-radius: 10px;
+      opacity: .45;
+      transition: opacity .15s ease;
+    }
+    .sketch-tools:hover, .sketch-tools:focus-within { opacity: 1; }
+    .sketch-tools button { min-height: 36px; padding: 5px 8px; color: white; background: transparent; border-color: #8a9790; font-size: 11px; }
+    .sketch-tools button[aria-pressed="true"] { background: #f3f7f4; color: #19231e; }
+    body[data-annotations="true"] [data-annotate] { outline: 1px dashed #c72f87; outline-offset: -2px; }
+    body[data-annotations="true"] [data-annotate]::after { content: attr(data-annotate); position: absolute; z-index: 90; padding: 2px 5px; color: white; background: #a51d70; font-size: 10px; }
+    /* Variant A: modal proof studio */
+    .product-shell[data-variant="A"] .creation-surface {
+      inset: 92px 34px 28px;
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(330px, 38%);
+      grid-template-rows: auto auto minmax(0,1fr) auto;
+      border-radius: var(--radius-shell);
+    }
+    .product-shell[data-variant="A"] .creation-head { grid-column: 1 / -1; }
+    .product-shell[data-variant="A"] .stage-nav {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(6,minmax(0,1fr));
+      gap: 4px;
+      padding: 7px;
+      border-bottom: 1px solid var(--rule);
+      overflow-x: auto;
+    }
+    .product-shell[data-variant="A"] .stage-region { grid-column: 1; grid-row: 3; }
+    .product-shell[data-variant="A"] .proof-deck { grid-column: 2; grid-row: 3 / 5; border-left: 1px solid var(--rule); }
+    .product-shell[data-variant="A"] .stage-footer { grid-column: 1; grid-row: 4; }
+    /* Variant B: full-viewport workbench */
+    .product-shell[data-variant="B"] .creation-backdrop { background: var(--paper-canvas); }
+    .product-shell[data-variant="B"] .creation-surface {
+      inset: 0;
+      display: grid;
+      grid-template-columns: 252px minmax(430px,1fr) minmax(330px, 37%);
+      grid-template-rows: auto minmax(0,1fr) auto;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .product-shell[data-variant="B"] .creation-head { grid-column: 1 / -1; }
+    .product-shell[data-variant="B"] .stage-nav {
+      grid-column: 1;
+      grid-row: 2 / 4;
+      display: grid;
+      align-content: start;
+      gap: 5px;
+      padding: 12px;
+      border-right: 1px solid var(--rule);
+      overflow: auto;
+    }
+    .product-shell[data-variant="B"] .stage-region { grid-column: 2; grid-row: 2; }
+    .product-shell[data-variant="B"] .proof-deck { grid-column: 3; grid-row: 2 / 4; border-left: 1px solid var(--rule); }
+    .product-shell[data-variant="B"] .stage-footer { grid-column: 2; grid-row: 3; }
+    /* Variant C: dashboard-connected dock */
+    .product-shell[data-variant="C"] .creation-backdrop { background: rgba(31,45,40,.06); }
+    .product-shell[data-variant="C"] .creation-surface {
+      top: 72px;
+      right: 0;
+      bottom: 0;
+      width: min(560px, 46vw);
+      display: grid;
+      grid-template-rows: auto auto minmax(0,1fr) auto auto;
+      border-radius: 14px 0 0 0;
+    }
+    .product-shell[data-variant="C"] .creation-head { grid-row: 1; }
+    .product-shell[data-variant="C"] .stage-nav {
+      grid-row: 2;
+      display: flex;
+      gap: 4px;
+      padding: 7px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--rule);
+    }
+    .product-shell[data-variant="C"] .stage-button { flex: 0 0 170px; }
+    .product-shell[data-variant="C"] .stage-region { grid-row: 3; }
+    .product-shell[data-variant="C"] .proof-deck { grid-row: 4; display: grid; grid-template-columns: 1fr 1fr; max-height: 270px; border-top: 1px solid var(--rule); }
+    .product-shell[data-variant="C"] .proof-card { margin: 8px; padding: 10px; overflow: auto; }
+    .product-shell[data-variant="C"] .proof-chart { height: 92px; }
+    .product-shell[data-variant="C"] .placement-grid { min-height: 82px; }
+    .product-shell[data-variant="C"] .placement-slot { min-height: 32px; }
+    .product-shell[data-variant="C"] .stage-footer { grid-row: 5; }
+    @media (max-width: 1080px) {
+      .review-bar { grid-template-columns: 1fr; gap: 8px; }
+      .review-title, .review-status { text-align: center; }
+      :root { --review-h: 176px; }
+      .variant-tabs { flex-wrap: wrap; }
+      .app-header { grid-template-columns: 1fr auto; height: auto; }
+      .header-actions { grid-column: 1 / -1; }
+      .product-shell[data-variant="A"] .creation-surface { inset: 78px 16px 16px; grid-template-columns: 1fr; grid-template-rows: auto auto minmax(260px,1fr) minmax(210px,.7fr) auto; }
+      .product-shell[data-variant="A"] .creation-head { grid-column: 1; }
+      .product-shell[data-variant="A"] .stage-region { grid-column: 1; grid-row: 3; }
+      .product-shell[data-variant="A"] .proof-deck { grid-column: 1; grid-row: 4; display: grid; grid-template-columns: 1fr 1fr; border-left: 0; border-top: 1px solid var(--rule); }
+      .product-shell[data-variant="A"] .stage-footer { grid-column: 1; grid-row: 5; }
+      .product-shell[data-variant="B"] .creation-surface { grid-template-columns: 1fr minmax(300px, 40%); grid-template-rows: auto auto minmax(0,1fr) auto; }
+      .product-shell[data-variant="B"] .creation-head { grid-column: 1 / -1; }
+      .product-shell[data-variant="B"] .stage-nav { grid-column: 1 / -1; grid-row: 2; display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); }
+      .product-shell[data-variant="B"] .stage-button { flex: 0 0 180px; }
+      .product-shell[data-variant="B"] .stage-region { grid-column: 1; grid-row: 3; }
+      .product-shell[data-variant="B"] .proof-deck { grid-column: 2; grid-row: 3 / 5; }
+      .product-shell[data-variant="B"] .stage-footer { grid-column: 1; grid-row: 4; }
+      .product-shell[data-variant="C"] .creation-surface { top: auto; left: 0; width: 100%; height: min(720px, 78%); border-radius: 14px 14px 0 0; }
+    }
+    @media (max-width: 720px) {
+      .review-bar { padding: 10px; }
+      .variant-tab { flex: 1 1 160px; }
+      .phone-banner { display: flex; }
+      .app-header { grid-template-columns: 1fr; padding: 10px 14px; }
+      .mode-switch, .header-actions { justify-self: stretch; }
+      .mode-switch button { flex: 1; }
+      .build-subheader { padding: 8px 14px; flex-wrap: wrap; }
+      .dashboard-scroll { padding: 14px; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .field-grid { grid-template-columns: 1fr; }
+      .footprint-wrap { grid-template-columns: 1fr; }
+      .footprint-grid { width: 100%; max-width: 320px; }
+      .creation-surface { display: none !important; }
+      .creation-backdrop { display: none; }
+      body[data-product-mode="view"] .phone-banner { display: none; }
+      .suspended-card { top: 210px; right: 14px; width: calc(100% - 28px); }
+      .unit-orbit { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body data-product-mode="build" data-annotations="false">
+  <header class="review-bar" aria-label="Prototype review controls">
+    <div class="review-title">
+      <strong>Sketch 004 · Chart creation</strong>
+      <small>Approved winner: A · Staged Proof Studio</small>
+    </div>
+    <nav class="variant-tabs" aria-label="Containing-surface variants">
+      <button class="variant-tab" data-variant="A" data-winner="true" aria-pressed="true">A · Staged Proof Studio · ★ Winner</button>
+      <button class="variant-tab" data-variant="B" aria-pressed="false">B · Full-viewport Workbench · Preserved</button>
+      <button class="variant-tab" data-variant="C" aria-pressed="false">C · Edge-docked Guided Layer · Preserved</button>
+    </nav>
+    <div class="review-status">
+      <strong id="reviewDigest">Shared draft · Stage 1 of 6</strong>
+      <small>Winner approved; rejected alternatives remain interactive.</small>
+    </div>
+  </header>
+
+  <div class="viewport-frame" id="viewportFrame">
+    <main id="app"></main>
+  </div>
+
+  <div class="sketch-tools" aria-label="Sketch tools">
+    <button data-width="100%" aria-pressed="true">Full</button>
+    <button data-width="1440px" aria-pressed="false">1440</button>
+    <button data-width="1024px" aria-pressed="false">1024</button>
+    <button data-width="768px" aria-pressed="false">768</button>
+    <button id="annotationToggle" aria-pressed="false">Labels</button>
+  </div>
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const stages = [
+        "Destination",
+        "Chart type",
+        "Data source",
+        "Map and prepare data",
+        "Configure chart",
+        "Review and create"
+      ];
+      const approvedStatuses = ["Not started", "In progress", "Complete", "Needs attention", "Waiting on prerequisite"];
+      const initialState = () => ({
+        variant: "A",
+        mode: "build",
+        stage: 0,
+        suspended: false,
+        created: false,
+        orbitOpen: false,
+        committing: false,
+        destinationConfirmed: false,
+        page: "Executive surveillance",
+        section: "Transmission and demand",
+        relation: "after",
+        anchor: "Regional R values",
+        anchorMissing: false,
+        footprint: { w: 2, h: 1 },
+        footprintFocus: { col: 2, row: 1 },
+        registryQuery: "",
+        type: "",
+        pendingType: "",
+        source: "",
+        profiling: false,
+        profileRevision: 1,
+        dateRole: "",
+        valueRole: "",
+        seriesRole: "",
+        missingRule: "Exclude rows with missing values",
+        duplicateRule: "Aggregate by date and municipality",
+        timeGroups: [],
+        mapAttempted: false,
+        zeroOutput: false,
+        title: "Respiratory pressure by municipality",
+        titleAccepted: false,
+        advanced: false,
+        smoothing: "7-day rolling average",
+        legend: true,
+        previewRevision: 1,
+        placementRevision: 1,
+        lastGoodPreview: false,
+        previewAcknowledged: false,
+        placementAcknowledged: false,
+        dialog: "",
+        discardCategories: [],
+        commitMessage: "",
+        toast: "",
+        newChartId: "chart-respiratory-pressure-01",
+        focusAfterRender: "",
+        savedChartCount: 4
+      });
+      let state = initialState();
+      const app = document.getElementById("app");
+      const live = document.getElementById("live");
+
+      function esc(value) {
+        return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[ch]));
+      }
+      function opt(value, label, current) {
+        return '<option value="' + esc(value) + '" ' + (current === value ? "selected" : "") + '>' + esc(label) + '</option>';
+      }
+      function announce(message) {
+        state.toast = message;
+        live.textContent = "";
+        requestAnimationFrame(() => { live.textContent = message; });
+      }
+      function mappingComplete() {
+        const dimensionNeeded = state.type === "heatmap";
+        return Boolean(state.dateRole && state.valueRole && (!dimensionNeeded || state.seriesRole) && !state.zeroOutput);
+      }
+      function previewCurrent() {
+        return Boolean(state.type && state.source && mappingComplete());
+      }
+      function placementCurrent() {
+        return Boolean(state.destinationConfirmed && !state.anchorMissing);
+      }
+      function stageStatus(index) {
+        let status = "Not started";
+        if (index === 0) {
+          if (state.anchorMissing) status = "Needs attention";
+          else status = state.destinationConfirmed ? "Complete" : "In progress";
+        } else if (index === 1) {
+          status = !state.destinationConfirmed ? "Waiting on prerequisite" : (state.type ? "Complete" : "In progress");
+        } else if (index === 2) {
+          status = !state.type ? "Waiting on prerequisite" : (state.source ? "Complete" : "In progress");
+        } else if (index === 3) {
+          if (!state.source) status = "Waiting on prerequisite";
+          else if ((state.mapAttempted && !mappingComplete()) || state.zeroOutput) status = "Needs attention";
+          else status = mappingComplete() ? "Complete" : "In progress";
+        } else if (index === 4) {
+          if (!mappingComplete()) status = "Waiting on prerequisite";
+          else status = state.titleAccepted ? "Complete" : "In progress";
+        } else if (index === 5) {
+          const priorComplete = [0,1,2,3,4].every(i => stageStatus(i) === "Complete");
+          if (!priorComplete) status = "Waiting on prerequisite";
+          else status = state.previewAcknowledged && state.placementAcknowledged ? "Complete" : "In progress";
+        }
+        return approvedStatuses.includes(status) ? status : "Not started";
+      }
+      function allPriorComplete() {
+        return [0,1,2,3,4].every(i => stageStatus(i) === "Complete");
+      }
+      function createEnabled() {
+        return allPriorComplete() && previewCurrent() && placementCurrent() && state.previewAcknowledged && state.placementAcknowledged && !state.committing && !state.created;
+      }
+      function dirtyCategories() {
+        const categories = [];
+        if (state.destinationConfirmed) categories.push("destination and placement");
+        if (state.type) categories.push("chart type");
+        if (state.source) categories.push("data source");
+        if (state.dateRole || state.valueRole || state.seriesRole) categories.push("mapping and preparation");
+        if (state.titleAccepted || state.advanced) categories.push("configuration");
+        if (state.timeGroups.length) categories.push("temporal memberships");
+        return categories;
+      }
+      function proofState(kind) {
+        if (kind === "placement") {
+          if (state.anchorMissing) return {label:"Invalid · named anchor missing", cls:"invalid"};
+          if (!state.destinationConfirmed) return {label:"Awaiting destination", cls:"stale"};
+          return {label:"Current · revision " + state.placementRevision, cls:""};
+        }
+        if (state.zeroOutput) return {label:"Invalid · zero effective rows", cls:"invalid"};
+        if (previewCurrent()) return {label:"Current · revision " + state.previewRevision, cls:""};
+        if (state.lastGoodPreview) return {label:"Stale last-good · repair mapping", cls:"stale"};
+        return {label:"Awaiting prerequisites", cls:"stale"};
+      }
+      function stageNav() {
+        return '<nav class="stage-nav" role="tablist" aria-label="Chart creation stages">' +
+          stages.map((name, index) => {
+            const status = stageStatus(index);
+            return '<button class="stage-button" role="tab" data-stage="' + index + '" aria-selected="' + (state.stage === index) + '" tabindex="' + (state.stage === index ? "0" : "-1") + '">' +
+              '<span class="stage-index">' + (index + 1) + '</span><span class="stage-name">' + esc(name) + '</span>' +
+              '<span class="status-pill" data-status="' + esc(status) + '">' + esc(status) + '</span></button>';
+          }).join("") + '</nav>';
+      }
+      function footprintPicker() {
+        const cells = [];
+        for (let row = 1; row <= 2; row++) {
+          for (let col = 1; col <= 4; col++) {
+            const endpoint = state.footprint.w === col && state.footprint.h === row;
+            const filled = col <= state.footprint.w && row <= state.footprint.h;
+            const focused = state.footprintFocus.col === col && state.footprintFocus.row === row;
+            cells.push('<button class="footprint-cell" data-footprint="' + col + 'x' + row + '" data-col="' + col + '" data-row="' + row + '" data-filled="' + filled + '" aria-pressed="' + endpoint + '" tabindex="' + (focused ? "0" : "-1") + '" aria-label="' + col + ' columns by ' + row + ' rows"></button>');
+          }
+        }
+        return '<div class="footprint-wrap"><div class="footprint-grid" role="grid" aria-label="Chart footprint, four columns by two rows">' + cells.join("") + '</div>' +
+          '<div><strong>' + state.footprint.w + ' columns × ' + state.footprint.h + ' rows</strong><p>Chart-owned footprint. Arrow keys move the endpoint; Enter or Space applies it. The filled rectangle always starts at the top-left.</p></div></div>';
+      }
+      function destinationStage() {
+        return '<section class="stage-card"><header><h3>Choose destination and footprint</h3><p>The saved dashboard remains unchanged. This stage defines a named insertion relationship and a chart-owned footprint for the placement projection.</p></header>' +
+          '<div class="field-grid">' +
+            '<label class="field"><span>Page</span><select data-field="page">' + opt("Executive surveillance","Executive surveillance",state.page) + opt("Regional capacity","Regional capacity",state.page) + '</select></label>' +
+            '<label class="field"><span>Section</span><select data-field="section">' + opt("Transmission and demand","Transmission and demand",state.section) + opt("Protection and coverage","Protection and coverage",state.section) + '</select></label>' +
+            '<fieldset class="field full"><legend>Insertion relationship</legend><div class="choice-row">' +
+              ['append','before','after'].map(v => '<label class="inline-check"><input type="radio" name="relation" value="' + v + '" ' + (state.relation === v ? "checked" : "") + '><span>' + (v === "append" ? "Append to section" : v[0].toUpperCase()+v.slice(1)+" named chart") + '</span></label>').join("") +
+            '</div></fieldset>' +
+            (state.relation === "append" ? "" : '<label class="field full"><span>Named neighbour</span><select data-field="anchor">' + ["Confirmed cases","Regional R values","Vaccination rate","Hospital demand signal"].map(v => opt(v,v,state.anchor)).join("") + '</select></label>') +
+          '</div>' +
+          (state.anchorMissing ? '<div class="callout error"><span aria-hidden="true">!</span><div><strong>Named anchor is no longer available</strong>The projection is blocked; it will not silently append. <button data-action="restore-anchor">Restore Regional R values</button></div></div>' : '') +
+          '<div class="section-box"><h4>Chart footprint</h4>' + footprintPicker() + '</div>' +
+          '<button data-action="confirm-destination" class="primary">' + (state.destinationConfirmed ? "Update placement proof" : "Confirm destination") + '</button> ' +
+          '<button data-action="break-anchor">Test missing anchor</button></section>';
+      }
+      function chartTypeStage() {
+        const types = [
+          {id:"line", name:"Multi-series line", note:"Compatible · temporal comparison"},
+          {id:"columns", name:"Clustered columns", note:"Compatible · discrete periods"},
+          {id:"heatmap", name:"Municipality heatmap", note:"Partially compatible · remaps series to rows"},
+          {id:"map", name:"Municipality map", note:"Waiting on geography resource"}
+        ].filter(t => (t.name + " " + t.note).toLowerCase().includes(state.registryQuery.toLowerCase()));
+        return '<section class="stage-card"><header><h3>Select chart type</h3><p>Search by name, purpose, or description. Incompatible and partially compatible types remain discoverable with a reason.</p></header>' +
+          '<label class="field full"><span>Search chart registry</span><input type="search" data-field="registryQuery" value="' + esc(state.registryQuery) + '" placeholder="Try line, municipality, comparison…"></label>' +
+          '<div class="choice-row" style="margin-top:14px">' +
+          (types.length ? types.map(t => '<button class="choice-card" data-type="' + t.id + '" aria-pressed="' + (state.type === t.id) + '" ' + (t.id === "map" ? 'aria-disabled="true"' : '') + '><strong>' + esc(t.name) + '</strong><small>' + esc(t.note) + '</small></button>').join("") : '<div class="callout warning"><span>○</span><div><strong>No registry matches</strong>Clear the search to restore the compatible catalogue.</div></div>') +
+          '</div>' +
+          (state.type ? '<div class="callout success"><span>✓</span><div><strong>Selected schema revision</strong>' + esc(state.type) + ' / registry revision 6.2. Compatible values will survive later changes.</div></div>' : '') +
+          '</section>';
+      }
+      function dataSourceStage() {
+        return '<section class="stage-card"><header><h3>Choose an existing source</h3><p>Source profiling is asynchronous evidence. Its revision is independent from the canonical chart render.</p></header>' +
+          '<div class="choice-row">' +
+            '<button class="choice-card" data-source="weekly" aria-pressed="' + (state.source === "weekly") + '"><strong>Weekly respiratory surveillance · reconciled</strong><small>42,180 rows · 2024-01-01 to 2026-08-10 · current profile</small></button>' +
+            '<button class="choice-card" data-source="long" aria-pressed="' + (state.source === "long") + '"><strong>Regional hospital and laboratory reporting feed — validated weekly reconciliation</strong><small>50,000 rows · long-name fixture · current profile</small></button>' +
+          '</div>' +
+          (state.source ? '<div class="section-box"><h4>Profile revision ' + state.profileRevision + '</h4><p><strong>Fields:</strong> reporting_date, municipality, confirmed_cases, positivity_rate, hospital_admissions, age_group</p><p><strong>Provenance:</strong> regional laboratories + hospital census reconciliation</p><button data-action="refresh-profile" ' + (state.profiling ? "disabled" : "") + '>' + (state.profiling ? "Refreshing profile…" : "Refresh profile") + '</button></div>' : '<div class="callout"><span>i</span><div><strong>No source selected</strong>Choose an existing source to unlock mapping and preparation.</div></div>') +
+          '</section>';
+      }
+      function mappingStage() {
+        const dimLabel = state.type === "heatmap" ? "Row dimension" : "Series";
+        const issue = state.mapAttempted && !mappingComplete();
+        return '<section class="stage-card"><header><h3>Map and prepare data</h3><p>Required roles, temporal identity, missing values, duplicates, and effective output are resolved here.</p></header>' +
+          (issue ? '<div class="callout error" id="mappingError"><span>!</span><div><strong>Mapping needs attention</strong>' + (state.zeroOutput ? "The current preparation produces zero effective rows." : "Reporting date and value are required; the selected heatmap also needs a row dimension.") + ' <button data-action="repair-mapping">Repair first issue</button></div></div>' : '') +
+          '<div class="field-grid">' +
+            '<label class="field"><span>Reporting date · temporal</span><select data-field="dateRole">' + opt("","Choose field…",state.dateRole) + opt("reporting_date","reporting_date",state.dateRole) + opt("admission_date","admission_date",state.dateRole) + '</select></label>' +
+            '<label class="field"><span>Value</span><select data-field="valueRole">' + opt("","Choose field…",state.valueRole) + opt("confirmed_cases","confirmed_cases",state.valueRole) + opt("positivity_rate","positivity_rate",state.valueRole) + opt("hospital_admissions","hospital_admissions",state.valueRole) + '</select></label>' +
+            '<label class="field"><span>' + dimLabel + '</span><select data-field="seriesRole">' + opt("","No grouping…",state.seriesRole) + opt("municipality","municipality",state.seriesRole) + opt("age_group","age_group",state.seriesRole) + '</select></label>' +
+            '<label class="field"><span>Missing values</span><select data-field="missingRule">' + opt("Exclude rows with missing values","Exclude rows with missing values",state.missingRule) + opt("Keep gaps visible","Keep gaps visible",state.missingRule) + '</select></label>' +
+            '<label class="field full"><span>Duplicate dates</span><select data-field="duplicateRule">' + opt("Aggregate by date and municipality","Aggregate by date and municipality",state.duplicateRule) + opt("Keep latest observation","Keep latest observation",state.duplicateRule) + '</select></label>' +
+          '</div>' +
+          '<div class="section-box"><h4>Existing Time Group memberships</h4>' +
+            ['Winter response 2026','Management review cadence'].map(g => '<label class="inline-check"><input type="checkbox" data-time-group="' + g + '" ' + (state.timeGroups.includes(g) ? "checked" : "") + '><span>' + g + '</span></label>').join("") +
+            '<p>Matching and fallback policy remain owned by the linked Time Group workflow.</p></div>' +
+          '<div class="choice-row"><button data-action="validate-mapping" class="primary">Validate mapping</button><button data-action="test-prerequisite">Test missing temporal role</button><button data-action="test-zero">Test zero output</button></div>' +
+          '</section>';
+      }
+      function configureStage() {
+        return '<section class="stage-card"><header><h3>Configure chart</h3><p>Accept the human-readable title, change visible presentation, and disclose advanced settings only when needed.</p></header>' +
+          '<label class="field full"><span>Chart title</span><input type="text" data-field="title" value="' + esc(state.title) + '" maxlength="120"></label>' +
+          '<div class="choice-row" style="margin-top:10px"><button data-action="accept-title" class="' + (state.titleAccepted ? "" : "primary") + '">' + (state.titleAccepted ? "✓ Title accepted" : "Accept this title") + '</button><button data-action="toggle-advanced" aria-expanded="' + state.advanced + '">' + (state.advanced ? "− Hide advanced properties" : "+ Reveal advanced properties") + '</button></div>' +
+          '<div class="section-box"><h4>Presentation</h4><div class="field-grid">' +
+            '<label class="field"><span>Temporal smoothing</span><select data-field="smoothing"><option>None</option><option ' + (state.smoothing === "7-day rolling average" ? "selected" : "") + '>7-day rolling average</option><option>14-day rolling average</option></select></label>' +
+            '<label class="inline-check"><input type="checkbox" data-field="legend" ' + (state.legend ? "checked" : "") + '><span>Show series legend</span></label>' +
+          '</div></div>' +
+          (state.advanced ? '<div class="section-box"><h4>Advanced</h4><label class="inline-check"><input type="checkbox" checked><span>Announce the latest value in the chart summary</span></label><label class="field"><span>Y-axis baseline</span><select><option>Automatic, include zero when truthful</option><option>Always zero</option></select></label><div class="callout"><span>i</span><div><strong>Accessibility summary</strong>Municipality series are named in the legend and available in the chart data table.</div></div></div>' : '') +
+          '</section>';
+      }
+      function reviewStage() {
+        const rows = stages.map((name,i) => '<div class="ledger-row"><span>' + (i+1) + '</span><div><b>' + esc(name) + '</b><br><small>' + reviewSummary(i) + '</small></div><span class="status-pill" data-status="' + esc(stageStatus(i)) + '">' + esc(stageStatus(i)) + '</span></div>').join("");
+        return '<section class="stage-card"><header><h3>Review and create</h3><p>The ledger reports all six stages. Both independent proofs must be current and explicitly acknowledged.</p></header>' +
+          '<div class="review-ledger">' + rows + '</div>' +
+          '<div class="section-box"><h4>Proof acknowledgements</h4>' +
+            '<label class="inline-check"><input type="checkbox" data-ack="preview" ' + (state.previewAcknowledged ? "checked" : "") + ' ' + (!previewCurrent() ? "disabled" : "") + '><span>I reviewed canonical render revision ' + state.previewRevision + '.</span></label>' +
+            '<label class="inline-check"><input type="checkbox" data-ack="placement" ' + (state.placementAcknowledged ? "checked" : "") + ' ' + (!placementCurrent() ? "disabled" : "") + '><span>I reviewed placement projection revision ' + state.placementRevision + '.</span></label>' +
+          '</div>' +
+          (!allPriorComplete() ? '<div class="callout error"><span>!</span><div><strong>Review is waiting on prerequisites</strong><button data-action="repair-first-stage">Open first stage needing attention</button></div></div>' : '') +
+          '<button data-action="create-chart" class="primary" ' + (!createEnabled() ? "disabled" : "") + '>' + (state.committing ? "Creating chart · do not close…" : "Create chart") + '</button>' +
+          '<p><small>The fake commit is serialized and non-cancellable. Repeated activation cannot create a duplicate.</small></p></section>';
+      }
+      function reviewSummary(i) {
+        if (i === 0) return state.page + " / " + state.section + " · " + state.relation + (state.relation === "append" ? "" : " " + state.anchor) + " · " + state.footprint.w + "×" + state.footprint.h;
+        if (i === 1) return state.type || "No chart type selected";
+        if (i === 2) return state.source ? (state.source === "weekly" ? "Weekly respiratory surveillance · reconciled" : "Regional hospital and laboratory reporting feed") : "No source selected";
+        if (i === 3) return (state.dateRole || "date missing") + " · " + (state.valueRole || "value missing") + " · " + (state.seriesRole || "no dimension");
+        if (i === 4) return state.title + " · " + state.smoothing;
+        return (previewCurrent() ? "canonical current" : "canonical not current") + " · " + (placementCurrent() ? "placement current" : "placement not current");
+      }
+      function stageContent() {
+        if (state.stage === 0) return destinationStage();
+        if (state.stage === 1) return chartTypeStage();
+        if (state.stage === 2) return dataSourceStage();
+        if (state.stage === 3) return mappingStage();
+        if (state.stage === 4) return configureStage();
+        return reviewStage();
+      }
+      function canonicalProof() {
+        const ps = proofState("preview");
+        const showChart = previewCurrent() || state.lastGoodPreview;
+        return '<section class="proof-card" data-annotate="Canonical proof"><header><div><h3>Canonical chart preview</h3><small>Renderer proof · independent revision</small></div><span class="proof-state ' + ps.cls + '">' + esc(ps.label) + '</span></header>' +
+          '<div class="proof-chart">' +
+            (showChart ? '<svg viewBox="0 0 420 170" role="img" aria-label="Respiratory pressure by municipality canonical preview"><path d="M20 142 L75 122 L125 132 L180 82 L238 98 L292 54 L345 66 L400 30" fill="none" stroke="#3a7662" stroke-width="4"/><path d="M20 132 L75 138 L125 105 L180 114 L238 72 L292 88 L345 48 L400 58" fill="none" stroke="#a15e45" stroke-width="4"/><g fill="#3a7662"><circle cx="180" cy="82" r="4"/><circle cx="292" cy="54" r="4"/></g></svg>' : '<div style="display:grid;place-items:center;height:100%;color:var(--ink-soft);padding:18px;text-align:center">Choose a chart type, source, and valid mapping.</div>') +
+            (!previewCurrent() && state.lastGoodPreview ? '<div class="watermark">' + esc(ps.label) + '<br>Not valid for creation</div>' : '') +
+          '</div>' +
+          '<p><strong>' + esc(state.title) + '</strong><br>' + (state.valueRole || "value role") + ' by ' + (state.dateRole || "temporal role") + ' · output ' + (state.zeroOutput ? "0" : "42,180") + ' rows</p></section>';
+      }
+      function placementProof() {
+        const ps = proofState("placement");
+        const names = ["Confirmed cases","Regional R values","Vaccination rate","Hospital demand"];
+        let inserted = false;
+        const slots = [];
+        names.forEach(name => {
+          if (state.destinationConfirmed && state.relation === "before" && name === state.anchor) { slots.push('<div class="placement-slot draft">Draft · ' + state.footprint.w + '×' + state.footprint.h + '</div>'); inserted = true; }
+          slots.push('<div class="placement-slot">' + esc(name) + '</div>');
+          if (state.destinationConfirmed && state.relation === "after" && name === state.anchor) { slots.push('<div class="placement-slot draft">Draft · ' + state.footprint.w + '×' + state.footprint.h + '</div>'); inserted = true; }
+        });
+        if (state.destinationConfirmed && (state.relation === "append" || !inserted)) slots.push('<div class="placement-slot draft">Draft · ' + state.footprint.w + '×' + state.footprint.h + '</div>');
+        return '<section class="proof-card" data-annotate="Placement proof"><header><div><h3>Placement projection</h3><small>Real order and grid rules · no saved mutation</small></div><span class="proof-state ' + ps.cls + '">' + esc(ps.label) + '</span></header>' +
+          '<div class="placement-grid">' + slots.join("") + '</div>' +
+          '<p class="placement-copy"><strong>Textual equivalent:</strong> ' + esc(state.page) + ' → ' + esc(state.section) + '; ' + esc(state.relation) + (state.relation === "append" ? "" : " “" + state.anchor + "”") + '; footprint ' + state.footprint.w + ' columns × ' + state.footprint.h + ' rows. Other charts retain relative reading order.</p>' +
+          (state.destinationConfirmed ? '<button data-action="toggle-anchor-drift">' + (state.anchorMissing ? "Restore named anchor" : "Simulate anchor removal") + '</button>' : '') + '</section>';
+      }
+      function proofDeck() {
+        return '<aside class="proof-deck" aria-label="Independent creation proofs">' + canonicalProof() + placementProof() + '</aside>';
+      }
+      function stageFooter() {
+        return '<footer class="stage-footer"><div><button data-action="previous-stage" ' + (state.stage === 0 ? "disabled" : "") + '>Earlier</button><button data-action="next-stage" ' + (state.stage === 5 ? "disabled" : "") + '>Later</button></div><div><span class="geometry-proof">Saved canvas: ' + state.savedChartCount + ' charts · 0.00 geometry delta</span></div></footer>';
+      }
+      function creationSurface() {
+        if (state.suspended || state.created || state.mode !== "build") return "";
+        return '<div class="creation-backdrop" aria-hidden="true"></div><section class="creation-surface" role="dialog" aria-modal="true" aria-labelledby="creationTitle" data-committing="' + state.committing + '">' +
+          '<header class="creation-head"><div><h2 id="creationTitle">Create chart · ' + esc(stages[state.stage]) + '</h2><p>Session draft · ' + esc(state.page) + ' / ' + esc(state.section) + '</p></div><div class="draft-actions"><button data-action="suspend" ' + (state.committing ? "disabled" : "") + '>Close · keep draft</button><button data-action="discard" class="danger" ' + (state.committing ? "disabled" : "") + '>Discard</button></div></header>' +
+          stageNav() + '<div class="stage-region" role="tabpanel" tabindex="-1">' + stageContent() + '</div>' + proofDeck() + stageFooter() + '</section>';
+      }
+      function fixturePanel(id, title, subtitle, chart) {
+        return '<article class="dash-panel ' + (id === state.newChartId ? "new-chart" : "") + '" id="panel-' + esc(id) + '" data-chart-id="' + esc(id) + '"><div class="panel-title"><div><h2>' + esc(title) + '</h2><small>' + esc(subtitle) + '</small></div><span aria-hidden="true">⋯</span></div>' + chart + '</article>';
+      }
+      function dashboardFixture() {
+        const line = '<div class="chart-surface"><svg viewBox="0 0 500 165" aria-label="Confirmed cases line chart"><path d="M8 140 L78 130 L140 111 L205 124 L270 79 L335 96 L405 46 L492 58" fill="none" stroke="#4a7665" stroke-width="4"/><path d="M8 148 L78 144 L140 132 L205 118 L270 121 L335 77 L405 92 L492 70" fill="none" stroke="#a3624a" stroke-width="3"/></svg></div>';
+        const bars = '<div class="bars" aria-label="Regional R values columns"><i style="--h:40%"></i><i style="--h:58%"></i><i style="--h:74%"></i><i style="--h:49%"></i><i style="--h:82%"></i><i style="--h:67%"></i><i style="--h:90%"></i></div>';
+        const donut = '<div class="donut" aria-label="Vaccination rate 74 percent"></div>';
+        const demand = '<div class="demand-lines"><div><span>Ward beds</span><span class="meter"><b style="--w:68%"></b></span><strong>68%</strong></div><div><span>ICU</span><span class="meter"><b style="--w:82%"></b></span><strong>82%</strong></div><div><span>Staffing</span><span class="meter"><b style="--w:73%"></b></span><strong>73%</strong></div></div>';
+        const panels = [
+          {id:"confirmed-cases", title:"Confirmed cases", subtitle:"Weekly · 42 municipalities", chart:line},
+          {id:"regional-r-values", title:"Regional R values", subtitle:"Latest median 1.08", chart:bars},
+          {id:"vaccination-rate", title:"Vaccination rate", subtitle:"Primary course + booster", chart:donut},
+          {id:"hospital-demand", title:"Hospital demand signal", subtitle:"Capacity and staffing", chart:demand}
+        ];
+        if (state.created) {
+          const aliases = {"Confirmed cases":"confirmed-cases","Regional R values":"regional-r-values","Vaccination rate":"vaccination-rate","Hospital demand signal":"hospital-demand"};
+          let index = panels.length;
+          const anchorIndex = panels.findIndex(panel => panel.id === aliases[state.anchor]);
+          if (state.relation === "before" && anchorIndex >= 0) index = anchorIndex;
+          if (state.relation === "after" && anchorIndex >= 0) index = anchorIndex + 1;
+          panels.splice(index, 0, {id:state.newChartId, title:state.title, subtitle:"Created now · same identity in Unit Orbit", chart:line});
+        }
+        return panels.map(panel => fixturePanel(panel.id,panel.title,panel.subtitle,panel.chart)).join("");
+      }
+      function unitOrbit() {
+        if (!state.orbitOpen) return "";
+        return '<aside class="unit-orbit" role="dialog" aria-labelledby="orbitTitle"><small>Ordinary chart editor · approved Unit Orbit</small><h2 id="orbitTitle">' + esc(state.title) + '</h2><div class="orbit-id">' + esc(state.newChartId) + '</div><div class="callout success"><span>✓</span><div><strong>Chart created successfully</strong>The committed chart is revealed and selected. Creation will not run again.</div></div><label class="field"><span>Chart title</span><input type="text" value="' + esc(state.title) + '"></label><div class="choice-row" style="margin-top:14px"><button class="primary" data-action="orbit-save">Save chart changes</button><button data-action="orbit-close">Close editor</button></div></aside>';
+      }
+      function modal() {
+        if (!state.dialog) return "";
+        if (state.dialog === "lossy") {
+          return '<div class="modal-layer"><section class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle">Change chart type and remove incompatible values?</h2><p>The selected municipality heatmap cannot retain:</p><ul><li><strong>Series role:</strong> municipality</li><li><strong>Smoothing:</strong> 7-day rolling average</li></ul><p>Reporting date, value, source, destination, footprint, title, and temporal memberships will remain.</p><div class="modal-actions"><button data-action="cancel-dialog">Cancel · keep everything</button><button data-action="confirm-lossy" class="primary">Apply type change</button></div></section></div>';
+        }
+        if (state.dialog === "discard") {
+          return '<div class="modal-layer"><section class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle">Discard this chart-creation draft?</h2><p>This cannot be resumed. Present draft categories:</p><ul>' + state.discardCategories.map(c => '<li>' + esc(c) + '</li>').join("") + '</ul><div class="modal-actions"><button data-action="cancel-dialog">Keep draft</button><button data-action="confirm-discard" class="danger">Discard draft</button></div></section></div>';
+        }
+        return "";
+      }
+      function suspendedCard() {
+        if (!state.suspended || state.mode !== "build" || state.created) return "";
+        return '<section class="suspended-card"><small>Session draft suspended</small><h2>Respiratory pressure chart</h2><p>Stage ' + (state.stage + 1) + ' of 6 · ' + esc(stages[state.stage]) + '. Destination and compatible work are retained.</p><button class="primary" data-action="resume">Resume chart draft</button> <button data-action="discard">Discard</button></section>';
+      }
+      function product() {
+        document.body.dataset.productMode = state.mode;
+        return '<section class="product-shell" data-variant="' + state.variant + '">' +
+          '<div class="phone-banner" role="status"><span>' + (state.mode === "present" ? "Present" : "Build") + ' is not supported at phone size. Your chart draft is retained.</span><button data-action="switch-view">Switch to View</button></div>' +
+          '<header class="app-header"><div class="identity"><small>Dashboard</small><strong>Regional Respiratory Preparedness</strong></div><div class="mode-switch" aria-label="Dashboard mode"><button data-mode="view" aria-pressed="' + (state.mode === "view") + '">View</button><button data-mode="build" aria-pressed="' + (state.mode === "build") + '">Build</button><button data-mode="present" aria-pressed="' + (state.mode === "present") + '">Present</button></div><div class="header-actions"><button data-action="share">Share</button><button data-action="dashboard-status">Dashboard status</button></div></header>' +
+          (state.mode === "build" ? '<div class="build-subheader"><div class="path"><strong>Build</strong> · Executive surveillance · Transmission and demand</div><div><span class="geometry-proof">Structure · ' + (state.created ? state.newChartId + " selected" : state.savedChartCount + " charts") + '</span> <button data-action="' + (state.suspended ? "resume" : "suspend") + '">' + (state.suspended ? "Resume chart draft" : state.created ? "Creation complete" : "Chart draft open") + '</button></div></div>' : '') +
+          '<div class="dashboard-scroll"><div class="dashboard-heading"><div><h1>Executive surveillance</h1><p>Transmission, protection, and care demand across 42 municipalities</p></div><div class="geometry-proof">FIX-DASH · canonical canvas unchanged</div></div><div class="dashboard-grid">' + dashboardFixture() + '</div></div>' +
+          creationSurface() + suspendedCard() + unitOrbit() + '</section>' + modal() + (state.toast ? '<div class="toast" role="status">' + esc(state.toast) + '</div>' : '');
+      }
+      function render(options = {}) {
+        const active = document.activeElement;
+        const focusKey = options.focusKey || (active && active.dataset ? (active.dataset.focusKey || active.dataset.action || active.dataset.stage || active.dataset.footprint) : "");
+        app.innerHTML = product();
+        document.querySelectorAll(".variant-tab").forEach(btn => btn.setAttribute("aria-pressed", String(btn.dataset.variant === state.variant)));
+        document.getElementById("reviewDigest").textContent = "Shared draft · Stage " + (state.stage + 1) + " of 6 · " + stageStatus(state.stage);
+        if (state.toast) {
+          window.clearTimeout(render.toastTimer);
+          render.toastTimer = window.setTimeout(() => { state.toast = ""; render(); }, 2600);
+        }
+        requestAnimationFrame(() => {
+          let target = null;
+          if (state.dialog) target = document.querySelector(".modal button");
+          else if (options.focusSelector) target = document.querySelector(options.focusSelector);
+          else if (focusKey) target = document.querySelector('[data-focus-key="' + CSS.escape(String(focusKey)) + '"]') || document.querySelector('[data-action="' + CSS.escape(String(focusKey)) + '"]') || document.querySelector('[data-stage="' + CSS.escape(String(focusKey)) + '"]') || document.querySelector('[data-footprint="' + CSS.escape(String(focusKey)) + '"]');
+          if (target) target.focus({preventScroll:true});
+        });
+      }
+      function updateProof(kind) {
+        if (kind === "preview") {
+          state.previewRevision++;
+          state.previewAcknowledged = false;
+          if (previewCurrent()) state.lastGoodPreview = true;
+        } else {
+          state.placementRevision++;
+          state.placementAcknowledged = false;
+        }
+      }
+      function chooseType(type) {
+        if (type === "map") { announce("Municipality map is waiting on a geography resource."); render(); return; }
+        if (state.type && type === "heatmap" && (state.seriesRole || state.dateRole || state.valueRole || state.titleAccepted)) {
+          state.pendingType = type;
+          state.dialog = "lossy";
+          render();
+          return;
+        }
+        state.type = type;
+        updateProof("preview");
+        announce("Selected " + type + ". Compatible work retained.");
+        render();
+      }
+      function advance() {
+        if (state.stage === 0 && !state.destinationConfirmed) {
+          state.destinationConfirmed = true; updateProof("placement"); announce("Destination confirmed; placement projection updated.");
+        } else if (state.stage === 1 && !state.type) {
+          announce("Choose a chart type before continuing."); return render({focusSelector:'[data-field="registryQuery"]'});
+        } else if (state.stage === 2 && !state.source) {
+          announce("Choose an existing source before continuing."); return render({focusSelector:'[data-source]'});
+        } else if (state.stage === 3 && !mappingComplete()) {
+          state.mapAttempted = true; announce("Mapping needs attention."); return render({focusSelector:"#mappingError button"});
+        } else if (state.stage === 4 && !state.titleAccepted) {
+          announce("Explicitly accept or edit and accept the chart title."); return render({focusSelector:'[data-action="accept-title"]'});
+        }
+        if (state.stage < 5) state.stage++;
+        render({focusSelector:'[data-stage="' + state.stage + '"]'});
+      }
+      function firstRepairStage() {
+        const idx = [0,1,2,3,4].find(i => stageStatus(i) !== "Complete");
+        state.stage = idx < 0 ? 0 : idx;
+        render({focusSelector:'[data-stage="' + state.stage + '"]'});
+      }
+      function resetDraft(keepVariant = true) {
+        const variant = state.variant;
+        const mode = state.mode;
+        state = initialState();
+        if (keepVariant) state.variant = variant;
+        state.mode = mode;
+      }
+      function handleAction(action, el) {
+        if (state.committing && !["create-chart"].includes(action)) return;
+        if (action === "confirm-destination") {
+          state.destinationConfirmed = true; state.anchorMissing = false; updateProof("placement"); announce("Placement projection is current.");
+        } else if (action === "break-anchor" || action === "toggle-anchor-drift") {
+          state.anchorMissing = !state.anchorMissing; updateProof("placement"); announce(state.anchorMissing ? "Named anchor removed. Placement proof is invalid." : "Named anchor restored.");
+        } else if (action === "restore-anchor") {
+          state.anchor = "Regional R values"; state.anchorMissing = false; updateProof("placement"); announce("Named anchor restored.");
+        } else if (action === "refresh-profile") {
+          state.profiling = true; announce("Refreshing the selected source profile."); render();
+          window.setTimeout(() => { state.profiling = false; state.profileRevision++; announce("Source profile revision " + state.profileRevision + " is current."); render(); }, 800); return;
+        } else if (action === "validate-mapping") {
+          state.mapAttempted = true;
+          if (mappingComplete()) { state.lastGoodPreview = true; updateProof("preview"); announce("Mapping valid. Canonical preview is current."); }
+          else announce(state.zeroOutput ? "Preparation produces zero effective rows." : "Required mapping is missing.");
+        } else if (action === "test-prerequisite") {
+          if (previewCurrent()) state.lastGoodPreview = true;
+          state.dateRole = ""; state.mapAttempted = true; updateProof("preview"); announce("Temporal role removed. Canonical preview is stale; placement remains current.");
+        } else if (action === "test-zero") {
+          if (previewCurrent()) state.lastGoodPreview = true;
+          state.zeroOutput = true; state.mapAttempted = true; updateProof("preview"); announce("Zero effective output blocks canonical readiness.");
+        } else if (action === "repair-mapping") {
+          state.dateRole = "reporting_date"; state.valueRole = "confirmed_cases";
+          if (state.type === "heatmap") state.seriesRole = "municipality";
+          state.zeroOutput = false; state.mapAttempted = true; updateProof("preview"); announce("First mapping issue repaired.");
+        } else if (action === "accept-title") {
+          state.titleAccepted = Boolean(state.title.trim()); updateProof("preview"); announce(state.titleAccepted ? "Chart title accepted." : "Enter a chart title.");
+        } else if (action === "toggle-advanced") {
+          state.advanced = !state.advanced; announce(state.advanced ? "Advanced properties revealed." : "Advanced properties hidden.");
+        } else if (action === "previous-stage") {
+          if (state.stage > 0) state.stage--;
+        } else if (action === "next-stage") {
+          return advance();
+        } else if (action === "suspend") {
+          state.suspended = true; announce("Chart draft suspended in this session.");
+        } else if (action === "resume") {
+          state.suspended = false; announce("Chart draft resumed exactly where you left it.");
+        } else if (action === "discard") {
+          state.discardCategories = dirtyCategories();
+          if (state.discardCategories.length === 0) { resetDraft(); announce("Pristine draft discarded."); }
+          else state.dialog = "discard";
+        } else if (action === "cancel-dialog") {
+          state.dialog = "";
+          announce("No values changed.");
+        } else if (action === "confirm-lossy") {
+          state.type = state.pendingType; state.pendingType = ""; state.dialog = "";
+          state.seriesRole = ""; state.smoothing = "None"; state.mapAttempted = true;
+          updateProof("preview"); announce("Type changed. Only the named incompatible values were removed.");
+        } else if (action === "confirm-discard") {
+          resetDraft(); announce("Chart-creation draft discarded. No chart was added.");
+        } else if (action === "repair-first-stage") {
+          return firstRepairStage();
+        } else if (action === "create-chart") {
+          if (!createEnabled()) { announce("Both proofs and every stage must be complete."); }
+          else {
+            state.committing = true; announce("Creating one chart. Commit is serialized and cannot be cancelled."); render();
+            window.setTimeout(() => {
+              if (!state.committing) return;
+              state.committing = false; state.created = true; state.orbitOpen = true; state.suspended = false; state.savedChartCount = 5;
+              state.toast = "Chart created once. Revealed and handed to Unit Orbit.";
+              render({focusSelector:"#orbitTitle"});
+            }, 1200); return;
+          }
+        } else if (action === "switch-view") {
+          state.mode = "view"; state.suspended = true; announce("View mode active. The unsupported Build draft remains in session memory.");
+        } else if (action === "share") {
+          announce("Share link prepared for this dashboard fixture.");
+        } else if (action === "dashboard-status") {
+          announce("Dashboard status: saved fixture current; chart draft session-scoped.");
+        } else if (action === "orbit-save") {
+          announce("Chart changes saved in the ordinary editor.");
+        } else if (action === "orbit-close") {
+          state.orbitOpen = false; announce("Ordinary chart editor closed; the committed chart remains.");
+        }
+        render();
+      }
+
+      document.addEventListener("click", event => {
+        const variant = event.target.closest("[data-variant].variant-tab");
+        if (variant) {
+          state.variant = variant.dataset.variant;
+          announce("Variant " + state.variant + " applied. Draft and proof state preserved.");
+          return render({focusSelector:'.variant-tab[data-variant="' + state.variant + '"]'});
+        }
+        const actionEl = event.target.closest("[data-action]");
+        if (actionEl) return handleAction(actionEl.dataset.action, actionEl);
+        const type = event.target.closest("[data-type]");
+        if (type) return chooseType(type.dataset.type);
+        const source = event.target.closest("[data-source]");
+        if (source) {
+          state.source = source.dataset.source; updateProof("preview"); announce("Existing source selected."); return render();
+        }
+        const fp = event.target.closest("[data-footprint]");
+        if (fp) {
+          state.footprint = {w:Number(fp.dataset.col), h:Number(fp.dataset.row)};
+          state.footprintFocus = {col:Number(fp.dataset.col), row:Number(fp.dataset.row)};
+          state.destinationConfirmed = true; updateProof("placement"); announce("Footprint set to " + state.footprint.w + " columns by " + state.footprint.h + " rows."); return render({focusSelector:'[data-footprint="' + fp.dataset.footprint + '"]'});
+        }
+        const stage = event.target.closest("[data-stage]");
+        if (stage) {
+          state.stage = Number(stage.dataset.stage); return render({focusSelector:'[data-stage="' + state.stage + '"]'});
+        }
+        const mode = event.target.closest("[data-mode]");
+        if (mode) {
+          if (mode.dataset.mode === "build") { state.mode = "build"; state.suspended = false; }
+          else { state.mode = mode.dataset.mode; state.suspended = true; }
+          announce(mode.dataset.mode[0].toUpperCase() + mode.dataset.mode.slice(1) + " mode selected. Draft retained.");
+          return render();
+        }
+        const width = event.target.closest("[data-width]");
+        if (width) {
+          document.documentElement.style.setProperty("--preview-width", width.dataset.width);
+          document.querySelectorAll("[data-width]").forEach(b => b.setAttribute("aria-pressed", String(b === width)));
+        }
+      });
+
+      document.addEventListener("change", event => {
+        const el = event.target;
+        const field = el.dataset.field;
+        if (field) {
+          if (field === "legend") state.legend = el.checked;
+          else state[field] = el.value;
+          if (["page","section","anchor"].includes(field)) { state.destinationConfirmed = false; updateProof("placement"); }
+          if (["dateRole","valueRole","seriesRole","missingRule","duplicateRule"].includes(field)) { state.mapAttempted = true; state.zeroOutput = false; updateProof("preview"); }
+          if (["smoothing","legend"].includes(field)) updateProof("preview");
+          if (field === "title") { state.titleAccepted = false; updateProof("preview"); }
+          render({focusSelector:'[data-field="' + field + '"]'});
+          return;
+        }
+        if (el.name === "relation") {
+          state.relation = el.value; state.destinationConfirmed = false; updateProof("placement"); render();
+        } else if (el.dataset.timeGroup) {
+          const group = el.dataset.timeGroup;
+          if (el.checked && !state.timeGroups.includes(group)) state.timeGroups.push(group);
+          if (!el.checked) state.timeGroups = state.timeGroups.filter(g => g !== group);
+          render();
+        } else if (el.dataset.ack) {
+          if (el.dataset.ack === "preview") state.previewAcknowledged = el.checked;
+          else state.placementAcknowledged = el.checked;
+          render({focusSelector:'[data-ack="' + el.dataset.ack + '"]'});
+        }
+      });
+
+      document.addEventListener("input", event => {
+        if (event.target.dataset.field === "registryQuery") {
+          state.registryQuery = event.target.value;
+          render({focusSelector:'[data-field="registryQuery"]'});
+        } else if (event.target.dataset.field === "title") {
+          state.title = event.target.value;
+          state.titleAccepted = false;
+          updateProof("preview");
+        }
+      });
+
+      document.addEventListener("keydown", event => {
+        const stage = event.target.closest("[data-stage]");
+        if (stage && ["ArrowRight","ArrowDown","ArrowLeft","ArrowUp","Home","End"].includes(event.key)) {
+          event.preventDefault();
+          let index = Number(stage.dataset.stage);
+          if (event.key === "ArrowRight" || event.key === "ArrowDown") index = Math.min(5,index+1);
+          if (event.key === "ArrowLeft" || event.key === "ArrowUp") index = Math.max(0,index-1);
+          if (event.key === "Home") index = 0;
+          if (event.key === "End") index = 5;
+          state.stage = index; return render({focusSelector:'[data-stage="' + index + '"]'});
+        }
+        const fp = event.target.closest("[data-footprint]");
+        if (fp && ["ArrowRight","ArrowDown","ArrowLeft","ArrowUp","Enter"," ","Spacebar"].includes(event.key)) {
+          event.preventDefault();
+          let col = Number(fp.dataset.col), row = Number(fp.dataset.row);
+          if (event.key === "ArrowRight") col = Math.min(4,col+1);
+          if (event.key === "ArrowLeft") col = Math.max(1,col-1);
+          if (event.key === "ArrowDown") row = Math.min(2,row+1);
+          if (event.key === "ArrowUp") row = Math.max(1,row-1);
+          if (["Enter"," ","Spacebar"].includes(event.key)) {
+            state.footprint = {w:col,h:row}; state.destinationConfirmed = true; updateProof("placement"); announce("Footprint applied by keyboard.");
+          }
+          state.footprintFocus = {col,row};
+          return render({focusSelector:'[data-footprint="' + col + 'x' + row + '"]'});
+        }
+        if (event.key === "Escape") {
+          if (state.dialog) { state.dialog = ""; announce("Confirmation closed. Draft retained."); return render(); }
+          if (!state.suspended && !state.created && state.mode === "build") {
+            state.suspended = true; announce("Chart draft suspended with Escape."); return render({focusSelector:'[data-action="resume"]'});
+          }
+        }
+        if (state.dialog && event.key === "Tab") {
+          const modal = document.querySelector(".modal");
+          const focusable = [...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')];
+          if (!focusable.length) return;
+          const first = focusable[0], last = focusable[focusable.length-1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+      });
+
+      document.getElementById("annotationToggle").addEventListener("click", event => {
+        const on = document.body.dataset.annotations !== "true";
+        document.body.dataset.annotations = String(on);
+        event.currentTarget.setAttribute("aria-pressed", String(on));
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
