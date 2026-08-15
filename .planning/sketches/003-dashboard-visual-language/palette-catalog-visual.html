@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 003 · Visual palette catalogue</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --matte: #7a7a7a;
+      --micro-gap: 4px;
+      --appearance-gap: 14px;
+      --pair-gap: 30px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--matte);
+    }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background: var(--matte);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .reference-area,
+    .gallery {
+      width: min(100%, 2040px);
+      margin: 0 auto;
+      padding-inline: clamp(14px, 2vw, 32px);
+    }
+
+    .reference-area {
+      padding-top: clamp(14px, 2vw, 32px);
+    }
+
+    .reference-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+    }
+
+    .reference-scroll:focus-visible {
+      outline: 3px solid #000000;
+      outline-offset: 3px;
+    }
+
+    .reference-composition {
+      display: grid;
+      gap: var(--micro-gap);
+      width: min(100%, 900px);
+      min-width: 680px;
+      margin-inline: auto;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--pair-gap);
+      padding-block: clamp(14px, 2vw, 32px);
+    }
+
+    .palette-pair,
+    .appearance {
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+    }
+
+    .palette-pair {
+      display: grid;
+      gap: var(--appearance-gap);
+      align-content: start;
+    }
+
+    .appearance {
+      display: grid;
+      gap: var(--micro-gap);
+    }
+
+    .palette-name {
+      margin: 0;
+      padding: 0;
+      color: #000000;
+      background: transparent;
+      font: 700 19px/1.25 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: left;
+      letter-spacing: 0;
+    }
+
+    .treemap {
+      display: grid;
+      grid-template-rows: 34fr 32fr;
+      gap: var(--micro-gap);
+      width: 100%;
+      aspect-ratio: 200 / 99;
+      overflow: hidden;
+      background: var(--matte);
+    }
+
+    .major,
+    .detail,
+    .text-group,
+    .frame-group,
+    .control-group,
+    .state-group,
+    .frame-row,
+    .control-row,
+    .state-row,
+    .series {
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      gap: var(--micro-gap);
+    }
+
+    .major {
+      grid-template-columns: 8fr 20fr 32fr 8fr;
+    }
+
+    .detail {
+      grid-template-columns: 10fr 8.5fr 7.25fr 6.25fr;
+    }
+
+    .text-group {
+      grid-template-rows: 5fr 3fr 2fr;
+    }
+
+    .frame-group {
+      grid-template-rows: 4.5fr 4fr;
+    }
+
+    .frame-row:first-child {
+      grid-template-columns: 3fr 1.5fr;
+    }
+
+    .frame-row:last-child {
+      grid-template-columns: 2.5fr 1.5fr;
+    }
+
+    .control-group {
+      grid-template-rows: 3.5fr 2.5fr 1.25fr;
+    }
+
+    .control-row:first-child {
+      grid-template-columns: 2fr 1.5fr;
+    }
+
+    .control-row:nth-child(2) {
+      grid-template-columns: 0.75fr 1fr 0.75fr;
+    }
+
+    .control-row:last-child {
+      grid-template-columns: 1fr;
+    }
+
+    .state-group {
+      grid-template-rows: repeat(5, 1fr);
+    }
+
+    .state-row {
+      grid-template-columns: 0.5fr 0.75fr;
+    }
+
+    .series {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      height: clamp(52px, 5.2vw, 84px);
+      background: var(--matte);
+    }
+
+    .tile,
+    .series-tile {
+      display: block;
+      min-width: 0;
+      min-height: 0;
+      background: var(--swatch);
+    }
+
+    .reference-tile,
+    .reference-series-tile {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 3px;
+      color: var(--reference-ink);
+      font: 700 clamp(10px, 0.8vw, 13px)/1.05 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    @media (min-width: 1080px) {
+      .gallery {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1740px) {
+      .gallery {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --micro-gap: 3px;
+        --appearance-gap: 10px;
+        --pair-gap: 22px;
+      }
+
+      .reference-area,
+      .gallery {
+        padding-inline: 10px;
+      }
+
+      .reference-area {
+        padding-top: 10px;
+      }
+
+      .gallery {
+        padding-block: 10px;
+      }
+
+      .series {
+        height: 46px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 0.25in;
+      }
+
+      html,
+      body {
+        width: auto;
+        min-width: 0;
+        background: #ffffff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .reference-area,
+      .gallery {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .reference-area {
+        break-after: page;
+        page-break-after: always;
+      }
+
+      .reference-scroll {
+        overflow: visible;
+      }
+
+      .reference-composition {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+      }
+
+      .gallery {
+        display: block;
+      }
+
+      .palette-pair {
+        width: 100%;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        break-after: page;
+        page-break-after: always;
+      }
+
+      .palette-pair:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .appearance,
+      .treemap,
+      .series {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="sr-only">Visual comparison of the approved dashboard palette portfolio</h1>
+  <section class="reference-area" aria-labelledby="reference-heading">
+    <h2 class="sr-only" id="reference-heading">Reference map for the fixed palette regions</h2>
+    <div class="reference-scroll" tabindex="0" role="region" aria-label="Labeled palette-region reference map. Scroll horizontally when needed.">
+      <div class="reference-composition" id="reference-composition"></div>
+    </div>
+  </section>
+  <main class="gallery" id="gallery" aria-label="Fifteen palette pairs. Each pair presents the Light appearance above the Dark appearance in portfolio order."></main>
+
+  <script>
+    (() => {
+      const tokens = [
+        ['outer', 8],
+        ['canvas', 20],
+        ['panel', 32],
+        ['panel alternate', 8],
+        ['ink', 5],
+        ['soft ink', 3],
+        ['faint ink', 2],
+        ['rule', 3],
+        ['strong rule', 1.5],
+        ['UI accent', 2],
+        ['soft UI accent', 1.5],
+        ['content on UI accent', 0.75],
+        ['focus', 1],
+        ['selected', 0.75],
+        ['soft selected', 1.25],
+        ['Chrono', 0.5],
+        ['soft Chrono', 0.75],
+        ['information', 0.5],
+        ['soft information', 0.75],
+        ['success', 0.5],
+        ['soft success', 0.75],
+        ['warning', 0.5],
+        ['soft warning', 0.75],
+        ['error', 0.5],
+        ['soft error', 0.75],
+        ['gridline', 2.5],
+        ['chart mark', 1.5]
+      ];
+
+      const appearances = [
+        {
+                "id": "light-brighter-vellum",
+                "name": "Brighter Vellum",
+                "colors": "#eee9de #f7f2e8 #fffdf8 #faf6ec #1d2529 #555a55 #6d7069 #b7b0a2 #50595d #2c383d #e8e4da #fffdf8 #2c383d #744740 #f0e2dc #62596b #e8e2e9 #58666b #e2e7e7 #4e6655 #e1e8e1 #7a6342 #eee7d8 #81514b #eee0dc #ddd7cb #2c383d #667853 #8f704a #61746f #8b584e #77657e #7d7457"
+        },
+        {
+                "id": "light-ash-register",
+                "name": "Ash Register",
+                "colors": "#deded9 #e9e9e3 #faf9f4 #f1f0e9 #202321 #555a56 #6e736e #aaa9a1 #4a4e4a #303735 #e2e4df #fbfaf5 #303735 #704b46 #e8ded9 #625c68 #e4e0e6 #59646a #e0e3e3 #486252 #dde6df #75603d #ede5d6 #794d49 #eadeda #d4d3ca #303735 #667853 #8f704a #61746f #8b584e #77657e #7d7457"
+        },
+        {
+                "id": "light-cool-archive",
+                "name": "Cool Archive",
+                "colors": "#dfe3e1 #e9ece8 #fafaf6 #f1f3ef #1f2928 #52605e #687572 #a7b0ad #465551 #314743 #dce5e1 #fafcf8 #314743 #73505d #e8dfe3 #5f5a73 #e3e1e9 #536a6c #dfe7e6 #4d6758 #dfe8e2 #786443 #ece6d9 #81544f #eddfdc #d1d7d3 #314743 #667853 #8f704a #61746f #8b584e #77657e #7d7457"
+        },
+        {
+                "id": "light-common-ground",
+                "name": "Common Ground",
+                "colors": "#e6ece8 #f0f5f1 #fcfdfb #f2f7f3 #1d2b2a #52615e #6d7975 #b7c5bf #61736d #28635d #dcebe5 #fafffc #155f91 #2c628e #dce9f4 #77618c #ebe3f0 #3c6a83 #e0ebf1 #397059 #dceae1 #8a641f #f4e9ce #9a4d52 #f4e0e1 #d6e0db #25423f #286b79 #a1693e #4f7b61 #9a5961 #6d66a0 #8b7944"
+        },
+        {
+                "id": "light-quiet-commons",
+                "name": "Quiet Commons",
+                "colors": "#e9e9e5 #f2f2ee #fcfbf8 #f5f4ef #252c2b #59615f #737a77 #c2c4be #69716e #365e5a #e0e9e5 #fbfdfa #205e86 #496b86 #e1e9ef #706779 #e9e5ec #536d7a #e4eaed #4c6959 #e1e9e3 #796337 #eee8d9 #80565a #eee1e2 #dadbd5 #344643 #286b79 #a1693e #4f7b61 #9a5961 #6d66a0 #8b7944"
+        },
+        {
+                "id": "light-open-forum",
+                "name": "Open Forum",
+                "colors": "#e8e6ed #f2eff5 #fcfbfd #f5f2f8 #282631 #5d5968 #777280 #c5bfcc #716a7c #594f7e #e8e2f1 #fdfbff #2d668e #3f6f94 #deeaf2 #755c8d #ebe2f1 #4e6f84 #e0e9ee #4d725f #e0ebe5 #86632d #f1e8d5 #95545e #f1e0e3 #ddd8e2 #403a51 #477b88 #a47149 #54806a #9a5e70 #705f9a #8d7a43"
+        },
+        {
+                "id": "light-calibrated-steel",
+                "name": "Calibrated Steel",
+                "colors": "#dce4e6 #e8edef #f8faf9 #edf2f2 #17252b #45585e #5f7075 #aab9bd #536970 #285b67 #d7e6e8 #ffffff #0b6f89 #8a4350 #f1dee2 #615484 #e6e1ef #3b6576 #dce9ed #38705a #dcebe2 #7a5b1a #f3e7c9 #93434a #f2dfe1 #d0dadd #253941 #276f82 #a7602e #347557 #9c4f58 #665aa0 #7f6a25"
+        },
+        {
+                "id": "light-quiet-telemetry",
+                "name": "Quiet Telemetry",
+                "colors": "#e1e5e6 #ebeeef #fafbfb #f1f3f3 #20292d #505d61 #687579 #b7c0c3 #5d6b70 #3d5b63 #dfe7e9 #ffffff #2e6675 #73515a #eadfe2 #625d73 #e8e5ed #536a73 #e3e9eb #4c6858 #e0e8e3 #75613a #eee7d8 #7d5056 #ecdee1 #d8dcdd #354348 #276f82 #a7602e #347557 #9c4f58 #665aa0 #7f6a25"
+        },
+        {
+                "id": "light-amber-vector",
+                "name": "Amber Vector",
+                "colors": "#e2e3e5 #ececed #fbfaf9 #f2efed #2a2422 #625650 #7a6d66 #c1b6b0 #71615a #6f4e43 #ebe0dc #fffaf8 #205e79 #8a4054 #efdee3 #5f5680 #e7e2ef #42687a #dfe9ed #416c59 #dce9e1 #765c20 #f0e6cc #8c444b #f0dddf #ded7d3 #493b36 #2f7582 #a55f36 #397258 #9a4f65 #64589a #817022"
+        },
+        {
+                "id": "light-prismatic-index",
+                "name": "Prismatic Index",
+                "colors": "#e2e2e7 #eeeff2 #ffffff #f6f6f8 #1e2028 #545763 #717480 #b8bbc4 #5c606c #303745 #e5e7ec #ffffff #005fcc #47586b #e3e9ef #6b4d83 #eae2ef #27677b #e0eef2 #2e6f50 #dcede3 #7b5900 #f5e8be #a33b42 #f6dee1 #d7d8de #282b36 #2f6db0 #b83d5a #26743f #7148a6 #9a6500 #007b80"
+        },
+        {
+                "id": "light-chromatic-polarity",
+                "name": "Chromatic Polarity",
+                "colors": "#ddd5cb #ebe2d7 #f7eee3 #e8ddd2 #213238 #4f5d5e #626e6b #a9a390 #4e5b59 #6b3f68 #eadbe5 #fff8eb #176f76 #8d3f65 #f0d8e4 #5d4c8a #e4def2 #246579 #d7e7e8 #376c57 #dbe9dd #875a12 #f4e4bb #9a3e47 #f3dadd #d3cbb8 #23393d #0f6f78 #aa521b #7251a3 #41743f #a13c77 #806a18"
+        },
+        {
+                "id": "light-luminance-ladder",
+                "name": "Luminance Ladder",
+                "colors": "#ded8e7 #eae5ef #fffdf4 #f3efe0 #201827 #534a5c #6f6478 #c4bacb #62556b #5c2d82 #eadcf5 #fff8ed #00718c #a52d66 #f5dbe7 #006f72 #d9ece8 #3f568e #dfe6f5 #3a7045 #dfecdf #855800 #f4e5bd #9b3041 #f6dde0 #d8d0c6 #24182d #0a6c96 #560c34 #3ca21a #6d2b0b #8d5ede #5e5206"
+        },
+        {
+                "id": "light-sunrise-reference-faithful",
+                "name": "Sunrise — Reference faithful",
+                "colors": "#E8DDD2 #F4ECE3 #FFF9F2 #F7E8DD #2D1B23 #65535A #756168 #C9B5AE #735D65 #7F32BD #EADDF5 #FFFFFF #2856A8 #9B3D35 #F5DDD8 #68458E #EADFF2 #345E9A #DEE8F5 #3E6D49 #DDEADF #785000 #F4E4BB #982F2C #F5DCD8 #D9C9C0 #37242C #FB8809 #D84420 #690001 #7F32BD #5770FF #87BEFF"
+        },
+        {
+                "id": "light-lakeside-reference-faithful",
+                "name": "Lakeside — Reference faithful",
+                "colors": "#DDE4E3 #EAF0EE #F9FCF8 #EAF3EE #1E2E2B #4D5E59 #5F706B #B7C7C2 #526660 #2650CC #DDE5FA #FFFFFF #8B4300 #246B72 #D9ECEC #526F3C #E1ECDA #2657A7 #DDE7F7 #486A37 #DFEAD9 #765500 #F4E6B7 #963E44 #F4DDDE #CED9D4 #1F302D #2650CC #3D89DE #65C8E3 #81CE6D #5F7B49 #29331A"
+        },
+        {
+                "id": "light-monochrome-reserve",
+                "name": "Monochrome Reserve",
+                "colors": "#d6d6d6 #eeeeee #ffffff #f6f6f6 #151515 #494949 #5d5d5d #767676 #3e3e3e #202020 #e2e2e2 #ffffff #000000 #2e2e2e #e3e3e3 #424242 #ededed #4c4c4c #f0f0f0 #373737 #e6e6e6 #4a4a4a #ececec #272727 #e0e0e0 #c5c5c5 #222222 #2f6db0 #b83d5a #26743f #7148a6 #9a6500 #007b80"
+        },
+        {
+                "id": "dark-brighter-vellum",
+                "name": "Brighter Vellum",
+                "colors": "#181713 #211f1a #2b2922 #25231d #f5efe4 #c9c1b3 #aaa394 #746f64 #c2baab #f0e9dc #3b3831 #1d2428 #f5efe4 #d0a096 #493531 #c3b4ca #3f3944 #aab9bd #343e40 #a8bda9 #314035 #d1b482 #493d2c #d8a299 #4a3431 #4e4a40 #eee7da #a8b794 #c4aa82 #a2b2ad #c49a90 #b6a7bd #b9b08e"
+        },
+        {
+                "id": "dark-ash-register",
+                "name": "Ash Register",
+                "colors": "#151615 #1d1f1d #262825 #222421 #ecebe4 #c4c5bc #a4a69c #686a63 #b8bab0 #e4e5dc #363a36 #1b1d1b #ecebe4 #c59a91 #443733 #b8abbc #3c3740 #adb8bb #343b3d #9eb5a3 #2f3b32 #c3aa7e #443c2f #c99d96 #463533 #454841 #e2e2d9 #a8b794 #c4aa82 #a2b2ad #c49a90 #b6a7bd #b9b08e"
+        },
+        {
+                "id": "dark-cool-archive",
+                "name": "Cool Archive",
+                "colors": "#141817 #1c2220 #252c29 #202623 #eef2ed #c2cbc5 #a1aca6 #65706b #b6c0ba #e0e8e2 #343d39 #19211f #eef2ed #c39aaa #44343b #b2aac3 #393643 #9fb7b8 #2e3f40 #9db7a8 #2e4137 #c6b286 #443c2d #d0a09a #473431 #46504c #e2e9e3 #a8b794 #c4aa82 #a2b2ad #c49a90 #b6a7bd #b9b08e"
+        },
+        {
+                "id": "dark-common-ground",
+                "name": "Common Ground",
+                "colors": "#121a18 #19231f #222e29 #1d2824 #eef5f1 #becbc5 #9caba4 #52655d #9aafa6 #8ed0c1 #2b4640 #10211d #8fcaf0 #91c5ef #293f51 #c3add7 #40364a #9bcbe4 #2b414c #98caae #2b4234 #e1bd77 #4a3d26 #e8a0a7 #4c3034 #405149 #dcece5 #7fc3cf #dfaa7e #91c2a2 #dfa0a7 #b8afe3 #c9ba7d"
+        },
+        {
+                "id": "dark-quiet-commons",
+                "name": "Quiet Commons",
+                "colors": "#171918 #202321 #292c29 #242724 #f0f0eb #c3c6c0 #a2a7a0 #5b605b #a5aaa3 #a6cbc3 #33413d #1a2320 #9ac9e8 #a9c8df #34424c #beb2c6 #403a43 #abc4d0 #354148 #a4bda9 #344039 #cfb782 #463f30 #d1a5a8 #49383a #494d49 #e3e8e3 #7fc3cf #dfaa7e #91c2a2 #dfa0a7 #b8afe3 #c9ba7d"
+        },
+        {
+                "id": "dark-open-forum",
+                "name": "Open Forum",
+                "colors": "#17151c #201d27 #292530 #24212b #f2eef5 #c8c1cf #a8a0b1 #605a69 #aba3b5 #c2b2e0 #3d364a #211b2a #91c9ed #99c8e7 #344657 #ceb2e0 #493852 #a8cbdd #34454e #a2c7b1 #304438 #dec080 #4b3f28 #e1a2ae #4c3238 #4b4554 #e5def0 #86c0cc #dfae82 #91c0a5 #dea0b1 #b8abe1 #c9b873"
+        },
+        {
+                "id": "dark-calibrated-steel",
+                "name": "Calibrated Steel",
+                "colors": "#0d1518 #131e22 #1a272c #162126 #edf4f5 #bac8cb #96a8ad #455a61 #8ca0a6 #86bbc4 #263f45 #102126 #85ccd6 #e09aa7 #4a2e35 #c1afe4 #3a334b #99c9d7 #293e45 #8bc7aa #283f34 #e2bf72 #473a20 #f1a1a9 #4b2c31 #34484f #dbe8ea #72c0d0 #e3a170 #83c3a0 #e79ca7 #aea3e2 #ceb96b"
+        },
+        {
+                "id": "dark-quiet-telemetry",
+                "name": "Quiet Telemetry",
+                "colors": "#111719 #182024 #20292d #1b2327 #edf1f2 #bdc6c8 #9ba6a9 #4a575b #929da0 #a7bcc1 #303c40 #162023 #91c6d2 #cba4ad #41343a #b8b1c7 #39363f #a3bdc6 #323f44 #a0baa9 #304038 #ccb680 #443d2d #d1a2a7 #473538 #414b4e #dfe6e8 #72c0d0 #e3a170 #83c3a0 #e79ca7 #aea3e2 #ceb96b"
+        },
+        {
+                "id": "dark-amber-vector",
+                "name": "Amber Vector",
+                "colors": "#151314 #1d1a1b #282325 #211d1f #f2ece9 #c9bbb5 #aa9a93 #625451 #ae9b93 #d3a58f #49362f #241711 #83c8df #e3a0b1 #4b3039 #c0b2df #3c354b #9bc7d7 #2e4149 #92c5aa #2c4237 #dfbd75 #473c24 #eca3aa #4c2e33 #4c4140 #eaded9 #78c1cc #e4a074 #88c1a0 #dfa0b0 #ada3df #cdbc6c"
+        },
+        {
+                "id": "dark-prismatic-index",
+                "name": "Prismatic Index",
+                "colors": "#111117 #181820 #202029 #272731 #f1f1f6 #c3c4ce #9d9faa #4a4b58 #989aa7 #c8cbd6 #343741 #181a23 #85b6ff #acc0d4 #33414e #d0a8e3 #46374e #8dd1e0 #293f45 #81cda1 #294237 #e2c46a #493f25 #f09aa3 #4e2d34 #3b3b47 #e6e6ed #78a9e0 #e88498 #70b985 #b695de #c9a84f #60bdc1"
+        },
+        {
+                "id": "dark-chromatic-polarity",
+                "name": "Chromatic Polarity",
+                "colors": "#161319 #172126 #22272c #251f28 #f1eadb #c8c0b2 #aaa599 #666873 #afb4b2 #e0abd6 #4b3048 #271624 #75d0cf #e898bf #4c2b3e #bdabf0 #3b3455 #7ec7d9 #243e46 #8bc69e #293f34 #e7bd68 #493b25 #f09ba4 #4a2c32 #434a4d #e9e0cf #4dc2c3 #f09b5a #ad8de1 #8dc786 #e47eaf #d5b750"
+        },
+        {
+                "id": "dark-luminance-ladder",
+                "name": "Luminance Ladder",
+                "colors": "#150d1b #1e1528 #2a2034 #241a2e #fff4df #d6c4db #b19db9 #594a64 #c0a9ca #d8a4f1 #4a2d5c #24102d #73d5ed #ff86c1 #553044 #6fe0ca #254a44 #a8bcef #334060 #93d69b #2e4934 #f4c55a #51411c #ff9aa7 #58303a #493d52 #fff2dc #1db1f1 #d41e7f #acee96 #db5716 #cbb5f0 #a7930b"
+        },
+        {
+                "id": "dark-sunrise-reference-faithful",
+                "name": "Sunrise — Reference faithful",
+                "colors": "#160F14 #21171E #2C2028 #251A21 #FFF1E8 #D8C0C9 #B7A0A9 #66515B #C0A6B0 #FF9D4D #55301A #2A1303 #9FC0FF #FF8D76 #5B302C #D5A6F3 #493558 #A7C4FF #2F3B55 #9BCB9D #314538 #FFD080 #51401F #FFA192 #58302F #5A4650 #FFF0E6 #FF9A3D #F06A4A #D65C6A #B879E3 #7E95FF #9ACBFF"
+        },
+        {
+                "id": "dark-lakeside-reference-faithful",
+                "name": "Lakeside — Reference faithful",
+                "colors": "#0E1515 #14201F #1C2B28 #182421 #EFF8F2 #C2D0CB #9FAFA9 #435954 #94AAA3 #83AEFF #293F65 #10203A #84DDEB #7CCAD6 #26464A #A8D88E #35472D #93B7FF #2B3B5C #A4D58D #34482F #E5C36A #4B4022 #F1A0A7 #502F35 #3D514C #EDF8F1 #6F91F2 #64ACEF #78D1E5 #9ADE88 #9FC68A #B5C996"
+        },
+        {
+                "id": "dark-monochrome-reserve",
+                "name": "Monochrome Reserve",
+                "colors": "#0d0d0d #171717 #222222 #2c2c2c #f5f5f5 #cacaca #ababab #757575 #b9b9b9 #f0f0f0 #3c3c3c #171717 #ffffff #f0f0f0 #414141 #d7d7d7 #363636 #cacaca #303030 #e7e7e7 #3d3d3d #d0d0d0 #333333 #fafafa #454545 #4a4a4a #ededed #78a9e0 #e88498 #70b985 #b695de #c9a84f #60bdc1"
+        }
+];
+
+      const referenceLabels = [
+        'Outer', 'Canvas', 'Panel', 'Alternate',
+        'Ink', 'Soft', 'Faint',
+        'Rule', 'Strong',
+        'Accent', 'Soft', 'On accent', 'Focus', 'Selected', 'Selected soft',
+        'Chrono', 'Soft', 'Info', 'Soft', 'Success', 'Soft',
+        'Warning', 'Soft', 'Error', 'Soft', 'Grid', 'Mark'
+      ];
+
+      const referenceColors = [
+        '#b6b6b6', '#d4d4d4', '#f0f0f0', '#c6c6c6',
+        '#2d2d2d', '#565656', '#7c7c7c',
+        '#a0a0a0', '#606060',
+        '#858585', '#bcbcbc', '#e6e6e6', '#484848', '#989898', '#d0d0d0',
+        '#555555', '#c5c5c5', '#6c6c6c', '#d0d0d0', '#7d7d7d', '#d8d8d8',
+        '#909090', '#e0e0e0', '#a3a3a3', '#e8e8e8', '#dadada', '#3e3e3e'
+      ];
+
+      const referenceSeriesColors = [
+        '#242424', '#4c4c4c', '#747474', '#9c9c9c', '#c4c4c4', '#ececec'
+      ];
+
+      const gallery = document.getElementById('gallery');
+      const referenceComposition = document.getElementById('reference-composition');
+
+      function readableInk(color) {
+        const value = Number.parseInt(color.slice(1, 3), 16) / 255;
+        const linear = value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        return linear > 0.179 ? '#000000' : '#ffffff';
+      }
+
+      function swatch(color, label, weight, className = 'tile') {
+        const item = document.createElement('span');
+        item.className = className;
+        item.style.setProperty('--swatch', color);
+        item.setAttribute('role', 'img');
+        item.setAttribute('aria-label', weight === null
+          ? label + ': ' + color
+          : label + ': ' + color + '; ' + weight + ' percent of the surface and UI map');
+        return item;
+      }
+
+      function referenceSwatch(index) {
+        const item = swatch(referenceColors[index], tokens[index][0], tokens[index][1], 'tile reference-tile');
+        item.style.setProperty('--reference-ink', readableInk(referenceColors[index]));
+        item.textContent = referenceLabels[index];
+        return item;
+      }
+
+      function group(className, children) {
+        const container = document.createElement('div');
+        container.className = className;
+        children.forEach((child) => container.append(child));
+        return container;
+      }
+
+      function renderTopology(tile) {
+        const major = group('major', [tile(0), tile(1), tile(2), tile(3)]);
+        const text = group('text-group', [tile(4), tile(5), tile(6)]);
+        const frame = group('frame-group', [
+          group('frame-row', [tile(7), tile(8)]),
+          group('frame-row', [tile(25), tile(26)])
+        ]);
+        const controls = group('control-group', [
+          group('control-row', [tile(9), tile(10)]),
+          group('control-row', [tile(11), tile(12), tile(13)]),
+          group('control-row', [tile(14)])
+        ]);
+        const states = group('state-group', [
+          group('state-row', [tile(15), tile(16)]),
+          group('state-row', [tile(17), tile(18)]),
+          group('state-row', [tile(19), tile(20)]),
+          group('state-row', [tile(21), tile(22)]),
+          group('state-row', [tile(23), tile(24)])
+        ]);
+        return group('treemap', [
+          major,
+          group('detail', [text, frame, controls, states])
+        ]);
+      }
+
+      function renderReference() {
+        referenceComposition.append(renderTopology(referenceSwatch));
+        const series = group('series', referenceSeriesColors.map((color, index) => {
+          const item = swatch(color, 'chart series ' + (index + 1), null, 'series-tile reference-series-tile');
+          item.style.setProperty('--reference-ink', readableInk(color));
+          item.textContent = 'D' + (index + 1);
+          return item;
+        }));
+        referenceComposition.append(series);
+      }
+
+      function renderAppearance(record, scheme) {
+        const colors = record.colors.split(' ');
+        const appearance = document.createElement('section');
+        appearance.className = 'appearance';
+        appearance.setAttribute('aria-label', record.name + ', ' + scheme + ' appearance');
+
+        const heading = document.createElement('h3');
+        heading.className = 'palette-name';
+        heading.textContent = record.name + ' (' + scheme + ')';
+        appearance.append(heading);
+
+        appearance.append(renderTopology((index) =>
+          swatch(colors[index], tokens[index][0], tokens[index][1])));
+
+        const series = group('series', colors.slice(27).map((color, index) =>
+          swatch(color, 'chart series ' + (index + 1), null, 'series-tile')));
+        appearance.append(series);
+        return appearance;
+      }
+
+      renderReference();
+
+      for (let index = 0; index < 15; index += 1) {
+        const light = appearances[index];
+        const dark = appearances[index + 15];
+        const pair = document.createElement('article');
+        pair.className = 'palette-pair';
+        pair.setAttribute('aria-label', light.name + ' palette pair; Light above Dark');
+
+        const heading = document.createElement('h2');
+        heading.className = 'sr-only';
+        heading.textContent = light.name;
+        pair.append(heading, renderAppearance(light, 'Light'), renderAppearance(dark, 'Dark'));
+        gallery.append(pair);
+      }
+    })();
+  </script>
+</body>
+</html>
