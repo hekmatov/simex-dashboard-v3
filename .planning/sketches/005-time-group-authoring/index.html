@@ -1,0 +1,1529 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 005 · Time Group authoring</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper-outer: #dfe5df;
+      --paper-canvas: #eef1ec;
+      --paper-panel: #fffefa;
+      --paper-panel-alt: #f1f4ee;
+      --ink: #1f2d28;
+      --ink-soft: #50615a;
+      --ink-faint: #68766f;
+      --rule: #bdc9c1;
+      --rule-strong: #718179;
+      --accent: #315d50;
+      --accent-hover: #244c40;
+      --accent-soft: #dceae2;
+      --selected: #8a4d3f;
+      --selected-soft: #f1ded8;
+      --info: #315f7b;
+      --info-soft: #dde9ef;
+      --warning: #815d16;
+      --warning-soft: #f3e8c8;
+      --error: #9a3f47;
+      --error-soft: #f4dfe1;
+      --success: #397055;
+      --success-soft: #dceadd;
+      --focus: #166d79;
+      --shadow: 0 18px 48px rgba(29, 43, 37, .18);
+      --radius-shell: 16px;
+      --radius-panel: 10px;
+      --radius-control: 8px;
+      --review-h: 92px;
+      --preview-width: 100%;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-width: 320px; min-height: 100%; margin: 0; background: #cfd7d1; color: var(--ink); }
+    body { overflow-x: hidden; }
+    button, input, select { font: inherit; color: inherit; }
+    button, select, input[type="date"], input[type="text"], input[type="number"] {
+      min-height: 44px;
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-control);
+      background: var(--paper-panel);
+    }
+    button { padding: 9px 14px; cursor: pointer; font-weight: 680; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+    button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { opacity: .52; cursor: not-allowed; }
+    button.primary { color: white; border-color: var(--accent); background: var(--accent); }
+    button.primary:hover:not(:disabled) { color: white; background: var(--accent-hover); }
+    button.danger { color: var(--error); border-color: var(--error); }
+    button.quiet { border-color: transparent; background: transparent; }
+    button.small { min-height: 40px; padding: 7px 10px; font-size: 12px; }
+    input[type="date"], input[type="text"], input[type="number"], select { width: 100%; padding: 8px 11px; }
+    input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    h1, h2, h3, h4, p { overflow-wrap: anywhere; }
+    .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
+
+    /* Prototype-only review chrome; excluded from product geometry. */
+    .review-bar {
+      min-height: var(--review-h);
+      position: relative;
+      z-index: 500;
+      display: grid;
+      grid-template-columns: minmax(220px,.7fr) minmax(510px,1.45fr) minmax(350px,1fr);
+      align-items: center;
+      gap: 16px;
+      padding: 10px 18px;
+      color: #f7faf7;
+      background: #202723;
+      border-bottom: 1px solid #59645e;
+    }
+    .review-title strong { display: block; font-size: 16px; }
+    .review-title small, .review-actions small { color: #c6d0ca; }
+    .variant-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+    .variant-tab { min-height: 52px; padding: 7px 9px; color: #eef4f0; border-color: #708078; background: #303a34; font-size: 12px; line-height: 1.25; }
+    .variant-tab[aria-pressed="true"] { color: #1d2923; border-color: #edf4ef; background: #edf4ef; box-shadow: inset 0 -4px 0 var(--selected); }
+    .review-actions { display: grid; grid-template-columns: minmax(175px,1fr) auto auto; gap: 7px; align-items: center; }
+    .review-actions select, .review-actions button { min-height: 42px; color: #172019; background: #f7faf7; font-size: 12px; }
+    .review-digest { grid-column: 1 / -1; text-align: right; color: #c6d0ca; font-size: 11px; }
+    .viewport-frame {
+      width: min(var(--preview-width), 100%);
+      max-width: 100%;
+      min-height: calc(100vh - var(--review-h));
+      margin-inline: auto;
+      position: relative;
+      container: fixture / inline-size;
+      background: var(--paper-outer);
+      box-shadow: 0 0 0 1px rgba(29,43,37,.16);
+    }
+    .sketch-tools {
+      position: fixed;
+      z-index: 650;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 7px;
+      color: white;
+      background: rgba(16,20,18,.9);
+      border-radius: 10px;
+      opacity: .48;
+      transition: opacity .15s ease;
+    }
+    .sketch-tools:hover, .sketch-tools:focus-within { opacity: 1; }
+    .sketch-tools button { min-height: 36px; padding: 5px 8px; color: white; border-color: #8a9790; background: transparent; font-size: 11px; }
+    .sketch-tools button[aria-pressed="true"] { color: #19231e; background: #f3f7f4; }
+    .task-layer { position: fixed; z-index: 800; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(18,26,22,.58); }
+    .task-card { width: min(760px,100%); max-height: min(760px,90vh); overflow: auto; padding: 22px; color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 14px; background: var(--paper-panel); box-shadow: var(--shadow); }
+    .task-card h2 { margin: 0 0 8px; }
+    .task-card ol { padding-left: 22px; line-height: 1.5; }
+    .task-card li + li { margin-top: 7px; }
+
+    /* Fixed product fixture and inherited Staged Proof Studio shell. */
+    .product-shell { min-height: calc(100vh - var(--review-h)); position: relative; overflow: hidden; background: var(--paper-canvas); }
+    .phone-banner { display: none; position: relative; z-index: 120; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; color: #4f3909; border-bottom: 2px solid var(--warning); background: var(--warning-soft); font-weight: 730; }
+    .phone-banner button { flex: 0 0 auto; border-color: var(--warning); background: #fffaf0; }
+    .app-header { min-height: 72px; display: grid; grid-template-columns: minmax(260px,1fr) auto auto; align-items: center; gap: 20px; padding: 10px 24px; border-bottom: 1px solid var(--rule); background: var(--paper-panel); }
+    .identity small { display: block; color: var(--ink-faint); }
+    .identity strong { font-size: 18px; }
+    .mode-switch { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel-alt); }
+    .mode-switch button { min-width: 72px; border: 0; background: transparent; }
+    .mode-switch button[aria-pressed="true"] { color: white; background: var(--ink); }
+    .header-actions { display: flex; gap: 8px; }
+    .build-subheader { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 8px 24px; border-bottom: 1px solid var(--rule); background: #e5ece6; }
+    .build-path { color: var(--ink-soft); }
+    .build-path strong { color: var(--ink); }
+    .build-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; }
+    .dashboard-scroll { min-height: 780px; padding: 24px; overflow: auto; }
+    .dashboard-heading { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 16px; }
+    .dashboard-heading h1 { margin: 0; font-size: clamp(24px,2.3vw,34px); letter-spacing: -.02em; }
+    .dashboard-heading p { margin: 5px 0 0; color: var(--ink-soft); }
+    .geometry-proof { display: inline-block; padding: 7px 9px; color: var(--ink-soft); border: 1px solid var(--rule); border-radius: 8px; background: var(--paper-panel); font-size: 12px; }
+    .saved-group-strip { margin: 0 0 16px; padding: 12px 14px; display: flex; justify-content: space-between; gap: 14px; align-items: center; border: 1px solid var(--success); border-radius: 10px; background: var(--success-soft); }
+    .saved-group-strip strong, .saved-group-strip small { display: block; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .dash-panel { min-height: 235px; padding: 16px; overflow: hidden; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); box-shadow: 0 2px 6px rgba(34,48,40,.05); }
+    .dash-panel h2 { margin: 0 0 4px; font-size: 16px; }
+    .dash-panel small { color: var(--ink-faint); }
+    .mini-chart { height: 145px; margin-top: 12px; position: relative; border-top: 1px solid var(--rule); background: linear-gradient(to bottom,transparent 32%,var(--rule) 33%,transparent 34%,transparent 65%,var(--rule) 66%,transparent 67%); }
+    .mini-chart svg { width: 100%; height: 100%; }
+    .mini-bars { height: 145px; display: flex; align-items: end; gap: 9px; padding: 20px 10px 0; }
+    .mini-bars i { flex: 1; height: var(--h); background: #587c6c; border: 1px solid #35584a; border-radius: 3px 3px 0 0; }
+    .studio-backdrop { position: absolute; z-index: 30; inset: 0; pointer-events: auto; background: rgba(31,45,40,.2); }
+    .studio {
+      position: absolute;
+      z-index: 40;
+      inset: 88px 28px 24px;
+      display: grid;
+      grid-template-rows: auto auto minmax(0,1fr) auto;
+      overflow: hidden;
+      pointer-events: auto;
+      border: 1px solid var(--rule-strong);
+      border-radius: var(--radius-shell);
+      background: var(--paper-canvas);
+      box-shadow: var(--shadow);
+    }
+    .studio[data-saving="true"] { cursor: progress; }
+    .studio[data-saving="true"] button,
+    .studio[data-saving="true"] input,
+    .studio[data-saving="true"] select { pointer-events: none; opacity: .56; }
+    .studio-head { min-height: 74px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px; padding: 10px 18px; border-bottom: 1px solid var(--rule); background: var(--paper-panel); }
+    .studio-head h2 { margin: 0; font-size: 20px; }
+    .studio-head p { margin: 4px 0 0; color: var(--ink-soft); font-size: 13px; }
+    .studio-actions { display: flex; gap: 8px; align-items: center; }
+    .dirty-mark { display: inline-flex; align-items: center; gap: 6px; color: var(--selected); font-size: 12px; font-weight: 760; }
+    .dirty-mark::before { content: "●"; }
+    .stage-nav { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; padding: 7px; overflow-x: auto; border-bottom: 1px solid var(--rule); background: var(--paper-panel-alt); }
+    .stage-button { min-width: 170px; padding: 9px 10px; text-align: left; border: 1px solid transparent; background: transparent; }
+    .stage-button[aria-selected="true"] { border-color: var(--selected); background: var(--paper-panel); box-shadow: inset 4px 0 0 var(--selected); }
+    .stage-index { display: inline-grid; width: 27px; height: 27px; place-items: center; margin-right: 7px; border: 1px solid var(--rule-strong); border-radius: 50%; font-size: 12px; }
+    .stage-name { font-size: 13px; }
+    .stage-status { display: flex; align-items: center; gap: 6px; margin: 5px 0 0 35px; color: var(--ink-soft); font-size: 11px; font-weight: 750; }
+    .stage-status::before { content: "○"; font-size: 14px; }
+    .stage-status[data-status="Complete"]::before { content: "✓"; color: var(--success); }
+    .stage-status[data-status="Needs attention"]::before { content: "!"; width: 16px; height: 16px; display: grid; place-items: center; color: white; border-radius: 50%; background: var(--error); }
+    .stage-status[data-status="Waiting on prerequisite"]::before { content: "⌛"; }
+    .stage-status[data-status="In progress"]::before { content: "◐"; color: var(--info); }
+    .stage-region { min-width: 0; overflow: auto; background: var(--paper-canvas); }
+    .stage-card { width: min(1180px,100%); margin: 0 auto; padding: 22px; }
+    .stage-card.narrow { width: min(820px,100%); }
+    .stage-card > header { margin-bottom: 18px; }
+    .stage-card h3 { margin: 0 0 6px; font-size: 24px; }
+    .stage-card header p { margin: 0; color: var(--ink-soft); line-height: 1.45; }
+    .stage-footer { min-height: 66px; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 18px; border-top: 1px solid var(--rule); background: var(--paper-panel); }
+    .stage-footer > div { display: flex; gap: 8px; align-items: center; }
+    .field-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+    .field { min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    .field > span:first-child, fieldset > legend { display: block; margin-bottom: 7px; font-weight: 720; }
+    fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+    .hint { color: var(--ink-soft); font-size: 12px; line-height: 1.42; }
+    .choice-row { display: flex; flex-wrap: wrap; gap: 9px; }
+    .inline-check { min-height: 44px; display: flex; align-items: center; gap: 9px; padding: 8px 0; }
+    .callout { display: flex; gap: 10px; align-items: start; padding: 12px; margin: 14px 0; border: 1px solid var(--info); border-radius: 9px; background: var(--info-soft); line-height: 1.42; }
+    .callout.error { border-color: var(--error); background: var(--error-soft); }
+    .callout.warning { border-color: var(--warning); background: var(--warning-soft); }
+    .callout.success { border-color: var(--success); background: var(--success-soft); }
+    .callout strong { display: block; margin-bottom: 3px; }
+    .section-box { margin: 16px 0; padding: 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); }
+    .section-box h4 { margin: 0 0 10px; }
+    .period-summary { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 9px; background: var(--paper-panel); }
+    .period-summary strong, .period-summary small { display: block; }
+    .period-summary small { margin-top: 3px; color: var(--ink-soft); }
+    .loading-box { min-height: 220px; display: grid; place-items: center; padding: 28px; text-align: center; color: var(--ink-soft); border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); }
+    .spinner { width: 34px; height: 34px; margin: 0 auto 12px; border: 4px solid var(--rule); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Shared availability evidence atoms. */
+    .group-region { margin-top: 18px; }
+    .group-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 0 0 9px; }
+    .group-heading h4 { margin: 0; font-size: 16px; }
+    .group-heading small { color: var(--ink-soft); }
+    .region-separator { height: 1px; margin: 18px 0; background: var(--rule-strong); }
+    .chart-card { --ledger-evidence-columns: minmax(150px,.7fr) minmax(260px,1.6fr) 112px; margin-bottom: 10px; overflow: hidden; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); }
+    .chart-card[data-selected="true"] { border-color: var(--selected); box-shadow: inset 4px 0 0 var(--selected); }
+    .chart-card[data-attention="true"] { border-color: var(--error); box-shadow: inset 4px 0 0 var(--error); }
+    .chart-card-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; padding: 13px 14px 10px; align-items: start; }
+    .chart-card h5 { margin: 0 0 5px; font-size: 15px; line-height: 1.35; }
+    .chart-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; color: var(--ink-soft); font-size: 11px; }
+    .chart-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 3px 7px; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink-soft); background: var(--paper-panel-alt); font-size: 11px; font-weight: 700; }
+    .tag.membership::before { content: "↗"; }
+    .tag.attention { color: var(--error); border-color: var(--error); background: var(--error-soft); }
+    .summary-evidence { display: grid; grid-template-columns: minmax(150px,.7fr) minmax(260px,1.6fr) auto; gap: 12px; align-items: center; padding: 10px 14px 13px; border-top: 1px solid var(--rule); background: var(--paper-panel-alt); }
+    .summary-evidence strong { font-size: 12px; }
+    .summary-evidence small { display: block; color: var(--ink-soft); font-size: 11px; }
+    .count-label { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 760; }
+    .availability-track { height: 24px; position: relative; overflow: hidden; border: 1px solid var(--rule-strong); border-radius: 4px; background: repeating-linear-gradient(90deg,var(--paper-panel) 0,var(--paper-panel) calc(10% - 1px),rgba(113,129,121,.16) calc(10% - 1px),rgba(113,129,121,.16) 10%); }
+    .availability-track::before { content: ""; position: absolute; inset: 50% 0 auto; border-top: 1px solid var(--rule-strong); }
+    .availability-track.empty { background: repeating-linear-gradient(135deg,#fff7f5 0,#fff7f5 7px,#f0d8d7 7px,#f0d8d7 9px); }
+    .tick { position: absolute; bottom: 3px; width: 3px; height: 16px; border-radius: 1px; background: var(--accent); transform: translateX(-1px); }
+    .tick.alt { width: 5px; height: 9px; background: var(--selected); }
+    .variable-list { padding: 4px 14px 13px; }
+    .variable-row { display: grid; grid-template-columns: minmax(170px,.9fr) minmax(210px,1.5fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--rule); }
+    .chart-card .summary-evidence,
+    .chart-card .variable-row { grid-template-columns: var(--ledger-evidence-columns); }
+    .variable-row strong { display: block; font-size: 12px; }
+    .variable-row small { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 10px; line-height: 1.35; }
+
+    /* Variant B: all chart/variable evidence shares one contained axis. */
+    .matrix-shell { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); }
+    .matrix { min-width: 1050px; }
+    .matrix-axis, .matrix-row { display: grid; grid-template-columns: 310px 180px minmax(480px,1fr) 100px; align-items: center; }
+    .matrix-axis { min-height: 48px; position: sticky; top: 0; z-index: 3; color: var(--ink-soft); border-bottom: 1px solid var(--rule-strong); background: var(--paper-panel-alt); font-size: 11px; }
+    .matrix-axis > *, .matrix-row > * { padding: 8px 10px; }
+    .matrix-row { min-height: 52px; border-bottom: 1px solid var(--rule); }
+    .matrix-row.chart { min-height: 66px; background: var(--paper-panel-alt); }
+    .matrix-row.chart[data-selected="true"] { box-shadow: inset 4px 0 0 var(--selected); }
+    .matrix-row.chart[data-attention="true"] { box-shadow: inset 4px 0 0 var(--error); background: var(--error-soft); }
+    .matrix-identity { position: sticky; left: 0; z-index: 2; background: inherit; }
+    .matrix-identity strong { display: block; font-size: 12px; line-height: 1.32; }
+    .matrix-identity small { color: var(--ink-soft); font-size: 10px; }
+    .matrix-variable { padding-left: 30px !important; }
+    .matrix-section { padding: 9px 10px; border-bottom: 1px solid var(--rule-strong); background: #e4e9e3; font-size: 12px; font-weight: 780; }
+    .matrix-period { display: flex; justify-content: space-between; gap: 12px; }
+
+    /* Variant C: membership roster and inspection focus stay separate. */
+    .lens-layout { display: grid; grid-template-columns: minmax(340px,.88fr) minmax(430px,1.12fr); gap: 14px; min-height: 470px; }
+    .roster, .lens-detail { min-width: 0; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-panel); }
+    .roster { overflow: auto; }
+    .roster > header, .lens-detail > header { padding: 13px 14px; border-bottom: 1px solid var(--rule); background: var(--paper-panel-alt); }
+    .roster h4, .lens-detail h4 { margin: 0 0 4px; }
+    .roster-section > strong { display: block; padding: 9px 12px; border-bottom: 1px solid var(--rule); background: #e5eae4; font-size: 12px; }
+    .roster-item { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+    .roster-item[data-focus="true"] { outline: 2px solid var(--info); outline-offset: -3px; background: var(--info-soft); }
+    .roster-item[data-attention="true"] { box-shadow: inset 4px 0 0 var(--error); background: var(--error-soft); }
+    .roster-item strong { display: block; font-size: 12px; line-height: 1.3; }
+    .roster-item small { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 10px; }
+    .lens-detail { align-self: start; position: sticky; top: 0; }
+    .lens-content { padding: 14px; }
+    .lens-content .variable-row { grid-template-columns: minmax(145px,.85fr) minmax(190px,1.3fr) auto; }
+
+    /* Defaults, review, success, and modal states. */
+    .policy-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .policy-card { min-height: 88px; padding: 12px; text-align: left; border-color: var(--rule); }
+    .policy-card[aria-pressed="true"] { border: 2px solid var(--selected); background: var(--selected-soft); }
+    .policy-card strong, .policy-card small { display: block; }
+    .policy-card small { margin-top: 4px; color: var(--ink-soft); font-weight: 400; line-height: 1.35; }
+    .review-ledger { display: grid; gap: 8px; }
+    .ledger-row { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 11px; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper-panel); }
+    .ledger-row strong { font-size: 13px; }
+    .ledger-row small { color: var(--ink-soft); line-height: 1.35; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; margin: 14px 0; }
+    .metric { padding: 12px; border: 1px solid var(--rule); border-radius: 9px; background: var(--paper-panel); }
+    .metric strong { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
+    .metric small { color: var(--ink-soft); }
+    .duplicate-map { display: grid; gap: 7px; margin-top: 10px; }
+    .duplicate-row { display: grid; grid-template-columns: minmax(150px,.8fr) 22px minmax(220px,1.2fr); gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 7px; background: var(--paper-panel-alt); font: 11px ui-monospace,monospace; }
+    .modal-layer { position: fixed; z-index: 900; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(20,28,24,.5); }
+    .modal { width: min(590px,100%); padding: 20px; border: 1px solid var(--rule-strong); border-radius: 14px; background: var(--paper-panel); box-shadow: var(--shadow); }
+    .modal h2 { margin: 0 0 8px; }
+    .modal-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 9px; margin-top: 20px; }
+    .toast { position: fixed; z-index: 950; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: min(680px,calc(100vw - 32px)); padding: 12px 16px; color: white; border-radius: 9px; background: #20352c; box-shadow: var(--shadow); font-weight: 720; }
+    .phone-draft-card { display: none; margin: 14px; padding: 16px; border: 2px solid var(--warning); border-radius: 10px; background: #fffaf0; }
+    .phone-draft-card h2 { margin: 0 0 6px; }
+    body[data-annotations="true"] [data-annotate] { outline: 1px dashed #b02776; outline-offset: -2px; position: relative; }
+    body[data-annotations="true"] [data-annotate]::after { content: attr(data-annotate); position: absolute; z-index: 20; top: 0; right: 0; padding: 2px 5px; color: white; background: #991a67; font-size: 10px; }
+
+    @container fixture (max-width: 1020px) {
+      .app-header { grid-template-columns: 1fr auto; }
+      .header-actions { grid-column: 1 / -1; }
+      .studio { inset: 74px 12px 12px; }
+      .stage-card { padding: 16px; }
+      .lens-layout { grid-template-columns: 1fr; }
+      .lens-detail { position: static; }
+      .metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .chart-card { --ledger-evidence-columns: minmax(145px,.75fr) minmax(190px,1.25fr) 112px; }
+      .summary-evidence, .variable-row { grid-template-columns: minmax(145px,.75fr) minmax(190px,1.25fr) auto; }
+    }
+    @container fixture (max-width: 720px) {
+      .phone-banner { display: flex; }
+      .product-shell[data-mode="view"] .phone-banner { display: none; }
+      .app-header { grid-template-columns: 1fr; padding: 10px 14px; }
+      .mode-switch, .header-actions { justify-self: stretch; }
+      .mode-switch button { flex: 1; min-width: 0; }
+      .build-subheader { padding: 8px 14px; flex-wrap: wrap; }
+      .build-actions { justify-content: start; }
+      .dashboard-scroll { padding: 14px; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .dashboard-heading { align-items: start; flex-direction: column; }
+      .studio, .studio-backdrop { display: none !important; }
+      .product-shell:not([data-mode="view"]) .phone-draft-card { display: block; }
+      .saved-group-strip { align-items: start; flex-direction: column; }
+    }
+    @media (max-width: 1120px) {
+      :root { --review-h: 178px; }
+      .review-bar { grid-template-columns: 1fr; gap: 8px; }
+      .review-title { text-align: center; }
+      .review-actions { width: min(720px,100%); margin-inline: auto; }
+      .review-digest { text-align: center; }
+    }
+    @media (max-width: 720px) {
+      :root { --review-h: 246px; }
+      .variant-tabs { grid-template-columns: 1fr; }
+      .review-actions { grid-template-columns: 1fr 1fr; }
+      .review-actions select { grid-column: 1 / -1; }
+      .sketch-tools { max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: end; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+      .spinner { animation: none; border-top-color: var(--rule); }
+    }
+  </style>
+</head>
+<body data-annotations="false">
+  <header class="review-bar" aria-label="Prototype review controls">
+    <div class="review-title">
+      <strong>Sketch 005 · Time Group authoring</strong>
+      <small>Fixed Staged Proof Studio · Evidence Ledger / Brighter Vellum</small>
+    </div>
+    <nav class="variant-tabs" aria-label="Availability-evidence variants">
+      <button class="variant-tab" data-review-variant="A" aria-pressed="true">A · Availability Ledger · ★ Winner<br><small>Approved · Expandable aligned evidence cards</small></button>
+      <button class="variant-tab" data-review-variant="B" aria-pressed="false">B · Aligned Availability Matrix<br><small>Preserved alternative · One shared calendar axis</small></button>
+      <button class="variant-tab" data-review-variant="C" aria-pressed="false">C · Coverage Focus Lens<br><small>Preserved alternative · Roster + focused evidence</small></button>
+    </nav>
+    <div class="review-actions">
+      <label><span class="sr-only">Review scene</span><select id="scenePicker" aria-label="Review scene">
+        <option value="start">01 · Reversed dates / no analysis</option>
+        <option value="valid">02 · Valid period / zero selected</option>
+        <option value="many">03 · Five charts selected</option>
+        <option value="attention">04 · Period changed / Needs attention</option>
+        <option value="blocked">05 · Interpolate fallback blocked</option>
+        <option value="ready">06 · Review ready</option>
+        <option value="save-failure">07 · Atomic save failure</option>
+        <option value="duplicate">08 · Duplicate group draft</option>
+        <option value="analysis-error">09 · Availability error / retry</option>
+      </select></label>
+      <button id="taskToggle">Task script</button>
+      <button id="resetButton">Reset</button>
+      <div class="review-digest" id="reviewDigest">Shared state · Stage 1 of 4 · Needs attention</div>
+    </div>
+  </header>
+
+  <div class="viewport-frame" id="viewportFrame">
+    <main id="app"></main>
+  </div>
+
+  <div class="sketch-tools" aria-label="Viewport and annotation tools">
+    <button data-width="100%" data-device="full" aria-pressed="true">Full</button>
+    <button data-width="1440px" data-device="desktop" aria-pressed="false">1440</button>
+    <button data-width="1200px" data-device="desktop" aria-pressed="false">1200</button>
+    <button data-width="1024px" data-device="tablet" aria-pressed="false">1024</button>
+    <button data-width="768px" data-device="tablet" aria-pressed="false">768</button>
+    <button data-width="390px" data-device="phone" aria-pressed="false">390</button>
+    <button id="annotationToggle" aria-pressed="false">Labels</button>
+  </div>
+  <div id="reviewOverlay"></div>
+  <div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    (() => {
+      "use strict";
+const policies = [
+  ["Concurrent only", "Use observations that occur on the frame date."],
+  ["Interpolate", "Resolve numeric values between surrounding observations. Never extrapolate."],
+  ["Snap to Latest", "Use the latest observation at or before the frame."],
+  ["Snap to Closest", "Use the nearest observation; equal-distance ties choose the earlier date."]
+];
+
+const charts = [
+  {
+    id: "C01",
+    page: "National overview",
+    section: "Health-system pressure",
+    title: "Emergency department occupancy, staffed critical-care capacity, and medically fit discharge backlog",
+    range: "01 Jan 2024–31 May 2026",
+    variables: [
+      { name: "Adult emergency occupancy", start: "01 Jan 2024", end: "31 May 2026", initial: 31, final: 17 },
+      { name: "Paediatric emergency occupancy", start: "01 Jan 2024", end: "31 May 2026", initial: 31, final: 17 },
+      { name: "Staffed critical-care beds", start: "04 Jan 2024", end: "31 May 2026", initial: 31, final: 17 }
+    ]
+  },
+  {
+    id: "C02",
+    page: "National overview",
+    section: "Emergency response",
+    title: "Priority-one ambulance dispatch-to-arrival time by response district and hour of day",
+    range: "01 Jul 2025–30 Jun 2026",
+    memberships: ["May Operational Tempo", "Executive Watch"],
+    variables: [
+      { name: "Median dispatch-to-arrival time", start: "01 Jul 2025", end: "30 Jun 2026", initial: 744, final: 408 },
+      { name: "90th-percentile dispatch-to-arrival time", start: "01 Jul 2025", end: "30 Jun 2026", initial: 744, final: 408 }
+    ]
+  },
+  {
+    id: "C03",
+    page: "Critical services",
+    section: "Infrastructure continuity",
+    title: "Operating status of hospitals relying on backup generation and verified fuel resupply",
+    range: "03 Nov 2025–30 May 2026",
+    categorical: true,
+    note: "One corrected duplicate timestamp is disclosed and counted once.",
+    variables: [
+      { name: "Facility operating state", start: "03 Nov 2025", end: "30 May 2026", initial: 8, final: 4, note: "Categorical state · Interpolate unavailable" },
+      { name: "Fuel-assurance band", start: "03 Nov 2025", end: "30 May 2026", initial: 8, final: 4, note: "Ordered discrete band · Interpolate unavailable" }
+    ]
+  },
+  {
+    id: "C04",
+    page: "Critical services",
+    section: "Clinical supplies",
+    title: "Days of essential medicine stock remaining across emergency, intensive-care, and surgical services",
+    range: "01 Sep 2025–31 May 2026",
+    note: "Null observations are excluded from dates and ticks.",
+    variables: [
+      { name: "Emergency service stock days", start: "01 Sep 2025", end: "31 May 2026", initial: 29, final: 16, note: "2 null observations in May" },
+      { name: "Intensive-care stock days", start: "01 Sep 2025", end: "31 May 2026", initial: 31, final: 17 },
+      { name: "Surgical service stock days", start: "03 Sep 2025", end: "31 May 2026", initial: 30, final: 16, note: "1 null observation in narrowed period" }
+    ]
+  },
+  {
+    id: "C05",
+    page: "Critical services",
+    section: "Essential treatment",
+    title: "Dialysis service continuity at facilities isolated by transport or communications disruption",
+    range: "14 Feb 2026–09 May 2026",
+    note: "Only 02 May and 09 May fall inside the initial period.",
+    variables: [
+      { name: "Delivered dialysis sessions", start: "14 Feb 2026", end: "09 May 2026", initial: 2, final: 0 },
+      { name: "Planned treatment capacity", start: "14 Feb 2026", end: "09 May 2026", initial: 2, final: 0 }
+    ]
+  },
+  {
+    id: "C06",
+    page: "Population protection",
+    section: "Temporary accommodation",
+    title: "Temporary accommodation occupancy by municipality, age group, and accessibility-support requirement",
+    range: "01 Oct 2025–14 Jun 2026",
+    memberships: ["Displacement Monitoring"],
+    note: "Saved municipality and support filters are applied.",
+    variables: [
+      { name: "Residents housed", start: "01 Oct 2025", end: "14 Jun 2026", initial: 27, final: 15 },
+      { name: "Unfilled supported placements", start: "05 Oct 2025", end: "14 Jun 2026", initial: 27, final: 15 }
+    ]
+  },
+  {
+    id: "C07",
+    page: "Population protection",
+    section: "Public warning",
+    title: "Public warning acknowledgement across SMS, radio, siren, and community liaison channels",
+    range: "05 Jan 2026–31 May 2026",
+    variables: [
+      { name: "SMS acknowledgements", start: "05 Jan 2026", end: "31 May 2026", initial: 20, final: 11 },
+      { name: "Radio bulletin confirmations", start: "09 Jan 2026", end: "29 May 2026", initial: 18, final: 10 },
+      { name: "Siren-zone confirmations", start: "12 Jan 2026", end: "27 May 2026", initial: 14, final: 8 },
+      { name: "Community-liaison confirmations", start: "05 Jan 2026", end: "31 May 2026", initial: 16, final: 9 }
+    ]
+  }
+];
+
+const stageNames = ["Choose period", "Choose charts", "Set defaults", "Name and review"];
+const seedName = "Coastal Storm Readiness — Operational Briefing";
+const copyName = "Copy of Coastal Storm Readiness — Operational Briefing";
+const finalName = "May 15–31 Multi-agency Readiness Review";
+let analysisTimer = 0;
+let toastTimer = 0;
+
+function baseState() {
+  return {
+    variant: "A",
+    mode: "build",
+    studioOpen: true,
+    stage: 0,
+    start: "2026-05-20",
+    end: "2026-05-01",
+    timezone: "Europe/Berlin",
+    analysis: "idle",
+    selected: [],
+    expanded: ["C01"],
+    focusChart: "C01",
+    defaultPolicy: "Concurrent only",
+    fallbacks: {},
+    seconds: "2.5",
+    name: "",
+    duplicate: false,
+    duplicateConflict: false,
+    dirty: false,
+    saving: false,
+    saveError: "",
+    failNextSave: false,
+    commitSuccess: false,
+    savedGroup: null,
+    modal: null,
+    pendingMode: null,
+    toast: ""
+  };
+}
+
+let state = baseState();
+const app = document.getElementById("app");
+const live = document.getElementById("live");
+const reviewOverlay = document.getElementById("reviewOverlay");
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function announce(message) {
+  live.textContent = "";
+  requestAnimationFrame(() => { live.textContent = message; });
+}
+
+function showToast(message) {
+  state.toast = message;
+  clearTimeout(toastTimer);
+  render();
+  toastTimer = setTimeout(() => {
+    state.toast = "";
+    render();
+  }, 2600);
+}
+
+function periodValid() {
+  return Boolean(state.start && state.end && state.timezone && state.start <= state.end);
+}
+
+function narrowedPeriod() {
+  return state.start >= "2026-05-15";
+}
+
+function variableCount(variable) {
+  return narrowedPeriod() ? variable.final : variable.initial;
+}
+
+function chartCount(chart) {
+  return Math.max(0, ...chart.variables.map(variableCount));
+}
+
+function derivedFrameCount() {
+  if (!periodValid() || state.analysis !== "ready") return 0;
+  const members = validSelectedCharts();
+  if (!members.length) return 0;
+  if (members.some(chart => chart.id === "C01")) return narrowedPeriod() ? 17 : 31;
+  return Math.max(0, ...members.flatMap(chart => chart.variables.map(variableCount)));
+}
+
+function isSelected(id) {
+  return state.selected.includes(id);
+}
+
+function needsAttention(chart) {
+  return isSelected(chart.id) && chartCount(chart) === 0;
+}
+
+function validSelectedCharts() {
+  return charts.filter(chart => isSelected(chart.id) && !needsAttention(chart));
+}
+
+function attentionCharts() {
+  return charts.filter(needsAttention);
+}
+
+function availableCharts() {
+  return charts.filter(chart => !isSelected(chart.id) && chartCount(chart) > 0);
+}
+
+function unsupportedMember() {
+  return state.defaultPolicy === "Interpolate" && isSelected("C03") && !state.fallbacks.C03;
+}
+
+function secondsValid() {
+  const value = Number(state.seconds);
+  return Number.isFinite(value) && value > 0;
+}
+
+function duplicateNameInvalid() {
+  return state.duplicate && state.name.trim() === copyName;
+}
+
+function nameValid() {
+  return Boolean(state.name.trim()) && !duplicateNameInvalid();
+}
+
+function reviewReady() {
+  return periodValid() &&
+    state.analysis === "ready" &&
+    validSelectedCharts().length > 0 &&
+    attentionCharts().length === 0 &&
+    !unsupportedMember() &&
+    secondsValid() &&
+    nameValid();
+}
+
+function stageStatuses() {
+  const first = !periodValid() ? "Needs attention" : state.analysis === "ready" ? "Complete" : state.analysis === "error" ? "Needs attention" : "In progress";
+  const second = state.analysis !== "ready" ? "Waiting on prerequisite" :
+    attentionCharts().length ? "Needs attention" :
+    validSelectedCharts().length ? "Complete" : "In progress";
+  const third = validSelectedCharts().length === 0 || attentionCharts().length ? "Waiting on prerequisite" :
+    unsupportedMember() || !secondsValid() ? "Needs attention" : "Complete";
+  const fourth = !periodValid() || state.analysis !== "ready" || validSelectedCharts().length === 0 || attentionCharts().length || unsupportedMember() || !secondsValid() ?
+    "Waiting on prerequisite" : nameValid() ? "Complete" : "In progress";
+  return [first, second, third, fourth];
+}
+
+function setDirty() {
+  state.dirty = true;
+  state.commitSuccess = false;
+  state.saveError = "";
+}
+
+function loadScene(scene) {
+  clearTimeout(analysisTimer);
+  const next = baseState();
+  next.variant = state.variant;
+  if (scene === "valid") {
+    Object.assign(next, { stage: 1, start: "2026-05-01", end: "2026-05-31", analysis: "ready" });
+  }
+  if (scene === "many") {
+    Object.assign(next, { stage: 1, start: "2026-05-01", end: "2026-05-31", analysis: "ready", selected: ["C01","C03","C04","C05","C06"], expanded: ["C03","C04"], focusChart: "C03", dirty: true });
+  }
+  if (scene === "attention") {
+    Object.assign(next, { stage: 1, start: "2026-05-15", end: "2026-05-31", analysis: "ready", selected: ["C01","C03","C04","C05","C06"], expanded: ["C05"], focusChart: "C05", dirty: true });
+  }
+  if (["blocked","ready","save-failure"].includes(scene)) {
+    Object.assign(next, {
+      stage: scene === "blocked" ? 2 : 3,
+      start: "2026-05-15",
+      end: "2026-05-31",
+      analysis: "ready",
+      selected: ["C01","C03","C04","C06"],
+      focusChart: "C03",
+      defaultPolicy: "Interpolate",
+      fallbacks: scene === "blocked" ? {} : { C03: "Snap to Latest" },
+      name: scene === "blocked" ? "" : finalName,
+      dirty: true,
+      failNextSave: scene === "save-failure"
+    });
+  }
+  if (scene === "duplicate") {
+    Object.assign(next, {
+      stage: 3,
+      start: "2026-05-15",
+      end: "2026-05-31",
+      analysis: "ready",
+      selected: ["C01","C03","C04","C06"],
+      focusChart: "C03",
+      defaultPolicy: "Interpolate",
+      fallbacks: { C03: "Snap to Latest" },
+      name: copyName,
+      duplicate: true,
+      duplicateConflict: true,
+      dirty: true
+    });
+  }
+  if (scene === "analysis-error") {
+    Object.assign(next, { stage: 1, start: "2026-05-01", end: "2026-05-31", analysis: "error", dirty: true });
+  }
+  state = next;
+  render();
+  announce("Review scene loaded. Shared draft state reset.");
+}
+
+function stageStatusMarkup(index, status) {
+  return `<span class="stage-status" data-status="${escapeHTML(status)}">${escapeHTML(status)}</span>`;
+}
+
+function renderStageNav() {
+  const statuses = stageStatuses();
+  return `<nav class="stage-nav" role="tablist" aria-label="Time Group stages">
+    ${stageNames.map((name, index) => `
+      <button class="stage-button" role="tab" aria-selected="${state.stage === index}" aria-controls="stage-panel" data-action="stage" data-index="${index}" data-focus-key="stage-${index}">
+        <span class="stage-index">${index + 1}</span><span class="stage-name">${name}</span>
+        ${stageStatusMarkup(index, statuses[index])}
+      </button>`).join("")}
+  </nav>`;
+}
+
+function renderPeriodStage() {
+  const valid = periodValid();
+  let status = "";
+  if (!valid) {
+    status = `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Choose a valid inclusive period</strong>The end date must be on or after the start date. Availability analysis has not run, so no chart counts or ticks are shown.</div></div>`;
+  } else if (state.analysis === "loading") {
+    status = `<div class="loading-box" role="status"><div><div class="spinner" aria-hidden="true"></div><strong>Analysing availability</strong><p>Applying saved filters and counting unique valid observation dates in ${escapeHTML(state.timezone)}.</p></div></div>`;
+  } else if (state.analysis === "error") {
+    status = `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Availability analysis could not finish</strong>The fake availability service returned a deterministic failure. The draft period remains unchanged.<br><button class="small" data-action="retry-analysis" data-focus-key="retry-analysis">Retry analysis</button></div></div>`;
+  } else if (state.analysis === "ready") {
+    status = `<div class="callout success" role="status"><span aria-hidden="true">✓</span><div><strong>Availability current</strong>${narrowedPeriod() ? "17-day" : "31-day"} inclusive period · seven dashboard charts evaluated · counts use unique valid observation dates.</div></div>`;
+  } else {
+    status = `<div class="callout" role="status"><span aria-hidden="true">i</span><div><strong>Waiting for both bounds</strong>Analysis begins only after the inclusive period and dashboard timezone are valid.</div></div>`;
+  }
+  return `<section class="stage-card narrow" id="stage-panel" role="tabpanel" aria-labelledby="stage-title">
+    <header><h3 id="stage-title">Choose period</h3><p>Define the inclusive authoring period in the dashboard timezone. Nothing is analysed or saved while the range is invalid.</p></header>
+    <div class="field-grid">
+      <label class="field"><span>Start date</span><input id="startDate" data-field="start" data-focus-key="start" type="date" value="${escapeHTML(state.start)}"></label>
+      <label class="field"><span>End date</span><input id="endDate" data-field="end" data-focus-key="end" type="date" value="${escapeHTML(state.end)}"></label>
+      <div class="field full section-box" role="note"><span>Dashboard timezone</span><strong>Europe/Berlin</strong><p class="hint">Fixed dashboard-owned context. A Time Group cannot override it; counts, inclusive boundaries, offsets, and the derived ledger all use this timezone.</p></div>
+    </div>
+    ${status}
+    <div class="section-box"><h4>Period semantics</h4><p class="hint">Start and end dates are mandatory inclusive boundaries. The Default Chrono ledger will later be derived from saved members and their effective matching policies; the ledger itself is never persisted.</p></div>
+  </section>`;
+}
+
+function tickPositions(count, chartId) {
+  if (count <= 0) return [];
+  const visible = Math.min(count, count > 60 ? 48 : count);
+  const seed = chartId.charCodeAt(chartId.length - 1) - 47;
+  return Array.from({ length: visible }, (_, index) => {
+    if (chartId === "C05" && !narrowedPeriod()) return index === 0 ? 4 : 29;
+    const even = ((index + 1) / (visible + 1)) * 94 + 3;
+    const irregular = chartId === "C07" || chartId === "C03" ? ((index * seed) % 7) - 3 : 0;
+    return Math.max(2, Math.min(98, even + irregular));
+  });
+}
+
+function tickDateDescription(chart, variable, count) {
+  if (!count) return "No in-period observation dates.";
+  if (chart.id === "C05" && !narrowedPeriod()) return "Observation dates: 02 May 2026 and 09 May 2026.";
+  const positions = tickPositions(count, chart.id);
+  const start = new Date(`${state.start}T00:00:00Z`);
+  const end = new Date(`${state.end}T00:00:00Z`);
+  const selectedPositions = positions.length <= 8 ? positions : [...positions.slice(0, 4), ...positions.slice(-4)];
+  const formatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+  const dates = [...new Set(selectedPositions.map(position => formatter.format(new Date(start.getTime() + ((end.getTime() - start.getTime()) * position / 100)))))];
+  return `${count} dates represented; ${positions.length > 8 ? "first and last displayed tick-date samples" : "tick dates"}: ${dates.join(", ")}.`;
+}
+
+function availabilityTrack(chart, variable, compact = false) {
+  const count = variableCount(variable);
+  const label = `${chart.title}, ${variable.name}: ${count} unique valid observation dates between ${state.start || "unset"} and ${state.end || "unset"}; full data ${variable.start} to ${variable.end}${variable.note ? `; ${variable.note}` : ""}; ${tickDateDescription(chart, variable, count)}`;
+  return `<div class="availability-track${count ? "" : " empty"}" role="img" aria-label="${escapeHTML(label)}">
+    ${tickPositions(count, chart.id).map((position, index) => `<i class="tick${index % 7 === 5 ? " alt" : ""}" style="left:${position.toFixed(2)}%" aria-hidden="true"></i>`).join("")}
+  </div>`;
+}
+
+function membershipTags(chart) {
+  return (chart.memberships || []).map(name => `<span class="tag membership">Also in ${escapeHTML(name)}</span>`).join("");
+}
+
+function variableRows(chart, matrix = false) {
+  return chart.variables.map(variable => {
+    const count = variableCount(variable);
+    if (matrix) {
+      return `<div class="matrix-row" role="row">
+        <div class="matrix-identity matrix-variable" role="rowheader"><strong>${escapeHTML(variable.name)}</strong><small>${escapeHTML(variable.note || "Unique valid dates")}</small></div>
+        <div role="cell"><strong>${escapeHTML(variable.start)}</strong><small> to ${escapeHTML(variable.end)}</small></div>
+        <div role="cell">${availabilityTrack(chart, variable, true)}</div>
+        <div class="count-label" role="cell">${count} date${count === 1 ? "" : "s"}</div>
+      </div>`;
+    }
+    return `<div class="variable-row">
+      <div><strong>${escapeHTML(variable.name)}</strong><small>Full data ${escapeHTML(variable.start)}–${escapeHTML(variable.end)}${variable.note ? ` · ${escapeHTML(variable.note)}` : ""}</small></div>
+      ${availabilityTrack(chart, variable)}
+      <div class="count-label">${count} date${count === 1 ? "" : "s"}</div>
+    </div>`;
+  }).join("");
+}
+
+function summaryTrack(chart) {
+  const variable = chart.variables.reduce((best, candidate) => variableCount(candidate) > variableCount(best) ? candidate : best, chart.variables[0]);
+  return availabilityTrack(chart, variable, true);
+}
+
+function chartCard(chart) {
+  const selected = isSelected(chart.id);
+  const attention = needsAttention(chart);
+  const expanded = state.expanded.includes(chart.id);
+  return `<article class="chart-card" data-selected="${selected}" data-attention="${attention}" id="chart-${chart.id}">
+    <div class="chart-card-head">
+      <div>
+        <h5>${escapeHTML(chart.title)}</h5>
+        <div class="chart-meta"><span>${escapeHTML(chart.page)} · ${escapeHTML(chart.section)}</span><span>Full chart range ${escapeHTML(chart.range)}</span>${membershipTags(chart)}${attention ? `<span class="tag attention">Needs attention · 0 dates</span>` : ""}</div>
+      </div>
+      <div class="chart-actions">
+        <button class="small" data-action="toggle-expand" data-id="${chart.id}" aria-expanded="${expanded}" aria-controls="variables-${chart.id}" data-focus-key="expand-${chart.id}">${expanded ? "Hide evidence" : "Inspect evidence"}</button>
+        <button class="small${selected ? " danger" : ""}" data-action="toggle-select" data-id="${chart.id}" data-focus-key="select-${chart.id}">${selected ? "Remove" : "Add to group"}</button>
+      </div>
+    </div>
+    <div class="summary-evidence">
+      <div><strong>${chart.variables.length} plotted variable${chart.variables.length === 1 ? "" : "s"}</strong><small>${escapeHTML(chart.note || "Saved transformations and filters applied")}</small></div>
+      ${summaryTrack(chart)}
+      <div class="count-label">${chartCount(chart)} chart date${chartCount(chart) === 1 ? "" : "s"}</div>
+    </div>
+    <div class="variable-list" id="variables-${chart.id}" ${expanded ? "" : "hidden"}>${variableRows(chart)}</div>
+  </article>`;
+}
+
+function groupRegion(title, items, description, kind) {
+  if (!items.length && kind === "attention") return "";
+  return `<section class="group-region" aria-labelledby="region-${kind}">
+    <div class="group-heading"><div><h4 id="region-${kind}">${title}</h4><small>${description}</small></div><small>${items.length} chart${items.length === 1 ? "" : "s"}</small></div>
+    ${items.length ? items.map(chartCard).join("") : `<div class="section-box"><p class="hint">No charts in this region.</p></div>`}
+  </section>`;
+}
+
+function renderLedger() {
+  return `${groupRegion("Selected", validSelectedCharts(), "Members with at least one observation in the current period.", "selected")}
+    ${groupRegion("Needs attention", attentionCharts(), "Still selected, but unavailable after the period changed. Remove or restore availability explicitly.", "attention")}
+    <div class="region-separator" role="separator" aria-label="Selected charts above; available charts below"></div>
+    ${groupRegion("Available", availableCharts(), "Eligible dashboard charts not currently selected.", "available")}`;
+}
+
+function matrixRegion(title, items, kind, description) {
+  if (!items.length && kind === "attention") return "";
+  return `<div class="matrix-section" role="rowgroup">${title} · ${items.length} <span class="hint">— ${description}</span></div>
+    ${items.map(chart => `
+      <div class="matrix-row chart" role="row" data-selected="${isSelected(chart.id)}" data-attention="${needsAttention(chart)}">
+        <div class="matrix-identity" role="rowheader"><strong>${escapeHTML(chart.title)}</strong><small>${escapeHTML(chart.page)} · ${escapeHTML(chart.section)}</small>${membershipTags(chart)}</div>
+        <div role="cell"><button class="small${isSelected(chart.id) ? " danger" : ""}" data-action="toggle-select" data-id="${chart.id}" data-focus-key="matrix-select-${chart.id}">${isSelected(chart.id) ? "Remove" : "Add to group"}</button></div>
+        <div role="cell">${summaryTrack(chart)}</div>
+        <div class="count-label" role="cell">${chartCount(chart)} dates</div>
+      </div>
+      ${variableRows(chart, true)}
+    `).join("")}`;
+}
+
+function renderMatrix() {
+  return `<div class="matrix-shell" tabindex="0" aria-label="Aligned availability matrix; scroll horizontally inside this region if needed">
+    <div class="matrix" role="table" aria-label="Chart and variable availability aligned to ${escapeHTML(state.start)} through ${escapeHTML(state.end)}">
+      <div class="matrix-axis" role="row">
+        <div role="columnheader">Chart or plotted variable</div>
+        <div role="columnheader">Full-data bounds</div>
+        <div role="columnheader"><div class="matrix-period"><span>${escapeHTML(state.start)}</span><span>${escapeHTML(state.end)}</span></div></div>
+        <div role="columnheader">In period</div>
+      </div>
+      ${matrixRegion("Selected", validSelectedCharts(), "selected", "members above the separator")}
+      ${matrixRegion("Needs attention", attentionCharts(), "attention", "selected with zero observations")}
+      <div class="matrix-section region-separator" role="separator" aria-label="Selected charts above; available charts below"></div>
+      ${matrixRegion("Available", availableCharts(), "available", "eligible candidates")}
+    </div>
+  </div>`;
+}
+
+function rosterSection(title, items, kind) {
+  if (!items.length && kind === "attention") return "";
+  return `<section class="roster-section"><strong>${title} · ${items.length}</strong>${items.map(chart => `
+    <div class="roster-item" data-focus="${state.focusChart === chart.id}" data-attention="${needsAttention(chart)}">
+      <input type="checkbox" aria-label="${isSelected(chart.id) ? "Remove" : "Add"} ${escapeHTML(chart.title)} ${isSelected(chart.id) ? "from" : "to"} Time Group" data-action="roster-select" data-id="${chart.id}" ${isSelected(chart.id) ? "checked" : ""} data-focus-key="roster-check-${chart.id}">
+      <div><strong>${escapeHTML(chart.title)}</strong><small>${escapeHTML(chart.page)} · ${escapeHTML(chart.section)} · ${chartCount(chart)} dates</small></div>
+      <button class="small" data-action="focus-chart" data-id="${chart.id}" aria-pressed="${state.focusChart === chart.id}" data-focus-key="roster-focus-${chart.id}">Inspect</button>
+    </div>`).join("")}</section>`;
+}
+
+function renderLens() {
+  const focus = charts.find(chart => chart.id === state.focusChart) || charts[0];
+  return `<div class="lens-layout">
+    <div class="roster" aria-label="Membership roster">
+      <header><h4>Membership roster</h4><small>Checkbox changes membership. Inspect changes only the evidence focus.</small></header>
+      ${rosterSection("Selected", validSelectedCharts(), "selected")}
+      ${rosterSection("Needs attention", attentionCharts(), "attention")}
+      <div class="region-separator" role="separator" aria-label="Selected charts above; available charts below"></div>
+      ${rosterSection("Available", availableCharts(), "available")}
+    </div>
+    <aside class="lens-detail" aria-labelledby="lens-title">
+      <header><h4 id="lens-title">Focused evidence</h4><small>Inspection focus: ${escapeHTML(focus.id)} · membership ${isSelected(focus.id) ? "selected" : "not selected"}</small></header>
+      <div class="lens-content">
+        <h4>${escapeHTML(focus.title)}</h4>
+        <p class="hint">${escapeHTML(focus.page)} · ${escapeHTML(focus.section)} · full chart range ${escapeHTML(focus.range)}</p>
+        ${membershipTags(focus)}
+        ${needsAttention(focus) ? `<div class="callout error"><span aria-hidden="true">!</span><div><strong>Needs attention</strong>This selected chart has zero valid observations after 15 May. It remains selected until you remove it or restore the period.</div></div>` : ""}
+        <div class="summary-evidence"><div><strong>${focus.variables.length} variables</strong><small>${escapeHTML(focus.note || "Saved transformations applied")}</small></div>${summaryTrack(focus)}<div class="count-label">${chartCount(focus)} dates</div></div>
+        <div class="variable-list">${variableRows(focus)}</div>
+      </div>
+    </aside>
+  </div>`;
+}
+
+function renderChartStage() {
+  if (!periodValid() || state.analysis === "idle" || state.analysis === "loading") {
+    return `<section class="stage-card narrow" id="stage-panel" role="tabpanel"><header><h3>Choose charts</h3><p>Availability evidence waits for a valid analysed period.</p></header><div class="callout warning"><span aria-hidden="true">⌛</span><div><strong>Waiting on Choose period</strong>Correct the inclusive bounds and let availability analysis finish.<br><button class="small" data-action="stage" data-index="0">Return to period</button></div></div></section>`;
+  }
+  if (state.analysis === "error") {
+    return `<section class="stage-card narrow" id="stage-panel" role="tabpanel"><header><h3>Choose charts</h3><p>The period is valid, but the fake availability analysis failed.</p></header><div class="callout error"><span aria-hidden="true">!</span><div><strong>No stale evidence is shown</strong>Retry without changing the saved dashboard.<br><button class="small" data-action="retry-analysis" data-focus-key="retry-analysis">Retry analysis</button></div></div></section>`;
+  }
+  const description = state.variant === "A" ? "Complete chart records move intact between vertically separated regions." :
+    state.variant === "B" ? "Every chart and variable uses one shared horizontal period axis." :
+    "Membership stays in the roster while one chart receives a stable, enlarged evidence focus.";
+  return `<section class="stage-card" id="stage-panel" role="tabpanel">
+    <header><h3>Choose charts · Variant ${state.variant}</h3><p>${description}</p></header>
+    <div class="period-summary"><div><strong>${escapeHTML(state.start)} through ${escapeHTML(state.end)} · inclusive</strong><small>${escapeHTML(state.timezone)} · counts use unique valid observation dates</small></div><button class="small" data-action="stage" data-index="0">Edit period</button></div>
+    ${attentionCharts().length ? `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>${attentionCharts().length} selected chart needs attention</strong>It was not silently removed when availability recomputed. Remove it explicitly or restore the period.</div></div>` : ""}
+    ${state.variant === "A" ? renderLedger() : state.variant === "B" ? renderMatrix() : renderLens()}
+  </section>`;
+}
+
+function policyCard(policy) {
+  const [name, description] = policy;
+  return `<button class="policy-card" data-action="policy" data-policy="${escapeHTML(name)}" aria-pressed="${state.defaultPolicy === name}" data-focus-key="policy-${escapeHTML(name)}"><strong>${escapeHTML(name)}</strong><small>${escapeHTML(description)}</small></button>`;
+}
+
+function renderDefaultsStage() {
+  if (!validSelectedCharts().length || attentionCharts().length) {
+    return `<section class="stage-card narrow" id="stage-panel" role="tabpanel"><header><h3>Set defaults</h3><p>Matching and cadence require at least one valid member and no unresolved selected member.</p></header><div class="callout warning"><span aria-hidden="true">⌛</span><div><strong>Waiting on Choose charts</strong>${attentionCharts().length ? "Resolve the Needs attention member." : "Select at least one eligible chart."}<br><button class="small" data-action="stage" data-index="1">Return to charts</button></div></div></section>`;
+  }
+  return `<section class="stage-card narrow" id="stage-panel" role="tabpanel">
+    <header><h3>Set defaults</h3><p>Choose one group matching default and a positive number of seconds per frame. Unsupported members require an explicit fallback.</p></header>
+    <fieldset><legend>Group matching default</legend><div class="policy-options">${policies.map(policyCard).join("")}</div></fieldset>
+    <label class="field" style="display:block;margin-top:18px"><span>Default seconds per frame</span><input type="number" min="0.1" step="0.1" value="${escapeHTML(state.seconds)}" data-field="seconds" data-focus-key="seconds"><span class="hint">Numeric authoring value; not a 1×, 2×, or 3× tier.</span></label>
+    ${!secondsValid() ? `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Enter a positive finite value</strong>Seconds per frame must be greater than zero.</div></div>` : ""}
+    ${unsupportedMember() ? `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Interpolate is unsupported for TEMP-FIX-C03</strong>Facility operating state and fuel-assurance band are categorical or discrete. Interpolation cannot coerce them and never extrapolates.</div></div>
+      <label class="field"><span>Explicit member fallback · Operating status of hospitals…</span><select data-action="fallback" data-id="C03" data-focus-key="fallback-C03"><option value="">Choose an eligible fallback</option><option>Concurrent only</option><option>Snap to Latest</option><option>Snap to Closest</option></select><span class="hint">Choose Snap to Latest for the representative task, or change the group default.</span></label>` :
+      state.defaultPolicy === "Interpolate" && state.fallbacks.C03 ? `<div class="callout success"><span aria-hidden="true">✓</span><div><strong>Member fallback resolved</strong>TEMP-FIX-C03 uses ${escapeHTML(state.fallbacks.C03)}; the other members inherit Interpolate. <button class="small" data-action="clear-fallback">Remove fallback</button></div></div>` : ""}
+    <div class="section-box"><h4>Effective hierarchy</h4><p class="hint">Time-group default → explicit member fallback → later Scene override → later temporary View override. This sketch authors only the first two layers.</p></div>
+  </section>`;
+}
+
+function reviewProblem() {
+  if (!periodValid() || state.analysis !== "ready") return { stage: 0, text: "Choose a valid analysed period." };
+  if (!validSelectedCharts().length || attentionCharts().length) return { stage: 1, text: attentionCharts().length ? "Resolve the selected member in Needs attention." : "Select at least one chart." };
+  if (unsupportedMember() || !secondsValid()) return { stage: 2, text: unsupportedMember() ? "Give TEMP-FIX-C03 an eligible fallback or change the default." : "Enter positive seconds per frame." };
+  if (!nameValid()) return { stage: 3, text: duplicateNameInvalid() ? "Make the proposed copy name unique." : "Enter a unique Time Group name." };
+  return null;
+}
+
+function renderReviewStage() {
+  const problem = reviewProblem();
+  if (state.commitSuccess && state.savedGroup) {
+    return `<section class="stage-card narrow" id="stage-panel" role="tabpanel">
+      <header><h3>${state.duplicate ? "Duplicate Time Group saved" : "Time Group saved"}</h3><p>The fake atomic commit created exactly one group. The derived frame ledger remains derived evidence.</p></header>
+      <div class="callout success" role="status"><span aria-hidden="true">✓</span><div><strong>${escapeHTML(state.savedGroup.name)}</strong>${state.savedGroup.frames} derived frames · ${state.savedGroup.members} members · ${escapeHTML(state.savedGroup.seconds)} seconds per frame.</div></div>
+      ${state.duplicate ? `<div class="duplicate-map"><div class="duplicate-row"><span>scene/coastal-overview</span><span>→</span><span>draft-scene/copy-7a21</span></div><div class="duplicate-row"><span>scene/clinical-continuity</span><span>→</span><span>draft-scene/copy-7a22</span></div></div><p class="hint">New group and scene IDs; chart and data-source references remain shared.</p>` : ""}
+      <div class="choice-row" style="margin-top:18px"><button class="primary" data-action="reveal-saved">Reveal saved Time Group</button><button data-action="duplicate">Duplicate seeded group</button></div>
+    </section>`;
+  }
+  return `<section class="stage-card narrow" id="stage-panel" role="tabpanel">
+    <header><h3>Name and review</h3><p>Review the derived ledger, membership, matching, cadence, and gaps before one atomic save.</p></header>
+    <label class="field"><span>Unique Time Group name</span><input type="text" value="${escapeHTML(state.name)}" data-field="name" data-focus-key="group-name" aria-invalid="${!nameValid()}"><span class="hint">${state.duplicate ? "The proposed Copy of… value must become unique." : "Unique across this dashboard."}</span></label>
+    ${duplicateNameInvalid() ? `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Name already exists</strong>Rename this editable copy before save. No group or child Scene has been committed.</div></div>` : ""}
+    ${state.duplicate ? `<div class="section-box"><h4>Duplicate draft identity map</h4><div class="duplicate-map"><div class="duplicate-row"><span>group/coastal-storm</span><span>→</span><span>draft-group/copy-7a20</span></div><div class="duplicate-row"><span>scene/coastal-overview</span><span>→</span><span>draft-scene/copy-7a21</span></div><div class="duplicate-row"><span>scene/clinical-continuity</span><span>→</span><span>draft-scene/copy-7a22</span></div></div><p class="hint">Configuration and two child Scenes are deep-copied; chart identities and data remain shared references.</p></div>` : ""}
+    <div class="metric-grid">
+      <div class="metric"><strong>${derivedFrameCount()}</strong><small>derived Default Chrono frames</small></div>
+      <div class="metric"><strong>${validSelectedCharts().length}</strong><small>member charts</small></div>
+      <div class="metric"><strong>${new Set(validSelectedCharts().map(chart => chart.page)).size}</strong><small>affected pages</small></div>
+      <div class="metric"><strong>${escapeHTML(state.seconds || "—")}</strong><small>seconds per frame</small></div>
+    </div>
+    <div class="review-ledger">
+      <div class="ledger-row"><span aria-hidden="true">1</span><div><strong>Period and timezone</strong><small>${escapeHTML(state.start)} through ${escapeHTML(state.end)}, inclusive · ${escapeHTML(state.timezone)}</small></div><button class="small" data-action="stage" data-index="0">Edit</button></div>
+      <div class="ledger-row"><span aria-hidden="true">2</span><div><strong>Members and coverage</strong><small>${validSelectedCharts().map(chart => escapeHTML(chart.id)).join(", ") || "No valid members"} · ${attentionCharts().length} unresolved · nulls and corrected duplicates do not inflate counts</small></div><button class="small" data-action="stage" data-index="1">Edit</button></div>
+      <div class="ledger-row"><span aria-hidden="true">3</span><div><strong>Matching and cadence</strong><small>${escapeHTML(state.defaultPolicy)}${state.fallbacks.C03 ? ` · C03 fallback ${escapeHTML(state.fallbacks.C03)}` : ""} · ${escapeHTML(state.seconds)} seconds/frame</small></div><button class="small" data-action="stage" data-index="2">Edit</button></div>
+      <div class="ledger-row"><span aria-hidden="true">4</span><div><strong>Derived ledger and gaps</strong><small>${derivedFrameCount()} union frames · C04 null gaps disclosed · ledger is recomputed, not persisted</small></div><span class="tag">Current</span></div>
+    </div>
+    ${problem ? `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Save is blocked</strong>${escapeHTML(problem.text)} <button class="small" data-action="stage" data-index="${problem.stage}">Repair in ${escapeHTML(stageNames[problem.stage])}</button></div></div>` : `<div class="callout success"><span aria-hidden="true">✓</span><div><strong>Review is ready</strong>${validSelectedCharts().length} members use ${escapeHTML(state.defaultPolicy)}${state.fallbacks.C03 ? ` with C03 fallback ${escapeHTML(state.fallbacks.C03)}` : ""}, ${escapeHTML(state.seconds)} seconds/frame, and a current ${derivedFrameCount()}-frame derived ledger.</div></div>`}
+    ${state.saveError ? `<div class="callout error" role="alert"><span aria-hidden="true">!</span><div><strong>Atomic save failed</strong>${escapeHTML(state.saveError)} The draft remains open and the last saved dashboard is unchanged.</div></div>` : ""}
+  </section>`;
+}
+
+function renderStageBody() {
+  if (state.stage === 0) return renderPeriodStage();
+  if (state.stage === 1) return renderChartStage();
+  if (state.stage === 2) return renderDefaultsStage();
+  return renderReviewStage();
+}
+
+function renderFooter() {
+  const problem = reviewProblem();
+  const nextLabel = state.stage === 3 ? state.saveError ? "Retry save" : state.duplicate ? "Save duplicate Time Group" : "Save Time Group" : "Continue";
+  const nextAction = state.stage === 3 ? "save" : "next";
+  return `<footer class="stage-footer">
+    <div><button data-action="back" ${state.stage === 0 || state.saving ? "disabled" : ""}>Back</button><span class="hint">Stage ${state.stage + 1} of 4 · ${stageStatuses()[state.stage]}</span></div>
+    <div>${state.stage === 1 ? `<span class="hint">${validSelectedCharts().length} selected · ${attentionCharts().length} need attention</span>` : ""}
+      <button class="primary" data-action="${nextAction}" ${state.saving ? "disabled" : ""}>${state.saving ? "Saving complete draft…" : nextLabel}</button>
+    </div>
+  </footer>`;
+}
+
+function modalMarkup() {
+  if (!state.modal) return "";
+  const leaving = state.pendingMode ? `switch to ${state.pendingMode}` : "close the Time Group workflow";
+  return `<div class="modal-layer" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="dirty-title" aria-describedby="dirty-description">
+      <h2 id="dirty-title">Unsaved Time Group draft</h2>
+      <p id="dirty-description">You are about to ${escapeHTML(leaving)}. Save validates the complete group and commits atomically; discard removes only this local draft.</p>
+      <div class="modal-actions">
+        <button data-action="stay" data-focus-key="modal-stay">Stay</button>
+        <button class="danger" data-action="discard-draft">Discard draft</button>
+        <button class="primary" data-action="save-from-modal">Save Time Group</button>
+      </div>
+    </section>
+  </div>`;
+}
+
+function dashboardPanels() {
+  return `<div class="dashboard-grid">
+    <article class="dash-panel"><h2>Emergency occupancy and staffed capacity</h2><small>Health-system pressure · current View geometry</small><div class="mini-chart"><svg viewBox="0 0 500 140" aria-hidden="true"><polyline fill="none" stroke="#315d50" stroke-width="4" points="0,112 50,101 95,108 145,72 195,80 245,55 300,65 355,37 410,44 500,18"/><polyline fill="none" stroke="#8a4d3f" stroke-width="3" points="0,126 50,119 95,115 145,110 195,99 245,90 300,78 355,72 410,58 500,52"/></svg></div></article>
+    <article class="dash-panel"><h2>Priority-one ambulance response</h2><small>Emergency response · median and P90</small><div class="mini-bars">${[72,86,64,94,81,68,88,76].map(height => `<i style="--h:${height}%"></i>`).join("")}</div></article>
+    <article class="dash-panel"><h2>Essential medicine stock</h2><small>Clinical supplies · nulls disclosed</small><div class="mini-chart"><svg viewBox="0 0 500 140" aria-hidden="true"><polyline fill="none" stroke="#315f7b" stroke-width="4" points="0,32 55,43 110,39 165,58 220,55 275,75 330,70 385,92 440,98 500,116"/></svg></div></article>
+    <article class="dash-panel"><h2>Temporary accommodation</h2><small>Population protection · filtered dimensions</small><div class="mini-bars">${[41,58,49,72,65,83,77,91].map(height => `<i style="--h:${height}%"></i>`).join("")}</div></article>
+  </div>`;
+}
+
+function renderProduct() {
+  const studio = state.mode === "build" && state.studioOpen ? `<div class="studio-backdrop" aria-hidden="true"></div>
+    <section class="studio" role="dialog" aria-modal="true" aria-labelledby="studio-title" aria-busy="${state.saving}" data-saving="${state.saving}">
+      <header class="studio-head">
+        <div><h2 id="studio-title">${state.duplicate ? "Duplicate Time Group" : "Create Time Group"}</h2><p>${state.duplicate ? "Editable deep-copy draft · two child Scenes receive new IDs" : "Dashboard-wide authored object · local draft · fixed Staged Proof Studio"}</p></div>
+        <div class="studio-actions">${state.dirty ? `<span class="dirty-mark">Unsaved draft</span>` : `<span class="tag">Draft clean</span>`}<button data-action="close" data-focus-key="close-studio">Close</button></div>
+      </header>
+      ${renderStageNav()}
+      <div class="stage-region">${renderStageBody()}</div>
+      ${renderFooter()}
+    </section>` : "";
+  return `<div class="product-shell" data-mode="${escapeHTML(state.mode)}">
+    <div class="phone-banner" role="status"><span>Build and Present are not supported at phone size. Your Time Group draft is preserved.</span><button data-action="mode" data-mode="view">Switch to View</button></div>
+    <header class="app-header">
+      <div class="identity"><small>Regional Respiratory Preparedness</small><strong>Executive surveillance</strong></div>
+      <nav class="mode-switch" aria-label="Dashboard mode">${["view","build","present"].map(mode => `<button data-action="mode" data-mode="${mode}" aria-pressed="${state.mode === mode}">${mode[0].toUpperCase() + mode.slice(1)}</button>`).join("")}</nav>
+      <div class="header-actions"><button data-action="noop" data-message="Share link copied in the fake session.">Share</button><button data-action="noop" data-message="Dashboard status: all saved data current.">Status</button></div>
+    </header>
+    <div class="build-subheader">
+      <div class="build-path"><strong>Build · Time Groups</strong><br><small>Dashboard-wide authoring · saved content unchanged until atomic save</small></div>
+      <div class="build-actions"><button data-action="open-create">Create Time Group</button><button data-action="duplicate">Duplicate Time Group</button><span class="geometry-proof">Canvas geometry · unchanged</span></div>
+    </div>
+    <div class="dashboard-scroll">
+      <div class="dashboard-heading"><div><h1>Multi-agency readiness</h1><p>Seven temporal sources across national, critical-service, and population-protection pages.</p></div><span class="geometry-proof">2 columns · canonical panels</span></div>
+      <div class="saved-group-strip"><div><strong>${state.savedGroup ? escapeHTML(state.savedGroup.name) : escapeHTML(seedName)}</strong><small>${state.savedGroup ? `${state.savedGroup.frames} derived frames · ${state.savedGroup.members} members` : "Saved Time Group · 2 child Scenes · ready to duplicate"}</small></div><button data-action="duplicate">Duplicate Time Group</button></div>
+      ${dashboardPanels()}
+      <div class="phone-draft-card"><h2>Time Group draft retained</h2><p>Return to a supported tablet or desktop width to continue authoring. Switching to View follows dirty-draft resolution and never redirects automatically.</p><button data-action="mode" data-mode="view">Switch to View</button></div>
+    </div>
+    ${studio}
+    ${modalMarkup()}
+    ${state.toast ? `<div class="toast" role="status">${escapeHTML(state.toast)}</div>` : ""}
+  </div>`;
+}
+
+function updateReviewChrome() {
+  document.querySelectorAll("[data-review-variant]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.reviewVariant === state.variant)));
+  document.getElementById("reviewDigest").textContent = `Shared draft · Variant ${state.variant} · Stage ${state.stage + 1} of 4 · ${state.dirty ? "unsaved" : "clean"} · ${state.selected.length} selected`;
+}
+
+function render(focusKey = "") {
+  const remembered = focusKey || document.activeElement?.dataset?.focusKey || "";
+  app.innerHTML = renderProduct();
+  updateReviewChrome();
+  if (remembered) {
+    requestAnimationFrame(() => {
+      const target = document.querySelector(`[data-focus-key="${CSS.escape(remembered)}"]`) || document.querySelector(`[data-focus-key="stage-${state.stage}"]`);
+      if (target && !target.disabled) target.focus({ preventScroll: true });
+    });
+  }
+  if (state.modal) {
+    requestAnimationFrame(() => document.querySelector('[data-action="stay"]')?.focus());
+  }
+}
+
+function scheduleAnalysis() {
+  clearTimeout(analysisTimer);
+  if (!periodValid()) {
+    state.analysis = "idle";
+    render();
+    return;
+  }
+  state.analysis = "loading";
+  render();
+  analysisTimer = setTimeout(() => {
+    state.analysis = "ready";
+    render();
+    announce(`Availability current for ${state.start} through ${state.end}.`);
+  }, 650);
+}
+
+function toggleSelection(id, requestedFocusKey = "") {
+  const wasSelected = isSelected(id);
+  if (wasSelected) {
+    state.selected = state.selected.filter(item => item !== id);
+    announce(`${id} removed from the Time Group.`);
+  } else {
+    state.selected = [...state.selected, id];
+    state.focusChart = id;
+    announce(`${id} selected and moved to the Selected region.`);
+  }
+  setDirty();
+  const chart = charts.find(candidate => candidate.id === id);
+  const disappears = wasSelected && chart && chartCount(chart) === 0;
+  render(disappears ? `stage-${state.stage}` : requestedFocusKey || `select-${id}`);
+}
+
+function firstProblemStage() {
+  const problem = reviewProblem();
+  return problem ? problem.stage : null;
+}
+
+function goStage(index) {
+  const requested = Number(index);
+  if (requested > 0 && (!periodValid() || state.analysis !== "ready")) {
+    state.stage = 0;
+    render("start");
+    announce("Choose a valid period before continuing.");
+    return;
+  }
+  if (requested > 1 && (!validSelectedCharts().length || attentionCharts().length)) {
+    state.stage = 1;
+    render();
+    announce("Resolve chart membership before continuing.");
+    return;
+  }
+  if (requested > 2 && (unsupportedMember() || !secondsValid())) {
+    state.stage = 2;
+    render();
+    announce("Resolve matching and cadence before review.");
+    return;
+  }
+  state.stage = Math.max(0, Math.min(3, requested));
+  render(`stage-${state.stage}`);
+  announce(`${stageNames[state.stage]}, stage ${state.stage + 1} of 4.`);
+}
+
+function startDuplicate() {
+  const variant = state.variant;
+  state = baseState();
+  Object.assign(state, {
+    variant,
+    stage: 3,
+    start: "2026-05-15",
+    end: "2026-05-31",
+    analysis: "ready",
+    selected: ["C01","C03","C04","C06"],
+    focusChart: "C03",
+    defaultPolicy: "Interpolate",
+    fallbacks: { C03: "Snap to Latest" },
+    name: copyName,
+    duplicate: true,
+    duplicateConflict: true,
+    dirty: true,
+    studioOpen: true,
+    mode: "build"
+  });
+  render("group-name");
+  announce("Duplicate draft opened. Two child Scenes have new draft IDs; chart and data references remain shared.");
+}
+
+function attemptSave(fromModal = false) {
+  if (state.saving) {
+    announce("Save already in progress. Draft controls are temporarily locked.");
+    return;
+  }
+  const problem = reviewProblem();
+  if (problem) {
+    state.modal = null;
+    state.pendingMode = null;
+    state.stage = problem.stage;
+    render(problem.stage === 3 ? "group-name" : `stage-${problem.stage}`);
+    announce(`Save blocked. ${problem.text}`);
+    return;
+  }
+  state.modal = null;
+  state.saving = true;
+  state.saveError = "";
+  render();
+  announce("Saving the complete Time Group draft atomically.");
+  setTimeout(() => {
+    if (state.failNextSave) {
+      state.failNextSave = false;
+      state.saving = false;
+      state.saveError = "The fake persistence service rejected this attempt.";
+      state.stage = 3;
+      render();
+      announce("Atomic save failed. Draft retained; saved dashboard unchanged.");
+      return;
+    }
+    state.saving = false;
+    state.dirty = false;
+    state.commitSuccess = true;
+    state.savedGroup = {
+      name: state.name.trim(),
+      frames: derivedFrameCount(),
+      members: validSelectedCharts().length,
+      seconds: state.seconds
+    };
+    const pendingMode = state.pendingMode;
+    state.pendingMode = null;
+    render();
+    announce("Time Group saved atomically. Exactly one saved group is now available.");
+    if (pendingMode) {
+      state.mode = pendingMode;
+      state.studioOpen = false;
+      render();
+    }
+  }, 900);
+}
+
+function requestMode(mode) {
+  if (state.saving) {
+    announce("Wait for the atomic save to finish before changing mode.");
+    return;
+  }
+  if (mode === state.mode) return;
+  if (state.dirty && state.studioOpen) {
+    state.modal = "dirty";
+    state.pendingMode = mode;
+    render();
+    return;
+  }
+  state.mode = mode;
+  state.studioOpen = mode === "build" ? state.studioOpen : false;
+  render();
+  announce(`${mode} mode active.`);
+}
+
+function requestClose() {
+  if (state.saving) {
+    announce("Wait for the atomic save to finish before closing.");
+    return;
+  }
+  if (!state.studioOpen) return;
+  if (state.dirty) {
+    state.modal = "dirty";
+    state.pendingMode = null;
+    render();
+  } else {
+    state.studioOpen = false;
+    render();
+    document.querySelector('[data-action="open-create"]')?.focus();
+  }
+}
+
+app.addEventListener("click", event => {
+  const button = event.target.closest("[data-action]");
+  if (!button || button.disabled) return;
+  const action = button.dataset.action;
+  if (state.saving && action !== "noop") {
+    announce("Atomic save in progress. Draft and navigation controls are locked.");
+    return;
+  }
+  if (action === "stage") goStage(button.dataset.index);
+  if (action === "next") goStage(state.stage + 1);
+  if (action === "back") goStage(state.stage - 1);
+  if (action === "toggle-select") toggleSelection(button.dataset.id, button.dataset.focusKey);
+  if (action === "toggle-expand") {
+    const id = button.dataset.id;
+    state.expanded = state.expanded.includes(id) ? state.expanded.filter(item => item !== id) : [...state.expanded, id];
+    render(`expand-${id}`);
+    announce(`${id} evidence ${state.expanded.includes(id) ? "expanded" : "collapsed"}.`);
+  }
+  if (action === "focus-chart") {
+    state.focusChart = button.dataset.id;
+    render(`roster-focus-${button.dataset.id}`);
+    announce(`${button.dataset.id} evidence focused. Membership unchanged.`);
+  }
+  if (action === "policy") {
+    state.defaultPolicy = button.dataset.policy;
+    if (state.defaultPolicy !== "Interpolate") state.fallbacks = {};
+    setDirty();
+    render(`policy-${button.dataset.policy}`);
+    announce(`${button.dataset.policy} set as group default.`);
+  }
+  if (action === "clear-fallback") {
+    delete state.fallbacks.C03;
+    setDirty();
+    render("fallback-C03");
+  }
+  if (action === "retry-analysis") {
+    state.analysis = "loading";
+    render("retry-analysis");
+    analysisTimer = setTimeout(() => {
+      state.analysis = "ready";
+      render();
+      announce("Availability retry succeeded.");
+    }, 700);
+  }
+  if (action === "save" || action === "save-from-modal") attemptSave(action === "save-from-modal");
+  if (action === "duplicate") startDuplicate();
+  if (action === "close") requestClose();
+  if (action === "stay") {
+    state.modal = null;
+    state.pendingMode = null;
+    render("close-studio");
+    announce("Kept editing the Time Group draft.");
+  }
+  if (action === "discard-draft") {
+    const variant = state.variant;
+    const pendingMode = state.pendingMode;
+    state = baseState();
+    state.variant = variant;
+    state.studioOpen = false;
+    if (pendingMode) state.mode = pendingMode;
+    render();
+    announce("Time Group draft discarded explicitly.");
+  }
+  if (action === "mode") requestMode(button.dataset.mode);
+  if (action === "open-create") {
+    if (!state.studioOpen) {
+      const variant = state.variant;
+      state = baseState();
+      state.variant = variant;
+      render("start");
+    }
+  }
+  if (action === "reveal-saved") {
+    state.studioOpen = false;
+    render();
+    showToast(`Revealed ${state.savedGroup?.name || "saved Time Group"} in Build.`);
+  }
+  if (action === "noop") showToast(button.dataset.message || "Fake action complete.");
+});
+
+app.addEventListener("change", event => {
+  const target = event.target;
+  if (state.saving) {
+    event.preventDefault();
+    render();
+    announce("Atomic save in progress. Draft controls are locked.");
+    return;
+  }
+  if (target.matches('[data-action="roster-select"]')) {
+    toggleSelection(target.dataset.id, target.dataset.focusKey);
+    return;
+  }
+  if (target.matches('[data-action="fallback"]')) {
+    if (target.value) state.fallbacks[target.dataset.id] = target.value;
+    else delete state.fallbacks[target.dataset.id];
+    setDirty();
+    render(`fallback-${target.dataset.id}`);
+    announce(target.value ? `${target.dataset.id} fallback set to ${target.value}.` : `${target.dataset.id} fallback removed.`);
+    return;
+  }
+  if (target.dataset.field === "start" || target.dataset.field === "end") {
+    state[target.dataset.field] = target.value;
+    setDirty();
+    scheduleAnalysis();
+    return;
+  }
+  if (target.dataset.field === "name" || target.dataset.field === "seconds") {
+    state[target.dataset.field] = target.value;
+    setDirty();
+    const focusKey = target.dataset.focusKey;
+    setTimeout(() => render(focusKey), 0);
+  }
+});
+
+app.addEventListener("input", event => {
+  if (state.saving) {
+    event.preventDefault();
+    render();
+    announce("Atomic save in progress. Draft controls are locked.");
+    return;
+  }
+  const field = event.target.dataset.field;
+  if (field === "name" || field === "seconds") {
+    state[field] = event.target.value;
+    if (field === "name") state.duplicateConflict = duplicateNameInvalid();
+    setDirty();
+    updateReviewChrome();
+    if (field === "name") event.target.setAttribute("aria-invalid", String(!nameValid()));
+    if (field === "seconds") event.target.setAttribute("aria-invalid", String(!secondsValid()));
+    const cleanMark = app.querySelector(".studio-actions .tag");
+    if (cleanMark) cleanMark.outerHTML = '<span class="dirty-mark">Unsaved draft</span>';
+    document.querySelectorAll(".dirty-mark").forEach(mark => mark.textContent = "Unsaved draft");
+  }
+});
+
+document.querySelectorAll("[data-review-variant]").forEach(button => {
+  button.addEventListener("click", () => {
+    if (state.saving) {
+      announce("Wait for the atomic save to finish before comparing variants.");
+      return;
+    }
+    state.variant = button.dataset.reviewVariant;
+    render();
+    button.focus();
+    announce(`Variant ${state.variant} active. Draft state preserved; only Choose charts presentation changed.`);
+  });
+});
+
+document.getElementById("scenePicker").addEventListener("change", event => {
+  if (state.saving) {
+    event.target.value = "ready";
+    announce("Wait for the atomic save to finish before loading another review scene.");
+    return;
+  }
+  loadScene(event.target.value);
+});
+document.getElementById("resetButton").addEventListener("click", () => {
+  if (state.saving) {
+    announce("Wait for the atomic save to finish before resetting.");
+    return;
+  }
+  const variant = state.variant;
+  state = baseState();
+  state.variant = variant;
+  document.getElementById("scenePicker").value = "start";
+  render();
+  announce("Sketch reset to reversed-date prerequisite state.");
+});
+
+document.querySelectorAll(".sketch-tools [data-width]").forEach(button => {
+  button.addEventListener("click", () => {
+    document.documentElement.style.setProperty("--preview-width", button.dataset.width);
+    document.querySelectorAll(".sketch-tools [data-width]").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+    announce(`${button.textContent.trim()} viewport preview active.`);
+  });
+});
+
+document.getElementById("annotationToggle").addEventListener("click", event => {
+  const next = document.body.dataset.annotations !== "true";
+  document.body.dataset.annotations = String(next);
+  event.currentTarget.setAttribute("aria-pressed", String(next));
+});
+
+document.getElementById("taskToggle").addEventListener("click", () => {
+  reviewOverlay.innerHTML = `<div class="task-layer" role="presentation"><section class="task-card" role="dialog" aria-modal="true" aria-labelledby="task-title">
+    <h2 id="task-title">Representative Time Group task</h2>
+    <p>Exercise the same state in A, B, and C. Judge only the distribution of Stage 2 availability evidence.</p>
+    <ol>
+      <li>Correct the reversed period to 01–31 May 2026, Europe/Berlin.</li>
+      <li>Inspect chart and variable bounds, counts, ticks, nulls, corrections, and existing memberships.</li>
+      <li>Select C01, C03, C04, C05, and C06; deselect and reselect one.</li>
+      <li>Change the start to 15 May. Confirm C05 moves intact to Needs attention, then remove it explicitly.</li>
+      <li>Choose Interpolate and 2.5 seconds/frame; repair C03 with Snap to Latest.</li>
+      <li>Name the group ${escapeHTML(finalName)} and review 17 derived frames.</li>
+      <li>Use the save-failure review scene, fail once, retry, and reveal exactly one saved group.</li>
+      <li>Duplicate ${escapeHTML(seedName)}, resolve the Copy of… name, review two new Scene IDs, and save.</li>
+      <li>Switch variants mid-task and confirm every draft value persists.</li>
+    </ol>
+    <button class="primary" id="closeTask">Return to sketch</button>
+  </section></div>`;
+  document.getElementById("closeTask").focus();
+});
+
+reviewOverlay.addEventListener("click", event => {
+  if (event.target.id === "closeTask" || event.target.classList.contains("task-layer")) {
+    reviewOverlay.innerHTML = "";
+    document.getElementById("taskToggle").focus();
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    if (reviewOverlay.innerHTML) {
+      reviewOverlay.innerHTML = "";
+      document.getElementById("taskToggle").focus();
+    } else if (state.modal) {
+      state.modal = null;
+      state.pendingMode = null;
+      render("close-studio");
+    } else {
+      requestClose();
+    }
+  }
+  if (!state.modal && state.studioOpen && state.mode === "build" && event.key === "Tab" && event.target.closest(".product-shell")) {
+    const focusable = [...document.querySelectorAll(".studio button:not(:disabled), .studio input:not(:disabled), .studio select:not(:disabled), .studio [tabindex='0']")];
+    if (focusable.length) {
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  }
+  if (state.modal && event.key === "Tab") {
+    const focusable = [...document.querySelectorAll(".modal button:not(:disabled)")];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+  const activeStage = event.target.closest?.(".stage-button");
+  if (activeStage && ["ArrowRight","ArrowLeft","Home","End"].includes(event.key)) {
+    event.preventDefault();
+    let index = Number(activeStage.dataset.index);
+    if (event.key === "ArrowRight") index = (index + 1) % 4;
+    if (event.key === "ArrowLeft") index = (index + 3) % 4;
+    if (event.key === "Home") index = 0;
+    if (event.key === "End") index = 3;
+    document.querySelector(`[data-focus-key="stage-${index}"]`)?.focus();
+  }
+});
+
+render();
+    })();
+  </script>
+</body>
+</html>

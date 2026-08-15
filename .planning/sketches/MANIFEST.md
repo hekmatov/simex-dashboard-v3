@@ -20,7 +20,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | 002 | Contextual panel editing | How can a builder edit progressively without changing View-equivalent geometry or losing sight of the target? | Approved | A — Unit Orbit + universal 2×4 footprint picker | Build, parity, contextual editing, chart-owned sizing |
 | 003 | Dashboard visual language | What three complementary institutional aesthetic philosophies and portable colour profiles should V3 support? | Approved | Synthesis — three visual styles + 15 saveable palettes; Profile/Standard chart colors; Light/Dark/System | themes, light/dark/system, style portfolio, utility palettes, GraphPad, monochrome |
 | 004 | Chart creation | How should guided creation combine canonical preview with non-mutating placement proof? | Approved | A — Staged Proof Studio | Build, workflow, preview, placement proof |
-| 005 | Time Group authoring | How should temporal availability and membership remain understandable at realistic density? | Pending | Pending | time groups, availability, authoring |
+| 005 | Time Group authoring | How should temporal availability and membership remain understandable at realistic density? | Approved | A — Availability Ledger | time groups, availability, authoring |
 | 006 | Scene authoring | How should composition connect to increasingly advanced temporal behavior? | Pending | Pending | scenes, composition, temporal authoring |
 | 007 | View Chrono | How should View enter Chrono without losing dashboard usability or playback clarity? | Pending | Pending | View, Chrono, playback |
 | 008 | Present controller | How should a moderator control Audience output confidently and preserve the last valid output? | Pending | Pending | Present, Audience, controller |
