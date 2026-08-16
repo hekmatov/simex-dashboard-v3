@@ -25,6 +25,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | 007 | View Chrono | Which viewport-owned controller placement keeps Chrono clear, persistent, and subordinate to the unchanged View dashboard? | Approved | Synthesis — user-selectable Lower Playback Deck / Chrono Mast | View, Chrono, playback, controller placement |
 | 008 | Present controller | How should a moderator control Audience output confidently and preserve the last valid output? | Approved | A — Live Sidecar | Present, Audience, controller |
 | 009 | Shared shell and product chrome | How should approved winners fit one coherent shell and final visual synthesis? | Approved | A — Layered Command Crown | shell, navigation, chrome, synthesis |
+| 010 | Dashboard look controls | How should approved visual settings be placed and applied inside the Layered Command Crown? | Approved | A — Contextual Visual Settings Drawer | shell, settings, visual style, palettes, appearance, preview |
 
 ## Sequence
 

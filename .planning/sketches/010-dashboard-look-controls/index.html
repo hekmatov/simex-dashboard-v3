@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 010 · Dashboard look controls</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --review:#111722; --review-2:#1a2330; --review-line:#344357; --review-text:#eff4f8; --review-muted:#aab7c5;
+      --review-accent:#7ddfc1; --focus:#ffb85c;
+    }
+    * { box-sizing:border-box; }
+    html, body { width:100%; height:100%; min-width:0; margin:0; overflow:hidden; }
+    body { background:var(--review); color:var(--review-text); }
+    button, select, input { font:inherit; }
+    button, select { cursor:pointer; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+    .sr-only { position:absolute!important; width:1px!important; height:1px!important; margin:-1px!important; padding:0!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+    .prototype { display:grid; grid-template-columns:clamp(310px,22vw,390px) minmax(0,1fr); width:100%; height:100%; overflow:hidden; }
+    .review-rail { height:100%; overflow-y:auto; overscroll-behavior:contain; padding:22px 20px 34px; border-right:1px solid var(--review-line); background:var(--review); }
+    .eyebrow { color:var(--review-accent); font-size:11px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+    .review-rail h1 { margin:8px 0 7px; font-size:25px; line-height:1.08; letter-spacing:-.03em; }
+    .review-rail > p { margin:0; color:var(--review-muted); font-size:13px; line-height:1.5; }
+    .status-row { display:flex; flex-wrap:wrap; gap:7px; margin:15px 0 20px; }
+    .status-pill { padding:5px 9px; border:1px solid #41546a; border-radius:999px; color:#d9e3ed; font-size:11px; }
+    .status-pill.recommended { border-color:#33856f; background:#183c34; color:#bff2e2; }
+    .control-group { margin-top:16px; padding-top:16px; border-top:1px solid var(--review-line); }
+    .control-group h2 { margin:0 0 9px; color:#ced9e4; font-size:11px; letter-spacing:.1em; text-transform:uppercase; }
+    .rail-list { display:grid; gap:7px; }
+    .rail-list.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .rail-list.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .rail-button { min-height:44px; padding:8px 10px; border:1px solid #3d4e62; border-radius:9px; background:var(--review-2); color:#dce6ef; text-align:left; }
+    .rail-button:hover { border-color:#6f849a; }
+    .rail-button[aria-pressed="true"] { border-color:var(--review-accent); box-shadow:inset 0 0 0 1px var(--review-accent); background:#203b39; color:white; }
+    .rail-button strong, .rail-button span { display:block; }
+    .rail-button strong { font-size:12px; }
+    .rail-button span { margin-top:3px; color:#9caebe; font-size:10px; line-height:1.25; }
+    .rail-button[aria-pressed="true"] span { color:#c7eadd; }
+    .rail-list.three .rail-button, .rail-list.two .rail-button { text-align:center; }
+    .state-panel { margin:9px 0 0; padding:12px; border:1px solid #34495e; border-radius:9px; background:#151e29; font-size:11px; }
+    .state-line { display:grid; grid-template-columns:70px 1fr; gap:7px; margin:0 0 8px; }
+    .state-line:last-child { margin-bottom:0; }
+    .state-line dt { color:#94a7b9; }
+    .state-line dd { margin:0; color:#f2f6f9; font-weight:750; line-height:1.35; }
+    .state-line .dirty { color:#ffc17b; }
+    .mini-swatches { display:flex; gap:3px; margin-top:6px; }
+    .mini-swatches i { width:18px; height:8px; border-radius:2px; background:var(--swatch); }
+    .review-note { margin:9px 0 0; color:var(--review-muted); font-size:11px; line-height:1.45; }
+    .stage { min-width:0; height:100%; overflow:auto; overscroll-behavior:contain; padding:24px; background:#0b1018; }
+    .viewport-frame { display:flex; justify-content:center; align-items:flex-start; width:100%; min-height:100%; }
+    .product-window {
+      container:product/inline-size; position:relative; flex:none; width:var(--vw,100%); height:var(--vh,100%); min-width:0; overflow:auto; overscroll-behavior:contain;
+      border:1px solid #4a5b6d; border-radius:12px; background:var(--out); color:var(--ink); box-shadow:0 25px 75px rgba(0,0,0,.46);
+      --out:#eee9de; --canvas:#f7f2e8; --panel:#fffdf8; --alt:#faf6ec; --ink:#1d2529; --muted:#555a55; --rule:#b7b0a2; --accent:#2c383d;
+      --d1:#667853; --d2:#8f704a; --d3:#61746f; --d4:#8b584e; --d5:#77657e; --d6:#7d7457;
+    }
+    .product-window.fit { width:100%; height:100%; }
+    .product-root { position:relative; min-height:100%; overflow-x:clip; background:var(--out); }
+
+    /* The approved Layered Command Crown remains invariant in every variant. */
+    .command-crown { position:relative; z-index:30; }
+    .modebar { position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:18px; min-height:52px; padding:7px 18px; border-bottom:1px solid var(--rule); background:var(--panel); }
+    .identity { display:flex; align-items:center; gap:9px; white-space:nowrap; font-weight:900; letter-spacing:-.02em; }
+    .identity-mark { display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:var(--accent); color:var(--panel); font:900 12px Inter,sans-serif; }
+    .modes { display:flex; gap:4px; }
+    .crown-button, .mode-button, .page-button, .strip-button { min-height:38px; padding:7px 11px; border:1px solid transparent; border-radius:7px; background:transparent; color:inherit; font-weight:760; }
+    .mode-button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent); color:var(--panel); }
+    .crown-button:hover, .mode-button:hover, .page-button:hover, .strip-button:hover { background:var(--alt); }
+    .utilities { display:flex; align-items:center; gap:5px; margin-left:auto; }
+    .context-row { display:flex; align-items:center; gap:18px; min-height:58px; padding:8px 20px; border-bottom:1px solid var(--rule); background:var(--canvas); }
+    .dashboard-name { white-space:nowrap; }
+    .dashboard-name strong, .dashboard-name span { display:block; }
+    .dashboard-name strong { font-size:14px; }
+    .dashboard-name span { margin-top:2px; color:var(--muted); font-size:10px; }
+    .pages { display:flex; align-self:stretch; align-items:center; gap:3px; overflow:auto hidden; }
+    .page-button { white-space:nowrap; color:var(--muted); }
+    .page-button[aria-pressed="true"] { border-color:var(--rule); background:var(--panel); color:var(--ink); }
+    .context-meta { margin-left:auto; color:var(--muted); font-size:10px; white-space:nowrap; }
+    .view-strip { display:flex; align-items:center; gap:8px; height:52px; min-height:52px; padding:6px 20px; border-bottom:1px solid var(--rule); background:var(--alt); }
+    .view-strip > strong { margin-right:8px; color:var(--accent); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+    .strip-button { border-color:var(--rule); background:var(--panel); }
+    .strip-button.look { display:flex; align-items:center; gap:8px; margin-left:auto; border-color:var(--accent); color:var(--accent); }
+    .strip-button.look::before { content:"◐"; font-size:15px; }
+    .saved-chip { max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:10px; }
+
+    .grammar-evidence { font-family:Georgia,"Times New Roman",serif; }
+    .grammar-evidence .chart-card, .grammar-evidence .summary-card { border-radius:2px; box-shadow:none; }
+    .grammar-evidence .modebar, .grammar-evidence .context-row, .grammar-evidence .view-strip { box-shadow:none; }
+    .grammar-humanist { font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+    .grammar-humanist .chart-card, .grammar-humanist .summary-card { border-radius:15px; box-shadow:0 6px 18px color-mix(in srgb,var(--ink) 10%,transparent); }
+    .grammar-signal { font-family:"Segoe UI",ui-sans-serif,system-ui,sans-serif; }
+    .grammar-signal .chart-card, .grammar-signal .summary-card { border-radius:5px; box-shadow:inset 0 1px color-mix(in srgb,var(--panel) 35%,transparent),0 5px 14px color-mix(in srgb,var(--ink) 14%,transparent); }
+
+    .dashboard { padding:22px clamp(16px,3.2vw,46px) 38px; background:var(--canvas); }
+    .page-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:18px; }
+    .page-heading h1 { margin:0; font-size:clamp(24px,2.5vw,36px); line-height:1.03; letter-spacing:-.04em; }
+    .page-heading p { margin:6px 0 0; color:var(--muted); font-size:12px; }
+    .time-chip { padding:7px 11px; border:1px solid var(--rule); border-radius:999px; background:var(--panel); color:var(--muted); font:800 10px Inter,sans-serif; white-space:nowrap; }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .summary-card { min-height:100px; padding:14px; border:1px solid var(--rule); background:var(--panel); }
+    .summary-card span { display:block; color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+    .summary-card strong { display:block; margin-top:9px; font:850 25px/1 Inter,sans-serif; letter-spacing:-.04em; }
+    .summary-card small { display:block; margin-top:5px; color:var(--muted); font-size:9px; }
+    .section-title { display:flex; align-items:center; gap:12px; margin:24px 0 12px; }
+    .section-title h2 { margin:0; font-size:12px; text-transform:uppercase; letter-spacing:.1em; }
+    .section-title::after { content:""; flex:1; height:1px; background:var(--rule); }
+    .chart-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:190px; gap:14px; }
+    .chart-card { position:relative; overflow:hidden; padding:15px; border:1px solid var(--rule); background:var(--panel); }
+    .chart-card.span-2 { grid-column:span 2; }
+    .chart-card h3 { margin:0; font-size:13px; }
+    .metric { margin:9px 0 2px; font:850 24px/1 Inter,sans-serif; letter-spacing:-.04em; }
+    .submetric { color:var(--muted); font-size:9px; }
+    .bars { display:flex; align-items:flex-end; gap:5px; height:78px; margin-top:15px; }
+    .bars i { flex:1; min-width:3px; height:var(--h); border-radius:2px 2px 0 0; background:var(--d1); }
+    .bars i:nth-child(6n+2) { background:var(--d2); } .bars i:nth-child(6n+3) { background:var(--d3); }
+    .bars i:nth-child(6n+4) { background:var(--d4); } .bars i:nth-child(6n+5) { background:var(--d5); } .bars i:nth-child(6n) { background:var(--d6); }
+    .line-chart { width:100%; height:82px; margin-top:10px; }
+    .line-chart path { fill:none; stroke:var(--d1); stroke-width:3; vector-effect:non-scaling-stroke; }
+    .line-chart path:nth-child(2) { stroke:var(--d2); stroke-width:2; }
+    .donut { display:grid; place-items:center; width:84px; height:84px; margin:10px auto 0; border-radius:50%; background:conic-gradient(var(--d1) 0 38%,var(--d2) 38% 63%,var(--d3) 63% 80%,var(--d4) 80%); }
+    .donut::after { content:"86%"; display:grid; place-items:center; width:52px; height:52px; border-radius:50%; background:var(--panel); color:var(--ink); font:850 12px Inter,sans-serif; }
+    .dashboard-footer { display:flex; justify-content:space-between; gap:16px; margin-top:26px; padding-top:15px; border-top:1px solid var(--rule); color:var(--muted); font-size:9px; }
+    .preview-badge { position:sticky; z-index:22; left:18px; bottom:16px; display:inline-flex; gap:7px; align-items:center; margin:0 0 16px 18px; padding:7px 10px; border:1px solid var(--accent); border-radius:999px; background:var(--panel); color:var(--accent); box-shadow:0 7px 22px rgba(0,0,0,.2); font:800 10px Inter,sans-serif; }
+    .preview-badge::before { content:""; width:7px; height:7px; border-radius:50%; background:#d68132; }
+
+    /* All three controls are overlays: dashboard layout never yields space. */
+    .overlay-layer { position:absolute; inset:0; z-index:100; pointer-events:none; font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+    .scrim { position:absolute; inset:0; background:rgba(7,11,14,.55); pointer-events:auto; }
+    .variant-a-overlay .a-scrim { background:transparent; }
+    .overlay-surface { pointer-events:auto; color:#1c2529; background:#f7f8f8; border:1px solid #88969c; box-shadow:0 25px 80px rgba(0,0,0,.42); }
+    .drawer { position:absolute; top:0; right:0; width:min(470px,100%); height:100%; display:flex; flex-direction:column; border-width:0 0 0 1px; }
+    .studio { position:absolute; inset:clamp(16px,4vw,54px); display:flex; flex-direction:column; border-radius:14px; overflow:hidden; }
+    .popover { position:absolute; top:174px; right:18px; width:min(400px,calc(100% - 24px)); max-height:calc(100% - 194px); overflow:auto; border-radius:12px; }
+    .catalogue { position:absolute; inset:clamp(14px,3vw,44px); display:flex; flex-direction:column; border-radius:14px; overflow:hidden; }
+    .overlay-head { display:flex; align-items:flex-start; gap:12px; padding:16px 18px 13px; border-bottom:1px solid #c4cccf; background:#eef1f2; }
+    .overlay-head .eyebrow { color:#42616a; }
+    .overlay-head h2 { margin:4px 0 0; font-size:20px; letter-spacing:-.02em; }
+    .overlay-head p { margin:4px 0 0; color:#5e6c72; font-size:11px; }
+    .close-button { flex:none; width:40px; height:40px; margin-left:auto; border:1px solid #aeb8bc; border-radius:8px; background:white; color:#263238; font-size:18px; }
+    .overlay-scroll { flex:1; min-height:0; overflow:auto; padding:16px 18px 22px; }
+    .overlay-footer { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; padding:12px 18px; border-top:1px solid #c4cccf; background:#eef1f2; }
+    .overlay-footer .save-status { margin-right:auto; color:#59676c; font-size:10px; }
+    .action-button { min-height:40px; padding:7px 11px; border:1px solid #a8b2b6; border-radius:8px; background:white; color:#263238; font-weight:780; }
+    .action-button.primary { border-color:#244f59; background:#244f59; color:white; }
+    .action-button.subtle { background:transparent; }
+    .action-button:disabled { cursor:not-allowed; opacity:.45; }
+    .settings-section { margin:0 0 20px; }
+    .settings-section:last-child { margin-bottom:0; }
+    .settings-section h3 { margin:0 0 9px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:#4d5f66; }
+    .settings-section > p { margin:-3px 0 10px; color:#66767c; font-size:10px; line-height:1.45; }
+    .choice-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .choice-card { min-height:74px; padding:10px; border:1px solid #b5c0c4; border-radius:9px; background:white; color:#263238; text-align:left; }
+    .choice-card[aria-pressed="true"] { border-color:#2c6672; box-shadow:inset 0 0 0 2px #2c6672; background:#e9f3f4; }
+    .choice-card strong, .choice-card span { display:block; }
+    .choice-card strong { font-size:11px; }
+    .choice-card span { margin-top:5px; color:#637279; font-size:9px; line-height:1.3; }
+    .signature-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:9px; padding:9px 10px; border:1px dashed #a8b5ba; border-radius:8px; background:#f0f4f4; color:#52636a; font-size:10px; }
+    .palette-group { margin:0 0 16px; }
+    .palette-group h4 { margin:0 0 7px; color:#56676d; font-size:10px; }
+    .palette-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+    .palette-card { min-height:74px; padding:9px; border:1px solid #b5c0c4; border-radius:8px; background:white; color:#263238; text-align:left; }
+    .palette-card[aria-pressed="true"] { border-color:#2c6672; box-shadow:inset 0 0 0 2px #2c6672; }
+    .palette-card strong { display:block; font-size:10px; line-height:1.2; }
+    .palette-card small { display:block; margin-top:3px; color:#66777d; font-size:8px; }
+    .swatches { display:flex; gap:3px; height:17px; margin-top:7px; }
+    .swatches i { flex:1; border:1px solid rgba(0,0,0,.15); border-radius:2px; background:var(--c); }
+    .binary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+    .trinary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+    .studio-body { display:grid; grid-template-columns:minmax(250px,.7fr) minmax(420px,1.3fr); flex:1; min-height:0; }
+    .studio-column { overflow:auto; padding:18px; }
+    .studio-column + .studio-column { border-left:1px solid #c4cccf; background:#f1f3f3; }
+    .studio .palette-grid, .catalogue .palette-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .summary-box { padding:12px; border:1px solid #b9c4c8; border-radius:9px; background:white; }
+    .summary-box dl { display:grid; grid-template-columns:82px 1fr; gap:7px; margin:0; font-size:10px; }
+    .summary-box dt { color:#66757b; }
+    .summary-box dd { margin:0; font-weight:760; }
+    .phone-boundary { margin:0 0 14px; padding:10px 12px; border:1px solid #c7904e; border-radius:8px; background:#fff4e4; color:#704518; font-size:10px; line-height:1.45; }
+    .phone-boundary strong { display:block; margin-bottom:3px; }
+    .action-button[aria-disabled="true"] { cursor:not-allowed; opacity:.45; }
+    .product-window[data-phone="true"] .dashboard-owned { display:none!important; }
+    .field { display:grid; gap:5px; margin-bottom:12px; }
+    .field label { color:#53636a; font-size:10px; font-weight:800; }
+    .field select { width:100%; min-height:42px; padding:7px 34px 7px 9px; border:1px solid #aab5ba; border-radius:8px; background:white; color:#253136; }
+    .popover .overlay-scroll { padding-bottom:16px; }
+    .popover-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .popover-actions .action-button:first-child { grid-column:1 / -1; }
+    .toast { position:absolute; z-index:180; left:50%; bottom:24px; transform:translateX(-50%); min-width:220px; padding:11px 15px; border-radius:9px; background:#183f37; color:white; box-shadow:0 12px 35px rgba(0,0,0,.35); text-align:center; font:800 11px Inter,sans-serif; }
+
+    @container product (max-width:1050px) {
+      .chart-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .studio-body { grid-template-columns:1fr; overflow:auto; }
+      .studio-column { overflow:visible; }
+      .studio-column + .studio-column { border-left:0; border-top:1px solid #c4cccf; }
+      .studio .palette-grid, .catalogue .palette-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .studio { overflow:auto; }
+    }
+    @container product (max-width:767px) {
+      .modebar { position:relative; flex-wrap:wrap; gap:8px; padding-inline:10px; }
+      .identity span:last-child, .crown-button.optional, .context-meta, .saved-chip { display:none; }
+      .modes { order:3; width:100%; }
+      .mode-button { flex:1; }
+      .context-row { flex-wrap:wrap; padding-inline:12px; }
+      .dashboard-name { width:100%; }
+      .pages { width:100%; }
+      .view-strip { padding-inline:10px; overflow-x:auto; }
+      .strip-button.look { margin-left:0; }
+      .dashboard { padding:16px 12px 30px; }
+      .page-heading { align-items:flex-start; flex-direction:column; }
+      .summary-grid, .chart-grid { grid-template-columns:1fr; }
+      .chart-card.span-2 { grid-column:span 1; }
+      .dashboard-footer { flex-direction:column; }
+      .drawer { width:100%; }
+      .studio, .catalogue { inset:8px; }
+      .choice-grid, .studio .palette-grid, .catalogue .palette-grid, .palette-grid { grid-template-columns:1fr; }
+      .overlay-footer { align-items:stretch; flex-direction:column; }
+      .overlay-footer .save-status { margin-right:0; }
+      .overlay-footer .action-button { width:100%; }
+      .popover { top:218px; right:8px; width:calc(100% - 16px); max-height:calc(100% - 228px); }
+    }
+    @media(max-width:900px) { .prototype { grid-template-columns:280px minmax(0,1fr); } .stage { padding:12px; } }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+  </style>
+</head>
+<body>
+  <div class="prototype">
+    <aside class="review-rail" aria-label="Sketch review controls">
+      <div class="eyebrow">Sketch 010 · Approved</div>
+      <h1>Dashboard look controls</h1>
+      <p>Three ways to manage the approved style and palette portfolio without disturbing the fixed dashboard.</p>
+      <div class="status-row"><span class="status-pill recommended">Approved winner · A</span><span class="status-pill">B rejected · preserved</span><span class="status-pill">C alternative · preserved</span></div>
+      <section class="control-group"><h2>Control variant</h2><div class="rail-list" id="variant-controls"></div><p class="review-note" id="variant-note"></p></section>
+      <section class="control-group"><h2>Viewport</h2><div class="rail-list two" id="viewport-controls"></div></section>
+      <section class="control-group"><h2>System appearance simulator</h2><div class="rail-list two" id="system-controls"></div><p class="review-note">Used only to resolve a System appearance preview.</p></section>
+      <section class="control-group"><h2>Saved vs preview</h2><dl class="state-panel" id="state-panel"></dl><p class="review-note">Style, palette and chart colors belong to this dashboard. Appearance belongs to the signed-in user.</p></section>
+    </aside>
+    <main class="stage" aria-label="Prototype viewport"><div class="viewport-frame" id="viewport-frame"></div></main>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+      const variants = {
+        a:{name:'A · Contextual Visual Settings Drawer · ★ Winner',short:'Drawer',note:'Approved winner. The transparent focus boundary preserves an undimmed real-dashboard preview while the familiar right-side settings surface keeps context, breadth and progressive disclosure.'},
+        b:{name:'B · Visual Studio Overlay · Rejected · Preserved',short:'Studio',note:'Rejected because it darkens the real dashboard without providing an internal live preview, adding interruption without a compensating comparison surface. Preserved and interactive for review history.'},
+        c:{name:'C · Summary Popover + Full Catalogue · Preserved',short:'Popover',note:'Preserved alternative. A quick summary and common controls stay compact; the complete palette portfolio opens only on demand.'}
+      };
+      const styles = {
+        evidence:{name:'Evidence Ledger',signature:'evidence-signature',description:'Archival rules, ink hierarchy, restrained evidence framing.'},
+        humanist:{name:'Humanist Standard',signature:'humanist-signature',description:'Open, approachable surfaces with civic clarity.'},
+        signal:{name:'Signal Instrument',signature:'signal-signature',description:'Calibrated edges, terse state cues and low-glare precision.'}
+      };
+      const groups = [
+        {id:'evidence',name:'Evidence Ledger palettes'}, {id:'humanist',name:'Humanist Standard palettes'},
+        {id:'signal',name:'Signal Instrument palettes'}, {id:'utility',name:'Portfolio utility palettes'}
+      ];
+      const palettes = [
+        P('evidence-signature','evidence','Signature — Brighter Vellum',['#eee9de','#f7f2e8','#fffdf8','#faf6ec','#1d2529','#555a55','#b7b0a2','#2c383d'],['#667853','#8f704a','#61746f','#8b584e','#77657e','#7d7457'],['#181713','#211f1a','#2b2922','#25231d','#f5efe4','#c9c1b3','#746f64','#f0e9dc'],['#a8b794','#c4aa82','#a2b2ad','#c49a90','#b6a7bd','#b9b08e']),
+        P('evidence-restrained','evidence','Restrained — Ash Register',['#deded9','#e9e9e3','#faf9f4','#f1f0e9','#202321','#555a56','#aaa9a1','#303735'],['#667853','#8f704a','#61746f','#8b584e','#77657e','#7d7457'],['#151615','#1d1f1d','#262825','#222421','#ecebe4','#c4c5bc','#686a63','#e4e5dc'],['#a8b794','#c4aa82','#a2b2ad','#c49a90','#b6a7bd','#b9b08e']),
+        P('evidence-counterpoint','evidence','Counterpoint — Cool Archive',['#dfe3e1','#e9ece8','#fafaf6','#f1f3ef','#1f2928','#52605e','#a7b0ad','#314743'],['#667853','#8f704a','#61746f','#8b584e','#77657e','#7d7457'],['#141817','#1c2220','#252c29','#202623','#eef2ed','#c2cbc5','#65706b','#e0e8e2'],['#a8b794','#c4aa82','#a2b2ad','#c49a90','#b6a7bd','#b9b08e']),
+        P('humanist-signature','humanist','Signature — Common Ground',['#e6ece8','#f0f5f1','#fcfdfb','#f2f7f3','#1d2b2a','#52615e','#b7c5bf','#28635d'],['#286b79','#a1693e','#4f7b61','#9a5961','#6d66a0','#8b7944'],['#121a18','#19231f','#222e29','#1d2824','#eef5f1','#becbc5','#52655d','#8ed0c1'],['#7fc3cf','#dfaa7e','#91c2a2','#dfa0a7','#b8afe3','#c9ba7d']),
+        P('humanist-restrained','humanist','Restrained — Quiet Commons',['#e9e9e5','#f2f2ee','#fcfbf8','#f5f4ef','#252c2b','#59615f','#c2c4be','#365e5a'],['#286b79','#a1693e','#4f7b61','#9a5961','#6d66a0','#8b7944'],['#171918','#202321','#292c29','#242724','#f0f0eb','#c3c6c0','#5b605b','#a6cbc3'],['#7fc3cf','#dfaa7e','#91c2a2','#dfa0a7','#b8afe3','#c9ba7d']),
+        P('humanist-counterpoint','humanist','Counterpoint — Open Forum',['#e8e6ed','#f2eff5','#fcfbfd','#f5f2f8','#282631','#5d5968','#c5bfcc','#594f7e'],['#477b88','#a47149','#54806a','#9a5e70','#705f9a','#8d7a43'],['#17151c','#201d27','#292530','#24212b','#f2eef5','#c8c1cf','#605a69','#c2b2e0'],['#86c0cc','#dfae82','#91c0a5','#dea0b1','#b8abe1','#c9b873']),
+        P('signal-signature','signal','Signature — Calibrated Steel',['#dce4e6','#e8edef','#f8faf9','#edf2f2','#17252b','#45585e','#aab9bd','#285b67'],['#276f82','#a7602e','#347557','#9c4f58','#665aa0','#7f6a25'],['#0d1518','#131e22','#1a272c','#162126','#edf4f5','#bac8cb','#455a61','#86bbc4'],['#72c0d0','#e3a170','#83c3a0','#e79ca7','#aea3e2','#ceb96b']),
+        P('signal-restrained','signal','Restrained — Quiet Telemetry',['#e1e5e6','#ebeeef','#fafbfb','#f1f3f3','#20292d','#505d61','#b7c0c3','#3d5b63'],['#276f82','#a7602e','#347557','#9c4f58','#665aa0','#7f6a25'],['#111719','#182024','#20292d','#1b2327','#edf1f2','#bdc6c8','#4a575b','#a7bcc1'],['#72c0d0','#e3a170','#83c3a0','#e79ca7','#aea3e2','#ceb96b']),
+        P('signal-counterpoint','signal','Counterpoint — Amber Vector',['#e2e3e5','#ececed','#fbfaf9','#f2efed','#2a2422','#625650','#c1b6b0','#6f4e43'],['#2f7582','#a55f36','#397258','#9a4f65','#64589a','#817022'],['#151314','#1d1a1b','#282325','#211d1f','#f2ece9','#c9bbb5','#625451','#d3a58f'],['#78c1cc','#e4a074','#88c1a0','#dfa0b0','#ada3df','#cdbc6c']),
+        P('utility-prismatic','utility','Prismatic Index',['#e2e2e7','#eeeff2','#ffffff','#f6f6f8','#1e2028','#545763','#b8bbc4','#303745'],['#2f6db0','#b83d5a','#26743f','#7148a6','#9a6500','#007b80'],['#111117','#181820','#202029','#272731','#f1f1f6','#c3c4ce','#4a4b58','#c8cbd6'],['#78a9e0','#e88498','#70b985','#b695de','#c9a84f','#60bdc1']),
+        P('utility-polarity','utility','Chromatic Polarity',['#ddd5cb','#ebe2d7','#f7eee3','#e8ddd2','#213238','#4f5d5e','#a9a390','#6b3f68'],['#0f6f78','#aa521b','#7251a3','#41743f','#a13c77','#806a18'],['#161319','#172126','#22272c','#251f28','#f1eadb','#c8c0b2','#666873','#e0abd6'],['#4dc2c3','#f09b5a','#ad8de1','#8dc786','#e47eaf','#d5b750']),
+        P('utility-luminance','utility','Luminance Ladder',['#ded8e7','#eae5ef','#fffdf4','#f3efe0','#201827','#534a5c','#c4bacb','#5c2d82'],['#0a6c96','#560c34','#3ca21a','#6d2b0b','#8d5ede','#5e5206'],['#150d1b','#1e1528','#2a2034','#241a2e','#fff4df','#d6c4db','#594a64','#d8a4f1'],['#1db1f1','#d41e7f','#acee96','#db5716','#cbb5f0','#a7930b']),
+        P('graphpad-sunrise-reference','utility','Sunrise — Reference faithful',['#E8DDD2','#F4ECE3','#FFF9F2','#F7E8DD','#2D1B23','#65535A','#C9B5AE','#7F32BD'],['#FB8809','#D84420','#690001','#7F32BD','#5770FF','#87BEFF'],['#160F14','#21171E','#2C2028','#251A21','#FFF1E8','#D8C0C9','#66515B','#FF9D4D'],['#FF9A3D','#F06A4A','#D65C6A','#B879E3','#7E95FF','#9ACBFF']),
+        P('graphpad-lakeside-reference','utility','Lakeside — Reference faithful',['#DDE4E3','#EAF0EE','#F9FCF8','#EAF3EE','#1E2E2B','#4D5E59','#B7C7C2','#2650CC'],['#2650CC','#3D89DE','#65C8E3','#81CE6D','#5F7B49','#29331A'],['#0E1515','#14201F','#1C2B28','#182421','#EFF8F2','#C2D0CB','#435954','#83AEFF'],['#6F91F2','#64ACEF','#78D1E5','#9ADE88','#9FC68A','#B5C996']),
+        P('utility-monochrome','utility','Monochrome Reserve',['#d6d6d6','#eeeeee','#ffffff','#f6f6f6','#151515','#494949','#767676','#202020'],['#2f6db0','#b83d5a','#26743f','#7148a6','#9a6500','#007b80'],['#0d0d0d','#171717','#222222','#2c2c2c','#f5f5f5','#cacaca','#757575','#f0f0f0'],['#78a9e0','#e88498','#70b985','#b695de','#c9a84f','#60bdc1'])
+      ];
+      function P(id,group,name,light,lightSeries,dark,darkSeries){return{id,group,name,light:T(light,lightSeries),dark:T(dark,darkSeries)};}
+      function T(base,series){return{out:base[0],canvas:base[1],panel:base[2],alt:base[3],ink:base[4],muted:base[5],rule:base[6],accent:base[7],series};}
+
+      const viewports={fit:['Fit',null,null],desktop:['1440 × 900',1440,900],desktopCompact:['1200 × 900',1200,900],tablet:['1024 × 768',1024,768],tabletPortrait:['768 × 1024',768,1024],phone:['390 × 844',390,844]};
+      const standardSeries=['#2478b5','#d86d2f','#31905c','#7b5cc7','#c1465a','#168e98'];
+      const state={variant:'a',viewport:'fit',systemTheme:'light',controlsOpen:true,catalogueOpen:false,scroll:0,toast:'',saved:{style:'evidence',palette:'evidence-signature',chartMode:'profile'},preview:{style:'evidence',palette:'evidence-signature',chartMode:'profile'},appearanceSaved:'system',appearancePreview:'system'};
+      const el={variants:document.getElementById('variant-controls'),viewports:document.getElementById('viewport-controls'),system:document.getElementById('system-controls'),state:document.getElementById('state-panel'),note:document.getElementById('variant-note'),frame:document.getElementById('viewport-frame')};
+      let toastTimer=0;
+      const esc=value=>String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+      const palette=id=>palettes.find(item=>item.id===id);
+      const group=id=>groups.find(item=>item.id===id);
+      const phone=()=>state.viewport==='phone';
+      const dashboardDirty=()=>state.saved.style!==state.preview.style||state.saved.palette!==state.preview.palette;
+      const chartDirty=()=>state.saved.chartMode!==state.preview.chartMode;
+      const appearanceDirty=()=>state.appearanceSaved!==state.appearancePreview;
+      const systemDark=()=>state.systemTheme==='dark';
+      const resolvedAppearance=()=>state.appearancePreview==='system'?(systemDark()?'dark':'light'):state.appearancePreview;
+      const namespace=id=>`${group(palette(id).group).name.replace(' palettes','')} / ${palette(id).name}`;
+
+      function renderRail(){
+        el.variants.innerHTML=Object.entries(variants).map(([id,v])=>`<button class="rail-button" type="button" data-action="variant" data-value="${id}" aria-pressed="${state.variant===id}" data-focus-key="variant-${id}"><strong>${v.name}</strong><span>${id==='a'?'Approved winner':id==='b'?'Rejected · Preserved':'Alternative · Preserved'}</span></button>`).join('');
+        el.note.textContent=variants[state.variant].note;
+        el.viewports.innerHTML=Object.entries(viewports).map(([id,v])=>`<button class="rail-button" type="button" data-action="viewport" data-value="${id}" aria-pressed="${state.viewport===id}" data-focus-key="viewport-${id}"><strong>${v[0]}</strong></button>`).join('');
+        el.system.innerHTML=['light','dark'].map(value=>`<button class="rail-button" type="button" data-action="system-theme" data-value="${value}" aria-pressed="${state.systemTheme===value}" data-focus-key="system-${value}"><strong>${cap(value)}</strong></button>`).join('');
+        const p=palette(state.preview.palette), colors=(state.preview.chartMode==='profile'?p[resolvedAppearance()].series:standardSeries);
+        el.state.innerHTML=`<div class="state-line"><dt>Saved look</dt><dd>${esc(styles[state.saved.style].name)} · ${esc(namespace(state.saved.palette))}</dd></div><div class="state-line"><dt>Preview look</dt><dd class="${dashboardDirty()?'dirty':''}">${esc(styles[state.preview.style].name)} · ${esc(namespace(state.preview.palette))}${dashboardDirty()?' · not saved':''}</dd></div><div class="state-line"><dt>Chart colors</dt><dd class="${chartDirty()?'dirty':''}">Saved ${state.saved.chartMode==='profile'?'Profile':'Standard'} · Preview ${state.preview.chartMode==='profile'?'Profile':'Standard'}${chartDirty()?' · not saved':''}<span class="mini-swatches">${colors.map(color=>`<i style="--swatch:${color}"></i>`).join('')}</span></dd></div><div class="state-line"><dt>Appearance</dt><dd class="${appearanceDirty()?'dirty':''}">Saved ${cap(state.appearanceSaved)} · Preview ${cap(state.appearancePreview)}${state.appearancePreview==='system'?` → ${cap(resolvedAppearance())}`:''}${appearanceDirty()?' · not saved':''}</dd></div>`;
+      }
+      function cap(value){return value[0].toUpperCase()+value.slice(1);}
+      function cssTokens(){const p=palette(state.preview.palette),t=p[resolvedAppearance()],series=state.preview.chartMode==='profile'?t.series:standardSeries;return`--out:${t.out};--canvas:${t.canvas};--panel:${t.panel};--alt:${t.alt};--ink:${t.ink};--muted:${t.muted};--rule:${t.rule};--accent:${t.accent};${series.map((color,i)=>`--d${i+1}:${color};`).join('')}`;}
+      function crown(){return`<header class="command-crown"><div class="modebar"><div class="identity"><span class="identity-mark">Sx</span><span>SimEx</span></div><nav class="modes" aria-label="Product mode"><button class="mode-button" type="button" aria-pressed="true">View</button><button class="mode-button" type="button" aria-pressed="false" ${phone()?'disabled title="Build is not supported at phone size"':''}>Build</button><button class="mode-button" type="button" aria-pressed="false" ${phone()?'disabled title="Present is not supported at phone size"':''}>Present</button></nav><div class="utilities"><button class="crown-button optional" type="button">Help</button><button class="crown-button" type="button">HK</button></div></div><div class="context-row"><div class="dashboard-name"><strong>Hospital system watch</strong><span>National simulation dashboard</span></div><nav class="pages" aria-label="Dashboard pages"><button class="page-button" type="button" aria-pressed="true">System overview</button><button class="page-button" type="button" aria-pressed="false">Regional pressure</button><button class="page-button" type="button" aria-pressed="false">Equity signals</button></nav><span class="context-meta">Scenario Alpha · Updated 08:42</span></div><div class="view-strip"><strong>View</strong><button class="strip-button" type="button">Compare charts</button><button class="strip-button" type="button">Open Chrono</button><span class="saved-chip">Saved · ${esc(styles[state.saved.style].name)} / ${esc(palette(state.saved.palette).name)}</span><button id="look-button" class="strip-button look" type="button" data-action="open-controls" data-focus-key="look-button" aria-haspopup="dialog" aria-expanded="${state.controlsOpen}">${phone()?'Appearance':'Dashboard look'}</button></div></header>`;}
+      const bars=(offset=0)=>`<div class="bars" aria-hidden="true">${[43,66,52,83,71,92,62,78,88,69].map((h,i)=>`<i style="--h:${Math.max(20,h-((i+offset)%3)*7)}%"></i>`).join('')}</div>`;
+      function dashboard(){return`<main class="dashboard" aria-label="Dashboard preview"><header class="page-heading"><div><h1>System overview</h1><p>Capacity, access and patient-flow signals for the current simulation period.</p></div><span class="time-chip">16 Aug 2026</span></header><section class="summary-grid"><article class="summary-card"><span>Patient flow</span><strong>2,418</strong><small>+7.2% against prior period</small></article><article class="summary-card"><span>Capacity used</span><strong>86%</strong><small>Across 14 facilities</small></article><article class="summary-card"><span>Median wait</span><strong>42 min</strong><small>Target ≤ 35 min</small></article><article class="summary-card"><span>Regional alerts</span><strong>4</strong><small>Above intervention threshold</small></article></section><div class="section-title"><h2>Operating picture</h2></div><section class="chart-grid"><article class="chart-card span-2"><h3>Patient flow</h3><div class="metric">2,418</div><div class="submetric">Weekly admissions</div><svg class="line-chart" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0 65L42 54L82 59L122 34L162 43L204 20L250 28L300 10"></path><path d="M0 72L42 64L82 50L122 56L162 36L204 42L250 22L300 29"></path></svg></article><article class="chart-card"><h3>Capacity used</h3><div class="donut"></div></article><article class="chart-card"><h3>Median wait</h3><div class="metric">42 min</div>${bars(2)}</article><article class="chart-card"><h3>Admission pressure</h3><div class="metric">1.23</div>${bars(3)}</article><article class="chart-card span-2"><h3>Discharge balance</h3><div class="metric">−118</div><svg class="line-chart" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0 32L42 39L82 24L122 48L162 34L204 55L250 44L300 67"></path><path d="M0 59L42 52L82 61L122 45L162 53L204 35L250 42L300 27"></path></svg></article><article class="chart-card"><h3>Staffing coverage</h3><div class="metric">91%</div>${bars(5)}</article></section><footer class="dashboard-footer"><span>SimEx evidence workspace · Data refreshed 08:42</span><span>Methodology · Accessibility · Report a bug / request a feature · © 2026</span></footer></main>${dashboardDirty()||chartDirty()||appearanceDirty()?'<div class="preview-badge">Preview · not saved</div>':''}`;}
+
+      function styleChoices(){if(phone())return'';return`<section class="settings-section"><h3>Visual style</h3><p>Style controls typography, contour, elevation and motion. Selecting a style does not replace the current palette.</p><div class="choice-grid">${Object.entries(styles).map(([id,s])=>`<button class="choice-card" type="button" data-action="preview-style" data-value="${id}" aria-pressed="${state.preview.style===id}" data-focus-key="style-${id}"><strong>${s.name}</strong><span>${s.description}</span></button>`).join('')}</div><div class="signature-row"><span>Keep the current palette, or deliberately return to this style’s signature colors.</span><button class="action-button dashboard-owned" type="button" data-action="use-signature" data-focus-key="use-signature">Use ${styles[state.preview.style].name} Signature</button></div></section>`;}
+      function paletteCard(p){const t=p[resolvedAppearance()];return`<button class="palette-card" type="button" data-action="preview-palette" data-value="${p.id}" aria-pressed="${state.preview.palette===p.id}" aria-label="${esc(group(p.group).name)}: ${esc(p.name)}" data-focus-key="palette-${p.id}"><strong>${esc(p.name)}</strong><small>${esc(group(p.group).name)}</small><span class="swatches">${[t.out,t.canvas,t.panel,t.accent,...t.series.slice(0,3)].map(color=>`<i style="--c:${color}"></i>`).join('')}</span></button>`;}
+      function paletteChoices(){if(phone())return'';return`<section class="settings-section"><h3>Color palette · 15 approved</h3><p>Palettes are namespaced by provenance and remain independent from style.</p>${groups.map(g=>`<div class="palette-group"><h4>${g.name}</h4><div class="palette-grid">${palettes.filter(p=>p.group===g.id).map(paletteCard).join('')}</div></div>`).join('')}</section>`;}
+      function chartChoices(){if(phone())return'';return`<section class="settings-section"><h3>Chart series colors</h3><p>Profile follows the selected palette. Standard changes chart marks only.</p><div class="binary"><button class="choice-card" type="button" data-action="chart-mode" data-value="profile" aria-pressed="${state.preview.chartMode==='profile'}" data-focus-key="charts-profile"><strong>Profile colors</strong><span>Use ${esc(palette(state.preview.palette).name)} series</span></button><button class="choice-card" type="button" data-action="chart-mode" data-value="standard" aria-pressed="${state.preview.chartMode==='standard'}" data-focus-key="charts-standard"><strong>Standard colors</strong><span>Conventional chart series independent of palette</span></button></div></section>`;}
+      function appearanceChoices(){return`<section class="settings-section"><h3>My appearance</h3><p>This is a user preference, not part of the dashboard’s saved look.</p><div class="trinary">${['light','dark','system'].map(value=>`<button class="choice-card" type="button" data-action="appearance" data-value="${value}" aria-pressed="${state.appearancePreview===value}" data-focus-key="appearance-${value}"><strong>${cap(value)}</strong><span>${value==='system'?`Currently ${cap(resolvedAppearance())}`:'User preference'}</span></button>`).join('')}</div></section>`;}
+      function saveFooter(){return`<footer class="overlay-footer"><span class="save-status"><strong>Dashboard look:</strong> ${dashboardDirty()?'preview not saved':'saved'} · <strong>Chart colors:</strong> ${chartDirty()?'preview not saved':'saved'} · <strong>Appearance:</strong> ${appearanceDirty()?'preview not saved':'saved'}</span><button class="action-button subtle" type="button" data-action="restore" data-focus-key="restore" ${dashboardDirty()||chartDirty()||appearanceDirty()?'':'disabled'}>Restore saved</button><button class="action-button" type="button" data-action="save-appearance" data-focus-key="save-appearance" aria-disabled="${!appearanceDirty()}">Set appearance</button><button class="action-button primary dashboard-owned" type="button" data-action="save-chart" data-focus-key="save-chart" aria-disabled="${!chartDirty()}">Set chart colors</button><button class="action-button primary dashboard-owned" type="button" data-action="save-dashboard" data-focus-key="save-dashboard" aria-disabled="${!dashboardDirty()}">Set dashboard look</button></footer>`;}
+      function head(title,subtitle,closeLabel='Close dashboard look controls',closeAction='close-controls'){return`<header class="overlay-head"><div><div class="eyebrow">Dashboard look</div><h2>${title}</h2><p>${subtitle}</p></div><button class="close-button" type="button" data-action="${closeAction}" aria-label="${closeLabel}" data-focus-key="overlay-close">×</button></header>`;}
+      function drawer(){return`<div class="overlay-layer variant-a-overlay"><div class="scrim a-scrim" data-action="close-controls"></div><section class="overlay-surface drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" data-overlay-surface>${head('<span id="drawer-title">Visual settings</span>','Preview freely; save dashboard and user scopes explicitly.')}<div class="overlay-scroll" data-focus-key="overlay-start" tabindex="-1">${phoneNote()}${scopeSummary()}${styleChoices()}${paletteChoices()}${chartChoices()}${appearanceChoices()}</div>${saveFooter()}</section></div>`;}
+      function studio(){return`<div class="overlay-layer"><div class="scrim" data-action="close-controls"></div><section class="overlay-surface studio" role="dialog" aria-modal="true" aria-labelledby="studio-title" data-overlay-surface>${head('<span id="studio-title">Visual Studio</span>','Compare the complete portfolio while the dashboard remains fixed behind it.')}<div class="studio-body"><div class="studio-column" data-focus-key="overlay-start" tabindex="-1">${phoneNote()}${scopeSummary()}${styleChoices()}${chartChoices()}${appearanceChoices()}</div><div class="studio-column">${paletteChoices()}</div></div>${saveFooter()}</section></div>`;}
+      function scopeSummary(){return`<div class="summary-box"><dl><dt>Saved look</dt><dd>${esc(styles[state.saved.style].name)} · ${esc(namespace(state.saved.palette))}</dd><dt>Preview look</dt><dd>${esc(styles[state.preview.style].name)} · ${esc(namespace(state.preview.palette))}${dashboardDirty()?' · not saved':''}</dd><dt>Chart colors</dt><dd>Saved ${state.saved.chartMode==='profile'?'Profile':'Standard'} · Preview ${state.preview.chartMode==='profile'?'Profile':'Standard'}${chartDirty()?' · not saved':''}</dd><dt>Appearance</dt><dd>Saved ${cap(state.appearanceSaved)} · Preview ${cap(state.appearancePreview)}${state.appearancePreview==='system'?` → ${cap(resolvedAppearance())}`:''}${appearanceDirty()?' · not saved':''}</dd></dl></div>`;}
+      function phoneNote(){return phone()?'<div class="phone-boundary"><strong>Phone supports View only.</strong>Dashboard look and chart-color authoring remain available on tablet and desktop. Your personal Light, Dark or System appearance remains operable here.</div>':'';}
+      function popover(){return`<div class="overlay-layer"><section class="overlay-surface popover" role="dialog" aria-modal="true" aria-labelledby="popover-title" data-overlay-surface>${head('<span id="popover-title">Dashboard look</span>','Quick changes and a full catalogue on demand.')}<div class="overlay-scroll" data-focus-key="overlay-start" tabindex="-1">${phoneNote()}${scopeSummary()}<div class="field dashboard-owned" style="margin-top:14px"><label for="quick-style">Visual style · palette will be preserved</label><select id="quick-style" data-action="quick-style" data-focus-key="quick-style">${Object.entries(styles).map(([id,s])=>`<option value="${id}" ${state.preview.style===id?'selected':''}>${s.name}</option>`).join('')}</select></div><button class="action-button dashboard-owned" type="button" data-action="use-signature" data-focus-key="use-signature">Use ${styles[state.preview.style].name} Signature</button><div class="field dashboard-owned" style="margin-top:12px"><label for="quick-charts">Chart series colors</label><select id="quick-charts" data-action="quick-charts" data-focus-key="quick-charts"><option value="profile" ${state.preview.chartMode==='profile'?'selected':''}>Profile colors</option><option value="standard" ${state.preview.chartMode==='standard'?'selected':''}>Standard colors</option></select></div><div class="field"><label for="quick-appearance">My appearance</label><select id="quick-appearance" data-action="quick-appearance" data-focus-key="quick-appearance">${['light','dark','system'].map(v=>`<option value="${v}" ${state.appearancePreview===v?'selected':''}>${cap(v)}</option>`).join('')}</select></div><div class="popover-actions"><button class="action-button dashboard-owned" type="button" data-action="open-catalogue" data-focus-key="open-catalogue">Browse all 15 palettes</button><button class="action-button" type="button" data-action="save-appearance" data-focus-key="save-appearance" aria-disabled="${!appearanceDirty()}">Set appearance</button><button class="action-button primary dashboard-owned" type="button" data-action="save-chart" data-focus-key="save-chart" aria-disabled="${!chartDirty()}">Set chart colors</button><button class="action-button primary dashboard-owned" type="button" data-action="save-dashboard" data-focus-key="save-dashboard" aria-disabled="${!dashboardDirty()}">Set dashboard look</button></div><button class="action-button subtle" style="width:100%;margin-top:7px" type="button" data-action="restore" data-focus-key="restore" ${dashboardDirty()||chartDirty()||appearanceDirty()?'':'disabled'}>Restore saved</button></div></section></div>`;}
+      function catalogue(){return`<div class="overlay-layer"><div class="scrim"></div><section class="overlay-surface catalogue" role="dialog" aria-modal="true" aria-labelledby="catalogue-title" data-overlay-surface>${head('<span id="catalogue-title">Palette catalogue</span>','All 15 approved, saveable palettes grouped by provenance.','Return to dashboard look summary','close-catalogue')}<div class="overlay-scroll" data-focus-key="catalogue-start" tabindex="-1">${paletteChoices()}</div><footer class="overlay-footer"><span class="save-status">Selected · ${esc(namespace(state.preview.palette))}</span><button class="action-button" type="button" data-action="close-catalogue" data-focus-key="close-catalogue">Back to summary</button></footer></section></div>`;}
+      function overlay(){if(!state.controlsOpen)return'';if(state.variant==='a')return drawer();if(state.variant==='b')return studio();return state.catalogueOpen?catalogue():popover();}
+
+      function renderProduct(focusKey){const current=el.frame.querySelector('.product-window');if(current)state.scroll=current.scrollTop;const vp=viewports[state.viewport];const size=state.viewport==='fit'?'':`--vw:${vp[1]}px;--vh:${vp[2]}px;`;el.frame.innerHTML=`<div class="product-window ${state.viewport==='fit'?'fit':''} grammar-${state.preview.style}" style="${size}${cssTokens()}" data-phone="${phone()}"><div class="product-root">${crown()}${dashboard()}${overlay()}${state.toast?`<div class="toast" role="status">${esc(state.toast)}</div>`:''}</div></div>`;const product=el.frame.querySelector('.product-window');product.scrollTop=state.scroll;product.addEventListener('scroll',()=>{state.scroll=product.scrollTop;},{passive:true});if(focusKey)requestAnimationFrame(()=>{const target=el.frame.querySelector(`[data-focus-key="${focusKey}"]`)||el.frame.querySelector('[data-overlay-surface] button, [data-overlay-surface] select');if(target)target.focus();});}
+      function renderAll(focusKey){renderRail();renderProduct(focusKey);}
+      function restoreSaved(){state.preview={...state.saved};state.appearancePreview=state.appearanceSaved;}
+      function cancelControls(){restoreSaved();state.controlsOpen=false;state.catalogueOpen=false;renderAll('look-button');}
+      function announce(message,focusKey){state.toast=message;clearTimeout(toastTimer);renderAll(focusKey);toastTimer=setTimeout(()=>{state.toast='';renderAll(focusKey);},1800);}
+
+      document.addEventListener('click',event=>{const c=event.target.closest('[data-action]');if(!c)return;const action=c.dataset.action,value=c.dataset.value,focus=c.dataset.focusKey;
+        if(action==='variant'){state.variant=value;state.catalogueOpen=false;renderAll(`variant-${value}`);}
+        else if(action==='system-theme'){state.systemTheme=value;renderAll(`system-${value}`);}
+        else if(action==='viewport'){state.viewport=value;if(phone()){state.preview={...state.saved};state.catalogueOpen=false;}renderAll(`viewport-${value}`);}
+        else if(action==='open-controls'){restoreSaved();state.controlsOpen=true;state.catalogueOpen=false;renderAll('overlay-start');}
+        else if(action==='close-controls'){cancelControls();}
+        else if(action==='preview-style'){state.preview.style=value;renderAll(focus);}
+        else if(action==='preview-palette'){state.preview.palette=value;renderAll(focus);}
+        else if(action==='chart-mode'){state.preview.chartMode=value;renderAll(focus);}
+        else if(action==='appearance'){state.appearancePreview=value;renderAll(focus);}
+        else if(action==='use-signature'){state.preview.palette=styles[state.preview.style].signature;renderAll('use-signature');}
+        else if(action==='restore'){restoreSaved();renderAll('restore');}
+        else if(action==='save-dashboard'&&dashboardDirty()){state.saved.style=state.preview.style;state.saved.palette=state.preview.palette;announce('Dashboard look set','save-dashboard');}
+        else if(action==='save-chart'&&chartDirty()){state.saved.chartMode=state.preview.chartMode;announce('Chart colors set','save-chart');}
+        else if(action==='save-appearance'&&appearanceDirty()){state.appearanceSaved=state.appearancePreview;announce('Appearance set','save-appearance');}
+        else if(action==='open-catalogue'){state.catalogueOpen=true;renderAll('catalogue-start');}
+        else if(action==='close-catalogue'){state.catalogueOpen=false;renderAll('open-catalogue');}
+      });
+      document.addEventListener('change',event=>{const c=event.target.closest('[data-action]');if(!c)return;const focus=c.dataset.focusKey;
+        if(c.dataset.action==='quick-style'){state.preview.style=c.value;renderAll(focus);}
+        else if(c.dataset.action==='quick-charts'){state.preview.chartMode=c.value;renderAll(focus);}
+        else if(c.dataset.action==='quick-appearance'){state.appearancePreview=c.value;renderAll(focus);}
+      });
+      document.addEventListener('keydown',event=>{if(!state.controlsOpen)return;if(event.key==='Escape'){event.preventDefault();if(state.catalogueOpen){state.catalogueOpen=false;renderAll('open-catalogue');}else{cancelControls();}return;}if(event.key!=='Tab')return;const surface=el.frame.querySelector('[data-overlay-surface]');if(!surface)return;const items=[...surface.querySelectorAll('button:not([disabled]),select:not([disabled]),input:not([disabled]),[tabindex="0"]')].filter(item=>item.offsetParent!==null);if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}});
+      if(window.matchMedia){const media=window.matchMedia('(prefers-color-scheme: dark)');media.addEventListener?.('change',()=>{if(state.appearancePreview==='system')renderAll();});}
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
