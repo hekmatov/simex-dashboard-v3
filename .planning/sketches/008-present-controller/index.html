@@ -1,0 +1,1772 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 008 · Present Controller</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --paper-outer: #eee9de;
+      --paper-canvas: #f7f2e8;
+      --paper-panel: #fffdf8;
+      --paper-panel-alt: #faf6ec;
+      --ink: #1d2529;
+      --ink-soft: #555a55;
+      --ink-faint: #70716b;
+      --rule: #b7b0a2;
+      --rule-strong: #50595d;
+      --ui-accent: #2c383d;
+      --ui-accent-soft: #e8e4da;
+      --ui-on-accent: #fffdf8;
+      --present: #62596b;
+      --present-soft: #e8e2e9;
+      --success: #4e6655;
+      --success-soft: #e1e8e1;
+      --warning: #7a6342;
+      --warning-soft: #eee7d8;
+      --error: #81514b;
+      --error-soft: #eee0dc;
+      --info: #52666a;
+      --info-soft: #e1e7e7;
+      --destructive: #692f2f;
+      --data-1: #667853;
+      --data-2: #8f704a;
+      --data-3: #61746f;
+      --data-4: #8b584e;
+      --data-5: #77657e;
+      --data-6: #7d7457;
+      --gridline: #ddd7cb;
+      --review-bg: #171a1c;
+      --review-surface: #22272a;
+      --review-rule: #3d4448;
+      --review-text: #f3f5f4;
+      --review-muted: #aeb7b5;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #c9ccca;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.42;
+    }
+    button, input, select { font: inherit; }
+    button, select, input[type="number"], input[type="search"] { min-height: 44px; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .5; }
+    :focus-visible { outline: 3px solid #176a78; outline-offset: 3px; }
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .review-layout {
+      display: grid;
+      grid-template-columns: clamp(370px, 23vw, 470px) minmax(0, 1fr);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .review-rail {
+      position: relative;
+      z-index: 100;
+      overflow-y: auto;
+      padding: 24px;
+      color: var(--review-text);
+      background: var(--review-bg);
+      border-right: 1px solid #080a0b;
+      scrollbar-gutter: stable;
+    }
+    .review-kicker,
+    .eyebrow,
+    .control-label,
+    .section-kicker,
+    .chart-kicker {
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-size: .69rem;
+      font-weight: 760;
+    }
+    .review-kicker { color: #b9c6c3; }
+    .review-rail h1 { margin: 5px 0 0; font: 720 1.55rem/1.12 Georgia, serif; }
+    .review-lede { margin: 10px 0 22px; color: var(--review-muted); }
+    .review-section { padding: 18px 0; border-top: 1px solid var(--review-rule); }
+    .review-section h2 { margin: 0 0 10px; font-size: .9rem; }
+    .variant-list { display: grid; gap: 9px; }
+    .variant-button {
+      width: 100%;
+      min-height: 76px;
+      padding: 12px 14px;
+      color: var(--review-text);
+      text-align: left;
+      background: var(--review-surface);
+      border: 1px solid var(--review-rule);
+      border-radius: 4px;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+    .variant-button:hover { border-color: #8d9b98; }
+    .variant-button[aria-pressed="true"] {
+      background: #30383b;
+      border-color: #e7f0ed;
+      box-shadow: inset 4px 0 0 #d7e2df;
+    }
+    .variant-title { display: block; font-weight: 780; }
+    .variant-copy { display: block; margin-top: 4px; color: var(--review-muted); font-size: .82rem; }
+    .review-note {
+      margin: 12px 0 0;
+      padding: 11px 12px;
+      color: #d4dcda;
+      background: #202629;
+      border-left: 3px solid #8ba09a;
+      font-size: .83rem;
+    }
+    .review-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .review-control-grid button,
+    .review-action,
+    .review-select {
+      min-width: 0;
+      width: 100%;
+      padding: 9px 10px;
+      color: var(--review-text);
+      background: #262c2f;
+      border: 1px solid var(--review-rule);
+      border-radius: 3px;
+    }
+    .review-control-grid button[aria-pressed="true"] { color: #1d2529; background: #e7ecea; }
+    .review-actions { display: grid; gap: 8px; }
+    .state-list { display: grid; gap: 7px; margin: 0; }
+    .state-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; font-size: .8rem; }
+    .state-row dt { color: var(--review-muted); }
+    .state-row dd { margin: 0; font-weight: 680; overflow-wrap: anywhere; }
+    .integrity {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px;
+      color: #d9e3e0;
+      border: 1px solid #4d5856;
+      border-radius: 999px;
+      font-size: .77rem;
+    }
+    .integrity::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #82a78e; }
+
+    .product-stage {
+      min-width: 0;
+      overflow: auto;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #bfc3c1;
+    }
+    .product-viewport {
+      position: relative;
+      container-type: inline-size;
+      width: min(1440px, 100%);
+      height: min(900px, calc(100vh - 32px));
+      min-width: 390px;
+      min-height: 620px;
+      overflow: hidden;
+      background: var(--paper-outer);
+      border: 1px solid #9b9f9d;
+      box-shadow: 0 18px 52px rgb(18 23 24 / 22%);
+      transition: width 180ms ease, height 180ms ease;
+    }
+    .product-viewport[data-preview="1440"] { width: 1440px; height: 900px; }
+    .product-viewport[data-preview="1024"] { width: 1024px; height: 768px; }
+    .product-viewport[data-preview="390"] { width: 390px; height: 844px; min-width: 390px; min-height: 844px; }
+    .app-shell { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+    .app-header {
+      position: relative;
+      z-index: 60;
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) minmax(250px, auto) auto;
+      align-items: center;
+      gap: 18px;
+      min-height: 70px;
+      padding: 10px 18px;
+      background: var(--paper-panel);
+      border-bottom: 2px solid var(--rule-strong);
+    }
+    .brand-lockup { min-width: 0; }
+    .brand-lockup strong { display: block; font: 700 1.13rem/1.15 Georgia, serif; }
+    .brand-lockup span { display: block; overflow: hidden; color: var(--ink-soft); font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+    .mode-pill {
+      justify-self: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 7px 12px;
+      color: var(--present);
+      background: var(--present-soft);
+      border: 1px solid var(--present);
+      font-weight: 760;
+    }
+    .mode-pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+    .header-context { min-width: 0; text-align: right; }
+    .header-context strong { display: block; font-size: .82rem; }
+    .header-context span { display: block; color: var(--ink-soft); font-size: .72rem; }
+
+    .phone-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 74px;
+      padding: 10px 14px;
+      color: #382b1b;
+      background: #f1dfb8;
+      border-bottom: 2px solid #8d6e39;
+    }
+    .phone-banner strong { display: block; }
+    .phone-banner span { display: block; font-size: .78rem; }
+    .phone-banner button { padding: 7px 10px; color: #fff; background: #4f452f; border: 1px solid #292318; }
+    .phone-placeholder { display: none; padding: 24px 18px; overflow: auto; }
+    .phone-card { padding: 22px 18px; background: var(--paper-panel); border: 1px solid var(--rule-strong); }
+    .phone-card h2 { margin: 3px 0 10px; font: 700 1.45rem/1.12 Georgia, serif; }
+    .phone-card p { margin: 0 0 12px; color: var(--ink-soft); }
+    .phone-session { display: grid; gap: 8px; margin-top: 20px; }
+    .phone-session div { padding: 9px 10px; background: var(--paper-panel-alt); border-left: 3px solid var(--rule-strong); font-size: .82rem; }
+    .product-viewport[data-preview="390"] .phone-banner { display: flex; }
+    .product-viewport[data-preview="390"] .present-main { display: none; }
+    .product-viewport[data-preview="390"] .phone-placeholder { display: block; }
+    .product-viewport[data-preview="390"] .app-shell { grid-template-rows: auto auto minmax(0, 1fr); }
+    .product-viewport[data-preview="390"] .app-header { grid-template-columns: 1fr auto; min-height: 64px; padding: 9px 12px; }
+    .product-viewport[data-preview="390"] .mode-pill { justify-self: end; }
+    .product-viewport[data-preview="390"] .header-context { display: none; }
+
+    .present-main {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+    .command-strip {
+      position: relative;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) auto;
+      align-items: stretch;
+      gap: 12px;
+      min-height: 72px;
+      padding: 9px 12px;
+      background: var(--paper-panel-alt);
+      border-bottom: 1px solid var(--rule-strong);
+    }
+    .status-cluster { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 8px; }
+    .dimension-status {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      padding: 7px 10px;
+      background: var(--paper-panel);
+      border: 1px solid var(--rule);
+    }
+    .dimension-status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--status-color, var(--info)); box-shadow: 0 0 0 3px var(--status-soft, var(--info-soft)); }
+    .dimension-status strong { display: block; overflow: hidden; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+    .dimension-status span { display: block; overflow: hidden; color: var(--ink-soft); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+    .dimension-status[data-tone="success"] { --status-color: var(--success); --status-soft: var(--success-soft); }
+    .dimension-status[data-tone="warning"] { --status-color: var(--warning); --status-soft: var(--warning-soft); }
+    .dimension-status[data-tone="error"] { --status-color: var(--error); --status-soft: var(--error-soft); }
+    .dimension-status[data-tone="blackout"] { --status-color: #111; --status-soft: #c8c8c8; }
+    .persistent-actions { display: flex; align-items: center; gap: 7px; }
+    .control-button,
+    .primary-button,
+    .safety-button,
+    .destructive-button,
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px 11px;
+      color: var(--ink);
+      background: var(--paper-panel-alt);
+      border: 1px solid var(--rule-strong);
+      border-radius: 2px;
+      font-weight: 680;
+      transition: background 130ms ease, color 130ms ease, border-color 130ms ease;
+    }
+    .control-button:hover, .icon-button:hover { background: var(--present-soft); }
+    .primary-button { color: var(--ui-on-accent); background: var(--present); border-color: var(--present); }
+    .primary-button:hover { background: color-mix(in srgb, var(--present) 84%, black); }
+    .safety-button { color: #fff; background: #262626; border-color: #050505; }
+    .safety-button[data-active="true"] { color: #121212; background: #f5f2e9; box-shadow: inset 0 0 0 2px #121212; }
+    .destructive-button { color: #fff; background: var(--destructive); border-color: #421c1c; }
+    .destructive-button:hover { background: #532323; }
+    .icon-button svg, .control-button svg { width: 18px; height: 18px; fill: currentColor; flex: 0 0 auto; }
+    .focus-drawer-actions { display: none; align-items: center; gap: 7px; }
+
+    .work-area {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      gap: 12px;
+      padding: 12px;
+      overflow: hidden;
+    }
+    .monitor-panel {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      background: var(--paper-panel);
+      border: 1px solid var(--rule-strong);
+    }
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 52px;
+      padding: 8px 12px;
+      background: var(--paper-panel-alt);
+      border-bottom: 1px solid var(--rule);
+    }
+    .panel-heading h2 { margin: 2px 0 0; font: 700 1rem/1.2 Georgia, serif; }
+    .monitor-note { color: var(--ink-soft); font-size: .72rem; text-align: right; }
+    .audience-monitor {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      background: #d1cec5;
+    }
+    .audience-artboard {
+      position: absolute;
+      width: 960px;
+      height: 540px;
+      overflow: hidden;
+      color: #1b2225;
+      background: #f7f2e8;
+      border: 1px solid #3f474a;
+      box-shadow: 0 10px 28px rgb(26 31 32 / 24%);
+      transform: scale(var(--preview-scale, .7));
+      transform-origin: center;
+    }
+    .audience-artboard.is-blackout { color: #fff; background: #000; }
+    .audience-artboard.is-blank { background: #f7f2e8; }
+    .audience-header {
+      position: absolute;
+      inset: 0 0 auto 0;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 24px;
+      height: 78px;
+      padding: 16px 22px 12px;
+      background: #fffdf8;
+      border-bottom: 2px solid #50595d;
+    }
+    .audience-header h1 { margin: 0; font: 700 24px/1.08 Georgia, serif; }
+    .audience-header p { margin: 4px 0 0; color: #555a55; font-size: 12px; }
+    .audience-header .scene-label { max-width: 350px; color: #555a55; font-size: 12px; font-weight: 700; text-align: right; }
+    .audience-grid {
+      position: absolute;
+      inset: 94px 20px 20px;
+      display: grid;
+      gap: 12px;
+    }
+    .audience-artboard.header-off .audience-grid { top: 20px; }
+    .audience-grid.layout-solo { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+    .audience-grid.layout-2-side { grid-template-columns: repeat(2, 1fr); grid-template-rows: 1fr; }
+    .audience-grid.layout-2-stack { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); }
+    .audience-grid.layout-3-top { grid-template-columns: repeat(2, 1fr); grid-template-rows: 1.12fr .88fr; }
+    .audience-grid.layout-3-top .audience-chart:first-child { grid-column: 1 / -1; }
+    .audience-grid.layout-3-bottom { grid-template-columns: repeat(2, 1fr); grid-template-rows: .88fr 1.12fr; }
+    .audience-grid.layout-3-bottom .audience-chart:first-child { grid-column: 1 / -1; grid-row: 2; }
+    .audience-grid.layout-3-left { grid-template-columns: 1.25fr .75fr; grid-template-rows: repeat(2, 1fr); }
+    .audience-grid.layout-3-left .audience-chart:first-child { grid-row: 1 / -1; }
+    .audience-grid.layout-3-right { grid-template-columns: .75fr 1.25fr; grid-template-rows: repeat(2, 1fr); }
+    .audience-grid.layout-3-right .audience-chart:first-child { grid-column: 2; grid-row: 1 / -1; }
+    .audience-grid.layout-4-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+    .audience-chart {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: #fffdf8;
+      border: 1px solid #737872;
+    }
+    .audience-chart-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; padding: 9px 11px 7px; border-bottom: 1px solid #c7c1b6; }
+    .audience-chart h2 { margin: 2px 0 0; font: 700 15px/1.18 Georgia, serif; }
+    .chart-kicker { color: #60645f; font-size: 8px; }
+    .chart-value { align-self: start; color: #20282b; font: 760 15px/1.1 "Cascadia Mono", Consolas, monospace; white-space: nowrap; }
+    .audience-plot { position: relative; min-height: 0; overflow: hidden; padding: 6px 10px; }
+    .audience-plot svg { width: 100%; height: 100%; display: block; }
+    .audience-plot .grid { stroke: #ddd7cb; stroke-width: 1; }
+    .audience-plot .line { fill: none; stroke: var(--series); stroke-width: 3; vector-effect: non-scaling-stroke; }
+    .audience-plot .fill { fill: color-mix(in srgb, var(--series) 17%, transparent); }
+    .audience-plot .bar { fill: var(--series); }
+    .map-grid { height: 100%; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(4, 1fr); gap: 3px; padding: 4px; }
+    .map-grid span { background: color-mix(in srgb, var(--series) var(--strength), #f3eee4); border: 1px solid color-mix(in srgb, var(--series) 48%, #c2bbaf); }
+    .audience-chart-foot { display: flex; justify-content: space-between; gap: 12px; padding: 5px 10px 6px; color: #565d5d; border-top: 1px solid #d8d2c6; font-size: 8px; }
+    .audience-chart-foot strong { color: #2b3335; }
+    .holding-message,
+    .preview-message {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: 10px;
+      padding: 80px;
+      text-align: center;
+    }
+    .holding-message h2, .preview-message h2 { margin: 0; font: 700 33px/1.08 Georgia, serif; }
+    .holding-message p, .preview-message p { margin: 0; color: #5c625e; font-size: 17px; }
+    .scene-date {
+      position: absolute;
+      z-index: 15;
+      left: var(--date-x);
+      top: var(--date-y);
+      min-width: 154px;
+      padding: 7px 11px;
+      color: #fffdf8;
+      background: #2c383d;
+      border: 2px solid #fffdf8;
+      box-shadow: 0 0 0 1px #2c383d;
+      font: 760 12px/1.15 "Cascadia Mono", Consolas, monospace;
+      text-align: center;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    .scene-date:active { cursor: grabbing; }
+    .connection-indicator {
+      position: absolute;
+      z-index: 20;
+      right: 14px;
+      bottom: 14px;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      color: #fff;
+      background: #482b2b;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px #482b2b;
+    }
+    .connection-indicator.reconnecting { color: #1d2529; background: #eee7d8; border-color: #1d2529; box-shadow: 0 0 0 1px #eee7d8; }
+    .connection-indicator svg { width: 19px; height: 19px; fill: currentColor; }
+    .monitor-footer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 42px;
+      padding: 7px 11px;
+      color: var(--ink-soft);
+      background: var(--paper-panel-alt);
+      border-top: 1px solid var(--rule);
+      font-size: .71rem;
+    }
+    .monitor-footer strong { color: var(--ink); }
+    .last-confirmed { font-family: "Cascadia Mono", Consolas, monospace; white-space: nowrap; }
+
+    .control-panel {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      background: var(--paper-panel);
+      border: 1px solid var(--rule-strong);
+    }
+    .control-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      min-height: 51px;
+      padding: 8px 11px;
+      background: var(--paper-panel-alt);
+      border-bottom: 1px solid var(--rule);
+    }
+    .control-panel-header h2 { margin: 2px 0 0; font: 700 1rem/1.15 Georgia, serif; }
+    .drawer-close { display: none; }
+    .drawer-tabs { display: none; gap: 6px; padding: 7px; border-bottom: 1px solid var(--rule); }
+    .drawer-tabs button { flex: 1; min-height: 40px; padding: 6px 8px; color: var(--ink); background: var(--paper-panel-alt); border: 1px solid var(--rule); }
+    .drawer-tabs button[aria-pressed="true"] { color: #fff; background: var(--present); border-color: var(--present); }
+    .panel-scroll { min-height: 0; overflow-y: auto; padding: 12px; scrollbar-gutter: stable; }
+    .control-section + .control-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rule); }
+    .control-section h3 { margin: 3px 0 5px; font: 700 .96rem/1.2 Georgia, serif; }
+    .section-help { margin: 0 0 10px; color: var(--ink-soft); font-size: .76rem; }
+    .scene-identity { display: grid; gap: 7px; margin-bottom: 12px; }
+    .identity-row { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; font-size: .76rem; }
+    .identity-row span { color: var(--ink-faint); }
+    .identity-row strong { overflow-wrap: anywhere; }
+    .selected-list { display: grid; gap: 6px; margin: 8px 0; }
+    .selected-item {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 7px;
+      min-height: 55px;
+      padding: 6px 7px;
+      background: var(--paper-panel-alt);
+      border: 1px solid var(--rule);
+      cursor: grab;
+    }
+    .selected-item[aria-grabbed="true"] { opacity: .55; border-style: dashed; }
+    .order-index { display: grid; place-items: center; width: 24px; height: 24px; color: #fff; background: var(--present); font-size: .72rem; font-weight: 760; }
+    .selected-copy { min-width: 0; }
+    .selected-copy strong { display: block; overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+    .selected-copy span { display: block; color: var(--ink-soft); font-size: .66rem; }
+    .item-actions { display: flex; gap: 3px; }
+    .mini-button { display: grid; place-items: center; min-width: 34px; min-height: 34px; padding: 4px; color: var(--ink); background: var(--paper-panel); border: 1px solid var(--rule); }
+    .mini-button:hover { background: var(--present-soft); }
+    .mini-button svg { width: 15px; height: 15px; fill: currentColor; }
+    .cap-note { min-height: 19px; margin: 5px 0 9px; color: var(--ink-soft); font-size: .7rem; }
+    .cap-note.at-cap { color: var(--warning); font-weight: 700; }
+    .layout-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 8px 0 0; }
+    .layout-option { min-height: 43px; padding: 6px 7px; color: var(--ink); background: var(--paper-panel-alt); border: 1px solid var(--rule); font-size: .72rem; }
+    .layout-option[aria-pressed="true"] { color: #fff; background: var(--present); border-color: var(--present); }
+    .layout-option:disabled { color: var(--ink-soft); background: #eeeae0; }
+    .catalogue-tools { margin: 10px 0 7px; }
+    .catalogue-tools input { width: 100%; padding: 7px 9px; color: var(--ink); background: var(--paper-panel); border: 1px solid var(--rule-strong); }
+    .catalogue-list { max-height: 240px; overflow-y: auto; display: grid; gap: 5px; padding-right: 4px; scrollbar-gutter: stable; }
+    .catalogue-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 49px; padding: 6px 7px; background: var(--paper-panel-alt); border: 1px solid var(--rule); }
+    .catalogue-copy { min-width: 0; }
+    .catalogue-copy strong { display: block; overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+    .catalogue-copy span { display: block; color: var(--ink-soft); font-size: .64rem; }
+    .catalogue-item button { min-height: 34px; padding: 4px 8px; color: var(--ink); background: var(--paper-panel); border: 1px solid var(--rule-strong); font-size: .7rem; }
+    .catalogue-item button:not(:disabled):hover { background: var(--present-soft); }
+    .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid #ddd7cb; }
+    .toggle-row:last-child { border-bottom: 0; }
+    .toggle-copy strong { display: block; font-size: .76rem; }
+    .toggle-copy span { display: block; color: var(--ink-soft); font-size: .66rem; }
+    .switch { position: relative; width: 48px; height: 28px; flex: 0 0 auto; }
+    .switch input { position: absolute; opacity: 0; }
+    .switch span { position: absolute; inset: 0; background: #aaa69d; border: 1px solid #77736b; border-radius: 999px; transition: background 140ms ease; }
+    .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border: 1px solid #777; border-radius: 50%; transition: transform 140ms ease; }
+    .switch input:checked + span { background: var(--present); }
+    .switch input:checked + span::after { transform: translateX(20px); }
+    .display-options { min-width: 0; margin: 12px 0 0; padding: 0; border: 0; }
+    .display-options legend { margin: 0 0 3px; padding: 0; color: var(--ink); font-size: .76rem; font-weight: 760; }
+    .display-options-help { margin-bottom: 7px; }
+    .display-choice {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr);
+      gap: 9px;
+      align-items: start;
+      min-height: 44px;
+      padding: 7px 0;
+      border-bottom: 1px solid #ddd7cb;
+      cursor: pointer;
+    }
+    .display-choice:last-child { border-bottom: 0; }
+    .display-choice input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--present); }
+    .display-choice strong, .display-choice small { display: block; }
+    .display-choice strong { font-size: .75rem; }
+    .display-choice small { margin-top: 2px; color: var(--ink-soft); font-size: .64rem; line-height: 1.25; }
+    .blank-action, .save-scene-action { width: 100%; margin-top: 9px; }
+    .position-state { margin: 7px 0 0; color: var(--ink-soft); font-size: .7rem; }
+
+    .transport-dock {
+      position: relative;
+      z-index: 45;
+      display: grid;
+      grid-template-columns: auto minmax(280px, 1fr) 180px auto;
+      align-items: end;
+      gap: 14px;
+      min-height: 105px;
+      padding: 10px 12px 12px;
+      background: color-mix(in srgb, var(--paper-panel) 96%, transparent);
+      border-top: 2px solid var(--present);
+      box-shadow: 0 -10px 24px rgb(40 36 44 / 8%);
+    }
+    .transport-buttons { display: flex; gap: 5px; }
+    .play-button { color: #fff; background: var(--present); border-color: var(--present); }
+    .transport-context { min-width: 0; }
+    .frame-reading { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 2px; color: var(--ink-soft); font-size: .7rem; }
+    .frame-reading strong { color: var(--ink); font-family: "Cascadia Mono", Consolas, monospace; }
+    .seek-range { width: 100%; min-height: 38px; accent-color: var(--present); cursor: pointer; }
+    .cadence-field label { display: block; margin-bottom: 3px; color: var(--ink-soft); font-size: .68rem; font-weight: 700; }
+    .number-wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border: 1px solid var(--rule-strong); background: var(--paper-panel); }
+    .number-wrap input { min-width: 0; width: 100%; padding: 6px 8px; color: var(--ink); background: transparent; border: 0; }
+    .number-wrap span { padding: 0 8px; color: var(--ink-soft); font-size: .72rem; }
+    .field-error { min-height: 17px; margin: 2px 0 0; color: var(--error); font-size: .65rem; }
+    .transport-safety { display: flex; gap: 6px; justify-content: flex-end; }
+
+    .inline-alert {
+      display: none;
+      margin: 0 12px 10px;
+      padding: 9px 11px;
+      color: #512f2b;
+      background: var(--error-soft);
+      border-left: 4px solid var(--error);
+      font-size: .76rem;
+    }
+    .inline-alert[data-open="true"] { display: block; }
+
+    body[data-variant="b"] .work-area {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(300px, 1.35fr) minmax(235px, .72fr);
+      gap: 10px;
+    }
+    body[data-variant="b"] .monitor-panel { grid-row: 1; }
+    body[data-variant="b"] .control-panel { grid-row: 2; }
+    body[data-variant="b"] .control-panel-header { min-height: 43px; }
+    body[data-variant="b"] .panel-scroll {
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(260px, .7fr);
+      gap: 14px;
+      padding: 9px 11px;
+    }
+    body[data-variant="b"] .composition-section {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(250px, .82fr) minmax(310px, 1.18fr);
+      gap: 12px;
+      overflow: hidden;
+    }
+    body[data-variant="b"] .composition-core { min-width: 0; overflow-y: auto; padding-right: 4px; }
+    body[data-variant="b"] .catalogue-core { min-width: 0; overflow: hidden; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+    body[data-variant="b"] .catalogue-list { max-height: none; min-height: 0; }
+    body[data-variant="b"] .session-section { min-width: 0; margin: 0; padding: 0 0 0 14px; border-top: 0; border-left: 1px solid var(--rule); overflow-y: auto; }
+    body[data-variant="b"] .scene-identity { display: none; }
+    body[data-variant="b"] .selected-list { max-height: 110px; overflow-y: auto; }
+
+    body[data-variant="c"] .focus-drawer-actions { display: flex; }
+    body[data-variant="c"] .work-area { position: relative; display: block; padding: 10px; }
+    body[data-variant="c"] .monitor-panel { width: 100%; height: 100%; }
+    body[data-variant="c"] .control-panel {
+      position: absolute;
+      z-index: 35;
+      top: 10px;
+      right: 10px;
+      bottom: 10px;
+      width: 430px;
+      box-shadow: 0 16px 38px rgb(28 24 31 / 26%);
+      transform: translateX(calc(100% + 22px));
+      transition: transform 170ms ease;
+    }
+    body[data-variant="c"][data-drawer-open="true"] .control-panel { transform: translateX(0); }
+    body[data-variant="c"] .drawer-close { display: inline-flex; }
+    body[data-variant="c"] .drawer-tabs { display: flex; }
+    body[data-variant="c"][data-drawer-tab="composition"] .session-section { display: none; }
+    body[data-variant="c"][data-drawer-tab="session"] .composition-section { display: none; }
+    body[data-variant="c"] .catalogue-list { max-height: 280px; }
+
+    @container (max-width: 1120px) {
+      .app-header { grid-template-columns: minmax(200px, 1fr) auto; }
+      .header-context { display: none; }
+      .command-strip { grid-template-columns: 1fr; }
+      .persistent-actions { justify-content: flex-start; flex-wrap: wrap; }
+      .work-area { grid-template-columns: minmax(0, 1fr) 360px; gap: 8px; padding: 8px; }
+      .transport-dock { grid-template-columns: auto minmax(220px, 1fr) 155px; gap: 9px; min-height: 100px; }
+      .transport-safety { display: none; }
+      body[data-variant="b"] .work-area { grid-template-rows: minmax(270px, 1.22fr) minmax(230px, .78fr); }
+      body[data-variant="b"] .panel-scroll { grid-template-columns: minmax(0, 1.35fr) minmax(220px, .65fr); }
+      body[data-variant="b"] .composition-section { grid-template-columns: minmax(220px, .9fr) minmax(250px, 1.1fr); }
+      body[data-variant="c"] .control-panel { width: 390px; }
+      .monitor-note { display: none; }
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 9999;
+      left: 50%;
+      bottom: 20px;
+      max-width: min(560px, calc(100vw - 40px));
+      padding: 11px 14px;
+      color: #fff;
+      background: #202629;
+      border: 1px solid #64706d;
+      box-shadow: 0 10px 28px rgb(0 0 0 / 28%);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px);
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+    .toast[data-open="true"] { opacity: 1; transform: translate(-50%, 0); }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body data-variant="a" data-drawer-open="false" data-drawer-tab="composition">
+  <div class="review-layout">
+    <aside class="review-rail" aria-label="Sketch comparison controls">
+      <p class="review-kicker">Sketch 008 · Present controller</p>
+      <h1>Approved live sidecar with preserved alternatives</h1>
+      <p class="review-lede">A is the approved Present controller. B and C remain switchable evidence with the same session state and Audience behavior.</p>
+
+      <section class="review-section">
+        <h2>Controller structure</h2>
+        <div class="variant-list">
+          <button type="button" class="variant-button" data-variant-select="a" aria-pressed="true">
+            <span class="variant-title">A · Live Sidecar · ★ Winner</span>
+            <span class="variant-copy">Dominant monitor, persistent right operations rail, transport dock below.</span>
+          </button>
+          <button type="button" class="variant-button" data-variant-select="b" aria-pressed="false">
+            <span class="variant-title">B · Broadcast Bench · Preserved alternative</span>
+            <span class="variant-copy">Full-width monitor above a bounded horizontal command bench.</span>
+          </button>
+          <button type="button" class="variant-button" data-variant-select="c" aria-pressed="false">
+            <span class="variant-title">C · Focus Stage · Preserved alternative</span>
+            <span class="variant-copy">Near-full monitor with compact persistent controls and task drawers.</span>
+          </button>
+        </div>
+        <p class="review-note"><strong>A is approved.</strong> Variant switches preserve chart selection and order, layout, frame, cadence, the five Audience-information choices, date position, connection/output states, and last-valid Audience output.</p>
+      </section>
+
+      <section class="review-section">
+        <h2>Viewport proof</h2>
+        <div class="review-control-grid">
+          <button type="button" data-preview-select="1440" aria-pressed="true">1440 × 900</button>
+          <button type="button" data-preview-select="1024" aria-pressed="false">1024 × 768</button>
+          <button type="button" data-preview-select="390" aria-pressed="false">Phone boundary</button>
+          <button type="button" id="fitButton">Fit selected</button>
+        </div>
+      </section>
+
+      <section class="review-section">
+        <h2>Lifecycle fixture</h2>
+        <label class="visually-hidden" for="lifecycleSelect">Lifecycle fixture state</label>
+        <select id="lifecycleSelect" class="review-select">
+          <option value="active">Connected active</option>
+          <option value="not-open">Not opened</option>
+          <option value="waiting">Opening / waiting</option>
+          <option value="holding">Connected holding</option>
+          <option value="blank">Deliberate blank</option>
+          <option value="blackout">Blackout</option>
+          <option value="disconnected">Disconnected</option>
+          <option value="reconnecting">Reconnecting</option>
+          <option value="restored">Restored</option>
+          <option value="ended">Ended</option>
+        </select>
+        <div class="review-actions" style="margin-top:8px">
+          <button type="button" class="review-action" id="fourChartButton">Load four-chart cap</button>
+          <button type="button" class="review-action" id="invalidSceneButton">Attempt invalid Scene update</button>
+          <button type="button" class="review-action" id="popupFailureButton">Exercise blocked popup</button>
+          <button type="button" class="review-action" id="resetButton">Reset shared session</button>
+        </div>
+      </section>
+
+      <section class="review-section">
+        <h2>Shared-session readout</h2>
+        <dl class="state-list">
+          <div class="state-row"><dt>Variant</dt><dd id="stateVariant">A · Live Sidecar</dd></div>
+          <div class="state-row"><dt>Connection</dt><dd id="stateConnection">Connected</dd></div>
+          <div class="state-row"><dt>Output</dt><dd id="stateOutput">Active · 3 charts</dd></div>
+          <div class="state-row"><dt>Frame</dt><dd id="stateFrame">8 of 12</dd></div>
+          <div class="state-row"><dt>Layout</dt><dd id="stateLayout">One on left</dd></div>
+          <div class="state-row"><dt>Scene date</dt><dd id="stateDatePosition">Session matches Scene</dd></div>
+        </dl>
+        <p style="margin:14px 0 0"><span class="integrity">Shared fixture and 960 × 540 monitor geometry</span></p>
+      </section>
+    </aside>
+
+    <main class="product-stage">
+      <div class="product-viewport" id="productViewport" data-preview="1440">
+        <div class="app-shell">
+          <header class="app-header">
+            <div class="brand-lockup">
+              <strong>Regional Respiratory Preparedness</strong>
+              <span>Executive surveillance · Europe/Berlin</span>
+            </div>
+            <div class="mode-pill">Present</div>
+            <div class="header-context">
+              <strong>March operational pressure briefing</strong>
+              <span>Parent: Winter response 2026</span>
+            </div>
+          </header>
+
+          <div class="phone-banner" role="status">
+            <div><strong>Present is unavailable at phone size.</strong><span>Only View is supported. The presentation session is retained.</span></div>
+            <button type="button" id="switchToViewButton">Switch to View</button>
+          </div>
+
+          <section class="phone-placeholder" aria-label="Phone mode boundary">
+            <div class="phone-card">
+              <p class="eyebrow">View mode boundary</p>
+              <h2 id="phoneModeHeading">Presentation retained</h2>
+              <p id="phoneModeCopy">Switch to View to inspect the dashboard. Returning to a supported Present viewport restores this same controller session.</p>
+              <div class="phone-session">
+                <div><strong id="phoneChartCount">3 charts</strong> remain in the presentation composition.</div>
+                <div><strong id="phoneFrame">Frame 8 of 12</strong> remains paused.</div>
+                <div><strong id="phoneConnection">Connected</strong> Audience session remains unchanged.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="present-main" aria-label="Present controller">
+            <div class="command-strip">
+              <div class="status-cluster">
+                <div class="dimension-status" id="connectionStatus" data-tone="success">
+                  <div><strong id="connectionLabel">Connected</strong><span id="connectionDetail">Audience display is receiving valid snapshots.</span></div>
+                </div>
+                <div class="dimension-status" id="outputStatus" data-tone="success">
+                  <div><strong id="outputLabel">Active · 3 charts</strong><span id="outputDetail">One on left · 14 March 2026</span></div>
+                </div>
+              </div>
+              <div class="persistent-actions">
+                <div class="focus-drawer-actions">
+                  <button type="button" class="control-button" data-open-drawer="composition">Composition</button>
+                  <button type="button" class="control-button" data-open-drawer="session">Settings</button>
+                </div>
+                <button type="button" class="primary-button" id="openAudienceButton">Audience display open</button>
+                <button type="button" class="safety-button" id="blackoutButton" data-active="false">Blackout Audience</button>
+                <button type="button" class="destructive-button" id="endButton">End Presentation</button>
+              </div>
+            </div>
+
+            <div class="inline-alert" id="inlineAlert" data-open="false" role="alert" tabindex="-1"></div>
+
+            <div class="work-area">
+              <section class="monitor-panel">
+                <header class="panel-heading">
+                  <div><p class="section-kicker">Controller monitor</p><h2>Audience output · fixed 16:9</h2></div>
+                  <div class="monitor-note">Drag the Scene date here; projected Audience remains passive.</div>
+                </header>
+                <div class="audience-monitor" id="audienceMonitor">
+                  <div class="audience-artboard" id="audienceArtboard" style="--preview-scale:.7"></div>
+                </div>
+                <footer class="monitor-footer">
+                  <span><strong>Preview scope:</strong> identity, order, layout, title, time, key values, annotations, output and connection state.</span>
+                  <span class="last-confirmed" id="lastConfirmed">Last confirmed 14:28:04</span>
+                </footer>
+              </section>
+
+              <aside class="control-panel" id="controlPanel" aria-label="Composition and session controls">
+                <header class="control-panel-header">
+                  <div><p class="section-kicker" id="panelKicker">Live operations</p><h2 id="panelTitle">Scene composition</h2></div>
+                  <button type="button" class="mini-button drawer-close" id="drawerCloseButton" aria-label="Close task drawer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg>
+                  </button>
+                </header>
+                <div class="drawer-tabs" aria-label="Focus Stage drawers">
+                  <button type="button" data-drawer-tab-select="composition" aria-pressed="true">Composition</button>
+                  <button type="button" data-drawer-tab-select="session" aria-pressed="false">Session settings</button>
+                </div>
+                <div class="panel-scroll">
+                  <section class="control-section composition-section">
+                    <div class="composition-core">
+                      <p class="section-kicker">Selected composition</p>
+                      <h3>March operational pressure briefing</h3>
+                      <div class="scene-identity">
+                        <div class="identity-row"><span>Dashboard</span><strong>Regional Respiratory Preparedness</strong></div>
+                        <div class="identity-row"><span>Page</span><strong>Executive surveillance</strong></div>
+                        <div class="identity-row"><span>Parent</span><strong>Winter response 2026</strong></div>
+                      </div>
+                      <p class="section-help">Drag charts or use the arrow controls. Controller order is Audience reading order.</p>
+                      <div class="selected-list" id="selectedList"></div>
+                      <p class="cap-note" id="capNote">3 of 4 charts selected.</p>
+                      <p class="control-label">Count-valid layout</p>
+                      <div class="layout-options" id="layoutOptions"></div>
+                    </div>
+                    <div class="catalogue-core">
+                      <p class="section-kicker">Dashboard catalogue</p>
+                      <h3>Available charts</h3>
+                      <p class="section-help">The catalogue scrolls independently; persistent session and safety actions do not move.</p>
+                      <div class="catalogue-tools">
+                        <label class="visually-hidden" for="catalogueSearch">Filter chart catalogue</label>
+                        <input type="search" id="catalogueSearch" placeholder="Filter 40 dashboard charts">
+                      </div>
+                      <div class="catalogue-list" id="catalogueList"></div>
+                    </div>
+                  </section>
+
+                  <section class="control-section session-section">
+                    <p class="section-kicker">Output settings</p>
+                    <h3>Audience information</h3>
+                    <p class="section-help">Each choice updates valid Audience output immediately. Chart-local evidence remains visible.</p>
+                    <fieldset class="display-options" aria-describedby="displayOptionsHelp">
+                      <legend>Display on Audience</legend>
+                      <p class="section-help display-options-help" id="displayOptionsHelp">Hide shared context independently without changing its saved value.</p>
+                      <label class="display-choice"><input type="checkbox" data-display-info="dashboard" checked><span><strong>Dashboard name</strong><small>Regional Respiratory Preparedness</small></span></label>
+                      <label class="display-choice"><input type="checkbox" data-display-info="page" checked><span><strong>Page</strong><small>Executive surveillance</small></span></label>
+                      <label class="display-choice"><input type="checkbox" data-display-info="parent" checked><span><strong>Parent Time Group</strong><small>Winter response 2026</small></span></label>
+                      <label class="display-choice"><input type="checkbox" data-display-info="scene" checked><span><strong>Scene name</strong><small>March operational pressure briefing</small></span></label>
+                      <label class="display-choice"><input type="checkbox" data-display-info="date" checked><span><strong>Scene date</strong><small>Current presentation frame</small></span></label>
+                    </fieldset>
+                    <button type="button" class="control-button blank-action" id="blankButton">Show blank canvas</button>
+                    <p class="section-help" style="margin-top:6px">Deliberate blank is distinct from Blackout and retains the composition.</p>
+                    <button type="button" class="control-button save-scene-action" id="saveDateButton">Save date position to Scene</button>
+                    <p class="position-state" id="positionState">Session position matches the saved Scene.</p>
+                  </section>
+                </div>
+              </aside>
+            </div>
+
+            <footer class="transport-dock" aria-label="Persistent playback controls">
+              <div class="transport-buttons">
+                <button type="button" class="icon-button" id="previousButton" aria-label="Previous step">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zm3.5 7 8.5 7V5z"/></svg>
+                </button>
+                <button type="button" class="icon-button play-button" id="playButton" aria-label="Play">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button type="button" class="icon-button" id="nextButton" aria-label="Next step">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 5 8.5 7L6 19zm10 0h2v14h-2z"/></svg>
+                </button>
+              </div>
+              <div class="transport-context">
+                <div class="frame-reading"><strong id="frameReading">14 Mar 2026 · 8 / 12</strong><span>Winter response 2026</span></div>
+                <label class="visually-hidden" for="seekRange">Direct presentation position</label>
+                <input type="range" class="seek-range" id="seekRange" min="0" max="11" value="7">
+              </div>
+              <div class="cadence-field">
+                <label for="secondsInput">Seconds per frame</label>
+                <div class="number-wrap"><input type="number" id="secondsInput" value="2.5" min="0.5" max="10" step="0.5" aria-describedby="secondsError"><span>sec</span></div>
+                <p class="field-error" id="secondsError"></p>
+              </div>
+              <div class="transport-safety">
+                <button type="button" class="control-button" id="restoreButton">Restore Audience</button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" data-open="false"></div>
+  <div class="visually-hidden" id="announcement" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    (() => {
+      const VARIANT_NAMES = {
+        a: 'A · Live Sidecar',
+        b: 'B · Broadcast Bench',
+        c: 'C · Focus Stage'
+      };
+
+      const CHARTS = [
+        { id: 'confirmed', title: 'Confirmed cases by report date', short: 'Confirmed cases', section: 'Surveillance and response', type: 'line', value: '1,842', accent: '#667853', annotation: '7-day average +11%' },
+        { id: 'map', title: 'Municipality outbreak intensity', short: 'Municipality outbreak map', section: 'Surveillance and response', type: 'map', value: '8 high', accent: '#8f704a', annotation: 'North corridor cluster' },
+        { id: 'hospital', title: 'Hospital load and staffed capacity', short: 'Hospital load', section: 'Care system readiness', type: 'bar', value: '84%', accent: '#61746f', annotation: 'Alert threshold 80%' },
+        { id: 'rvalue', title: 'Effective reproduction number and confidence interval', short: 'Effective reproduction number', section: 'Surveillance and response', type: 'line', value: '1.18', accent: '#8b584e', annotation: 'Above 1.0 since 10 Mar' },
+        { id: 'vaccination', title: 'Vaccination coverage by priority cohort', short: 'Vaccination coverage', section: 'Prevention', type: 'bar', value: '72%', accent: '#77657e', annotation: 'Cohort 65+ at 81%' },
+        { id: 'staffing', title: 'Critical care staffing coverage', short: 'Staffing coverage', section: 'Care system readiness', type: 'bar', value: '91%', accent: '#7d7457', annotation: 'Night shift gap: 6' },
+        { id: 'testing', title: 'Testing volume and positivity', short: 'Testing and positivity', section: 'Surveillance and response', type: 'line', value: '12.4%', accent: '#667853', annotation: '4,212 tests reported' },
+        { id: 'admissions', title: 'Daily admissions by hospital network', short: 'Daily admissions', section: 'Care system readiness', type: 'bar', value: '126', accent: '#8f704a', annotation: 'Central network +18' },
+        { id: 'icu', title: 'Intensive care occupancy by facility', short: 'ICU occupancy', section: 'Care system readiness', type: 'bar', value: '76%', accent: '#61746f', annotation: '3 facilities above 85%' },
+        { id: 'mortality', title: 'Reported mortality by age group', short: 'Mortality by age', section: 'Outcomes', type: 'line', value: '28', accent: '#8b584e', annotation: 'Reporting lag: 2 days' },
+        { id: 'syndromic', title: 'Syndromic surveillance signal', short: 'Syndromic signal', section: 'Surveillance and response', type: 'line', value: '+8.2%', accent: '#77657e', annotation: 'Respiratory visits elevated' },
+        { id: 'schools', title: 'School absence rate by municipality', short: 'School absence rate', section: 'Community impact', type: 'map', value: '9.1%', accent: '#7d7457', annotation: 'Five municipalities elevated' },
+        { id: 'workforce', title: 'Essential workforce absence', short: 'Workforce absence', section: 'Community impact', type: 'bar', value: '6.8%', accent: '#667853', annotation: 'Transport most affected' },
+        { id: 'labs', title: 'Laboratory turnaround time', short: 'Lab turnaround', section: 'Diagnostics', type: 'bar', value: '19 h', accent: '#8f704a', annotation: 'Target below 24 h' },
+        { id: 'variants', title: 'Variant distribution from sequenced samples', short: 'Variant distribution', section: 'Diagnostics', type: 'bar', value: '64%', accent: '#61746f', annotation: 'BA.9 share increasing' },
+        { id: 'antivirals', title: 'Antiviral courses available and dispensed', short: 'Antiviral supply', section: 'Countermeasures', type: 'bar', value: '2,410', accent: '#8b584e', annotation: '12 days at current use' },
+        { id: 'ppe', title: 'Personal protective equipment stock', short: 'PPE stock', section: 'Logistics', type: 'bar', value: '18 d', accent: '#77657e', annotation: 'Gloves below target' },
+        { id: 'beds', title: 'Available staffed beds by care level', short: 'Available beds', section: 'Care system readiness', type: 'bar', value: '214', accent: '#7d7457', annotation: '42 critical care beds' },
+        { id: 'ambulance', title: 'Ambulance turnaround time', short: 'Ambulance turnaround', section: 'Emergency response', type: 'line', value: '41 min', accent: '#667853', annotation: 'Target 30 minutes' },
+        { id: 'calls', title: 'Health advice line call demand', short: 'Advice line demand', section: 'Community access', type: 'line', value: '3,088', accent: '#8f704a', annotation: 'Peak at 19:00' },
+        { id: 'pharmacy', title: 'Community pharmacy availability', short: 'Pharmacy availability', section: 'Community access', type: 'map', value: '94%', accent: '#61746f', annotation: 'Six temporary closures' },
+        { id: 'wastewater', title: 'Wastewater respiratory signal', short: 'Wastewater signal', section: 'Surveillance and response', type: 'line', value: '+14%', accent: '#8b584e', annotation: 'Three-catchment increase' },
+        { id: 'mobility', title: 'Population mobility relative to baseline', short: 'Population mobility', section: 'Community impact', type: 'line', value: '-3.6%', accent: '#77657e', annotation: 'Weekend travel reduced' },
+        { id: 'supply', title: 'Medical oxygen supply resilience', short: 'Oxygen supply', section: 'Logistics', type: 'bar', value: '21 d', accent: '#7d7457', annotation: 'Regional reserve stable' },
+        { id: 'transfers', title: 'Inter-facility patient transfers', short: 'Patient transfers', section: 'Care system readiness', type: 'line', value: '46', accent: '#667853', annotation: '12 critical transfers' },
+        { id: 'equity', title: 'Access disparity by deprivation quintile', short: 'Access disparity', section: 'Equity', type: 'bar', value: '1.7×', accent: '#8f704a', annotation: 'Largest gap in testing' },
+        { id: 'rural', title: 'Rural service access travel time', short: 'Rural access time', section: 'Equity', type: 'map', value: '38 min', accent: '#61746f', annotation: 'Seven remote areas' },
+        { id: 'carehomes', title: 'Care-home outbreaks and staffing', short: 'Care-home outbreaks', section: 'Vulnerable settings', type: 'bar', value: '17', accent: '#8b584e', annotation: 'Five new this week' },
+        { id: 'prisons', title: 'Closed-setting outbreak status', short: 'Closed settings', section: 'Vulnerable settings', type: 'map', value: '4 active', accent: '#77657e', annotation: 'No critical staffing gaps' },
+        { id: 'communications', title: 'Public information reach and recall', short: 'Information reach', section: 'Public communication', type: 'bar', value: '68%', accent: '#7d7457', annotation: 'Recall +6 points' },
+        { id: 'sentiment', title: 'Community concern and information need', short: 'Community concern', section: 'Public communication', type: 'line', value: 'High', accent: '#667853', annotation: 'School policy top topic' },
+        { id: 'mutualaid', title: 'Mutual-aid requests and fulfilment', short: 'Mutual-aid fulfilment', section: 'Coordination', type: 'bar', value: '87%', accent: '#8f704a', annotation: '14 requests open' },
+        { id: 'cost', title: 'Response expenditure against allocation', short: 'Response expenditure', section: 'Finance', type: 'line', value: '63%', accent: '#61746f', annotation: 'Within monthly plan' },
+        { id: 'procurement', title: 'Priority procurement lead times', short: 'Procurement lead times', section: 'Logistics', type: 'bar', value: '9 d', accent: '#8b584e', annotation: 'Reagents delayed' },
+        { id: 'coldchain', title: 'Cold-chain capacity utilization', short: 'Cold-chain capacity', section: 'Logistics', type: 'bar', value: '79%', accent: '#77657e', annotation: 'North depot at 91%' },
+        { id: 'alerts', title: 'Operational alerts by owner and age', short: 'Operational alerts', section: 'Coordination', type: 'bar', value: '23', accent: '#7d7457', annotation: 'Four overdue' },
+        { id: 'briefings', title: 'Briefing actions completed on schedule', short: 'Briefing actions', section: 'Coordination', type: 'line', value: '82%', accent: '#667853', annotation: 'Seven due today' },
+        { id: 'weather', title: 'Weather-related service pressure outlook', short: 'Weather pressure outlook', section: 'Context', type: 'line', value: 'Moderate', accent: '#8f704a', annotation: 'Cold warning in effect' },
+        { id: 'border', title: 'Cross-region referral and movement pressure', short: 'Cross-region pressure', section: 'Context', type: 'map', value: '+9%', accent: '#61746f', annotation: 'East corridor elevated' },
+        { id: 'long', title: 'Regional respiratory emergency preparedness, equitable access, continuity, and multi-agency operational assurance indicator', short: 'Long-title assurance indicator', section: 'Assurance and governance', type: 'line', value: '74%', accent: '#8b584e', annotation: 'Mandatory long-title fixture' }
+      ];
+
+      const FRAMES = [
+        '2026-03-01', '2026-03-03', '2026-03-05', '2026-03-07',
+        '2026-03-09', '2026-03-11', '2026-03-13', '2026-03-14',
+        '2026-03-16', '2026-03-18', '2026-03-21', '2026-03-24'
+      ];
+
+      const LAYOUTS = {
+        0: [],
+        1: [['solo', 'Solo']],
+        2: [['2-side', 'Side by side'], ['2-stack', 'Over under']],
+        3: [['3-top', 'One on top'], ['3-bottom', 'One on bottom'], ['3-left', 'One on left'], ['3-right', 'One on right']],
+        4: [['4-grid', '2 × 2 grid']]
+      };
+
+      const DEFAULT_STATE = {
+        variant: 'a',
+        preview: '1440',
+        connection: 'connected',
+        selected: ['confirmed', 'map', 'hospital'],
+        layout: '3-left',
+        displayInfo: { dashboard: true, page: true, parent: true, scene: true, date: true },
+        deliberateBlank: false,
+        blackout: false,
+        frameIndex: 7,
+        seconds: 2.5,
+        playing: false,
+        drawerOpen: false,
+        drawerTab: 'composition',
+        datePos: { x: 748, y: 49 },
+        savedDatePos: { x: 748, y: 49 },
+        dateDirty: false,
+        lastConfirmed: '14:28:04',
+        phoneView: false,
+        catalogueSearch: ''
+      };
+
+      const state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      state.timer = null;
+      state.toastTimer = null;
+      state.connectionTimer = null;
+      state.dragId = null;
+      state.datePointer = null;
+      state.lastValid = null;
+
+      const body = document.body;
+      const productViewport = document.getElementById('productViewport');
+      const audienceMonitor = document.getElementById('audienceMonitor');
+      const audienceArtboard = document.getElementById('audienceArtboard');
+      const selectedList = document.getElementById('selectedList');
+      const catalogueList = document.getElementById('catalogueList');
+      const layoutOptions = document.getElementById('layoutOptions');
+      const seekRange = document.getElementById('seekRange');
+      const playButton = document.getElementById('playButton');
+
+      function chartById(id) { return CHARTS.find(chart => chart.id === id); }
+      function layoutName(id) { return Object.values(LAYOUTS).flat().find(item => item[0] === id)?.[1] || 'No layout'; }
+      function formatDate(value, short = false) {
+        return new Intl.DateTimeFormat('en-GB', short
+          ? { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Berlin' }
+          : { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' }
+        ).format(new Date(`${value}T12:00:00+01:00`));
+      }
+      function connectionLabel(value = state.connection) {
+        return ({
+          'not-open': 'Not opened', waiting: 'Opening / waiting', connected: 'Connected',
+          disconnected: 'Disconnected', reconnecting: 'Reconnecting', restored: 'Restored', ended: 'Ended'
+        })[value];
+      }
+      function outputName() {
+        if (state.blackout) return 'Blackout';
+        if (state.deliberateBlank) return 'Deliberate blank';
+        if (state.selected.length === 0) return hasHeaderInfo(state.displayInfo) ? 'Holding · context shown' : 'Holding · neutral';
+        return `Active · ${state.selected.length} chart${state.selected.length === 1 ? '' : 's'}`;
+      }
+      function connectionTone() {
+        if (state.connection === 'connected' || state.connection === 'restored') return 'success';
+        if (state.connection === 'waiting' || state.connection === 'reconnecting') return 'warning';
+        if (state.connection === 'disconnected' || state.connection === 'ended') return 'error';
+        return 'info';
+      }
+      function outputTone() {
+        if (state.blackout) return 'blackout';
+        if (state.deliberateBlank || state.selected.length === 0) return 'warning';
+        return 'success';
+      }
+      function canTransmit() { return state.connection === 'connected' || state.connection === 'restored'; }
+      function captureSnapshot() {
+        return {
+          selected: [...state.selected], layout: state.layout, displayInfo: { ...state.displayInfo },
+          deliberateBlank: state.deliberateBlank, frameIndex: state.frameIndex,
+          datePos: { ...state.datePos }
+        };
+      }
+      function commitLastValid() {
+        if (!canTransmit()) return;
+        state.lastValid = captureSnapshot();
+        state.lastConfirmed = new Date().toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+      function outputSnapshot() {
+        if ((state.connection === 'disconnected' || state.connection === 'reconnecting') && state.lastValid) return state.lastValid;
+        return captureSnapshot();
+      }
+      function ensureValidLayout() {
+        const valid = LAYOUTS[state.selected.length] || [];
+        if (!valid.some(item => item[0] === state.layout)) state.layout = valid[0]?.[0] || '';
+      }
+
+      function linePlot(chart, seed) {
+        const points = seed % 2
+          ? '0,82 40,72 80,76 120,54 160,59 200,36 240,43 280,25 320,18'
+          : '0,76 40,68 80,51 120,60 160,39 200,43 240,28 280,33 320,12';
+        return `<svg viewBox="0 0 320 100" preserveAspectRatio="none" aria-hidden="true">
+          <line class="grid" x1="0" y1="20" x2="320" y2="20"/><line class="grid" x1="0" y1="50" x2="320" y2="50"/><line class="grid" x1="0" y1="80" x2="320" y2="80"/>
+          <polygon class="fill" points="${points} 320,100 0,100"/><polyline class="line" points="${points}"/>
+        </svg>`;
+      }
+      function barPlot(seed) {
+        const heights = [42, 58, 49, 76, 64, 88, 71].map((value, index) => Math.max(20, value - ((seed + index) % 3) * 7));
+        return `<svg viewBox="0 0 320 100" preserveAspectRatio="none" aria-hidden="true">
+          <line class="grid" x1="0" y1="25" x2="320" y2="25"/><line class="grid" x1="0" y1="55" x2="320" y2="55"/><line class="grid" x1="0" y1="85" x2="320" y2="85"/>
+          ${heights.map((h, i) => `<rect class="bar" x="${10 + i * 44}" y="${100 - h}" width="28" height="${h}" opacity="${.65 + (i % 3) * .14}"/>`).join('')}
+        </svg>`;
+      }
+      function mapPlot(seed) {
+        return `<div class="map-grid" aria-hidden="true">${Array.from({ length: 32 }, (_, i) => `<span style="--strength:${24 + ((i * 17 + seed * 11) % 66)}%"></span>`).join('')}</div>`;
+      }
+      function chartMarkup(chart, index, date) {
+        const plot = chart.type === 'map' ? mapPlot(index) : chart.type === 'bar' ? barPlot(index) : linePlot(chart, index);
+        return `<article class="audience-chart" style="--series:${chart.accent}">
+          <header class="audience-chart-head">
+            <div><p class="chart-kicker">${chart.section}</p><h2>${chart.title}</h2></div>
+            <strong class="chart-value">${chart.value}</strong>
+          </header>
+          <div class="audience-plot">${plot}</div>
+          <footer class="audience-chart-foot"><span><strong>Active time</strong> ${formatDate(date, true)}</span><span><strong>Key annotation</strong> ${chart.annotation}</span></footer>
+        </article>`;
+      }
+
+      function hasHeaderInfo(displayInfo) {
+        return displayInfo.dashboard || displayInfo.page || displayInfo.parent || displayInfo.scene;
+      }
+
+      function audienceHeaderMarkup(displayInfo) {
+        if (!hasHeaderInfo(displayInfo)) return '';
+        const context = [
+          displayInfo.page ? 'Executive surveillance' : '',
+          displayInfo.parent ? 'Winter response 2026' : ''
+        ].filter(Boolean).join(' · ');
+        return `<div class="audience-header">
+          <div>${displayInfo.dashboard ? '<h1>Regional Respiratory Preparedness</h1>' : ''}${context ? `<p>${context}</p>` : ''}</div>
+          ${displayInfo.scene ? '<div class="scene-label">March operational pressure briefing</div>' : ''}
+        </div>`;
+      }
+
+      function renderPreview() {
+        const snapshot = outputSnapshot();
+        const date = FRAMES[Math.min(snapshot.frameIndex, FRAMES.length - 1)];
+        const header = audienceHeaderMarkup(snapshot.displayInfo);
+        audienceArtboard.className = `audience-artboard${state.blackout ? ' is-blackout' : ''}${snapshot.deliberateBlank ? ' is-blank' : ''}${header ? '' : ' header-off'}`;
+
+        let content = '';
+        if (state.connection === 'not-open') {
+          content = '<div class="preview-message"><h2>No Audience display</h2><p>The composition is ready. Open the Audience display when the room is ready.</p></div>';
+        } else if (state.connection === 'waiting') {
+          content = '<div class="preview-message"><h2>Waiting for the moderator.</h2></div>';
+        } else if (state.connection === 'ended') {
+          content = '<div class="preview-message"><h2>Presentation ended</h2><p>This session will not reconnect automatically.</p></div>';
+        } else if (state.blackout) {
+          content = '';
+        } else if (snapshot.deliberateBlank) {
+          content = '';
+        } else if (snapshot.selected.length === 0) {
+          content = `${header}<div class="holding-message"><h2>${snapshot.displayInfo.scene ? 'March operational pressure briefing' : 'Waiting for the next scene.'}</h2>${snapshot.displayInfo.scene ? '<p>Waiting for the next scene.</p>' : ''}</div>`;
+        } else {
+          const charts = snapshot.selected.map((id, index) => chartMarkup(chartById(id), index, date)).join('');
+          const dateTag = snapshot.displayInfo.date ? `<div class="scene-date" data-scene-date tabindex="0" role="button" aria-label="Scene date ${formatDate(date, true)}. Drag or use arrow keys to reposition." style="--date-x:${snapshot.datePos.x}px;--date-y:${snapshot.datePos.y}px">${formatDate(date, true)}</div>` : '';
+          content = `${header}<div class="audience-grid layout-${snapshot.layout}">${charts}</div>${dateTag}`;
+        }
+
+        const connectionIcon = (state.connection === 'disconnected' || state.connection === 'reconnecting')
+          ? `<div class="connection-indicator ${state.connection}" role="img" aria-label="Audience display ${state.connection}">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18.5 15.5 15a5 5 0 0 0-7 0zm-7-7 1.5 1.5a8 8 0 0 1 11 0l1.5-1.5a10.2 10.2 0 0 0-14 0zM1.5 8 3 9.5a13 13 0 0 1 18 0L22.5 8a15 15 0 0 0-21 0z"/></svg>
+            </div>`
+          : '';
+        audienceArtboard.innerHTML = content + connectionIcon;
+        resizePreview();
+      }
+
+      function renderSelected() {
+        if (state.selected.length === 0) {
+          selectedList.innerHTML = '<div class="review-note" style="margin:0;color:var(--ink-soft);background:var(--paper-panel-alt);border-color:var(--rule-strong)">No charts selected. Audience is showing the holding scene.</div>';
+        } else {
+          selectedList.innerHTML = state.selected.map((id, index) => {
+            const chart = chartById(id);
+            return `<div class="selected-item" draggable="true" tabindex="0" data-selected-id="${id}" aria-grabbed="false" aria-label="${index + 1}. ${chart.title}. Use Alt plus arrow keys to reorder.">
+              <span class="order-index">${index + 1}</span>
+              <div class="selected-copy"><strong title="${chart.title}">${chart.title}</strong><span>${chart.section}</span></div>
+              <div class="item-actions">
+                <button type="button" class="mini-button" data-move="up" data-id="${id}" aria-label="Move ${chart.short} earlier" ${index === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 5-7 7 1.4 1.4L11 8.8V19h2V8.8l4.6 4.6L19 12z"/></svg></button>
+                <button type="button" class="mini-button" data-move="down" data-id="${id}" aria-label="Move ${chart.short} later" ${index === state.selected.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19 7-7-1.4-1.4-4.6 4.6V5h-2v10.2l-4.6-4.6L5 12z"/></svg></button>
+                <button type="button" class="mini-button" data-remove-id="${id}" aria-label="Remove ${chart.short} from Audience"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"/></svg></button>
+              </div>
+            </div>`;
+          }).join('');
+        }
+        const capNote = document.getElementById('capNote');
+        capNote.textContent = state.selected.length >= 4 ? '4 of 4 charts selected. Remove one before adding another.' : `${state.selected.length} of 4 charts selected.`;
+        capNote.classList.toggle('at-cap', state.selected.length >= 4);
+      }
+
+      function renderLayouts() {
+        const options = LAYOUTS[state.selected.length] || [];
+        if (options.length === 0) {
+          layoutOptions.innerHTML = '<button type="button" class="layout-option" disabled>No layout while holding</button>';
+          return;
+        }
+        layoutOptions.innerHTML = options.map(([id, label]) => `<button type="button" class="layout-option" data-layout-id="${id}" aria-pressed="${state.layout === id}">${label}</button>`).join('');
+      }
+
+      function renderCatalogue() {
+        const query = state.catalogueSearch.trim().toLowerCase();
+        const filtered = CHARTS.filter(chart => !query || `${chart.title} ${chart.section}`.toLowerCase().includes(query));
+        catalogueList.innerHTML = filtered.length ? filtered.map(chart => {
+          const selected = state.selected.includes(chart.id);
+          const atCap = state.selected.length >= 4 && !selected;
+          return `<div class="catalogue-item">
+            <div class="catalogue-copy"><strong title="${chart.title}">${chart.title}</strong><span>${chart.section}</span></div>
+            <button type="button" data-add-id="${chart.id}" ${selected || atCap ? 'disabled' : ''} title="${atCap ? 'Remove a selected chart before adding another.' : selected ? 'Already selected' : `Add ${chart.short}`}">${selected ? 'Selected' : 'Add'}</button>
+          </div>`;
+        }).join('') : '<p class="section-help">No chart names match this filter.</p>';
+      }
+
+      function renderStatus() {
+        const cStatus = document.getElementById('connectionStatus');
+        const oStatus = document.getElementById('outputStatus');
+        cStatus.dataset.tone = connectionTone();
+        oStatus.dataset.tone = outputTone();
+        document.getElementById('connectionLabel').textContent = connectionLabel();
+        const connectionDetails = {
+          'not-open': 'Audience display is not open.',
+          waiting: 'Opening audience display…',
+          connected: 'Audience display is receiving valid snapshots.',
+          disconnected: 'Last confirmed scene may be stale.',
+          reconnecting: 'Last confirmed scene remains visible.',
+          restored: 'Fresh snapshot restored; playback is paused.',
+          ended: 'The previous channel cannot reconnect.'
+        };
+        document.getElementById('connectionDetail').textContent = connectionDetails[state.connection];
+        document.getElementById('outputLabel').textContent = outputName();
+        document.getElementById('outputDetail').textContent = state.blackout
+          ? `Composition retained · ${formatDate(FRAMES[state.frameIndex], true)}`
+          : `${layoutName(state.layout)} · ${formatDate(FRAMES[state.frameIndex], true)}`;
+        document.getElementById('lastConfirmed').textContent = `Last confirmed ${state.lastConfirmed}`;
+
+        const openButton = document.getElementById('openAudienceButton');
+        if (state.connection === 'not-open' || state.connection === 'ended') {
+          openButton.textContent = 'Open Audience Display';
+          openButton.disabled = false;
+        } else if (state.connection === 'disconnected' || state.connection === 'reconnecting') {
+          openButton.textContent = 'Reopen Audience Display';
+          openButton.disabled = false;
+        } else if (state.connection === 'waiting') {
+          openButton.textContent = 'Opening Audience…';
+          openButton.disabled = true;
+        } else {
+          openButton.textContent = 'Audience display open';
+          openButton.disabled = true;
+        }
+        const blackoutButton = document.getElementById('blackoutButton');
+        blackoutButton.textContent = state.blackout ? 'Restore Audience' : 'Blackout Audience';
+        blackoutButton.dataset.active = String(state.blackout);
+        blackoutButton.disabled = state.connection === 'not-open' || state.connection === 'waiting' || state.connection === 'ended';
+        document.getElementById('restoreButton').disabled = !state.blackout;
+        document.getElementById('endButton').disabled = state.connection === 'not-open' || state.connection === 'ended';
+        document.getElementById('blankButton').textContent = state.deliberateBlank ? 'Show holding / selected scene' : 'Show blank canvas';
+        document.querySelectorAll('[data-display-info]').forEach(input => {
+          input.checked = state.displayInfo[input.dataset.displayInfo];
+        });
+        const dateShown = state.displayInfo.date;
+        const positionState = document.getElementById('positionState');
+        positionState.textContent = !dateShown
+          ? 'Scene date hidden. Show it to move or save its position.'
+          : state.dateDirty
+            ? 'Session-only position differs from the saved Scene.'
+            : 'Session position matches the saved Scene.';
+        const saveDateButton = document.getElementById('saveDateButton');
+        saveDateButton.disabled = !dateShown || !state.dateDirty;
+        saveDateButton.title = !dateShown
+          ? 'Show Scene date before saving its position.'
+          : state.dateDirty
+            ? 'Copy this session position into the saved Scene.'
+            : 'Session position already matches the saved Scene.';
+
+        document.getElementById('stateVariant').textContent = VARIANT_NAMES[state.variant];
+        document.getElementById('stateConnection').textContent = connectionLabel();
+        document.getElementById('stateOutput').textContent = outputName();
+        document.getElementById('stateFrame').textContent = `${state.frameIndex + 1} of ${FRAMES.length}`;
+        document.getElementById('stateLayout').textContent = layoutName(state.layout);
+        document.getElementById('stateDatePosition').textContent = state.dateDirty ? 'Session-only change' : 'Session matches Scene';
+        document.getElementById('phoneChartCount').textContent = `${state.selected.length} chart${state.selected.length === 1 ? '' : 's'}`;
+        document.getElementById('phoneFrame').textContent = `Frame ${state.frameIndex + 1} of ${FRAMES.length}`;
+        document.getElementById('phoneConnection').textContent = connectionLabel();
+      }
+
+      function renderTransport() {
+        const interrupted = ['not-open', 'waiting', 'disconnected', 'reconnecting', 'ended'].includes(state.connection) || state.blackout;
+        document.getElementById('previousButton').disabled = interrupted || state.frameIndex === 0;
+        document.getElementById('nextButton').disabled = interrupted || state.frameIndex === FRAMES.length - 1;
+        playButton.disabled = interrupted || state.frameIndex === FRAMES.length - 1 || state.selected.length === 0 || state.deliberateBlank;
+        playButton.setAttribute('aria-label', state.playing ? 'Pause' : 'Play');
+        playButton.innerHTML = state.playing
+          ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>'
+          : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+        document.getElementById('frameReading').textContent = `${formatDate(FRAMES[state.frameIndex], true)} · ${state.frameIndex + 1} / ${FRAMES.length}`;
+        seekRange.value = String(state.frameIndex);
+        seekRange.disabled = interrupted;
+        document.getElementById('secondsInput').value = String(state.seconds);
+      }
+
+      function renderVariant() {
+        body.dataset.variant = state.variant;
+        body.dataset.drawerOpen = String(state.drawerOpen);
+        body.dataset.drawerTab = state.drawerTab;
+        document.querySelectorAll('[data-variant-select]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.variantSelect === state.variant)));
+        document.querySelectorAll('[data-drawer-tab-select]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.drawerTabSelect === state.drawerTab)));
+        document.getElementById('panelKicker').textContent = state.variant === 'b' ? 'Command bench' : state.variant === 'c' ? 'Focus Stage drawer' : 'Live operations';
+        document.getElementById('panelTitle').textContent = state.drawerTab === 'session' && state.variant === 'c' ? 'Session settings' : 'Scene composition';
+        requestAnimationFrame(resizePreview);
+      }
+
+      function renderAll({ preserveCatalogue = false } = {}) {
+        const catalogueScroll = preserveCatalogue ? catalogueList.scrollTop : 0;
+        ensureValidLayout();
+        renderVariant();
+        renderSelected();
+        renderLayouts();
+        renderCatalogue();
+        renderPreview();
+        renderStatus();
+        renderTransport();
+        if (preserveCatalogue) catalogueList.scrollTop = catalogueScroll;
+      }
+
+      function resizePreview() {
+        const rect = audienceMonitor.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const scale = Math.max(.18, Math.min((rect.width - 20) / 960, (rect.height - 20) / 540));
+        audienceArtboard.style.setProperty('--preview-scale', scale.toFixed(4));
+      }
+
+      function announce(message) {
+        const node = document.getElementById('announcement');
+        node.textContent = '';
+        requestAnimationFrame(() => { node.textContent = message; });
+      }
+      function toast(message) {
+        const node = document.getElementById('toast');
+        node.textContent = message;
+        node.dataset.open = 'true';
+        if (state.toastTimer) clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => { node.dataset.open = 'false'; }, 2600);
+      }
+      function showAlert(message) {
+        const alert = document.getElementById('inlineAlert');
+        alert.textContent = message;
+        alert.dataset.open = 'true';
+        alert.focus({ preventScroll: true });
+        announce(message);
+      }
+      function clearAlert() {
+        const alert = document.getElementById('inlineAlert');
+        alert.textContent = '';
+        alert.dataset.open = 'false';
+      }
+      function pause(reason) {
+        if (state.timer) clearInterval(state.timer);
+        state.timer = null;
+        const wasPlaying = state.playing;
+        state.playing = false;
+        renderTransport();
+        if (reason && wasPlaying) announce(reason);
+      }
+      function play() {
+        if (playButton.disabled) return;
+        state.playing = true;
+        renderTransport();
+        announce(`Playing from ${formatDate(FRAMES[state.frameIndex], true)} at ${state.seconds} seconds per frame.`);
+        state.timer = setInterval(() => {
+          if (state.frameIndex >= FRAMES.length - 1) {
+            pause('Reached the final frame. Playback paused.');
+            return;
+          }
+          state.frameIndex += 1;
+          commitLastValid();
+          renderPreview();
+          renderStatus();
+          renderTransport();
+        }, Math.max(400, state.seconds * 1000));
+      }
+      function setFrame(next, message = true) {
+        pause();
+        state.frameIndex = Math.max(0, Math.min(FRAMES.length - 1, Number(next)));
+        commitLastValid();
+        renderPreview();
+        renderStatus();
+        renderTransport();
+        if (message) announce(`Presentation moved to ${formatDate(FRAMES[state.frameIndex], true)} and remains paused.`);
+      }
+      function applyValidChange(message) {
+        clearAlert();
+        commitLastValid();
+        renderAll({ preserveCatalogue: true });
+        announce(message);
+      }
+      function reorderChart(id, direction) {
+        const from = state.selected.indexOf(id);
+        const to = direction === 'up' ? from - 1 : from + 1;
+        if (from < 0 || to < 0 || to >= state.selected.length) return;
+        [state.selected[from], state.selected[to]] = [state.selected[to], state.selected[from]];
+        applyValidChange(`${chartById(id).short} moved to position ${to + 1}. Audience reading order updated.`);
+      }
+      function moveChartTo(id, targetId) {
+        const from = state.selected.indexOf(id);
+        const to = state.selected.indexOf(targetId);
+        if (from < 0 || to < 0 || from === to) return;
+        const [moved] = state.selected.splice(from, 1);
+        state.selected.splice(to, 0, moved);
+        applyValidChange(`${chartById(id).short} moved to position ${to + 1}. Audience reading order updated.`);
+      }
+      function addChart(id) {
+        if (state.selected.includes(id)) return;
+        if (state.selected.length >= 4) {
+          showAlert(`Couldn’t add ${chartById(id).title} to the scene. Up to four charts can be presented. The Audience is still showing the last valid scene.`);
+          return;
+        }
+        state.selected.push(id);
+        ensureValidLayout();
+        applyValidChange(`${chartById(id).short} added to the Audience composition.`);
+      }
+      function removeChart(id) {
+        state.selected = state.selected.filter(item => item !== id);
+        ensureValidLayout();
+        pause('Playback paused because the composition changed.');
+        applyValidChange(`${chartById(id).short} removed from the Audience composition.`);
+      }
+
+      function setConnection(next, message) {
+        pause('Playback paused for presentation safety.');
+        if (state.connectionTimer) clearTimeout(state.connectionTimer);
+        state.connectionTimer = null;
+        state.connection = next;
+        renderAll({ preserveCatalogue: true });
+        if (message) announce(message);
+      }
+      function openAudience() {
+        clearAlert();
+        if (state.connection === 'disconnected' || state.connection === 'reconnecting') {
+          setConnection('reconnecting', 'Reconnecting audience display. The last scene remains visible but may be stale.');
+          state.connectionTimer = setTimeout(() => {
+            state.connection = 'restored';
+            commitLastValid();
+            renderAll({ preserveCatalogue: true });
+            announce('Audience display restored. Playback is paused.');
+          }, 720);
+          return;
+        }
+        setConnection('waiting', 'Opening audience display…');
+        state.connectionTimer = setTimeout(() => {
+          state.connection = 'connected';
+          commitLastValid();
+          renderAll({ preserveCatalogue: true });
+          announce('Audience display connected.');
+        }, 620);
+      }
+      function toggleBlackout() {
+        if (state.blackout) {
+          state.blackout = false;
+          pause();
+          renderAll({ preserveCatalogue: true });
+          announce('Audience restored to the retained scene. Playback remains paused.');
+        } else {
+          pause('Playback paused for Blackout.');
+          state.blackout = true;
+          renderAll({ preserveCatalogue: true });
+          announce('Blackout active. Composition and presentation position are retained.');
+        }
+      }
+      function endPresentation() {
+        if (!confirm('End this Audience session? The composition will remain in this controller, but the current Audience channel cannot be revived.')) return;
+        pause();
+        state.connection = 'ended';
+        state.blackout = false;
+        renderAll({ preserveCatalogue: true });
+        announce('Presentation ended. Open Audience Display starts a new session.');
+      }
+
+      function setLifecycleFixture(value) {
+        clearAlert();
+        pause();
+        state.deliberateBlank = false;
+        state.blackout = false;
+        if (value === 'active') {
+          state.connection = 'connected';
+          if (state.selected.length === 0) state.selected = ['confirmed', 'map', 'hospital'];
+        } else if (value === 'holding') {
+          state.connection = 'connected';
+          state.selected = [];
+        } else if (value === 'blank') {
+          state.connection = 'connected';
+          state.deliberateBlank = true;
+        } else if (value === 'blackout') {
+          state.connection = 'connected';
+          state.blackout = true;
+        } else {
+          state.connection = value;
+        }
+        ensureValidLayout();
+        if (canTransmit()) commitLastValid();
+        renderAll({ preserveCatalogue: true });
+        announce(`${connectionLabel()} fixture loaded. Output is ${outputName().toLowerCase()}.`);
+      }
+
+      function resetSession() {
+        pause();
+        if (state.connectionTimer) clearTimeout(state.connectionTimer);
+        const clean = JSON.parse(JSON.stringify(DEFAULT_STATE));
+        Object.keys(clean).forEach(key => { state[key] = clean[key]; });
+        state.timer = null;
+        state.connectionTimer = null;
+        state.catalogueSearch = '';
+        document.getElementById('catalogueSearch').value = '';
+        document.getElementById('lifecycleSelect').value = 'active';
+        productViewport.dataset.preview = '1440';
+        document.querySelectorAll('[data-preview-select]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.previewSelect === '1440')));
+        clearAlert();
+        commitLastValid();
+        renderAll();
+        announce('Shared Present session reset.');
+      }
+
+      document.querySelectorAll('[data-variant-select]').forEach(button => button.addEventListener('click', () => {
+        state.variant = button.dataset.variantSelect;
+        state.drawerOpen = false;
+        renderVariant();
+        renderStatus();
+        requestAnimationFrame(resizePreview);
+        announce(`${VARIANT_NAMES[state.variant]} selected. The complete presentation session is unchanged.`);
+      }));
+      document.querySelectorAll('[data-preview-select]').forEach(button => button.addEventListener('click', () => {
+        state.preview = button.dataset.previewSelect;
+        productViewport.dataset.preview = state.preview;
+        document.querySelectorAll('[data-preview-select]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        requestAnimationFrame(resizePreview);
+        announce(state.preview === '390' ? 'Phone boundary selected. Present is unsupported and the session is retained.' : `${state.preview} Present viewport selected.`);
+      }));
+      document.getElementById('fitButton').addEventListener('click', () => {
+        productViewport.scrollIntoView({ block: 'center', inline: 'center' });
+        toast('Selected product viewport centered in the review stage.');
+      });
+      document.querySelectorAll('[data-open-drawer]').forEach(button => button.addEventListener('click', () => {
+        state.drawerTab = button.dataset.openDrawer;
+        state.drawerOpen = true;
+        renderVariant();
+        requestAnimationFrame(() => document.querySelector(`[data-drawer-tab-select="${state.drawerTab}"]`)?.focus({ preventScroll: true }));
+      }));
+      document.querySelectorAll('[data-drawer-tab-select]').forEach(button => button.addEventListener('click', () => {
+        state.drawerTab = button.dataset.drawerTabSelect;
+        renderVariant();
+      }));
+      document.getElementById('drawerCloseButton').addEventListener('click', () => {
+        state.drawerOpen = false;
+        renderVariant();
+        document.querySelector(`[data-open-drawer="${state.drawerTab}"]`)?.focus({ preventScroll: true });
+      });
+
+      document.getElementById('catalogueSearch').addEventListener('input', event => {
+        state.catalogueSearch = event.target.value;
+        renderCatalogue();
+      });
+      catalogueList.addEventListener('click', event => {
+        const button = event.target.closest('[data-add-id]');
+        if (button && !button.disabled) addChart(button.dataset.addId);
+      });
+      selectedList.addEventListener('click', event => {
+        const remove = event.target.closest('[data-remove-id]');
+        const move = event.target.closest('[data-move]');
+        if (remove) removeChart(remove.dataset.removeId);
+        if (move && !move.disabled) reorderChart(move.dataset.id, move.dataset.move);
+      });
+      selectedList.addEventListener('keydown', event => {
+        const item = event.target.closest('[data-selected-id]');
+        if (!item || !event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        const id = item.dataset.selectedId;
+        reorderChart(id, event.key === 'ArrowUp' ? 'up' : 'down');
+        requestAnimationFrame(() => selectedList.querySelector(`[data-selected-id="${id}"]`)?.focus());
+      });
+      selectedList.addEventListener('dragstart', event => {
+        const item = event.target.closest('[data-selected-id]');
+        if (!item) return;
+        state.dragId = item.dataset.selectedId;
+        item.setAttribute('aria-grabbed', 'true');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', state.dragId);
+      });
+      selectedList.addEventListener('dragover', event => {
+        if (event.target.closest('[data-selected-id]')) event.preventDefault();
+      });
+      selectedList.addEventListener('drop', event => {
+        const target = event.target.closest('[data-selected-id]');
+        if (!target || !state.dragId) return;
+        event.preventDefault();
+        moveChartTo(state.dragId, target.dataset.selectedId);
+        state.dragId = null;
+      });
+      selectedList.addEventListener('dragend', () => {
+        state.dragId = null;
+        selectedList.querySelectorAll('[aria-grabbed="true"]').forEach(item => item.setAttribute('aria-grabbed', 'false'));
+      });
+      layoutOptions.addEventListener('click', event => {
+        const button = event.target.closest('[data-layout-id]');
+        if (!button) return;
+        state.layout = button.dataset.layoutId;
+        applyValidChange(`${layoutName(state.layout)} layout selected. Audience output updated immediately.`);
+      });
+
+      const displayInfoLabels = {
+        dashboard: 'Dashboard name',
+        page: 'Page',
+        parent: 'Parent Time Group',
+        scene: 'Scene name',
+        date: 'Scene date'
+      };
+      document.querySelectorAll('[data-display-info]').forEach(input => input.addEventListener('change', event => {
+        const key = event.target.dataset.displayInfo;
+        state.displayInfo[key] = event.target.checked;
+        applyValidChange(`${displayInfoLabels[key]} ${event.target.checked ? 'shown' : 'hidden'} on Audience. Hidden values are retained.`);
+      }));
+      document.getElementById('blankButton').addEventListener('click', () => {
+        pause('Playback paused because output state changed.');
+        state.deliberateBlank = !state.deliberateBlank;
+        applyValidChange(state.deliberateBlank ? 'Connected — blank canvas is live.' : state.selected.length ? 'Selected scene restored.' : 'Holding scene restored.');
+      });
+      document.getElementById('saveDateButton').addEventListener('click', () => {
+        state.savedDatePos = { ...state.datePos };
+        state.dateDirty = false;
+        renderStatus();
+        toast('Scene date position saved to March operational pressure briefing.');
+        announce('Scene date position saved.');
+      });
+
+      audienceArtboard.addEventListener('pointerdown', event => {
+        const date = event.target.closest('[data-scene-date]');
+        if (!date) return;
+        event.preventDefault();
+        state.datePointer = event.pointerId;
+        date.setPointerCapture(event.pointerId);
+      });
+      audienceArtboard.addEventListener('pointermove', event => {
+        if (state.datePointer !== event.pointerId) return;
+        const rect = audienceArtboard.getBoundingClientRect();
+        const scale = rect.width / 960;
+        state.datePos.x = Math.max(8, Math.min(798, (event.clientX - rect.left) / scale - 78));
+        state.datePos.y = Math.max(8, Math.min(500, (event.clientY - rect.top) / scale - 17));
+        state.dateDirty = true;
+        const node = audienceArtboard.querySelector('[data-scene-date]');
+        if (node) {
+          node.style.setProperty('--date-x', `${state.datePos.x}px`);
+          node.style.setProperty('--date-y', `${state.datePos.y}px`);
+        }
+        renderStatus();
+      });
+      audienceArtboard.addEventListener('pointerup', event => {
+        if (state.datePointer !== event.pointerId) return;
+        state.datePointer = null;
+        commitLastValid();
+        renderStatus();
+        announce('Scene date moved for this presentation session.');
+      });
+      audienceArtboard.addEventListener('keydown', event => {
+        const date = event.target.closest('[data-scene-date]');
+        if (!date || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 12 : 4;
+        if (event.key === 'ArrowUp') state.datePos.y = Math.max(8, state.datePos.y - step);
+        if (event.key === 'ArrowDown') state.datePos.y = Math.min(500, state.datePos.y + step);
+        if (event.key === 'ArrowLeft') state.datePos.x = Math.max(8, state.datePos.x - step);
+        if (event.key === 'ArrowRight') state.datePos.x = Math.min(798, state.datePos.x + step);
+        state.dateDirty = true;
+        commitLastValid();
+        renderPreview();
+        renderStatus();
+        requestAnimationFrame(() => audienceArtboard.querySelector('[data-scene-date]')?.focus());
+        announce('Scene date moved for this presentation session.');
+      });
+
+      document.getElementById('previousButton').addEventListener('click', () => setFrame(state.frameIndex - 1));
+      document.getElementById('nextButton').addEventListener('click', () => setFrame(state.frameIndex + 1));
+      playButton.addEventListener('click', () => state.playing ? pause('Playback paused.') : play());
+      seekRange.addEventListener('input', event => setFrame(event.target.value, false));
+      seekRange.addEventListener('change', () => announce(`Presentation moved to ${formatDate(FRAMES[state.frameIndex], true)} and remains paused.`));
+      document.getElementById('secondsInput').addEventListener('change', event => {
+        pause();
+        const value = Number(event.target.value);
+        const error = document.getElementById('secondsError');
+        if (!Number.isFinite(value) || value <= 0 || value > 10) {
+          error.textContent = 'Enter a value above 0 and no more than 10.';
+          event.target.setAttribute('aria-invalid', 'true');
+          event.target.value = String(state.seconds);
+          announce('Seconds per frame must be above zero and no more than ten.');
+          return;
+        }
+        state.seconds = value;
+        error.textContent = '';
+        event.target.removeAttribute('aria-invalid');
+        announce(`${state.seconds} seconds per frame set for this presentation session.`);
+      });
+
+      document.getElementById('openAudienceButton').addEventListener('click', openAudience);
+      document.getElementById('blackoutButton').addEventListener('click', toggleBlackout);
+      document.getElementById('restoreButton').addEventListener('click', toggleBlackout);
+      document.getElementById('endButton').addEventListener('click', endPresentation);
+      document.getElementById('lifecycleSelect').addEventListener('change', event => setLifecycleFixture(event.target.value));
+      document.getElementById('fourChartButton').addEventListener('click', () => {
+        state.connection = 'connected';
+        state.blackout = false;
+        state.deliberateBlank = false;
+        state.selected = ['confirmed', 'map', 'hospital', 'rvalue'];
+        ensureValidLayout();
+        applyValidChange('Four-chart cap loaded. Additional catalogue actions explain why they are unavailable.');
+      });
+      document.getElementById('invalidSceneButton').addEventListener('click', () => {
+        showAlert('Couldn’t add Missing regional capacity panel to the scene. The Audience is still showing the last valid scene. Remove Missing Panel from Scene or choose another chart.');
+      });
+      document.getElementById('popupFailureButton').addEventListener('click', () => {
+        pause();
+        state.connection = 'not-open';
+        renderAll({ preserveCatalogue: true });
+        showAlert('Audience display couldn’t open. Allow pop-ups for this site, then try again. Use Open Audience Display to retry.');
+      });
+      document.getElementById('resetButton').addEventListener('click', resetSession);
+      document.getElementById('switchToViewButton').addEventListener('click', () => {
+        state.phoneView = true;
+        document.getElementById('phoneModeHeading').textContent = 'View mode active';
+        document.getElementById('phoneModeCopy').textContent = 'The phone can inspect the dashboard in View. The Audience session and complete Present controller state remain retained.';
+        toast('Switched to View at phone size. Present session retained.');
+        announce('View mode active. Presentation session retained.');
+      });
+
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && state.variant === 'c' && state.drawerOpen) {
+          state.drawerOpen = false;
+          renderVariant();
+          document.querySelector(`[data-open-drawer="${state.drawerTab}"]`)?.focus({ preventScroll: true });
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && state.playing) pause('Playback paused because the controller is no longer visible.');
+      });
+      window.addEventListener('resize', () => requestAnimationFrame(resizePreview));
+      if ('ResizeObserver' in window) new ResizeObserver(() => resizePreview()).observe(audienceMonitor);
+
+      const requestedVariant = new URLSearchParams(location.search).get('variant');
+      if (['a', 'b', 'c'].includes(requestedVariant)) state.variant = requestedVariant;
+      commitLastValid();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

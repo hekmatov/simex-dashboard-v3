@@ -23,7 +23,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | 005 | Time Group authoring | How should temporal availability and membership remain understandable at realistic density? | Approved | A — Availability Ledger | time groups, availability, authoring |
 | 006 | Scene authoring | Which twin-canvas treatment best completes an approved two-stage Scene workflow with a persistent draft panel, familiar availability ledger, direct arrangement, and Unit Orbit? | Approved | A — Balanced Twin Canvas | scenes, two-stage, availability ledger, twin canvas, Unit Orbit |
 | 007 | View Chrono | Which viewport-owned controller placement keeps Chrono clear, persistent, and subordinate to the unchanged View dashboard? | Approved | Synthesis — user-selectable Lower Playback Deck / Chrono Mast | View, Chrono, playback, controller placement |
-| 008 | Present controller | How should a moderator control Audience output confidently and preserve the last valid output? | Pending | Pending | Present, Audience, controller |
+| 008 | Present controller | How should a moderator control Audience output confidently and preserve the last valid output? | Approved | A — Live Sidecar | Present, Audience, controller |
 | 009 | Shared shell and product chrome | How should approved winners fit one coherent shell and final visual synthesis? | Pending | Pending | shell, navigation, chrome, synthesis |
 
 ## Sequence
