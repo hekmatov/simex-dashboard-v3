@@ -1,0 +1,1516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 007 · View Chrono</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --paper-outer: #eee9de;
+      --paper-canvas: #f7f2e8;
+      --paper-panel: #fffdf8;
+      --paper-panel-alt: #faf6ec;
+      --ink: #1d2529;
+      --ink-soft: #555a55;
+      --ink-faint: #6d7069;
+      --rule: #b7b0a2;
+      --rule-strong: #50595d;
+      --ui-accent: #2c383d;
+      --ui-accent-soft: #e8e4da;
+      --ui-on-accent: #fffdf8;
+      --focus: #2c383d;
+      --selected: #744740;
+      --selected-soft: #f0e2dc;
+      --chrono: #62596b;
+      --chrono-soft: #e8e2e9;
+      --info: #58666b;
+      --info-soft: #e2e7e7;
+      --success: #4e6655;
+      --success-soft: #e1e8e1;
+      --warning: #7a6342;
+      --warning-soft: #eee7d8;
+      --error: #81514b;
+      --error-soft: #eee0dc;
+      --data-1: #667853;
+      --data-2: #8f704a;
+      --data-3: #61746f;
+      --data-4: #8b584e;
+      --data-5: #77657e;
+      --data-6: #7d7457;
+      --gridline: #ddd7cb;
+      --chart-mark: #2c383d;
+      --review-bg: #171a1c;
+      --review-surface: #22272a;
+      --review-rule: #3d4448;
+      --review-text: #f3f5f4;
+      --review-muted: #aeb7b5;
+      --controller-gap: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      margin: 0;
+      background: #c9ccca;
+      color: var(--ink);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.45;
+    }
+    button, select, input { font: inherit; }
+    button, select, input[type="number"] { min-height: 44px; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+    :focus-visible { outline: 3px solid #176a78; outline-offset: 3px; }
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .review-layout {
+      display: grid;
+      grid-template-columns: clamp(340px, 23vw, 460px) minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+    .review-rail {
+      position: relative;
+      z-index: 100;
+      overflow: auto;
+      padding: 24px;
+      background: var(--review-bg);
+      color: var(--review-text);
+      border-right: 1px solid #080a0b;
+      scrollbar-gutter: stable;
+    }
+    .review-kicker,
+    .eyebrow,
+    .control-label,
+    .chart-meta,
+    .section-kicker {
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+    .review-kicker { color: #b9c6c3; margin: 0 0 5px; }
+    .review-rail h1 { margin: 0; font-size: 1.55rem; line-height: 1.15; }
+    .review-lede { color: var(--review-muted); margin: 10px 0 22px; }
+    .review-section {
+      padding: 18px 0;
+      border-top: 1px solid var(--review-rule);
+    }
+    .review-section h2 { margin: 0 0 10px; font-size: .9rem; }
+    .variant-list { display: grid; gap: 10px; }
+    .variant-button {
+      width: 100%;
+      min-height: 76px;
+      padding: 12px 14px;
+      text-align: left;
+      color: var(--review-text);
+      background: var(--review-surface);
+      border: 1px solid var(--review-rule);
+      border-radius: 4px;
+      transition: border-color 140ms ease, background 140ms ease;
+    }
+    .variant-button:hover { border-color: #8d9b98; }
+    .variant-button[aria-pressed="true"] {
+      border-color: #e7f0ed;
+      background: #30383b;
+      box-shadow: inset 4px 0 0 #d7e2df;
+    }
+    .variant-title { display: block; font-weight: 760; }
+    .variant-copy { display: block; color: var(--review-muted); font-size: .82rem; margin-top: 4px; }
+    .variant-button[aria-pressed="true"] .variant-copy { color: #d7dfdd; }
+    .review-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .review-control-grid button,
+    .review-action {
+      min-width: 0;
+      padding: 9px 10px;
+      color: var(--review-text);
+      background: #262c2f;
+      border: 1px solid var(--review-rule);
+      border-radius: 3px;
+    }
+    .review-control-grid button[aria-pressed="true"] { background: #e7ecea; color: #1d2529; }
+    .review-note {
+      margin: 12px 0 0;
+      padding: 11px 12px;
+      color: #d4dcda;
+      background: #202629;
+      border-left: 3px solid #8ba09a;
+      font-size: .83rem;
+    }
+    .state-list { display: grid; gap: 7px; margin: 0; }
+    .state-row { display: grid; grid-template-columns: 108px 1fr; gap: 8px; font-size: .8rem; }
+    .state-row dt { color: var(--review-muted); }
+    .state-row dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
+    .integrity {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 8px;
+      border: 1px solid #4d5856;
+      border-radius: 999px;
+      color: #d9e3e0;
+      font-size: .78rem;
+    }
+    .integrity::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #82a78e; }
+
+    .product-stage {
+      min-width: 0;
+      overflow: auto;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #bfc3c1;
+    }
+    .product-viewport {
+      position: relative;
+      container-type: inline-size;
+      width: min(100%, 1440px);
+      height: min(calc(100vh - 32px), 980px);
+      min-height: 620px;
+      overflow: hidden;
+      background: var(--paper-outer);
+      border: 1px solid #9b9f9d;
+      box-shadow: 0 18px 52px rgb(18 23 24 / 22%);
+      transition: width 180ms ease, height 180ms ease;
+    }
+    .product-viewport[data-preview="1440"] { width: min(1440px, 100%); height: min(900px, calc(100vh - 32px)); }
+    .product-viewport[data-preview="1024"] { width: 1024px; height: min(768px, calc(100vh - 32px)); }
+    .product-viewport[data-preview="768"] { width: 768px; height: min(1024px, calc(100vh - 32px)); }
+    .product-viewport[data-preview="390"] { width: 390px; height: min(844px, calc(100vh - 32px)); }
+    .app-shell { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+    .app-header {
+      position: relative;
+      z-index: 60;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      align-items: center;
+      gap: 18px;
+      min-height: 72px;
+      padding: 10px 18px;
+      color: var(--ink);
+      background: var(--paper-panel);
+      border-bottom: 2px solid var(--rule-strong);
+    }
+    .brand-lockup { min-width: 0; }
+    .brand-lockup strong { display: block; font-family: Georgia, serif; font-size: 1.12rem; }
+    .brand-lockup span { display: block; color: var(--ink-soft); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mode-switch,
+    .page-tabs,
+    .header-actions,
+    .transport,
+    .segmented,
+    .inline-actions { display: flex; align-items: center; gap: 7px; }
+    .mode-switch button,
+    .page-tabs button,
+    .header-actions button {
+      padding: 8px 12px;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 2px;
+    }
+    .mode-switch button[aria-pressed="true"] { color: var(--ui-on-accent); background: var(--ui-accent); }
+    .mode-switch button:not([aria-pressed="true"]):hover,
+    .page-tabs button:hover,
+    .header-actions button:hover { background: var(--ui-accent-soft); border-color: var(--rule); }
+    .open-chrono {
+      gap: 8px;
+      font-weight: 720;
+      border-color: var(--chrono) !important;
+      background: var(--chrono-soft) !important;
+    }
+    body[data-chrono-open="true"] .open-chrono { visibility: hidden; }
+    .product-scroll {
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scroll-padding: 96px 16px 220px;
+      scrollbar-gutter: stable;
+    }
+    body[data-chrono-open="true"][data-variant="a"] .product-scroll { padding-bottom: 190px; }
+    body[data-chrono-open="true"][data-variant="c"] .product-scroll { padding-bottom: 36px; }
+    .dashboard-page { width: 100%; max-width: 1320px; margin: 0 auto; padding: 26px 28px 0; }
+    .page-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .page-heading h1 { margin: 2px 0 7px; font: 700 clamp(1.7rem, 2.8vw, 2.5rem)/1.05 Georgia, serif; }
+    .page-heading p { max-width: 760px; margin: 0; color: var(--ink-soft); }
+    .page-context { text-align: right; color: var(--ink-soft); font-size: .82rem; }
+    .page-tabs {
+      margin-bottom: 22px;
+      padding: 6px;
+      background: var(--paper-panel-alt);
+      border: 1px solid var(--rule);
+    }
+    .page-tabs button { flex: 0 1 auto; }
+    .page-tabs button[aria-pressed="true"] { color: var(--ui-on-accent); background: var(--ui-accent); }
+    .section-heading { margin: 0 0 14px; }
+    .section-heading h2 { margin: 2px 0 5px; font: 700 1.25rem/1.2 Georgia, serif; }
+    .section-heading p { margin: 0; color: var(--ink-soft); font-size: .9rem; }
+    .scene-focus {
+      margin: 0 0 22px;
+      padding: 16px;
+      background: color-mix(in srgb, var(--chrono-soft) 62%, var(--paper-panel));
+      border: 2px solid var(--chrono);
+    }
+    .scene-focus-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .scene-focus-head h2 { margin: 0; font: 700 1.15rem Georgia, serif; }
+    .scene-focus-head span { color: var(--ink-soft); font-size: .78rem; }
+    .scene-divider {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0;
+      color: var(--ink-faint);
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .scene-divider::before,
+    .scene-divider::after { content: ""; height: 1px; background: var(--rule); }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-auto-flow: row;
+      gap: 14px;
+      align-items: stretch;
+    }
+    .chart-card {
+      position: relative;
+      min-width: 0;
+      min-height: 244px;
+      overflow: hidden;
+      background: var(--paper-panel);
+      border: 1px solid var(--rule-strong);
+      border-radius: 2px;
+      transition: box-shadow 140ms ease, border-color 140ms ease;
+    }
+    .chart-card[data-span="1"] { grid-column: span 1; }
+    .chart-card[data-span="2"] { grid-column: span 2; }
+    .chart-card[data-span="3"] { grid-column: span 3; }
+    .chart-card[data-span="4"] { grid-column: span 4; }
+    .chart-card[data-scene="true"] { min-height: 260px; }
+    body[data-overlay="true"] .chart-card[data-active-chart="true"] {
+      border-color: var(--chart-color);
+      box-shadow: inset 0 0 0 2px var(--chart-color);
+    }
+    .chart-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      min-height: 69px;
+      padding: 12px 13px 10px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .chart-head h3 { margin: 2px 0 0; font: 700 1rem/1.2 Georgia, serif; }
+    .chart-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 23px;
+      padding: 2px 7px;
+      border: 1px solid var(--rule);
+      background: var(--paper-panel-alt);
+      color: var(--ink-soft);
+      font-size: .68rem;
+      font-weight: 680;
+    }
+    .tag.member { border-color: var(--chrono); background: var(--chrono-soft); color: var(--chrono); }
+    .tag.scene { border-color: var(--selected); background: var(--selected-soft); color: var(--selected); }
+    .provenance {
+      align-self: start;
+      max-width: 132px;
+      padding: 4px 7px;
+      color: var(--ink);
+      background: var(--paper-panel-alt);
+      border: 1px solid var(--rule);
+      font-size: .67rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    .plot {
+      position: relative;
+      min-height: 142px;
+      margin: 0 12px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--gridline);
+      background:
+        repeating-linear-gradient(to bottom, transparent 0, transparent 34px, var(--gridline) 35px),
+        linear-gradient(var(--paper-panel), var(--paper-panel));
+    }
+    .plot svg { display: block; width: 100%; height: 142px; }
+    .plot line.grid { stroke: var(--gridline); stroke-width: 1; }
+    .plot .series-line { fill: none; stroke: var(--series); stroke-width: 3; vector-effect: non-scaling-stroke; }
+    .plot .series-line.secondary { stroke-dasharray: 6 5; stroke-width: 2; }
+    .plot .series-fill { fill: color-mix(in srgb, var(--series) 18%, transparent); }
+    .plot .bar { fill: var(--series); }
+    .plot .bar.alt { fill: var(--series-alt); }
+    .plot-reveal-cover {
+      position: absolute;
+      z-index: 4;
+      top: 0;
+      bottom: 0;
+      left: var(--frame-percent);
+      right: 0;
+      background: color-mix(in srgb, var(--paper-panel) 93%, transparent);
+      border-left: 1px dashed var(--rule-strong);
+      pointer-events: none;
+    }
+    body[data-trace="full"] .plot-reveal-cover { background: transparent; border-left: 0; }
+    .frame-marker {
+      position: absolute;
+      z-index: 5;
+      top: 6px;
+      bottom: 0;
+      left: var(--frame-percent);
+      width: 2px;
+      background: var(--chrono);
+      pointer-events: none;
+    }
+    .frame-marker::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--chrono);
+    }
+    .map-plot { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(4, 1fr); gap: 3px; padding: 10px; }
+    .map-cell { background: color-mix(in srgb, var(--series) var(--strength), var(--paper-panel-alt)); border: 1px solid color-mix(in srgb, var(--series) 48%, var(--rule)); }
+    .donut-plot { display: grid; place-items: center; }
+    .donut {
+      width: 112px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: conic-gradient(var(--series) 0 31%, var(--series-alt) 31% 55%, var(--data-5) 55% 72%, var(--data-6) 72% 100%);
+      position: relative;
+    }
+    .donut::after { content: "12.4%"; position: absolute; inset: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--paper-panel); font-weight: 750; }
+    .bullet-plot { display: grid; align-content: center; gap: 18px; padding: 20px 8px; }
+    .bullet-row { display: grid; grid-template-columns: 90px 1fr 40px; gap: 8px; align-items: center; font-size: .72rem; }
+    .bullet-track { height: 18px; background: var(--gridline); position: relative; }
+    .bullet-fill { height: 100%; width: var(--fill); background: var(--series); }
+    .bullet-target { position: absolute; top: -4px; bottom: -4px; left: var(--target); width: 2px; background: var(--chart-mark); }
+    .chart-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      min-height: 32px;
+      padding: 7px 12px;
+      color: var(--ink-soft);
+      font-size: .7rem;
+    }
+    .availability-proof { display: none; font-weight: 700; color: var(--chart-color); }
+    body[data-overlay="true"] .chart-card[data-active-chart="true"] .availability-proof { display: inline; }
+    .page-footer {
+      margin-top: 36px;
+      padding: 26px 28px 34px;
+      background: var(--paper-panel-alt);
+      border-top: 1px solid var(--rule-strong);
+      color: var(--ink-soft);
+      font-size: .78rem;
+    }
+    .footer-grid { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(120px, .7fr)); gap: 20px; max-width: 1264px; margin: auto; }
+    .footer-grid h2 { margin: 0 0 6px; font: 700 1rem Georgia, serif; color: var(--ink); }
+    .footer-grid a { display: block; color: var(--ink); margin: 5px 0; }
+
+    .chrono-controller {
+      position: absolute;
+      z-index: 80;
+      color: var(--ink);
+      background: color-mix(in srgb, var(--paper-panel) 97%, transparent);
+      border: 2px solid var(--chrono);
+      box-shadow: 0 18px 45px rgb(28 24 31 / 24%);
+      backdrop-filter: blur(8px);
+      transition: transform 160ms ease, opacity 160ms ease;
+    }
+    body[data-chrono-open="false"] .chrono-controller { display: none !important; }
+    body[data-variant="a"] .chrono-controller {
+      left: 14px;
+      right: 14px;
+      bottom: 12px;
+      max-height: min(48%, 390px);
+    }
+    body[data-variant="b"] .chrono-controller {
+      left: 14px;
+      right: 14px;
+      top: 84px;
+      max-height: min(48%, 390px);
+    }
+    body[data-variant="c"] .chrono-controller {
+      top: 84px;
+      right: 12px;
+      bottom: 12px;
+      width: 326px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .chrono-primary {
+      display: grid;
+      grid-template-columns: minmax(190px, .9fr) auto minmax(240px, 1.5fr) auto;
+      gap: 12px;
+      align-items: end;
+      padding: 11px 12px;
+    }
+    .source-stack,
+    .frame-stack { min-width: 0; }
+    .source-stack label,
+    .settings-field label,
+    .frame-stack .control-label { display: block; margin-bottom: 4px; color: var(--ink-soft); }
+    .source-stack select,
+    .settings-field select,
+    .settings-field input {
+      width: 100%;
+      padding: 7px 9px;
+      color: var(--ink);
+      background: var(--paper-panel);
+      border: 1px solid var(--rule-strong);
+      border-radius: 2px;
+    }
+    .frame-reading { font-family: "Cascadia Mono", Consolas, monospace; font-weight: 760; white-space: nowrap; }
+    .period-reading { color: var(--ink-soft); font-size: .7rem; white-space: nowrap; }
+    .transport { gap: 5px; }
+    .icon-button,
+    .text-button,
+    .settings-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-width: 44px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: var(--paper-panel-alt);
+      border: 1px solid var(--rule-strong);
+      border-radius: 2px;
+      transition: background 130ms ease, color 130ms ease;
+    }
+    .icon-button:hover,
+    .text-button:hover,
+    .settings-toggle:hover { background: var(--chrono-soft); }
+    .play-button { color: var(--ui-on-accent); background: var(--chrono); border-color: var(--chrono); }
+    .play-button:hover { background: color-mix(in srgb, var(--chrono) 86%, black); }
+    .icon-button svg { width: 19px; height: 19px; fill: currentColor; }
+    .track-wrap { position: relative; min-width: 0; padding: 7px 0 2px; }
+    .track-meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 3px; color: var(--ink-soft); font-size: .68rem; }
+    .seek-range { width: 100%; min-height: 34px; accent-color: var(--chrono); cursor: pointer; }
+    .availability-marks { position: absolute; left: 7px; right: 7px; bottom: 1px; height: 9px; pointer-events: none; }
+    .availability-mark {
+      position: absolute;
+      left: var(--p);
+      bottom: 0;
+      width: 3px;
+      height: var(--h);
+      min-height: 4px;
+      background: var(--mark-color, var(--rule-strong));
+      transform: translateX(-50%);
+    }
+    body[data-overlay="false"] .availability-mark { background: var(--rule); height: 4px; }
+    .primary-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+    .settings-toggle[aria-expanded="true"] { background: var(--chrono-soft); border-color: var(--chrono); }
+    .chrono-alert {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 9px 12px;
+      color: var(--error);
+      background: var(--error-soft);
+      border-top: 1px solid var(--error);
+      font-size: .78rem;
+      font-weight: 650;
+    }
+    body[data-blocked="true"] .chrono-alert { display: flex; }
+    .chrono-settings {
+      display: grid;
+      grid-template-columns: 1fr .62fr 1.2fr .95fr .85fr;
+      gap: 12px;
+      padding: 11px 12px 13px;
+      overflow: auto;
+      border-top: 1px solid var(--rule);
+      background: var(--paper-panel-alt);
+    }
+    body[data-settings-open="false"] .chrono-settings { display: none; }
+    .settings-field { min-width: 0; }
+    .settings-field small { display: block; margin-top: 4px; color: var(--ink-soft); font-size: .67rem; }
+    .segmented { align-items: stretch; gap: 0; }
+    .segmented button {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 7px 9px;
+      color: var(--ink);
+      background: var(--paper-panel);
+      border: 1px solid var(--rule-strong);
+    }
+    .segmented button + button { border-left: 0; }
+    .segmented button[aria-pressed="true"] { color: var(--ui-on-accent); background: var(--ui-accent); }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 44px;
+      padding: 6px 9px;
+      background: var(--paper-panel);
+      border: 1px solid var(--rule-strong);
+    }
+    .toggle-row input { width: 20px; height: 20px; accent-color: var(--chrono); }
+
+    body[data-variant="c"] .chrono-primary {
+      grid-template-columns: 1fr;
+      align-content: start;
+      overflow: auto;
+      padding: 12px;
+    }
+    body[data-variant="c"] .chrono-controller:has(.chrono-settings:not([style*="display: none"])) .chrono-primary { min-height: 0; }
+    body[data-variant="c"] .frame-stack { order: 1; }
+    body[data-variant="c"] .source-stack { order: 0; }
+    body[data-variant="c"] .transport { order: 2; justify-content: center; }
+    body[data-variant="c"] .track-wrap {
+      order: 3;
+      display: grid;
+      grid-template-columns: auto 58px;
+      grid-template-rows: auto 1fr;
+      gap: 6px 8px;
+      min-height: 218px;
+      padding: 2px 18px;
+    }
+    body[data-variant="c"] .track-meta { grid-column: 1 / -1; }
+    body[data-variant="c"] .seek-range {
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: center;
+      width: 44px;
+      height: 182px;
+      writing-mode: vertical-lr;
+      direction: rtl;
+    }
+    body[data-variant="c"] .availability-marks {
+      grid-column: 2;
+      grid-row: 2;
+      left: 50%;
+      top: 10px;
+      right: auto;
+      bottom: 10px;
+      width: 10px;
+      height: auto;
+    }
+    body[data-variant="c"] .availability-mark {
+      top: calc(100% - var(--p));
+      left: 50%;
+      bottom: auto;
+      width: var(--h);
+      height: 3px;
+      min-height: 0;
+      transform: translate(-50%, -50%);
+    }
+    body[data-variant="c"] .primary-actions { order: 4; justify-content: stretch; }
+    body[data-variant="c"] .primary-actions button { flex: 1; }
+    body[data-variant="c"] .chrono-settings {
+      grid-template-columns: 1fr;
+      align-content: start;
+      min-height: 0;
+      overflow: auto;
+    }
+    body[data-variant="c"] .chrono-alert { position: absolute; left: 0; right: 0; bottom: 0; }
+
+    .controller-identity {
+      position: absolute;
+      z-index: 2;
+      color: var(--ui-on-accent);
+      background: var(--chrono);
+      padding: 3px 7px;
+      font-size: .62rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    body[data-variant="a"] .controller-identity { left: 10px; top: -23px; }
+    body[data-variant="b"] .controller-identity { left: 10px; bottom: -23px; }
+    body[data-variant="c"] .controller-identity { left: -2px; top: -23px; }
+
+    .toast {
+      position: absolute;
+      z-index: 120;
+      left: 50%;
+      bottom: 22px;
+      max-width: calc(100% - 36px);
+      padding: 10px 14px;
+      color: var(--ui-on-accent);
+      background: var(--ui-accent);
+      border: 1px solid var(--ui-on-accent);
+      transform: translate(-50%, 24px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+    .toast[data-open="true"] { opacity: 1; transform: translate(-50%, 0); }
+
+    @container (max-width: 1040px) {
+      .app-header { grid-template-columns: minmax(190px, 1fr) auto; }
+      .header-actions { grid-column: 1 / -1; justify-content: flex-end; margin-top: -4px; }
+      .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chart-card[data-span="3"], .chart-card[data-span="4"] { grid-column: span 2; }
+      .chrono-primary { grid-template-columns: minmax(170px, .8fr) auto minmax(210px, 1.4fr) auto; gap: 8px; }
+      .chrono-settings { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      body[data-variant="c"] .chrono-controller {
+        top: auto;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        width: auto;
+        max-height: 52%;
+      }
+      body[data-variant="c"] .chrono-primary {
+        grid-template-columns: minmax(170px, .8fr) auto minmax(210px, 1.4fr) auto;
+        align-items: end;
+      }
+      body[data-variant="c"] .source-stack,
+      body[data-variant="c"] .frame-stack,
+      body[data-variant="c"] .transport,
+      body[data-variant="c"] .track-wrap,
+      body[data-variant="c"] .primary-actions { order: initial; }
+      body[data-variant="c"] .track-wrap {
+        display: block;
+        min-height: 0;
+        padding: 7px 0 2px;
+      }
+      body[data-variant="c"] .seek-range { width: 100%; height: 34px; writing-mode: horizontal-tb; direction: ltr; }
+      body[data-variant="c"] .availability-marks { position: absolute; left: 7px; right: 7px; top: auto; bottom: 1px; width: auto; height: 9px; }
+      body[data-variant="c"] .availability-mark { top: auto; left: var(--p); bottom: 0; width: 3px; height: var(--h); transform: translateX(-50%); }
+      body[data-variant="c"] .chrono-settings { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @container (max-width: 680px) {
+      .app-header { grid-template-columns: 1fr auto; gap: 8px; min-height: 66px; padding: 8px 10px; }
+      .brand-lockup span { display: none; }
+      .mode-switch { display: none; }
+      .header-actions { grid-column: auto; margin: 0; }
+      .open-chrono .wide-label { display: none; }
+      .dashboard-page { padding: 18px 12px 0; }
+      .page-heading { grid-template-columns: 1fr; gap: 9px; }
+      .page-context { text-align: left; }
+      .page-tabs { overflow-x: auto; }
+      .page-tabs button { white-space: nowrap; }
+      .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+      .chart-card[data-span="1"], .chart-card[data-span="2"], .chart-card[data-span="3"], .chart-card[data-span="4"] { grid-column: 1; }
+      .chart-card { min-height: 238px; }
+      .scene-focus { padding: 10px; }
+      .scene-focus-head { align-items: flex-start; flex-direction: column; gap: 3px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      body[data-variant="a"] .chrono-controller,
+      body[data-variant="c"] .chrono-controller { left: 8px; right: 8px; bottom: 8px; max-height: 58%; }
+      body[data-variant="b"] .chrono-controller { left: 8px; right: 8px; top: 76px; max-height: 56%; }
+      .chrono-primary,
+      body[data-variant="c"] .chrono-primary {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 7px;
+        padding: 9px;
+      }
+      .source-stack { grid-column: 1 / -1; }
+      .frame-stack { grid-column: 1; }
+      .transport { grid-column: 2; }
+      .track-wrap { grid-column: 1 / -1; }
+      .primary-actions { grid-column: 1 / -1; }
+      .primary-actions button { flex: 1; }
+      .chrono-settings,
+      body[data-variant="c"] .chrono-settings { grid-template-columns: 1fr; max-height: 265px; }
+      .track-meta { font-size: .63rem; }
+      .period-reading { white-space: normal; }
+      body[data-chrono-open="true"][data-variant="a"] .product-scroll,
+      body[data-chrono-open="true"][data-variant="c"] .product-scroll { padding-bottom: 260px; }
+      .controller-identity { display: none; }
+    }
+
+    @media (max-width: 900px) {
+      .review-layout { grid-template-columns: 300px minmax(0, 1fr); }
+      .review-rail { padding: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body data-variant="a" data-chrono-open="false" data-settings-open="false" data-overlay="false" data-trace="reveal" data-blocked="false">
+  <div class="review-layout">
+    <aside class="review-rail" data-review-rail aria-label="Sketch review controls">
+      <p class="review-kicker">Sketch 007 · Approved</p>
+      <h1>View Chrono controller</h1>
+      <p class="review-lede">Both controller placements are accepted. The user moves the same live Chrono controller between them without resetting state.</p>
+
+      <section class="review-section" aria-labelledby="variant-heading">
+        <h2 id="variant-heading">Accepted placements</h2>
+        <div class="variant-list" aria-label="Approved Chrono placements">
+          <div class="variant-button">
+            <span class="variant-title">A · Lower Playback Deck · Accepted default</span>
+            <span class="variant-copy">Bottom anchored; settings expand upward.</span>
+          </div>
+          <div class="variant-button">
+            <span class="variant-title">B · Chrono Mast · Accepted</span>
+            <span class="variant-copy">Top anchored below View chrome; settings expand downward.</span>
+          </div>
+        </div>
+        <p class="review-note">Open Chrono and use its Move to top / Move to bottom button. Placement changes preserve page, source, frame, playback, filters, disclosure, and dashboard scroll.</p>
+      </section>
+
+      <section class="review-section" aria-labelledby="viewport-heading">
+        <h2 id="viewport-heading">Product viewport</h2>
+        <div class="review-control-grid">
+          <button type="button" data-preview="full" aria-pressed="true">Full</button>
+          <button type="button" data-preview="1440" aria-pressed="false">1440</button>
+          <button type="button" data-preview="1024" aria-pressed="false">1024</button>
+          <button type="button" data-preview="768" aria-pressed="false">768</button>
+          <button type="button" data-preview="390" aria-pressed="false">390</button>
+          <button type="button" id="resetButton">Reset</button>
+        </div>
+      </section>
+
+      <section class="review-section" aria-labelledby="fixture-heading">
+        <h2 id="fixture-heading">Review state</h2>
+        <div class="review-control-grid">
+          <button type="button" data-fixture-state="ready" aria-pressed="true">Ready</button>
+          <button type="button" data-fixture-state="blocked" aria-pressed="false">Needs attention</button>
+        </div>
+        <p class="review-note">Needs attention simulates one unsupported temporary matching choice. It must remain inspectable and block Play with a direct repair.</p>
+      </section>
+
+      <section class="review-section" aria-labelledby="state-heading">
+        <h2 id="state-heading">Shared state</h2>
+        <dl class="state-list">
+          <div class="state-row"><dt>Placement</dt><dd id="stateVariant">Lower Playback Deck</dd></div>
+          <div class="state-row"><dt>Chrono</dt><dd id="stateChrono">Closed</dd></div>
+          <div class="state-row"><dt>Source</dt><dd id="stateSource">Winter response 2026</dd></div>
+          <div class="state-row"><dt>Frame</dt><dd id="stateFrame">1 of 17</dd></div>
+          <div class="state-row"><dt>Page</dt><dd id="statePage">Executive surveillance</dd></div>
+        </dl>
+        <p style="margin:14px 0 0"><span class="integrity" id="geometryStatus">Canonical chart sizes unchanged</span></p>
+      </section>
+    </aside>
+
+    <div class="product-stage">
+      <div class="product-viewport" id="productViewport" data-preview="full">
+        <div class="app-shell">
+          <header class="app-header">
+            <div class="brand-lockup">
+              <strong>Regional Respiratory Preparedness</strong>
+              <span>Regional coordination dashboard · Updated 31 March 2026</span>
+            </div>
+            <nav class="mode-switch" aria-label="Dashboard modes">
+              <button type="button" aria-pressed="true">View</button>
+              <button type="button" aria-pressed="false">Build</button>
+              <button type="button" aria-pressed="false">Present</button>
+            </nav>
+            <div class="header-actions">
+              <button type="button" class="open-chrono" id="openChronoButton">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+                <span class="wide-label">Open Chrono</span><span class="visually-hidden"> playback</span>
+              </button>
+            </div>
+          </header>
+
+          <div class="product-scroll" id="productScroll" data-fixture-scroll>
+            <main class="dashboard-page" id="dashboardMount"></main>
+            <footer class="page-footer">
+              <div class="footer-grid">
+                <div><h2>Regional Respiratory Preparedness</h2><div>Evidence package for operational coordination. Dates use Europe/Berlin.</div><div style="margin-top:8px">© 2026 SimEx regional coordination programme</div></div>
+                <div><strong>About</strong><a href="#about">Methods</a><a href="#sources">Data sources</a></div>
+                <div><strong>Support</strong><a href="#bug">Report a bug</a><a href="#feature">Request a feature</a></div>
+                <div><strong>Policies</strong><a href="#accessibility">Accessibility</a><a href="#privacy">Privacy</a></div>
+              </div>
+            </footer>
+          </div>
+        </div>
+
+        <section class="chrono-controller" id="chronoController" aria-label="Chrono playback controller">
+          <div class="controller-identity">View · Chrono</div>
+          <div>
+            <div class="chrono-primary">
+              <div class="source-stack">
+                <label class="control-label" for="chronoSource">Time Group or Scene</label>
+                <select id="chronoSource">
+                  <optgroup label="Time Groups">
+                    <option value="winter">Winter response 2026</option>
+                    <option value="sentinel">Sentinel monitoring 2026</option>
+                  </optgroup>
+                  <optgroup label="Scenes">
+                    <option value="march">March operational pressure briefing</option>
+                    <option value="care">Care capacity escalation</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div class="frame-stack">
+                <span class="control-label">Current frame</span>
+                <div class="frame-reading" id="frameReading">01 Jan 2026 · 1 / 17</div>
+                <div class="period-reading" id="periodReading">01 Jan–31 Mar · Europe/Berlin</div>
+              </div>
+
+              <div class="track-wrap">
+                <div class="track-meta"><span id="trackStart">01 Jan</span><span id="trackMode">Reveal to frame</span><span id="trackEnd">31 Mar</span></div>
+                <input class="seek-range" id="seekRange" type="range" min="0" max="16" value="0" aria-label="Seek Chrono frame">
+                <div class="availability-marks" id="availabilityMarks" aria-hidden="true"></div>
+              </div>
+
+              <div class="primary-actions">
+                <div class="transport" aria-label="Playback transport">
+                  <button class="icon-button" type="button" id="previousButton" aria-label="Previous frame">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2v14H7zm3 7l9 7V5z"/></svg>
+                  </button>
+                  <button class="icon-button play-button" type="button" id="playButton" aria-label="Play">
+                    <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                  </button>
+                  <button class="icon-button" type="button" id="nextButton" aria-label="Next frame">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5h2v14h-2zM5 5v14l9-7z"/></svg>
+                  </button>
+                </div>
+                <button class="text-button" type="button" id="placementToggle" aria-label="Move Chrono controls to top">Move to top</button>
+                <button class="settings-toggle" type="button" id="settingsToggle" aria-expanded="false" aria-controls="chronoSettings">Settings</button>
+                <button class="text-button" type="button" id="exitChronoButton">Exit</button>
+              </div>
+            </div>
+
+            <div class="chrono-alert" id="chronoAlert" role="status">
+              <span>Hospital load cannot use temporary Interpolate at 15 March. Playback is paused.</span>
+              <button class="text-button" type="button" id="repairButton">Use authored settings</button>
+            </div>
+          </div>
+
+          <div class="chrono-settings" id="chronoSettings">
+            <div class="settings-field">
+              <span class="control-label">Visible charts</span>
+              <div class="segmented" role="group" aria-label="Visible charts">
+                <button type="button" data-visibility="all" aria-pressed="true">All page</button>
+                <button type="button" data-visibility="group" aria-pressed="false">Group only</button>
+              </div>
+              <small>Current page only; canonical saved layout is unchanged.</small>
+            </div>
+            <div class="settings-field">
+              <label class="control-label" for="secondsInput">Seconds / frame</label>
+              <input id="secondsInput" type="number" min="0.5" max="10" step="0.5" value="2.5">
+              <small>Session override</small>
+            </div>
+            <div class="settings-field">
+              <label class="control-label" for="matchingSelect">Temporal matching</label>
+              <select id="matchingSelect">
+                <option value="authored">Use authored settings</option>
+                <option value="concurrent">Concurrent only</option>
+                <option value="latest">Snap to latest</option>
+                <option value="closest">Snap to closest</option>
+                <option value="interpolate">Interpolate</option>
+              </select>
+              <small id="matchingHelp">Effective authored policy: Interpolate; chart fallbacks retained.</small>
+            </div>
+            <div class="settings-field">
+              <span class="control-label">Time trace</span>
+              <div class="segmented" role="group" aria-label="Time trace mode">
+                <button type="button" data-trace="reveal" aria-pressed="true">Reveal</button>
+                <button type="button" data-trace="full" aria-pressed="false">Full timeline</button>
+              </div>
+              <small>Reveal hides future observations.</small>
+            </div>
+            <div class="settings-field">
+              <span class="control-label">Availability</span>
+              <label class="toggle-row" for="overlayToggle"><span>Overlay</span><input id="overlayToggle" type="checkbox"></label>
+              <small>Colour outline plus named count and pattern.</small>
+            </div>
+          </div>
+        </section>
+
+        <div class="toast" id="toast" data-open="false" role="status"></div>
+        <div class="visually-hidden" id="announcement" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const VARIANT_NAMES = {
+        a: 'Lower Playback Deck',
+        b: 'Chrono Mast'
+      };
+
+      const EXEC_CHARTS = [
+        { id: 'cases', title: 'Confirmed cases', type: 'line', span: 2, group: true, color: 'var(--data-1)', availability: 17 },
+        { id: 'rvalues', title: 'Regional R values', type: 'line', span: 2, group: true, color: 'var(--data-2)', availability: 14 },
+        { id: 'map', title: 'Municipality outbreak map', type: 'map', span: 4, group: true, color: 'var(--data-3)', availability: 12 },
+        { id: 'region', title: 'Regional comparison', type: 'bars', span: 2, group: true, color: 'var(--data-4)', availability: 15 },
+        { id: 'vaccination', title: 'Vaccination rate by age group', type: 'bars', span: 2, group: true, color: 'var(--data-5)', availability: 9 },
+        { id: 'hospital', title: 'Hospital load', type: 'line', span: 4, group: true, color: 'var(--data-6)', availability: 13 },
+        { id: 'daily', title: 'Daily new cases and deaths', type: 'mixed', span: 2, group: false, color: 'var(--data-2)', availability: 17 },
+        { id: 'mortality', title: 'Mortality by age group', type: 'donut', span: 2, group: false, color: 'var(--data-4)', availability: 8 },
+        { id: 'capacity', title: 'ICU and hospital capacity', type: 'bullet', span: 2, group: false, color: 'var(--data-1)', availability: 17 },
+        { id: 'admissions', title: 'New ICU and hospital admissions', type: 'bars', span: 2, group: false, color: 'var(--data-3)', availability: 16 }
+      ];
+
+      const CARE_CHARTS = [
+        { id: 'hospital', title: 'Hospital load', type: 'line', span: 2, group: true, color: 'var(--data-6)', availability: 13 },
+        { id: 'capacity', title: 'ICU and hospital capacity', type: 'bullet', span: 2, group: true, color: 'var(--data-1)', availability: 17 },
+        { id: 'admissions', title: 'New ICU and hospital admissions', type: 'bars', span: 2, group: true, color: 'var(--data-3)', availability: 16 },
+        { id: 'occupancy', title: 'Ward occupancy by facility', type: 'bars', span: 2, group: false, color: 'var(--data-4)', availability: 14 },
+        { id: 'staffing', title: 'Clinical staff absence', type: 'line', span: 2, group: false, color: 'var(--data-5)', availability: 11 },
+        { id: 'oxygen', title: 'Oxygen demand forecast', type: 'line', span: 2, group: false, color: 'var(--data-2)', availability: 12 }
+      ];
+
+      const SOURCES = {
+        winter: {
+          kind: 'group',
+          name: 'Winter response 2026',
+          page: null,
+          period: ['2026-01-01', '2026-03-31'],
+          frames: ['2026-01-01','2026-01-08','2026-01-15','2026-01-22','2026-02-01','2026-02-08','2026-02-15','2026-02-22','2026-03-01','2026-03-05','2026-03-10','2026-03-15','2026-03-18','2026-03-20','2026-03-23','2026-03-26','2026-03-31'],
+          members: {
+            exec: ['cases','rvalues','map','region','vaccination','hospital'],
+            care: ['hospital','capacity','admissions']
+          },
+          effectiveMatching: 'Interpolate with member fallbacks'
+        },
+        sentinel: {
+          kind: 'group',
+          name: 'Sentinel monitoring 2026',
+          page: null,
+          period: ['2026-02-01', '2026-03-31'],
+          frames: ['2026-02-01','2026-02-08','2026-02-15','2026-02-22','2026-03-01','2026-03-08','2026-03-15','2026-03-22','2026-03-31'],
+          members: { exec: ['cases','rvalues','daily'], care: ['staffing'] },
+          effectiveMatching: 'Snap to closest'
+        },
+        march: {
+          kind: 'scene',
+          name: 'March operational pressure briefing',
+          parent: 'Winter response 2026',
+          page: 'exec',
+          period: ['2026-03-01', '2026-03-31'],
+          frames: ['2026-03-05','2026-03-12','2026-03-19','2026-03-26'],
+          members: ['cases','map','hospital'],
+          widths: { cases: 2, map: 4, hospital: 2 },
+          effectiveMatching: 'Scene override: Snap to closest'
+        },
+        care: {
+          kind: 'scene',
+          name: 'Care capacity escalation',
+          parent: 'Winter response 2026',
+          page: 'care',
+          period: ['2026-02-01', '2026-03-08'],
+          frames: ['2026-02-03','2026-02-10','2026-02-17','2026-02-24','2026-03-03'],
+          members: ['hospital','capacity','admissions'],
+          widths: { hospital: 2, capacity: 2, admissions: 4 },
+          effectiveMatching: 'Inherited parent policy with Hospital load fallback'
+        }
+      };
+
+      const state = {
+        variant: 'a',
+        preview: 'full',
+        chronoOpen: false,
+        settingsOpen: false,
+        sourceId: 'winter',
+        frameBySource: { winter: 0, sentinel: 0, march: 0, care: 0 },
+        playing: false,
+        seconds: 2.5,
+        visibility: 'all',
+        matching: 'authored',
+        trace: 'reveal',
+        overlay: false,
+        blocked: false,
+        activePage: 'exec',
+        excludedAlerts: true,
+        timer: null,
+        baselineGeometry: null,
+        lastInvoker: null,
+        toastTimer: null
+      };
+
+      const body = document.body;
+      const productViewport = document.getElementById('productViewport');
+      const productScroll = document.getElementById('productScroll');
+      const dashboardMount = document.getElementById('dashboardMount');
+      const sourceSelect = document.getElementById('chronoSource');
+      const seekRange = document.getElementById('seekRange');
+      const playButton = document.getElementById('playButton');
+
+      function source() { return SOURCES[state.sourceId]; }
+      function frames() { return source().frames; }
+      function frameIndex() { return state.frameBySource[state.sourceId] || 0; }
+      function currentPageCharts() { return state.activePage === 'exec' ? EXEC_CHARTS : CARE_CHARTS; }
+
+      function formatDate(value, withYear = false) {
+        const date = new Date(value + 'T12:00:00');
+        return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', ...(withYear ? { year: 'numeric' } : {}) }).format(date);
+      }
+
+      function pageName(id = state.activePage) {
+        return id === 'exec' ? 'Executive surveillance' : 'Care capacity';
+      }
+
+      function activeMemberIds() {
+        const active = source();
+        return active.kind === 'scene' ? active.members : (active.members[state.activePage] || []);
+      }
+
+      function parentGroupMemberIds() {
+        const active = source();
+        if (active.kind === 'scene') return SOURCES.winter.members[state.activePage] || [];
+        return active.members[state.activePage] || [];
+      }
+
+      function visibleCharts() {
+        const charts = currentPageCharts();
+        if (state.visibility === 'group') {
+          const allowed = new Set(parentGroupMemberIds());
+          return charts.filter(chart => allowed.has(chart.id));
+        }
+        return charts;
+      }
+
+      function sceneMemberIds() {
+        const active = source();
+        return active.kind === 'scene' && active.page === state.activePage ? active.members : [];
+      }
+
+      function chartSpan(chart, scene = false) {
+        if (scene && source().widths) return source().widths[chart.id] || chart.span;
+        return chart.span;
+      }
+
+      function plotMarkup(chart) {
+        if (chart.type === 'map') {
+          const cells = Array.from({ length: 28 }, (_, index) => `<span class="map-cell" style="--strength:${26 + ((index * 17) % 58)}%"></span>`).join('');
+          return `<div class="plot map-plot" role="img" aria-label="Municipality map at the active frame">${cells}<div class="plot-reveal-cover"></div><div class="frame-marker"></div></div>`;
+        }
+        if (chart.type === 'donut') {
+          return `<div class="plot donut-plot" role="img" aria-label="Mortality share by age group"><div class="donut"></div><div class="plot-reveal-cover"></div><div class="frame-marker"></div></div>`;
+        }
+        if (chart.type === 'bullet') {
+          return `<div class="plot bullet-plot" role="img" aria-label="Capacity and occupancy compared with target"><div class="bullet-row"><span>ICU beds</span><div class="bullet-track"><div class="bullet-fill" style="--fill:78%"></div><i class="bullet-target" style="--target:85%"></i></div><strong>78%</strong></div><div class="bullet-row"><span>Ward beds</span><div class="bullet-track"><div class="bullet-fill" style="--fill:69%"></div><i class="bullet-target" style="--target:80%"></i></div><strong>69%</strong></div><div class="plot-reveal-cover"></div><div class="frame-marker"></div></div>`;
+        }
+        const bars = [42,68,52,84,63,76,91,58,72,49,79,66].map((height, index) => `<rect class="bar${index % 3 === 0 ? ' alt' : ''}" x="${8 + index * 15}" y="${128 - height}" width="9" height="${height}" rx="1"/>`).join('');
+        const pathA = 'M8 114 C28 105,35 95,52 98 S78 72,96 78 S124 47,144 59 S166 34,186 29';
+        const pathB = 'M8 121 C28 118,42 106,59 112 S89 90,106 94 S139 68,154 72 S176 55,188 48';
+        const isBar = chart.type === 'bars';
+        const isMixed = chart.type === 'mixed';
+        return `<div class="plot" role="img" aria-label="${chart.title} time series through the active frame"><svg viewBox="0 0 196 142" preserveAspectRatio="none" aria-hidden="true"><line class="grid" x1="0" y1="36" x2="196" y2="36"/><line class="grid" x1="0" y1="72" x2="196" y2="72"/><line class="grid" x1="0" y1="108" x2="196" y2="108"/>${isBar || isMixed ? bars : `<path class="series-fill" d="${pathA} L188 136 L8 136 Z"/><path class="series-line" d="${pathA}"/>`}${isMixed ? `<path class="series-line secondary" d="${pathB}"/>` : ''}</svg><div class="plot-reveal-cover"></div><div class="frame-marker"></div></div>`;
+      }
+
+      function provenanceFor(chart, index) {
+        if (!parentGroupMemberIds().includes(chart.id)) return 'Static · not in group';
+        if (chart.id === 'map') return index % 3 === 0 ? 'Concurrent · exact date' : 'Closest · −1 day';
+        if (chart.id === 'hospital') return index % 4 === 2 ? 'Latest · −2 days' : 'Concurrent · exact date';
+        if (chart.id === 'rvalues') return index % 5 === 3 ? 'Interpolated · +1 day' : 'Concurrent · exact date';
+        return index % 4 === 1 ? 'Closest · +1 day' : 'Concurrent · exact date';
+      }
+
+      function chartMarkup(chart, scene = false) {
+        const parentMember = parentGroupMemberIds().includes(chart.id);
+        const activeChart = activeMemberIds().includes(chart.id);
+        const current = frameIndex();
+        const availability = Math.min(chart.availability, frames().length);
+        return `<article class="chart-card" id="chart-${chart.id}" data-chart-id="${chart.id}" data-span="${chartSpan(chart, scene)}" data-member="${parentMember}" data-active-chart="${activeChart}" data-scene="${scene}" style="--series:${chart.color};--series-alt:var(--data-2);--chart-color:${chart.color};--frame-percent:0%">
+          <header class="chart-head">
+            <div><div class="chart-meta">${state.activePage === 'exec' ? 'Surveillance and response' : 'Care system readiness'}</div><h3>${chart.title}</h3><div class="chart-tags">${parentMember ? '<span class="tag member">Winter response member</span>' : '<span class="tag">Page context</span>'}${scene ? '<span class="tag scene">Scene focus</span>' : ''}</div></div>
+            <span class="provenance" tabindex="0" aria-label="Temporal provenance for ${chart.title}">${provenanceFor(chart, current)}</span>
+          </header>
+          ${plotMarkup(chart)}
+          <footer class="chart-foot"><span>${chart.type === 'map' ? 'Municipality level' : 'Europe/Berlin observations'}</span><span class="availability-proof">Pattern ${activeChart ? '●' : '○'} · ${availability}/${frames().length} dates</span></footer>
+        </article>`;
+      }
+
+      function renderDashboard() {
+        const charts = visibleCharts();
+        const sceneIds = sceneMemberIds();
+        const sceneSet = new Set(sceneIds);
+        const sceneCharts = sceneIds.map(id => charts.find(chart => chart.id === id)).filter(Boolean);
+        const remaining = charts.filter(chart => !sceneSet.has(chart.id));
+        const active = source();
+        const focusBlock = sceneCharts.length ? `<section class="scene-focus" aria-labelledby="scene-focus-title"><div class="scene-focus-head"><h2 id="scene-focus-title">${active.name}</h2><span>Focused Scene · authored order and widths · ephemeral View arrangement</span></div><div class="dashboard-grid">${sceneCharts.map(chart => chartMarkup(chart, true)).join('')}</div></section><div class="scene-divider" role="separator">Remaining ${state.visibility === 'group' ? 'Time Group' : 'page'} context</div>` : '';
+        const sectionTitle = state.activePage === 'exec' ? 'Surveillance and response overview' : 'Care capacity and continuity';
+        const sectionCopy = state.activePage === 'exec' ? 'Situation, trajectory, geographic spread, vaccination, and operational demand.' : 'Capacity, admissions, workforce continuity, and supply pressure.';
+        dashboardMount.innerHTML = `
+          <header class="page-heading">
+            <div><div class="eyebrow">View · ${state.chronoOpen ? 'Chrono active' : 'Current evidence'}</div><h1>${pageName()}</h1><p>${state.chronoOpen ? 'Playback is a temporary View lens. The saved dashboard and chart footprints remain unchanged.' : 'Review the latest validated regional evidence without changing the authored dashboard.'}</p></div>
+            <div class="page-context"><strong>${state.excludedAlerts ? 'Archived alerts excluded' : 'All alerts visible'}</strong><br>Europe/Berlin · 31 March 2026</div>
+          </header>
+          <nav class="page-tabs" aria-label="Dashboard pages">
+            <button type="button" data-page="exec" aria-pressed="${state.activePage === 'exec'}">Executive surveillance</button>
+            <button type="button" data-page="care" aria-pressed="${state.activePage === 'care'}">Care capacity</button>
+          </nav>
+          ${focusBlock}
+          <section aria-labelledby="dashboard-section-title">
+            <header class="section-heading"><div class="section-kicker">${charts.length} charts · ${state.visibility === 'group' ? 'Group only' : 'All page charts'}</div><h2 id="dashboard-section-title">${sectionTitle}</h2><p>${sectionCopy}</p></header>
+            <div class="dashboard-grid">${remaining.map(chart => chartMarkup(chart, false)).join('')}</div>
+          </section>`;
+        dashboardMount.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => setPage(button.dataset.page)));
+        updateFrameUI();
+        requestAnimationFrame(captureGeometryBaseline);
+      }
+
+      function framePercent() {
+        const total = Math.max(1, frames().length - 1);
+        return `${(frameIndex() / total) * 100}%`;
+      }
+
+      function renderAvailabilityMarks() {
+        const activeFrames = frames();
+        const colors = ['var(--data-1)','var(--data-2)','var(--data-3)','var(--data-4)','var(--data-5)','var(--data-6)'];
+        const marks = activeFrames.map((frame, index) => {
+          const percent = activeFrames.length === 1 ? 0 : (index / (activeFrames.length - 1)) * 100;
+          const count = 1 + ((index * 3 + activeMemberIds().length) % Math.max(2, activeMemberIds().length));
+          return `<span class="availability-mark" style="--p:${percent}%;--h:${4 + count * 2}px;--mark-color:${colors[index % colors.length]}" title="${formatDate(frame)} · ${count} contributing charts"></span>`;
+        }).join('');
+        document.getElementById('availabilityMarks').innerHTML = marks;
+      }
+
+      function updateFrameUI() {
+        const active = source();
+        const activeFrames = frames();
+        const index = Math.min(frameIndex(), activeFrames.length - 1);
+        const date = activeFrames[index];
+        const percent = framePercent();
+        document.getElementById('frameReading').textContent = `${formatDate(date, true)} · ${index + 1} / ${activeFrames.length}`;
+        document.getElementById('periodReading').textContent = `${formatDate(active.period[0])}–${formatDate(active.period[1])} · Europe/Berlin`;
+        document.getElementById('trackStart').textContent = formatDate(active.period[0]);
+        document.getElementById('trackEnd').textContent = formatDate(active.period[1]);
+        document.getElementById('trackMode').textContent = state.trace === 'reveal' ? 'Reveal to frame' : 'Full timeline';
+        seekRange.max = String(Math.max(0, activeFrames.length - 1));
+        seekRange.value = String(index);
+        document.getElementById('previousButton').disabled = index === 0 || state.blocked;
+        document.getElementById('nextButton').disabled = index === activeFrames.length - 1 || state.blocked;
+        playButton.disabled = state.blocked || activeFrames.length === 0;
+        playButton.setAttribute('aria-label', state.playing ? 'Pause' : 'Play');
+        playButton.innerHTML = state.playing ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+        dashboardMount.querySelectorAll('.chart-card').forEach(card => {
+          card.style.setProperty('--frame-percent', percent);
+          const chart = currentPageCharts().find(item => item.id === card.dataset.chartId);
+          const provenance = card.querySelector('.provenance');
+          if (chart && provenance) provenance.textContent = provenanceFor(chart, index);
+        });
+        updateStateReadout();
+      }
+
+      function updateControllerCopy() {
+        const active = source();
+        sourceSelect.value = state.sourceId;
+        document.getElementById('matchingHelp').textContent = `Effective authored policy: ${active.effectiveMatching}. Session changes are temporary.`;
+        document.getElementById('secondsInput').value = String(state.seconds);
+        document.getElementById('matchingSelect').value = state.matching;
+        document.getElementById('overlayToggle').checked = state.overlay;
+        document.querySelectorAll('[data-visibility]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.visibility === state.visibility)));
+        document.querySelectorAll('[data-trace]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.trace === state.trace)));
+        document.getElementById('settingsToggle').setAttribute('aria-expanded', String(state.settingsOpen));
+        document.getElementById('settingsToggle').textContent = state.settingsOpen ? 'Hide settings' : 'Settings';
+        const placementToggle = document.getElementById('placementToggle');
+        placementToggle.textContent = state.variant === 'a' ? 'Move to top' : 'Move to bottom';
+        placementToggle.setAttribute('aria-label', state.variant === 'a' ? 'Move Chrono controls to top' : 'Move Chrono controls to bottom');
+        body.dataset.settingsOpen = String(state.settingsOpen);
+        body.dataset.overlay = String(state.overlay);
+        body.dataset.trace = state.trace;
+        body.dataset.blocked = String(state.blocked);
+        renderAvailabilityMarks();
+        updateFrameUI();
+      }
+
+      function pause(reason) {
+        if (state.timer) clearInterval(state.timer);
+        state.timer = null;
+        const wasPlaying = state.playing;
+        state.playing = false;
+        updateFrameUI();
+        if (reason && wasPlaying) announce(reason);
+      }
+
+      function play() {
+        if (state.blocked) {
+          announce('Playback is blocked. Repair the matching problem first.');
+          return;
+        }
+        if (frameIndex() >= frames().length - 1) state.frameBySource[state.sourceId] = 0;
+        state.playing = true;
+        updateFrameUI();
+        state.timer = setInterval(() => {
+          const next = frameIndex() + 1;
+          if (next >= frames().length) {
+            pause('Reached the final frame. Playback paused.');
+            return;
+          }
+          state.frameBySource[state.sourceId] = next;
+          updateFrameUI();
+        }, Math.max(500, state.seconds * 1000));
+        announce(`Playing ${source().name} from ${formatDate(frames()[frameIndex()], true)}.`);
+      }
+
+      function setFrame(next, manual = true) {
+        if (manual) pause();
+        state.frameBySource[state.sourceId] = Math.max(0, Math.min(frames().length - 1, Number(next)));
+        updateFrameUI();
+        if (manual) announce(`Frame ${frameIndex() + 1} of ${frames().length}, ${formatDate(frames()[frameIndex()], true)}.`);
+      }
+
+      function setSource(id) {
+        pause();
+        state.sourceId = id;
+        state.matching = 'authored';
+        state.blocked = false;
+        document.querySelectorAll('[data-fixture-state]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.fixtureState === 'ready')));
+        const active = source();
+        if (active.kind === 'scene' && active.page !== state.activePage) {
+          state.activePage = active.page;
+          showToast(`Navigated to ${pageName()} for Scene “${active.name}”.`);
+        }
+        renderDashboard();
+        updateControllerCopy();
+        announce(`${active.kind === 'scene' ? 'Scene' : 'Time Group'} ${active.name} selected. Playback paused.`);
+        if (active.kind === 'scene') requestAnimationFrame(() => document.querySelector('.scene-focus')?.scrollIntoView({ block: 'start' }));
+      }
+
+      function setPage(page) {
+        if (page === state.activePage) return;
+        pause();
+        state.activePage = page;
+        if (source().kind === 'scene' && source().page !== page) state.sourceId = 'winter';
+        renderDashboard();
+        updateControllerCopy();
+        announce(`${pageName()} page selected. Playback paused.`);
+      }
+
+      function setVisibility(value) {
+        pause();
+        state.visibility = value;
+        renderDashboard();
+        updateControllerCopy();
+        announce(`${value === 'all' ? 'All page charts' : 'Group only'} shown. Playback paused.`);
+      }
+
+      function openChrono(invoker = document.activeElement) {
+        state.lastInvoker = invoker;
+        state.chronoOpen = true;
+        state.playing = false;
+        body.dataset.chronoOpen = 'true';
+        renderDashboard();
+        updateControllerCopy();
+        requestAnimationFrame(() => sourceSelect.focus({ preventScroll: true }));
+        announce(`Chrono opened for ${source().name}, paused at frame ${frameIndex() + 1}.`);
+      }
+
+      function closeChrono() {
+        pause();
+        state.chronoOpen = false;
+        body.dataset.chronoOpen = 'false';
+        renderDashboard();
+        updateStateReadout();
+        (state.lastInvoker || document.getElementById('openChronoButton')).focus({ preventScroll: true });
+        announce('Chrono closed. Dashboard context and playback position retained.');
+      }
+
+      function setVariant(variant, button) {
+        const scrollTop = productScroll.scrollTop;
+        state.variant = variant;
+        body.dataset.variant = variant;
+        productScroll.scrollTop = scrollTop;
+        updateStateReadout();
+        requestAnimationFrame(() => {
+          productScroll.scrollTop = scrollTop;
+          verifyGeometry();
+          button?.focus({ preventScroll: true });
+        });
+        announce(`Chrono controls moved to the ${variant === 'a' ? 'bottom' : 'top'}. Playback and dashboard state retained.`);
+      }
+
+      function setPreview(preview) {
+        state.preview = preview;
+        productViewport.dataset.preview = preview;
+        document.querySelectorAll('[data-preview]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.preview === preview)));
+        requestAnimationFrame(() => {
+          captureGeometryBaseline();
+          positionControllerForFocus();
+        });
+      }
+
+      function captureGeometryBaseline() {
+        const cards = [...dashboardMount.querySelectorAll('.chart-card')];
+        state.baselineGeometry = cards.map(card => {
+          const rect = card.getBoundingClientRect();
+          return `${card.dataset.chartId}:${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`;
+        }).join('|');
+        document.getElementById('geometryStatus').textContent = 'Canonical chart sizes unchanged';
+      }
+
+      function verifyGeometry() {
+        if (!state.baselineGeometry) return;
+        const current = [...dashboardMount.querySelectorAll('.chart-card')].map(card => {
+          const rect = card.getBoundingClientRect();
+          return `${card.dataset.chartId}:${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`;
+        }).join('|');
+        document.getElementById('geometryStatus').textContent = current === state.baselineGeometry ? 'Canonical chart sizes unchanged' : 'Viewport adaptation active';
+      }
+
+      function positionControllerForFocus() {
+        if (!state.chronoOpen || source().kind !== 'scene') return;
+        const focus = dashboardMount.querySelector('.scene-focus');
+        if (!focus) return;
+        focus.style.scrollMarginTop = state.variant === 'b' ? '220px' : '94px';
+        focus.style.scrollMarginBottom = state.variant === 'a' || state.variant === 'c' ? '250px' : '80px';
+      }
+
+      function updateStateReadout() {
+        document.getElementById('stateVariant').textContent = VARIANT_NAMES[state.variant];
+        document.getElementById('stateChrono').textContent = state.chronoOpen ? (state.playing ? 'Playing' : 'Open · paused') : 'Closed';
+        document.getElementById('stateSource').textContent = source().name;
+        document.getElementById('stateFrame').textContent = `${frameIndex() + 1} of ${frames().length}`;
+        document.getElementById('statePage').textContent = pageName();
+      }
+
+      function announce(message) {
+        const node = document.getElementById('announcement');
+        node.textContent = '';
+        requestAnimationFrame(() => { node.textContent = message; });
+      }
+
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.dataset.open = 'true';
+        if (state.toastTimer) clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => { toast.dataset.open = 'false'; }, 2600);
+      }
+
+      function reset() {
+        pause();
+        Object.assign(state, {
+          variant: 'a', preview: 'full', chronoOpen: false, settingsOpen: false,
+          sourceId: 'winter', playing: false, seconds: 2.5, visibility: 'all',
+          matching: 'authored', trace: 'reveal', overlay: false, blocked: false,
+          activePage: 'exec', excludedAlerts: true
+        });
+        state.frameBySource = { winter: 0, sentinel: 0, march: 0, care: 0 };
+        body.dataset.variant = 'a';
+        body.dataset.chronoOpen = 'false';
+        body.dataset.settingsOpen = 'false';
+        body.dataset.overlay = 'false';
+        body.dataset.trace = 'reveal';
+        body.dataset.blocked = 'false';
+        setPreview('full');
+        document.querySelectorAll('[data-fixture-state]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.fixtureState === 'ready')));
+        renderDashboard();
+        updateControllerCopy();
+        productScroll.scrollTop = 0;
+        announce('Sketch reset to ordinary View.');
+      }
+
+      document.getElementById('placementToggle').addEventListener('click', event => setVariant(state.variant === 'a' ? 'b' : 'a', event.currentTarget));
+      document.querySelectorAll('[data-preview]').forEach(button => button.addEventListener('click', () => setPreview(button.dataset.preview)));
+      document.querySelectorAll('[data-fixture-state]').forEach(button => button.addEventListener('click', () => {
+        pause();
+        state.blocked = button.dataset.fixtureState === 'blocked';
+        body.dataset.blocked = String(state.blocked);
+        document.querySelectorAll('[data-fixture-state]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        updateFrameUI();
+        if (state.blocked && !state.chronoOpen) openChrono(button);
+        announce(state.blocked ? 'Needs-attention fixture active. Playback blocked.' : 'Ready fixture restored.');
+      }));
+      document.getElementById('resetButton').addEventListener('click', reset);
+      document.getElementById('openChronoButton').addEventListener('click', event => openChrono(event.currentTarget));
+      document.getElementById('exitChronoButton').addEventListener('click', closeChrono);
+      document.getElementById('settingsToggle').addEventListener('click', () => {
+        state.settingsOpen = !state.settingsOpen;
+        updateControllerCopy();
+        positionControllerForFocus();
+      });
+      sourceSelect.addEventListener('change', event => setSource(event.target.value));
+      seekRange.addEventListener('input', event => setFrame(event.target.value));
+      document.getElementById('previousButton').addEventListener('click', () => setFrame(frameIndex() - 1));
+      document.getElementById('nextButton').addEventListener('click', () => setFrame(frameIndex() + 1));
+      playButton.addEventListener('click', () => state.playing ? pause('Playback paused.') : play());
+      document.querySelectorAll('[data-visibility]').forEach(button => button.addEventListener('click', () => setVisibility(button.dataset.visibility)));
+      document.querySelectorAll('[data-trace]').forEach(button => button.addEventListener('click', () => {
+        pause();
+        state.trace = button.dataset.trace;
+        body.dataset.trace = state.trace;
+        updateControllerCopy();
+        announce(`${state.trace === 'reveal' ? 'Reveal to frame' : 'Full timeline'} selected. Playback paused.`);
+      }));
+      document.getElementById('overlayToggle').addEventListener('change', event => {
+        state.overlay = event.target.checked;
+        body.dataset.overlay = String(state.overlay);
+        renderAvailabilityMarks();
+        announce(`Availability overlay ${state.overlay ? 'on' : 'off'}.`);
+      });
+      document.getElementById('secondsInput').addEventListener('change', event => {
+        pause();
+        const value = Number(event.target.value);
+        if (!Number.isFinite(value) || value <= 0) {
+          event.target.value = String(state.seconds);
+          announce('Seconds per frame must be a positive number.');
+          return;
+        }
+        state.seconds = Math.min(10, Math.max(.5, value));
+        event.target.value = String(state.seconds);
+        announce(`${state.seconds} seconds per frame for this View session.`);
+      });
+      document.getElementById('matchingSelect').addEventListener('change', event => {
+        pause();
+        state.matching = event.target.value;
+        state.blocked = state.matching === 'interpolate' && source().name.includes('Winter');
+        body.dataset.blocked = String(state.blocked);
+        document.querySelectorAll('[data-fixture-state]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.fixtureState === (state.blocked ? 'blocked' : 'ready'))));
+        updateFrameUI();
+        announce(state.blocked ? 'Interpolate is unsupported for Hospital load at this frame. Playback blocked.' : `Temporary matching set to ${event.target.selectedOptions[0].textContent}.`);
+      });
+      document.getElementById('repairButton').addEventListener('click', () => {
+        state.matching = 'authored';
+        state.blocked = false;
+        body.dataset.blocked = 'false';
+        document.getElementById('matchingSelect').value = 'authored';
+        document.querySelectorAll('[data-fixture-state]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.fixtureState === 'ready')));
+        updateFrameUI();
+        announce('Authored matching restored. Playback is ready.');
+        playButton.focus();
+      });
+      document.querySelectorAll('.mode-switch button:not([aria-pressed="true"])').forEach(button => button.addEventListener('click', () => {
+        showToast(`${button.textContent.trim()} remains outside this View Chrono sketch.`);
+        announce(`This comparison keeps View active. ${button.textContent.trim()} is not entered.`);
+      }));
+      document.querySelectorAll('.page-footer a').forEach(link => link.addEventListener('click', event => {
+        event.preventDefault();
+        showToast(`${link.textContent.trim()} is represented as page chrome in this sketch.`);
+      }));
+      productScroll.addEventListener('scroll', () => { if (state.chronoOpen) verifyGeometry(); }, { passive: true });
+      document.addEventListener('visibilitychange', () => { if (document.hidden && state.playing) pause('Playback paused because the page is no longer visible.'); });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && state.chronoOpen) closeChrono();
+      });
+      window.addEventListener('resize', () => requestAnimationFrame(() => { captureGeometryBaseline(); positionControllerForFocus(); }));
+
+      renderDashboard();
+      updateControllerCopy();
+      updateStateReadout();
+    })();
+  </script>
+</body>
+</html>
