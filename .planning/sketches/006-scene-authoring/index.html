@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 006 — Two-stage Scene authoring</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper-outer:#eee9de; --paper-canvas:#f7f3e9; --paper-panel:#fffdf8; --paper-panel-alt:#f2ede2;
+      --ink:#282c2d; --ink-soft:#535b5c; --ink-faint:#6c7474; --rule:#c9c5ba; --rule-strong:#727a7b;
+      --ui:#2c383d; --ui-soft:#e3e8e6; --focus:#005fcc; --selected:#8b2d3d; --selected-soft:#f3dfe3;
+      --info:#315f75; --info-soft:#dce9ec; --success:#3f6b50; --success-soft:#e0ebe3;
+      --warning:#815a10; --warning-soft:#f5e7bf; --error:#983840; --error-soft:#f5dfe1;
+      --chrono:#5d4f82; --chrono-soft:#e8e3f2; --shadow:0 18px 48px rgba(40,44,45,.2);
+      font-family:"Segoe UI",Arial,sans-serif;
+    }
+    * { box-sizing:border-box; }
+    html,body { margin:0; min-height:100%; }
+    body { background:#d8d5cd; color:var(--ink); overflow:hidden; }
+    button,input,select { font:inherit; }
+    button,select,input[type="date"],input[type="text"],input[type="number"] { min-height:44px; }
+    button { border:1px solid var(--rule-strong); background:var(--paper-panel); color:var(--ink); padding:9px 13px; cursor:pointer; transition:background 120ms ease,border-color 120ms ease; }
+    button:hover:not(:disabled) { background:var(--ui-soft); }
+    button:disabled { cursor:not-allowed; opacity:.48; }
+    button.primary { background:var(--ui); color:white; border-color:var(--ui); }
+    button.danger { color:var(--error); border-color:var(--error); }
+    button.ghost { border-color:transparent; background:transparent; }
+    button[aria-pressed="true"],button[aria-current="step"] { border-color:var(--selected); box-shadow:inset 4px 0 0 var(--selected); background:var(--selected-soft); }
+    :focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+    h1,h2,h3,h4 { font-family:Georgia,"Times New Roman",serif; font-weight:600; margin:0; }
+    p { margin:0; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .skip-link { position:fixed; left:12px; top:-80px; z-index:120; background:white; padding:12px; }
+    .skip-link:focus { top:12px; }
+
+    .review-layout { display:grid; grid-template-columns:clamp(360px,25vw,500px) minmax(0,1fr); width:100vw; height:100vh; overflow:hidden; }
+    .review-rail { height:100vh; overflow:auto; background:#f1f0ec; border-right:1px solid #aaa9a4; padding:22px; scrollbar-gutter:stable; }
+    .review-rail h1 { font:700 23px/1.2 "Segoe UI",Arial,sans-serif; }
+    .review-kicker { font-size:12px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#50585a; margin-bottom:6px; }
+    .review-copy { margin-top:10px; line-height:1.48; color:#4f5657; }
+    .review-group { margin-top:22px; border-top:1px solid #c8c7c1; padding-top:16px; }
+    .review-group h2 { font:700 13px/1.3 "Segoe UI",Arial,sans-serif; text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px; }
+    .variant-stack,.viewport-grid { display:grid; gap:8px; }
+    .variant-button { text-align:left; }
+    .variant-button strong,.variant-button span { display:block; }
+    .variant-button span { color:#596162; font-size:13px; margin-top:3px; }
+    .viewport-grid { grid-template-columns:repeat(3,1fr); }
+    .viewport-grid button { padding-inline:6px; }
+    .review-list { padding-left:20px; margin:10px 0 0; line-height:1.48; }
+    .review-status { min-height:72px; border:1px solid #b7b7b1; background:white; padding:12px; line-height:1.4; font-size:14px; }
+
+    .preview-stage { min-width:0; height:100vh; overflow:auto; background:#c7c4bc; display:flex; align-items:flex-start; justify-content:center; padding:18px; scrollbar-gutter:stable; }
+    .product-frame { --frame-w:1440px; position:relative; width:min(100%,var(--frame-w)); min-width:min(100%,390px); min-height:900px; overflow:hidden; background:var(--paper-canvas); border:1px solid #92938f; box-shadow:0 8px 30px rgba(0,0,0,.16); container-type:inline-size; }
+    .phone-mode-banner { display:none; position:relative; z-index:55; align-items:center; justify-content:space-between; gap:14px; padding:10px 14px; background:var(--warning-soft); border-bottom:2px solid var(--warning); color:#513800; font-weight:650; }
+    .product-frame[data-preview="390"] .phone-mode-banner { display:flex; }
+    body[data-ui-mode="view"] .phone-mode-banner { display:none!important; }
+    .product-header { position:relative; z-index:2; min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 20px; background:var(--paper-panel); border-bottom:1px solid var(--rule-strong); }
+    .brand { display:flex; gap:12px; align-items:center; }
+    .brand-mark { width:38px; height:38px; display:grid; place-items:center; border:2px solid var(--ui); font-weight:800; }
+    .brand strong,.brand span { display:block; }
+    .brand span { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+    .mode-actions,.button-row,.compact-actions,.footer-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .dashboard-background { padding:22px; min-height:824px; background:var(--paper-canvas); }
+    .dashboard-heading { display:flex; justify-content:space-between; align-items:end; gap:18px; border-bottom:2px solid var(--rule-strong); padding-bottom:14px; margin-bottom:16px; }
+    .dashboard-heading p { color:var(--ink-soft); margin-top:5px; }
+    .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .dash-panel { min-height:220px; border:1px solid var(--rule); background:var(--paper-panel); padding:14px; }
+    .dash-panel h3 { font-size:17px; }
+    .dash-meta { color:var(--ink-faint); font-size:12px; margin-top:3px; }
+    .mini-chart { height:120px; margin-top:18px; border-left:1px solid var(--rule); border-bottom:1px solid var(--rule); display:flex; align-items:end; gap:7px; padding:8px; background-image:linear-gradient(to bottom,transparent 32%,var(--paper-panel-alt) 33%,transparent 34%,transparent 65%,var(--paper-panel-alt) 66%,transparent 67%); }
+    .mini-chart span { flex:1; background:#667853; min-width:6px; }
+    .view-only-message { display:none; border:1px solid var(--info); background:var(--info-soft); padding:12px 16px; margin-bottom:14px; }
+    body[data-ui-mode="view"] .view-only-message { display:block; }
+
+    .studio-backdrop { position:absolute; z-index:30; inset:0; background:rgba(42,43,42,.46); pointer-events:auto; }
+    .studio-shell { position:absolute; z-index:40; inset:100px 20px 20px; display:grid; grid-template-rows:auto minmax(0,1fr) auto; background:var(--paper-panel); border:1px solid var(--rule-strong); box-shadow:var(--shadow); overflow:hidden; }
+    body:not([data-ui-mode="build"]) .studio-shell,body:not([data-ui-mode="build"]) .studio-backdrop,body[data-studio-open="false"] .studio-shell,body[data-studio-open="false"] .studio-backdrop { display:none; }
+    .studio-header { min-height:82px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--rule); padding:12px 18px; background:var(--paper-panel-alt); }
+    .studio-header h2 { font-size:22px; }
+    .studio-header p { color:var(--ink-soft); margin-top:4px; }
+    .scene-lineage { display:flex; flex-wrap:wrap; gap:7px 13px; align-items:center; margin-top:8px; font-size:12px; font-weight:700; }
+    .scene-lineage strong { border-left:5px solid var(--selected); padding-left:8px; }
+    .draft-state,.status { display:inline-flex; align-items:center; min-height:28px; padding:3px 7px; border:1px solid var(--rule); background:var(--paper-panel-alt); font-size:12px; font-weight:700; }
+    .draft-state { min-height:30px; border-color:var(--rule-strong); text-transform:uppercase; letter-spacing:.05em; background:white; }
+    .status.error { border-color:var(--error); background:var(--error-soft); }
+    .status.success { border-color:var(--success); background:var(--success-soft); }
+    .studio-content { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 318px; overflow:hidden; }
+    .stage-body { min-width:0; overflow:auto; padding:18px; scrollbar-gutter:stable; }
+    .scene-draft-panel { min-width:0; overflow:auto; border-left:1px solid var(--rule); background:#faf7f0; padding:14px; scrollbar-gutter:stable; }
+    .scene-draft-panel h3 { font:750 13px/1.2 "Segoe UI",Arial,sans-serif; text-transform:uppercase; letter-spacing:.06em; }
+    .draft-fields { display:grid; gap:14px; margin-top:14px; }
+    .draft-section { display:grid; gap:10px; border-top:1px solid var(--rule); padding-top:12px; }
+    .draft-section:first-child { border-top:0; padding-top:0; }
+    .draft-section h4 { font:800 11px/1.2 "Segoe UI",Arial,sans-serif; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-faint); }
+    .validation-list { margin:0; padding-left:18px; display:grid; gap:5px; font-size:12px; line-height:1.35; }
+    .studio-footer { min-height:68px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid var(--rule); padding:10px 16px; background:var(--paper-panel-alt); }
+    .stage-switch { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:16px; }
+    .stage-switch button { display:grid; grid-template-columns:30px minmax(0,1fr); gap:9px; text-align:left; align-items:center; }
+    .stage-index { width:28px; height:28px; display:grid; place-items:center; border:1px solid currentColor; font-weight:800; }
+    .stage-switch strong,.stage-switch small { display:block; }
+    .stage-switch small { margin-top:2px; color:var(--ink-soft); }
+    .stage-intro { border-bottom:1px solid var(--rule); padding-bottom:14px; margin-bottom:16px; }
+    .stage-intro h3 { font-size:23px; }
+    .stage-intro p { margin-top:6px; color:var(--ink-soft); line-height:1.45; max-width:78ch; }
+    .notice { border-left:4px solid var(--info); background:var(--info-soft); padding:12px; margin-bottom:14px; line-height:1.4; }
+    .notice.error { border-color:var(--error); background:var(--error-soft); color:#5f2026; }
+    .notice.warning { border-color:var(--warning); background:var(--warning-soft); color:#5a3b00; }
+    .notice.success { border-color:var(--success); background:var(--success-soft); color:#294735; }
+    .field { display:grid; gap:6px; min-width:0; }
+    .field > span,.field > label { font-weight:700; }
+    .field small { color:var(--ink-soft); line-height:1.35; }
+    .field input,.field select { width:100%; border:1px solid var(--rule-strong); background:white; color:var(--ink); padding:8px 10px; }
+    .date-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+
+    .ledger-region { margin-top:16px; }
+    .ledger-region-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; border-bottom:1px solid var(--rule-strong); padding-bottom:8px; }
+    .ledger-region-heading p { color:var(--ink-soft); font-size:12px; margin-top:3px; }
+    .ledger-list { display:grid; gap:10px; margin-top:10px; }
+    .region-separator { height:1px; background:var(--rule-strong); margin:20px 0; }
+    .ledger-empty { padding:12px; color:var(--ink-soft); border:1px dashed var(--rule); }
+    .ledger-card { border:1px solid var(--rule); background:white; }
+    .ledger-card[data-member="true"] { border-left:5px solid var(--selected); }
+    .ledger-card[data-frame-source="true"] { border:2px solid var(--selected); box-shadow:0 4px 14px rgba(83,42,48,.12); }
+    .ledger-card[data-frame-source="true"] .ledger-card-head { background:var(--selected-soft); }
+    .ledger-card-head { display:grid; grid-template-columns:minmax(190px,.8fr) minmax(260px,1.5fr) 96px; gap:12px; align-items:center; padding:11px; border-bottom:1px solid var(--rule); background:var(--paper-panel-alt); }
+    .ledger-title strong,.ledger-title small { display:block; }
+    .ledger-title small { color:var(--ink-soft); margin-top:3px; }
+    .ledger-count { text-align:right; font-variant-numeric:tabular-nums; font-weight:800; font-size:12px; }
+    .ledger-actions { display:flex; flex-wrap:wrap; gap:7px; padding:9px 11px; border-bottom:1px solid var(--rule); }
+    .ledger-actions button,.ledger-actions label { min-height:38px; }
+    .ledger-actions label { display:flex; align-items:center; gap:7px; padding:5px 8px; border:1px solid var(--rule); background:white; font-weight:700; font-size:12px; }
+    .source-config { display:grid; gap:9px; padding:12px; border-bottom:1px solid var(--rule); background:#fff9f5; }
+    .source-config-head { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; }
+    .source-config-head h4 { font-size:16px; }
+    .frame-options { display:flex; flex-wrap:wrap; gap:7px; }
+    .timeline-grid { display:grid; grid-template-columns:minmax(190px,.8fr) minmax(260px,1.5fr) 96px; gap:12px; align-items:center; padding:9px 11px; }
+    .timeline-label strong,.timeline-label small { display:block; }
+    .timeline-label small { color:var(--ink-soft); margin-top:2px; }
+    .availability-track { position:relative; min-height:44px; border:1px solid var(--rule); background:linear-gradient(to right,var(--paper-panel-alt),white); overflow:hidden; }
+    .availability-track::before { content:""; position:absolute; left:4%; right:4%; top:21px; height:2px; background:var(--rule-strong); }
+    .observation-tick { position:absolute; top:11px; width:3px; height:21px; background:var(--info); transform:translateX(-1px); }
+    .observation-tick[data-selected="true"] { width:5px; background:var(--selected); }
+    .observation-tick::after { content:""; position:absolute; inset:-10px -8px; }
+    .variable-list { border-top:1px solid var(--rule); background:#fbfaf6; }
+    .timeline-grid.variable { font-size:12px; padding-block:7px; }
+
+    .arrange-header { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .primary-switch { display:none; gap:7px; flex-wrap:wrap; }
+    body[data-variant="B"] .primary-switch { display:flex; }
+    .twin-stage { display:grid; gap:14px; align-items:start; }
+    body[data-variant="A"] .twin-stage { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    body[data-variant="B"] .twin-stage { grid-template-columns:minmax(0,1.55fr) minmax(250px,.75fr); }
+    body[data-variant="B"][data-primary-board="present"] .scene-board { order:2; }
+    body[data-variant="B"][data-primary-board="present"] .present-board { order:1; }
+    body[data-variant="C"] .twin-stage { grid-template-columns:1fr; }
+    .arrangement-board { position:relative; min-width:0; border:1px solid var(--rule-strong); background:var(--paper-panel-alt); padding:11px; overflow:hidden; }
+    .board-toolbar { display:flex; align-items:start; justify-content:space-between; gap:10px; border-bottom:1px solid var(--rule); padding-bottom:9px; }
+    .board-toolbar h4 { font-size:18px; }
+    .board-toolbar p { color:var(--ink-soft); font-size:12px; line-height:1.35; margin-top:3px; }
+    .canvas-warning { color:var(--ink-soft); font-size:12px; line-height:1.35; margin:8px 0; }
+    .arrangement-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-flow:row; gap:8px; min-height:232px; align-content:start; }
+    .scene-panel { min-width:0; min-height:104px; border:1px solid var(--rule); background:white; padding:7px; display:grid; grid-template-rows:auto 1fr auto; gap:7px; }
+    .scene-panel[data-board="scene"] { grid-column:span var(--tracks,2); }
+    .scene-panel[data-selected="true"] { border:2px solid var(--selected); background:var(--selected-soft); }
+    .scene-panel[data-dragging="true"] { opacity:.34; }
+    .scene-panel[data-drop="true"] { border:3px dashed var(--selected); }
+    .scene-panel-head { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px; align-items:start; }
+    .chart-title-button { width:100%; min-height:50px; border:0; background:transparent; text-align:left; padding:7px; cursor:grab; touch-action:none; user-select:none; }
+    .chart-title-button:active { cursor:grabbing; }
+    .chart-title-button strong,.chart-title-button small { display:block; }
+    .chart-title-button small { color:var(--ink-soft); margin-top:3px; }
+    .panel-present-action { min-height:44px; align-self:start; padding:6px 8px; font-size:11px; line-height:1.15; white-space:nowrap; }
+    .chart-plot { min-height:34px; border-left:1px solid var(--rule); border-bottom:1px solid var(--rule); display:flex; gap:3px; align-items:end; padding:4px; }
+    .chart-plot span { flex:1; min-width:3px; background:#667853; }
+    .panel-meta { font-size:11px; color:var(--ink-soft); }
+    .drop-zone-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:8px; }
+    .drop-zone { min-height:44px; border:2px dashed var(--info); background:var(--info-soft); display:grid; place-items:center; text-align:center; font-size:11px; font-weight:800; padding:5px; }
+    .drop-zone[data-active="true"] { border-style:solid; border-color:var(--selected); background:var(--selected-soft); }
+    .present-grid[data-layout="single"] .scene-panel { grid-column:1/-1; min-height:210px; }
+    .present-grid[data-layout="split-columns"] .scene-panel { grid-column:span 2; min-height:210px; }
+    .present-grid[data-layout="split-rows"] .scene-panel { grid-column:1/-1; min-height:98px; }
+    .present-grid[data-layout="dominant-left"] .scene-panel:first-child { grid-column:span 2; grid-row:span 2; min-height:216px; }
+    .present-grid[data-layout="dominant-left"] .scene-panel:not(:first-child) { grid-column:span 2; }
+    .present-grid[data-layout="dominant-top"] .scene-panel:first-child { grid-column:1/-1; }
+    .present-grid[data-layout="dominant-top"] .scene-panel:not(:first-child) { grid-column:span 2; }
+    .present-grid[data-layout="grid-2x2"] .scene-panel { grid-column:span 2; }
+    .layout-shapes { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+    .layout-shapes button { min-height:38px; padding:6px 9px; font-size:12px; }
+
+    .unit-orbit { position:fixed; z-index:80; width:min(390px,calc(100vw - 24px)); max-height:var(--orbit-max-h,calc(100vh - 24px)); overflow:auto; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start; border:1px solid var(--rule-strong); border-left:5px solid var(--info); background:var(--paper-panel); padding:12px; box-shadow:0 12px 30px rgba(35,30,25,.22); }
+    .unit-orbit[data-unpositioned="true"] { visibility:hidden; }
+    .unit-orbit h4 { font-size:18px; }
+    .unit-orbit p { color:var(--ink-soft); font-size:12px; line-height:1.35; margin-top:3px; }
+    .orbit-fields { grid-column:1/-1; display:grid; gap:11px; }
+    .orbit-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+
+    .modal-layer { position:fixed; z-index:90; inset:0; display:grid; place-items:center; padding:20px; background:rgba(33,35,34,.6); }
+    .modal-layer[hidden] { display:none; }
+    .modal-card { width:min(560px,100%); max-height:min(760px,calc(100vh - 32px)); overflow:auto; background:var(--paper-panel); border:1px solid var(--rule-strong); box-shadow:var(--shadow); padding:20px; }
+    .modal-card h2 { font-size:23px; }
+    .modal-card p { margin-top:8px; line-height:1.45; }
+    .modal-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+    .observation-list { display:grid; gap:7px; max-height:380px; overflow:auto; margin-top:14px; border-block:1px solid var(--rule); padding-block:9px; }
+    .observation-option { display:grid; grid-template-columns:24px minmax(0,1fr) auto; gap:8px; align-items:center; min-height:48px; padding:7px; border:1px solid var(--rule); }
+    .toast { position:fixed; z-index:110; right:24px; bottom:24px; max-width:420px; background:var(--ui); color:white; padding:12px 16px; box-shadow:var(--shadow); opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity 120ms ease,transform 120ms ease; }
+    .toast[data-open="true"] { opacity:1; transform:none; }
+
+    .product-frame[data-preview="1024"] .studio-content { grid-template-columns:minmax(0,1fr) 286px; }
+    .product-frame[data-preview="1024"] .ledger-card-head,.product-frame[data-preview="1024"] .timeline-grid { grid-template-columns:minmax(155px,.75fr) minmax(190px,1.35fr) 84px; }
+    .product-frame[data-preview="1024"] .twin-stage,.product-frame[data-preview="768"] .twin-stage { grid-template-columns:1fr!important; }
+    .product-frame[data-preview="768"] .studio-shell { inset-inline:8px; }
+    .product-frame[data-preview="768"] .studio-content { grid-template-columns:1fr; overflow:auto; }
+    .product-frame[data-preview="768"] .stage-body,.product-frame[data-preview="768"] .scene-draft-panel { overflow:visible; }
+    .product-frame[data-preview="768"] .scene-draft-panel { border-left:0; border-top:1px solid var(--rule); }
+    .product-frame[data-preview="768"] .ledger-card-head,.product-frame[data-preview="768"] .timeline-grid { grid-template-columns:minmax(135px,.75fr) minmax(175px,1.3fr) 78px; }
+    .product-frame[data-preview="390"] .studio-shell,.product-frame[data-preview="390"] .studio-backdrop { display:none!important; }
+    @container (max-width:760px) {
+      .ledger-card-head,.timeline-grid { grid-template-columns:1fr; }
+      .ledger-count { text-align:left; }
+      .twin-stage { grid-template-columns:1fr!important; }
+    }
+    @media (max-width:900px) {
+      body { overflow:auto; }
+      .review-layout { display:block; height:auto; min-height:100vh; overflow:visible; }
+      .review-rail { height:auto; max-height:44vh; border-right:0; border-bottom:1px solid #aaa9a4; }
+      .preview-stage { height:56vh; min-height:600px; padding:8px; }
+      .product-header { align-items:flex-start; flex-direction:column; }
+      .studio-backdrop { inset-block-start:122px; }
+      .studio-shell { inset-block-start:142px; }
+    }
+    @media (max-width:639px) { .phone-mode-banner { display:flex; } .dashboard-grid { grid-template-columns:1fr; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
+  </style>
+</head>
+<body data-variant="A" data-ui-mode="build" data-studio-open="true" data-primary-board="scene">
+  <a class="skip-link" href="#studioMain">Skip to Scene authoring</a>
+  <div class="review-layout">
+    <aside class="review-rail" aria-label="Prototype review controls">
+      <p class="review-kicker">Sketch 006 · Two-stage round</p>
+      <h1>Scene authoring</h1>
+      <p class="review-copy">Approved winner: Variant A. B and C remain interactive as preserved evidence.</p>
+      <section class="review-group" aria-labelledby="variantHeading">
+        <h2 id="variantHeading">Twin-canvas treatment</h2>
+        <div class="variant-stack">
+          <button class="variant-button" type="button" data-variant-button="A" aria-pressed="true"><strong>A · Balanced Twin Canvas ★ Winner</strong><span>Approved · equal Scene View and Present proofs</span></button>
+          <button class="variant-button" type="button" data-variant-button="B" aria-pressed="false"><strong>B · Primary + Companion</strong><span>Preserved alternative · unequal editing emphasis</span></button>
+          <button class="variant-button" type="button" data-variant-button="C" aria-pressed="false"><strong>C · Stacked Twin Canvas</strong><span>Preserved alternative · greater vertical travel</span></button>
+        </div>
+      </section>
+      <section class="review-group" aria-labelledby="viewportHeading">
+        <h2 id="viewportHeading">Fixture viewport</h2>
+        <div class="viewport-grid">
+          <button type="button" data-viewport="1440" aria-pressed="true">1440</button><button type="button" data-viewport="1200" aria-pressed="false">1200</button><button type="button" data-viewport="1024" aria-pressed="false">1024</button><button type="button" data-viewport="768" aria-pressed="false">768</button><button type="button" data-viewport="390" aria-pressed="false">390</button><button type="button" id="resetButton">Reset</button>
+        </div>
+      </section>
+      <section class="review-group" aria-labelledby="exerciseHeading">
+        <h2 id="exerciseHeading">Decision exercise</h2>
+        <ol class="review-list">
+          <li>Choose Page, then Parent; confirm the maximum parent period loads.</li>
+          <li>Select charts and assign one Frame source.</li>
+          <li>Choose Selected frames and edit the Observation list.</li>
+          <li>Continue to Stage 2 and drag charts in both canvases.</li>
+          <li>Open Unit Orbit; change Scene width, matching, and Present inclusion.</li>
+          <li>Use fewer than four Present charts and compare divider shapes.</li>
+          <li>Switch A/B/C and confirm the same Scene draft persists.</li>
+        </ol>
+      </section>
+      <section class="review-group"><h2>Shared state proof</h2><div class="review-status" id="reviewStatus">A · Stage 1 · clean fixture</div></section>
+      <section class="review-group"><h2>Not being decided</h2><p class="review-copy">The data, matching semantics, persistence, and validation are simulated fixtures. This round decides Stage 2 canvas containment.</p></section>
+    </aside>
+
+    <main class="preview-stage" aria-label="Scene-authoring fixture">
+      <div class="product-frame" id="productFrame" data-preview="1440" style="--frame-w:1440px">
+        <div class="phone-mode-banner" role="status"><span>Build and Present are not supported at phone size. Your Scene draft is retained.</span><button type="button" data-action="switch-view">Switch to View</button></div>
+        <header class="product-header">
+          <div class="brand"><div class="brand-mark" aria-hidden="true">SX</div><div><strong>Regional Respiratory Preparedness</strong><span>Executive surveillance · Europe/Berlin</span></div></div>
+          <div class="mode-actions" aria-label="Dashboard mode"><button type="button" data-mode="view" aria-pressed="false">View</button><button type="button" data-mode="build" aria-pressed="true">Build</button><button type="button" data-mode="present" aria-pressed="false">Present</button></div>
+        </header>
+        <section class="dashboard-background" aria-label="Saved dashboard">
+          <div class="view-only-message">View shows only saved dashboard state. The unfinished Scene draft remains suspended in Build.</div>
+          <div class="dashboard-heading"><div><h2>Winter response 2026</h2><p id="savedDashboardStatus">Saved Time Group · no saved Scene from this draft</p></div><button type="button" data-action="open-studio">Create Scene</button></div>
+          <div class="dashboard-grid" aria-label="Canonical saved dashboard panels">
+            <article class="dash-panel"><h3>Confirmed cases</h3><p class="dash-meta">Canonical footprint · 2 × 1</p><div class="mini-chart"><span style="height:25%"></span><span style="height:42%"></span><span style="height:55%"></span><span style="height:82%"></span><span style="height:66%"></span><span style="height:89%"></span></div></article>
+            <article class="dash-panel"><h3>Regional R values</h3><p class="dash-meta">Canonical footprint · 2 × 1</p><div class="mini-chart"><span style="height:62%"></span><span style="height:57%"></span><span style="height:69%"></span><span style="height:48%"></span><span style="height:54%"></span><span style="height:46%"></span></div></article>
+            <article class="dash-panel"><h3>Municipality outbreak map</h3><p class="dash-meta">Canonical footprint · 4 × 2</p><div class="mini-chart"><span style="height:75%"></span><span style="height:35%"></span><span style="height:61%"></span><span style="height:49%"></span><span style="height:78%"></span><span style="height:40%"></span></div></article>
+            <article class="dash-panel"><h3>Regional comparison</h3><p class="dash-meta">Canonical footprint · 2 × 1</p><div class="mini-chart"><span style="height:45%"></span><span style="height:51%"></span><span style="height:69%"></span><span style="height:73%"></span><span style="height:58%"></span><span style="height:64%"></span></div></article>
+            <article class="dash-panel"><h3>Vaccination rate</h3><p class="dash-meta">Canonical footprint · 2 × 1</p><div class="mini-chart"><span style="height:30%"></span><span style="height:38%"></span><span style="height:49%"></span><span style="height:60%"></span><span style="height:70%"></span><span style="height:79%"></span></div></article>
+            <article class="dash-panel"><h3>Hospital load</h3><p class="dash-meta">Canonical footprint · 2 × 1</p><div class="mini-chart"><span style="height:73%"></span><span style="height:66%"></span><span style="height:78%"></span><span style="height:84%"></span><span style="height:71%"></span><span style="height:76%"></span></div></article>
+          </div>
+        </section>
+        <div class="studio-backdrop" aria-hidden="true"></div>
+        <section class="studio-shell" id="studio" role="dialog" aria-modal="true" aria-labelledby="studioTitle">
+          <header class="studio-header">
+            <div><p class="review-kicker" id="variantEyebrow">Variant A · Balanced Twin Canvas · Approved winner</p><h2 id="studioTitle">Create Scene</h2><p>Two stages · one atomic Scene draft · saved dashboard unchanged until Save</p><div class="scene-lineage"><strong>Scene draft</strong><span id="lineageParent">Winter response 2026</span><span>→</span><span id="lineagePage">Executive surveillance</span></div></div>
+            <div><span class="draft-state" id="draftState">Clean fixture</span><button type="button" data-action="leave-build">Switch to View</button><button type="button" data-action="close-studio">Close</button></div>
+          </header>
+          <div class="studio-content">
+            <div class="stage-body" id="studioMain" tabindex="-1"></div>
+            <aside class="scene-draft-panel" aria-labelledby="draftPanelHeading"><h3 id="draftPanelHeading">Scene draft</h3><div class="draft-fields" id="draftPanel"></div></aside>
+          </div>
+          <footer class="studio-footer">
+            <div class="footer-actions"><button type="button" data-action="previous-stage">Previous</button><button type="button" data-action="next-stage">Next</button></div>
+            <div class="footer-actions"><span class="status" id="footerStatus">Stage 1 of 2</span><button type="button" class="primary" data-action="save-scene">Save Scene</button></div>
+          </footer>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-layer" id="observationModal" role="dialog" aria-modal="true" aria-labelledby="observationTitle" hidden><div class="modal-card"><h2 id="observationTitle">Observation list</h2><p id="observationDescription"></p><div class="observation-list" id="observationList"></div><div class="modal-actions"><button type="button" class="primary" data-action="apply-observations">Apply selected frames</button><button type="button" data-action="close-observations">Cancel</button></div></div></div>
+  <div class="modal-layer" id="dirtyModal" role="dialog" aria-modal="true" aria-labelledby="dirtyTitle" hidden><div class="modal-card"><h2 id="dirtyTitle">Unsaved Scene changes</h2><p>Leaving Build would lose this local Scene draft. Save the complete valid Scene, discard it, or keep editing.</p><div class="modal-actions"><button type="button" class="primary" data-modal-action="save">Save Scene</button><button type="button" class="danger" data-modal-action="discard">Discard Scene draft</button><button type="button" data-modal-action="stay">Keep editing</button></div></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" data-open="false"></div><div class="sr-only" id="liveRegion" role="status" aria-live="polite"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var STAGES = [
+      ['Select charts and frames','Scope, availability, membership, and frame rule'],
+      ['Arrange and configure','Scene View, Present, and chart-local temporal behavior']
+    ];
+    var VARIANTS = {
+      A:{name:'Balanced Twin Canvas',hypothesis:'Equal Scene View and Present proofs make differences directly comparable.'},
+      B:{name:'Primary + Companion',hypothesis:'One larger active proof improves editing while its companion remains visible.'},
+      C:{name:'Stacked Twin Canvas',hypothesis:'Full-width proofs maximize chart fidelity at the cost of vertical travel.'}
+    };
+    var CHARTS = [
+      {id:'cases',title:'Confirmed cases',canonical:'2 × 1',vars:['Reported cases','Laboratory positivity'],dates:['2026-01-04','2026-01-18','2026-02-01','2026-02-15','2026-03-01','2026-03-08','2026-03-15','2026-03-22','2026-03-29','2026-03-31']},
+      {id:'rvalues',title:'Regional R values',canonical:'2 × 1',vars:['North estimate','South estimate'],dates:['2026-01-07','2026-01-21','2026-02-04','2026-02-18','2026-03-04','2026-03-11','2026-03-18','2026-03-25']},
+      {id:'map',title:'Municipality outbreak map',canonical:'4 × 2',vars:['Municipality alert band'],dates:['2026-01-05','2026-01-19','2026-02-02','2026-02-16','2026-03-02','2026-03-16','2026-03-30']},
+      {id:'region',title:'Regional comparison',canonical:'2 × 1',vars:['Cases per 100k','Admissions per 100k'],dates:['2026-01-03','2026-01-17','2026-01-31','2026-02-14','2026-02-28','2026-03-14','2026-03-28']},
+      {id:'vaccination',title:'Vaccination rate by dose and priority cohort with dense legend',canonical:'2 × 1',vars:['Primary course','Booster','Priority cohort'],dates:['2026-01-09','2026-01-23','2026-02-06','2026-02-20','2026-03-06','2026-03-20']},
+      {id:'hospital',title:'Hospital load',canonical:'2 × 1',vars:['Ward occupancy','ICU occupancy'],dates:['2026-01-02','2026-01-16','2026-01-30','2026-02-13','2026-02-27','2026-03-13','2026-03-27']}
+    ];
+    var PAGES = {
+      executive:{label:'Executive surveillance',groups:[
+        {id:'winter',label:'Winter response 2026',start:'2026-01-01',end:'2026-03-31',matching:'Interpolate',charts:['cases','rvalues','map','region','vaccination','hospital']},
+        {id:'march',label:'March regional review',start:'2026-03-01',end:'2026-03-31',matching:'Concurrent only',charts:['cases','rvalues','map','region']}
+      ]},
+      capacity:{label:'Care capacity',groups:[
+        {id:'surge',label:'Hospital surge monitoring',start:'2026-02-01',end:'2026-03-31',matching:'Snap to Latest',charts:['cases','region','hospital']}
+      ]}
+    };
+    function initialState() {
+      return {
+        variant:'A',viewport:'1440',uiMode:'build',studioOpen:true,stage:1,primaryBoard:'scene',
+        page:'executive',parentGroup:'winter',start:'2026-01-01',end:'2026-03-31',timeMode:'source',calendarEvery:7,calendarUnit:'days',
+        eligible:['cases','rvalues','map','region','vaccination','hospital'],members:['cases','map','hospital'],order:['cases','map','hospital'],frameSource:'cases',frameSelectionMode:'selected',selectedFrames:['2026-03-01','2026-03-15','2026-03-22','2026-03-31'],pendingFrames:null,
+        widths:{cases:2,rvalues:2,map:4,region:2,vaccination:2,hospital:2},present:['cases','map','hospital'],presentLayout:'dominant-left',parentMatchingOverride:'inherit',matching:{},
+        selectedChart:'cases',orbitOpen:false,orbitBoard:'scene',name:'March operational pressure briefing',seconds:2.5,
+        dirty:false,saving:false,saveError:'',failNextSave:true,savedScenes:0,modalOpen:false,pendingMode:null,pendingClose:false,
+        draggingId:null,dragBoard:null,dragStarted:false,dragOrigin:null,dropInsertIndex:null,dropTargetId:null
+      };
+    }
+    var state = initialState();
+    var toastTimer = null;
+    var suppressPanelClick = false;
+
+    function chartById(id) { return CHARTS.filter(function (chart) { return chart.id === id; })[0]; }
+    function currentPage() { return PAGES[state.page]; }
+    function currentGroup() { return currentPage().groups.filter(function (group) { return group.id === state.parentGroup; })[0]; }
+    function escapeHtml(value) { return String(value).replace(/[&<>"']/g,function (char) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]; }); }
+    function formatDate(value) { return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T00:00:00Z')); }
+    function inPeriod(date) { return date >= state.start && date <= state.end; }
+    function periodDates(chart) { return chart.dates.filter(inPeriod); }
+    function isMember(id) { return state.members.indexOf(id) !== -1; }
+    function isPresent(id) { return state.present.indexOf(id) !== -1; }
+    function memberOrder() { return state.order.filter(isMember); }
+    function boardIds(board) { return board === 'present' ? state.present.slice() : memberOrder(); }
+    function markDirty(message) { state.dirty=true; state.saveError=''; if(message) announce(message); }
+    function announce(message) { document.getElementById('liveRegion').textContent=''; requestAnimationFrame(function () { document.getElementById('liveRegion').textContent=message; }); }
+    function toast(message) { clearTimeout(toastTimer); var node=document.getElementById('toast'); node.textContent=message; node.dataset.open='true'; toastTimer=setTimeout(function(){node.dataset.open='false';},2200); }
+    function scopeError() {
+      var group=currentGroup();
+      if(!state.start||!state.end) return 'Choose both inclusive period bounds.';
+      if(state.start>state.end) return 'Scene start must not be after Scene end.';
+      if(state.start<group.start||state.end>group.end) return 'Scene period must remain inside '+group.label+': '+formatDate(group.start)+'–'+formatDate(group.end)+'.';
+      return '';
+    }
+    function validationErrors() {
+      var errors=[]; var scope=scopeError();
+      if(scope) errors.push(scope);
+      if(!state.members.length) errors.push('Select at least one chart for the Scene.');
+      if(state.timeMode==='source'&&(!state.frameSource||!isMember(state.frameSource))) errors.push('Choose one selected chart as the Frame source.');
+      if(state.timeMode==='source'&&state.frameSelectionMode==='selected'&&!state.selectedFrames.filter(inPeriod).length) errors.push('Select at least one available observation frame.');
+      if(!state.present.length||state.present.length>4) errors.push('Present must contain one to four selected Scene charts.');
+      if(!state.name.trim()) errors.push('Enter a unique Scene name.');
+      if(!Number.isFinite(Number(state.seconds))||Number(state.seconds)<=0) errors.push('Seconds per frame must be positive.');
+      return errors;
+    }
+    function stageOneReady() { return !scopeError()&&state.members.length>0&&(state.timeMode==='calendar'||(state.frameSource&&isMember(state.frameSource)&&(state.frameSelectionMode==='all'||state.selectedFrames.filter(inPeriod).length>0))); }
+    function layoutOptions() {
+      if(state.present.length===1) return [{id:'single',label:'Single'}];
+      if(state.present.length===2) return [{id:'split-columns',label:'Vertical divider'},{id:'split-rows',label:'Horizontal divider'}];
+      if(state.present.length===3) return [{id:'dominant-left',label:'Large left'},{id:'dominant-top',label:'Large top'}];
+      return [{id:'grid-2x2',label:'2 × 2'}];
+    }
+    function normalizePresentLayout() { var options=layoutOptions(); if(!options.some(function(option){return option.id===state.presentLayout;})) state.presentLayout=options[0].id; }
+    function widthLabel(value) { return Number(value)+' column'+(Number(value)===1?'':'s'); }
+    function effectivePolicy(id) { return state.matching[id]||'inherit'; }
+    function matchingLabel(value) { return {concurrent:'Concurrent only',interpolate:'Interpolate',latest:'Snap to Latest',closest:'Snap to Closest'}[value]||value; }
+    function sceneMatchingLabel() { return state.parentMatchingOverride==='inherit'?currentGroup().matching:matchingLabel(state.parentMatchingOverride); }
+    function groupLabel() { return currentGroup().label; }
+
+    function stageSwitch() {
+      return '<div class="stage-switch" role="tablist" aria-label="Scene creation stages">'+STAGES.map(function(stage,index){var n=index+1;return '<button type="button" role="tab" data-stage="'+n+'" aria-selected="'+(state.stage===n)+'" aria-current="'+(state.stage===n?'step':'false')+'"><span class="stage-index">'+n+'</span><span><strong>'+stage[0]+'</strong><small>'+stage[1]+'</small></span></button>';}).join('')+'</div>';
+    }
+    function stageIntro(title,copy) { return stageSwitch()+'<div class="stage-intro"><p class="review-kicker">Stage '+state.stage+' of 2</p><h3>'+title+'</h3><p>'+copy+'</p></div>'; }
+    function pageOptions() { return Object.keys(PAGES).map(function(id){return '<option value="'+id+'"'+(state.page===id?' selected':'')+'>'+escapeHtml(PAGES[id].label)+'</option>';}).join(''); }
+    function groupOptions() { return currentPage().groups.map(function(group){return '<option value="'+group.id+'"'+(state.parentGroup===group.id?' selected':'')+'>'+escapeHtml(group.label)+'</option>';}).join(''); }
+    function renderDraftPanel() {
+      var errors=validationErrors(); var group=currentGroup();
+      var frameSourceOptions=memberOrder().map(function(id){return '<option value="'+id+'"'+(state.frameSource===id?' selected':'')+'>'+escapeHtml(chartById(id).title)+'</option>';}).join('');
+      var modeControl=state.timeMode==='calendar' ? '<div class="date-grid"><label class="field"><span>Every</span><input type="number" min="1" step="1" data-field="calendarEvery" value="'+state.calendarEvery+'"></label><label class="field"><span>Unit</span><select data-field="calendarUnit"><option value="days"'+(state.calendarUnit==='days'?' selected':'')+'>days</option><option value="months"'+(state.calendarUnit==='months'?' selected':'')+'>months</option><option value="years"'+(state.calendarUnit==='years'?' selected':'')+'>years</option></select></label></div><small>Start and end remain mandatory calendar frames.</small>' : '<label class="field"><span>Frame source</span><select data-field="frameSource"'+(frameSourceOptions?'':' disabled')+'>'+(frameSourceOptions||'<option>No Scene charts selected</option>')+'</select><small>This is the same assignment exposed on each selected chart in Stage 1.</small></label>';
+      return '<div class="draft-section"><h4>Scope</h4><label class="field"><span>Page</span><select data-field="page">'+pageOptions()+'</select><small>Choose the owning page first.</small></label><label class="field"><span>Parent Time Group</span><select data-field="parentGroup">'+groupOptions()+'</select><small>Eligible charts come from this group and page.</small></label><div class="date-grid"><label class="field"><span>Start</span><input type="date" data-field="start" value="'+state.start+'" min="'+group.start+'" max="'+group.end+'"></label><label class="field"><span>End</span><input type="date" data-field="end" value="'+state.end+'" min="'+group.start+'" max="'+group.end+'"></label></div><small>Loaded maximum: '+formatDate(group.start)+'–'+formatDate(group.end)+' · Europe/Berlin</small></div>'+
+        '<div class="draft-section"><h4>Time mode</h4><label class="field"><span>Frames are composed by</span><select data-field="timeMode"><option value="calendar"'+(state.timeMode==='calendar'?' selected':'')+'>Calendar</option><option value="source"'+(state.timeMode==='source'?' selected':'')+'>Frame source observations</option></select></label>'+modeControl+'<label class="field"><span>Parent matching override</span><select data-field="parentMatchingOverride"><option value="inherit"'+(state.parentMatchingOverride==='inherit'?' selected':'')+'>Inherit parent · '+escapeHtml(group.matching)+'</option><option value="concurrent"'+(state.parentMatchingOverride==='concurrent'?' selected':'')+'>Concurrent only</option><option value="interpolate"'+(state.parentMatchingOverride==='interpolate'?' selected':'')+'>Interpolate</option><option value="latest"'+(state.parentMatchingOverride==='latest'?' selected':'')+'>Snap to Latest</option><option value="closest"'+(state.parentMatchingOverride==='closest'?' selected':'')+'>Snap to Closest</option></select><small>The parent policy is set in Time Group authoring’s Set defaults step. This selection overrides it for the Scene; chart-specific overrides remain in Unit Orbit.</small></label></div>'+
+        '<div class="draft-section"><h4>Scene</h4><label class="field"><span>Name</span><input type="text" data-field="name" value="'+escapeHtml(state.name)+'"></label><label class="field"><span>Seconds per frame</span><input type="number" min="0.1" step="0.1" data-field="seconds" value="'+state.seconds+'"></label></div>'+
+        '<div class="draft-section"><h4>Validation</h4>'+(errors.length?'<span class="status error">'+errors.length+' item'+(errors.length===1?'':'s')+' need attention</span><ul class="validation-list">'+errors.map(function(error){return '<li>'+escapeHtml(error)+'</li>';}).join('')+'</ul>':'<span class="status success">Ready to save</span><ul class="validation-list"><li>'+state.members.length+' Scene charts</li><li>'+state.present.length+' Present charts</li><li>'+(state.timeMode==='calendar'?'Calendar every '+state.calendarEvery+' '+state.calendarUnit:(state.frameSelectionMode==='all'?'All available observations':state.selectedFrames.filter(inPeriod).length+' selected observations'))+'</li></ul>')+'</div>';
+    }
+    function datePct(date) { var start=Date.parse(state.start+'T00:00:00Z'),end=Date.parse(state.end+'T00:00:00Z'),value=Date.parse(date+'T00:00:00Z'); if(end<=start)return 50; return Math.max(4,Math.min(96,4+92*((value-start)/(end-start)))); }
+    function availabilityTrack(chart,label,dates) {
+      var selectedLookup=state.selectedFrames;
+      return '<div class="availability-track" role="img" aria-label="'+escapeHtml(label)+': '+dates.length+' observations in '+formatDate(state.start)+' through '+formatDate(state.end)+'. Dates: '+escapeHtml(dates.map(formatDate).join(', ')||'none')+'">'+dates.map(function(date){return '<span class="observation-tick" data-selected="'+(selectedLookup.indexOf(date)!==-1)+'" style="left:'+datePct(date)+'%" title="'+formatDate(date)+'"></span>';}).join('')+'</div>';
+    }
+    function frameSourceConfig(chart) {
+      if(state.timeMode!=='source'||state.frameSource!==chart.id) return '';
+      var dates=periodDates(chart); var selectedCount=state.selectedFrames.filter(inPeriod).length;
+      return '<div class="source-config"><div class="source-config-head"><div><p class="review-kicker">Frame source</p><h4>Observation options</h4></div><span class="status">'+dates.length+' available</span></div><div class="frame-options"><button type="button" data-frame-mode="all" aria-pressed="'+(state.frameSelectionMode==='all')+'">All available frames</button><button type="button" data-frame-mode="selected" aria-pressed="'+(state.frameSelectionMode==='selected')+'">Selected frames</button><button type="button" data-action="open-observations"'+(state.frameSelectionMode==='selected'?'':' disabled')+'>Observation list · '+selectedCount+' selected</button></div><small>All available persists the rule; Selected frames persists the checked timestamps explicitly.</small></div>';
+    }
+    function ledgerCard(id) {
+      var chart=chartById(id),member=isMember(id),source=state.frameSource===id&&state.timeMode==='source',dates=periodDates(chart);
+      return '<article class="ledger-card" data-chart-id="'+id+'" data-member="'+member+'" data-frame-source="'+source+'"><div class="ledger-card-head"><div class="ledger-title"><strong>'+escapeHtml(chart.title)+'</strong><small>'+escapeHtml(currentPage().label)+' · canonical '+chart.canonical+'</small></div>'+availabilityTrack(chart,chart.title+' chart availability',dates)+'<span class="ledger-count">'+dates.length+' dates</span></div>'+frameSourceConfig(chart)+'<div class="ledger-actions"><button type="button" class="'+(member?'danger':'primary')+'" data-action="toggle-member" data-chart="'+id+'">'+(member?'Remove from Scene':'Add to Scene')+'</button>'+(state.timeMode==='source'?'<label><input type="checkbox" data-frame-source="'+id+'"'+(source?' checked':'')+(member?'':' disabled')+'> Frame source</label>':'')+'</div><div class="variable-list">'+chart.vars.map(function(variable,index){var subset=dates.filter(function(_,i){return i%chart.vars.length===index%chart.vars.length||chart.vars.length===1;});return '<div class="timeline-grid variable"><div class="timeline-label"><strong>'+escapeHtml(variable)+'</strong><small>Full data '+formatDate(chart.dates[0])+'–'+formatDate(chart.dates[chart.dates.length-1])+'</small></div>'+availabilityTrack(chart,chart.title+', '+variable+' availability',subset)+'<span class="ledger-count">'+subset.length+' dates</span></div>';}).join('')+'</div></article>';
+    }
+    function ledgerRegion(title,copy,ids) { return '<section class="ledger-region"><div class="ledger-region-heading"><div><h4>'+title+'</h4><p>'+copy+'</p></div><span class="status">'+ids.length+'</span></div>'+(ids.length?'<div class="ledger-list">'+ids.map(ledgerCard).join('')+'</div>':'<p class="ledger-empty">No charts in this region.</p>')+'</section>'; }
+    function renderStageOne() {
+      var selected=memberOrder(),available=state.eligible.filter(function(id){return !isMember(id);}); var error=scopeError();
+      return stageIntro('Select charts and frames','The parent selection loads eligible charts and maximum period. Selected charts rise into the upper ledger; only the Frame source expands to expose observation options.')+(error?'<div class="notice error" role="alert">'+escapeHtml(error)+'</div>':'<div class="notice success"><strong>'+escapeHtml(groupLabel())+'</strong> supplies '+state.eligible.length+' eligible charts for '+escapeHtml(currentPage().label)+'.</div>')+ledgerRegion('Selected for this Scene','Membership and availability remain aligned to the same period scale.',selected)+'<div class="region-separator" role="separator"></div>'+ledgerRegion('Available from parent group','Add charts without changing the parent Time Group.',available);
+    }
+    function plotBars(id) { var seed=id.split('').reduce(function(sum,char){return sum+char.charCodeAt(0);},0); return [0,1,2,3,4,5].map(function(i){return '<span style="height:'+(24+((seed+i*17)%65))+'%"></span>';}).join(''); }
+    function panelCard(id,board) {
+      var chart=chartById(id),selected=state.orbitOpen&&state.orbitBoard===board&&state.selectedChart===id,drop=state.dropTargetId===id&&state.dragBoard===board;
+      var inPresent=isPresent(id),presentFull=state.present.length>=4&&!inPresent;
+      var presentAction=board==='present' ? '<button type="button" class="panel-present-action" data-action="panel-present" data-chart="'+id+'" data-present-operation="remove">Remove from Present</button>' : '<button type="button" class="panel-present-action" data-action="panel-present" data-chart="'+id+'" data-present-operation="add"'+(inPresent||presentFull?' disabled':'')+'>'+(inPresent?'In Present':presentFull?'Present full':'Add to Present')+'</button>';
+      return '<article class="scene-panel" data-panel-id="'+id+'" data-board="'+board+'" data-selected="'+selected+'" data-dragging="'+(state.draggingId===id&&state.dragBoard===board)+'" data-drop="'+drop+'"'+(board==='scene'?' style="--tracks:'+state.widths[id]+'"':'')+'><div class="scene-panel-head"><button type="button" class="chart-title-button" data-action="open-orbit" data-chart="'+id+'" data-board="'+board+'" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown Alt+Home Alt+End"><strong>'+escapeHtml(chart.title)+'</strong><small>'+(board==='scene'?widthLabel(state.widths[id]):'Present position '+(state.present.indexOf(id)+1))+' · drag title</small></button>'+presentAction+'</div><div class="chart-plot" aria-hidden="true">'+plotBars(id)+'</div><span class="panel-meta">'+escapeHtml(chart.vars.join(' · '))+'</span></article>';
+    }
+    function dropZones(board) {
+      if(!state.draggingId||state.dragBoard!==board) return '';
+      var ids=boardIds(board).filter(function(id){return id!==state.draggingId;});
+      return '<div class="drop-zone-strip">'+Array.from({length:ids.length+1},function(_,index){var label=index===ids.length?'Append':'Move to position '+(index+1);return '<div class="drop-zone" data-drop-board="'+board+'" data-insert-index="'+index+'" data-active="'+(state.dropInsertIndex===index)+'">'+label+'</div>';}).join('')+'</div>';
+    }
+    function layoutShapeControls() { var options=layoutOptions(); return '<div class="layout-shapes" aria-label="Present divider shape">'+options.map(function(option){return '<button type="button" data-present-layout="'+option.id+'" aria-pressed="'+(state.presentLayout===option.id)+'">'+option.label+'</button>';}).join('')+'</div>'; }
+    function board(board) {
+      var ids=boardIds(board),present=board==='present';
+      return '<section class="arrangement-board '+(present?'present-board':'scene-board')+'" data-board-surface="'+board+'"><div class="board-toolbar"><div><h4>'+(present?'Present':'Scene View')+'</h4><p>'+(present?ids.length+' of 4 charts · '+layoutOptions().filter(function(option){return option.id===state.presentLayout;})[0].label:ids.length+' charts · four-column Scene-only grid')+'</p></div><span class="status">'+(state.orbitOpen&&state.orbitBoard===board?'Editing '+escapeHtml(chartById(state.selectedChart).title):'Drag titles to arrange')+'</span></div><p class="canvas-warning">Drag a chart title to another title or highlighted empty insertion target. Alt+Arrow, Home, and End provide the same moves.</p><div class="arrangement-grid '+(present?'present-grid':'scene-grid')+'" data-board-grid="'+board+'"'+(present?' data-layout="'+state.presentLayout+'"':'')+'>'+ids.map(function(id){return panelCard(id,board);}).join('')+'</div>'+dropZones(board)+(present?layoutShapeControls():'')+'</section>';
+    }
+    function orbitMoveControls(id,boardName) { var ids=boardIds(boardName),index=ids.indexOf(id); return '<div class="field"><span>'+(boardName==='present'?'Present':'Scene View')+' position</span><div class="orbit-actions"><button type="button" data-action="orbit-move" data-destination="first"'+(index<=0?' disabled':'')+'>Move first</button><button type="button" data-action="orbit-move" data-destination="earlier"'+(index<=0?' disabled':'')+'>Move earlier</button><button type="button" data-action="orbit-move" data-destination="later"'+(index<0||index===ids.length-1?' disabled':'')+'>Move later</button><button type="button" data-action="orbit-move" data-destination="last"'+(index<0||index===ids.length-1?' disabled':'')+'>Move last</button></div></div>'; }
+    function unitOrbit() {
+      if(!state.orbitOpen||!isMember(state.selectedChart)) return '';
+      var chart=chartById(state.selectedChart),boardName=state.orbitBoard==='present'&&isPresent(chart.id)?'present':'scene';
+      return '<aside id="unitOrbit" class="unit-orbit" role="dialog" aria-modal="false" aria-labelledby="unitOrbitTitle" data-unpositioned="true"><div><p class="review-kicker">Unit Orbit · Scene chart settings</p><h4 id="unitOrbitTitle">'+escapeHtml(chart.title)+'</h4><p>Scene-local settings · canonical dashboard chart unchanged</p></div><button type="button" data-action="close-orbit">Done</button><div class="orbit-fields"><label class="field"><span>Scene View width</span><select data-width-id="'+chart.id+'">'+[1,2,3,4].map(function(width){return '<option value="'+width+'"'+(state.widths[chart.id]===width?' selected':'')+'>'+widthLabel(width)+'</option>';}).join('')+'</select><small>Canonical footprint remains '+chart.canonical+'.</small></label><label class="field"><span>Temporal matching</span><select data-matching-id="'+chart.id+'"><option value="inherit"'+(effectivePolicy(chart.id)==='inherit'?' selected':'')+'>Inherit Scene default · '+escapeHtml(sceneMatchingLabel())+'</option><option value="concurrent"'+(effectivePolicy(chart.id)==='concurrent'?' selected':'')+'>Concurrent only</option><option value="interpolate"'+(effectivePolicy(chart.id)==='interpolate'?' selected':'')+'>Interpolate</option><option value="latest"'+(effectivePolicy(chart.id)==='latest'?' selected':'')+'>Snap to Latest</option><option value="closest"'+(effectivePolicy(chart.id)==='closest'?' selected':'')+'>Snap to Closest</option></select></label><label class="field"><span>Present</span><label><input type="checkbox" data-present-id="'+chart.id+'"'+(isPresent(chart.id)?' checked':'')+'> Include in Present</label><small>'+(isPresent(chart.id)?'Present position '+(state.present.indexOf(chart.id)+1):'Not in Present')+' · maximum 4</small></label>'+orbitMoveControls(chart.id,boardName)+'</div></aside>';
+    }
+    function renderStageTwo() {
+      return stageIntro('Arrange and configure','The same selected charts appear in Scene View and the separate one-to-four-chart Present composition. Both use Build-style direct movement; chart settings stay in Unit Orbit.')+'<div class="arrange-header"><div><span class="status">'+state.members.length+' Scene charts</span> <span class="status">'+state.present.length+' Present charts</span></div><div class="primary-switch" aria-label="Primary canvas"><button type="button" data-primary="scene" aria-pressed="'+(state.primaryBoard==='scene')+'">Scene View primary</button><button type="button" data-primary="present" aria-pressed="'+(state.primaryBoard==='present')+'">Present primary</button></div></div><div class="twin-stage">'+board('scene')+board('present')+'</div>'+unitOrbit();
+    }
+    function renderMain() { return state.stage===1?renderStageOne():renderStageTwo(); }
+    function updateChrome() {
+      document.body.dataset.variant=state.variant; document.body.dataset.uiMode=state.uiMode; document.body.dataset.studioOpen=String(state.studioOpen); document.body.dataset.primaryBoard=state.primaryBoard;
+      document.querySelectorAll('[data-variant-button]').forEach(function(button){button.setAttribute('aria-pressed',button.dataset.variantButton===state.variant?'true':'false');});
+      document.querySelectorAll('[data-viewport]').forEach(function(button){button.setAttribute('aria-pressed',button.dataset.viewport===state.viewport?'true':'false');});
+      document.querySelectorAll('[data-mode]').forEach(function(button){button.setAttribute('aria-pressed',button.dataset.mode===state.uiMode?'true':'false');});
+      document.getElementById('variantEyebrow').textContent='Variant '+state.variant+' · '+VARIANTS[state.variant].name+(state.variant==='A'?' · Approved winner':' · Preserved alternative');
+      document.getElementById('lineagePage').textContent=currentPage().label; document.getElementById('lineageParent').textContent=groupLabel();
+      document.getElementById('draftState').textContent=state.saving?'Saving':state.saveError?'Save failed · draft retained':state.dirty?'Scene draft unsaved':state.savedScenes?'Saved Scene':'Clean fixture';
+      document.getElementById('reviewStatus').textContent=state.variant+' · Stage '+state.stage+' of 2 · '+state.members.length+' Scene charts · '+state.present.length+' Present · '+(state.dirty?'unsaved draft':'clean/saved');
+      document.getElementById('savedDashboardStatus').textContent='Saved Time Group · '+(state.savedScenes?state.savedScenes+' saved Scene'+(state.savedScenes===1?'':'s'):'no saved Scene from this draft');
+      var previous=document.querySelector('[data-action="previous-stage"]'),next=document.querySelector('[data-action="next-stage"]'),save=document.querySelector('[data-action="save-scene"]');
+      previous.disabled=state.stage===1||state.saving; next.hidden=state.stage===2; next.disabled=!stageOneReady()||state.saving; save.hidden=state.stage!==2; save.disabled=validationErrors().length>0||state.saving;
+      document.getElementById('footerStatus').textContent='Stage '+state.stage+' of 2 · '+(state.stage===1?(stageOneReady()?'ready for arrangement':'selection incomplete'):(validationErrors().length?'needs attention':'ready to save'));
+    }
+    function render(focusSelector) {
+      var scroller=document.getElementById('studioMain'),scrollTop=scroller?scroller.scrollTop:0;
+      document.getElementById('studioMain').innerHTML=renderMain(); document.getElementById('draftPanel').innerHTML=renderDraftPanel(); updateChrome();
+      var nextScroller=document.getElementById('studioMain'); nextScroller.scrollTop=scrollTop;
+      if(focusSelector){requestAnimationFrame(function(){var target=document.querySelector(focusSelector);if(target)target.focus({preventScroll:true});});}
+      if(state.orbitOpen) requestAnimationFrame(function(){positionUnitOrbit();requestAnimationFrame(positionUnitOrbit);});
+    }
+    function loadGroup() {
+      var group=currentGroup(); state.start=group.start; state.end=group.end; state.eligible=group.charts.slice(); state.members=group.charts.slice(0,Math.min(3,group.charts.length)); state.order=state.members.slice(); state.frameSource=state.members[0]||null; state.present=state.members.slice(0,Math.min(3,state.members.length)); state.selectedFrames=state.frameSource?periodDates(chartById(state.frameSource)).slice(-4):[]; state.parentMatchingOverride='inherit'; state.matching={}; state.orbitOpen=false; normalizePresentLayout(); markDirty('Parent Time Group loaded. Period and matching default reset to the parent values.');
+    }
+    function toggleMember(id) {
+      if(isMember(id)){state.members=state.members.filter(function(item){return item!==id;});state.order=state.order.filter(function(item){return item!==id;});state.present=state.present.filter(function(item){return item!==id;});if(state.frameSource===id)state.frameSource=null;if(state.selectedChart===id)state.orbitOpen=false;markDirty(chartById(id).title+' removed from the Scene.');}
+      else {state.members.push(id);state.order.push(id);if(!state.frameSource&&state.timeMode==='source')state.frameSource=id;markDirty(chartById(id).title+' moved to Selected for this Scene.');}
+      normalizePresentLayout(); render('[data-action="toggle-member"][data-chart="'+id+'"]');
+    }
+    function setFrameSource(id,focusSelector) { if(!isMember(id))return; state.frameSource=id; state.selectedFrames=periodDates(chartById(id)).slice(-4); markDirty(chartById(id).title+' assigned as Frame source.'); render(focusSelector||'[data-frame-source="'+id+'"]'); }
+    function openObservations() { if(state.frameSelectionMode!=='selected'||!state.frameSource)return; state.pendingFrames=state.selectedFrames.slice(); var chart=chartById(state.frameSource),dates=periodDates(chart); document.getElementById('observationTitle').textContent='Observation list · '+chart.title; document.getElementById('observationDescription').textContent='Choose explicit frame dates from all observations available during the Scene period.'; document.getElementById('observationList').innerHTML=dates.map(function(date){return '<label class="observation-option"><input type="checkbox" data-observation-date="'+date+'"'+(state.pendingFrames.indexOf(date)!==-1?' checked':'')+'><span>'+formatDate(date)+'</span><span class="status">'+chart.vars[(dates.indexOf(date))%chart.vars.length]+'</span></label>';}).join(''); document.getElementById('observationModal').hidden=false; requestAnimationFrame(function(){var first=document.querySelector('[data-observation-date]');if(first)first.focus();}); }
+    function closeObservations(apply) { if(apply){state.selectedFrames=(state.pendingFrames||[]).slice();markDirty(state.selectedFrames.length+' explicit observation frames selected.');} state.pendingFrames=null;document.getElementById('observationModal').hidden=true;render('[data-action="open-observations"]'); }
+    function togglePresent(id,checked) { if(checked&&!isPresent(id)){if(state.present.length>=4){toast('Present supports at most four charts.');render('[data-present-id="'+id+'"]');return;}state.present.push(id);markDirty(chartById(id).title+' added to Present.');} if(!checked&&isPresent(id)){state.present=state.present.filter(function(item){return item!==id;});if(state.orbitBoard==='present'&&state.selectedChart===id)state.orbitOpen=false;markDirty(chartById(id).title+' removed from Present.');} normalizePresentLayout();render(); }
+    function moveAtIndex(boardName,id,index) { var ids=boardIds(boardName),from=ids.indexOf(id);if(from<0)return;ids.splice(from,1);index=Math.max(0,Math.min(index,ids.length));ids.splice(index,0,id);if(boardName==='present')state.present=ids;else {var nonmembers=state.order.filter(function(item){return !isMember(item);});state.order=ids.concat(nonmembers);} state.dropInsertIndex=null;state.dropTargetId=null;markDirty(chartById(id).title+' moved to '+(boardName==='present'?'Present':'Scene View')+' position '+(index+1)+'.');render('[data-panel-id="'+id+'"][data-board="'+boardName+'"] .chart-title-button'); }
+    function moveBy(boardName,id,destination) { var ids=boardIds(boardName),index=ids.indexOf(id),target=index;if(destination==='first')target=0;if(destination==='earlier')target=Math.max(0,index-1);if(destination==='later')target=Math.min(ids.length-1,index+1);if(destination==='last')target=ids.length-1;if(target!==index)moveAtIndex(boardName,id,target); }
+    function beginDrag(event,button) { if(event.button!==0)return;state.draggingId=button.dataset.chart;state.dragBoard=button.dataset.board;state.dragStarted=false;state.dragOrigin={x:event.clientX,y:event.clientY}; }
+    function clearDrag() { state.draggingId=null;state.dragBoard=null;state.dragStarted=false;state.dragOrigin=null;state.dropInsertIndex=null;state.dropTargetId=null; }
+    function trackDrag(event) { if(!state.draggingId||!state.dragOrigin)return;if(!state.dragStarted&&Math.hypot(event.clientX-state.dragOrigin.x,event.clientY-state.dragOrigin.y)<7)return;if(!state.dragStarted){state.dragStarted=true;suppressPanelClick=true;render();} var hit=document.elementFromPoint(event.clientX,event.clientY),zone=hit&&hit.closest('[data-drop-board="'+state.dragBoard+'"]'),panel=hit&&hit.closest('[data-panel-id][data-board="'+state.dragBoard+'"]');var nextIndex=null,nextTarget=null;if(zone)nextIndex=Number(zone.dataset.insertIndex);else if(panel&&panel.dataset.panelId!==state.draggingId)nextTarget=panel.dataset.panelId;if(nextIndex!==state.dropInsertIndex||nextTarget!==state.dropTargetId){state.dropInsertIndex=nextIndex;state.dropTargetId=nextTarget;render();} event.preventDefault(); }
+    function finishDrag() { if(!state.draggingId)return;var id=state.draggingId,boardName=state.dragBoard,started=state.dragStarted,index=state.dropInsertIndex,target=state.dropTargetId;if(target){var ids=boardIds(boardName).filter(function(item){return item!==id;});index=ids.indexOf(target);}clearDrag();if(started&&index!==null&&index>=0)moveAtIndex(boardName,id,index);else if(started)render();setTimeout(function(){suppressPanelClick=false;},0); }
+    function handleBoardKey(event,button) { if(!event.altKey)return;var destination=null;if(event.key==='Home')destination='first';if(event.key==='End')destination='last';if(event.key==='ArrowLeft'||event.key==='ArrowUp')destination='earlier';if(event.key==='ArrowRight'||event.key==='ArrowDown')destination='later';if(!destination)return;event.preventDefault();moveBy(button.dataset.board,button.dataset.chart,destination); }
+    function openOrbit(id,boardName) { state.selectedChart=id;state.orbitBoard=boardName;state.orbitOpen=true;render('#unitOrbit [data-action="close-orbit"]');announce('Unit Orbit opened for '+chartById(id).title+'.'); }
+    function positionUnitOrbit() { var orbit=document.getElementById('unitOrbit');if(!orbit)return;var anchor=document.querySelector('[data-panel-id="'+state.selectedChart+'"][data-board="'+state.orbitBoard+'"]');if(!anchor)return;var main=document.getElementById('studioMain').getBoundingClientRect(),r=anchor.getBoundingClientRect(),gap=12,margin=10;orbit.style.setProperty('--orbit-max-h',Math.max(180,main.height-20)+'px');var w=orbit.offsetWidth,h=Math.min(orbit.scrollHeight,main.height-20);var candidates=[{left:r.right+gap,top:r.top},{left:r.left-w-gap,top:r.top},{left:r.left,top:r.bottom+gap},{left:r.left,top:r.top-h-gap}];var chosen=null;candidates.some(function(c){var left=Math.max(main.left+margin,Math.min(c.left,main.right-w-margin)),top=Math.max(main.top+margin,Math.min(c.top,main.bottom-h-margin));var clear=left+w<=r.left||left>=r.right||top+h<=r.top||top>=r.bottom;if(clear){chosen={left:left,top:top};return true;}return false;});if(!chosen)chosen={left:Math.max(main.left+margin,Math.min(r.left,main.right-w-margin)),top:Math.max(main.top+margin,Math.min(r.bottom+gap,main.bottom-h-margin))};orbit.style.left=chosen.left+'px';orbit.style.top=chosen.top+'px';orbit.dataset.unpositioned='false'; }
+    function requestLeave(mode,close) { if(state.dirty){state.modalOpen=true;state.pendingMode=mode||null;state.pendingClose=Boolean(close);document.getElementById('dirtyModal').hidden=false;requestAnimationFrame(function(){document.querySelector('[data-modal-action="stay"]').focus();});return;} if(mode){state.uiMode=mode;state.studioOpen=mode==='build';}if(close)state.studioOpen=false;render(); }
+    function attemptSave() { if(state.saving||validationErrors().length)return;state.saving=true;state.saveError='';render();setTimeout(function(){state.saving=false;if(state.failNextSave){state.failNextSave=false;state.saveError='Simulated save failure';toast('Save failed. The complete Scene draft is retained.');render('[data-action="save-scene"]');return;}state.dirty=false;state.saveError='';state.savedScenes=1;toast('Scene saved atomically.');render('[data-action="save-scene"]');if(state.modalOpen)resolvePendingAfterSave();},650); }
+    function resolvePendingAfterSave(){document.getElementById('dirtyModal').hidden=true;state.modalOpen=false;if(state.pendingMode){state.uiMode=state.pendingMode;state.studioOpen=state.uiMode==='build';}if(state.pendingClose)state.studioOpen=false;state.pendingMode=null;state.pendingClose=false;render();}
+    function resetAll(){var variant=state.variant,viewport=state.viewport;state=initialState();state.variant=variant;state.viewport=viewport;document.getElementById('productFrame').dataset.preview=viewport;document.getElementById('productFrame').style.setProperty('--frame-w',viewport==='full'?'100%':viewport+'px');document.getElementById('observationModal').hidden=true;document.getElementById('dirtyModal').hidden=true;render();toast('Two-stage fixture reset.');}
+
+    document.addEventListener('click',function(event){var button=event.target.closest('button');if(!button)return;
+      if(button.dataset.variantButton){state.variant=button.dataset.variantButton;render('[data-variant-button="'+state.variant+'"]');announce('Variant '+state.variant+' applied. Shared Scene draft preserved.');return;}
+      if(button.dataset.viewport){state.viewport=button.dataset.viewport;var frame=document.getElementById('productFrame');frame.dataset.preview=state.viewport;frame.style.setProperty('--frame-w',state.viewport+'px');updateChrome();if(state.orbitOpen)requestAnimationFrame(positionUnitOrbit);return;}
+      if(button.dataset.mode){requestLeave(button.dataset.mode,false);return;}
+      if(button.dataset.stage){var target=Number(button.dataset.stage);if(target===2&&!stageOneReady()){toast('Complete chart and frame selection before arranging.');return;}state.stage=target;state.orbitOpen=false;render('[data-stage="'+target+'"]');return;}
+      if(button.dataset.frameMode){state.frameSelectionMode=button.dataset.frameMode;markDirty(button.textContent.trim()+' selected.');render('[data-frame-mode="'+state.frameSelectionMode+'"]');return;}
+      if(button.dataset.presentLayout){state.presentLayout=button.dataset.presentLayout;markDirty(button.textContent.trim()+' Present divider selected.');render('[data-present-layout="'+state.presentLayout+'"]');return;}
+      if(button.dataset.primary){state.primaryBoard=button.dataset.primary;render('[data-primary="'+state.primaryBoard+'"]');return;}
+      if(button.dataset.action==='toggle-member'){toggleMember(button.dataset.chart);return;}
+      if(button.dataset.action==='panel-present'){togglePresent(button.dataset.chart,button.dataset.presentOperation==='add');return;}
+      if(button.dataset.action==='open-observations'){openObservations();return;}
+      if(button.dataset.action==='apply-observations'){closeObservations(true);return;}
+      if(button.dataset.action==='close-observations'){closeObservations(false);return;}
+      if(button.dataset.action==='open-orbit'){if(suppressPanelClick)return;openOrbit(button.dataset.chart,button.dataset.board);return;}
+      if(button.dataset.action==='close-orbit'){state.orbitOpen=false;var selector='[data-panel-id="'+state.selectedChart+'"][data-board="'+state.orbitBoard+'"] .chart-title-button';render(selector);return;}
+      if(button.dataset.action==='orbit-move'){moveBy(state.orbitBoard,state.selectedChart,button.dataset.destination);return;}
+      if(button.dataset.action==='previous-stage'){if(state.stage>1){state.stage--;state.orbitOpen=false;render('[data-stage="'+state.stage+'"]');}return;}
+      if(button.dataset.action==='next-stage'){if(stageOneReady()){state.stage=2;state.orbitOpen=false;render('[data-stage="2"]');}return;}
+      if(button.dataset.action==='save-scene'){attemptSave();return;}
+      if(button.dataset.action==='close-studio'){requestLeave(null,true);return;}
+      if(button.dataset.action==='leave-build'||button.dataset.action==='switch-view'){requestLeave('view',false);return;}
+      if(button.dataset.action==='open-studio'){state.uiMode='build';state.studioOpen=true;render();return;}
+    });
+    document.addEventListener('change',function(event){var target=event.target;
+      if(target.dataset.field==='page'){state.page=target.value;state.parentGroup=currentPage().groups[0].id;loadGroup();render('[data-field="page"]');return;}
+      if(target.dataset.field==='parentGroup'){state.parentGroup=target.value;loadGroup();render('[data-field="parentGroup"]');return;}
+      if(target.dataset.field==='start'||target.dataset.field==='end'){state[target.dataset.field]=target.value;state.selectedFrames=state.selectedFrames.filter(inPeriod);markDirty('Scene period updated. Availability recomputed.');render('[data-field="'+target.dataset.field+'"]');return;}
+      if(target.dataset.field==='timeMode'){state.timeMode=target.value;if(state.timeMode==='source'&&!state.frameSource)state.frameSource=state.members[0]||null;markDirty('Time mode changed to '+target.options[target.selectedIndex].text+'.');render('[data-field="timeMode"]');return;}
+      if(target.dataset.field==='parentMatchingOverride'){state.parentMatchingOverride=target.value;markDirty('Scene matching default changed to '+sceneMatchingLabel()+'.');render('[data-field="parentMatchingOverride"]');return;}
+      if(target.dataset.field==='frameSource'){setFrameSource(target.value,'[data-field="frameSource"]');return;}
+      if(target.dataset.field==='calendarEvery'){state.calendarEvery=Math.max(1,Number(target.value)||1);markDirty('Calendar interval updated.');render('[data-field="calendarEvery"]');return;}
+      if(target.dataset.field==='calendarUnit'){state.calendarUnit=target.value;markDirty('Calendar interval unit updated.');render('[data-field="calendarUnit"]');return;}
+      if(target.dataset.field==='name'){state.name=target.value;markDirty();render('[data-field="name"]');return;}
+      if(target.dataset.field==='seconds'){state.seconds=target.value;markDirty();render('[data-field="seconds"]');return;}
+      if(target.dataset.frameSource){setFrameSource(target.dataset.frameSource);return;}
+      if(target.dataset.observationDate){var date=target.dataset.observationDate;if(target.checked&&state.pendingFrames.indexOf(date)===-1)state.pendingFrames.push(date);if(!target.checked)state.pendingFrames=state.pendingFrames.filter(function(item){return item!==date;});return;}
+      if(target.dataset.widthId){state.widths[target.dataset.widthId]=Number(target.value);markDirty(chartById(target.dataset.widthId).title+' width changed to '+widthLabel(target.value)+'.');render('[data-width-id="'+target.dataset.widthId+'"]');return;}
+      if(target.dataset.matchingId){state.matching[target.dataset.matchingId]=target.value;markDirty(chartById(target.dataset.matchingId).title+' matching updated.');render('[data-matching-id="'+target.dataset.matchingId+'"]');return;}
+      if(target.dataset.presentId){togglePresent(target.dataset.presentId,target.checked);return;}
+    });
+    document.addEventListener('pointerdown',function(event){var title=event.target.closest('.chart-title-button');if(title)beginDrag(event,title);});
+    document.addEventListener('pointermove',trackDrag);
+    document.addEventListener('pointerup',finishDrag);
+    document.addEventListener('pointercancel',function(){clearDrag();render();});
+    document.addEventListener('keydown',function(event){
+      var title=event.target.closest&&event.target.closest('.chart-title-button');if(title){handleBoardKey(event,title);if(event.defaultPrevented)return;}
+      if(event.key==='Escape'){
+        if(!document.getElementById('observationModal').hidden){closeObservations(false);return;}
+        if(!document.getElementById('dirtyModal').hidden){document.querySelector('[data-modal-action="stay"]').click();return;}
+        if(state.draggingId){clearDrag();render();return;}
+        if(state.orbitOpen){state.orbitOpen=false;render();return;}
+        requestLeave(null,true);
+      }
+    });
+    document.querySelectorAll('[data-modal-action]').forEach(function(button){button.addEventListener('click',function(){var action=button.dataset.modalAction;if(action==='stay'){state.modalOpen=false;state.pendingMode=null;state.pendingClose=false;document.getElementById('dirtyModal').hidden=true;document.querySelector('[data-action="close-studio"]').focus();return;}if(action==='discard'){var variant=state.variant,viewport=state.viewport,mode=state.pendingMode,close=state.pendingClose;state=initialState();state.variant=variant;state.viewport=viewport;if(mode){state.uiMode=mode;state.studioOpen=mode==='build';}if(close)state.studioOpen=false;document.getElementById('dirtyModal').hidden=true;render();return;}if(action==='save')attemptSave();});});
+    document.getElementById('resetButton').addEventListener('click',resetAll);
+    document.getElementById('studioMain').addEventListener('scroll',function(){if(state.orbitOpen)positionUnitOrbit();},{passive:true});
+    window.addEventListener('resize',function(){if(state.orbitOpen)positionUnitOrbit();});
+    render();
+  }());
+  </script>
+</body>
+</html>
