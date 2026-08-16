@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 009 · Shared shell and product chrome</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --review-bg: #111722;
+      --review-surface: #1a2330;
+      --review-line: #334155;
+      --review-text: #eef3f8;
+      --review-muted: #a7b3c3;
+      --review-accent: #72dcba;
+      --focus: #ffb454;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-width: 0; height: 100%; margin: 0; overflow: hidden; }
+    body { background: var(--review-bg); color: var(--review-text); }
+    button, select, input { font: inherit; }
+    button, select, input[type="checkbox"] { cursor: pointer; }
+    button:focus-visible, select:focus-visible, input:focus-visible {
+      outline: 3px solid var(--focus); outline-offset: 2px;
+    }
+    .visually-hidden {
+      position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important;
+      overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important;
+    }
+    .prototype {
+      display: grid;
+      grid-template-columns: clamp(310px, 22vw, 390px) minmax(0, 1fr);
+      width: 100%; height: 100%; min-width: 0; overflow: hidden;
+    }
+    .review-rail {
+      min-width: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain;
+      border-right: 1px solid var(--review-line); background: var(--review-bg); padding: 22px 20px 32px;
+    }
+    .eyebrow { color: var(--review-accent); font-size: 11px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .review-rail h1 { margin: 8px 0 7px; font-size: 25px; line-height: 1.08; letter-spacing: -.025em; }
+    .review-rail > p { margin: 0; color: var(--review-muted); font-size: 13px; line-height: 1.5; }
+    .review-status { display: flex; gap: 8px; flex-wrap: wrap; margin: 15px 0 20px; }
+    .status-pill { border: 1px solid #3b5268; border-radius: 999px; padding: 5px 9px; color: #d5e0ec; font-size: 11px; }
+    .status-pill.recommend { border-color: #32876e; background: #153f35; color: #baf4df; }
+    .control-group { border-top: 1px solid var(--review-line); padding-top: 16px; margin-top: 16px; }
+    .control-group h2 { margin: 0 0 9px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #cad6e3; }
+    .segmented { display: grid; gap: 7px; }
+    .segmented.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .segmented.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rail-button {
+      min-height: 44px; border: 1px solid #3b4b5f; border-radius: 9px; padding: 8px 10px;
+      background: var(--review-surface); color: #dbe6f2; text-align: left; line-height: 1.2;
+    }
+    .rail-button:hover { border-color: #6b829b; }
+    .rail-button[aria-pressed="true"] { border-color: var(--review-accent); box-shadow: inset 0 0 0 1px var(--review-accent); color: white; background: #203b3a; }
+    .rail-button strong, .rail-button span { display: block; }
+    .rail-button strong { font-size: 12px; }
+    .rail-button span { margin-top: 3px; color: #9eb0c1; font-size: 10px; }
+    .rail-button[aria-pressed="true"] span { color: #c0e9dc; }
+    .compact .rail-button { text-align: center; }
+    .viewport-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+    .viewport-grid .rail-button:first-child { grid-column: 1 / -1; }
+    .state-card {
+      margin-top: 10px; padding: 12px; border: 1px solid #33475c; border-radius: 9px; background: #151e29;
+      display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; font-size: 11px;
+    }
+    .state-card dt { color: #96a8bb; }
+    .state-card dd { margin: 0; color: #f2f6fa; font-weight: 700; text-align: right; }
+    .variant-note { margin: 10px 0 0; color: var(--review-muted); font-size: 12px; line-height: 1.45; }
+    .stage {
+      min-width: 0; height: 100%; overflow: auto; overscroll-behavior: contain;
+      background:
+        linear-gradient(45deg, rgba(255,255,255,.025) 25%, transparent 25%) 0 0/24px 24px,
+        linear-gradient(-45deg, rgba(255,255,255,.025) 25%, transparent 25%) 0 0/24px 24px,
+        #0b1018;
+      padding: 24px;
+    }
+    .viewport-frame {
+      position: relative; margin: 0 auto; width: 100%; height: 100%; min-width: 0;
+      display: flex; align-items: flex-start; justify-content: center;
+    }
+    .product-window {
+      container: product / inline-size;
+      position: relative; flex: none; width: var(--viewport-w, 100%); height: var(--viewport-h, 100%);
+      min-width: 0; max-width: none; overflow: auto; overscroll-behavior: contain;
+      border: 1px solid #4a5a6d; border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,.44);
+      background: var(--page); color: var(--ink);
+    }
+    .product-window.is-fit { width: 100%; height: 100%; }
+    .product-window, .product-window * { min-width: 0; }
+    .product-root { min-height: 100%; overflow-x: clip; background: var(--page); }
+
+    /* Paint systems: changing these variables must not alter geometry. */
+    .style-evidence {
+      --page:#f3efe7; --surface:#fffdf8; --surface-2:#e9e2d6; --ink:#202421; --muted:#67706a;
+      --line:#c9c0b3; --line-strong:#8c8174; --brand:#145f54; --brand-2:#d5ebe4; --accent:#b45633;
+      --danger:#a63d35; --success:#2f7559; --shadow:rgba(45,41,35,.13); --chart-1:#176b63; --chart-2:#c3633c;
+      --chart-3:#7261a7; --chart-4:#8c8b3d; --chrome:#ede6da; --chrome-ink:#1f2824;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    .style-humanist {
+      --page:#f5f7f8; --surface:#ffffff; --surface-2:#e7edf0; --ink:#1c2830; --muted:#62727c;
+      --line:#cbd6dc; --line-strong:#80919c; --brand:#23628b; --brand-2:#dcecf6; --accent:#d87945;
+      --danger:#a83d4a; --success:#2e785f; --shadow:rgba(23,46,61,.12); --chart-1:#2d77a1; --chart-2:#df8b50;
+      --chart-3:#6e61a5; --chart-4:#4b927a; --chrome:#edf2f4; --chrome-ink:#172730;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    .style-signal {
+      --page:#161a1e; --surface:#20262b; --surface-2:#2a3238; --ink:#f3f6f7; --muted:#a9b5bc;
+      --line:#414b52; --line-strong:#71808a; --brand:#91e6d2; --brand-2:#224a46; --accent:#ffd166;
+      --danger:#ff7b79; --success:#73d6a8; --shadow:rgba(0,0,0,.38); --chart-1:#7be0cf; --chart-2:#ffd166;
+      --chart-3:#f28aae; --chart-4:#8fb8ff; --chrome:#11161a; --chrome-ink:#f3f6f7;
+      font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    }
+    .appearance-dark.style-evidence {
+      --page:#1b211f; --surface:#242b28; --surface-2:#303936; --ink:#f2eee5; --muted:#b8b7ad; --line:#48524d;
+      --line-strong:#7d8c84; --brand:#8ed8c3; --brand-2:#284b42; --accent:#e8906c; --chrome:#171d1b; --chrome-ink:#f4f1e9;
+    }
+    .appearance-dark.style-humanist {
+      --page:#182126; --surface:#222d33; --surface-2:#2d3a41; --ink:#eff5f7; --muted:#b0bec5; --line:#425159;
+      --line-strong:#74848d; --brand:#83c8ef; --brand-2:#294754; --accent:#f1a073; --chrome:#121a1e; --chrome-ink:#f2f7f9;
+    }
+    .appearance-light.style-signal {
+      --page:#eef1f2; --surface:#ffffff; --surface-2:#dde3e6; --ink:#161b1e; --muted:#5c6b73; --line:#c1ccd1;
+      --line-strong:#76878f; --brand:#176b63; --brand-2:#d5eee9; --accent:#aa6b00; --chrome:#e5eaec; --chrome-ink:#151c20;
+    }
+
+    .unsupported-banner {
+      position: sticky; z-index: 70; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      min-height: 52px; padding: 8px 14px; background: #7b2e2e; color: #fff; font: 700 13px/1.3 Inter, sans-serif;
+      border-bottom: 2px solid #f0a3a3;
+    }
+    .unsupported-banner button { min-height: 36px; border: 1px solid #fff; border-radius: 7px; padding: 6px 12px; background: white; color: #652525; font-weight: 800; }
+    .product-shell { min-height: 100%; background: var(--page); }
+    .identity { display: inline-flex; align-items: center; gap: 9px; font-weight: 900; letter-spacing: -.02em; white-space: nowrap; }
+    .identity-mark { display:grid; place-items:center; width:27px; height:27px; border-radius:8px; background:var(--brand); color:var(--surface); font:900 13px Inter,sans-serif; }
+    .product-mode-switch { display: flex; gap: 4px; align-items: center; }
+    .product-mode-switch button, .utility-button, .chrome-button, .page-tab, .context-button {
+      min-height: 38px; border: 1px solid transparent; border-radius: 7px; padding: 7px 11px; color: inherit; background: transparent; font-weight: 750;
+    }
+    .product-mode-switch button:hover, .utility-button:hover, .chrome-button:hover, .page-tab:hover, .context-button:hover { background: var(--surface-2); }
+    .product-mode-switch button[aria-pressed="true"] { background: var(--brand); color: var(--surface); border-color: var(--brand); }
+    .utilities { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .modebar, .adaptive-bar, .ledger-mobilebar {
+      position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 18px; min-height: 52px; padding: 7px 18px;
+      border-bottom: 1px solid var(--line); background: var(--chrome); color: var(--chrome-ink); box-shadow: 0 2px 9px var(--shadow);
+    }
+    .unsupported-banner + .product-shell .modebar, .unsupported-banner + .product-shell .adaptive-bar { top: 52px; }
+    .dashboard-row {
+      display: flex; align-items: center; gap: 18px; min-height: 58px; padding: 8px 20px;
+      border-bottom: 1px solid var(--line); background: var(--surface);
+    }
+    .dashboard-title { white-space: nowrap; }
+    .dashboard-title strong { display:block; font-size:14px; }
+    .dashboard-title span { display:block; margin-top:2px; color:var(--muted); font-size:11px; }
+    .page-tabs { display:flex; align-self:stretch; align-items:center; gap:3px; overflow:auto hidden; }
+    .page-tab { white-space: nowrap; color: var(--muted); }
+    .page-tab[aria-pressed="true"] { color: var(--ink); border-color: var(--line); background: var(--surface-2); }
+    .dashboard-meta { margin-left:auto; color:var(--muted); font-size:11px; white-space:nowrap; }
+    .context-strip {
+      position: relative; z-index: 40; display:flex; align-items:center; gap:8px; height:52px; min-height:52px; padding:6px 20px;
+      border-bottom:1px solid var(--line); background:color-mix(in srgb, var(--brand-2) 64%, var(--surface));
+    }
+    .context-label { margin-right:8px; font-size:11px; font-weight:900; letter-spacing:.09em; text-transform:uppercase; color:var(--brand); }
+    .context-button { min-height:36px; border-color:var(--line); background:var(--surface); }
+    .context-button.primary { background:var(--brand); border-color:var(--brand); color:var(--surface); }
+    .context-button.danger { color:var(--danger); }
+    .context-spacer { flex:1; }
+    .draft-badge { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:11px; font-weight:800; }
+    .draft-dot { width:8px; height:8px; border-radius:50%; background:var(--success); }
+    .draft-badge.dirty .draft-dot { background:var(--accent); }
+
+    /* B: the only variant with a persistent desktop rail. */
+    .variant-b { display:grid; grid-template-columns:188px minmax(0,1fr); min-height:100%; }
+    .product-rail {
+      position: sticky; top:0; align-self:start; height:100vh; z-index:55; display:flex; flex-direction:column; gap:18px;
+      padding:18px 14px; border-right:1px solid var(--line); background:var(--chrome); color:var(--chrome-ink);
+    }
+    .product-rail .product-mode-switch { flex-direction:column; align-items:stretch; }
+    .product-rail .product-mode-switch button { text-align:left; }
+    .product-rail .utilities { margin: auto 0 0; flex-direction:column; align-items:stretch; }
+    .product-rail .utility-button { text-align:left; }
+    .ledger-main { min-width:0; }
+    .ledger-mobilebar { display:none; }
+    .variant-b .dashboard-row { position:sticky; top:0; z-index:45; }
+    .variant-b .context-strip { position:sticky; top:58px; }
+
+    .adaptive-bar { gap:12px; min-height:56px; }
+    .adaptive-bar .product-mode-switch button { min-height:36px; padding-inline:9px; }
+    .breadcrumb { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:12px; }
+    .breadcrumb strong { color:var(--ink); }
+    .page-select { min-height:38px; max-width:190px; border:1px solid var(--line); border-radius:7px; background:var(--surface); color:var(--ink); padding:6px 30px 6px 9px; }
+
+    .dashboard-page { padding: 22px clamp(16px, 3.2vw, 46px) 36px; }
+    .page-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-bottom:18px; }
+    .page-heading h1 { margin:0; color:var(--ink); font-size:clamp(23px,2.3vw,34px); line-height:1.05; letter-spacing:-.035em; }
+    .page-heading p { margin:5px 0 0; color:var(--muted); font-size:12px; }
+    .time-chip { flex:none; border:1px solid var(--line); border-radius:999px; padding:7px 11px; background:var(--surface); color:var(--muted); font-size:11px; font-weight:800; }
+    .section-divider { display:flex; align-items:center; gap:12px; margin:24px 0 12px; }
+    .section-divider h2 { margin:0; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
+    .section-divider::after { content:""; flex:1; height:1px; background:var(--line); }
+    .dashboard-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:190px; gap:14px; }
+    .chart-card {
+      position:relative; overflow:hidden; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:0 5px 16px var(--shadow);
+      padding:15px; transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .chart-card.span-2 { grid-column:span 2; }
+    .chart-card.tall { grid-row:span 2; }
+    .chart-card.selected { border:2px solid var(--brand); box-shadow:0 0 0 3px var(--brand-2),0 8px 22px var(--shadow); padding:14px; }
+    .chart-card h3 { margin:0; padding-right:76px; font-size:13px; }
+    .chart-card .metric { margin:10px 0 2px; font:800 25px/1 Inter,sans-serif; letter-spacing:-.04em; }
+    .chart-card .submetric { color:var(--muted); font-size:10px; }
+    .build-select { position:absolute; z-index:3; top:9px; right:9px; min-height:34px; border:1px solid var(--line); border-radius:7px; background:var(--surface); color:var(--ink); font-size:10px; font-weight:900; }
+    .spark-bars { height:75px; margin-top:15px; display:flex; align-items:flex-end; gap:5px; }
+    .spark-bars i { flex:1; min-width:3px; height:var(--h); border-radius:3px 3px 0 0; background:var(--chart-1); opacity:.9; }
+    .spark-bars i:nth-child(3n+2) { background:var(--chart-2); }
+    .spark-line { width:100%; height:82px; margin-top:10px; }
+    .spark-line polyline { fill:none; stroke:var(--chart-1); stroke-width:3; vector-effect:non-scaling-stroke; }
+    .spark-line .area { fill:color-mix(in srgb,var(--chart-1) 16%,transparent); stroke:none; }
+    .donut { width:83px; height:83px; margin:12px auto 0; border-radius:50%; background:conic-gradient(var(--chart-1) 0 40%,var(--chart-2) 40% 68%,var(--chart-3) 68% 86%,var(--surface-2) 86%); display:grid; place-items:center; }
+    .donut::after { content:"86%"; display:grid; place-items:center; width:52px; height:52px; border-radius:50%; background:var(--surface); font:800 12px Inter,sans-serif; }
+    .mini-table { width:100%; margin-top:10px; border-collapse:collapse; font:11px Inter,sans-serif; }
+    .mini-table td { border-bottom:1px solid var(--line); padding:6px 2px; }
+    .mini-table td:last-child { text-align:right; font-weight:800; }
+    .page-footer { margin-top:28px; padding-top:16px; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:18px; color:var(--muted); font-size:10px; }
+
+    .chrono-deck { margin:0 clamp(16px,3.2vw,46px) 18px; border:1px solid var(--line-strong); border-radius:11px; background:var(--surface); box-shadow:0 8px 24px var(--shadow); overflow:hidden; }
+    .chrono-deck.top { margin-top:18px; margin-bottom:0; }
+    .chrono-head { min-height:48px; padding:7px 12px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); }
+    .chrono-head strong { font-size:12px; }
+    .chrono-head span { color:var(--muted); font-size:10px; }
+    .chrono-head .context-button { margin-left:auto; }
+    .chrono-track { height:104px; padding:17px 22px; display:grid; grid-template-columns:112px minmax(0,1fr); gap:15px; align-items:center; }
+    .chrono-track label { font-size:11px; font-weight:800; }
+    .timeline { position:relative; height:34px; border-bottom:2px solid var(--line-strong); }
+    .timeline::before { content:"Jan 2024"; position:absolute; left:0; top:24px; color:var(--muted); font-size:9px; }
+    .timeline::after { content:"Dec 2024"; position:absolute; right:0; top:24px; color:var(--muted); font-size:9px; }
+    .timeline i { position:absolute; left:var(--x); bottom:-5px; width:10px; height:10px; border-radius:50%; background:var(--chart-1); border:2px solid var(--surface); }
+    .timeline i.active { width:16px; height:16px; bottom:-8px; background:var(--accent); }
+
+    .orbit {
+      position:absolute; z-index:100; width:min(350px,calc(100% - 24px)); border:1px solid var(--line-strong); border-radius:13px;
+      background:var(--surface); color:var(--ink); box-shadow:0 22px 60px rgba(0,0,0,.28); overflow:hidden;
+    }
+    .orbit-head { display:flex; align-items:center; gap:9px; padding:12px 14px; border-bottom:1px solid var(--line); background:var(--surface-2); }
+    .orbit-head strong { font-size:13px; }
+    .orbit-head button { margin-left:auto; min-width:38px; min-height:38px; border:1px solid var(--line); border-radius:7px; background:var(--surface); color:var(--ink); }
+    .orbit-body { padding:14px; }
+    .field { display:grid; gap:5px; margin-bottom:13px; }
+    .field label, .field legend { color:var(--muted); font-size:10px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+    .field input, .field select { width:100%; min-height:40px; border:1px solid var(--line); border-radius:7px; padding:7px 9px; background:var(--page); color:var(--ink); }
+    fieldset.field { border:0; padding:0; }
+    .footprint-grid { display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,34px); gap:4px; }
+    .footprint-grid button { border:1px solid var(--line); background:var(--page); color:var(--muted); font-size:9px; }
+    .footprint-grid button.active { background:var(--brand); color:var(--surface); border-color:var(--brand); }
+    .orbit-actions { display:flex; gap:7px; padding:11px 14px; border-top:1px solid var(--line); }
+    .orbit-actions .context-button:last-child { margin-left:auto; }
+
+    .modal-scrim { position:absolute; inset:0; z-index:130; display:grid; place-items:center; padding:20px; background:rgba(7,11,14,.56); }
+    .modal { width:min(520px,100%); max-height:calc(100% - 30px); overflow:auto; border:1px solid var(--line-strong); border-radius:13px; background:var(--surface); color:var(--ink); box-shadow:0 25px 80px rgba(0,0,0,.4); }
+    .modal-head { padding:16px 18px 10px; }
+    .modal-head .eyebrow { color:var(--brand); }
+    .modal h2 { margin:5px 0 0; font-size:21px; }
+    .modal-body { padding:5px 18px 18px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .modal-demo { margin-top:14px; padding:13px; border:1px dashed var(--line-strong); border-radius:9px; background:var(--page); color:var(--ink); }
+    .modal-actions { display:flex; justify-content:flex-end; gap:8px; padding:12px 18px; border-top:1px solid var(--line); }
+
+    .present-workspace { min-height:calc(100vh - 110px); padding:18px; background:#0c1013; font-family:Inter,ui-sans-serif,sans-serif; }
+    .present-layout { display:grid; grid-template-columns:minmax(0,1fr) clamp(290px,27%,390px); gap:16px; max-width:1500px; margin:0 auto; }
+    .audience-stage { min-width:0; }
+    .audience-monitor { aspect-ratio:16/9; border:8px solid #060708; border-radius:13px; background:#f3f1ea; box-shadow:0 16px 45px rgba(0,0,0,.48); overflow:hidden; color:#1d2527; }
+    .audience { height:100%; padding:clamp(14px,2.4vw,34px); display:flex; flex-direction:column; gap:10px; background:linear-gradient(145deg,#fbfaf6,#e7eceb); }
+    .audience-kicker { color:#39766c; font-size:clamp(8px,1vw,12px); font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+    .audience h1 { margin:0; font:800 clamp(16px,2.3vw,32px)/1.05 Georgia,serif; }
+    .audience-meta { display:flex; gap:8px; flex-wrap:wrap; color:#5f6c6a; font-size:clamp(7px,.75vw,10px); }
+    .audience-grid { flex:1; display:grid; grid-template-columns:2fr 1fr; gap:10px; min-height:0; }
+    .audience-chart { border:1px solid #bdc8c5; border-radius:8px; background:#fff; padding:9px; overflow:hidden; }
+    .audience-chart h3 { margin:0; font-size:clamp(8px,.9vw,12px); }
+    .audience-chart.primary { grid-row:span 2; }
+    .audience-chart .spark-bars { height:68%; margin-top:8px; }
+    .audience-date { align-self:flex-end; color:#657471; font-size:clamp(7px,.7vw,10px); }
+    .stage-caption { display:flex; justify-content:space-between; gap:10px; margin-top:8px; color:#bdc7ce; font-size:10px; }
+    .sidecar { align-self:start; max-height:calc(100vh - 150px); overflow:auto; border:1px solid #3f4a50; border-radius:12px; background:#171d21; color:#edf3f5; box-shadow:0 14px 35px rgba(0,0,0,.32); }
+    .sidecar-head { position:sticky; top:0; z-index:2; padding:14px; border-bottom:1px solid #3d484e; background:#171d21; }
+    .sidecar-head .eyebrow { color:#7fe0c9; }
+    .sidecar-head h2 { margin:4px 0 0; font-size:18px; }
+    .sidecar-section { padding:13px 14px; border-bottom:1px solid #333d43; }
+    .sidecar-section h3 { margin:0 0 9px; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:#aebbc2; }
+    .sidecar label { display:flex; align-items:center; gap:8px; min-height:34px; font-size:11px; }
+    .sidecar input[type="checkbox"] { width:18px; height:18px; accent-color:#6fd1ba; }
+    .scene-select { width:100%; min-height:42px; border:1px solid #526169; border-radius:7px; background:#222b30; color:#fff; padding:7px; }
+    .transport { display:grid; grid-template-columns:44px 1fr 44px; gap:7px; }
+    .transport button { min-height:44px; border:1px solid #526169; border-radius:8px; background:#222b30; color:#fff; font-weight:900; }
+    .transport .play { background:#7fe0c9; color:#10201d; border-color:#7fe0c9; }
+    .safety { color:#9eacb3; font-size:10px; line-height:1.5; }
+    .present-pill { padding:5px 8px; border:1px solid #48615c; border-radius:999px; color:#9de4d3; font-size:9px; }
+
+    @container product (max-width: 1199px) {
+      .variant-b { display:block; }
+      .variant-b .product-rail { display:none; }
+      .variant-b .ledger-mobilebar { display:flex; position:sticky; top:0; }
+      .variant-b .dashboard-row { top:52px; }
+      .variant-b .context-strip { top:110px; }
+      .dashboard-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .present-layout { grid-template-columns:minmax(0,1fr) 320px; }
+    }
+    @container product (max-width: 820px) {
+      .modebar, .adaptive-bar, .ledger-mobilebar { gap:8px; padding-inline:10px; }
+      .identity > span:last-child { display:none; }
+      .dashboard-meta, .breadcrumb, .utility-button.optional { display:none; }
+      .dashboard-row { padding-inline:12px; }
+      .context-strip { padding-inline:10px; overflow-x:auto; }
+      .dashboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .present-layout { grid-template-columns:1fr; }
+      .sidecar { width:100%; max-height:none; }
+    }
+    @container product (max-width: 767px) {
+      .unsupported-banner { position:relative; top:auto; }
+      .modebar, .adaptive-bar, .ledger-mobilebar { position:relative; top:auto !important; flex-wrap:wrap; }
+      .product-mode-switch { order:3; width:100%; }
+      .product-mode-switch button { flex:1; }
+      .adaptive-bar .page-select { flex:1; }
+      .dashboard-row { position:relative !important; top:auto !important; flex-wrap:wrap; }
+      .dashboard-title { width:100%; }
+      .page-tabs { width:100%; }
+      .context-strip { position:relative !important; top:auto !important; }
+      .dashboard-page { padding:16px 12px 28px; }
+      .page-heading { align-items:flex-start; flex-direction:column; }
+      .dashboard-grid { grid-template-columns:1fr; grid-auto-rows:180px; }
+      .chart-card.span-2 { grid-column:span 1; }
+      .chart-card.tall { grid-row:span 1; }
+      .chrono-deck { margin-inline:12px; }
+      .chrono-track { grid-template-columns:1fr; height:auto; }
+      .present-workspace { padding:10px; }
+      .audience-monitor { border-width:4px; }
+      .audience-grid { gap:5px; }
+      .page-footer { flex-direction:column; }
+    }
+    @media (max-width: 900px) {
+      .prototype { grid-template-columns:280px minmax(0,1fr); }
+      .stage { padding:12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype">
+    <aside class="review-rail" aria-label="Sketch review controls">
+      <div class="eyebrow">Sketch 009 · Approved</div>
+      <h1>Shared shell &amp; product chrome</h1>
+      <p>Three shell hypotheses wrap the same approved dashboard, Build, Chrono and Present behavior.</p>
+      <div class="review-status">
+        <span class="status-pill recommend">Approved</span>
+        <span class="status-pill recommend">A · Winner</span>
+        <span class="status-pill">B/C preserved</span>
+      </div>
+
+      <section class="control-group">
+        <h2>Shell variant</h2>
+        <div class="segmented" id="variant-controls"></div>
+        <p class="variant-note" id="variant-note"></p>
+      </section>
+
+      <section class="control-group">
+        <h2>Product mode</h2>
+        <div class="segmented three compact" id="mode-controls"></div>
+      </section>
+
+      <section class="control-group">
+        <h2>Visual style</h2>
+        <div class="segmented" id="style-controls"></div>
+        <div class="segmented two compact" id="appearance-controls" style="margin-top:7px"></div>
+      </section>
+
+      <section class="control-group">
+        <h2>Viewport</h2>
+        <div class="viewport-grid" id="viewport-controls"></div>
+      </section>
+
+      <section class="control-group">
+        <h2>Shared session state</h2>
+        <dl class="state-card" id="state-card"></dl>
+        <p class="variant-note">Switch variants, styles and modes: the selected page, date, product scroll, Build draft and Present scene persist.</p>
+      </section>
+    </aside>
+
+    <main class="stage" aria-label="Prototype viewport">
+      <div class="viewport-frame" id="viewport-frame"></div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const variants = {
+        a: { name: 'A · Layered Command Crown · ★ Winner', short: 'A ★', note: 'Approved winner. Slim mode crown, explicit dashboard/page row, then an equal-height View or Build strip. Clearest hierarchy; accepted higher vertical cost.' },
+        b: { name: 'B · Navigation Ledger · Preserved', short: 'B', note: 'Preserved alternative. Persistent desktop product rail with a dashboard/page row; not selected because it spends chart and Live Sidecar width.' },
+        c: { name: 'C · Adaptive Command Bar · Preserved', short: 'C', note: 'Preserved alternative. Compact combined bar; not selected because page context is less scannable and tablet controls are crowded.' }
+      };
+      const modes = ['View', 'Build', 'Present'];
+      const styles = {
+        evidence: 'Evidence Ledger',
+        humanist: 'Humanist Standard',
+        signal: 'Signal Instrument'
+      };
+      const viewports = {
+        fit: ['Fit available space', null, null],
+        desktop: ['1440 × 900', 1440, 900],
+        tabletLandscape: ['1024 × 768', 1024, 768],
+        tabletPortrait: ['768 × 1024', 768, 1024],
+        phone: ['390 × 844', 390, 844]
+      };
+      const pages = ['System overview', 'Regional pressure', 'Equity signals'];
+      const charts = [
+        { id:'flow', title:'Patient flow', metric:'2,418', sub:'+7.2% against prior period', kind:'line', span:'span-2' },
+        { id:'capacity', title:'Capacity used', metric:'86%', sub:'Across 14 facilities', kind:'donut', span:'' },
+        { id:'wait', title:'Median wait', metric:'42 min', sub:'Target ≤ 35 min', kind:'bars', span:'' },
+        { id:'admit', title:'Admission pressure', metric:'1.23', sub:'Composite demand index', kind:'bars', span:'' },
+        { id:'discharge', title:'Discharge balance', metric:'−118', sub:'Admissions less discharges', kind:'line', span:'span-2' },
+        { id:'regions', title:'Regional watchlist', metric:'4', sub:'Areas above threshold', kind:'table', span:'' },
+        { id:'mix', title:'Care setting mix', metric:'63%', sub:'Community pathway share', kind:'donut', span:'' },
+        { id:'staff', title:'Staffing coverage', metric:'91%', sub:'Rostered hours covered', kind:'bars', span:'span-2' }
+      ];
+
+      const state = {
+        variant:'a', mode:'View', style:'evidence', appearance:'light', viewport:'fit',
+        page:0, time:'16 Aug 2026', scroll:{ View:0, Build:0, Present:0 },
+        chronoOpen:true, chronoPlacement:'bottom', selectedChart:null, orbitOpen:false,
+        footprint:'2×1', chartTitle:'Patient flow', draftDirty:false, overlay:null, pendingMode:null,
+        present:{ scene:'Winter pressure', frame:7, playing:false, info:{ dashboard:true, page:true, parent:true, scene:true, date:true } }
+      };
+
+      const rail = {
+        variant:document.getElementById('variant-controls'), mode:document.getElementById('mode-controls'),
+        style:document.getElementById('style-controls'), appearance:document.getElementById('appearance-controls'),
+        viewport:document.getElementById('viewport-controls'), note:document.getElementById('variant-note'),
+        card:document.getElementById('state-card'), frame:document.getElementById('viewport-frame')
+      };
+
+      const esc = value => String(value).replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+      const phonePreview = () => state.viewport === 'phone';
+      const button = (label, action, active=false, extra='') => `<button type="button" data-action="${action}" aria-pressed="${active}" ${extra}>${label}</button>`;
+
+      function renderRail() {
+        rail.variant.innerHTML = Object.entries(variants).map(([key, value]) =>
+          `<button class="rail-button" type="button" data-action="variant" data-value="${key}" aria-pressed="${state.variant === key}"><strong>${value.name}</strong><span>${key === 'a' ? 'Recommended' : key === 'b' ? 'Persistent rail' : 'Compact crown'}</span></button>`
+        ).join('');
+        rail.note.textContent = variants[state.variant].note;
+        rail.mode.innerHTML = modes.map(mode => `<button class="rail-button" type="button" data-action="mode" data-value="${mode}" aria-pressed="${state.mode === mode}"><strong>${mode}</strong></button>`).join('');
+        rail.style.innerHTML = Object.entries(styles).map(([key, name]) => `<button class="rail-button" type="button" data-action="style" data-value="${key}" aria-pressed="${state.style === key}"><strong>${name}</strong><span>Paint and material only</span></button>`).join('');
+        rail.appearance.innerHTML = ['light','dark'].map(value => `<button class="rail-button" type="button" data-action="appearance" data-value="${value}" aria-pressed="${state.appearance === value}"><strong>${value[0].toUpperCase()+value.slice(1)}</strong></button>`).join('');
+        rail.viewport.innerHTML = Object.entries(viewports).map(([key, value]) => `<button class="rail-button" type="button" data-action="viewport" data-value="${key}" aria-pressed="${state.viewport === key}"><strong>${value[0]}</strong></button>`).join('');
+        rail.card.innerHTML = `
+          <dt>Shell</dt><dd>${variants[state.variant].short}</dd>
+          <dt>Mode</dt><dd>${state.mode}</dd>
+          <dt>Page</dt><dd>${esc(pages[state.page])}</dd>
+          <dt>Time</dt><dd>${esc(state.time)}</dd>
+          <dt>Build draft</dt><dd>${state.draftDirty ? 'Unsaved' : 'Saved'}</dd>
+          <dt>Present</dt><dd>${state.present.playing ? 'Playing' : 'Paused'} · frame ${state.present.frame}</dd>
+          <dt>View / Build geometry</dt><dd>Same fixture</dd>`;
+      }
+
+      function modeSwitch() {
+        return `<nav class="product-mode-switch" aria-label="Product mode">${modes.map(mode => button(mode, 'mode', state.mode === mode, `data-value="${mode}"`)).join('')}</nav>`;
+      }
+      function identity() { return `<div class="identity"><span class="identity-mark" aria-hidden="true">Sx</span><span>SimEx</span></div>`; }
+      function utilities() { return `<div class="utilities"><button class="utility-button optional" type="button" aria-label="Help">Help</button><button class="utility-button" type="button" aria-label="Account">HK</button></div>`; }
+      function pageTabs() {
+        return `<nav class="page-tabs" aria-label="Dashboard pages">${pages.map((name,index) => button(esc(name), 'page', state.page === index, `class="page-tab" data-value="${index}"`)).join('')}</nav>`;
+      }
+      function dashboardRow() {
+        return `<div class="dashboard-row"><div class="dashboard-title"><strong>Hospital system watch</strong><span>National simulation dashboard</span></div>${pageTabs()}<div class="dashboard-meta">Scenario Alpha · Updated 08:42</div></div>`;
+      }
+      function contextualStrip() {
+        if (state.mode === 'Build') {
+          return `<div class="context-strip" aria-label="Build tools"><span class="context-label">Build</span>
+            <button class="context-button" type="button" data-action="author" data-value="chart">+ Chart</button>
+            <button class="context-button" type="button" data-action="author" data-value="time group">+ Time group</button>
+            <button class="context-button" type="button" data-action="author" data-value="scene">+ Scene</button>
+            <span class="context-spacer"></span><span class="draft-badge ${state.draftDirty ? 'dirty':''}"><i class="draft-dot"></i>${state.draftDirty ? 'Unsaved layout' : 'Layout saved'}</span>
+            <button class="context-button danger" type="button" data-action="discard-draft" ${state.draftDirty ? '' : 'disabled'}>Discard</button>
+            <button class="context-button primary" type="button" data-action="save-draft" ${state.draftDirty ? '' : 'disabled'}>Save changes</button>
+          </div>`;
+        }
+        if (state.mode === 'View') {
+          return `<div class="context-strip" aria-label="View tools"><span class="context-label">View</span>
+            <button class="context-button" type="button">Compare charts</button>
+            <button class="context-button" type="button" data-action="chrono">${state.chronoOpen ? 'Close' : 'Open'} Chrono</button>
+            <span class="context-spacer"></span><span class="draft-badge"><i class="draft-dot"></i>Live data · ${esc(state.time)}</span>
+          </div>`;
+        }
+        return `<div class="context-strip" aria-label="Present status"><span class="context-label">Present</span><span class="present-pill">Audience output clean</span><span class="context-spacer"></span><span class="draft-badge"><i class="draft-dot"></i>${state.present.playing ? 'Playing' : 'Paused'} · frame ${state.present.frame}</span></div>`;
+      }
+
+      function renderShell(workspace) {
+        if (state.variant === 'a') {
+          return `<div class="product-shell variant-a"><header class="modebar">${identity()}${modeSwitch()}${utilities()}</header>${dashboardRow()}${contextualStrip()}${workspace}</div>`;
+        }
+        if (state.variant === 'b') {
+          return `<div class="product-shell variant-b"><aside class="product-rail" aria-label="Product navigation">${identity()}${modeSwitch()}${utilities()}</aside><div class="ledger-main"><header class="ledger-mobilebar">${identity()}${modeSwitch()}${utilities()}</header>${dashboardRow()}${contextualStrip()}${workspace}</div></div>`;
+        }
+        return `<div class="product-shell variant-c"><header class="adaptive-bar">${identity()}${modeSwitch()}<div class="breadcrumb">Hospital system watch / <strong>${esc(pages[state.page])}</strong></div><label><span class="visually-hidden">Page</span><select class="page-select" data-action="page-select" aria-label="Dashboard page">${pages.map((name,index) => `<option value="${index}" ${state.page===index?'selected':''}>${esc(name)}</option>`).join('')}</select></label>${utilities()}</header>${contextualStrip()}${workspace}</div>`;
+      }
+
+      function chartVisual(chart, index) {
+        if (chart.kind === 'donut') return '<div class="donut" aria-hidden="true"></div>';
+        if (chart.kind === 'table') return '<table class="mini-table" aria-label="Regional statuses"><tbody><tr><td>North Coast</td><td>High</td></tr><tr><td>Central</td><td>Watch</td></tr><tr><td>South East</td><td>High</td></tr></tbody></table>';
+        if (chart.kind === 'line') return `<svg class="spark-line" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="M0 67 L40 54 L80 59 L120 35 L160 43 L200 21 L250 29 L300 12 L300 80 L0 80 Z"></path><polyline points="0,67 40,54 80,59 120,35 160,43 200,21 250,29 300,12"></polyline></svg>`;
+        const heights = [34,55,43,72,62,86,58,74,90,67].map((height,i)=>`<i style="--h:${Math.max(18,height-((index+i)%3)*7)}%"></i>`).join('');
+        return `<div class="spark-bars" aria-hidden="true">${heights}</div>`;
+      }
+      function chartCard(chart,index) {
+        const selected = state.mode === 'Build' && state.selectedChart === chart.id;
+        return `<article class="chart-card ${chart.span} ${selected ? 'selected':''}" data-chart="${chart.id}">
+          ${state.mode === 'Build' ? `<button class="build-select" type="button" data-action="select-chart" data-value="${chart.id}">${selected ? 'Editing' : 'Edit chart'}</button>` : ''}
+          <h3>${esc(chart.title)}</h3><div class="metric">${esc(chart.metric)}</div><div class="submetric">${esc(chart.sub)}</div>${chartVisual(chart,index)}
+        </article>`;
+      }
+      function chrono() {
+        if (!state.chronoOpen || state.mode !== 'View') return '';
+        return `<section class="chrono-deck ${state.chronoPlacement}" aria-label="Chrono time control"><div class="chrono-head"><strong>Chrono</strong><span>Shared dashboard time</span><button class="context-button" type="button" data-action="chrono-position">Move to ${state.chronoPlacement === 'top' ? 'bottom deck' : 'top mast'}</button></div><div class="chrono-track"><label>Observation date<br><span>${esc(state.time)}</span></label><div class="timeline" aria-label="Timeline"><i style="--x:4%"></i><i style="--x:23%"></i><i style="--x:44%"></i><i class="active" style="--x:66%"></i><i style="--x:82%"></i><i style="--x:96%"></i></div></div></section>`;
+      }
+      function dashboard() {
+        const topChrono = state.chronoPlacement === 'top' ? chrono() : '';
+        const lowerChrono = state.chronoPlacement === 'bottom' ? chrono() : '';
+        return `${topChrono}<main class="dashboard-page" aria-label="Dashboard fixture"><header class="page-heading"><div><h1>${esc(pages[state.page])}</h1><p>Capacity, access and patient-flow signals for the current simulation period.</p></div><span class="time-chip">${esc(state.time)}</span></header><div class="section-divider"><h2>Operating picture</h2></div><section class="dashboard-grid">${charts.map(chartCard).join('')}</section><div class="section-divider"><h2>Interpretation notes</h2></div><footer class="page-footer"><span>SimEx evidence workspace · Data refreshed 08:42</span><span>Methodology · Accessibility · Report a bug / request a feature · © 2026</span></footer></main>${lowerChrono}`;
+      }
+
+      function orbit() {
+        if (state.mode !== 'Build' || !state.orbitOpen || !state.selectedChart) return '';
+        const selected = charts.find(chart => chart.id === state.selectedChart);
+        return `<section class="orbit" id="unit-orbit" aria-label="Unit Orbit chart editor"><header class="orbit-head"><span class="eyebrow">Unit Orbit</span><strong>${esc(selected.title)}</strong><button type="button" data-action="close-orbit" aria-label="Close Unit Orbit">×</button></header><div class="orbit-body"><div class="field"><label for="chart-title">Chart title</label><input id="chart-title" data-action="chart-title" value="${esc(state.chartTitle)}"></div><div class="field"><label for="chart-view">Chart view</label><select id="chart-view"><option>Line</option><option>Bars</option><option>Table</option></select></div><fieldset class="field"><legend>Footprint · ${state.footprint}</legend><div class="footprint-grid">${[1,2].flatMap(row => [1,2,3,4].map(col => `<button type="button" class="${state.footprint===`${col}×${row}`?'active':''}" data-action="footprint" data-value="${col}×${row}" aria-label="${col} columns by ${row} rows">${col}×${row}</button>`)).join('')}</div></fieldset></div><footer class="orbit-actions"><button class="context-button danger" type="button" data-action="discard-chart">Discard chart edits</button><button class="context-button primary" type="button" data-action="save-chart">Save chart</button></footer></section>`;
+      }
+      function modal() {
+        if (state.pendingMode) {
+          return `<div class="modal-scrim" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="pending-title"><header class="modal-head"><div class="eyebrow">Unsaved Build changes</div><h2 id="pending-title">Resolve layout changes?</h2></header><div class="modal-body">Switching to ${esc(state.pendingMode)} can continue after this Build draft is saved or discarded. Stay keeps the draft exactly as it is.</div><footer class="modal-actions"><button class="context-button" type="button" data-action="pending-stay">Stay in Build</button><button class="context-button danger" type="button" data-action="pending-discard">Discard</button><button class="context-button primary" type="button" data-action="pending-save">Save &amp; switch</button></footer></section></div>`;
+        }
+        if (!state.overlay) return '';
+        const label = state.overlay[0].toUpperCase()+state.overlay.slice(1);
+        return `<div class="modal-scrim" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="author-title"><header class="modal-head"><div class="eyebrow">Build overlay</div><h2 id="author-title">Create ${esc(state.overlay)}</h2></header><div class="modal-body">The approved authoring workflow opens over the unchanged dashboard geometry.<div class="modal-demo"><strong>${esc(label)} draft</strong><br>Representative controls are intentionally compressed in this shell decision sketch.</div></div><footer class="modal-actions"><button class="context-button primary" type="button" data-action="close-overlay">Return to dashboard</button></footer></section></div>`;
+      }
+
+      function audienceInfo() {
+        const info = state.present.info;
+        return `<div class="audience-meta">${info.dashboard?'<span>Hospital system watch</span>':''}${info.page?`<span>· ${esc(pages[state.page])}</span>`:''}${info.parent?'<span>· Parent: Winter capacity</span>':''}${info.scene?`<span>· ${esc(state.present.scene)}</span>`:''}</div>`;
+      }
+      function present() {
+        const info = state.present.info;
+        return `<main class="present-workspace"><div class="present-layout"><section class="audience-stage" aria-label="Audience monitor preview"><div class="audience-monitor"><div class="audience"><div class="audience-kicker">System briefing</div><h1>Pressure is rising, with capacity constraints concentrated in four regions</h1>${audienceInfo()}<div class="audience-grid"><article class="audience-chart primary"><h3>Patient flow</h3>${chartVisual(charts[0],0)}</article><article class="audience-chart"><h3>Capacity used</h3><div class="donut"></div></article><article class="audience-chart"><h3>Median wait</h3>${chartVisual(charts[3],3)}</article></div>${info.date?`<div class="audience-date">${esc(state.time)} · Frame ${state.present.frame} of 12</div>`:''}</div></div><div class="stage-caption"><span>Audience monitor · no product chrome</span><span>16:9 output</span></div></section><aside class="sidecar" aria-label="Present Live Sidecar"><header class="sidecar-head"><div class="eyebrow">Live Sidecar</div><h2>Present controller</h2></header><section class="sidecar-section"><h3>Scene</h3><select class="scene-select" data-action="scene"><option ${state.present.scene==='Winter pressure'?'selected':''}>Winter pressure</option><option ${state.present.scene==='Regional equity'?'selected':''}>Regional equity</option><option ${state.present.scene==='Recovery outlook'?'selected':''}>Recovery outlook</option></select></section><section class="sidecar-section"><h3>Audience information</h3>${Object.entries({dashboard:'Dashboard',page:'Page',parent:'Parent time group',scene:'Scene name',date:'Scene date'}).map(([key,label])=>`<label><input type="checkbox" data-action="audience-info" data-value="${key}" ${info[key]?'checked':''}>${label}</label>`).join('')}</section><section class="sidecar-section"><h3>Transport</h3><div class="transport"><button type="button" data-action="frame-prev" aria-label="Previous frame">←</button><button class="play" type="button" data-action="play">${state.present.playing?'Pause':'Play'} · ${state.present.frame}/12</button><button type="button" data-action="frame-next" aria-label="Next frame">→</button></div></section><section class="sidecar-section safety">Audience output is isolated from product chrome. Leaving Present pauses playback but retains the scene, frame and display choices.</section></aside></div></main>`;
+      }
+
+      function renderProduct() {
+        const current = rail.frame.querySelector('.product-window');
+        if (current) state.scroll[current.dataset.mode || state.mode] = current.scrollTop;
+        const viewport = viewports[state.viewport];
+        const sizeStyle = state.viewport === 'fit' ? '' : `--viewport-w:${viewport[1]}px;--viewport-h:${viewport[2]}px;`;
+        const workspace = state.mode === 'Present' ? present() : dashboard();
+        const unsupported = phonePreview() && state.mode !== 'View' ? `<div class="unsupported-banner" role="status"><span>${state.mode} is not supported at phone size. View remains available.</span><button type="button" data-action="switch-view">Switch to View</button></div>` : '';
+        rail.frame.innerHTML = `<div class="product-window ${state.viewport === 'fit'?'is-fit':''} style-${state.style} appearance-${state.appearance}" style="${sizeStyle}" data-viewport="${state.viewport}" data-mode="${state.mode}"><div class="product-root">${unsupported}${renderShell(workspace)}${orbit()}${modal()}</div></div>`;
+        const product = rail.frame.querySelector('.product-window');
+        product.scrollTop = state.scroll[state.mode] || 0;
+        product.addEventListener('scroll', () => { state.scroll[state.mode] = product.scrollTop; }, { passive:true });
+        requestAnimationFrame(positionOrbit);
+      }
+
+      function positionOrbit() {
+        const product = rail.frame.querySelector('.product-window');
+        const orbitEl = document.getElementById('unit-orbit');
+        const selected = state.selectedChart && product ? product.querySelector(`[data-chart="${state.selectedChart}"]`) : null;
+        if (!product || !orbitEl || !selected) return;
+        const p = product.getBoundingClientRect();
+        const c = selected.getBoundingClientRect();
+        const width = orbitEl.offsetWidth;
+        const height = orbitEl.offsetHeight;
+        const clearance = 14;
+        let left = c.right - p.left + product.scrollLeft + clearance;
+        if (left + width > product.scrollWidth - 12) left = c.left - p.left + product.scrollLeft - width - clearance;
+        left = Math.max(12, Math.min(left, product.scrollWidth - width - 12));
+        let top = c.top - p.top + product.scrollTop;
+        top = Math.max(product.scrollTop + 118, Math.min(top, product.scrollTop + product.clientHeight - height - 12));
+        orbitEl.style.left = `${left}px`;
+        orbitEl.style.top = `${top}px`;
+      }
+
+      function renderAll() { renderRail(); renderProduct(); }
+      function setMode(next) {
+        if (next === state.mode) return;
+        if (state.mode === 'Build' && state.draftDirty) { state.pendingMode = next; renderAll(); return; }
+        if (state.mode === 'Present') state.present.playing = false;
+        state.mode = next; state.pendingMode = null; state.overlay = null; state.orbitOpen = next === 'Build' && state.orbitOpen;
+        renderAll();
+      }
+      function completePending(save) {
+        const next = state.pendingMode;
+        if (!next) return;
+        state.draftDirty = false; state.pendingMode = null; state.orbitOpen = false; state.selectedChart = save ? state.selectedChart : null;
+        state.mode = next; renderAll();
+      }
+
+      document.addEventListener('click', event => {
+        const control = event.target.closest('[data-action]');
+        if (!control) return;
+        const action = control.dataset.action;
+        const value = control.dataset.value;
+        if (action === 'variant') { state.variant=value; renderAll(); }
+        else if (action === 'mode') setMode(value);
+        else if (action === 'style') { state.style=value; renderAll(); }
+        else if (action === 'appearance') { state.appearance=value; renderAll(); }
+        else if (action === 'viewport') { state.viewport=value; renderAll(); }
+        else if (action === 'page') { state.page=Number(value); renderAll(); }
+        else if (action === 'chrono') { state.chronoOpen=!state.chronoOpen; renderAll(); }
+        else if (action === 'chrono-position') { state.chronoPlacement=state.chronoPlacement==='top'?'bottom':'top'; renderAll(); }
+        else if (action === 'select-chart') { const chart=charts.find(item=>item.id===value); state.selectedChart=value; state.chartTitle=chart.title; state.orbitOpen=true; renderAll(); }
+        else if (action === 'close-orbit') { state.orbitOpen=false; renderAll(); }
+        else if (action === 'footprint') { state.footprint=value; state.draftDirty=true; renderAll(); }
+        else if (action === 'save-chart' || action === 'save-draft') { state.draftDirty=false; state.orbitOpen=false; renderAll(); }
+        else if (action === 'discard-chart') { state.draftDirty=false; state.orbitOpen=false; renderAll(); }
+        else if (action === 'discard-draft') { state.draftDirty=false; renderAll(); }
+        else if (action === 'author') { state.overlay=value; renderAll(); }
+        else if (action === 'close-overlay') { state.overlay=null; renderAll(); }
+        else if (action === 'pending-stay') { state.pendingMode=null; renderAll(); }
+        else if (action === 'pending-discard') completePending(false);
+        else if (action === 'pending-save') completePending(true);
+        else if (action === 'switch-view') { state.mode='View'; state.present.playing=false; renderAll(); }
+        else if (action === 'play') { state.present.playing=!state.present.playing; renderAll(); }
+        else if (action === 'frame-prev') { state.present.frame=Math.max(1,state.present.frame-1); renderAll(); }
+        else if (action === 'frame-next') { state.present.frame=Math.min(12,state.present.frame+1); renderAll(); }
+      });
+      document.addEventListener('change', event => {
+        const control = event.target.closest('[data-action]');
+        if (!control) return;
+        if (control.dataset.action === 'page-select') { state.page=Number(control.value); renderAll(); }
+        else if (control.dataset.action === 'scene') { state.present.scene=control.value; renderAll(); }
+        else if (control.dataset.action === 'audience-info') { state.present.info[control.dataset.value]=control.checked; renderAll(); }
+      });
+      document.addEventListener('input', event => {
+        if (event.target.dataset.action !== 'chart-title') return;
+        state.chartTitle=event.target.value; state.draftDirty=true; renderRail();
+      });
+      window.addEventListener('resize', positionOrbit, { passive:true });
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
