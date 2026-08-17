@@ -30,6 +30,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | 012 | Temporal content library | How should builders find, understand, manage, and repair saved Time Groups and page-scoped Scenes without conflating library management with approved authoring workflows? | Approved | D — Page-grouped Relationships | Build, temporal library, Time Groups, Scenes, repair, saved content |
 | 013 | Scenario & dashboard package management | How should Build expose one-scenario identity and package operations without implying a package-wide Save or disturbing valid work? | Approved | A — Scenario Passport | Build, scenario, package, import, download, reset, recovery |
 | 014 | View exploration and comparison | How should ordinary View support source inspection, Chrono member elevation, and one-to-four-chart comparison without resembling Build or Present? | Approved | D — Immersive View Canvas | View, comparison, source, Chrono, fullscreen, phone, consistency |
+| 015 | Integrated Build command surfaces | How should approved Build entry points and transient surfaces coexist in the Layered Command Crown without hiding the active target or obscuring draft ownership? | Approved | B — Context Shelf | Build, integration, Crown, Unit Orbit, focus, drafts, consistency |
 
 ## Sequence
 

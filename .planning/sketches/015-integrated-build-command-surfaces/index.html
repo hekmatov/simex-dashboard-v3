@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 015 · Integrated Build command surfaces</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --paper:#f4f0e7;
+      --paper-2:#ece6d9;
+      --panel:#fffdf8;
+      --panel-2:#f8f4eb;
+      --ink:#202a2d;
+      --muted:#647073;
+      --rule:#c5bdaf;
+      --rule-strong:#918a7f;
+      --accent:#254c57;
+      --accent-2:#dbe9e8;
+      --select:#a94b34;
+      --select-soft:#f4dfd7;
+      --good:#356b50;
+      --warn:#9b6127;
+      --danger:#9b4036;
+      --shadow:0 18px 50px rgba(43,38,31,.18);
+      --shadow-small:0 7px 22px rgba(43,38,31,.13);
+      --review-h:78px;
+    }
+
+    * { box-sizing:border-box; }
+    html { background:#242829; }
+    body { margin:0; min-width:320px; background:#242829; color:var(--ink); font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select { font:inherit; }
+    button, select, input { transition:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease; }
+    button { cursor:pointer; }
+    button:disabled { cursor:not-allowed; opacity:.46; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline:3px solid #e39d57; outline-offset:2px; }
+
+    .review-bar {
+      position:sticky; top:0; z-index:1000; min-height:var(--review-h); display:flex; align-items:center; gap:16px; padding:10px 16px;
+      color:#f9f7f1; background:#202526; border-bottom:1px solid #4a5252; box-shadow:0 8px 22px rgba(0,0,0,.25);
+    }
+    .review-title { min-width:245px; }
+    .review-title strong, .review-title small { display:block; }
+    .review-title strong { font-size:14px; letter-spacing:.01em; }
+    .review-title small { margin-top:3px; color:#bfc7c6; font-size:11px; }
+    .review-group { display:flex; align-items:center; gap:6px; }
+    .review-group[aria-label="Variant comparison"] { flex:1; }
+    .review-button {
+      min-height:42px; padding:7px 11px; border:1px solid #566060; border-radius:8px; color:#edf1ef; background:#2d3435; font-size:12px; font-weight:730;
+    }
+    .review-button:hover { background:#394243; border-color:#889392; }
+    .review-button[aria-pressed="true"] { background:#e8ded0; color:#202829; border-color:#e8ded0; box-shadow:inset 0 -3px 0 var(--select); }
+    .viewport-buttons { white-space:nowrap; }
+    .viewport-buttons .review-button { min-width:44px; padding-inline:8px; }
+    .session-proof { max-width:230px; color:#cad1cf; font-size:11px; line-height:1.35; }
+
+    .review-stage { min-height:calc(100vh - var(--review-h)); padding:24px; overflow:auto; display:grid; place-items:start center; background:#303637; }
+    .product-window { position:relative; width:100%; max-width:1440px; height:calc(100vh - var(--review-h) - 48px); min-height:620px; overflow:hidden; background:var(--paper); border:1px solid #56605f; border-radius:11px; box-shadow:0 28px 78px rgba(0,0,0,.34); }
+    .product-scroll { width:100%; height:100%; overflow:auto; overscroll-behavior:contain; background:var(--paper); }
+    .product-root { position:relative; min-width:0; min-height:100%; background:var(--paper); }
+    .product-root[data-profile="signal"] { --accent:#674859; --accent-2:#eadce4; --select:#466d79; --select-soft:#dcecef; }
+    .product-root[data-profile="contrast"] { --accent:#213b69; --accent-2:#dce5f6; --select:#9b4d21; --select-soft:#f7e3d8; }
+
+    .unsupported-banner {
+      position:sticky; top:0; z-index:90; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:8px 12px;
+      background:#ffe8b8; color:#513811; border-bottom:1px solid #c69032; font-size:13px; font-weight:750;
+    }
+    .unsupported-banner button { min-height:36px; padding:6px 10px; border:1px solid #805713; border-radius:6px; background:#fff7e7; color:#513811; font-weight:800; }
+
+    .command-crown { position:sticky; top:0; z-index:50; box-shadow:0 2px 11px rgba(54,45,35,.10); }
+    .modebar { display:flex; align-items:center; gap:16px; min-height:52px; padding:7px 18px; background:var(--paper-2); border-bottom:1px solid var(--rule); }
+    .brand { display:flex; align-items:center; gap:9px; min-width:max-content; font-weight:900; letter-spacing:-.02em; }
+    .brand-mark { display:grid; place-items:center; width:28px; height:28px; border-radius:7px; color:#fff; background:var(--accent); font-size:11px; letter-spacing:.06em; }
+    .mode-nav { display:flex; gap:3px; }
+    .mode-button, .crown-button, .page-button, .strip-button, .small-button {
+      min-height:38px; padding:7px 11px; border:1px solid transparent; border-radius:7px; background:transparent; color:inherit; font-weight:740;
+    }
+    .mode-button:hover, .crown-button:hover, .page-button:hover, .strip-button:hover, .small-button:hover { border-color:var(--rule); background:rgba(255,255,255,.55); }
+    .mode-button[aria-current="page"], .page-button[aria-current="page"] { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .mode-spacer, .strip-spacer { flex:1; }
+    .scenario-trigger { display:flex; align-items:center; gap:9px; max-width:380px; text-align:left; border-color:var(--rule); background:rgba(255,255,255,.38); }
+    .scenario-trigger span { display:block; min-width:0; }
+    .scenario-trigger strong, .scenario-trigger small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .scenario-trigger small { margin-top:2px; color:var(--muted); font-weight:620; }
+    .scenario-trigger[aria-expanded="true"] { background:var(--accent-2); border-color:var(--accent); }
+
+    .context-row { display:flex; align-items:center; min-height:48px; gap:12px; padding:5px 18px; background:var(--panel); border-bottom:1px solid var(--rule); }
+    .dashboard-name { min-width:220px; }
+    .dashboard-name strong, .dashboard-name span { display:block; }
+    .dashboard-name strong { font-size:13px; }
+    .dashboard-name span { margin-top:2px; color:var(--muted); font-size:11px; }
+    .page-tabs { display:flex; align-items:center; gap:4px; overflow:auto; scrollbar-width:thin; }
+    .page-button { min-width:max-content; font-size:12px; }
+    .page-button[draggable="true"] { cursor:grab; }
+    .page-button.dragging { opacity:.45; }
+    .add-page { border-style:dashed; border-color:var(--rule-strong); }
+    .page-drag-note { min-width:max-content; color:var(--muted); font-size:10px; }
+
+    .build-strip { display:flex; align-items:center; gap:7px; min-height:48px; padding:5px 18px; background:#e5ded0; border-bottom:1px solid var(--rule-strong); overflow-x:auto; scrollbar-width:thin; }
+    .build-strip > * { flex:none; }
+    .build-strip > .strip-spacer { flex:1 1 auto; }
+    .strip-title { font-size:13px; letter-spacing:.01em; }
+    .draft-chip, .surface-chip, .scope-chip { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:5px 8px; border:1px solid var(--rule); border-radius:999px; background:rgba(255,255,255,.55); color:var(--muted); font-size:11px; font-weight:720; white-space:nowrap; }
+    .draft-chip::before { content:""; width:7px; height:7px; border-radius:50%; background:#82908a; }
+    .draft-chip.dirty { color:#6c351f; border-color:#c68161; background:#fff1e9; }
+    .draft-chip.dirty::before { background:var(--select); }
+    .surface-chip { color:var(--accent); border-color:#89a3a7; background:#edf6f4; }
+    button.surface-chip:hover { background:#dcece9; }
+    .surface-chip strong { color:inherit; }
+    .trail { display:flex; align-items:center; gap:4px; }
+    .trail-separator { color:#7d8583; font-size:12px; }
+    .trail .surface-chip[aria-current="step"] { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .strip-button { min-height:34px; padding:5px 9px; border-color:var(--rule); background:rgba(255,255,255,.45); font-size:11px; }
+    .strip-button.primary, .small-button.primary { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .strip-button.danger, .small-button.danger { color:#7d2f27; border-color:#bc766c; background:#fff3f0; }
+    .strip-message { min-width:max-content; color:var(--muted); font-size:11px; font-style:italic; }
+
+    .dashboard-page { max-width:1320px; margin:0 auto; padding:24px 28px 70px; }
+    .page-heading { display:flex; justify-content:space-between; align-items:end; gap:20px; margin-bottom:22px; }
+    .page-heading h1 { margin:0; font-family:Georgia, "Times New Roman", serif; font-size:clamp(25px,3vw,40px); font-weight:600; letter-spacing:-.03em; }
+    .page-heading p { max-width:690px; margin:6px 0 0; color:var(--muted); line-height:1.5; }
+    .period-chip { min-width:max-content; padding:8px 10px; border:1px solid var(--rule); border-radius:999px; background:var(--panel); color:var(--muted); font-size:11px; font-weight:720; }
+    .section-block { margin-top:24px; scroll-margin-top:165px; }
+    .section-head { display:flex; align-items:start; justify-content:space-between; gap:18px; padding:0 0 9px; border-bottom:2px solid var(--ink); }
+    .section-title-button { display:block; min-height:44px; padding:2px 4px; border:1px solid transparent; border-radius:5px; background:transparent; color:inherit; text-align:left; }
+    .section-title-button:hover { border-color:var(--rule); background:var(--panel); }
+    .section-title-button strong { display:block; font-family:Georgia, "Times New Roman", serif; font-size:21px; font-weight:600; }
+    .section-title-button small { display:block; margin-top:3px; color:var(--muted); font-family:Inter, sans-serif; font-size:10px; font-weight:650; }
+    .section-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:5px; }
+    .section-actions .small-button { min-height:36px; padding:5px 8px; border-color:var(--rule); background:var(--panel); font-size:10px; }
+    .section-actions .remove { color:var(--danger); border-color:#c98579; }
+
+    .chart-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:minmax(190px,auto); gap:13px; padding-top:13px; }
+    .chart-card { position:relative; min-width:0; padding:14px; overflow:hidden; border:1px solid var(--rule); border-radius:9px; background:var(--panel); box-shadow:0 2px 7px rgba(38,34,28,.05); }
+    .chart-card:hover { border-color:#899795; box-shadow:var(--shadow-small); transform:translateY(-1px); }
+    .chart-card.selected { border:2px solid var(--select); box-shadow:0 0 0 3px var(--select-soft), var(--shadow-small); }
+    .chart-card[draggable="true"] { cursor:grab; }
+    .chart-card.dragging { opacity:.45; }
+    .chart-card.drag-target { outline:3px dashed var(--select); outline-offset:3px; }
+    .chart-head { display:flex; align-items:start; justify-content:space-between; gap:8px; }
+    .chart-title { min-height:44px; padding:2px; border:1px solid transparent; background:transparent; color:inherit; text-align:left; }
+    .chart-title:hover { border-color:var(--rule); background:var(--panel-2); }
+    .chart-title strong, .chart-title span { display:block; }
+    .chart-title strong { font-size:13px; }
+    .chart-title span { margin-top:3px; color:var(--muted); font-size:10px; }
+    .edit-chart { min-width:44px; min-height:44px; padding:6px; border:1px solid var(--rule); border-radius:6px; background:var(--panel-2); color:var(--accent); font-size:10px; font-weight:800; }
+    .metric { margin:15px 0 8px; font-family:Georgia, "Times New Roman", serif; font-size:30px; }
+    .metric-note { color:var(--muted); font-size:10px; }
+    .mini-chart { position:relative; height:82px; margin-top:15px; border-bottom:1px solid var(--rule); background:linear-gradient(to top, rgba(37,76,87,.06), transparent 65%); }
+    .mini-chart svg { width:100%; height:100%; overflow:visible; }
+    .mini-bars { height:82px; margin-top:15px; display:flex; align-items:end; gap:7px; border-bottom:1px solid var(--rule); }
+    .mini-bars i { flex:1; min-width:6px; height:var(--h); background:var(--accent); opacity:.76; border-radius:3px 3px 0 0; }
+    .chart-footprint { position:absolute; right:10px; bottom:8px; color:var(--muted); font:700 9px ui-monospace, monospace; }
+    .chart-id { position:absolute; left:11px; bottom:8px; color:var(--muted); font:600 9px ui-monospace, monospace; }
+    .drag-helper { padding:13px; border:1px dashed var(--rule-strong); border-radius:8px; color:var(--muted); background:rgba(255,255,255,.35); text-align:center; font-size:11px; }
+    .page-footer { display:flex; justify-content:space-between; gap:20px; margin-top:32px; padding-top:14px; border-top:1px solid var(--rule); color:var(--muted); font-size:10px; }
+
+    .surface-layer { position:absolute; inset:0; z-index:70; pointer-events:none; }
+    .surface-layer > * { pointer-events:auto; }
+    .surface-card { color:var(--ink); background:var(--panel); border:1px solid var(--rule-strong); box-shadow:var(--shadow); }
+    .surface-head { display:flex; align-items:start; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--rule); background:var(--panel-2); }
+    .surface-head h2 { margin:2px 0 0; font:600 19px Georgia, serif; }
+    .surface-head p { margin:4px 0 0; color:var(--muted); font-size:10px; line-height:1.4; }
+    .eyebrow { color:var(--select); font-size:9px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+    .close-button { min-width:44px; min-height:44px; padding:7px; border:1px solid var(--rule); border-radius:6px; background:var(--panel); color:var(--ink); font-weight:900; }
+    .surface-body { padding:16px; overflow:auto; }
+    .surface-footer { display:flex; align-items:center; justify-content:flex-end; gap:7px; padding:12px 16px; border-top:1px solid var(--rule); background:var(--panel-2); }
+    .surface-footer .small-button { min-height:42px; border-color:var(--rule); background:var(--panel); font-size:11px; }
+    .surface-footer .primary { color:#fff; background:var(--accent); }
+    .field { display:block; margin-bottom:13px; }
+    .field > span, .field > label, .field-label { display:block; margin-bottom:5px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.02em; }
+    .field input, .field select, input.field-control, select.field-control { width:100%; min-height:42px; padding:8px 10px; border:1px solid var(--rule-strong); border-radius:6px; color:var(--ink); background:#fff; }
+    .field-note { margin:-7px 0 13px; color:var(--muted); font-size:10px; line-height:1.4; }
+    .scope-note { padding:10px; border-left:3px solid var(--accent); background:var(--accent-2); color:#31494c; font-size:10px; line-height:1.45; }
+
+    .unit-orbit { position:absolute; top:176px; right:26px; width:min(350px,calc(100% - 52px)); max-height:calc(100% - 205px); display:flex; flex-direction:column; border-radius:12px; }
+    .orbit-target { display:flex; justify-content:space-between; gap:10px; margin-bottom:14px; padding:9px; border:1px solid #c98a71; border-radius:7px; background:var(--select-soft); font-size:10px; }
+    .orbit-tabs { display:flex; gap:4px; margin-bottom:14px; }
+    .orbit-tabs button { flex:1; min-height:38px; border:1px solid var(--rule); border-radius:6px; background:var(--panel-2); font-size:10px; font-weight:800; }
+    .orbit-tabs button[aria-selected="true"] { color:#fff; background:var(--accent); }
+    .footprint-grid { display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,42px); gap:5px; }
+    .footprint-grid button { min-width:0; border:1px solid var(--rule-strong); border-radius:5px; background:var(--panel-2); color:var(--muted); font-size:10px; font-weight:800; }
+    .footprint-grid button.active { color:#fff; background:var(--select); border-color:var(--select); box-shadow:0 0 0 2px var(--select-soft); }
+
+    .look-drawer { position:absolute; inset:153px 0 0 auto; width:min(392px,100%); display:flex; flex-direction:column; border-radius:11px 0 0 0; }
+    .look-drawer .surface-body { flex:1; }
+    .palette-preview { display:grid; grid-template-columns:2.2fr 1.2fr 1fr 1fr; height:46px; margin-bottom:14px; overflow:hidden; border:1px solid var(--rule); border-radius:6px; }
+    .palette-preview i:nth-child(1) { background:var(--paper); }
+    .palette-preview i:nth-child(2) { background:var(--panel); }
+    .palette-preview i:nth-child(3) { background:var(--accent); }
+    .palette-preview i:nth-child(4) { background:var(--select); }
+    .transparent-proof { padding:10px; border:1px dashed var(--good); border-radius:6px; color:var(--good); background:#f1faf5; font-size:10px; line-height:1.4; }
+
+    .modal-wash { position:absolute; inset:153px 0 0; display:grid; place-items:center; padding:24px; background:rgba(44,45,40,.09); }
+    .time-library { width:min(930px,calc(100% - 40px)); max-height:calc(100% - 42px); display:flex; flex-direction:column; border-radius:12px; }
+    .library-toolbar { display:flex; align-items:end; gap:10px; margin-bottom:14px; }
+    .library-toolbar .field { flex:1; margin:0; }
+    .library-summary { min-width:max-content; color:var(--muted); font-size:10px; }
+    .time-groups { display:grid; gap:12px; }
+    .time-group { padding:13px; border:1px solid var(--rule); border-radius:8px; background:var(--panel-2); }
+    .time-group.attention { border-left:4px solid var(--warn); }
+    .time-group-head { display:flex; align-items:start; justify-content:space-between; gap:12px; }
+    .time-group h3 { margin:0; font-size:13px; }
+    .time-group p { margin:4px 0 0; color:var(--muted); font-size:10px; }
+    .attention-label { color:#7b4719; font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .scene-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:11px; }
+    .scene-card { min-height:76px; padding:9px; border:1px solid var(--rule); border-radius:6px; background:#fff; }
+    .scene-card strong, .scene-card span { display:block; }
+    .scene-card strong { font-size:10px; }
+    .scene-card span { margin-top:5px; color:var(--muted); font-size:9px; line-height:1.35; }
+
+    .proof-studio { width:min(1060px,calc(100% - 40px)); max-height:calc(100% - 42px); display:flex; flex-direction:column; border-radius:12px; }
+    .proof-layout { display:grid; grid-template-columns:190px 1fr 250px; min-height:380px; }
+    .proof-steps { padding:14px; border-right:1px solid var(--rule); background:var(--panel-2); }
+    .proof-step { display:flex; gap:8px; align-items:start; padding:8px 4px; color:var(--muted); font-size:10px; }
+    .proof-step i { display:grid; place-items:center; flex:none; width:22px; height:22px; border:1px solid var(--rule); border-radius:50%; font-style:normal; }
+    .proof-step.active { color:var(--ink); font-weight:800; }
+    .proof-step.active i { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .proof-work { padding:17px; overflow:auto; }
+    .proof-work h3 { margin:0 0 6px; font:600 20px Georgia,serif; }
+    .proof-work > p { margin:0 0 17px; color:var(--muted); font-size:11px; line-height:1.5; }
+    .mapping-row { display:grid; grid-template-columns:1fr 30px 1fr; align-items:center; gap:8px; margin-bottom:8px; }
+    .mapping-row span { text-align:center; color:var(--muted); }
+    .mapping-row select { min-height:40px; border:1px solid var(--rule); border-radius:6px; background:#fff; }
+    .proof-ledger { padding:15px; border-left:1px solid var(--rule); background:#fbf8f1; }
+    .proof-ledger h3 { margin:0 0 12px; font-size:12px; }
+    .proof-check { display:flex; gap:8px; align-items:start; margin:10px 0; font-size:10px; line-height:1.4; }
+    .proof-check input { width:18px; height:18px; }
+
+    .passport { position:absolute; top:57px; right:18px; width:min(390px,calc(100% - 36px)); max-height:calc(100% - 78px); display:flex; flex-direction:column; border-radius:10px; }
+    .passport-value { width:100%; min-height:44px; padding:8px 9px; border:1px solid transparent; border-radius:6px; background:transparent; color:inherit; text-align:left; }
+    .passport-value:hover { border-color:var(--rule); background:var(--panel-2); }
+    .passport-value strong, .passport-value span { display:block; }
+    .passport-value span { margin-top:3px; color:var(--muted); font-size:10px; }
+    .source-card { margin:10px 0; padding:10px; border:1px solid var(--rule); border-radius:6px; background:var(--panel-2); font-size:10px; line-height:1.45; }
+    .package-actions { display:grid; gap:7px; }
+    .package-actions button { min-height:44px; padding:8px 10px; border:1px solid var(--rule); border-radius:6px; background:#fff; color:inherit; text-align:left; font-size:10px; font-weight:800; }
+    .package-actions button:hover { border-color:var(--accent); background:var(--accent-2); }
+
+    .priority-layer { position:absolute; inset:0; z-index:100; display:grid; place-items:center; padding:24px; background:rgba(32,38,38,.25); }
+    .priority-dialog { width:min(560px,calc(100% - 32px)); max-height:calc(100% - 32px); overflow:auto; border-radius:11px; }
+    .priority-dialog .surface-body p, .priority-dialog .surface-body li { color:var(--muted); font-size:11px; line-height:1.5; }
+    .scope-resolution { display:grid; gap:8px; margin:14px 0; }
+    .scope-resolution div { display:flex; justify-content:space-between; gap:10px; padding:9px; border:1px solid var(--rule); border-radius:6px; background:var(--panel-2); font-size:10px; }
+    .scope-resolution .current { border-color:var(--select); background:var(--select-soft); }
+    .incoming-card { display:grid; grid-template-columns:1fr 28px 1fr; align-items:center; gap:8px; margin:15px 0; }
+    .incoming-card > div { padding:10px; border:1px solid var(--rule); border-radius:7px; background:var(--panel-2); font-size:10px; line-height:1.45; }
+    .incoming-card > span { text-align:center; font-weight:900; }
+
+    .inline-dialog { width:min(470px,calc(100% - 32px)); border-radius:10px; }
+    .radio-stack { display:grid; gap:8px; margin:12px 0; }
+    .radio-stack label { display:flex; align-items:center; gap:8px; min-height:42px; padding:8px; border:1px solid var(--rule); border-radius:6px; font-size:11px; }
+    .radio-stack input { width:18px; height:18px; }
+
+    .toast { position:absolute; left:50%; bottom:18px; z-index:130; width:max-content; max-width:calc(100% - 36px); transform:translateX(-50%); padding:9px 13px; border-radius:7px; color:#fff; background:#243033; box-shadow:var(--shadow-small); font-size:11px; font-weight:720; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+    @media (max-width:1100px) {
+      .review-bar { flex-wrap:wrap; }
+      .review-title { min-width:190px; }
+      .session-proof { display:none; }
+      .chart-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .proof-layout { grid-template-columns:150px 1fr; }
+      .proof-ledger { grid-column:1/-1; border-left:0; border-top:1px solid var(--rule); }
+      .scenario-trigger { max-width:280px; }
+    }
+    @media (max-width:850px) {
+      .review-stage { padding:14px; }
+      .product-window { min-height:720px; }
+      .modebar, .context-row, .build-strip { padding-inline:12px; }
+      .dashboard-name { min-width:170px; }
+      .scenario-trigger { max-width:210px; }
+      .scenario-trigger small, .page-drag-note { display:none; }
+      .dashboard-page { padding:20px 18px 60px; }
+      .chart-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .unit-orbit { position:absolute; top:auto; right:12px; bottom:12px; left:12px; width:auto; max-height:58%; }
+      .look-drawer { inset:153px 0 0 12%; width:auto; }
+      .scene-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .proof-layout { grid-template-columns:1fr; }
+      .proof-steps { display:flex; overflow:auto; border-right:0; border-bottom:1px solid var(--rule); }
+      .proof-step { min-width:max-content; }
+    }
+    @media (max-width:520px) {
+      .review-stage { place-items:start; padding:8px; }
+      .product-window { border-radius:6px; }
+      .modebar { gap:7px; flex-wrap:wrap; }
+      .brand { flex:1; }
+      .mode-nav { order:3; width:100%; }
+      .mode-button { flex:1; }
+      .scenario-trigger { max-width:180px; }
+      .context-row { align-items:start; flex-wrap:wrap; }
+      .dashboard-name { width:100%; }
+      .page-tabs { width:100%; }
+      .build-strip { min-height:52px; }
+      .dashboard-page { padding-inline:12px; }
+      .page-heading { display:block; }
+      .period-chip { display:inline-block; margin-top:12px; }
+      .section-head { display:block; }
+      .section-actions { justify-content:flex-start; margin-top:8px; }
+      .chart-grid { grid-template-columns:1fr; }
+      .chart-card { grid-column:1 !important; }
+      .page-footer { display:block; }
+      .page-footer span { display:block; margin-top:7px; }
+      .modal-wash { inset:220px 0 0; padding:9px; }
+      .time-library, .proof-studio { width:100%; max-height:calc(100% - 18px); }
+      .scene-grid { grid-template-columns:1fr; }
+      .passport { top:105px; right:8px; width:calc(100% - 16px); }
+      .unit-orbit { bottom:8px; right:8px; left:8px; }
+      .look-drawer { inset:220px 0 0 0; }
+      .priority-layer { padding:8px; }
+      .incoming-card { grid-template-columns:1fr; }
+      .incoming-card > span { transform:rotate(90deg); }
+    }
+    @media (prefers-reduced-motion:reduce) { *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+  (() => {
+    "use strict";
+
+    const labels = {
+      orbit:"Unit Orbit",
+      look:"Dashboard Look",
+      time:"Time Content",
+      proof:"Proof Studio",
+      passport:"Scenario Passport"
+    };
+
+    const viewports = {
+      fit:{label:"Fit",w:null,h:null},
+      "1440":{label:"1440",w:1440,h:900},
+      "1200":{label:"1200",w:1200,h:900},
+      "1024":{label:"1024",w:1024,h:768},
+      "768":{label:"768",w:768,h:1024},
+      "390":{label:"390",w:390,h:844}
+    };
+
+    const variants = {
+      a:{short:"A",name:"Replace and Reopen",note:"Rejected · preserved. Opening another surface hides the current one. Its state is retained and it reopens only through its original trigger."},
+      b:{short:"B",name:"Context Shelf",note:"Approved winner. One surface is active; displaced surfaces become named Resume chips and closing returns to the most recent one."},
+      c:{short:"C",name:"Activity Back-stack",note:"Rejected · preserved. Each surface invocation joins a visible task trail. Close or Escape returns through that trail in reverse order."}
+    };
+
+    const initialCharts = [
+      {id:"bio_admissions",title:"New ICU and hospital admissions",subtitle:"Daily admissions · national",kind:"line",metric:"42",note:"15 Mar 2026 · 6 above prior frame"},
+      {id:"bio_capacity",title:"Critical care capacity",subtitle:"Occupied staffed beds",kind:"bars",metric:"86%",note:"124 beds remain available"},
+      {id:"bio_confirmed_cases",title:"Confirmed cases",subtitle:"Seven-day rolling total",kind:"line",metric:"2,418",note:"+8.2% from prior week"},
+      {id:"bio_r_values",title:"Regional reproduction values",subtitle:"Median and interval",kind:"bars",metric:"1.23",note:"4 regions above 1.0"},
+      {id:"bio_vaccination_rate",title:"Vaccination coverage",subtitle:"Eligible population",kind:"line",metric:"71%",note:"Target 80%"},
+      {id:"bio_region_comparison",title:"Regional pressure comparison",subtitle:"Admissions per 100k",kind:"bars",metric:"9.4",note:"North Coast highest"}
+    ];
+
+    const state = {
+      variant:"b",
+      viewport:"fit",
+      mode:"Build",
+      page:"Biomedical",
+      pages:["Biomedical","System capacity","Response"],
+      sections:[
+        {id:"operating",name:"Operating picture",meta:"4 charts · 2 Time Groups · 1 Scene",charts:["bio_admissions","bio_capacity","bio_confirmed_cases","bio_r_values"]},
+        {id:"coverage",name:"Coverage and regional signals",meta:"2 charts · 1 Time Group",charts:["bio_vaccination_rate","bio_region_comparison"]}
+      ],
+      charts:initialCharts.map(chart => ({...chart})),
+      activeSurface:null,
+      parked:[],
+      trail:["Build"],
+      visited:{orbit:false,look:false,time:false,proof:false,passport:false},
+      returnFocus:{},
+      selectedChart:"bio_admissions",
+      layoutDirty:false,
+      chartDirty:false,
+      lookDirty:false,
+      proofDirty:true,
+      footprint:"2×1",
+      committedFootprint:"2×1",
+      chartTitle:"New ICU and hospital admissions",
+      committedChartTitle:"New ICU and hospital admissions",
+      orbitTab:"chart",
+      lookProfile:"vellum",
+      committedLookProfile:"vellum",
+      appearance:"Light",
+      chartColors:"Color profile",
+      proofStage:2,
+      proofChecks:{mapping:true,missing:false},
+      passportEdit:null,
+      scenario:"HeV-A26 Day 2 Simulation",
+      program:"Pandemic & Disaster Preparedness Center",
+      updated:"2026-07-27",
+      importStep:null,
+      structureDialog:null,
+      dragChart:null,
+      dragPage:null,
+      toast:"",
+      focusMessage:"Shared Build session ready. Variant B Context Shelf is active."
+    };
+
+    const app = document.getElementById("app");
+    const esc = value => String(value ?? "").replace(/[&<>\"']/g, character => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[character]));
+    const surfaceName = id => labels[id] || id;
+    const selectedChart = () => state.charts.find(chart => chart.id === state.selectedChart) || state.charts[0];
+    const isPhone = () => state.viewport === "390";
+    const buttonLabel = (surface, plain) => state.variant === "a" && state.visited[surface] && state.activeSurface !== surface ? `Reopen ${plain}` : plain;
+
+    function announce(message) {
+      state.focusMessage = message;
+      state.toast = message;
+      window.clearTimeout(announce.timer);
+      render();
+      announce.timer = window.setTimeout(() => { state.toast = ""; render(); }, 2400);
+    }
+
+    function openSurface(surface, focusKey) {
+      if (state.mode !== "Build") {
+        announce(`${surfaceName(surface)} is available in Build.`);
+        return;
+      }
+      if (state.activeSurface === surface) {
+        render(`surface-${surface}`);
+        return;
+      }
+      const previous = state.activeSurface;
+      state.visited[surface] = true;
+      state.returnFocus[surface] = focusKey || `trigger-${surface}`;
+
+      if (state.variant === "b") {
+        state.parked = state.parked.filter(item => item !== surface);
+        if (previous) state.parked.push(previous);
+      } else if (state.variant === "c") {
+        const existing = state.trail.indexOf(surface);
+        if (existing >= 0) state.trail = state.trail.slice(0, existing + 1);
+        else state.trail.push(surface);
+      }
+
+      state.activeSurface = surface;
+      const message = previous
+        ? state.variant === "a"
+          ? `${surfaceName(surface)} opened. ${surfaceName(previous)} is hidden and retains its state.`
+          : state.variant === "b"
+            ? `${surfaceName(previous)} parked on the Context Shelf. ${surfaceName(surface)} is active.`
+            : `${surfaceName(surface)} added to the Activity Back-stack.`
+        : `${surfaceName(surface)} opened.`;
+      state.focusMessage = message;
+      render(`surface-${surface}`);
+    }
+
+    function closeActiveSurface() {
+      const closing = state.activeSurface;
+      if (!closing) return;
+      let next = null;
+      if (state.variant === "b" && state.parked.length) {
+        next = state.parked.pop();
+      } else if (state.variant === "c") {
+        if (state.trail[state.trail.length - 1] === closing) state.trail.pop();
+        const tail = state.trail[state.trail.length - 1];
+        next = tail && tail !== "Build" ? tail : null;
+      }
+      state.activeSurface = next;
+      const focusKey = next ? `surface-${next}` : state.returnFocus[closing] || `trigger-${closing}`;
+      state.focusMessage = next
+        ? `${surfaceName(closing)} closed. ${surfaceName(next)} resumed with its state intact.`
+        : `${surfaceName(closing)} closed. Focus returned to its Build trigger.`;
+      render(focusKey);
+    }
+
+    function switchVariant(variant) {
+      if (!variants[variant]) return;
+      const previousVariant = state.variant;
+      if (variant === "b" && previousVariant === "c") {
+        const priorTrail = state.trail.filter(surface => surface !== "Build" && surface !== state.activeSurface);
+        state.parked = [...new Set([...state.parked.filter(surface => surface !== state.activeSurface), ...priorTrail])];
+      }
+      if (variant === "c" && previousVariant === "b") {
+        const activityChain = [...state.parked, ...(state.activeSurface ? [state.activeSurface] : [])];
+        state.trail = ["Build", ...activityChain.filter((surface,index) => activityChain.indexOf(surface) === index)];
+      }
+      state.variant = variant;
+      if (variant === "c") {
+        const activeIndex = state.activeSurface ? state.trail.indexOf(state.activeSurface) : -1;
+        if (state.activeSurface && activeIndex < 0) state.trail.push(state.activeSurface);
+      }
+      const translatedContext = previousVariant === "c" && variant === "b"
+        ? ` ${state.parked.length} prior ${state.parked.length === 1 ? "activity is" : "activities are"} available on the Context Shelf.`
+        : previousVariant === "b" && variant === "c"
+          ? ` The trail now reflects ${state.trail.length - 1} retained Build activities.`
+          : "";
+      state.focusMessage = `Variant ${variant.toUpperCase()} ${variants[variant].name}. Shared drafts, surface contents, selection, and scroll context are unchanged.${translatedContext}`;
+      render(`variant-${variant}`);
+    }
+
+    function renderReviewBar() {
+      const dirty = [state.layoutDirty ? "layout unsaved" : "layout saved", state.chartDirty ? "chart unsaved" : "chart saved"].join(" · ");
+      return `<header class="review-bar" aria-label="Sketch review controls">
+        <div class="review-title"><strong>Sketch 015 · Integrated Build synthesis</strong><small>Approved · B — Context Shelf · shared session state</small></div>
+        <nav class="review-group" aria-label="Variant comparison">
+          ${Object.entries(variants).map(([id,variant]) => `<button class="review-button" id="variant-${id}" type="button" data-action="variant" data-value="${id}" aria-pressed="${state.variant === id}">${variant.short} · ${variant.name}${id === "b" ? " · ★ Winner · Approved" : " · Rejected · Preserved"}</button>`).join("")}
+        </nav>
+        <div class="review-group viewport-buttons" aria-label="Viewport preview">
+          ${Object.entries(viewports).map(([id,viewport]) => `<button class="review-button" type="button" data-action="viewport" data-value="${id}" aria-pressed="${state.viewport === id}" title="${viewport.w ? `${viewport.w} × ${viewport.h}` : "Fit available stage"}">${viewport.label}</button>`).join("")}
+        </div>
+        <button class="review-button" type="button" data-action="prime-dual">Create dual drafts</button>
+        <button class="review-button" type="button" data-action="reset">Reset</button>
+        <div class="session-proof">Shared state · ${dirty}<br>${esc(variants[state.variant].note)}</div>
+      </header>`;
+    }
+
+    function renderModebar() {
+      return `<div class="modebar">
+        <div class="brand"><span class="brand-mark">SX</span><span>SimEx</span></div>
+        <nav class="mode-nav" aria-label="Product mode">
+          ${["View","Build","Present"].map(mode => `<button class="mode-button" type="button" data-action="mode" data-value="${mode}" aria-current="${state.mode === mode ? "page" : "false"}">${mode}</button>`).join("")}
+        </nav>
+        <span class="mode-spacer"></span>
+        <button class="crown-button scenario-trigger" type="button" data-action="open-surface" data-surface="passport" data-focus-key="trigger-passport" aria-expanded="${state.activeSurface === "passport"}">
+          <span><strong>${esc(state.scenario)}</strong><small>${esc(state.program)} · Scenario details</small></span>
+        </button>
+        <button class="crown-button" type="button" data-action="announce" data-message="Help opened in a new support context.">Help</button>
+        <button class="crown-button" type="button" data-action="announce" data-message="Account menu opened for HK.">HK</button>
+      </div>`;
+    }
+
+    function renderContextRow() {
+      return `<div class="context-row">
+        <div class="dashboard-name"><strong>${esc(state.program)}</strong><span>National simulation dashboard</span></div>
+        <nav class="page-tabs" aria-label="Dashboard pages">
+          ${state.pages.map(page => `<button class="page-button ${state.dragPage === page ? "dragging" : ""}" type="button" data-action="page" data-value="${esc(page)}" data-drag-page="${esc(page)}" draggable="${state.mode === "Build"}" aria-current="${state.page === page ? "page" : "false"}" title="${state.mode === "Build" ? "Drag to reorder page" : "Open page"}">${esc(page)}</button>`).join("")}
+        </nav>
+        ${state.mode === "Build" ? `<button class="page-button add-page" type="button" data-action="structure-dialog" data-kind="add-page" data-focus-key="add-page">+ Add page</button><span class="page-drag-note">Page tabs drag to reorder</span>` : ""}
+      </div>`;
+    }
+
+    function renderSurfaceNavigation() {
+      if (state.variant === "a") {
+        return `<span class="strip-message">${state.activeSurface ? `${surfaceName(state.activeSurface)} active · hidden tools reopen at their original trigger` : "No command surface open · retained tools reopen at their original trigger"}</span>`;
+      }
+      if (state.variant === "b") {
+        const parked = state.parked.map(surface => `<button class="surface-chip" type="button" data-action="resume-surface" data-surface="${surface}"><span>Resume</span><strong>${esc(surfaceName(surface))}</strong></button>`).join("");
+        return parked || `<span class="strip-message">Context Shelf empty · opening another tool parks the active surface here</span>`;
+      }
+      return `<nav class="trail" aria-label="Activity Back-stack">
+        ${state.trail.map((surface,index) => `${index ? `<span class="trail-separator" aria-hidden="true">/</span>` : ""}<button class="surface-chip" type="button" data-action="trail" data-index="${index}" aria-current="${index === state.trail.length - 1 ? "step" : "false"}">${surface === "Build" ? "Build" : esc(surfaceName(surface))}</button>`).join("")}
+      </nav>`;
+    }
+
+    function renderBuildStrip() {
+      if (state.mode !== "Build") {
+        return `<div class="build-strip"><strong class="strip-title">${state.mode}</strong><span class="strip-message">Build drafts remain suspended in this session.</span><span class="strip-spacer"></span><button class="strip-button primary" type="button" data-action="mode" data-value="Build">Return to Build</button></div>`;
+      }
+      return `<div class="build-strip">
+        <strong class="strip-title">Build</strong>
+        <span class="draft-chip ${state.layoutDirty ? "dirty" : ""}">Layout · ${state.layoutDirty ? "Unsaved" : "Saved"}</span>
+        <label class="sr-only" for="layout-preset">Layout preset</label>
+        <select class="strip-button" id="layout-preset" data-action="layout-preset"><option>Balanced</option><option>Map lead</option><option>Signals lead</option></select>
+        <button class="strip-button" type="button" data-action="open-surface" data-surface="look" data-focus-key="trigger-look">${buttonLabel("look","Dashboard Look")}</button>
+        <button class="strip-button" type="button" data-action="open-surface" data-surface="time" data-focus-key="trigger-time">${buttonLabel("time","Time Content")}</button>
+        <button class="strip-button" type="button" data-action="open-surface" data-surface="proof" data-focus-key="trigger-proof">${state.variant === "a" && state.visited.proof && state.activeSurface !== "proof" ? "Reopen Proof Studio" : "+ Add chart"}</button>
+        <button class="strip-button" type="button" data-action="announce" data-message="Local Preview shows the combined layout and selected-chart drafts without saving either scope.">Preview</button>
+        ${renderSurfaceNavigation()}
+        <span class="strip-spacer"></span>
+        <button class="strip-button danger" type="button" data-action="discard-layout" ${state.layoutDirty ? "" : "disabled"}>Discard Layout Changes</button>
+        <button class="strip-button primary" type="button" data-action="save-layout" ${state.layoutDirty ? "" : "disabled"}>Save Layout Changes</button>
+      </div>`;
+    }
+
+    function renderCrown() {
+      const banner = isPhone() && state.mode !== "View"
+        ? `<div class="unsupported-banner" role="status"><span>${state.mode} is not supported at phone size. View remains available.</span><button type="button" data-action="mode" data-value="View">Switch to View</button></div>`
+        : "";
+      return `${banner}<header class="command-crown" aria-label="Layered Command Crown">${renderModebar()}${renderContextRow()}${renderBuildStrip()}</header>`;
+    }
+
+    function lineGraphic(index) {
+      const paths = ["M0 65 C30 59 44 36 72 42 S112 70 142 43 S190 25 230 38 S270 24 320 13","M0 56 C38 30 72 58 105 41 S154 19 195 32 S246 60 320 23","M0 62 C34 57 63 16 98 29 S147 66 191 42 S245 29 320 17"];
+      return `<div class="mini-chart" aria-hidden="true"><svg viewBox="0 0 320 82" preserveAspectRatio="none"><path d="${paths[index % paths.length]}" fill="none" stroke="var(--accent)" stroke-width="4" vector-effect="non-scaling-stroke"/><path d="M0 73 H320" stroke="var(--rule)" stroke-width="1"/></svg></div>`;
+    }
+
+    function barsGraphic(index) {
+      const bars = [42,63,38,75,56,82,49,70].map((height,i) => Math.max(22,height - ((i + index) % 3) * 7));
+      return `<div class="mini-bars" aria-hidden="true">${bars.map(height => `<i style="--h:${height}%"></i>`).join("")}</div>`;
+    }
+
+    function chartCard(chart,index) {
+      const selected = state.selectedChart === chart.id;
+      const footprint = chart.id === "bio_admissions" ? state.footprint : (index % 3 === 0 ? "2×1" : "1×1");
+      const columns = chart.id === "bio_admissions" ? Math.min(4,Number(state.footprint.split("×")[0])) : (index % 3 === 0 ? 2 : 1);
+      const rows = chart.id === "bio_admissions" ? Math.min(2,Number(state.footprint.split("×")[1])) : 1;
+      return `<article class="chart-card ${selected ? "selected" : ""} ${state.dragChart === chart.id ? "dragging" : ""}" draggable="${state.mode === "Build"}" data-chart-id="${chart.id}" style="grid-column:span ${columns};grid-row:span ${rows}" aria-label="${esc(chart.title)} chart">
+        <div class="chart-head">
+          <button class="chart-title" type="button" data-action="open-chart" data-value="${chart.id}" data-focus-key="chart-${chart.id}"><strong>${esc(chart.id === "bio_admissions" ? state.chartTitle : chart.title)}</strong><span>${esc(chart.subtitle)}</span></button>
+          ${state.mode === "Build" ? `<button class="edit-chart" type="button" data-action="open-chart" data-value="${chart.id}" data-focus-key="edit-${chart.id}">${state.variant === "a" && state.visited.orbit && state.activeSurface !== "orbit" ? "Reopen" : "Edit"}</button>` : ""}
+        </div>
+        <div class="metric">${esc(chart.metric)}</div><div class="metric-note">${esc(chart.note)}</div>
+        ${chart.kind === "line" ? lineGraphic(index) : barsGraphic(index)}
+        <span class="chart-id">${esc(chart.id)}</span><span class="chart-footprint">${footprint}</span>
+      </article>`;
+    }
+
+    function renderSection(section,index) {
+      const charts = section.charts.map(id => state.charts.find(chart => chart.id === id)).filter(Boolean);
+      return `<section class="section-block" id="section-${section.id}">
+        <header class="section-head">
+          <button class="section-title-button" type="button" data-action="structure-dialog" data-kind="rename-section" data-section="${section.id}" data-focus-key="section-${section.id}"><strong>${esc(section.name)}</strong><small>Click title to rename · ${esc(section.meta)}</small></button>
+          ${state.mode === "Build" ? `<div class="section-actions" aria-label="${esc(section.name)} authoring controls">
+            <button class="small-button" type="button" data-action="move-section" data-section="${section.id}" data-direction="-1" ${index === 0 ? "disabled" : ""}>Move earlier</button>
+            <button class="small-button" type="button" data-action="move-section" data-section="${section.id}" data-direction="1" ${index === state.sections.length - 1 ? "disabled" : ""}>Move later</button>
+            <button class="small-button" type="button" data-action="structure-dialog" data-kind="move-section" data-section="${section.id}">Move to page</button>
+            <button class="small-button remove" type="button" data-action="structure-dialog" data-kind="remove-section" data-section="${section.id}">Remove section</button>
+          </div>` : ""}
+        </header>
+        <div class="chart-grid">${charts.map((chart,chartIndex) => chartCard(chart,chartIndex + index)).join("")}</div>
+      </section>`;
+    }
+
+    function renderDashboard() {
+      return `<main class="dashboard-page" aria-label="Biomedical dashboard fixture">
+        <header class="page-heading"><div><h1>${esc(state.page)}</h1><p>Capacity, access, and patient-flow signals for the HeV-A26 national exercise. Build surfaces overlay this canonical dashboard without changing its geometry.</p></div><span class="period-chip">01 Feb–31 Mar 2026 · 24 frames</span></header>
+        ${state.sections.map(renderSection).join("")}
+        ${state.mode === "Build" ? `<div class="drag-helper">Drag chart titles or cards to reorder. A drop changes only the dashboard-layout draft; Unit Orbit retains chart-property ownership.</div>` : ""}
+        <footer class="page-footer"><span>SimEx evidence workspace · Updated 27 July 2026</span><span>Methodology · Accessibility · Report a bug / request a feature · © 2026</span></footer>
+      </main>`;
+    }
+
+    function renderUnitOrbit() {
+      const chart = selectedChart();
+      return `<aside class="unit-orbit surface-card" role="dialog" aria-modal="false" aria-labelledby="orbit-title" tabindex="-1" data-surface-root="orbit" data-focus-key="surface-orbit">
+        <header class="surface-head"><div><span class="eyebrow">Unit Orbit · selected-chart properties</span><h2 id="orbit-title">${esc(chart.id === "bio_admissions" ? state.chartTitle : chart.title)}</h2><p>${esc(chart.id)} · chart draft remains independent of layout</p></div><button class="close-button" type="button" data-action="close-surface" aria-label="Close Unit Orbit">×</button></header>
+        <div class="surface-body">
+          <div class="orbit-target"><strong>Canonical selected chart</strong><span>${state.chartDirty ? "Chart draft · Unsaved" : "Chart saved"}</span></div>
+          <div class="orbit-tabs" role="tablist"><button type="button" data-action="orbit-tab" data-value="chart" aria-selected="${state.orbitTab === "chart"}">Chart</button><button type="button" data-action="orbit-tab" data-value="size" aria-selected="${state.orbitTab === "size"}">Size</button><button type="button" data-action="orbit-tab" data-value="advanced" aria-selected="${state.orbitTab === "advanced"}">Advanced</button></div>
+          ${state.orbitTab === "size" ? `<div><span class="field-label">Footprint · ${esc(state.footprint)}</span><div class="footprint-grid" aria-label="Chart footprint: four columns by two rows">${[1,2].flatMap(row => [1,2,3,4].map(column => { const value = `${column}×${row}`; return `<button type="button" data-action="footprint" data-value="${value}" class="${state.footprint === value ? "active" : ""}" aria-label="${column} columns by ${row} rows">${value}</button>`; })).join("")}</div><p class="field-note" style="margin-top:10px">The footprint belongs to this chart draft. Reflow is derived output, not a layout edit.</p></div>` : state.orbitTab === "advanced" ? `<label class="field"><span>Missing-value treatment</span><select data-action="chart-property"><option>Gap</option><option>Connect adjacent observations</option><option>Zero</option></select></label><label class="field"><span>Tooltip detail</span><select data-action="chart-property"><option>Value and source</option><option>Value only</option></select></label><div class="scope-note">Advanced properties remain inside Unit Orbit and never migrate into the Build layout strip.</div>` : `<label class="field"><span>Chart title</span><input data-action="chart-title" value="${esc(state.chartTitle)}"></label><label class="field"><span>Chart view</span><select data-action="chart-property"><option>Line</option><option>Bars</option><option>Table</option></select></label><label class="field"><span>Y axis</span><select data-action="chart-property"><option>Automatic</option><option>Start at zero</option></select></label>`}
+        </div>
+        <footer class="surface-footer"><button class="small-button danger" type="button" data-action="discard-chart" ${state.chartDirty ? "" : "disabled"}>Discard Chart Changes</button><button class="small-button primary" type="button" data-action="save-chart" ${state.chartDirty ? "" : "disabled"}>Save Chart Changes</button></footer>
+      </aside>`;
+    }
+
+    function renderLookDrawer() {
+      return `<aside class="look-drawer surface-card" role="dialog" aria-modal="false" aria-labelledby="look-title" tabindex="-1" data-surface-root="look" data-focus-key="surface-look">
+        <header class="surface-head"><div><span class="eyebrow">Dashboard visual settings</span><h2 id="look-title">Dashboard Look</h2><p>Transparent context · live dashboard preview</p></div><button class="close-button" type="button" data-action="close-surface" aria-label="Close Dashboard Look">×</button></header>
+        <div class="surface-body">
+          <div class="palette-preview" aria-label="Current surface and chart colour sample"><i></i><i></i><i></i><i></i></div>
+          <label class="field"><span>Style</span><select data-action="look-setting"><option>Evidence Ledger</option><option>Signal Room</option><option>Prismatic Index</option></select></label>
+          <label class="field"><span>Color profile</span><select data-action="look-profile"><option value="vellum" ${state.lookProfile === "vellum" ? "selected" : ""}>Brighter Vellum</option><option value="signal" ${state.lookProfile === "signal" ? "selected" : ""}>Cool Archive</option><option value="contrast" ${state.lookProfile === "contrast" ? "selected" : ""}>Prismatic Index</option></select></label>
+          <label class="field"><span>Appearance</span><select data-action="appearance"><option ${state.appearance === "Light" ? "selected" : ""}>Light</option><option ${state.appearance === "Dark" ? "selected" : ""}>Dark</option></select></label>
+          <label class="field"><span>Chart colors</span><select data-action="chart-colors"><option ${state.chartColors === "Color profile" ? "selected" : ""}>Color profile</option><option ${state.chartColors === "Standard chart colors" ? "selected" : ""}>Standard chart colors</option></select></label>
+          <div class="transparent-proof">The rest of the dashboard remains undimmed so surface, UI, and chart colors can be judged in their real context.</div>
+        </div>
+        <footer class="surface-footer"><span class="scope-chip">${state.lookDirty ? "Look draft · Unsaved" : "Look saved"}</span><button class="small-button danger" type="button" data-action="discard-look" ${state.lookDirty ? "" : "disabled"}>Discard</button><button class="small-button primary" type="button" data-action="save-look" ${state.lookDirty ? "" : "disabled"}>Save Look</button></footer>
+      </aside>`;
+    }
+
+    function renderTimeLibrary() {
+      return `<div class="modal-wash"><section class="time-library surface-card" role="dialog" aria-modal="true" aria-labelledby="time-title" tabindex="-1" data-surface-root="time" data-focus-key="surface-time">
+        <header class="surface-head"><div><span class="eyebrow">Page-first retrieval</span><h2 id="time-title">Time Content</h2><p>Time Groups organized by Page · Scenes three per row</p></div><button class="close-button" type="button" data-action="close-surface" aria-label="Close Time Content">×</button></header>
+        <div class="surface-body">
+          <div class="library-toolbar"><label class="field"><span>Page</span><select><option>Biomedical</option><option>System capacity</option><option>Response</option></select></label><label class="field"><span>Find time content</span><input type="search" placeholder="Search Time Groups or Scenes"></label><span class="library-summary">3 Time Groups · 7 Scenes</span></div>
+          <div class="time-groups">
+            <article class="time-group attention"><div class="time-group-head"><div><span class="attention-label">Needs attention · elevated first</span><h3>National outbreak and health-system playback</h3><p>Calendar frames · 01 Feb–31 Mar 2026 · includes bio_admissions</p></div><button class="small-button" type="button" data-action="announce" data-message="Time Group manager route preserved from Sketch 005.">Manage</button></div><div class="scene-grid"><div class="scene-card"><strong>National pressure briefing</strong><span>Needs review · Scene · 4 charts</span></div><div class="scene-card"><strong>Admissions inflection</strong><span>Ready · Scene · 3 charts</span></div><div class="scene-card"><strong>Capacity threshold</strong><span>Ready · Scene · 4 charts</span></div></div></article>
+            <article class="time-group"><div class="time-group-head"><div><h3>Regional response cadence</h3><p>Observation frames · 12 Feb–29 Mar 2026</p></div><button class="small-button" type="button" data-action="announce" data-message="Time Group manager route preserved from Sketch 005.">Manage</button></div><div class="scene-grid"><div class="scene-card"><strong>North Coast comparison</strong><span>Ready · Scene · 3 charts</span></div><div class="scene-card"><strong>Regional divergence</strong><span>Ready · Scene · 2 charts</span></div><div class="scene-card"><strong>Coverage close</strong><span>Draft · Scene · 3 charts</span></div></div></article>
+          </div>
+        </div>
+        <footer class="surface-footer"><button class="small-button" type="button" data-action="announce" data-message="New Time Group routes to the approved Time Group authoring flow.">+ New Time Group</button></footer>
+      </section></div>`;
+    }
+
+    function renderProofStudio() {
+      const stages = ["Purpose","Data","Chart","Configure","Proofs","Create"];
+      return `<div class="modal-wash"><section class="proof-studio surface-card" role="dialog" aria-modal="true" aria-labelledby="proof-title" tabindex="-1" data-surface-root="proof" data-focus-key="surface-proof">
+        <header class="surface-head"><div><span class="eyebrow">Staged chart creation</span><h2 id="proof-title">Proof Studio</h2><p>Stage ${state.proofStage} of 6 · exclusive authoring workflow</p></div><button class="close-button" type="button" data-action="close-surface" aria-label="Suspend Proof Studio">×</button></header>
+        <div class="proof-layout">
+          <nav class="proof-steps" aria-label="Creation stages">${stages.map((stage,index) => `<div class="proof-step ${state.proofStage === index + 1 ? "active" : ""}"><i>${index + 1}</i><span>${stage}</span></div>`).join("")}</nav>
+          <div class="proof-work"><h3>${esc(stages[state.proofStage - 1])}</h3><p>The fixture draft remains intact if this authoring surface is hidden, parked, or placed behind another activity.</p>
+            ${state.proofStage === 2 ? `<label class="field"><span>Dataset</span><select><option>HeV-A26 biomedical observations</option></select></label><div class="mapping-row"><select><option>reporting_date</option></select><span>→</span><select><option>X · Date</option></select></div><div class="mapping-row"><select><option>hospital_admissions</option></select><span>→</span><select><option>Y · Value</option></select></div>` : `<label class="field"><span>Chart title</span><input value="Emergency attendance pressure"></label><label class="field"><span>Chart type</span><select><option>Line chart</option><option>Bar chart</option></select></label><div class="scope-note">Creation has its own staged draft. It never shares the Unit Orbit chart-property save boundary.</div>`}
+          </div>
+          <aside class="proof-ledger"><h3>Proof review</h3><label class="proof-check"><input type="checkbox" data-action="proof-check" data-value="mapping" ${state.proofChecks.mapping ? "checked" : ""}><span><strong>Field mapping reviewed</strong><br>Required before creation</span></label><label class="proof-check"><input type="checkbox" data-action="proof-check" data-value="missing" ${state.proofChecks.missing ? "checked" : ""}><span><strong>Missing values reviewed</strong><br>2 gaps detected</span></label><div class="scope-note">Both proof checks remain part of the fixture for evaluating the containing surface, not a new decision in Sketch 015.</div></aside>
+        </div>
+        <footer class="surface-footer"><button class="small-button" type="button" data-action="proof-back" ${state.proofStage === 1 ? "disabled" : ""}>Back</button><button class="small-button primary" type="button" data-action="proof-next" ${state.proofStage === 6 ? "disabled" : ""}>Next</button></footer>
+      </section></div>`;
+    }
+
+    function renderPassport() {
+      const editing = state.passportEdit;
+      return `<aside class="passport surface-card" role="dialog" aria-modal="false" aria-labelledby="passport-title" tabindex="-1" data-surface-root="passport" data-focus-key="surface-passport">
+        <header class="surface-head"><div><span class="eyebrow">Scenario details</span><h2 id="passport-title">Scenario Passport</h2><p>Identity-anchored management · Build only</p></div><button class="close-button" type="button" data-action="close-surface" aria-label="Close Scenario Passport">×</button></header>
+        <div class="surface-body">
+          ${editing === "scenario" ? `<label class="field"><span>Scenario name</span><input data-action="scenario-input" value="${esc(state.scenario)}"></label><div class="surface-footer" style="padding:0 0 10px;border:0;background:transparent"><button class="small-button" type="button" data-action="passport-cancel">Cancel</button><button class="small-button primary" type="button" data-action="passport-save">Save Changes</button></div>` : `<button class="passport-value" type="button" data-action="passport-edit" data-value="scenario"><strong>${esc(state.scenario)}</strong><span>Scenario name · click to edit</span></button>`}
+          ${editing === "metadata" ? `<label class="field"><span>Program</span><input data-action="program-input" value="${esc(state.program)}"></label><label class="field"><span>Updated</span><input type="date" data-action="updated-input" value="${esc(state.updated)}"></label><div class="surface-footer" style="padding:0 0 10px;border:0;background:transparent"><button class="small-button" type="button" data-action="passport-cancel">Cancel</button><button class="small-button primary" type="button" data-action="passport-save">Save Changes</button></div>` : `<button class="passport-value" type="button" data-action="passport-edit" data-value="metadata"><strong>${esc(state.program)}</strong><span>Program · Updated 27 July 2026 · click to edit</span></button>`}
+          <div class="source-card"><strong>Authoritative source package</strong><br>hev-a26-dashboard.v3.json<br><span>Browser state differs from source · last-good dashboard retained</span></div>
+          <div class="scope-resolution"><div><span>Dashboard layout</span><strong>${state.layoutDirty ? "Unsaved" : "Saved"}</strong></div><div><span>${esc(selectedChart().id)} chart properties</span><strong>${state.chartDirty ? "Unsaved" : "Saved"}</strong></div></div>
+          <div class="package-actions"><button type="button" data-action="start-import"><strong>Import Dashboard Package</strong><br>Review replacement and resolve affected scopes</button><button type="button" data-action="announce" data-message="Downloaded the last successfully committed current-V3 dashboard; unresolved drafts were excluded.">Download Dashboard Package</button><button type="button" data-action="announce" data-message="Reset consequence review opened; last-good dashboard remains unchanged in this prototype.">Reset Dashboard to Source</button></div>
+        </div>
+      </aside>`;
+    }
+
+    function renderActiveSurface() {
+      if (state.mode !== "Build" || !state.activeSurface) return "";
+      const content = {
+        orbit:renderUnitOrbit,
+        look:renderLookDrawer,
+        time:renderTimeLibrary,
+        proof:renderProofStudio,
+        passport:renderPassport
+      }[state.activeSurface];
+      return content ? `<div class="surface-layer">${content()}</div>` : "";
+    }
+
+    function renderImportDialog() {
+      if (!state.importStep) return "";
+      if (state.importStep === "layout" || state.importStep === "chart") {
+        const layout = state.importStep === "layout";
+        const title = layout ? "Resolve dashboard-layout draft" : `Resolve ${selectedChart().id} chart-property draft`;
+        return `<div class="priority-layer"><section class="priority-dialog surface-card" role="alertdialog" aria-modal="true" aria-labelledby="import-title">
+          <header class="surface-head"><div><span class="eyebrow">Import Dashboard Package · protected consequence</span><h2 id="import-title">${esc(title)}</h2><p>Each approved dirty scope resolves independently. There is no Save All.</p></div></header>
+          <div class="surface-body"><p>The incoming package cannot replace the current dashboard until this named scope is saved or discarded. Stay cancels Import and preserves every draft.</p><div class="scope-resolution"><div class="${layout ? "current" : ""}"><span>1 · Dashboard layout</span><strong>${state.layoutDirty ? (layout ? "Resolve now" : "Waiting") : "Resolved"}</strong></div><div class="${!layout ? "current" : ""}"><span>2 · ${esc(selectedChart().id)} chart properties</span><strong>${state.chartDirty ? (!layout ? "Resolve now" : "Waiting") : "Resolved"}</strong></div></div></div>
+          <footer class="surface-footer"><button class="small-button" type="button" data-action="cancel-import">Stay in Build</button><button class="small-button danger" type="button" data-action="resolve-import" data-resolution="discard">${layout ? "Discard Layout Changes" : "Discard Chart Changes"}</button><button class="small-button primary" type="button" data-action="resolve-import" data-resolution="save">${layout ? "Save Layout Changes" : "Save Chart Changes"}</button></footer>
+        </section></div>`;
+      }
+      return `<div class="priority-layer"><section class="priority-dialog surface-card" role="alertdialog" aria-modal="true" aria-labelledby="import-title">
+        <header class="surface-head"><div><span class="eyebrow">Import Dashboard Package · final review</span><h2 id="import-title">Replace the current HeV-A26 dashboard?</h2><p>Validated current-V3 package · one incoming Scenario</p></div></header>
+        <div class="surface-body"><div class="incoming-card"><div><strong>Current</strong><br>HeV-A26 Day 2 Simulation<br>3 Pages · 8 Sections · 40 charts</div><span>→</span><div><strong>Incoming</strong><br>Coastal Response Coordination<br>2 Pages · 6 Sections · 28 charts</div></div><p>Confirmation replaces the current dashboard only after validation succeeds. The last-good HeV-A26 dashboard remains available if replacement fails.</p></div>
+        <footer class="surface-footer"><button class="small-button" type="button" data-action="cancel-import">Cancel · keep HeV-A26</button><button class="small-button primary" type="button" data-action="confirm-import">Confirm replacement</button></footer>
+      </section></div>`;
+    }
+
+    function renderStructureDialog() {
+      const dialog = state.structureDialog;
+      if (!dialog) return "";
+      const section = dialog.section ? state.sections.find(item => item.id === dialog.section) : null;
+      let title = "", body = "", confirm = "Confirm";
+      if (dialog.kind === "add-page") {
+        title = "Add page"; confirm = "Add page";
+        body = `<label class="field"><span>Page name</span><input id="structure-value" value="Exercise notes" data-autofocus></label><p class="field-note">The new Page joins the approved navigation row and can be dragged to reorder.</p>`;
+      } else if (dialog.kind === "rename-section") {
+        title = "Rename section"; confirm = "Rename section";
+        body = `<label class="field"><span>Section title</span><input id="structure-value" value="${esc(section?.name || "")}" data-autofocus></label>`;
+      } else if (dialog.kind === "move-section") {
+        title = "Move section to page"; confirm = "Move section";
+        body = `<label class="field"><span>Destination page</span><select id="structure-value">${state.pages.filter(page => page !== state.page).map(page => `<option>${esc(page)}</option>`).join("")}</select></label><p class="field-note">Time Group membership remains attached; page-scoped Scene references are reviewed before the move.</p>`;
+      } else {
+        title = "Remove section"; confirm = "Review consequences";
+        body = `<p class="field-note">Choose what happens to the charts in “${esc(section?.name || "this section")}”.</p><div class="radio-stack"><label><input type="radio" name="removal" value="delete" checked>Delete charts from this page</label><label><input type="radio" name="removal" value="above">Merge charts with section above</label><label><input type="radio" name="removal" value="below">Merge charts with section below</label></div>`;
+      }
+      return `<div class="priority-layer"><section class="inline-dialog surface-card" role="dialog" aria-modal="true" aria-labelledby="structure-title"><header class="surface-head"><div><span class="eyebrow">Inline structure authoring</span><h2 id="structure-title">${esc(title)}</h2></div></header><div class="surface-body">${body}</div><footer class="surface-footer"><button class="small-button" type="button" data-action="cancel-structure">Cancel</button><button class="small-button primary" type="button" data-action="confirm-structure">${esc(confirm)}</button></footer></section></div>`;
+    }
+
+    function renderProduct() {
+      const viewport = viewports[state.viewport];
+      const style = viewport.w ? `width:${viewport.w}px;height:${viewport.h}px;max-width:none;` : "";
+      return `<main class="review-stage"><section class="product-window" style="${style}" aria-label="${viewport.w ? `${viewport.w} by ${viewport.h}` : "Fit"} product preview"><div class="product-scroll"><div class="product-root" data-profile="${esc(state.lookProfile)}">${renderCrown()}${renderDashboard()}${renderActiveSurface()}${renderImportDialog()}${renderStructureDialog()}${state.toast ? `<div class="toast" role="status">${esc(state.toast)}</div>` : ""}<div class="sr-only" aria-live="polite">${esc(state.focusMessage)}</div></div></div></section></main>`;
+    }
+
+    function render(focusKey) {
+      app.innerHTML = renderReviewBar() + renderProduct();
+      if (focusKey) window.requestAnimationFrame(() => {
+        const target = app.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`) || document.getElementById(focusKey);
+        if (target && typeof target.focus === "function") target.focus({preventScroll:true});
+      });
+    }
+
+    function nextImportStep() {
+      if (state.layoutDirty) state.importStep = "layout";
+      else if (state.chartDirty) state.importStep = "chart";
+      else state.importStep = "review";
+    }
+
+    app.addEventListener("click", event => {
+      const control = event.target.closest("[data-action]");
+      if (!control) return;
+      const action = control.dataset.action;
+
+      if (action === "variant") switchVariant(control.dataset.value);
+      else if (action === "viewport") { state.viewport = control.dataset.value; state.focusMessage = `${viewports[state.viewport].label} viewport preview.`; render(); }
+      else if (action === "prime-dual") { state.layoutDirty = true; state.chartDirty = true; state.footprint = state.footprint === state.committedFootprint ? "3×1" : state.footprint; announce("Representative dual-draft state created: dashboard layout and bio_admissions chart properties are independently unsaved."); }
+      else if (action === "reset") { window.location.reload(); }
+      else if (action === "mode") { state.mode = control.dataset.value; if (state.mode !== "Build") state.activeSurface = null; state.focusMessage = `${state.mode} mode active. Shared Build drafts remain in session memory.`; render(); }
+      else if (action === "page") { state.page = control.dataset.value; state.focusMessage = `${state.page} page selected.`; render(); }
+      else if (action === "open-surface") openSurface(control.dataset.surface, control.dataset.focusKey);
+      else if (action === "open-chart") { state.selectedChart = control.dataset.value; const chart = selectedChart(); if (chart.id !== "bio_admissions") { state.chartTitle = chart.title; state.committedChartTitle = chart.title; state.footprint = "1×1"; state.committedFootprint = "1×1"; state.chartDirty = false; } openSurface("orbit", control.dataset.focusKey); }
+      else if (action === "close-surface") closeActiveSurface();
+      else if (action === "resume-surface") openSurface(control.dataset.surface, `resume-${control.dataset.surface}`);
+      else if (action === "trail") { const index = Number(control.dataset.index); state.trail = state.trail.slice(0,index + 1); const tail = state.trail[state.trail.length - 1]; state.activeSurface = tail === "Build" ? null : tail; state.focusMessage = `${tail === "Build" ? "Build canvas" : surfaceName(tail)} resumed from the Activity Back-stack.`; render(state.activeSurface ? `surface-${state.activeSurface}` : `variant-c`); }
+      else if (action === "orbit-tab") { state.orbitTab = control.dataset.value; render(`surface-orbit`); }
+      else if (action === "footprint") { state.footprint = control.dataset.value; state.chartDirty = state.footprint !== state.committedFootprint || state.chartTitle !== state.committedChartTitle; state.focusMessage = `${state.footprint} committed to the selected-chart property draft. Layout ownership is unchanged.`; render(`surface-orbit`); }
+      else if (action === "save-chart") { state.committedFootprint = state.footprint; state.committedChartTitle = state.chartTitle; state.chartDirty = false; announce("Selected-chart properties saved. The dashboard-layout draft is unchanged."); }
+      else if (action === "discard-chart") { state.footprint = state.committedFootprint; state.chartTitle = state.committedChartTitle; state.chartDirty = false; announce("Selected-chart property draft discarded. The dashboard-layout draft is unchanged."); }
+      else if (action === "save-layout") { state.layoutDirty = false; announce("Dashboard-layout changes saved. The selected-chart draft is unchanged."); }
+      else if (action === "discard-layout") { state.layoutDirty = false; announce("Dashboard-layout changes discarded. The selected-chart draft is unchanged."); }
+      else if (action === "save-look") { state.committedLookProfile = state.lookProfile; state.lookDirty = false; announce("Dashboard Look saved without changing chart or layout drafts."); }
+      else if (action === "discard-look") { state.lookProfile = state.committedLookProfile; state.lookDirty = false; announce("Dashboard Look draft discarded."); }
+      else if (action === "proof-back") { state.proofStage = Math.max(1,state.proofStage - 1); state.proofDirty = true; render(`surface-proof`); }
+      else if (action === "proof-next") { state.proofStage = Math.min(6,state.proofStage + 1); state.proofDirty = true; render(`surface-proof`); }
+      else if (action === "proof-check") { state.proofChecks[control.dataset.value] = control.checked; state.proofDirty = true; render(`surface-proof`); }
+      else if (action === "passport-edit") { state.passportEdit = control.dataset.value; render(`surface-passport`); }
+      else if (action === "passport-cancel") { state.passportEdit = null; render(`surface-passport`); }
+      else if (action === "passport-save") { state.passportEdit = null; announce("Scenario details saved in their object-scoped edit."); }
+      else if (action === "start-import") { nextImportStep(); state.focusMessage = "Import package resolution started with the first affected dirty scope."; render(); }
+      else if (action === "cancel-import") { state.importStep = null; state.focusMessage = "Import cancelled. Every draft and the last-good HeV-A26 dashboard remain unchanged."; render(`surface-passport`); }
+      else if (action === "resolve-import") { if (state.importStep === "layout") state.layoutDirty = false; else state.chartDirty = false; nextImportStep(); state.focusMessage = `${control.dataset.resolution === "save" ? "Saved" : "Discarded"} the named scope. Import advanced without a combined Save All.`; render(); }
+      else if (action === "confirm-import") { state.importStep = null; announce("Replacement simulated. The prototype retains the HeV-A26 fixture for continued comparison."); }
+      else if (action === "structure-dialog") { state.structureDialog = {kind:control.dataset.kind,section:control.dataset.section || null}; render(); }
+      else if (action === "cancel-structure") { state.structureDialog = null; render(); }
+      else if (action === "confirm-structure") {
+        const dialog = state.structureDialog;
+        const value = document.getElementById("structure-value")?.value?.trim();
+        if (dialog?.kind === "add-page" && value) state.pages.push(value);
+        if (dialog?.kind === "rename-section" && value) { const section = state.sections.find(item => item.id === dialog.section); if (section) section.name = value; }
+        state.structureDialog = null; state.layoutDirty = true; announce("Inline structure change added to the dashboard-layout draft.");
+      }
+      else if (action === "move-section") { const index = state.sections.findIndex(section => section.id === control.dataset.section); const target = index + Number(control.dataset.direction); if (target >= 0 && target < state.sections.length) { [state.sections[index],state.sections[target]] = [state.sections[target],state.sections[index]]; state.layoutDirty = true; announce("Section moved in the dashboard-layout draft."); } }
+      else if (action === "announce") announce(control.dataset.message || "Action completed.");
+    });
+
+    app.addEventListener("input", event => {
+      const action = event.target.dataset.action;
+      if (action === "chart-title") { state.chartTitle = event.target.value; state.chartDirty = state.chartTitle !== state.committedChartTitle || state.footprint !== state.committedFootprint; }
+      else if (action === "scenario-input") state.scenario = event.target.value;
+      else if (action === "program-input") state.program = event.target.value;
+      else if (action === "updated-input") state.updated = event.target.value;
+    });
+
+    app.addEventListener("change", event => {
+      const action = event.target.dataset.action;
+      if (action === "look-profile") { state.lookProfile = event.target.value; state.lookDirty = state.lookProfile !== state.committedLookProfile; state.focusMessage = `${event.target.selectedOptions[0].text} preview applied to the undimmed dashboard.`; render(`surface-look`); }
+      else if (action === "look-setting") { state.lookDirty = true; render(`surface-look`); }
+      else if (action === "appearance") { state.appearance = event.target.value; state.lookDirty = true; render(`surface-look`); }
+      else if (action === "chart-colors") { state.chartColors = event.target.value; state.lookDirty = true; render(`surface-look`); }
+      else if (action === "chart-property") { state.chartDirty = true; state.focusMessage = "Selected-chart property changed inside Unit Orbit."; render(`surface-orbit`); }
+      else if (action === "layout-preset") { state.layoutDirty = true; announce(`${event.target.value} layout preset loaded into the dashboard-layout draft. Chart footprints remain unchanged.`); }
+    });
+
+    app.addEventListener("dragstart", event => {
+      const page = event.target.closest("[data-drag-page]");
+      const chart = event.target.closest("[data-chart-id]");
+      if (page) { state.dragPage = page.dataset.dragPage; event.dataTransfer.effectAllowed = "move"; }
+      else if (chart) { state.dragChart = chart.dataset.chartId; event.dataTransfer.effectAllowed = "move"; }
+      event.target.classList.add("dragging");
+    });
+
+    app.addEventListener("dragover", event => {
+      const target = event.target.closest("[data-drag-page],[data-chart-id]");
+      if (!target) return;
+      event.preventDefault();
+      target.classList.add("drag-target");
+    });
+
+    app.addEventListener("dragleave", event => event.target.closest("[data-drag-page],[data-chart-id]")?.classList.remove("drag-target"));
+
+    app.addEventListener("drop", event => {
+      const pageTarget = event.target.closest("[data-drag-page]");
+      const chartTarget = event.target.closest("[data-chart-id]");
+      event.preventDefault();
+      if (pageTarget && state.dragPage) {
+        const from = state.pages.indexOf(state.dragPage), to = state.pages.indexOf(pageTarget.dataset.dragPage);
+        if (from >= 0 && to >= 0 && from !== to) { const [page] = state.pages.splice(from,1); state.pages.splice(to,0,page); state.layoutDirty = true; }
+        state.focusMessage = "Page navigation reordered in the dashboard-layout draft.";
+      } else if (chartTarget && state.dragChart && state.dragChart !== chartTarget.dataset.chartId) {
+        const sourceSection = state.sections.find(section => section.charts.includes(state.dragChart));
+        const targetSection = state.sections.find(section => section.charts.includes(chartTarget.dataset.chartId));
+        if (sourceSection && targetSection) {
+          const sourceIndex = sourceSection.charts.indexOf(state.dragChart);
+          sourceSection.charts.splice(sourceIndex,1);
+          const targetIndex = targetSection.charts.indexOf(chartTarget.dataset.chartId);
+          targetSection.charts.splice(targetIndex,0,state.dragChart);
+          state.layoutDirty = true;
+          state.focusMessage = "Chart reordered in the dashboard-layout draft. Its footprint and chart properties are unchanged.";
+        }
+      }
+      state.dragPage = null; state.dragChart = null; render();
+    });
+
+    app.addEventListener("dragend", () => { state.dragPage = null; state.dragChart = null; render(); });
+
+    document.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      if (state.structureDialog) { state.structureDialog = null; render(); }
+      else if (state.importStep) { state.importStep = null; state.focusMessage = "Import cancelled. Drafts remain unchanged."; render(`surface-passport`); }
+      else if (state.activeSurface) closeActiveSurface();
+    });
+
+    render();
+  })();
+  </script>
+</body>
+</html>
