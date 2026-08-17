@@ -28,6 +28,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | 010 | Dashboard look controls | How should approved visual settings be placed and applied inside the Layered Command Crown? | Approved | A — Contextual Visual Settings Drawer | shell, settings, visual style, palettes, appearance, preview |
 | 011 | Dashboard structure authoring | How should builders manage pages and sections while keeping structural consequences and the actual dashboard understandable? | Approved | D — Inline Build Structure Controls | Build, structure, pages, sections, inline canvas, consequences |
 | 012 | Temporal content library | How should builders find, understand, manage, and repair saved Time Groups and page-scoped Scenes without conflating library management with approved authoring workflows? | Approved | D — Page-grouped Relationships | Build, temporal library, Time Groups, Scenes, repair, saved content |
+| 013 | Scenario & dashboard package management | How should Build expose one-scenario identity and package operations without implying a package-wide Save or disturbing valid work? | Approved | A — Scenario Passport | Build, scenario, package, import, download, reset, recovery |
 
 ## Sequence
 
