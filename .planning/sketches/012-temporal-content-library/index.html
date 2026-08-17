@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 012 · Temporal content library</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --review-bg: #0b1118;
+      --review-panel: #121b25;
+      --review-rule: #2c3a48;
+      --review-ink: #eef5f7;
+      --review-muted: #a8b8c5;
+      --review-accent: #8fc8a9;
+      --out: #eee9de;
+      --canvas: #f7f2e8;
+      --panel: #fffdf8;
+      --alt: #faf6ec;
+      --ink: #1d2529;
+      --muted: #555a55;
+      --faint: #716d64;
+      --rule: #b7b0a2;
+      --rule-strong: #655f55;
+      --accent: #2c383d;
+      --accent-soft: #e3e6e3;
+      --focus: #176f76;
+      --selected: #8a3e46;
+      --selected-soft: #f1dddc;
+      --attention: #9a3e47;
+      --attention-soft: #f3dadd;
+      --ready: #376c57;
+      --ready-soft: #dbe9dd;
+      --warning: #875a12;
+      --warning-soft: #f4e4bb;
+      --info: #246579;
+      --info-soft: #d7e7e8;
+      --shadow: 0 24px 64px rgba(18, 16, 12, .3);
+      --ui: "Segoe UI", Arial, sans-serif;
+      --editorial: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      background: var(--review-bg);
+      color: var(--review-ink);
+      font: 15px/1.45 var(--ui);
+    }
+    button, input, select { font: inherit; }
+    button, select, input { color: inherit; }
+    button { cursor: pointer; }
+    button[disabled] { cursor: not-allowed; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .prototype {
+      display: grid;
+      grid-template-columns: clamp(320px, 22vw, 410px) minmax(0, 1fr);
+      height: 100%;
+      min-width: 0;
+    }
+    .review-rail {
+      overflow-y: auto;
+      border-right: 1px solid var(--review-rule);
+      background: linear-gradient(180deg, #0e1721, var(--review-bg));
+      padding: 22px;
+    }
+    .review-kicker {
+      margin: 0 0 6px;
+      color: var(--review-accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .review-rail h1 {
+      margin: 0;
+      max-width: 15ch;
+      font: 700 30px/1.04 var(--editorial);
+    }
+    .review-summary {
+      margin: 12px 0 20px;
+      color: var(--review-muted);
+    }
+    .review-block {
+      margin-top: 18px;
+      padding-top: 17px;
+      border-top: 1px solid var(--review-rule);
+    }
+    .review-block h2 {
+      margin: 0 0 10px;
+      color: var(--review-muted);
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .review-stack { display: grid; gap: 8px; }
+    .review-button {
+      min-height: 46px;
+      width: 100%;
+      border: 1px solid #394b5d;
+      border-radius: 6px;
+      background: var(--review-panel);
+      padding: 10px 12px;
+      color: var(--review-ink);
+      text-align: left;
+      transition: border-color .14s ease, background .14s ease;
+    }
+    .review-button:hover { border-color: #70869a; }
+    .review-button[aria-pressed="true"] {
+      border-color: var(--review-accent);
+      box-shadow: inset 3px 0 var(--review-accent);
+      background: #17251f;
+    }
+    .review-button strong, .review-button span { display: block; }
+    .review-button span { margin-top: 2px; color: var(--review-muted); font-size: 12px; }
+    .review-inline { display: flex; flex-wrap: wrap; gap: 8px; }
+    .review-inline .review-button { width: auto; flex: 1 1 76px; text-align: center; }
+    .review-note {
+      border: 1px solid #304151;
+      border-radius: 6px;
+      background: rgba(255,255,255,.035);
+      padding: 12px;
+      color: var(--review-muted);
+      font-size: 13px;
+    }
+    .stage {
+      min-width: 0;
+      overflow: auto;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 70% 10%, rgba(80, 104, 120, .22), transparent 30%),
+        #090e14;
+    }
+    .viewport-frame {
+      display: flex;
+      min-width: min-content;
+      min-height: 100%;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .product-window {
+      container: product / inline-size;
+      position: relative;
+      width: var(--vw, 100%);
+      height: var(--vh, calc(100vh - 48px));
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #526372;
+      border-radius: 12px;
+      background: var(--canvas);
+      color: var(--ink);
+      box-shadow: 0 32px 84px rgba(0,0,0,.46);
+    }
+    .product-window.fit {
+      width: 100%;
+      min-width: 760px;
+      height: calc(100vh - 48px);
+      min-height: 700px;
+    }
+    .product-scroll {
+      position: relative;
+      height: 100%;
+      overflow: auto;
+      background: var(--canvas);
+    }
+
+    .unsupported-banner {
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      display: flex;
+      min-height: 52px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 2px solid #f0a3a3;
+      background: #7b2e2e;
+      padding: 8px 14px;
+      color: #fff;
+      font-weight: 700;
+    }
+    .unsupported-banner button {
+      min-height: 36px;
+      border: 1px solid #fff;
+      border-radius: 4px;
+      background: #fff;
+      padding: 6px 10px;
+      color: #612326;
+      font-weight: 800;
+    }
+    .command-crown {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--panel);
+    }
+    .phone .command-crown { top: 52px; }
+    .modebar, .context-row, .build-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--rule);
+      padding: 7px 18px;
+    }
+    .modebar { min-height: 52px; background: var(--accent); color: #fff; }
+    .identity { display: flex; align-items: center; gap: 9px; margin-right: auto; font-weight: 800; }
+    .identity-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.65);
+      font-size: 12px;
+      letter-spacing: .08em;
+    }
+    .mode-actions { display: flex; gap: 6px; }
+    .mode-button {
+      min-height: 38px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 3px;
+      background: transparent;
+      padding: 6px 13px;
+      color: #fff;
+    }
+    .mode-button[aria-pressed="true"] {
+      border-color: #fff;
+      background: rgba(255,255,255,.16);
+      font-weight: 800;
+    }
+    .context-row { min-height: 58px; background: var(--panel); }
+    .dashboard-name { font: 700 18px/1.2 var(--editorial); }
+    .page-nav { display: flex; gap: 5px; margin-left: auto; }
+    .page-button, .strip-button {
+      min-height: 40px;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--alt);
+      padding: 7px 12px;
+      color: var(--ink);
+    }
+    .page-button[aria-current="page"] {
+      border-color: var(--rule-strong);
+      background: var(--panel);
+      font-weight: 800;
+    }
+    .build-strip { min-height: 52px; background: var(--alt); }
+    .strip-label { margin-right: auto; color: var(--muted); }
+    .strip-button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+    }
+    .strip-button[aria-pressed="true"] {
+      box-shadow: inset 0 -3px var(--selected);
+      background: var(--panel);
+      font-weight: 800;
+    }
+
+    .dashboard-canvas {
+      min-height: 900px;
+      padding: 24px;
+      background: var(--canvas);
+    }
+    .dashboard-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 6px 0 22px;
+    }
+    .dashboard-heading h2, .section-heading h3, .chart-card h4 {
+      font-family: var(--editorial);
+    }
+    .dashboard-heading h2 { margin: 0; font-size: 25px; }
+    .dashboard-heading p { margin: 4px 0 0; color: var(--muted); }
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 26px;
+      border-bottom: 2px solid var(--rule-strong);
+      padding-bottom: 9px;
+    }
+    .section-heading h3 { margin: 0 auto 0 0; font-size: 20px; }
+    .section-heading button {
+      min-height: 36px;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      color: var(--muted);
+    }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .chart-card {
+      min-height: 190px;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--panel);
+      padding: 13px;
+    }
+    .chart-card.wide { grid-column: span 2; }
+    .chart-card h4 { margin: 0 0 4px; font-size: 16px; }
+    .chart-card p { margin: 0; color: var(--muted); font-size: 12px; }
+    .mini-chart {
+      display: flex;
+      height: 104px;
+      align-items: end;
+      gap: 8px;
+      margin-top: 14px;
+      border-left: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      padding: 7px 8px 0;
+    }
+    .mini-chart span { flex: 1; background: #687b6a; opacity: .85; }
+
+    .library-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      background: rgba(36, 34, 29, .14);
+    }
+    .library-layer {
+      position: absolute;
+      inset: 22px;
+      z-index: 70;
+      display: grid;
+      grid-template-rows: auto auto auto minmax(0,1fr) auto;
+      overflow: hidden;
+      border: 1px solid var(--rule-strong);
+      border-radius: 3px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .library-header {
+      display: flex;
+      align-items: start;
+      gap: 18px;
+      border-bottom: 1px solid var(--rule);
+      padding: 18px 20px 15px;
+    }
+    .library-title { margin-right: auto; }
+    .library-kicker {
+      margin: 0 0 3px;
+      color: var(--selected);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .library-title h2 { margin: 0; font: 700 25px/1.1 var(--editorial); }
+    .library-title p { margin: 5px 0 0; color: var(--muted); }
+    .library-header .header-actions { display: flex; gap: 8px; }
+    .library-header button, .library-footer button, .filter-bar button {
+      min-height: 42px;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--alt);
+      padding: 8px 12px;
+      color: var(--ink);
+    }
+    .library-header .primary, .filter-bar .primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+    }
+    .library-subhead {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--rule);
+      background: var(--alt);
+      padding: 7px 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .variant-name { color: var(--ink); font-weight: 800; }
+    .draft-chip {
+      margin-left: auto;
+      border: 1px solid var(--warning);
+      background: var(--warning-soft);
+      padding: 4px 8px;
+      color: #553700;
+      font-weight: 800;
+    }
+    .filter-bar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.6fr) minmax(145px,.6fr) minmax(180px,.8fr) auto;
+      gap: 10px;
+      border-bottom: 1px solid var(--rule);
+      padding: 12px 20px;
+    }
+    .field { display: grid; gap: 4px; }
+    .field label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .field input, .field select {
+      min-height: 42px;
+      width: 100%;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: #fff;
+      padding: 7px 10px;
+      color: var(--ink);
+    }
+    .filter-action { align-self: end; }
+    .library-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 20px 28px;
+      scroll-padding-top: 12px;
+    }
+    .library-footer {
+      display: flex;
+      min-height: 50px;
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid var(--rule);
+      background: var(--alt);
+      padding: 8px 20px;
+      color: var(--muted);
+    }
+    .library-footer strong { color: var(--ink); }
+    .library-footer button { margin-left: auto; }
+
+    .summary-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .count-chip, .page-chip, .parent-chip, .status-pill {
+      display: inline-flex;
+      min-height: 26px;
+      align-items: center;
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--alt);
+      color: var(--ink);
+      font: 700 12px/1 var(--ui);
+    }
+    .status-pill.ready { border-color: var(--ready); background: var(--ready-soft); color: #244b3b; }
+    .status-pill.attention { border-color: var(--attention); background: var(--attention-soft); color: #6d2831; }
+    .status-pill.empty { border-color: var(--info); background: var(--info-soft); color: #1c4f5e; }
+
+    .ledger { display: grid; gap: 12px; }
+    .group-record {
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--panel);
+    }
+    .group-record.selected { border-color: var(--selected); box-shadow: inset 4px 0 var(--selected); }
+    .group-record.attention { border-color: #c08186; }
+    .group-head {
+      display: grid;
+      grid-template-columns: auto minmax(0,1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+    }
+    .disclosure {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--alt);
+      color: var(--ink);
+      font-size: 18px;
+    }
+    .record-title {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      color: var(--ink);
+      text-align: left;
+    }
+    .record-title strong {
+      display: block;
+      font: 700 18px/1.2 var(--editorial);
+    }
+    .record-title span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .record-metadata {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 8px;
+    }
+    .record-actions, .scene-actions, .queue-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+    .action-button {
+      min-height: 38px;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--alt);
+      padding: 6px 9px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .action-button:hover { border-color: var(--rule-strong); background: #fff; }
+    .action-button.danger { border-color: #c48c90; color: #7b2e36; }
+    .action-button.repair { border-color: var(--attention); background: var(--attention-soft); color: #6d2831; font-weight: 800; }
+    .action-button[aria-disabled="true"] {
+      opacity: .58;
+      background: #eeeae1;
+      cursor: not-allowed;
+    }
+    .group-details {
+      border-top: 1px solid var(--rule);
+      background: var(--alt);
+      padding: 14px 14px 16px 68px;
+    }
+    .issue-list { display: grid; gap: 8px; margin-bottom: 12px; }
+    .issue-row {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 12px;
+      align-items: center;
+      border-left: 4px solid var(--attention);
+      background: var(--attention-soft);
+      padding: 10px 12px;
+    }
+    .issue-row strong, .issue-row span { display: block; }
+    .issue-row span { margin-top: 2px; color: #6d4044; font-size: 13px; }
+    .scene-list { display: grid; gap: 8px; }
+    .scene-card {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      padding: 11px 12px;
+    }
+    .scene-card.selected { border-color: var(--selected); box-shadow: inset 3px 0 var(--selected); }
+    .scene-card h4 { margin: 0; font: 700 16px/1.25 var(--editorial); }
+    .scene-card p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .scene-card .record-metadata { margin-top: 6px; }
+    .empty-state {
+      border: 1px dashed var(--rule-strong);
+      background: var(--panel);
+      padding: 22px;
+      text-align: center;
+    }
+    .empty-state h3 { margin: 0; font: 700 20px/1.2 var(--editorial); }
+    .empty-state p { max-width: 64ch; margin: 7px auto 14px; color: var(--muted); }
+
+    .shelf-layout {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(260px, .34fr);
+      gap: 16px;
+    }
+    .page-shelf, .group-rail, .ready-catalogue, .attention-queue {
+      border: 1px solid var(--rule);
+      background: var(--alt);
+      padding: 14px;
+    }
+    .shelf-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .shelf-tab {
+      min-height: 40px;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      color: var(--ink);
+    }
+    .shelf-tab[aria-pressed="true"] { border-color: var(--selected); box-shadow: inset 0 -3px var(--selected); font-weight: 800; }
+    .shelf-heading, .rail-heading, .queue-heading {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .shelf-heading h3, .rail-heading h3, .queue-heading h3 {
+      margin: 0 auto 0 0;
+      font: 700 19px/1.2 var(--editorial);
+    }
+    .shelf-cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+    .shelf-card {
+      display: grid;
+      min-height: 196px;
+      align-content: start;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      padding: 13px;
+    }
+    .shelf-card h4 { margin: 9px 0 5px; font: 700 17px/1.22 var(--editorial); }
+    .shelf-card p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+    .shelf-card .scene-actions { align-self: end; margin-top: auto; justify-content: flex-start; }
+    .group-rail-list { display: grid; gap: 7px; }
+    .rail-record {
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      padding: 10px;
+    }
+    .rail-record strong { display: block; font-family: var(--editorial); }
+    .rail-record span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .rail-record .record-actions { justify-content: flex-start; margin-top: 8px; }
+    .rail-record.selected { border-color: var(--selected); box-shadow: inset 3px 0 var(--selected); }
+    .shelf-relationship {
+      grid-column: 1 / -1;
+      border: 1px solid var(--rule-strong);
+      background: var(--panel);
+      padding: 15px;
+    }
+    .relationship-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: flex-start;
+      padding-bottom: 13px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .relationship-head > div { flex: 1 1 560px; min-width: 0; }
+    .relationship-kicker {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--selected);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .relationship-head h3 { margin: 0; font: 700 22px/1.2 var(--editorial); }
+    .relationship-head .record-actions { justify-content: flex-start; margin-top: 10px; }
+    .relationship-close { white-space: nowrap; }
+    .relationship-pages { display: grid; gap: 12px; margin-top: 13px; }
+    .relationship-page {
+      border: 1px solid var(--rule);
+      background: var(--alt);
+      padding: 11px;
+    }
+    .relationship-page-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .relationship-page-head h4 { margin: 0 auto 0 0; font: 700 16px/1.2 var(--editorial); }
+    .relationship-page-head span { color: var(--muted); font-size: 12px; }
+    .relationship-scenes { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(280px,100%),1fr)); gap: 8px; }
+    .relationship-scene {
+      display: grid;
+      gap: 9px;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      padding: 11px;
+    }
+    .relationship-scene.attention { border-color: #c48c90; }
+    .relationship-scene h5 { margin: 6px 0 3px; font: 700 15px/1.25 var(--editorial); }
+    .relationship-scene p { margin: 0; color: var(--muted); font-size: 12px; }
+    .relationship-scene .scene-actions { justify-content: flex-start; }
+
+    .page-grouped-library { display: grid; gap: 12px; }
+    .page-group-list { display: grid; gap: 13px; }
+    .page-group-block {
+      border: 1px solid var(--rule);
+      background: var(--alt);
+    }
+    .page-group-block.elevated { border-color: #b97178; box-shadow: inset 4px 0 var(--attention); }
+    .page-group-header {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 14px;
+      align-items: start;
+      padding: 13px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--rule);
+    }
+    .page-group-header h3 { margin: 4px 0 3px; font: 700 19px/1.2 var(--editorial); }
+    .page-group-header p { margin: 0; color: var(--muted); font-size: 13px; }
+    .page-group-header .record-actions { align-self: center; }
+    .priority-label {
+      display: inline-block;
+      color: #7b3038;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .045em;
+      text-transform: uppercase;
+    }
+    .page-group-scenes {
+      display: grid;
+      grid-template-columns: repeat(3,minmax(0,1fr));
+      gap: 9px;
+      padding: 11px;
+    }
+    .page-group-scene {
+      display: grid;
+      grid-template-rows: auto auto minmax(42px,1fr) auto;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      padding: 11px;
+      min-width: 0;
+    }
+    .page-group-scene.attention { border-color: #c48c90; box-shadow: inset 0 3px var(--attention); }
+    .page-group-scene h4 { margin: 8px 0 4px; font: 700 16px/1.25 var(--editorial); }
+    .page-group-scene p { margin: 0; color: var(--muted); font-size: 12px; }
+    .page-group-scene .record-metadata { margin: 8px 0; }
+    .page-group-scene .scene-actions { justify-content: flex-start; align-self: end; }
+
+    .queue-layout { display: grid; gap: 16px; }
+    .attention-queue { border-color: #c48c90; background: #fbf0ee; }
+    .queue-list { display: grid; gap: 9px; }
+    .queue-item {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 14px;
+      border: 1px solid #c99195;
+      background: var(--panel);
+      padding: 12px;
+    }
+    .queue-item h4 { margin: 0; font: 700 17px/1.2 var(--editorial); }
+    .queue-item p { margin: 4px 0 0; color: var(--muted); }
+    .ready-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+    .ready-card {
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      padding: 11px;
+    }
+    .ready-card h4 { margin: 7px 0 4px; font: 700 15px/1.24 var(--editorial); }
+    .ready-card p { margin: 0; color: var(--muted); font-size: 12px; }
+    .ready-card .record-actions { justify-content: flex-start; margin-top: 8px; }
+
+    .handoff-panel {
+      display: grid;
+      max-width: 900px;
+      margin: 10px auto;
+      border: 1px solid var(--rule-strong);
+      background: var(--panel);
+    }
+    .handoff-head { border-bottom: 1px solid var(--rule); background: var(--accent); padding: 18px; color: #fff; }
+    .handoff-head p { margin: 0 0 4px; font-size: 12px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .handoff-head h3 { margin: 0; font: 700 24px/1.2 var(--editorial); }
+    .handoff-body { padding: 22px; }
+    .handoff-stage {
+      border-left: 4px solid var(--selected);
+      background: var(--selected-soft);
+      padding: 12px;
+    }
+    .handoff-stage strong, .handoff-stage span { display: block; }
+    .handoff-stage span { margin-top: 3px; color: #63464a; }
+    .handoff-proof {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .proof-card { border: 1px solid var(--rule); background: var(--alt); padding: 12px; }
+    .proof-card strong { display: block; }
+    .proof-card span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .handoff-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid var(--rule);
+      padding: 12px 18px;
+    }
+    .handoff-actions button, .modal-actions button {
+      min-height: 42px;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      background: var(--alt);
+      padding: 8px 12px;
+      color: var(--ink);
+    }
+    .handoff-actions .primary, .modal-actions .primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      background: rgba(29, 28, 24, .42);
+      padding: 20px;
+    }
+    .modal {
+      width: min(620px, 100%);
+      max-height: min(680px, 90%);
+      overflow: auto;
+      border: 1px solid var(--rule-strong);
+      border-radius: 3px;
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+    }
+    .modal-head { border-bottom: 1px solid var(--rule); padding: 17px 18px; }
+    .modal-head h3 { margin: 0; font: 700 22px/1.2 var(--editorial); }
+    .modal-body { padding: 18px; }
+    .modal-body p { margin-top: 0; }
+    .consequence-list { margin: 10px 0; border: 1px solid var(--rule); background: var(--alt); padding: 10px 12px 10px 30px; }
+    .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--rule); padding: 12px 18px; }
+    .modal-actions .danger { border-color: var(--attention); background: var(--attention); color: #fff; font-weight: 800; }
+    .toast {
+      position: absolute;
+      right: 18px;
+      bottom: 64px;
+      z-index: 130;
+      max-width: 440px;
+      border: 1px solid var(--rule-strong);
+      background: var(--accent);
+      padding: 11px 14px;
+      color: #fff;
+      box-shadow: 0 10px 26px rgba(0,0,0,.24);
+    }
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      overflow: hidden !important;
+      clip: rect(1px,1px,1px,1px) !important;
+      white-space: nowrap !important;
+    }
+
+    @container product (max-width: 1060px) {
+      .library-layer { inset: 12px; }
+      .filter-bar { grid-template-columns: 1fr 1fr; }
+      .filter-action { align-self: stretch; }
+      .shelf-layout { grid-template-columns: 1fr; }
+      .group-rail { order: -1; }
+      .group-rail-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .ready-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .group-head { grid-template-columns: auto minmax(0,1fr); }
+      .group-head .record-actions { grid-column: 2; justify-content: flex-start; }
+      .chart-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .page-group-scenes { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @container product (max-width: 760px) {
+      .library-layer { inset: 6px; }
+      .modebar, .context-row, .build-strip { flex-wrap: wrap; padding-inline: 10px; }
+      .page-nav { width: 100%; margin-left: 0; overflow-x: auto; }
+      .library-header { padding: 13px; }
+      .library-header .header-actions { flex-direction: column; }
+      .library-title h2 { font-size: 20px; }
+      .library-subhead { padding-inline: 13px; }
+      .filter-bar { grid-template-columns: 1fr; padding: 10px 13px; }
+      .library-scroll { padding: 12px 13px 22px; }
+      .group-head, .scene-card, .queue-item { grid-template-columns: 1fr; }
+      .page-group-header, .page-group-scenes { grid-template-columns: 1fr; }
+      .disclosure { width: 100%; height: 36px; }
+      .group-head .record-actions { grid-column: 1; justify-content: flex-start; }
+      .group-details { padding-left: 14px; }
+      .scene-actions, .queue-actions { justify-content: flex-start; }
+      .shelf-cards, .ready-grid, .group-rail-list, .handoff-proof { grid-template-columns: 1fr; }
+      .library-footer { align-items: flex-start; flex-direction: column; }
+      .library-footer button { margin-left: 0; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .chart-card.wide { grid-column: span 1; }
+    }
+    @media (max-width: 760px) {
+      .prototype { grid-template-columns: 1fr; }
+      .review-rail { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--review-rule); }
+      .stage { min-height: 60vh; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    (function () {
+      "use strict";
+
+      var PAGES = ["Executive surveillance", "Hospital readiness", "Population protection"];
+      var BASE_GROUPS = [
+        {
+          id: "winter",
+          name: "Winter response 2026",
+          status: "ready",
+          period: "1 Jan–31 Mar 2026",
+          charts: 6,
+          frames: 17,
+          saved: "Today · 09:42",
+          issues: [],
+          scenes: [
+            { id: "march", name: "March operational pressure briefing", page: "Executive surveillance", status: "ready", charts: 3, frames: 17, issue: "" },
+            { id: "capacity", name: "Care capacity escalation", page: "Hospital readiness", status: "ready", charts: 4, frames: 11, issue: "" }
+          ]
+        },
+        {
+          id: "coastal",
+          name: "Coastal Storm Readiness — Operational Briefing",
+          status: "ready",
+          period: "1 Sep–30 Nov 2026",
+          charts: 5,
+          frames: 24,
+          saved: "Yesterday · 16:10",
+          issues: [],
+          scenes: [
+            { id: "coastal-command", name: "Coastal command briefing", page: "Executive surveillance", status: "ready", charts: 4, frames: 18, issue: "" },
+            { id: "coastal-shelter", name: "Shelter and access continuity", page: "Population protection", status: "ready", charts: 3, frames: 12, issue: "" }
+          ]
+        },
+        {
+          id: "may-review",
+          name: "May 15–31 Multi-agency Readiness Review",
+          status: "ready",
+          period: "15–31 May 2026",
+          charts: 4,
+          frames: 17,
+          saved: "13 Aug · 12:08",
+          issues: [],
+          scenes: [
+            { id: "may-executive", name: "End-of-month executive readiness", page: "Executive surveillance", status: "ready", charts: 4, frames: 17, issue: "" }
+          ]
+        },
+        {
+          id: "may-tempo",
+          name: "May Operational Tempo",
+          status: "attention",
+          period: "15–31 May 2026",
+          charts: 5,
+          frames: 13,
+          saved: "12 Aug · 18:24",
+          issues: [
+            {
+              id: "dialysis",
+              title: "Dialysis service continuity has no observations in the saved period",
+              detail: "TEMP-FIX-C05 remains selected but has zero valid observations after 15 May.",
+              stage: "Sketch 005 · Choose charts",
+              focus: "Dialysis service continuity · Needs attention"
+            },
+            {
+              id: "fallback",
+              title: "One categorical member cannot use Interpolate",
+              detail: "Operating status of hospitals requires an eligible member fallback.",
+              stage: "Sketch 005 · Set defaults",
+              focus: "Matching fallback for TEMP-FIX-C03"
+            }
+          ],
+          scenes: [
+            {
+              id: "clinical-surge",
+              name: "Selected-frame clinical surge briefing",
+              page: "Hospital readiness",
+              status: "attention",
+              charts: 4,
+              frames: 8,
+              issue: "The saved observation for 18 May is no longer available.",
+              stage: "Sketch 006 · Stage 1 — Select charts and frames",
+              focus: "Selected frames → Observation list"
+            }
+          ]
+        },
+        {
+          id: "displacement",
+          name: "Displacement Monitoring",
+          status: "ready",
+          period: "1 Feb–30 Jun 2026",
+          charts: 3,
+          frames: 15,
+          saved: "8 Aug · 14:12",
+          issues: [],
+          scenes: []
+        },
+        {
+          id: "cross-page",
+          name: "Regional continuity, public warning, temporary accommodation, and critical-service recovery coordination",
+          status: "attention",
+          period: "1 Apr–31 Jul 2026",
+          charts: 7,
+          frames: 31,
+          saved: "7 Aug · 11:02",
+          issues: [],
+          scenes: [
+            {
+              id: "cross-page-scene",
+              name: "Regional public-protection briefing with long translated-like operational context",
+              page: "Population protection",
+              status: "attention",
+              charts: 4,
+              frames: 19,
+              issue: "Hospital load was moved to another Page and is missing from this Scene.",
+              stage: "Sketch 006 · Stage 2 — Arrange and configure",
+              focus: "Scene View · Missing chart"
+            }
+          ]
+        }
+      ];
+
+      var EXTRA_NAMES = [
+        "Weekly hospital readiness review",
+        "Regional vaccination confidence pulse",
+        "Public warning channel review",
+        "Critical supplies continuity",
+        "Municipality outbreak watch",
+        "Population movement briefing",
+        "Clinical staffing outlook",
+        "Emergency department pressure",
+        "Laboratory reporting cadence",
+        "Community protection overview",
+        "Outbreak and demand alignment",
+        "Health-system resilience review",
+        "Interagency situation update"
+      ];
+
+      function makeExtras() {
+        var rows = [];
+        for (var i = 0; i < 26; i += 1) {
+          var page = PAGES[i % PAGES.length];
+          var name = EXTRA_NAMES[i % EXTRA_NAMES.length] + " · " + String(i + 1).padStart(2, "0");
+          rows.push({
+            id: "extra-" + i,
+            name: name,
+            status: "ready",
+            period: "1 Jan–31 Dec 2026",
+            charts: 2 + (i % 5),
+            frames: 8 + (i % 18),
+            saved: (2 + (i % 12)) + " Aug · " + String(8 + (i % 9)).padStart(2, "0") + ":20",
+            issues: [],
+            scenes: i % 4 === 0 ? [] : [
+              {
+                id: "extra-scene-" + i,
+                name: name.replace("review", "briefing").replace("overview", "scene"),
+                page: page,
+                status: "ready",
+                charts: 1 + (i % 4),
+                frames: 6 + (i % 16),
+                issue: ""
+              },
+              ...(i % 5 === 0 ? [{
+                id: "extra-scene-b-" + i,
+                name: "Focused " + page.toLowerCase() + " handover",
+                page: page,
+                status: "ready",
+                charts: 2,
+                frames: 9,
+                issue: ""
+              }] : [])
+            ]
+          });
+        }
+        return rows;
+      }
+
+      var state = {
+        variant: "D",
+        viewport: "fit",
+        mode: "build",
+        libraryOpen: true,
+        query: "",
+        statusFilter: "all",
+        pageFilter: "all",
+        shelfPage: "Executive surveillance",
+        expanded: new Set(["winter", "may-tempo"]),
+        selected: "march",
+        removed: new Set(),
+        repaired: new Set(),
+        addedGroups: [],
+        addedScenes: [],
+        handoff: null,
+        activeDraft: null,
+        pendingRequest: null,
+        dialog: null,
+        trueEmpty: false,
+        libraryScroll: 0,
+        toast: "",
+        lastFocus: "time-content",
+        sequence: 1
+      };
+
+      function esc(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function statusOf(item) {
+        return state.repaired.has(item.id) ? "ready" : item.status;
+      }
+
+      function groupsAll() {
+        if (state.trueEmpty) return [];
+        var groups = BASE_GROUPS.concat(makeExtras(), state.addedGroups);
+        return groups.filter(function (group) { return !state.removed.has(group.id); }).map(function (group) {
+          var extraScenes = state.addedScenes.filter(function (scene) { return scene.parentId === group.id && !state.removed.has(scene.id); });
+          var scenes = group.scenes.concat(extraScenes).filter(function (scene) { return !state.removed.has(scene.id); });
+          return Object.assign({}, group, { scenes: scenes });
+        });
+      }
+
+      function groupById(id) {
+        return groupsAll().find(function (group) { return group.id === id; }) || null;
+      }
+
+      function sceneById(id) {
+        var found = null;
+        groupsAll().some(function (group) {
+          var scene = group.scenes.find(function (entry) { return entry.id === id; });
+          if (scene) {
+            found = { scene: scene, group: group };
+            return true;
+          }
+          return false;
+        });
+        return found;
+      }
+
+      function searchText(group) {
+        var pieces = [group.name, group.period];
+        group.issues.forEach(function (issue) { pieces.push(issue.title, issue.detail); });
+        group.scenes.forEach(function (scene) { pieces.push(scene.name, scene.page, scene.issue); });
+        return pieces.join(" ").toLowerCase();
+      }
+
+      function visibleGroups() {
+        var query = state.query.trim().toLowerCase();
+        return groupsAll().filter(function (group) {
+          if (query && searchText(group).indexOf(query) === -1) return false;
+          if (state.statusFilter === "ready") {
+            if (statusOf(group) !== "ready" && !group.scenes.some(function (scene) { return statusOf(scene) === "ready"; })) return false;
+          }
+          if (state.statusFilter === "attention") {
+            if (statusOf(group) !== "attention" && !group.scenes.some(function (scene) { return statusOf(scene) === "attention"; })) return false;
+          }
+          if (state.pageFilter !== "all") {
+            if (!group.scenes.some(function (scene) { return scene.page === state.pageFilter; })) return false;
+          }
+          return true;
+        });
+      }
+
+      function statusPill(status, label) {
+        var text = label || (status === "attention" ? "Needs attention" : status === "ready" ? "Ready" : "No Scenes");
+        return '<span class="status-pill ' + esc(status) + '">' + esc(text) + '</span>';
+      }
+
+      function viewportStyle() {
+        var map = {
+          "1440": ["1440px", "900px"],
+          "1200": ["1200px", "900px"],
+          "1024": ["1024px", "768px"],
+          "768": ["768px", "1024px"],
+          "390": ["390px", "844px"]
+        };
+        if (state.viewport === "fit") return 'class="product-window fit"';
+        var size = map[state.viewport];
+        return 'class="product-window' + (state.viewport === "390" ? " phone" : "") + '" style="--vw:' + size[0] + ';--vh:' + size[1] + '"';
+      }
+
+      function reviewButton(value, label, detail) {
+        return '<button class="review-button" type="button" data-action="variant" data-value="' + value + '" aria-pressed="' + (state.variant === value) + '" data-focus-key="variant-' + value + '"><strong>' + label + '</strong><span>' + detail + '</span></button>';
+      }
+
+      function viewportButton(value, label) {
+        return '<button class="review-button" type="button" data-action="viewport" data-value="' + value + '" aria-pressed="' + (state.viewport === value) + '" data-focus-key="viewport-' + value + '"><strong>' + label + '</strong></button>';
+      }
+
+      function renderReviewRail() {
+        return '<aside class="review-rail" aria-label="Sketch review controls">' +
+          '<p class="review-kicker">Sketch 012 · Approved</p>' +
+          '<h1>Temporal content library</h1>' +
+          '<p class="review-summary">Compare how builders browse parent Time Groups, page-scoped Scenes, and blocked content without creating a second temporal editor.</p>' +
+          '<section class="review-block"><h2>Variants</h2><div class="review-stack">' +
+            reviewButton("A", "A · Relationship Ledger", "Preserved alternative · parent-first expansion") +
+            reviewButton("B", "B · Page-first Scene Shelf", "Preserved alternative · split Scene shelf and group index") +
+            reviewButton("C", "C · Attention Queue", "Preserved alternative · repair-first catalogue") +
+            reviewButton("D", "D · Page-grouped Relationships ★ Winner", "Approved · page first · parent groups · three-across Scenes") +
+          '</div></section>' +
+          '<section class="review-block"><h2>Viewport</h2><div class="review-inline">' +
+            viewportButton("fit", "Fit") + viewportButton("1440", "1440") + viewportButton("1200", "1200") +
+            viewportButton("1024", "1024") + viewportButton("768", "768") + viewportButton("390", "390") +
+          '</div></section>' +
+          '<section class="review-block"><h2>Exercise states</h2><div class="review-stack">' +
+            '<button class="review-button" type="button" data-action="review-open" data-focus-key="review-open"><strong>' + (state.libraryOpen ? "Close Time content" : "Open Time content") + '</strong><span>Product entry remains in the Build strip.</span></button>' +
+            '<button class="review-button" type="button" data-action="true-empty" aria-pressed="' + state.trueEmpty + '" data-focus-key="true-empty"><strong>True-empty catalogue</strong><span>Distinct from a filtered no-results state.</span></button>' +
+            '<button class="review-button" type="button" data-action="reset" data-focus-key="reset"><strong>Reset shared fixture</strong><span>32 groups · 40+ explicit Scenes · one state across variants.</span></button>' +
+          '</div></section>' +
+          '<section class="review-block"><h2>Fixed boundary</h2><p class="review-note">The library may route to Sketch 005 or 006, but it never embeds period, availability, frame, matching, twin-canvas, or Unit Orbit controls. Needs-attention objects remain inspectable and manageable while Chrono and Audience launch are blocked.</p></section>' +
+        '</aside>';
+      }
+
+      function renderCrown() {
+        var phoneBanner = state.viewport === "390" && state.mode !== "view" ?
+          '<div class="unsupported-banner" role="status"><span>Build is not supported at phone size. View remains available.</span><button type="button" data-action="switch-view">Switch to View</button></div>' : "";
+        return phoneBanner +
+          '<header class="command-crown">' +
+            '<div class="modebar">' +
+              '<div class="identity"><span class="identity-mark">SX</span><span>SimEx dashboards</span></div>' +
+              '<nav class="mode-actions" aria-label="Product mode">' +
+                '<button class="mode-button" type="button" data-action="mode" data-value="view" aria-pressed="' + (state.mode === "view") + '">View</button>' +
+                '<button class="mode-button" type="button" data-action="mode" data-value="build" aria-pressed="' + (state.mode === "build") + '">Build</button>' +
+                '<button class="mode-button" type="button" data-action="mode" data-value="present" aria-pressed="' + (state.mode === "present") + '">Present</button>' +
+              '</nav>' +
+            '</div>' +
+            '<div class="context-row">' +
+              '<div><div class="dashboard-name">Regional Respiratory Preparedness</div><small>Europe/Berlin · saved dashboard</small></div>' +
+              '<nav class="page-nav" aria-label="Dashboard pages">' +
+                PAGES.map(function (page, index) { return '<button class="page-button" type="button" aria-current="' + (index === 0 ? "page" : "false") + '">' + esc(page) + '</button>'; }).join("") +
+              '</nav>' +
+            '</div>' +
+            '<div class="build-strip">' +
+              '<span class="strip-label">Build · structure clean · layout clean</span>' +
+              '<button class="strip-button" type="button">Add chart</button>' +
+              '<button class="strip-button" type="button">Add section</button>' +
+              '<button class="strip-button" type="button">Dashboard look</button>' +
+              '<button class="strip-button primary" type="button" data-action="time-content" aria-pressed="' + state.libraryOpen + '" data-focus-key="time-content">Time content</button>' +
+            '</div>' +
+          '</header>';
+      }
+
+      function miniBars(seed) {
+        var heights = [42, 68, 53, 82, 61, 91, 73, 88];
+        return heights.map(function (height, i) {
+          var adjusted = Math.max(22, Math.min(96, height - ((seed + i * 7) % 20)));
+          return '<span style="height:' + adjusted + '%"></span>';
+        }).join("");
+      }
+
+      function renderDashboard() {
+        return '<main class="dashboard-canvas"' + (state.libraryOpen ? ' aria-hidden="true" inert' : "") + '>' +
+          '<div class="dashboard-heading"><div><h2>Executive surveillance</h2><p>National indicators, outbreak distribution, and health-system pressure.</p></div><span class="status-pill ready">Data current · 16 Aug 2026</span></div>' +
+          '<section><div class="section-heading"><h3>Transmission and demand</h3><button type="button">Move earlier</button><button type="button">Move later</button><button type="button">Move to page</button><button type="button">Remove</button></div>' +
+          '<div class="chart-grid">' +
+            '<article class="chart-card"><h4>Confirmed cases</h4><p>79,547 cumulative</p><div class="mini-chart">' + miniBars(1) + '</div></article>' +
+            '<article class="chart-card"><h4>Regional R values</h4><p>Median 1.08 · six regions</p><div class="mini-chart">' + miniBars(7) + '</div></article>' +
+            '<article class="chart-card wide"><h4>Municipality outbreak map</h4><p>18 municipalities · 4 elevated</p><div class="mini-chart">' + miniBars(11) + '</div></article>' +
+          '</div></section>' +
+          '<section><div class="section-heading"><h3>Health-system readiness</h3><button type="button">Move earlier</button><button type="button">Move later</button><button type="button">Move to page</button><button type="button">Remove</button></div>' +
+          '<div class="chart-grid">' +
+            '<article class="chart-card wide"><h4>Hospital load</h4><p>ICU 72% · staffed capacity 81%</p><div class="mini-chart">' + miniBars(17) + '</div></article>' +
+            '<article class="chart-card"><h4>Vaccination rate</h4><p>Primary series 83.4%</p><div class="mini-chart">' + miniBars(23) + '</div></article>' +
+            '<article class="chart-card"><h4>Regional comparison</h4><p>Four-week change</p><div class="mini-chart">' + miniBars(31) + '</div></article>' +
+          '</div></section>' +
+        '</main>';
+      }
+
+      function blockedButton(label, reason) {
+        return '<button class="action-button" type="button" aria-disabled="true" data-action="blocked" data-reason="' + esc(reason) + '">' + esc(label) + '</button>';
+      }
+
+      function handoffButton(label, kind, id, stage, focus, purpose, extraClass) {
+        return '<button class="action-button ' + (extraClass || "") + '" type="button" data-action="request-handoff" data-kind="' + esc(kind) + '" data-id="' + esc(id) + '" data-stage="' + esc(stage) + '" data-focus="' + esc(focus || "") + '" data-purpose="' + esc(purpose || "edit") + '">' + esc(label) + '</button>';
+      }
+
+      function groupActions(group) {
+        var status = statusOf(group);
+        var launch = status === "ready" ?
+          '<button class="action-button" type="button" data-action="launch" data-label="Opened ' + esc(group.name) + ' in View Chrono">Open in Chrono</button>' :
+          blockedButton("Open in Chrono", group.name + " cannot start Chrono until its Needs-attention findings are repaired.");
+        return '<div class="record-actions">' +
+          launch +
+          handoffButton("Edit", "Time Group", group.id, "Sketch 005 · Name and review", "Saved Time Group summary", "edit") +
+          handoffButton("Duplicate", "Time Group", group.id, "Sketch 005 · Name and review", "Duplicate draft with new Group and child Scene IDs", "duplicate") +
+          '<button class="action-button danger" type="button" data-action="remove" data-kind="group" data-id="' + esc(group.id) + '">Remove</button>' +
+        '</div>';
+      }
+
+      function sceneActions(scene, group) {
+        var status = statusOf(scene);
+        var launch = status === "ready" ?
+          '<button class="action-button" type="button" data-action="launch" data-label="Opened ' + esc(scene.name) + ' in View Chrono">Open in Chrono</button>' :
+          blockedButton("Open in Chrono", scene.name + " cannot start Chrono or reach Audience until repaired. " + scene.issue);
+        var repair = status === "attention" ?
+          handoffButton("Repair", "Scene", scene.id, scene.stage || "Sketch 006 · Stage 1 — Select charts and frames", scene.focus || "Affected Scene control", "repair", "repair") : "";
+        return '<div class="scene-actions">' +
+          repair + launch +
+          handoffButton("Edit", "Scene", scene.id, "Sketch 006 · Stage 1 — Select charts and frames", "Saved Scene scope", "edit") +
+          handoffButton("Duplicate", "Scene", scene.id, "Sketch 006 · Stage 1 — Select charts and frames", "Duplicate under " + group.name + " on " + scene.page, "duplicate") +
+          '<button class="action-button danger" type="button" data-action="remove" data-kind="scene" data-id="' + esc(scene.id) + '">Remove</button>' +
+        '</div>';
+      }
+
+      function issueRows(group) {
+        if (statusOf(group) !== "attention" || !group.issues.length) return "";
+        return '<div class="issue-list">' + group.issues.map(function (issue) {
+          return '<div class="issue-row"><div><strong>' + esc(issue.title) + '</strong><span>' + esc(issue.detail) + '</span></div>' +
+            handoffButton("Repair", "Time Group", group.id, issue.stage, issue.focus, "repair", "repair") + '</div>';
+        }).join("") + '</div>';
+      }
+
+      function sceneCard(scene, group) {
+        var status = statusOf(scene);
+        return '<article class="scene-card ' + (state.selected === scene.id ? "selected" : "") + '" data-object-id="' + esc(scene.id) + '">' +
+          '<div><button class="record-title" type="button" data-action="select" data-id="' + esc(scene.id) + '" data-focus-key="select-' + esc(scene.id) + '">' +
+            '<h4>' + esc(scene.name) + '</h4></button>' +
+            '<p>Child of <strong>' + esc(group.name) + '</strong>' + (scene.issue ? " · " + esc(scene.issue) : "") + '</p>' +
+            '<div class="record-metadata">' + statusPill(status) + '<span class="page-chip">' + esc(scene.page) + '</span><span class="count-chip">' + scene.charts + ' charts</span><span class="count-chip">' + scene.frames + ' frames</span></div>' +
+          '</div>' + sceneActions(scene, group) +
+        '</article>';
+      }
+
+      function groupRecord(group) {
+        var expanded = state.expanded.has(group.id);
+        var status = statusOf(group);
+        var scenes = group.scenes;
+        return '<article class="group-record ' + status + " " + (state.selected === group.id ? "selected" : "") + '" data-object-id="' + esc(group.id) + '">' +
+          '<div class="group-head">' +
+            '<button class="disclosure" type="button" data-action="toggle-group" data-id="' + esc(group.id) + '" aria-expanded="' + expanded + '" aria-label="' + (expanded ? "Collapse " : "Expand ") + esc(group.name) + '" data-focus-key="toggle-' + esc(group.id) + '">' + (expanded ? "−" : "+") + '</button>' +
+            '<div><button class="record-title" type="button" data-action="select" data-id="' + esc(group.id) + '" data-focus-key="select-' + esc(group.id) + '"><strong>' + esc(group.name) + '</strong><span>Dashboard-wide Time Group · ' + esc(group.period) + '</span></button>' +
+              '<div class="record-metadata">' + statusPill(status) + '<span class="count-chip">' + group.charts + ' charts</span><span class="count-chip">' + group.frames + ' default frames</span><span class="count-chip">' + scenes.length + ' Scene' + (scenes.length === 1 ? "" : "s") + '</span><span class="count-chip">Saved ' + esc(group.saved) + '</span></div>' +
+            '</div>' + groupActions(group) +
+          '</div>' +
+          (expanded ? '<div class="group-details">' + issueRows(group) +
+            (scenes.length ? '<div class="scene-list">' + scenes.map(function (scene) { return sceneCard(scene, group); }).join("") + '</div>' :
+              '<div class="empty-state"><h3>No Scenes yet</h3><p>This ready Time Group remains usable in Default Chrono. Create a page-scoped Scene without changing its parent configuration.</p>' +
+                handoffButton("Create Scene", "Scene", group.id, "Sketch 006 · Stage 1 — Select charts and frames", "Page first · parent preselected when compatible", "create-scene") + '</div>') +
+          '</div>' : "") +
+        '</article>';
+      }
+
+      function noResults() {
+        var trueEmpty = groupsAll().length === 0;
+        return '<div class="empty-state"><h3>' + (trueEmpty ? "No saved Time Groups" : "No temporal content matches") + '</h3>' +
+          '<p>' + (trueEmpty ? "Create the first dashboard-wide Time Group, then add page-scoped Scenes from its saved membership." : "The saved library is unchanged. Clear the query or broaden the status and Page filters.") + '</p>' +
+          (trueEmpty ? handoffButton("Create Time Group", "Time Group", "new", "Sketch 005 · Choose period", "New Time Group draft", "create-group") :
+            '<button class="action-button" type="button" data-action="clear-filters">Clear filters</button>') +
+        '</div>';
+      }
+
+      function renderLedger() {
+        var groups = visibleGroups();
+        if (!groups.length) return noResults();
+        var sceneCount = groups.reduce(function (sum, group) { return sum + group.scenes.length; }, 0);
+        return '<div class="summary-line"><strong>' + groups.length + ' Time Groups</strong><span>·</span><span>' + sceneCount + ' matching Scenes</span><span>·</span><span>Time Groups are dashboard-wide; every Scene keeps its Page label.</span></div>' +
+          '<div class="ledger">' + groups.map(groupRecord).join("") + '</div>';
+      }
+
+      function renderShelfCard(scene, group) {
+        var status = statusOf(scene);
+        return '<article class="shelf-card ' + status + '">' +
+          '<div><span class="parent-chip">Time Group · ' + esc(group.name) + '</span>' + statusPill(status) + '</div>' +
+          '<h4>' + esc(scene.name) + '</h4><p>' + (scene.issue ? esc(scene.issue) : scene.charts + ' charts · ' + scene.frames + ' frames') + '</p>' +
+          sceneActions(scene, group) +
+        '</article>';
+      }
+
+      function renderShelfRelationship(group) {
+        var status = statusOf(group);
+        var pages = PAGES.map(function (page) {
+          return { page: page, scenes: group.scenes.filter(function (scene) { return scene.page === page; }) };
+        }).filter(function (entry) { return entry.scenes.length; });
+        return '<section class="shelf-relationship" aria-labelledby="shelf-relationship-title-' + esc(group.id) + '">' +
+          '<div class="relationship-head"><div><span class="relationship-kicker">Focused Time Group relationship</span>' +
+            '<h3 id="shelf-relationship-title-' + esc(group.id) + '">' + esc(group.name) + '</h3>' +
+            '<div class="record-metadata">' + statusPill(status) + '<span class="count-chip">' + esc(group.period) + '</span><span class="count-chip">' + group.charts + ' charts</span><span class="count-chip">' + group.frames + ' default frames</span><span class="count-chip">' + group.scenes.length + ' child Scene' + (group.scenes.length === 1 ? '' : 's') + '</span></div>' +
+            groupActions(group) + '</div>' +
+            '<button class="action-button relationship-close" type="button" data-action="clear-shelf-relationship" data-return-id="' + esc(group.id) + '" data-focus-key="relationship-close">Close relationship view</button></div>' +
+          issueRows(group) +
+          (pages.length ? '<div class="relationship-pages">' + pages.map(function (entry) {
+            return '<section class="relationship-page" aria-label="' + esc(entry.page) + ' Scenes"><div class="relationship-page-head"><h4>' + esc(entry.page) + '</h4><span>' + entry.scenes.length + ' Scene' + (entry.scenes.length === 1 ? '' : 's') + '</span></div>' +
+              '<div class="relationship-scenes">' + entry.scenes.map(function (scene) {
+                var sceneStatus = statusOf(scene);
+                return '<article class="relationship-scene ' + sceneStatus + '"><div>' + statusPill(sceneStatus) + '<h5>' + esc(scene.name) + '</h5><p>' + (scene.issue ? esc(scene.issue) : scene.charts + ' charts · ' + scene.frames + ' frames') + '</p></div>' + sceneActions(scene, group) + '</article>';
+              }).join('') + '</div></section>';
+          }).join('') + '</div>' : '<div class="empty-state"><h3>No child Scenes</h3><p>This Time Group is ready for Default Chrono and can become the parent of a new page-scoped Scene.</p>' + handoffButton('Create Scene', 'Scene', group.id, 'Sketch 006 · Stage 1 — Select charts and frames', 'Page first · parent preselected when compatible', 'create-scene') + '</div>') +
+        '</section>';
+      }
+
+      function renderShelf() {
+        var groups = visibleGroups();
+        if (!groups.length) return noResults();
+        var relationshipGroup = groupById(state.selected);
+        var scenes = [];
+        groups.forEach(function (group) {
+          group.scenes.forEach(function (scene) {
+            if (scene.page === state.shelfPage) scenes.push({ scene: scene, group: group });
+          });
+        });
+        return '<div class="summary-line"><strong>Page-first retrieval</strong><span>·</span><span>Every Scene still names its parent Time Group.</span></div>' +
+          '<div class="shelf-layout">' +
+            (relationshipGroup ? renderShelfRelationship(relationshipGroup) : '') +
+            '<section class="page-shelf" aria-labelledby="page-shelf-title">' +
+              '<div class="shelf-tabs" role="tablist" aria-label="Scene pages">' +
+                PAGES.map(function (page) { return '<button class="shelf-tab" type="button" data-action="shelf-page" data-value="' + esc(page) + '" aria-pressed="' + (state.shelfPage === page) + '">' + esc(page) + '</button>'; }).join("") +
+              '</div>' +
+              '<div class="shelf-heading"><h3 id="page-shelf-title">' + esc(state.shelfPage) + '</h3><span>' + scenes.length + ' Scenes</span></div>' +
+              (scenes.length ? '<div class="shelf-cards">' + scenes.map(function (entry) { return renderShelfCard(entry.scene, entry.group); }).join("") + '</div>' :
+                '<div class="empty-state"><h3>No Scenes on this Page</h3><p>Parent Time Groups remain dashboard-wide in the adjacent group index.</p></div>') +
+            '</section>' +
+            '<aside class="group-rail" aria-labelledby="group-index-title"><div class="rail-heading"><h3 id="group-index-title">Time Group index</h3><span>Dashboard-wide</span></div>' +
+              '<div class="group-rail-list">' + groups.slice(0, 12).map(function (group) {
+                return '<article class="rail-record ' + (state.selected === group.id ? 'selected' : '') + '">' + statusPill(statusOf(group)) + '<strong>' + esc(group.name) + '</strong><span>' + group.scenes.length + ' Scenes across ' + new Set(group.scenes.map(function (scene) { return scene.page; })).size + ' Pages</span>' +
+                  '<div class="record-actions"><button class="action-button" type="button" data-action="select-group-from-rail" data-id="' + esc(group.id) + '" data-focus-key="relationship-' + esc(group.id) + '">View Time Group &amp; Scenes</button>' +
+                  handoffButton("Create Scene", "Scene", group.id, "Sketch 006 · Stage 1 — Select charts and frames", "Page first · parent selected second", "create-scene") + '</div></article>';
+              }).join("") + '</div>' +
+            '</aside>' +
+          '</div>';
+      }
+
+      function queueItem(kind, item, group, issue) {
+        var title = kind === "Time Group" ? item.name : item.name;
+        var reason = issue ? issue.title : item.issue;
+        var stage = issue ? issue.stage : (item.stage || "Sketch 006 · Stage 1 — Select charts and frames");
+        var focus = issue ? issue.focus : (item.focus || "Affected control");
+        return '<article class="queue-item"><div><div class="record-metadata"><span class="parent-chip">' + esc(kind) + '</span>' +
+          (kind === "Scene" ? '<span class="page-chip">' + esc(item.page) + '</span><span class="parent-chip">Parent · ' + esc(group.name) + '</span>' : "") +
+          '</div><h4>' + esc(title) + '</h4><p>' + esc(reason) + '</p></div>' +
+          '<div class="queue-actions">' + blockedButton("Open in Chrono", "Repair is required before playback or Audience output.") +
+          handoffButton("Repair", kind, item.id, stage, focus, "repair", "repair") + '</div></article>';
+      }
+
+      function renderQueue() {
+        var groups = visibleGroups();
+        if (!groups.length) return noResults();
+        var attention = [];
+        var ready = [];
+        groups.forEach(function (group) {
+          if (statusOf(group) === "attention") {
+            if (group.issues.length) group.issues.forEach(function (issue) { attention.push(queueItem("Time Group", group, group, issue)); });
+            else attention.push(queueItem("Time Group", group, group, { title: "This Time Group needs repair.", stage: "Sketch 005 · Name and review", focus: "Saved summary" }));
+          } else ready.push({ kind: "Time Group", item: group, group: group });
+          group.scenes.forEach(function (scene) {
+            if (statusOf(scene) === "attention") attention.push(queueItem("Scene", scene, group));
+            else ready.push({ kind: "Scene", item: scene, group: group });
+          });
+        });
+        return '<div class="queue-layout">' +
+          '<section class="attention-queue" aria-labelledby="attention-title"><div class="queue-heading"><h3 id="attention-title">Needs attention</h3><span>' + attention.length + ' repair findings · playback blocked only for affected objects</span></div>' +
+            (attention.length ? '<div class="queue-list">' + attention.join("") + '</div>' :
+              '<div class="empty-state"><h3>No repairs needed</h3><p>The Ready library remains available below; an empty queue is not an empty catalogue.</p></div>') +
+          '</section>' +
+          '<section class="ready-catalogue" aria-labelledby="ready-title"><div class="queue-heading"><h3 id="ready-title">Ready library</h3><span>' + ready.length + ' saved objects</span></div>' +
+            '<div class="ready-grid">' + ready.slice(0, 18).map(function (entry) {
+              var item = entry.item;
+              return '<article class="ready-card">' + statusPill("ready") + '<h4>' + esc(item.name) + '</h4><p>' + (entry.kind === "Scene" ? esc(item.page) + ' · Child of ' + esc(entry.group.name) : 'Dashboard-wide Time Group · ' + item.scenes.length + ' Scenes') + '</p>' +
+                '<div class="record-actions">' +
+                  '<button class="action-button" type="button" data-action="launch" data-label="Opened ' + esc(item.name) + ' in View Chrono">Open</button>' +
+                  handoffButton("Edit", entry.kind, item.id, entry.kind === "Scene" ? "Sketch 006 · Stage 1 — Select charts and frames" : "Sketch 005 · Name and review", "Saved summary", "edit") +
+                '</div></article>';
+            }).join("") + '</div>' +
+          '</section>' +
+        '</div>';
+      }
+
+      function renderPageGrouped() {
+        var groups = visibleGroups();
+        if (!groups.length) return noResults();
+        var entries = groups.map(function (group, groupIndex) {
+          var scenes = group.scenes.map(function (scene, sceneIndex) {
+            return { scene: scene, sceneIndex: sceneIndex, attention: statusOf(scene) === "attention" };
+          }).filter(function (entry) { return entry.scene.page === state.shelfPage; });
+          if (!scenes.length) return null;
+          scenes.sort(function (a, b) { return Number(b.attention) - Number(a.attention) || a.sceneIndex - b.sceneIndex; });
+          var attentionScenes = scenes.filter(function (entry) { return entry.attention; }).length;
+          return {
+            group: group,
+            groupIndex: groupIndex,
+            scenes: scenes,
+            attentionScenes: attentionScenes,
+            elevated: statusOf(group) === "attention" || attentionScenes > 0
+          };
+        }).filter(Boolean);
+        entries.sort(function (a, b) { return Number(b.elevated) - Number(a.elevated) || a.groupIndex - b.groupIndex; });
+        var elevatedCount = entries.filter(function (entry) { return entry.elevated; }).length;
+        return '<div class="page-grouped-library">' +
+          '<div class="summary-line"><strong>' + esc(state.shelfPage) + '</strong><span>·</span><span>' + entries.length + ' Time Groups</span><span>·</span><span>' + elevatedCount + ' elevated for attention</span></div>' +
+          '<div class="shelf-tabs" role="tablist" aria-label="Time Groups by Scene Page">' +
+            PAGES.map(function (page) { return '<button class="shelf-tab" type="button" data-action="shelf-page" data-value="' + esc(page) + '" aria-pressed="' + (state.shelfPage === page) + '">' + esc(page) + '</button>'; }).join("") +
+          '</div>' +
+          (entries.length ? '<div class="page-group-list">' + entries.map(function (entry) {
+            var group = entry.group;
+            var priority = statusOf(group) === "attention" ? "Time Group needs attention" : entry.attentionScenes + ' Scene' + (entry.attentionScenes === 1 ? '' : 's') + ' need attention';
+            return '<section class="page-group-block ' + (entry.elevated ? 'elevated' : '') + '" aria-labelledby="page-group-' + esc(group.id) + '">' +
+              '<div class="page-group-header"><div>' + (entry.elevated ? '<span class="priority-label">Elevated · ' + esc(priority) + '</span>' : '') +
+                '<h3 id="page-group-' + esc(group.id) + '">' + esc(group.name) + '</h3><p>Dashboard-wide Time Group · ' + esc(group.period) + '</p>' +
+                '<div class="record-metadata">' + statusPill(statusOf(group)) + '<span class="count-chip">' + entry.scenes.length + ' Scene' + (entry.scenes.length === 1 ? '' : 's') + ' on this Page</span><span class="count-chip">' + group.scenes.length + ' total Scenes</span><span class="count-chip">' + group.charts + ' charts</span><span class="count-chip">' + group.frames + ' default frames</span></div></div>' +
+                groupActions(group) + '</div>' + issueRows(group) +
+              '<div class="page-group-scenes">' + entry.scenes.map(function (sceneEntry) {
+                var scene = sceneEntry.scene;
+                var sceneStatus = statusOf(scene);
+                return '<article class="page-group-scene ' + sceneStatus + '">' + statusPill(sceneStatus) + '<h4>' + esc(scene.name) + '</h4><p>' + (scene.issue ? esc(scene.issue) : 'Child Scene in ' + esc(scene.page)) + '</p>' +
+                  '<div class="record-metadata"><span class="count-chip">' + scene.charts + ' charts</span><span class="count-chip">' + scene.frames + ' frames</span></div>' + sceneActions(scene, group) + '</article>';
+              }).join("") + '</div></section>';
+          }).join("") + '</div>' : '<div class="empty-state"><h3>No Time Groups with Scenes on this Page</h3><p>The saved library is unchanged. Choose another Page or broaden the shared filters.</p></div>') +
+        '</div>';
+      }
+
+      function renderFilters() {
+        var activeDraft = state.activeDraft ? '<span class="draft-chip">Active temporal draft · ' + esc(state.activeDraft.label) + '</span>' : '<span class="draft-chip" style="border-color:var(--rule);background:var(--panel);color:var(--muted)">No temporal draft open</span>';
+        return '<div class="library-subhead"><span class="variant-name">' + (state.variant === "A" ? "A · Relationship Ledger" : state.variant === "B" ? "B · Page-first Scene Shelf" : state.variant === "C" ? "C · Attention Queue" : "D · Page-grouped Relationships") + '</span><span>One saved-content projection · one shared session</span>' + activeDraft + '</div>' +
+          '<div class="filter-bar">' +
+            '<div class="field"><label for="library-search">Search saved temporal content</label><input id="library-search" type="search" value="' + esc(state.query) + '" placeholder="Group, Scene, Page, chart, or issue" data-action="query" data-focus-key="search"></div>' +
+            '<div class="field"><label for="status-filter">Status</label><select id="status-filter" data-action="status-filter" data-focus-key="status-filter"><option value="all"' + (state.statusFilter === "all" ? " selected" : "") + '>All statuses</option><option value="ready"' + (state.statusFilter === "ready" ? " selected" : "") + '>Ready</option><option value="attention"' + (state.statusFilter === "attention" ? " selected" : "") + '>Needs attention</option></select></div>' +
+            '<div class="field"><label for="page-filter">Scene Page</label><select id="page-filter" data-action="page-filter" data-focus-key="page-filter"><option value="all"' + (state.pageFilter === "all" ? " selected" : "") + '>All Pages</option>' + PAGES.map(function (page) { return '<option value="' + esc(page) + '"' + (state.pageFilter === page ? " selected" : "") + '>' + esc(page) + '</option>'; }).join("") + '</select></div>' +
+            '<button class="primary filter-action" type="button" data-action="create-group" data-focus-key="create-group">Create Time Group</button>' +
+          '</div>';
+      }
+
+      function renderHandoff() {
+        var handoff = state.handoff;
+        if (!handoff) return "";
+        var object = handoff.kind === "Time Group" ? groupById(handoff.id) : sceneById(handoff.id);
+        var objectName = handoff.id === "new" ? "New Time Group" : handoff.kind === "Time Group" ? (object ? object.name : handoff.label) : (object ? object.scene.name : handoff.label);
+        var parent = handoff.kind === "Scene" && object ? object.group.name : "Dashboard-wide";
+        return '<div class="handoff-panel" aria-label="Approved authoring workflow handoff">' +
+          '<div class="handoff-head"><p>' + esc(handoff.kind) + ' authoring handoff</p><h3>' + esc(objectName) + '</h3></div>' +
+          '<div class="handoff-body"><p>This library routes to the approved authoring owner. It does not reproduce its controls.</p>' +
+            '<div class="handoff-stage"><strong>' + esc(handoff.stage) + '</strong><span>Focus target · ' + esc(handoff.focus || "Saved summary") + '</span></div>' +
+            '<div class="handoff-proof">' +
+              '<div class="proof-card"><strong>Object identity</strong><span>' + esc(handoff.kind) + ' · ' + esc(objectName) + '</span></div>' +
+              '<div class="proof-card"><strong>Relationship retained</strong><span>' + esc(parent) + '</span></div>' +
+              '<div class="proof-card"><strong>Return context</strong><span>Variant ' + state.variant + ', query, filters, expansion, scroll, and focus retained.</span></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="handoff-actions"><button type="button" data-action="handoff-return">Cancel and return to library</button><button class="primary" type="button" data-action="handoff-save">Simulate Save and return</button></div>' +
+        '</div>';
+      }
+
+      function renderLibraryBody() {
+        if (state.handoff) return renderHandoff();
+        if (state.variant === "A") return renderLedger();
+        if (state.variant === "B") return renderShelf();
+        if (state.variant === "C") return renderQueue();
+        return renderPageGrouped();
+      }
+
+      function renderModal() {
+        if (!state.dialog) return "";
+        if (state.dialog.type === "draft-conflict") {
+          return '<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">' +
+            '<div class="modal-head"><h3 id="modal-title">Another temporal draft is already open</h3></div>' +
+            '<div class="modal-body"><p><strong>' + esc(state.activeDraft.label) + '</strong> must be resolved before starting <strong>' + esc(state.pendingRequest.label) + '</strong>.</p><p>The requested action and current library position will be retained.</p></div>' +
+            '<div class="modal-actions"><button type="button" data-action="modal-cancel">Cancel</button><button type="button" data-action="return-active">Return to active draft</button><button type="button" data-action="discard-active">Discard active and continue</button><button class="primary" type="button" data-action="save-active">Save active and continue</button></div>' +
+          '</section></div>';
+        }
+        var target = state.dialog.kind === "group" ? groupById(state.dialog.id) : sceneById(state.dialog.id);
+        if (!target) return "";
+        if (state.dialog.kind === "group") {
+          var childNames = target.scenes.map(function (scene) { return '<li>' + esc(scene.name) + ' · ' + esc(scene.page) + '</li>'; }).join("");
+          return '<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="remove-title">' +
+            '<div class="modal-head"><h3 id="remove-title">Remove Time Group?</h3></div><div class="modal-body"><p><strong>' + esc(target.name) + '</strong> and every child Scene will be removed from the saved dashboard.</p>' +
+            (childNames ? '<ul class="consequence-list">' + childNames + '</ul>' : '<p class="empty-state">This Time Group has no child Scenes.</p>') +
+            '<p>Charts, data, Pages, and any currently running View/Present session remain unchanged.</p></div>' +
+            '<div class="modal-actions"><button type="button" data-action="modal-cancel">Cancel</button><button class="danger" type="button" data-action="confirm-remove">Remove Time Group and named Scenes</button></div></section></div>';
+        }
+        return '<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="remove-title">' +
+          '<div class="modal-head"><h3 id="remove-title">Remove Scene?</h3></div><div class="modal-body"><p>Remove <strong>' + esc(target.scene.name) + '</strong> from <strong>' + esc(target.group.name) + '</strong>?</p><p>The parent Time Group, sibling Scenes, charts, and live sessions remain unchanged.</p></div>' +
+          '<div class="modal-actions"><button type="button" data-action="modal-cancel">Cancel</button><button class="danger" type="button" data-action="confirm-remove">Remove Scene only</button></div></section></div>';
+      }
+
+      function renderLibrary() {
+        if (!state.libraryOpen || state.mode !== "build") return "";
+        var totalGroups = groupsAll().length;
+        var totalScenes = groupsAll().reduce(function (sum, group) { return sum + group.scenes.length; }, 0);
+        return '<div class="library-backdrop" aria-hidden="true"></div>' +
+          '<section class="library-layer" role="dialog" aria-modal="true" aria-labelledby="library-title">' +
+            '<header class="library-header"><div class="library-title"><p class="library-kicker">Saved temporal content</p><h2 id="library-title">Time Groups and Scenes</h2><p>Find relationships, understand readiness, and route to the approved authoring owner.</p></div>' +
+              '<div class="header-actions"><button class="primary" type="button" data-action="create-group">Create Time Group</button><button type="button" data-action="close-library" data-focus-key="close-library">Close</button></div></header>' +
+            renderFilters() +
+            '<div class="library-scroll" data-scroll-owner="library">' + renderLibraryBody() + '</div>' +
+            '<footer class="library-footer"><span><strong>' + totalGroups + '</strong> saved Time Groups · <strong>' + totalScenes + '</strong> child Scenes · saved content is independent from live Chrono and Present sessions.</span><button type="button" data-action="close-library">Return to Build</button></footer>' +
+          '</section>' + renderModal() + (state.toast ? '<div class="toast" role="status">' + esc(state.toast) + '</div>' : "");
+      }
+
+      function renderProduct() {
+        return '<div ' + viewportStyle() + '><div class="product-scroll">' + renderCrown() + renderDashboard() + renderLibrary() + '<div class="sr-only" role="status" aria-live="polite" id="live-status">' + esc(state.toast) + '</div></div></div>';
+      }
+
+      function render(focusKey) {
+        var previousScroll = document.querySelector(".library-scroll");
+        if (previousScroll) state.libraryScroll = previousScroll.scrollTop;
+        var active = document.activeElement;
+        var key = focusKey || (active && active.dataset ? active.dataset.focusKey : "") || state.lastFocus;
+        document.getElementById("app").innerHTML = '<div class="prototype">' + renderReviewRail() + '<main class="stage"><div class="viewport-frame">' + renderProduct() + '</div></main></div>';
+        var scroll = document.querySelector(".library-scroll");
+        if (scroll) scroll.scrollTop = state.libraryScroll;
+        if (key) {
+          requestAnimationFrame(function () {
+            var target = document.querySelector('[data-focus-key="' + CSS.escape(key) + '"]');
+            if (target) {
+              target.focus({ preventScroll: true });
+              if (target.matches("input")) {
+                var len = target.value.length;
+                target.setSelectionRange(len, len);
+              }
+            }
+          });
+        }
+        if (state.toast) {
+          window.clearTimeout(render.toastTimer);
+          render.toastTimer = window.setTimeout(function () {
+            state.toast = "";
+            render();
+          }, 2600);
+        }
+      }
+
+      function handoffPayload(button) {
+        var id = button.dataset.id;
+        var kind = button.dataset.kind;
+        var object = kind === "Time Group" ? groupById(id) : sceneById(id);
+        var label = id === "new" ? "New Time Group draft" : kind === "Time Group" ? (object ? object.name : id) : (object ? object.scene.name : id);
+        return {
+          kind: kind,
+          id: id,
+          label: label,
+          stage: button.dataset.stage,
+          focus: button.dataset.focus,
+          purpose: button.dataset.purpose || "edit"
+        };
+      }
+
+      function requestHandoff(payload) {
+        if (state.activeDraft) {
+          state.pendingRequest = payload;
+          state.dialog = { type: "draft-conflict" };
+        } else {
+          state.handoff = payload;
+        }
+        render();
+      }
+
+      function simulateSave(handoff) {
+        if (handoff.purpose === "repair") state.repaired.add(handoff.id);
+        if (handoff.purpose === "create-group") {
+          var id = "created-group-" + state.sequence++;
+          state.addedGroups.unshift({
+            id: id,
+            name: "New Time Group " + state.sequence,
+            status: "ready",
+            period: "1 Jan–31 Mar 2027",
+            charts: 2,
+            frames: 8,
+            saved: "Just now",
+            issues: [],
+            scenes: []
+          });
+          state.expanded.add(id);
+          state.selected = id;
+        }
+        if (handoff.purpose === "duplicate" && handoff.kind === "Time Group") {
+          var source = groupById(handoff.id);
+          if (source) {
+            var newGroupId = "copy-group-" + state.sequence++;
+            state.addedGroups.unshift(Object.assign({}, source, {
+              id: newGroupId,
+              name: "Copy of " + source.name,
+              saved: "Just now",
+              scenes: source.scenes.map(function (scene) {
+                return Object.assign({}, scene, { id: "copy-scene-" + state.sequence++ + "-" + scene.id, name: "Copy of " + scene.name });
+              })
+            }));
+            state.expanded.add(newGroupId);
+            state.selected = newGroupId;
+          }
+        }
+        if ((handoff.purpose === "duplicate" || handoff.purpose === "create-scene") && handoff.kind === "Scene") {
+          var sourceScene = sceneById(handoff.id);
+          var parentId = handoff.purpose === "create-scene" ? handoff.id : (sourceScene ? sourceScene.group.id : "winter");
+          var source = sourceScene ? sourceScene.scene : null;
+          var newSceneId = "created-scene-" + state.sequence++;
+          state.addedScenes.unshift({
+            id: newSceneId,
+            parentId: parentId,
+            name: source ? "Copy of " + source.name : "New Scene " + state.sequence,
+            page: source ? source.page : "Executive surveillance",
+            status: "ready",
+            charts: source ? source.charts : 2,
+            frames: source ? source.frames : 8,
+            issue: ""
+          });
+          state.expanded.add(parentId);
+          state.selected = newSceneId;
+        }
+        state.toast = handoff.purpose === "repair" ? "Repair saved. The object is Ready; library context retained." : "Saved through the approved authoring owner; library context retained.";
+      }
+
+      function clearFilters() {
+        state.query = "";
+        state.statusFilter = "all";
+        state.pageFilter = "all";
+      }
+
+      document.addEventListener("input", function (event) {
+        if (event.target.dataset.action === "query") {
+          state.query = event.target.value;
+          render("search");
+        }
+      });
+
+      document.addEventListener("change", function (event) {
+        if (event.target.dataset.action === "status-filter") {
+          state.statusFilter = event.target.value;
+          state.libraryScroll = 0;
+          render("status-filter");
+        }
+        if (event.target.dataset.action === "page-filter") {
+          state.pageFilter = event.target.value;
+          state.libraryScroll = 0;
+          render("page-filter");
+        }
+      });
+
+      document.addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+        if (!button) return;
+        var action = button.dataset.action;
+        if (!action) return;
+        state.lastFocus = button.dataset.focusKey || state.lastFocus;
+
+        if (action === "variant") {
+          state.variant = button.dataset.value;
+          render("variant-" + state.variant);
+          return;
+        }
+        if (action === "viewport") {
+          state.viewport = button.dataset.value;
+          render("viewport-" + state.viewport);
+          return;
+        }
+        if (action === "review-open" || action === "time-content") {
+          state.libraryOpen = !state.libraryOpen;
+          if (state.libraryOpen) state.mode = "build";
+          render(action === "time-content" ? "time-content" : "review-open");
+          return;
+        }
+        if (action === "close-library") {
+          state.libraryOpen = false;
+          render("time-content");
+          return;
+        }
+        if (action === "mode") {
+          var nextMode = button.dataset.value;
+          if (state.activeDraft && nextMode !== "build") {
+            state.toast = "The active temporal draft stays in Build. Resolve it before leaving.";
+          } else {
+            state.mode = nextMode;
+            if (nextMode !== "build") state.libraryOpen = false;
+          }
+          render();
+          return;
+        }
+        if (action === "switch-view") {
+          state.mode = "view";
+          state.libraryOpen = false;
+          state.toast = "Switched to supported phone View. Temporal state retained.";
+          render();
+          return;
+        }
+        if (action === "true-empty") {
+          state.trueEmpty = !state.trueEmpty;
+          state.libraryScroll = 0;
+          render("true-empty");
+          return;
+        }
+        if (action === "reset") {
+          var variant = state.variant;
+          var viewport = state.viewport;
+          state = {
+            variant: variant, viewport: viewport, mode: "build", libraryOpen: true, query: "", statusFilter: "all", pageFilter: "all",
+            shelfPage: "Executive surveillance", expanded: new Set(["winter", "may-tempo"]), selected: "march", removed: new Set(),
+            repaired: new Set(), addedGroups: [], addedScenes: [], handoff: null, activeDraft: null, pendingRequest: null, dialog: null,
+            trueEmpty: false, libraryScroll: 0, toast: "Shared fixture reset.", lastFocus: "reset", sequence: 1
+          };
+          render("reset");
+          return;
+        }
+        if (action === "toggle-group") {
+          var groupId = button.dataset.id;
+          if (state.expanded.has(groupId)) state.expanded.delete(groupId); else state.expanded.add(groupId);
+          render("toggle-" + groupId);
+          return;
+        }
+        if (action === "select") {
+          state.selected = button.dataset.id;
+          render("select-" + button.dataset.id);
+          return;
+        }
+        if (action === "shelf-page") {
+          state.shelfPage = button.dataset.value;
+          render();
+          return;
+        }
+        if (action === "select-group-from-rail") {
+          state.selected = button.dataset.id;
+          state.libraryScroll = 0;
+          render("relationship-close");
+          return;
+        }
+        if (action === "clear-shelf-relationship") {
+          var returnId = button.dataset.returnId;
+          state.selected = "";
+          render("relationship-" + returnId);
+          return;
+        }
+        if (action === "clear-filters") {
+          clearFilters();
+          render("search");
+          return;
+        }
+        if (action === "create-group") {
+          requestHandoff({ kind: "Time Group", id: "new", label: "New Time Group draft", stage: "Sketch 005 · Choose period", focus: "Inclusive period in Europe/Berlin", purpose: "create-group" });
+          return;
+        }
+        if (action === "request-handoff") {
+          requestHandoff(handoffPayload(button));
+          return;
+        }
+        if (action === "handoff-return") {
+          state.activeDraft = { label: state.handoff.label, handoff: state.handoff, valid: true };
+          state.handoff = null;
+          state.toast = "Authoring suspended. The active temporal draft is retained.";
+          render();
+          return;
+        }
+        if (action === "handoff-save") {
+          simulateSave(state.handoff);
+          state.handoff = null;
+          state.activeDraft = null;
+          render();
+          return;
+        }
+        if (action === "return-active") {
+          state.handoff = state.activeDraft.handoff;
+          state.dialog = null;
+          state.pendingRequest = null;
+          render();
+          return;
+        }
+        if (action === "discard-active" || action === "save-active") {
+          var requested = state.pendingRequest;
+          state.toast = action === "save-active" ? "Active draft saved; requested action opened." : "Active draft discarded; requested action opened.";
+          state.activeDraft = null;
+          state.pendingRequest = null;
+          state.dialog = null;
+          state.handoff = requested;
+          render();
+          return;
+        }
+        if (action === "modal-cancel") {
+          state.dialog = null;
+          state.pendingRequest = null;
+          render(state.lastFocus);
+          return;
+        }
+        if (action === "remove") {
+          state.dialog = { type: "remove", kind: button.dataset.kind, id: button.dataset.id };
+          render();
+          requestAnimationFrame(function () {
+            var cancel = document.querySelector('[data-action="modal-cancel"]');
+            if (cancel) cancel.focus();
+          });
+          return;
+        }
+        if (action === "confirm-remove") {
+          var removedDialog = state.dialog;
+          if (removedDialog.kind === "group") {
+            var removedGroup = groupById(removedDialog.id);
+            if (removedGroup) removedGroup.scenes.forEach(function (scene) { state.removed.add(scene.id); });
+            state.removed.add(removedDialog.id);
+            state.toast = "Time Group and its named child Scenes removed. Charts and live sessions unchanged.";
+          } else {
+            state.removed.add(removedDialog.id);
+            state.toast = "Scene removed. Parent Time Group and sibling Scenes unchanged.";
+          }
+          state.dialog = null;
+          render();
+          return;
+        }
+        if (action === "blocked") {
+          state.toast = button.dataset.reason;
+          render();
+          return;
+        }
+        if (action === "launch") {
+          state.toast = button.dataset.label + ". The saved library did not change.";
+          render();
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          if (state.dialog) {
+            state.dialog = null;
+            state.pendingRequest = null;
+            render(state.lastFocus);
+          } else if (state.handoff) {
+            state.activeDraft = { label: state.handoff.label, handoff: state.handoff, valid: true };
+            state.handoff = null;
+            state.toast = "Authoring suspended; draft retained.";
+            render();
+          } else if (state.libraryOpen) {
+            state.libraryOpen = false;
+            render("time-content");
+          }
+          return;
+        }
+        if (event.key === "Tab" && (state.dialog || state.libraryOpen)) {
+          var scope = state.dialog ? document.querySelector(".modal") : document.querySelector(".library-layer");
+          if (!scope) return;
+          var focusable = Array.from(scope.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]')).filter(function (node) {
+            return node.offsetParent !== null;
+          });
+          if (!focusable.length) return;
+          var first = focusable[0];
+          var last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
