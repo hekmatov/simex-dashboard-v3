@@ -1,0 +1,2474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 014 · View exploration and comparison</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --review-bg:#111722;
+      --review-surface:#192330;
+      --review-surface-2:#202c3b;
+      --review-rule:#33465a;
+      --review-ink:#f1f5f8;
+      --review-muted:#aab7c7;
+      --review-accent:#78dfc1;
+      --focus:#f0a85b;
+      --paper-outer:#eee9de;
+      --paper-canvas:#f7f2e8;
+      --paper-panel:#fffdf8;
+      --paper-panel-alt:#faf6ec;
+      --ink:#1d2529;
+      --ink-soft:#555a55;
+      --ink-faint:#6d7069;
+      --rule:#b7b0a2;
+      --rule-strong:#50595d;
+      --ui-accent:#2c383d;
+      --ui-accent-soft:#e8e4da;
+      --ui-on-accent:#fffdf8;
+      --selected:#744740;
+      --selected-soft:#f0e2dc;
+      --chrono:#62596b;
+      --chrono-soft:#e8e2e9;
+      --success:#4e6655;
+      --success-soft:#e1e8e1;
+      --warning:#7a6342;
+      --warning-soft:#eee7d8;
+      --error:#81514b;
+      --error-soft:#eee0dc;
+      --data-1:#667853;
+      --data-2:#8f704a;
+      --data-3:#61746f;
+      --data-4:#8b584e;
+      --data-5:#77657e;
+      --data-6:#7d7457;
+      --gridline:#ddd7cb;
+    }
+    * { box-sizing:border-box; }
+    html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+    body { background:var(--review-bg); color:var(--review-ink); }
+    button, input, select { font:inherit; }
+    button, select, input[type="checkbox"], input[type="range"] { cursor:pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline:3px solid var(--focus);
+      outline-offset:2px;
+    }
+    button:disabled, input:disabled, select:disabled { cursor:not-allowed; opacity:.48; }
+    .visually-hidden {
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      padding:0 !important;
+      margin:-1px !important;
+      overflow:hidden !important;
+      clip:rect(0 0 0 0) !important;
+      white-space:nowrap !important;
+      border:0 !important;
+    }
+    .prototype {
+      display:grid;
+      grid-template-columns:clamp(350px,25vw,470px) minmax(0,1fr);
+      width:100%;
+      height:100%;
+      overflow:hidden;
+    }
+    .review-rail {
+      height:100%;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      padding:22px 22px 34px;
+      border-right:1px solid var(--review-rule);
+      background:var(--review-bg);
+    }
+    .review-eyebrow {
+      color:var(--review-accent);
+      font-size:11px;
+      font-weight:850;
+      letter-spacing:.13em;
+      text-transform:uppercase;
+    }
+    .review-rail h1 {
+      margin:8px 0 8px;
+      max-width:390px;
+      font-size:25px;
+      line-height:1.08;
+      letter-spacing:-.025em;
+    }
+    .review-rail > p {
+      margin:0;
+      max-width:410px;
+      color:var(--review-muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+    .review-pills { display:flex; gap:7px; flex-wrap:wrap; margin:15px 0 20px; }
+    .review-pill {
+      padding:5px 9px;
+      border:1px solid #3e576d;
+      border-radius:999px;
+      color:#d9e4ee;
+      font-size:11px;
+    }
+    .review-pill.recommended { border-color:#3e8f76; background:#153c34; color:#c4f5e5; }
+    .review-group { margin-top:17px; padding-top:16px; border-top:1px solid var(--review-rule); }
+    .review-group h2 {
+      margin:0 0 9px;
+      color:#d2dce6;
+      font-size:11px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    .rail-grid { display:grid; gap:7px; }
+    .rail-grid.four { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .rail-button {
+      min-height:44px;
+      padding:8px 10px;
+      border:1px solid #3d5063;
+      border-radius:8px;
+      background:var(--review-surface);
+      color:#e6edf4;
+      text-align:left;
+      line-height:1.2;
+    }
+    .rail-button:hover { border-color:#71879d; background:var(--review-surface-2); }
+    .rail-button[aria-pressed="true"] {
+      border-color:var(--review-accent);
+      box-shadow:inset 0 0 0 1px var(--review-accent);
+      background:#203c3a;
+    }
+    .rail-button strong, .rail-button span { display:block; }
+    .rail-button strong { font-size:12px; }
+    .rail-button span { margin-top:3px; color:#9fb0c1; font-size:10px; }
+    .rail-button[aria-pressed="true"] span { color:#c4ede1; }
+    .variant-list { display:grid; gap:8px; }
+    .variant-button { padding:10px 11px; }
+    .review-note { margin:10px 0 0; color:var(--review-muted); font-size:12px; line-height:1.45; }
+    .state-ledger {
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:7px 12px;
+      margin:11px 0 0;
+      padding:12px;
+      border:1px solid #34485b;
+      border-radius:8px;
+      background:#151f2b;
+      font-size:11px;
+    }
+    .state-ledger dt { color:#9fb0c1; }
+    .state-ledger dd { margin:0; color:#f3f6f9; font-weight:800; text-align:right; }
+    .stage {
+      min-width:0;
+      height:100%;
+      overflow:auto;
+      overscroll-behavior:contain;
+      padding:24px;
+      background:
+        linear-gradient(45deg,rgba(255,255,255,.026) 25%,transparent 25%) 0 0/24px 24px,
+        linear-gradient(-45deg,rgba(255,255,255,.026) 25%,transparent 25%) 0 0/24px 24px,
+        #0b1018;
+    }
+    .viewport-frame { min-width:0; min-height:100%; display:flex; align-items:flex-start; justify-content:center; }
+    .product-window {
+      container:product / inline-size;
+      position:relative;
+      flex:none;
+      width:var(--viewport-w,100%);
+      height:var(--viewport-h,100%);
+      min-width:0;
+      overflow:hidden;
+      border:1px solid #526173;
+      border-radius:11px;
+      background:var(--paper-canvas);
+      color:var(--ink);
+      box-shadow:0 24px 70px rgba(0,0,0,.46);
+    }
+    .product-window.is-fit { width:100%; height:100%; min-height:720px; }
+    .product-scroll {
+      width:100%;
+      height:100%;
+      overflow:auto;
+      overscroll-behavior:contain;
+      scroll-padding-block:170px 94px;
+      background:var(--paper-canvas);
+    }
+    .product-root { min-width:0; min-height:100%; background:var(--paper-canvas); }
+
+    /* Approved Layered Command Crown. */
+    .modebar {
+      position:sticky;
+      z-index:40;
+      top:0;
+      display:flex;
+      align-items:center;
+      gap:18px;
+      min-height:52px;
+      height:52px;
+      padding:7px 18px;
+      border-bottom:1px solid var(--rule);
+      background:var(--paper-outer);
+      box-shadow:0 2px 8px rgba(40,35,28,.10);
+    }
+    .brand { display:inline-flex; align-items:center; gap:9px; font-weight:900; letter-spacing:-.02em; white-space:nowrap; }
+    .brand-mark {
+      display:grid;
+      place-items:center;
+      width:27px;
+      height:27px;
+      border-radius:6px;
+      background:var(--ui-accent);
+      color:var(--ui-on-accent);
+      font-size:12px;
+    }
+    .mode-switch, .utilities, .pages { display:flex; align-items:center; gap:4px; }
+    .utilities { margin-left:auto; }
+    .crown-button, .mode-button, .page-button, .context-button, .plain-button, .icon-button, .layout-button {
+      min-height:44px;
+      border:1px solid transparent;
+      border-radius:6px;
+      padding:8px 11px;
+      background:transparent;
+      color:inherit;
+      font-weight:760;
+    }
+    .mode-button:hover, .crown-button:hover, .page-button:hover, .context-button:hover, .plain-button:hover, .icon-button:hover, .layout-button:hover {
+      background:var(--paper-panel-alt);
+    }
+    .mode-button[aria-pressed="true"] { border-color:var(--ui-accent); background:var(--ui-accent); color:var(--ui-on-accent); }
+    .dashboard-row {
+      display:flex;
+      align-items:center;
+      gap:18px;
+      min-height:58px;
+      height:58px;
+      padding:7px 20px;
+      border-bottom:1px solid var(--rule);
+      background:var(--paper-panel);
+    }
+    .dashboard-identity { flex:none; min-width:280px; }
+    .dashboard-identity strong {
+      display:block;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      font:700 14px/1.2 Georgia,"Times New Roman",serif;
+    }
+    .dashboard-identity span { display:block; margin-top:2px; color:var(--ink-soft); font-size:10px; }
+    .pages { align-self:stretch; flex:1 1 auto; min-width:0; overflow:auto hidden; }
+    .page-panel-actions {
+      flex:none;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-left:auto;
+      padding-left:12px;
+      border-left:1px solid var(--rule);
+    }
+    .chrono-source-field { flex:none; display:block; }
+    .chrono-source-field select {
+      min-height:44px;
+      width:min(190px,28vw);
+      border:1px solid var(--rule);
+      border-radius:6px;
+      padding:7px 9px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+      font:750 11px/1.2 "Segoe UI",Arial,sans-serif;
+    }
+    .page-button { white-space:nowrap; color:var(--ink-soft); }
+    .page-button[aria-pressed="true"] { border-color:var(--rule); background:var(--paper-panel-alt); color:var(--ink); }
+    .context-strip {
+      position:relative;
+      z-index:30;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-height:52px;
+      height:52px;
+      padding:6px 20px;
+      border-bottom:1px solid var(--rule);
+      background:color-mix(in srgb,var(--ui-accent-soft) 65%,var(--paper-panel));
+    }
+    .context-label {
+      margin-right:6px;
+      color:var(--ui-accent);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    .context-button { border-color:var(--rule); background:var(--paper-panel); font-size:11px; }
+    .context-button.primary { border-color:var(--ui-accent); background:var(--ui-accent); color:var(--ui-on-accent); }
+    .context-spacer { flex:1; }
+    .scope-chip { color:var(--ink-soft); font-size:10px; font-weight:800; white-space:nowrap; }
+    .dashboard-page { padding:22px clamp(16px,3.2vw,46px) 42px; }
+    .page-heading, .comparison-heading {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:20px;
+      margin-bottom:18px;
+    }
+    .eyebrow { color:var(--selected); font-size:9px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+    .page-heading h1, .comparison-heading h1 {
+      margin:4px 0 0;
+      font:700 clamp(24px,2.4vw,35px)/1.05 Georgia,"Times New Roman",serif;
+      letter-spacing:-.025em;
+    }
+    .page-heading p, .comparison-heading p { margin:6px 0 0; max-width:760px; color:var(--ink-soft); font-size:12px; line-height:1.45; }
+    .time-chip {
+      flex:none;
+      padding:7px 11px;
+      border:1px solid var(--rule);
+      border-radius:999px;
+      background:var(--paper-panel);
+      color:var(--ink-soft);
+      font-size:10px;
+      font-weight:850;
+    }
+    .filter-bar {
+      display:grid;
+      grid-template-columns:minmax(155px,.8fr) minmax(220px,1.5fr) auto auto;
+      align-items:end;
+      gap:12px;
+      margin:0 0 22px;
+      padding:12px;
+      border:1px solid var(--rule);
+      background:var(--paper-panel);
+    }
+    .field { display:grid; gap:5px; color:var(--ink-soft); font-size:10px; font-weight:800; }
+    .field select {
+      width:100%;
+      min-height:44px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      padding:7px 9px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+    }
+    .time-field { grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+    .time-field label { grid-column:1/-1; }
+    .time-field input { width:100%; }
+    .time-field output { min-width:80px; color:var(--ink); text-align:right; }
+    .check-field {
+      min-height:44px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 9px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+      font-size:11px;
+      font-weight:750;
+    }
+    .check-field input { width:18px; height:18px; }
+    .section-rule { display:flex; align-items:center; gap:12px; margin:24px 0 12px; }
+    .section-rule h2 { margin:0; font-size:12px; letter-spacing:.09em; text-transform:uppercase; }
+    .section-rule::after { content:""; flex:1; height:1px; background:var(--rule); }
+    .dashboard-grid {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      grid-auto-rows:214px;
+      gap:14px;
+    }
+    .chart-card {
+      position:relative;
+      min-width:0;
+      overflow:hidden;
+      padding:14px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      background:var(--paper-panel);
+    }
+    .chart-card.span-2 { grid-column:span 2; }
+    .chart-card.span-4 { grid-column:span 4; }
+    .chart-card.selectable { padding-bottom:58px; }
+    .chart-card.is-selected { border-color:var(--selected); box-shadow:inset 0 0 0 2px var(--selected); background:var(--selected-soft); }
+    .chart-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-height:44px; }
+    .chart-kicker { color:var(--ink-soft); font-size:9px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+    .chart-card h3 { margin:3px 0 0; font:700 14px/1.2 Georgia,"Times New Roman",serif; }
+    .chart-actions { display:flex; gap:5px; flex:none; }
+    .chart-action {
+      min-height:44px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      padding:7px 9px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+      font-size:10px;
+      font-weight:850;
+    }
+    .chart-action.select { min-width:82px; }
+    .chart-action[aria-pressed="true"] { border-color:var(--selected); background:var(--selected); color:#fff; }
+    .selection-order {
+      display:inline-grid;
+      place-items:center;
+      width:24px;
+      height:24px;
+      margin-right:5px;
+      border-radius:50%;
+      background:#fff;
+      color:var(--selected);
+      font-weight:950;
+    }
+    .chart-summary { display:flex; align-items:baseline; gap:9px; margin:9px 0 0; }
+    .metric { color:var(--ink); font-size:24px; font-weight:900; letter-spacing:-.04em; }
+    .delta { color:var(--ink-soft); font-size:10px; font-weight:800; }
+    .plot { position:relative; height:98px; margin-top:8px; overflow:hidden; }
+    .plot svg { width:100%; height:100%; overflow:visible; }
+    .grid-line { stroke:var(--gridline); stroke-width:1; }
+    .series-fill { fill:color-mix(in srgb,var(--data-3) 15%,transparent); }
+    .series-line { fill:none; stroke:var(--data-3); stroke-width:3; vector-effect:non-scaling-stroke; }
+    .series-line.alt { stroke:var(--data-4); stroke-width:2; }
+    .bar { fill:var(--data-1); }
+    .bar.alt { fill:var(--data-2); }
+    .map {
+      height:94px;
+      display:grid;
+      grid-template-columns:repeat(10,minmax(0,1fr));
+      grid-auto-rows:1fr;
+      gap:3px;
+      margin-top:8px;
+    }
+    .map i { border:1px solid color-mix(in srgb,var(--data-3) 70%,var(--paper-panel)); background:color-mix(in srgb,var(--data-3) var(--strength),var(--paper-panel)); }
+    .donut-plot {
+      width:88px;
+      height:88px;
+      margin:8px auto 0;
+      border-radius:50%;
+      background:conic-gradient(var(--data-1) 0 41%,var(--data-2) 41% 69%,var(--data-5) 69% 87%,var(--paper-panel-alt) 87%);
+    }
+    .donut-plot::after {
+      content:"87%";
+      position:absolute;
+      inset:18px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:var(--paper-panel);
+      font-size:12px;
+      font-weight:900;
+    }
+    .bullet-list { display:grid; gap:10px; margin-top:14px; }
+    .bullet-row { display:grid; grid-template-columns:58px minmax(0,1fr) 36px; align-items:center; gap:7px; font-size:9px; }
+    .bullet-track { position:relative; height:13px; background:var(--paper-panel-alt); border:1px solid var(--rule); }
+    .bullet-fill { width:var(--fill); height:100%; background:var(--data-1); }
+    .bullet-target { position:absolute; top:-4px; bottom:-4px; left:var(--target); width:2px; background:var(--ink); }
+    .chart-foot {
+      position:absolute;
+      right:14px;
+      bottom:10px;
+      left:14px;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      color:var(--ink-soft);
+      font-size:9px;
+    }
+    .chart-card:has(.chart-hover-actions) { padding-bottom:62px; }
+    .chart-hover-actions {
+      position:absolute;
+      z-index:10;
+      right:10px;
+      bottom:10px;
+      display:flex;
+      gap:8px;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(5px);
+      transition:opacity 140ms ease,transform 140ms ease;
+    }
+    .chart-card:hover > .chart-hover-actions,
+    .chart-card:focus-within > .chart-hover-actions,
+    .chart-card.is-selected > .chart-hover-actions {
+      opacity:1;
+      pointer-events:auto;
+      transform:translateY(0);
+    }
+    .chart-hover-actions .chart-action {
+      min-width:72px;
+      background:color-mix(in srgb,var(--paper-panel) 94%,transparent);
+      box-shadow:0 6px 18px rgba(45,38,29,.17);
+      backdrop-filter:blur(8px);
+    }
+    .page-footer {
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+      margin-top:28px;
+      padding-top:16px;
+      border-top:1px solid var(--rule);
+      color:var(--ink-soft);
+      font-size:10px;
+    }
+    .selection-dock {
+      position:sticky;
+      z-index:45;
+      bottom:0;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-height:76px;
+      padding:10px clamp(16px,3vw,42px);
+      border-top:1px solid var(--rule-strong);
+      background:color-mix(in srgb,var(--paper-panel) 94%,transparent);
+      box-shadow:0 -12px 35px rgba(45,38,29,.15);
+      backdrop-filter:blur(8px);
+    }
+    .dock-count { min-width:140px; }
+    .dock-count strong { display:block; font:700 15px/1.2 Georgia,"Times New Roman",serif; }
+    .dock-count span { display:block; margin-top:3px; color:var(--ink-soft); font-size:10px; }
+    .dock-chips { display:flex; gap:5px; min-width:0; flex:1; overflow:auto hidden; }
+    .dock-chip {
+      flex:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-height:36px;
+      padding:5px 8px;
+      border:1px solid var(--selected);
+      border-radius:999px;
+      background:var(--selected-soft);
+      color:var(--selected);
+      font-size:10px;
+      font-weight:850;
+    }
+    .dock-actions { display:flex; gap:7px; }
+    .solid-button {
+      min-height:44px;
+      padding:8px 14px;
+      border:1px solid var(--ui-accent);
+      border-radius:6px;
+      background:var(--ui-accent);
+      color:var(--ui-on-accent);
+      font-weight:850;
+    }
+    .secondary-button {
+      min-height:44px;
+      padding:8px 14px;
+      border:1px solid var(--rule-strong);
+      border-radius:6px;
+      background:var(--paper-panel);
+      color:var(--ink);
+      font-weight:850;
+    }
+    .limit-alert { color:var(--error); font-size:11px; font-weight:900; }
+
+    /* Shared comparison controls and layouts. */
+    .comparison-shell { min-height:100%; padding:22px clamp(16px,3vw,40px) 42px; background:var(--paper-canvas); }
+    .comparison-toolbar {
+      position:sticky;
+      z-index:24;
+      top:0;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:0 0 14px;
+      padding:10px;
+      border:1px solid var(--rule);
+      background:color-mix(in srgb,var(--paper-panel) 95%,transparent);
+      backdrop-filter:blur(8px);
+    }
+    .ordered-chips { display:flex; gap:5px; min-width:160px; flex:1; overflow:auto hidden; }
+    .ordered-chip {
+      flex:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-height:34px;
+      padding:5px 8px;
+      border:1px solid var(--rule);
+      border-radius:999px;
+      background:var(--paper-panel-alt);
+      font-size:9px;
+      font-weight:850;
+    }
+    .ordered-chip b {
+      display:grid;
+      place-items:center;
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      background:var(--selected);
+      color:#fff;
+    }
+    .layout-control { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+    .layout-label { color:var(--ink-soft); font-size:9px; font-weight:900; text-transform:uppercase; }
+    .layout-button { min-height:36px; padding:6px 8px; border-color:var(--rule); background:var(--paper-panel); font-size:9px; }
+    .layout-button[aria-pressed="true"] { border-color:var(--selected); background:var(--selected-soft); color:var(--selected); }
+    .comparison-grid { display:grid; gap:14px; min-width:0; }
+    .comparison-grid.count-1 { grid-template-columns:minmax(0,860px); justify-content:center; }
+    .comparison-grid.count-2.layout-side-by-side { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .comparison-grid.count-2.layout-over-under { grid-template-columns:minmax(0,1fr); }
+    .comparison-grid.count-3 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .comparison-grid.count-3.layout-focus-top .compare-item.focus { grid-column:1/-1; }
+    .comparison-grid.count-3.layout-focus-bottom .compare-item.focus { grid-column:1/-1; order:4; }
+    .comparison-grid.count-3.layout-focus-left { grid-template-columns:1.35fr 1fr; }
+    .comparison-grid.count-3.layout-focus-left .compare-item.focus { grid-row:span 2; }
+    .comparison-grid.count-3.layout-focus-right { grid-template-columns:1fr 1.35fr; }
+    .comparison-grid.count-3.layout-focus-right .compare-item.focus { grid-column:2; grid-row:span 2; }
+    .comparison-grid.count-4 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .compare-item {
+      min-width:0;
+      min-height:300px;
+      display:flex;
+      flex-direction:column;
+      padding:14px;
+      border:1px solid var(--rule);
+      background:var(--paper-panel);
+    }
+    .compare-item.focus { border-color:var(--selected); box-shadow:inset 0 0 0 1px var(--selected); }
+    .compare-item .plot, .compare-item .map { flex:1; min-height:150px; height:auto; }
+    .compare-item .chart-foot { position:static; margin-top:10px; }
+    .compare-order { display:grid; place-items:center; flex:none; width:26px; height:26px; border-radius:50%; background:var(--selected); color:#fff; font-size:11px; font-weight:950; }
+    .compare-card-actions {
+      display:flex;
+      flex-wrap:wrap;
+      gap:5px;
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px solid var(--rule);
+    }
+    .small-button {
+      min-height:40px;
+      padding:6px 9px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+      font-size:9px;
+      font-weight:850;
+    }
+    .small-button.remove { margin-left:auto; color:var(--error); border-color:color-mix(in srgb,var(--error) 55%,var(--rule)); }
+
+    /* The four containment candidates. */
+    .workspace-header {
+      padding:18px clamp(16px,3vw,40px) 0;
+      background:var(--paper-canvas);
+    }
+    .workspace-header + .comparison-shell { padding-top:0; }
+    .gallery-layer {
+      position:absolute;
+      z-index:80;
+      inset:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      background:var(--paper-canvas);
+      color:var(--ink);
+    }
+    .gallery-head {
+      flex:none;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-height:68px;
+      padding:10px 18px;
+      border-bottom:1px solid var(--rule-strong);
+      background:var(--paper-panel);
+    }
+    .gallery-head .gallery-title { min-width:0; flex:1; }
+    .gallery-head h1 { margin:0; font:700 22px/1.15 Georgia,"Times New Roman",serif; }
+    .gallery-head p { margin:4px 0 0; color:var(--ink-soft); font-size:10px; }
+    .gallery-scroll { min-height:0; flex:1; overflow:auto; overscroll-behavior:contain; scroll-padding-block:74px; }
+    .comparison-lift {
+      margin:0 clamp(16px,3vw,40px) 26px;
+      border:1px solid var(--rule-strong);
+      background:var(--paper-panel-alt);
+      box-shadow:0 14px 30px rgba(45,38,29,.12);
+    }
+    .comparison-lift .comparison-shell { padding:16px; background:transparent; }
+    .lift-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(250px,320px); gap:14px; align-items:start; }
+    .lift-evidence { position:sticky; top:12px; }
+    .ordinary-below {
+      margin-top:16px;
+      padding-top:18px;
+      border-top:1px dashed var(--rule-strong);
+    }
+    .ordinary-below-label {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+      color:var(--ink-soft);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .ordinary-below-label::after { content:""; flex:1; height:1px; background:var(--rule); }
+
+    /* D — production-aligned hover actions and immersive chart canvas. */
+    .d-filter-bar { grid-template-columns:minmax(155px,.8fr) minmax(220px,1.5fr) auto; }
+    .d-selection-dock {
+      position:absolute;
+      z-index:92;
+      right:auto;
+      bottom:14px;
+      left:50%;
+      width:min(520px,calc(100% - 24px));
+      min-height:64px;
+      padding:8px 9px 8px 12px;
+      border:1px solid var(--rule-strong);
+      border-radius:11px;
+      background:color-mix(in srgb,var(--paper-panel) 96%,transparent);
+      box-shadow:0 14px 38px rgba(40,34,28,.24);
+      backdrop-filter:blur(10px);
+      transform:translateX(-50%);
+    }
+    .d-selection-dock .dock-count { min-width:0; flex:1; }
+    .d-selection-dock .dock-actions { flex:none; }
+    .d-chrono-playback {
+      position:absolute;
+      z-index:90;
+      right:14px;
+      left:14px;
+      display:grid;
+      grid-template-columns:minmax(190px,.8fr) minmax(300px,1.5fr) auto minmax(104px,.35fr);
+      align-items:end;
+      gap:12px;
+      min-height:108px;
+      padding:11px 12px;
+      border:2px solid var(--chrono);
+      background:color-mix(in srgb,var(--paper-panel) 97%,transparent);
+      box-shadow:0 18px 45px rgba(40,34,28,.25);
+      color:var(--ink);
+      backdrop-filter:blur(8px);
+    }
+    .d-chrono-playback.is-bottom { bottom:12px; }
+    .d-chrono-playback.is-top { top:122px; }
+    .d-chrono-playback::before {
+      content:"View · Chrono";
+      position:absolute;
+      z-index:2;
+      top:-23px;
+      left:10px;
+      padding:3px 7px;
+      background:var(--chrono);
+      color:var(--ui-on-accent);
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    .d-chrono-status { min-width:0; align-self:center; }
+    .d-chrono-status strong {
+      display:block;
+      overflow:hidden;
+      font:700 15px/1.2 Georgia,"Times New Roman",serif;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .d-chrono-status span { display:block; margin-top:5px; color:var(--chrono); font-size:10px; font-weight:850; }
+    .d-chrono-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; align-self:center; }
+    .d-chrono-transport { display:flex; gap:5px; }
+    .d-chrono-button {
+      display:inline-grid;
+      place-items:center;
+      min-width:44px;
+      min-height:44px;
+      padding:7px 9px;
+      border:1px solid var(--rule-strong);
+      border-radius:2px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+      font-size:10px;
+      font-weight:850;
+    }
+    .d-chrono-button:hover { background:var(--chrono-soft); }
+    .d-chrono-button.play { border-color:var(--chrono); background:var(--chrono); color:var(--ui-on-accent); }
+    .d-chrono-button.text { min-width:max-content; padding-inline:11px; }
+    .d-chrono-button svg { width:19px; height:19px; fill:currentColor; }
+    .d-chrono-track { min-width:0; align-self:end; }
+    .d-chrono-track-meta { display:flex; justify-content:space-between; gap:8px; margin-bottom:2px; color:var(--ink-soft); font-size:9px; font-weight:800; }
+    .d-chrono-range-shell { position:relative; min-width:0; padding:0 7px 10px; }
+    .d-chrono-range { position:relative; z-index:2; width:100%; min-height:34px; margin:0; accent-color:var(--chrono); cursor:pointer; }
+    .d-chrono-ticks { position:absolute; z-index:1; right:14px; bottom:4px; left:14px; height:10px; pointer-events:none; }
+    .d-chrono-tick {
+      position:absolute;
+      bottom:0;
+      left:var(--tick);
+      width:2px;
+      height:6px;
+      background:var(--rule-strong);
+      transform:translateX(-50%);
+    }
+    .d-chrono-tick.current { width:3px; height:10px; background:var(--chrono); }
+    .d-chrono-speed { display:grid; gap:4px; min-width:150px; color:var(--ink-soft); font-size:9px; font-weight:900; text-transform:uppercase; }
+    .d-chrono-number-wrap { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; min-height:44px; border:1px solid var(--rule-strong); border-radius:2px; background:var(--paper-panel-alt); }
+    .d-chrono-number-wrap input { min-width:0; width:100%; padding:7px 8px; border:0; background:transparent; color:var(--ink); font:inherit; font-weight:800; }
+    .d-chrono-number-wrap span { padding:0 8px; color:var(--ink-soft); font-size:10px; text-transform:none; }
+    .d-chrono-speed small { color:var(--ink-faint); font-size:9px; font-weight:700; text-transform:none; }
+    .d-chrono-playback.is-bottom ~ .toast { bottom:136px; }
+    .dashboard-page.chrono-view-active { padding-bottom:165px; }
+    .chrono-date-modal {
+      position:absolute;
+      z-index:94;
+      display:grid;
+      place-items:center;
+      min-width:170px;
+      min-height:72px;
+      max-width:calc(100% - 16px);
+      max-height:calc(100% - 16px);
+      overflow:hidden;
+      border:2px solid var(--chrono);
+      border-radius:4px;
+      background:color-mix(in srgb,var(--paper-panel) 97%,transparent);
+      box-shadow:0 12px 30px rgba(40,34,28,.22);
+      color:var(--ink);
+      touch-action:none;
+    }
+    .chrono-date-value {
+      width:100%;
+      height:100%;
+      display:grid;
+      place-items:center;
+      padding:18px 28px;
+      cursor:move;
+      user-select:none;
+      font:700 var(--chrono-date-font-size,26px)/1 Georgia,"Times New Roman",serif;
+      white-space:nowrap;
+    }
+    .chrono-date-value:active { cursor:grabbing; }
+    .chrono-date-resize {
+      position:absolute;
+      right:0;
+      bottom:0;
+      width:36px;
+      height:36px;
+      padding:0;
+      border:0;
+      background:transparent;
+      cursor:nwse-resize;
+    }
+    .chrono-date-resize::after {
+      content:"";
+      position:absolute;
+      right:7px;
+      bottom:7px;
+      width:12px;
+      height:12px;
+      border-right:3px double var(--chrono);
+      border-bottom:3px double var(--chrono);
+    }
+    .chrono-date-value:focus-visible,
+    .chrono-date-resize:focus-visible { outline:3px solid var(--focus); outline-offset:-4px; }
+
+    .d-comparison-layer {
+      position:absolute;
+      z-index:96;
+      inset:0;
+      overflow:hidden;
+      background:var(--paper-canvas);
+      color:var(--ink);
+    }
+    .d-comparison-toolbar {
+      position:absolute;
+      z-index:4;
+      top:12px;
+      left:50%;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      max-width:calc(100% - 24px);
+      padding:7px;
+      border:1px solid var(--rule-strong);
+      border-radius:9px;
+      background:color-mix(in srgb,var(--paper-panel) 95%,transparent);
+      box-shadow:0 8px 26px rgba(45,38,29,.19);
+      backdrop-filter:blur(10px);
+      transform:translateX(-50%);
+    }
+    .d-comparison-grid {
+      position:absolute;
+      inset:0;
+      display:grid;
+      gap:12px;
+      min-width:0;
+      padding:72px 12px 12px;
+    }
+    .d-comparison-grid.count-1 { grid-template-columns:minmax(0,1fr); }
+    .d-comparison-grid.count-2.layout-side-by-side { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .d-comparison-grid.count-2.layout-over-under { grid-template-columns:minmax(0,1fr); grid-template-rows:repeat(2,minmax(0,1fr)); }
+    .d-comparison-grid.count-3 { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); }
+    .d-comparison-grid.count-3.layout-focus-top .d-compare-item.focus { grid-column:1/-1; }
+    .d-comparison-grid.count-3.layout-focus-bottom .d-compare-item.focus { grid-column:1/-1; order:4; }
+    .d-comparison-grid.count-3.layout-focus-left { grid-template-columns:1.35fr 1fr; }
+    .d-comparison-grid.count-3.layout-focus-left .d-compare-item.focus { grid-row:span 2; }
+    .d-comparison-grid.count-3.layout-focus-right { grid-template-columns:1fr 1.35fr; }
+    .d-comparison-grid.count-3.layout-focus-right .d-compare-item.focus { grid-column:2; grid-row:span 2; }
+    .d-comparison-grid.count-4 { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); }
+    .d-compare-item {
+      position:relative;
+      min-width:0;
+      min-height:0;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      padding:14px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      background:var(--paper-panel);
+      cursor:grab;
+    }
+    .d-compare-item:active { cursor:grabbing; }
+    .d-compare-item:focus-visible { outline:3px solid var(--focus); outline-offset:-4px; }
+    .d-compare-item.is-dragging { opacity:.52; }
+    .d-compare-item.is-drop-target { border-color:var(--selected); box-shadow:inset 0 0 0 3px var(--selected); }
+    .d-compare-item h2 {
+      flex:none;
+      margin:0 0 8px;
+      font:700 clamp(14px,1.5vw,20px)/1.2 Georgia,"Times New Roman",serif;
+    }
+    .d-compare-item .plot,
+    .d-compare-item .map,
+    .d-compare-item .bullet-list {
+      flex:1;
+      min-height:0;
+      height:auto;
+    }
+    .d-compare-item .map { grid-auto-rows:minmax(0,1fr); }
+    @media (hover:none) {
+      .chart-hover-actions { opacity:1; pointer-events:auto; transform:none; }
+    }
+
+    /* Shared evidence content. */
+    .evidence-layer {
+      position:absolute;
+      z-index:88;
+      inset:0;
+      pointer-events:none;
+      display:flex;
+      justify-content:flex-end;
+    }
+    .evidence-panel {
+      pointer-events:auto;
+      width:min(420px,94%);
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      border-left:1px solid var(--rule-strong);
+      background:var(--paper-panel);
+      color:var(--ink);
+      box-shadow:-18px 0 48px rgba(40,34,28,.20);
+    }
+    .evidence-panel.in-flow {
+      width:100%;
+      height:auto;
+      border:1px solid var(--rule);
+      box-shadow:none;
+    }
+    .evidence-head {
+      position:relative;
+      flex:none;
+      padding:14px 62px 12px 15px;
+      border-bottom:1px solid var(--rule);
+      background:var(--paper-panel-alt);
+    }
+    .evidence-head h2 { margin:4px 0 0; font:700 18px/1.2 Georgia,"Times New Roman",serif; }
+    .evidence-close { position:absolute; top:8px; right:8px; width:44px; min-height:44px; border:1px solid var(--rule); border-radius:5px; background:var(--paper-panel); color:var(--ink); font-size:18px; }
+    .evidence-tabs { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:10px 12px 0; }
+    .evidence-tab {
+      min-height:44px;
+      border:1px solid var(--rule);
+      border-radius:5px 5px 0 0;
+      background:var(--paper-panel-alt);
+      color:var(--ink-soft);
+      font-size:10px;
+      font-weight:850;
+    }
+    .evidence-tab[aria-selected="true"] { border-bottom-color:var(--paper-panel); background:var(--paper-panel); color:var(--selected); }
+    .evidence-body { min-height:0; flex:1; overflow-y:auto; padding:14px; }
+    .evidence-ledger { display:grid; grid-template-columns:112px minmax(0,1fr); gap:10px 12px; margin:0; font-size:11px; line-height:1.45; }
+    .evidence-ledger dt { color:var(--ink-soft); }
+    .evidence-ledger dd { margin:0; font-weight:750; overflow-wrap:anywhere; }
+    .evidence-note { margin:14px 0 0; padding:11px; border-left:3px solid var(--selected); background:var(--selected-soft); color:var(--ink-soft); font-size:10px; line-height:1.45; }
+
+    /* Chrono is the same retained session from either comparison. */
+    .chrono-layer {
+      position:absolute;
+      z-index:92;
+      inset:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      background:var(--paper-canvas);
+      color:var(--ink);
+    }
+    .chrono-mast, .chrono-deck {
+      flex:none;
+      border-color:var(--rule-strong);
+      background:var(--paper-panel);
+      box-shadow:0 10px 30px rgba(39,33,27,.15);
+    }
+    .chrono-mast { order:0; border-bottom:1px solid var(--rule-strong); }
+    .chrono-deck { order:2; border-top:1px solid var(--rule-strong); }
+    .chrono-content { min-height:0; flex:1; order:1; overflow:auto; padding:22px clamp(16px,3vw,42px); }
+    .chrono-bar {
+      display:grid;
+      grid-template-columns:minmax(190px,.8fr) minmax(240px,1.5fr) auto auto;
+      align-items:center;
+      gap:14px;
+      min-height:108px;
+      padding:12px 18px;
+    }
+    .chrono-status strong { display:block; font:700 16px/1.2 Georgia,"Times New Roman",serif; }
+    .chrono-status span { display:block; margin-top:4px; color:var(--chrono); font-size:10px; font-weight:850; }
+    .chrono-seek { display:grid; grid-template-columns:1fr auto; align-items:center; gap:7px; }
+    .chrono-seek label { grid-column:1/-1; color:var(--ink-soft); font-size:9px; font-weight:900; text-transform:uppercase; }
+    .chrono-seek input { width:100%; }
+    .chrono-controls { display:flex; gap:5px; }
+    .chrono-button {
+      min-height:44px;
+      border:1px solid var(--rule);
+      border-radius:5px;
+      padding:7px 10px;
+      background:var(--paper-panel-alt);
+      color:var(--ink);
+      font-weight:850;
+    }
+    .chrono-card {
+      max-width:880px;
+      margin:0 auto;
+      padding:22px;
+      border:1px solid var(--rule);
+      background:var(--paper-panel);
+    }
+    .chrono-card h1 { margin:5px 0; font:700 30px/1.08 Georgia,"Times New Roman",serif; }
+    .chrono-card p { color:var(--ink-soft); line-height:1.55; }
+    .retained-banner { margin-top:16px; padding:11px 12px; border:1px solid var(--chrono); background:var(--chrono-soft); color:var(--chrono); font-size:11px; font-weight:850; }
+    .chrono-preview-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:18px; }
+    .chrono-preview { min-height:150px; padding:12px; border:1px solid var(--rule); background:var(--paper-panel-alt); }
+    .chrono-preview strong { font:700 13px/1.2 Georgia,"Times New Roman",serif; }
+
+    .toast {
+      position:absolute;
+      z-index:110;
+      right:18px;
+      bottom:18px;
+      max-width:min(420px,calc(100% - 36px));
+      padding:11px 14px;
+      border:1px solid var(--rule-strong);
+      border-radius:6px;
+      background:var(--ui-accent);
+      color:var(--ui-on-accent);
+      box-shadow:0 12px 34px rgba(0,0,0,.25);
+      font-size:11px;
+      font-weight:850;
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *, *::before, *::after { scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+    }
+    @container product (max-width: 1023px) {
+      .dashboard-identity { min-width:210px; }
+      .dashboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .chart-card.span-4 { grid-column:span 2; }
+      .filter-bar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .d-filter-bar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .lift-grid { grid-template-columns:minmax(0,1fr); }
+      .lift-evidence { position:static; }
+      .chrono-bar { grid-template-columns:1fr 1.4fr; }
+      .d-chrono-playback { grid-template-columns:minmax(160px,.72fr) minmax(250px,1.4fr); }
+      .d-chrono-actions { grid-column:1; grid-row:2; justify-content:flex-start; }
+      .d-chrono-speed { grid-column:2; grid-row:2; justify-self:end; }
+    }
+    @container product (max-width: 767px) {
+      .modebar { position:static; height:auto; min-height:54px; gap:8px; padding:6px 10px; }
+      .brand span:last-child, .utilities .optional { display:none; }
+      .mode-switch { margin-left:auto; }
+      .mode-button { min-width:58px; padding-inline:8px; }
+      .dashboard-row { height:auto; min-height:100px; align-items:flex-start; flex-wrap:wrap; gap:4px 8px; padding:8px 10px; }
+      .dashboard-identity { min-width:0; width:100%; }
+      .pages { width:100%; order:2; }
+      .page-panel-actions { width:100%; order:3; justify-content:flex-end; border-left:0; padding-left:0; }
+      .page-panel-actions .context-button { flex:0 0 auto; }
+      .chrono-source-field { flex:1 1 150px; }
+      .chrono-source-field select { width:100%; max-width:none; }
+      .context-strip { height:auto; min-height:54px; flex-wrap:wrap; padding:6px 10px; }
+      .context-spacer, .scope-chip { display:none; }
+      .context-button { flex:1; min-width:118px; }
+      .dashboard-page, .comparison-shell { padding:16px 12px 28px; }
+      .workspace-header { padding:15px 12px 0; }
+      .page-heading, .comparison-heading { display:block; }
+      .time-chip { display:inline-block; margin-top:10px; }
+      .filter-bar { grid-template-columns:minmax(0,1fr); }
+      .dashboard-grid { grid-template-columns:minmax(0,1fr); grid-auto-rows:230px; }
+      .chart-card.span-2, .chart-card.span-4 { grid-column:auto; }
+      .chart-head { gap:6px; }
+      .chart-actions { flex-direction:column; }
+      .selection-dock { align-items:stretch; flex-direction:column; padding:9px 12px; }
+      .d-selection-dock { width:calc(100% - 16px); }
+      .d-chrono-playback {
+        right:8px;
+        left:8px;
+        grid-template-columns:minmax(0,1fr);
+        gap:9px;
+        max-height:min(58%,430px);
+        overflow-y:auto;
+      }
+      .d-chrono-playback.is-top { top:166px; }
+      .d-chrono-status,
+      .d-chrono-track,
+      .d-chrono-actions,
+      .d-chrono-speed { grid-column:1; grid-row:auto; justify-self:stretch; }
+      .d-chrono-actions { justify-content:space-between; flex-wrap:wrap; }
+      .d-chrono-speed { min-width:0; }
+      .dashboard-page.chrono-view-active { padding-bottom:310px; }
+      .chrono-date-modal { min-width:150px; min-height:68px; }
+      .chrono-date-value { padding:16px 24px; }
+      .dock-count { min-width:0; }
+      .dock-chips { width:100%; }
+      .dock-actions { width:100%; }
+      .dock-actions button { flex:1; }
+      .comparison-toolbar { position:static; align-items:stretch; flex-direction:column; }
+      .ordered-chips { width:100%; }
+      .layout-control { width:100%; }
+      .layout-button { flex:1; min-height:44px; }
+      .comparison-grid, .comparison-grid.count-1, .comparison-grid.count-2.layout-side-by-side,
+      .comparison-grid.count-2.layout-over-under, .comparison-grid.count-3,
+      .comparison-grid.count-3.layout-focus-left, .comparison-grid.count-3.layout-focus-right,
+      .comparison-grid.count-4 { display:grid; grid-template-columns:minmax(0,1fr); }
+      .comparison-grid .compare-item { grid-column:auto !important; grid-row:auto !important; order:initial !important; min-height:320px; }
+      .gallery-head { align-items:flex-start; flex-wrap:wrap; height:auto; padding:9px 12px; }
+      .gallery-head .gallery-title { width:100%; flex-basis:100%; }
+      .comparison-lift { margin:0 8px 20px; }
+      .lift-grid { display:block; }
+      .lift-evidence { margin-top:12px; }
+      .ordinary-below { margin-top:14px; }
+      .evidence-layer { align-items:flex-end; }
+      .evidence-panel { width:100%; height:min(76%,650px); border-top:1px solid var(--rule-strong); border-left:0; }
+      .evidence-panel.in-flow { height:auto; }
+      .evidence-ledger { grid-template-columns:92px minmax(0,1fr); }
+      .chrono-layer { overflow:auto; }
+      .chrono-mast, .chrono-deck { position:sticky; z-index:2; }
+      .chrono-mast { top:0; }
+      .chrono-deck { bottom:0; }
+      .chrono-bar { grid-template-columns:minmax(0,1fr); }
+      .chrono-controls { justify-content:center; }
+      .chrono-content { overflow:visible; }
+      .chrono-preview-grid { grid-template-columns:minmax(0,1fr); }
+      .d-comparison-layer { overflow:auto; }
+      .d-comparison-toolbar {
+        position:sticky;
+        top:8px;
+        left:auto;
+        width:calc(100% - 16px);
+        margin:8px auto -62px;
+        transform:none;
+      }
+      .d-comparison-grid,
+      .d-comparison-grid.count-1,
+      .d-comparison-grid.count-2.layout-side-by-side,
+      .d-comparison-grid.count-2.layout-over-under,
+      .d-comparison-grid.count-3,
+      .d-comparison-grid.count-3.layout-focus-left,
+      .d-comparison-grid.count-3.layout-focus-right,
+      .d-comparison-grid.count-4 {
+        position:relative;
+        inset:auto;
+        grid-template-columns:minmax(0,1fr);
+        grid-template-rows:none;
+        grid-auto-rows:minmax(320px,1fr);
+        min-height:100%;
+        padding:82px 8px 10px;
+      }
+      .d-comparison-grid .d-compare-item { grid-column:auto !important; grid-row:auto !important; order:initial !important; }
+      .page-footer { flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype">
+    <aside class="review-rail" aria-label="Sketch review controls">
+      <div class="review-eyebrow">Sketch 014 · Approved</div>
+      <h1>View exploration &amp; comparison</h1>
+      <p>D is the approved View exploration model. A–C remain switchable as rejected evidence over the same session and fixture.</p>
+      <div class="review-pills">
+        <span class="review-pill recommended">D · ★ Winner</span>
+        <span class="review-pill">Evidence Ledger</span>
+        <span class="review-pill">Brighter Vellum · Light</span>
+      </div>
+
+      <section class="review-group" aria-labelledby="variant-title">
+        <h2 id="variant-title">Containment variant</h2>
+        <div class="variant-list">
+          <button class="rail-button variant-button" type="button" data-variant="a" aria-pressed="false">
+            <strong>A · View Focus Workspace · Rejected</strong>
+            <span>Comparison replaces only the document below the Crown.</span>
+          </button>
+          <button class="rail-button variant-button" type="button" data-variant="b" aria-pressed="false">
+            <strong>B · Fullscreen Evidence Gallery · Rejected</strong>
+            <span>Protected modal-like gallery; closest to the current display path.</span>
+          </button>
+          <button class="rail-button variant-button" type="button" data-variant="c" aria-pressed="false">
+            <strong>C · Contextual Comparison Lift · Rejected</strong>
+            <span>Comparison elevates above the unchanged dashboard.</span>
+          </button>
+          <button class="rail-button variant-button" type="button" data-variant="d" aria-pressed="true">
+            <strong>D · Immersive View Canvas · ★ Winner</strong>
+            <span>Hover actions lead to fullscreen focus and a chart-only draggable comparison.</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="review-group" aria-labelledby="viewport-title">
+        <h2 id="viewport-title">Product viewport</h2>
+        <div class="rail-grid four">
+          <button class="rail-button" type="button" data-viewport="1440" aria-pressed="true"><strong>1440</strong><span>Desktop</span></button>
+          <button class="rail-button" type="button" data-viewport="1024" aria-pressed="false"><strong>1024</strong><span>Compact</span></button>
+          <button class="rail-button" type="button" data-viewport="768" aria-pressed="false"><strong>768</strong><span>Boundary</span></button>
+          <button class="rail-button" type="button" data-viewport="390" aria-pressed="false"><strong>390</strong><span>Phone</span></button>
+        </div>
+      </section>
+
+      <section class="review-group" aria-labelledby="fixture-title">
+        <h2 id="fixture-title">Fixture shortcuts</h2>
+        <div class="rail-grid four">
+          <button class="rail-button" type="button" data-fixture="ordinary"><strong>Ordinary</strong><span>View</span></button>
+          <button class="rail-button" type="button" data-fixture="selection"><strong>Selection</strong><span>0 charts</span></button>
+          <button class="rail-button" type="button" data-fixture="four"><strong>4-chart</strong><span>2 × 2</span></button>
+          <button class="rail-button" type="button" data-fixture="chrono"><strong>Chrono View</strong><span>Member lift</span></button>
+        </div>
+        <p class="review-note">Variant and viewport switches preserve Page, chart order, comparison state, evidence, selected Time Group, and Chrono state.</p>
+      </section>
+
+      <section class="review-group" aria-labelledby="state-title">
+        <h2 id="state-title">Shared session state</h2>
+        <dl class="state-ledger" id="stateLedger"></dl>
+      </section>
+
+      <section class="review-group">
+        <h2>Representative task</h2>
+        <p class="review-note">In D, confirm the right-aligned Page actions, toggle Chrono View, switch Time Groups, verify member-chart elevation, toggle it off, then exercise Focus and the chart-only comparison.</p>
+      </section>
+    </aside>
+
+    <main class="stage">
+      <div class="viewport-frame">
+        <section class="product-window" id="productWindow" aria-label="SimEx product viewport">
+          <div class="product-scroll" id="productScroll">
+            <div class="product-root" id="productRoot"></div>
+          </div>
+          <div id="floatingRoot"></div>
+          <div class="visually-hidden" id="liveRegion" role="status" aria-live="polite" aria-atomic="true"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var representativeIds = [
+        'bio_confirmed_cases',
+        'bio_municipality_choropleth_animation',
+        'bio_hospital_load',
+        'bio_icu_hospital_capacity'
+      ];
+
+      var charts = [
+        {id:'bio_confirmed_cases', title:'Confirmed cases', kicker:'Incident total', type:'line', span:2, metric:'18,442', delta:'+7.2% over 14 days', source:'Regional surveillance ledger', current:'31 Mar 2026 · 06:00', owner:'Epidemiology unit', cadence:'Daily at 06:00', status:'Validated'},
+        {id:'bio_r_values', title:'Regional R values', kicker:'7-day posterior estimate', type:'dual', span:2, metric:'1.08', delta:'Credible interval 0.96–1.21', source:'Transmission model register', current:'30 Mar 2026 · 18:00', owner:'Modelling cell', cadence:'Twice weekly', status:'Validated'},
+        {id:'bio_municipality_choropleth_animation', title:'Municipality incidence over time', kicker:'Animated choropleth · Week 31', type:'map', span:4, metric:'126.4', delta:'Cases per 100,000 residents', source:'Regional surveillance ledger', current:'31 Mar 2026 · 06:00', owner:'Spatial analytics team', cadence:'Daily at 06:00', status:'Validated'},
+        {id:'bio_region_comparison', title:'Regional comparison', kicker:'Peer municipality comparison', type:'bars', span:2, metric:'3 of 12', delta:'Regions above threshold', source:'Regional comparison mart', current:'31 Mar 2026 · 06:15', owner:'Epidemiology unit', cadence:'Daily', status:'Validated'},
+        {id:'bio_vaccination_rate', title:'Vaccination rate by age group', kicker:'Eligible population', type:'bars', span:2, metric:'71.2%', delta:'+1.4 points this month', source:'Immunisation coverage feed', current:'30 Mar 2026 · 23:00', owner:'Protection programme', cadence:'Daily', status:'Validated'},
+        {id:'bio_hospital_load', title:'Hospital demand signal', kicker:'Regional treatment capacity', type:'line', span:4, metric:'78%', delta:'14 staffed beds available', source:'Hospital capacity feed', current:'31 Mar 2026 · 08:00', owner:'Care coordination centre', cadence:'Every 2 hours', status:'Two sites delayed'},
+        {id:'bio_new_cases_deaths', title:'Daily new cases and deaths', kicker:'Explicit secondary axis', type:'mixed', span:2, metric:'642 / 8', delta:'Notifications / deaths', source:'Regional surveillance ledger', current:'31 Mar 2026 · 06:00', owner:'Epidemiology unit', cadence:'Daily at 06:00', status:'Validated'},
+        {id:'bio_mortality_age', title:'Mortality by age group', kicker:'Cumulative composition', type:'donut', span:2, metric:'87%', delta:'Age 65 and older', source:'Vital events ledger', current:'29 Mar 2026 · 17:00', owner:'Outcomes team', cadence:'Weekly', status:'Validated'},
+        {id:'bio_icu_hospital_capacity', title:'ICU and hospital capacity', kicker:'Target and escalation threshold', type:'bullet', span:2, metric:'78 / 69%', delta:'ICU / ward occupancy', source:'Hospital capacity feed', current:'31 Mar 2026 · 08:00', owner:'Care coordination centre', cadence:'Every 2 hours', status:'Two sites delayed'},
+        {id:'bio_new_icu_hospital_admissions', title:'New ICU and hospital admissions', kicker:'Grouped weekly admissions', type:'bars', span:2, metric:'42 / 184', delta:'ICU / hospital admissions', source:'Hospital admissions ledger', current:'30 Mar 2026 · 22:00', owner:'Care analytics team', cadence:'Daily', status:'Validated'}
+      ];
+
+      var chronoGroups = [
+        {
+          id:'winter',
+          name:'Winter response 2026',
+          start:'2026-01-01',
+          end:'2026-03-31',
+          frames:['2026-01-01','2026-01-08','2026-01-15','2026-01-22','2026-02-01','2026-02-08','2026-02-15','2026-02-22','2026-03-01','2026-03-05','2026-03-10','2026-03-15','2026-03-18','2026-03-20','2026-03-23','2026-03-26','2026-03-31'],
+          members:['bio_confirmed_cases','bio_r_values','bio_municipality_choropleth_animation','bio_region_comparison','bio_vaccination_rate','bio_hospital_load']
+        },
+        {
+          id:'sentinel',
+          name:'Sentinel monitoring 2026',
+          start:'2026-02-01',
+          end:'2026-03-31',
+          frames:['2026-02-01','2026-02-08','2026-02-15','2026-02-22','2026-03-01','2026-03-08','2026-03-15','2026-03-22','2026-03-31'],
+          members:['bio_confirmed_cases','bio_r_values','bio_new_cases_deaths']
+        }
+      ];
+
+      var variantNames = {
+        a:'View Focus Workspace',
+        b:'Fullscreen Evidence Gallery',
+        c:'Contextual Comparison Lift',
+        d:'Immersive View Canvas'
+      };
+
+      var state = {
+        variant:'d',
+        viewport:'1440',
+        lens:'ordinary',
+        selected:[],
+        layout:'solo',
+        chronoView:false,
+        chronoTimeGroup:'winter',
+        chronoViewFrame:0,
+        chronoViewPlaying:false,
+        chronoViewSeconds:2.5,
+        chronoViewPlacement:'bottom',
+        chronoDateX:null,
+        chronoDateY:null,
+        chronoDateWidth:220,
+        chronoDateHeight:82,
+        evidenceOpen:false,
+        evidenceChartId:null,
+        evidenceTab:'details',
+        maxAlert:false,
+        chronoReturn:'ordinary',
+        chronoRetained:false,
+        chronoPlacement:'deck',
+        chronoFrame:6,
+        chronoPlaying:false,
+        announcement:'',
+        toast:'',
+        lastEvidenceChart:null,
+        returnFocusId:null,
+        returnScrollTop:0
+      };
+
+      var productWindow = document.getElementById('productWindow');
+      var productRoot = document.getElementById('productRoot');
+      var floatingRoot = document.getElementById('floatingRoot');
+      var productScroll = document.getElementById('productScroll');
+      var liveRegion = document.getElementById('liveRegion');
+      var stateLedger = document.getElementById('stateLedger');
+      var toastTimer = null;
+      var focusHoldTimer = null;
+      var suppressFocusClickUntil = 0;
+      var draggedChartId = null;
+      var chronoViewTimer = null;
+      var chronoDatePointer = null;
+
+      function chartById(id) {
+        return charts.find(function (chart) { return chart.id === id; });
+      }
+
+      function chronoGroupById(id) {
+        return chronoGroups.find(function (group) { return group.id === id; }) || chronoGroups[0];
+      }
+
+      function chronoDateMs(value) {
+        return Date.parse(value + 'T00:00:00Z');
+      }
+
+      function formatChronoDate(value, includeYear) {
+        return new Intl.DateTimeFormat('en-GB',{
+          day:'2-digit',
+          month:'short',
+          year:includeYear ? 'numeric' : undefined,
+          timeZone:'UTC'
+        }).format(new Date(chronoDateMs(value)));
+      }
+
+      function nearestChronoFrameIndex(group, rawValue) {
+        var target = Number(rawValue);
+        var bestIndex = 0;
+        var bestDistance = Infinity;
+        group.frames.forEach(function (date,index) {
+          var distance = Math.abs(chronoDateMs(date) - target);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = index;
+          }
+        });
+        return bestIndex;
+      }
+
+      function chronoTickPercent(group, date) {
+        var start = chronoDateMs(group.start);
+        var duration = Math.max(1,chronoDateMs(group.end) - start);
+        return ((chronoDateMs(date) - start) / duration * 100).toFixed(3) + '%';
+      }
+
+      function stopChronoViewTimer() {
+        if (chronoViewTimer !== null) {
+          window.clearInterval(chronoViewTimer);
+          chronoViewTimer = null;
+        }
+      }
+
+      function pauseChronoViewPlayback() {
+        state.chronoViewPlaying = false;
+        stopChronoViewTimer();
+      }
+
+      function syncChronoViewPlayback() {
+        stopChronoViewTimer();
+        if (!(state.variant === 'd' && state.chronoView && state.lens === 'ordinary' && state.chronoViewPlaying)) return;
+        chronoViewTimer = window.setInterval(function () {
+          var group = chronoGroupById(state.chronoTimeGroup);
+          if (state.chronoViewFrame >= group.frames.length - 1) {
+            pauseChronoViewPlayback();
+            state.announcement = 'Chrono playback completed at ' + formatChronoDate(group.frames[state.chronoViewFrame],true) + '.';
+            render();
+            return;
+          }
+          state.chronoViewFrame += 1;
+          render();
+        },Math.max(100,Number(state.chronoViewSeconds) * 1000));
+      }
+
+      function clamp(value,min,max) {
+        return Math.min(Math.max(value,min),Math.max(min,max));
+      }
+
+      function applyChronoDateGeometry(modal) {
+        if (!modal) return;
+        var dateValue = modal.querySelector('[data-chrono-date-value]');
+        var valueStyles = dateValue ? getComputedStyle(dateValue) : null;
+        var horizontalPadding = valueStyles ? parseFloat(valueStyles.paddingLeft) + parseFloat(valueStyles.paddingRight) : 56;
+        var verticalPadding = valueStyles ? parseFloat(valueStyles.paddingTop) + parseFloat(valueStyles.paddingBottom) : 36;
+        var availableWidth = Math.max(1,state.chronoDateWidth - horizontalPadding);
+        var availableHeight = Math.max(1,state.chronoDateHeight - verticalPadding);
+        var characterCount = Math.max(1,dateValue ? dateValue.textContent.trim().length : 11);
+        var fittedFontSize = clamp(Math.min(availableWidth / (characterCount * .56),availableHeight * .78),16,88);
+        modal.style.left = state.chronoDateX + 'px';
+        modal.style.top = state.chronoDateY + 'px';
+        modal.style.width = state.chronoDateWidth + 'px';
+        modal.style.height = state.chronoDateHeight + 'px';
+        modal.style.setProperty('--chrono-date-font-size',fittedFontSize.toFixed(1) + 'px');
+        modal.style.visibility = 'visible';
+      }
+
+      function positionChronoDateModal() {
+        var modal = document.querySelector('.chrono-date-modal');
+        if (!modal) return;
+        var productRect = productWindow.getBoundingClientRect();
+        var scaleX = productRect.width ? productWindow.clientWidth / productRect.width : 1;
+        var scaleY = productRect.height ? productWindow.clientHeight / productRect.height : 1;
+        if (state.chronoDateX === null || state.chronoDateY === null) {
+          var page = document.querySelector('.dashboard-page');
+          var pageRect = page ? page.getBoundingClientRect() : productRect;
+          state.chronoDateX = Math.round((productWindow.clientWidth - state.chronoDateWidth) / 2);
+          state.chronoDateY = Math.round((pageRect.top - productRect.top) * scaleY + 10);
+        }
+        state.chronoDateWidth = clamp(state.chronoDateWidth,170,productWindow.clientWidth - 16);
+        state.chronoDateHeight = clamp(state.chronoDateHeight,72,productWindow.clientHeight - 16);
+        state.chronoDateX = clamp(state.chronoDateX,8,productWindow.clientWidth - state.chronoDateWidth - 8);
+        state.chronoDateY = clamp(state.chronoDateY,8,productWindow.clientHeight - state.chronoDateHeight - 8);
+        applyChronoDateGeometry(modal);
+      }
+
+      function chronoDateModalMarkup() {
+        var group = chronoGroupById(state.chronoTimeGroup);
+        var frameIndex = Math.min(state.chronoViewFrame,group.frames.length - 1);
+        var positioned = state.chronoDateX !== null && state.chronoDateY !== null;
+        return '<section class="chrono-date-modal" role="dialog" aria-modal="false" aria-label="Current Chrono date. Drag the date to move. Use arrow keys to move or Shift plus arrow keys to resize." style="left:' + (positioned ? state.chronoDateX : 0) + 'px;top:' + (positioned ? state.chronoDateY : 0) + 'px;width:' + state.chronoDateWidth + 'px;height:' + state.chronoDateHeight + 'px;' + (positioned ? '' : 'visibility:hidden;') + '">' +
+          '<div class="chrono-date-value" tabindex="0" data-chrono-date-drag data-chrono-date-value>' + formatChronoDate(group.frames[frameIndex],true) + '</div>' +
+          '<button class="chrono-date-resize" type="button" data-chrono-date-resize aria-label="Resize date display. Drag the corner or use arrow keys."></button>' +
+        '</section>';
+      }
+
+      function escapeText(value) {
+        return String(value)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;');
+      }
+
+      function announce(message, toast) {
+        state.announcement = message;
+        state.toast = toast === false ? '' : message;
+        render();
+        if (toastTimer) window.clearTimeout(toastTimer);
+        if (state.toast) {
+          toastTimer = window.setTimeout(function () {
+            state.toast = '';
+            renderFloatingOnly();
+          }, 2600);
+        }
+      }
+
+      function defaultLayout(count) {
+        if (count <= 1) return 'solo';
+        if (count === 2) return 'side-by-side';
+        if (count === 3) return 'focus-top';
+        return 'grid-2x2';
+      }
+
+      function validLayouts(count) {
+        if (count <= 1) return [{id:'solo',label:'Solo'}];
+        if (count === 2) return [{id:'side-by-side',label:'Side by side'},{id:'over-under',label:'Over-under'}];
+        if (count === 3) return [
+          {id:'focus-top',label:'Top focus'},
+          {id:'focus-bottom',label:'Bottom focus'},
+          {id:'focus-left',label:'Left focus'},
+          {id:'focus-right',label:'Right focus'}
+        ];
+        return [{id:'grid-2x2',label:'2 × 2'}];
+      }
+
+      function ensureLayout() {
+        var ids = validLayouts(state.selected.length).map(function (entry) { return entry.id; });
+        if (ids.indexOf(state.layout) === -1) state.layout = defaultLayout(state.selected.length);
+      }
+
+      function plotMarkup(chart) {
+        if (chart.type === 'map') {
+          var cells = Array.from({length:50}, function (_, index) {
+            return '<i style="--strength:' + (18 + ((index * 19) % 72)) + '%"></i>';
+          }).join('');
+          return '<div class="map" role="img" aria-label="Municipality incidence choropleth">' + cells + '</div>';
+        }
+        if (chart.type === 'donut') {
+          return '<div class="plot donut-plot" role="img" aria-label="Mortality composition by age group"></div>';
+        }
+        if (chart.type === 'bullet') {
+          return '<div class="bullet-list" role="img" aria-label="ICU and hospital occupancy against targets">' +
+            '<div class="bullet-row"><span>ICU</span><div class="bullet-track"><div class="bullet-fill" style="--fill:78%"></div><i class="bullet-target" style="--target:85%"></i></div><strong>78%</strong></div>' +
+            '<div class="bullet-row"><span>Ward</span><div class="bullet-track"><div class="bullet-fill" style="--fill:69%"></div><i class="bullet-target" style="--target:80%"></i></div><strong>69%</strong></div>' +
+            '<div class="bullet-row"><span>Stepdown</span><div class="bullet-track"><div class="bullet-fill" style="--fill:64%"></div><i class="bullet-target" style="--target:78%"></i></div><strong>64%</strong></div>' +
+          '</div>';
+        }
+        var bars = [42,68,52,84,63,76,91,58,72,49,79,66].map(function (height,index) {
+          return '<rect class="bar' + (index % 3 === 1 ? ' alt' : '') + '" x="' + (7 + index * 15) + '" y="' + (130 - height) + '" width="9" height="' + height + '"></rect>';
+        }).join('');
+        var grid = '<line class="grid-line" x1="0" y1="35" x2="196" y2="35"></line><line class="grid-line" x1="0" y1="72" x2="196" y2="72"></line><line class="grid-line" x1="0" y1="109" x2="196" y2="109"></line>';
+        var pathA = '<path class="series-fill" d="M7 116 C28 105 37 96 53 99 S78 74 97 79 S125 48 145 60 S169 35 188 29 L188 136 L7 136 Z"></path><path class="series-line" d="M7 116 C28 105 37 96 53 99 S78 74 97 79 S125 48 145 60 S169 35 188 29"></path>';
+        var pathB = '<path class="series-line alt" d="M7 124 C28 119 42 107 59 113 S90 91 106 95 S139 69 154 73 S176 56 188 49"></path>';
+        var marks = chart.type === 'bars' ? bars : pathA;
+        if (chart.type === 'mixed') marks = bars + pathB;
+        if (chart.type === 'dual') marks = pathA + pathB;
+        return '<div class="plot" role="img" aria-label="' + escapeText(chart.title) + ' chart"><svg viewBox="0 0 196 142" preserveAspectRatio="none" aria-hidden="true">' + grid + marks + '</svg></div>';
+      }
+
+      function crownMarkup() {
+        var directVariant = state.variant === 'd';
+        var chronoSelect = directVariant && state.chronoView ?
+          '<label class="chrono-source-field"><span class="visually-hidden">Time Group</span><select data-control="chrono-time-group" aria-label="Chrono Time Group">' + chronoGroups.map(function (group) { return '<option value="' + group.id + '"' + (state.chronoTimeGroup === group.id ? ' selected' : '') + '>' + escapeText(group.name) + '</option>'; }).join('') + '</select></label>' : '';
+        var pageTools = directVariant ?
+          '<div class="page-panel-actions" aria-label="View page actions">' + chronoSelect + '<button class="context-button' + (state.chronoView ? ' primary' : '') + '" type="button" data-action="toggle-chrono-view" aria-pressed="' + state.chronoView + '">Chrono View</button><button class="context-button' + (state.lens === 'selection' ? ' primary' : '') + '" type="button" data-action="start-selection">Compare charts</button></div>' : '';
+        var contextStrip = directVariant ? '' :
+          '<div class="context-strip">' +
+            '<span class="context-label">View</span>' +
+            '<button class="context-button' + (state.lens === 'selection' ? ' primary' : '') + '" type="button" data-action="start-selection">Compare charts</button>' +
+            '<button class="context-button" type="button" data-action="open-chrono">Open Chrono</button>' +
+            '<span class="context-spacer"></span>' +
+          '</div>';
+        return '<header class="command-crown">' +
+          '<div class="modebar">' +
+            '<div class="brand"><span class="brand-mark">Sx</span><span>SimEx</span></div>' +
+            '<nav class="mode-switch" aria-label="Product mode">' +
+              '<button class="mode-button" type="button" aria-pressed="true" data-action="context-note" data-message="View is already active.">View</button>' +
+              '<button class="mode-button" type="button" aria-pressed="false" data-action="context-note" data-message="Build is held outside this fixed Sketch 014 View fixture."' + (state.viewport === '390' ? ' disabled title="Build is not supported at phone size"' : '') + '>Build</button>' +
+              '<button class="mode-button" type="button" aria-pressed="false" data-action="context-note" data-message="Present is held outside this fixed Sketch 014 View fixture."' + (state.viewport === '390' ? ' disabled title="Present is not supported at phone size"' : '') + '>Present</button>' +
+            '</nav>' +
+            '<div class="utilities"><button class="crown-button optional" type="button" data-action="context-note" data-message="Help is held outside this fixed Sketch 014 fixture.">Help</button><button class="crown-button" type="button" aria-label="Account" data-action="context-note" data-message="Account is held outside this fixed Sketch 014 fixture.">HK</button></div>' +
+          '</div>' +
+          '<div class="dashboard-row">' +
+            '<div class="dashboard-identity"><strong>Biomedical situational awareness</strong><span>Regional preparedness evidence</span></div>' +
+            '<nav class="pages" aria-label="Dashboard pages"><button class="page-button" type="button" aria-pressed="true" data-action="context-note" data-message="Executive surveillance is already active.">Executive surveillance</button><button class="page-button" type="button" aria-pressed="false" data-action="context-note" data-message="Care capacity page is held outside this fixed Sketch 014 fixture.">Care capacity</button><button class="page-button" type="button" aria-pressed="false" data-action="context-note" data-message="Equity signals page is held outside this fixed Sketch 014 fixture.">Equity signals</button></nav>' +
+            pageTools +
+          '</div>' +
+          contextStrip +
+        '</header>';
+      }
+
+      function chartCardMarkup(chart, selectable) {
+        var selectedIndex = state.selected.indexOf(chart.id);
+        var selected = selectedIndex !== -1;
+        var directVariant = state.variant === 'd';
+        var topActions = directVariant ? '' :
+          '<div class="chart-actions">' +
+            (selectable ?
+              '<button class="chart-action select" type="button" data-action="toggle-select" data-id="' + chart.id + '" aria-pressed="' + selected + '">' + (selected ? '<span class="selection-order">' + (selectedIndex + 1) + '</span>Selected' : 'Select') + '</button>' :
+              '<button class="chart-action" type="button" data-action="focus-chart" data-id="' + chart.id + '">Focus</button>') +
+            '<button class="chart-action" type="button" data-action="open-evidence" data-id="' + chart.id + '" data-tab="details">Details</button>' +
+          '</div>';
+        var directActions = directVariant ?
+          '<div class="chart-hover-actions' + (selectable ? ' is-selection' : '') + '" aria-label="' + escapeText(chart.title) + ' actions">' +
+            (selectable ?
+              '<button class="chart-action select" type="button" data-action="toggle-select" data-id="' + chart.id + '" aria-pressed="' + selected + '">' + (selected ? '<span class="selection-order">' + (selectedIndex + 1) + '</span>Selected' : 'Select') + '</button>' :
+              '<button class="chart-action focus-hold" type="button" data-action="focus-chart" data-id="' + chart.id + '" title="Click for fullscreen; hold to compare">Focus</button>') +
+            '<button class="chart-action" type="button" data-action="open-evidence" data-id="' + chart.id + '" data-tab="details">Details</button>' +
+          '</div>' : '';
+        return '<article class="chart-card span-' + chart.span + (selectable ? ' selectable' : '') + (selected ? ' is-selected' : '') + '" id="chart-' + chart.id + '">' +
+          '<header class="chart-head">' +
+            '<div><div class="chart-kicker">' + escapeText(chart.kicker) + '</div><h3>' + escapeText(chart.title) + '</h3></div>' +
+            topActions +
+          '</header>' +
+          '<div class="chart-summary"><span class="metric">' + escapeText(chart.metric) + '</span><span class="delta">' + escapeText(chart.delta) + '</span></div>' +
+          plotMarkup(chart) +
+          (directVariant ? directActions : '<footer class="chart-foot"><span>' + escapeText(chart.source) + '</span><span>' + escapeText(chart.current) + '</span></footer>') +
+        '</article>';
+      }
+
+      function ordinaryDashboardMarkup(selectable, compact) {
+        var chronoGroup = chronoGroupById(state.chronoTimeGroup);
+        var showChronoMembers = state.variant === 'd' && state.chronoView;
+        var memberCharts = showChronoMembers ? charts.filter(function (chart) { return chronoGroup.members.indexOf(chart.id) !== -1; }) : [];
+        var remainingCharts = showChronoMembers ? charts.filter(function (chart) { return chronoGroup.members.indexOf(chart.id) === -1; }) : charts;
+        var chartSections;
+        if (showChronoMembers) {
+          chartSections =
+            '<section class="chrono-member-section" aria-labelledby="chrono-member-title"><div class="section-rule"><h2 id="chrono-member-title">' + escapeText(chronoGroup.name) + ' · Chrono View</h2></div>' +
+            '<div class="dashboard-grid">' + memberCharts.map(function (chart) { return chartCardMarkup(chart, selectable); }).join('') + '</div></section>' +
+            '<section aria-labelledby="remaining-chart-title"><div class="section-rule"><h2 id="remaining-chart-title">Situation and trajectory</h2></div>' +
+            '<div class="dashboard-grid">' + remainingCharts.map(function (chart) { return chartCardMarkup(chart, selectable); }).join('') + '</div></section>';
+        } else {
+          chartSections =
+            '<div class="section-rule"><h2>Situation and trajectory</h2></div>' +
+            '<div class="dashboard-grid">' + remainingCharts.map(function (chart) { return chartCardMarkup(chart, selectable); }).join('') + '</div>';
+        }
+        var activeFrameDate = showChronoMembers ? chronoGroup.frames[Math.min(state.chronoViewFrame,chronoGroup.frames.length - 1)] : null;
+        return '<main class="dashboard-page' + (compact ? ' ordinary-below' : '') + (showChronoMembers ? ' chrono-view-active' : '') + '">' +
+          (compact ? '<div class="ordinary-below-label">Origin dashboard remains unchanged below comparison</div>' : '') +
+          '<header class="page-heading">' +
+            '<div><div class="eyebrow">View · Current evidence</div><h1>Executive surveillance</h1><p>Review validated biomedical indicators and explore evidence without changing the authored dashboard.</p></div>' +
+            '<span class="time-chip">' + (activeFrameDate ? formatChronoDate(activeFrameDate,true) : '31 March 2026') + ' · Europe/Berlin</span>' +
+          '</header>' +
+          chartSections +
+          '<footer class="page-footer"><span>Biomedical situational awareness · Evidence Ledger</span><span>Report a bug · Request a feature · Data sources · © 2026 SimEx</span></footer>' +
+        '</main>';
+      }
+
+      function selectionDockMarkup() {
+        if (state.variant === 'd') {
+          return '<section class="selection-dock d-selection-dock" role="dialog" aria-modal="false" aria-label="Comparison selection">' +
+            '<div class="dock-count"><strong>' + state.selected.length + ' of 4 selected</strong><span>' + (state.maxAlert ? 'Maximum 4 charts allowed' : 'Choose at least two charts') + '</span></div>' +
+            '<div class="dock-actions"><button class="secondary-button" type="button" data-action="cancel-selection">Cancel</button><button class="solid-button" type="button" data-action="enter-comparison"' + (state.selected.length < 2 ? ' disabled' : '') + '>Compare</button></div>' +
+          '</section>';
+        }
+        var chips = state.selected.map(function (id,index) {
+          var chart = chartById(id);
+          return '<span class="dock-chip"><b>' + (index + 1) + '</b> ' + escapeText(chart.title) + '</span>';
+        }).join('');
+        return '<div class="selection-dock" aria-label="Comparison selection">' +
+          '<div class="dock-count"><strong>' + state.selected.length + ' of 4 selected</strong><span>Number indicates insertion order</span></div>' +
+          '<div class="dock-chips">' + (chips || '<span class="scope-chip">Select at least two charts to compare</span>') + '</div>' +
+          (state.maxAlert ? '<div class="limit-alert">Maximum 4 charts allowed</div>' : '') +
+          '<div class="dock-actions"><button class="secondary-button" type="button" data-action="cancel-selection">Cancel</button><button class="solid-button" type="button" data-action="enter-comparison"' + (state.selected.length < 2 ? ' disabled' : '') + '>Enter comparison</button></div>' +
+        '</div>';
+      }
+
+      function chronoViewPlaybackMarkup() {
+        var group = chronoGroupById(state.chronoTimeGroup);
+        var frameIndex = Math.min(state.chronoViewFrame,group.frames.length - 1);
+        var currentDate = group.frames[frameIndex];
+        var ticks = group.frames.map(function (date,index) {
+          return '<span class="d-chrono-tick' + (index === frameIndex ? ' current' : '') + '" data-chrono-tick-index="' + index + '" style="--tick:' + chronoTickPercent(group,date) + '"></span>';
+        }).join('');
+        var placementLabel = state.chronoViewPlacement === 'bottom' ? 'Move to top' : 'Move to bottom';
+        return '<section class="d-chrono-playback is-' + state.chronoViewPlacement + '" aria-label="Chrono playback controller">' +
+          '<div class="d-chrono-status"><strong>' + escapeText(group.name) + '</strong><span data-chrono-frame-reading>' + formatChronoDate(currentDate,true) + ' · Frame ' + (frameIndex + 1) + ' of ' + group.frames.length + '</span></div>' +
+          '<div class="d-chrono-track">' +
+            '<div class="d-chrono-track-meta"><span>' + formatChronoDate(group.start,false) + '</span><output for="dChronoRange" data-chrono-frame-output>' + formatChronoDate(currentDate,true) + '</output><span>' + formatChronoDate(group.end,false) + '</span></div>' +
+            '<div class="d-chrono-range-shell"><input class="d-chrono-range" id="dChronoRange" data-control="chrono-view-frame" type="range" min="' + chronoDateMs(group.start) + '" max="' + chronoDateMs(group.end) + '" step="86400000" value="' + chronoDateMs(currentDate) + '" aria-label="Seek Chrono frame" aria-valuetext="' + formatChronoDate(currentDate,true) + ', frame ' + (frameIndex + 1) + ' of ' + group.frames.length + '"><div class="d-chrono-ticks" aria-hidden="true">' + ticks + '</div></div>' +
+          '</div>' +
+          '<div class="d-chrono-actions"><div class="d-chrono-transport" role="group" aria-label="Playback transport">' +
+            '<button class="d-chrono-button" type="button" data-action="chrono-view-prev" aria-label="Previous frame"' + (frameIndex === 0 ? ' disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2v14H7zm3 7l9 7V5z"/></svg></button>' +
+            '<button class="d-chrono-button play" type="button" data-action="chrono-view-play" aria-label="' + (state.chronoViewPlaying ? 'Pause' : 'Play') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + (state.chronoViewPlaying ? 'M6 5h4v14H6zm8 0h4v14h-4z' : 'M8 5v14l11-7z') + '"/></svg></button>' +
+            '<button class="d-chrono-button" type="button" data-action="chrono-view-next" aria-label="Next frame"' + (frameIndex === group.frames.length - 1 ? ' disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5h2v14h-2zM5 5v14l9-7z"/></svg></button>' +
+          '</div><button class="d-chrono-button text" type="button" data-action="chrono-view-placement" aria-label="Move Chrono controls to ' + (state.chronoViewPlacement === 'bottom' ? 'top' : 'bottom') + '">' + placementLabel + '</button></div>' +
+          '<label class="d-chrono-speed"><span>Seconds per frame</span><span class="d-chrono-number-wrap"><input data-control="chrono-view-seconds" type="number" min="0.5" max="10" step="0.5" value="' + state.chronoViewSeconds + '" aria-label="Seconds per frame"><span>sec</span></span><small>Session override</small></label>' +
+        '</section>';
+      }
+
+      function comparisonHeadingMarkup() {
+        return '<header class="comparison-heading">' +
+          '<div><div class="eyebrow">View · Comparison</div><h1>' + state.selected.length + '-chart evidence comparison</h1><p>Personal View arrangement · membership, order, and layout are session-only.</p></div>' +
+          '<span class="time-chip">Executive surveillance · 31 Mar 2026</span>' +
+        '</header>';
+      }
+
+      function orderedChipsMarkup() {
+        return state.selected.map(function (id,index) {
+          return '<span class="ordered-chip"><b>' + (index + 1) + '</b>' + escapeText(chartById(id).title) + '</span>';
+        }).join('');
+      }
+
+      function comparisonToolbarMarkup() {
+        var layouts = validLayouts(state.selected.length).map(function (layout) {
+          return '<button class="layout-button" type="button" data-action="set-layout" data-layout="' + layout.id + '" aria-pressed="' + (state.layout === layout.id) + '">' + layout.label + '</button>';
+        }).join('');
+        return '<div class="comparison-toolbar">' +
+          '<div class="ordered-chips" aria-label="Comparison order">' + orderedChipsMarkup() + '</div>' +
+          '<div class="layout-control"><span class="layout-label">Layout</span>' + layouts + '</div>' +
+          '<button class="secondary-button" type="button" data-action="open-chrono">Open Chrono</button>' +
+          '<button class="secondary-button" type="button" data-action="exit-comparison">Exit comparison</button>' +
+        '</div>';
+      }
+
+      function compareCardMarkup(id,index) {
+        var chart = chartById(id);
+        var count = state.selected.length;
+        var focus = count === 3 && index === 0;
+        return '<article class="compare-item' + (focus ? ' focus' : '') + '">' +
+          '<header class="chart-head"><div class="compare-order">' + (index + 1) + '</div><div style="min-width:0;flex:1"><div class="chart-kicker">' + escapeText(chart.kicker) + '</div><h3>' + escapeText(chart.title) + '</h3></div><div class="metric">' + escapeText(chart.metric) + '</div></header>' +
+          '<div class="delta">' + escapeText(chart.delta) + '</div>' +
+          plotMarkup(chart) +
+          '<footer class="chart-foot"><span>' + escapeText(chart.source) + '</span><span>' + escapeText(chart.current) + '</span></footer>' +
+          '<div class="compare-card-actions">' +
+            '<button class="small-button" type="button" data-action="move-earlier" data-id="' + id + '"' + (index === 0 ? ' disabled' : '') + '>Move earlier</button>' +
+            '<button class="small-button" type="button" data-action="move-later" data-id="' + id + '"' + (index === count - 1 ? ' disabled' : '') + '>Move later</button>' +
+            '<button class="small-button" type="button" data-action="open-evidence" data-id="' + id + '" data-tab="details">Chart details</button>' +
+            '<button class="small-button" type="button" data-action="open-evidence" data-id="' + id + '" data-tab="source">Source &amp; freshness</button>' +
+            '<button class="small-button remove" type="button" data-action="remove-chart" data-id="' + id + '">Remove chart</button>' +
+          '</div>' +
+        '</article>';
+      }
+
+      function comparisonGridMarkup() {
+        var cards = state.selected.map(compareCardMarkup).join('');
+        return '<div class="comparison-grid count-' + state.selected.length + ' layout-' + state.layout + '">' + cards + '</div>';
+      }
+
+      function directComparisonMarkup() {
+        var layouts = validLayouts(state.selected.length).map(function (layout) {
+          return '<button class="layout-button" type="button" data-action="set-layout" data-layout="' + layout.id + '" aria-pressed="' + (state.layout === layout.id) + '">' + layout.label + '</button>';
+        }).join('');
+        var cards = state.selected.map(function (id,index) {
+          var chart = chartById(id);
+          var focus = state.selected.length === 3 && index === 0;
+          return '<article class="d-compare-item' + (focus ? ' focus' : '') + '" draggable="true" tabindex="0" data-drag-id="' + id + '" aria-label="' + escapeText(chart.title) + ', position ' + (index + 1) + ' of ' + state.selected.length + '. Drag to reorder or use Alt plus arrow keys.">' +
+            '<h2>' + escapeText(chart.title) + '</h2>' +
+            plotMarkup(chart) +
+          '</article>';
+        }).join('');
+        return '<section class="d-comparison-layer" role="dialog" aria-modal="true" aria-label="Fullscreen chart comparison">' +
+          '<div class="d-comparison-toolbar"><div class="layout-control"><span class="layout-label">Layout</span>' + layouts + '</div><button class="secondary-button" type="button" data-action="exit-comparison">Exit</button></div>' +
+          '<div class="d-comparison-grid count-' + state.selected.length + ' layout-' + state.layout + '">' + cards + '</div>' +
+        '</section>';
+      }
+
+      function sharedComparisonMarkup(includeHeading) {
+        return (includeHeading ? comparisonHeadingMarkup() : '') + comparisonToolbarMarkup() + comparisonGridMarkup();
+      }
+
+      function evidenceMarkup(inFlow, persistent) {
+        var id = state.evidenceChartId || state.selected[0] || representativeIds[0];
+        var chart = chartById(id);
+        var details = '<dl class="evidence-ledger">' +
+          '<dt>Chart</dt><dd>' + escapeText(chart.title) + '</dd>' +
+          '<dt>Definition</dt><dd>' + escapeText(chart.kicker) + '. ' + escapeText(chart.delta) + '.</dd>' +
+          '<dt>Active Page</dt><dd>Executive surveillance</dd>' +
+          '<dt>Chart status</dt><dd>' + escapeText(chart.status) + '</dd>' +
+          '<dt>Display role</dt><dd>Read-only View evidence; canonical footprint and order unchanged.</dd>' +
+        '</dl>';
+        var source = '<dl class="evidence-ledger">' +
+          '<dt>Source</dt><dd>' + escapeText(chart.source) + '</dd>' +
+          '<dt>Citation</dt><dd>SimEx Regional Preparedness Programme. Biomedical evidence release 2026-03-31.</dd>' +
+          '<dt>Current through</dt><dd>' + escapeText(chart.current) + '</dd>' +
+          '<dt>Status</dt><dd>' + escapeText(chart.status) + '</dd>' +
+          '<dt>Owner</dt><dd>' + escapeText(chart.owner) + '</dd>' +
+          '<dt>Update cadence</dt><dd>' + escapeText(chart.cadence) + '</dd>' +
+          '<dt>Transformation</dt><dd>Validated aggregation; suppression applied below reporting threshold.</dd>' +
+        '</dl>';
+        return '<section class="evidence-panel' + (inFlow ? ' in-flow' : '') + '" aria-label="Read-only chart evidence">' +
+          '<header class="evidence-head"><div class="eyebrow">Read-only evidence</div><h2>' + escapeText(chart.title) + '</h2>' +
+            (!persistent ? '<button class="evidence-close" type="button" data-action="close-evidence" aria-label="Close evidence">×</button>' : '') +
+          '</header>' +
+          '<div class="evidence-tabs" role="tablist" aria-label="Evidence record">' +
+            '<button class="evidence-tab" type="button" role="tab" data-action="evidence-tab" data-tab="details" aria-selected="' + (state.evidenceTab === 'details') + '">Chart details</button>' +
+            '<button class="evidence-tab" type="button" role="tab" data-action="evidence-tab" data-tab="source" aria-selected="' + (state.evidenceTab === 'source') + '">Source &amp; freshness</button>' +
+          '</div>' +
+          '<div class="evidence-body">' + (state.evidenceTab === 'details' ? details : source) +
+            '<p class="evidence-note">This record is identical in ordinary View and all comparison variants. It exposes no Build fields or author diagnostics.</p>' +
+          '</div>' +
+        '</section>';
+      }
+
+      function workspaceMarkup() {
+        return crownMarkup() +
+          '<div class="workspace-header">' + comparisonHeadingMarkup() + '</div>' +
+          '<main class="comparison-shell">' + sharedComparisonMarkup(false) + '</main>';
+      }
+
+      function galleryMarkup() {
+        return '<section class="gallery-layer" role="dialog" aria-modal="true" aria-labelledby="gallery-title">' +
+          '<header class="gallery-head"><div class="gallery-title"><div class="eyebrow">View · Comparison gallery</div><h1 id="gallery-title">' + state.selected.length + '-chart evidence comparison</h1><p>Executive surveillance · 31 Mar 2026</p></div><button class="secondary-button" type="button" data-action="open-chrono">Open Chrono</button><button class="secondary-button" type="button" data-action="exit-comparison">Close gallery</button></header>' +
+          '<div class="gallery-scroll"><main class="comparison-shell">' + sharedComparisonMarkup(false) + '</main></div>' +
+        '</section>';
+      }
+
+      function liftMarkup() {
+        var compare = '<section class="comparison-lift" aria-label="Contextual comparison lift"><div class="comparison-shell">' +
+          comparisonHeadingMarkup() +
+          '<div class="lift-grid"><div>' + comparisonToolbarMarkup() + comparisonGridMarkup() + '</div><aside class="lift-evidence">' + evidenceMarkup(true,true) + '</aside></div>' +
+        '</div></section>';
+        return crownMarkup() + '<main class="dashboard-page" style="padding-bottom:0">' + compare + '</main>' + ordinaryDashboardMarkup(false,true);
+      }
+
+      function chronoControllerMarkup() {
+        var dates = ['15 Mar','18 Mar','21 Mar','24 Mar','27 Mar','29 Mar','31 Mar'];
+        var placementLabel = state.chronoPlacement === 'deck' ? 'Move to Mast' : 'Move to lower Deck';
+        return '<div class="chrono-bar">' +
+          '<div class="chrono-status"><strong>Chrono · Biomedical progression</strong><span>' + (state.chronoRetained ? 'Comparison retained · ' + state.selected.length + ' charts' : 'Ordinary View retained') + '</span></div>' +
+          '<div class="chrono-seek"><label for="chronoRange">Frame ' + (state.chronoFrame + 1) + ' of 7</label><input id="chronoRange" data-control="chrono-frame" type="range" min="0" max="6" value="' + state.chronoFrame + '"><output for="chronoRange">' + dates[state.chronoFrame] + '</output></div>' +
+          '<div class="chrono-controls"><button class="chrono-button" type="button" data-action="chrono-prev"' + (state.chronoFrame === 0 ? ' disabled' : '') + '>Previous</button><button class="chrono-button" type="button" data-action="chrono-play">' + (state.chronoPlaying ? 'Pause' : 'Play') + '</button><button class="chrono-button" type="button" data-action="chrono-next"' + (state.chronoFrame === 6 ? ' disabled' : '') + '>Next</button></div>' +
+          '<div class="chrono-controls"><button class="chrono-button" type="button" data-action="move-chrono">' + placementLabel + '</button><button class="chrono-button" type="button" data-action="exit-chrono">Exit Chrono</button></div>' +
+        '</div>';
+      }
+
+      function chronoMarkup() {
+        var selectedPreviews = (state.chronoRetained ? state.selected : representativeIds.slice(0,2)).map(function (id) {
+          var chart = chartById(id);
+          return '<article class="chrono-preview"><strong>' + escapeText(chart.title) + '</strong>' + plotMarkup(chart) + '</article>';
+        }).join('');
+        var controllerClass = state.chronoPlacement === 'mast' ? 'chrono-mast' : 'chrono-deck';
+        return '<section class="chrono-layer" aria-label="Chrono View lens">' +
+          '<div class="' + controllerClass + '">' + chronoControllerMarkup() + '</div>' +
+          '<main class="chrono-content"><section class="chrono-card"><div class="eyebrow">View · Chrono</div><h1>Biomedical progression</h1><p>Playback is a temporary View lens. The same Page and comparison session remain available when you exit.</p>' +
+            (state.chronoRetained ? '<div class="retained-banner">Comparison suspended and retained · ' + state.selected.length + ' charts · ' + validLayouts(state.selected.length).find(function (item) { return item.id === state.layout; }).label + '</div>' : '<div class="retained-banner">Ordinary View context retained</div>') +
+            '<div class="chrono-preview-grid">' + selectedPreviews + '</div></section></main>' +
+        '</section>';
+      }
+
+      function renderProduct() {
+        ensureLayout();
+        var base;
+        if (state.lens === 'selection') {
+          base = crownMarkup() + ordinaryDashboardMarkup(true,false) + (state.variant === 'd' ? '' : selectionDockMarkup());
+        } else if (state.lens === 'comparison') {
+          if (state.variant === 'a') base = workspaceMarkup();
+          else if (state.variant === 'b') base = crownMarkup() + ordinaryDashboardMarkup(false,false);
+          else if (state.variant === 'c') base = liftMarkup();
+          else base = '';
+        } else {
+          base = crownMarkup() + ordinaryDashboardMarkup(false,false);
+        }
+        productRoot.innerHTML = base;
+      }
+
+      function renderFloatingOnly() {
+        var floating = '';
+        if (state.variant === 'd' && state.chronoView && state.lens === 'ordinary') floating += chronoViewPlaybackMarkup() + chronoDateModalMarkup();
+        if (state.lens === 'selection' && state.variant === 'd') floating += selectionDockMarkup();
+        if (state.lens === 'comparison' && state.variant === 'b') floating += galleryMarkup();
+        if (state.lens === 'comparison' && state.variant === 'd') floating += directComparisonMarkup();
+        if (state.lens === 'chrono') floating += chronoMarkup();
+        if (state.evidenceOpen && !(state.lens === 'comparison' && (state.variant === 'c' || state.variant === 'd'))) {
+          floating += '<div class="evidence-layer">' + evidenceMarkup(false,false) + '</div>';
+        }
+        if (state.toast) floating += '<div class="toast">' + escapeText(state.toast) + '</div>';
+        floatingRoot.innerHTML = floating;
+        liveRegion.textContent = state.announcement;
+      }
+
+      function renderRail() {
+        document.querySelectorAll('[data-variant]').forEach(function (button) {
+          button.setAttribute('aria-pressed', String(button.dataset.variant === state.variant));
+        });
+        document.querySelectorAll('[data-viewport]').forEach(function (button) {
+          button.setAttribute('aria-pressed', String(button.dataset.viewport === state.viewport));
+        });
+        var lensName = state.variant === 'd' && state.chronoView ? 'Chrono View' : state.lens === 'chrono' ? 'Chrono' : state.lens === 'selection' ? 'Selecting' : state.lens === 'comparison' ? 'Comparison' : 'Ordinary View';
+        var layoutName = validLayouts(state.selected.length).find(function (item) { return item.id === state.layout; });
+        var activeChronoGroup = chronoGroupById(state.chronoTimeGroup);
+        stateLedger.innerHTML =
+          '<dt>Variant</dt><dd>' + state.variant.toUpperCase() + ' · ' + variantNames[state.variant] + '</dd>' +
+          '<dt>View lens</dt><dd>' + lensName + '</dd>' +
+          '<dt>Selection</dt><dd>' + state.selected.length + ' / 4</dd>' +
+          '<dt>Layout</dt><dd>' + (layoutName ? layoutName.label : 'Solo') + '</dd>' +
+          '<dt>Chrono</dt><dd>' + (state.variant === 'd' ? (state.chronoView ? escapeText(activeChronoGroup.name) + ' · frame ' + (state.chronoViewFrame + 1) + '/' + activeChronoGroup.frames.length + ' · ' + state.chronoViewSeconds + ' seconds/frame' : 'Off') : (state.chronoPlacement === 'deck' ? 'Lower Deck' : 'Mast')) + '</dd>';
+      }
+
+      function applyViewport() {
+        var dimensions = {
+          '1440':{width:'1440px',height:'900px'},
+          '1024':{width:'1024px',height:'780px'},
+          '768':{width:'768px',height:'760px'},
+          '390':{width:'390px',height:'844px'}
+        };
+        var current = dimensions[state.viewport];
+        productWindow.classList.remove('is-fit');
+        productWindow.style.setProperty('--viewport-w',current.width);
+        productWindow.style.setProperty('--viewport-h',current.height);
+      }
+
+      function render(focusSelector) {
+        var scrollTop = productScroll.scrollTop;
+        renderProduct();
+        renderFloatingOnly();
+        renderRail();
+        applyViewport();
+        productScroll.scrollTop = scrollTop;
+        window.requestAnimationFrame(positionChronoDateModal);
+        if (focusSelector) {
+          window.requestAnimationFrame(function () {
+            var target = document.querySelector(focusSelector);
+            if (target) target.focus();
+          });
+        }
+      }
+
+      function focusGallery() {
+        if (state.lens !== 'comparison' || (state.variant !== 'b' && state.variant !== 'd')) return;
+        var selector = state.variant === 'd' ? '.d-comparison-layer' : '.gallery-layer';
+        window.requestAnimationFrame(function () {
+          var first = document.querySelector(selector + ' button:not([disabled])');
+          if (first) first.focus();
+        });
+      }
+
+      function galleryFocusable() {
+        var selector = state.variant === 'd' ? '.d-comparison-layer' : '.gallery-layer';
+        var root = document.querySelector(selector);
+        if (!root) return [];
+        return Array.from(root.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]'
+        ));
+      }
+
+      function openEvidence(id, tab, invoker) {
+        state.evidenceChartId = id;
+        state.evidenceTab = tab || 'details';
+        state.evidenceOpen = true;
+        state.lastEvidenceChart = invoker || id;
+        announce((state.evidenceTab === 'source' ? 'Source and freshness' : 'Chart details') + ' opened for ' + chartById(id).title, false);
+      }
+
+      function closeEvidence() {
+        var id = state.lastEvidenceChart;
+        state.evidenceOpen = false;
+        state.announcement = 'Evidence closed. Focus returned to ' + chartById(id || representativeIds[0]).title;
+        render('[data-action="open-evidence"][data-id="' + (id || representativeIds[0]) + '"]');
+      }
+
+      function startSelection(initialId) {
+        pauseChronoViewPlayback();
+        state.returnScrollTop = productScroll.scrollTop;
+        state.returnFocusId = initialId || null;
+        state.lens = 'selection';
+        state.selected = initialId ? [initialId] : [];
+        state.layout = 'solo';
+        state.maxAlert = false;
+        state.evidenceOpen = false;
+        productScroll.scrollTop = 0;
+        announce(initialId ? chartById(initialId).title + ' selected as chart 1. Continue choosing charts.' : 'Chart comparison selection started. Zero charts selected.');
+      }
+
+      function exitToOrdinary(message) {
+        var returnId = state.returnFocusId;
+        var returnScrollTop = state.returnScrollTop;
+        state.lens = 'ordinary';
+        state.selected = [];
+        state.layout = 'solo';
+        state.maxAlert = false;
+        state.evidenceOpen = false;
+        announce(message || 'Comparison exited. Dashboard geometry and View context restored.');
+        window.requestAnimationFrame(function () {
+          productScroll.scrollTop = returnScrollTop;
+          var selector = returnId ? '[data-action="focus-chart"][data-id="' + returnId + '"]' : '[data-action="start-selection"]';
+          var target = document.querySelector(selector);
+          if (target) target.focus();
+        });
+      }
+
+      function toggleSelect(id) {
+        var index = state.selected.indexOf(id);
+        if (index !== -1) {
+          state.selected.splice(index,1);
+          state.maxAlert = false;
+          ensureLayout();
+          announce(chartById(id).title + ' removed from selection.');
+          return;
+        }
+        if (state.selected.length >= 4) {
+          state.maxAlert = true;
+          announce('Maximum 4 charts allowed');
+          return;
+        }
+        state.selected.push(id);
+        state.maxAlert = false;
+        ensureLayout();
+        announce(chartById(id).title + ' selected as chart ' + state.selected.length + '.');
+      }
+
+      function enterComparison() {
+        if (state.selected.length < 2) return;
+        state.lens = 'comparison';
+        state.layout = defaultLayout(state.selected.length);
+        state.maxAlert = false;
+        state.evidenceOpen = false;
+        if (state.variant === 'c') {
+          state.evidenceChartId = state.selected[0];
+          state.evidenceTab = 'details';
+        }
+        productScroll.scrollTop = 0;
+        announce('Comparison opened with ' + state.selected.length + ' charts. Dashboard geometry remains unchanged.');
+        focusGallery();
+      }
+
+      function focusChart(id) {
+        pauseChronoViewPlayback();
+        state.returnScrollTop = productScroll.scrollTop;
+        state.returnFocusId = id;
+        state.selected = [id];
+        state.layout = 'solo';
+        state.lens = 'comparison';
+        state.evidenceOpen = false;
+        state.evidenceChartId = id;
+        productScroll.scrollTop = 0;
+        announce(chartById(id).title + ' opened in Solo focus.');
+        focusGallery();
+      }
+
+      function moveChart(id, delta) {
+        var index = state.selected.indexOf(id);
+        var next = index + delta;
+        if (index < 0 || next < 0 || next >= state.selected.length) return;
+        var moved = state.selected.splice(index,1)[0];
+        state.selected.splice(next,0,moved);
+        announce(chartById(id).title + ' moved to position ' + (next + 1) + '.');
+      }
+
+      function reorderDragged(sourceId, targetId, placeAfter) {
+        if (!sourceId || !targetId || sourceId === targetId) return;
+        var sourceIndex = state.selected.indexOf(sourceId);
+        if (sourceIndex === -1) return;
+        var moved = state.selected.splice(sourceIndex,1)[0];
+        var targetIndex = state.selected.indexOf(targetId);
+        if (targetIndex === -1) {
+          state.selected.push(moved);
+        } else {
+          state.selected.splice(targetIndex + (placeAfter ? 1 : 0),0,moved);
+        }
+        draggedChartId = null;
+        announce(chartById(sourceId).title + ' moved to position ' + (state.selected.indexOf(sourceId) + 1) + '.');
+      }
+
+      function clearDragClasses() {
+        document.querySelectorAll('.d-compare-item.is-dragging,.d-compare-item.is-drop-target').forEach(function (item) {
+          item.classList.remove('is-dragging','is-drop-target');
+        });
+      }
+
+      function removeChart(id) {
+        var index = state.selected.indexOf(id);
+        if (index === -1) return;
+        state.selected.splice(index,1);
+        if (!state.selected.length) {
+          exitToOrdinary('Final chart removed. Comparison exited and ordinary View restored.');
+          return;
+        }
+        ensureLayout();
+        if (state.evidenceChartId === id) state.evidenceChartId = state.selected[0];
+        announce(chartById(id).title + ' removed. ' + state.selected.length + ' charts remain.');
+      }
+
+      function openChrono() {
+        state.chronoReturn = state.lens === 'comparison' ? 'comparison' : 'ordinary';
+        state.chronoRetained = state.lens === 'comparison';
+        state.evidenceOpen = false;
+        state.lens = 'chrono';
+        announce(state.chronoRetained ? 'Comparison suspended and retained. Chrono opened.' : 'Chrono opened from ordinary View.');
+      }
+
+      function exitChrono() {
+        state.lens = state.chronoReturn;
+        state.chronoPlaying = false;
+        announce(state.chronoReturn === 'comparison' ? 'Chrono exited. Retained comparison restored.' : 'Chrono exited. Ordinary View restored.');
+      }
+
+      function toggleChronoView() {
+        state.chronoView = !state.chronoView;
+        var group = chronoGroupById(state.chronoTimeGroup);
+        if (!state.chronoView) pauseChronoViewPlayback();
+        else {
+          state.chronoDateX = null;
+          state.chronoDateY = null;
+        }
+        state.chronoViewFrame = Math.min(state.chronoViewFrame,group.frames.length - 1);
+        announce(state.chronoView ?
+          group.name + ' selected for Chrono View. ' + group.members.length + ' member charts elevated; playback is paused at ' + formatChronoDate(group.frames[state.chronoViewFrame],true) + '.' :
+          'Chrono View exited. Original Page chart order restored.');
+      }
+
+      function useFixture(name) {
+        state.evidenceOpen = false;
+        state.maxAlert = false;
+        if (name !== 'chrono') {
+          state.chronoView = false;
+          pauseChronoViewPlayback();
+        }
+        if (name === 'ordinary') {
+          state.lens = 'ordinary';
+          state.selected = [];
+          state.layout = 'solo';
+          announce('Ordinary View fixture restored.');
+        } else if (name === 'selection') {
+          state.lens = 'selection';
+          state.selected = [];
+          state.layout = 'solo';
+          announce('Selection fixture opened with zero charts selected.');
+        } else if (name === 'four') {
+          state.lens = 'comparison';
+          state.selected = representativeIds.slice();
+          state.layout = 'grid-2x2';
+          state.evidenceChartId = state.selected[0];
+          announce('Four-chart representative comparison opened.');
+        } else {
+          if (state.variant === 'd') {
+            state.lens = 'ordinary';
+            state.selected = [];
+            state.layout = 'solo';
+            state.chronoView = true;
+            state.chronoViewFrame = 0;
+            state.chronoDateX = null;
+            state.chronoDateY = null;
+            pauseChronoViewPlayback();
+            announce(chronoGroupById(state.chronoTimeGroup).name + ' member charts elevated in Chrono View with playback paused at the first frame.');
+          } else {
+            state.selected = representativeIds.slice();
+            state.layout = 'grid-2x2';
+            state.chronoReturn = 'comparison';
+            state.chronoRetained = true;
+            state.lens = 'chrono';
+            announce('Chrono opened with four-chart comparison retained.');
+          }
+        }
+        productScroll.scrollTop = 0;
+      }
+
+      function clearFocusHold() {
+        if (focusHoldTimer !== null) {
+          window.clearTimeout(focusHoldTimer);
+          focusHoldTimer = null;
+        }
+      }
+
+      document.addEventListener('pointerdown', function (event) {
+        var resizeHandle = event.target.closest('[data-chrono-date-resize]');
+        var dragHandle = resizeHandle ? null : event.target.closest('[data-chrono-date-drag]');
+        if (resizeHandle || dragHandle) {
+          var modal = event.target.closest('.chrono-date-modal');
+          var productRect = productWindow.getBoundingClientRect();
+          var modalRect = modal.getBoundingClientRect();
+          var scaleX = productRect.width ? productWindow.clientWidth / productRect.width : 1;
+          var scaleY = productRect.height ? productWindow.clientHeight / productRect.height : 1;
+          chronoDatePointer = {
+            mode:resizeHandle ? 'resize' : 'move',
+            pointerId:event.pointerId,
+            startClientX:event.clientX,
+            startClientY:event.clientY,
+            startX:(modalRect.left - productRect.left) * scaleX,
+            startY:(modalRect.top - productRect.top) * scaleY,
+            startWidth:modalRect.width * scaleX,
+            startHeight:modalRect.height * scaleY,
+            scaleX:scaleX,
+            scaleY:scaleY,
+            modal:modal
+          };
+          if (modal.setPointerCapture) modal.setPointerCapture(event.pointerId);
+          event.preventDefault();
+          return;
+        }
+        var button = event.target.closest('.focus-hold[data-action="focus-chart"]');
+        if (!button || state.variant !== 'd' || state.lens !== 'ordinary') return;
+        clearFocusHold();
+        var id = button.dataset.id;
+        focusHoldTimer = window.setTimeout(function () {
+          focusHoldTimer = null;
+          suppressFocusClickUntil = Date.now() + 1200;
+          startSelection(id);
+        },650);
+      });
+
+      document.addEventListener('pointermove', function (event) {
+        if (!chronoDatePointer || event.pointerId !== chronoDatePointer.pointerId) return;
+        var dx = (event.clientX - chronoDatePointer.startClientX) * chronoDatePointer.scaleX;
+        var dy = (event.clientY - chronoDatePointer.startClientY) * chronoDatePointer.scaleY;
+        if (chronoDatePointer.mode === 'move') {
+          state.chronoDateX = clamp(chronoDatePointer.startX + dx,8,productWindow.clientWidth - state.chronoDateWidth - 8);
+          state.chronoDateY = clamp(chronoDatePointer.startY + dy,8,productWindow.clientHeight - state.chronoDateHeight - 8);
+        } else {
+          state.chronoDateWidth = clamp(chronoDatePointer.startWidth + dx,170,productWindow.clientWidth - chronoDatePointer.startX - 8);
+          state.chronoDateHeight = clamp(chronoDatePointer.startHeight + dy,72,productWindow.clientHeight - chronoDatePointer.startY - 8);
+          state.chronoDateX = chronoDatePointer.startX;
+          state.chronoDateY = chronoDatePointer.startY;
+        }
+        applyChronoDateGeometry(chronoDatePointer.modal);
+        event.preventDefault();
+      });
+
+      ['pointerup','pointercancel'].forEach(function (eventName) {
+        document.addEventListener(eventName,function (event) {
+          clearFocusHold();
+          if (!chronoDatePointer || event.pointerId !== chronoDatePointer.pointerId) return;
+          state.announcement = chronoDatePointer.mode === 'move' ? 'Date display moved.' : 'Date display resized.';
+          liveRegion.textContent = state.announcement;
+          chronoDatePointer = null;
+        });
+      });
+
+      document.addEventListener('pointerout', function (event) {
+        var button = event.target.closest('.focus-hold[data-action="focus-chart"]');
+        if (button && !button.contains(event.relatedTarget)) clearFocusHold();
+      });
+
+      document.addEventListener('dragstart', function (event) {
+        var item = event.target.closest('[data-drag-id]');
+        if (!item || state.variant !== 'd' || state.lens !== 'comparison') return;
+        draggedChartId = item.dataset.dragId;
+        item.classList.add('is-dragging');
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain',draggedChartId);
+        }
+      });
+
+      document.addEventListener('dragover', function (event) {
+        var item = event.target.closest('[data-drag-id]');
+        if (!item || !draggedChartId || item.dataset.dragId === draggedChartId) return;
+        event.preventDefault();
+        document.querySelectorAll('.d-compare-item.is-drop-target').forEach(function (target) {
+          target.classList.remove('is-drop-target');
+        });
+        item.classList.add('is-drop-target');
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      });
+
+      document.addEventListener('drop', function (event) {
+        var item = event.target.closest('[data-drag-id]');
+        if (!item || !draggedChartId) return;
+        event.preventDefault();
+        var rect = item.getBoundingClientRect();
+        var placeAfter = event.clientY > rect.top + rect.height / 2 || event.clientX > rect.left + rect.width / 2;
+        var sourceId = draggedChartId;
+        var targetId = item.dataset.dragId;
+        clearDragClasses();
+        reorderDragged(sourceId,targetId,placeAfter);
+      });
+
+      document.addEventListener('dragend', function () {
+        draggedChartId = null;
+        clearDragClasses();
+      });
+
+      document.addEventListener('click', function (event) {
+        var variantButton = event.target.closest('[data-variant]');
+        if (variantButton) {
+          state.variant = variantButton.dataset.variant;
+          if (state.variant !== 'd') pauseChronoViewPlayback();
+          if (state.variant === 'd' && state.lens === 'chrono') {
+            state.lens = 'ordinary';
+            state.chronoView = true;
+          }
+          draggedChartId = null;
+          clearFocusHold();
+          announce('Variant ' + state.variant.toUpperCase() + ' selected. Shared View state preserved.');
+          focusGallery();
+          return;
+        }
+        var viewportButton = event.target.closest('[data-viewport]');
+        if (viewportButton) {
+          state.viewport = viewportButton.dataset.viewport;
+          render();
+          return;
+        }
+        var fixtureButton = event.target.closest('[data-fixture]');
+        if (fixtureButton) {
+          useFixture(fixtureButton.dataset.fixture);
+          return;
+        }
+        var actionButton = event.target.closest('[data-action]');
+        if (!actionButton || actionButton.disabled) return;
+        var action = actionButton.dataset.action;
+        var id = actionButton.dataset.id;
+        if (action === 'start-selection') startSelection();
+        else if (action === 'cancel-selection') exitToOrdinary('Selection cancelled. Ordinary View context restored.');
+        else if (action === 'enter-comparison') enterComparison();
+        else if (action === 'toggle-select') toggleSelect(id);
+        else if (action === 'focus-chart') {
+          if (Date.now() < suppressFocusClickUntil) {
+            suppressFocusClickUntil = 0;
+            return;
+          }
+          focusChart(id);
+        }
+        else if (action === 'open-evidence') openEvidence(id,actionButton.dataset.tab,id);
+        else if (action === 'close-evidence') closeEvidence();
+        else if (action === 'evidence-tab') {
+          state.evidenceTab = actionButton.dataset.tab;
+          announce((state.evidenceTab === 'details' ? 'Chart details' : 'Source and freshness') + ' tab selected.',false);
+        }
+        else if (action === 'set-layout') {
+          state.layout = actionButton.dataset.layout;
+          announce('Comparison layout changed to ' + actionButton.textContent.trim() + '.');
+        }
+        else if (action === 'move-earlier') moveChart(id,-1);
+        else if (action === 'move-later') moveChart(id,1);
+        else if (action === 'remove-chart') removeChart(id);
+        else if (action === 'exit-comparison') exitToOrdinary();
+        else if (action === 'toggle-chrono-view') toggleChronoView();
+        else if (action === 'chrono-view-prev') {
+          var previousGroup = chronoGroupById(state.chronoTimeGroup);
+          state.chronoViewFrame = Math.max(0,state.chronoViewFrame - 1);
+          announce('Previous Chrono frame: ' + formatChronoDate(previousGroup.frames[state.chronoViewFrame],true) + '.',false);
+        }
+        else if (action === 'chrono-view-next') {
+          var nextGroup = chronoGroupById(state.chronoTimeGroup);
+          state.chronoViewFrame = Math.min(nextGroup.frames.length - 1,state.chronoViewFrame + 1);
+          announce('Next Chrono frame: ' + formatChronoDate(nextGroup.frames[state.chronoViewFrame],true) + '.',false);
+        }
+        else if (action === 'chrono-view-placement') {
+          state.chronoViewPlacement = state.chronoViewPlacement === 'bottom' ? 'top' : 'bottom';
+          announce('Chrono controller moved to ' + (state.chronoViewPlacement === 'bottom' ? 'Lower Playback Deck' : 'Chrono Mast') + '. Frame and playback state preserved.',false);
+        }
+        else if (action === 'chrono-view-play') {
+          var playbackGroup = chronoGroupById(state.chronoTimeGroup);
+          if (!state.chronoViewPlaying && state.chronoViewFrame === playbackGroup.frames.length - 1) state.chronoViewFrame = 0;
+          state.chronoViewPlaying = !state.chronoViewPlaying;
+          announce(state.chronoViewPlaying ? 'Chrono playback started at ' + state.chronoViewSeconds + ' seconds per frame.' : 'Chrono playback paused.',false);
+          syncChronoViewPlayback();
+        }
+        else if (action === 'open-chrono') openChrono();
+        else if (action === 'exit-chrono') exitChrono();
+        else if (action === 'move-chrono') {
+          state.chronoPlacement = state.chronoPlacement === 'deck' ? 'mast' : 'deck';
+          announce('Chrono controller moved to ' + (state.chronoPlacement === 'deck' ? 'Lower Playback Deck' : 'Chrono Mast') + '. Playback state preserved.');
+        }
+        else if (action === 'chrono-prev') {
+          state.chronoFrame = Math.max(0,state.chronoFrame - 1);
+          announce('Chrono moved to frame ' + (state.chronoFrame + 1) + '.',false);
+        }
+        else if (action === 'chrono-next') {
+          state.chronoFrame = Math.min(6,state.chronoFrame + 1);
+          announce('Chrono moved to frame ' + (state.chronoFrame + 1) + '.',false);
+        }
+        else if (action === 'chrono-play') {
+          state.chronoPlaying = !state.chronoPlaying;
+          announce(state.chronoPlaying ? 'Chrono playback started.' : 'Chrono playback paused.');
+        }
+        else if (action === 'context-note') announce(actionButton.dataset.message);
+      });
+
+      document.addEventListener('change', function (event) {
+        var control = event.target.dataset.control;
+        if (control === 'chrono-time-group') {
+          state.chronoTimeGroup = event.target.value;
+          state.chronoViewFrame = 0;
+          pauseChronoViewPlayback();
+          var group = chronoGroupById(state.chronoTimeGroup);
+          announce(group.name + ' selected. ' + group.members.length + ' member charts elevated; playback is paused at ' + formatChronoDate(group.frames[0],true) + '.');
+        } else if (control === 'chrono-view-frame') {
+          var seekGroup = chronoGroupById(state.chronoTimeGroup);
+          state.chronoViewFrame = nearestChronoFrameIndex(seekGroup,event.target.value);
+          announce('Chrono seek moved to ' + formatChronoDate(seekGroup.frames[state.chronoViewFrame],true) + ', frame ' + (state.chronoViewFrame + 1) + ' of ' + seekGroup.frames.length + '.',false);
+        } else if (control === 'chrono-view-seconds') {
+          var seconds = Number(event.target.value);
+          state.chronoViewPlaying = false;
+          if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 10) {
+            event.target.value = String(state.chronoViewSeconds);
+            event.target.setAttribute('aria-invalid','true');
+            announce('Seconds per frame must be above zero and no more than ten.',false);
+          } else {
+            state.chronoViewSeconds = seconds;
+            event.target.removeAttribute('aria-invalid');
+            announce(state.chronoViewSeconds + ' seconds per frame set for this View session. Playback paused.',false);
+          }
+          syncChronoViewPlayback();
+        } else if (control === 'chrono-frame') {
+          state.chronoFrame = Number(event.target.value);
+          announce('Chrono frame changed to ' + (state.chronoFrame + 1) + '.',false);
+        }
+      });
+
+      document.addEventListener('input', function (event) {
+        if (event.target.dataset.control !== 'chrono-view-frame') return;
+        var group = chronoGroupById(state.chronoTimeGroup);
+        state.chronoViewFrame = nearestChronoFrameIndex(group,event.target.value);
+        var date = group.frames[state.chronoViewFrame];
+        event.target.setAttribute('aria-valuetext',formatChronoDate(date,true) + ', frame ' + (state.chronoViewFrame + 1) + ' of ' + group.frames.length);
+        var reading = document.querySelector('[data-chrono-frame-reading]');
+        var output = document.querySelector('[data-chrono-frame-output]');
+        var chip = document.querySelector('.dashboard-page.chrono-view-active .time-chip');
+        var floatingDate = document.querySelector('[data-chrono-date-value]');
+        if (reading) reading.textContent = formatChronoDate(date,true) + ' · Frame ' + (state.chronoViewFrame + 1) + ' of ' + group.frames.length;
+        if (output) output.textContent = formatChronoDate(date,true);
+        if (chip) chip.textContent = formatChronoDate(date,true) + ' · Europe/Berlin';
+        if (floatingDate) {
+          floatingDate.textContent = formatChronoDate(date,true);
+          applyChronoDateGeometry(floatingDate.closest('.chrono-date-modal'));
+        }
+        document.querySelectorAll('[data-chrono-tick-index]').forEach(function (tick) {
+          tick.classList.toggle('current',Number(tick.dataset.chronoTickIndex) === state.chronoViewFrame);
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        var dateMoveTarget = event.target.closest('[data-chrono-date-drag]');
+        var dateResizeTarget = event.target.closest('[data-chrono-date-resize]');
+        if ((dateMoveTarget || dateResizeTarget) && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].indexOf(event.key) !== -1) {
+          event.preventDefault();
+          var deltaX = event.key === 'ArrowLeft' ? -10 : event.key === 'ArrowRight' ? 10 : 0;
+          var deltaY = event.key === 'ArrowUp' ? -10 : event.key === 'ArrowDown' ? 10 : 0;
+          var resize = Boolean(dateResizeTarget || event.shiftKey);
+          if (resize) {
+            state.chronoDateWidth = clamp(state.chronoDateWidth + deltaX,170,productWindow.clientWidth - state.chronoDateX - 8);
+            state.chronoDateHeight = clamp(state.chronoDateHeight + deltaY,72,productWindow.clientHeight - state.chronoDateY - 8);
+          } else {
+            state.chronoDateX = clamp(state.chronoDateX + deltaX,8,productWindow.clientWidth - state.chronoDateWidth - 8);
+            state.chronoDateY = clamp(state.chronoDateY + deltaY,8,productWindow.clientHeight - state.chronoDateHeight - 8);
+          }
+          applyChronoDateGeometry(document.querySelector('.chrono-date-modal'));
+          state.announcement = resize ? 'Date display resized.' : 'Date display moved.';
+          liveRegion.textContent = state.announcement;
+          return;
+        }
+        var reorderTarget = event.target.closest('[data-drag-id]');
+        if (reorderTarget && state.variant === 'd' && state.lens === 'comparison' && event.altKey && ['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].indexOf(event.key) !== -1) {
+          event.preventDefault();
+          var reorderId = reorderTarget.dataset.dragId;
+          var delta = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1;
+          moveChart(reorderId,delta);
+          window.requestAnimationFrame(function () {
+            var target = document.querySelector('[data-drag-id="' + reorderId + '"]');
+            if (target) target.focus();
+          });
+          return;
+        }
+        if (event.key === 'Tab' && state.lens === 'comparison' && (state.variant === 'b' || state.variant === 'd') && !state.evidenceOpen) {
+          var focusable = galleryFocusable();
+          if (focusable.length) {
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }
+          return;
+        }
+        if (event.key !== 'Escape') return;
+        if (state.evidenceOpen && !(state.lens === 'comparison' && (state.variant === 'c' || state.variant === 'd'))) {
+          event.preventDefault();
+          closeEvidence();
+        } else if (state.lens === 'chrono') {
+          event.preventDefault();
+          exitChrono();
+        } else if (state.lens === 'selection') {
+          event.preventDefault();
+          exitToOrdinary('Selection cancelled. Ordinary View context restored.');
+        } else if (state.lens === 'comparison') {
+          event.preventDefault();
+          exitToOrdinary();
+        }
+      });
+
+      render();
+    }());
+  </script>
+</body>
+</html>
