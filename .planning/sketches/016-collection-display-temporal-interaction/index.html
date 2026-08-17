@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 016 · Collection display and paging interaction</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --paper:#f4f0e7;
+      --paper-2:#e9e2d4;
+      --panel:#fffdf8;
+      --panel-2:#f8f4eb;
+      --ink:#202a2d;
+      --muted:#647073;
+      --rule:#c5bdaf;
+      --rule-strong:#918a7f;
+      --accent:#254c57;
+      --accent-soft:#dbe9e8;
+      --select:#a94b34;
+      --select-soft:#f4dfd7;
+      --good:#356b50;
+      --warn:#9b6127;
+      --shadow:0 18px 48px rgba(43,38,31,.2);
+      --shadow-small:0 7px 22px rgba(43,38,31,.12);
+    }
+
+    * { box-sizing:border-box; }
+    .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+    html { background:#252a2b; }
+    body { margin:0; min-width:320px; color:var(--ink); background:#252a2b; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,select { font:inherit; }
+    button,select,input { min-height:44px; transition:background-color .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease,transform .15s ease; }
+    button { cursor:pointer; }
+    button:hover { transform:translateY(-1px); }
+    button:disabled { cursor:not-allowed; opacity:.48; transform:none; }
+    button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible { outline:3px solid #e39d57; outline-offset:2px; }
+
+    .review-bar { position:sticky; top:0; z-index:1000; min-height:78px; display:flex; align-items:center; gap:14px; padding:10px 16px; color:#f7f4ed; background:#202526; border-bottom:1px solid #4d5656; box-shadow:0 8px 22px rgba(0,0,0,.25); }
+    .review-title { width:270px; flex:none; }
+    .review-title strong,.review-title small { display:block; }
+    .review-title strong { font-size:14px; }
+    .review-title small { margin-top:4px; color:#bdc7c5; font-size:11px; line-height:1.35; }
+    .review-tabs { flex:1; display:flex; gap:7px; }
+    .review-button { min-height:44px; padding:7px 11px; color:#edf1ef; background:#2e3536; border:1px solid #596363; border-radius:8px; font-size:11px; font-weight:780; }
+    .review-button:hover { background:#3b4445; border-color:#8b9795; }
+    .review-button[aria-pressed="true"] { color:#202829; background:#ede3d4; border-color:#ede3d4; box-shadow:inset 0 -3px 0 var(--select); }
+    .review-button.winner::after { content:"★ Winner"; display:block; margin-top:2px; color:#c8d6d3; font-size:8px; font-weight:700; }
+    .review-button.winner[aria-pressed="true"]::after { color:#6d6256; }
+    .viewport-tools { display:flex; gap:5px; }
+    .viewport-tools .review-button { min-width:48px; padding-inline:7px; }
+
+    .review-stage { min-height:calc(100vh - 78px); padding:24px; overflow:auto; display:grid; place-items:start center; background:#313738; }
+    .product-window { position:relative; width:100%; max-width:1440px; height:calc(100vh - 126px); min-height:650px; overflow:hidden; background:var(--paper); border:1px solid #596261; border-radius:11px; box-shadow:0 28px 80px rgba(0,0,0,.35); }
+    .product-window[data-preview="1200"] { width:1200px; max-width:none; }
+    .product-window[data-preview="768"] { width:768px; max-width:none; }
+    .product-window[data-preview="390"] { width:390px; max-width:none; }
+    #app { width:100%; height:100%; overflow:auto; overscroll-behavior:contain; background:var(--paper); }
+
+    .phone-banner { position:sticky; top:0; z-index:95; min-height:54px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; color:#513811; background:#ffe8b8; border-bottom:1px solid #c69032; font-size:11px; font-weight:760; }
+    .phone-banner button { padding:6px 10px; color:#513811; background:#fff7e7; border:1px solid #805713; border-radius:6px; font-weight:800; }
+    .command-crown { position:sticky; top:0; z-index:50; box-shadow:0 2px 11px rgba(54,45,35,.11); }
+    .modebar,.context-row,.build-strip { display:flex; align-items:center; gap:8px; padding:6px 18px; border-bottom:1px solid var(--rule); }
+    .modebar { min-height:54px; background:var(--paper-2); }
+    .context-row { min-height:49px; background:var(--panel); }
+    .build-strip { min-height:48px; overflow-x:auto; background:#e4dccd; border-color:var(--rule-strong); }
+    .brand { display:flex; align-items:center; gap:9px; margin-right:8px; font-weight:900; }
+    .brand-mark { display:grid; place-items:center; width:30px; height:30px; color:#fff; background:var(--accent); border-radius:7px; font-size:10px; letter-spacing:.08em; }
+    .mode-button,.crown-button,.page-button,.small-button,.icon-button { min-height:44px; padding:7px 11px; color:inherit; background:transparent; border:1px solid transparent; border-radius:7px; font-size:11px; font-weight:760; }
+    .mode-button:hover,.crown-button:hover,.page-button:hover,.small-button:hover,.icon-button:hover { background:rgba(255,255,255,.6); border-color:var(--rule); }
+    .mode-button[aria-current="page"],.page-button[aria-current="page"],.crown-button[aria-pressed="true"] { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .spacer { flex:1; }
+    .scenario { max-width:330px; text-align:left; background:rgba(255,255,255,.38); border-color:var(--rule); }
+    .scenario strong,.scenario span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .scenario span { margin-top:2px; color:var(--muted); font-size:9px; }
+    .dashboard-name { min-width:210px; }
+    .dashboard-name strong,.dashboard-name span { display:block; }
+    .dashboard-name strong { font-size:12px; }
+    .dashboard-name span { margin-top:2px; color:var(--muted); font-size:9px; }
+    .page-tabs { display:flex; align-items:center; gap:4px; overflow:auto; }
+    .page-button { min-width:max-content; }
+    .page-button[aria-current="page"] { min-height:38px; }
+    .crown-actions { display:flex; gap:5px; }
+    .crown-button { min-width:max-content; border-color:var(--rule); background:var(--panel-2); }
+    .crown-button.emphasis { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .build-strip strong { font-size:12px; }
+    .draft-chip,.scope-chip { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:5px 9px; color:var(--muted); background:rgba(255,255,255,.58); border:1px solid var(--rule); border-radius:999px; font-size:9px; font-weight:760; white-space:nowrap; }
+    .draft-chip::before { content:""; width:7px; height:7px; background:#7f8e87; border-radius:50%; }
+    .draft-chip.dirty { color:#6c351f; background:#fff1e9; border-color:#c68161; }
+    .draft-chip.dirty::before { background:var(--select); }
+    .strip-button { min-height:38px; padding:6px 10px; color:var(--ink); background:rgba(255,255,255,.56); border:1px solid var(--rule); border-radius:7px; font-size:10px; font-weight:780; }
+    .strip-message { color:var(--muted); font-size:9px; font-style:italic; white-space:nowrap; }
+
+    .controller-label strong,.controller-label span { display:block; }
+    .controller-label strong { font-size:11px; letter-spacing:.05em; text-transform:uppercase; }
+    .controller-label span { margin-top:2px; color:#76584c; font-size:9px; }
+    .transport { display:flex; gap:4px; }
+
+    .dashboard-page { max-width:1320px; margin:0 auto; padding:24px 28px 120px; }
+    .page-heading { display:flex; align-items:end; justify-content:space-between; gap:20px; margin-bottom:18px; }
+    .page-heading h1 { margin:0; font:600 clamp(25px,3vw,39px) Georgia,"Times New Roman",serif; letter-spacing:-.03em; }
+    .page-heading p { max-width:680px; margin:6px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
+    .period-chip { min-width:max-content; padding:8px 11px; color:var(--muted); background:var(--panel); border:1px solid var(--rule); border-radius:999px; font-size:10px; font-weight:740; }
+    .section-head { display:flex; align-items:end; justify-content:space-between; gap:12px; padding-bottom:8px; border-bottom:2px solid var(--ink); }
+    .section-head h2 { margin:0; font:600 21px Georgia,"Times New Roman",serif; }
+    .section-head p { margin:4px 0 0; color:var(--muted); font-size:9px; }
+    .legend { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+    .legend span { padding:5px 8px; color:var(--muted); background:var(--panel); border:1px solid var(--rule); border-radius:999px; font-size:8px; font-weight:760; }
+    .legend .items { color:#6c351f; background:var(--select-soft); border-color:#c88770; }
+    .chart-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:minmax(205px,auto); gap:13px; padding-top:13px; }
+    .chart-card { position:relative; min-width:0; padding:14px; overflow:hidden; background:var(--panel); border:1px solid var(--rule); border-radius:9px; box-shadow:0 2px 7px rgba(38,34,28,.05); }
+    .chart-card:hover { border-color:#899795; box-shadow:var(--shadow-small); }
+    .chart-card.selected { border:2px solid var(--select); box-shadow:0 0 0 3px var(--select-soft),var(--shadow-small); }
+    .chart-card.large { grid-column:span 2; grid-row:span 2; }
+    .chart-card.wide { grid-column:span 2; }
+    .chart-head { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .chart-head.with-collection-controls { display:grid; grid-template-columns:minmax(0,1fr) minmax(28px,.55fr) auto; align-items:center; gap:8px; }
+    .chart-head.with-collection-controls.with-build-edit { grid-template-columns:minmax(0,1fr) minmax(28px,.55fr) auto 44px; column-gap:4px; }
+    .collection-page-dots { min-width:28px; display:flex; align-items:center; justify-content:center; gap:6px; overflow:hidden; }
+    .collection-page-dot { flex:none; width:8px; height:8px; background:transparent; border:1px solid #9b7665; border-radius:50%; }
+    .collection-page-dot.current { background:var(--select); border-color:var(--select); }
+    .collection-header-transport { display:flex; align-items:center; gap:0; }
+    .collection-icon-button { width:44px; min-width:44px; height:44px; padding:11px; display:grid; place-items:center; color:#693b29; background:transparent; border:0; border-radius:7px; }
+    .collection-icon-surface { width:22px; height:22px; padding:5px; display:grid; place-items:center; background:#fff9f4; border:1px solid #c68d74; border-radius:5px; transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease; }
+    .collection-icon-button:hover .collection-icon-surface { color:#fff; background:var(--select); border-color:var(--select); box-shadow:0 3px 10px rgba(115,60,40,.18); }
+    .collection-icon-button:focus-visible { outline:0; }
+    .collection-icon-button:focus-visible .collection-icon-surface { color:#fff; background:var(--select); border-color:var(--select); outline:2px solid var(--focus); outline-offset:2px; }
+    .collection-icon-button svg { width:10px; height:10px; fill:currentColor; pointer-events:none; }
+    .chart-title { min-width:0; min-height:44px; padding:2px; overflow:hidden; text-align:left; color:inherit; background:transparent; border:1px solid transparent; border-radius:5px; }
+    .chart-title:hover { background:var(--panel-2); border-color:var(--rule); }
+    .chart-title strong,.chart-title span { display:block; }
+    .chart-title strong { overflow:hidden; text-overflow:ellipsis; font-size:12px; }
+    .chart-title span { margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font:600 8px ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .edit-button { width:44px; min-width:44px; padding:5px; color:var(--accent); background:var(--panel-2); border:1px solid var(--rule); border-radius:6px; font-size:9px; font-weight:820; }
+    .build-edit-slot { grid-column:4; justify-self:end; }
+    .chart-body { min-height:116px; margin-top:9px; }
+    .collection-meta { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:9px; }
+    .collection-meta span { padding:4px 6px; color:var(--muted); background:var(--panel-2); border:1px solid var(--rule); border-radius:4px; font-size:8px; font-weight:750; }
+    .collection-meta .runtime { color:#6f3c28; background:var(--select-soft); border-color:#d09b87; }
+    .item-grid { display:grid; grid-template-columns:repeat(var(--columns),minmax(0,1fr)); gap:var(--gap); }
+    .item-grid.draft-scroll { max-height:150px; padding-right:5px; overflow-y:auto; overscroll-behavior:contain; scrollbar-color:#b56f52 #f3ded3; }
+    .chart-card.draft-preview { border-color:#b86d4e; background:#fffaf5; box-shadow:0 0 0 3px #f3ded3,var(--shadow-small); }
+    .collection-meta .draft-preview { color:#fff; background:var(--select); border-color:var(--select); }
+    .item-tile { min-height:78px; padding:9px; background:#fbf7ef; border:1px solid var(--rule); border-radius:6px; }
+    .item-tile.priority { border-left:4px solid var(--rank-color,var(--select)); }
+    .item-tile small,.item-tile strong,.item-tile span { display:block; }
+    .item-tile small { color:var(--muted); font-size:8px; }
+    .item-tile strong { margin-top:5px; font:600 21px Georgia,"Times New Roman",serif; }
+    .item-tile span { margin-top:3px; color:var(--muted); font-size:8px; line-height:1.3; }
+    .spark { height:38px; margin-top:7px; display:flex; align-items:end; gap:3px; border-bottom:1px solid var(--rule); }
+    .spark i { flex:1; height:var(--h); background:var(--accent); opacity:.76; border-radius:2px 2px 0 0; }
+    .chart-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; padding-top:8px; border-top:1px solid var(--rule); color:var(--muted); font-size:8px; }
+    .runtime-note { color:var(--muted); font-size:8px; line-height:1.35; }
+    .item-rail { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:7px; margin-top:11px; padding:8px; background:#fff5ef; border:1px solid #d3a38e; border-radius:7px; }
+    .rail-label strong,.rail-label span { display:block; }
+    .rail-label strong { color:#773e29; font-size:9px; text-transform:uppercase; letter-spacing:.06em; }
+    .rail-label span { margin-top:2px; color:#76584c; font-size:8px; }
+    .item-transport { display:flex; justify-content:center; gap:4px; }
+    .item-transport button { min-width:44px; min-height:44px; padding:5px; color:#693b29; background:#fffdf9; border:1px solid #c68d74; border-radius:6px; font-size:9px; font-weight:820; }
+    .item-state { min-width:max-content; color:#6d4738; font-size:8px; text-align:right; }
+    .browse-launch,.deck-launch { width:100%; margin-top:10px; color:#6b3927; background:#fff5ef; border:1px solid #c98f76; border-radius:7px; font-size:10px; font-weight:800; }
+    .browse-face { min-height:170px; display:flex; flex-direction:column; justify-content:space-between; padding:12px; background:#fff4ed; border:1px solid #c7886d; border-radius:7px; }
+    .browse-face-head { display:flex; align-items:start; justify-content:space-between; gap:8px; }
+    .browse-face h3 { margin:2px 0 0; font:600 17px Georgia,serif; }
+    .browse-face p { margin:5px 0 0; color:#745a4e; font-size:9px; line-height:1.4; }
+    .back-button { min-width:70px; color:#653725; background:#fff; border:1px solid #bd8067; border-radius:6px; font-size:9px; font-weight:800; }
+    .browse-number { margin:12px 0; font:600 clamp(32px,5vw,58px) Georgia,serif; color:#733c28; }
+    .page-footer { display:flex; justify-content:space-between; gap:20px; margin-top:30px; padding-top:13px; color:var(--muted); border-top:1px solid var(--rule); font-size:9px; }
+
+    .surface-layer { position:absolute; inset:0; z-index:75; pointer-events:none; }
+    .surface-layer > * { pointer-events:auto; }
+    .surface-card { color:var(--ink); background:var(--panel); border:1px solid var(--rule-strong); box-shadow:var(--shadow); }
+    .surface-head { display:flex; align-items:start; justify-content:space-between; gap:12px; padding:14px 16px; background:var(--panel-2); border-bottom:1px solid var(--rule); }
+    .surface-head h2 { margin:2px 0 0; font:600 19px Georgia,serif; }
+    .surface-head p { margin:4px 0 0; color:var(--muted); font-size:9px; line-height:1.4; }
+    .eyebrow { color:var(--select); font-size:8px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+    .close-button { min-width:44px; padding:6px; color:var(--ink); background:var(--panel); border:1px solid var(--rule); border-radius:6px; font-weight:900; }
+    .surface-body { padding:16px; overflow:auto; }
+    .surface-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; background:var(--panel-2); border-top:1px solid var(--rule); }
+    .surface-footer .small-button { background:var(--panel); border-color:var(--rule); }
+    .surface-footer .primary { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .unit-orbit { position:absolute; top:158px; right:24px; width:min(390px,calc(100% - 48px)); max-height:calc(100% - 180px); display:flex; flex-direction:column; border-radius:11px; }
+    .orbit-tabs { display:flex; gap:4px; margin-bottom:13px; }
+    .orbit-tabs button { flex:1; min-height:44px; color:var(--ink); background:var(--panel-2); border:1px solid var(--rule); border-radius:6px; font-size:9px; font-weight:800; }
+    .orbit-tabs button[aria-selected="true"] { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .target-proof { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:13px; padding:9px; background:var(--select-soft); border:1px solid #c98a71; border-radius:7px; font-size:9px; }
+    .field { display:block; margin-bottom:12px; }
+    .field > span { display:block; margin-bottom:5px; color:var(--muted); font-size:9px; font-weight:800; }
+    .field select,.field input { width:100%; padding:8px 10px; color:var(--ink); background:#fff; border:1px solid var(--rule-strong); border-radius:6px; }
+    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .check-field { display:flex; align-items:start; gap:9px; min-height:44px; margin-bottom:10px; padding:8px; background:var(--panel-2); border:1px solid var(--rule); border-radius:6px; }
+    .check-field input { flex:none; width:20px; height:20px; min-height:20px; margin:1px 0 0; }
+    .check-field strong,.check-field span { display:block; }
+    .check-field strong { font-size:9px; }
+    .check-field span { margin-top:3px; color:var(--muted); font-size:8px; line-height:1.35; }
+    .scope-note { padding:10px; color:#31494c; background:var(--accent-soft); border-left:3px solid var(--accent); font-size:9px; line-height:1.45; }
+    .try-scroll { width:100%; margin:11px 0; color:#703c29; background:#fff1e9; border:1px dashed #bb775a; border-radius:7px; font-size:9px; font-weight:820; }
+    .footprint-grid { display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,44px); gap:5px; }
+    .footprint-grid button { min-width:0; color:var(--muted); background:var(--panel-2); border:1px solid var(--rule-strong); border-radius:5px; font-size:9px; font-weight:800; }
+    .footprint-grid button.active { color:#fff; background:var(--select); border-color:var(--select); box-shadow:0 0 0 2px var(--select-soft); }
+
+    .collection-deck { position:absolute; z-index:83; right:28px; bottom:84px; left:28px; display:grid; grid-template-columns:auto minmax(180px,1fr) auto; align-items:center; gap:12px; padding:10px 13px; color:#5d3425; background:#fff1e8; border:1px solid #b9785c; border-radius:10px; box-shadow:var(--shadow); }
+    .collection-deck::before { content:"ITEMS DECK · CHART-LOCAL"; position:absolute; top:-20px; left:12px; padding:4px 7px; color:#fff; background:#a94b34; border-radius:5px 5px 0 0; font-size:8px; font-weight:900; letter-spacing:.08em; }
+    .collection-deck .transport button { color:#693b29; background:#fff; border-color:#c68d74; }
+    .collection-deck .item-track { position:relative; height:28px; }
+    .item-track-line { position:absolute; top:13px; right:0; left:0; height:2px; background:#d7a791; }
+    .item-track-fill { position:absolute; top:13px; left:0; width:var(--fill); height:2px; background:#a94b34; }
+    .item-dot { position:absolute; top:7px; left:var(--x); width:14px; height:14px; transform:translateX(-7px); background:#fff; border:2px solid #bd8067; border-radius:50%; }
+    .item-dot.active { background:#a94b34; border-color:#a94b34; }
+    .deck-close { min-width:44px; color:#663522; background:#fff; border:1px solid #c68d74; border-radius:6px; font-weight:900; }
+
+    .immersive { position:absolute; inset:0; z-index:100; display:flex; flex-direction:column; color:var(--ink); background:var(--paper); }
+    .immersive-bar { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 18px; background:var(--paper-2); border-bottom:1px solid var(--rule-strong); }
+    .immersive-bar strong,.immersive-bar span { display:block; }
+    .immersive-bar span { margin-top:3px; color:var(--muted); font-size:9px; }
+    .immersive-body { flex:1; min-height:0; display:grid; place-items:stretch; gap:14px; padding:18px; overflow:auto; }
+    .immersive-body.compare { grid-template-columns:1fr 1fr; }
+    .immersive .chart-card { display:flex; flex-direction:column; min-height:0; }
+    .immersive .chart-body { flex:1; }
+
+    .present-page { min-height:calc(100% - 103px); display:grid; grid-template-columns:minmax(0,1fr) 350px; gap:15px; padding:18px; background:#e9e4d9; }
+    .audience-monitor { display:flex; flex-direction:column; min-width:0; background:#1f2729; border:1px solid #121718; border-radius:10px; box-shadow:var(--shadow-small); }
+    .monitor-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 13px; color:#edf3f1; border-bottom:1px solid #495657; }
+    .monitor-head strong,.monitor-head span { display:block; }
+    .monitor-head strong { font-size:11px; }
+    .monitor-head span { margin-top:2px; color:#aebdba; font-size:8px; }
+    .passive-pill { padding:5px 8px; color:#cfe0db; background:#304043; border:1px solid #617675; border-radius:999px; font-size:8px; font-weight:800; }
+    .audience-output { flex:1; min-height:380px; display:grid; place-items:center; padding:28px; color:#f8faf9; background:radial-gradient(circle at 30% 20%,#34494c,#1f2729 65%); }
+    .audience-card { width:min(720px,100%); padding:28px; color:var(--ink); background:#fffdf8; border:1px solid #718081; border-radius:8px; }
+    .audience-card small { color:var(--muted); font-size:10px; }
+    .audience-card h2 { margin:8px 0 22px; font:600 clamp(23px,4vw,42px) Georgia,serif; }
+    .audience-value { font:600 clamp(54px,10vw,104px) Georgia,serif; color:var(--accent); }
+    .audience-proof { margin-top:18px; padding-top:12px; color:var(--muted); border-top:1px solid var(--rule); font-size:9px; }
+    .sidecar { min-width:0; overflow:auto; background:var(--panel); border:1px solid var(--rule-strong); border-radius:10px; }
+    .sidecar-head { padding:14px; background:var(--panel-2); border-bottom:1px solid var(--rule); }
+    .sidecar-head h2 { margin:3px 0 0; font:600 19px Georgia,serif; }
+    .sidecar-body { padding:14px; }
+    .sidecar-section { margin-bottom:13px; padding:11px; background:var(--panel-2); border:1px solid var(--rule); border-radius:7px; }
+    .sidecar-section h3 { margin:0; font-size:10px; }
+    .sidecar-section p { margin:5px 0 10px; color:var(--muted); font-size:8px; line-height:1.4; }
+    .sidecar .item-transport { justify-content:flex-start; }
+    .mirror-proof { margin-top:9px; padding:8px; color:var(--good); background:#f1faf5; border:1px solid #8ab6a0; border-radius:6px; font-size:8px; line-height:1.4; }
+    .toast { position:absolute; z-index:130; right:18px; top:166px; max-width:390px; padding:10px 13px; color:#fff; background:#293536; border:1px solid #6e7d7b; border-radius:7px; box-shadow:var(--shadow-small); font-size:9px; line-height:1.4; }
+
+    .product-window[data-preview="768"] .chart-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .product-window[data-preview="768"] .scenario { display:none; }
+    .product-window[data-preview="768"] .present-page { grid-template-columns:1fr; }
+    .product-window[data-preview="768"] .immersive-body.compare { grid-template-columns:1fr; }
+    .product-window[data-preview="390"] .modebar,.product-window[data-preview="390"] .context-row,.product-window[data-preview="390"] .build-strip { padding-inline:9px; }
+    .product-window[data-preview="390"] .modebar { flex-wrap:wrap; }
+    .product-window[data-preview="390"] .brand { width:100%; }
+    .product-window[data-preview="390"] .scenario,.product-window[data-preview="390"] .dashboard-name,.product-window[data-preview="390"] .page-button:not([aria-current="page"]),.product-window[data-preview="390"] .strip-message { display:none; }
+    .product-window[data-preview="390"] .context-row { flex-wrap:wrap; }
+    .product-window[data-preview="390"] .crown-actions { width:100%; }
+    .product-window[data-preview="390"] .crown-actions .crown-button { flex:1; min-width:0; padding-inline:5px; }
+    .product-window[data-preview="390"] .dashboard-page { padding:18px 12px 132px; }
+    .product-window[data-preview="390"] .page-heading { display:block; }
+    .product-window[data-preview="390"] .period-chip { display:inline-block; margin-top:10px; }
+    .product-window[data-preview="390"] .section-head { display:block; }
+    .product-window[data-preview="390"] .legend { justify-content:flex-start; margin-top:9px; }
+    .product-window[data-preview="390"] .chart-grid { grid-template-columns:1fr; }
+    .product-window[data-preview="390"] .chart-card.large,.product-window[data-preview="390"] .chart-card.wide { grid-column:auto; grid-row:auto; }
+    .product-window[data-preview="390"] .item-grid { grid-template-columns:repeat(min(var(--columns),2),minmax(0,1fr)); }
+    .product-window[data-preview="390"] .item-rail { grid-template-columns:1fr; }
+    .product-window[data-preview="390"] .item-state { text-align:left; }
+    .product-window[data-preview="390"] .collection-deck { right:8px; bottom:116px; left:8px; grid-template-columns:1fr auto; }
+    .product-window[data-preview="390"] .collection-deck .item-track { display:none; }
+    .product-window[data-preview="390"] .unit-orbit { top:208px; right:8px; width:calc(100% - 16px); max-height:calc(100% - 220px); }
+    .product-window[data-preview="390"] .present-page { grid-template-columns:1fr; padding:10px; }
+    .product-window[data-preview="390"] .audience-output { min-height:310px; padding:12px; }
+    .product-window[data-preview="390"] .page-footer { display:block; }
+    .product-window[data-preview="390"] .page-footer span { display:block; margin-top:5px; }
+
+    @media (max-width:900px) {
+      .review-bar { align-items:flex-start; flex-wrap:wrap; }
+      .review-title { width:100%; }
+      .review-tabs { order:2; width:100%; overflow:auto; }
+      .review-stage { padding:12px; }
+      .product-window { height:calc(100vh - 170px); }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="review-bar" aria-label="Sketch comparison controls">
+    <div class="review-title"><strong>Sketch 016 · Collection display + paging</strong><small>One HeV-A26 session · switch variants without resetting Items, drafts, Focus, or Audience</small></div>
+    <div class="review-tabs" aria-label="Variant comparison">
+      <button class="review-button winner" type="button" data-variant="a" aria-pressed="true">A · Embedded Header Controls</button>
+      <button class="review-button" type="button" data-variant="b" aria-pressed="false">B · Browse Face</button>
+      <button class="review-button" type="button" data-variant="c" aria-pressed="false">C · Contextual Twin Deck</button>
+    </div>
+    <div class="viewport-tools" aria-label="Viewport preview">
+      <button class="review-button" type="button" data-viewport="1440" aria-pressed="true">Wide</button>
+      <button class="review-button" type="button" data-viewport="1200" aria-pressed="false">1200</button>
+      <button class="review-button" type="button" data-viewport="768" aria-pressed="false">768</button>
+      <button class="review-button" type="button" data-viewport="390" aria-pressed="false">390</button>
+    </div>
+  </header>
+  <main class="review-stage">
+    <section class="product-window" id="productWindow" data-preview="1440" aria-label="Interactive dashboard prototype">
+      <div id="app"></div>
+    </section>
+  </main>
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const charts = [
+        {
+          id:"bio_case_deltas", title:"Case delta priority set", subtitle:"Fixed priority collection", size:"large", footprint:"2×2",
+          pages:[
+            [
+              ["North district","+42","Highest rise"],["Central district","+31","Second rise"],["Coastal district","+24","Third rise"],
+              ["East district","+17","Watch"],["West district","+9","Stable"],["South district","−3","Improving"]
+            ]
+          ]
+        },
+        {
+          id:"bio_current_cases_kpi", title:"Current cases KPI", subtitle:"Carousel collection · 10 seconds/page", size:"wide", footprint:"2×1",
+          pages:[
+            [["Confirmed cases","1,284","+6.2% vs prior report"]],
+            [["Probable cases","418","+2.8% vs prior report"]],
+            [["Under investigation","96","18 added today"]],
+            [["Recovered","3,912","72.4% of resolved"]]
+          ]
+        },
+        {
+          id:"bio_icu_capacity_bullet", title:"ICU capacity", subtitle:"Carousel collection · capacity series", size:"", footprint:"1×1",
+          pages:[
+            [["ICU occupancy","86%","172 of 200 beds"]],
+            [["ICU beds available","28","Across reporting hospitals"]],
+            [["Critical care staffing","91%","Of required shift cover"]]
+          ]
+        },
+        {
+          id:"bio_hospital_capacity_bullet", title:"Hospital capacity", subtitle:"Carousel collection · capacity series", size:"", footprint:"1×1",
+          pages:[
+            [["Hospital occupancy","78%","1,248 of 1,600 beds"]],
+            [["Surge beds ready","140","Activation within 12 hours"]],
+            [["Admissions today","162","+14 from prior report"]]
+          ]
+        },
+        {
+          id:"bio_occupancy_collection", title:"Occupancy priority collection", subtitle:"Fixed 1×2 priority · source refresh", size:"wide", footprint:"2×1",
+          pages:[
+            [["Mercy Central","94%","Critical"],["Riverside","89%","High"]]
+          ]
+        }
+      ];
+
+      const baselineConfigs = {
+        bio_case_deltas:{presentation:"fixed",rows:2,columns:3,gap:8,overflow:"clip",ranking:"priority",rerank:true,seconds:10},
+        bio_current_cases_kpi:{presentation:"carousel",rows:1,columns:1,gap:8,overflow:"clip",ranking:"source",rerank:false,seconds:10},
+        bio_icu_capacity_bullet:{presentation:"carousel",rows:1,columns:1,gap:8,overflow:"clip",ranking:"source",rerank:false,seconds:10},
+        bio_hospital_capacity_bullet:{presentation:"carousel",rows:1,columns:1,gap:8,overflow:"clip",ranking:"source",rerank:false,seconds:10},
+        bio_occupancy_collection:{presentation:"fixed",rows:1,columns:2,gap:8,overflow:"clip",ranking:"priority",rerank:true,seconds:10}
+      };
+
+      const state = {
+        variant:"a", viewport:"1440", mode:"View", selected:"bio_current_cases_kpi", surface:null, orbitTab:"collection",
+        chartDirty:false, footprint:"2×1", savedConfigs:structuredClone(baselineConfigs), draftConfig:null, draftTarget:null,
+        pages:{bio_case_deltas:0,bio_current_cases_kpi:1,bio_icu_capacity_bullet:0,bio_hospital_capacity_bullet:0,bio_occupancy_collection:0},
+        paused:{bio_case_deltas:true,bio_current_cases_kpi:false,bio_icu_capacity_bullet:false,bio_hospital_capacity_bullet:false,bio_occupancy_collection:true},
+        collectionElapsed:{bio_case_deltas:0,bio_current_cases_kpi:0,bio_icu_capacity_bullet:0,bio_hospital_capacity_bullet:0,bio_occupancy_collection:0}, hoveredCollection:null,
+        browseFace:null, twinOpen:null,
+        focus:null, comparison:false, toast:"A — Embedded Header Controls is approved. Multi-page collections use compact header transport controls."
+      };
+
+      let collectionTimer = null;
+      const app = document.getElementById("app");
+      const productWindow = document.getElementById("productWindow");
+      const live = document.getElementById("live");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      if (reducedMotion.matches) Object.keys(state.paused).forEach(id => { state.paused[id] = true; });
+      const esc = value => String(value).replace(/[&<>"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[char]));
+      const chartById = id => charts.find(chart => chart.id === id);
+      const configFor = id => state.surface === "orbit" && state.selected === id && state.draftConfig ? state.draftConfig : state.savedConfigs[id];
+      const maxPage = id => Math.max(0,chartById(id).pages.length - 1);
+
+      function announce(message) {
+        state.toast = message;
+        live.textContent = message;
+      }
+
+      function phoneUnsupported() {
+        return state.viewport === "390" && state.mode !== "View";
+      }
+
+      function renderPhoneBanner() {
+        if (!phoneUnsupported()) return "";
+        return `<div class="phone-banner" role="status"><span>${state.mode} mode is not supported at phone size. Your state is retained; use View on this device.</span><button type="button" data-action="mode" data-mode="View">Switch to View</button></div>`;
+      }
+
+      function renderModebar() {
+        return `<div class="modebar">
+          <div class="brand"><span class="brand-mark">SX</span><span>SimEx</span></div>
+          ${["View","Build","Present"].map(mode => `<button type="button" class="mode-button" data-action="mode" data-mode="${mode}" ${state.mode === mode ? 'aria-current="page"' : ""}>${mode}</button>`).join("")}
+          <div class="spacer"></div>
+          <button type="button" class="crown-button scenario" aria-label="Open Scenario Passport"><strong>HeV-A26 · National exercise</strong><span>Biomedical situational awareness</span></button>
+        </div>`;
+      }
+
+      function renderContextRow() {
+        return `<div class="context-row">
+          <div class="dashboard-name"><strong>Pandemic preparedness watch</strong><span>Dashboard · Page 1 of 3</span></div>
+          <nav class="page-tabs" aria-label="Dashboard pages">
+            <button type="button" class="page-button" aria-current="page">National picture</button>
+            <button type="button" class="page-button">Health capacity</button>
+            <button type="button" class="page-button">Regional detail</button>
+          </nav>
+          <div class="spacer"></div>
+          <div class="crown-actions">
+            <button type="button" class="crown-button" data-action="focus" aria-label="Focus selected chart">Focus</button>
+            <button type="button" class="crown-button emphasis" data-action="compare">Compare charts</button>
+          </div>
+        </div>`;
+      }
+
+      function renderBuildStrip() {
+        if (state.mode !== "Build") return "";
+        return `<div class="build-strip">
+          <strong>Build</strong>
+          <span class="scope-chip">Chart footprint · Unit Orbit</span>
+          <span class="draft-chip ${state.chartDirty ? "dirty" : ""}">${state.chartDirty ? "Chart draft unsaved" : "Chart draft clean"}</span>
+          <button type="button" class="strip-button" data-action="open-orbit">Edit selected collection</button>
+          <span class="strip-message">Collection rows, columns, gap, overflow, ranking and playback stay chart-owned.</span>
+        </div>`;
+      }
+
+      function renderCrown() {
+        return `${renderPhoneBanner()}<header class="command-crown" aria-label="Layered Command Crown">${renderModebar()}${renderContextRow()}${renderBuildStrip()}</header>`;
+      }
+
+
+
+      function pageItems(chart) {
+        const page = Math.min(state.pages[chart.id],maxPage(chart.id));
+        return chart.pages[page];
+      }
+
+      function renderItems(chart,passive=false) {
+        const config = configFor(chart.id);
+        const items = config.presentation === "scroll" ? chart.pages.flat() : pageItems(chart);
+        const columns = Math.max(1,config.columns);
+        return `<div class="item-grid ${config.presentation === "scroll" ? "draft-scroll" : ""}" style="--columns:${columns};--gap:${config.gap}px">
+          ${items.map((item,index) => `<article class="item-tile ${config.ranking === "priority" ? "priority" : ""}" style="--rank-color:${index === 0 ? "#a94b34" : index === 1 ? "#c47b45" : "#688379"}">
+            <small>${config.ranking === "priority" ? `Rank ${index + 1} · ${item[0]}` : item[0]}</small>
+            <strong>${item[1]}</strong><span>${item[2]}</span>
+            ${["bio_current_cases_kpi","bio_icu_capacity_bullet","bio_hospital_capacity_bullet"].includes(chart.id) ? `<div class="spark" aria-hidden="true">${[35,48,43,65,74,68,88].map(h => `<i style="--h:${h}%"></i>`).join("")}</div>` : ""}
+          </article>`).join("")}
+        </div>${passive ? "" : `<div class="runtime-note" style="margin-top:7px">${config.presentation === "scroll" ? "Bounded internal scroll preview; dashboard footprint is unchanged. " : ""}${config.rerank ? "Priority ranking refreshes from current source values." : "Authored source order is retained."}</div>`}`;
+      }
+
+      function renderItemRail(chart,context="dashboard") {
+        const config = configFor(chart.id);
+        if (config.presentation === "scroll") return `<div class="item-rail"><div class="rail-label"><strong>Items · Scroll</strong><span>${config.rows} rows × ${config.columns} columns · ${context}</span></div><div class="runtime-note">Bounded chart-interior scrolling. No automatic page clock.</div><div class="item-state">${state.chartDirty && state.draftTarget === chart.id ? "Draft preview" : "Saved presentation"}</div></div>`;
+        if (config.presentation !== "carousel") return `<div class="item-rail"><div class="rail-label"><strong>Items · Fixed</strong><span>${config.rows} rows × ${config.columns} columns</span></div><div class="runtime-note">All ${pageItems(chart).length} items remain visible.</div><div class="item-state">No page clock</div></div>`;
+        return `<div class="item-rail" aria-label="${chart.title} Item controls">
+          <div class="rail-label"><strong>Items · Page ${state.pages[chart.id] + 1} / ${chart.pages.length}</strong><span>${config.seconds} seconds/page · ${context}</span></div>
+          <div class="item-transport">
+            <button type="button" data-action="item-step" data-id="${chart.id}" data-delta="-1" aria-label="Previous Item page for ${chart.title}">Prev</button>
+            <button type="button" data-action="item-pause" data-id="${chart.id}" aria-label="${state.paused[chart.id] ? "Resume" : "Pause"} ${chart.title} carousel">${state.paused[chart.id] ? "Resume" : "Pause"}</button>
+            <button type="button" data-action="item-step" data-id="${chart.id}" data-delta="1" aria-label="Next Item page for ${chart.title}">Next</button>
+          </div>
+          <div class="item-state">${state.paused[chart.id] ? "Item carousel paused" : "Item carousel running"}<br>Manual page changes never dirty</div>
+        </div>`;
+      }
+
+      function renderBrowseFace(chart) {
+        const config = configFor(chart.id);
+        const item = pageItems(chart)[0];
+        return `<div class="browse-face">
+          <div class="browse-face-head"><div><span class="eyebrow">Items browse face · chart interior</span><h3>${esc(item[0])}</h3><p>Page ${state.pages[chart.id] + 1} of ${chart.pages.length} · ${config.seconds} seconds/page. Chart geometry is unchanged.</p></div><button type="button" class="back-button" data-action="browse-close">Back to chart</button></div>
+          <div class="browse-number">${esc(item[1])}</div>
+          ${renderItemRail(chart,"browse face")}
+        </div>`;
+      }
+
+      function renderCollectionPageDots(chart) {
+        return `<div class="collection-page-dots" aria-hidden="true">${chart.pages.map((_,index) => `<i class="collection-page-dot ${index === state.pages[chart.id] ? "current" : ""}"></i>`).join("")}</div><span class="sr-only">Current collection page ${state.pages[chart.id] + 1} of ${chart.pages.length}</span>`;
+      }
+
+      function renderCollectionHeaderTransport(chart) {
+        const playing = !state.paused[chart.id];
+        return `<div class="collection-header-transport">
+          <button type="button" class="collection-icon-button" data-action="item-step" data-id="${chart.id}" data-delta="-1" aria-label="Previous collection page for ${chart.title}"><span class="collection-icon-surface"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6V5Zm12.5 1.6L10.6 12l7.9 5.4V6.6Z"/></svg></span></button>
+          <button type="button" class="collection-icon-button" data-action="item-pause" data-id="${chart.id}" aria-label="${playing ? "Pause" : "Play"} collection pages for ${chart.title}"><span class="collection-icon-surface"><svg viewBox="0 0 24 24" aria-hidden="true">${playing ? `<path d="M6.5 5h4v14h-4V5Zm7 0h4v14h-4V5Z"/>` : `<path d="M8 5v14l11-7L8 5Z"/>`}</svg></span></button>
+          <button type="button" class="collection-icon-button" data-action="item-step" data-id="${chart.id}" data-delta="1" aria-label="Next collection page for ${chart.title}"><span class="collection-icon-surface"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2V5ZM5.5 6.6 13.4 12l-7.9 5.4V6.6Z"/></svg></span></button>
+        </div>`;
+      }
+
+      function renderChartCard(chart,{immersive=false,passive=false}={}) {
+        const config = configFor(chart.id);
+        const selected = state.selected === chart.id;
+        const draftPreview = state.surface === "orbit" && state.draftTarget === chart.id && state.chartDirty;
+        const showBrowse = state.variant === "b" && state.browseFace === chart.id && !passive;
+        const headerPaging = state.variant === "a" && chart.pages.length > 1 && !passive;
+        const classes = `chart-card ${immersive ? "" : chart.size} ${selected ? "selected" : ""} ${draftPreview ? "draft-preview" : ""}`;
+        return `<article class="${classes}" data-chart="${chart.id}">
+          <header class="chart-head ${headerPaging ? "with-collection-controls" : ""} ${headerPaging && state.mode === "Build" && !passive ? "with-build-edit" : ""}">
+            <button type="button" class="chart-title" data-action="select-chart" data-id="${chart.id}"><strong>${esc(chart.title)}</strong><span>${esc(chart.id)} · ${esc(chart.subtitle)}</span></button>
+            ${headerPaging ? renderCollectionPageDots(chart) : ""}
+            ${headerPaging ? renderCollectionHeaderTransport(chart) : ""}
+            ${state.mode === "Build" && !passive ? `<button type="button" class="edit-button ${headerPaging ? "build-edit-slot" : ""}" data-action="open-orbit" data-id="${chart.id}" aria-label="Edit ${chart.title} in Unit Orbit">Edit</button>` : ""}
+          </header>
+          <div class="chart-body">
+            ${showBrowse ? renderBrowseFace(chart) : `<div class="collection-meta"><span>Chart footprint ${chart.footprint}</span><span class="runtime">Items ${config.presentation === "fixed" ? `${config.rows}×${config.columns} fixed` : config.presentation === "scroll" ? `${config.rows}×${config.columns} scroll` : state.variant === "a" ? `carousel · ${config.seconds} seconds/page` : `page ${state.pages[chart.id] + 1}/${chart.pages.length}`}</span><span>${config.ranking === "priority" ? `Priority · rerank ${config.rerank ? "on" : "off"}` : "Source order"}</span>${draftPreview ? `<span class="draft-preview">Draft preview · discard restores baseline</span>` : ""}</div>${renderItems(chart,passive)}`}
+          </div>
+          ${!showBrowse && !passive ? state.variant === "a" ? "" : state.variant === "b" ? `<button type="button" class="browse-launch" data-action="browse-open" data-id="${chart.id}">${config.presentation === "fixed" ? "Inspect fixed Items" : `Browse Items · Page ${state.pages[chart.id] + 1}/${chart.pages.length}`}</button>` : `<button type="button" class="deck-launch" data-action="deck-open" data-id="${chart.id}">Open Item controls in deck</button>` : ""}
+          <footer class="chart-footer"><span>${config.presentation} · gap ${config.gap}px · overflow ${config.overflow}</span><span>${passive ? "Audience mirror" : "Source: HeV-A26 evidence ledger"}</span></footer>
+        </article>`;
+      }
+
+      function renderDashboard() {
+        return `<main class="dashboard-page">
+          <header class="page-heading"><div><h1>National picture</h1><p>Collections own their display, paging cadence and current-data priority order.</p></div><span class="period-chip">Updated 17 Aug 2026</span></header>
+          <section aria-labelledby="collection-heading">
+            <header class="section-head"><div><h2 id="collection-heading">Biomedical pressure collections</h2><p>Select a chart, change its Item page, then switch variants. Runtime state stays put and the Chart draft stays clean.</p></div><div class="legend"><span class="items">Items · seconds/page</span></div></header>
+            <div class="chart-grid">${charts.map(chart => renderChartCard(chart)).join("")}</div>
+          </section>
+          <footer class="page-footer"><span>Biomedical situational awareness · Evidence Ledger</span><span>Report a bug · Request a feature · Data sources · © 2026 SimEx</span></footer>
+        </main>`;
+      }
+
+      function renderUnitOrbit() {
+        if (state.surface !== "orbit") return "";
+        const chart = chartById(state.selected);
+        const draft = state.draftConfig;
+        const collectionBody = `<div class="target-proof"><strong>${esc(chart.title)}</strong><span>${esc(chart.id)}</span></div>
+          <div class="field-grid"><label class="field"><span>Presentation</span><select data-config="presentation"><option value="fixed" ${draft.presentation === "fixed" ? "selected" : ""}>Fixed</option><option value="scroll" ${draft.presentation === "scroll" ? "selected" : ""}>Scroll</option><option value="carousel" ${draft.presentation === "carousel" ? "selected" : ""}>Carousel</option></select></label><label class="field"><span>Overflow</span><select data-config="overflow"><option value="clip" ${draft.overflow === "clip" ? "selected" : ""}>Clip</option><option value="scroll" ${draft.overflow === "scroll" ? "selected" : ""}>Scroll</option></select></label></div>
+          <div class="field-grid"><label class="field"><span>Rows</span><select data-config="rows">${[1,2,3].map(value => `<option ${draft.rows === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label class="field"><span>Columns</span><select data-config="columns">${[1,2,3,4].map(value => `<option ${draft.columns === value ? "selected" : ""}>${value}</option>`).join("")}</select></label></div>
+          <label class="field"><span>Gap between Items</span><select data-config="gap">${[4,8,12,16].map(value => `<option value="${value}" ${draft.gap === value ? "selected" : ""}>${value}px</option>`).join("")}</select></label>
+          <div class="field-grid"><label class="field"><span>Ranking</span><select data-config="ranking"><option value="source" ${draft.ranking === "source" ? "selected" : ""}>Source order</option><option value="priority" ${draft.ranking === "priority" ? "selected" : ""}>Priority score</option></select></label><label class="field"><span>Carousel playback</span><select data-config="seconds">${[5,10,15,30].map(value => `<option value="${value}" ${draft.seconds === value ? "selected" : ""}>${value} seconds/page</option>`).join("")}</select></label></div>
+          <label class="check-field"><input type="checkbox" data-config="rerank" ${draft.rerank ? "checked" : ""}><span><strong>Rerank on source refresh</strong><span>Priority collections recalculate order when current source values update.</span></span></label>
+          <button type="button" class="try-scroll" data-action="try-scroll">Try draft-only Scroll presentation</button>
+          <div class="scope-note">Collection composition belongs to this chart’s Unit Orbit draft. Manual Previous/Next/Pause Item actions are runtime state and never make this draft dirty.</div>`;
+        const sizeBody = `<div class="target-proof"><strong>${esc(chart.title)}</strong><span>Current footprint ${state.footprint}</span></div><p class="scope-note">Footprint is dashboard geometry. It is distinct from the rows and columns used inside the collection.</p><div class="footprint-grid" aria-label="Chart footprint: four columns by two rows">${[1,2].flatMap(row => [1,2,3,4].map(column => { const value = `${column}×${row}`; return `<button type="button" data-action="footprint" data-value="${value}" class="${state.footprint === value ? "active" : ""}" aria-label="${column} columns by ${row} rows">${value}</button>`; })).join("")}</div>`;
+        const chartBody = `<div class="target-proof"><strong>${esc(chart.title)}</strong><span>Selected chart properties</span></div><label class="field"><span>Chart title</span><input value="${esc(chart.title)}"></label><label class="field"><span>Evidence caption</span><select><option>Source and updated time</option><option>Source only</option></select></label><div class="scope-note">Collection authoring remains in the Collection tab; footprint remains in Size.</div>`;
+        return `<aside class="unit-orbit surface-card" aria-label="Unit Orbit collection editor">
+          <header class="surface-head"><div><span class="eyebrow">Unit Orbit · chart-owned</span><h2>${esc(chart.title)}</h2><p>Chart draft ${state.chartDirty ? "has unsaved changes" : "matches saved baseline"}.</p></div><button type="button" class="close-button" data-action="close-orbit" aria-label="Close Unit Orbit">×</button></header>
+          <div class="surface-body"><div class="orbit-tabs" role="tablist">${[["chart","Chart"],["size","Size"],["collection","Collection"]].map(([id,label]) => `<button type="button" role="tab" data-action="orbit-tab" data-tab="${id}" aria-selected="${state.orbitTab === id}">${label}</button>`).join("")}</div>${state.orbitTab === "collection" ? collectionBody : state.orbitTab === "size" ? sizeBody : chartBody}</div>
+          <footer class="surface-footer"><span class="draft-chip ${state.chartDirty ? "dirty" : ""}">${state.chartDirty ? `Draft: ${draft.presentation}` : `Saved: ${draft.presentation}`}</span><div><button type="button" class="small-button" data-action="discard-draft" ${state.chartDirty ? "" : "disabled"}>Discard</button><button type="button" class="small-button primary" data-action="save-draft" ${state.chartDirty ? "" : "disabled"}>Save chart</button></div></footer>
+        </aside>`;
+      }
+
+      function renderCollectionDeck() {
+        if (state.variant !== "c" || !state.twinOpen) return "";
+        const chart = chartById(state.twinOpen);
+        const config = state.savedConfigs[chart.id];
+        const pageCount = chart.pages.length;
+        const fill = pageCount > 1 ? (state.pages[chart.id] / (pageCount - 1)) * 100 : 0;
+        return `<section class="collection-deck" aria-label="Contextual Item deck for ${chart.title}">
+          <div class="controller-label"><strong>${esc(chart.title)}</strong><span>${config.presentation === "fixed" ? `${config.rows}×${config.columns} fixed Items` : `Items · Page ${state.pages[chart.id] + 1}/${pageCount} · ${config.seconds} seconds/page`}</span></div>
+          <div class="item-track"><span class="item-track-line"></span><span class="item-track-fill" style="--fill:${fill}%"></span>${chart.pages.map((_,i) => `<i class="item-dot ${i === state.pages[chart.id] ? "active" : ""}" style="--x:${pageCount > 1 ? (i/(pageCount-1))*100 : 0}%"></i>`).join("")}</div>
+          <div class="transport">${config.presentation === "carousel" ? `<button type="button" data-action="item-step" data-id="${chart.id}" data-delta="-1">Prev</button><button type="button" data-action="item-pause" data-id="${chart.id}">${state.paused[chart.id] ? "Resume" : "Pause"}</button><button type="button" data-action="item-step" data-id="${chart.id}" data-delta="1">Next</button>` : `<span class="runtime-note">All Items visible · no page clock</span>`}<button type="button" class="deck-close" data-action="deck-close" aria-label="Close Item deck">×</button></div>
+        </section>`;
+      }
+
+      function renderImmersive() {
+        if (!state.focus && !state.comparison) return "";
+        const ids = state.comparison ? [state.selected,state.selected === "bio_current_cases_kpi" ? "bio_icu_capacity_bullet" : "bio_current_cases_kpi"] : [state.focus];
+        return `<section class="immersive" aria-label="${state.comparison ? "Chart comparison" : "Focused chart"}">
+          <header class="immersive-bar"><div><strong>${state.comparison ? "Chart comparison" : "Focused chart"}</strong><span>Collection Item page and pause state are shared with the dashboard.</span></div><button type="button" class="small-button" data-action="immersive-close">Exit ${state.comparison ? "comparison" : "focus"}</button></header>
+          <div class="immersive-body ${state.comparison ? "compare" : ""}">${ids.map(id => renderChartCard(chartById(id),{immersive:true})).join("")}</div>
+        </section>`;
+      }
+
+      function renderPresent() {
+        const chart = chartById(state.selected);
+        const config = state.savedConfigs[chart.id];
+        return `<main class="present-page">
+          <section class="audience-monitor"><header class="monitor-head"><div><strong>Audience output · fixed 16:9</strong><span>Exact mirror of the Live Sidecar collection runtime state</span></div><span class="passive-pill">Passive · no controls</span></header><div class="audience-output"><article class="audience-card"><small>HeV-A26 · Item page ${state.pages[chart.id] + 1}/${chart.pages.length}</small><h2>${esc(chart.title)}</h2>${renderItems(chart,true)}<div class="audience-proof">The full active collection page is mirrored. Audience contains no Previous, Next, Pause, or Resume controls; the presenter’s sidecar is the sole runtime owner.</div></article></div></section>
+          <aside class="sidecar"><header class="sidecar-head"><span class="eyebrow">Approved Present controller</span><h2>Live Sidecar</h2></header><div class="sidecar-body"><div class="sidecar-section"><h3>Selected collection</h3><p>${esc(chart.title)} · ${esc(chart.id)}</p><select data-action="present-chart" aria-label="Collection controlled in Live Sidecar">${charts.map(candidate => `<option value="${candidate.id}" ${candidate.id === chart.id ? "selected" : ""}>${esc(candidate.title)}</option>`).join("")}</select></div><div class="sidecar-section"><h3>Items runtime</h3><p>${config.presentation === "fixed" ? `${config.rows}×${config.columns} fixed Items; no page clock.` : `Page ${state.pages[chart.id] + 1}/${chart.pages.length} · ${config.seconds} seconds/page.`}</p>${config.presentation === "carousel" ? `<div class="item-transport"><button type="button" data-action="item-step" data-id="${chart.id}" data-delta="-1">Prev</button><button type="button" data-action="item-pause" data-id="${chart.id}">${state.paused[chart.id] ? "Resume" : "Pause"}</button><button type="button" data-action="item-step" data-id="${chart.id}" data-delta="1">Next</button></div>` : ""}<div class="mirror-proof">Audience mirrors the full Item page ${state.pages[chart.id] + 1} exactly. Manual runtime changes do not create a Chart draft.</div></div></div></aside>
+        </main>`;
+      }
+
+      function renderContent() {
+        if (phoneUnsupported()) return `<div class="dashboard-page"><header class="page-heading"><div><h1>${state.mode} state retained</h1><p>Build and Present are outside phone scope. Switch to View to inspect the supported one-column collection dashboard.</p></div></header></div>`;
+        return state.mode === "Present" ? renderPresent() : renderDashboard();
+      }
+
+      function render() {
+        const active = app.contains(document.activeElement) ? document.activeElement : null;
+        const focusToken = active && (active.dataset.action || active.dataset.config) ? {action:active.dataset.action || "",config:active.dataset.config || "",id:active.dataset.id || "",delta:active.dataset.delta || "",tab:active.dataset.tab || "",chart:state.draftTarget || ""} : null;
+        document.querySelectorAll("[data-variant]").forEach(button => button.setAttribute("aria-pressed",String(button.dataset.variant === state.variant)));
+        document.querySelectorAll("[data-viewport]").forEach(button => button.setAttribute("aria-pressed",String(button.dataset.viewport === state.viewport)));
+        productWindow.dataset.preview = state.viewport;
+        app.innerHTML = `${renderCrown()}${renderContent()}<div class="surface-layer">${renderUnitOrbit()}${!state.focus && !state.comparison ? renderCollectionDeck() : ""}${state.toast ? `<div class="toast" role="status">${esc(state.toast)}</div>` : ""}</div>${renderImmersive()}`;
+        if (focusToken) {
+          let selector = focusToken.action ? `[data-action="${focusToken.action}"]` : `[data-config="${focusToken.config}"]`;
+          if (focusToken.id) selector += `[data-id="${focusToken.id}"]`;
+          if (focusToken.delta) selector += `[data-delta="${focusToken.delta}"]`;
+          if (focusToken.tab) selector += `[data-tab="${focusToken.tab}"]`;
+          const replacement = !focusToken.config || focusToken.chart === state.draftTarget ? app.querySelector(selector) : null;
+          if (replacement) replacement.focus({preventScroll:true});
+        }
+        syncTimers();
+      }
+
+      function selectChart(id) {
+        state.selected = id;
+        const chart = chartById(id);
+        state.footprint = chart.footprint;
+        announce(`${chart.title} selected. Item page ${state.pages[id] + 1}; Chart draft ${state.chartDirty ? "remains unsaved" : "remains clean"}.`);
+      }
+
+      function openOrbit(id=state.selected) {
+        const retainDraft = state.chartDirty && state.draftTarget === id && state.draftConfig;
+        selectChart(id);
+        state.mode = "Build";
+        state.surface = "orbit";
+        state.orbitTab = "collection";
+        state.browseFace = null;
+        if (!retainDraft) {
+          state.draftConfig = structuredClone(state.savedConfigs[id]);
+          state.draftTarget = id;
+          state.chartDirty = false;
+        }
+        announce(`Unit Orbit opened for ${chartById(id).title}. ${retainDraft ? "The unsaved Chart draft was resumed." : "Collection owns internal geometry; Size owns dashboard footprint."}`);
+      }
+
+      function manualPage(id,delta) {
+        const chart = chartById(id);
+        const count = chart.pages.length;
+        if (count <= 1) {
+          announce(`${chart.title} is fixed: all Items are already visible and no page clock exists.`);
+          return;
+        }
+        state.pages[id] = (state.pages[id] + Number(delta) + count) % count;
+        state.paused[id] = true;
+        state.collectionElapsed[id] = 0;
+        announce(`${chart.title} moved to Item page ${state.pages[id] + 1}/${count} and paused. Runtime changed; Chart draft is still ${state.chartDirty ? "unsaved for its separate authored change" : "clean"}.`);
+      }
+
+      function syncTimers() {
+        if (!collectionTimer) {
+          collectionTimer = window.setInterval(() => {
+            if (document.hidden || reducedMotion.matches) return;
+            let changed = false;
+            charts.forEach(chart => {
+              const config = state.savedConfigs[chart.id];
+              const held = state.hoveredCollection === chart.id;
+              if (config.presentation === "carousel" && !state.paused[chart.id] && !held && chart.pages.length > 1) {
+                state.collectionElapsed[chart.id] += 1;
+                if (state.collectionElapsed[chart.id] >= config.seconds) {
+                  state.collectionElapsed[chart.id] = 0;
+                  state.pages[chart.id] = (state.pages[chart.id] + 1) % chart.pages.length;
+                  changed = true;
+                }
+              }
+            });
+            if (changed) { announce("A collection advanced on its own seconds/page cadence."); render(); }
+          },1000);
+        }
+      }
+
+      document.addEventListener("click", event => {
+        const variantButton = event.target.closest("[data-variant]");
+        if (variantButton) {
+          state.variant = variantButton.dataset.variant;
+          state.browseFace = null;
+          if (state.variant !== "c") state.twinOpen = null;
+          announce(`${variantButton.textContent.trim()} active. Shared Item pages, pause state, drafts, Focus and Audience state were preserved.`);
+          render();
+          return;
+        }
+        const viewportButton = event.target.closest("[data-viewport]");
+        if (viewportButton) {
+          state.viewport = viewportButton.dataset.viewport;
+          announce(`${state.viewport}px review viewport. ${state.viewport === "390" ? "View is supported; Build and Present show the scope banner." : "Full mode set remains available."}`);
+          render();
+        }
+      });
+
+      app.addEventListener("click", event => {
+        const control = event.target.closest("[data-action]");
+        if (!control) return;
+        const action = control.dataset.action;
+        if (action === "mode") { state.mode = control.dataset.mode; state.surface = null; state.focus = null; state.comparison = false; announce(`${state.mode} mode active. Collection runtime state retained.`); }
+        else if (action === "select-chart") selectChart(control.dataset.id);
+        else if (action === "open-orbit") openOrbit(control.dataset.id || state.selected);
+        else if (action === "close-orbit") { state.surface = null; announce(`Unit Orbit closed. ${state.chartDirty ? "Unsaved Chart draft retained in this prototype session." : "No Chart draft was created."}`); }
+        else if (action === "orbit-tab") { state.orbitTab = control.dataset.tab; announce(`${control.dataset.tab} tab active in Unit Orbit.`); }
+        else if (action === "try-scroll") { state.draftConfig.presentation = "scroll"; state.draftConfig.overflow = "scroll"; state.chartDirty = true; announce("Draft-only Scroll presentation applied. Press Discard to return to the saved baseline."); }
+        else if (action === "discard-draft") { state.draftConfig = structuredClone(state.savedConfigs[state.selected]); state.chartDirty = false; announce(`Collection draft discarded. ${chartById(state.selected).title} returned to saved ${state.draftConfig.presentation} baseline.`); }
+        else if (action === "save-draft") { state.savedConfigs[state.selected] = structuredClone(state.draftConfig); state.chartDirty = false; announce(`Collection authoring saved for ${chartById(state.selected).title}. Runtime Item page was unchanged.`); }
+        else if (action === "footprint") { state.footprint = control.dataset.value; state.chartDirty = true; announce(`Chart footprint draft set to ${state.footprint}. Internal collection rows and columns were not changed.`); }
+        else if (action === "item-step") manualPage(control.dataset.id,control.dataset.delta);
+        else if (action === "item-pause") { const id = control.dataset.id; state.paused[id] = !state.paused[id]; state.collectionElapsed[id] = 0; announce(`${chartById(id).title} Item carousel ${state.paused[id] ? "paused" : `resumed with a full ${state.savedConfigs[id].seconds}-second interval`}. Chart draft remains ${state.chartDirty ? "unsaved" : "clean"}.`); }
+        else if (action === "browse-open") { state.browseFace = control.dataset.id; selectChart(control.dataset.id); announce("Chart-interior Browse Face opened at the shared Item page."); }
+        else if (action === "browse-close") { state.browseFace = null; announce("Returned to the chart visualization; Item state was preserved."); }
+        else if (action === "deck-open") { state.twinOpen = control.dataset.id; selectChart(control.dataset.id); announce("Chart-local Items Deck opened at the shared collection page."); }
+        else if (action === "deck-close") { state.twinOpen = null; announce("Items Deck closed; its page and pause state remain available."); }
+        else if (action === "focus") { state.focus = state.selected; state.comparison = false; state.paused[state.selected] = true; announce(`${chartById(state.focus).title} focused full-screen. Its collection page and pause state are preserved.`); }
+        else if (action === "compare") { state.comparison = true; state.focus = null; state.paused[state.selected] = true; announce("Comparison opened full-screen with shared collection page and pause state."); }
+        else if (action === "immersive-close") { state.focus = null; state.comparison = false; announce("Returned to dashboard. Collection runtime state preserved."); }
+        render();
+      });
+
+      app.addEventListener("change", event => {
+        const target = event.target;
+        if (target.dataset.action === "present-chart") {
+          selectChart(target.value);
+          announce(`${chartById(target.value).title} is now controlled by Live Sidecar and mirrored exactly to passive Audience.`);
+        } else if (target.dataset.config) {
+          const key = target.dataset.config;
+          const value = target.type === "checkbox" ? target.checked : ["rows","columns","gap","seconds"].includes(key) ? Number(target.value) : target.value;
+          state.draftConfig[key] = value;
+          state.chartDirty = true;
+          announce(`${key} changed in the Unit Orbit Chart draft. Runtime Item page remains ${state.pages[state.selected] + 1}.`);
+        }
+        render();
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) return;
+        Object.keys(state.paused).forEach(id => { state.paused[id] = true; });
+        announce("Playback paused because the prototype is no longer visible.");
+      });
+
+      reducedMotion.addEventListener("change", event => {
+        if (!event.matches) return;
+        Object.keys(state.paused).forEach(id => { state.paused[id] = true; });
+        announce("Playback paused for reduced-motion preference.");
+        render();
+      });
+
+      app.addEventListener("focusin", event => {
+        const card = event.target.closest("[data-chart]");
+        if (!card || event.target.dataset.action === "item-pause") return;
+        const id = card.dataset.chart;
+        if (state.savedConfigs[id].presentation === "carousel" && !state.paused[id]) {
+          state.paused[id] = true;
+          state.collectionElapsed[id] = 0;
+          announce(`${chartById(id).title} Item carousel paused when its chart received keyboard focus.`);
+        }
+      });
+
+      app.addEventListener("pointerover", event => {
+        const card = event.target.closest("[data-chart]");
+        if (!card || card.contains(event.relatedTarget)) return;
+        state.hoveredCollection = card.dataset.chart;
+      });
+
+      app.addEventListener("pointerout", event => {
+        const card = event.target.closest("[data-chart]");
+        if (!card || card.contains(event.relatedTarget)) return;
+        if (state.hoveredCollection === card.dataset.chart) state.hoveredCollection = null;
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
