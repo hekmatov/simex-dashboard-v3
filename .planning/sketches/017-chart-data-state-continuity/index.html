@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 017 · Chart data-state continuity</title>
+  <style>
+    :root {
+      color-scheme:light;
+      --paper:#f2eee4;
+      --paper-deep:#e7dfd0;
+      --panel:#fffdf8;
+      --panel-soft:#f8f3e8;
+      --ink:#202a2c;
+      --ink-soft:#5f6969;
+      --ink-faint:#7a817f;
+      --rule:#c5bdaf;
+      --rule-strong:#807c73;
+      --teal:#254f56;
+      --teal-soft:#dbe8e7;
+      --rust:#9d4f38;
+      --rust-soft:#f3dfd7;
+      --amber:#9a681f;
+      --amber-soft:#f8e8c8;
+      --green:#3f6d55;
+      --green-soft:#deeadf;
+      --purple:#685c78;
+      --review:#182021;
+      --review-2:#222c2d;
+      --review-3:#2c393a;
+      --review-rule:#435254;
+      --review-ink:#f5f1e9;
+      --review-muted:#b7c2c0;
+      --focus:#e79a4a;
+      --shadow:0 18px 54px rgba(41,36,28,.20);
+      --shadow-small:0 7px 22px rgba(41,36,28,.12);
+      --series-1:#315d64;
+      --series-2:#b76342;
+      --series-3:#718149;
+      --series-4:#7b6685;
+      --series-5:#a57935;
+      --grid:#ddd6ca;
+    }
+
+    * { box-sizing:border-box; }
+    html,body { width:100%; height:100%; margin:0; overflow:hidden; }
+    body { color:var(--ink); background:var(--review); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,select { font:inherit; }
+    button,select,input[type="checkbox"] { cursor:pointer; }
+    button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+    button:disabled { cursor:not-allowed; opacity:.48; }
+    .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0 0 0 0)!important; white-space:nowrap!important; border:0!important; }
+    .hidden { display:none!important; }
+
+    .prototype { display:grid; grid-template-columns:clamp(390px,25vw,470px) minmax(0,1fr); width:100%; height:100%; overflow:hidden; }
+    .review-rail { height:100%; overflow-y:auto; overscroll-behavior:contain; padding:24px 23px 42px; color:var(--review-ink); background:var(--review); border-right:1px solid var(--review-rule); }
+    .eyebrow { margin:0 0 8px; color:#95dbc8; font-size:10px; font-weight:850; letter-spacing:.15em; text-transform:uppercase; }
+    .review-rail h1 { max-width:390px; margin:0; font-family:Georgia,"Times New Roman",serif; font-size:28px; line-height:1.04; font-weight:650; }
+    .review-lede { margin:13px 0 0; color:var(--review-muted); font-size:12px; line-height:1.55; }
+    .review-section { margin-top:23px; padding-top:19px; border-top:1px solid var(--review-rule); }
+    .review-section h2 { margin:0 0 10px; font-size:11px; letter-spacing:.11em; text-transform:uppercase; }
+    .variant-list { display:grid; gap:8px; }
+    .variant-button { position:relative; width:100%; min-height:74px; padding:12px 13px 11px 42px; color:var(--review-ink); text-align:left; background:var(--review-2); border:1px solid var(--review-rule); border-radius:8px; }
+    .variant-button::before { position:absolute; left:13px; top:14px; display:grid; place-items:center; width:20px; height:20px; color:var(--review); background:#a8b7b4; border-radius:50%; font-size:10px; font-weight:900; content:attr(data-letter); }
+    .variant-button strong,.variant-button small { display:block; }
+    .variant-button strong { font-size:12px; }
+    .variant-button small { margin-top:5px; color:var(--review-muted); font-size:10px; line-height:1.35; }
+    .variant-button[aria-pressed="true"] { background:var(--review-3); border-color:#9fd8ca; box-shadow:inset 4px 0 0 #95dbc8; }
+    .variant-button[aria-pressed="true"]::before { color:var(--review); background:#95dbc8; }
+    .selected-marker { display:inline-flex; margin-left:5px; padding:2px 5px; color:#182021; background:#95dbc8; border-radius:999px; font-size:8px; vertical-align:1px; }
+    .tool-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+    .tool-grid.five { grid-template-columns:repeat(5,minmax(0,1fr)); }
+    .rail-button,.viewport-button { min-height:42px; padding:7px 8px; color:var(--review-ink); background:var(--review-2); border:1px solid var(--review-rule); border-radius:6px; font-size:10px; font-weight:760; }
+    .rail-button:hover,.viewport-button:hover { background:var(--review-3); }
+    .viewport-button[aria-pressed="true"],.rail-button[aria-pressed="true"] { color:var(--review); background:#e8dfd0; border-color:#e8dfd0; }
+    .script-actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .script-actions .rail-button { text-align:left; }
+    .legend { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+    .legend li { display:grid; grid-template-columns:18px 1fr; gap:8px; align-items:start; color:var(--review-muted); font-size:10px; line-height:1.4; }
+    .cue { display:grid; place-items:center; width:17px; height:17px; margin-top:1px; color:#182021; background:#c8d5d2; border:1px solid #dbe5e2; border-radius:3px; font-size:9px; font-weight:900; }
+    .rail-status { min-height:46px; margin-top:9px; padding:9px 10px; color:#dce9e6; background:#121819; border:1px solid #3b4c4e; border-radius:6px; font-size:10px; line-height:1.4; }
+    .review-note { margin:0; color:var(--review-muted); font-size:10px; line-height:1.5; }
+
+    .workbench { height:100%; overflow:auto; overscroll-behavior:contain; padding:25px; background:#303a3b; }
+    .product-window { position:relative; width:min(1440px,100%); height:calc(100vh - 50px); min-height:690px; margin:0 auto; overflow:hidden; background:var(--paper); border:1px solid #596566; border-radius:10px; box-shadow:0 30px 90px rgba(0,0,0,.38); }
+    .product-window[data-preview="1200"] { width:1200px; max-width:none; }
+    .product-window[data-preview="1024"] { width:1024px; max-width:none; }
+    .product-window[data-preview="768"] { width:768px; max-width:none; }
+    .product-window[data-preview="390"] { width:390px; max-width:none; height:844px; }
+    #app { width:100%; height:100%; overflow:auto; overscroll-behavior:contain; background:var(--paper); }
+
+    .phone-boundary { position:sticky; top:0; z-index:100; min-height:56px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; color:#573817; background:#ffe9bc; border-bottom:1px solid #c68b31; font-size:10px; font-weight:760; }
+    .phone-boundary button { min-height:38px; padding:6px 9px; color:#573817; background:#fff8ea; border:1px solid #8b5c20; border-radius:5px; font-weight:850; }
+    .command-crown { position:sticky; top:0; z-index:50; box-shadow:0 3px 12px rgba(45,39,31,.11); }
+    .mode-row,.page-row,.build-row { display:flex; align-items:center; gap:7px; padding:6px 18px; border-bottom:1px solid var(--rule); }
+    .mode-row { min-height:55px; background:var(--paper-deep); }
+    .page-row { min-height:48px; background:var(--panel); }
+    .build-row { min-height:45px; background:#e5dccd; border-color:var(--rule-strong); }
+    .brand { display:flex; align-items:center; gap:8px; margin-right:7px; font-weight:900; }
+    .brand-mark { display:grid; place-items:center; width:30px; height:30px; color:#fff; background:var(--teal); border-radius:6px; font-size:9px; letter-spacing:.08em; }
+    .mode-button,.crown-button,.page-button,.small-button,.action-button { min-height:40px; padding:7px 10px; color:inherit; background:transparent; border:1px solid transparent; border-radius:6px; font-size:10px; font-weight:760; }
+    .mode-button:hover,.crown-button:hover,.page-button:hover,.small-button:hover { background:rgba(255,255,255,.64); border-color:var(--rule); }
+    .mode-button[aria-current="page"],.page-button[aria-current="page"] { color:#fff; background:var(--teal); border-color:var(--teal); }
+    .spacer { flex:1; }
+    .scenario { min-width:190px; padding:7px 10px; background:rgba(255,255,255,.4); border:1px solid var(--rule); border-radius:6px; }
+    .scenario strong,.scenario span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .scenario strong { font-size:10px; }
+    .scenario span { margin-top:2px; color:var(--ink-soft); font-size:8px; }
+    .crown-button { min-width:max-content; background:var(--panel-soft); border-color:var(--rule); }
+    .crown-button.primary { color:#fff; background:var(--teal); border-color:var(--teal); }
+    .dashboard-id strong,.dashboard-id span { display:block; }
+    .dashboard-id strong { font-size:11px; }
+    .dashboard-id span { margin-top:2px; color:var(--ink-soft); font-size:8px; }
+    .page-tabs { display:flex; align-items:center; gap:4px; overflow-x:auto; }
+    .page-button { min-width:max-content; }
+    .draft-chip { display:inline-flex; align-items:center; gap:6px; min-height:28px; padding:5px 8px; color:#603a27; background:#fff0e7; border:1px solid #c58466; border-radius:999px; font-size:8px; font-weight:800; }
+    .draft-chip::before { width:6px; height:6px; background:var(--rust); border-radius:50%; content:""; }
+
+    .page { padding:23px 25px 46px; }
+    .page-heading { display:flex; align-items:end; justify-content:space-between; gap:18px; margin-bottom:18px; }
+    .page-heading h2 { margin:0; font-family:Georgia,"Times New Roman",serif; font-size:25px; font-weight:650; }
+    .page-heading p { max-width:640px; margin:6px 0 0; color:var(--ink-soft); font-size:10px; line-height:1.45; }
+    .state-summary { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+    .summary-chip { min-height:26px; padding:5px 8px; color:var(--ink-soft); background:var(--panel); border:1px solid var(--rule); border-radius:999px; font-size:8px; font-weight:800; }
+    .section-header { display:flex; align-items:center; gap:10px; margin:0 0 10px; padding:0 0 9px; border-bottom:1px solid var(--rule-strong); }
+    .section-header h3 { margin:0; font-size:12px; }
+    .section-header span { color:var(--ink-soft); font-size:9px; }
+    .dashboard-grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:14px; }
+    .chart-card { position:relative; min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--rule); border-radius:8px; box-shadow:var(--shadow-small); }
+    .chart-card.span-12 { grid-column:span 12; }
+    .chart-card.span-7 { grid-column:span 7; }
+    .chart-card.span-6 { grid-column:span 6; }
+    .chart-card.span-5 { grid-column:span 5; }
+    .chart-card.is-affected { border-color:#a99c8c; }
+    .chart-head { min-height:58px; display:flex; align-items:center; gap:9px; padding:9px 11px; background:var(--panel-soft); border-bottom:1px solid var(--rule); }
+    .chart-identity { min-width:0; flex:1; }
+    .chart-identity h4 { margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .chart-identity p { margin:3px 0 0; color:var(--ink-soft); font-size:8px; }
+    .state-token { flex:none; display:inline-flex; align-items:center; gap:5px; min-height:23px; padding:4px 7px; color:var(--ink-soft); background:#f2eee5; border:1px solid var(--rule); border-radius:999px; font-size:8px; font-weight:850; }
+    .state-token::before { width:6px; height:6px; background:var(--green); border-radius:50%; content:""; }
+    .state-token.loading::before { background:var(--amber); }
+    .state-token.empty::before { background:#7b7c73; border-radius:1px; }
+    .state-token.partial::before { background:repeating-linear-gradient(135deg,var(--amber) 0 2px,#fff 2px 4px); border:1px solid var(--amber); }
+    .state-token.error::before { background:var(--rust); border-radius:0; }
+    .collection-proof { min-width:245px; display:grid; grid-template-columns:minmax(85px,1fr) auto auto; align-items:center; gap:8px; padding-left:9px; border-left:1px solid var(--rule); }
+    .collection-label { min-width:0; color:var(--ink-soft); font-size:8px; line-height:1.25; }
+    .page-dots { display:flex; justify-content:center; gap:4px; }
+    .page-dot { width:6px; height:6px; background:transparent; border:1px solid var(--teal); border-radius:50%; }
+    .page-dot.current { background:var(--teal); }
+    .collection-buttons { display:flex; align-items:center; gap:4px; }
+    .collection-control { width:22px; min-width:22px; height:22px; min-height:22px; display:grid; place-items:center; padding:0; color:var(--ink); background:#fff; border:1px solid var(--rule-strong); border-radius:4px; font-size:8px; font-weight:900; }
+    .collection-edit { min-width:38px; width:auto; padding:0 6px; color:#fff; background:var(--teal); border-color:var(--teal); }
+
+    .chart-body { padding:10px; }
+    .plot-shell { position:relative; width:100%; height:232px; overflow:hidden; background:#fbfaf5; border:1px solid var(--rule); border-radius:5px; }
+    .chart-card.span-12 .plot-shell { height:254px; }
+    .plot-drawing { position:absolute; inset:0; overflow:hidden; }
+    .plot-shell.variant-b .plot-drawing { bottom:76px; border-bottom:1px solid var(--rule); }
+    .plot-svg { display:block; width:100%; height:100%; }
+    .plot-grid line { stroke:var(--grid); stroke-width:1; }
+    .axis-label { fill:#747871; font-size:8px; }
+    .line-one { fill:none; stroke:var(--series-1); stroke-width:3; vector-effect:non-scaling-stroke; }
+    .line-two { fill:none; stroke:var(--series-2); stroke-width:2.5; vector-effect:non-scaling-stroke; stroke-dasharray:6 4; }
+    .area-one { fill:rgba(49,93,100,.17); stroke:var(--series-1); stroke-width:2.5; vector-effect:non-scaling-stroke; }
+    .bar-one { fill:var(--series-1); }
+    .bar-two { fill:var(--series-3); }
+    .bar-three { fill:var(--series-2); }
+    .last-valid { opacity:.62; filter:saturate(.65); }
+    .last-valid-stamp { position:absolute; right:8px; top:8px; padding:3px 5px; color:#5b4b3f; background:rgba(255,250,239,.92); border:1px solid #9f9385; border-radius:3px; font-size:7px; font-weight:850; text-transform:uppercase; letter-spacing:.06em; }
+    .state-plate { position:absolute; left:50%; top:50%; z-index:5; width:min(88%,500px); transform:translate(-50%,-50%); padding:13px 14px; color:var(--ink); background:rgba(255,253,248,.96); border:1px solid var(--rule-strong); border-radius:6px; box-shadow:0 8px 22px rgba(43,37,29,.14); }
+    .state-plate.compact { left:11px; right:11px; bottom:10px; top:auto; width:auto; transform:none; }
+    .state-plate.partial { background:rgba(255,250,239,.96); border-left:5px solid var(--amber); }
+    .state-plate.error { border-left:5px solid var(--rust); }
+    .state-copy { display:flex; align-items:flex-start; gap:9px; min-width:0; }
+    .state-copy p { flex:1; margin:0; font-size:10px; line-height:1.42; }
+    .state-copy strong { font-weight:850; }
+    .state-cue { flex:none; width:18px; height:18px; display:grid; place-items:center; color:var(--ink); background:#e8e1d4; border:1px solid var(--rule-strong); border-radius:3px; font-size:9px; font-weight:900; }
+    .state-cue.loading { border-radius:50%; border:3px solid #d7c79e; border-top-color:var(--amber); background:transparent; animation:rotate 1.2s steps(8,end) infinite; }
+    .state-cue.empty { background:transparent; border-style:dashed; }
+    .state-cue.partial { background:repeating-linear-gradient(135deg,#e1bd7f 0 3px,#fff7e7 3px 6px); border-color:var(--amber); }
+    .state-cue.error { color:#fff; background:var(--rust); border-color:var(--rust); border-radius:1px; }
+    @keyframes rotate { to { transform:rotate(360deg); } }
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; }
+      .state-cue.loading { transform:rotate(36deg); }
+    }
+    .state-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .action-button { min-height:38px; color:#fff; background:var(--teal); border:1px solid var(--teal); }
+    .action-button.secondary { color:var(--ink); background:#fff; border-color:var(--rule-strong); }
+    .action-button.review { color:#fff; background:var(--rust); border-color:var(--rust); }
+    .status-ledger { position:absolute; left:0; right:0; bottom:0; z-index:5; height:76px; display:flex; align-items:center; gap:10px; padding:9px 10px; background:#eee8dc; border-top:1px solid var(--rule-strong); }
+    .status-ledger.loaded { color:var(--ink-soft); background:#f3eee5; }
+    .status-ledger .state-copy { flex:1; }
+    .status-ledger .state-actions { flex:none; margin:0; justify-content:flex-end; }
+    .status-ledger .action-button { min-height:34px; padding:5px 8px; font-size:8px; }
+    .state-marker { position:absolute; left:9px; top:9px; z-index:5; max-width:calc(100% - 18px); padding:8px 9px; color:var(--ink); background:rgba(255,253,248,.96); border:1px solid var(--rule-strong); border-radius:5px; box-shadow:0 5px 15px rgba(43,37,29,.13); }
+    .state-marker.partial { border-left:4px solid var(--amber); }
+    .state-marker.error { border-left:4px solid var(--rust); }
+    .state-marker .state-copy p { font-size:9px; }
+    .card-action-rail { height:52px; display:flex; align-items:center; justify-content:flex-end; flex-wrap:nowrap; gap:5px; padding:5px 10px 8px; overflow-x:auto; overflow-y:hidden; }
+    .card-action-rail .small-button,.card-action-rail .action-button { min-height:34px; padding:5px 8px; font-size:8px; }
+    .small-button { color:var(--ink); background:#fff; border-color:var(--rule); }
+    .small-button.selected { color:#fff; background:var(--purple); border-color:var(--purple); }
+    .rail-separator { width:1px; align-self:stretch; margin:2px 2px; background:var(--rule); }
+    .chart-feedback { height:21px; overflow:hidden; padding:3px 10px 7px; color:var(--ink-soft); font-size:8px; text-align:right; text-overflow:ellipsis; white-space:nowrap; }
+
+    .present-page { min-height:100%; padding:19px 20px 34px; }
+    .present-layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:15px; align-items:start; }
+    .present-stage { min-width:0; padding:12px; background:#d9d1c3; border:1px solid var(--rule-strong); border-radius:7px; }
+    .present-stage .chart-card { box-shadow:var(--shadow); }
+    .live-sidecar { position:sticky; top:126px; max-height:calc(100vh - 175px); overflow-y:auto; padding:14px; background:var(--panel); border:1px solid var(--rule-strong); border-radius:7px; box-shadow:var(--shadow-small); }
+    .live-sidecar h3 { margin:0; font-family:Georgia,"Times New Roman",serif; font-size:19px; }
+    .sidecar-kicker { margin:4px 0 13px; color:var(--ink-soft); font-size:9px; line-height:1.4; }
+    .field-label { display:block; margin:12px 0 5px; font-size:9px; font-weight:850; }
+    .field-select { width:100%; min-height:42px; padding:7px 9px; color:var(--ink); background:#fff; border:1px solid var(--rule-strong); border-radius:5px; font-size:10px; }
+    .sidecar-state { margin-top:13px; padding:10px; background:var(--panel-soft); border:1px solid var(--rule); border-radius:5px; }
+    .sidecar-state p { margin:0; font-size:10px; line-height:1.45; }
+    .sidecar-actions { display:grid; gap:6px; margin-top:10px; }
+    .sidecar-actions .action-button { width:100%; text-align:left; }
+    .audience-note { margin:13px 0 0; padding-top:11px; color:var(--ink-soft); border-top:1px solid var(--rule); font-size:9px; line-height:1.45; }
+
+    .surface-overlay { position:absolute; inset:0; z-index:300; display:grid; grid-template-rows:auto minmax(0,1fr); color:var(--ink); background:var(--paper); }
+    .overlay-bar { min-height:54px; display:flex; align-items:center; gap:9px; padding:7px 13px; background:var(--paper-deep); border-bottom:1px solid var(--rule-strong); box-shadow:0 4px 13px rgba(42,36,27,.13); }
+    .overlay-bar h2 { margin:0; font-size:12px; }
+    .overlay-content { min-height:0; overflow:auto; padding:18px; }
+    .focus-content { display:grid; place-items:stretch; }
+    .focus-content .chart-card { width:100%; height:100%; }
+    .focus-content .chart-body { height:calc(100% - 58px); }
+    .focus-content .plot-shell { height:calc(100% - 55px); min-height:420px; }
+    .comparison-overlay { grid-template-rows:minmax(0,1fr); }
+    .comparison-top-controls { position:absolute; left:50%; top:12px; z-index:5; display:flex; align-items:center; gap:6px; padding:7px; transform:translateX(-50%); background:rgba(255,253,248,.96); border:1px solid var(--rule-strong); border-radius:7px; box-shadow:var(--shadow); }
+    .comparison-top-controls select,.comparison-top-controls button { min-height:38px; padding:6px 9px; color:var(--ink); background:#fff; border:1px solid var(--rule-strong); border-radius:5px; font-size:9px; font-weight:800; }
+    .comparison-canvas { height:100%; overflow:auto; padding:72px 18px 18px; background:#ded7ca; }
+    .comparison-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; min-height:100%; }
+    .comparison-grid[data-layout="two"] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .comparison-grid[data-layout="one"] { grid-template-columns:1fr; }
+    .comparison-grid .chart-card { min-height:450px; grid-column:auto!important; }
+    .comparison-grid .plot-shell { height:315px; }
+    .comparison-grid .chart-card.dragging { opacity:.48; outline:3px dashed var(--teal); }
+    .drag-hint { color:var(--ink-soft); font-size:8px; }
+    .modal-scrim { position:absolute; inset:0; z-index:500; display:grid; place-items:center; padding:20px; background:rgba(28,34,34,.58); }
+    .dialog { width:min(640px,100%); max-height:calc(100% - 30px); overflow:auto; background:var(--panel); border:1px solid var(--rule-strong); border-radius:8px; box-shadow:0 28px 90px rgba(0,0,0,.38); }
+    .dialog-head { display:flex; align-items:center; gap:10px; padding:13px 15px; background:var(--panel-soft); border-bottom:1px solid var(--rule); }
+    .dialog-head h2 { flex:1; margin:0; font-family:Georgia,"Times New Roman",serif; font-size:20px; }
+    .dialog-body { padding:15px; }
+    .dialog-body p { color:var(--ink-soft); font-size:10px; line-height:1.55; }
+    .orbit-tabs { display:flex; gap:5px; margin-bottom:13px; border-bottom:1px solid var(--rule); }
+    .orbit-tab { min-height:40px; padding:7px 11px; color:var(--ink-soft); background:transparent; border:0; border-bottom:3px solid transparent; font-size:9px; font-weight:850; }
+    .orbit-tab.active { color:var(--ink); border-color:var(--rust); }
+    .orbit-field { margin:11px 0; padding:10px; background:var(--panel-soft); border:1px solid var(--rule); border-radius:5px; }
+    .orbit-field strong,.orbit-field span { display:block; }
+    .orbit-field strong { font-size:10px; }
+    .orbit-field span { margin-top:4px; color:var(--ink-soft); font-size:9px; line-height:1.4; }
+    .audience-overlay { color:var(--ink); background:#1e2728; }
+    .audience-overlay .overlay-bar { color:#f6f0e6; background:#273334; border-color:#4d5c5c; }
+    .audience-stage { min-height:0; display:grid; place-items:center; overflow:auto; padding:28px; }
+    .audience-frame { width:min(1100px,100%); }
+    .audience-frame .chart-card { box-shadow:0 25px 80px rgba(0,0,0,.45); }
+    .audience-frame .plot-shell { height:min(62vh,560px); }
+    .passive-badge { margin-left:auto; padding:5px 8px; color:#dbe7e4; border:1px solid #627473; border-radius:999px; font-size:8px; font-weight:850; }
+
+    .product-window[data-preview="1024"] .scenario { display:none; }
+    .product-window[data-preview="1024"] .chart-card.span-7,.product-window[data-preview="1024"] .chart-card.span-5 { grid-column:span 6; }
+    .product-window[data-preview="768"] .scenario,.product-window[data-preview="768"] .dashboard-id span,.product-window[data-preview="768"] .page-heading p { display:none; }
+    .product-window[data-preview="768"] .mode-row,.product-window[data-preview="768"] .page-row { padding-inline:11px; }
+    .product-window[data-preview="768"] .page { padding:17px 14px 35px; }
+    .product-window[data-preview="768"] .dashboard-grid { grid-template-columns:1fr; }
+    .product-window[data-preview="768"] .chart-card { grid-column:1!important; }
+    .product-window[data-preview="768"] .present-layout { grid-template-columns:1fr; }
+    .product-window[data-preview="768"] .live-sidecar { position:static; max-height:none; }
+    .product-window[data-preview="768"] .comparison-grid { grid-template-columns:1fr!important; }
+    .product-window[data-preview="390"] .mode-row { gap:3px; padding:5px 8px; }
+    .product-window[data-preview="390"] .brand span,.product-window[data-preview="390"] .scenario,.product-window[data-preview="390"] .crown-actions,.product-window[data-preview="390"] .dashboard-id span,.product-window[data-preview="390"] .page-tabs .page-button:not([aria-current="page"]),.product-window[data-preview="390"] .page-heading p,.product-window[data-preview="390"] .state-summary,.product-window[data-preview="390"] .collection-label { display:none; }
+    .product-window[data-preview="390"] .brand { margin-right:0; }
+    .product-window[data-preview="390"] .brand-mark { width:28px; height:28px; }
+    .product-window[data-preview="390"] .mode-button { min-height:38px; padding:6px 7px; font-size:9px; }
+    .product-window[data-preview="390"] .page-row { min-height:45px; padding:5px 8px; }
+    .product-window[data-preview="390"] .page { padding:15px 10px 28px; }
+    .product-window[data-preview="390"] .page-heading h2 { font-size:21px; }
+    .product-window[data-preview="390"] .dashboard-grid { grid-template-columns:1fr; gap:10px; }
+    .product-window[data-preview="390"] .chart-card { grid-column:1!important; }
+    .product-window[data-preview="390"] .chart-head { align-items:flex-start; flex-wrap:wrap; }
+    .product-window[data-preview="390"] .collection-proof { order:3; width:100%; min-width:0; grid-template-columns:1fr auto; padding:7px 0 0; border-left:0; border-top:1px solid var(--rule); }
+    .product-window[data-preview="390"] .page-dots { justify-content:flex-start; }
+    .product-window[data-preview="390"] .plot-shell,.product-window[data-preview="390"] .chart-card.span-12 .plot-shell { height:270px; }
+    .product-window[data-preview="390"] .state-plate { width:calc(100% - 18px); padding:11px; }
+    .product-window[data-preview="390"] .state-plate.compact { left:8px; right:8px; bottom:8px; }
+    .product-window[data-preview="390"] .status-ledger { height:132px; align-items:flex-start; flex-direction:column; }
+    .product-window[data-preview="390"] .plot-shell.variant-b .plot-drawing { bottom:132px; }
+    .product-window[data-preview="390"] .status-ledger .state-actions { width:100%; justify-content:flex-start; }
+    .product-window[data-preview="390"] .card-action-rail { height:126px; flex-wrap:wrap; align-content:flex-start; justify-content:flex-start; padding-top:7px; overflow:hidden; }
+    .product-window[data-preview="390"] .present-layout { grid-template-columns:1fr; }
+    .product-window[data-preview="390"] .live-sidecar { position:static; max-height:none; }
+    .product-window[data-preview="390"] .comparison-grid { grid-template-columns:1fr!important; }
+    .product-window[data-preview="390"] .comparison-top-controls { top:8px; }
+
+    @media (max-width:980px) {
+      .prototype { grid-template-columns:350px minmax(0,1fr); }
+      .review-rail { padding-inline:17px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype">
+    <aside class="review-rail" aria-label="Sketch controls">
+      <p class="eyebrow">Sketch 017 · Approved</p>
+      <h1>Chart data-state continuity</h1>
+      <p class="review-lede">Compare where chart-local state and recovery belong while the same five canonical chart frames move through View, Focus, Comparison, Build, Present, and passive Audience.</p>
+
+      <section class="review-section" aria-labelledby="variant-heading">
+        <h2 id="variant-heading">Containment variant</h2>
+        <div class="variant-list">
+          <button class="variant-button" type="button" data-variant="a" data-letter="A" aria-pressed="true">
+            <strong>Plot-native State Plate <span class="selected-marker">★ Selected · Approved</span></strong>
+            <small>Condition and remedy remain together inside the canonical plot rectangle.</small>
+          </button>
+          <button class="variant-button" type="button" data-variant="b" data-letter="B" aria-pressed="false">
+            <strong>Permanent Status Ledger</strong>
+            <small>A reserved ledger remains inside every chart frame, including loaded charts.</small>
+          </button>
+          <button class="variant-button" type="button" data-variant="c" data-letter="C" aria-pressed="false">
+            <strong>In-plot Marker + Action Rail</strong>
+            <small>Truth stays in the plot; eligible recovery joins the existing visible lower action rail.</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="review-section" aria-labelledby="viewport-heading">
+        <h2 id="viewport-heading">Preview width</h2>
+        <div class="tool-grid five">
+          <button class="viewport-button" type="button" data-width="1440" aria-pressed="true">1440</button>
+          <button class="viewport-button" type="button" data-width="1200" aria-pressed="false">1200</button>
+          <button class="viewport-button" type="button" data-width="1024" aria-pressed="false">1024</button>
+          <button class="viewport-button" type="button" data-width="768" aria-pressed="false">768</button>
+          <button class="viewport-button" type="button" data-width="390" aria-pressed="false">390</button>
+        </div>
+      </section>
+
+      <section class="review-section" aria-labelledby="surface-heading">
+        <h2 id="surface-heading">Surface shortcut</h2>
+        <div class="tool-grid">
+          <button class="rail-button" type="button" data-mode-shortcut="view" aria-pressed="true">View</button>
+          <button class="rail-button" type="button" data-mode-shortcut="build" aria-pressed="false">Build</button>
+          <button class="rail-button" type="button" data-mode-shortcut="present" aria-pressed="false">Present</button>
+        </div>
+      </section>
+
+      <section class="review-section" aria-labelledby="script-heading">
+        <h2 id="script-heading">Fixture / state shortcuts</h2>
+        <div class="script-actions">
+          <button class="rail-button" type="button" data-script="reset-all">Reset fixed fixture</button>
+          <button class="rail-button" type="button" data-script="release-loading">Release Loading</button>
+          <button class="rail-button" type="button" data-script="reset-loading">Reset Loading</button>
+          <button class="rail-button" type="button" data-script="reset-partial">Reset Partial</button>
+          <button class="rail-button" type="button" data-script="retry-error">Retry Error</button>
+          <button class="rail-button" type="button" data-script="open-comparison">Open Comparison</button>
+        </div>
+        <div class="rail-status" id="rail-status" aria-live="polite">Fixed fixture ready. A is active.</div>
+      </section>
+
+      <section class="review-section" aria-labelledby="legend-heading">
+        <h2 id="legend-heading">Non-colour state cues</h2>
+        <ul class="legend">
+          <li><span class="cue">◌</span><span><strong>Loading:</strong> segmented progress form; static when reduced motion is requested.</span></li>
+          <li><span class="cue">□</span><span><strong>Zero-row:</strong> neutral dashed field; successful load, not a failure or fabricated zero.</span></li>
+          <li><span class="cue">▧</span><span><strong>Partial:</strong> hatched marker; valid series remain visible and Booster coverage is named.</span></li>
+          <li><span class="cue">!</span><span><strong>Error:</strong> firm inset rule; the retained render is labelled last valid.</span></li>
+        </ul>
+      </section>
+
+      <section class="review-section">
+        <h2>What is fixed</h2>
+        <p class="review-note">The chart order, plot bounds, copy, actions, fixture values, header ownership, state object, and renderer are shared by A/B/C. Present recovery always belongs to Live Sidecar; Audience is always passive.</p>
+      </section>
+    </aside>
+
+    <main class="workbench" aria-label="Interactive product preview">
+      <div class="product-window" id="product-window" data-preview="1440">
+        <div id="app"></div>
+      </div>
+    </main>
+  </div>
+  <div class="sr-only" id="announcer" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var charts = [
+        { id:"bio_r_values", role:"P-loaded", name:"Effective reproduction rate", subtitle:"Weekly estimate · national", state:"loaded", initial:"loaded", footprint:"span-12", kind:"line" },
+        { id:"bio_confirmed_cases", role:"P-loading", name:"Confirmed cases", subtitle:"Daily reports · collection 1 of 3", state:"loading", initial:"loading", footprint:"span-6", kind:"bars", collection:true },
+        { id:"bio_icu_hospital_capacity", role:"P-empty", name:"ICU and hospital capacity", subtitle:"Capacity utilization · national", state:"empty", initial:"empty", footprint:"span-6", kind:"stacked" },
+        { id:"bio_vaccination_rate", role:"P-partial", name:"Vaccination rate", subtitle:"Coverage by population series", state:"partial", initial:"partial", footprint:"span-7", kind:"multi" },
+        { id:"bio_hospital_load", role:"P-error", name:"Hospital demand signal", subtitle:"Admissions index · retained snapshot", state:"error", initial:"error", footprint:"span-5", kind:"area", lastValid:true }
+      ];
+
+      var ui = {
+        variant:"a",
+        mode:"view",
+        preview:"1440",
+        selectedPresent:"bio_vaccination_rate",
+        comparison:["bio_confirmed_cases","bio_vaccination_rate","bio_hospital_load"],
+        overlay:null,
+        details:null,
+        orbit:null,
+        errorAttempts:0,
+        feedback:{}
+      };
+
+      var app = document.getElementById("app");
+      var productWindow = document.getElementById("product-window");
+      var announcer = document.getElementById("announcer");
+      var railStatus = document.getElementById("rail-status");
+
+      function chartById(id) {
+        return charts.find(function (chart) { return chart.id === id; });
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g,function (character) {
+          return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[character];
+        });
+      }
+
+      function stateLabel(chart) {
+        return {loaded:"Loaded",loading:"Loading",empty:"Zero rows",partial:"Partial",error:"Error"}[chart.state];
+      }
+
+      function primaryCopy(chart) {
+        if (chart.state === "loading") return "Loading " + chart.name + "…";
+        if (chart.state === "empty") return "No data is available for " + chart.name + ".";
+        if (chart.state === "partial") return chart.name + " is showing partial data. Booster coverage is unavailable.";
+        if (chart.state === "error") return "Couldn’t load " + chart.name + ". The previous valid dashboard state is unchanged.";
+        return "Data current";
+      }
+
+      function stateIcon(chart) {
+        return {loading:"",empty:"□",partial:"▧",error:"!",loaded:"✓"}[chart.state];
+      }
+
+      function announce(message) {
+        announcer.textContent = "";
+        window.setTimeout(function () { announcer.textContent = message; },20);
+        railStatus.textContent = message;
+      }
+
+      function modeAllowsActions(context) {
+        return context !== "present" && context !== "audience";
+      }
+
+      function stateActions(chart,context) {
+        if (!modeAllowsActions(context) || chart.state === "loaded" || chart.state === "loading") return "";
+        var parts = [];
+        if (chart.state === "empty" || chart.state === "partial" || chart.state === "error") {
+          parts.push('<button class="action-button" type="button" data-chart-action="retry" data-chart-id="' + chart.id + '">Retry Loading ' + escapeHtml(chart.name) + '</button>');
+        }
+        if (chart.state === "partial") {
+          parts.push('<button class="action-button secondary" type="button" data-chart-action="continue" data-chart-id="' + chart.id + '">Continue with Available Data</button>');
+        }
+        if (context === "build" && chart.state === "empty") {
+          parts.push('<button class="action-button review" type="button" data-chart-action="review" data-chart-id="' + chart.id + '">Review ' + escapeHtml(chart.name) + ' Data Settings</button>');
+        }
+        return parts.join("");
+      }
+
+      function axes() {
+        return '<g class="plot-grid"><line x1="42" y1="28" x2="42" y2="180"></line><line x1="42" y1="180" x2="570" y2="180"></line><line x1="42" y1="130" x2="570" y2="130"></line><line x1="42" y1="80" x2="570" y2="80"></line><line x1="42" y1="30" x2="570" y2="30"></line></g><g class="axis-label"><text x="41" y="198">Jan</text><text x="215" y="198">Apr</text><text x="390" y="198">Jul</text><text x="548" y="198">Oct</text><text x="9" y="183">0</text><text x="5" y="133">50</text><text x="1" y="83">100</text></g>';
+      }
+
+      function svgFor(chart,passiveLastValid) {
+        var base = '<svg class="plot-svg' + (passiveLastValid ? ' last-valid' : '') + '" viewBox="0 0 600 215" preserveAspectRatio="none" aria-hidden="true">' + axes();
+        if (chart.kind === "line") {
+          return base + '<path class="line-one" d="M42 125 C90 100 114 115 156 88 S236 72 278 92 S355 118 402 80 S484 62 570 75"></path><line x1="42" y1="105" x2="570" y2="105" stroke="#9d4f38" stroke-width="1.5" stroke-dasharray="4 4"></line><circle cx="570" cy="75" r="5" fill="#315d64"></circle></svg>';
+        }
+        if (chart.kind === "bars") {
+          var bars = "";
+          var values = [92,120,84,142,154,130,168,122,109,137,98,72];
+          values.forEach(function (value,index) {
+            bars += '<rect class="bar-one" x="' + (58 + index * 42) + '" y="' + (180 - value * .78) + '" width="23" height="' + (value * .78) + '" rx="2"></rect>';
+          });
+          return base + bars + '</svg>';
+        }
+        if (chart.kind === "stacked") {
+          var stacked = "";
+          [0,1,2,3,4,5,6].forEach(function (index) {
+            var x = 72 + index * 70;
+            stacked += '<rect class="bar-one" x="' + x + '" y="' + (104-index*3) + '" width="36" height="' + (76+index*3) + '"></rect><rect class="bar-two" x="' + x + '" y="' + (74-index*2) + '" width="36" height="30"></rect>';
+          });
+          return base + stacked + '</svg>';
+        }
+        if (chart.kind === "multi") {
+          return base + '<path class="line-one" d="M42 165 C105 154 132 135 190 122 S286 92 342 75 S456 58 570 46"></path><path class="line-two" d="M42 177 C118 165 170 152 224 132 S330 108 392 91 S494 78 570 69"></path><g fill="#315d64"><circle cx="190" cy="122" r="4"></circle><circle cx="342" cy="75" r="4"></circle><circle cx="570" cy="46" r="4"></circle></g><g fill="#b76342"><circle cx="224" cy="132" r="4"></circle><circle cx="392" cy="91" r="4"></circle><circle cx="570" cy="69" r="4"></circle></g></svg>';
+        }
+        return base + '<path class="area-one" d="M42 180 L42 146 C100 138 132 151 180 121 S265 90 310 105 S398 137 442 98 S518 66 570 84 L570 180 Z"></path><line x1="42" y1="92" x2="570" y2="92" stroke="#9d4f38" stroke-width="1.5" stroke-dasharray="5 4"></line></svg>';
+      }
+
+      function drawingFor(chart,context) {
+        var showMarks = chart.state === "loaded" || chart.state === "partial" || chart.state === "error";
+        var passiveRetained = context === "audience" && (chart.state === "loading" || chart.state === "error");
+        var markup = showMarks || passiveRetained ? svgFor(chart,passiveRetained || chart.state === "error") : '<div aria-hidden="true" style="position:absolute;inset:0;background:linear-gradient(180deg,#fbfaf5,#f5f1e8)"></div>';
+        if ((chart.state === "error" && chart.lastValid) || passiveRetained) markup += '<span class="last-valid-stamp">Last valid · retained</span>';
+        return markup;
+      }
+
+      function stateCopyMarkup(chart) {
+        return '<div class="state-copy"><span class="state-cue ' + chart.state + '" aria-hidden="true">' + stateIcon(chart) + '</span><p><strong>' + escapeHtml(primaryCopy(chart)) + '</strong></p></div>';
+      }
+
+      function containmentFor(chart,context) {
+        if (chart.state === "loaded" && ui.variant !== "b") return "";
+        var actions = stateActions(chart,context);
+        if (ui.variant === "a") {
+          var compact = chart.state === "partial" || chart.state === "error";
+          return '<div class="state-plate ' + chart.state + (compact ? ' compact' : '') + '" role="status" aria-label="' + escapeHtml(stateLabel(chart)) + '">' + stateCopyMarkup(chart) + (actions ? '<div class="state-actions">' + actions + '</div>' : '') + '</div>';
+        }
+        if (ui.variant === "b") {
+          return '<div class="status-ledger ' + chart.state + '" role="status" aria-label="' + escapeHtml(stateLabel(chart)) + '">' + stateCopyMarkup(chart) + (actions ? '<div class="state-actions">' + actions + '</div>' : '') + '</div>';
+        }
+        return '<div class="state-marker ' + chart.state + '" role="status" aria-label="' + escapeHtml(stateLabel(chart)) + '">' + stateCopyMarkup(chart) + '</div>';
+      }
+
+      function collectionProof(chart,context) {
+        if (!chart.collection) return "";
+        if (context === "audience") {
+          return '<div class="collection-proof" data-collection-proof="true"><span class="collection-label">Collection pages</span><span class="page-dots" aria-label="Page 1 of 3"><span class="page-dot current"></span><span class="page-dot"></span><span class="page-dot"></span></span></div>';
+        }
+        var edit = context === "build" ? '<button class="collection-control collection-edit" type="button" data-open-orbit="' + chart.id + '" aria-label="Edit collection">Edit</button>' : "";
+        return '<div class="collection-proof" data-collection-proof="true"><span class="collection-label">Collection pages</span><span class="page-dots" aria-label="Page 1 of 3"><span class="page-dot current"></span><span class="page-dot"></span><span class="page-dot"></span></span><span class="collection-buttons"><button class="collection-control" type="button" aria-label="Previous collection page">◀</button><button class="collection-control" type="button" aria-label="Play collection pages">▶</button><button class="collection-control" type="button" aria-label="Next collection page">▶</button>' + edit + '</span></div>';
+      }
+
+      function baseRail(chart,context) {
+        var parts = [];
+        if (ui.variant === "c") parts.push(stateActions(chart,context));
+        if (context === "view" || context === "focus") {
+          if (parts.length && parts[0]) parts.push('<span class="rail-separator" aria-hidden="true"></span>');
+          parts.push('<button class="small-button" type="button" data-details="' + chart.id + '">Details</button>');
+          if (context !== "focus") parts.push('<button class="small-button" type="button" data-focus="' + chart.id + '">Focus</button>');
+          var selected = ui.comparison.indexOf(chart.id) !== -1;
+          parts.push('<button class="small-button ' + (selected ? 'selected' : '') + '" type="button" data-compare-toggle="' + chart.id + '" aria-pressed="' + selected + '">' + (selected ? 'Selected' : 'Compare') + '</button>');
+        }
+        if (context === "build") {
+          if (parts.length && parts[0]) parts.push('<span class="rail-separator" aria-hidden="true"></span>');
+          parts.push('<button class="small-button" type="button" data-open-orbit="' + chart.id + '">Edit chart</button>');
+        }
+        if (context === "comparison") {
+          parts.push('<span class="drag-hint">Drag this chart to reposition</span>');
+        }
+        return parts.filter(Boolean).join("");
+      }
+
+      function chartCard(chart,context) {
+        var cardClass = "chart-card " + chart.footprint + (chart.state === "loaded" ? "" : " is-affected");
+        var draggable = context === "comparison" ? ' draggable="true" data-draggable-chart="' + chart.id + '"' : "";
+        var feedback = ui.feedback[chart.id] || "";
+        return '<article class="' + cardClass + '" data-chart-id="' + chart.id + '" data-state="' + chart.state + '"' + draggable + '>' +
+          '<header class="chart-head"><div class="chart-identity"><h4>' + escapeHtml(chart.name) + '</h4><p>' + escapeHtml(chart.role + " · " + chart.subtitle) + '</p></div><span class="state-token ' + chart.state + '">' + escapeHtml(stateLabel(chart)) + '</span>' + collectionProof(chart,context) + '</header>' +
+          '<div class="chart-body"><div class="plot-shell variant-' + ui.variant + '" data-canonical-plot="' + chart.id + '" aria-busy="' + (chart.state === "loading") + '"><div class="plot-drawing">' + drawingFor(chart,context) + '</div>' + containmentFor(chart,context) + '</div></div>' +
+          '<div class="card-action-rail" aria-label="' + escapeHtml(chart.name) + ' actions">' + baseRail(chart,context) + '</div>' +
+          '<div class="chart-feedback" aria-live="polite">' + escapeHtml(feedback) + '</div>' +
+          '</article>';
+      }
+
+      function crown() {
+        var build = ui.mode === "build";
+        var present = ui.mode === "present";
+        return '<header class="command-crown">' +
+          '<div class="mode-row"><div class="brand"><span class="brand-mark">SIMEX</span><span>Evidence Ledger</span></div>' +
+          ["view","build","present"].map(function (mode) {
+            return '<button class="mode-button" type="button" data-mode="' + mode + '" aria-current="' + (ui.mode === mode ? "page" : "false") + '">' + mode.charAt(0).toUpperCase() + mode.slice(1) + '</button>';
+          }).join("") +
+          '<div class="spacer"></div><div class="scenario"><strong>Pandemic preparedness watch</strong><span>National exercise dashboard · Brighter Vellum</span></div></div>' +
+          '<div class="page-row"><div class="dashboard-id"><strong>Overview</strong><span>Operational picture</span></div><nav class="page-tabs" aria-label="Dashboard pages"><button class="page-button" type="button" aria-current="page">Overview</button><button class="page-button" type="button">Health system</button><button class="page-button" type="button">Response</button></nav><div class="spacer"></div><div class="crown-actions">' +
+          (ui.mode === "view" ? '<button class="crown-button" type="button" data-open-comparison>Compare charts (' + ui.comparison.length + ')</button>' : '') +
+          (present ? '<button class="crown-button primary" type="button" data-open-audience>Open Audience preview</button>' : '') +
+          '</div></div>' +
+          (build ? '<div class="build-row"><strong>Build canvas</strong><span class="draft-chip">Draft changes</span><span style="font-size:8px;color:var(--ink-soft)">Canonical substitutes · Unit Orbit owns chart settings</span></div>' : '') +
+          '</header>';
+      }
+
+      function viewPage(context) {
+        var cards = charts.map(function (chart) { return chartCard(chart,context); }).join("");
+        return '<main class="page"><div class="page-heading"><div><h2>' + (context === "build" ? "Author dashboard" : "Operational picture") + '</h2><p>The five chart frames below keep the same declared bounds as their data state changes. State and recovery are chart-local.</p></div><div class="state-summary"><span class="summary-chip">1 loaded</span><span class="summary-chip">1 loading</span><span class="summary-chip">1 zero-row</span><span class="summary-chip">1 partial</span><span class="summary-chip">1 error</span></div></div><section aria-labelledby="section-title"><header class="section-header"><h3 id="section-title">Public health indicators</h3><span>Five canonical panels · fixed order</span></header><div class="dashboard-grid">' + cards + '</div></section></main>';
+      }
+
+      function sidecarActions(chart) {
+        if (chart.state === "loaded" || chart.state === "loading") return chart.state === "loading" ? '<p>No action is available while progress is active.</p>' : '<p>This chart is current. No recovery action is required.</p>';
+        var markup = '<div class="sidecar-actions"><button class="action-button" type="button" data-chart-action="retry" data-chart-id="' + chart.id + '">Retry Loading ' + escapeHtml(chart.name) + '</button>';
+        if (chart.state === "partial") markup += '<button class="action-button secondary" type="button" data-chart-action="continue" data-chart-id="' + chart.id + '">Continue with Available Data</button>';
+        if (chart.state === "empty") markup += '<button class="action-button review" type="button" data-chart-action="review" data-chart-id="' + chart.id + '">Review ' + escapeHtml(chart.name) + ' Data Settings</button>';
+        return markup + '</div>';
+      }
+
+      function presentPage() {
+        var selected = chartById(ui.selectedPresent);
+        var options = charts.map(function (chart) { return '<option value="' + chart.id + '"' + (chart.id === selected.id ? " selected" : "") + '>' + escapeHtml(chart.name) + '</option>'; }).join("");
+        return '<main class="present-page"><div class="page-heading"><div><h2>Present controller</h2><p>The preview is truthful but passive. Recovery for the selected chart belongs to Live Sidecar and never appears in Audience.</p></div></div><div class="present-layout"><section class="present-stage" aria-label="Present preview">' + chartCard(selected,"present") + '</section><aside class="live-sidecar" aria-label="Live Sidecar"><h3>Live Sidecar</h3><p class="sidecar-kicker">Recovery and output control for the selected chart.</p><label class="field-label" for="present-chart">Selected chart</label><select class="field-select" id="present-chart">' + options + '</select><div class="sidecar-state"><p><strong>' + escapeHtml(stateLabel(selected)) + '</strong></p><p>' + escapeHtml(primaryCopy(selected)) + '</p>' + sidecarActions(selected) + '</div><p class="audience-note">Audience receives the last-valid chart where present and exact passive state copy. It receives no buttons, Details, Focus, or recovery targets.</p></aside></div></main>';
+      }
+
+      function phoneBoundary() {
+        if (ui.preview !== "390" || ui.mode === "view") return "";
+        return '<div class="phone-boundary" role="status"><span>' + (ui.mode === "build" ? "Build" : "Present") + ' is not supported at phone width. Your current state is preserved.</span><button type="button" data-switch-view>Switch to View</button></div>';
+      }
+
+      function focusOverlay() {
+        if (!ui.overlay || ui.overlay.type !== "focus") return "";
+        var chart = chartById(ui.overlay.chartId);
+        return '<section class="surface-overlay" aria-label="Focused chart"><header class="overlay-bar"><h2>Focus · ' + escapeHtml(chart.name) + '</h2><div class="spacer"></div><button class="crown-button" type="button" data-close-overlay>Exit Focus</button></header><div class="overlay-content focus-content">' + chartCard(chart,"focus") + '</div></section>';
+      }
+
+      function comparisonOverlay() {
+        if (!ui.overlay || ui.overlay.type !== "comparison") return "";
+        var cards = ui.comparison.map(function (id) { return chartCard(chartById(id),"comparison"); }).join("");
+        return '<section class="surface-overlay comparison-overlay" aria-label="Chart comparison"><div class="comparison-top-controls"><label class="sr-only" for="comparison-layout">Layout</label><select id="comparison-layout"><option value="three">3 columns</option><option value="two">2 columns</option><option value="one">1 column</option></select><button type="button" data-close-overlay>Exit comparison</button></div><div class="comparison-canvas"><div class="comparison-grid" id="comparison-grid" data-layout="three">' + cards + '</div></div></section>';
+      }
+
+      function detailsDialog() {
+        if (!ui.details) return "";
+        var chart = chartById(ui.details);
+        return '<div class="modal-scrim" role="presentation"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="details-title"><header class="dialog-head"><h2 id="details-title">' + escapeHtml(chart.name) + '</h2><button class="small-button" type="button" data-close-dialog>Close</button></header><div class="dialog-body"><p><strong>Chart ID:</strong> ' + chart.id + '</p><p><strong>Fixture role:</strong> ' + chart.role + '</p><p><strong>Current state:</strong> ' + stateLabel(chart) + '</p><p>This existing Details surface stays separate from chart-state recovery in every candidate.</p></div></section></div>';
+      }
+
+      function orbitDialog() {
+        if (!ui.orbit) return "";
+        var chart = chartById(ui.orbit);
+        return '<div class="modal-scrim" role="presentation"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="orbit-title"><header class="dialog-head"><h2 id="orbit-title">Unit Orbit · ' + escapeHtml(chart.name) + '</h2><button class="small-button" type="button" data-close-dialog>Close</button></header><div class="dialog-body"><nav class="orbit-tabs" aria-label="Unit Orbit sections"><button class="orbit-tab" type="button">Content</button><button class="orbit-tab active" type="button" aria-current="page">Data</button><button class="orbit-tab" type="button">Size</button><button class="orbit-tab" type="button">Collection</button><button class="orbit-tab" type="button">Layout</button></nav><div class="orbit-field"><strong>Source and query</strong><span>Review the selected chart’s data source and filters here. This prototype does not modify or persist them.</span></div><div class="orbit-field"><strong>Current result</strong><span>' + escapeHtml(primaryCopy(chart)) + '</span></div><div class="orbit-field"><strong>Ownership remains stable</strong><span>Data remains in Unit Orbit → Data. Size, Collection, and Layout have not moved.</span></div></div></section></div>';
+      }
+
+      function audienceOverlay() {
+        if (!ui.overlay || ui.overlay.type !== "audience") return "";
+        var chart = chartById(ui.selectedPresent);
+        return '<section class="surface-overlay audience-overlay" aria-label="Passive Audience preview"><header class="overlay-bar"><h2>Audience · ' + escapeHtml(chart.name) + '</h2><span class="passive-badge">Passive output · no actions</span><button class="crown-button" type="button" data-close-overlay>Close preview</button></header><div class="audience-stage"><div class="audience-frame">' + chartCard(chart,"audience") + '</div></div></section>';
+      }
+
+      function render() {
+        var product = ui.mode === "present" ? presentPage() : viewPage(ui.mode);
+        app.innerHTML = phoneBoundary() + crown() + product + focusOverlay() + comparisonOverlay() + audienceOverlay() + detailsDialog() + orbitDialog();
+        productWindow.setAttribute("data-preview",ui.preview);
+        document.querySelectorAll(".variant-button").forEach(function (button) {
+          button.setAttribute("aria-pressed",String(button.getAttribute("data-variant") === ui.variant));
+        });
+        document.querySelectorAll(".viewport-button").forEach(function (button) {
+          button.setAttribute("aria-pressed",String(button.getAttribute("data-width") === ui.preview));
+        });
+        document.querySelectorAll("[data-mode-shortcut]").forEach(function (button) {
+          button.setAttribute("aria-pressed",String(button.getAttribute("data-mode-shortcut") === ui.mode));
+        });
+      }
+
+      function resetChart(chart) {
+        chart.state = chart.initial;
+        chart.lastValid = chart.id === "bio_hospital_load";
+        delete ui.feedback[chart.id];
+      }
+
+      function resetAll() {
+        charts.forEach(resetChart);
+        ui.errorAttempts = 0;
+        announce("Fixed five-panel fixture reset.");
+        render();
+      }
+
+      function runRetry(chart) {
+        if (chart.state === "empty") {
+          ui.feedback[chart.id] = "Retry completed: the source still returned zero rows.";
+          announce("ICU and hospital capacity remains a successful zero-row result.");
+          render();
+          return;
+        }
+        if (chart.state === "partial") {
+          ui.feedback[chart.id] = "Retry in progress; valid series remain visible.";
+          announce("Retrying Vaccination rate without clearing available data.");
+          render();
+          window.setTimeout(function () {
+            chart.state = "loaded";
+            ui.feedback[chart.id] = "Replacement succeeded. All configured series are available.";
+            announce("Vaccination rate replacement succeeded.");
+            render();
+          },650);
+          return;
+        }
+        if (chart.state === "error") {
+          ui.errorAttempts += 1;
+          if (ui.errorAttempts === 1) {
+            ui.feedback[chart.id] = "Retry failed; the previous valid render remains unchanged.";
+            announce("Hospital demand signal retry failed; last-valid content remains.");
+            render();
+          } else {
+            chart.state = "loaded";
+            chart.lastValid = false;
+            ui.feedback[chart.id] = "Replacement succeeded on the second retry.";
+            announce("Hospital demand signal replacement succeeded.");
+            render();
+          }
+        }
+      }
+
+      document.querySelector(".review-rail").addEventListener("click",function (event) {
+        var variant = event.target.closest("[data-variant]");
+        if (variant) {
+          ui.variant = variant.getAttribute("data-variant");
+          announce("Variant " + ui.variant.toUpperCase() + " selected.");
+          render();
+          return;
+        }
+        var viewport = event.target.closest("[data-width]");
+        if (viewport) {
+          ui.preview = viewport.getAttribute("data-width");
+          announce(ui.preview + " pixel preview selected.");
+          render();
+          return;
+        }
+        var shortcut = event.target.closest("[data-mode-shortcut]");
+        if (shortcut) {
+          ui.mode = shortcut.getAttribute("data-mode-shortcut");
+          ui.overlay = null;
+          announce(ui.mode.charAt(0).toUpperCase() + ui.mode.slice(1) + " selected.");
+          render();
+          return;
+        }
+        var script = event.target.closest("[data-script]");
+        if (!script) return;
+        var action = script.getAttribute("data-script");
+        if (action === "reset-all") resetAll();
+        if (action === "release-loading") {
+          chartById("bio_confirmed_cases").state = "loaded";
+          ui.feedback.bio_confirmed_cases = "Loading released in place; canonical bounds were preserved.";
+          announce("Confirmed cases released from Loading.");
+          render();
+        }
+        if (action === "reset-loading") {
+          resetChart(chartById("bio_confirmed_cases"));
+          announce("Confirmed cases returned to Loading.");
+          render();
+        }
+        if (action === "reset-partial") {
+          resetChart(chartById("bio_vaccination_rate"));
+          announce("Vaccination rate returned to Partial.");
+          render();
+        }
+        if (action === "retry-error") runRetry(chartById("bio_hospital_load"));
+        if (action === "open-comparison") {
+          ui.mode = "view";
+          ui.overlay = {type:"comparison"};
+          announce("Comparison opened with Loading, Partial, and Error.");
+          render();
+        }
+      });
+
+      app.addEventListener("click",function (event) {
+        var mode = event.target.closest("[data-mode]");
+        if (mode) {
+          ui.mode = mode.getAttribute("data-mode");
+          ui.overlay = null;
+          announce(ui.mode.charAt(0).toUpperCase() + ui.mode.slice(1) + " selected.");
+          render();
+          return;
+        }
+        if (event.target.closest("[data-switch-view]")) {
+          ui.mode = "view";
+          announce("Switched to supported phone View.");
+          render();
+          return;
+        }
+        var focus = event.target.closest("[data-focus]");
+        if (focus) {
+          ui.overlay = {type:"focus",chartId:focus.getAttribute("data-focus")};
+          announce("Focus opened.");
+          render();
+          return;
+        }
+        if (event.target.closest("[data-open-comparison]")) {
+          ui.overlay = {type:"comparison"};
+          announce("Comparison opened.");
+          render();
+          return;
+        }
+        if (event.target.closest("[data-close-overlay]")) {
+          ui.overlay = null;
+          announce("Overlay closed; chart state was preserved.");
+          render();
+          return;
+        }
+        var details = event.target.closest("[data-details]");
+        if (details) {
+          ui.details = details.getAttribute("data-details");
+          render();
+          return;
+        }
+        var orbit = event.target.closest("[data-open-orbit]");
+        if (orbit) {
+          ui.orbit = orbit.getAttribute("data-open-orbit");
+          render();
+          return;
+        }
+        if (event.target.closest("[data-close-dialog]")) {
+          ui.details = null;
+          ui.orbit = null;
+          render();
+          return;
+        }
+        var compare = event.target.closest("[data-compare-toggle]");
+        if (compare) {
+          var compareId = compare.getAttribute("data-compare-toggle");
+          var index = ui.comparison.indexOf(compareId);
+          if (index === -1) ui.comparison.push(compareId);
+          else if (ui.comparison.length > 1) ui.comparison.splice(index,1);
+          announce(chartById(compareId).name + (index === -1 ? " selected for comparison." : " removed from comparison."));
+          render();
+          return;
+        }
+        var action = event.target.closest("[data-chart-action]");
+        if (action) {
+          var chart = chartById(action.getAttribute("data-chart-id"));
+          var operation = action.getAttribute("data-chart-action");
+          if (operation === "retry") runRetry(chart);
+          if (operation === "continue") {
+            ui.feedback[chart.id] = "Continuing without mutation; Booster coverage remains identified as unavailable.";
+            announce("Continuing with available Vaccination rate data without changing saved semantics.");
+            render();
+          }
+          if (operation === "review") {
+            ui.orbit = chart.id;
+            announce("Unit Orbit Data opened for " + chart.name + ".");
+            render();
+          }
+          return;
+        }
+        if (event.target.closest("[data-open-audience]")) {
+          ui.overlay = {type:"audience"};
+          announce("Passive Audience preview opened.");
+          render();
+        }
+      });
+
+      app.addEventListener("change",function (event) {
+        if (event.target.id === "present-chart") {
+          ui.selectedPresent = event.target.value;
+          announce(chartById(ui.selectedPresent).name + " selected in Live Sidecar.");
+          render();
+        }
+        if (event.target.id === "comparison-layout") {
+          var grid = document.getElementById("comparison-grid");
+          if (grid) grid.setAttribute("data-layout",event.target.value);
+        }
+      });
+
+      var draggedChart = null;
+      app.addEventListener("dragstart",function (event) {
+        var card = event.target.closest("[data-draggable-chart]");
+        if (!card) return;
+        draggedChart = card.getAttribute("data-draggable-chart");
+        card.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+      });
+      app.addEventListener("dragend",function (event) {
+        var card = event.target.closest("[data-draggable-chart]");
+        if (card) card.classList.remove("dragging");
+        draggedChart = null;
+      });
+      app.addEventListener("dragover",function (event) {
+        if (event.target.closest("[data-draggable-chart]")) event.preventDefault();
+      });
+      app.addEventListener("drop",function (event) {
+        var target = event.target.closest("[data-draggable-chart]");
+        if (!target || !draggedChart) return;
+        event.preventDefault();
+        var targetId = target.getAttribute("data-draggable-chart");
+        var from = ui.comparison.indexOf(draggedChart);
+        var to = ui.comparison.indexOf(targetId);
+        if (from !== -1 && to !== -1 && from !== to) {
+          ui.comparison.splice(from,1);
+          ui.comparison.splice(to,0,draggedChart);
+          announce("Comparison charts repositioned; chart state followed its chart.");
+          render();
+        }
+      });
+
+      render();
+    }());
+  </script>
+</body>
+</html>

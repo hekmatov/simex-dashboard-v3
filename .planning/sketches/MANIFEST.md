@@ -32,6 +32,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 | 014 | View exploration and comparison | How should ordinary View support source inspection, Chrono member elevation, and one-to-four-chart comparison without resembling Build or Present? | Approved | D — Immersive View Canvas | View, comparison, source, Chrono, fullscreen, phone, consistency |
 | 015 | Integrated Build command surfaces | How should approved Build entry points and transient surfaces coexist in the Layered Command Crown without hiding the active target or obscuring draft ownership? | Approved | B — Context Shelf | Build, integration, Crown, Unit Orbit, focus, drafts, consistency |
 | 016 | Collection display runtime interaction | How should non-temporal Collection Display controls and runtime state remain understandable across View, Focus, Comparison, Present, Audience, and Build authoring? | Approved | A — Embedded Header Controls | collection, View, Present, Audience, Build, consistency |
+| 017 | Chart data-state continuity | How should a chart preserve canonical bounds and truthful content through Loading, zero-row, Partial, and Error across ordinary View, Focus, Comparison, Build canonical substitute, Present, and passive Audience—and where should recovery actions appear without colliding with Details, Focus, or Collection controls? | Approved | A — Plot-native State Plate | data states, View, Focus, Comparison, Build, Present, Audience, continuity, consistency |
 
 ## Sequence
 
