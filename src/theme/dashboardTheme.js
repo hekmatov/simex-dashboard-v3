@@ -1,3 +1,5 @@
+import { resolveDashboardStyleGrammar } from "./dashboardStyleGrammar.js";
+
 const TOKEN_KEYS = Object.freeze([
   "OUT", "CAN", "PAN", "ALT", "INK", "INK-S", "INK-F", "RULE", "RULE+",
   "ACC", "ACC-S", "ON-ACC", "FOCUS", "SEL", "SEL-S", "CHR", "CHR-S",
@@ -168,6 +170,7 @@ export function resolveDashboardTheme({
     chartColorMode,
     appearancePreference: savedAppearance,
     resolvedAppearance,
+    styleVariables: resolveDashboardStyleGrammar(dashboardStyle, resolvedAppearance),
     cssVariables: Object.freeze(Object.fromEntries(
       TOKEN_KEYS.map((key, index) => [CSS_VARIABLES[index], tokens[key]]),
     )),

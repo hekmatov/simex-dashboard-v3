@@ -6,6 +6,7 @@ import "./styles/tokens.css";
 import "./styles.css";
 import "./styles/modes.css";
 import "./styles/presentation.css";
+import "./styles/dashboard-style-grammar.css";
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {

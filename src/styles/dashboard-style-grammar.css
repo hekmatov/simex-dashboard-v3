@@ -1,0 +1,182 @@
+/* Approved Sketch 003 style grammars. These rules change paint only: no
+   placement, dimensions, spacing, overflow, or dashboard geometry. */
+.app-frame {
+  font-family: var(--simex-style-body-font);
+}
+
+.app-frame :is(
+  .app-frame-identity,
+  .dashboard-header h1,
+  .dashboard-page-title,
+  .section-header h2,
+  .chart-panel h3,
+  .build-header h1,
+  .present-panel-heading h1,
+  .look-drawer-header h2,
+  .chart-wizard-header h2,
+  .chart-wizard-step > h3,
+  .chart-editor-header h2
+) {
+  font-family: var(--simex-style-heading-font);
+  font-weight: var(--simex-style-heading-weight);
+  letter-spacing: var(--simex-style-heading-tracking);
+}
+
+.app-frame :is(
+  .dashboard-meta dd,
+  .kpi-card strong,
+  .delta-card strong,
+  .chart-panel table td,
+  .present-status-strip strong
+) {
+  font-family: var(--simex-style-data-font);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.app-frame :is(
+  .dashboard-location-row,
+  .chart-panel,
+  .status-panel,
+  .dashboard-footer,
+  .build-header,
+  .build-command-area,
+  .build-page-tabs,
+  .build-canvas-toolbar,
+  .present-status-strip,
+  .present-context-panel,
+  .present-scene-panel,
+  .chart-wizard,
+  .chart-editor-v3
+) {
+  background-color: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
+.app-frame :is(
+  .chart-canvas,
+  .kpi-card,
+  .delta-card,
+  .look-section,
+  .look-profile-option,
+  .chart-authoring-section,
+  .chart-authoring-section-advanced
+) {
+  background-color: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+}
+
+.app-frame :is(
+  button,
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]),
+  .chart-panel-icon-button
+) {
+  border-radius: var(--simex-style-control-radius);
+}
+
+.app-frame :is(
+  .chart-panel,
+  button,
+  .chart-panel-icon-button,
+  .look-profile-option
+) {
+  transition-duration: var(--simex-style-transition-duration);
+}
+
+.look-drawer {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-panel-radius) 0 0 var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+.look-drawer :is(.look-drawer-header, .look-drawer-footer) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] .section-header {
+  background: var(--simex-surface-canvas);
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] :is(
+  .chart-panel,
+  .dashboard-location-row,
+  .build-header,
+  .build-command-area,
+  .build-page-tabs,
+  .present-status-strip,
+  .present-context-panel,
+  .present-scene-panel
+) {
+  box-shadow: none;
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] :is(
+  .mode-switcher button[aria-pressed="true"],
+  .page-tabs button[aria-current="page"]
+) {
+  box-shadow: inset 4px 0 0 var(--simex-accent);
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .section-header {
+  background: color-mix(in srgb, var(--simex-surface-canvas) 88%, var(--simex-surface-panel));
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] :is(
+  .chart-panel:hover,
+  .chart-panel:focus-within,
+  button:hover
+) {
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--simex-accent) 16%, transparent);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .section-header {
+  background:
+    linear-gradient(var(--simex-accent), var(--simex-accent)) left center / 3px calc(100% - 20px) no-repeat,
+    color-mix(in srgb, var(--simex-surface-panel-alt) 82%, var(--simex-surface-canvas));
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .chart-panel {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--simex-accent) 56%, var(--simex-border-strong)) 0 38px, var(--simex-border-subtle) 38px 100%) top / 100% 2px no-repeat,
+    var(--simex-surface-panel);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .mode-switcher button,
+  .page-tabs button,
+  .view-comparison-button,
+  .dashboard-look-trigger,
+  .chart-panel-icon-button,
+  .build-command-area button,
+  .present-workspace button,
+  .look-drawer button
+) {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--simex-border-strong) 34%, transparent);
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] :is(
+  .eyebrow,
+  .build-command-title,
+  .present-chart-limit-status,
+  .dashboard-meta dt
+) {
+  font-family: var(--simex-style-data-font);
+  letter-spacing: 0.075em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-frame :is(.chart-panel, button, .chart-panel-icon-button, .look-profile-option) {
+    transition-duration: 0.01ms;
+  }
+}

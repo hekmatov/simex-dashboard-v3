@@ -22,7 +22,7 @@ export default function AppFrame({
       data-chart-color-mode={theme?.chartColorMode}
       data-appearance-preference={theme?.appearancePreference}
       data-resolved-appearance={theme?.resolvedAppearance}
-      style={theme?.cssVariables}
+      style={{ ...theme?.cssVariables, ...theme?.styleVariables }}
     >
       {phoneUnsupported && (
         <section className="phone-mode-banner" role="status" aria-label={`${mode} phone support notice`}>
