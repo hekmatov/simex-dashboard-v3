@@ -1,0 +1,1081 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 019 · Application and structural recovery</title>
+  <link rel="stylesheet" href="../themes/default.css">
+  <style>
+    :root {
+      --paper: #f5f0e5;
+      --canvas: #fbf7ed;
+      --panel: #fffdf7;
+      --panel-alt: #eee9dc;
+      --ink: #142234;
+      --ink-soft: #52606b;
+      --ink-faint: #6b756f;
+      --rule: #d5cec0;
+      --rule-strong: #5f6d72;
+      --accent: #176d79;
+      --accent-soft: #dcebec;
+      --focus: #b46b16;
+      --error: #963f35;
+      --error-soft: #f5e2dc;
+      --success: #496d4d;
+      --success-soft: #e1ecdf;
+      --shadow: 0 14px 36px rgb(20 34 52 / 13%);
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: #1a2937; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      overflow-x: hidden;
+      background: #1a2937;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    button,
+    select { font: inherit; }
+    button { min-height: 44px; cursor: pointer; }
+    button:focus-visible,
+    select:focus-visible,
+    [tabindex="-1"]:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+    button:active { filter: brightness(.94); }
+    button[disabled] { cursor: default; opacity: .55; }
+
+    .review-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 304px;
+      min-height: 100vh;
+    }
+    .product-stage {
+      min-width: 0;
+      padding: 20px;
+      overflow: auto;
+      background: #cfd2d0;
+    }
+    .product-viewport {
+      width: 100%;
+      max-width: 1440px;
+      min-width: 320px;
+      min-height: calc(100vh - 40px);
+      margin: 0 auto;
+      overflow: hidden;
+      background: var(--canvas);
+      border: 1px solid #aeb5b6;
+      box-shadow: var(--shadow);
+    }
+    .product-viewport[data-width="1200"] { max-width: 1200px; }
+    .product-viewport[data-width="1024"] { max-width: 1024px; }
+    .product-viewport[data-width="768"] { max-width: 768px; }
+    .product-viewport[data-width="390"] { width: 390px; max-width: 390px; }
+    .product-viewport[data-width="full"] { max-width: none; }
+
+    .review-rail {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 20px 16px 28px;
+      color: #f6f0e2;
+      background: #1a2937;
+      border-left: 1px solid rgb(255 255 255 / 12%);
+    }
+    .review-rail h1 {
+      margin: 0;
+      font: 600 23px/1.05 Georgia, "Times New Roman", serif;
+    }
+    .review-rail > p {
+      margin: 10px 0 20px;
+      color: #bcc9ca;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .review-group {
+      padding: 16px 0;
+      border-top: 1px solid rgb(255 255 255 / 13%);
+    }
+    .review-label {
+      display: block;
+      margin-bottom: 9px;
+      color: #9fb9b8;
+      font: 800 10px/1.2 ui-monospace, Consolas, monospace;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .review-stack { display: grid; gap: 7px; }
+    .review-button,
+    .review-choice {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 10px;
+      color: #eef4ef;
+      text-align: left;
+      background: rgb(255 255 255 / 5%);
+      border: 1px solid rgb(255 255 255 / 16%);
+      border-radius: 6px;
+    }
+    .review-button:hover,
+    .review-choice:hover { background: rgb(255 255 255 / 10%); }
+    .review-button[aria-pressed="true"],
+    .review-choice[aria-pressed="true"] {
+      color: #15393b;
+      background: #dcebea;
+      border-color: #dcebea;
+      box-shadow: inset 4px 0 var(--accent);
+    }
+    .review-button strong,
+    .review-button small { display: block; }
+    .review-button strong { font-size: 12px; }
+    .review-button small { margin-top: 4px; font-size: 10px; line-height: 1.35; opacity: .76; }
+    .recommended {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 5px;
+      color: #164a48;
+      background: #bcd8d2;
+      border-radius: 3px;
+      font: 800 8px/1.4 ui-monospace, monospace;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .preserved {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 5px;
+      color: #5c5148;
+      background: #e4ddd2;
+      border-radius: 3px;
+      font: 800 8px/1.4 ui-monospace, monospace;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .review-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .review-row.viewport-row { grid-template-columns: repeat(2, 1fr); }
+    .review-choice { padding: 7px; text-align: center; font-size: 11px; }
+    .review-rail select {
+      width: 100%;
+      min-height: 44px;
+      padding: 7px 9px;
+      color: #142234;
+      background: #fffdf7;
+      border: 1px solid #9fa8a8;
+      border-radius: 5px;
+    }
+
+    .brand-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 32px;
+      padding: 7px 28px;
+      color: #fff7e7;
+      background: var(--ink);
+      font: 800 10px/1.2 ui-monospace, Consolas, monospace;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .scenario-row,
+    .command-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 54px;
+      padding: 0 28px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--rule);
+    }
+    .scenario-mark {
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      flex: 0 0 auto;
+      color: white;
+      background: var(--accent);
+      border-radius: 5px;
+      font: 700 17px/1 Georgia, serif;
+    }
+    .scenario-row strong,
+    .scenario-row small { display: block; }
+    .scenario-row strong { font: 600 16px/1.15 Georgia, "Times New Roman", serif; }
+    .scenario-row small { margin-top: 3px; color: var(--ink-soft); font-size: 11px; }
+    .mode-tabs { display: flex; gap: 4px; }
+    .mode-tab {
+      min-height: 42px;
+      padding: 0 12px;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .mode-tab[aria-selected="true"] { color: var(--ink); border-color: var(--accent); }
+    .page-context {
+      margin-left: auto;
+      color: var(--ink-soft);
+      font: 700 11px/1.3 ui-monospace, Consolas, monospace;
+    }
+    .phone-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      color: #fff7e7;
+      background: #263b4c;
+      border-bottom: 1px solid #526674;
+      font-size: 12px;
+    }
+    .phone-banner button {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      color: var(--ink);
+      background: #fff7e7;
+      border: 0;
+      border-radius: 4px;
+      font-weight: 800;
+    }
+    .product-viewport[data-width="390"][data-mode="build"] .phone-banner,
+    .product-viewport[data-width="390"][data-mode="present"] .phone-banner { display: flex; }
+    .product-viewport[data-width="390"][data-mode="build"] .product-main,
+    .product-viewport[data-width="390"][data-mode="present"] .product-main { display: none; }
+
+    .product-main {
+      min-height: 620px;
+      padding: 28px;
+    }
+    .root-empty .product-main { min-height: calc(100vh - 74px); }
+    .context-line {
+      color: var(--ink-faint);
+      font: 800 10px/1.3 ui-monospace, Consolas, monospace;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .variant-line { margin-top: 16px; color: var(--accent); }
+    .product-main h1 {
+      margin: 7px 0 8px;
+      font: 600 32px/1.1 Georgia, "Times New Roman", serif;
+    }
+    .product-main > p {
+      max-width: 740px;
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .content-region { margin-top: 24px; }
+
+    .scope-frame,
+    .section-frame,
+    .time-frame,
+    .present-catalogue,
+    .audience-monitor {
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 7px;
+    }
+    .scope-frame { padding: 14px; }
+    .scope-frame + .scope-frame { margin-top: 14px; }
+    .scope-header,
+    .section-header,
+    .catalogue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 38px;
+      margin-bottom: 12px;
+      color: var(--ink);
+      font: 600 15px/1.25 Georgia, "Times New Roman", serif;
+    }
+    .scope-header small,
+    .section-header small,
+    .catalogue-header small {
+      color: var(--ink-faint);
+      font: 800 9px/1.2 ui-monospace, Consolas, monospace;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .section-frame { padding: 13px; }
+    .panel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .chart-panel {
+      min-height: 146px;
+      padding: 11px;
+      overflow: hidden;
+      color: var(--ink-soft);
+      background: repeating-linear-gradient(0deg, #fffdf7 0 30px, #e9eeea 31px 32px);
+      border: 1px solid #c5d0cc;
+      border-radius: 5px;
+      font-size: 11px;
+    }
+    .chart-panel strong { display: block; color: var(--ink); font-size: 12px; }
+    .mini-bars { display: flex; align-items: end; gap: 6px; height: 94px; margin-top: 8px; }
+    .mini-bars i { flex: 1; background: #377983; }
+    .mini-bars i:nth-child(2n) { background: #b76f39; }
+    .empty-geometry {
+      display: grid;
+      place-items: center;
+      min-height: 150px;
+      color: #8a918f;
+      background: repeating-linear-gradient(135deg, #fbf8ee, #fbf8ee 10px, #f3efe4 10px, #f3efe4 20px);
+      border: 1px dashed #aeb5b2;
+      border-radius: 5px;
+      font: 800 10px/1.3 ui-monospace, Consolas, monospace;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .recovery-plate {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 104px;
+      padding: 17px;
+      background: var(--error-soft);
+      border: 1px solid #d4a99f;
+      border-left: 5px solid var(--error);
+      border-radius: 6px;
+    }
+    .recovery-plate strong,
+    .recovery-plate span { display: block; }
+    .recovery-plate strong {
+      color: var(--error);
+      font: 800 10px/1.25 ui-monospace, Consolas, monospace;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .recovery-plate span {
+      max-width: 650px;
+      margin-top: 6px;
+      font: 600 16px/1.35 Georgia, "Times New Roman", serif;
+    }
+    .recovery-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; }
+    .primary,
+    .secondary {
+      min-height: 44px;
+      padding: 0 13px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .primary { color: white; background: var(--accent); border: 1px solid var(--accent); }
+    .secondary { color: var(--accent); background: var(--panel); border: 1px solid var(--accent); }
+    .failure-note {
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      color: #6d2923;
+      background: #fff4ef;
+      border: 1px solid #e0b6aa;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .passive-note {
+      min-height: 72px;
+      padding: 15px;
+      color: var(--ink-soft);
+      background: #eef1eb;
+      border: 1px solid #cbd2ca;
+      border-radius: 5px;
+      line-height: 1.45;
+    }
+    .passive-note strong { display: block; margin-bottom: 4px; color: var(--ink); }
+
+    .context-shelf {
+      padding: 15px;
+      background: #e2eff0;
+      border: 1px solid #a7c7c8;
+      border-radius: 7px;
+    }
+    .context-shelf h2 { margin: 0; font: 600 18px/1.2 Georgia, serif; }
+    .context-shelf > p { margin: 5px 0 12px; color: var(--ink-soft); font-size: 12px; }
+    .scope-chain { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 12px; padding: 0; list-style: none; }
+    .scope-chain li {
+      padding: 5px 8px;
+      color: var(--ink-soft);
+      background: rgb(255 255 255 / 58%);
+      border: 1px solid #b7cccc;
+      border-radius: 4px;
+      font: 800 9px/1.2 ui-monospace, monospace;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .scope-chain li[data-state="current"] { color: var(--error); background: var(--error-soft); border-color: #d4a99f; }
+    .scope-chain li[data-state="waiting"] { opacity: .5; }
+    .shelf-context { margin-top: 14px; opacity: .62; }
+
+    .recovery-navigator {
+      max-width: 900px;
+      margin: 0 auto;
+      overflow: hidden;
+      background: var(--panel);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .navigator-head { padding: 17px 20px; border-bottom: 1px solid var(--rule); }
+    .navigator-head strong { display: block; font: 600 20px/1.2 Georgia, serif; }
+    .navigator-head span { display: block; margin-top: 4px; color: var(--ink-soft); font-size: 12px; }
+    .navigator-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+    .navigator-path { margin: 0; padding: 14px; list-style: none; background: var(--panel-alt); border-right: 1px solid var(--rule); }
+    .navigator-path li {
+      min-height: 42px;
+      padding: 12px 10px;
+      color: var(--ink-soft);
+      border-left: 3px solid transparent;
+      font-size: 12px;
+    }
+    .navigator-path li[data-state="complete"]::before { content: "✓ "; color: var(--success); font-weight: 900; }
+    .navigator-path li[data-state="current"] { color: var(--error); background: var(--error-soft); border-left-color: var(--error); font-weight: 800; }
+    .navigator-path li[data-state="waiting"] { opacity: .48; }
+    .navigator-repair { min-width: 0; padding: 22px; }
+    .navigator-repair h2 { margin: 5px 0 13px; font: 600 24px/1.15 Georgia, serif; }
+
+    .present-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 34%); gap: 14px; }
+    .present-catalogue,
+    .audience-monitor { padding: 14px; }
+    .catalogue-empty {
+      display: grid;
+      place-items: center;
+      min-height: 250px;
+      color: var(--ink-faint);
+      border: 1px dashed #aeb5b2;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .live-sidecar { display: grid; align-content: start; gap: 12px; }
+    .sidecar-label {
+      color: var(--accent);
+      font: 800 10px/1.2 ui-monospace, Consolas, monospace;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .audience-monitor {
+      min-height: 175px;
+      color: #e8efe9;
+      background: #17262d;
+      border-color: #40535a;
+    }
+    .audience-monitor strong,
+    .audience-monitor span { display: block; }
+    .audience-monitor strong { font: 600 14px/1.2 Georgia, serif; }
+    .audience-monitor span { margin-top: 8px; color: #b8c7c4; font-size: 11px; line-height: 1.45; }
+    .holding-card {
+      display: grid;
+      place-items: center;
+      min-height: 98px;
+      margin-top: 12px;
+      color: #d5dfd8;
+      border: 1px solid #52656a;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .success-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      color: #294f30;
+      background: var(--success-soft);
+      border: 1px solid #aec5ad;
+      border-radius: 5px;
+    }
+    .success-mark {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      color: white;
+      background: var(--success);
+      border-radius: 50%;
+      font-weight: 900;
+    }
+
+    dialog {
+      width: min(460px, calc(100vw - 32px));
+      padding: 0;
+      color: var(--ink);
+      background: var(--panel);
+      border: 0;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgb(0 0 0 / 32%);
+    }
+    dialog::backdrop { background: rgb(20 34 52 / 58%); }
+    .dialog-body { padding: 22px; }
+    .dialog-body h2 { margin: 0; font: 600 23px/1.15 Georgia, serif; }
+    .dialog-body p { color: var(--ink-soft); line-height: 1.5; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .product-viewport[data-root-empty="true"] .scenario-row,
+    .product-viewport[data-root-empty="true"] .command-row { display: none; }
+    .product-viewport[data-width="390"] .brand-bar { padding-inline: 14px; }
+    .product-viewport[data-width="390"] .brand-bar span:last-child { display: none; }
+    .product-viewport[data-width="390"] .scenario-row,
+    .product-viewport[data-width="390"] .command-row { padding-inline: 14px; }
+    .product-viewport[data-width="390"] .command-row { align-items: flex-start; flex-direction: column; padding-block: 7px; }
+    .product-viewport[data-width="390"] .page-context { margin-left: 0; }
+    .product-viewport[data-width="390"] .product-main { min-height: 620px; padding: 18px 14px; }
+    .product-viewport[data-width="390"] .product-main h1 { font-size: 27px; }
+    .product-viewport[data-width="390"] .panel-grid,
+    .product-viewport[data-width="390"] .present-layout,
+    .product-viewport[data-width="390"] .navigator-body { grid-template-columns: 1fr; }
+    .product-viewport[data-width="390"] .navigator-path { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .product-viewport[data-width="390"] .recovery-plate { align-items: flex-start; flex-direction: column; }
+    .product-viewport[data-width="390"] .recovery-actions { width: 100%; }
+    .product-viewport[data-width="390"] .recovery-actions button { width: 100%; }
+
+    @media (max-width: 900px) {
+      .review-layout { grid-template-columns: 1fr; }
+      .review-rail { position: static; height: auto; border-left: 0; border-top: 1px solid rgb(255 255 255 / 12%); }
+      .product-stage { min-height: 720px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="review-layout">
+    <section class="product-stage" aria-label="Sketch product viewport">
+      <div class="product-viewport" id="product" data-width="1440" data-mode="build" data-root-empty="false">
+        <header>
+          <div class="brand-bar">
+            <span>SimEx dashboard</span>
+            <span>Application and structural recovery</span>
+          </div>
+          <div class="scenario-row" id="scenario-row">
+            <span class="scenario-mark" aria-hidden="true">S</span>
+            <div>
+              <strong>SimEx Training Exercise</strong>
+              <small>Program · Pandemic &amp; Disaster Preparedness Center</small>
+            </div>
+          </div>
+          <div class="command-row" id="command-row">
+            <div class="mode-tabs" role="tablist" aria-label="Product mode">
+              <button class="mode-tab" type="button" role="tab" data-product-mode="view">View</button>
+              <button class="mode-tab" type="button" role="tab" data-product-mode="build">Build</button>
+              <button class="mode-tab" type="button" role="tab" data-product-mode="present">Present</button>
+            </div>
+            <span class="page-context" id="page-context"></span>
+          </div>
+        </header>
+
+        <div class="phone-banner" role="status">
+          <span>This mode is available on larger screens. Your recovery context is retained.</span>
+          <button type="button" data-product-mode="view">Switch to View</button>
+        </div>
+
+        <main class="product-main" id="product-main" tabindex="-1">
+          <div class="context-line" id="context-line"></div>
+          <div class="context-line variant-line" id="variant-line"></div>
+          <h1 id="product-title" tabindex="-1"></h1>
+          <p id="product-summary"></p>
+          <section class="content-region" id="content-region" aria-live="off"></section>
+        </main>
+      </div>
+    </section>
+
+    <aside class="review-rail" aria-label="Sketch review controls">
+      <h1>Recovery states</h1>
+      <p>Compare the same recovery contract in three containment models. Variant and fixture changes preserve one shared session.</p>
+
+      <section class="review-group">
+        <span class="review-label">Containment variant</span>
+        <div class="review-stack" role="group" aria-label="Containment variant">
+          <button class="review-button" type="button" data-variant="a">
+            <strong>A · Inline Recovery Rails · ★ Selected</strong>
+            <small>The exact recovery sits in the missing object’s canonical region.</small>
+            <span class="recommended">Approved winner</span>
+          </button>
+          <button class="review-button" type="button" data-variant="b">
+            <strong>B · Context Shelf Recovery</strong>
+            <small>A stable shelf owns recovery while empty geometry remains visible.</small>
+            <span class="preserved">Rejected · Preserved</span>
+          </button>
+          <button class="review-button" type="button" data-variant="c">
+            <strong>C · Guided Structural Navigator</strong>
+            <small>A focused path identifies the first unavailable structural level.</small>
+            <span class="preserved">Rejected · Preserved</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="review-group">
+        <label class="review-label" for="fixture-select">State script</label>
+        <select id="fixture-select">
+          <option value="pages">No Pages</option>
+          <option value="scenario">No valid Scenario</option>
+          <option value="sections">No Sections</option>
+          <option value="panels">No panels</option>
+          <option value="groups">No Time Groups</option>
+          <option value="catalogue">No Present catalogue</option>
+          <option value="recovered">Recovered baseline</option>
+        </select>
+      </section>
+
+      <section class="review-group">
+        <span class="review-label">Mode</span>
+        <div class="review-row" role="group" aria-label="Review mode">
+          <button class="review-choice" type="button" data-review-mode="view">View</button>
+          <button class="review-choice" type="button" data-review-mode="build">Build</button>
+          <button class="review-choice" type="button" data-review-mode="present">Present</button>
+        </div>
+      </section>
+
+      <section class="review-group">
+        <span class="review-label">Viewport</span>
+        <div class="review-row viewport-row" role="group" aria-label="Viewport preview">
+          <button class="review-choice" type="button" data-width="1440">1440</button>
+          <button class="review-choice" type="button" data-width="1200">1200</button>
+          <button class="review-choice" type="button" data-width="1024">1024</button>
+          <button class="review-choice" type="button" data-width="768">768</button>
+          <button class="review-choice" type="button" data-width="390">390</button>
+          <button class="review-choice" type="button" data-width="full">Full</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <dialog id="import-dialog" aria-labelledby="import-title">
+    <div class="dialog-body">
+      <div class="context-line">Application-frame recovery</div>
+      <h2 id="import-title">Import Dashboard Package</h2>
+      <p>A valid current-version package restores one complete dashboard. No partial dashboard is shown before confirmation.</p>
+      <div class="dialog-actions">
+        <button class="secondary" type="button" id="import-cancel">Cancel</button>
+        <button class="primary" type="button" id="import-confirm">Import Dashboard Package</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="sr-only" id="live-region" role="status" aria-live="polite"></div>
+
+  <script>
+    const state = {
+      variant: 'a',
+      fixture: 'pages',
+      mode: 'build',
+      width: '1440',
+      reloadAttempts: 0,
+      reloadMessage: '',
+      importInvoker: null
+    };
+
+    const fixtures = {
+      scenario: {
+        scope: 'Scenario',
+        title: 'No valid Scenario',
+        copy: 'Dashboard couldn’t load. No valid scenario is available.',
+        primary: 'Reload Dashboard',
+        secondary: 'Import Dashboard Package'
+      },
+      pages: {
+        scope: 'Page',
+        title: 'No Pages',
+        copy: 'This dashboard has no pages.',
+        primary: 'Create Page'
+      },
+      sections: {
+        scope: 'Section',
+        title: 'No Sections',
+        copy: 'This page has no sections.',
+        primary: 'Create Section'
+      },
+      panels: {
+        scope: 'Panel',
+        title: 'No panels',
+        copy: 'This section has no panels.',
+        primary: 'Add Panel to Section'
+      },
+      groups: {
+        scope: 'Time Group',
+        title: 'No Time Groups',
+        copy: 'No time groups have been created.',
+        primary: 'Create Time Group'
+      },
+      catalogue: {
+        scope: 'Present catalogue',
+        title: 'No Present catalogue',
+        copy: 'No charts are available to present from this dashboard.',
+        primary: 'Open Build to Add Charts'
+      },
+      recovered: {
+        scope: 'Dashboard',
+        title: 'Recovered baseline',
+        copy: 'The valid structural path is restored.'
+      }
+    };
+
+    const scopeOrder = ['Scenario', 'Page', 'Section', 'Panel', 'Time Group', 'Present catalogue'];
+    const product = document.querySelector('#product');
+    const contentRegion = document.querySelector('#content-region');
+    const fixtureSelect = document.querySelector('#fixture-select');
+    const importDialog = document.querySelector('#import-dialog');
+    const liveRegion = document.querySelector('#live-region');
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function activeIssue() {
+      const base = fixtures[state.fixture];
+      if (state.fixture === 'groups' && state.mode !== 'build') {
+        return {
+          scope: 'Time Group',
+          title: 'Synchronized playback unavailable',
+          copy: 'Synchronized playback is unavailable because no Time Group exists.'
+        };
+      }
+      return base;
+    }
+
+    function recoveryPlate(issue) {
+      const failure = state.fixture === 'scenario' && state.reloadMessage
+        ? `<p class="failure-note" role="alert">${escapeHtml(state.reloadMessage)}</p>`
+        : '';
+      const actions = issue.primary || issue.secondary
+        ? `<div class="recovery-actions">
+            ${issue.secondary ? `<button class="secondary" type="button" data-recovery-action="import">${escapeHtml(issue.secondary)}</button>` : ''}
+            ${issue.primary ? `<button class="primary" type="button" data-recovery-action="primary">${escapeHtml(issue.primary)}</button>` : ''}
+          </div>`
+        : '';
+      return `<div>
+        <div class="recovery-plate" role="status">
+          <div>
+            <strong>${escapeHtml(issue.scope)} recovery</strong>
+            <span>${escapeHtml(issue.copy)}</span>
+          </div>
+          ${actions}
+        </div>
+        ${failure}
+      </div>`;
+    }
+
+    function miniBars(seed = 0) {
+      const values = [36, 58, 44, 76, 63, 88];
+      return `<div class="mini-bars" aria-hidden="true">${values.map((value, index) => `<i style="height:${value - seed + (index % 2 ? 4 : 0)}%"></i>`).join('')}</div>`;
+    }
+
+    function baselineDashboard({ muted = false } = {}) {
+      return `<section class="scope-frame${muted ? ' shelf-context' : ''}" aria-label="Recovered dashboard context">
+        <div class="scope-header">
+          <span>Biomedical</span>
+          <small>Page 1 of 3</small>
+        </div>
+        <section class="section-frame">
+          <div class="section-header">
+            <span>Outbreak dynamics</span>
+            <small>3 panels</small>
+          </div>
+          <div class="panel-grid">
+            <article class="chart-panel"><strong>Confirmed cases</strong>${miniBars(0)}</article>
+            <article class="chart-panel"><strong>Effective reproduction rate</strong>${miniBars(9)}</article>
+            <article class="chart-panel"><strong>Hospital load</strong>${miniBars(4)}</article>
+          </div>
+        </section>
+      </section>`;
+    }
+
+    function emptyGeometry() {
+      if (state.fixture === 'pages') {
+        return `<section class="scope-frame"><div class="scope-header"><span>Dashboard canvas</span><small>0 Pages</small></div><div class="empty-geometry">Canonical zero-Page region</div></section>`;
+      }
+      if (state.fixture === 'sections') {
+        return `<section class="scope-frame"><div class="scope-header"><span>Operations briefing</span><small>Page 1 of 1</small></div><div class="empty-geometry">Canonical zero-Section region</div></section>`;
+      }
+      if (state.fixture === 'panels') {
+        return `<section class="scope-frame"><div class="scope-header"><span>Operations briefing</span><small>Page 1 of 1</small></div><section class="section-frame"><div class="section-header"><span>Briefing highlights</span><small>0 panels</small></div><div class="empty-geometry">Canonical zero-panel region</div></section></section>`;
+      }
+      if (state.fixture === 'groups') {
+        return `${baselineDashboard({ muted: true })}<section class="time-frame shelf-context"><div class="scope-header"><span>Temporal content</span><small>0 Time Groups</small></div><div class="empty-geometry">No synchronized playback structure</div></section>`;
+      }
+      if (state.fixture === 'catalogue') {
+        return presentWorkspace({ includeRecovery: false, muted: true });
+      }
+      return '';
+    }
+
+    function audienceMonitor() {
+      return `<section class="audience-monitor" aria-label="Passive Audience monitor">
+        <strong>Audience monitor · passive</strong>
+        <span>The last valid holding output remains visible. Audience exposes no recovery action.</span>
+        <div class="holding-card">SimEx Training Exercise<br>Holding output</div>
+      </section>`;
+    }
+
+    function presentWorkspace({ includeRecovery = true, muted = false } = {}) {
+      const issue = fixtures.catalogue;
+      return `<div class="present-layout${muted ? ' shelf-context' : ''}">
+        <section class="present-catalogue">
+          <div class="catalogue-header"><span>Chart catalogue</span><small>0 available</small></div>
+          <div class="catalogue-empty">No selectable chart records</div>
+        </section>
+        <aside class="live-sidecar" aria-label="Live Sidecar">
+          <span class="sidecar-label">Live Sidecar</span>
+          ${includeRecovery ? recoveryPlate(issue) : ''}
+          ${audienceMonitor()}
+        </aside>
+      </div>`;
+    }
+
+    function inlineVariant(issue) {
+      if (state.fixture === 'scenario') return recoveryPlate(issue);
+      if (state.fixture === 'pages') {
+        return `<section class="scope-frame"><div class="scope-header"><span>Dashboard canvas</span><small>0 Pages</small></div>${recoveryPlate(issue)}</section>`;
+      }
+      if (state.fixture === 'sections') {
+        return `<section class="scope-frame"><div class="scope-header"><span>Operations briefing</span><small>Page 1 of 1</small></div>${recoveryPlate(issue)}</section>`;
+      }
+      if (state.fixture === 'panels') {
+        return `<section class="scope-frame"><div class="scope-header"><span>Operations briefing</span><small>Page 1 of 1</small></div><section class="section-frame"><div class="section-header"><span>Briefing highlights</span><small>0 panels</small></div>${recoveryPlate(issue)}</section></section>`;
+      }
+      if (state.fixture === 'groups') {
+        const timeContent = issue.primary ? recoveryPlate(issue) : `<div class="passive-note" role="status"><strong>${escapeHtml(issue.title)}</strong>${escapeHtml(issue.copy)}</div>`;
+        return `${baselineDashboard()}<section class="time-frame scope-frame"><div class="scope-header"><span>Temporal content</span><small>0 Time Groups</small></div>${timeContent}</section>`;
+      }
+      if (state.fixture === 'catalogue' && state.mode === 'present') return presentWorkspace();
+      if (state.fixture === 'catalogue') return recoveryPlate(issue);
+      return recoveredBaseline();
+    }
+
+    function chainMarkup(currentScope) {
+      const currentIndex = scopeOrder.indexOf(currentScope);
+      return scopeOrder.map((scope, index) => {
+        const itemState = index < currentIndex ? 'complete' : index === currentIndex ? 'current' : 'waiting';
+        return `<li data-state="${itemState}">${escapeHtml(scope)}</li>`;
+      }).join('');
+    }
+
+    function contextShelfVariant(issue) {
+      if (state.fixture === 'recovered') return recoveredBaseline();
+      const shelf = `<section class="context-shelf">
+        <h2>Context Shelf Recovery</h2>
+        <p>The first unavailable structural level owns the next named action.</p>
+        <ol class="scope-chain">${chainMarkup(issue.scope)}</ol>
+        ${issue.primary || issue.secondary ? recoveryPlate(issue) : `<div class="passive-note" role="status"><strong>${escapeHtml(issue.title)}</strong>${escapeHtml(issue.copy)}</div>`}
+      </section>`;
+      return `${shelf}${emptyGeometry()}`;
+    }
+
+    function navigatorVariant(issue) {
+      if (state.fixture === 'recovered') return recoveredBaseline();
+      const recovery = issue.primary || issue.secondary
+        ? recoveryPlate(issue)
+        : `<div class="passive-note" role="status"><strong>${escapeHtml(issue.title)}</strong>${escapeHtml(issue.copy)}</div>`;
+      return `<section class="recovery-navigator">
+        <header class="navigator-head">
+          <strong>Guided Structural Navigator</strong>
+          <span>Only the first unavailable level can be repaired.</span>
+        </header>
+        <div class="navigator-body">
+          <ol class="navigator-path">${chainMarkup(issue.scope)}</ol>
+          <div class="navigator-repair">
+            <div class="context-line">${escapeHtml(issue.scope)}</div>
+            <h2>${escapeHtml(issue.title)}</h2>
+            ${recovery}
+          </div>
+        </div>
+      </section>${state.fixture === 'catalogue' && state.mode === 'present' ? `<div style="margin-top:14px">${audienceMonitor()}</div>` : ''}`;
+    }
+
+    function recoveredBaseline() {
+      return `<div class="success-card"><span class="success-mark" aria-hidden="true">✓</span><div><strong>Structural path restored</strong><br><span>Scenario, Page, Section, panel, Time Group, and Present catalogue are valid.</span></div></div>${baselineDashboard()}`;
+    }
+
+    function productSummary(issue) {
+      if (state.variant === 'a') return 'Recovery remains inside the affected scope’s canonical region.';
+      if (state.variant === 'b') return 'The Context Shelf owns recovery while the missing scope remains visible.';
+      return 'A temporary structural path guides one repair without becoming a parallel editor.';
+    }
+
+    function pageContext() {
+      if (state.fixture === 'pages') return 'No Pages';
+      if (state.fixture === 'sections' || state.fixture === 'panels') return 'Operations briefing · 1 of 1';
+      return 'Biomedical · 1 of 3';
+    }
+
+    function render({ announce = '' } = {}) {
+      const issue = activeIssue();
+      const rootEmpty = state.fixture === 'scenario';
+      product.dataset.width = state.width;
+      product.dataset.mode = state.mode;
+      product.dataset.rootEmpty = String(rootEmpty);
+      product.classList.toggle('root-empty', rootEmpty);
+
+      document.querySelector('#page-context').textContent = pageContext();
+      document.querySelector('#context-line').textContent = rootEmpty
+        ? 'Application frame'
+        : `SimEx Training Exercise · ${pageContext()}`;
+      document.querySelector('#variant-line').textContent = `${state.mode} · Variant ${state.variant.toUpperCase()}`;
+      document.querySelector('#product-title').textContent = issue.title;
+      document.querySelector('#product-summary').textContent = productSummary(issue);
+
+      if (state.fixture === 'recovered') {
+        contentRegion.innerHTML = recoveredBaseline();
+      } else if (state.variant === 'a') {
+        contentRegion.innerHTML = inlineVariant(issue);
+      } else if (state.variant === 'b') {
+        contentRegion.innerHTML = contextShelfVariant(issue);
+      } else {
+        contentRegion.innerHTML = navigatorVariant(issue);
+      }
+
+      fixtureSelect.value = state.fixture;
+      document.querySelectorAll('[data-variant]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.variant === state.variant));
+      });
+      document.querySelectorAll('[data-review-mode]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.reviewMode === state.mode));
+      });
+      document.querySelectorAll('[data-product-mode]').forEach(button => {
+        const selected = button.dataset.productMode === state.mode;
+        if (button.getAttribute('role') === 'tab') button.setAttribute('aria-selected', String(selected));
+      });
+      document.querySelectorAll('[data-width]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.width === state.width));
+      });
+      if (announce) liveRegion.textContent = announce;
+    }
+
+    function runPrimaryRecovery() {
+      if (state.fixture === 'scenario') {
+        state.reloadAttempts += 1;
+        if (state.reloadAttempts === 1) {
+          state.reloadMessage = 'Reload failed. No valid Scenario was installed; the application frame is unchanged.';
+          render({ announce: state.reloadMessage });
+          return;
+        }
+        state.fixture = 'recovered';
+        state.reloadMessage = '';
+        render({ announce: 'Dashboard reloaded. The valid structural path is restored.' });
+        document.querySelector('#product-title').focus({ preventScroll: true });
+        return;
+      }
+      if (state.fixture === 'pages') {
+        state.mode = 'build';
+        state.fixture = 'sections';
+        render({ announce: 'Operations briefing Page created. This page has no sections.' });
+        return;
+      }
+      if (state.fixture === 'sections') {
+        state.mode = 'build';
+        state.fixture = 'panels';
+        render({ announce: 'Briefing highlights Section created. This section has no panels.' });
+        return;
+      }
+      if (state.fixture === 'panels') {
+        state.mode = 'build';
+        state.fixture = 'recovered';
+        render({ announce: 'Confirmed cases panel added. The valid structural path is restored.' });
+        return;
+      }
+      if (state.fixture === 'groups') {
+        state.mode = 'build';
+        state.fixture = 'recovered';
+        render({ announce: 'National outbreak Time Group created.' });
+        return;
+      }
+      if (state.fixture === 'catalogue') {
+        state.mode = 'build';
+        state.fixture = 'panels';
+        render({ announce: 'Build opened at the empty Briefing highlights Section.' });
+      }
+    }
+
+    document.addEventListener('click', event => {
+      const variantButton = event.target.closest('[data-variant]');
+      if (variantButton) {
+        state.variant = variantButton.dataset.variant;
+        render({ announce: `Variant ${state.variant.toUpperCase()} selected.` });
+        return;
+      }
+
+      const reviewModeButton = event.target.closest('[data-review-mode]');
+      if (reviewModeButton) {
+        state.mode = reviewModeButton.dataset.reviewMode;
+        render({ announce: `${state.mode} mode selected.` });
+        return;
+      }
+
+      const productModeButton = event.target.closest('[data-product-mode]');
+      if (productModeButton) {
+        state.mode = productModeButton.dataset.productMode;
+        render({ announce: `${state.mode} mode selected.` });
+        return;
+      }
+
+      const widthButton = event.target.closest('[data-width]');
+      if (widthButton) {
+        state.width = widthButton.dataset.width;
+        render({ announce: `${state.width} viewport preview selected.` });
+        return;
+      }
+
+      const recoveryAction = event.target.closest('[data-recovery-action]');
+      if (recoveryAction?.dataset.recoveryAction === 'import') {
+        state.importInvoker = recoveryAction;
+        importDialog.showModal();
+        document.querySelector('#import-confirm').focus();
+        return;
+      }
+      if (recoveryAction?.dataset.recoveryAction === 'primary') runPrimaryRecovery();
+    });
+
+    fixtureSelect.addEventListener('change', event => {
+      state.fixture = event.target.value;
+      state.reloadAttempts = 0;
+      state.reloadMessage = '';
+      if (state.fixture === 'catalogue') state.mode = 'present';
+      render({ announce: `${fixtures[state.fixture].title} fixture selected.` });
+    });
+
+    document.querySelector('#import-cancel').addEventListener('click', () => {
+      importDialog.close();
+      state.importInvoker?.focus({ preventScroll: true });
+    });
+
+    document.querySelector('#import-confirm').addEventListener('click', () => {
+      importDialog.close();
+      state.fixture = 'recovered';
+      state.reloadAttempts = 0;
+      state.reloadMessage = '';
+      render({ announce: 'Dashboard package imported. The valid structural path is restored.' });
+      document.querySelector('#product-title').focus({ preventScroll: true });
+    });
+
+    importDialog.addEventListener('cancel', () => {
+      requestAnimationFrame(() => state.importInvoker?.focus({ preventScroll: true }));
+    });
+
+    render();
+  </script>
+</body>
+</html>
