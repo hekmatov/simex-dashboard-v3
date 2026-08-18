@@ -8,6 +8,9 @@
   "lastUpdated": "2026-07-27",
   "layout": "two-column",
   "globalStyles": {
+    "dashboardStyle": "evidence-ledger",
+    "dashboardColorProfile": "evidence-ledger/brighter-vellum",
+    "chartColorMode": "profile",
     "accessibility": {
       "enabled": false
     },

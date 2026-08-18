@@ -75,7 +75,16 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
     ]),
     landingDeliveryStatus: shape(["description", "label", "state"]),
     landingPreviewAsset: shape(["alt", "src"]),
-    globalStyles: shape(["panelColors"], ["accessibility", "iconAccent"]),
+    globalStyles: shape(
+      ["panelColors"],
+      [
+        "accessibility",
+        "chartColorMode",
+        "dashboardColorProfile",
+        "dashboardStyle",
+        "iconAccent",
+      ],
+    ),
     accessibility: shape(["enabled"]),
     panelColors: shape([
       "chartAreaBorderColor",
@@ -536,6 +545,45 @@ function validateGlobalStyles(value) {
     && !/^#[0-9a-f]{6}$/i.test(styles.iconAccent)
   ) {
     throw new TypeError("Dashboard icon accent must use #RRGGBB.");
+  }
+  allowedValue(
+    styles.dashboardStyle,
+    ["evidence-ledger", "humanist-standard", "signal-instrument"],
+    "Dashboard style",
+  );
+  allowedValue(
+    styles.dashboardColorProfile,
+    [
+      "evidence-ledger/brighter-vellum",
+      "evidence-ledger/ash-register",
+      "evidence-ledger/cool-archive",
+      "humanist-standard/common-ground",
+      "humanist-standard/quiet-commons",
+      "humanist-standard/open-forum",
+      "signal-instrument/calibrated-steel",
+      "signal-instrument/quiet-telemetry",
+      "signal-instrument/amber-vector",
+      "utility/prismatic-index",
+      "utility/chromatic-polarity",
+      "utility/luminance-ladder",
+      "graphpad/sunrise-reference",
+      "graphpad/lakeside-reference",
+      "utility/monochrome-reserve",
+    ],
+    "Dashboard color profile",
+  );
+  allowedValue(
+    styles.chartColorMode,
+    ["profile", "standard"],
+    "Dashboard chart color mode",
+  );
+}
+
+function allowedValue(value, options, description) {
+  if (value !== undefined && !options.includes(value)) {
+    throw new TypeError(
+      `${description} must be one of: ${options.join(", ")}.`,
+    );
   }
 }
 

@@ -82,7 +82,13 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   ],
   deliveryStatus: ["description", "label", "state"],
   previewAsset: ["alt", "src"],
-  globalStyles: ["accessibility", "panelColors"],
+  globalStyles: [
+    "accessibility",
+    "chartColorMode",
+    "dashboardColorProfile",
+    "dashboardStyle",
+    "panelColors",
+  ],
   accessibility: ["enabled"],
   panelColors: [
     "chartAreaBorderColor",

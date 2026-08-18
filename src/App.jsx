@@ -40,6 +40,10 @@ import {
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 import { createPresentationAudienceChannel } from "./lib/presentationChannel.js";
+import {
+  readAppearancePreference,
+  resolveDashboardTheme,
+} from "./theme/dashboardTheme.js";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
@@ -77,6 +81,11 @@ export default function App() {
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
   const [audiencePresentationState, setAudiencePresentationState] = React.useState(null);
   const [audienceConnectionStatus, setAudienceConnectionStatus] = React.useState("waiting");
+  const [appearancePreference] = React.useState(() => readAppearancePreference());
+  const [prefersDark, setPrefersDark] = React.useState(() => (
+    typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true
+  ));
   const displayStateRef = React.useRef(displayState);
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
@@ -92,6 +101,20 @@ export default function App() {
   validChartIdsRef.current = validChartIds;
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
+  const dashboardTheme = React.useMemo(() => resolveDashboardTheme({
+    globalStyles: dashboard?.globalStyles,
+    appearancePreference,
+    prefersDark,
+  }), [appearancePreference, dashboard?.globalStyles, prefersDark]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return undefined;
+    const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyColorScheme = () => setPrefersDark(colorScheme.matches);
+    applyColorScheme();
+    colorScheme.addEventListener?.("change", applyColorScheme);
+    return () => colorScheme.removeEventListener?.("change", applyColorScheme);
+  }, []);
 
   React.useEffect(() => {
     if (dashboardEntry.surface === "audience") return undefined;
@@ -494,6 +517,7 @@ export default function App() {
       modeDisabled={modeDisabled || buildDraftLocked}
       blockedReason={blockedReason}
       density={densityForDashboardMode(mode)}
+      theme={dashboardTheme}
     >
     <DashboardRenderer
       ref={dashboardRendererRef}

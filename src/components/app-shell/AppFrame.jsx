@@ -9,6 +9,7 @@ export default function AppFrame({
   blockedReason = "",
   density,
   children,
+  theme,
 }) {
   const phoneUnsupported = mode === "build" || mode === "present";
   return (
@@ -16,6 +17,12 @@ export default function AppFrame({
       className="app-frame"
       data-dashboard-mode={mode}
       data-dashboard-density={density}
+      data-dashboard-style={theme?.dashboardStyle}
+      data-dashboard-color-profile={theme?.dashboardColorProfile}
+      data-chart-color-mode={theme?.chartColorMode}
+      data-appearance-preference={theme?.appearancePreference}
+      data-resolved-appearance={theme?.resolvedAppearance}
+      style={theme?.cssVariables}
     >
       {phoneUnsupported && (
         <section className="phone-mode-banner" role="status" aria-label={`${mode} phone support notice`}>
