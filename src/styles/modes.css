@@ -560,6 +560,34 @@
   padding-left: 12px;
 }
 
+.chrono-group-select {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+}
+
+.chrono-group-select select {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  color: var(--simex-text-strong);
+  max-width: min(300px, 28vw);
+  min-height: var(--simex-control-min);
+}
+
+.view-shell .chrono-view-button {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  color: var(--simex-text-strong);
+  min-height: var(--simex-control-min);
+}
+
+.view-shell .chrono-view-button[aria-pressed="true"] {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+}
+
 .view-shell .view-comparison-button {
   background: var(--simex-accent-soft);
   border: 1px solid var(--simex-border-subtle);
@@ -627,6 +655,18 @@
 
   .page-navigation-line {
     padding-inline: 8px;
+  }
+
+  .page-navigation-line {
+    flex-wrap: wrap;
+  }
+
+  .page-navigation-actions {
+    border-left: 0;
+    border-top: 1px solid var(--simex-border-subtle);
+    justify-content: flex-end;
+    padding: 6px 0;
+    width: 100%;
   }
 
   .page-navigation-actions {

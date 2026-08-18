@@ -69,8 +69,10 @@ export function reducePlaybackState(state, action) {
     return tick(state, validClockLength(action.clockLength));
   }
   if (action.type === "setSpeed") {
-    if (![1, 2, 3].includes(action.speed)) {
-      throw new RangeError("Playback speed must be 1, 2, or 3.");
+    if (!Number.isFinite(action.speed) || action.speed <= 0) {
+      throw new RangeError(
+        "Playback seconds per frame must be a positive finite number.",
+      );
     }
     return withChanges(state, { speed: action.speed });
   }

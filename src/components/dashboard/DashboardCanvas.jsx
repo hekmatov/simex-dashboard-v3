@@ -14,6 +14,7 @@ export default function DashboardCanvas({
   displayState,
   multiSelectMode = false,
   multiPanelIds = [],
+  excludedChartIds = [],
   geoDataSources = {},
   onNavigate,
   onDisplayAction,
@@ -23,6 +24,7 @@ export default function DashboardCanvas({
   if (!activePage) return null;
   const landingActive = hasLandingPresentation(activePage);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
+  const excludedIds = new Set(excludedChartIds);
 
   return (
     <section className="dashboard-workspace" data-dashboard-surface={surface}>
@@ -30,7 +32,13 @@ export default function DashboardCanvas({
         {landingActive ? (
           <LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} />
         ) : (
-          (activePage.sections ?? []).map((section) => (
+          (activePage.sections ?? []).map((section) => {
+            const visiblePlacements = (section.panels ?? []).filter((placement) => {
+              const chart = placement.chart ?? placement;
+              return !excludedIds.has(chart.id);
+            });
+            if (visiblePlacements.length === 0) return null;
+            return (
             <section className="dashboard-section" key={section.id}>
               <div className="section-header">
                 <div className="section-title-block">
@@ -39,7 +47,7 @@ export default function DashboardCanvas({
                 </div>
               </div>
               <LayoutGrid>
-                {(section.panels ?? []).map((placement) => {
+                {visiblePlacements.map((placement) => {
                   const chart = placement.chart ?? placement;
                   const selected = buildState?.selection?.kind === "chart"
                     && buildState.selection.placementId === placement.id;
@@ -76,7 +84,8 @@ export default function DashboardCanvas({
                 })}
               </LayoutGrid>
             </section>
-          ))
+            );
+          })
         )}
       </div>
     </section>

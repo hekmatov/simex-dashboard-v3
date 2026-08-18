@@ -957,13 +957,13 @@ test("invalid reducer boundaries, speeds, and group IDs fail closed", () => {
       String(index),
     );
   }
-  for (const speed of [0, 1.5, 4, "2"]) {
+  for (const speed of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, "2"]) {
     assert.throws(
       () => reducePlaybackState(state, {
         type: "setSpeed",
         speed,
       }),
-      /playback speed must be 1, 2, or 3/i,
+      /playback seconds per frame must be a positive finite number/i,
       String(speed),
     );
   }

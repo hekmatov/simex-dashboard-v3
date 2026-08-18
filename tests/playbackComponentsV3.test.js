@@ -63,13 +63,13 @@ test("playback controls expose semantic transport, time selection, speed, and vi
   assert.match(html, /aria-label="Playback time"/);
   assert.match(html, /type="range"/);
   assert.match(html, /aria-label="Choose synchronized time"/);
-  assert.match(html, /<select[^>]*aria-label="Playback speed"/);
-  assert.match(html, /<span class="visually-hidden">Playback speed<\/span>/);
-  assert.match(html, />1\u00d7</);
-  assert.match(html, />2\u00d7</);
-  assert.match(html, />3\u00d7</);
+  assert.match(html, /<select[^>]*aria-label="Seconds per frame"/);
+  assert.match(html, /<span class="visually-hidden">Seconds per frame<\/span>/);
+  assert.match(html, />1 seconds</);
+  assert.match(html, />2\.5 seconds</);
+  assert.match(html, />5 seconds</);
   assert.match(html, /2027-05-02/);
-  assert.match(html, />1×</);
+  assert.match(html, />1 seconds</);
   assert.match(html, /aria-label="Close playback view"/);
   assert.match(html, /aria-live="polite"/);
 });
@@ -1168,7 +1168,7 @@ test("one playback timer advances, pauses on invisibility, and cleans every reso
   cleanup();
 
   assert.deepEqual(calls, [
-    "set:500",
+    "set:2000",
     "listen:visibilitychange",
     "clear:1",
     "remove:visibilitychange",

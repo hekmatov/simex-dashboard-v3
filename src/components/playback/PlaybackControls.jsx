@@ -115,16 +115,16 @@ export default function PlaybackControls({
           dateTime: new Date(activeEpochMs).toISOString(),
         }, canonicalTime(activeEpochMs))),
   React.createElement(LabeledSelect, {
-    label: "Playback speed",
+    label: "Seconds per frame",
     labelClassName: "visually-hidden",
     value: String(speed),
     onChange: (event) => dispatch({
       type: "setSpeed",
       speed: Number(event.target.value),
     }),
-    options: [1, 2, 3].map((value) => ({
+    options: [1, 2.5, 5].map((value) => ({
       value: String(value),
-      label: `${value}\u00d7`,
+      label: `${value} seconds`,
     })),
   }),
   React.createElement(IconControl, {

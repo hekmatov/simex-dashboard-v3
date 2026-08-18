@@ -169,7 +169,8 @@ export function createPlaybackTimer({
     || clockLength <= 0
     || !Number.isInteger(activeIndex)
     || activeIndex >= clockLength - 1
-    || ![1, 2, 3].includes(speed)
+    || !Number.isFinite(speed)
+    || speed <= 0
     || typeof dispatch !== "function"
     || typeof scheduler?.setInterval !== "function"
   ) {
@@ -182,7 +183,7 @@ export function createPlaybackTimer({
 
   let intervalId = scheduler.setInterval(
     () => dispatch({ type: "tick", clockLength }),
-    1_000 / speed,
+    1_000 * speed,
   );
   const clearTimer = () => {
     if (intervalId === null) return;

@@ -4,7 +4,9 @@ import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "../InstallDashboardPrompt.jsx";
 import { IconControl } from "../common/SimExIcon.js";
 import { hasLandingPresentation } from "../LandingPage.jsx";
+import PlaybackPageActions from "../playback/PlaybackPageActions.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
+import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import DashboardHeader from "../dashboard/DashboardHeader.jsx";
 import PageNavigation from "../dashboard/PageNavigation.jsx";
@@ -28,6 +30,11 @@ export default function ViewShell({
   onOpenMultiFullscreen,
   onCancelMultiSelection,
 }) {
+  const playback = usePlayback();
+  const elevatedChartIds = playback.playbackView === true
+    ? playback.activeGroup?.members.map(({ chartId }) => chartId) ?? []
+    : [];
+
   return (
     <main className="app-shell view-shell" data-page-type={hasLandingPresentation(activePage) ? "landing" : "analytical"} style={iconLanguageStyles}>
       <section className="dashboard-location-row" aria-label="Dashboard location and Page tools">
@@ -42,6 +49,7 @@ export default function ViewShell({
             >
               Dashboard look
             </button>
+            <PlaybackPageActions />
             <button
               type="button"
               className="secondary view-comparison-button"
@@ -53,7 +61,10 @@ export default function ViewShell({
           </div>
         </div>
       </section>
-      <PlaybackSurface accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}>
+      <PlaybackSurface
+        accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
+        viewOwned
+      >
         <DashboardCanvas
           activePage={activePage}
           dashboard={dashboard}
@@ -62,6 +73,7 @@ export default function ViewShell({
           displayState={displayState}
           multiSelectMode={multiSelectMode}
           multiPanelIds={multiPanelIds}
+          excludedChartIds={elevatedChartIds}
           geoDataSources={geoDataSources}
           onNavigate={onActivePageChange}
           onDisplayAction={onDisplayAction}
