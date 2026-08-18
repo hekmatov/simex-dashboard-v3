@@ -2,6 +2,7 @@ import React from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import DashboardLookDrawer from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
@@ -41,9 +42,15 @@ import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 import { createPresentationAudienceChannel } from "./lib/presentationChannel.js";
 import {
+  persistAppearancePreference,
   readAppearancePreference,
   resolveDashboardTheme,
 } from "./theme/dashboardTheme.js";
+import {
+  chartColorUpdates,
+  createDashboardLookPreview,
+  dashboardLookUpdates,
+} from "./theme/dashboardLookDraft.js";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
@@ -81,7 +88,12 @@ export default function App() {
   const [companionStatus, setCompanionStatus] = React.useState("standalone");
   const [audiencePresentationState, setAudiencePresentationState] = React.useState(null);
   const [audienceConnectionStatus, setAudienceConnectionStatus] = React.useState("waiting");
-  const [appearancePreference] = React.useState(() => readAppearancePreference());
+  const [appearancePreference, setAppearancePreference] = React.useState(() => readAppearancePreference());
+  const [lookDrawerOpen, setLookDrawerOpen] = React.useState(false);
+  const [lookPreview, setLookPreview] = React.useState(null);
+  const [lookSavingScope, setLookSavingScope] = React.useState("");
+  const [lookStatus, setLookStatus] = React.useState("");
+  const [lookError, setLookError] = React.useState("");
   const [prefersDark, setPrefersDark] = React.useState(() => (
     typeof window !== "undefined"
       && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true
@@ -101,11 +113,20 @@ export default function App() {
   validChartIdsRef.current = validChartIds;
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
-  const dashboardTheme = React.useMemo(() => resolveDashboardTheme({
+  const savedDashboardTheme = React.useMemo(() => resolveDashboardTheme({
     globalStyles: dashboard?.globalStyles,
     appearancePreference,
     prefersDark,
   }), [appearancePreference, dashboard?.globalStyles, prefersDark]);
+  const dashboardTheme = React.useMemo(() => resolveDashboardTheme({
+    globalStyles: lookPreview ? {
+      ...(dashboard?.globalStyles ?? {}),
+      ...dashboardLookUpdates(lookPreview),
+      ...chartColorUpdates(lookPreview),
+    } : dashboard?.globalStyles,
+    appearancePreference: lookPreview?.appearancePreference ?? appearancePreference,
+    prefersDark,
+  }), [appearancePreference, dashboard?.globalStyles, lookPreview, prefersDark]);
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
@@ -346,6 +367,78 @@ export default function App() {
     const transaction = ensureDashboardCommitController().mutate(mutator);
     reportBackgroundPersistence(transaction);
     return transaction;
+  }
+
+  function openDashboardLook() {
+    setLookPreview(createDashboardLookPreview(savedDashboardTheme));
+    setLookStatus("");
+    setLookError("");
+    setLookDrawerOpen(true);
+  }
+
+  function cancelDashboardLook() {
+    if (lookSavingScope) return;
+    setLookDrawerOpen(false);
+    setLookPreview(null);
+    setLookStatus("");
+    setLookError("");
+  }
+
+  function changeDashboardLookPreview(nextPreview) {
+    setLookPreview(nextPreview);
+    setLookStatus("");
+    setLookError("");
+  }
+
+  async function setDashboardLook() {
+    if (!lookPreview) return;
+    await commitDashboardLookScope(
+      "look",
+      dashboardLookUpdates(lookPreview),
+      "Dashboard look set.",
+    );
+  }
+
+  async function setDashboardChartColors() {
+    if (!lookPreview) return;
+    await commitDashboardLookScope(
+      "charts",
+      chartColorUpdates(lookPreview),
+      "Chart colors set.",
+    );
+  }
+
+  async function commitDashboardLookScope(scope, updates, successMessage) {
+    if (lookSavingScope) return;
+    setLookSavingScope(scope);
+    setLookStatus("");
+    setLookError("");
+    try {
+      await ensureDashboardCommitController().mutate((next) => {
+        next.globalStyles = { ...(next.globalStyles ?? {}), ...updates };
+      });
+      setLookStatus(successMessage);
+    } catch (commitError) {
+      setLookError(boundedBackgroundPersistenceError(commitError).message);
+    } finally {
+      setLookSavingScope("");
+    }
+  }
+
+  function setDashboardAppearance() {
+    if (!lookPreview || lookSavingScope) return;
+    setLookSavingScope("appearance");
+    setLookStatus("");
+    setLookError("");
+    try {
+      persistAppearancePreference(lookPreview.appearancePreference);
+      setAppearancePreference(lookPreview.appearancePreference);
+      setLookStatus("Appearance set for this browser.");
+    } catch (preferenceError) {
+      setLookError(boundedBackgroundPersistenceError(preferenceError).message);
+    } finally {
+      setLookSavingScope("");
+    }
   }
 
   function reportBackgroundPersistence(promise) {
@@ -613,7 +706,21 @@ export default function App() {
       onImportConfig={importConfig}
       onExportConfig={exportConfig}
       onResetEditSession={resetEditSession}
+      onOpenDashboardLook={openDashboardLook}
       operationError={operationError}
+    />
+    <DashboardLookDrawer
+      open={lookDrawerOpen}
+      saved={createDashboardLookPreview(savedDashboardTheme)}
+      preview={lookPreview}
+      savingScope={lookSavingScope}
+      status={lookStatus}
+      error={lookError}
+      onCancel={cancelDashboardLook}
+      onPreviewChange={changeDashboardLookPreview}
+      onSetDashboardLook={setDashboardLook}
+      onSetChartColors={setDashboardChartColors}
+      onSetAppearance={setDashboardAppearance}
     />
     </AppFrame>
     </PlaybackProvider>

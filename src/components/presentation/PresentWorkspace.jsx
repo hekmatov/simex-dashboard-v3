@@ -8,6 +8,7 @@ export default function PresentWorkspace({
   dashboard,
   activePageId,
   onActivePageChange,
+  onOpenDashboardLook,
   runtime,
   accessibilityEnabled,
 }) {
@@ -109,9 +110,12 @@ export default function PresentWorkspace({
           <strong>{connectionStatusLabel(connectionStatus)}</strong>
           <p>{sceneSummary(activePage, selectedCharts)}</p>
         </div>
-        <button type="button" onClick={openDisplay}>
-          {hasSession ? "Reopen audience display" : "Open audience display"}
-        </button>
+        <div className="present-status-actions">
+          <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>Dashboard look</button>
+          <button type="button" onClick={openDisplay}>
+            {hasSession ? "Reopen audience display" : "Open audience display"}
+          </button>
+        </div>
         {connectionError && <p className="present-connection-error" role="status">{connectionError}</p>}
       </section>
 

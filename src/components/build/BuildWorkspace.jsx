@@ -21,6 +21,7 @@ export default function BuildWorkspace({
   operationError = "",
   appearanceControls,
   geoDataSources,
+  onOpenDashboardLook,
   onActivePageChange,
   onSelectionChange,
   onDashboardChange,
@@ -128,6 +129,7 @@ export default function BuildWorkspace({
             {page.label || page.title || "Untitled page"}
           </button>
         ))}
+        <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>Dashboard look</button>
       </nav>
       <section className="build-command-area" aria-label="Build commands">
         <div className="build-command-title">

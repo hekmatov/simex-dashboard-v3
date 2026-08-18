@@ -21,6 +21,7 @@ export default function ViewShell({
   multiSelectNotice,
   onActivePageChange,
   onCompareCharts,
+  onOpenDashboardLook,
   onDisplayAction,
   onToggleMultiPanel,
   onStartMultiFullscreenSelection,
@@ -34,6 +35,13 @@ export default function ViewShell({
         <div className="page-navigation-line">
           <PageNavigation activePageId={activePage?.id} pages={dashboard.pages} onPageChange={onActivePageChange} />
           <div className="page-navigation-actions" aria-label="View page actions">
+            <button
+              type="button"
+              className="secondary dashboard-look-trigger"
+              onClick={onOpenDashboardLook}
+            >
+              Dashboard look
+            </button>
             <button
               type="button"
               className="secondary view-comparison-button"

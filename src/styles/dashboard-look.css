@@ -1,0 +1,310 @@
+.dashboard-look-trigger {
+  min-height: 44px;
+}
+
+.build-page-tabs .dashboard-look-trigger {
+  background: var(--simex-surface-panel);
+  margin-left: auto;
+  position: sticky;
+  right: 0;
+}
+
+.present-status-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.look-drawer-layer {
+  inset: 0;
+  position: fixed;
+  z-index: 1400;
+}
+
+.look-drawer-click-catcher {
+  background: transparent;
+  inset: 0;
+  position: absolute;
+}
+
+.look-drawer {
+  background: var(--simex-surface-panel);
+  border-left: 1px solid var(--simex-border-strong);
+  box-shadow: -18px 0 36px rgb(18 26 28 / 24%);
+  color: var(--simex-text-strong);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  margin-left: auto;
+  max-width: min(520px, 100%);
+  position: relative;
+  width: min(520px, 42vw);
+}
+
+.look-drawer-header {
+  align-items: start;
+  border-bottom: 1px solid var(--simex-border-subtle);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 20px 22px 16px;
+}
+
+.look-drawer-header h2,
+.look-drawer-header p {
+  margin: 0;
+}
+
+.look-drawer-header h2 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.look-drawer-header #look-drawer-description {
+  color: var(--simex-text-muted);
+  margin-top: 6px;
+}
+
+.look-drawer button,
+.look-drawer input,
+.look-drawer label {
+  font: inherit;
+}
+
+.look-drawer button {
+  min-height: 44px;
+}
+
+.look-drawer button:focus-visible,
+.look-drawer input:focus-visible + span,
+.look-profile-option:has(input:focus-visible) {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.look-drawer-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 22px 28px;
+  scroll-padding-bottom: 24px;
+}
+
+.look-state-summary {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: 1px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 18px;
+}
+
+.look-state-summary > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.look-state-summary > div + div {
+  border-left: 1px solid var(--simex-border-subtle);
+}
+
+.look-state-summary strong,
+.look-state-summary span {
+  overflow-wrap: anywhere;
+}
+
+.look-state-summary span {
+  color: var(--simex-text-muted);
+  font-size: 13px;
+}
+
+.look-state-summary [data-preview-changed="true"] {
+  box-shadow: inset 4px 0 0 var(--simex-selected);
+}
+
+.look-control-section {
+  border: 0;
+  border-top: 1px solid var(--simex-border-subtle);
+  margin: 0;
+  padding: 18px 0 0;
+}
+
+.look-control-section + .look-control-section {
+  margin-top: 18px;
+}
+
+.look-control-section legend {
+  font-size: 17px;
+  font-weight: 800;
+  padding: 0;
+}
+
+.look-control-section > p {
+  color: var(--simex-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 5px 0 10px;
+}
+
+.look-choice-list,
+.look-profile-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.look-style-choice {
+  align-items: stretch;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.look-style-choice > label,
+.look-segmented-options label,
+.look-profile-option {
+  align-items: center;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  cursor: pointer;
+  display: flex;
+  min-height: 44px;
+}
+
+.look-style-choice > label,
+.look-segmented-options label {
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.look-style-choice > label:has(input:checked),
+.look-segmented-options label:has(input:checked),
+.look-profile-option:has(input:checked) {
+  border-color: var(--simex-selected);
+  box-shadow: inset 0 0 0 1px var(--simex-selected);
+}
+
+.look-signature-button {
+  max-width: 176px;
+  padding-inline: 10px;
+}
+
+.look-profile-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.look-profile-option {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.look-profile-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.look-profile-copy strong,
+.look-profile-copy small {
+  overflow-wrap: anywhere;
+}
+
+.look-profile-copy small {
+  color: var(--simex-text-muted);
+  line-height: 1.3;
+}
+
+.look-profile-swatches {
+  align-items: center;
+  display: flex;
+  gap: 2px;
+}
+
+.look-profile-swatches i {
+  border: 1px solid var(--simex-border-subtle);
+  display: block;
+  height: 22px;
+  width: 12px;
+}
+
+.look-segmented-options {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.look-control-section:nth-of-type(3) .look-segmented-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.look-drawer-footer {
+  align-items: center;
+  background: var(--simex-surface-panel);
+  border-top: 1px solid var(--simex-border-strong);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  padding: 12px 22px max(12px, env(safe-area-inset-bottom));
+}
+
+.look-drawer-feedback {
+  color: var(--simex-text-muted);
+  font-size: 13px;
+  grid-column: 1 / -1;
+  min-height: 20px;
+}
+
+.look-drawer-error {
+  color: var(--simex-error);
+}
+
+.look-drawer-footer button:last-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1023px) {
+  .look-drawer {
+    width: min(520px, 62vw);
+  }
+
+  .look-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .look-drawer {
+    border-left: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  .look-drawer-header,
+  .look-drawer-scroll,
+  .look-drawer-footer {
+    padding-inline: 16px;
+  }
+
+  .look-style-choice,
+  .look-segmented-options,
+  .look-control-section:nth-of-type(3) .look-segmented-options {
+    grid-template-columns: 1fr;
+  }
+
+  .look-signature-button {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .look-drawer,
+  .look-drawer * {
+    scroll-behavior: auto;
+    transition: none !important;
+  }
+}

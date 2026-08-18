@@ -64,6 +64,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onImportConfig,
   onExportConfig,
   onResetEditSession,
+  onOpenDashboardLook,
   operationError = "",
 }, ref) {
   const buildMode = mode === "build";
@@ -744,6 +745,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboard={dashboard}
         activePageId={activePage?.id}
         onActivePageChange={onActivePageChange}
+        onOpenDashboardLook={onOpenDashboardLook}
         runtime={presentationRuntime}
         accessibilityEnabled={accessibilityEnabled}
       />
@@ -764,6 +766,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         multiSelectNotice={multiSelectNotice}
         onActivePageChange={navigateToPage}
         onCompareCharts={() => startMultiFullscreenSelection()}
+        onOpenDashboardLook={onOpenDashboardLook}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}
@@ -835,6 +838,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               </label>
             </>
           )}
+          onOpenDashboardLook={onOpenDashboardLook}
           onActivePageChange={onActivePageChange}
           onSelectionChange={selectBuildItem}
           onDashboardChange={changeDashboardText}
