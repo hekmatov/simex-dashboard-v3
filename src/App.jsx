@@ -34,8 +34,9 @@ import {
   reconcileActivePageId,
 } from "./lib/dashboardNavigation.js";
 import {
-  loadDashboard,
   loadDashboardConfig,
+  loadDashboardConfigProgressively,
+  loadDashboardDefinition,
   profilesForConfiguredCsvSources,
 } from "./lib/loadDashboard.js";
 import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
@@ -111,6 +112,10 @@ export default function App() {
     [dashboard?.pages],
   );
   validChartIdsRef.current = validChartIds;
+  const playbackGroups = React.useMemo(
+    () => readyTimeSyncGroups(dashboard),
+    [dashboard?.dataSourceStates, dashboard?.pages, dashboard?.timeSyncGroups],
+  );
   const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
   const vantaSettingsKey = JSON.stringify(vantaSettings);
   const savedDashboardTheme = React.useMemo(() => resolveDashboardTheme({
@@ -158,29 +163,48 @@ export default function App() {
 
   React.useEffect(() => {
     let disposed = false;
-    loadDashboard(`${import.meta.env.BASE_URL}config/dashboard.json`)
-      .then(async (tracked) => {
-        trackedDatasetProfilesRef.current = tracked.datasetProfiles ?? {};
+    loadDashboardDefinition(`${import.meta.env.BASE_URL}config/dashboard.json`)
+      .then(async (definition) => {
+        const trackedProfiles = definition.datasetProfiles ?? {};
+        const tracked = {
+          ...definition.dashboard,
+          datasetProfiles: trackedProfiles,
+        };
+        trackedDatasetProfilesRef.current = trackedProfiles;
         const stored = readDashboardStorage(
           localStorage,
           DASHBOARD_STORAGE_KEY,
-          { profiles: tracked.datasetProfiles },
+          { profiles: trackedProfiles },
         );
         const selected = stored ?? configurationForStorage(
           tracked,
-          trackedDatasetProfilesRef.current,
+          trackedProfiles,
         );
-        const loaded = await loadDashboardConfig(
-          selected,
-          selected.datasetProfiles ?? tracked.datasetProfiles,
-        );
-        if (!disposed) {
+        const profiles = selected.datasetProfiles ?? trackedProfiles;
+        const portableSources = stored ? null : definition.portableSources;
+        const publish = (loaded) => {
+          if (disposed) return;
           dashboardRef.current = loaded;
           if (dashboardEntry.surface === "workspace") {
             ensureDashboardCommitController(loaded);
           }
           setDashboard(loaded);
+          setError(null);
+        };
+        if (dashboardEntry.surface === "audience") {
+          publish(await loadDashboardConfig(
+            selected,
+            profiles,
+            portableSources,
+          ));
+          return;
         }
+        await loadDashboardConfigProgressively(
+          selected,
+          profiles,
+          portableSources,
+          { onUpdate: publish },
+        );
       })
       .catch((loadError) => {
         if (!disposed) setError(loadError);
@@ -598,7 +622,7 @@ export default function App() {
 
   return (
     <PlaybackProvider
-      groups={dashboard.timeSyncGroups ?? []}
+      groups={playbackGroups}
       charts={configuredCharts(dashboard)}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}
@@ -728,7 +752,12 @@ export default function App() {
 }
 
 export function configurationForStorage(dashboard, fallbackProfiles = {}) {
-  const { loadedData: _runtimeData, ...portableDashboard } = dashboard;
+  const {
+    chartDataStates: _chartDataStates,
+    dataSourceStates: _dataSourceStates,
+    loadedData: _runtimeData,
+    ...portableDashboard
+  } = dashboard;
   const config = structuredClone(portableDashboard);
   const retainedProfiles = Object.fromEntries(
     Object.entries(config.datasetProfiles ?? {}).filter(([sourceId, profile]) => {
@@ -746,6 +775,8 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
 
 function configurationForSemanticUse(dashboard) {
   const {
+    chartDataStates: _chartDataStates,
+    dataSourceStates: _dataSourceStates,
     loadedData: _runtimeData,
     datasetProfiles: _runtimeProfiles,
     ...semanticDashboard
@@ -754,8 +785,28 @@ function configurationForSemanticUse(dashboard) {
 }
 
 function configurationForPortableUse(dashboard) {
-  const { loadedData: _runtimeData, ...portableDashboard } = dashboard;
+  const {
+    chartDataStates: _chartDataStates,
+    dataSourceStates: _dataSourceStates,
+    loadedData: _runtimeData,
+    ...portableDashboard
+  } = dashboard;
   return structuredClone(portableDashboard);
+}
+
+export function readyTimeSyncGroups(dashboard) {
+  const groups = dashboard?.timeSyncGroups ?? [];
+  const sourceStates = dashboard?.dataSourceStates;
+  if (!sourceStates) return groups;
+  const sourceByChartId = new Map(
+    configuredCharts(dashboard).map((chart) => [chart.id, chart.sourceId]),
+  );
+  return groups.filter((group) => (
+    (group.members ?? []).every(({ chartId }) => {
+      const sourceId = sourceByChartId.get(chartId);
+      return sourceId && sourceStates[sourceId]?.status === "ready";
+    })
+  ));
 }
 
 function configuredCharts(dashboard) {

@@ -123,17 +123,17 @@ const GEOJSON_COLLECTION_GEOMETRY_KEYS = new Set([
   "type",
 ]);
 
-export async function loadDashboard(
+export async function loadDashboardDefinition(
   configPath,
   profilesPath = "config/dataset-profiles.json",
 ) {
   const portable = portableDashboard();
   if (usingFileProtocol() && portable?.config) {
-    return loadDashboardConfig(
-      portable.config,
-      portable.datasetProfiles,
-      portable.sources,
-    );
+    return {
+      dashboard: portable.config,
+      datasetProfiles: portable.datasetProfiles ?? {},
+      portableSources: portable.sources ?? null,
+    };
   }
 
   try {
@@ -141,17 +141,29 @@ export async function loadDashboard(
       fetchJson(configPath, `dashboard config: ${configPath}`),
       fetchJson(sourceUrl(profilesPath), `dataset profiles: ${profilesPath}`),
     ]);
-    return loadDashboardConfig(dashboard, datasetProfiles);
+    return { dashboard, datasetProfiles, portableSources: null };
   } catch (error) {
     if (portable?.config) {
-      return loadDashboardConfig(
-        portable.config,
-        portable.datasetProfiles,
-        portable.sources,
-      );
+      return {
+        dashboard: portable.config,
+        datasetProfiles: portable.datasetProfiles ?? {},
+        portableSources: portable.sources ?? null,
+      };
     }
     throw error;
   }
+}
+
+export async function loadDashboard(
+  configPath,
+  profilesPath = "config/dataset-profiles.json",
+) {
+  const definition = await loadDashboardDefinition(configPath, profilesPath);
+  return loadDashboardConfig(
+    definition.dashboard,
+    definition.datasetProfiles,
+    definition.portableSources,
+  );
 }
 
 export async function loadDashboardConfig(
@@ -211,6 +223,106 @@ export async function loadDashboardConfig(
     datasetProfiles: hydratedProfiles,
     loadedData,
   };
+}
+
+export async function loadDashboardConfigProgressively(
+  dashboard,
+  datasetProfiles,
+  portableSources = null,
+  { onUpdate = () => {} } = {},
+) {
+  const structure = validateDashboardStructure(dashboard, {
+    allowRuntimeState: true,
+  });
+  const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
+  const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
+  const reusableProfiles = mergeDatasetProfiles(
+    profilesForConfiguredCsvSources(dataSources, datasetProfiles),
+    entryValue(dashboardEntries, "datasetProfiles"),
+  );
+  validateDatasetProfiles(dataSources, reusableProfiles);
+  const chartReferences = validateDashboardChartReferences(
+    structure,
+    dataSources,
+  );
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv,
+    parseCsvText,
+    profileDataset,
+    fetchJson,
+    sourceUrl,
+    validateGeoJson,
+  }));
+  const dataService = createDataService({
+    dataSources,
+    profiles: reusableProfiles,
+    portableSources,
+    providers,
+    cache: dashboardSourceCache,
+  });
+  const sourceIds = Object.keys(dataSources);
+  const loadedData = {};
+  const hydratedProfiles = { ...reusableProfiles };
+  const dataSourceStates = {};
+
+  for (const sourceId of sourceIds) {
+    const request = { sourceId, purpose: "dashboard" };
+    if (dataService.getSnapshot(request).status === "error") {
+      dataService.evict(request);
+    }
+    const snapshot = dataService.getSnapshot(request);
+    if (snapshot.status === "ready") {
+      loadedData[sourceId] = snapshot.data;
+      if (snapshot.profile) hydratedProfiles[sourceId] = snapshot.profile;
+      dataSourceStates[sourceId] = { status: "ready" };
+    } else {
+      dataSourceStates[sourceId] = { status: "loading" };
+    }
+  }
+
+  let latest = publishProgressiveDashboard();
+  await Promise.all(sourceIds.map(async (sourceId) => {
+    const request = { sourceId, purpose: "dashboard" };
+    try {
+      const snapshot = await dataService.load(request);
+      loadedData[sourceId] = snapshot.data;
+      if (snapshot.profile) hydratedProfiles[sourceId] = snapshot.profile;
+      dataSourceStates[sourceId] = { status: "ready" };
+    } catch {
+      const snapshot = dataService.getSnapshot(request);
+      if (snapshot.data !== null && snapshot.data !== undefined) {
+        loadedData[sourceId] = snapshot.data;
+      }
+      dataSourceStates[sourceId] = { status: "error" };
+    }
+    latest = publishProgressiveDashboard();
+  }));
+
+  if (sourceIds.every((sourceId) => dataSourceStates[sourceId].status === "ready")) {
+    validateTimeSyncGroups(dashboard.timeSyncGroups ?? [], {
+      charts: chartReferences.map(({ chart }) => chart),
+      loadedData,
+      profiles: hydratedProfiles,
+    });
+  }
+  return latest;
+
+  function publishProgressiveDashboard() {
+    const runtimeDashboard = {
+      ...dashboard,
+      dataSources,
+      datasetProfiles: { ...hydratedProfiles },
+      loadedData: { ...loadedData },
+      dataSourceStates: Object.fromEntries(
+        Object.entries(dataSourceStates).map(([sourceId, state]) => [
+          sourceId,
+          { ...state },
+        ]),
+      ),
+    };
+    onUpdate(runtimeDashboard);
+    return runtimeDashboard;
+  }
 }
 
 export function profilesForConfiguredCsvSources(

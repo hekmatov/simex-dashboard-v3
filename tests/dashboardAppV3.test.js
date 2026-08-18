@@ -51,6 +51,43 @@ test("the shared runtime keeps version 3 authoring while App owns playback", asy
   assert.doesNotMatch(renderer, /LegacyEditor/);
 });
 
+test("source runtime state is excluded from packages and gates only affected playback groups", async () => {
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    root: process.cwd(),
+    appType: "custom",
+    logLevel: "silent",
+    server: { middlewareMode: true },
+  });
+  const {
+    configurationForStorage,
+    readyTimeSyncGroups,
+  } = await vite.ssrLoadModule("/src/App.jsx");
+  await vite.close();
+  const dashboard = minimalDashboard();
+  dashboard.loadedData = {};
+  dashboard.dataSourceStates = { status: { status: "loading" } };
+  dashboard.chartDataStates = {
+    "status-share": { status: "partial", unavailableSeries: "Exercise status" },
+  };
+  dashboard.timeSyncGroups = [{
+    id: "status-group",
+    members: [{ chartId: "status-share" }],
+  }];
+
+  assert.deepEqual(readyTimeSyncGroups(dashboard), []);
+  dashboard.dataSourceStates.status = { status: "ready" };
+  assert.deepEqual(
+    readyTimeSyncGroups(dashboard).map(({ id }) => id),
+    ["status-group"],
+  );
+
+  const stored = configurationForStorage(dashboard);
+  assert.equal(Object.hasOwn(stored, "loadedData"), false);
+  assert.equal(Object.hasOwn(stored, "dataSourceStates"), false);
+  assert.equal(Object.hasOwn(stored, "chartDataStates"), false);
+});
+
 test("legacy chart-system files are absent after the clean cutover", async () => {
   const legacyFiles = [
     "src/components/AddChartWizard.jsx",
