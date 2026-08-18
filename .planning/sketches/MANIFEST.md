@@ -10,6 +10,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 - Normative temporal contract: `docs/superpowers/specs/2026-08-12-temporal-authoring-chrono-design.md`
 - Normative chart-creation contract: `docs/superpowers/specs/2026-08-12-chart-creation-design.md`
 - Accepted baseline evidence: `docs/audits/2026-08-11-three-mode-dashboard-baseline/`
+- Approved low-risk integration choices: [`INTEGRATION-DEFAULTS.md`](INTEGRATION-DEFAULTS.md)
 - Historical 2026-08-10 prototypes are evidence only and are not approved design authority.
 
 ## Sketch register
@@ -39,7 +40,7 @@ Step 4 compares interactive, disposable design directions for the approved V3 da
 
 ## Sequence
 
-Sketches proceed in ascending order. Only the current sketch is built before review. Rejected variants remain in their sketch, and no winner is recorded before the representative task has been exercised.
+Sketches 001–020 are complete and approved. Rejected variants remain in their sketch as comparison evidence. Remaining low-risk integration choices use the recommended approved pattern and are recorded in [`INTEGRATION-DEFAULTS.md`](INTEGRATION-DEFAULTS.md), without allocating another sketch number. A new sketch is opened only for a material change to product scope, ownership, persistence, a major workflow, or primary information architecture.
 
 ## Cross-sketch support boundary
 
