@@ -401,3 +401,235 @@
     min-height: 0;
   }
 }
+
+/* Approved ordinary View foundation: Layered Command Crown + Evidence Ledger. */
+.app-frame-bar {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  min-height: 52px;
+  padding: 4px 20px;
+}
+
+.app-frame-identity {
+  color: var(--simex-text-strong);
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+}
+
+.mode-switcher button {
+  border-radius: 2px;
+  color: var(--simex-text-strong);
+}
+
+.mode-switcher button[aria-pressed="true"] {
+  background: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+.mode-switcher button:focus-visible,
+.view-shell button:focus-visible,
+.phone-mode-banner button:focus-visible {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.phone-mode-banner {
+  display: none;
+}
+
+.view-shell {
+  background: var(--simex-surface-canvas);
+  color: var(--simex-text-strong);
+}
+
+.dashboard-location-row {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  box-shadow: 0 5px 0 rgb(80 89 93 / 8%);
+  margin-bottom: 16px;
+}
+
+.view-shell .dashboard-header {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--simex-text-strong);
+  margin: 0;
+  min-height: 86px;
+  padding: 12px 20px;
+}
+
+.view-shell .dashboard-brand-block {
+  gap: 12px;
+}
+
+.view-shell .pdpc-header-mark {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  box-shadow: none;
+  height: 54px;
+  padding: 3px;
+  width: 54px;
+}
+
+.view-shell .eyebrow,
+.view-shell .subtitle,
+.view-shell .dashboard-meta dt {
+  color: var(--simex-text-muted);
+}
+
+.view-shell .eyebrow {
+  margin-bottom: 3px;
+}
+
+.view-shell .dashboard-header h1,
+.view-shell .dashboard-page-title,
+.view-shell .section-header h2 {
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+}
+
+.view-shell .dashboard-header h1,
+.view-shell .dashboard-page-title {
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.view-shell .subtitle {
+  margin-top: 4px;
+}
+
+.view-shell .dashboard-meta {
+  gap: 8px;
+}
+
+.view-shell .dashboard-meta div {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  padding: 7px 9px;
+}
+
+.page-navigation-line {
+  align-items: stretch;
+  border-top: 1px solid var(--simex-border-subtle);
+  display: flex;
+  min-height: 56px;
+  padding: 0 20px;
+}
+
+.page-navigation-line .page-tabs {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  flex: 1;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 6px 0;
+}
+
+.view-shell .page-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--simex-text-muted);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.view-shell .page-tabs button.active,
+.view-shell .page-tabs button[aria-current="page"] {
+  background: var(--simex-accent-soft);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.page-navigation-actions {
+  align-items: center;
+  background: var(--simex-surface-panel);
+  border-left: 1px solid var(--simex-border-subtle);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding-left: 12px;
+}
+
+.view-shell .view-comparison-button {
+  background: var(--simex-accent-soft);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  color: var(--simex-text-strong);
+  min-height: var(--simex-control-min);
+}
+
+.view-shell .section-header p,
+.view-shell .dashboard-footer,
+.view-shell .dashboard-footer span,
+.view-shell .dashboard-footer a {
+  color: var(--simex-text-muted);
+}
+
+.view-shell .chart-panel,
+.view-shell .status-panel,
+.view-shell .dashboard-footer {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.view-shell .dashboard-footer strong {
+  color: var(--simex-text-strong);
+}
+
+@media (max-width: 767px) {
+  .phone-mode-banner {
+    align-items: center;
+    background: var(--simex-warning-soft);
+    border-bottom: 1px solid var(--simex-warning);
+    color: var(--simex-text-strong);
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: 6px 10px;
+  }
+
+  .phone-mode-banner button {
+    background: var(--simex-accent);
+    border-radius: 2px;
+    color: var(--simex-on-accent);
+    flex: 0 0 auto;
+    min-height: var(--simex-control-min);
+  }
+
+  .app-frame-bar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    padding-inline: 10px;
+  }
+
+  .view-shell .dashboard-header {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .view-shell .dashboard-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .page-navigation-line {
+    padding-inline: 8px;
+  }
+
+  .page-navigation-actions {
+    padding-left: 8px;
+  }
+}

@@ -1,9 +1,37 @@
 :root {
-  --simex-surface-canvas: #f7f9fc;
-  --simex-surface-panel: #f8fbff;
-  --simex-text-strong: #08224a;
-  --simex-text-muted: #49627a;
-  --simex-border-subtle: #d8e2ec;
-  --simex-focus: #f4b942;
+  /* Evidence Ledger · Brighter Vellum · Light */
+  --simex-surface-outer: #eee9de;
+  --simex-surface-canvas: #f7f2e8;
+  --simex-surface-panel: #fffdf8;
+  --simex-surface-panel-alt: #faf6ec;
+  --simex-text-strong: #1d2529;
+  --simex-text-muted: #555a55;
+  --simex-text-faint: #6d7069;
+  --simex-border-subtle: #b7b0a2;
+  --simex-border-strong: #50595d;
+  --simex-accent: #2c383d;
+  --simex-accent-soft: #e8e4da;
+  --simex-on-accent: #fffdf8;
+  --simex-focus: #2c383d;
+  --simex-selected: #744740;
+  --simex-selected-soft: #f0e2dc;
+  --simex-chrono: #62596b;
+  --simex-chrono-soft: #e8e2e9;
+  --simex-info: #58666b;
+  --simex-info-soft: #e2e7e7;
+  --simex-success: #4e6655;
+  --simex-success-soft: #e1e8e1;
+  --simex-warning: #7a6342;
+  --simex-warning-soft: #eee7d8;
+  --simex-error: #81514b;
+  --simex-error-soft: #eee0dc;
+  --simex-gridline: #ddd7cb;
+  --simex-chart-mark: #2c383d;
+  --simex-data-1: #667853;
+  --simex-data-2: #8f704a;
+  --simex-data-3: #61746f;
+  --simex-data-4: #8b584e;
+  --simex-data-5: #77657e;
+  --simex-data-6: #7d7457;
   --simex-control-min: 44px;
 }

@@ -29,18 +29,22 @@ export default function ViewShell({
 }) {
   return (
     <main className="app-shell view-shell" data-page-type={hasLandingPresentation(activePage) ? "landing" : "analytical"} style={iconLanguageStyles}>
-      <DashboardHeader activePage={activePage} dashboard={dashboard} />
-      <PageNavigation activePageId={activePage?.id} pages={dashboard.pages} onPageChange={onActivePageChange} />
-      <div className="view-comparison-controls">
-        <button
-          type="button"
-          className="secondary view-comparison-button"
-          disabled={multiSelectMode}
-          onClick={onCompareCharts}
-        >
-          Compare charts
-        </button>
-      </div>
+      <section className="dashboard-location-row" aria-label="Dashboard location and Page tools">
+        <DashboardHeader activePage={activePage} dashboard={dashboard} />
+        <div className="page-navigation-line">
+          <PageNavigation activePageId={activePage?.id} pages={dashboard.pages} onPageChange={onActivePageChange} />
+          <div className="page-navigation-actions" aria-label="View page actions">
+            <button
+              type="button"
+              className="secondary view-comparison-button"
+              disabled={multiSelectMode}
+              onClick={onCompareCharts}
+            >
+              Compare charts
+            </button>
+          </div>
+        </div>
+      </section>
       <PlaybackSurface accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}>
         <DashboardCanvas
           activePage={activePage}

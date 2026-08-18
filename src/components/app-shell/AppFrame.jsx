@@ -10,12 +10,21 @@ export default function AppFrame({
   density,
   children,
 }) {
+  const phoneUnsupported = mode === "build" || mode === "present";
   return (
     <div
       className="app-frame"
       data-dashboard-mode={mode}
       data-dashboard-density={density}
     >
+      {phoneUnsupported && (
+        <section className="phone-mode-banner" role="status" aria-label={`${mode} phone support notice`}>
+          <span>
+            {mode === "build" ? "Build" : "Present"} is not supported at phone width. Your current state is retained.
+          </span>
+          <button type="button" onClick={() => onModeRequest?.("view")}>Switch to View</button>
+        </section>
+      )}
       <header className="app-frame-bar">
         <span className="app-frame-identity">SimEx</span>
         <ModeSwitcher
