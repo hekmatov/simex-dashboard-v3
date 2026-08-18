@@ -1,5 +1,7 @@
 import React from "react";
 
+import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
+
 import ChartView from "../charts/ChartView.jsx";
 
 export default function DisplayedChartGrid({
@@ -38,7 +40,8 @@ export default function DisplayedChartGrid({
           {renderCellControls?.(chart, index, charts)}
           <ChartView
             chart={chart}
-            rows={dashboard.loadedData?.[chart.sourceId] ?? []}
+            rows={dashboard.loadedData?.[chart.sourceId]}
+            sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
             datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
             geoData={dashboard.loadedData?.[chart.presentation?.map?.geoSource]}
             accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}

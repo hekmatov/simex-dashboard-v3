@@ -4,8 +4,10 @@ import {
   canReuseChartRendering,
   resolveChartRendering,
 } from "../../charting/rendering/resolveChartRendering.js";
+import { resolveChartDataState } from "../../charting/data/chartDataState.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
+import ChartDataStateBoundary from "./ChartDataStateBoundary.jsx";
 import CardChartView from "./CardChartView.jsx";
 import EChartsChartView from "./EChartsChartView.jsx";
 import ImageChartView from "./ImageChartView.jsx";
@@ -19,13 +21,25 @@ export default function ChartView(props) {
   const playback = useOptionalPlayback();
   const playbackProps = withPlaybackTimeContext(props, playback);
   const interactionMode = props.interactionMode === "passive" ? "passive" : "active";
+  const state = resolveChartDataState({
+    chartTitle: props.chart?.title,
+    rows: props.rows,
+    sourceState: props.sourceState,
+  });
+  const content = state && !state.hasValidContent
+    ? null
+    : renderChartContent(playbackProps, interactionMode);
+  return React.createElement(ChartDataStateBoundary, { state }, content);
+}
+
+function renderChartContent(props, interactionMode) {
   try {
     const resolved = canReuseChartRendering(
       props.resolvedRendering,
-      playbackProps,
+      props,
     )
       ? props.resolvedRendering
-      : resolveChartRendering(playbackProps);
+      : resolveChartRendering(props);
     const { model, prepared, schema } = resolved;
     const provenance = resolveProvenance(props);
     let view;

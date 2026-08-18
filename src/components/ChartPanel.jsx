@@ -8,7 +8,8 @@ import { resolveChartCitation } from "../charting/presentation/chartCitation.js"
 
 function ChartPanel({
   panel,
-  rows = [],
+  rows,
+  sourceState,
   datasetProfile,
   geoData,
   dataSources = {},
@@ -130,7 +131,8 @@ function ChartPanel({
       {shouldRenderChart ? (
         <ChartView
           chart={chart}
-          rows={Array.isArray(rows) ? rows : []}
+          rows={rows}
+          sourceState={sourceState}
           datasetProfile={datasetProfile}
           geoData={geoData}
           accessibilityEnabled={accessibilityEnabled}

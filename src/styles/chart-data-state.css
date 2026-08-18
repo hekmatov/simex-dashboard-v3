@@ -1,0 +1,103 @@
+.chart-data-state-boundary {
+  background: var(--simex-surface-panel-alt);
+  color: var(--simex-text-strong);
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+}
+
+.chart-data-state-boundary > .chart-view-frame {
+  height: 100%;
+}
+
+.chart-data-state-boundary[data-has-valid-content="false"] {
+  display: grid;
+  place-items: center;
+}
+
+.chart-state-plate {
+  align-items: center;
+  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius, 2px);
+  color: var(--simex-text-strong);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  max-width: min(620px, 88%);
+  padding: 12px 14px;
+  z-index: 6;
+}
+
+.chart-data-state-boundary[data-has-valid-content="true"] .chart-state-plate {
+  bottom: 12px;
+  left: 12px;
+  max-width: none;
+  position: absolute;
+  right: 104px;
+}
+
+.chart-state-plate p {
+  line-height: 1.4;
+  margin: 0;
+}
+
+.chart-state-indicator {
+  align-items: center;
+  border: 2px solid currentColor;
+  display: inline-flex;
+  font-family: var(--simex-style-data-font, ui-monospace, monospace);
+  font-weight: 800;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 32px;
+}
+
+.chart-data-state-boundary--loading .chart-state-indicator {
+  animation: chart-state-pulse 900ms steps(4, end) infinite;
+  color: var(--simex-info);
+  letter-spacing: -0.18em;
+}
+
+.chart-data-state-boundary--partial .chart-state-plate {
+  border-left: 5px solid var(--simex-warning);
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 8px,
+    color-mix(in srgb, var(--simex-warning) 8%, transparent) 8px 12px
+  );
+}
+
+.chart-data-state-boundary--partial .chart-state-indicator {
+  color: var(--simex-warning);
+}
+
+.chart-data-state-boundary--error .chart-state-plate {
+  box-shadow: inset 5px 0 0 var(--simex-error);
+}
+
+.chart-data-state-boundary--error .chart-state-indicator {
+  color: var(--simex-error);
+}
+
+.chart-data-state-boundary--empty .chart-state-indicator {
+  color: var(--simex-text-muted);
+}
+
+@keyframes chart-state-pulse {
+  50% { opacity: 0.45; }
+}
+
+@media (max-width: 700px) {
+  .chart-data-state-boundary[data-has-valid-content="true"] .chart-state-plate {
+    bottom: 56px;
+    right: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-data-state-boundary--loading .chart-state-indicator {
+    animation: none;
+  }
+}

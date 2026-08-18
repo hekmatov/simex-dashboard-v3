@@ -1,5 +1,6 @@
 import React from "react";
 
+import { sourceStateForDashboard } from "../../charting/data/chartDataState.js";
 import ChartPanel from "../ChartPanel.jsx";
 import LandingPage, { hasLandingPresentation } from "../LandingPage.jsx";
 import LayoutGrid from "../LayoutGrid.jsx";
@@ -46,7 +47,8 @@ export default function DashboardCanvas({
                     <ChartPanel
                       key={placement.id}
                       panel={chart}
-                      rows={dashboard.loadedData?.[chart.sourceId] ?? []}
+                      rows={dashboard.loadedData?.[chart.sourceId]}
+                      sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
                       datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
                       geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                       dataSources={dashboard.dataSources}
