@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sketch 018 — Source evidence workspace</title>
+  <style>
+    :root {
+      --ink: #183036;
+      --muted: #5f706f;
+      --faint: #889594;
+      --vellum: #f5f0e5;
+      --paper: #fffdf7;
+      --paper-2: #f9f4e9;
+      --line: #d7d0c3;
+      --line-strong: #aaa89f;
+      --crown: #17373a;
+      --crown-2: #21484a;
+      --teal: #176f68;
+      --teal-dark: #0b5450;
+      --teal-soft: #dcebe6;
+      --amber: #bc6b2c;
+      --amber-soft: #f5e5cf;
+      --red: #a8453d;
+      --red-soft: #f6e0dd;
+      --blue: #3e7183;
+      --blue-soft: #e2edf0;
+      --shadow: 0 18px 48px rgba(20, 40, 43, .16);
+      --shadow-small: 0 8px 22px rgba(20, 40, 43, .12);
+      --radius: 8px;
+      --rail-w: 324px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #dfe2dc;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { min-width: 320px; overflow-x: hidden; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible { outline: 3px solid rgba(23,111,104,.28); outline-offset: 2px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    .review-rail {
+      position: fixed; inset: 0 0 0 auto; z-index: 1000; width: var(--rail-w);
+      overflow-y: auto; overscroll-behavior: contain; background: #142e31; color: #eef6f2;
+      border-left: 1px solid rgba(255,255,255,.15); box-shadow: -12px 0 32px rgba(15,33,36,.16);
+    }
+    .review-head { padding: 22px 22px 18px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .review-kicker { margin: 0 0 7px; color: #a5ccc4; font: 700 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .review-head h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 23px; line-height: 1.08; font-weight: 600; }
+    .review-head p { margin: 10px 0 0; color: #bfd0cd; font-size: 12px; line-height: 1.5; }
+    .review-group { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    .review-group h2 { margin: 0 0 10px; color: #9cbcb8; font: 700 10px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .13em; text-transform: uppercase; }
+    .variant-list { display: grid; gap: 9px; }
+    .variant-choice { display: grid; grid-template-columns: 28px 1fr; gap: 9px; width: 100%; padding: 12px; text-align: left; background: rgba(255,255,255,.05); color: white; border: 1px solid rgba(255,255,255,.14); border-radius: 7px; cursor: pointer; }
+    .variant-choice:hover { background: rgba(255,255,255,.09); }
+    .variant-choice.active { background: #e8f1ed; color: #15373a; border-color: #e8f1ed; }
+    .variant-letter { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 5px; background: rgba(255,255,255,.12); font: 800 12px/1 ui-monospace, monospace; }
+    .variant-choice.active .variant-letter { background: #176f68; color: white; }
+    .variant-copy strong { display: block; font-size: 13px; line-height: 1.2; }
+    .variant-copy small { display: block; margin-top: 5px; opacity: .72; font-size: 10px; line-height: 1.35; }
+    .tag-recommended { display: inline-block; margin-top: 6px; padding: 2px 5px; background: #c9ded7; color: #164c48; border-radius: 3px; font: 800 8px/1.4 ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
+    .tag-preserved { display: inline-block; margin-top: 6px; padding: 2px 5px; background: rgba(255,255,255,.1); color: inherit; border-radius: 3px; font: 800 8px/1.4 ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
+    .shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .shortcut { min-height: 34px; padding: 7px 9px; border: 1px solid rgba(255,255,255,.15); border-radius: 5px; background: transparent; color: #d9e6e3; font-size: 11px; cursor: pointer; }
+    .shortcut:hover { background: rgba(255,255,255,.08); }
+    .shortcut.active { background: #b9d8cf; color: #143b3a; border-color: #b9d8cf; font-weight: 750; }
+    .viewport-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .viewport-grid .shortcut { padding-inline: 4px; }
+    .review-note { margin: 0; color: #afc1be; font-size: 10px; line-height: 1.5; }
+
+    .workbench { min-height: 100vh; margin-right: var(--rail-w); padding: 28px; overflow: hidden; display: grid; place-items: start center; }
+    .viewport-frame { position: relative; width: min(100%, 1440px); height: calc(100vh - 56px); min-height: 650px; overflow: hidden; border: 1px solid #aeb6b1; background: var(--vellum); box-shadow: 0 15px 45px rgba(38,53,52,.18); transition: width .2s ease; }
+    .viewport-frame[data-preset="1200"] { width: min(100%, 1200px); }
+    .viewport-frame[data-preset="1024"] { width: min(100%, 1024px); }
+    .viewport-frame[data-preset="768"] { width: min(100%, 768px); }
+    .viewport-frame[data-preset="390"] { width: min(100%, 390px); }
+
+    .dashboard-shell { height: 100%; overflow-y: auto; overflow-x: hidden; background: var(--vellum); }
+    .crown { position: sticky; top: 0; z-index: 20; color: #f6faf8; background: var(--crown); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+    .crown-primary { min-height: 58px; display: flex; align-items: center; gap: 18px; padding: 0 24px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: max-content; }
+    .brand-mark { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid #8ebdb4; border-radius: 50%; font: 800 11px/1 Georgia, serif; }
+    .brand strong { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 600; letter-spacing: .02em; }
+    .mode-switch { display: flex; gap: 2px; padding: 3px; margin-left: 12px; background: rgba(255,255,255,.07); border-radius: 6px; }
+    .mode { padding: 7px 13px; border: 0; border-radius: 4px; background: transparent; color: #bcd0cd; font-size: 11px; }
+    .mode.active { background: #eff5f2; color: #173b3c; font-weight: 750; }
+    .crown-spacer { flex: 1; }
+    .crown-action { width: 32px; height: 32px; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; background: transparent; color: #e9f2ef; cursor: pointer; }
+    .page-strip { min-height: 43px; display: flex; align-items: center; gap: 7px; padding: 0 24px; background: var(--crown-2); border-top: 1px solid rgba(255,255,255,.08); }
+    .page-tab { height: 29px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: #c2d4d1; font-size: 11px; }
+    .page-tab.active { background: #f5f0e5; color: #17373a; font-weight: 750; }
+    .page-context { margin-left: auto; color: #a9c2bd; font: 600 10px/1 ui-monospace, monospace; letter-spacing: .05em; }
+
+    .dashboard-main { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 70px; }
+    .page-heading { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .page-heading .eyebrow { margin: 0 0 6px; color: var(--teal); font: 800 10px/1 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .page-heading h2 { margin: 0; font: 600 31px/1.1 Georgia, "Times New Roman", serif; }
+    .page-heading p { margin: 8px 0 0; max-width: 620px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .updated-block { text-align: right; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .updated-block strong { display: block; color: var(--ink); font: 700 12px/1.2 ui-monospace, monospace; }
+    .section-heading { margin: 31px 0 14px; display: flex; align-items: center; gap: 12px; }
+    .section-heading h3 { margin: 0; font: 600 18px/1.2 Georgia, serif; }
+    .section-heading::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+    .chart-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+    .chart-card { position: relative; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; box-shadow: 0 3px 10px rgba(35,48,47,.05); overflow: clip; }
+    .chart-card.selected { border-color: #5e8c88; box-shadow: 0 0 0 2px rgba(23,111,104,.12), 0 5px 16px rgba(35,48,47,.07); }
+    .chart-head { min-height: 63px; padding: 15px 18px 12px; border-bottom: 1px solid #e2ddd2; display: flex; gap: 12px; align-items: flex-start; }
+    .chart-title { min-width: 0; flex: 1; }
+    .chart-title h4 { margin: 0; font: 600 17px/1.2 Georgia, serif; }
+    .chart-title p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+    .chart-value { text-align: right; font: 700 20px/1 ui-monospace, monospace; color: var(--teal-dark); }
+    .chart-value small { display: block; margin-top: 5px; color: var(--muted); font: 600 9px/1 sans-serif; }
+    .plot { position: relative; height: 270px; padding: 18px 18px 28px 46px; background-image: linear-gradient(to bottom, transparent 24%, rgba(215,208,195,.6) 25%, transparent 26%, transparent 49%, rgba(215,208,195,.6) 50%, transparent 51%, transparent 74%, rgba(215,208,195,.6) 75%, transparent 76%); }
+    .plot svg { width: 100%; height: 100%; overflow: visible; }
+    .axis-label { position: absolute; color: var(--faint); font: 9px/1 ui-monospace, monospace; }
+    .axis-y1 { left: 12px; top: 20px; } .axis-y2 { left: 17px; top: 50%; } .axis-y3 { left: 25px; bottom: 29px; }
+    .axis-x1 { left: 47px; bottom: 10px; } .axis-x2 { left: 48%; bottom: 10px; } .axis-x3 { right: 17px; bottom: 10px; }
+    .chart-foot { display: flex; align-items: center; gap: 10px; min-height: 37px; padding: 0 18px; border-top: 1px solid #e6e0d5; color: var(--muted); font-size: 9px; }
+    .legend-key { width: 20px; height: 3px; background: var(--teal); }
+    .mini-card .plot { height: 270px; padding-left: 42px; }
+    .action-rail { position: absolute; z-index: 4; right: 12px; bottom: 46px; display: flex; gap: 5px; padding: 5px; border: 1px solid #cbc5b9; border-radius: 6px; background: rgba(255,253,247,.96); box-shadow: var(--shadow-small); opacity: 0; transform: translateY(4px); pointer-events: none; transition: .15s ease; }
+    .chart-card:hover .action-rail, .chart-card:focus-within .action-rail, .chart-card.selected .action-rail { opacity: 1; transform: none; pointer-events: auto; }
+    .rail-button { min-height: 30px; padding: 0 9px; border: 1px solid transparent; border-radius: 4px; background: transparent; font-size: 10px; font-weight: 700; cursor: pointer; }
+    .rail-button:hover { background: var(--teal-soft); color: var(--teal-dark); }
+    .rail-button.primary { background: var(--teal); color: white; }
+    .citation-popover { position: absolute; z-index: 8; right: 12px; bottom: 89px; width: min(365px, calc(100% - 24px)); padding: 17px; background: var(--paper); border: 1px solid #9da9a3; border-radius: 7px; box-shadow: var(--shadow); }
+    .citation-popover[hidden] { display: none; }
+    .citation-top { display: flex; gap: 10px; }
+    .citation-top > div { flex: 1; min-width: 0; }
+    .citation-popover h5 { margin: 0; font: 600 14px/1.2 Georgia, serif; }
+    .citation-popover p { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+    .citation-meta { margin-top: 12px; padding: 10px; background: var(--paper-2); border-left: 3px solid var(--teal); font: 10px/1.55 ui-monospace, monospace; }
+    .citation-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
+    .small-button { min-height: 31px; padding: 0 11px; border: 1px solid #9da9a3; border-radius: 4px; background: var(--paper); font-size: 10px; font-weight: 750; cursor: pointer; }
+    .small-button.primary { color: white; background: var(--teal); border-color: var(--teal); }
+    .popup-blocked { margin-top: 11px; padding: 9px 10px; border: 1px solid #d3a16e; background: var(--amber-soft); color: #74431f; font-size: 10px; line-height: 1.45; }
+    .popup-blocked[hidden] { display: none; }
+    .details-note { position: absolute; z-index: 8; left: 16px; bottom: 86px; width: 260px; padding: 13px; border: 1px solid #b6b1a7; border-radius: 6px; background: var(--paper); box-shadow: var(--shadow-small); color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .details-note[hidden] { display: none; }
+    .focus-stage { display: none; }
+    .dashboard-shell.focus-active .page-heading, .dashboard-shell.focus-active .section-heading, .dashboard-shell.focus-active .chart-grid { display: none; }
+    .dashboard-shell.focus-active .focus-stage { display: block; }
+    .focus-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
+    .focus-bar p { margin: 0; color: var(--muted); font: 700 10px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    .focus-stage .chart-card .plot { height: 480px; }
+
+    .app-overlay { position: absolute; inset: 0; z-index: 100; display: none; }
+    .app-overlay.open { display: block; }
+    .overlay-scrim { position: absolute; inset: 0; background: rgba(17,38,40,.2); }
+    .lens { position: absolute; inset: 0; background: var(--vellum); display: flex; flex-direction: column; }
+    .drawer { position: absolute; inset: 0 0 0 auto; width: min(72%, 820px); min-width: 650px; background: var(--vellum); box-shadow: -20px 0 48px rgba(20,40,43,.24); display: flex; flex-direction: column; }
+    .lens[hidden], .drawer[hidden] { display: none; }
+    .viewport-frame.is-compact .drawer { width: 100%; min-width: 0; }
+    .viewer-host { min-height: 0; height: 100%; }
+
+    /* Shared evidence viewer language (also copied into Variant A's window). */
+    .evidence-viewer { --viewer-head: #17373a; height: 100%; min-height: 520px; display: flex; flex-direction: column; overflow: hidden; color: #183036; background: #f5f0e5; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .evidence-viewer * { box-sizing: border-box; }
+    .evidence-viewer button, .evidence-viewer input { font: inherit; color: inherit; }
+    .viewer-titlebar { min-height: 68px; display: flex; align-items: center; gap: 12px; padding: 0 18px; color: #eff6f4; background: var(--viewer-head); border-bottom: 1px solid rgba(255,255,255,.12); }
+    .viewer-titlebar .window-mark { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid #86b4ac; border-radius: 50%; font: 800 9px/1 Georgia, serif; }
+    .viewer-titlecopy { min-width: 0; flex: 1; }
+    .viewer-eyebrow { display: block; margin-bottom: 3px; color: #9fc5bd; font: 800 8px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .viewer-titlecopy strong { display: block; font: 600 15px/1.15 Georgia, serif; }
+    .viewer-titlecopy small { display: block; margin-top: 3px; color: #b9cfca; font: 9px/1.2 ui-monospace, monospace; }
+    .viewer-close { width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.22); border-radius: 50%; background: transparent; color: white !important; cursor: pointer; font-size: 18px !important; }
+    .viewer-close:hover { background: rgba(255,255,255,.1); }
+    .source-ledger { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(250px, 1.3fr) auto; gap: 18px; padding: 14px 18px; background: #fffdf7; border-bottom: 1px solid #d7d0c3; }
+    .ledger-cell { min-width: 0; }
+    .ledger-label { display: block; margin-bottom: 5px; color: #6b7d7a; font: 800 8px/1 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .ledger-value { display: block; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+    .ledger-value.mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; }
+    .source-route { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+    .route-node { padding: 3px 5px; background: #eef2ed; border-radius: 3px; }
+    .route-arrow { color: #7a8b88; }
+    .ready-badge { align-self: center; min-width: 72px; padding: 6px 9px; border: 1px solid #8eb3aa; border-radius: 999px; background: #dcebe6; color: #0b5450; text-align: center; font: 800 9px/1 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .06em; }
+    .ready-badge.loading, .ready-badge.waiting { background: #e2edf0; color: #345f6d; border-color: #91b1ba; }
+    .ready-badge.error { background: #f6e0dd; color: #8e3932; border-color: #c68a84; }
+    .ready-badge.zero { background: #f5e5cf; color: #7a461f; border-color: #d1a271; }
+    .columns-strip { padding: 9px 18px; display: flex; align-items: center; gap: 7px; overflow-x: auto; white-space: nowrap; background: #f9f4e9; border-bottom: 1px solid #d7d0c3; }
+    .columns-strip strong { margin-right: 4px; color: #6b7d7a; font: 800 8px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .column-chip { padding: 4px 6px; background: #fffdf7; border: 1px solid #d7d0c3; border-radius: 3px; color: #3a5153; font: 9px/1 ui-monospace, monospace; }
+    .viewer-tools { min-height: 70px; display: flex; align-items: center; gap: 9px; padding: 8px 18px; background: #f5f0e5; border-bottom: 1px solid #d7d0c3; }
+    .search-wrap { position: relative; width: min(460px, 55%); display: grid; gap: 5px; }
+    .search-label { color: #5f706f; font: 800 8px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    .search-wrap input { width: 100%; height: 44px; padding: 0 68px 0 31px; border: 1px solid #aaa89f; border-radius: 5px; background: #fffdf7; font-size: 11px; }
+    .search-icon { position: absolute; left: 10px; bottom: 14px; color: #687a77; font-size: 13px; }
+    .clear-search { position: absolute; right: 0; bottom: 0; min-width: 44px; height: 44px; padding: 0 9px; border: 0; background: transparent; color: #176f68 !important; font-size: 9px !important; font-weight: 750 !important; cursor: pointer; }
+    .viewer-result-summary { margin-left: auto; color: #5f706f; font: 9px/1.3 ui-monospace, monospace; text-align: right; }
+    .viewer-content { min-height: 0; flex: 1; display: flex; flex-direction: column; padding: 0 18px 12px; overflow: hidden; }
+    .table-scroller { min-height: 0; flex: 1; overflow: auto; background: #fffdf7; border: 1px solid #c9c3b7; border-radius: 5px; overscroll-behavior: contain; }
+    .evidence-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: auto; font: 10px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .evidence-table th { position: sticky; top: 0; z-index: 2; height: 44px; padding: 0; background: #e8eee9; color: #2d4b4c; border-bottom: 1px solid #aab6af; border-right: 1px solid #cbd3ce; text-align: left; font-size: 9px; letter-spacing: .02em; white-space: nowrap; }
+    .evidence-table th.row-number { width: 58px; min-width: 58px; padding: 0 12px; }
+    .evidence-table td { height: 31px; padding: 0 12px; color: #304547; border-bottom: 1px solid #e6e0d5; border-right: 1px solid #eee9df; white-space: nowrap; }
+    .evidence-table td:not(.row-number) { min-width: 150px; }
+    .evidence-table tbody tr:nth-child(even) td { background: #fcf8ef; }
+    .evidence-table tbody tr:hover td { background: #eaf2ee; }
+    .evidence-table .row-number { width: 58px; color: #7a8886; text-align: right; background: #f6f2e8; }
+    .column-sort { width: 100%; min-width: 150px; min-height: 44px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 750; text-align: left; cursor: pointer; }
+    .column-sort:hover { background: #dfe9e4; }
+    .column-sort:focus-visible { position: relative; z-index: 1; outline: 3px solid rgba(23,111,104,.35); outline-offset: -3px; }
+    .evidence-table th[aria-sort] .column-sort { color: #0b5450; background: #dcebe6; }
+    .sort-indicator { flex: 0 0 auto; color: #176f68; font-size: 12px; }
+    .viewer-state { min-height: 0; flex: 1; display: grid; place-items: center; padding: 28px; background: #fffdf7; border: 1px solid #c9c3b7; border-radius: 5px; }
+    .state-plate { width: min(470px, 100%); padding: 24px; text-align: center; border: 1px solid #d3cdc1; background: #fcf8ef; }
+    .state-icon { width: 38px; height: 38px; display: grid; place-items: center; margin: 0 auto 13px; border: 1px solid #8aa9a3; border-radius: 50%; color: #176f68; font: 800 14px/1 ui-monospace, monospace; }
+    .state-icon.error { color: #a8453d; border-color: #c68a84; }
+    .state-plate h3 { margin: 0; color: #183036; font: 600 18px/1.2 Georgia, serif; }
+    .state-plate p { margin: 9px auto 0; max-width: 380px; color: #5f706f; font-size: 11px; line-height: 1.55; }
+    .state-action { min-height: 33px; margin-top: 16px; padding: 0 13px; border: 1px solid #176f68; border-radius: 4px; background: #176f68; color: white !important; font-size: 10px !important; font-weight: 750 !important; cursor: pointer; }
+    .spinner { width: 18px; height: 18px; border: 2px solid #bad1cc; border-top-color: #176f68; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .viewer-footer { min-height: 50px; display: flex; align-items: center; gap: 12px; padding: 8px 18px; border-top: 1px solid #d7d0c3; background: #fffdf7; }
+    .range-copy { color: #42595a; font: 10px/1.2 ui-monospace, monospace; }
+    .footer-note { color: #7b8a88; font-size: 9px; }
+    .pager { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+    .page-count { min-width: 74px; text-align: center; color: #5f706f; font: 9px/1 ui-monospace, monospace; }
+    .pager button { min-height: 44px; padding: 0 13px; border: 1px solid #9fa8a3; border-radius: 4px; background: #fffdf7; font-size: 9px; font-weight: 750; cursor: pointer; }
+    .pager button:disabled { opacity: .42; cursor: default; }
+
+    .window-shell { height: 100vh; min-width: 700px; overflow: hidden; background: #f5f0e5; }
+    .window-shell .evidence-viewer { height: 100vh; }
+    .window-shell .viewer-titlebar { background: #203f42; }
+
+    .viewport-frame.is-compact .crown-primary { padding-inline: 15px; gap: 8px; }
+    .viewport-frame.is-compact .mode-switch { margin-left: 0; }
+    .viewport-frame.is-compact .brand strong { display: none; }
+    .viewport-frame.is-compact .page-strip { padding-inline: 15px; overflow-x: auto; }
+    .viewport-frame.is-compact .page-context { display: none; }
+    .viewport-frame.is-compact .dashboard-main { width: calc(100% - 28px); padding-top: 24px; }
+    .viewport-frame.is-compact .chart-grid { grid-template-columns: 1fr; }
+    .viewport-frame.is-compact .source-ledger { grid-template-columns: 1fr 1fr; }
+    .viewport-frame.is-compact .source-ledger .ready-badge { grid-column: 1 / -1; justify-self: start; }
+    .viewport-frame.is-compact .viewer-result-summary { display: none; }
+    .viewport-frame.is-compact .search-wrap { width: 100%; }
+
+    .viewport-frame.is-phone { min-height: 650px; }
+    .viewport-frame.is-phone .crown-primary { min-height: 52px; padding: 0 10px; }
+    .viewport-frame.is-phone .brand-mark { width: 28px; height: 28px; }
+    .viewport-frame.is-phone .mode-switch { margin: 0; }
+    .viewport-frame.is-phone .mode { padding-inline: 8px; }
+    .viewport-frame.is-phone .crown-action { width: 29px; height: 29px; }
+    .viewport-frame.is-phone .page-strip { min-height: 40px; padding-inline: 9px; }
+    .viewport-frame.is-phone .page-tab { padding-inline: 8px; }
+    .viewport-frame.is-phone .dashboard-main { width: calc(100% - 22px); padding-top: 20px; }
+    .viewport-frame.is-phone .page-heading { grid-template-columns: 1fr; gap: 10px; }
+    .viewport-frame.is-phone .page-heading h2 { font-size: 25px; }
+    .viewport-frame.is-phone .updated-block { text-align: left; }
+    .viewport-frame.is-phone .plot { height: 245px; padding-left: 38px; }
+    .viewport-frame.is-phone .action-rail { right: 8px; bottom: 43px; max-width: calc(100% - 16px); }
+    .viewport-frame.is-phone .rail-button { padding-inline: 6px; font-size: 9px; }
+    .viewport-frame.is-phone .source-ledger { grid-template-columns: 1fr; gap: 9px; padding: 10px 12px; }
+    .viewport-frame.is-phone .source-ledger .ready-badge { grid-column: auto; }
+    .viewport-frame.is-phone .columns-strip { padding-inline: 12px; }
+    .viewport-frame.is-phone .viewer-titlebar { padding-inline: 11px; }
+    .viewport-frame.is-phone .viewer-tools { padding-inline: 11px; flex-wrap: wrap; }
+    .viewport-frame.is-phone .viewer-content { padding-inline: 11px; }
+    .viewport-frame.is-phone .viewer-footer { padding-inline: 11px; flex-wrap: wrap; }
+    .viewport-frame.is-phone .footer-note { display: none; }
+
+    @media (max-width: 900px) {
+      :root { --rail-w: 286px; }
+      .workbench { padding: 14px; }
+      .viewport-frame { height: calc(100vh - 28px); }
+    }
+  </style>
+</head>
+<body>
+  <aside class="review-rail" aria-label="Prototype review controls">
+    <header class="review-head">
+      <p class="review-kicker">Sketch 018 · decision prototype</p>
+      <h1>Source evidence workspace</h1>
+      <p>Compare where raw-source inspection belongs. These controls are outside the product fixture.</p>
+    </header>
+
+    <section class="review-group">
+      <h2>Containment variant</h2>
+      <div class="variant-list" role="group" aria-label="Containment variant">
+        <button class="variant-choice active" type="button" data-variant="a" aria-pressed="true">
+          <span class="variant-letter">A</span>
+          <span class="variant-copy"><strong>Dedicated viewer window</strong><small>Lightweight evidence window; no dashboard chrome.</small><span class="tag-recommended">★ Selected · Approved</span></span>
+        </button>
+        <button class="variant-choice" type="button" data-variant="b" aria-pressed="false">
+          <span class="variant-letter">B</span>
+          <span class="variant-copy"><strong>Full-screen evidence lens</strong><small>Source inspection temporarily replaces the product canvas.</small><span class="tag-preserved">Rejected · Preserved</span></span>
+        </button>
+        <button class="variant-choice" type="button" data-variant="c" aria-pressed="false">
+          <span class="variant-letter">C</span>
+          <span class="variant-copy"><strong>Bounded evidence drawer</strong><small>Right-side workspace; full-screen at phone width.</small><span class="tag-preserved">Rejected · Preserved</span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="review-group">
+      <h2>Source response</h2>
+      <div class="shortcut-grid" role="group" aria-label="Source response shortcut">
+        <button class="shortcut" type="button" data-state="waiting">Waiting</button>
+        <button class="shortcut" type="button" data-state="loading">Loading</button>
+        <button class="shortcut active" type="button" data-state="ready">Ready · 177</button>
+        <button class="shortcut" type="button" data-state="error">Error</button>
+        <button class="shortcut" type="button" data-state="zero">Zero rows</button>
+        <button class="shortcut" type="button" data-state="no-results">No search result</button>
+      </div>
+    </section>
+
+    <section class="review-group">
+      <h2>Viewport</h2>
+      <div class="viewport-grid" role="group" aria-label="Viewport preset">
+        <button class="shortcut active" type="button" data-viewport="1440">1440</button>
+        <button class="shortcut" type="button" data-viewport="1200">1200</button>
+        <button class="shortcut" type="button" data-viewport="1024">1024</button>
+        <button class="shortcut" type="button" data-viewport="768">768</button>
+        <button class="shortcut" type="button" data-viewport="390">390</button>
+      </div>
+    </section>
+
+    <section class="review-group">
+      <h2>Representative path</h2>
+      <p class="review-note">Hover the Confirmed cases chart → Source &amp; freshness → View source CSV. Search “2027-08-15”, clear it, advance to page 2, then close and confirm the same chart, page, and scroll position remain. Dedicated-window focus return remains browser-dependent.</p>
+    </section>
+  </aside>
+
+  <main class="workbench">
+    <div class="viewport-frame" id="viewportFrame" data-preset="1440">
+      <div class="dashboard-shell" id="dashboardShell">
+        <header class="crown">
+          <div class="crown-primary">
+            <div class="brand"><span class="brand-mark">SX</span><strong>SimEx</strong></div>
+            <div class="mode-switch" aria-label="Dashboard mode">
+              <button class="mode active" type="button">View</button>
+              <button class="mode" type="button">Build</button>
+              <button class="mode" type="button">Present</button>
+            </div>
+            <span class="crown-spacer"></span>
+            <button class="crown-action" type="button" aria-label="More options">•••</button>
+          </div>
+          <nav class="page-strip" aria-label="Dashboard pages">
+            <button class="page-tab active" type="button">National overview</button>
+            <button class="page-tab" type="button">Regional response</button>
+            <button class="page-tab" type="button">Capacity</button>
+            <span class="page-context">EXERCISE · DAY 18</span>
+          </nav>
+        </header>
+
+        <div class="dashboard-main">
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">Pandemic preparedness watch</p>
+              <h2>National overview</h2>
+              <p>Exercise indicators for epidemiological progression, mortality, and response capacity.</p>
+            </div>
+            <div class="updated-block">Data position<strong>18 AUG 2025 · 09:00</strong></div>
+          </section>
+
+          <div class="section-heading"><h3>Situation trajectory</h3></div>
+          <section class="chart-grid" aria-label="Situation trajectory charts">
+            <article class="chart-card selected" id="confirmedCasesCard" tabindex="-1" aria-label="Confirmed cases chart">
+              <header class="chart-head">
+                <div class="chart-title"><h4>Confirmed cases</h4><p>National cumulative count · daily</p></div>
+                <div class="chart-value">86,420<small>+1,284 today</small></div>
+              </header>
+              <div class="plot">
+                <span class="axis-label axis-y1">90k</span><span class="axis-label axis-y2">45k</span><span class="axis-label axis-y3">0</span>
+                <span class="axis-label axis-x1">Jan</span><span class="axis-label axis-x2">Apr</span><span class="axis-label axis-x3">Aug</span>
+                <svg viewBox="0 0 640 210" preserveAspectRatio="none" role="img" aria-label="Cumulative confirmed cases rising from January through August">
+                  <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#176f68" stop-opacity=".24"/><stop offset="1" stop-color="#176f68" stop-opacity=".02"/></linearGradient></defs>
+                  <path d="M0 195 C65 193 80 187 125 181 S190 162 228 155 S285 132 330 121 S390 92 435 80 S505 49 548 36 S602 17 640 8 L640 210 L0 210 Z" fill="url(#area)"/>
+                  <path d="M0 195 C65 193 80 187 125 181 S190 162 228 155 S285 132 330 121 S390 92 435 80 S505 49 548 36 S602 17 640 8" fill="none" stroke="#176f68" stroke-width="4"/>
+                  <g fill="#fffdf7" stroke="#176f68" stroke-width="2"><circle cx="125" cy="181" r="4"/><circle cx="228" cy="155" r="4"/><circle cx="330" cy="121" r="4"/><circle cx="435" cy="80" r="4"/><circle cx="548" cy="36" r="4"/><circle cx="640" cy="8" r="4"/></g>
+                </svg>
+              </div>
+              <footer class="chart-foot"><span class="legend-key"></span>National total cases</footer>
+
+              <div class="action-rail" aria-label="Confirmed cases actions">
+                <button class="rail-button" id="detailsButton" type="button" aria-expanded="false">Details</button>
+                <button class="rail-button" id="focusButton" type="button">Focus</button>
+                <button class="rail-button primary" id="sourceButton" type="button" aria-expanded="false">Source &amp; freshness</button>
+              </div>
+
+              <aside class="citation-popover" id="citationPopover" hidden aria-label="Source and freshness">
+                <div class="citation-top">
+                  <div><h5>Confirmed cases source</h5><p>Trace the rendered series to the untransformed source rows used by this chart.</p></div>
+                  <button class="small-button" id="closeCitation" type="button" aria-label="Close source details">Close</button>
+                </div>
+                <div class="citation-meta"><strong>Simulation exercise biomedical dataset</strong><br>bio_confirmed_cases → bio_cases<br>data/biomedical/cases.csv</div>
+                <div class="citation-actions"><button class="small-button primary" id="viewSourceCsv" type="button">View source CSV</button></div>
+                <div class="popup-blocked" id="popupBlocked" role="alert" hidden>The source-data window was blocked. Allow popups and try again.</div>
+              </aside>
+              <aside class="details-note" id="detailsNote" hidden><strong>Confirmed cases</strong><br>Cumulative national total. Units: people. Evidence source and freshness remain available as a separate chart action.</aside>
+            </article>
+
+            <article class="chart-card mini-card" aria-label="Daily new cases chart">
+              <header class="chart-head"><div class="chart-title"><h4>Daily new cases</h4><p>Seven-day moving average</p></div><div class="chart-value">1,196<small>−4.8% week</small></div></header>
+              <div class="plot">
+                <span class="axis-label axis-y1">2k</span><span class="axis-label axis-y2">1k</span><span class="axis-label axis-y3">0</span>
+                <span class="axis-label axis-x1">Jan</span><span class="axis-label axis-x2">Apr</span><span class="axis-label axis-x3">Aug</span>
+                <svg viewBox="0 0 500 210" preserveAspectRatio="none" role="img" aria-label="Daily cases variable line">
+                  <path d="M0 170 C42 120 68 154 105 102 S176 62 208 116 S270 190 310 133 S375 50 412 90 S464 142 500 82" fill="none" stroke="#bc6b2c" stroke-width="4"/>
+                  <path d="M0 183 C65 169 112 160 168 144 S280 125 332 110 S425 94 500 78" fill="none" stroke="#3e7183" stroke-width="2" stroke-dasharray="6 5"/>
+                </svg>
+              </div>
+              <footer class="chart-foot"><span class="legend-key" style="background:#bc6b2c"></span>Daily cases <span class="legend-key" style="margin-left:8px;background:#3e7183"></span>Trend</footer>
+            </article>
+          </section>
+
+          <div class="focus-stage" id="focusStage">
+            <div class="focus-bar"><p>Focused chart · source context preserved</p><button class="small-button" id="exitFocus" type="button">Exit focus</button></div>
+            <article class="chart-card selected" aria-label="Confirmed cases focused chart">
+              <header class="chart-head"><div class="chart-title"><h4>Confirmed cases</h4><p>National cumulative count · daily</p></div><div class="chart-value">86,420<small>+1,284 today</small></div></header>
+              <div class="plot"><svg viewBox="0 0 900 360" preserveAspectRatio="none"><path d="M0 330 C90 326 145 306 200 292 S310 248 370 222 S495 170 560 142 S685 86 750 59 S842 31 900 15" fill="none" stroke="#176f68" stroke-width="5"/></svg></div>
+              <footer class="chart-foot"><span class="legend-key"></span>National total cases</footer>
+            </article>
+          </div>
+
+          <div class="section-heading"><h3>Response capacity</h3></div>
+          <section class="chart-grid">
+            <article class="chart-card"><header class="chart-head"><div class="chart-title"><h4>Hospital load</h4><p>Occupied staffed beds</p></div><div class="chart-value">72%<small>+3 pts week</small></div></header><div class="plot"><svg viewBox="0 0 500 210" preserveAspectRatio="none"><path d="M0 150 C80 147 110 125 180 130 S290 104 345 87 S430 74 500 52" fill="none" stroke="#3e7183" stroke-width="4"/></svg></div><footer class="chart-foot"><span class="legend-key" style="background:#3e7183"></span>Occupied beds</footer></article>
+            <article class="chart-card"><header class="chart-head"><div class="chart-title"><h4>Total deaths</h4><p>National cumulative count</p></div><div class="chart-value">1,248<small>+12 today</small></div></header><div class="plot"><svg viewBox="0 0 500 210" preserveAspectRatio="none"><path d="M0 188 C74 180 120 170 175 153 S270 119 330 96 S422 62 500 29" fill="none" stroke="#a8453d" stroke-width="4"/></svg></div><footer class="chart-foot"><span class="legend-key" style="background:#a8453d"></span>Total deaths</footer></article>
+          </section>
+        </div>
+      </div>
+
+      <div class="app-overlay" id="appOverlay" aria-hidden="true">
+        <div class="overlay-scrim"></div>
+        <section class="lens" id="lens" hidden aria-label="Full-screen evidence lens"><div class="viewer-host" id="lensHost"></div></section>
+        <section class="drawer" id="drawer" hidden aria-label="Evidence drawer"><div class="viewer-host" id="drawerHost"></div></section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const app = {
+        variant: 'a',
+        sourceState: 'ready',
+        viewport: '1440',
+        viewerOpen: false,
+        page: 1,
+        pageSize: 100,
+        query: '',
+        sortColumn: null,
+        sortDirection: null,
+        popup: null,
+        returnContext: null,
+        lastTrigger: null,
+        rows: []
+      };
+
+      const columns = [
+        'date',
+        'national_total_cases',
+        'total_deaths',
+        'daily_new_cases',
+        'new_deaths',
+        'active_cases',
+        'recovered_cases',
+        'hospitalized_cases',
+        'intensive_care_cases',
+        'ventilated_cases',
+        'cumulative_tests',
+        'daily_tests',
+        'test_positivity_pct',
+        'healthcare_worker_cases',
+        'daily_imported_cases'
+      ];
+      const source = {
+        chart: 'Confirmed cases',
+        chartId: 'bio_confirmed_cases',
+        datasetId: 'bio_cases',
+        path: 'data/biomedical/cases.csv',
+        provenance: 'Simulation exercise biomedical dataset'
+      };
+
+      function generateRows(count = 177) {
+        const start = Date.UTC(2027, 1, 20);
+        return Array.from({ length: count }, (_, index) => {
+          const date = new Date(start + index * 86400000).toISOString().slice(0, 10);
+          const row = {
+            __sourceRow: index + 1,
+            date,
+            national_total_cases: Math.round(19880 + index * 337 + Math.sin(index / 13) * 420),
+            total_deaths: Math.max(0, Math.round(index / 19)),
+            daily_new_cases: Math.max(35, Math.round(120 + index * 1.15 + Math.sin(index / 9) * 48)),
+            new_deaths: index % 21 === 0 ? 1 : 0
+          };
+          if (index === 176) Object.assign(row, {
+            date: '2027-08-15', national_total_cases: 79547, total_deaths: 9,
+            daily_new_cases: 319, new_deaths: 9
+          });
+          const activeCases = Math.max(0, Math.round(row.national_total_cases * .084 + Math.sin(index / 7) * 180));
+          const hospitalizedCases = Math.max(0, Math.round(activeCases * .067 + 42));
+          const intensiveCareCases = Math.max(0, Math.round(hospitalizedCases * .19));
+          const dailyTests = Math.max(1, Math.round(3600 + index * 9 + Math.sin(index / 11) * 420));
+          return {
+            ...row,
+            active_cases: activeCases,
+            recovered_cases: Math.max(0, row.national_total_cases - activeCases - row.total_deaths),
+            hospitalized_cases: hospitalizedCases,
+            intensive_care_cases: intensiveCareCases,
+            ventilated_cases: Math.max(0, Math.round(intensiveCareCases * .46)),
+            cumulative_tests: Math.round(318000 + index * 4820 + Math.sin(index / 15) * 1300),
+            daily_tests: dailyTests,
+            test_positivity_pct: Number((row.daily_new_cases / dailyTests * 100).toFixed(1)),
+            healthcare_worker_cases: Math.round(row.national_total_cases * .018),
+            daily_imported_cases: index % 8
+          };
+        });
+      }
+
+      app.rows = generateRows();
+
+      const frame = document.getElementById('viewportFrame');
+      const dashboard = document.getElementById('dashboardShell');
+      const card = document.getElementById('confirmedCasesCard');
+      const citation = document.getElementById('citationPopover');
+      const blocked = document.getElementById('popupBlocked');
+      const overlay = document.getElementById('appOverlay');
+      const lens = document.getElementById('lens');
+      const drawer = document.getElementById('drawer');
+      const lensHost = document.getElementById('lensHost');
+      const drawerHost = document.getElementById('drawerHost');
+
+      function rememberContext(trigger) {
+        if (app.returnContext) return;
+        app.lastTrigger = trigger || document.getElementById('viewSourceCsv');
+        app.returnContext = {
+          scrollTop: dashboard.scrollTop,
+          focused: dashboard.classList.contains('focus-active'),
+          selected: card.classList.contains('selected')
+        };
+      }
+
+      function restoreContext(restoreInvokerFocus = true) {
+        const context = app.returnContext;
+        app.returnContext = null;
+        if (!context) return;
+        dashboard.classList.toggle('focus-active', context.focused);
+        card.classList.toggle('selected', context.selected);
+        requestAnimationFrame(() => {
+          dashboard.scrollTop = context.scrollTop;
+          if (restoreInvokerFocus && app.lastTrigger && app.lastTrigger.isConnected) app.lastTrigger.focus();
+        });
+      }
+
+      function filteredRows() {
+        const query = app.query.trim().toLowerCase();
+        if (!query) return app.rows;
+        return app.rows.filter(row => columns.some(column => String(row[column]).toLowerCase().includes(query)));
+      }
+
+      function sortedRows(rows) {
+        if (!app.sortColumn || !app.sortDirection) return rows;
+        const direction = app.sortDirection === 'ascending' ? 1 : -1;
+        return rows.slice().sort((left, right) => {
+          const leftValue = left[app.sortColumn];
+          const rightValue = right[app.sortColumn];
+          let comparison;
+          if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+            comparison = leftValue - rightValue;
+          } else {
+            comparison = String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true, sensitivity: 'base' });
+          }
+          if (comparison === 0) return left.__sourceRow - right.__sourceRow;
+          return comparison * direction;
+        });
+      }
+
+      function advanceSort(column) {
+        if (app.sortColumn !== column || !app.sortDirection) {
+          app.sortColumn = column;
+          app.sortDirection = 'ascending';
+        } else if (app.sortDirection === 'ascending') {
+          app.sortDirection = 'descending';
+        } else {
+          app.sortColumn = null;
+          app.sortDirection = null;
+        }
+      }
+
+      function tableHeaderMarkup() {
+        const headers = columns.map(column => {
+          const active = app.sortColumn === column;
+          const direction = active ? app.sortDirection : null;
+          const ariaSort = active ? ` aria-sort="${direction}"` : '';
+          const indicator = direction === 'ascending' ? '▲' : direction === 'descending' ? '▼' : '↕';
+          const label = direction === 'ascending'
+            ? `${column}, sorted ascending. Sort descending`
+            : direction === 'descending'
+              ? `${column}, sorted descending. Restore source order`
+              : `Sort ${column} ascending`;
+          return `<th scope="col"${ariaSort}><button type="button" class="column-sort" data-sort-column="${column}" aria-label="${label}"><span>${column}</span><span class="sort-indicator" aria-hidden="true">${indicator}</span></button></th>`;
+        }).join('');
+        return `<thead><tr><th class="row-number" scope="col">ROW</th>${headers}</tr></thead>`;
+      }
+
+      function statusLabel() {
+        const displayedState = app.sourceState === 'waiting' && app.variant !== 'a' ? 'loading' : app.sourceState;
+        return ({ waiting: 'Waiting', loading: 'Loading', ready: 'Ready · 177 rows', error: 'Error', zero: 'Zero rows', 'no-results': 'No matches' })[displayedState] || 'Ready';
+      }
+
+      function viewerMarkup() {
+        const displayedState = app.sourceState === 'waiting' && app.variant !== 'a' ? 'loading' : app.sourceState;
+        const statusClass = displayedState === 'ready' ? '' : displayedState;
+        return `
+          <div class="evidence-viewer" data-variant="${app.variant}" data-source-state="${app.sourceState}">
+            <header class="viewer-titlebar">
+              <span class="window-mark">CSV</span>
+              <div class="viewer-titlecopy"><span class="viewer-eyebrow">Source data</span><strong role="heading" aria-level="1">Simulation exercise biomedical dataset</strong><small>bio_cases</small></div>
+              <span class="ready-badge ${statusClass}" aria-live="polite">${statusLabel()}</span>
+              <button class="viewer-close" type="button" data-close-viewer aria-label="Close source evidence">×</button>
+            </header>
+            <div class="columns-strip"><strong>Columns · 15 fields</strong>${columns.map(column => `<span class="column-chip">${column}</span>`).join('')}</div>
+            ${viewerBodyMarkup()}
+          </div>`;
+      }
+
+      function viewerBodyMarkup() {
+        if (app.sourceState === 'waiting' && app.variant === 'a') return stateMarkup('…', 'Waiting for source data…', '');
+        if (app.sourceState === 'waiting' || app.sourceState === 'loading') {
+          return stateMarkup('<span class="spinner" aria-hidden="true"></span>', 'Loading and parsing the CSV…', '');
+        }
+        if (app.sourceState === 'error') return stateMarkup('!', 'The CSV could not be displayed', 'Could not load the CSV (404).', '', true);
+
+        const sourceTotal = app.sourceState === 'zero' ? 0 : app.rows.length;
+        const rows = app.sourceState === 'no-results' || app.sourceState === 'zero' ? [] : sortedRows(filteredRows());
+        const total = rows.length;
+        const maxPage = Math.max(1, Math.ceil(total / app.pageSize));
+        app.page = Math.min(app.page, maxPage);
+        const start = total ? (app.page - 1) * app.pageSize : 0;
+        const end = Math.min(start + app.pageSize, total);
+        const pageRows = rows.slice(start, end);
+        const queryValue = app.sourceState === 'no-results' ? 'not-a-source-value' : app.query;
+        const tableHead = tableHeaderMarkup();
+
+        const tools = `
+          <div class="viewer-tools">
+            <label class="search-wrap"><span class="search-label">Search all columns</span><span class="search-icon" aria-hidden="true">⌕</span><input type="search" data-source-search value="${escapeHtml(queryValue)}" placeholder="Date or value" autocomplete="off"><button class="clear-search" type="button" data-clear-search ${queryValue ? '' : 'hidden'}>Clear</button></label>
+            <span class="viewer-result-summary">${total} of ${sourceTotal} rows</span>
+          </div>`;
+
+        if (!total) {
+          return `${tools}<div class="viewer-content"><div class="table-scroller" tabindex="0" aria-label="Scrollable source rows"><table class="evidence-table">${tableHead}<tbody></tbody></table></div></div><div class="viewer-footer"><span class="range-copy">No matching rows</span></div>`;
+        }
+
+        return `${tools}
+          <div class="viewer-content">
+            <div class="table-scroller" tabindex="0" aria-label="Scrollable source rows">
+              <table class="evidence-table">
+                ${tableHead}
+                <tbody>${pageRows.map(row => `<tr><td class="row-number">${row.__sourceRow}</td>${columns.map(column => `<td>${row[column]}</td>`).join('')}</tr>`).join('')}</tbody>
+              </table>
+            </div>
+          </div>
+          <footer class="viewer-footer">
+            <span class="range-copy">${start + 1}–${end} of ${total}</span>
+            <div class="pager"><button type="button" data-page="prev" ${app.page === 1 ? 'disabled' : ''}>Previous</button><span class="page-count">Page ${app.page} of ${maxPage}</span><button type="button" data-page="next" ${app.page >= maxPage ? 'disabled' : ''}>Next</button></div>
+          </footer>`;
+      }
+
+      function stateMarkup(icon, title, copy, action = '', error = false) {
+        return `<div class="viewer-content" style="padding-top:12px"><div class="viewer-state"><div class="state-plate"><div class="state-icon${error ? ' error' : ''}">${icon}</div><h3>${title}</h3>${copy ? `<p>${copy}</p>` : ''}${action}</div></div></div><div class="viewer-footer"><span class="range-copy">Source data</span><span class="footer-note">Dashboard state unchanged</span></div>`;
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[character]);
+      }
+
+      function bindViewer(root, doc = document) {
+        root.querySelector('[data-close-viewer]')?.addEventListener('click', closeEvidenceViewer);
+        const search = root.querySelector('[data-source-search]');
+        search?.addEventListener('input', event => {
+          app.sourceState = 'ready';
+          app.query = event.target.value;
+          app.page = 1;
+          renderOpenViewer(true);
+        });
+        root.querySelectorAll('[data-clear-search]').forEach(button => button.addEventListener('click', () => {
+          app.sourceState = 'ready';
+          app.query = '';
+          app.page = 1;
+          syncStateControls();
+          renderOpenViewer();
+          getViewerRoot()?.querySelector('[data-source-search]')?.focus();
+        }));
+        root.querySelectorAll('[data-sort-column]').forEach(button => button.addEventListener('click', () => {
+          const column = button.dataset.sortColumn;
+          advanceSort(column);
+          app.page = 1;
+          renderOpenViewer(false, column);
+        }));
+        root.querySelector('[data-page="prev"]')?.addEventListener('click', () => { app.page -= 1; renderOpenViewer(); });
+        root.querySelector('[data-page="next"]')?.addEventListener('click', () => { app.page += 1; renderOpenViewer(); });
+        doc.addEventListener('keydown', popupEscapeHandler, { once: true });
+      }
+
+      function popupEscapeHandler(event) {
+        if (event.key === 'Escape' && app.viewerOpen && app.variant === 'a') closeEvidenceViewer();
+      }
+
+      function getViewerRoot() {
+        if (app.variant === 'a' && app.popup && !app.popup.closed) return app.popup.document.getElementById('popupRoot');
+        if (app.variant === 'b') return lensHost;
+        if (app.variant === 'c') return drawerHost;
+        return null;
+      }
+
+      function renderOpenViewer(preserveSearchFocus = false, restoreSortColumn = null) {
+        if (!app.viewerOpen) return;
+        const root = getViewerRoot();
+        if (!root) return;
+        const doc = root.ownerDocument;
+        const selection = preserveSearchFocus && doc.activeElement?.matches?.('[data-source-search]') ? { start: doc.activeElement.selectionStart, end: doc.activeElement.selectionEnd } : null;
+        const scroller = restoreSortColumn ? root.querySelector('.table-scroller') : null;
+        const tablePosition = scroller ? { left: scroller.scrollLeft, top: scroller.scrollTop } : null;
+        root.innerHTML = viewerMarkup();
+        bindViewer(root, doc);
+        if (selection) {
+          const input = root.querySelector('[data-source-search]');
+          input?.focus();
+          input?.setSelectionRange(selection.start, selection.end);
+        }
+        if (restoreSortColumn) {
+          const nextScroller = root.querySelector('.table-scroller');
+          if (tablePosition && nextScroller) {
+            nextScroller.scrollLeft = tablePosition.left;
+            nextScroller.scrollTop = tablePosition.top;
+          }
+          root.querySelector(`[data-sort-column="${restoreSortColumn}"]`)?.focus({ preventScroll: true });
+        }
+      }
+
+      function viewerCssText() {
+        return Array.from(document.styleSheets).map(sheet => {
+          try { return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n'); }
+          catch (_) { return ''; }
+        }).join('\n');
+      }
+
+      function openDedicatedWindow() {
+        const popup = window.open('', 'simexSourceEvidence', 'popup=yes,width=1180,height=780,resizable=yes,scrollbars=no');
+        if (!popup) {
+          app.viewerOpen = false;
+          app.returnContext = null;
+          blocked.hidden = false;
+          citation.hidden = false;
+          document.getElementById('sourceButton').setAttribute('aria-expanded', 'true');
+          return;
+        }
+        app.popup = popup;
+        popup.document.open();
+        popup.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Source data · bio_cases</title><style>${viewerCssText()}</style></head><body class="window-shell"><main id="popupRoot"></main></body></html>`);
+        popup.document.close();
+        app.viewerOpen = true;
+        renderOpenViewer();
+        popup.addEventListener('beforeunload', () => {
+          if (app.popup !== popup) return;
+          app.popup = null;
+          app.viewerOpen = false;
+          restoreContext(false);
+        }, { once: true });
+        popup.focus();
+      }
+
+      function openEmbeddedContainer() {
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+        if (app.variant === 'b') {
+          lens.hidden = false;
+          drawer.hidden = true;
+          lensHost.innerHTML = viewerMarkup();
+          bindViewer(lensHost);
+        } else {
+          drawer.hidden = false;
+          lens.hidden = true;
+          drawerHost.innerHTML = viewerMarkup();
+          bindViewer(drawerHost);
+        }
+        app.viewerOpen = true;
+        const root = getViewerRoot();
+        root?.querySelector('[data-close-viewer]')?.focus();
+      }
+
+      function openEvidenceViewer(trigger = document.getElementById('viewSourceCsv')) {
+        rememberContext(trigger);
+        blocked.hidden = true;
+        citation.hidden = true;
+        document.getElementById('sourceButton').setAttribute('aria-expanded', 'false');
+        if (app.variant === 'a') openDedicatedWindow();
+        else openEmbeddedContainer();
+      }
+
+      function closeEvidenceViewer() {
+        if (!app.viewerOpen && !(app.popup && !app.popup.closed)) return;
+        const restoreInvokerFocus = app.variant !== 'a';
+        app.viewerOpen = false;
+        if (app.popup && !app.popup.closed) {
+          const popup = app.popup;
+          app.popup = null;
+          popup.close();
+        }
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+        lens.hidden = true;
+        drawer.hidden = true;
+        lensHost.innerHTML = '';
+        drawerHost.innerHTML = '';
+        restoreContext(restoreInvokerFocus);
+      }
+
+      window.closeEvidenceViewer = closeEvidenceViewer;
+
+      function selectVariant(variant) {
+        if (variant === app.variant) return;
+        const wasOpen = app.viewerOpen || !blocked.hidden;
+        if (wasOpen) {
+          app.viewerOpen = false;
+          if (app.popup && !app.popup.closed) { const popup = app.popup; app.popup = null; popup.close(); }
+          overlay.classList.remove('open');
+          lens.hidden = true;
+          drawer.hidden = true;
+        }
+        app.variant = variant;
+        document.querySelectorAll('[data-variant]').forEach(button => {
+          const selected = button.dataset.variant === variant;
+          button.classList.toggle('active', selected);
+          button.setAttribute('aria-pressed', String(selected));
+        });
+        if (wasOpen) {
+          openEvidenceViewer(app.lastTrigger);
+        }
+      }
+
+      function syncStateControls() {
+        document.querySelectorAll('[data-state]').forEach(button => button.classList.toggle('active', button.dataset.state === app.sourceState));
+      }
+
+      function selectState(state, trigger) {
+        app.sourceState = state;
+        app.page = 1;
+        if (state === 'no-results') app.query = 'not-a-source-value';
+        else if (app.query === 'not-a-source-value') app.query = '';
+        syncStateControls();
+        if (!app.viewerOpen) openEvidenceViewer(trigger);
+        else renderOpenViewer();
+      }
+
+      function syncFrameBreakpoints() {
+        const width = frame.clientWidth;
+        frame.classList.toggle('is-compact', width <= 768);
+        frame.classList.toggle('is-phone', width <= 390);
+      }
+
+      function selectViewport(preset) {
+        app.viewport = preset;
+        frame.dataset.preset = preset;
+        document.querySelectorAll('[data-viewport]').forEach(button => button.classList.toggle('active', button.dataset.viewport === preset));
+        requestAnimationFrame(syncFrameBreakpoints);
+      }
+
+      const frameResizeObserver = new ResizeObserver(syncFrameBreakpoints);
+      frameResizeObserver.observe(frame);
+      syncFrameBreakpoints();
+
+      document.querySelectorAll('[data-variant]').forEach(button => button.addEventListener('click', () => selectVariant(button.dataset.variant)));
+      document.querySelectorAll('[data-state]').forEach(button => button.addEventListener('click', () => selectState(button.dataset.state, button)));
+      document.querySelectorAll('[data-viewport]').forEach(button => button.addEventListener('click', () => selectViewport(button.dataset.viewport)));
+
+      document.getElementById('sourceButton').addEventListener('click', event => {
+        const opening = citation.hidden;
+        citation.hidden = !opening;
+        blocked.hidden = true;
+        event.currentTarget.setAttribute('aria-expanded', String(opening));
+        if (opening) document.getElementById('viewSourceCsv').focus();
+      });
+      document.getElementById('closeCitation').addEventListener('click', () => {
+        citation.hidden = true;
+        document.getElementById('sourceButton').setAttribute('aria-expanded', 'false');
+        document.getElementById('sourceButton').focus();
+      });
+      document.getElementById('viewSourceCsv').addEventListener('click', event => openEvidenceViewer(event.currentTarget));
+
+      document.getElementById('detailsButton').addEventListener('click', event => {
+        const note = document.getElementById('detailsNote');
+        const opening = note.hidden;
+        note.hidden = !opening;
+        event.currentTarget.setAttribute('aria-expanded', String(opening));
+      });
+      document.getElementById('focusButton').addEventListener('click', () => {
+        dashboard.classList.add('focus-active');
+        dashboard.scrollTop = 0;
+        document.getElementById('exitFocus').focus();
+      });
+      document.getElementById('exitFocus').addEventListener('click', () => {
+        dashboard.classList.remove('focus-active');
+        card.scrollIntoView({ block: 'center' });
+        document.getElementById('focusButton').focus();
+      });
+
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          if (app.viewerOpen && app.variant !== 'a') { closeEvidenceViewer(); return; }
+          if (!citation.hidden) { citation.hidden = true; document.getElementById('sourceButton').focus(); }
+        }
+        if (event.key === 'Tab' && app.viewerOpen && app.variant !== 'a') {
+          const root = getViewerRoot();
+          const focusable = Array.from(root?.querySelectorAll('button:not(:disabled), input, [tabindex="0"]') || []);
+          if (!focusable.length) return;
+          const first = focusable[0], last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+      });
+
+      window.addEventListener('beforeunload', () => { if (app.popup && !app.popup.closed) app.popup.close(); });
+    })();
+  </script>
+</body>
+</html>
