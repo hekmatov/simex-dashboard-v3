@@ -771,6 +771,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         dashboard={dashboard}
         activePageId={activePage?.id}
         onActivePageChange={onActivePageChange}
+        onModeRequest={onModeRequest}
         onOpenDashboardLook={onOpenDashboardLook}
         runtime={presentationRuntime}
         accessibilityEnabled={accessibilityEnabled}

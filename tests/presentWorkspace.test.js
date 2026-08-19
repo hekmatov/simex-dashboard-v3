@@ -209,6 +209,33 @@ test("Present forwards display state without substituting layout or enforcing ca
   );
 });
 
+test("an empty Present catalogue routes recovery to Build without adding an Audience action", () => {
+  const emptyDashboard = {
+    ...dashboard,
+    pages: [{
+      ...dashboard.pages[0],
+      sections: [{ ...dashboard.pages[0].sections[0], panels: [] }],
+    }],
+  };
+  const html = renderPresent(presentModule.default, {
+    dashboard: emptyDashboard,
+    displayState: {
+      display_revision: 4,
+      displayed_chart_ids: [],
+      layout: "solo",
+    },
+    onModeRequest: () => {},
+  });
+
+  assert.match(
+    html,
+    /No charts are available to present from this dashboard\./,
+  );
+  assert.equal((html.match(/>Open Build to Add Charts<\/button>/g) ?? []).length, 1);
+  assert.match(html, /Audience display not open/);
+  assert.doesNotMatch(html, /Choose up to 4 charts/);
+});
+
 function elementMarkupByAriaLabel(html, tagName, label) {
   const marker = `aria-label="${label}"`;
   const markerIndex = html.indexOf(marker);

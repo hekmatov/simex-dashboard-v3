@@ -8,6 +8,7 @@ export default function PresentWorkspace({
   dashboard,
   activePageId,
   onActivePageChange,
+  onModeRequest,
   onOpenDashboardLook,
   runtime,
   accessibilityEnabled,
@@ -249,37 +250,49 @@ export default function PresentWorkspace({
         </aside>
 
         <section className="present-scene-panel" aria-label="Choose charts for the audience scene">
-          <p id="present-chart-limit-status" className="present-chart-limit-status" aria-live="polite">
-            {atChartCapacity
-              ? `${MAX_DISPLAYED_CHARTS} of ${MAX_DISPLAYED_CHARTS} charts selected. Remove a displayed chart before selecting another.`
-              : `Choose up to ${MAX_DISPLAYED_CHARTS} charts. ${displayedChartIds.length} of ${MAX_DISPLAYED_CHARTS} selected.`}
-          </p>
-          <div className="present-chart-groups">
-            {chartGroups.map((group) => (
-              <fieldset className="present-chart-group" key={group.id}>
-                <legend>{group.label}</legend>
-                {group.charts.map((chart) => {
-                  const selected = displayedChartIds.includes(chart.id);
-                  const unavailable = atChartCapacity && !selected;
-                  return (
-                    <label
-                      className={`present-chart-choice${unavailable ? " is-unavailable" : ""}`}
-                      key={chart.id}
-                    >
-                      <input
-                        type="checkbox"
-                        aria-describedby="present-chart-limit-status"
-                        checked={selected}
-                        disabled={unavailable}
-                        onChange={() => toggleChart(chart.id)}
-                      />
-                      <span>{chart.title ?? chart.id}</span>
-                    </label>
-                  );
-                })}
-              </fieldset>
-            ))}
-          </div>
+          {chartGroups.length === 0 ? (
+            <section className="present-catalogue-recovery" aria-labelledby="present-catalogue-recovery-title">
+              <p className="eyebrow">Presentation catalogue</p>
+              <h2 id="present-catalogue-recovery-title">No charts are available to present from this dashboard.</h2>
+              <button type="button" onClick={() => onModeRequest?.("build")}>
+                Open Build to Add Charts
+              </button>
+            </section>
+          ) : (
+            <>
+              <p id="present-chart-limit-status" className="present-chart-limit-status" aria-live="polite">
+                {atChartCapacity
+                  ? `${MAX_DISPLAYED_CHARTS} of ${MAX_DISPLAYED_CHARTS} charts selected. Remove a displayed chart before selecting another.`
+                  : `Choose up to ${MAX_DISPLAYED_CHARTS} charts. ${displayedChartIds.length} of ${MAX_DISPLAYED_CHARTS} selected.`}
+              </p>
+              <div className="present-chart-groups">
+                {chartGroups.map((group) => (
+                  <fieldset className="present-chart-group" key={group.id}>
+                    <legend>{group.label}</legend>
+                    {group.charts.map((chart) => {
+                      const selected = displayedChartIds.includes(chart.id);
+                      const unavailable = atChartCapacity && !selected;
+                      return (
+                        <label
+                          className={`present-chart-choice${unavailable ? " is-unavailable" : ""}`}
+                          key={chart.id}
+                        >
+                          <input
+                            type="checkbox"
+                            aria-describedby="present-chart-limit-status"
+                            checked={selected}
+                            disabled={unavailable}
+                            onChange={() => toggleChart(chart.id)}
+                          />
+                          <span>{chart.title ?? chart.id}</span>
+                        </label>
+                      );
+                    })}
+                  </fieldset>
+                ))}
+              </div>
+            </>
+          )}
         </section>
       </div>
 
