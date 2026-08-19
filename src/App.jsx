@@ -146,6 +146,32 @@ export default function App() {
     prefersDark,
   }), [appearancePreference, dashboard?.globalStyles, lookPreview, prefersDark]);
 
+  const commandCrownProjection = React.useMemo(() => {
+    const pages = Object.freeze((dashboard?.pages ?? []).map((page) => Object.freeze({
+      id: page.id,
+      label: page.label ?? page.title ?? page.id,
+      title: page.title ?? page.label ?? page.id,
+    })));
+    const activePage = pages.find(({ id }) => id === activePageId) ?? pages[0] ?? null;
+    return Object.freeze({
+      dashboardIdentity: Object.freeze({
+        title: dashboard?.title ?? dashboard?.programLabel ?? "SimEx Dashboard",
+        programLabel: dashboard?.programLabel ?? "SimEx Dashboard",
+        scenarioLabel: dashboard?.scenarioLabel ?? "Scenario unavailable",
+        lastUpdated: dashboard?.lastUpdated ?? "",
+      }),
+      activePage,
+      pages,
+    });
+  }, [
+    activePageId,
+    dashboard?.lastUpdated,
+    dashboard?.pages,
+    dashboard?.programLabel,
+    dashboard?.scenarioLabel,
+    dashboard?.title,
+  ]);
+
   React.useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
     const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -746,6 +772,11 @@ export default function App() {
       onModeRequest={requestMode}
       modeDisabled={modeDisabled || buildDraftLocked}
       blockedReason={blockedReason}
+      dashboardIdentity={commandCrownProjection.dashboardIdentity}
+      activePage={commandCrownProjection.activePage}
+      pages={commandCrownProjection.pages}
+      contextNode={<span>{mode === "build" ? "Dashboard authoring workspace" : mode === "present" ? "Audience presentation workspace" : "Dashboard exploration workspace"}</span>}
+      onPageRequest={setActivePageId}
       density={densityForDashboardMode(mode)}
       theme={dashboardTheme}
     >

@@ -1,12 +1,20 @@
 import React from "react";
 
-import ModeSwitcher from "./ModeSwitcher.jsx";
+import DashboardCommandCrown from "./DashboardCommandCrown.jsx";
 
 export default function AppFrame({
   mode,
   onModeRequest,
   modeDisabled = false,
   blockedReason = "",
+  dashboardIdentity,
+  activePage,
+  pages,
+  contextNode,
+  statusNode,
+  pageActions,
+  onPageRequest,
+  onScenarioRequest,
   density,
   children,
   theme,
@@ -32,14 +40,20 @@ export default function AppFrame({
           <button type="button" onClick={() => onModeRequest?.("view")}>Switch to View</button>
         </section>
       )}
-      <header className="app-frame-bar">
-        <span className="app-frame-identity">SimEx</span>
-        <ModeSwitcher
-          mode={mode}
-          onModeRequest={onModeRequest}
-          disabled={modeDisabled}
-        />
-      </header>
+      <DashboardCommandCrown
+        mode={mode}
+        dashboardIdentity={dashboardIdentity}
+        activePage={activePage}
+        pages={pages}
+        contextNode={contextNode}
+        statusNode={statusNode}
+        pageActions={pageActions}
+        onModeRequest={onModeRequest}
+        onPageRequest={onPageRequest}
+        onScenarioRequest={onScenarioRequest}
+        disabled={modeDisabled}
+        disabledReason={blockedReason}
+      />
       {blockedReason && <p className="mode-switch-error" role="alert">{blockedReason}</p>}
       {children}
     </div>

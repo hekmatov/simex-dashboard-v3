@@ -68,6 +68,10 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
     mode: "build",
     density: "compact",
     onModeRequest: () => {},
+    dashboardIdentity: { title: "Biomedical situational awareness", scenarioLabel: "HeV-A26 Day 2 Simulation" },
+    activePage: { id: "biomedical", label: "Biomedical" },
+    pages: [{ id: "biomedical", label: "Biomedical" }],
+    onPageRequest: () => {},
     children: React.createElement("div", null, "Build workspace"),
   }));
   const view = renderToStaticMarkup(React.createElement(AppFrame, {
@@ -79,6 +83,7 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
 
   assert.match(build, /class="phone-mode-banner"/);
   assert.match(build, />Switch to View<\/button>/);
+  assert.match(build, /data-command-crown-layer="mode"[\s\S]*data-command-crown-layer="location"[\s\S]*data-command-crown-layer="context"/);
   assert.doesNotMatch(view, /class="phone-mode-banner"/);
 });
 
