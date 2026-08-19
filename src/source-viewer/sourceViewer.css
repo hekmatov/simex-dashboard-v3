@@ -82,9 +82,31 @@ td {
 
 thead th {
   background: #eaf1f6;
+  padding: 0;
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.source-viewer-sort-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: flex;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 44px;
+  min-width: 100%;
+  padding: 7px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.source-viewer-sort-button:focus-visible {
+  outline: 3px solid #f2b541;
+  outline-offset: -3px;
 }
 
 tbody tr:nth-child(even) {
@@ -97,6 +119,7 @@ tbody tr:nth-child(even) {
   border-radius: 8px;
   color: white;
   font-weight: 700;
+  min-height: 44px;
   padding: 9px 14px;
 }
 
@@ -109,4 +132,29 @@ tbody tr:nth-child(even) {
   border-left: 4px solid #b42318;
   margin-top: 20px;
   padding: 16px;
+}
+
+@media (max-width: 600px) {
+  .source-viewer-shell {
+    padding: 12px;
+  }
+
+  .source-viewer-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .source-viewer-toolbar label {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .source-viewer-toolbar p {
+    margin: 0;
+  }
+
+  .source-viewer-table-wrap {
+    max-height: calc(100vh - 250px);
+  }
 }

@@ -6,6 +6,10 @@ import {
   SOURCE_VIEWER_READY,
   SOURCE_VIEWER_VERSION,
 } from "../components/source-data/sourceViewerProtocol.js";
+import {
+  nextSourceSort,
+  sortSourceRows,
+} from "./sourceViewerSort.js";
 
 const PAGE_SIZE = 100;
 
@@ -19,6 +23,7 @@ export default function SourceCsvViewer() {
   });
   const [query, setQuery] = React.useState("");
   const [page, setPage] = React.useState(0);
+  const [sort, setSort] = React.useState(null);
 
   React.useEffect(() => {
     let loaded = false;
@@ -45,6 +50,9 @@ export default function SourceCsvViewer() {
         descriptor,
         error: "",
       }));
+      setQuery("");
+      setPage(0);
+      setSort(null);
       try {
         const csvText = await sourceText(descriptor);
         const parsed = Papa.parse(csvText, {
@@ -92,10 +100,14 @@ export default function SourceCsvViewer() {
         )))
       : state.rows
   ), [queryLower, state.columns, state.rows]);
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const sortedRows = React.useMemo(
+    () => sortSourceRows(filteredRows, sort),
+    [filteredRows, sort],
+  );
+  const pageCount = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const start = currentPage * PAGE_SIZE;
-  const visibleRows = filteredRows.slice(start, start + PAGE_SIZE);
+  const visibleRows = sortedRows.slice(start, start + PAGE_SIZE);
 
   return React.createElement(
     "main",
@@ -167,8 +179,28 @@ export default function SourceCsvViewer() {
                   null,
                   state.columns.map((column) => React.createElement(
                     "th",
-                    { key: column, scope: "col" },
-                    column,
+                    {
+                      key: column,
+                      scope: "col",
+                      "aria-sort": ariaSortForColumn(sort, column),
+                    },
+                    React.createElement(
+                      "button",
+                      {
+                        type: "button",
+                        className: "source-viewer-sort-button",
+                        "data-sort-direction": sort?.column === column
+                          ? sort.direction
+                          : "source",
+                        "aria-label": nextSortLabel(sort, column),
+                        onClick: () => {
+                          setSort((current) => nextSourceSort(current, column));
+                          setPage(0);
+                        },
+                      },
+                      React.createElement("span", null, column),
+                      React.createElement("span", { "aria-hidden": "true" }, sortGlyph(sort, column)),
+                    ),
                   )),
                 ),
               ),
@@ -246,6 +278,22 @@ function displayValue(value) {
   if (value === undefined) return "";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function ariaSortForColumn(sort, column) {
+  if (sort?.column !== column) return "none";
+  return sort.direction === "asc" ? "ascending" : "descending";
+}
+
+function nextSortLabel(sort, column) {
+  if (sort?.column !== column) return `Sort ${column} ascending`;
+  if (sort.direction === "asc") return `Sort ${column} descending`;
+  return `Restore ${column} to source order`;
+}
+
+function sortGlyph(sort, column) {
+  if (sort?.column !== column) return "↕";
+  return sort.direction === "asc" ? "↑" : "↓";
 }
 
 function boundedMessage(error) {
