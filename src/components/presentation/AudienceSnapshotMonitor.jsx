@@ -56,7 +56,7 @@ export default function AudienceSnapshotMonitor({
     activePageId: presentationState.active_page_id,
     chartIds: presentationState.displayed_chart_ids,
     layout: presentationState.layout,
-    showSceneTitle: presentationState.show_scene_title,
+    audienceFacts: presentationState.audience_facts,
     blackout: presentationState.blackout,
   }), [presentationState]);
   const timeKey = `${presentationState.time?.group_id ?? ""}:${presentationState.time?.active_epoch_ms ?? ""}`;

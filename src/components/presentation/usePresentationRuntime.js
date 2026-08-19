@@ -4,6 +4,15 @@ import { initialDisplayState, reduceDisplayState } from "../../lib/displayContro
 import { createPresentationControllerChannel } from "../../lib/presentationChannel.js";
 import { openAudienceWindow } from "../../lib/presentationWindow.js";
 
+export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
+  dashboard_name: true,
+  page: true,
+  parent_time_group: true,
+  scene_name: true,
+  scene_date: true,
+});
+const AUDIENCE_FACT_KEYS = new Set(Object.keys(DEFAULT_AUDIENCE_FACTS));
+
 export default function usePresentationRuntime(validChartIds) {
   const controllerRef = React.useRef(null);
   const sessionIdRef = React.useRef(null);
@@ -15,7 +24,9 @@ export default function usePresentationRuntime(validChartIds) {
   const [connectionStatus, setConnectionStatus] = React.useState("not-open");
   const [connectionError, setConnectionError] = React.useState("");
   const [hasSession, setHasSession] = React.useState(false);
-  const [showSceneTitle, setShowSceneTitle] = React.useState(true);
+  const [audienceFacts, setAudienceFacts] = React.useState(
+    () => ({ ...DEFAULT_AUDIENCE_FACTS }),
+  );
   const [blackout, setBlackout] = React.useState(false);
 
   const onDisplayAction = React.useCallback((action) => {
@@ -23,6 +34,16 @@ export default function usePresentationRuntime(validChartIds) {
       current,
       action,
       validChartIdsRef.current,
+    ));
+  }, []);
+
+  const setAudienceFactVisible = React.useCallback((key, visible) => {
+    if (!AUDIENCE_FACT_KEYS.has(key)) return;
+    const nextVisible = visible === true;
+    setAudienceFacts((current) => (
+      current[key] === nextVisible
+        ? current
+        : { ...current, [key]: nextVisible }
     ));
   }, []);
 
@@ -104,8 +125,8 @@ export default function usePresentationRuntime(validChartIds) {
     connectionStatus,
     connectionError,
     hasSession,
-    showSceneTitle,
-    setShowSceneTitle,
+    audienceFacts,
+    setAudienceFactVisible,
     blackout,
     setBlackout,
     publish,

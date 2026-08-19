@@ -1,4 +1,4 @@
-export const PRESENTATION_PROTOCOL_VERSION = 1;
+export const PRESENTATION_PROTOCOL_VERSION = 2;
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const MESSAGE_TYPES = new Set(["ready", "state", "heartbeat", "ended"]);
@@ -21,8 +21,15 @@ const STATE_FIELDS = [
   "displayed_chart_ids",
   "layout",
   "time",
-  "show_scene_title",
+  "audience_facts",
   "blackout",
+];
+const AUDIENCE_FACT_FIELDS = [
+  "dashboard_name",
+  "page",
+  "parent_time_group",
+  "scene_name",
+  "scene_date",
 ];
 const TIME_FIELDS = ["group_id", "active_epoch_ms"];
 
@@ -64,7 +71,8 @@ export function validatePresentationState(state, { validChartIds } = {}) {
   if (!LAYOUTS_BY_COUNT[state.displayed_chart_ids.length].has(state.layout)) {
     throw new Error("layout is not valid for displayed chart count");
   }
-  if (typeof state.show_scene_title !== "boolean" || typeof state.blackout !== "boolean") {
+  validateAudienceFacts(state.audience_facts);
+  if (typeof state.blackout !== "boolean") {
     throw new Error("presentation state flags must be booleans");
   }
   validateTime(state.time);
@@ -93,6 +101,18 @@ function validateMessage(message, { sessionId, validChartIds }) {
   } else {
     assertPlainObject(message.payload, "presentation payload");
     assertExactFields(message.payload, [], "presentation payload");
+  }
+}
+
+function validateAudienceFacts(facts) {
+  assertPlainObject(facts, "presentation audience facts");
+  assertExactFields(
+    facts,
+    AUDIENCE_FACT_FIELDS,
+    "presentation audience facts",
+  );
+  if (AUDIENCE_FACT_FIELDS.some((key) => typeof facts[key] !== "boolean")) {
+    throw new Error("Audience fact flags must be booleans");
   }
 }
 

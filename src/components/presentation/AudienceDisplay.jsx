@@ -15,7 +15,6 @@ export default function AudienceDisplay({
   const activePage = (dashboard.pages ?? []).find(
     ({ id }) => id === presentationState.active_page_id,
   );
-  const showSceneTitle = Boolean(presentationState.show_scene_title && activePage);
   const timeGroup = presentationState.time
     ? (dashboard.timeSyncGroups ?? []).find(
       ({ id }) => id === presentationState.time.group_id,
@@ -25,17 +24,36 @@ export default function AudienceDisplay({
     timeGroup,
     presentationState.time?.active_epoch_ms,
   );
+  const facts = presentationState.audience_facts;
+  const dashboardName = facts.dashboard_name ? dashboard.title : null;
+  const pageName = facts.page && activePage
+    ? activePage.label ?? activePage.title ?? activePage.id
+    : null;
+  const parentName = facts.parent_time_group ? timeGroup?.name ?? null : null;
+  const sceneName = null;
+  const sceneDate = facts.scene_date
+    ? canonicalTime(presentationState.time?.active_epoch_ms)
+    : null;
+  const sharedHeaderVisible = Boolean(
+    dashboardName || pageName || parentName || sceneName,
+  );
+  const context = [pageName, parentName].filter(Boolean);
 
   return (
     <main
       className="audience-display"
       data-connection-status={connectionStatus ?? "waiting"}
-      data-show-scene-title={showSceneTitle ? "true" : "false"}
+      data-shared-header-visible={sharedHeaderVisible ? "true" : "false"}
     >
-      {showSceneTitle && (
-        <header className="audience-scene-title">
-          <h1>{activePage.title ?? activePage.label ?? activePage.id}</h1>
-          {dashboard.scenarioLabel && <p>{dashboard.scenarioLabel}</p>}
+      {sharedHeaderVisible && (
+        <header className="audience-shared-header">
+          <div className="audience-shared-identity">
+            {dashboardName && <h1>{dashboardName}</h1>}
+            {context.length > 0 && (
+              <p className="audience-shared-context">{context.join(" · ")}</p>
+            )}
+          </div>
+          {sceneName && <strong className="audience-scene-name">{sceneName}</strong>}
         </header>
       )}
       <DisplayedChartGrid
@@ -45,6 +63,14 @@ export default function AudienceDisplay({
         timeContextForChart={(chartId) => memberTimeContexts[chartId] ?? null}
         surface="audience"
       />
+      {sceneDate && (
+        <time
+          className="audience-scene-date"
+          dateTime={new Date(presentationState.time.active_epoch_ms).toISOString()}
+        >
+          {sceneDate}
+        </time>
+      )}
       {presentationState.blackout && <div className="audience-blackout" aria-hidden="true" />}
     </main>
   );
@@ -54,7 +80,7 @@ function AudienceWaiting() {
   return (
     <main
       className="audience-display audience-waiting"
-      data-show-scene-title="false"
+      data-shared-header-visible="false"
     >
       <div className="audience-waiting-content">
         <span className="audience-waiting-mark" aria-hidden="true">SimEx</span>
@@ -63,4 +89,10 @@ function AudienceWaiting() {
       </div>
     </main>
   );
+}
+
+function canonicalTime(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const iso = new Date(epochMs).toISOString();
+  return iso.endsWith("T00:00:00.000Z") ? iso.slice(0, 10) : iso;
 }

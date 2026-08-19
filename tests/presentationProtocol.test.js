@@ -10,7 +10,13 @@ const scene = {
   displayed_chart_ids: ["chart-a", "chart-b"],
   layout: "sideBySide",
   time: { group_id: "epidemic-time", active_epoch_ms: 1_801_440_000_000 },
-  show_scene_title: true,
+  audience_facts: {
+    dashboard_name: true,
+    page: true,
+    parent_time_group: true,
+    scene_name: true,
+    scene_date: true,
+  },
   blackout: false,
 };
 
@@ -24,7 +30,7 @@ test("presentation protocol creates a complete versioned state message", () => {
   });
 
   assert.deepEqual(message, {
-    protocol_version: 1,
+    protocol_version: 2,
     session_id: "session-001",
     sequence: 1,
     type: "state",
@@ -72,10 +78,41 @@ test("presentation protocol validates identifiers, count-valid layouts, and fini
   );
 });
 
+test("presentation protocol requires the five independent Audience fact flags", () => {
+  assert.ok(protocolModule, "presentation protocol must be implemented");
+
+  for (const key of Object.keys(scene.audience_facts)) {
+    const missing = { ...scene.audience_facts };
+    delete missing[key];
+    assert.throws(
+      () => protocolModule.validatePresentationState({
+        ...scene,
+        audience_facts: missing,
+      }),
+      /missing presentation audience facts field/,
+    );
+    assert.throws(
+      () => protocolModule.validatePresentationState({
+        ...scene,
+        audience_facts: { ...scene.audience_facts, [key]: "yes" },
+      }),
+      /Audience fact flags must be booleans/,
+    );
+  }
+
+  assert.throws(
+    () => protocolModule.validatePresentationState({
+      ...scene,
+      audience_facts: { ...scene.audience_facts, owner: true },
+    }),
+    /unknown presentation audience facts field/,
+  );
+});
+
 test("presentation protocol accepts only the four small message types for the expected session", () => {
   assert.ok(protocolModule, "presentation protocol must be implemented");
   const ready = {
-    protocol_version: 1,
+    protocol_version: 2,
     session_id: "session-001",
     sequence: 1,
     type: "ready",

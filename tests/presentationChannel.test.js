@@ -10,7 +10,13 @@ const firstScene = {
   displayed_chart_ids: ["chart-a"],
   layout: "solo",
   time: null,
-  show_scene_title: true,
+  audience_facts: {
+    dashboard_name: true,
+    page: true,
+    parent_time_group: true,
+    scene_name: true,
+    scene_date: true,
+  },
   blackout: false,
 };
 const secondScene = {

@@ -23,6 +23,7 @@ const playbackModule = await vite
 await vite.close();
 
 const dashboard = {
+  title: "Response overview",
   pages: [
     {
       id: "biomedical",
@@ -51,6 +52,32 @@ const displayState = {
 };
 
 function renderPresent(Component, overrides = {}) {
+  const {
+    displayState: requestedDisplayState = displayState,
+    runtime: runtimeOverrides = {},
+    ...componentOverrides
+  } = overrides;
+  const runtime = {
+    displayState: requestedDisplayState,
+    onDisplayAction: () => {},
+    connectionStatus: "not-open",
+    connectionError: "",
+    hasSession: false,
+    audienceFacts: {
+      dashboard_name: true,
+      page: true,
+      parent_time_group: true,
+      scene_name: true,
+      scene_date: true,
+    },
+    setAudienceFactVisible: () => {},
+    blackout: false,
+    setBlackout: () => {},
+    publish: () => {},
+    open: () => {},
+    end: () => {},
+    ...runtimeOverrides,
+  };
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   Object.defineProperty(globalThis, "window", {
@@ -75,11 +102,11 @@ function renderPresent(Component, overrides = {}) {
           dashboard,
           activePageId: "biomedical",
           onActivePageChange: () => {},
-          displayState,
-          onDisplayAction: () => {},
           accessibilityEnabled: false,
-          ...(Component === rendererModule?.default ? { mode: "present" } : {}),
-          ...overrides,
+          ...(Component === rendererModule?.default
+            ? { mode: "present" }
+            : { runtime }),
+          ...componentOverrides,
         }),
       ),
     );
@@ -115,7 +142,20 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /aria-label="Scene layout"/);
   assert.match(html, /aria-label="Synchronized time"/);
   assert.match(html, /aria-label="Presentation time"/);
-  assert.match(html, /Show scene title/);
+  assert.match(html, /Display on audience/);
+  for (const label of [
+    "Dashboard name",
+    "Page",
+    "Parent Time Group",
+    "Scene name",
+    "Scene date",
+  ]) {
+    assert.match(html, new RegExp(`>${label}<`));
+  }
+  assert.match(html, /Response overview/);
+  assert.match(html, /Biomedical/);
+  assert.match(html, /aria-label="Display Scene name"[^>]*disabled=""/);
+  assert.doesNotMatch(html, /Show scene title/);
   assert.match(html, />Blackout<\/button>/);
   assert.match(html, />Restore<\/button>/);
   assert.match(html, />End presentation<\/button>/);
@@ -162,10 +202,10 @@ test("Present forwards display state without substituting layout or enforcing ca
     },
   });
   const escalationChoice = labeledControlMarkup(fullSceneHtml, "Escalation");
-  assert.doesNotMatch(
+  assert.match(
     escalationChoice,
     /disabled=""/,
-    "Present must dispatch selection and let displayController enforce capacity",
+    "Present must reason-disable a fifth chart until one is removed",
   );
 });
 

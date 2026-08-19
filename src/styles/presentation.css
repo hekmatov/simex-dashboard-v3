@@ -12,7 +12,7 @@
   position: relative;
 }
 
-.audience-display[data-show-scene-title="false"] {
+.audience-display[data-shared-header-visible="false"] {
   gap: 0;
   grid-template-rows: minmax(0, 1fr);
 }
@@ -48,24 +48,24 @@
   color: #49627a;
 }
 
-.audience-scene-title {
+.audience-shared-header {
   align-content: center;
   display: grid;
   gap: 8px;
   min-height: 96px;
 }
 
-.audience-scene-title h1,
-.audience-scene-title p {
+.audience-shared-header h1,
+.audience-shared-header p {
   margin: 0;
 }
 
-.audience-scene-title h1 {
+.audience-shared-header h1 {
   font-size: 48px;
   line-height: 56px;
 }
 
-.audience-scene-title p {
+.audience-shared-header p {
   color: #49627a;
   font-size: 24px;
   line-height: 32px;
@@ -324,7 +324,7 @@
 }
 
 .present-field > span,
-.present-title-toggle {
+.present-audience-fact {
   font-weight: 700;
 }
 
@@ -337,7 +337,7 @@
   min-width: 176px;
 }
 
-.present-title-toggle,
+.present-audience-fact,
 .present-chart-choice {
   align-items: center;
   display: flex;
@@ -349,7 +349,7 @@
   cursor: not-allowed;
 }
 
-.present-title-toggle input,
+.present-audience-fact input,
 .present-chart-choice input {
   block-size: 20px;
   inline-size: 20px;
@@ -497,13 +497,13 @@
     padding: 24px;
   }
 
-  .audience-scene-title h1,
+  .audience-shared-header h1,
   .audience-waiting-mark {
     font-size: 36px;
     line-height: 44px;
   }
 
-  .audience-scene-title p,
+  .audience-shared-header p,
   .audience-waiting-content p {
     font-size: 20px;
     line-height: 28px;
@@ -556,5 +556,83 @@
 
   .present-time-slider {
     min-width: 0;
+  }
+}
+
+
+.audience-shared-header {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.audience-shared-context {
+  overflow-wrap: anywhere;
+}
+
+.audience-scene-name {
+  font-size: 24px;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.audience-scene-date {
+  background: rgb(247 249 252 / 92%);
+  border: 1px solid #c8d6e3;
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 800;
+  padding: 8px 12px;
+  position: absolute;
+  right: 48px;
+  top: 48px;
+  z-index: 1;
+}
+
+.present-audience-information {
+  border: 1px solid #d8e2ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+  padding: 14px;
+}
+
+.present-audience-information > legend {
+  font-weight: 800;
+  padding-inline: 4px;
+}
+
+.present-audience-information > p {
+  color: #49627a;
+  font-size: 13px;
+  margin: 0 0 2px;
+}
+
+.present-audience-fact {
+  align-items: start;
+  min-height: 44px;
+}
+
+.present-audience-fact > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.present-audience-fact small {
+  color: #49627a;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.present-audience-fact.is-unavailable {
+  color: #74879a;
+}
+
+@media (max-width: 767px) {
+  .audience-scene-date {
+    right: 24px;
+    top: 24px;
   }
 }

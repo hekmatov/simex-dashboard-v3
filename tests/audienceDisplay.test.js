@@ -19,6 +19,8 @@ const gridModule = await vite
 await vite.close();
 
 const dashboard = {
+  title: "Response overview",
+  scenarioLabel: "Scenario identity must not be Audience scene identity",
   dataSources: {
     status: { kind: "inline", rows: [{ entity: "A", value: 1 }] },
   },
@@ -53,7 +55,12 @@ const dashboard = {
       })),
     }],
   }],
-  timeSyncGroups: [],
+  timeSyncGroups: [{
+    id: "epidemic-time",
+    name: "Winter response 2027",
+    matching: { policy: "exact" },
+    members: [{ chartId: "chart-a", timeRole: "observation" }],
+  }],
 };
 
 const twoChartScene = {
@@ -61,7 +68,13 @@ const twoChartScene = {
   displayed_chart_ids: ["chart-b", "chart-a"],
   layout: "sideBySide",
   time: null,
-  show_scene_title: true,
+  audience_facts: {
+    dashboard_name: true,
+    page: true,
+    parent_time_group: true,
+    scene_name: true,
+    scene_date: true,
+  },
   blackout: false,
 };
 
@@ -96,6 +109,50 @@ test("displayed chart grid preserves one-to-four chart order and selected layout
   assert.ok(html.indexOf('data-displayed-chart-id="chart-b"') < html.indexOf('data-displayed-chart-id="chart-a"'));
   assert.ok(html.indexOf('data-displayed-chart-id="chart-a"') < html.indexOf('data-displayed-chart-id="chart-c"'));
   assert.doesNotMatch(html, /chart-zoom-guard/);
+});
+
+test("Audience facts hide independently, collapse the shared header, and never relabel Scenario as Scene", () => {
+  const dateEpoch = Date.UTC(2027, 2, 15);
+  const selective = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    presentationState: {
+      ...twoChartScene,
+      time: { group_id: "epidemic-time", active_epoch_ms: dateEpoch },
+      audience_facts: {
+        dashboard_name: true,
+        page: false,
+        parent_time_group: true,
+        scene_name: true,
+        scene_date: true,
+      },
+    },
+  }));
+  const dateOnly = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    presentationState: {
+      ...twoChartScene,
+      time: { group_id: "epidemic-time", active_epoch_ms: dateEpoch },
+      audience_facts: {
+        dashboard_name: false,
+        page: false,
+        parent_time_group: false,
+        scene_name: false,
+        scene_date: true,
+      },
+    },
+  }));
+
+  assert.match(selective, /Response overview/);
+  assert.match(selective, /Winter response 2027/);
+  assert.match(selective, /2027-03-15/);
+  assert.doesNotMatch(selective, />Biomedical response</);
+  assert.doesNotMatch(selective, /Scenario identity must not be Audience scene identity/);
+  assert.match(dateOnly, /data-shared-header-visible="false"/);
+  assert.doesNotMatch(dateOnly, /audience-shared-header/);
+  assert.match(dateOnly, /2027-03-15/);
+  assert.match(dateOnly, /data-displayed-chart-id="chart-a"/);
 });
 
 test("audience retains a disconnected scene and blackouts it without unmounting charts or exposing chrome", () => {

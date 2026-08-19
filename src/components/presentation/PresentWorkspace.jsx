@@ -19,8 +19,8 @@ export default function PresentWorkspace({
     connectionStatus,
     connectionError,
     hasSession,
-    showSceneTitle,
-    setShowSceneTitle,
+    audienceFacts,
+    setAudienceFactVisible,
     blackout,
     setBlackout,
     publish,
@@ -49,6 +49,12 @@ export default function PresentWorkspace({
   const hasClock = playback.activeGroupId !== null && playback.clock.length > 0;
   const atFirstTime = !hasClock || playback.activeIndex <= 0;
   const atLastTime = !hasClock || playback.activeIndex >= playback.clock.length - 1;
+  const audienceInformation = audienceInformationRows({
+    dashboard,
+    activePage,
+    activeGroup: playback.activeGroup,
+    activeEpochMs: playback.activeEpochMs,
+  });
 
   const presentationState = React.useMemo(() => ({
     active_page_id: activePage?.id ?? "dashboard",
@@ -60,7 +66,7 @@ export default function PresentWorkspace({
           active_epoch_ms: playback.activeEpochMs,
         }
       : null,
-    show_scene_title: showSceneTitle,
+    audience_facts: { ...audienceFacts },
     blackout,
   }), [
     activePage?.id,
@@ -69,7 +75,7 @@ export default function PresentWorkspace({
     playback.activeEpochMs,
     playback.activeGroupId,
     layout,
-    showSceneTitle,
+    audienceFacts,
   ]);
 
   React.useEffect(() => {
@@ -143,14 +149,39 @@ export default function PresentWorkspace({
               </select>
             </label>
 
-            <label className="present-title-toggle">
-              <input
-                type="checkbox"
-                checked={showSceneTitle}
-                onChange={(event) => setShowSceneTitle(event.target.checked)}
-              />
-              <span>Show scene title</span>
-            </label>
+            <fieldset className="present-audience-information">
+              <legend>Display on audience</legend>
+              <p>Shared information can be hidden without changing its value.</p>
+              {audienceInformation.map((fact) => {
+                const available = Boolean(fact.value);
+                const descriptionId = `present-audience-fact-${fact.key}`;
+                return (
+                  <label
+                    className={`present-audience-fact${available ? "" : " is-unavailable"}`}
+                    key={fact.key}
+                    title={available ? undefined : fact.unavailableReason}
+                  >
+                    <input
+                      type="checkbox"
+                      aria-label={`Display ${fact.label}`}
+                      aria-describedby={descriptionId}
+                      checked={audienceFacts[fact.key] === true}
+                      disabled={!available}
+                      onChange={(event) => setAudienceFactVisible(
+                        fact.key,
+                        event.target.checked,
+                      )}
+                    />
+                    <span>
+                      <strong>{fact.label}</strong>
+                      <small id={descriptionId}>
+                        {fact.value ?? fact.unavailableReason}
+                      </small>
+                    </span>
+                  </label>
+                );
+              })}
+            </fieldset>
 
             <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
           </div>
@@ -336,6 +367,56 @@ export default function PresentWorkspace({
       </section>
     </main>
   );
+}
+
+function audienceInformationRows({
+  dashboard,
+  activePage,
+  activeGroup,
+  activeEpochMs,
+}) {
+  return [
+    {
+      key: "dashboard_name",
+      label: "Dashboard name",
+      value: optionalText(dashboard?.title),
+      unavailableReason: "This dashboard has no name.",
+    },
+    {
+      key: "page",
+      label: "Page",
+      value: optionalText(activePage?.label ?? activePage?.title ?? activePage?.id),
+      unavailableReason: "No Page is selected.",
+    },
+    {
+      key: "parent_time_group",
+      label: "Parent Time Group",
+      value: optionalText(activeGroup?.name),
+      unavailableReason: "Choose a Time Group to make this available.",
+    },
+    {
+      key: "scene_name",
+      label: "Scene name",
+      value: null,
+      unavailableReason: "No Scene is loaded.",
+    },
+    {
+      key: "scene_date",
+      label: "Scene date",
+      value: canonicalTime(activeEpochMs),
+      unavailableReason: "Choose a Time Group with available frames.",
+    },
+  ];
+}
+
+function optionalText(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function canonicalTime(epochMs) {
+  if (!Number.isFinite(epochMs)) return null;
+  const iso = new Date(epochMs).toISOString();
+  return iso.endsWith("T00:00:00.000Z") ? iso.slice(0, 10) : iso;
 }
 
 function configuredChartGroups(dashboard) {
