@@ -240,6 +240,40 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
 });
 
+test("live Build Page actions expose 44px targets and a visible 3px focus ring", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+
+  const actionRail = page.getByLabel("Home Page actions");
+  const actions = actionRail.getByRole("button");
+  await expect(actions).toHaveCount(3);
+  for (const action of await actions.all()) {
+    const box = await action.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+
+  const edit = actionRail.getByRole("button", { name: "Edit Home", exact: true });
+  await edit.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(edit).toBeFocused();
+  const focus = await edit.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    };
+  });
+  expect(focus).toEqual({
+    outlineStyle: "solid",
+    outlineWidth: "3px",
+  });
+});
+
 async function readLegacyDiagnostic(page) {
   return page.evaluate(() => {
     const read = (selector) => {

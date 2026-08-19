@@ -269,10 +269,10 @@
 .build-page-action-rail button {
   align-items: center;
   display: inline-flex;
-  height: 30px;
+  height: 44px;
   justify-content: center;
   padding: 0;
-  width: 30px;
+  width: 44px;
 }
 
 .build-add-page,
@@ -1104,6 +1104,8 @@
 .mode-switcher button:focus-visible,
 .dashboard-identity-row button:focus-visible,
 .view-shell button:focus-visible,
+.build-workspace button:focus-visible,
+.build-mode-shell button:focus-visible,
 .build-shell button:focus-visible,
 .phone-mode-banner button:focus-visible {
   outline: 3px solid var(--simex-focus, #f2b541);
