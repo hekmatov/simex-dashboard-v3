@@ -274,6 +274,43 @@ test("live Build Page actions expose 44px targets and a visible 3px focus ring",
   });
 });
 
+test("canonical View and Build frames project landing and analytical Page metadata", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  const frame = page.locator(".canonical-dashboard-frame");
+  const header = frame.locator(".dashboard-header");
+
+  await expect(frame).toHaveAttribute("data-page-type", "landing");
+  expect(await header.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return [style.paddingTop, style.paddingRight];
+  })).toEqual(["18px", "22px"]);
+
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  await expect(frame).toHaveAttribute("data-canonical-mode", "build");
+  await expect(frame).toHaveAttribute("data-page-type", "landing");
+  expect(await header.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return [style.paddingTop, style.paddingRight];
+  })).toEqual(["18px", "22px"]);
+
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+  await expect(frame).toHaveAttribute("data-page-type", "analytical");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "View", exact: true })
+    .click();
+  await expect(frame).toHaveAttribute("data-canonical-mode", "view");
+  await expect(frame).toHaveAttribute("data-page-type", "analytical");
+  expect(await header.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return [style.paddingTop, style.paddingRight];
+  })).toEqual(["12px", "20px"]);
+});
+
 async function readLegacyDiagnostic(page) {
   return page.evaluate(() => {
     const read = (selector) => {

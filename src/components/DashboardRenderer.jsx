@@ -808,6 +808,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return (
       <ViewShell
         activePage={activePage}
+        pageType={landingActive ? "landing" : "analytical"}
         dashboard={dashboard}
         displayState={displayState}
         companionStatusLabel={companionStatusLabel}
@@ -855,6 +856,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         <BuildWorkspace
           dashboard={dashboard}
           activePage={activePage}
+          pageType={landingActive ? "landing" : "analytical"}
           selection={buildSelection}
           dashboardDraft={dashboardDraft}
           pageDrafts={pageDrafts}

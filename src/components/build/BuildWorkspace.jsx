@@ -13,6 +13,7 @@ import UnitOrbit from "./UnitOrbit.jsx";
 export default function BuildWorkspace({
   dashboard,
   activePage,
+  pageType,
   selection,
   dashboardDraft,
   pageDrafts,
@@ -107,6 +108,7 @@ export default function BuildWorkspace({
   return (
     <CanonicalDashboardFrame
       mode="build"
+      pageType={pageType}
       pageId={activePage?.id}
       dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
       pageContent={(

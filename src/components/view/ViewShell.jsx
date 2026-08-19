@@ -10,6 +10,7 @@ import DashboardHeader from "../dashboard/DashboardHeader.jsx";
 
 export default function ViewShell({
   activePage,
+  pageType,
   dashboard,
   displayState,
   companionStatusLabel,
@@ -34,6 +35,7 @@ export default function ViewShell({
   return (
     <CanonicalDashboardFrame
       mode="view"
+      pageType={pageType}
       pageId={activePage?.id}
       dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
       pageContent={(

@@ -2,6 +2,7 @@ import React from "react";
 
 export default function CanonicalDashboardFrame({
   mode,
+  pageType,
   pageId,
   dashboardHeader,
   pageContent,
@@ -13,6 +14,7 @@ export default function CanonicalDashboardFrame({
       className={`app-shell canonical-dashboard-frame ${mode}-shell${mode === "build" ? " build-workspace" : ""}`}
       data-canonical-page-id={pageId}
       data-canonical-mode={mode}
+      data-page-type={pageType}
     >
       <div className="canonical-dashboard-header">{dashboardHeader}</div>
       <div className="canonical-dashboard-content">{pageContent}</div>
