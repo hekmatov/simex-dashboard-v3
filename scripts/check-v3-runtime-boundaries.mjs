@@ -11,10 +11,23 @@ const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";
 const REGISTRY_PATH = "src/charting/schemas/chartSchemaRegistry.js";
 const RENDERER_PATH = "src/charting/rendering/resolveChartRendering.js";
 const AUDIENCE_ENTRYPOINT = "src/components/presentation/AudienceDisplay.jsx";
-const ALLOWED_RENDERER_CONSUMERS = new Set([
+const ALLOWED_RESOLVER_CONSUMERS = new Set([
   CHART_VIEW_PATH,
   "src/components/chart-authoring/ChartPreview.jsx",
   "src/components/playback/PlaybackView.jsx",
+]);
+// Canonical wrappers may compose ChartView/EChartsChartView, but mode-reachable
+// code may access a raw rendering engine or canvas context only at these audited
+// capability boundaries. EyeDropper samples pixels; it does not render charts.
+const RAW_RENDER_SURFACE_ALLOWLIST = new Map([
+  [
+    "src/components/charts/EChartsChartView.jsx",
+    new Set(["echarts-runtime"]),
+  ],
+  [
+    "src/components/color/EyeDropperCoordinator.js",
+    new Set(["canvas-context"]),
+  ],
 ]);
 const MODE_ENTRYPOINTS = Object.freeze([
   ["view", "src/components/view/ViewShell.jsx"],
@@ -420,16 +433,44 @@ function assertCanonicalRendererExclusivity(sourceFiles, reachableByMode) {
     [...reachableByMode.values()].flatMap((paths) => [...paths]),
   );
   for (const filePath of [...reachable].toSorted()) {
-    if (ALLOWED_RENDERER_CONSUMERS.has(filePath)) continue;
-    const importsRenderer = parseImportSpecifiers(sourceFiles[filePath]).some(
+    const source = sourceFiles[filePath];
+    const specifiers = parseImportSpecifiers(source);
+    const importsRenderer = specifiers.some(
       (specifier) => resolveSourceImport(filePath, specifier, sourceFiles) === RENDERER_PATH,
     );
-    if (importsRenderer) {
+    if (importsRenderer && !ALLOWED_RESOLVER_CONSUMERS.has(filePath)) {
       throw new Error(
         `${filePath} canonicalRendererExclusivity: unexpected renderer consumer`,
       );
     }
+
+    const allowedSignals = RAW_RENDER_SURFACE_ALLOWLIST.get(filePath) ?? new Set();
+    const unexpectedSignals = rawRenderSurfaceSignals(source, specifiers)
+      .filter((signal) => !allowedSignals.has(signal));
+    if (unexpectedSignals.length > 0) {
+      throw new Error(
+        `${filePath} canonicalRendererExclusivity: unexpected raw render surface (${unexpectedSignals.join(", ")})`,
+      );
+    }
   }
+}
+
+function rawRenderSurfaceSignals(source, specifiers) {
+  const signals = [];
+  if (specifiers.some((specifier) => specifier === "echarts" || specifier === "echarts-for-react")) {
+    signals.push("echarts-runtime");
+  }
+  if (
+    /<canvas\b/i.test(source)
+    || /React\.createElement\(\s*["']canvas["']/i.test(source)
+    || /document\.createElement\(\s*["']canvas["']/i.test(source)
+  ) {
+    signals.push("canvas-element");
+  }
+  if (/\.getContext\(\s*["'](?:2d|webgl2?|bitmaprenderer)["']/i.test(source)) {
+    signals.push("canvas-context");
+  }
+  return signals;
 }
 
 function reachableSourceFiles(entrypoint, sourceFiles) {

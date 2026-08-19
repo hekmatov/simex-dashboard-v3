@@ -118,6 +118,32 @@ test("a reachable renderer fork fails even when canonical imports remain", async
   );
 });
 
+test("a reachable raw copied renderer fails while canonical reachability remains", async () => {
+  const inputs = await repositoryInputs();
+  const audiencePath = "src/components/presentation/AudienceDisplay.jsx";
+  const forkPath = "src/components/presentation/RawAudienceChart.jsx";
+  inputs.sourceFiles[forkPath] = [
+    'import React from "react";',
+    "export default function RawAudienceChart() {",
+    "  const canvasRef = React.useRef(null);",
+    "  React.useEffect(() => {",
+    "    const context = canvasRef.current?.getContext(\"2d\");",
+    "    context?.fillRect(0, 0, 20, 20);",
+    "  }, []);",
+    '  return React.createElement("canvas", { ref: canvasRef });',
+    "}",
+  ].join("\n");
+  inputs.sourceFiles[audiencePath] = [
+    'import RawAudienceChart from "./RawAudienceChart.jsx";',
+    inputs.sourceFiles[audiencePath],
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${forkPath} canonicalRendererExclusivity: unexpected raw render surface (canvas-element, canvas-context)`,
+  );
+});
+
 test("source CSS and JSX remote assets report exact paths and fields", async () => {
   const inputs = await repositoryInputs();
   const fixtures = [
