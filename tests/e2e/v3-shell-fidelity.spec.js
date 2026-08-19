@@ -240,6 +240,31 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
 });
 
+test("active comparison selection disables repeated crown activation without clearing selection", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+
+  const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
+  const compareCharts = pinned.getByRole("button", { name: "Compare charts", exact: true });
+  await compareCharts.click();
+
+  const firstPanel = page.locator(".chart-panel").first();
+  await firstPanel.hover();
+  await firstPanel.getByRole("button", { name: "Add chart to comparison" }).click();
+  const selectionDock = page.getByRole("region", { name: "Chart comparison selection" });
+  await expect(selectionDock).toContainText("1of 4 selected");
+
+  await compareCharts.evaluate((button) => button.click());
+
+  await expect(selectionDock).toContainText("1of 4 selected");
+  await expect(compareCharts).toBeDisabled();
+  await selectionDock.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(compareCharts).toBeEnabled();
+});
+
 test("live Build Page actions expose 44px targets and a visible 3px focus ring", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");

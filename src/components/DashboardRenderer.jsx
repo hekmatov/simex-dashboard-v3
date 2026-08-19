@@ -39,6 +39,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onActivePageChange,
   onModeRequest,
   onBuildDraftLockChange,
+  onComparisonSelectionChange,
   onCommitPendingConfiguration,
   displayState,
   onDisplayAction,
@@ -167,7 +168,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   React.useImperativeHandle(ref, () => ({
     requestCompareCharts() {
-      if (buildMode) return;
+      if (buildMode || multiSelectMode) return;
       startMultiFullscreenSelection();
     },
     requestAddPage() {
@@ -188,7 +189,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
       return { ok: true };
     },
-  }), [buildMode, chartAuthoringActive, onCommitPendingConfiguration, pendingEdits]);
+  }), [buildMode, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, pendingEdits]);
+
+  React.useEffect(() => {
+    onComparisonSelectionChange?.(multiSelectMode);
+  }, [multiSelectMode, onComparisonSelectionChange]);
+
+  React.useEffect(() => () => {
+    onComparisonSelectionChange?.(false);
+  }, [onComparisonSelectionChange]);
 
   React.useEffect(() => {
     if (!editMode) {

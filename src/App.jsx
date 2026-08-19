@@ -96,6 +96,7 @@ export default function App() {
   }));
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
+  const [compareSelectionActive, setCompareSelectionActive] = React.useState(false);
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
   const [editBaseline, setEditBaseline] = React.useState(null);
@@ -187,6 +188,8 @@ export default function App() {
       <button
         type="button"
         className="secondary view-comparison-button"
+        aria-pressed={compareSelectionActive}
+        disabled={compareSelectionActive}
         onClick={() => dashboardRendererRef.current?.requestCompareCharts?.()}
       >
         Compare charts
@@ -847,6 +850,7 @@ export default function App() {
       onActivePageChange={setActivePageId}
       onModeRequest={requestMode}
       onBuildDraftLockChange={setBuildDraftLocked}
+      onComparisonSelectionChange={setCompareSelectionActive}
       onCommitPendingConfiguration={() => ensureDashboardCommitController().mutate(
         (current) => current,
       )}
