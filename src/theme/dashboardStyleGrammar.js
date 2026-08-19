@@ -10,6 +10,7 @@ const STYLE_GRAMMARS = Object.freeze({
     surfaceRadius: "2px",
     transitionDuration: "140ms",
     shadow: Object.freeze({ light: "none", dark: "none" }),
+    shellShadow: Object.freeze({ light: "none", dark: "none" }),
   }),
   "humanist-standard": Object.freeze({
     bodyFont: 'Segoe UI Variable Text, "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
@@ -25,6 +26,10 @@ const STYLE_GRAMMARS = Object.freeze({
       light: "0 8px 20px rgb(36 57 52 / 10%)",
       dark: "0 10px 24px rgb(0 0 0 / 24%)",
     }),
+    shellShadow: Object.freeze({
+      light: "0 16px 38px rgb(25 55 48 / 12%)",
+      dark: "0 16px 38px rgb(0 0 0 / 28%)",
+    }),
   }),
   "signal-instrument": Object.freeze({
     bodyFont: 'Segoe UI Variable Text, "Segoe UI", ui-sans-serif, system-ui, sans-serif',
@@ -39,6 +44,10 @@ const STYLE_GRAMMARS = Object.freeze({
     shadow: Object.freeze({
       light: "0 1px 2px rgb(19 38 45 / 14%), inset 0 1px 0 rgb(255 255 255 / 55%)",
       dark: "0 1px 2px rgb(0 0 0 / 38%), inset 0 1px 0 rgb(255 255 255 / 6%)",
+    }),
+    shellShadow: Object.freeze({
+      light: "0 4px 12px rgb(19 38 45 / 14%), inset 0 1px 0 rgb(255 255 255 / 45%)",
+      dark: "0 4px 12px rgb(0 0 0 / 32%), inset 0 1px 0 rgb(255 255 255 / 6%)",
     }),
   }),
 });
@@ -60,5 +69,6 @@ export function resolveDashboardStyleGrammar(
     "--simex-style-surface-radius": grammar.surfaceRadius,
     "--simex-style-transition-duration": grammar.transitionDuration,
     "--simex-style-panel-shadow": grammar.shadow[appearance],
+    "--simex-style-shell-shadow": grammar.shellShadow[appearance],
   });
 }

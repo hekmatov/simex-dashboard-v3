@@ -4,6 +4,7 @@ import {
   canReuseChartRendering,
   resolveChartRendering,
 } from "../../charting/rendering/resolveChartRendering.js";
+import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import { resolveChartDataState } from "../../charting/data/chartDataState.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
@@ -96,16 +97,9 @@ export function presentationFrameProps(chart) {
   const align = ["left", "center", "right"].includes(chart?.presentation?.title?.align)
     ? chart.presentation.title.align
     : "left";
-  const background = chart?.presentation?.background;
-  let backgroundColor;
-  if (background && typeof background === "object" && !Array.isArray(background)) {
-    if (background.transparent === true) {
-      backgroundColor = "transparent";
-    } else {
-      const color = typeof background.color === "string" ? background.color.trim() : "";
-      if (/^#[0-9a-f]{6}$/i.test(color)) backgroundColor = color.toUpperCase();
-    }
-  }
+  const backgroundColor = resolveChartSurfaceBackground(
+    chart?.presentation?.background,
+  );
   return {
     className: "chart-view-frame",
     "data-title-align": align,

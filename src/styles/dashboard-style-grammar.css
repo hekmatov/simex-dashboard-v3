@@ -226,3 +226,102 @@
     transition-duration: 0.01ms;
   }
 }
+
+/* Sketch 003 shared-surface fidelity calibration. */
+.app-frame {
+  background-color: var(--simex-surface-outer);
+}
+
+.app-frame > .canonical-dashboard-frame {
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+  max-width: 1392px;
+  padding: 0;
+  width: calc(100% - 48px);
+}
+
+.app-frame .canonical-dashboard-frame .page-stack,
+.app-frame .canonical-dashboard-frame .dashboard-section {
+  gap: 0;
+}
+
+.app-frame .canonical-dashboard-frame .section-header {
+  border: 0;
+  border-bottom: 1px solid var(--simex-border-subtle);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 22px 18px 14px;
+}
+
+.app-frame .canonical-dashboard-frame .dashboard-section:not(:first-child) > .section-header {
+  border-top: 1px solid var(--simex-border-strong);
+}
+
+.app-frame .canonical-dashboard-frame .dashboard-section > .layout-grid {
+  gap: 16px;
+  padding: 18px;
+}
+
+.app-frame .canonical-dashboard-frame .chart-panel {
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  padding: 12px;
+}
+
+.app-frame .chart-view-frame {
+  background-color: var(--simex-surface-panel-alt);
+}
+
+.app-frame :is(
+  button, select, textarea,
+  input:not([type="checkbox"]):not([type="radio"]),
+  .chart-canvas, .chart-view-frame, .chart-panel-icon-button,
+  .look-profile-option
+) {
+  border-radius: var(--simex-style-control-radius);
+}
+
+.app-frame :is(
+  .dashboard-command-crown, .look-drawer,
+  .canonical-dashboard-frame .dashboard-header,
+  .canonical-dashboard-frame .dashboard-footer
+) {
+  border-radius: var(--simex-style-surface-radius);
+}
+
+@media (max-width: 1000px) {
+  .app-frame > .canonical-dashboard-frame {
+    width: calc(100% - 24px);
+  }
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] .canonical-dashboard-frame .section-header {
+  background: var(--simex-surface-canvas);
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .canonical-dashboard-frame .section-header {
+  background: color-mix(in srgb, var(--simex-surface-canvas) 88%, var(--simex-surface-panel));
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .canonical-dashboard-frame .section-header {
+  background:
+    linear-gradient(var(--simex-accent), var(--simex-accent)) left center / 3px calc(100% - 20px) no-repeat,
+    color-mix(in srgb, var(--simex-surface-panel-alt) 82%, var(--simex-surface-canvas));
+}
+
+.audience-theme-root {
+  background: var(--simex-surface-outer);
+  min-height: 100vh;
+}
+
+.audience-theme-root .audience-display {
+  background: var(--simex-surface-canvas);
+}
+
+.audience-theme-root .displayed-chart-grid[data-display-surface="audience"] .displayed-chart-cell {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}

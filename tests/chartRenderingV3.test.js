@@ -384,6 +384,43 @@ test("transparent and hostile ECharts presentation values cannot create an opaqu
   assert.equal(Object.hasOwn(hostile.option, "backgroundColor"), false);
 });
 
+test("the packaged opaque white default yields to themed chart surfaces", () => {
+  const presented = applyEChartsPresentation({
+    kind: "echarts",
+    option: { backgroundColor: "#ff00ff", series: [] },
+  }, {
+    presentation: {
+      title: { align: "left" },
+      background: { color: "#FFFFFF", transparent: false },
+    },
+  });
+
+  assert.equal(presented.option.backgroundColor, "transparent");
+});
+
+test("ECharts title and legend defaults consume projected profile text colors", () => {
+  const presented = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      title: { text: "Capacity" },
+      legend: { data: ["Observed"] },
+      series: [],
+    },
+  }, {
+    presentation: {
+      title: { align: "left" },
+      background: { color: "#FFFFFF", transparent: false },
+    },
+  }, false, {
+    textStrong: "#F8FAF9",
+    textMuted: "#C1CFD4",
+  });
+
+  assert.equal(presented.option.textStyle.color, "#F8FAF9");
+  assert.equal(presented.option.title.textStyle.color, "#F8FAF9");
+  assert.equal(presented.option.legend.textStyle.color, "#C1CFD4");
+});
+
 test("axis series honor validated label visibility, position, and formatting", () => {
   const enabled = buildRenderModel({
     chart: chart("bar", {

@@ -2,10 +2,15 @@ import React from "react";
 import * as echarts from "echarts";
 
 import { describeAccessibilityCompanion } from "../../charting/rendering/accessibilityRows.js";
+import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import { titleContainerProps } from "./chartViewPresentation.js";
 import { chartDescriptionVisible } from "./chartViewPresentation.js";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
+const DEFAULT_CHART_TEXT_THEME = Object.freeze({
+  textStrong: "#18334E",
+  textMuted: "#49627A",
+});
 
 export default function EChartsChartView({
   model,
@@ -18,17 +23,35 @@ export default function EChartsChartView({
   const hostRef = React.useRef(null);
   const lifecycleRef = React.useRef(null);
   const [runtimeError, setRuntimeError] = React.useState(null);
+  const [textTheme, setTextTheme] = React.useState(DEFAULT_CHART_TEXT_THEME);
   const titleId = React.useId();
   const descriptionId = React.useId();
   const summaryId = React.useId();
   const title = chart.title || "Chart";
   const description = chart.description || model.option?.aria?.description || "Interactive chart.";
   const presentedModel = React.useMemo(
-    () => applyEChartsPresentation(model, chart, accessibilityEnabled),
-    [model, chart, accessibilityEnabled],
+    () => applyEChartsPresentation(model, chart, accessibilityEnabled, textTheme),
+    [model, chart, accessibilityEnabled, textTheme],
   );
   const summary = accessibilityEnabled ? summaryFor(presentedModel, chart) : null;
   const activeError = suppliedRuntimeError ?? runtimeError;
+
+  React.useEffect(() => {
+    const host = hostRef.current;
+    if (!host || typeof window === "undefined") return;
+    const style = window.getComputedStyle(host);
+    const next = {
+      textStrong: style.getPropertyValue("--simex-text-strong").trim()
+        || DEFAULT_CHART_TEXT_THEME.textStrong,
+      textMuted: style.getPropertyValue("--simex-text-muted").trim()
+        || DEFAULT_CHART_TEXT_THEME.textMuted,
+    };
+    setTextTheme((current) => (
+      current.textStrong === next.textStrong && current.textMuted === next.textMuted
+        ? current
+        : next
+    ));
+  });
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -98,6 +121,7 @@ export function applyEChartsPresentation(
   model = {},
   chart = {},
   accessibilityEnabled = false,
+  textTheme = DEFAULT_CHART_TEXT_THEME,
 ) {
   const option = model.option && typeof model.option === "object" && !Array.isArray(model.option)
     ? model.option
@@ -107,21 +131,33 @@ export function applyEChartsPresentation(
     ...optionWithoutBackground
   } = option;
   const align = normalizedTitleAlignment(chart?.presentation?.title?.align);
-  const backgroundColor = normalizedBackground(chart?.presentation?.background);
+  const textStrong = normalizedTextColor(
+    textTheme?.textStrong,
+    DEFAULT_CHART_TEXT_THEME.textStrong,
+  );
+  const textMuted = normalizedTextColor(textTheme?.textMuted, textStrong);
+  const backgroundColor = resolveChartSurfaceBackground(
+    chart?.presentation?.background,
+    { themeDefault: "transparent" },
+  );
   return {
     ...model,
     option: {
       ...optionWithoutBackground,
+      textStyle: {
+        color: textStrong,
+        ...(option.textStyle ?? {}),
+      },
       ...(option.title === undefined
         ? {}
         : {
             title: Array.isArray(option.title)
-              ? option.title.map((title) => normalizedTitle(title, align))
-              : normalizedTitle(option.title, align),
+              ? option.title.map((title) => normalizedTitle(title, align, textStrong))
+              : normalizedTitle(option.title, align, textStrong),
           }),
       ...(option.legend === undefined
         ? {}
-        : { legend: normalizedLegend(option.legend) }),
+        : { legend: normalizedLegend(option.legend, textMuted) }),
       aria: {
         ...(option.aria ?? {}),
         enabled: accessibilityEnabled,
@@ -204,14 +240,14 @@ function registerMap(echartsApi, registration) {
   }
 }
 
-function normalizedTitle(value, align) {
+function normalizedTitle(value, align, textColor) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? {
         ...value,
         left: align,
         top: value.top ?? 0,
         textStyle: {
-          color: "#18334e",
+          color: textColor,
           fontSize: 16,
           fontWeight: 600,
           ...(value.textStyle ?? {}),
@@ -220,7 +256,7 @@ function normalizedTitle(value, align) {
     : { text: "", left: align, top: 0 };
 }
 
-function normalizedLegend(value) {
+function normalizedLegend(value, textColor) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   return {
     ...value,
@@ -231,6 +267,7 @@ function normalizedLegend(value) {
     itemWidth: value.itemWidth ?? 16,
     itemHeight: value.itemHeight ?? 10,
     textStyle: {
+      color: textColor,
       fontSize: 11,
       ...(value.textStyle ?? {}),
     },
@@ -241,11 +278,9 @@ function normalizedTitleAlignment(value) {
   return ["left", "center", "right"].includes(value) ? value : "left";
 }
 
-function normalizedBackground(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  if (value.transparent === true) return "transparent";
-  const color = typeof value.color === "string" ? value.color.trim() : "";
-  return /^#[0-9a-f]{6}$/i.test(color) ? color.toUpperCase() : null;
+function normalizedTextColor(value, fallback) {
+  const color = typeof value === "string" ? value.trim() : "";
+  return /^#[0-9a-f]{6}$/i.test(color) ? color.toUpperCase() : fallback;
 }
 
 function summaryFor(model, chart) {
