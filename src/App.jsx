@@ -196,14 +196,24 @@ export default function App() {
       </button>
     </>
   ) : mode === "build" ? (
-    <button
-      type="button"
-      className="secondary build-add-page"
-      disabled={modeDisabled || buildDraftLocked}
-      onClick={() => dashboardRendererRef.current?.requestAddPage?.()}
-    >
-      Add Page
-    </button>
+    <>
+      <button
+        type="button"
+        className="secondary build-add-page"
+        disabled={modeDisabled || buildDraftLocked}
+        onClick={() => dashboardRendererRef.current?.requestAddPage?.()}
+      >
+        Add Page
+      </button>
+      <button
+        type="button"
+        className="secondary dashboard-look-trigger"
+        disabled={modeDisabled || buildDraftLocked}
+        onClick={openDashboardLook}
+      >
+        Dashboard look
+      </button>
+    </>
   ) : null;
 
   React.useEffect(() => {

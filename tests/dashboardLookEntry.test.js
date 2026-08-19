@@ -10,10 +10,9 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: ViewShell }, { default: BuildWorkspace }, { PlaybackProvider }] = await Promise.all([
-  vite.ssrLoadModule("/src/components/view/ViewShell.jsx"),
+const [{ default: DashboardCommandCrown }, { default: BuildWorkspace }] = await Promise.all([
+  vite.ssrLoadModule("/src/components/app-shell/DashboardCommandCrown.jsx"),
   vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
-  vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx"),
 ]);
 await vite.close();
 
@@ -37,34 +36,29 @@ const dashboard = {
   pages: [page],
 };
 
-test("View places Dashboard look before the rightmost Compare charts action", () => {
-  const html = withBrowserGlobals(() => renderToStaticMarkup(
-    React.createElement(
-      PlaybackProvider,
-      { groups: [], charts: [], loadedData: {}, profiles: {} },
-      React.createElement(ViewShell, {
-        activePage: page,
-        dashboard,
-        displayState: { displayed_chart_ids: [], layout: "solo" },
-        companionStatusLabel: "Companion unavailable",
-        iconLanguageStyles: {},
-        geoDataSources: {},
-        onActivePageChange: () => {},
-        onCompareCharts: () => {},
-        onDisplayAction: () => {},
-        onOpenDashboardLook: () => {},
-      }),
-    ),
+test("View projects Dashboard look before Compare charts in the shared crown", () => {
+  const html = renderCrown("view", React.createElement(
+    React.Fragment,
+    null,
+    React.createElement("button", { type: "button" }, "Dashboard look"),
+    React.createElement("button", { type: "button" }, "Chrono view"),
+    React.createElement("button", { type: "button" }, "Compare charts"),
   ));
 
   assert.match(
     html,
-    /aria-label="View page actions"[\s\S]*>Dashboard look<\/button>[\s\S]*>Compare charts<\/button>/,
+    /data-command-crown-pinned-actions="true"[\s\S]*>Dashboard look<\/button>[\s\S]*>Compare charts<\/button>/,
   );
 });
 
-test("Build keeps Dashboard look beside the page tabs", () => {
-  const html = withBrowserGlobals(() => renderToStaticMarkup(React.createElement(BuildWorkspace, {
+test("Build projects exactly one Dashboard look and Add Page in the shared crown", () => {
+  const crown = renderCrown("build", React.createElement(
+    React.Fragment,
+    null,
+    React.createElement("button", { type: "button" }, "Add Page"),
+    React.createElement("button", { type: "button" }, "Dashboard look"),
+  ));
+  const workspace = withBrowserGlobals(() => renderToStaticMarkup(React.createElement(BuildWorkspace, {
     dashboard,
     activePage: page,
     selection: null,
@@ -76,11 +70,29 @@ test("Build keeps Dashboard look beside the page tabs", () => {
     onOpenDashboardLook: () => {},
   })));
 
-  assert.match(
-    html,
-    /class="build-page-tabs build-page-navigation"[\s\S]*>Biomedical<\/button>[\s\S]*>Add page<\/span>[\s\S]*>Dashboard look<\/button>[\s\S]*<\/nav>/,
-  );
+  assert.equal((crown.match(/>Dashboard look<\/button>/g) ?? []).length, 1);
+  assert.equal((crown.match(/>Add Page<\/button>/g) ?? []).length, 1);
+  assert.match(crown, /data-command-crown-pinned-actions="true"/);
+  assert.doesNotMatch(workspace, />Dashboard look<\/button>/);
 });
+
+function renderCrown(mode, pageActions) {
+  return renderToStaticMarkup(React.createElement(DashboardCommandCrown, {
+    mode,
+    dashboardIdentity: Object.freeze({
+      programLabel: dashboard.programLabel,
+      scenarioLabel: dashboard.scenarioLabel,
+      title: dashboard.title,
+      lastUpdated: dashboard.lastUpdated,
+    }),
+    activePage: Object.freeze({ id: page.id, label: page.label }),
+    pages: Object.freeze([Object.freeze({ id: page.id, label: page.label })]),
+    pageActions,
+    onModeRequest: () => {},
+    onPageRequest: () => {},
+    onScenarioRequest: () => {},
+  }));
+}
 
 function withBrowserGlobals(run) {
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
