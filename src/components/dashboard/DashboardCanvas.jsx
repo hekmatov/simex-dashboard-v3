@@ -18,6 +18,7 @@ export default function DashboardCanvas({
   excludedChartIds = [],
   geoDataSources = {},
   onNavigate,
+  onAddPanelToSection,
   onDisplayAction,
   onToggleMultiPanel,
   onStartMultiFullscreenSelection,
@@ -39,7 +40,9 @@ export default function DashboardCanvas({
                 const chart = placement.chart ?? placement;
                 return !excludedIds.has(chart.id);
               });
-              if (visiblePlacements.length === 0 && !buildState) return null;
+              if (visiblePlacements.length === 0 && !buildState && !onAddPanelToSection) {
+                return null;
+              }
               const sectionDraft = buildState?.sectionDrafts?.[section.id] ?? section;
               return (
                 <section className="dashboard-section" key={section.id}>
@@ -101,12 +104,14 @@ export default function DashboardCanvas({
                       })}
                     </LayoutGrid>
                   ) : (
-                    <section className="build-empty-section" aria-label={`${sectionDraft.title || "Untitled section"} empty state`}>
+                    <section className="dashboard-empty-section build-empty-section" aria-label={`${sectionDraft.title || "Untitled section"} empty state`}>
                       <p>This section has no panels.</p>
                       <button
                         type="button"
-                        disabled={Boolean(buildState.disabled)}
-                        onClick={() => buildState.onAddChart?.(section.id)}
+                        disabled={Boolean(buildState?.disabled)}
+                        onClick={() => (buildState
+                          ? buildState.onAddChart?.(section.id)
+                          : onAddPanelToSection?.(section.id))}
                       >
                         Add Panel to Section
                       </button>

@@ -82,6 +82,42 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
   assert.doesNotMatch(view, /class="phone-mode-banner"/);
 });
 
+test("ordinary View preserves an empty Section and routes its exact recovery action to Build", () => {
+  const emptyDashboard = {
+    ...dashboard,
+    pages: [{
+      ...dashboard.pages[0],
+      sections: [{
+        id: "empty-evidence",
+        title: "Evidence awaiting panels",
+        description: "This Section is valid but empty.",
+        panels: [],
+      }],
+    }],
+  };
+  const html = withBrowserGlobals(() => renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      { groups: [], charts: [], loadedData: {}, profiles: {} },
+      React.createElement(ViewShell, {
+        activePage: emptyDashboard.pages[0],
+        dashboard: emptyDashboard,
+        displayState: { displayed_chart_ids: [], layout: "solo" },
+        companionStatusLabel: "Companion unavailable",
+        iconLanguageStyles: {},
+        geoDataSources: {},
+        onActivePageChange: () => {},
+        onAddPanelToSection: () => {},
+        onDisplayAction: () => {},
+      }),
+    ),
+  ));
+
+  assert.match(html, />Evidence awaiting panels</);
+  assert.match(html, /This section has no panels\./);
+  assert.match(html, />Add Panel to Section<\/button>/);
+});
+
 function withBrowserGlobals(run) {
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");

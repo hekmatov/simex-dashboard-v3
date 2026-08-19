@@ -23,6 +23,7 @@ export default function ViewShell({
   onActivePageChange,
   onCompareCharts,
   onOpenDashboardLook,
+  onAddPanelToSection,
   onDisplayAction,
   onToggleMultiPanel,
   onStartMultiFullscreenSelection,
@@ -75,6 +76,7 @@ export default function ViewShell({
           excludedChartIds={elevatedChartIds}
           geoDataSources={geoDataSources}
           onNavigate={onActivePageChange}
+          onAddPanelToSection={onAddPanelToSection}
           onDisplayAction={onDisplayAction}
           onToggleMultiPanel={onToggleMultiPanel}
           onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}

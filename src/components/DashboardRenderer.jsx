@@ -655,6 +655,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
   }
 
+  function recoverEmptySectionInBuild(sectionId) {
+    if (moderatorOperationGateRef.current.isActive() || !activePage) return;
+    const section = activePage.sections?.find(({ id }) => id === sectionId);
+    if (!section) return;
+    setBuildSelection({
+      kind: "section",
+      pageId: activePage.id,
+      sectionId,
+    });
+    setChartWizardTarget({ pageId: activePage.id, sectionId });
+    void onModeRequest("build");
+  }
+
   function saveEditMode() {
     void performModeratorOperation("save-session", async () => {
       await onModeRequest("view");
@@ -794,6 +807,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onActivePageChange={navigateToPage}
         onCompareCharts={() => startMultiFullscreenSelection()}
         onOpenDashboardLook={onOpenDashboardLook}
+        onAddPanelToSection={recoverEmptySectionInBuild}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
         onStartMultiFullscreenSelection={startMultiFullscreenSelection}
