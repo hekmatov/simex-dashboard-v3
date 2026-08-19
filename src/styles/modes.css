@@ -1098,8 +1098,9 @@
 .mode-switcher button:focus-visible,
 .dashboard-identity-row button:focus-visible,
 .view-shell button:focus-visible,
+.build-shell button:focus-visible,
 .phone-mode-banner button:focus-visible {
-  outline: 3px solid var(--simex-focus);
+  outline: 3px solid var(--simex-focus, #f2b541);
   outline-offset: 2px;
 }
 
@@ -1269,11 +1270,17 @@
   position: relative;
 }
 
+.canonical-dashboard-frame .build-section-header h2 {
+  height: 1.2em;
+}
+
 .canonical-dashboard-frame .build-section-title-button {
-  border: 0;
+  border: 1px solid transparent;
   line-height: inherit;
-  min-height: 0;
-  padding: 0;
+  margin-block: calc((1.2em - 44px) / 2);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 2px 4px;
 }
 
 .canonical-dashboard-frame .build-section-actions,

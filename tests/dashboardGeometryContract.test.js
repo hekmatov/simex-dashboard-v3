@@ -15,7 +15,7 @@ export function canonicalDelta(viewValue, buildValue) {
   return Math.abs(viewValue - buildValue).toFixed(2);
 }
 
-export function compareCanonicalGeometry(viewGeometry, buildGeometry) {
+export function compareCanonicalGeometry(viewGeometry, buildGeometry, expectedGeometryIds) {
   const idErrors = [];
   const requiredSingletons = new Set(["page", "canvas", "grid"]);
   const requiredCollections = new Set(["section", "panel", "placement", "plot"]);
@@ -27,6 +27,25 @@ export function compareCanonicalGeometry(viewGeometry, buildGeometry) {
     const buildIds = buildEntries.map(({ id }) => id);
     const viewSet = new Set(viewIds);
     const buildSet = new Set(buildIds);
+    const expectedIds = expectedGeometryIds?.[kind];
+
+    if (expectedIds) {
+      const expectedSet = new Set(expectedIds);
+      if (expectedSet.size !== expectedIds.length) {
+        idErrors.push(`${kind}: duplicate expected IDs`);
+      }
+      for (const [mode, actualIds, actualSet] of [
+        ["View", viewIds, viewSet],
+        ["Build", buildIds, buildSet],
+      ]) {
+        const missingExpected = expectedIds.filter((id) => !actualSet.has(id));
+        const unexpected = actualIds.filter((id) => !expectedSet.has(id));
+        if (missingExpected.length > 0) {
+          idErrors.push(`${kind}: ${mode} missing expected ${missingExpected.join(", ")}`);
+        }
+        if (unexpected.length > 0) idErrors.push(`${kind}: ${mode} unexpected ${unexpected.join(", ")}`);
+      }
+    }
 
     if (viewSet.size !== viewIds.length) idErrors.push(`${kind}: duplicate View IDs`);
     if (buildSet.size !== buildIds.length) idErrors.push(`${kind}: duplicate Build IDs`);
@@ -110,5 +129,44 @@ if (invokedDirectly) {
         delta: { x: canonicalDelta(0, value), y: "0.00", width: "0.00", height: "0.00" },
       }]), /Non-zero canonical geometry delta/);
     }
+  });
+
+  test("canonical IDs must exactly match an independent fixture", () => {
+    const expectedIds = {
+      page: ["biomedical"],
+      canvas: ["biomedical"],
+      grid: ["biomedical"],
+      section: ["outbreak_dynamics"],
+      panel: ["bio_confirmed_cases", "bio_daily_cases_bar"],
+      placement: ["bio_confirmed_cases", "bio_daily_cases_bar"],
+      plot: ["bio_confirmed_cases", "bio_daily_cases_bar"],
+    };
+    const geometryFor = (ids) => ({
+      geometry: Object.fromEntries(Object.entries(ids).map(([kind, values]) => [
+        kind,
+        values.map((id) => ({ id, x: 0, y: 0, width: 100, height: 100 })),
+      ])),
+    });
+    const omittedIds = {
+      ...expectedIds,
+      panel: ["bio_confirmed_cases"],
+      placement: ["bio_confirmed_cases"],
+      plot: ["bio_confirmed_cases"],
+    };
+    const extraIds = {
+      ...expectedIds,
+      panel: [...expectedIds.panel, "unexpected_chart"],
+      placement: [...expectedIds.placement, "unexpected_chart"],
+      plot: [...expectedIds.plot, "unexpected_chart"],
+    };
+
+    assert.throws(
+      () => compareCanonicalGeometry(geometryFor(omittedIds), geometryFor(omittedIds), expectedIds),
+      /missing expected/,
+    );
+    assert.throws(
+      () => compareCanonicalGeometry(geometryFor(extraIds), geometryFor(extraIds), expectedIds),
+      /unexpected/,
+    );
   });
 }

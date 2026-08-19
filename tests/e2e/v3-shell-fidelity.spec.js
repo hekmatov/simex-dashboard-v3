@@ -60,6 +60,20 @@ export async function readCanonicalGeometry(page) {
   }, CANONICAL_ATTRIBUTES);
 }
 
+export function expectedCanonicalIdsForPage(dashboard, pageId) {
+  const dashboardPage = dashboard.pages.find(({ id }) => id === pageId);
+  const panels = dashboardPage.sections.flatMap(({ panels: sectionPanels }) => sectionPanels);
+  return {
+    page: [dashboardPage.id],
+    canvas: [dashboardPage.id],
+    grid: [dashboardPage.id],
+    section: dashboardPage.sections.map(({ id }) => id),
+    panel: panels.map(({ id }) => id),
+    placement: panels.map(({ id }) => id),
+    plot: panels.map(({ id }) => id),
+  };
+}
+
 test.describe.configure({ timeout: 150_000 });
 
 test.beforeEach(async ({ request }) => {
@@ -69,7 +83,11 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("exact View Build geometry", async ({ page }) => {
+test("exact View Build geometry", async ({ page, request }) => {
+  const fixtureResponse = await request.get("/config/dashboard.json");
+  expect(fixtureResponse.ok()).toBe(true);
+  const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
+
   for (const viewport of WORKSPACE_VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.goto("/");
@@ -93,7 +111,7 @@ test("exact View Build geometry", async ({ page }) => {
     let comparisons = [];
     let contractError = null;
     try {
-      comparisons = compareCanonicalGeometry(viewGeometry, buildGeometry);
+      comparisons = compareCanonicalGeometry(viewGeometry, buildGeometry, expectedIds);
     } catch (error) {
       contractError = error;
     }
@@ -104,12 +122,16 @@ test("exact View Build geometry", async ({ page }) => {
         + `first panel View ${formatRect(viewLegacy.panel)} Build ${formatRect(buildLegacy.panel)}`,
     ).toBeNull();
 
-    for (const comparison of comparisons) {
-      expect(
-        comparison.delta,
-        `${label} ${comparison.kind} ${comparison.id}`,
-      ).toEqual({ x: "0.00", y: "0.00", width: "0.00", height: "0.00" });
-    }
+    const mismatches = comparisons
+      .filter(({ delta }) => Object.values(delta).some((value) => value !== "0.00"))
+      .map(({ kind, id, view, build, delta }) => ({
+        kind,
+        id,
+        view: formatRect(view),
+        build: formatRect(build),
+        delta,
+      }));
+    expect(mismatches, `${label} canonical mismatches`).toEqual([]);
     const canvas = comparisons.find(({ kind }) => kind === "canvas");
     console.log("CANONICAL_GEOMETRY", JSON.stringify({
       viewport: label,
@@ -118,6 +140,37 @@ test("exact View Build geometry", async ({ page }) => {
       comparisons: comparisons.length,
     }));
   }
+});
+
+test("Build section rename target keeps 44px activation and 3px focus", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+
+  const renameButton = page.locator(".build-section-title-button").first();
+  await expect(renameButton).toBeVisible();
+  const target = await renameButton.boundingBox();
+  expect(target.width).toBeGreaterThanOrEqual(44);
+  expect(target.height).toBeGreaterThanOrEqual(44);
+
+  await page.keyboard.press("Tab");
+  await renameButton.focus();
+  const focus = await renameButton.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      outlineWidth: style.outlineWidth,
+      outlineStyle: style.outlineStyle,
+    };
+  });
+  expect(focus).toEqual({
+    outlineWidth: "3px",
+    outlineStyle: "solid",
+  });
 });
 
 async function readLegacyDiagnostic(page) {
