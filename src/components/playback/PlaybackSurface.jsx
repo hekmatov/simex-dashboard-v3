@@ -18,9 +18,6 @@ export default function PlaybackSurface({
     return React.createElement(
       React.Fragment,
       null,
-      playback.playbackView === true
-        ? React.createElement(PlaybackView, { accessibilityEnabled })
-        : null,
       children,
       playback.playbackView === true
         ? React.createElement(ChronoController)

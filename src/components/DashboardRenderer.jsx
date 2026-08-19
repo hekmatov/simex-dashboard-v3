@@ -51,6 +51,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPageChange,
   onPageReorder,
   onDashboardChange,
+  onTimeGroupChange,
   onBackgroundPersistenceError,
   onApplyPendingEdits,
   onPanelEditCommit,
@@ -176,6 +177,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     requestAddPage() {
       if (!buildMode || chartAuthoringActive) return;
       addPage();
+    },
+    requestTimeGroupAuthoring() {
+      if (!buildMode || chartAuthoringActive) return;
+      const group = dashboardStateRef.current.timeSyncGroups?.[0];
+      if (!group) return;
+      setBuildSelection({ kind: "timeGroup", groupId: group.id });
+      setFocusInspectorLabelKey((current) => current + 1);
     },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
@@ -908,6 +916,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onDashboardChange={changeDashboardText}
           onPageChange={changePage}
           onSectionChange={changeSection}
+          onTimeGroupChange={onTimeGroupChange}
+          onOpenSceneComposer={() => onModeRequest?.("present")}
           onPageReorder={reorderBuildPage}
           onSectionReorder={reorderBuildSection}
           onAddSection={addSection}

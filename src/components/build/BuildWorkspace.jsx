@@ -32,6 +32,8 @@ export default function BuildWorkspace({
   onDashboardChange,
   onPageChange,
   onSectionChange,
+  onTimeGroupChange,
+  onOpenSceneComposer,
   onPageReorder,
   onSectionReorder,
   onAddSection,
@@ -102,6 +104,8 @@ export default function BuildWorkspace({
       onDashboardChange={onDashboardChange}
       onPageChange={onPageChange}
       onSectionChange={onSectionChange}
+      onTimeGroupChange={onTimeGroupChange}
+      onOpenSceneComposer={onOpenSceneComposer}
     />
   );
 

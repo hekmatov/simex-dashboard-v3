@@ -199,6 +199,14 @@ export default function App() {
     <>
       <button
         type="button"
+        className="secondary build-time-groups"
+        disabled={modeDisabled || buildDraftLocked || (dashboard?.timeSyncGroups?.length ?? 0) === 0}
+        onClick={() => dashboardRendererRef.current?.requestTimeGroupAuthoring?.()}
+      >
+        Time Groups
+      </button>
+      <button
+        type="button"
         className="secondary build-add-page"
         disabled={modeDisabled || buildDraftLocked}
         onClick={() => dashboardRendererRef.current?.requestAddPage?.()}
@@ -846,7 +854,6 @@ export default function App() {
       dashboardIdentity={commandCrownProjection.dashboardIdentity}
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
-      contextNode={<span>{mode === "build" ? "Dashboard authoring workspace" : mode === "present" ? "Audience presentation workspace" : "Dashboard exploration workspace"}</span>}
       pageActions={commandCrownPageActions}
       onPageRequest={requestPage}
       density={densityForDashboardMode(mode)}
@@ -927,6 +934,10 @@ export default function App() {
         reorderPage(next, pageId, targetIndex);
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
+      onTimeGroupChange={(groupId, updates) => mutateDashboard((next) => {
+        const group = next.timeSyncGroups?.find(({ id }) => id === groupId);
+        if (group) Object.assign(group, updates);
+      })}
       onBackgroundPersistenceError={reportBackgroundPersistenceError}
       onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
         (next) => applyDashboardEdits(next, edits),

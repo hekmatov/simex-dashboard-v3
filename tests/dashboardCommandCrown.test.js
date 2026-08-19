@@ -46,7 +46,7 @@ test("the command crown orders mode, dashboard/Page, and one equal-sized mode co
   assert.match(html, /data-mode-context-size="shared"/);
 });
 
-test("View and Build share the context block while crown targets remain 44 by 44", async () => {
+test("an empty mode context is omitted until a real projection needs it", async () => {
   const props = {
     dashboardIdentity: Object.freeze({ title: "Biomedical situational awareness" }),
     activePage: Object.freeze({ id: "biomedical", label: "Biomedical" }),
@@ -70,8 +70,8 @@ test("View and Build share the context block while crown targets remain 44 by 44
   const scenarioRule = [...crownStyles.matchAll(/\.dashboard-scenario-trigger\s*\{([^}]*)\}/g)].at(-1)?.[1] ?? "";
   const pageButtonRule = crownStyles.match(/\.dashboard-command-page-scroller button\s*\{([^}]*)\}/)?.[1] ?? "";
 
-  assert.match(view, /data-mode-context-size="shared"/);
-  assert.match(build, /data-mode-context-size="shared"/);
+  assert.doesNotMatch(view, /data-command-crown-layer="context"/);
+  assert.doesNotMatch(build, /data-command-crown-layer="context"/);
   assert.match(view, /--dashboard-mode-context-block-size:52px/);
   assert.match(build, /--dashboard-mode-context-block-size:52px/);
   assert.match(scenarioRule, /min-height:\s*44px;/);

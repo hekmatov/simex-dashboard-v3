@@ -67,7 +67,7 @@ const dashboard = {
   pages: [page],
 };
 
-test("View Chrono keeps the Page visible, elevates members, and owns entry in the Page row", () => {
+test("View Chrono relocates one canonical member instance into a top Page section", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -100,17 +100,13 @@ test("View Chrono keeps the Page visible, elevates members, and owns entry in th
     ),
   ));
 
-  assert.match(
-    html,
-    /aria-label="View page actions"[\s\S]*aria-label="Time Group"[\s\S]*>Chrono view<\/button>[\s\S]*>Compare charts<\/button>/,
-  );
-  assert.match(html, /aria-pressed="true"[^>]*>Chrono view<\/button>/);
-  assert.match(html, /class="playback-view"/);
-  assert.match(html, /data-chart-id="member-chart"/);
+  assert.match(html, /data-chrono-section="exercise"/);
+  assert.match(html, /class="layout-grid layout-two-column"/);
+  assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
   assert.match(html, /data-dashboard-surface="view"/);
   assert.match(html, /data-panel-id="ordinary-chart"/);
   assert.ok(
-    html.indexOf("class=\"playback-view\"") < html.indexOf("data-dashboard-surface=\"view\""),
+    html.indexOf("data-chrono-section=\"exercise\"") < html.indexOf("data-panel-id=\"ordinary-chart\""),
     "Chrono members should be elevated before the ordinary Page canvas",
   );
   assert.match(html, /class="playback-controls playback-controls--floating playback-controls--bottom"/);

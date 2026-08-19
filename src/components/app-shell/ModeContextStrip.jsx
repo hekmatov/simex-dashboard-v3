@@ -7,6 +7,7 @@ const MODE_CONTEXT_LABELS = {
 };
 
 export default function ModeContextStrip({ mode, contextNode, statusNode, disabledReason = "" }) {
+  if (React.Children.count(contextNode) === 0 && !statusNode && !disabledReason) return null;
   const sharesViewBuildBlockSize = mode === "view" || mode === "build";
   return (
     <section

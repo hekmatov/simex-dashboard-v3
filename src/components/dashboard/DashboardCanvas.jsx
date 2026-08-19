@@ -16,6 +16,7 @@ export default function DashboardCanvas({
   multiSelectMode = false,
   multiPanelIds = [],
   excludedChartIds = [],
+  chronoSection = null,
   geoDataSources = {},
   onNavigate,
   onAddPanelToSection,
@@ -24,7 +25,17 @@ export default function DashboardCanvas({
   onStartMultiFullscreenSelection,
 }) {
   const canvasRef = React.useRef(null);
-  const excludedIds = new Set(excludedChartIds);
+  const excludedIds = new Set([
+    ...excludedChartIds,
+    ...(chronoSection?.chartIds ?? []),
+  ]);
+  const chronoPlacements = chronoSection
+    ? (activePage?.sections ?? []).flatMap((section) => (
+        (section.panels ?? [])
+          .filter((placement) => chronoSection.chartIds.includes((placement.chart ?? placement).id))
+          .map((placement) => ({ placement, section }))
+      ))
+    : [];
 
   React.useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -56,7 +67,7 @@ export default function DashboardCanvas({
     const observer = new MutationObserver(annotateCanonicalElements);
     observer.observe(canvas, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [activePage, excludedChartIds]);
+  }, [activePage, chronoSection, excludedChartIds]);
 
   if (!activePage) return null;
   const landingActive = hasLandingPresentation(activePage);
@@ -69,6 +80,42 @@ export default function DashboardCanvas({
           <LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} />
         ) : (
           <>
+            {chronoPlacements.length > 0 && (
+              <section
+                className="dashboard-section chrono-dashboard-section"
+                data-chrono-section={chronoSection.id}
+              >
+                <div className="section-header">
+                  <div className="section-title-block">
+                    <h2>{chronoSection.title}</h2>
+                    <p>{chronoPlacements.length} participating chart{chronoPlacements.length === 1 ? "" : "s"}</p>
+                  </div>
+                </div>
+                <LayoutGrid>
+                  {chronoPlacements.map(({ placement }) => {
+                    const chart = placement.chart ?? placement;
+                    return (
+                      <ChartPanel
+                        key={placement.id}
+                        panel={chart}
+                        rows={dashboard.loadedData?.[chart.sourceId]}
+                        sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
+                        datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
+                        geoData={geoDataSources[chart.presentation?.map?.geoSource]}
+                        dataSources={dashboard.dataSources}
+                        accessibilityEnabled={accessibilityEnabled}
+                        onDisplayAction={onDisplayAction}
+                        multiSelectMode={multiSelectMode}
+                        isMultiSelected={multiPanelIds.includes(chart.id)}
+                        multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
+                        onToggleMultiSelect={() => onToggleMultiPanel?.(chart.id)}
+                        onFullScreenHold={() => onStartMultiFullscreenSelection?.(chart.id)}
+                      />
+                    );
+                  })}
+                </LayoutGrid>
+              </section>
+            )}
             {(activePage.sections ?? []).map((section, sectionIndex) => {
               const visiblePlacements = (section.panels ?? []).filter((placement) => {
                 const chart = placement.chart ?? placement;

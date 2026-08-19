@@ -28,9 +28,13 @@ export default function ViewShell({
   onCancelMultiSelection,
 }) {
   const playback = usePlayback();
-  const elevatedChartIds = playback.playbackView === true
-    ? playback.activeGroup?.members.map(({ chartId }) => chartId) ?? []
-    : [];
+  const chronoSection = playback.playbackView === true && playback.activeGroup
+    ? {
+        id: playback.activeGroup.id,
+        title: playback.activeGroup.name,
+        chartIds: playback.activeGroup.members.map(({ chartId }) => chartId),
+      }
+    : null;
 
   return (
     <CanonicalDashboardFrame
@@ -52,7 +56,7 @@ export default function ViewShell({
               displayState={displayState}
               multiSelectMode={multiSelectMode}
               multiPanelIds={multiPanelIds}
-              excludedChartIds={elevatedChartIds}
+              chronoSection={chronoSection}
               geoDataSources={geoDataSources}
               onNavigate={onActivePageChange}
               onAddPanelToSection={onAddPanelToSection}
