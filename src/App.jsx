@@ -54,6 +54,7 @@ import { catalogueMatchesDashboardSnapshot } from "./lib/quorumCatalogue.js";
 import { createQuorumCompanionClient } from "./lib/quorumCompanionClient.js";
 import { createPresentationAudienceChannel } from "./lib/presentationChannel.js";
 import {
+  createDashboardThemeProjection,
   persistAppearancePreference,
   readAppearancePreference,
   resolveDashboardTheme,
@@ -146,6 +147,10 @@ export default function App() {
     appearancePreference: lookPreview?.appearancePreference ?? appearancePreference,
     prefersDark,
   }), [appearancePreference, dashboard?.globalStyles, lookPreview, prefersDark]);
+  const dashboardThemeProjection = React.useMemo(
+    () => createDashboardThemeProjection(dashboardTheme),
+    [dashboardTheme],
+  );
 
   const commandCrownProjection = React.useMemo(() => {
     const pages = Object.freeze((dashboard?.pages ?? []).map((page) => Object.freeze({
@@ -792,6 +797,7 @@ export default function App() {
         busy={recoveryBusy}
         error={recoveryError}
         candidate={recoveryImportCandidate}
+        themeProjection={dashboardThemeProjection}
         onReload={reloadDashboardFromSource}
         onChoosePackage={chooseRecoveryPackage}
         onConfirmPackage={confirmRecoveryPackage}
@@ -934,6 +940,7 @@ export default function App() {
       onExportConfig={exportConfig}
       onResetEditSession={resetEditSession}
       onOpenDashboardLook={openDashboardLook}
+      themeProjection={dashboardThemeProjection}
       operationError={operationError}
     />
     <DashboardLookDrawer

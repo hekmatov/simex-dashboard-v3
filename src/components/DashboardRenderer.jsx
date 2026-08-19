@@ -68,6 +68,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onResetEditSession,
   onOpenDashboardLook,
   operationError = "",
+  themeProjection,
 }, ref) {
   const buildMode = mode === "build";
   const editMode = buildMode;
@@ -798,6 +799,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onOpenDashboardLook={onOpenDashboardLook}
         runtime={presentationRuntime}
         accessibilityEnabled={accessibilityEnabled}
+        themeProjection={themeProjection}
       />
     );
   }

@@ -115,6 +115,41 @@ test("Profile and Standard chart colours are independent across Light, Dark, and
   }
 });
 
+test("active theme projections are immutable and keyed by every rendered theme value", () => {
+  assert.equal(typeof themeModule.createDashboardThemeProjection, "function");
+  if (typeof themeModule.createDashboardThemeProjection !== "function") return;
+
+  const light = themeModule.resolveDashboardTheme({
+    globalStyles: {
+      dashboardStyle: "humanist-standard",
+      dashboardColorProfile: "humanist-standard/common-ground",
+      chartColorMode: "profile",
+    },
+    appearancePreference: "light",
+  });
+  const sameLight = themeModule.resolveDashboardTheme({
+    globalStyles: {
+      dashboardStyle: "humanist-standard",
+      dashboardColorProfile: "humanist-standard/common-ground",
+      chartColorMode: "profile",
+    },
+    appearancePreference: "light",
+  });
+  const dark = themeModule.resolveDashboardTheme({
+    globalStyles: light,
+    appearancePreference: "dark",
+  });
+  const projection = themeModule.createDashboardThemeProjection(light);
+  const sameProjection = themeModule.createDashboardThemeProjection(sameLight);
+  const darkProjection = themeModule.createDashboardThemeProjection(dark);
+
+  assert.equal(Object.isFrozen(projection), true);
+  assert.equal(Object.isFrozen(projection.cssVariables), true);
+  assert.equal(projection.key, sameProjection.key);
+  assert.notEqual(projection.key, darkProjection.key);
+  assert.equal(projection.cssVariables["--simex-style-body-font"], light.styleVariables["--simex-style-body-font"]);
+});
+
 test("appearance preference persistence rejects unknown stored values", () => {
   assert.equal(typeof themeModule.readAppearancePreference, "function");
   assert.equal(typeof themeModule.persistAppearancePreference, "function");
@@ -170,19 +205,29 @@ test("named V3 surfaces inherit shared style and component variables", async () 
 });
 
 test("standalone Audience and its snapshot portal project active theme metadata and variables", async () => {
-  const [app, snapshot] = await Promise.all([
+  const [app, recovery, renderer, present, snapshot] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/app-shell/ApplicationRecovery.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/DashboardRenderer.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/presentation/PresentWorkspace.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/presentation/AudienceSnapshotMonitor.jsx", import.meta.url), "utf8"),
   ]);
 
+  assert.match(app, /createDashboardThemeProjection\(dashboardTheme\)/);
+  assert.match(app, /<ApplicationRecovery[\s\S]*themeProjection=\{dashboardThemeProjection\}/);
+  assert.match(recovery, /data-dashboard-style=\{themeProjection\.dashboardStyle\}/);
+  assert.match(recovery, /style=\{themeProjection\.cssVariables\}/);
+  assert.match(renderer, /<PresentWorkspace[\s\S]*themeProjection=\{themeProjection\}/);
+  assert.match(present, /<AudienceSnapshotMonitor[\s\S]*themeProjection=\{themeProjection\}/);
   assert.match(app, /className="audience-theme-root"/);
   assert.match(app, /data-dashboard-style=\{dashboardTheme\.dashboardStyle\}/);
   assert.match(app, /data-dashboard-color-profile=\{dashboardTheme\.dashboardColorProfile\}/);
   assert.match(app, /data-resolved-appearance=\{dashboardTheme\.resolvedAppearance\}/);
   assert.match(app, /style=\{\{ \.\.\.dashboardTheme\.cssVariables, \.\.\.dashboardTheme\.styleVariables \}\}/);
-  assert.match(snapshot, /data-dashboard-style=\{captureSource\.theme\.style\}/);
-  assert.match(snapshot, /data-dashboard-color-profile=\{captureSource\.theme\.colorProfile\}/);
-  assert.match(snapshot, /data-resolved-appearance=\{captureSource\.theme\.resolvedAppearance\}/);
-  assert.match(snapshot, /style=\{captureSource\.theme\.variables\}/);
-  assert.match(snapshot, /getComputedStyle\(appFrame\)/);
+  assert.match(snapshot, /data-dashboard-style=\{captureSource\.themeProjection\.dashboardStyle\}/);
+  assert.match(snapshot, /data-dashboard-color-profile=\{captureSource\.themeProjection\.dashboardColorProfile\}/);
+  assert.match(snapshot, /data-resolved-appearance=\{captureSource\.themeProjection\.resolvedAppearance\}/);
+  assert.match(snapshot, /style=\{captureSource\.themeProjection\.cssVariables\}/);
+  assert.match(snapshot, /themeProjection\.key/);
+  assert.doesNotMatch(snapshot, /getComputedStyle|querySelector\("\.app-frame"\)/);
 });

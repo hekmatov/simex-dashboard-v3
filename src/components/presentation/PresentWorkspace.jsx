@@ -12,6 +12,7 @@ export default function PresentWorkspace({
   onOpenDashboardLook,
   runtime,
   accessibilityEnabled,
+  themeProjection,
 }) {
   const playback = usePlayback();
   const {
@@ -134,6 +135,7 @@ export default function PresentWorkspace({
               connectionLabel={connectionStatusLabel(connectionStatus)}
               presentationState={presentationState}
               playing={playback.playing}
+              themeProjection={themeProjection}
             />
             <label className="present-field">
               <span>Current page</span>

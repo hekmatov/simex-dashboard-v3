@@ -206,6 +206,25 @@ export function resolveDashboardTheme({
   });
 }
 
+export function createDashboardThemeProjection(theme = {}) {
+  const cssVariables = Object.freeze({
+    ...(theme.cssVariables ?? {}),
+    ...(theme.styleVariables ?? {}),
+  });
+  const metadata = {
+    dashboardStyle: theme.dashboardStyle,
+    dashboardColorProfile: theme.dashboardColorProfile,
+    chartColorMode: theme.chartColorMode,
+    appearancePreference: theme.appearancePreference,
+    resolvedAppearance: theme.resolvedAppearance,
+  };
+  const key = JSON.stringify([
+    ...Object.values(metadata),
+    ...Object.entries(cssVariables).sort(([left], [right]) => left.localeCompare(right)),
+  ]);
+  return Object.freeze({ ...metadata, cssVariables, key });
+}
+
 export function readAppearancePreference(storage = globalThis.localStorage) {
   try {
     const value = storage?.getItem(APPEARANCE_STORAGE_KEY);

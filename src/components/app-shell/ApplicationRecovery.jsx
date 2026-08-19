@@ -6,6 +6,7 @@ export default function ApplicationRecovery({
   busy = false,
   error = "",
   candidate = null,
+  themeProjection = {},
   onReload,
   onChoosePackage,
   onConfirmPackage,
@@ -20,7 +21,15 @@ export default function ApplicationRecovery({
   };
 
   return (
-    <main className="application-recovery" aria-labelledby="application-recovery-title" aria-busy={busy || undefined}>
+    <main
+      className="application-recovery"
+      aria-labelledby="application-recovery-title"
+      aria-busy={busy || undefined}
+      data-dashboard-style={themeProjection.dashboardStyle}
+      data-dashboard-color-profile={themeProjection.dashboardColorProfile}
+      data-resolved-appearance={themeProjection.resolvedAppearance}
+      style={themeProjection.cssVariables}
+    >
       <section className="application-recovery-panel">
         <p className="eyebrow">SimEx Dashboard</p>
         <h1 id="application-recovery-title">Dashboard couldn’t load. No valid scenario is available.</h1>

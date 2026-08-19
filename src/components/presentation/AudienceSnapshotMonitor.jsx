@@ -6,12 +6,20 @@ import AudienceDisplay from "./AudienceDisplay.jsx";
 const CAPTURE_SETTLE_MS = 200;
 const IDLE_DEBOUNCE_MS = 160;
 const PLAYING_CAPTURE_INTERVAL_MS = 2_000;
+const EMPTY_THEME_PROJECTION = Object.freeze({
+  dashboardStyle: undefined,
+  dashboardColorProfile: undefined,
+  resolvedAppearance: undefined,
+  cssVariables: Object.freeze({}),
+  key: "",
+});
 
 export default function AudienceSnapshotMonitor({
   dashboard,
   connectionLabel,
   presentationState,
   playing,
+  themeProjection = EMPTY_THEME_PROJECTION,
 }) {
   const [imageUrl, setImageUrl] = React.useState("");
   const [captureSource, setCaptureSource] = React.useState(null);
@@ -24,8 +32,8 @@ export default function AudienceSnapshotMonitor({
   const lastCaptureAtRef = React.useRef(0);
   const imageUrlRef = React.useRef(imageUrl);
   imageUrlRef.current = imageUrl;
-  const latestRef = React.useRef({ dashboard, presentationState, playing });
-  latestRef.current = { dashboard, presentationState, playing };
+  const latestRef = React.useRef({ dashboard, presentationState, playing, themeProjection });
+  latestRef.current = { dashboard, presentationState, playing, themeProjection };
 
   const startCapture = React.useCallback(() => {
     timerRef.current = null;
@@ -39,7 +47,7 @@ export default function AudienceSnapshotMonitor({
     setCaptureSource({
       dashboard: latestRef.current.dashboard,
       presentationState: latestRef.current.presentationState,
-      theme: readAppFrameThemeProjection(),
+      themeProjection: latestRef.current.themeProjection,
     });
   }, []);
 
@@ -64,7 +72,7 @@ export default function AudienceSnapshotMonitor({
 
   React.useEffect(() => {
     requestCapture(IDLE_DEBOUNCE_MS, { urgent: true });
-  }, [requestCapture, structureKey]);
+  }, [requestCapture, structureKey, themeProjection.key]);
 
   React.useEffect(() => {
     const elapsed = Date.now() - lastCaptureAtRef.current;
@@ -140,10 +148,10 @@ export default function AudienceSnapshotMonitor({
           className="audience-snapshot-source"
           aria-hidden="true"
           inert
-          data-dashboard-style={captureSource.theme.style}
-          data-dashboard-color-profile={captureSource.theme.colorProfile}
-          data-resolved-appearance={captureSource.theme.resolvedAppearance}
-          style={captureSource.theme.variables}
+          data-dashboard-style={captureSource.themeProjection.dashboardStyle}
+          data-dashboard-color-profile={captureSource.themeProjection.dashboardColorProfile}
+          data-resolved-appearance={captureSource.themeProjection.resolvedAppearance}
+          style={captureSource.themeProjection.cssVariables}
         >
           <AudienceDisplay
             dashboard={captureSource.dashboard}
@@ -155,26 +163,4 @@ export default function AudienceSnapshotMonitor({
       )}
     </section>
   );
-}
-
-function readAppFrameThemeProjection() {
-  if (typeof document === "undefined") return emptyThemeProjection();
-  const appFrame = document.querySelector(".app-frame");
-  if (!appFrame) return emptyThemeProjection();
-  const computed = window.getComputedStyle(appFrame);
-  const variables = Object.fromEntries(
-    [...computed]
-      .filter((name) => name.startsWith("--simex-"))
-      .map((name) => [name, computed.getPropertyValue(name)]),
-  );
-  return {
-    style: appFrame.dataset.dashboardStyle,
-    colorProfile: appFrame.dataset.dashboardColorProfile,
-    resolvedAppearance: appFrame.dataset.resolvedAppearance,
-    variables,
-  };
-}
-
-function emptyThemeProjection() {
-  return { style: undefined, colorProfile: undefined, resolvedAppearance: undefined, variables: {} };
 }
