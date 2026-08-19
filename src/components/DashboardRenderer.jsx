@@ -878,8 +878,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onAddChart={openChartWizard}
           onFinish={saveEditMode}
           onReset={() => setResetEditSessionConfirmation(true)}
-          onImport={onImportConfig}
-          onExport={() => onExportConfig(dashboardWithCurrentDrafts())}
           onOpenBackground={openBackgroundSettings}
           onDeviceLayoutChange={onDeviceLayoutChange}
           onDisplayAction={onDisplayAction}

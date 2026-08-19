@@ -1,6 +1,7 @@
 import React from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
+import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
 import {
   reorderPage,
@@ -18,6 +19,11 @@ import {
   serializeDashboardBundle,
   validateDashboardConfig,
 } from "./charting/config/dashboardBundleV3.js";
+import {
+  hydrateConfigurationBeforeStorageWrite,
+  recoveryPackageError,
+  recoveryPackageSummary,
+} from "./lib/applicationRecovery.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -77,6 +83,9 @@ export default function App() {
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [operationError, setOperationError] = React.useState("");
+  const [recoveryBusy, setRecoveryBusy] = React.useState(false);
+  const [recoveryError, setRecoveryError] = React.useState("");
+  const [recoveryImportCandidate, setRecoveryImportCandidate] = React.useState(null);
   const [mode, setMode] = React.useState(() => resolveInitialDashboardMode({
     storedMode: dashboardEntry.surface === "workspace"
       ? readDashboardModePreference()
@@ -397,6 +406,93 @@ export default function App() {
     return transaction;
   }
 
+  function replaceRecoveryDashboardController(loaded) {
+    dashboardCommitControllerRef.current?.dispose();
+    dashboardCommitControllerRef.current = null;
+    if (dashboardEntry.surface === "workspace") {
+      ensureDashboardCommitController(loaded);
+    }
+  }
+
+  async function reloadDashboardFromSource() {
+    if (recoveryBusy) return;
+    setRecoveryBusy(true);
+    setRecoveryError("");
+    setRecoveryImportCandidate(null);
+    try {
+      const definition = await loadDashboardDefinition(
+        `${import.meta.env.BASE_URL}config/dashboard.json`,
+      );
+      const trackedProfiles = definition.datasetProfiles ?? {};
+      trackedDatasetProfilesRef.current = trackedProfiles;
+      const tracked = {
+        ...definition.dashboard,
+        datasetProfiles: trackedProfiles,
+      };
+      const loaded = await hydrateConfigurationBeforeStorageWrite({
+        candidate: tracked,
+        hydrate: (candidate) => loadDashboardConfig(
+          candidate,
+          trackedProfiles,
+          definition.portableSources,
+        ),
+        persist: (candidate) => localStorage.setItem(
+          DASHBOARD_STORAGE_KEY,
+          JSON.stringify(
+            configurationForStorage(candidate, trackedProfiles),
+            null,
+            2,
+          ),
+        ),
+      });
+      dashboardRef.current = loaded;
+      replaceRecoveryDashboardController(loaded);
+      setDashboard(loaded);
+      setError(null);
+      setOperationError("");
+    } catch {
+      setRecoveryError(
+        "Dashboard couldn’t be reloaded. Import a current version 3 dashboard package or try again.",
+      );
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
+  async function chooseRecoveryPackage(file) {
+    if (!file || recoveryBusy) return;
+    setRecoveryBusy(true);
+    setRecoveryError("");
+    try {
+      const config = parseDashboardBundle(await file.text());
+      setRecoveryImportCandidate({
+        config,
+        fileName: file.name,
+        summary: recoveryPackageSummary(config),
+      });
+    } catch (packageError) {
+      setRecoveryImportCandidate(null);
+      setRecoveryError(recoveryPackageError(packageError));
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
+  async function confirmRecoveryPackage() {
+    if (!recoveryImportCandidate || recoveryBusy) return;
+    setRecoveryBusy(true);
+    setRecoveryError("");
+    try {
+      await persistConfiguration(recoveryImportCandidate.config);
+      replaceRecoveryDashboardController(dashboardRef.current);
+      setRecoveryImportCandidate(null);
+    } catch (packageError) {
+      setRecoveryError(recoveryPackageError(packageError));
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
   function openDashboardLook() {
     setLookPreview(createDashboardLookPreview(savedDashboardTheme));
     setLookStatus("");
@@ -596,6 +692,15 @@ export default function App() {
   }
 
   if (dashboardEntry.surface === "audience") {
+    if (!dashboard || error) {
+      return (
+        <main className="audience-display audience-display-waiting">
+          <section className="status-panel" role="status">
+            <h1>Audience display is waiting for a valid dashboard.</h1>
+          </section>
+        </main>
+      );
+    }
     return <AudienceDisplay
       dashboard={dashboard}
       connectionStatus={audienceConnectionStatus}
@@ -605,12 +710,15 @@ export default function App() {
 
   if (error) {
     return (
-      <main className="app-shell">
-        <section className="status-panel status-panel-error">
-          <h1>Dashboard configuration error</h1>
-          <p>{error.message}</p>
-        </section>
-      </main>
+      <ApplicationRecovery
+        busy={recoveryBusy}
+        error={recoveryError}
+        candidate={recoveryImportCandidate}
+        onReload={reloadDashboardFromSource}
+        onChoosePackage={chooseRecoveryPackage}
+        onConfirmPackage={confirmRecoveryPackage}
+        onCancelPackage={() => setRecoveryImportCandidate(null)}
+      />
     );
   }
   if (!dashboard) {

@@ -80,6 +80,85 @@
   place-items: center;
 }
 
+.application-recovery {
+  align-items: center;
+  background: var(--simex-surface-outer, #eee9de);
+  color: var(--simex-text-strong, #1d2529);
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.application-recovery-panel {
+  background: var(--simex-surface-panel, #fffdf8);
+  border: 1px solid var(--simex-border-strong, #50595d);
+  border-radius: 2px;
+  box-shadow: 0 14px 38px rgb(29 37 41 / 14%);
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+  padding: clamp(22px, 5vw, 48px);
+  width: 100%;
+}
+
+.application-recovery-panel h1,
+.application-recovery-panel p {
+  margin: 0;
+}
+
+.application-recovery-panel h1 {
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.08;
+}
+
+.application-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.application-recovery-actions button {
+  min-height: var(--simex-control-min, 44px);
+}
+
+.application-recovery-error {
+  background: var(--simex-error-soft, #eee0dc);
+  border-left: 4px solid var(--simex-error, #81514b);
+  padding: 10px 12px;
+}
+
+.application-recovery-review {
+  max-height: min(640px, calc(100vh - 40px));
+  overflow: auto;
+  width: min(560px, calc(100vw - 32px));
+}
+
+.application-recovery-review dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.application-recovery-review dl div {
+  background: var(--simex-surface-panel-alt, #faf6ec);
+  border: 1px solid var(--simex-border-subtle, #b7b0a2);
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(90px, 0.35fr) minmax(0, 1fr);
+  padding: 8px 10px;
+}
+
+.application-recovery-review dt {
+  font-weight: 700;
+}
+
+.application-recovery-review dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .build-mode-shell {
   margin: 0 auto;
   max-width: 1600px;

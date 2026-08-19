@@ -37,13 +37,10 @@ export default function BuildWorkspace({
   onAddChart,
   onFinish,
   onReset,
-  onImport,
-  onExport,
   onOpenBackground,
   onDeviceLayoutChange,
   onDisplayAction,
 }) {
-  const importInputRef = React.useRef(null);
   const [openSheet, setOpenSheet] = React.useState(null);
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
@@ -136,19 +133,6 @@ export default function BuildWorkspace({
         <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
         <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
         <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
-        <button type="button" className="secondary" disabled={locked} onClick={() => importInputRef.current?.click()}>Import</button>
-        <button type="button" className="secondary" disabled={locked} onClick={onExport}>Export</button>
-        <input
-          ref={importInputRef}
-          className="visually-hidden"
-          type="file"
-          accept="application/json,.json"
-          disabled={locked}
-          onChange={(event) => {
-            onImport?.(event.target.files?.[0]);
-            event.target.value = "";
-          }}
-        />
         <fieldset className="build-device-layout-fieldset" disabled={locked}>
           <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
         </fieldset>
