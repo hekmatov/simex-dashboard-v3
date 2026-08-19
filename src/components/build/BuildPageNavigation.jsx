@@ -13,10 +13,8 @@ export default function BuildPageNavigation({
   pageDrafts = {},
   disabled = false,
   onSelectPage,
-  onAddPage,
   onPageChange,
   onPageReorder,
-  onOpenDashboardLook,
 }) {
   const [openPageId, setOpenPageId] = React.useState(null);
   const [renameValue, setRenameValue] = React.useState("");
@@ -123,13 +121,6 @@ export default function BuildPageNavigation({
           );
         })}
       </div>
-      <button type="button" className="secondary build-add-page" disabled={disabled} onClick={onAddPage}>
-        <SimExIcon iconId="addTab" size={18} />
-        <span>Add page</span>
-      </button>
-      <button type="button" className="secondary dashboard-look-trigger" disabled={disabled} onClick={onOpenDashboardLook}>
-        Dashboard look
-      </button>
       {openPage && typeof document !== "undefined" && createPortal(
         <PageRenameOrbit
           page={openPage}

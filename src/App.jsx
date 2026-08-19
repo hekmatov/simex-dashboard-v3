@@ -3,6 +3,7 @@ import React from "react";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
   reorderPage,
   reorderSection,
@@ -171,6 +172,31 @@ export default function App() {
     dashboard?.scenarioLabel,
     dashboard?.title,
   ]);
+
+  const commandCrownPageActions = mode === "view" ? (
+    <>
+      <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
+        Dashboard look
+      </button>
+      <PlaybackPageActions />
+      <button
+        type="button"
+        className="secondary view-comparison-button"
+        onClick={() => dashboardRendererRef.current?.requestCompareCharts?.()}
+      >
+        Compare charts
+      </button>
+    </>
+  ) : mode === "build" ? (
+    <button
+      type="button"
+      className="secondary build-add-page"
+      disabled={modeDisabled || buildDraftLocked}
+      onClick={() => dashboardRendererRef.current?.requestAddPage?.()}
+    >
+      Add Page
+    </button>
+  ) : null;
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
@@ -802,6 +828,7 @@ export default function App() {
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
       contextNode={<span>{mode === "build" ? "Dashboard authoring workspace" : mode === "present" ? "Audience presentation workspace" : "Dashboard exploration workspace"}</span>}
+      pageActions={commandCrownPageActions}
       onPageRequest={requestPage}
       density={densityForDashboardMode(mode)}
       theme={dashboardTheme}

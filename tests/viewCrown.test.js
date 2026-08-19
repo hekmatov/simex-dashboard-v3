@@ -45,6 +45,7 @@ test("AppFrame crown owns page location without a duplicate View-local row", () 
       pages: dashboard.pages,
       onModeRequest: () => {},
       onPageRequest: () => {},
+      pageActions: React.createElement("button", { type: "button" }, "Compare charts"),
       children: React.createElement(
         PlaybackProvider,
         { groups: [], charts: [], loadedData: {}, profiles: {} },

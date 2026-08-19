@@ -26,7 +26,6 @@ export default function BuildWorkspace({
   operationError = "",
   appearanceControls,
   geoDataSources,
-  onOpenDashboardLook,
   onActivePageChange,
   onSelectionChange,
   onDashboardChange,
@@ -34,7 +33,6 @@ export default function BuildWorkspace({
   onSectionChange,
   onPageReorder,
   onSectionReorder,
-  onAddPage,
   onAddSection,
   onAddChart,
   onFinish,
@@ -140,10 +138,8 @@ export default function BuildWorkspace({
             pageDrafts={pageDrafts}
             disabled={locked}
             onSelectPage={(pageId) => chooseSelection({ kind: "page", pageId })}
-            onAddPage={onAddPage}
             onPageChange={onPageChange}
             onPageReorder={onPageReorder}
-            onOpenDashboardLook={onOpenDashboardLook}
           />
           <section className="build-command-area" aria-label="Build commands">
             <div className="build-command-title">

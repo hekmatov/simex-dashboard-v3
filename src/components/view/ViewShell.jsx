@@ -2,7 +2,6 @@ import React from "react";
 
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "../InstallDashboardPrompt.jsx";
-import PlaybackPageActions from "../playback/PlaybackPageActions.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "../dashboard/CanonicalDashboardFrame.jsx";
@@ -20,8 +19,6 @@ export default function ViewShell({
   multiPanelIds = [],
   multiSelectNotice,
   onActivePageChange,
-  onCompareCharts,
-  onOpenDashboardLook,
   onAddPanelToSection,
   onDisplayAction,
   onToggleMultiPanel,
@@ -67,20 +64,6 @@ export default function ViewShell({
       footer={<CanonicalDashboardFooter dashboard={dashboard} />}
       overlayLayer={(
         <>
-          <div className="view-page-actions" aria-label="View page actions">
-            <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>
-              Dashboard look
-            </button>
-            <PlaybackPageActions />
-            <button
-              type="button"
-              className="secondary view-comparison-button"
-              disabled={multiSelectMode}
-              onClick={onCompareCharts}
-            >
-              Compare charts
-            </button>
-          </div>
           {multiSelectMode && (
             <section className="multi-select-dock" aria-label="Chart comparison selection">
               <span className="multi-select-count">

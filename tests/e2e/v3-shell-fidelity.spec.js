@@ -208,6 +208,38 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
 });
 
+test("shared Page row pins only the accepted View and Build actions", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
+
+  await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
+    .toHaveCount(1);
+  await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
+    .toHaveCount(1);
+  await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
+    .toHaveCount(1);
+  await expect(page.locator(".view-page-actions")).toHaveCount(0);
+
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  await expect(pinned.getByRole("button", { name: "Add Page", exact: true }))
+    .toHaveCount(1);
+  await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
+    .toHaveCount(0);
+  await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
+    .toHaveCount(0);
+  await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
+    .toHaveCount(0);
+  await expect(page.locator(".build-page-navigation .build-add-page")).toHaveCount(0);
+
+  await pinned.getByRole("button", { name: "Add Page", exact: true }).click();
+  await expect(page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "New page", exact: true }))
+    .toHaveCount(1);
+});
+
 async function readLegacyDiagnostic(page) {
   return page.evaluate(() => {
     const read = (selector) => {

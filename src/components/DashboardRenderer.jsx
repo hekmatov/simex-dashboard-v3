@@ -165,6 +165,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
 
   React.useImperativeHandle(ref, () => ({
+    requestCompareCharts() {
+      if (buildMode) return;
+      startMultiFullscreenSelection();
+    },
+    requestAddPage() {
+      if (!buildMode || chartAuthoringActive) return;
+      addPage();
+    },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
       if (chartAuthoringActive) {
@@ -807,8 +815,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         multiPanelIds={multiPanelIds}
         multiSelectNotice={multiSelectNotice}
         onActivePageChange={navigateToPage}
-        onCompareCharts={() => startMultiFullscreenSelection()}
-        onOpenDashboardLook={onOpenDashboardLook}
         onAddPanelToSection={recoverEmptySectionInBuild}
         onDisplayAction={onDisplayAction}
         onToggleMultiPanel={toggleMultiPanel}
@@ -882,7 +888,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               </label>
             </>
           )}
-          onOpenDashboardLook={onOpenDashboardLook}
           onActivePageChange={onActivePageChange}
           onSelectionChange={selectBuildItem}
           onDashboardChange={changeDashboardText}
@@ -890,7 +895,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onSectionChange={changeSection}
           onPageReorder={reorderBuildPage}
           onSectionReorder={reorderBuildSection}
-          onAddPage={addPage}
           onAddSection={addSection}
           onAddChart={openChartWizard}
           onFinish={saveEditMode}
