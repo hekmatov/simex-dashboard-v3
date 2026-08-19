@@ -23,14 +23,48 @@ export default function DashboardCanvas({
   onToggleMultiPanel,
   onStartMultiFullscreenSelection,
 }) {
+  const canvasRef = React.useRef(null);
+  const excludedIds = new Set(excludedChartIds);
+
+  React.useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !activePage) return undefined;
+
+    const annotateCanonicalElements = () => {
+      for (const section of activePage.sections ?? []) {
+        const sectionElement = [...canvas.querySelectorAll("[data-canonical-section-id]")]
+          .find((element) => element.dataset.canonicalSectionId === section.id);
+        if (!sectionElement) continue;
+        const placements = (section.panels ?? []).filter((placement) => {
+          const chart = placement.chart ?? placement;
+          return !excludedIds.has(chart.id);
+        });
+        const panelElements = sectionElement.querySelectorAll(":scope > .layout-grid > .chart-panel");
+        placements.forEach((placement, index) => {
+          const panelElement = panelElements[index];
+          if (!panelElement) return;
+          const chart = placement.chart ?? placement;
+          setCanonicalAttribute(panelElement, "data-canonical-panel-id", chart.id);
+          setCanonicalAttribute(panelElement, "data-canonical-placement-id", placement.id);
+          const plotElement = panelElement.querySelector(".chart-view-frame");
+          if (plotElement) setCanonicalAttribute(plotElement, "data-canonical-plot-id", chart.id);
+        });
+      }
+    };
+
+    annotateCanonicalElements();
+    const observer = new MutationObserver(annotateCanonicalElements);
+    observer.observe(canvas, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [activePage, excludedChartIds]);
+
   if (!activePage) return null;
   const landingActive = hasLandingPresentation(activePage);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
-  const excludedIds = new Set(excludedChartIds);
 
   return (
-    <section className="dashboard-workspace" data-dashboard-surface={surface}>
-      <div className="page-stack">
+    <section ref={canvasRef} className="dashboard-workspace" data-dashboard-surface={surface} data-canonical-canvas-id={activePage.id}>
+      <div className="page-stack" data-canonical-grid-id={activePage.id}>
         {landingActive ? (
           <LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} />
         ) : (
@@ -45,7 +79,7 @@ export default function DashboardCanvas({
               }
               const sectionDraft = buildState?.sectionDrafts?.[section.id] ?? section;
               return (
-                <section className="dashboard-section" key={section.id}>
+                <section className="dashboard-section" data-canonical-section-id={section.id} key={section.id}>
                   {buildState ? (
                     <BuildSectionHeader
                       section={section}
@@ -138,6 +172,10 @@ export default function DashboardCanvas({
       </div>
     </section>
   );
+}
+
+function setCanonicalAttribute(element, name, value) {
+  if (element.getAttribute(name) !== value) element.setAttribute(name, value);
 }
 
 function BuildSectionHeader({

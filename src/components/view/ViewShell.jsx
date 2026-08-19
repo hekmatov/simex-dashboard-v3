@@ -2,13 +2,12 @@ import React from "react";
 
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "../InstallDashboardPrompt.jsx";
-import { hasLandingPresentation } from "../LandingPage.jsx";
 import PlaybackPageActions from "../playback/PlaybackPageActions.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
+import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "../dashboard/CanonicalDashboardFrame.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import DashboardHeader from "../dashboard/DashboardHeader.jsx";
-import PageNavigation from "../dashboard/PageNavigation.jsx";
 
 export default function ViewShell({
   activePage,
@@ -36,17 +35,40 @@ export default function ViewShell({
     : [];
 
   return (
-    <main className="app-shell view-shell" data-page-type={hasLandingPresentation(activePage) ? "landing" : "analytical"} style={iconLanguageStyles}>
-      <section className="dashboard-location-row" aria-label="Dashboard location and Page tools">
-        <DashboardHeader activePage={activePage} dashboard={dashboard} />
-        <div className="page-navigation-line">
-          <PageNavigation activePageId={activePage?.id} pages={dashboard.pages} onPageChange={onActivePageChange} />
-          <div className="page-navigation-actions" aria-label="View page actions">
-            <button
-              type="button"
-              className="secondary dashboard-look-trigger"
-              onClick={onOpenDashboardLook}
-            >
+    <CanonicalDashboardFrame
+      mode="view"
+      pageId={activePage?.id}
+      dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
+      pageContent={(
+        <div className="canonical-view-content" style={iconLanguageStyles}>
+          <PlaybackSurface
+            accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
+            viewOwned
+          >
+            <DashboardCanvas
+              activePage={activePage}
+              dashboard={dashboard}
+              surface="view"
+              buildState={null}
+              displayState={displayState}
+              multiSelectMode={multiSelectMode}
+              multiPanelIds={multiPanelIds}
+              excludedChartIds={elevatedChartIds}
+              geoDataSources={geoDataSources}
+              onNavigate={onActivePageChange}
+              onAddPanelToSection={onAddPanelToSection}
+              onDisplayAction={onDisplayAction}
+              onToggleMultiPanel={onToggleMultiPanel}
+              onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
+            />
+          </PlaybackSurface>
+        </div>
+      )}
+      footer={<CanonicalDashboardFooter dashboard={dashboard} />}
+      overlayLayer={(
+        <>
+          <div className="view-page-actions" aria-label="View page actions">
+            <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>
               Dashboard look
             </button>
             <PlaybackPageActions />
@@ -59,88 +81,38 @@ export default function ViewShell({
               Compare charts
             </button>
           </div>
-        </div>
-      </section>
-      <PlaybackSurface
-        accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
-        viewOwned
-      >
-        <DashboardCanvas
-          activePage={activePage}
-          dashboard={dashboard}
-          surface="view"
-          buildState={null}
-          displayState={displayState}
-          multiSelectMode={multiSelectMode}
-          multiPanelIds={multiPanelIds}
-          excludedChartIds={elevatedChartIds}
-          geoDataSources={geoDataSources}
-          onNavigate={onActivePageChange}
-          onAddPanelToSection={onAddPanelToSection}
-          onDisplayAction={onDisplayAction}
-          onToggleMultiPanel={onToggleMultiPanel}
-          onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
-        />
-      </PlaybackSurface>
-      {multiSelectMode && (
-        <section className="multi-select-dock" aria-label="Chart comparison selection">
-          <span className="multi-select-count">
-            <strong>{multiPanelIds.length}</strong>
-            <span>of 4 selected</span>
-          </span>
-          <button
-            type="button"
-            disabled={multiPanelIds.length < 2}
-            onClick={onOpenMultiFullscreen}
-          >
-            Compare
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={onCancelMultiSelection}
-          >
-            Cancel
-          </button>
-        </section>
+          {multiSelectMode && (
+            <section className="multi-select-dock" aria-label="Chart comparison selection">
+              <span className="multi-select-count">
+                <strong>{multiPanelIds.length}</strong>
+                <span>of 4 selected</span>
+              </span>
+              <button type="button" disabled={multiPanelIds.length < 2} onClick={onOpenMultiFullscreen}>
+                Compare
+              </button>
+              <button type="button" className="secondary" onClick={onCancelMultiSelection}>
+                Cancel
+              </button>
+            </section>
+          )}
+          {multiSelectNotice && (
+            <div className="multi-select-limit-notice" role="alert" key={multiSelectNotice.id}>
+              {multiSelectNotice.message}
+            </div>
+          )}
+          <FullscreenDisplay
+            dashboard={dashboard}
+            displayState={displayState}
+            onDisplayAction={onDisplayAction}
+            timeContextForChart={playback.timeContextForChart}
+            accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
+          />
+          <div className="dashboard-device-tools">
+            <span className="companion-status" role="status">{companionStatusLabel}</span>
+            <InstallDashboardPrompt />
+          </div>
+        </>
       )}
-      {multiSelectNotice && (
-        <div className="multi-select-limit-notice" role="alert" key={multiSelectNotice.id}>
-          {multiSelectNotice.message}
-        </div>
-      )}
-      <FullscreenDisplay
-        dashboard={dashboard}
-        displayState={displayState}
-        onDisplayAction={onDisplayAction}
-        timeContextForChart={playback.timeContextForChart}
-        accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
-      />
-      <DashboardFooter dashboard={dashboard} />
-      <div className="dashboard-device-tools">
-        <span className="companion-status" role="status">{companionStatusLabel}</span>
-        <InstallDashboardPrompt />
-      </div>
-    </main>
+    />
   );
-}
-
-function DashboardFooter({ dashboard }) {
-  const feedbackUrl = dashboard.feedbackUrl || feedbackMailtoUrl(dashboard.contactEmail);
-  const contactUrl = dashboard.contactEmail ? `mailto:${dashboard.contactEmail}` : null;
-  return (
-    <footer className="dashboard-footer" aria-label="Dashboard information and feedback">
-      <div><strong>{dashboard.footerTitle ?? "SimEx Dashboard V3"}</strong><span>{dashboard.footerCredit ?? "Developed by Hekmat Alrouh"}</span></div>
-      <nav aria-label="Project links">
-        <a href={feedbackUrl} target="_blank" rel="noreferrer">Report a bug / request a feature</a>
-        {contactUrl && <a href={contactUrl}>Contact maintainer</a>}
-        {dashboard.repositoryUrl && dashboard.showRepositoryLink && <a href={dashboard.repositoryUrl} target="_blank" rel="noreferrer">Project repository</a>}
-      </nav>
-    </footer>
-  );
-}
-
-function feedbackMailtoUrl(contactEmail) {
-  const email = contactEmail || "hekmat.alrouh@live.com";
-  return `mailto:${email}?subject=${encodeURIComponent("SimEx Dashboard feedback")}`;
 }

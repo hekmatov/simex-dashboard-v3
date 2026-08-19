@@ -1127,3 +1127,183 @@
     padding-left: 0;
   }
 }
+/* View and Build share one in-flow dashboard frame. Mode-owned tools project
+   into overlay layers and therefore cannot resize canonical content. */
+.build-mode-shell {
+  display: contents;
+}
+
+.canonical-dashboard-frame {
+  background: var(--simex-surface-canvas);
+  color: var(--simex-text-strong);
+}
+
+.canonical-dashboard-frame.build-workspace {
+  display: block;
+}
+
+.canonical-dashboard-header {
+  margin-bottom: 16px;
+}
+
+.canonical-dashboard-frame .dashboard-header {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--simex-text-strong);
+  margin: 0;
+  min-height: 86px;
+  padding: 12px 20px;
+}
+
+.canonical-dashboard-frame .dashboard-brand-block {
+  gap: 12px;
+}
+
+.canonical-dashboard-frame .pdpc-header-mark {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  box-shadow: none;
+  height: 54px;
+  padding: 3px;
+  width: 54px;
+}
+
+.canonical-dashboard-frame .eyebrow {
+  margin-bottom: 3px;
+}
+
+.canonical-dashboard-frame .dashboard-header h1,
+.canonical-dashboard-frame .dashboard-page-title,
+.canonical-dashboard-frame .section-header h2 {
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+}
+
+.canonical-dashboard-frame .dashboard-header h1,
+.canonical-dashboard-frame .dashboard-page-title {
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.canonical-dashboard-frame .subtitle {
+  margin-top: 4px;
+}
+
+.canonical-dashboard-frame .dashboard-meta {
+  gap: 8px;
+}
+
+.canonical-dashboard-frame .dashboard-meta div {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 2px;
+  padding: 7px 9px;
+}
+
+.canonical-dashboard-frame .section-header {
+  align-items: end;
+  flex-direction: row;
+}
+
+.canonical-dashboard-frame .chart-panel,
+.canonical-dashboard-frame .dashboard-footer {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.canonical-dashboard-overlay {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 30;
+}
+
+.view-page-actions,
+.build-authoring-layer,
+.canonical-dashboard-overlay :is(button, input, select, textarea, a, [tabindex]) {
+  pointer-events: auto;
+}
+
+.view-page-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  position: fixed;
+  right: 16px;
+  top: 8px;
+  z-index: 40;
+}
+
+.build-authoring-layer {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  box-shadow: 0 14px 40px rgb(8 34 74 / 22%);
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 10px;
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  width: min(380px, calc(100vw - 24px));
+  z-index: 40;
+}
+
+.build-authoring-layer .build-region-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.build-authoring-layer .build-side-sheet {
+  display: block;
+  max-height: none;
+}
+
+.canonical-dashboard-frame .build-section-header {
+  position: relative;
+}
+
+.canonical-dashboard-frame .build-section-title-button {
+  border: 0;
+  line-height: inherit;
+  min-height: 0;
+  padding: 0;
+}
+
+.canonical-dashboard-frame .build-section-actions,
+.canonical-dashboard-frame .panel-actions,
+.canonical-dashboard-frame .build-add-section-row {
+  position: absolute;
+}
+
+.canonical-dashboard-frame .build-section-actions {
+  right: 0;
+  top: 0;
+}
+
+.canonical-dashboard-frame .panel-actions {
+  right: 18px;
+  top: 18px;
+}
+
+.canonical-dashboard-frame .chart-panel-has-actions {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.canonical-dashboard-frame .build-add-section-row {
+  bottom: 0;
+  right: 0;
+}
+
+@media (max-width: 767px) {
+  .canonical-dashboard-frame .dashboard-header {
+    gap: 10px;
+    padding: 10px;
+  }
+}

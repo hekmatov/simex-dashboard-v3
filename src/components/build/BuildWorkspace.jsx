@@ -2,7 +2,9 @@ import React from "react";
 
 import DeviceLayoutControl from "../DeviceLayoutControl.jsx";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
+import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "../dashboard/CanonicalDashboardFrame.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
+import DashboardHeader from "../dashboard/DashboardHeader.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildPageNavigation from "./BuildPageNavigation.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
@@ -105,103 +107,103 @@ export default function BuildWorkspace({
   );
 
   return (
-    <main className="build-workspace" data-device-layout={deviceLayout}>
-      <header className="build-header">
-        <div>
-          <p className="eyebrow">Build</p>
-          <h1>{dashboard.programLabel || "SimEx Dashboard"}</h1>
-          <p>{dashboard.scenarioLabel || "Dashboard authoring workspace"}</p>
-        </div>
-        <span>{dashboard.lastUpdated}</span>
-      </header>
-      <BuildPageNavigation
-        pages={dashboard.pages}
-        activePageId={activePage?.id}
-        pageDrafts={pageDrafts}
-        disabled={locked}
-        onSelectPage={(pageId) => chooseSelection({ kind: "page", pageId })}
-        onAddPage={onAddPage}
-        onPageChange={onPageChange}
-        onPageReorder={onPageReorder}
-        onOpenDashboardLook={onOpenDashboardLook}
-      />
-      <section className="build-command-area" aria-label="Build commands">
-        <div className="build-command-title">
-          <p className="eyebrow">Workspace</p>
-          <strong>Build commands</strong>
-        </div>
-        <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
-        <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
-        <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
-        <fieldset className="build-device-layout-fieldset" disabled={locked}>
-          <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
-        </fieldset>
-        <fieldset className="build-appearance-controls" disabled={locked}>
-          {appearanceControls}
-          <button type="button" className="secondary" disabled={locked} onClick={onOpenBackground}>Background</button>
-        </fieldset>
-      </section>
-      {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
-      <section className="build-canvas-toolbar" aria-label="Build regions">
-        <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
-        <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>
-      </section>
-      <section className="build-region-grid">
-        <ModalFocusScope
-          as="section"
-          open={tablet && openSheet === "structure"}
-          className={`build-side-sheet build-structure-sheet${openSheet === "structure" ? " build-sheet-open" : ""}`}
-          role={tablet && openSheet === "structure" ? "dialog" : undefined}
-          aria-modal={tablet && openSheet === "structure" ? "true" : undefined}
-          aria-label="Dashboard structure"
-          onEscape={close}
-        >
-          {tablet && openSheet === "structure" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
-          {structure}
-        </ModalFocusScope>
-        <section className="build-live-canvas" aria-label="Live dashboard canvas">
-          <DashboardCanvas
-            activePage={activePage}
-            dashboard={dashboard}
-            surface="build"
-            geoDataSources={geoDataSources}
-            onNavigate={(pageId) => chooseSelection({ kind: "page", pageId })}
-            onDisplayAction={onDisplayAction}
-            buildState={{
-              selection,
-              disabled: locked,
-              sectionDrafts,
-              onSelect: chooseSelection,
-              onRenameSection: onSectionChange,
-              onReorderSection: onSectionReorder,
-              onAddSection,
-              onAddChart,
-            }}
-          />
-        </section>
-        <ModalFocusScope
-          as="section"
-          open={tablet && openSheet === "inspector"}
-          className={`build-side-sheet build-inspector-sheet${openSheet === "inspector" ? " build-sheet-open" : ""}`}
-          role={tablet && openSheet === "inspector" ? "dialog" : undefined}
-          aria-modal={tablet && openSheet === "inspector" ? "true" : undefined}
-          aria-label="Context inspector"
-          onEscape={close}
-        >
-          {tablet && openSheet === "inspector" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
-          {inspector}
-        </ModalFocusScope>
-      </section>
-      {selection?.kind === "chart" && chartEditor && (
-        <UnitOrbit
-          anchorPlacementId={selection.placementId}
-          chartTitle={selectedChart?.title}
-          onRequestClose={onCloseChartEditor}
-        >
-          {chartEditor}
-        </UnitOrbit>
+    <CanonicalDashboardFrame
+      mode="build"
+      pageId={activePage?.id}
+      dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
+      pageContent={(
+        <DashboardCanvas
+          activePage={activePage}
+          dashboard={dashboard}
+          surface="build"
+          geoDataSources={geoDataSources}
+          onNavigate={(pageId) => chooseSelection({ kind: "page", pageId })}
+          onDisplayAction={onDisplayAction}
+          buildState={{
+            selection,
+            disabled: locked,
+            sectionDrafts,
+            onSelect: chooseSelection,
+            onRenameSection: onSectionChange,
+            onReorderSection: onSectionReorder,
+            onAddSection,
+            onAddChart,
+          }}
+        />
       )}
-    </main>
+      footer={<CanonicalDashboardFooter dashboard={dashboard} />}
+      overlayLayer={(
+        <div className="build-authoring-layer" data-device-layout={deviceLayout}>
+          <BuildPageNavigation
+            pages={dashboard.pages}
+            activePageId={activePage?.id}
+            pageDrafts={pageDrafts}
+            disabled={locked}
+            onSelectPage={(pageId) => chooseSelection({ kind: "page", pageId })}
+            onAddPage={onAddPage}
+            onPageChange={onPageChange}
+            onPageReorder={onPageReorder}
+            onOpenDashboardLook={onOpenDashboardLook}
+          />
+          <section className="build-command-area" aria-label="Build commands">
+            <div className="build-command-title">
+              <p className="eyebrow">Workspace</p>
+              <strong>Build commands</strong>
+            </div>
+            <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
+            <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
+            <fieldset className="build-device-layout-fieldset" disabled={locked}>
+              <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
+            </fieldset>
+            <fieldset className="build-appearance-controls" disabled={locked}>
+              {appearanceControls}
+              <button type="button" className="secondary" disabled={locked} onClick={onOpenBackground}>Background</button>
+            </fieldset>
+          </section>
+          {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
+          <section className="build-canvas-toolbar" aria-label="Build regions">
+            <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
+            <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>
+          </section>
+          <section className="build-region-grid">
+            <ModalFocusScope
+              as="section"
+              open={tablet && openSheet === "structure"}
+              className={"build-side-sheet build-structure-sheet" + (openSheet === "structure" ? " build-sheet-open" : "")}
+              role={tablet && openSheet === "structure" ? "dialog" : undefined}
+              aria-modal={tablet && openSheet === "structure" ? "true" : undefined}
+              aria-label="Dashboard structure"
+              onEscape={close}
+            >
+              {tablet && openSheet === "structure" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
+              {structure}
+            </ModalFocusScope>
+            <ModalFocusScope
+              as="section"
+              open={tablet && openSheet === "inspector"}
+              className={"build-side-sheet build-inspector-sheet" + (openSheet === "inspector" ? " build-sheet-open" : "")}
+              role={tablet && openSheet === "inspector" ? "dialog" : undefined}
+              aria-modal={tablet && openSheet === "inspector" ? "true" : undefined}
+              aria-label="Context inspector"
+              onEscape={close}
+            >
+              {tablet && openSheet === "inspector" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
+              {inspector}
+            </ModalFocusScope>
+          </section>
+          {selection?.kind === "chart" && chartEditor && (
+            <UnitOrbit
+              anchorPlacementId={selection.placementId}
+              chartTitle={selectedChart?.title}
+              onRequestClose={onCloseChartEditor}
+            >
+              {chartEditor}
+            </UnitOrbit>
+          )}
+        </div>
+      )}
+    />
   );
 }
 
