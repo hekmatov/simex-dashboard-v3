@@ -628,9 +628,25 @@ export default function App() {
     }
   }
 
-  async function prepareToLeaveBuild() {
-    return dashboardRendererRef.current?.prepareToLeaveBuild?.()
+  async function prepareToLeaveBuild(destination = "mode") {
+    return dashboardRendererRef.current?.prepareToLeaveBuild?.(destination)
       ?? { ok: true };
+  }
+
+  async function requestPage(nextPageId) {
+    if (nextPageId === activePageId) return;
+    if (!(dashboard?.pages ?? []).some(({ id }) => id === nextPageId)) return;
+    setBlockedReason("");
+    if (mode === "build") {
+      const result = await prepareToLeaveBuild("page");
+      if (!result?.ok) {
+        setBlockedReason(
+          result?.reason ?? "Finish the current Build operation before changing Page.",
+        );
+        return;
+      }
+    }
+    setActivePageId(nextPageId);
   }
 
   async function resetEditSession() {
@@ -786,7 +802,7 @@ export default function App() {
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
       contextNode={<span>{mode === "build" ? "Dashboard authoring workspace" : mode === "present" ? "Audience presentation workspace" : "Dashboard exploration workspace"}</span>}
-      onPageRequest={setActivePageId}
+      onPageRequest={requestPage}
       density={densityForDashboardMode(mode)}
       theme={dashboardTheme}
     >

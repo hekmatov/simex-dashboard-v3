@@ -165,12 +165,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
 
   React.useImperativeHandle(ref, () => ({
-    async prepareToLeaveBuild() {
+    async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
       if (chartAuthoringActive) {
         return {
           ok: false,
-          reason: "Finish or cancel the open chart editor before leaving Build.",
+          reason: destination === "page"
+            ? "Finish or cancel the open chart editor before changing Page."
+            : "Finish or cancel the open chart editor before leaving Build.",
         };
       }
       await pendingEdits.flush();

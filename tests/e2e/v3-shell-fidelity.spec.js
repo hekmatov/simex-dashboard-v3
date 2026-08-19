@@ -173,6 +173,41 @@ test("Build section rename target keeps 44px activation and 3px focus", async ({
   });
 });
 
+test("dirty Build chart blocks crown Page navigation until the draft resolves", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  const crownPages = page.locator(".dashboard-command-page-scroller");
+  await crownPages.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+
+  const frame = page.locator(".canonical-dashboard-frame");
+  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  await target.scrollIntoViewIfNeeded();
+  const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
+  await editChart.focus();
+  await page.keyboard.press("Enter");
+
+  const editor = page.locator(".chart-editor-v3");
+  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  const title = editor.getByLabel("Chart title");
+  await title.fill("Draft survives crown navigation");
+
+  await crownPages.getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
+  await expect(editor).toHaveCount(1);
+  await expect(title).toHaveValue("Draft survives crown navigation");
+  await expect(page.getByRole("alert")).toContainText(
+    "Finish or cancel the open chart editor before changing Page.",
+  );
+
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await crownPages.getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
+});
+
 async function readLegacyDiagnostic(page) {
   return page.evaluate(() => {
     const read = (selector) => {
