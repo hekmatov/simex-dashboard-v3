@@ -183,15 +183,16 @@
 }
 /* S6-4 shared surface inheritance. These properties only alter paint, so the
    S6-3 canonical View/Build geometry remains unchanged. */
-:where(
+.app-frame :is(
   .dashboard-command-crown,
   .canonical-dashboard-frame .dashboard-header,
   .canonical-dashboard-frame .section-header,
+  .canonical-dashboard-frame .dashboard-footer,
   .dashboard-footer,
-  .confirm-dialog,
-  .application-recovery-panel,
   .look-drawer
-) {
+),
+.application-recovery :is(.confirm-dialog, .application-recovery-panel),
+.audience-theme-root {
   background-color: var(--simex-surface-panel);
   border-color: var(--simex-border-subtle);
   border-radius: var(--simex-component-surface-radius);
@@ -199,13 +200,29 @@
   color: var(--simex-text-strong);
 }
 
-:where(.look-drawer, .confirm-dialog, .application-recovery-panel) :focus-visible {
+.app-frame .look-drawer :focus-visible,
+.application-recovery :is(.confirm-dialog, .application-recovery-panel) :focus-visible,
+.audience-theme-root :focus-visible {
   outline: var(--simex-component-focus-width, 3px) solid var(--simex-component-focus, var(--simex-focus));
   outline-offset: 2px;
 }
 
+/* Exact canonical selectors must outrank their transparent, square defaults. */
+.app-frame .canonical-dashboard-frame :is(
+  .dashboard-header,
+  .section-header,
+  .dashboard-footer
+) {
+  background-color: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-component-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
 @media (prefers-reduced-motion: reduce) {
-  :where(.dashboard-command-crown, .confirm-dialog, .application-recovery-panel, .look-drawer) {
+  .app-frame :is(.dashboard-command-crown, .look-drawer),
+  .application-recovery :is(.confirm-dialog, .application-recovery-panel),
+  .audience-theme-root {
     transition-duration: 0.01ms;
   }
 }

@@ -199,9 +199,13 @@ test("look drawer preserves geometry", async ({ page }) => {
     .getByRole("button", { name: "Biomedical", exact: true })
     .click();
   await expect(page.locator(".chart-panel").first()).toBeVisible();
+  await expect(page.locator(".canonical-dashboard-frame .dashboard-header"))
+    .toHaveCSS("background-color", "rgb(255, 253, 248)");
+  await expect(page.locator(".canonical-dashboard-frame .dashboard-header"))
+    .toHaveCSS("border-top-left-radius", "10px");
   const before = await readCanonicalGeometry(page);
 
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).evaluate((button) => button.click());
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
   const after = await readCanonicalGeometry(page);
   const changes = compareCanonicalGeometry(before, after).filter(({ delta }) => (
@@ -213,7 +217,7 @@ test("look drawer preserves geometry", async ({ page }) => {
 test("look drawer phone sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).evaluate((button) => button.click());
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
 
   const drawer = page.getByRole("dialog", { name: "Dashboard look" });
   await expect(drawer).toBeVisible();

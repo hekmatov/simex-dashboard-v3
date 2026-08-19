@@ -168,3 +168,21 @@ test("named V3 surfaces inherit shared style and component variables", async () 
   assert.match(presentation, /--simex-component-surface-radius/);
   assert.match(presentation, /--simex-component-control-radius/);
 });
+
+test("standalone Audience and its snapshot portal project active theme metadata and variables", async () => {
+  const [app, snapshot] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/presentation/AudienceSnapshotMonitor.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(app, /className="audience-theme-root"/);
+  assert.match(app, /data-dashboard-style=\{dashboardTheme\.dashboardStyle\}/);
+  assert.match(app, /data-dashboard-color-profile=\{dashboardTheme\.dashboardColorProfile\}/);
+  assert.match(app, /data-resolved-appearance=\{dashboardTheme\.resolvedAppearance\}/);
+  assert.match(app, /style=\{\{ \.\.\.dashboardTheme\.cssVariables, \.\.\.dashboardTheme\.styleVariables \}\}/);
+  assert.match(snapshot, /data-dashboard-style=\{captureSource\.theme\.style\}/);
+  assert.match(snapshot, /data-dashboard-color-profile=\{captureSource\.theme\.colorProfile\}/);
+  assert.match(snapshot, /data-resolved-appearance=\{captureSource\.theme\.resolvedAppearance\}/);
+  assert.match(snapshot, /style=\{captureSource\.theme\.variables\}/);
+  assert.match(snapshot, /getComputedStyle\(appFrame\)/);
+});

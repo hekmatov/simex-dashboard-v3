@@ -39,6 +39,7 @@ export default function AudienceSnapshotMonitor({
     setCaptureSource({
       dashboard: latestRef.current.dashboard,
       presentationState: latestRef.current.presentationState,
+      theme: readAppFrameThemeProjection(),
     });
   }, []);
 
@@ -139,6 +140,10 @@ export default function AudienceSnapshotMonitor({
           className="audience-snapshot-source"
           aria-hidden="true"
           inert
+          data-dashboard-style={captureSource.theme.style}
+          data-dashboard-color-profile={captureSource.theme.colorProfile}
+          data-resolved-appearance={captureSource.theme.resolvedAppearance}
+          style={captureSource.theme.variables}
         >
           <AudienceDisplay
             dashboard={captureSource.dashboard}
@@ -150,4 +155,26 @@ export default function AudienceSnapshotMonitor({
       )}
     </section>
   );
+}
+
+function readAppFrameThemeProjection() {
+  if (typeof document === "undefined") return emptyThemeProjection();
+  const appFrame = document.querySelector(".app-frame");
+  if (!appFrame) return emptyThemeProjection();
+  const computed = window.getComputedStyle(appFrame);
+  const variables = Object.fromEntries(
+    [...computed]
+      .filter((name) => name.startsWith("--simex-"))
+      .map((name) => [name, computed.getPropertyValue(name)]),
+  );
+  return {
+    style: appFrame.dataset.dashboardStyle,
+    colorProfile: appFrame.dataset.dashboardColorProfile,
+    resolvedAppearance: appFrame.dataset.resolvedAppearance,
+    variables,
+  };
+}
+
+function emptyThemeProjection() {
+  return { style: undefined, colorProfile: undefined, resolvedAppearance: undefined, variables: {} };
 }

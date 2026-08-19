@@ -10,6 +10,7 @@ export function createDashboardLookPreview(theme) {
     dashboardColorProfile: theme.dashboardColorProfile,
     chartColorMode: theme.chartColorMode,
     appearancePreference: theme.appearancePreference,
+    resolvedAppearance: theme.resolvedAppearance,
   };
 }
 
@@ -33,6 +34,8 @@ export function resolveDashboardLookSurfaceAttributes(preview = {}) {
   return {
     style: preview.dashboardStyle,
     colorProfile: preview.dashboardColorProfile,
-    resolvedAppearance: appearancePreference === "dark" ? "dark" : "light",
+    resolvedAppearance: appearancePreference === "system"
+      ? preview.resolvedAppearance ?? "light"
+      : appearancePreference,
   };
 }

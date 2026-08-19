@@ -727,11 +727,21 @@ export default function App() {
         </main>
       );
     }
-    return <AudienceDisplay
-      dashboard={dashboard}
-      connectionStatus={audienceConnectionStatus}
-      presentationState={audiencePresentationState}
-    />;
+    return (
+      <div
+        className="audience-theme-root"
+        data-dashboard-style={dashboardTheme.dashboardStyle}
+        data-dashboard-color-profile={dashboardTheme.dashboardColorProfile}
+        data-resolved-appearance={dashboardTheme.resolvedAppearance}
+        style={{ ...dashboardTheme.cssVariables, ...dashboardTheme.styleVariables }}
+      >
+        <AudienceDisplay
+          dashboard={dashboard}
+          connectionStatus={audienceConnectionStatus}
+          presentationState={audiencePresentationState}
+        />
+      </div>
+    );
   }
 
   if (error) {
