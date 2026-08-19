@@ -2,7 +2,6 @@ import React from "react";
 
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import InstallDashboardPrompt from "../InstallDashboardPrompt.jsx";
-import { IconControl } from "../common/SimExIcon.js";
 import { hasLandingPresentation } from "../LandingPage.jsx";
 import PlaybackPageActions from "../playback/PlaybackPageActions.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
@@ -82,23 +81,25 @@ export default function ViewShell({
         />
       </PlaybackSurface>
       {multiSelectMode && (
-        <section className="multi-select-dock" aria-label="Multi-fullscreen selection">
+        <section className="multi-select-dock" aria-label="Chart comparison selection">
           <span className="multi-select-count">
             <strong>{multiPanelIds.length}</strong>
             <span>of 4 selected</span>
           </span>
-          <IconControl
-            interactionId="fullscreen.enter-multi-fullscreen"
+          <button
+            type="button"
             disabled={multiPanelIds.length < 2}
             onClick={onOpenMultiFullscreen}
-          />
-          <IconControl
-            interactionId="editor.cancel"
+          >
+            Compare
+          </button>
+          <button
+            type="button"
             className="secondary"
-            ariaLabel="Cancel multi-fullscreen selection"
-            tooltip="Cancel multi-fullscreen selection"
             onClick={onCancelMultiSelection}
-          />
+          >
+            Cancel
+          </button>
         </section>
       )}
       {multiSelectNotice && (
@@ -110,6 +111,7 @@ export default function ViewShell({
         dashboard={dashboard}
         displayState={displayState}
         onDisplayAction={onDisplayAction}
+        timeContextForChart={playback.timeContextForChart}
         accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
       />
       <DashboardFooter dashboard={dashboard} />

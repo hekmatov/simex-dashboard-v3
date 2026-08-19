@@ -173,9 +173,9 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   await expect(guard.locator('[data-zoom-modifier="Control"]')).toBeVisible();
 
   await panel.getByRole("button", {
-    name: "Open chart fullscreen",
+    name: "Focus chart",
   }).click();
-  const fullscreen = page.getByRole("dialog", { name: "Displayed charts" });
+  const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
   guard = fullscreen.locator(
     '[data-displayed-chart-id="bio_confirmed_cases"] .chart-zoom-guard',
   );
@@ -185,7 +185,7 @@ test("zoom requires Ctrl in both dashboard and fullscreen contexts", async ({
   await expect(guard.getByText("Hold Ctrl while scrolling to zoom"))
     .toBeVisible();
   await fullscreen.getByRole("button", {
-    name: "Close all displayed charts",
+    name: "Exit focus",
   }).click();
 });
 

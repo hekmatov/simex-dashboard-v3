@@ -71,9 +71,9 @@ export default function ChartPanelActions({
       ? React.createElement(IconControl, {
           interactionId: "panel.view-source-information",
           className: "chart-panel-icon-button",
-          "aria-label": "Show source information",
+          "aria-label": "Show chart details",
           "aria-expanded": infoOpen,
-          title: "Source information",
+          title: "Details",
           onClick: toggleInfo,
         })
       : null,
@@ -87,20 +87,20 @@ export default function ChartPanelActions({
       ].filter(Boolean).join(" "),
       "aria-label": selectionMode
         ? fullscreenSelected
-          ? "Remove chart from multi-fullscreen"
-          : "Add chart to multi-fullscreen"
-        : "Open chart fullscreen",
+          ? "Remove chart from comparison"
+          : "Add chart to comparison"
+        : "Focus chart",
       "aria-pressed": selectionMode ? fullscreenSelected : undefined,
       tooltip: selectionMode
         ? fullscreenSelected
           ? `${fullscreenSelectionIndex} of 4 selected`
-          : "Add to multi-fullscreen"
-        : "Fullscreen",
+          : "Add to comparison"
+        : "Focus",
       title: selectionMode
         ? fullscreenSelected
-          ? "Selected for multi-fullscreen"
-          : "Add to multi-fullscreen"
-        : "Fullscreen",
+          ? "Selected for comparison"
+          : "Add to comparison"
+        : "Focus",
       onPointerDown: selectionMode ? undefined : onFullscreenHoldStart,
       onPointerUp: selectionMode ? undefined : onFullscreenHoldEnd,
       onPointerCancel: selectionMode ? undefined : onFullscreenHoldEnd,

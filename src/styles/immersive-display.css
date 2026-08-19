@@ -1,0 +1,148 @@
+.fullscreen-backdrop--immersive {
+  background: var(--simex-surface-outer, #e9eef2);
+  padding: 0;
+  z-index: 1200;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-panel {
+  background: var(--simex-surface-canvas, #f8f7f2);
+  border-radius: 0;
+  display: block;
+  height: 100vh;
+  height: 100dvh;
+  padding: 0;
+  position: relative;
+  width: 100vw;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-controls {
+  align-items: center;
+  background: color-mix(
+    in srgb,
+    var(--simex-surface-panel, #f5f8fb) 94%,
+    transparent
+  );
+  border: 1px solid var(--simex-border-strong, rgb(8 34 74 / 24%));
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgb(8 34 74 / 20%);
+  display: flex;
+  gap: 6px;
+  left: 50%;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 7;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-controls button,
+.fullscreen-backdrop--immersive .multi-fullscreen-controls .fullscreen-layout-button {
+  min-height: 44px;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-controls .fullscreen-layout-button {
+  height: 44px;
+  width: 44px;
+}
+
+.fullscreen-exit-button {
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-grid {
+  gap: 6px;
+  height: 100vh;
+  height: 100dvh;
+  padding: 6px;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-cell {
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.fullscreen-backdrop--immersive [data-display-mode="focus"] .multi-fullscreen-cell {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-cell[draggable="true"] {
+  cursor: grab;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-cell.is-dragging {
+  cursor: grabbing;
+  opacity: 0.58;
+}
+
+.fullscreen-backdrop--immersive .multi-cell-controls {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-cell:hover > .multi-cell-controls,
+.fullscreen-backdrop--immersive .multi-fullscreen-cell:focus > .multi-cell-controls,
+.fullscreen-backdrop--immersive .multi-fullscreen-cell:focus-within > .multi-cell-controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.fullscreen-backdrop--immersive .multi-cell-controls .multi-cell-icon-button {
+  height: 44px;
+  min-height: 44px;
+  width: 44px;
+}
+
+.multi-select-dock {
+  border-radius: 999px;
+}
+
+.multi-select-dock button {
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+@media (max-width: 767px) {
+  .fullscreen-backdrop--immersive .multi-fullscreen-controls {
+    top: 8px;
+  }
+
+  .fullscreen-backdrop--immersive .multi-fullscreen-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .fullscreen-backdrop--immersive .displayed-count-2 {
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .fullscreen-backdrop--immersive .displayed-count-3 {
+    grid-template-rows: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .fullscreen-backdrop--immersive .displayed-count-4 {
+    grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .fullscreen-backdrop--immersive .multi-fullscreen-cell {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .multi-select-dock {
+    bottom: 8px;
+    max-width: calc(100vw - 16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-backdrop--immersive .multi-cell-controls {
+    transition: none;
+  }
+}

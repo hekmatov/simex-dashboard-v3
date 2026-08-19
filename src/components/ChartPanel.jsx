@@ -73,8 +73,8 @@ function ChartPanel({
       return;
     }
     onDisplayAction?.({
-      type: "manual_open",
-      chart_id: chart.id,
+      type: "manual_set",
+      chart_ids: [chart.id],
     });
   };
   React.useEffect(() => clearHold, []);

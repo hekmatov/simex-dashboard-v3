@@ -37,7 +37,7 @@ test("Quorum chart display remains available when the dashboard starts on showca
   ).toBeVisible();
 });
 
-test("operator-authorized display and individual close share actual browser state", async ({
+test("operator-authorized display and immersive Exit share actual browser state", async ({
   page,
   request,
 }) => {
@@ -50,15 +50,15 @@ test("operator-authorized display and individual close share actual browser stat
   });
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(2);
 
-  await page.getByRole("button", { name: `Close ${FIRST_CHART}` }).click();
-  await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(1);
+  await page.getByRole("button", { name: "Exit comparison" }).click();
+  await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
   await expect
     .poll(async () => stateEvents(request).then((events) => events.at(-1)))
     .toMatchObject({
       type: "display_state_changed",
       payload: {
         change_reason: "manual_close",
-        displayed_chart_ids: [SECOND_CHART],
+        displayed_chart_ids: [],
       },
     });
 });
@@ -74,44 +74,44 @@ test("manual single, multi-open, and reorder use the same display state", async 
 
   const firstPanel = page.locator(`[data-panel-id="${FIRST_CHART}"]`);
   await firstPanel.getByRole("button", {
-    name: "Open chart fullscreen",
+    name: "Focus chart",
   }).click();
   await expect(page.locator(`[data-displayed-chart-id="${FIRST_CHART}"]`)).toBeVisible();
-  await page.getByRole("button", { name: "Close all displayed charts" }).click();
+  await page.getByRole("button", { name: "Exit focus" }).click();
 
   const fullscreenButton = firstPanel.getByRole("button", {
-    name: "Open chart fullscreen",
+    name: "Focus chart",
   });
   await firstPanel.locator(".chart-view-frame").hover();
   await fullscreenButton.dispatchEvent("pointerdown");
   await expect(
     firstPanel.getByRole("button", {
-      name: "Remove chart from multi-fullscreen",
+      name: "Remove chart from comparison",
     }),
   ).toBeVisible();
   await expect(firstPanel.getByRole("button", {
-    name: "Remove chart from multi-fullscreen",
+    name: "Remove chart from comparison",
   })).toHaveAttribute("aria-pressed", "true");
   await page
     .locator(`[data-panel-id="${SECOND_CHART}"]`)
-    .getByRole("button", { name: "Add chart to multi-fullscreen" })
+    .getByRole("button", { name: "Add chart to comparison" })
     .click();
   await page
-    .getByRole("button", { name: "Enter multi-fullscreen" })
+    .getByRole("button", { name: "Compare", exact: true })
     .click();
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(2);
-  const fullscreen = page.getByRole("dialog", { name: "Displayed charts" });
+  const fullscreen = page.getByRole("dialog", { name: "Chart comparison" });
   await expect(fullscreen.getByRole("button", {
     name: "Use side by side layout",
   })).toBeVisible();
   await expect(fullscreen.getByRole("button", {
     name: "Use over-under layout",
   })).toBeVisible();
-  await expect(fullscreen.getByText("Displayed charts", { exact: true }))
+  await expect(fullscreen.getByText("Chart comparison", { exact: true }))
     .toHaveCount(0);
 
   await page
-    .getByRole("button", { name: `Move ${SECOND_CHART} previous` })
+    .getByRole("button", { name: "Move Mortality by age group previous" })
     .click();
   await expect
     .poll(async () => stateEvents(request).then((events) => events.at(-1)))
@@ -123,7 +123,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
     });
 });
 
-test("multi-fullscreen selection caps at four charts and Escape cancels selection", async ({
+test("comparison selection caps at four charts and Escape cancels selection", async ({
   page,
 }) => {
   await page.goto("/");
@@ -134,24 +134,24 @@ test("multi-fullscreen selection caps at four charts and Escape cancels selectio
   const first = panels.nth(0);
   await first.locator(".chart-view-frame").hover();
   await first.getByRole("button", {
-    name: "Open chart fullscreen",
+    name: "Focus chart",
   }).dispatchEvent("pointerdown");
   await expect(page.getByRole("button", {
-    name: "Enter multi-fullscreen",
+    name: "Compare",
   })).toBeVisible();
 
   for (let index = 1; index < 4; index += 1) {
     const panel = panels.nth(index);
     await panel.hover();
     await panel.getByRole("button", {
-      name: "Add chart to multi-fullscreen",
+      name: "Add chart to comparison",
     }).click();
   }
 
   const fifth = panels.nth(4);
   await fifth.hover();
   await fifth.getByRole("button", {
-    name: "Add chart to multi-fullscreen",
+    name: "Add chart to comparison",
   }).click();
   await expect(page.getByRole("alert")).toContainText(
     "Maximum 4 charts allowed",
@@ -159,7 +159,7 @@ test("multi-fullscreen selection caps at four charts and Escape cancels selectio
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", {
-    name: "Enter multi-fullscreen",
+    name: "Compare",
   })).toHaveCount(0);
   await expect(page.locator(
     '.chart-panel-icon-button[aria-pressed="true"]',
@@ -203,7 +203,7 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
     chart_ids: [FIRST_CHART],
     expected_display_revision: 0,
   });
-  await page.getByRole("button", { name: `Close ${FIRST_CHART}` }).click();
+  await page.getByRole("button", { name: "Exit focus" }).click();
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
 
   await control(request, "disconnect");
@@ -278,7 +278,7 @@ test("missing bootstrap preserves standalone dashboard behavior", async ({
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await page
     .locator(`[data-panel-id="${FIRST_CHART}"]`)
-    .getByRole("button", { name: "Open chart fullscreen" })
+    .getByRole("button", { name: "Focus chart" })
     .click();
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(1);
 });

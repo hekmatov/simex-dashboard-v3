@@ -10,6 +10,7 @@ export default function DisplayedChartGrid({
   layout = "solo",
   timeContextForChart = () => null,
   surface = "fullscreen",
+  getCellProps,
   renderCellControls,
 }) {
   const charts = chartIds
@@ -26,35 +27,43 @@ export default function DisplayedChartGrid({
 
   return (
     <div className={className} data-display-surface={surface}>
-      {charts.map((chart, index) => (
-        <section
-          className={[
-            "displayed-chart-cell",
-            `displayed-cell-${index + 1}`,
-            surface === "fullscreen" ? "multi-fullscreen-cell" : "",
-            surface === "fullscreen" ? `multi-cell-${index + 1}` : "",
-          ].filter(Boolean).join(" ")}
-          key={chart.id}
-          data-displayed-chart-id={chart.id}
-        >
-          {renderCellControls?.(chart, index, charts)}
-          <ChartView
-            chart={chart}
-            rows={dashboard.loadedData?.[chart.sourceId]}
-            sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
-            datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
-            geoData={dashboard.loadedData?.[chart.presentation?.map?.geoSource]}
-            accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
-            renderContext={{
-              sources: dashboard.dataSources ?? {},
-              mapName: chart.presentation?.map?.geoSource ?? chart.id,
-              accessibilityEnabled: dashboard.globalStyles?.accessibility?.enabled === true,
-            }}
-            timeContext={timeContextForChart(chart.id)}
-            interactionMode={surface === "audience" ? "passive" : "active"}
-          />
-        </section>
-      ))}
+      {charts.map((chart, index) => {
+        const cellProps = getCellProps?.(chart, index, charts) ?? {};
+        const suppliedClassName = cellProps.className;
+        const attributes = { ...cellProps };
+        delete attributes.className;
+        return (
+          <section
+            {...attributes}
+            className={[
+              "displayed-chart-cell",
+              `displayed-cell-${index + 1}`,
+              surface === "fullscreen" ? "multi-fullscreen-cell" : "",
+              surface === "fullscreen" ? `multi-cell-${index + 1}` : "",
+              suppliedClassName,
+            ].filter(Boolean).join(" ")}
+            key={chart.id}
+            data-displayed-chart-id={chart.id}
+          >
+            {renderCellControls?.(chart, index, charts)}
+            <ChartView
+              chart={chart}
+              rows={dashboard.loadedData?.[chart.sourceId]}
+              sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
+              datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
+              geoData={dashboard.loadedData?.[chart.presentation?.map?.geoSource]}
+              accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
+              renderContext={{
+                sources: dashboard.dataSources ?? {},
+                mapName: chart.presentation?.map?.geoSource ?? chart.id,
+                accessibilityEnabled: dashboard.globalStyles?.accessibility?.enabled === true,
+              }}
+              timeContext={timeContextForChart(chart.id)}
+              interactionMode={surface === "audience" ? "passive" : "active"}
+            />
+          </section>
+        );
+      })}
     </div>
   );
 }

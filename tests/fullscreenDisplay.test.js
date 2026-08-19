@@ -87,7 +87,7 @@ test("fullscreen display component is available", () => {
   );
 });
 
-test("fullscreen display preserves ordered charts in a labeled focus-scoped dialog", () => {
+test("fullscreen comparison preserves ordered charts in a labeled focus-scoped dialog", () => {
   assert.ok(displayModule, "fullscreen display must be implemented");
   const html = renderToStaticMarkup(
     React.createElement(displayModule.default, {
@@ -106,12 +106,13 @@ test("fullscreen display preserves ordered charts in a labeled focus-scoped dial
   assert.equal((html.match(/chart-view-frame/g) ?? []).length, 2);
   assert.equal((html.match(/chart-card-view/g) ?? []).length, 2);
   assert.ok(html.indexOf('data-displayed-chart-id="chart-b"') < html.indexOf('data-displayed-chart-id="chart-a"'));
-  assert.match(html, /aria-label="Close chart-b"/);
-  assert.match(html, /aria-label="Close chart-a"/);
-  assert.match(html, /aria-label="Displayed charts"/);
+  assert.match(html, /aria-label="Move Chart B next"/);
+  assert.match(html, /aria-label="Move Chart A previous"/);
+  assert.match(html, /aria-label="Chart comparison"/);
   assert.match(html, /tabindex="-1"/);
-  assert.match(html, />Close all<\/button>/);
+  assert.match(html, />Exit comparison<\/button>/);
   assert.match(html, /layout-sideBySide/);
+  assert.match(html, /data-display-mode="comparison"/);
 });
 
 test("the shared displayed-chart grid is available to the fullscreen surface", () => {

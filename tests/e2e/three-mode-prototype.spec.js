@@ -74,14 +74,14 @@ test("View compares charts and closes fullscreen with Escape", async ({ page }) 
 
   const panels = page.locator(".chart-panel");
   await panels.nth(0).getByRole("button", {
-    name: "Add chart to multi-fullscreen",
+    name: "Add chart to comparison",
   }).click();
   await panels.nth(1).getByRole("button", {
-    name: "Add chart to multi-fullscreen",
+    name: "Add chart to comparison",
   }).click();
-  await page.getByRole("button", { name: "Enter multi-fullscreen" }).click();
+  await page.getByRole("button", { name: "Compare", exact: true }).click();
 
-  const fullscreen = page.getByRole("dialog", { name: "Displayed charts" });
+  const fullscreen = page.getByRole("dialog", { name: "Chart comparison" });
   await expect(fullscreen).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(fullscreen).toHaveCount(0);
