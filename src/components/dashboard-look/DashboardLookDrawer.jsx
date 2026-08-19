@@ -5,7 +5,10 @@ import {
   DASHBOARD_STYLES,
   resolveDashboardTheme,
 } from "../../theme/dashboardTheme.js";
-import { signatureProfileForStyle } from "../../theme/dashboardLookDraft.js";
+import {
+  resolveDashboardLookSurfaceAttributes,
+  signatureProfileForStyle,
+} from "../../theme/dashboardLookDraft.js";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 
 const STYLE_NAMES = new Map(DASHBOARD_STYLES.map(({ id, name }) => [id, name]));
@@ -31,10 +34,17 @@ export default function DashboardLookDrawer({
   const appearanceChanged = saved.appearancePreference !== preview.appearancePreference;
   const busy = savingScope !== "";
 
+  const surface = resolveDashboardLookSurfaceAttributes(preview);
   const update = (field, value) => onPreviewChange?.({ ...preview, [field]: value });
 
   return (
-    <div className="look-drawer-layer" data-open="true">
+    <div
+      className="look-drawer-layer"
+      data-open="true"
+      data-dashboard-style={surface.style}
+      data-dashboard-color-profile={surface.colorProfile}
+      data-resolved-appearance={surface.resolvedAppearance}
+    >
       <div
         className="look-drawer-click-catcher"
         aria-hidden="true"

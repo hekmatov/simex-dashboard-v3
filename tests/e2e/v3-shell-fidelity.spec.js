@@ -191,3 +191,36 @@ function formatRect(rect) {
   if (!rect) return "missing";
   return `x=${rect.x.toFixed(2)} y=${rect.y.toFixed(2)} width=${rect.width.toFixed(2)} height=${rect.height.toFixed(2)}`;
 }
+
+test("look drawer preserves geometry", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+  await expect(page.locator(".chart-panel").first()).toBeVisible();
+  const before = await readCanonicalGeometry(page);
+
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).evaluate((button) => button.click());
+  await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
+  const after = await readCanonicalGeometry(page);
+  const changes = compareCanonicalGeometry(before, after).filter(({ delta }) => (
+    Object.values(delta).some((value) => value !== "0.00")
+  ));
+  expect(changes).toEqual([]);
+});
+
+test("look drawer phone sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).evaluate((button) => button.click());
+
+  const drawer = page.getByRole("dialog", { name: "Dashboard look" });
+  await expect(drawer).toBeVisible();
+  const box = await drawer.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.width).toBe(390);
+  expect(box.height).toBe(844);
+  await expect(page.locator(".look-drawer-click-catcher")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(drawer.getByRole("button", { name: "Close", exact: true })).toHaveCSS("min-height", "44px");
+});

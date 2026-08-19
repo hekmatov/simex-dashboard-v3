@@ -92,8 +92,8 @@
 .application-recovery-panel {
   background: var(--simex-surface-panel, #fffdf8);
   border: 1px solid var(--simex-border-strong, #50595d);
-  border-radius: 2px;
-  box-shadow: 0 14px 38px rgb(29 37 41 / 14%);
+  border-radius: var(--simex-component-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 14px;
   max-width: 720px;
@@ -107,7 +107,7 @@
 }
 
 .application-recovery-panel h1 {
-  font-family: Georgia, Cambria, "Times New Roman", serif;
+  font-family: var(--simex-style-heading-font);
   font-size: clamp(28px, 4vw, 42px);
   line-height: 1.08;
 }
@@ -1221,7 +1221,7 @@
   inset: 0;
   pointer-events: none;
   position: absolute;
-  z-index: 30;
+  z-index: 31;
 }
 
 .view-page-actions,

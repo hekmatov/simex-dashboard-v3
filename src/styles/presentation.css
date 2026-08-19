@@ -663,3 +663,40 @@
     top: 24px;
   }
 }
+
+/* Shared V3 paint contract only; Present/Audience workflow and calibration
+   remain owned by Step 8. */
+:where(.audience-display, .present-workspace) {
+  background: var(--simex-surface-canvas);
+  color: var(--simex-text-strong);
+}
+
+:where(
+  .displayed-chart-grid[data-display-surface="audience"] .displayed-chart-cell,
+  .present-context-panel,
+  .present-scene-panel,
+  .present-selected-chart,
+  .present-chart-group,
+  .present-audience-information,
+  .audience-snapshot-frame
+) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-component-surface-radius);
+}
+
+:where(.present-workspace, .audience-display) :is(button, input, select):focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-component-focus, var(--simex-focus));
+  outline-offset: 2px;
+}
+
+:where(.present-workspace, .audience-display) :is(button, input, select) {
+  border-radius: var(--simex-component-control-radius);
+  min-height: var(--simex-control-min);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.present-workspace, .audience-display) * {
+    transition-duration: 0.01ms;
+  }
+}

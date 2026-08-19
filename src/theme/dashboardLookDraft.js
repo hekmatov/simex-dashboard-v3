@@ -27,3 +27,12 @@ export function chartColorUpdates(preview) {
 export function signatureProfileForStyle(style) {
   return SIGNATURE_PROFILE_BY_STYLE[style] ?? null;
 }
+
+export function resolveDashboardLookSurfaceAttributes(preview = {}) {
+  const appearancePreference = preview.appearancePreference ?? "system";
+  return {
+    style: preview.dashboardStyle,
+    colorProfile: preview.dashboardColorProfile,
+    resolvedAppearance: appearancePreference === "dark" ? "dark" : "light",
+  };
+}

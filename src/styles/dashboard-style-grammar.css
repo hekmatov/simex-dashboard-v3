@@ -179,4 +179,33 @@
   .app-frame :is(.chart-panel, button, .chart-panel-icon-button, .look-profile-option) {
     transition-duration: 0.01ms;
   }
+
+}
+/* S6-4 shared surface inheritance. These properties only alter paint, so the
+   S6-3 canonical View/Build geometry remains unchanged. */
+:where(
+  .dashboard-command-crown,
+  .canonical-dashboard-frame .dashboard-header,
+  .canonical-dashboard-frame .section-header,
+  .dashboard-footer,
+  .confirm-dialog,
+  .application-recovery-panel,
+  .look-drawer
+) {
+  background-color: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-component-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+:where(.look-drawer, .confirm-dialog, .application-recovery-panel) :focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-component-focus, var(--simex-focus));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.dashboard-command-crown, .confirm-dialog, .application-recovery-panel, .look-drawer) {
+    transition-duration: 0.01ms;
+  }
 }

@@ -138,3 +138,33 @@ test("appearance preference persistence rejects unknown stored values", () => {
     /appearance preference/i,
   );
 });
+
+test("named V3 surfaces inherit shared style and component variables", async () => {
+  const [grammar, modes, presentation] = await Promise.all([
+    readFile(new URL("../src/styles/dashboard-style-grammar.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/modes.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/styles/presentation.css", import.meta.url), "utf8"),
+  ]);
+  const sharedSurfaces = [
+    ".dashboard-command-crown",
+    ".canonical-dashboard-frame .dashboard-header",
+    ".canonical-dashboard-frame .section-header",
+    ".dashboard-footer",
+    ".confirm-dialog",
+    ".application-recovery-panel",
+    ".look-drawer",
+  ];
+
+  for (const selector of sharedSurfaces) {
+    assert.ok(
+      (grammar + modes).includes(selector),
+      `${selector} should consume the shared surface grammar`,
+    );
+  }
+  assert.match(grammar, /--simex-component-surface-radius/);
+  assert.match(grammar, /--simex-component-control-radius/);
+  assert.match(grammar, /--simex-component-focus/);
+  assert.match(modes, /--simex-control-min/);
+  assert.match(presentation, /--simex-component-surface-radius/);
+  assert.match(presentation, /--simex-component-control-radius/);
+});
