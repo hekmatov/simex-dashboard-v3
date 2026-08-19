@@ -39,10 +39,7 @@ export function isCarouselPaused(state, settings) {
     || state.documentHidden === true
     || state.reducedMotion === true
     || (state.hovered === true && settings.carousel?.pauseOnHover === true)
-    || (
-      state.playbackPlaying === true
-      && settings.playback?.pauseCarousel === true
-    );
+  ;
 }
 
 export function createCollectionTimer({
@@ -101,7 +98,6 @@ export default function CollectionCarousel({
   items,
   settings,
   renderItem,
-  playback,
 }) {
   const pageSize = settings.rows * settings.columns;
   const pageCount = settings.overflow === "limit"
@@ -131,7 +127,6 @@ export default function CollectionCarousel({
     hovered,
     focused,
     ...environment,
-    playbackPlaying: playback?.playing === true,
   }, settings);
 
   React.useEffect(() => subscribeToCollectionEnvironment({
@@ -184,7 +179,6 @@ export default function CollectionCarousel({
     "data-collection-interval-ms": settings.carousel.intervalMs,
     "data-collection-loop": settings.carousel.loop,
     "data-collection-pause-on-hover": settings.carousel.pauseOnHover,
-    "data-collection-pause-on-playback": settings.playback.pauseCarousel,
     "data-collection-rotation-paused": paused,
     onMouseEnter: () => setHovered(true),
     onMouseLeave: () => setHovered(false),

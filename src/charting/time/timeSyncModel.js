@@ -376,6 +376,12 @@ function validateMemberEligibility({
   group,
   profiles,
 }) {
+  if (chart.presentation?.collection != null) {
+    throw new Error(
+      `Member chart "${chart.id}" is a Collection display. Collection displays cannot join Time Groups.`,
+    );
+  }
+
   if (schema.capabilities.timeSync !== true) {
     throw new Error(
       `Member chart "${chart.id}" type "${chart.typeId}" does not support time synchronization.`,

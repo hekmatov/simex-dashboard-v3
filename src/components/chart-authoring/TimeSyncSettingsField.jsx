@@ -43,11 +43,12 @@ function TimeSyncSettingsField({
     "select",
     {
       value: typeof field.groupId === "string" ? field.groupId : "",
+      "aria-describedby": field.help ? `${id}-help` : void 0,
       onChange: (event) => onMembershipChange(event.target.value || null)
     },
     /* @__PURE__ */ React.createElement("option", { value: "" }, "Not synchronized"),
-    groups.flatMap((group) => typeof group?.id === "string" && typeof group?.name === "string" ? [/* @__PURE__ */ React.createElement("option", { key: group.id, value: group.id }, group.name)] : [])
-  )), field.groupId && field.groupTarget ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Member matching", /* @__PURE__ */ React.createElement(
+    groups.flatMap((group) => typeof group?.id === "string" && typeof group?.name === "string" ? [/* @__PURE__ */ React.createElement("option", { key: group.id, value: group.id, disabled: field.ineligible === true }, group.name)] : [])
+  )), field.groupId && field.groupTarget && field.ineligible !== true ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Member matching", /* @__PURE__ */ React.createElement(
     "select",
     {
       value: matching.policy,

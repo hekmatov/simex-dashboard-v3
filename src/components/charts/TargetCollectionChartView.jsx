@@ -1,7 +1,6 @@
 import React from "react";
 
 import CollectionDisplay from "../collection/CollectionDisplay.jsx";
-import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import EmbeddedEChartsItem from "./EmbeddedEChartsItem.jsx";
 import {
   chartDescriptionVisible,
@@ -12,11 +11,8 @@ export default function TargetCollectionChartView({
   model,
   chart = {},
   provenance,
-  playback: suppliedPlayback,
   accessibilityEnabled = false,
 }) {
-  const contextPlayback = useOptionalPlayback();
-  const playback = suppliedPlayback ?? contextPlayback;
   const titleId = React.useId();
   const descriptionId = React.useId();
   const title = chart.title || "Target status";
@@ -53,7 +49,6 @@ export default function TargetCollectionChartView({
   }, React.createElement(CollectionDisplay, {
     items,
     settings: model.presentation?.collection ?? {},
-    playback,
     renderItem: (item) => React.createElement(TargetCollectionItem, {
       item,
       accessibilityEnabled,

@@ -283,7 +283,7 @@ test("target collections use shared fixed, scroll, carousel, and priority presen
   assert.match(fallback, /showing configured order/i);
 });
 
-test("target collections preserve playback order locking and embedded provenance summaries", async () => {
+test("target collections ignore playback order locking and preserve embedded provenance summaries", async () => {
   const {
     default: TargetCollectionChartView,
   } = await import("../src/components/charts/TargetCollectionChartView.jsx");
@@ -327,13 +327,13 @@ test("target collections preserve playback order locking and embedded provenance
     },
   ));
 
-  assertTextOrder(html, ["Clinic A", "Clinic B"], "target playback lock");
+  assertTextOrder(html, ["Clinic B", "Clinic A"], "autonomous target ranking");
   assert.match(html, /data-temporal-status="carried"/);
   assert.match(html, /Playback time 2027-05-02/);
   assert.match(html, /Last measured 2027-05-01/);
 });
 
-test("rerank locking applies only while the dedicated Playback view is active", () => {
+test("collection ordering remains autonomous from playback inputs", () => {
   const items = [
     { entityId: "a", label: "Alpha", current: 1 },
     { entityId: "b", label: "Bravo", current: 3 },
@@ -370,8 +370,8 @@ test("rerank locking applies only while the dedicated Playback view is active", 
   );
   assertTextOrder(
     lockedPlaybackView,
-    ["Alpha", "Charlie", "Bravo"],
-    "locked playback",
+    ["Bravo", "Charlie", "Alpha"],
+    "playback inputs ignored",
   );
   assertTextOrder(reranked, ["Bravo", "Charlie", "Alpha"], "reranked playback");
 });
@@ -456,7 +456,7 @@ test("stable entity identity is exposed while rendering leaves inputs untouched"
   assert.deepEqual(settings, beforeSettings);
 });
 
-test("carousel pause rules cover manual, hover, focus, hidden, motion, and playback states", () => {
+test("carousel pause rules cover only autonomous collection runtime states", () => {
   const settings = {
     carousel: { pauseOnHover: true },
     playback: { pauseCarousel: true },
@@ -477,7 +477,6 @@ test("carousel pause rules cover manual, hover, focus, hidden, motion, and playb
     "focused",
     "documentHidden",
     "reducedMotion",
-    "playbackPlaying",
   ]) {
     assert.equal(
       isCarouselPaused({ ...active, [reason]: true }, settings),
@@ -501,7 +500,7 @@ test("carousel pause rules cover manual, hover, focus, hidden, motion, and playb
   );
 });
 
-test("carousel surfaces expose stable rotation policy and effective pause state", () => {
+test("carousel surfaces ignore Chrono while exposing autonomous rotation policy", () => {
   const settings = {
     layout: "carousel",
     rows: 1,
@@ -535,9 +534,8 @@ test("carousel surfaces expose stable rotation policy and effective pause state"
   assert.match(paused, /data-collection-interval-ms="5000"/);
   assert.match(paused, /data-collection-loop="true"/);
   assert.match(paused, /data-collection-pause-on-hover="true"/);
-  assert.match(paused, /data-collection-pause-on-playback="true"/);
-  assert.match(paused, /data-collection-rotation-paused="true"/);
-  assert.match(independent, /data-collection-pause-on-playback="false"/);
+  assert.doesNotMatch(paused, /data-collection-pause-on-playback/);
+  assert.match(paused, /data-collection-rotation-paused="false"/);
   assert.match(independent, /data-collection-rotation-paused="false"/);
 });
 

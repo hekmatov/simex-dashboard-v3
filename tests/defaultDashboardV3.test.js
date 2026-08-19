@@ -370,6 +370,7 @@ test("time-indexed KPI and capacity snapshots use honest normalized collection d
       field: "date",
       interpretation: "category",
     });
+    assert.equal(chart.interaction.timeSync, null, chartId);
     assert.deepEqual(chart.presentation.collection, {
       layout: "carousel",
       rows: 1,
@@ -456,10 +457,7 @@ test("the municipal and national clocks validate and every national member is re
       { chartId: "bio_daily_cases_bar", timeRole: "observation" },
       { chartId: "bio_new_cases_deaths", timeRole: "observation" },
       { chartId: "bio_r_values", timeRole: "observation" },
-      { chartId: "bio_current_cases_kpi", timeRole: "time" },
       { chartId: "bio_admissions", timeRole: "observation" },
-      { chartId: "bio_icu_capacity_bullet", timeRole: "time" },
-      { chartId: "bio_hospital_capacity_bullet", timeRole: "time" },
     ],
   });
   assert.equal(

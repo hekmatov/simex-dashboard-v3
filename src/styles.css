@@ -1215,6 +1215,11 @@ th {
   color: #b42318;
 }
 
+.chart-authoring-collection [data-icon-control="collection.re-rank-now"],
+.chart-authoring-collection [data-icon-control="collection.pause-carousel"] {
+  display: none;
+}
+
 .chart-authoring-control-grid,
 .chart-authoring-role-list > div {
   display: grid;

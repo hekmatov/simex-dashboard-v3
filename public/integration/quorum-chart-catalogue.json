@@ -3384,7 +3384,7 @@
       "chart_id": "bio_current_cases_kpi",
       "type_id": "kpi",
       "title": "Current confirmed cases",
-      "description": "Time-indexed national cumulative confirmed-case snapshots; playback selects the active date.",
+      "description": "Autonomous collection of national cumulative confirmed-case observations.",
       "page_id": "biomedical",
       "section_id": "outbreak_dynamics",
       "aliases": [
@@ -3401,12 +3401,11 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "time_sync_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen",
-        "playback"
+        "multi_fullscreen"
       ]
     },
     {
@@ -3469,7 +3468,7 @@
       "chart_id": "bio_hospital_capacity_bullet",
       "type_id": "bullet",
       "title": "Hospital occupancy against capacity",
-      "description": "Time-indexed hospital capacity snapshots; playback selects one active occupancy value.",
+      "description": "Autonomous collection of hospital occupancy and capacity observations.",
       "page_id": "biomedical",
       "section_id": "health_system",
       "aliases": [
@@ -3487,12 +3486,11 @@
         "target",
         "time"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "time_sync_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen",
-        "playback"
+        "multi_fullscreen"
       ]
     },
     {
@@ -3526,7 +3524,7 @@
       "chart_id": "bio_icu_capacity_bullet",
       "type_id": "bullet",
       "title": "ICU occupancy against capacity",
-      "description": "Time-indexed ICU capacity snapshots; playback selects one active occupancy value.",
+      "description": "Autonomous collection of ICU occupancy and capacity observations.",
       "page_id": "biomedical",
       "section_id": "health_system",
       "aliases": [
@@ -3544,12 +3542,11 @@
         "target",
         "time"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "time_sync_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
-        "multi_fullscreen",
-        "playback"
+        "multi_fullscreen"
       ]
     },
     {
@@ -4408,6 +4405,6 @@
       ]
     }
   ],
-  "dashboard_semantic_digest": "c65010bf10eafeeb29262a8271e9d29c23cbaa955de1825cf44ad0f10e13bf8a",
-  "digest": "ea16107ab468e7458795e64d1f7ddd22579c0e36b79dcbccf6578948756340fd"
+  "dashboard_semantic_digest": "f47dd1dcc801cd7c3545f786b679393d16d0a74476ed4ae65316307adab1cdb0",
+  "digest": "e7607e9f74062e0959c2f1e1ec1193c7fa73f0f2df870e80dc5089d8d6022854"
 }

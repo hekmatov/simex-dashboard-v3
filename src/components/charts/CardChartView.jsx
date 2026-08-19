@@ -1,6 +1,5 @@
 import React from "react";
 import CollectionDisplay from "../collection/CollectionDisplay.jsx";
-import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import {
   chartDescriptionVisible,
   titleContainerProps,
@@ -11,7 +10,6 @@ const NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
 });
 
 export default function CardChartView({ model, chart = {}, provenance }) {
-  const playback = useOptionalPlayback();
   const title = chart.title || "Chart summary";
   const description = chart.description || "Summary values for this chart.";
   const items = Array.isArray(model.items) ? model.items : [];
@@ -34,7 +32,6 @@ export default function CardChartView({ model, chart = {}, provenance }) {
         : React.createElement(CollectionDisplay, {
             items: collectionItems(items),
             settings: model.presentation?.collection ?? {},
-            playback,
             renderItem: (item) => React.createElement(CardItem, {
               item,
               chart,

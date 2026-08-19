@@ -13,7 +13,6 @@ export default function CollectionDisplay({
   items = [],
   settings = {},
   renderItem,
-  playback = null,
 }) {
   if (typeof renderItem !== "function") {
     throw new Error("Collection renderItem must be a function.");
@@ -36,22 +35,8 @@ export default function CollectionDisplay({
         "aria-atomic": true,
       }, ranking.diagnostics[0].message)
     : null;
-  const playbackActive = playback?.playbackView === true;
-  const lockedOrder = Array.isArray(playback?.lockedEntityOrder)
-    ? playback.lockedEntityOrder
-    : previousOrder.current;
-  const ordered = playbackActive
-    && normalized.playback.rerank === false
-    && lockedOrder.length > 0
-    ? lockCollectionOrder(ranked, lockedOrder)
-    : ranked;
-  if (
-    previousOrder.current.length === 0
-    || !playbackActive
-    || normalized.playback.rerank
-  ) {
-    previousOrder.current = ordered.map(({ entityId }) => entityId);
-  }
+  const ordered = ranked;
+  previousOrder.current = ordered.map(({ entityId }) => entityId);
 
   const pageSize = normalized.rows * normalized.columns;
   const pageCount = normalized.overflow === "limit"
@@ -83,7 +68,6 @@ export default function CollectionDisplay({
         items: ordered,
         settings: normalized,
         renderItem,
-        playback,
       }));
   }
 
@@ -136,21 +120,4 @@ export default function CollectionDisplay({
       pageCount,
     )),
   }));
-}
-
-function lockCollectionOrder(items, lockedOrder) {
-  const positions = new Map(lockedOrder.map((entityId, index) => [
-    entityId,
-    index,
-  ]));
-  return [...items].sort((left, right) => {
-    const leftPosition = positions.get(left.entityId);
-    const rightPosition = positions.get(right.entityId);
-    if (leftPosition !== undefined && rightPosition !== undefined) {
-      return leftPosition - rightPosition;
-    }
-    if (leftPosition !== undefined) return -1;
-    if (rightPosition !== undefined) return 1;
-    return 0;
-  });
 }

@@ -680,20 +680,8 @@
           "timeRole": "observation"
         },
         {
-          "chartId": "bio_current_cases_kpi",
-          "timeRole": "time"
-        },
-        {
           "chartId": "bio_admissions",
           "timeRole": "observation"
-        },
-        {
-          "chartId": "bio_icu_capacity_bullet",
-          "timeRole": "time"
-        },
-        {
-          "chartId": "bio_hospital_capacity_bullet",
-          "timeRole": "time"
         }
       ]
     }
@@ -1529,7 +1517,7 @@
               "id": "bio_current_cases_kpi",
               "typeId": "kpi",
               "title": "Current confirmed cases",
-              "description": "Time-indexed national cumulative confirmed-case snapshots; playback selects the active date.",
+              "description": "Autonomous collection of national cumulative confirmed-case observations.",
               "sourceId": "bio_cases",
               "roles": {
                 "value": {
@@ -1584,9 +1572,7 @@
                 }
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": false
                 }
@@ -1608,7 +1594,7 @@
               "id": "bio_icu_capacity_bullet",
               "typeId": "bullet",
               "title": "ICU occupancy against capacity",
-              "description": "Time-indexed ICU capacity snapshots; playback selects one active occupancy value.",
+              "description": "Autonomous collection of ICU occupancy and capacity observations.",
               "sourceId": "bio_icu_occupancy",
               "roles": {
                 "actual": {
@@ -1669,9 +1655,7 @@
                 }
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": false
                 }
@@ -1685,7 +1669,7 @@
               "id": "bio_hospital_capacity_bullet",
               "typeId": "bullet",
               "title": "Hospital occupancy against capacity",
-              "description": "Time-indexed hospital capacity snapshots; playback selects one active occupancy value.",
+              "description": "Autonomous collection of hospital occupancy and capacity observations.",
               "sourceId": "bio_hospital_occupancy",
               "roles": {
                 "actual": {
@@ -1746,9 +1730,7 @@
                 }
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": false
                 }
