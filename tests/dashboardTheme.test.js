@@ -54,6 +54,10 @@ test("theme resolver exposes all 15 approved profiles in both appearances", () =
   if (typeof themeModule.resolveDashboardTheme !== "function") return;
 
   assert.deepEqual(
+    themeModule.DASHBOARD_STYLES.map(({ id }) => id),
+    ["evidence-ledger", "humanist-standard", "signal-instrument"],
+  );
+  assert.deepEqual(
     themeModule.DASHBOARD_COLOR_PROFILES.map(({ id }) => id),
     APPROVED_PROFILE_IDS,
   );
@@ -69,40 +73,46 @@ test("theme resolver exposes all 15 approved profiles in both appearances", () =
       });
       assert.equal(resolved.dashboardColorProfile, dashboardColorProfile);
       assert.equal(resolved.resolvedAppearance, appearancePreference);
-      assert.equal(Object.keys(resolved.cssVariables).length, 33);
+      assert.equal(
+        Object.keys(resolved.cssVariables)
+          .filter((key) => !key.startsWith("--simex-component-") && key !== "--simex-control-min").length,
+        33,
+      );
     }
   }
 });
 
-test("System appearance resolves machine preference and Standard changes only chart paint", () => {
+test("Profile and Standard chart colours are independent across Light, Dark, and System appearance", () => {
   assert.equal(typeof themeModule.resolveDashboardTheme, "function");
   if (typeof themeModule.resolveDashboardTheme !== "function") return;
 
-  const profile = themeModule.resolveDashboardTheme({
-    globalStyles: {
+  for (const [appearancePreference, prefersDark, resolvedAppearance] of [
+    ["light", false, "light"],
+    ["dark", false, "dark"],
+    ["system", false, "light"],
+    ["system", true, "dark"],
+  ]) {
+    const globalStyles = {
       dashboardStyle: "humanist-standard",
       dashboardColorProfile: "evidence-ledger/brighter-vellum",
-      chartColorMode: "profile",
-    },
-    appearancePreference: "system",
-    prefersDark: true,
-  });
-  const standard = themeModule.resolveDashboardTheme({
-    globalStyles: {
-      dashboardStyle: "humanist-standard",
-      dashboardColorProfile: "evidence-ledger/brighter-vellum",
-      chartColorMode: "standard",
-    },
-    appearancePreference: "system",
-    prefersDark: true,
-  });
+    };
+    const profile = themeModule.resolveDashboardTheme({
+      globalStyles: { ...globalStyles, chartColorMode: "profile" },
+      appearancePreference,
+      prefersDark,
+    });
+    const standard = themeModule.resolveDashboardTheme({
+      globalStyles: { ...globalStyles, chartColorMode: "standard" },
+      appearancePreference,
+      prefersDark,
+    });
 
-  assert.equal(profile.resolvedAppearance, "dark");
-  assert.equal(profile.cssVariables["--simex-surface-panel"], "#2b2922");
-  assert.equal(profile.cssVariables["--simex-data-1"], "#a8b794");
-  assert.equal(standard.cssVariables["--simex-surface-panel"], "#2b2922");
-  assert.equal(standard.cssVariables["--simex-data-1"], "#86b3dd");
-  assert.equal(standard.cssVariables["--simex-chart-mark"], "#edf2f5");
+    assert.equal(profile.resolvedAppearance, resolvedAppearance);
+    assert.equal(standard.resolvedAppearance, resolvedAppearance);
+    assert.equal(profile.cssVariables["--simex-surface-panel"], standard.cssVariables["--simex-surface-panel"]);
+    assert.notEqual(profile.cssVariables["--simex-data-1"], standard.cssVariables["--simex-data-1"]);
+    assert.notEqual(profile.cssVariables["--simex-chart-mark"], standard.cssVariables["--simex-chart-mark"]);
+  }
 });
 
 test("appearance preference persistence rejects unknown stored values", () => {

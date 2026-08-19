@@ -50,7 +50,7 @@
 ) {
   background-color: var(--simex-surface-panel);
   border-color: var(--simex-border-subtle);
-  border-radius: var(--simex-style-panel-radius);
+  border-radius: var(--simex-component-surface-radius);
   box-shadow: var(--simex-style-panel-shadow);
 }
 
@@ -65,7 +65,7 @@
 ) {
   background-color: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-subtle);
-  border-radius: var(--simex-style-control-radius);
+  border-radius: var(--simex-component-control-radius);
 }
 
 .app-frame :is(
@@ -75,7 +75,7 @@
   input:not([type="checkbox"]):not([type="radio"]),
   .chart-panel-icon-button
 ) {
-  border-radius: var(--simex-style-control-radius);
+  border-radius: var(--simex-component-control-radius);
 }
 
 .app-frame :is(
@@ -90,7 +90,7 @@
 .look-drawer {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-strong);
-  border-radius: var(--simex-style-panel-radius) 0 0 var(--simex-style-panel-radius);
+  border-radius: var(--simex-component-surface-radius) 0 0 var(--simex-component-surface-radius);
   box-shadow: var(--simex-style-panel-shadow);
   color: var(--simex-text-strong);
 }

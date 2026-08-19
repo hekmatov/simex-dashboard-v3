@@ -1,4 +1,16 @@
 :root {
+  --simex-component-control-radius: 6px;
+  --simex-component-surface-radius: 10px;
+  --simex-component-focus-width: 3px;
+  --simex-component-outer: #e8e9ea;
+  --simex-component-surface: #ffffff;
+  --simex-component-subtle: #f4f5f5;
+  --simex-component-text: #17191b;
+  --simex-component-muted: #5a6066;
+  --simex-component-border: #c7cbcf;
+  --simex-component-border-strong: #747b82;
+  --simex-component-focus: #155eef;
+  --simex-component-active: #202428;
   /* Evidence Ledger · Brighter Vellum · Light */
   --simex-surface-outer: #eee9de;
   --simex-surface-canvas: #f7f2e8;

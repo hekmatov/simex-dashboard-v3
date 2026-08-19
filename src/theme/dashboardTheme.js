@@ -1,5 +1,33 @@
 import { resolveDashboardStyleGrammar } from "./dashboardStyleGrammar.js";
 
+export const DASHBOARD_VISUAL_CONTRACT = Object.freeze({
+  radiusControl: 6,
+  radiusSurface: 10,
+  controlMinimum: 44,
+  focusWidth: 3,
+  neutral: Object.freeze({
+    outer: "#e8e9ea", surface: "#ffffff", subtle: "#f4f5f5",
+    text: "#17191b", muted: "#5a6066", border: "#c7cbcf",
+    borderStrong: "#747b82", focus: "#155eef", active: "#202428",
+  }),
+});
+
+const COMPONENT_CSS_VARIABLES = Object.freeze({
+  "--simex-component-control-radius": `${DASHBOARD_VISUAL_CONTRACT.radiusControl}px`,
+  "--simex-component-surface-radius": `${DASHBOARD_VISUAL_CONTRACT.radiusSurface}px`,
+  "--simex-control-min": `${DASHBOARD_VISUAL_CONTRACT.controlMinimum}px`,
+  "--simex-component-focus-width": `${DASHBOARD_VISUAL_CONTRACT.focusWidth}px`,
+  "--simex-component-outer": DASHBOARD_VISUAL_CONTRACT.neutral.outer,
+  "--simex-component-surface": DASHBOARD_VISUAL_CONTRACT.neutral.surface,
+  "--simex-component-subtle": DASHBOARD_VISUAL_CONTRACT.neutral.subtle,
+  "--simex-component-text": DASHBOARD_VISUAL_CONTRACT.neutral.text,
+  "--simex-component-muted": DASHBOARD_VISUAL_CONTRACT.neutral.muted,
+  "--simex-component-border": DASHBOARD_VISUAL_CONTRACT.neutral.border,
+  "--simex-component-border-strong": DASHBOARD_VISUAL_CONTRACT.neutral.borderStrong,
+  "--simex-component-focus": DASHBOARD_VISUAL_CONTRACT.neutral.focus,
+  "--simex-component-active": DASHBOARD_VISUAL_CONTRACT.neutral.active,
+});
+
 const TOKEN_KEYS = Object.freeze([
   "OUT", "CAN", "PAN", "ALT", "INK", "INK-S", "INK-F", "RULE", "RULE+",
   "ACC", "ACC-S", "ON-ACC", "FOCUS", "SEL", "SEL-S", "CHR", "CHR-S",
@@ -171,9 +199,10 @@ export function resolveDashboardTheme({
     appearancePreference: savedAppearance,
     resolvedAppearance,
     styleVariables: resolveDashboardStyleGrammar(dashboardStyle, resolvedAppearance),
-    cssVariables: Object.freeze(Object.fromEntries(
-      TOKEN_KEYS.map((key, index) => [CSS_VARIABLES[index], tokens[key]]),
-    )),
+    cssVariables: Object.freeze({
+      ...COMPONENT_CSS_VARIABLES,
+      ...Object.fromEntries(TOKEN_KEYS.map((key, index) => [CSS_VARIABLES[index], tokens[key]])),
+    }),
   });
 }
 

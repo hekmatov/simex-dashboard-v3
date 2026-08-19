@@ -4688,7 +4688,7 @@ button.danger {
 }
 
 .simex-icon-control:focus-visible {
-  outline: 3px solid rgb(4 59 203 / 38%);
+  outline: var(--simex-component-focus-width) solid var(--simex-component-focus);
   outline-offset: 3px;
 }
 
