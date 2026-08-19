@@ -59,9 +59,24 @@ test("Audience cannot import Quorum directly", async () => {
   inputs.sourceFiles[audiencePath] =
     `import quorum from "../../lib/quorumCompanionProtocol.js";\n${inputs.sourceFiles[audiencePath]}`;
 
-  assert.throws(
+  assertBoundaryError(
     () => boundaryModule.inspectRuntimeBoundaries(inputs),
-    /src\/components\/presentation\/AudienceDisplay\.jsx import: \.\.\/\.\.\/lib\/quorumCompanionProtocol\.js/,
+    `${audiencePath} quorumBoundary.audience: reaches src/lib/quorumCompanionProtocol.js`,
+  );
+});
+
+test("Audience cannot reach Quorum through an intermediate helper", async () => {
+  const inputs = await repositoryInputs();
+  const audiencePath = "src/components/presentation/AudienceDisplay.jsx";
+  const helperPath = "src/components/presentation/SceneThemeBridge.js";
+  inputs.sourceFiles[helperPath] =
+    'import "../../lib/quorumCompanionProtocol.js";\nexport const audienceHelper = true;';
+  inputs.sourceFiles[audiencePath] =
+    `import { audienceHelper } from "./SceneThemeBridge.js";\n${inputs.sourceFiles[audiencePath]}`;
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${audiencePath} quorumBoundary.audience: reaches src/lib/quorumCompanionProtocol.js via ${helperPath}`,
   );
 });
 
@@ -78,6 +93,28 @@ test("a forked mode renderer fails with the exact entrypoint field", async () =>
   assert.throws(
     () => boundaryModule.inspectRuntimeBoundaries(inputs),
     /src\/components\/presentation\/PresentWorkspace\.jsx canonicalRendererEntrypoints\.present\.chartView/,
+  );
+});
+
+test("a reachable renderer fork fails even when canonical imports remain", async () => {
+  const inputs = await repositoryInputs();
+  const audiencePath = "src/components/presentation/AudienceDisplay.jsx";
+  const forkPath = "src/components/presentation/ForkedAudienceChart.jsx";
+  inputs.sourceFiles[forkPath] = [
+    'import { resolveChartRendering } from "../../charting/rendering/resolveChartRendering.js";',
+    "export default function ForkedAudienceChart(props) {",
+    "  const rendering = resolveChartRendering(props);",
+    "  return rendering.kind;",
+    "}",
+  ].join("\n");
+  inputs.sourceFiles[audiencePath] = [
+    'import ForkedAudienceChart from "./ForkedAudienceChart.jsx";',
+    inputs.sourceFiles[audiencePath],
+  ].join("\n");
+
+  assertBoundaryError(
+    () => boundaryModule.inspectRuntimeBoundaries(inputs),
+    `${forkPath} canonicalRendererExclusivity: unexpected renderer consumer`,
   );
 });
 

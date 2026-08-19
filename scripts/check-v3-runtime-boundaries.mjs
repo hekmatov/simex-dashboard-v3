@@ -10,6 +10,12 @@ const CATALOGUE_PATH = "public/integration/quorum-chart-catalogue.json";
 const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";
 const REGISTRY_PATH = "src/charting/schemas/chartSchemaRegistry.js";
 const RENDERER_PATH = "src/charting/rendering/resolveChartRendering.js";
+const AUDIENCE_ENTRYPOINT = "src/components/presentation/AudienceDisplay.jsx";
+const ALLOWED_RENDERER_CONSUMERS = new Set([
+  CHART_VIEW_PATH,
+  "src/components/chart-authoring/ChartPreview.jsx",
+  "src/components/playback/PlaybackView.jsx",
+]);
 const MODE_ENTRYPOINTS = Object.freeze([
   ["view", "src/components/view/ViewShell.jsx"],
   ["build", "src/components/build/BuildWorkspace.jsx"],
@@ -260,7 +266,7 @@ export function inspectRuntimeBoundaries({
     );
   }
 
-  assertAudienceHasNoQuorumImport(sourceFiles);
+  assertAudienceHasNoQuorumPath(sourceFiles);
   const quorumContractHash = readQuorumContractHash(sourceFiles, publicFiles);
   if (quorumContractHash !== EXPECTED_QUORUM_CONTRACT_HASH) {
     throw new Error(
@@ -338,12 +344,26 @@ function findRemoteRuntimeDependencies({ packageJson, sourceFiles, publicFiles }
   return findings.toSorted(compareFinding);
 }
 
-function assertAudienceHasNoQuorumImport(sourceFiles) {
-  for (const [filePath, source] of Object.entries(sourceFiles)) {
-    if (!/\/Audience[^/]*\.(?:js|jsx)$/.test(filePath)) continue;
-    for (const specifier of parseImportSpecifiers(source)) {
-      if (/quorum/i.test(specifier)) {
-        throw new Error(`${filePath} import: ${specifier}`);
+function assertAudienceHasNoQuorumPath(sourceFiles) {
+  requiredTextFile(sourceFiles, AUDIENCE_ENTRYPOINT);
+  const visited = new Set();
+  const pending = [{ filePath: AUDIENCE_ENTRYPOINT, via: [] }];
+  while (pending.length > 0) {
+    const { filePath, via } = pending.shift();
+    if (visited.has(filePath)) continue;
+    visited.add(filePath);
+    for (const specifier of parseImportSpecifiers(sourceFiles[filePath])) {
+      const resolved = resolveSourceImport(filePath, specifier, sourceFiles);
+      const quorumTarget = /quorum/i.test(resolved ?? specifier);
+      if (quorumTarget) {
+        const target = resolved ?? specifier;
+        const transit = via.length > 0 ? ` via ${via.join(" -> ")}` : "";
+        throw new Error(
+          `${AUDIENCE_ENTRYPOINT} quorumBoundary.audience: reaches ${target}${transit}`,
+        );
+      }
+      if (resolved && !visited.has(resolved)) {
+        pending.push({ filePath: resolved, via: [...via, resolved] });
       }
     }
   }
@@ -368,8 +388,10 @@ function readQuorumContractHash(sourceFiles, publicFiles) {
 }
 
 function inspectCanonicalEntrypoints(sourceFiles) {
-  return MODE_ENTRYPOINTS.map(([mode, entrypoint]) => {
+  const reachableByMode = new Map();
+  const inventory = MODE_ENTRYPOINTS.map(([mode, entrypoint]) => {
     const reachable = reachableSourceFiles(entrypoint, sourceFiles);
+    reachableByMode.set(mode, reachable);
     for (const [field, requiredPath] of [
       ["chartView", CHART_VIEW_PATH],
       ["registry", REGISTRY_PATH],
@@ -389,6 +411,25 @@ function inspectCanonicalEntrypoints(sourceFiles) {
       renderer: RENDERER_PATH,
     };
   });
+  assertCanonicalRendererExclusivity(sourceFiles, reachableByMode);
+  return inventory;
+}
+
+function assertCanonicalRendererExclusivity(sourceFiles, reachableByMode) {
+  const reachable = new Set(
+    [...reachableByMode.values()].flatMap((paths) => [...paths]),
+  );
+  for (const filePath of [...reachable].toSorted()) {
+    if (ALLOWED_RENDERER_CONSUMERS.has(filePath)) continue;
+    const importsRenderer = parseImportSpecifiers(sourceFiles[filePath]).some(
+      (specifier) => resolveSourceImport(filePath, specifier, sourceFiles) === RENDERER_PATH,
+    );
+    if (importsRenderer) {
+      throw new Error(
+        `${filePath} canonicalRendererExclusivity: unexpected renderer consumer`,
+      );
+    }
+  }
 }
 
 function reachableSourceFiles(entrypoint, sourceFiles) {
