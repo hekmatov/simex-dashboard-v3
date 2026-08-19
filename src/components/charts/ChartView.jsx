@@ -117,12 +117,9 @@ export function presentationFrameProps(chart) {
 }
 
 function withPlaybackTimeContext(props, playback) {
-  const groupId = props.chart?.interaction?.timeSync?.groupId;
   const memberTimeContext = playback?.timeContextForChart?.(props.chart?.id);
   if (
-    groupId
-    && memberTimeContext?.groupId === groupId
-    && Number.isFinite(memberTimeContext.activeEpochMs)
+    Number.isFinite(memberTimeContext?.activeEpochMs)
   ) {
     return { ...props, timeContext: memberTimeContext };
   }

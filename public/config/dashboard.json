@@ -1,5 +1,6 @@
 {
   "configVersion": 3,
+  "timezone": "UTC",
   "id": "simex-dashboard",
   "programLabel": "Pandemic & Disaster Preparedness Center",
   "title": "SimEx Dashboard V3",
@@ -634,13 +635,14 @@
     {
       "id": "municipal_outbreak",
       "name": "Municipal outbreak playback",
-      "primaryClock": {
-        "sourceId": "bio_municipal_infections_harmonized_2021",
-        "timeField": "Datum"
+      "period": {
+        "start": "2020-02-27",
+        "end": "2021-04-17"
       },
       "matching": {
         "policy": "exact"
       },
+      "secondsPerFrame": 1,
       "members": [
         {
           "chartId": "bio_municipality_choropleth_animation",
@@ -655,13 +657,14 @@
     {
       "id": "national_outbreak",
       "name": "National outbreak and health-system playback",
-      "primaryClock": {
-        "sourceId": "bio_cases",
-        "timeField": "date"
+      "period": {
+        "start": "2027-02-20",
+        "end": "2027-08-15"
       },
       "matching": {
         "policy": "exact"
       },
+      "secondsPerFrame": 1,
       "members": [
         {
           "chartId": "bio_confirmed_cases",
@@ -997,9 +1000,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }
@@ -1048,9 +1049,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }
@@ -1103,9 +1102,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }
@@ -1154,9 +1151,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }
@@ -1390,9 +1385,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "municipal_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }
@@ -1441,9 +1434,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "municipal_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }
@@ -1897,9 +1888,7 @@
                 "collection": null
               },
               "interaction": {
-                "timeSync": {
-                  "groupId": "national_outbreak"
-                },
+                "timeSync": null,
                 "zoom": {
                   "enabled": true
                 }

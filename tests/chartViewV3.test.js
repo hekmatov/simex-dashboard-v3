@@ -245,7 +245,7 @@ test("time-series playback summaries place resolved overlays at the shared clock
       },
       interaction: {
         zoom: { enabled: false },
-        timeSync: { groupId: "exercise" },
+        timeSync: null,
       },
     },
     rows,

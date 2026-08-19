@@ -40,13 +40,15 @@ const PLAYBACK_DISPLAY_MODE = "playback";
 const TIME_GROUP_KEYS = new Set([
   "id",
   "name",
-  "primaryClock",
+  "period",
   "matching",
+  "secondsPerFrame",
   "members",
 ]);
-const PRIMARY_CLOCK_KEYS = new Set(["sourceId", "timeField"]);
+const TIME_PERIOD_KEYS = new Set(["start", "end"]);
 const TIME_MEMBER_KEYS = new Set(["chartId", "timeRole", "matching"]);
 const ALIAS_KEYS = new Set(["aliases", "keywords"]);
+const CANONICAL_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function buildChartCatalogue(dashboard, aliasConfig) {
   const context = buildDashboardContext(dashboard);
@@ -356,7 +358,6 @@ function buildDashboardContext(dashboard) {
   const membershipByChartId = validateTimeMembership(
     timeSyncGroups,
     chartsById,
-    dataSources,
   );
 
   return {
@@ -394,7 +395,7 @@ function validateAliasConfig(context, aliasConfig) {
   return aliases;
 }
 
-function validateTimeMembership(groups, chartsById, dataSources) {
+function validateTimeMembership(groups, chartsById) {
   const groupIds = new Set();
   const membershipByChartId = new Map();
 
@@ -407,26 +408,10 @@ function validateTimeMembership(groups, chartsById, dataSources) {
     }
     groupIds.add(groupId);
     requiredText(group.name, `name for time synchronization group ${groupId}`);
-    const primaryClock = requiredRecord(
-      group.primaryClock,
-      `primary clock for time synchronization group ${groupId}`,
-    );
-    rejectUnknownKeys(
-      primaryClock,
-      PRIMARY_CLOCK_KEYS,
-      `primary clock for time synchronization group ${groupId}`,
-    );
-    const primarySourceId = requiredText(
-      primaryClock.sourceId,
-      `primary clock source for time synchronization group ${groupId}`,
-    );
-    requiredText(
-      primaryClock.timeField,
-      `primary clock field for time synchronization group ${groupId}`,
-    );
-    if (!Object.hasOwn(dataSources, primarySourceId)) {
+    validateTimePeriod(group.period, groupId);
+    if (!Number.isFinite(group.secondsPerFrame) || group.secondsPerFrame <= 0) {
       throw new Error(
-        `time synchronization group ${groupId} references unknown primary source ${primarySourceId}`,
+        `time synchronization group ${groupId} secondsPerFrame must be positive and finite`,
       );
     }
     validateEffectiveTimeSyncMatching(
@@ -463,7 +448,7 @@ function validateTimeMembership(groups, chartsById, dataSources) {
       }
       if (membershipByChartId.has(chartId)) {
         throw new Error(
-          `chart ${chartId} belongs to more than one time synchronization group`,
+          `Quorum catalogue v2 cannot represent multiple Time Group memberships for chart ${chartId}`,
         );
       }
       memberIds.add(chartId);
@@ -495,24 +480,40 @@ function validateTimeMembership(groups, chartsById, dataSources) {
           `time synchronization member ${chartId}`,
         );
       }
-      if (chartEntry.chart.interaction.timeSync?.groupId !== groupId) {
-        throw new Error(
-          `chart ${chartId} time synchronization membership does not match ${groupId}`,
-        );
-      }
     }
   }
 
-  for (const { chart } of chartsById.values()) {
-    const configuredGroupId = chart.interaction.timeSync?.groupId ?? null;
-    const memberGroupId = membershipByChartId.get(chart.id) ?? null;
-    if (configuredGroupId !== memberGroupId) {
-      throw new Error(
-        `chart ${chart.id} time synchronization membership is inconsistent`,
-      );
-    }
-  }
   return membershipByChartId;
+}
+
+function validateTimePeriod(value, groupId) {
+  const period = requiredRecord(
+    value,
+    `period for time synchronization group ${groupId}`,
+  );
+  rejectUnknownKeys(
+    period,
+    TIME_PERIOD_KEYS,
+    `period for time synchronization group ${groupId}`,
+  );
+  const start = requiredText(
+    period.start,
+    `period start for time synchronization group ${groupId}`,
+  );
+  const end = requiredText(
+    period.end,
+    `period end for time synchronization group ${groupId}`,
+  );
+  if (!CANONICAL_DATE_ONLY.test(start) || !CANONICAL_DATE_ONLY.test(end)) {
+    throw new Error(
+      `time synchronization group ${groupId} period must use canonical YYYY-MM-DD dates`,
+    );
+  }
+  if (end < start) {
+    throw new Error(
+      `time synchronization group ${groupId} period end must be on or after start`,
+    );
+  }
 }
 
 function chartDescription({ chart, section, page }) {

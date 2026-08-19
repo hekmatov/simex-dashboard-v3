@@ -919,6 +919,7 @@ function minimalDashboard() {
     configVersion: 3,
     id: "exercise-dashboard",
     title: "Exercise dashboard",
+    timezone: "UTC",
     dataSources: {
       status: {
         kind: "inline",

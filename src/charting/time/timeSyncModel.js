@@ -6,15 +6,20 @@ import {
   resolveEffectiveBinding,
 } from "../data/bindings.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import {
+  collectTemporalAvailability,
+  validateIanaTimezone,
+} from "./temporalAvailability.js";
 
 const GROUP_KEYS = new Set([
   "id",
   "name",
-  "primaryClock",
+  "period",
   "matching",
+  "secondsPerFrame",
   "members",
 ]);
-const PRIMARY_CLOCK_KEYS = new Set(["sourceId", "timeField"]);
+const PERIOD_KEYS = new Set(["start", "end"]);
 const MEMBER_KEYS = new Set(["chartId", "timeRole", "matching"]);
 const MATCHING_KEYS = new Set(["policy", "toleranceMs"]);
 export const TIME_SYNC_MATCHING_POLICIES = Object.freeze([
@@ -31,7 +36,6 @@ const NON_INTERPOLATABLE_FAMILIES = new Set([
 ]);
 const EMPTY_CLOCK = Object.freeze([]);
 const CANONICAL_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
-const CANONICAL_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
 
 /**
  * Validates named synchronization groups against loaded sources, profiles,
@@ -48,8 +52,8 @@ export function validateTimeSyncGroups(groups, context = {}) {
 
   const charts = chartCollection(context.charts);
   const chartsById = indexCharts(charts);
+  const timezone = validateIanaTimezone(context.timezone ?? "UTC");
   const groupIds = new Set();
-  const membershipByChartId = new Map();
 
   for (const group of groups) {
     validateGroupShape(group);
@@ -62,7 +66,6 @@ export function validateTimeSyncGroups(groups, context = {}) {
       group.matching,
       `Time synchronization group "${group.id}"`,
     );
-    buildPrimaryClock(group, context.loadedData, context.profiles);
 
     const memberIds = new Set();
     for (const member of group.members) {
@@ -73,12 +76,6 @@ export function validateTimeSyncGroups(groups, context = {}) {
         );
       }
       memberIds.add(member.chartId);
-      if (membershipByChartId.has(member.chartId)) {
-        throw new Error(
-          `Member chart "${member.chartId}" belongs to more than one time synchronization group.`,
-        );
-      }
-      membershipByChartId.set(member.chartId, group.id);
 
       const chart = chartsById.get(member.chartId);
       if (!chart) {
@@ -91,7 +88,6 @@ export function validateTimeSyncGroups(groups, context = {}) {
         chart,
         schema,
         member,
-        group,
         profiles: context.profiles,
       });
 
@@ -107,9 +103,14 @@ export function validateTimeSyncGroups(groups, context = {}) {
         ));
       }
     }
+    buildTimeGroupClock(group, {
+      charts,
+      loadedData: context.loadedData,
+      profiles: context.profiles,
+      timezone,
+    });
   }
 
-  validateChartReferences(charts, groupIds, membershipByChartId);
   return groups;
 }
 
@@ -177,89 +178,76 @@ export function getTimeSyncGroup(groups, groupId) {
   return found;
 }
 
-/**
- * Builds the primary clock exclusively from the designated source profile's
- * canonical temporal evidence. Raw loaded rows and member-source clocks are
- * intentionally never parsed or unioned.
- */
-export function buildPrimaryClock(group, loadedData = {}, profiles = {}) {
+export function buildTimeGroupClock(group, {
+  charts = [],
+  loadedData = {},
+  profiles = {},
+  timezone = "UTC",
+} = {}) {
   if (group === null || group === undefined) return EMPTY_CLOCK;
-  if (!isRecord(group)) {
-    throw new TypeError("Time synchronization group must be an object.");
-  }
-  requiredString(group.id, "Time synchronization group id");
-  validatePrimaryClockShape(group.primaryClock, group.id);
+  validateGroupShape(group);
+  const canonicalTimezone = validateIanaTimezone(timezone);
+  const chartsById = indexCharts(chartCollection(charts));
+  const epochs = new Set();
 
-  const { sourceId, timeField } = group.primaryClock;
-  if (
-    !hasEntry(loadedData, sourceId)
-    || readEntry(loadedData, sourceId) === null
-    || readEntry(loadedData, sourceId) === undefined
-  ) {
-    throw new Error(
-      `Time synchronization group "${group.id}" primary source "${sourceId}" is not loaded.`,
-    );
-  }
-
-  const profileEntry = readEntry(profiles, sourceId);
-  if (profileEntry === undefined || profileEntry === null) {
-    throw new Error(
-      `Temporal profile for primary source "${sourceId}" is required by time synchronization group "${group.id}".`,
-    );
-  }
-  const profile = unwrapProfile(profileEntry);
-  if (!isRecord(profile) || !Array.isArray(profile.columns)) {
-    throw new Error(
-      `Temporal profile for primary source "${sourceId}" must contain a columns array.`,
-    );
-  }
-  const matches = profile.columns.filter((column) => column?.name === timeField);
-  if (matches.length === 0) {
-    throw new Error(
-      `Primary time field "${timeField}" is missing from source "${sourceId}" profile.`,
-    );
-  }
-  if (matches.length > 1) {
-    throw new Error(
-      `Primary time field "${timeField}" is duplicated in source "${sourceId}" profile.`,
-    );
-  }
-
-  const column = matches[0];
-  if (canonicalColumnType(column.type) !== "temporal") {
-    throw new Error(
-      `Primary time field "${timeField}" in source "${sourceId}" must be temporal.`,
-    );
-  }
-  const values = validatedTemporalEvidence(column, {
-    sourceId,
-    timeField,
-    description: "Primary",
-  });
-
-  const clock = [];
-  let previousEpochMs = null;
-  for (const [index, value] of values.entries()) {
-    if (value === null) continue;
-    const epochMs = canonicalEpochMs(value);
-    if (!Number.isFinite(epochMs)) {
-      throw new TypeError(
-        `Primary time field "${timeField}" temporal profile evidence must contain finite canonical temporal values (index ${index}).`,
-      );
-    }
-    if (previousEpochMs !== null && epochMs === previousEpochMs) {
-      continue;
-    }
-    if (previousEpochMs !== null && epochMs < previousEpochMs) {
+  for (const member of group.members) {
+    validateMemberShape(member, group.id);
+    const chart = chartsById.get(member.chartId);
+    if (!chart) {
       throw new Error(
-        `Primary clock for source "${sourceId}" must be strictly increasing.`,
+        `Time synchronization member chart "${member.chartId}" does not exist.`,
       );
     }
-    clock.push(epochMs);
-    previousEpochMs = epochMs;
+    const schema = schemaForMember(chart);
+    validateMemberEligibility({
+      chart,
+      schema,
+      member,
+      profiles,
+    });
+    const rows = readEntry(loadedData, chart.sourceId);
+    if (!Array.isArray(rows)) {
+      throw new Error(
+        `Time synchronization member source "${chart.sourceId}" for chart "${chart.id}" is not loaded.`,
+      );
+    }
+    const profileEntry = readEntry(profiles, chart.sourceId);
+    if (profileEntry === undefined || profileEntry === null) {
+      throw new Error(
+        `Temporal profile for member chart "${chart.id}" source "${chart.sourceId}" is required.`,
+      );
+    }
+    const profile = unwrapProfile(profileEntry);
+    for (const epochMs of collectTemporalAvailability({
+      chart,
+      member,
+      rows,
+      profile,
+      period: group.period,
+      timezone: canonicalTimezone,
+    })) {
+      epochs.add(epochMs);
+    }
   }
 
-  return clock.length === 0 ? EMPTY_CLOCK : Object.freeze(clock);
+  return epochs.size === 0
+    ? EMPTY_CLOCK
+    : Object.freeze([...epochs].sort((left, right) => left - right));
+}
+
+export function buildPrimaryClock(
+  group,
+  loadedData = {},
+  profiles = {},
+  charts = [],
+  timezone = "UTC",
+) {
+  return buildTimeGroupClock(group, {
+    charts,
+    loadedData,
+    profiles,
+    timezone,
+  });
 }
 
 function validateGroupShape(group) {
@@ -274,7 +262,12 @@ function validateGroupShape(group) {
       `Time synchronization group "${group.id}" matching is required.`,
     );
   }
-  validatePrimaryClockShape(group.primaryClock, group.id);
+  validatePeriodShape(group.period, group.id);
+  if (!Number.isFinite(group.secondsPerFrame) || group.secondsPerFrame <= 0) {
+    throw new RangeError(
+      `Time synchronization group "${group.id}" secondsPerFrame must be a positive finite number.`,
+    );
+  }
   if (!Array.isArray(group.members) || group.members.length === 0) {
     throw new TypeError(
       `Time synchronization group "${group.id}" members must be a non-empty array.`,
@@ -282,21 +275,34 @@ function validateGroupShape(group) {
   }
 }
 
-function validatePrimaryClockShape(primaryClock, groupId) {
-  if (!isRecord(primaryClock)) {
+function validatePeriodShape(period, groupId) {
+  if (!isRecord(period)) {
     throw new TypeError(
-      `Time synchronization group "${groupId}" primaryClock must be an object.`,
+      `Time synchronization group "${groupId}" period must be an object.`,
     );
   }
-  checkKnownKeys(primaryClock, PRIMARY_CLOCK_KEYS, "primary clock");
-  requiredString(
-    primaryClock.sourceId,
-    `Time synchronization group "${groupId}" primary sourceId`,
-  );
-  requiredString(
-    primaryClock.timeField,
-    `Time synchronization group "${groupId}" primary timeField`,
-  );
+  checkKnownKeys(period, PERIOD_KEYS, "time synchronization period");
+  validateCanonicalPeriodDate(period.start, groupId, "start");
+  validateCanonicalPeriodDate(period.end, groupId, "end");
+  if (period.end < period.start) {
+    throw new RangeError(
+      `Time synchronization group "${groupId}" period end cannot be before its start.`,
+    );
+  }
+}
+
+function validateCanonicalPeriodDate(value, groupId, edge) {
+  if (typeof value !== "string" || !CANONICAL_DATE_ONLY.test(value)) {
+    throw new Error(
+      `Time synchronization group "${groupId}" period ${edge} must use canonical YYYY-MM-DD format.`,
+    );
+  }
+  const [, year, month, day] = CANONICAL_DATE_ONLY.exec(value);
+  if (!validDateParts(year, month, day)) {
+    throw new Error(
+      `Time synchronization group "${groupId}" period ${edge} must be a valid calendar date.`,
+    );
+  }
 }
 
 function validateMemberShape(member, groupId) {
@@ -373,7 +379,6 @@ function validateMemberEligibility({
   chart,
   schema,
   member,
-  group,
   profiles,
 }) {
   if (chart.presentation?.collection != null) {
@@ -422,35 +427,6 @@ function validateMemberEligibility({
   if (resolveEffectiveBinding(bindings[0], column).type !== "temporal") {
     throw new Error(
       `Member chart "${chart.id}" time role "${member.timeRole}" is not backed by a temporal profile field.`,
-    );
-  }
-  const values = validatedTemporalEvidence(column, {
-    sourceId: chart.sourceId,
-    timeField: field,
-    description: `Member chart "${chart.id}"`,
-  });
-  for (const [index, value] of values.entries()) {
-    if (value === null) continue;
-    if (!Number.isFinite(canonicalEpochMs(value))) {
-      throw new TypeError(
-        `Member chart "${chart.id}" time field "${field}" temporal profile evidence must contain finite canonical temporal values (index ${index}).`,
-      );
-    }
-  }
-
-  const reference = chart.interaction?.timeSync;
-  if (!isRecord(reference)) {
-    throw new Error(
-      `Member chart "${chart.id}" does not reference time synchronization group "${group.id}".`,
-    );
-  }
-  requiredString(
-    reference.groupId,
-    `Member chart "${chart.id}" time synchronization groupId`,
-  );
-  if (reference.groupId !== group.id) {
-    throw new Error(
-      `Member chart "${chart.id}" references group "${reference.groupId}" instead of "${group.id}".`,
     );
   }
 }
@@ -518,112 +494,6 @@ function interpolationMeasureRoleIds(chart, schema) {
     return new Set(["measurement"]);
   }
   return new Set(["value"]);
-}
-
-function validateChartReferences(charts, groupIds, membershipByChartId) {
-  for (const chart of charts) {
-    const reference = chart.interaction?.timeSync;
-    if (reference === null || reference === undefined) continue;
-    if (!isRecord(reference)) {
-      throw new TypeError(
-        `Chart "${chart.id}" time synchronization reference must be an object or null.`,
-      );
-    }
-    requiredString(
-      reference.groupId,
-      `Chart "${chart.id}" time synchronization groupId`,
-    );
-    if (!groupIds.has(reference.groupId)) {
-      throw new Error(
-        `Chart "${chart.id}" references unknown time synchronization group "${reference.groupId}".`,
-      );
-    }
-    if (membershipByChartId.get(chart.id) !== reference.groupId) {
-      throw new Error(
-        `Chart "${chart.id}" references group "${reference.groupId}" but is not a member.`,
-      );
-    }
-  }
-}
-
-function validatedTemporalEvidence(column, {
-  sourceId,
-  timeField,
-  description,
-}) {
-  if (
-    !isRecord(column.temporal)
-    || !Array.isArray(column.temporal.values)
-    || !Array.isArray(column.temporal.diagnostics)
-    || column.temporal.diagnostics.length > 0
-  ) {
-    throw new Error(
-      `${description} time field "${timeField}" in source "${sourceId}" requires valid temporal profile evidence.`,
-    );
-  }
-  return column.temporal.values;
-}
-
-function canonicalEpochMs(value) {
-  if (typeof value !== "string") return null;
-
-  const dateOnly = CANONICAL_DATE_ONLY.exec(value);
-  if (dateOnly) {
-    const [, year, month, day] = dateOnly;
-    return validDateParts(year, month, day)
-      ? utcMilliseconds(year, month, day, 0, 0, 0, 0)
-      : null;
-  }
-
-  const instant = CANONICAL_INSTANT.exec(value);
-  if (!instant) return null;
-  const [
-    ,
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second,
-    milliseconds,
-  ] = instant;
-  if (
-    !validDateParts(year, month, day)
-    || Number(hour) > 23
-    || Number(minute) > 59
-    || Number(second) > 59
-  ) {
-    return null;
-  }
-  return utcMilliseconds(
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second,
-    milliseconds,
-  );
-}
-
-function utcMilliseconds(
-  year,
-  month,
-  day,
-  hour,
-  minute,
-  second,
-  milliseconds,
-) {
-  const date = new Date(0);
-  date.setUTCFullYear(Number(year), Number(month) - 1, Number(day));
-  date.setUTCHours(
-    Number(hour),
-    Number(minute),
-    Number(second),
-    Number(milliseconds),
-  );
-  return date.valueOf();
 }
 
 function validDateParts(yearText, monthText, dayText) {
@@ -694,11 +564,6 @@ function indexCharts(charts) {
 
 function unwrapProfile(value) {
   return value?.datasetProfile ?? value?.profile ?? value;
-}
-
-function hasEntry(collection, key) {
-  if (collection instanceof Map) return collection.has(key);
-  return isRecord(collection) && Object.hasOwn(collection, key);
 }
 
 function readEntry(collection, key) {

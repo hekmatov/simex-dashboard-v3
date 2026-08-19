@@ -5,6 +5,10 @@ import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
 import {
+  normalizeDashboardTemporalConfig,
+  validateCanonicalDashboardTemporalConfig,
+} from "../time/dashboardTemporalConfig.js";
+import {
   normalizeChartInstance,
 } from "./chartConfigV3.js";
 import { validateDashboardStructure } from "./dashboardConfigStructure.js";
@@ -172,6 +176,32 @@ function sourceRows(sourceId, source) {
   return null;
 }
 
+function temporalMigrationProfiles(config, suppliedProfiles = {}) {
+  const profiles = {
+    ...(isRecord(suppliedProfiles) ? suppliedProfiles : {}),
+    ...(isRecord(config.datasetProfiles) ? config.datasetProfiles : {}),
+  };
+  const needsLegacyEvidence = Array.isArray(config.timeSyncGroups)
+    && config.timeSyncGroups.some((group) => (
+      isRecord(group)
+      && group.primaryClock !== undefined
+      && group.period === undefined
+    ));
+  if (!needsLegacyEvidence || !isRecord(config.dataSources)) return profiles;
+
+  for (const [sourceId, source] of Object.entries(config.dataSources)) {
+    if (!isRecord(source)) continue;
+    const rows = sourceRows(sourceId, source);
+    if (rows !== null) {
+      profiles[sourceId] = profileDataset(
+        rows,
+        source.parsingMetadata ?? {},
+      );
+    }
+  }
+  return profiles;
+}
+
 function profileColumns(sourceId, source, profiles = {}) {
   const rows = sourceRows(sourceId, source);
   if (rows !== null) return profileDataset(rows, source.parsingMetadata ?? {}).columns;
@@ -313,6 +343,13 @@ function normalizeDashboardChartInstances(config) {
   };
 }
 
+function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
+  const chartNormalized = normalizeDashboardChartInstances(config);
+  return normalizeDashboardTemporalConfig(chartNormalized, {
+    profiles: temporalMigrationProfiles(chartNormalized, profiles),
+  });
+}
+
 function validCanonicalInstant(now) {
   if (typeof now !== "string" || !CANONICAL_ISO_INSTANT.test(now)) return false;
   const parsed = parseTemporalValue(now, { format: "ISO-8601" });
@@ -324,6 +361,7 @@ export function validateDashboardConfig(config) {
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
+  validateCanonicalDashboardTemporalConfig(config);
   if (config.configVersion !== DASHBOARD_CONFIG_VERSION) throw new Error("Dashboard configuration version 3 is required.");
   requiredString(config.id, "Dashboard id"); requiredString(config.title, "Dashboard title");
   const sourceEntries = plainDataEntries(config.dataSources, "Dashboard dataSources");
@@ -362,6 +400,7 @@ export function validateDashboardConfig(config) {
     charts,
     loadedData,
     profiles: validationProfiles,
+    timezone: config.timezone,
   });
   return config;
 }
@@ -392,8 +431,11 @@ export function readDashboardStorage(storage, storageKey, { profiles } = {}) {
           ...structuredClone(config.datasetProfiles ?? {}),
         },
       };
-  validateDashboardConfig(candidate);
-  return structuredClone(candidate);
+  const normalized = normalizeDashboardBoundary(candidate, {
+    profiles: profiles ?? {},
+  });
+  validateDashboardConfig(normalized);
+  return structuredClone(normalized);
 }
 
 /** Adds a normalized chart, optional new source, and group proposal atomically. */
@@ -450,7 +492,10 @@ export function integrateSavedChart(dashboard, payload) {
 }
 
 export function serializeDashboardBundle(config, { now = null } = {}) {
-  const serializable = serializableConfig(normalizeDashboardChartInstances(config));
+  const chartNormalized = serializableConfig(
+    normalizeDashboardChartInstances(config),
+  );
+  const serializable = normalizeDashboardBoundary(chartNormalized);
   validateDashboardConfig(serializable);
   if (now !== null && !validCanonicalInstant(now)) throw new Error("Bundle export time must be a valid canonical ISO-8601 timestamp or null.");
   return { bundleType: DASHBOARD_BUNDLE_TYPE, version: DASHBOARD_CONFIG_VERSION, metadata: { exportedAt: now, sourceFingerprints: sourceFingerprints(serializable.dataSources) }, config: serializable };
@@ -463,7 +508,7 @@ export function parseDashboardBundle(text) {
   if (!isRecord(bundle.config)) throw new Error("Bundle config must be a version 3 dashboard configuration object.");
   const bundleEntries = plainDataEntries(bundle, "Dashboard bundle");
   rejectUnknownEntries(bundleEntries, BUNDLE_KEYS, "dashboard bundle");
-  const config = normalizeDashboardChartInstances(structuredClone(bundle.config));
+  const config = normalizeDashboardBoundary(structuredClone(bundle.config));
   validateDashboardConfig(config);
   const metadataEntries = plainDataEntries(bundle.metadata, "Dashboard bundle metadata");
   rejectUnknownEntries(metadataEntries, BUNDLE_METADATA_KEYS, "dashboard bundle metadata");

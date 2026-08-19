@@ -21,7 +21,6 @@ function transformations(overrides = {}) {
 }
 
 function playbackChart(typeId, roles, {
-  groupId = "exercise",
   transformOverrides,
 } = {}) {
   return {
@@ -29,7 +28,7 @@ function playbackChart(typeId, roles, {
     roles,
     transformations: transformations(transformOverrides),
     interaction: {
-      timeSync: { groupId },
+      timeSync: null,
     },
   };
 }
@@ -59,7 +58,7 @@ function prepare({
   });
 }
 
-test("a chart outside the active group remains semantically byte-for-byte unchanged", () => {
+test("a chart without a supplied playback context remains semantically byte-for-byte unchanged", () => {
   const rows = [
     { at: "2027-05-01", value: 10 },
     { at: "2027-05-02", value: 12 },
@@ -70,15 +69,14 @@ test("a chart outside the active group remains semantically byte-for-byte unchan
   });
   const datasetProfile = profiled(rows);
   const baseline = prepareChartData({ chart, rows, datasetProfile });
-  const outsideGroup = prepareChartData({
+  const withoutContext = prepareChartData({
     chart,
     rows,
     datasetProfile,
-    timeContext: { groupId: "logistics", activeEpochMs: MAY_2 },
   });
 
-  assert.deepEqual(outsideGroup, baseline);
-  assert.equal(Object.hasOwn(outsideGroup.meta, "activeTime"), false);
+  assert.deepEqual(withoutContext, baseline);
+  assert.equal(Object.hasOwn(withoutContext.meta, "activeTime"), false);
 });
 
 test("temporal KPI, Gauge, and Bullet collections use latest static values and active playback snapshots per entity", () => {
@@ -488,18 +486,13 @@ test("active playback fails closed when no effective group or member matching co
   assert.ok(diagnostic.message.length <= 240);
 });
 
-test("direct playback preparation rejects chart-local matching even when context matching exists", () => {
+test("a supplied playback context is authoritative without a chart backlink", () => {
   const rows = [{ at: "2027-05-01", value: 10 }];
   const result = prepareChartData({
-    chart: {
-      ...playbackChart("kpi", {
+    chart: playbackChart("kpi", {
       value: { field: "value" },
       time: { field: "at" },
-      }),
-      interaction: {
-        timeSync: { groupId: "exercise", policy: "lastKnown" },
-      },
-    },
+    }),
     rows,
     datasetProfile: profiled(rows),
     timeContext: {
@@ -509,82 +502,40 @@ test("direct playback preparation rejects chart-local matching even when context
     },
   });
 
-  assert.equal(result.status, "invalid");
-  assert.deepEqual(result.marks, []);
-  assert.ok(result.diagnostics.some(({ code, message }) => (
-    code === "invalid-time-membership"
-    && /membership.*groupId/i.test(message)
-  )), JSON.stringify(result.diagnostics));
+  assert.equal(result.status, "ready");
+  assert.equal(result.marks[0].value, 10);
+  assert.equal(result.meta.activeTime.groupId, "exercise");
 });
 
-test("chart-local matching is rejected before inactive or different-group playback can bypass validation", () => {
+test("playback projection never reads legacy chart timeSync state", () => {
   const rows = [{ at: "2027-05-01", value: 10 }];
-  const chart = {
-    ...playbackChart("kpi", {
-      value: { field: "value" },
-      time: { field: "at" },
-    }),
-    interaction: {
-      timeSync: { groupId: "exercise", policy: "lastKnown" },
-    },
-  };
+  const chart = playbackChart("kpi", {
+    value: { field: "value" },
+    time: { field: "at" },
+  });
   const datasetProfile = profiled(rows);
-
-  for (const timeContext of [
-    undefined,
-    { groupId: "logistics", activeEpochMs: MAY_1, matching: { policy: "exact" } },
-  ]) {
-    const result = prepareChartData({
-      chart,
-      rows,
-      datasetProfile,
-      timeContext,
-    });
-    const diagnostic = result.diagnostics.find(({ code }) => (
-      code === "invalid-time-membership"
-    ));
-
-    assert.equal(result.status, "invalid");
-    assert.deepEqual(result.marks, []);
-    assert.ok(diagnostic);
-    assert.ok(diagnostic.message.length <= 240);
-  }
-});
-
-test("playback membership rejects inherited, executable, symbolic, and custom-prototype fields", () => {
-  const rows = [{ at: "2027-05-01", value: 10 }];
-  const datasetProfile = profiled(rows);
-  let accessorReads = 0;
-  const accessor = {};
-  Object.defineProperty(accessor, "groupId", {
+  let timeSyncReads = 0;
+  Object.defineProperty(chart.interaction, "timeSync", {
+    configurable: true,
     enumerable: true,
     get() {
-      accessorReads += 1;
-      return "exercise";
+      timeSyncReads += 1;
+      throw new Error("legacy chart backlink was read");
     },
   });
-  const inherited = Object.create({ groupId: "exercise" });
-  const symbolic = { groupId: "exercise" };
-  symbolic[Symbol("hidden")] = true;
+  const result = prepareChartData({
+    chart,
+    rows,
+    datasetProfile,
+    timeContext: {
+      groupId: "exercise",
+      activeEpochMs: MAY_1,
+      matching: { policy: "exact" },
+    },
+  });
 
-  for (const timeSync of [inherited, accessor, symbolic]) {
-    const result = prepareChartData({
-      chart: {
-        ...playbackChart("kpi", {
-          value: { field: "value" },
-          time: { field: "at" },
-        }),
-        interaction: { timeSync },
-      },
-      rows,
-      datasetProfile,
-    });
-    assert.equal(result.status, "invalid");
-    assert.ok(result.diagnostics.some(({ code }) => (
-      code === "invalid-time-membership"
-    )), JSON.stringify(result.diagnostics));
-  }
-  assert.equal(accessorReads, 0);
+  assert.equal(result.status, "ready");
+  assert.equal(timeSyncReads, 0);
 });
 
 test("active projection rejects malformed effective group or member matching contracts", () => {

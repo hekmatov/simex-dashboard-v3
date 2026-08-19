@@ -2,6 +2,10 @@ import { parseTemporalValue } from "../charting/data/temporal.js";
 import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
 import {
+  normalizeDashboardTemporalConfig,
+  validateCanonicalDashboardTemporalConfig,
+} from "../charting/time/dashboardTemporalConfig.js";
+import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
 import { validateTimeSyncGroups } from "../charting/time/timeSyncModel.js";
@@ -123,6 +127,53 @@ const GEOJSON_COLLECTION_GEOMETRY_KEYS = new Set([
   "type",
 ]);
 
+function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
+  const normalized = normalizeDashboardTemporalConfig(dashboard, {
+    profiles: temporalMigrationProfiles(dashboard, suppliedProfiles),
+  });
+  // Temporal normalization never changes source descriptors. Preserve the
+  // established runtime descriptor identity after the inert-data check while
+  // still cloning and normalizing temporal dashboard state.
+  if (isRecord(dashboard?.dataSources)) {
+    normalized.dataSources = dashboard.dataSources;
+  }
+  return normalized;
+}
+
+function temporalMigrationProfiles(dashboard, suppliedProfiles = {}) {
+  const profiles = {
+    ...(isRecord(suppliedProfiles) ? suppliedProfiles : {}),
+    ...(isRecord(dashboard?.datasetProfiles) ? dashboard.datasetProfiles : {}),
+  };
+  const needsLegacyEvidence = Array.isArray(dashboard?.timeSyncGroups)
+    && dashboard.timeSyncGroups.some((group) => (
+      isRecord(group)
+      && group.primaryClock !== undefined
+      && group.period === undefined
+    ));
+  if (!needsLegacyEvidence || !isRecord(dashboard?.dataSources)) return profiles;
+
+  for (const [sourceId, source] of Object.entries(dashboard.dataSources)) {
+    if (!isRecord(source)) continue;
+    let rows = null;
+    if (source.kind === "inline" && Array.isArray(source.rows)) {
+      rows = source.rows;
+    } else if (source.type === "uploadedCsv" && typeof source.csvText === "string") {
+      rows = parseCsvText(source.csvText, source.fileName ?? sourceId);
+    }
+    if (rows !== null) {
+      profiles[sourceId] = profileDataset(
+        rows,
+        source.parsingMetadata ?? {},
+      );
+    }
+  }
+  return profiles;
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 export async function loadDashboardDefinition(
   configPath,
   profilesPath = "config/dataset-profiles.json",
@@ -130,7 +181,7 @@ export async function loadDashboardDefinition(
   const portable = portableDashboard();
   if (usingFileProtocol() && portable?.config) {
     return {
-      dashboard: portable.config,
+      dashboard: normalizeDashboardSource(portable.config, portable.datasetProfiles),
       datasetProfiles: portable.datasetProfiles ?? {},
       portableSources: portable.sources ?? null,
     };
@@ -141,11 +192,15 @@ export async function loadDashboardDefinition(
       fetchJson(configPath, `dashboard config: ${configPath}`),
       fetchJson(sourceUrl(profilesPath), `dataset profiles: ${profilesPath}`),
     ]);
-    return { dashboard, datasetProfiles, portableSources: null };
+    return {
+      dashboard: normalizeDashboardSource(dashboard, datasetProfiles),
+      datasetProfiles,
+      portableSources: null,
+    };
   } catch (error) {
     if (portable?.config) {
       return {
-        dashboard: portable.config,
+        dashboard: normalizeDashboardSource(portable.config, portable.datasetProfiles),
         datasetProfiles: portable.datasetProfiles ?? {},
         portableSources: portable.sources ?? null,
       };
@@ -171,9 +226,16 @@ export async function loadDashboardConfig(
   datasetProfiles,
   portableSources = null,
 ) {
+  validateDashboardStructure(dashboard, {
+    allowRuntimeState: true,
+    requireComplete: false,
+  });
+  validateDashboardSourceDescriptors(dashboard);
+  dashboard = normalizeDashboardSource(dashboard, datasetProfiles);
   const structure = validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
   });
+  validateCanonicalDashboardTemporalConfig(dashboard);
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
   const reusableProfiles = mergeDatasetProfiles(
@@ -215,6 +277,7 @@ export async function loadDashboardConfig(
     charts: chartReferences.map(({ chart }) => chart),
     loadedData,
     profiles: hydratedProfiles,
+    timezone: dashboard.timezone,
   });
 
   return {
@@ -231,9 +294,16 @@ export async function loadDashboardConfigProgressively(
   portableSources = null,
   { onUpdate = () => {} } = {},
 ) {
+  validateDashboardStructure(dashboard, {
+    allowRuntimeState: true,
+    requireComplete: false,
+  });
+  validateDashboardSourceDescriptors(dashboard);
+  dashboard = normalizeDashboardSource(dashboard, datasetProfiles);
   const structure = validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
   });
+  validateCanonicalDashboardTemporalConfig(dashboard);
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
   const reusableProfiles = mergeDatasetProfiles(
@@ -303,6 +373,7 @@ export async function loadDashboardConfigProgressively(
       charts: chartReferences.map(({ chart }) => chart),
       loadedData,
       profiles: hydratedProfiles,
+      timezone: dashboard.timezone,
     });
   }
   return latest;
@@ -322,6 +393,20 @@ export async function loadDashboardConfigProgressively(
     };
     onUpdate(runtimeDashboard);
     return runtimeDashboard;
+  }
+}
+
+function validateDashboardSourceDescriptors(dashboard) {
+  const dashboardEntries = plainDataEntries(
+    dashboard,
+    "Dashboard config",
+  );
+  const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
+  for (const [sourceId, source] of plainDataEntries(
+    dataSources,
+    "Dashboard dataSources",
+  )) {
+    validateDataSourceDescriptor(sourceId, source);
   }
 }
 

@@ -49,11 +49,9 @@ function synchronizedState() {
     timeSyncGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
-      primaryClock: {
-        sourceId: "exercise-data",
-        timeField: "reportedAt",
-      },
+      period: { start: "2027-05-01", end: "2027-05-02" },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [{
         chartId: "exercise-trend",
         timeRole: "observation",
@@ -92,11 +90,7 @@ function synchronizedState() {
       format: "YYYY-MM-DD",
     },
   });
-  return reduceWizardState(state, {
-    type: "updateChart",
-    path: ["interaction", "timeSync"],
-    value: { groupId: "exercise-clock" },
-  });
+  return state;
 }
 
 test("every wizard tab is directly navigable before prerequisites are complete", () => {
@@ -338,9 +332,7 @@ test("finalization normalizes the chart and returns group edits separately", () 
       profile().columns.map((column) => [column.name, column]),
     ),
   }));
-  assert.deepEqual(result.chart.interaction.timeSync, {
-    groupId: "exercise-clock",
-  });
+  assert.equal(result.chart.interaction.timeSync, null);
   assert.equal("temporalMatch" in result.chart.transformations, false);
   assert.equal(
     result.timeSyncGroups[0].members[0].matching.policy,
@@ -363,18 +355,16 @@ test("unrelated populated synchronization groups validate against authoritative 
         format: "YYYY-MM-DD",
       },
     },
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   let state = createWizardState({
     charts: [existing],
     timeSyncGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
-      primaryClock: {
-        sourceId: "exercise-data",
-        timeField: "reportedAt",
-      },
+      period: { start: "2027-05-01", end: "2027-05-02" },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [{
         chartId: "existing-trend",
         timeRole: "observation",
@@ -417,7 +407,7 @@ test("changing chart type keeps logical identity and removes only the draft's st
         format: "YYYY-MM-DD",
       },
     },
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   const categoryRows = [
     { status: "Ready", value: 3 },
@@ -428,11 +418,9 @@ test("changing chart type keeps logical identity and removes only the draft's st
     timeSyncGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
-      primaryClock: {
-        sourceId: "exercise-data",
-        timeField: "reportedAt",
-      },
+      period: { start: "2027-05-01", end: "2027-05-02" },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [
         { chartId: "existing-trend", timeRole: "observation" },
         { chartId: "changing-chart", timeRole: "observation" },
@@ -470,12 +458,6 @@ test("changing chart type keeps logical identity and removes only the draft's st
       format: "YYYY-MM-DD",
     },
   });
-  state = reduceWizardState(state, {
-    type: "updateChart",
-    path: ["interaction", "timeSync"],
-    value: { groupId: "exercise-clock" },
-  });
-
   const beforeTypeChange = state;
   state = reduceWizardState(state, {
     type: "selectType",
@@ -521,19 +503,17 @@ test("changing the sole member's type removes only the now-empty runtime group",
         format: "YYYY-MM-DD",
       },
     },
-    interaction: { timeSync: { groupId: "unrelated-clock" } },
+    interaction: { timeSync: null },
   });
   const draftGroup = {
     id: "draft-clock",
     name: "Draft clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "reportedAt",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: {
       policy: "nearest",
       toleranceMs: 86_400_000,
     },
+    secondsPerFrame: 1,
     members: [{
       chartId: "changing-chart",
       timeRole: "observation",
@@ -543,11 +523,9 @@ test("changing the sole member's type removes only the now-empty runtime group",
   const unrelatedGroup = {
     id: "unrelated-clock",
     name: "Unrelated clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "reportedAt",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{
       chartId: "unrelated-trend",
       timeRole: "observation",
@@ -591,11 +569,6 @@ test("changing the sole member's type removes only the now-empty runtime group",
       interpretation: "temporal",
       format: "YYYY-MM-DD",
     },
-  });
-  state = reduceWizardState(state, {
-    type: "updateChart",
-    path: ["interaction", "timeSync"],
-    value: { groupId: "draft-clock" },
   });
   const beforeTypeChange = state;
 
@@ -642,11 +615,9 @@ test("preexisting empty runtime groups fail finalization instead of being filter
     timeSyncGroups: [{
       id: "empty-clock",
       name: "Empty clock",
-      primaryClock: {
-        sourceId: "exercise-data",
-        timeField: "reportedAt",
-      },
+      period: { start: "2027-05-01", end: "2027-05-02" },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [],
     }],
     loadedData: { "exercise-data": loadedRows },

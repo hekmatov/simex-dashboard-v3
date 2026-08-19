@@ -372,7 +372,7 @@ test("collection updates emit only the normalized nested contract", () => {
   assert.match(html, /Priority/);
 });
 
-test("time synchronization validates complete proposed groups and never writes chart-local matching", () => {
+test("time synchronization keeps matching group-owned and renders independent membership checkboxes", () => {
   const chart = createChartDraft("line", {
     id: "trend",
     sourceId: "exercise-data",
@@ -384,13 +384,14 @@ test("time synchronization validates complete proposed groups and never writes c
         format: "YYYY-MM-DD",
       },
     },
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: { sourceId: "exercise-data", timeField: "observed" },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{ chartId: "trend", timeRole: "observation" }],
   }];
   const rows = [
@@ -418,8 +419,7 @@ test("time synchronization validates complete proposed groups and never writes c
     toleranceMs: 3_600_000,
   });
   assert.equal(groups[0].members[0].matching, undefined);
-  assert.deepEqual(chart.interaction.timeSync, { groupId: "exercise-clock" });
-  assert.equal("temporalMatch" in chart.interaction.timeSync, false);
+  assert.equal(chart.interaction.timeSync, null);
   assert.throws(() => proposeTimeSyncGroupMatching({
     groups,
     target: {
@@ -437,24 +437,19 @@ test("time synchronization validates complete proposed groups and never writes c
     field: {
       id: "timeSync",
       label: "Synchronized playback",
-      groupId: "exercise-clock",
       groups,
-      groupTarget: {
-        groupId: "exercise-clock",
-        chartId: "trend",
-        property: "matching",
-      },
-      memberMatching: { policy: "exact" },
+      selectedGroupIds: ["exercise-clock"],
     },
     chart,
     charts: [chart],
     loadedData: { "exercise-data": rows },
     profiles: { "exercise-data": profile },
     onMembershipChange() {},
-    onGroupsChange() {},
   }));
-  assert.match(html, /Playback group/);
-  assert.match(html, /Member matching/);
+  assert.match(html, /Time Group memberships/);
+  assert.match(html, /type="checkbox"[^>]*checked/);
+  assert.match(html, /Exercise clock/);
+  assert.doesNotMatch(html, /Member matching/);
 });
 
 test("role controls expose cardinality, axis assignment, and detected X interpretation", () => {
@@ -1983,7 +1978,7 @@ test("wizard preparation correlates the current chart, rows, and profile", () =>
   );
 });
 
-test("wizard membership keeps matching in group members and chart-local state contains only groupId", () => {
+test("wizard membership keeps matching in group members and chart-local state null", () => {
   const chart = createChartDraft("line", {
     id: "exercise-trend",
     title: "Exercise trend",
@@ -2000,28 +1995,24 @@ test("wizard membership keeps matching in group members and chart-local state co
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "reportedAt",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [],
   }];
   const next = applyWizardMembership({
     chart,
     groups,
     groupId: "exercise-clock",
+    selected: true,
     timeRole: "observation",
   });
 
-  assert.deepEqual(next.chart.interaction.timeSync, {
-    groupId: "exercise-clock",
-  });
+  assert.equal(next.chart.interaction.timeSync, null);
   assert.deepEqual(next.groups[0].members, [{
     chartId: "exercise-trend",
     timeRole: "observation",
   }]);
-  assert.equal("matching" in next.chart.interaction.timeSync, false);
   assert.equal("temporalMatch" in next.chart.transformations, false);
   assert.deepEqual(groups[0].members, []);
 });
@@ -2039,16 +2030,14 @@ test("moving within the same synchronization group preserves member matching", (
         format: "YYYY-MM-DD",
       },
     },
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "reportedAt",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{
       chartId: "exercise-trend",
       timeRole: "observation",
@@ -2059,6 +2048,7 @@ test("moving within the same synchronization group preserves member matching", (
     chart,
     groups,
     groupId: "exercise-clock",
+    selected: true,
     timeRole: "observation",
   });
 
@@ -2365,11 +2355,9 @@ test("editor save normalizes, validates, and accepts the full synchronization gr
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "observed",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{
       chartId: chart.id,
       timeRole: "observation",
@@ -2400,9 +2388,7 @@ test("editor save normalizes, validates, and accepts the full synchronization gr
     profile,
   });
 
-  assert.deepEqual(result.chart.interaction.timeSync, {
-    groupId: "exercise-clock",
-  });
+  assert.equal(result.chart.interaction.timeSync, null);
   assert.equal("temporalMatch" in result.chart.transformations, false);
   assert.deepEqual(
     result.timeSyncGroups[0].members[0].matching,
@@ -2428,7 +2414,7 @@ test("editor save normalizes, validates, and accepts the full synchronization gr
   );
 });
 
-test("moving the sole synchronized chart to another group removes only the empty old group", () => {
+test("selecting a second synchronization group preserves the existing membership", () => {
   const rows = [
     { observed: "2027-05-01", capacity: 4 },
     { observed: "2027-05-02", capacity: 6 },
@@ -2436,7 +2422,7 @@ test("moving the sole synchronized chart to another group removes only the empty
   const chart = synchronizedLineChart();
   const other = synchronizedLineChart({
     id: "other-line",
-    interaction: { timeSync: { groupId: "secondary-clock" } },
+    interaction: { timeSync: null },
   });
   const profile = profileDataset(rows, {
     observed: { interpretation: "temporal" },
@@ -2444,11 +2430,9 @@ test("moving the sole synchronized chart to another group removes only the empty
   const group = (id, chartId) => ({
     id,
     name: id,
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "observed",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{ chartId, timeRole: "observation" }],
   });
   const state = createChartEditorState({
@@ -2461,6 +2445,7 @@ test("moving the sole synchronized chart to another group removes only the empty
   const moved = reduceChartEditorState(state, {
     type: "updateTimeSyncMembership",
     groupId: "secondary-clock",
+    selected: true,
     timeRole: "observation",
   }, {
     existingCharts: [chart, other],
@@ -2470,15 +2455,17 @@ test("moving the sole synchronized chart to another group removes only the empty
 
   assert.deepEqual(
     moved.timeSyncGroups.map(({ id }) => id),
-    ["secondary-clock"],
+    ["exercise-clock", "secondary-clock"],
   );
   assert.deepEqual(
     moved.timeSyncGroups[0].members.map(({ chartId }) => chartId),
+    ["synchronized-line"],
+  );
+  assert.deepEqual(
+    moved.timeSyncGroups[1].members.map(({ chartId }) => chartId),
     ["other-line", "synchronized-line"],
   );
-  assert.deepEqual(moved.draft.interaction.timeSync, {
-    groupId: "secondary-clock",
-  });
+  assert.equal(moved.draft.interaction.timeSync, null);
 });
 
 test("guided synchronized conversion remaps only the edited member semantic time role", () => {
@@ -2489,7 +2476,7 @@ test("guided synchronized conversion remaps only the edited member semantic time
   const chart = synchronizedLineChart();
   const other = synchronizedLineChart({
     id: "other-line",
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   const profile = profileDataset(rows, {
     observed: { interpretation: "temporal" },
@@ -2497,11 +2484,9 @@ test("guided synchronized conversion remaps only the edited member semantic time
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "observed",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [
       {
         chartId: chart.id,
@@ -2581,9 +2566,7 @@ test("guided synchronized conversion remaps only the edited member semantic time
 
   assert.equal(state.error, "");
   assert.equal(state.draft.typeId, "kpi");
-  assert.deepEqual(state.draft.interaction.timeSync, {
-    groupId: "exercise-clock",
-  });
+  assert.equal(state.draft.interaction.timeSync, null);
   assert.deepEqual(state.timeSyncGroups[0].members, [
     {
       chartId: chart.id,
@@ -2623,7 +2606,7 @@ test("multi-temporal conversion requires an explicit schema-derived playback tim
   const chart = synchronizedLineChart();
   const other = synchronizedLineChart({
     id: "other-line",
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   const profile = profileDataset(rows, {
     observed: { interpretation: "temporal" },
@@ -2633,11 +2616,9 @@ test("multi-temporal conversion requires an explicit schema-derived playback tim
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "observed",
-    },
+    period: { start: "2027-05-01", end: "2027-05-03" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [
       {
         chartId: chart.id,
@@ -2833,7 +2814,7 @@ test("multi-temporal conversion cancel is exact and intentional playback removal
   const chart = synchronizedLineChart();
   const other = synchronizedLineChart({
     id: "other-line",
-    interaction: { timeSync: { groupId: "exercise-clock" } },
+    interaction: { timeSync: null },
   });
   const profile = profileDataset(rows, {
     observed: { interpretation: "temporal" },
@@ -2843,11 +2824,9 @@ test("multi-temporal conversion cancel is exact and intentional playback removal
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "observed",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [
       {
         chartId: chart.id,
@@ -3065,7 +3044,7 @@ test("conversion dialog distinguishes compatible and remapped changes and cancel
   assert.match(remapHtml, /disabled/);
 });
 
-test("destructive conversion applies only after complete direct role assignments and removes disclosed time sync membership", () => {
+test("destructive conversion applies only after complete direct role assignments and removes group-owned time membership", () => {
   const rows = [
     { observed: "2027-05-01", capacity: 4 },
     { observed: "2027-05-02", capacity: 6 },
@@ -3081,11 +3060,9 @@ test("destructive conversion applies only after complete direct role assignments
   const groups = [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "observed",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{
       chartId: chart.id,
       timeRole: "observation",
@@ -3099,9 +3076,7 @@ test("destructive conversion applies only after complete direct role assignments
     type: "requestConversion",
     targetTypeId: "pie",
   });
-  assert.ok(state.conversion.plan.removedSettings.some(
-    ({ path }) => path === "interaction.timeSync",
-  ));
+  assert.equal(state.conversion.timeSyncConsequence.kind, "remove");
   const beforeIncompleteApply = state.draft;
   state = reduceChartEditorState(state, {
     type: "applyConversion",
@@ -3140,7 +3115,7 @@ test("destructive conversion applies only after complete direct role assignments
   assert.equal(state.previewRevision, 1);
 });
 
-test("dashboard editor profiles include an unbound primary-clock source and reuse supplied profiles", () => {
+test("dashboard editor profiles include unbound sources and reuse supplied profiles", () => {
   const memberRows = [
     { observed: "2027-05-01", capacity: 4 },
     { observed: "2027-05-02", capacity: 6 },
@@ -3183,11 +3158,9 @@ test("dashboard editor profiles include an unbound primary-clock source and reus
     timeSyncGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
-      primaryClock: {
-        sourceId: "clock-data",
-        timeField: "clock_at",
-      },
+      period: { start: "2027-05-01", end: "2027-05-02" },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [{
         chartId: chart.id,
         timeRole: "observation",
@@ -3409,9 +3382,7 @@ function synchronizedLineChart(overrides = {}) {
         format: "YYYY-MM-DD",
       },
     },
-    interaction: {
-      timeSync: { groupId: "exercise-clock" },
-    },
+    interaction: { timeSync: null },
     ...overrides,
     transformations: {
       ...(overrides.transformations ?? {}),

@@ -738,6 +738,7 @@ export default function App() {
       charts={configuredCharts(dashboard)}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}
+      timezone={dashboard.timezone}
       initialPosition="latest"
     >
     <AppFrame

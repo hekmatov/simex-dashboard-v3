@@ -135,11 +135,9 @@ function synchronizationGroups() {
   return [{
     id: "exercise-clock",
     name: "Exercise clock",
-    primaryClock: {
-      sourceId: "exercise-data",
-      timeField: "reportedAt",
-    },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{
       chartId: "exercise-trend",
       timeRole: "observation",
@@ -769,12 +767,8 @@ test("collection fields author the fully normalized nested contract", () => {
   assert.deepEqual(collection.path, ["presentation", "collection"]);
 });
 
-test("time matching edits target a group member by semantic identity", () => {
-  const chart = lineChart({
-    interaction: {
-      timeSync: { groupId: "exercise-clock" },
-    },
-  });
+test("time group memberships derive from group authority without chart-owned edit targets", () => {
+  const chart = lineChart();
   const profile = datasetProfile();
   const model = buildEditorFormModel({
     chart,
@@ -785,19 +779,14 @@ test("time matching edits target a group member by semantic identity", () => {
   const timeSync = allFields(model)
     .find(({ id }) => id === "timeSync");
 
-  assert.deepEqual(
-    timeSync.chartPath,
-    ["interaction", "timeSync", "groupId"],
-  );
-  assert.deepEqual(timeSync.groupTarget, {
-    groupId: "exercise-clock",
-    chartId: chart.id,
-    property: "matching",
-  });
-  assert.deepEqual(timeSync.memberMatching, {
+  assert.deepEqual(timeSync.selectedGroupIds, ["exercise-clock"]);
+  assert.deepEqual(timeSync.groups[0].members[0].matching, {
     policy: "nearest",
     toleranceMs: 3_600_000,
   });
+  assert.equal("chartPath" in timeSync, false);
+  assert.equal("groupTarget" in timeSync, false);
+  assert.equal("memberMatching" in timeSync, false);
 });
 
 test("sections are contextual because only schema-declared fields materialize", () => {

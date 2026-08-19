@@ -494,34 +494,30 @@ function interactionFields({
       });
     }
   }
-  const groupId = chart.interaction?.timeSync?.groupId ?? null;
+  const selectedGroupIds = timeSyncGroups
+    .filter(({ members }) => (
+      Array.isArray(members)
+      && members.some(({ chartId }) => chartId === chart.id)
+    ))
+    .map(({ id }) => id);
   const collectionIneligible = chart.presentation?.collection != null;
-  if (schema.capabilities.timeSync && (!collectionIneligible || groupId)) {
-    const group = timeSyncGroups.find(({ id }) => id === groupId);
-    const member = group?.members?.find(({ chartId }) => chartId === chart.id);
+  if (
+    schema.capabilities.timeSync
+    && (!collectionIneligible || selectedGroupIds.length > 0)
+  ) {
     fields.push({
       id: "timeSync",
-      label: "Synchronized playback",
+      label: "Time Group memberships",
       control: "timeSync",
-      chartPath: ["interaction", "timeSync", "groupId"],
-      groupId,
       groups: timeSyncGroups,
+      selectedGroupIds,
       ineligible: collectionIneligible,
       ...(collectionIneligible
         ? {
-            help: "Collection displays cannot join Time Groups. Choose Not synchronized to remove the existing membership.",
+            help: "Collection displays cannot join Time Groups. Remove existing memberships before saving Collection display settings.",
           }
         : {}),
       timeRoles: temporalRoleOptions(schema, chart, profile),
-      groupTarget: groupId
-        ? {
-            groupId,
-            chartId: chart.id,
-            property: "matching",
-          }
-        : null,
-      groupMatching: group?.matching,
-      memberMatching: member?.matching,
     });
   }
   return fields;

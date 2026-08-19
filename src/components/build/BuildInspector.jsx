@@ -123,11 +123,17 @@ function TimeGroupSummary({ dashboard, group }) {
   )));
   return (
     <section className="build-inspector build-time-group-summary" aria-labelledby="build-inspector-title">
-      <p className="eyebrow">Time group</p>
-      <h2 id="build-inspector-title">{group.name || "Unnamed time group"}</h2>
+      <p className="eyebrow">Time Group</p>
+      <h2 id="build-inspector-title">{group.name || "Unnamed Time Group"}</h2>
       <dl>
-        <div><dt>Primary clock</dt><dd>{group.primaryClock?.timeField || "Not configured"}</dd></div>
+        <div><dt>Period</dt><dd>{group.period?.start && group.period?.end
+          ? `${group.period.start} – ${group.period.end}`
+          : "Not configured"}</dd></div>
+        <div><dt>Timezone</dt><dd>{dashboard.timezone || "Not configured"}</dd></div>
         <div><dt>Matching</dt><dd>{group.matching?.policy || "Not configured"}</dd></div>
+        <div><dt>Playback speed</dt><dd>{Number.isFinite(group.secondsPerFrame)
+          ? `${group.secondsPerFrame} seconds per frame`
+          : "Not configured"}</dd></div>
       </dl>
       <h3>Member charts</h3>
       <ul>

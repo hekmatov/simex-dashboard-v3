@@ -29,8 +29,8 @@ const rows = [
 const profile = profileDataset(rows, {
   observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
 });
-const memberChart = lineChart("member-chart", "Synchronized cases", "exercise");
-const ordinaryChart = lineChart("ordinary-chart", "Ordinary page chart", null);
+const memberChart = lineChart("member-chart", "Synchronized cases");
+const ordinaryChart = lineChart("ordinary-chart", "Ordinary page chart");
 const page = {
   id: "biomedical",
   label: "Biomedical",
@@ -48,8 +48,9 @@ const page = {
 const groups = [{
   id: "exercise",
   name: "Exercise timeline",
-  primaryClock: { sourceId: "primary", timeField: "observed" },
+  period: { start: "2027-05-01", end: "2027-05-03" },
   matching: { policy: "exact" },
+  secondsPerFrame: 2.5,
   members: [{ chartId: memberChart.id, timeRole: "observation" }],
 }];
 const dashboard = {
@@ -58,6 +59,7 @@ const dashboard = {
   programLabel: "Pandemic & Disaster Preparedness Center",
   scenarioLabel: "HeV-A26 Day 2 Simulation",
   lastUpdated: "2026-07-27",
+  timezone: "UTC",
   globalStyles: { accessibility: { enabled: false } },
   dataSources: {},
   datasetProfiles: { primary: profile },
@@ -74,6 +76,7 @@ test("View Chrono keeps the Page visible, elevates members, and owns entry in th
         charts: [memberChart, ordinaryChart],
         loadedData: dashboard.loadedData,
         profiles: dashboard.datasetProfiles,
+        timezone: dashboard.timezone,
         initialState: {
           activeGroupId: "exercise",
           activeIndex: 1,
@@ -139,7 +142,7 @@ test("playback cadence is measured in seconds per frame", () => {
   cleanup();
 });
 
-function lineChart(id, title, groupId) {
+function lineChart(id, title) {
   return {
     id,
     typeId: "line",
@@ -156,7 +159,7 @@ function lineChart(id, title, groupId) {
     presentation: { collection: null, labels: null, accessibility: null },
     interaction: {
       zoom: { enabled: false },
-      timeSync: groupId ? { groupId } : null,
+      timeSync: null,
     },
   };
 }

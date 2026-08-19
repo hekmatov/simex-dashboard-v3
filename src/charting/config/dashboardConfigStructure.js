@@ -1,3 +1,7 @@
+import {
+  validateDashboardTimezone,
+} from "../time/dashboardTemporalConfig.js";
+
 const PAGE_TYPES = Object.freeze(["dashboard", "landing"]);
 const DOMAIN_ROUTE_TONES = Object.freeze(["biomedical", "socio"]);
 const DELIVERY_STATES = Object.freeze(["complete", "ready"]);
@@ -23,7 +27,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
   deliveryStates: DELIVERY_STATES,
   shapes: {
     dashboard: shape(
-      ["configVersion", "dataSources", "id", "pages", "title"],
+      ["configVersion", "dataSources", "id", "pages", "timezone", "title"],
       [
         "description",
         "globalStyles",
@@ -146,6 +150,9 @@ export function validateDashboardStructure(
   } else {
     optionalText(config.id, "Dashboard id");
     optionalText(config.title, "Dashboard title");
+  }
+  if (requireComplete || config.timezone !== undefined) {
+    validateDashboardTimezone(config.timezone);
   }
   for (const [key, label] of [
     ["description", "Dashboard description"],

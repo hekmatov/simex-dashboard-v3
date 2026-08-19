@@ -79,6 +79,7 @@ function dashboardFor(chart, source) {
     configVersion: 3,
     id: "integration-dashboard",
     title: "Integration dashboard",
+    timezone: "UTC",
     dataSources: { [chart.sourceId]: source },
     pages: [{
       id: "overview",
@@ -115,10 +116,6 @@ test("canonical object transformations and DD/MM bindings survive a bundle-to-EC
       duplicates: "aggregate",
       missingValues: "zero",
     }),
-    interaction: {
-      zoom: { enabled: false },
-      timeSync: { groupId: "outbreak" },
-    },
   });
   const dashboard = dashboardFor(chart, {
     kind: "dataset",
@@ -140,28 +137,12 @@ test("canonical object transformations and DD/MM bindings survive a bundle-to-EC
       cases: { interpretation: "numeric" },
     },
   });
-  dashboard.dataSources["outbreak-clock"] = {
-    kind: "inline",
-    rows: [
-      { time: "2027-05-02" },
-      { time: "2027-05-03" },
-    ],
-    parsingMetadata: {
-      time: {
-        interpretation: "temporal",
-        format: "YYYY-MM-DD",
-        timezone: "date-only",
-      },
-    },
-  };
   dashboard.timeSyncGroups = [{
     id: "outbreak",
     name: "Outbreak playback",
-    primaryClock: {
-      sourceId: "outbreak-clock",
-      timeField: "time",
-    },
+    period: { start: "2027-05-02", end: "2027-05-03" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{
       chartId: chart.id,
       timeRole: "observation",

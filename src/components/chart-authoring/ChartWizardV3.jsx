@@ -422,7 +422,7 @@ export default function ChartWizardV3({
       currentWizard: wizard,
     });
   };
-  const changeMembership = (groupId) => {
+  const changeMembership = (groupId, selected) => {
     if (!wizard.draft) return;
     const timeRole = timeSyncField?.timeRoles
       ?.find(({ field }) => typeof field === "string")?.value
@@ -432,6 +432,7 @@ export default function ChartWizardV3({
         chart: wizard.draft,
         groups: wizard.timeSyncGroups,
         groupId,
+        selected,
         timeRole,
       });
       validateTimeSyncGroups(proposal.groups, {
@@ -783,6 +784,7 @@ export function applyWizardMembership({
   chart,
   groups,
   groupId,
+  selected = groupId !== null,
   timeRole,
 } = {}) {
   if (!chart || typeof chart !== "object") {
@@ -801,35 +803,40 @@ export function applyWizardMembership({
   )) {
     throw new Error("Choose a temporal data role before synchronizing this chart.");
   }
-  const clonedGroups = structuredClone(groups);
-  const previousMember = clonedGroups
-    .flatMap(({ members }) => Array.isArray(members) ? members : [])
-    .find(({ chartId }) => chartId === chart.id);
-  const nextGroups = clonedGroups.map((group) => ({
-    ...group,
-    members: Array.isArray(group.members)
-      ? group.members.filter(({ chartId }) => chartId !== chart.id)
-      : [],
-  }));
-  if (groupId !== null) {
+  if (typeof selected !== "boolean") {
+    throw new TypeError("Time synchronization membership selection must be boolean.");
+  }
+  const nextGroups = structuredClone(groups);
+  if (groupId === null) {
+    for (const group of nextGroups) {
+      group.members = Array.isArray(group.members)
+        ? group.members.filter(({ chartId }) => chartId !== chart.id)
+        : [];
+    }
+  } else {
     const target = nextGroups.find(({ id }) => id === groupId);
     if (!target) {
       throw new Error(`Unknown time synchronization group "${groupId}".`);
     }
-    target.members.push({
-      chartId: chart.id,
-      timeRole,
-      ...(previousMember?.matching
-        ? { matching: structuredClone(previousMember.matching) }
-        : {}),
-    });
+    const members = Array.isArray(target.members) ? target.members : [];
+    const previousMember = members.find(({ chartId }) => chartId === chart.id);
+    target.members = members.filter(({ chartId }) => chartId !== chart.id);
+    if (selected) {
+      target.members.push({
+        chartId: chart.id,
+        timeRole,
+        ...(previousMember?.matching
+          ? { matching: structuredClone(previousMember.matching) }
+          : {}),
+      });
+    }
   }
   return {
     chart: {
       ...structuredClone(chart),
       interaction: {
         ...structuredClone(chart.interaction ?? {}),
-        timeSync: groupId === null ? null : { groupId },
+        timeSync: null,
       },
     },
     groups: nextGroups,

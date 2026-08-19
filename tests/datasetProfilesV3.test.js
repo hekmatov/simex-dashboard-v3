@@ -20,7 +20,7 @@ import {
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import {
-  buildPrimaryClock,
+  buildTimeGroupClock,
   validateTimeSyncGroups,
 } from "../src/charting/time/timeSyncModel.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
@@ -215,8 +215,9 @@ test("tracked profiles make chart binding and national time synchronization read
   const group = {
     id: "national-outbreak",
     name: "National outbreak",
-    primaryClock: { sourceId, timeField: "date" },
+    period: { start: "2027-02-20", end: "2027-08-15" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{ chartId: chart.id, timeRole: "observation" }],
   };
 
@@ -232,14 +233,16 @@ test("tracked profiles make chart binding and national time synchronization read
       charts: [chart],
       loadedData: { [sourceId]: rows },
       profiles,
+      timezone: dashboard.timezone,
     })[0],
     group,
   );
-  const clock = buildPrimaryClock(
-    group,
-    { [sourceId]: rows },
+  const clock = buildTimeGroupClock(group, {
+    charts: [chart],
+    loadedData: { [sourceId]: rows },
     profiles,
-  );
+    timezone: dashboard.timezone,
+  });
   assert.equal(clock.length, 177);
   assert.equal(clock[0], Date.UTC(2027, 1, 20));
   assert.equal(clock.at(-1), Date.UTC(2027, 7, 15));
@@ -266,8 +269,9 @@ test("municipal repeated rows produce one playback clock point per distinct date
   const group = {
     id: "municipal-outbreak",
     name: "Municipal outbreak",
-    primaryClock: { sourceId, timeField: "Datum" },
+    period: { start: "2020-02-27", end: "2021-04-17" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{ chartId: chart.id, timeRole: "time" }],
   };
 
@@ -281,10 +285,16 @@ test("municipal repeated rows produce one playback clock point per distinct date
       charts: [chart],
       loadedData: { [sourceId]: rows },
       profiles,
+      timezone: dashboard.timezone,
     })[0],
     group,
   );
-  const clock = buildPrimaryClock(group, { [sourceId]: rows }, profiles);
+  const clock = buildTimeGroupClock(group, {
+    charts: [chart],
+    loadedData: { [sourceId]: rows },
+    profiles,
+    timezone: dashboard.timezone,
+  });
   assert.equal(clock.length, 415);
   assert.equal(clock[0], Date.UTC(2020, 1, 27));
   assert.equal(clock.at(-1), Date.UTC(2021, 3, 17));
@@ -843,6 +853,7 @@ test("runtime eagerly hydrates uploaded and inline temporal sources with the pub
     "title",
     "dataSources",
     "pages",
+    "timezone",
     "datasetProfiles",
     "loadedData",
   ]);

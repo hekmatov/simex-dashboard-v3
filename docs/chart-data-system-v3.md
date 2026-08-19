@@ -52,7 +52,9 @@ does not weaken or replace the chart, dashboard, or bundle version 3 boundary.
 | Series appearance contract | `src/charting/presentation/seriesStyleContract.js` |
 | Generated form model | `src/charting/forms/formModel.js` |
 | Guided conversion | `src/charting/forms/chartConversion.js` |
+| Dashboard temporal normalization | `src/charting/time/dashboardTemporalConfig.js` |
 | Time synchronization | `src/charting/time/timeSyncModel.js` |
+| Temporal availability | `src/charting/time/temporalAvailability.js` |
 | Temporal matching | `src/charting/time/temporalMatch.js` |
 | Playback projection | `src/charting/time/applyTimeContext.js` |
 | Collection contract | `src/charting/collection/collectionModel.js` |
@@ -331,19 +333,30 @@ remain intact.
 
 ## Time synchronization
 
-A time-sync group contains:
+The dashboard owns a validated IANA `timezone`; legacy bundles that omit it
+normalize to `UTC`. A canonical Time Group contains exactly:
 
-- a stable group ID and name;
-- a primary clock source and profiled temporal field;
-- default matching;
-- validated member records;
-- optional member-level matching overrides.
+- stable `id` and `name` values;
+- an inclusive `period` with canonical `YYYY-MM-DD` `start` and `end` dates;
+- a default `matching` policy;
+- a positive finite `secondsPerFrame` cadence;
+- validated `members`.
 
-Each chart contains only its `groupId` membership. Matching is not duplicated
-inside chart-local transformations or interaction settings.
+`timeSyncGroups[].members` is the sole membership authority. Each member
+declares `chartId` and `timeRole`, with an optional validated `matching`
+override. The same chart can belong to multiple groups. Chart-local
+`interaction.timeSync` values are normalized away and are never read as an
+authoritative backlink.
 
-The primary clock is built only from canonical profiled temporal evidence.
-Malformed, empty, unsorted, or non-finite clocks fail closed.
+`temporalAvailability.js` builds the group clock as the sorted, unique union
+of member observations after saved transformations and filters. An observation
+contributes only when it falls inside the inclusive period, its temporal value
+is valid, and at least one plotted value is nonmissing. Date-only observations
+are compared directly; instant observations are assigned to calendar dates in
+the dashboard timezone. There is no designated primary clock.
+
+Collection displays are ineligible for Time Group membership and fail
+validation when supplied as members.
 
 ### Matching
 
@@ -364,15 +377,19 @@ Nearest refuses equidistant ties. Interpolation requires:
 It never extrapolates. Matching results retain provenance so a display can
 distinguish observed, carried, nearest, interpolated, and missing values.
 
-`applyTimeContext.js` projects each family without discarding its static
-meaning. Trace charts keep history, snapshot charts expose active values, maps
-select a frame, and cards retain provenance.
+`applyTimeContext.js` consumes the validated member context supplied by the
+active group; it never reads a chart backlink. It projects each family without
+discarding its static meaning. Trace charts keep history, snapshot charts
+expose active values, maps select a frame, and cards retain provenance.
 
 ## Collection Display
 
 Collection Display is independent of any one visualization. A collection item
 is produced by the chart family; `CollectionDisplay` decides how repeated
 items are presented.
+
+Collection displays are excluded from Time Groups. Their internal paging,
+ranking, and carousel rotation do not receive group time contexts.
 
 The current registry declares collection capability for `kpi`, `gauge`,
 `bullet`, and `deltaList`. Other types, including the single-value
@@ -391,16 +408,14 @@ Ranking modes:
 - sort;
 - priority.
 
-Shared settings include rows, columns, gap, overflow, ranking, carousel, and
-playback behavior.
+Shared settings include rows, columns, gap, overflow, ranking, and carousel.
 
 Priority methods include current value, absolute or percentage change,
 distance from target, risk score, and validated weighted metrics.
 `priorityExpression.js` validates, detaches, and evaluates a bounded
 declarative weighted-sum expression; it does not execute free-form JavaScript.
 
-During synchronized playback, a collection can rerank at each timestamp or
-stabilize its opening order. Carousel rotation can continue or pause.
+Collection ranking and carousel state remain local to the collection display.
 
 ## Delta comparisons
 
@@ -484,6 +499,12 @@ The generated catalogue contains:
 Object keys use JavaScript UTF-16 ordering, arrays preserve declared order, and
 the result is deterministic. Quorum validates the exact contract version 2
 snapshot without changing its version 1 companion protocol.
+
+Catalogue contract version 2 can represent only one Time Group membership per
+chart. Catalogue generation fails with an actionable error when a canonical
+dashboard uses multiple memberships for one chart; supporting that valid
+dashboard shape in Quorum requires a coordinated catalogue contract version 3
+update in both repositories.
 
 ## Extension procedure
 

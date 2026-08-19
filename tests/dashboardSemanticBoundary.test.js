@@ -32,6 +32,7 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "programLabel",
     "scenarioLabel",
     "timeSyncGroups",
+    "timezone",
     "title",
     "vantaBackground",
   ],
@@ -489,11 +490,11 @@ test("runtime loading rejects broken chart, source, and time references", async 
       },
       error: /Chart "runtime-line" references unknown source "missing-source"\./,
     },
-    "primary clock source": {
+    "time group period": {
       mutate(value) {
-        value.timeSyncGroups[0].primaryClock.sourceId = "missing-source";
+        value.timeSyncGroups[0].period.end = "2027-04-30";
       },
-      error: /Time synchronization group "runtime-clock" primary source "missing-source" is not loaded\./,
+      error: /Time synchronization group "runtime-clock" period end must be on or after start\./,
     },
     "member chart": {
       mutate(value) {
@@ -599,11 +600,11 @@ function runtimeDashboard() {
       },
     },
   });
-  chart.interaction.timeSync = { groupId: "runtime-clock" };
   return {
     configVersion: 3,
     id: "runtime-dashboard",
     title: "Runtime dashboard",
+    timezone: "UTC",
     dataSources: {
       measurements: {
         kind: "dataset",
@@ -622,11 +623,9 @@ function runtimeDashboard() {
     timeSyncGroups: [{
       id: "runtime-clock",
       name: "Runtime clock",
-      primaryClock: {
-        sourceId: "measurements",
-        timeField: "date",
-      },
+      period: { start: "2027-05-01", end: "2027-05-02" },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [{
         chartId: "runtime-line",
         timeRole: "observation",

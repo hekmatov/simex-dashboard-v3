@@ -30,6 +30,7 @@ const {
   PlaybackProvider,
   buildMemberTimeContexts,
   createPlaybackTimer,
+  dispatchPlaybackAction,
   prefersReducedMotion,
   useOptionalPlayback,
   usePlayback,
@@ -268,6 +269,108 @@ test("a live provider can initialize paused synchronized charts at the latest gr
   assert.equal(html, `<output>2|${MAY_3}|paused</output>`);
 });
 
+test("the provider evaluates the inclusive Time Group period in the dashboard timezone", () => {
+  const rows = [
+    { observed: "2027-05-02T03:59:59.000Z", cases: 10 },
+    { observed: "2027-05-02T04:00:00.000Z", cases: 20 },
+  ];
+  const chart = lineChart({
+    id: "timezone-chart",
+    sourceId: "timezone-source",
+    roles: {
+      measurements: { field: "cases" },
+      observation: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "ISO-8601",
+      },
+    },
+  });
+  function Probe() {
+    return React.createElement("output", null, usePlayback().clock.join(","));
+  }
+  const html = renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups: [{
+          id: "exercise",
+          name: "Exercise timeline",
+          period: { start: "2027-05-01", end: "2027-05-01" },
+          secondsPerFrame: 1,
+          matching: { policy: "exact" },
+          members: [{ chartId: chart.id, timeRole: "observation" }],
+        }],
+        charts: [chart],
+        loadedData: { "timezone-source": rows },
+        profiles: {
+          "timezone-source": profileDataset(rows, {
+            observed: { interpretation: "temporal", format: "ISO-8601" },
+          }),
+        },
+        timezone: "America/New_York",
+      },
+      React.createElement(Probe),
+    ),
+  );
+
+  assert.equal(html, `<output>${Date.UTC(2027, 4, 2, 3, 59, 59)}</output>`);
+});
+
+test("the provider initializes playback cadence from the active Time Group", () => {
+  function Probe() {
+    return React.createElement("output", null, usePlayback().speed);
+  }
+  const fixture = playbackFixture();
+  const html = renderPlayback(React.createElement(Probe), {
+    ...fixture,
+    groups: [{ ...fixture.groups[0], secondsPerFrame: 2.5 }],
+  });
+
+  assert.equal(html, "<output>2.5</output>");
+});
+
+test("switching Time Groups dispatches the selected group's saved cadence", () => {
+  assert.equal(
+    typeof dispatchPlaybackAction,
+    "function",
+    "dispatchPlaybackAction must mediate group cadence changes",
+  );
+  const dispatched = [];
+  dispatchPlaybackAction(
+    (action) => dispatched.push(action),
+    { type: "setGroup", groupId: "slow" },
+    {
+      activeGroupId: "exercise",
+      groups: [
+        { id: "exercise", secondsPerFrame: 1 },
+        { id: "slow", secondsPerFrame: 5 },
+      ],
+    },
+  );
+
+  assert.deepEqual(dispatched, [
+    { type: "setGroup", groupId: "slow" },
+    { type: "setSpeed", speed: 5 },
+  ]);
+});
+
+test("redispatching the active Time Group preserves its user cadence override", () => {
+  const dispatched = [];
+  dispatchPlaybackAction(
+    (action) => dispatched.push(action),
+    { type: "setGroup", groupId: "exercise" },
+    {
+      activeGroupId: "exercise",
+      groups: [{ id: "exercise", secondsPerFrame: 1 }],
+    },
+  );
+
+  assert.deepEqual(dispatched, [
+    { type: "setGroup", groupId: "exercise" },
+  ]);
+});
+
 test("presentation can derive immutable member time contexts without mounting playback", () => {
   assert.equal(
     typeof buildMemberTimeContexts,
@@ -300,13 +403,8 @@ test("presentation can derive immutable member time contexts without mounting pl
   });
 });
 
-test("playback view renders eligible members and explicit missing and unavailable states", () => {
+test("playback view renders Time Group members and explicit missing states", () => {
   const fixture = playbackFixture();
-  const unavailable = lineChart({
-    id: "unavailable-chart",
-    title: "Unavailable supplies",
-    sourceId: "unavailable",
-  });
   const missing = lineChart({
     id: "missing-chart",
     title: "Missing measurement",
@@ -323,7 +421,6 @@ test("playback view renders eligible members and explicit missing and unavailabl
     members: [
       ...fixture.groups[0].members,
       { chartId: missing.id, timeRole: "observation" },
-      { chartId: unavailable.id, timeRole: "observation" },
     ],
   };
   const html = renderToStaticMarkup(
@@ -332,7 +429,7 @@ test("playback view renders eligible members and explicit missing and unavailabl
       {
         ...fixture,
         groups: [group],
-        charts: [...fixture.charts, missing, unavailable, staticChart],
+        charts: [...fixture.charts, missing, staticChart],
         loadedData: {
           ...fixture.loadedData,
           missing: [{ observed: "2027-05-01", cases: 4 }],
@@ -340,7 +437,6 @@ test("playback view renders eligible members and explicit missing and unavailabl
         profiles: {
           ...fixture.profiles,
           missing: temporalProfile([{ observed: "2027-05-01", cases: 4 }]),
-          unavailable: temporalProfile([{ observed: "2027-05-01", cases: 0 }]),
         },
         initialState: {
           activeGroupId: "exercise",
@@ -356,10 +452,9 @@ test("playback view renders eligible members and explicit missing and unavailabl
 
   assert.match(
     html,
-    /3 participating charts\. 1 available; 2 unavailable\./,
+    /2 participating charts\. 1 available; 1 unavailable\./,
   );
   assert.match(html, /No measurement at this time/);
-  assert.match(html, /Data source unavailable is unavailable/);
   assert.match(
     html,
     /class="playback-member playback-member--unavailable" data-chart-id="missing-chart"/,
@@ -378,7 +473,8 @@ test("playback view resolves only the map chart's configured GeoJSON source", ()
   const group = {
     id: "exercise",
     name: "Exercise timeline",
-    primaryClock: { sourceId: "geo-values", timeField: "observed" },
+    period: { start: "2027-05-01", end: "2027-05-02" },
+    secondsPerFrame: 1,
     matching: { policy: "exact" },
     members: [{ chartId: chart.id, timeRole: "time" }],
   };
@@ -476,7 +572,7 @@ test("playback availability includes renderer preflight failures", () => {
     },
     interaction: {
       zoom: { enabled: false },
-      timeSync: { groupId: "exercise" },
+      timeSync: null,
     },
   });
   const profile = profileDataset(rows, {
@@ -489,7 +585,8 @@ test("playback availability includes renderer preflight failures", () => {
         groups: [{
           id: "exercise",
           name: "Exercise timeline",
-          primaryClock: { sourceId: "targets", timeField: "observed" },
+          period: { start: "2027-05-01", end: "2027-05-01" },
+          secondsPerFrame: 1,
           matching: { policy: "exact" },
           members: [{ chartId: chart.id, timeRole: "time" }],
         }],
@@ -712,7 +809,7 @@ test("shared rendering resolution converts preparation exceptions to bounded una
   );
 });
 
-test("playback view reports no group and empty primary clocks without claiming participation", () => {
+test("playback view reports no group and empty clocks without claiming participation", () => {
   const noGroup = renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -725,7 +822,7 @@ test("playback view reports no group and empty primary clocks without claiming p
   assert.doesNotMatch(noGroup, /playback-member/);
 });
 
-test("ChartView receives active time only when its configured group matches", () => {
+test("ChartView receives active time when the active Time Group lists it as a member", () => {
   const fixture = playbackFixture();
   const staticChart = lineChart({
     id: "static",
@@ -840,7 +937,8 @@ test("closing playback removes chart time context and restores static line and l
   const geographyGroup = {
     id: "exercise",
     name: "Exercise timeline",
-    primaryClock: { sourceId: "primary", timeField: "observed" },
+    period: { start: "2027-05-01", end: "2027-05-03" },
+    secondsPerFrame: 1,
     matching: { policy: "exact" },
     members: [{ chartId: geographyChart.id, timeRole: "time" }],
   };
@@ -898,6 +996,7 @@ test("group matching defaults reach ChartView and disclose carried card provenan
     { observed: "2027-05-03", value: 30 },
   ];
   const chart = kpiChart();
+  const clockChart = lineChart({ id: "clock-chart" });
   const html = renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -905,11 +1004,15 @@ test("group matching defaults reach ChartView and disclose carried card provenan
         groups: [{
           id: "exercise",
           name: "Exercise timeline",
-          primaryClock: { sourceId: "primary", timeField: "observed" },
+          period: { start: "2027-05-01", end: "2027-05-03" },
+          secondsPerFrame: 1,
           matching: { policy: "lastKnown" },
-          members: [{ chartId: chart.id, timeRole: "time" }],
+          members: [
+            { chartId: clockChart.id, timeRole: "observation" },
+            { chartId: chart.id, timeRole: "time" },
+          ],
         }],
-        charts: [chart],
+        charts: [clockChart, chart],
         loadedData: { primary: primaryRows, sparse: sparseRows },
         profiles: {
           primary: temporalProfile(primaryRows),
@@ -958,6 +1061,7 @@ test("member matching overrides carry validated interpolation permission into Ch
     },
   });
   const sparseProfile = temporalProfile(sparseRows, ["value"]);
+  const clockChart = lineChart({ id: "clock-chart" });
   const html = renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -965,15 +1069,16 @@ test("member matching overrides carry validated interpolation permission into Ch
         groups: [{
           id: "exercise",
           name: "Exercise timeline",
-          primaryClock: { sourceId: "primary", timeField: "observed" },
+          period: { start: "2027-05-01", end: "2027-05-03" },
+          secondsPerFrame: 1,
           matching: { policy: "exact" },
           members: [{
             chartId: chart.id,
             timeRole: "time",
             matching: { policy: "interpolate" },
-          }],
+          }, { chartId: clockChart.id, timeRole: "observation" }],
         }],
-        charts: [chart],
+        charts: [chart, clockChart],
         loadedData: { primary: primaryRows, sparse: sparseRows },
         profiles: {
           primary: temporalProfile(primaryRows),
@@ -1042,7 +1147,8 @@ test("ChartView announces an active trace point beyond the 50-row accessibility 
     groups: [{
       id: "exercise",
       name: "Exercise timeline",
-      primaryClock: { sourceId: "primary", timeField: "observed" },
+      period: { start: "2027-05-01", end: "2027-06-20" },
+      secondsPerFrame: 1,
       matching: { policy: "exact" },
       members: [{ chartId: chart.id, timeRole: "observation" }],
     }],
@@ -1099,7 +1205,8 @@ test("timeline and swimlane playback companions announce only active events", ()
         groups: [{
           id: "exercise",
           name: "Exercise timeline",
-          primaryClock: { sourceId: "primary", timeField: "start" },
+          period: { start: "2027-05-01", end: "2027-05-03" },
+          secondsPerFrame: 1,
           matching: { policy: "exact" },
           members: [{ chartId: chart.id, timeRole: "start" }],
         }],
@@ -1282,7 +1389,8 @@ function playbackFixture() {
     groups: [{
       id: "exercise",
       name: "Exercise timeline",
-      primaryClock: { sourceId: "primary", timeField: "observed" },
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
       matching: { policy: "exact" },
       members: [{ chartId: chart.id, timeRole: "observation" }],
     }],
@@ -1295,7 +1403,7 @@ function playbackFixture() {
 function lineChart(overrides = {}) {
   const interaction = overrides.interaction ?? {
     zoom: { enabled: false },
-    timeSync: { groupId: "exercise" },
+    timeSync: null,
   };
   return {
     id: "primary-chart",
@@ -1349,7 +1457,7 @@ function chronoChart() {
     },
     interaction: {
       zoom: { enabled: false },
-      timeSync: { groupId: "exercise" },
+      timeSync: null,
     },
   };
 }
@@ -1377,7 +1485,7 @@ function geoFixture(code) {
 function kpiChart(overrides = {}) {
   const interaction = overrides.interaction ?? {
     zoom: { enabled: false },
-    timeSync: { groupId: "exercise" },
+    timeSync: null,
   };
   return {
     id: "sparse-kpi",
@@ -1422,7 +1530,7 @@ function timelineChart(typeId) {
     presentation: { collection: null, labels: null, accessibility: null },
     interaction: {
       zoom: { enabled: false },
-      timeSync: { groupId: "exercise" },
+      timeSync: null,
     },
   };
 }
@@ -1470,7 +1578,7 @@ function chronoChoroplethChart() {
     },
     interaction: {
       zoom: { enabled: true },
-      timeSync: { groupId: "exercise" },
+      timeSync: null,
     },
   };
 }

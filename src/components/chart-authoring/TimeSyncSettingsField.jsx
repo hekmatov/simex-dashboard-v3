@@ -13,62 +13,42 @@ const MATCHING_POLICIES = [
 function TimeSyncSettingsField({
   field,
   chart,
-  charts = [],
-  loadedData = {},
-  profiles = {},
   onMembershipChange = noop,
-  onGroupsChange = noop,
-  onValidationError = noop
 } = {}) {
   if (!field || typeof field !== "object") return null;
   const groups = Array.isArray(field.groups) ? field.groups : [];
-  const matching = matchingValue(field.memberMatching ?? field.groupMatching);
+  const selected = new Set(
+    Array.isArray(field.selectedGroupIds) ? field.selectedGroupIds : []
+  );
   const id = fieldControlId(field);
-  const commitMatching = (nextMatching) => {
-    try {
-      const nextGroups = proposeTimeSyncGroupMatching({
-        groups,
-        target: field.groupTarget,
-        matching: nextMatching,
-        charts: chartCollection(charts, chart),
-        loadedData,
-        profiles
-      });
-      onGroupsChange(nextGroups);
-    } catch (error) {
-      onValidationError(error);
-    }
-  };
-  return /* @__PURE__ */ React.createElement(GroupShell, { field, className: "chart-authoring-time-sync" }, /* @__PURE__ */ React.createElement("div", { id, className: "chart-authoring-control-grid" }, /* @__PURE__ */ React.createElement("label", null, "Playback group", /* @__PURE__ */ React.createElement(
-    "select",
-    {
-      value: typeof field.groupId === "string" ? field.groupId : "",
-      "aria-describedby": field.help ? `${id}-help` : void 0,
-      onChange: (event) => onMembershipChange(event.target.value || null)
-    },
-    /* @__PURE__ */ React.createElement("option", { value: "" }, "Not synchronized"),
-    groups.flatMap((group) => typeof group?.id === "string" && typeof group?.name === "string" ? [/* @__PURE__ */ React.createElement("option", { key: group.id, value: group.id, disabled: field.ineligible === true }, group.name)] : [])
-  )), field.groupId && field.groupTarget && field.ineligible !== true ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", null, "Member matching", /* @__PURE__ */ React.createElement(
-    "select",
-    {
-      value: matching.policy,
-      onChange: (event) => commitMatching(
-        matchingForPolicy(event.target.value, matching)
-      )
-    },
-    MATCHING_POLICIES.map(([policy, label]) => /* @__PURE__ */ React.createElement("option", { key: policy, value: policy }, label))
-  )), matching.policy === "nearest" ? /* @__PURE__ */ React.createElement("label", null, "Tolerance (milliseconds)", /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      type: "number",
-      min: "0",
-      value: matching.toleranceMs,
-      onChange: (event) => commitMatching({
-        policy: "nearest",
-        toleranceMs: Number(event.target.value)
-      })
-    }
-  )) : null) : null));
+  return /* @__PURE__ */ React.createElement(
+    GroupShell,
+    { field, className: "chart-authoring-time-sync" },
+    /* @__PURE__ */ React.createElement(
+      "fieldset",
+      { id, className: "chart-authoring-control-grid" },
+      /* @__PURE__ */ React.createElement("legend", null, "Time Group memberships"),
+      groups.flatMap((group) => (
+        typeof group?.id === "string" && typeof group?.name === "string"
+          ? [/* @__PURE__ */ React.createElement(
+              "label",
+              { key: group.id },
+              /* @__PURE__ */ React.createElement("input", {
+                type: "checkbox",
+                checked: selected.has(group.id),
+                disabled: field.ineligible === true && !selected.has(group.id),
+                "aria-describedby": field.help ? `${id}-help` : void 0,
+                onChange: (event) => onMembershipChange(
+                  group.id,
+                  event.target.checked
+                )
+              }),
+              group.name
+            )]
+          : []
+      ))
+    )
+  );
 }
 function proposeTimeSyncGroupMatching({
   groups,

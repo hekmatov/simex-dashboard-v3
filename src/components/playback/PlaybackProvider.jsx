@@ -1,7 +1,7 @@
 import React from "react";
 
 import {
-  buildPrimaryClock,
+  buildTimeGroupClock,
   validateTimeSyncGroups,
 } from "../../charting/time/timeSyncModel.js";
 import {
@@ -20,30 +20,46 @@ export function PlaybackProvider({
   profiles = {},
   initialState,
   initialPosition = "earliest",
+  timezone = "UTC",
   children,
 }) {
+  const temporalContext = React.useMemo(() => ({
+    charts,
+    loadedData,
+    profiles,
+    timezone,
+  }), [charts, loadedData, profiles, timezone]);
   const validatedGroups = React.useMemo(() => {
-    validateTimeSyncGroups(groups, { charts, loadedData, profiles });
+    validateTimeSyncGroups(groups, temporalContext);
     return groups;
-  }, [groups, charts, loadedData, profiles]);
-  const [state, dispatch] = React.useReducer(
+  }, [groups, temporalContext]);
+  const [state, baseDispatch] = React.useReducer(
     reducePlaybackState,
     {
       groups: validatedGroups,
+      charts,
       initialState,
       initialPosition,
       loadedData,
       profiles,
+      timezone,
     },
     initializePlaybackState,
+  );
+  const dispatch = React.useCallback(
+    (action) => dispatchPlaybackAction(baseDispatch, action, {
+      groups: validatedGroups,
+      activeGroupId: state.activeGroupId,
+    }),
+    [baseDispatch, state.activeGroupId, validatedGroups],
   );
   const activeGroup = React.useMemo(
     () => resolveActiveGroup(validatedGroups, state.activeGroupId),
     [validatedGroups, state.activeGroupId],
   );
   const clock = React.useMemo(
-    () => buildPrimaryClock(activeGroup, loadedData, profiles),
-    [activeGroup, loadedData, profiles],
+    () => buildTimeGroupClock(activeGroup, temporalContext),
+    [activeGroup, temporalContext],
   );
   const activeIndex = clock.length === 0
     ? 0
@@ -227,12 +243,37 @@ export function buildMemberTimeContexts(group, activeEpochMs) {
   return Object.freeze(contexts);
 }
 
+export function dispatchPlaybackAction(
+  baseDispatch,
+  action,
+  { groups = EMPTY_ARRAY, activeGroupId = null } = {},
+) {
+  if (typeof baseDispatch !== "function") {
+    throw new TypeError("Playback dispatch must be a function.");
+  }
+  baseDispatch(action);
+  if (
+    action?.type !== "setGroup"
+    || action.groupId === activeGroupId
+  ) {
+    return;
+  }
+  const selectedGroup = groups.find(({ id }) => id === action.groupId);
+  if (!selectedGroup) return;
+  baseDispatch({
+    type: "setSpeed",
+    speed: selectedGroup.secondsPerFrame,
+  });
+}
+
 function initializePlaybackState({
   groups,
+  charts,
   initialState,
   initialPosition,
   loadedData,
   profiles,
+  timezone,
 }) {
   const supplied = initialState && typeof initialState === "object"
     ? initialState
@@ -242,8 +283,14 @@ function initializePlaybackState({
     ? supplied.activeGroupId
     : groups[0]?.id ?? null;
   const activeGroup = resolveActiveGroup(groups, activeGroupId);
-  const clock = buildPrimaryClock(activeGroup, loadedData, profiles);
+  const clock = buildTimeGroupClock(activeGroup, {
+    charts,
+    loadedData,
+    profiles,
+    timezone,
+  });
   const hasSuppliedIndex = Object.hasOwn(supplied, "activeIndex");
+  const hasSuppliedSpeed = Object.hasOwn(supplied, "speed");
   return {
     ...initialPlaybackState,
     ...supplied,
@@ -253,6 +300,9 @@ function initializePlaybackState({
       : initialPosition === "latest" && clock.length > 0
         ? clock.length - 1
         : 0,
+    speed: hasSuppliedSpeed
+      ? supplied.speed
+      : activeGroup?.secondsPerFrame ?? initialPlaybackState.speed,
   };
 }
 

@@ -268,6 +268,40 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   assert.equal(collection.collection_capability, true);
 });
 
+test("canonical Time Groups preserve a sole membership in catalogue v2", async () => {
+  const { dashboard, aliases } = await trackedInputs();
+  const canonical = structuredClone(dashboard);
+  for (const { chart } of configuredCharts(canonical)) {
+    chart.interaction.timeSync = null;
+  }
+
+  const catalogue = catalogueModule.buildChartCatalogue(canonical, aliases);
+  const municipal = catalogue.charts.find(
+    ({ chart_id }) => chart_id === "bio_municipality_choropleth_animation",
+  );
+
+  assert.equal(municipal.time_sync_group_id, "municipal_outbreak");
+  assert.deepEqual(municipal.supported_display_modes, [
+    "fullscreen",
+    "multi_fullscreen",
+    "playback",
+  ]);
+});
+
+test("catalogue v2 rejects multiple Time Group memberships actionably", async () => {
+  const { dashboard, aliases } = await trackedInputs();
+  const changed = structuredClone(dashboard);
+  changed.timeSyncGroups[1].members.push({
+    chartId: "bio_municipality_choropleth_animation",
+    timeRole: "time",
+  });
+
+  assert.throws(
+    () => catalogueModule.buildChartCatalogue(changed, aliases),
+    /Quorum catalogue v2 cannot represent multiple Time Group memberships/i,
+  );
+});
+
 test("generation and canonical digests are deterministic and match the persisted artifact", async () => {
   const { dashboard, aliases, persisted } = await trackedInputs();
   const first = catalogueModule.buildChartCatalogue(dashboard, aliases);
@@ -608,11 +642,8 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
     "unknown time-member property": (changed) => {
       changed.dashboard.timeSyncGroups[0].members[0].legacyPolicy = "exact";
     },
-    "mismatched time membership": (changed) => {
-      configuredChart(
-        changed.dashboard,
-        "bio_confirmed_cases",
-      ).interaction.timeSync.groupId = "municipal_outbreak";
+    "invalid time-group period": (changed) => {
+      changed.dashboard.timeSyncGroups[0].period.end = "2019-01-01";
     },
   };
 

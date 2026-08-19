@@ -272,13 +272,30 @@ Collection Display.
 
 ## Synchronized time playback
 
-Time synchronization is configured as a dashboard-level group:
+Time synchronization is owned by the dashboard. The dashboard stores an IANA
+timezone; bundles without one are normalized to UTC before validation. Each
+Time Group contains:
 
-- one profiled temporal field supplies the primary clock;
-- eligible charts join the group through a declared temporal role;
-- the group supplies default matching;
-- a member can use a validated override;
-- a chart stores only its group membership.
+- a stable ID and name;
+- an inclusive canonical `YYYY-MM-DD` start/end period;
+- a positive `secondsPerFrame` cadence;
+- a default matching policy;
+- members with a chart ID and declared temporal role, plus an optional
+  validated matching override.
+
+`timeSyncGroups[].members` is the sole membership authority. A chart can
+belong to multiple Time Groups, with independent matching in each. Charts do
+not store an authoritative group backlink, and groups do not designate a
+primary clock.
+
+Available frames are the sorted, unique union of valid member observations
+inside the period after each chart's saved transformations and filters. A row
+contributes a frame only when its temporal role resolves and at least one
+plotted value is present. Instant observations are assigned to period dates
+using the dashboard timezone; date-only observations remain date-only.
+
+Collection displays cannot join a Time Group. Their paging is independent of
+synchronized playback.
 
 Open the playback view to move all eligible charts across the same exercise
 time. Family-specific behavior includes:
@@ -288,7 +305,7 @@ time. Family-specific behavior includes:
 - choropleths show the active geographic frame;
 - heatmaps highlight the active cell;
 - timelines and swimlanes identify active events;
-- KPIs, gauges, bullets, and their collections show active values;
+- individual KPIs, gauges, and bullets show active values;
 - delta charts keep displayed and baseline provenance distinct.
 
 ### Matching policies
@@ -318,6 +335,9 @@ Collection Display separates a repeated visualization from the way its items
 are arranged. KPI grids, delta lists, bullet collections, and gauge
 collections share one contract.
 
+Collection displays cannot be added to Time Groups. Their paging, ranking,
+and carousel controls remain local to the collection.
+
 ### Fixed grid
 
 Displays a stable number of rows and columns. This is the default for
@@ -330,8 +350,7 @@ Keeps the panel fixed while its contents scroll vertically.
 ### Auto carousel
 
 Moves through collection pages at a configured interval. Settings include
-looping, pause on hover, manual navigation, transition, and the relationship
-between carousel rotation and synchronized playback.
+looping, pause on hover, manual navigation, and transition.
 
 ### Priority mode
 
@@ -344,12 +363,11 @@ methods include:
 - calculated risk score;
 - approved weighted metrics.
 
-The dashboard does not evaluate arbitrary executable expressions. During
-playback, priority collections can rerank at each timestamp or preserve their
-opening order. Carousel rotation can continue independently or pause.
+The dashboard does not evaluate arbitrary executable expressions. Collection
+ranking does not rerank in response to synchronized playback frames.
 
 Shared controls include rows, columns, card gap, overflow, sorting, ranking,
-carousel behavior, and playback behavior.
+and carousel behavior.
 
 ## Portable dashboard bundles
 

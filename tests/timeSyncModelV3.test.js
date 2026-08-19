@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+import * as timeSyncModel from "../src/charting/time/timeSyncModel.js";
+
 import {
   buildPrimaryClock,
   getTimeSyncGroup,
@@ -67,11 +70,9 @@ function synchronizationGroup(overrides = {}) {
   return {
     id: "exercise",
     name: "Exercise playback",
-    primaryClock: {
-      sourceId: "primary-cases",
-      timeField: "reportedAt",
-    },
+    period: { start: "2027-05-01", end: "2027-05-04" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [
       {
         chartId: "outbreak-trend",
@@ -107,6 +108,196 @@ function validReducerState(overrides = {}) {
   };
 }
 
+function canonicalSynchronizationGroup(overrides = {}) {
+  return {
+    id: "exercise",
+    name: "Exercise playback",
+    period: {
+      start: "2027-05-01",
+      end: "2027-05-04",
+    },
+    matching: { policy: "exact" },
+    secondsPerFrame: 1.5,
+    members: [{
+      chartId: "outbreak-trend",
+      timeRole: "observation",
+    }],
+    ...overrides,
+  };
+}
+
+function canonicalValidationContext(overrides = {}) {
+  const rows = [
+    { reportedAt: "2027-05-01", cases: 10 },
+    { reportedAt: "2027-05-02", cases: 20 },
+  ];
+  return {
+    charts: [lineChart({ interaction: { timeSync: null } })],
+    loadedData: { "primary-cases": rows },
+    profiles: {
+      "primary-cases": profileDataset(rows, {
+        reportedAt: { interpretation: "temporal", format: "YYYY-MM-DD" },
+      }),
+    },
+    timezone: "UTC",
+    ...overrides,
+  };
+}
+
+test("canonical Time Group validation owns period, speed, and many-to-many membership", () => {
+  const context = canonicalValidationContext();
+  const exercise = canonicalSynchronizationGroup();
+  const review = canonicalSynchronizationGroup({
+    id: "review",
+    name: "Review playback",
+    matching: { policy: "lastKnown" },
+  });
+  const groups = [exercise, review];
+
+  assert.equal(validateTimeSyncGroups(groups, context), groups);
+  assert.equal(validateTimeSyncGroups(groups, {
+    ...context,
+    timezone: undefined,
+  }), groups);
+  assert.equal(context.charts[0].interaction.timeSync, null);
+});
+
+test("canonical Time Group validation rejects legacy, invalid period, speed, and timezone contracts", () => {
+  const context = canonicalValidationContext();
+  const fixtures = [
+    [canonicalSynchronizationGroup({ primaryClock: { sourceId: "primary-cases", timeField: "reportedAt" } }), /unknown time synchronization group property "primaryClock"/i],
+    [canonicalSynchronizationGroup({ period: null }), /period must be an object/i],
+    [canonicalSynchronizationGroup({ period: { start: "05\/01\/2027", end: "2027-05-04" } }), /period start.*YYYY-MM-DD/i],
+    [canonicalSynchronizationGroup({ period: { start: "2027-02-30", end: "2027-05-04" } }), /period start.*calendar date/i],
+    [canonicalSynchronizationGroup({ period: { start: "2027-05-05", end: "2027-05-04" } }), /period end.*before.*start/i],
+    [canonicalSynchronizationGroup({ secondsPerFrame: 0 }), /secondsPerFrame.*positive finite/i],
+    [canonicalSynchronizationGroup({ secondsPerFrame: Number.POSITIVE_INFINITY }), /secondsPerFrame.*positive finite/i],
+  ];
+
+  for (const [group, message] of fixtures) {
+    assert.throws(
+      () => validateTimeSyncGroups([group], context),
+      message,
+    );
+  }
+  assert.throws(
+    () => validateTimeSyncGroups([canonicalSynchronizationGroup()], {
+      ...context,
+      timezone: "Mars/Olympus_Mons",
+    }),
+    /IANA timezone/i,
+  );
+});
+
+test("canonical Time Group clock unions filtered valid plotted observations inside its inclusive period", () => {
+  assert.equal(typeof timeSyncModel.buildTimeGroupClock, "function");
+
+  const lineRows = [
+    { reportedAt: "2027-04-30", cases: 1, include: "yes" },
+    { reportedAt: "2027-05-01", cases: null, include: "yes" },
+    { reportedAt: "2027-05-02", cases: 2, include: "yes" },
+    { reportedAt: "2027-05-02", cases: 3, include: "yes" },
+    { reportedAt: "2027-05-03", cases: "invalid", include: "yes" },
+    { reportedAt: "2027-05-04", cases: 4, include: "no" },
+    { reportedAt: "not-a-date", cases: 5, include: "yes" },
+    { reportedAt: "2027-05-05", cases: 6, include: "yes" },
+  ];
+  const eventRows = [
+    { start: "2027-05-01", event: "Exercise begins" },
+    { start: "2027-05-03", event: "" },
+    { start: "2027-05-04", event: "Exercise ends" },
+  ];
+  const charts = [
+    lineChart({
+      interaction: { timeSync: null },
+      transformations: {
+        filters: [{ field: "include", operator: "equals", value: "yes" }],
+      },
+    }),
+    {
+      id: "events",
+      typeId: "timeline",
+      sourceId: "events-source",
+      roles: {
+        event: { field: "event" },
+        start: {
+          field: "start",
+          interpretation: "temporal",
+          format: "YYYY-MM-DD",
+        },
+      },
+      interaction: { timeSync: null },
+      transformations: { filters: [] },
+    },
+  ];
+  const group = canonicalSynchronizationGroup({
+    members: [
+      { chartId: "outbreak-trend", timeRole: "observation" },
+      { chartId: "events", timeRole: "start" },
+    ],
+  });
+  const clock = timeSyncModel.buildTimeGroupClock(group, {
+    charts,
+    loadedData: {
+      "primary-cases": lineRows,
+      "events-source": eventRows,
+    },
+    profiles: {
+      "primary-cases": profileDataset(lineRows, {
+        reportedAt: { interpretation: "temporal", format: "YYYY-MM-DD" },
+        cases: { interpretation: "number" },
+      }),
+      "events-source": profileDataset(eventRows, {
+        start: { interpretation: "temporal", format: "YYYY-MM-DD" },
+      }),
+    },
+    timezone: "UTC",
+  });
+
+  assert.deepEqual(clock, [MAY_1, MAY_2, MAY_4]);
+  assert.equal(Object.isFrozen(clock), true);
+});
+
+test("canonical Time Group clock compares instant observations to period dates in the dashboard timezone", () => {
+  assert.equal(typeof timeSyncModel.buildTimeGroupClock, "function");
+
+  const rows = [
+    { at: "2027-05-02T03:59:59.000Z", value: 1 },
+    { at: "2027-05-02T04:00:00.000Z", value: 2 },
+  ];
+  const chart = lineChart({
+    id: "timezone-chart",
+    sourceId: "timezone-source",
+    roles: {
+      measurements: [{ field: "value" }],
+      observation: {
+        field: "at",
+        interpretation: "temporal",
+        format: "ISO-8601",
+      },
+    },
+    interaction: { timeSync: null },
+  });
+  const clock = timeSyncModel.buildTimeGroupClock(
+    canonicalSynchronizationGroup({
+      period: { start: "2027-05-01", end: "2027-05-01" },
+      members: [{ chartId: chart.id, timeRole: "observation" }],
+    }),
+    {
+      charts: [chart],
+      loadedData: { "timezone-source": rows },
+      profiles: {
+        "timezone-source": profileDataset(rows, {
+          at: { interpretation: "temporal", format: "ISO-8601" },
+        }),
+      },
+      timezone: "America/New_York",
+    },
+  );
+
+  assert.deepEqual(clock, [Date.UTC(2027, 4, 2, 3, 59, 59)]);
+});
+
 test("an absent or empty synchronization-group collection has no active clock", () => {
   const groups = [];
 
@@ -118,199 +309,7 @@ test("an absent or empty synchronization-group collection has no active clock", 
   assert.deepEqual(buildPrimaryClock(null, {}, {}), []);
 });
 
-test("a group derives its ordered clock only from designated profile evidence", () => {
-  const group = synchronizationGroup();
-  const context = validationContext({
-    loadedData: {
-      "primary-cases": [
-        { reportedAt: "2027-05-04", cases: 40 },
-        { reportedAt: "2027-05-01", cases: 10 },
-      ],
-      "member-only-source": [
-        { reportedAt: "2027-04-01", cases: 1 },
-      ],
-    },
-  });
-
-  assert.deepEqual(
-    buildPrimaryClock(group, context.loadedData, context.profiles),
-    [MAY_1, MAY_2, MAY_3],
-  );
-});
-
-test("primary clocks use canonical date-only and instant profile values", () => {
-  const group = synchronizationGroup();
-  const context = validationContext({
-    profiles: {
-      "primary-cases": profileWithTimes([
-        "2027-05-01",
-        "2027-05-02T12:30:15.125Z",
-      ]),
-    },
-  });
-
-  assert.deepEqual(
-    buildPrimaryClock(group, context.loadedData, context.profiles),
-    [MAY_1, Date.UTC(2027, 4, 2, 12, 30, 15, 125)],
-  );
-});
-
-test("an explicitly temporal primary source may currently have an empty clock", () => {
-  const group = synchronizationGroup();
-  const context = validationContext({
-    profiles: {
-      "primary-cases": profileWithTimes([]),
-    },
-  });
-
-  assert.deepEqual(
-    buildPrimaryClock(group, context.loadedData, context.profiles),
-    [],
-  );
-});
-
-test("missing primary source, profile, field, or temporal evidence is actionable", () => {
-  const group = synchronizationGroup();
-  const base = validationContext();
-  const cases = [
-    {
-      loadedData: {},
-      profiles: base.profiles,
-      message: /primary source "primary-cases".*not loaded/i,
-    },
-    {
-      loadedData: { "primary-cases": null },
-      profiles: base.profiles,
-      message: /primary source "primary-cases".*not loaded/i,
-    },
-    {
-      loadedData: { "primary-cases": undefined },
-      profiles: base.profiles,
-      message: /primary source "primary-cases".*not loaded/i,
-    },
-    {
-      loadedData: base.loadedData,
-      profiles: {},
-      message: /profile.*primary-cases.*required/i,
-    },
-    {
-      loadedData: base.loadedData,
-      profiles: {
-        "primary-cases": {
-          columns: [{ name: "cases", type: "numeric" }],
-        },
-      },
-      message: /time field "reportedAt".*profile/i,
-    },
-    {
-      loadedData: base.loadedData,
-      profiles: {
-        "primary-cases": {
-          columns: [{
-            name: "reportedAt",
-            type: "category",
-            temporal: { values: ["2027-05-01"], diagnostics: [] },
-          }],
-        },
-      },
-      message: /time field "reportedAt".*temporal/i,
-    },
-    {
-      loadedData: base.loadedData,
-      profiles: {
-        "primary-cases": {
-          columns: [{
-            name: "reportedAt",
-            type: "temporal",
-            temporal: { values: ["2027-05-01"] },
-          }],
-        },
-      },
-      message: /temporal profile evidence/i,
-    },
-  ];
-
-  for (const fixture of cases) {
-    assert.throws(
-      () => buildPrimaryClock(
-        group,
-        fixture.loadedData,
-        fixture.profiles,
-      ),
-      fixture.message,
-    );
-  }
-});
-
-test("repeated canonical primary timestamps collapse to one playback point", () => {
-  const group = synchronizationGroup();
-  const context = validationContext();
-
-  assert.deepEqual(
-    buildPrimaryClock(
-      group,
-      context.loadedData,
-      {
-        "primary-cases": profileWithTimes([
-          "2027-05-01",
-          "2027-05-01",
-          "2027-05-02",
-          "2027-05-02",
-          "2027-05-03",
-        ]),
-      },
-    ),
-    [MAY_1, MAY_2, MAY_3],
-  );
-});
-
-test("unsorted canonical primary timestamps are rejected", () => {
-  const group = synchronizationGroup();
-  const context = validationContext();
-
-  assert.throws(
-    () => buildPrimaryClock(
-      group,
-      context.loadedData,
-      {
-        "primary-cases": profileWithTimes([
-          "2027-05-02",
-          "2027-05-01",
-        ]),
-      },
-    ),
-    /strictly increasing/i,
-  );
-});
-
-test("malformed canonical temporal profile values are never guessed or coerced", () => {
-  const group = synchronizationGroup();
-  const context = validationContext();
-
-  for (const value of [
-    "02/05/2027",
-    "2027-02-30",
-    "2027-05-01T12:00:00Z",
-    MAY_1,
-    { epochMs: MAY_1 },
-    Number.NaN,
-    Number.POSITIVE_INFINITY,
-  ]) {
-    assert.throws(
-      () => buildPrimaryClock(
-        group,
-        context.loadedData,
-        {
-          "primary-cases": profileWithTimes([value]),
-        },
-      ),
-      /finite canonical temporal value/i,
-      String(value),
-    );
-  }
-});
-
-test("top-level, group, primary-clock, and member shapes are strict", () => {
+test("top-level, group, period, and member shapes are strict", () => {
   const context = validationContext();
   const malformed = [
     {
@@ -334,18 +333,18 @@ test("top-level, group, primary-clock, and member shapes are strict", () => {
       message: /matching policy is required/i,
     },
     {
-      groups: [synchronizationGroup({ primaryClock: null })],
-      message: /primaryClock must be an object/i,
+      groups: [synchronizationGroup({ period: null })],
+      message: /period must be an object/i,
     },
     {
       groups: [synchronizationGroup({
-        primaryClock: {
-          sourceId: "primary-cases",
-          timeField: "reportedAt",
+        period: {
+          start: "2027-05-01",
+          end: "2027-05-04",
           extra: true,
         },
       })],
-      message: /unknown primary clock property "extra"/i,
+      message: /unknown time synchronization period property "extra"/i,
     },
     {
       groups: [synchronizationGroup({ members: [] })],
@@ -455,86 +454,16 @@ test("members must reference existing eligible charts and bound temporal roles",
   );
 });
 
-test("member and chart group references must agree in both directions", () => {
+test("Time Group membership ignores obsolete chart backlinks", () => {
   const context = validationContext();
-  assert.throws(
-    () => validateTimeSyncGroups(
-      [synchronizationGroup()],
-      {
-        ...context,
-        charts: [lineChart({
-          interaction: {
-            timeSync: { groupId: "" },
-          },
-        })],
-      },
-    ),
-    /chart "outbreak-trend".*groupId is required/i,
-  );
+  const groups = [synchronizationGroup()];
 
-  assert.throws(
-    () => validateTimeSyncGroups(
-      [synchronizationGroup()],
-      {
-        ...context,
-        charts: [lineChart({
-          interaction: {
-            timeSync: { groupId: "another-group" },
-          },
-        })],
-      },
-    ),
-    /chart "outbreak-trend".*references group "another-group".*"exercise"/i,
-  );
-
-  assert.throws(
-    () => validateTimeSyncGroups(
-      [synchronizationGroup({
-        members: [{
-          chartId: "secondary-trend",
-          timeRole: "observation",
-        }],
-      })],
-      {
-        ...context,
-        charts: [
-          lineChart(),
-          lineChart({
-            id: "secondary-trend",
-            interaction: {
-              timeSync: { groupId: "exercise" },
-            },
-          }),
-        ],
-      },
-    ),
-    /chart "outbreak-trend".*references group "exercise".*not a member/i,
-  );
-});
-
-test("member temporal roles require canonical profile evidence", () => {
-  const secondary = lineChart({
-    id: "secondary-trend",
-    sourceId: "secondary-cases",
-  });
-  const group = synchronizationGroup({
-    members: [{
-      chartId: "secondary-trend",
-      timeRole: "observation",
-    }],
-  });
-  const context = validationContext({
-    charts: [secondary],
-    profiles: {
-      "primary-cases": profileWithTimes(),
-      "secondary-cases": profileWithTimes(["02/05/2027"]),
-    },
-  });
-
-  assert.throws(
-    () => validateTimeSyncGroups([group], context),
-    /member chart "secondary-trend".*finite canonical temporal values/i,
-  );
+  assert.equal(validateTimeSyncGroups(groups, {
+    ...context,
+    charts: [lineChart({
+      interaction: { timeSync: { groupId: "obsolete-group" } },
+    })],
+  }), groups);
 });
 
 test("matching requires an explicit exact, last-known, or bounded nearest policy", () => {

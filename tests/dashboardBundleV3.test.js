@@ -48,6 +48,7 @@ function lineChart(overrides = {}) {
 function version3Dashboard() {
   return {
     configVersion: 3,
+    timezone: "UTC",
     id: "exercise-dashboard",
     title: "Exercise dashboard",
     dataSources: {
@@ -71,11 +72,12 @@ function version3Dashboard() {
     timeSyncGroups: [{
       id: "outbreak",
       name: "Outbreak playback",
-      primaryClock: {
-        sourceId: "uploaded-cases",
-        timeField: "reportedAt",
+      period: {
+        start: "2027-05-01",
+        end: "2027-05-01",
       },
       matching: { policy: "exact" },
+      secondsPerFrame: 1,
       members: [{
         chartId: "outbreak-trend",
         timeRole: "observation",
@@ -234,7 +236,38 @@ test("version 3 bundles round-trip uploaded and inline sources", () => {
   assert.equal(bundle.bundleType, "simex-dashboard-bundle");
   assert.equal(bundle.version, 3);
   assert.equal(bundle.metadata.exportedAt, "2026-07-26T12:00:00.000Z");
-  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), dashboard);
+  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
+});
+
+test("dashboard persistence migrates legacy temporal authority to the canonical contract", () => {
+  const dashboard = version3Dashboard();
+  delete dashboard.timezone;
+  const legacyGroup = dashboard.timeSyncGroups[0];
+  legacyGroup.primaryClock = { sourceId: "uploaded-cases", timeField: "reportedAt" };
+  delete legacyGroup.period;
+  delete legacyGroup.secondsPerFrame;
+  const bundle = serializeDashboardBundle(dashboard);
+  const group = bundle.config.timeSyncGroups[0];
+
+  assert.equal(bundle.config.timezone, "UTC");
+  assert.deepEqual(Object.keys(group).sort(), [
+    "id",
+    "matching",
+    "members",
+    "name",
+    "period",
+    "secondsPerFrame",
+  ]);
+  assert.deepEqual(group.period, {
+    start: "2027-05-01",
+    end: "2027-05-01",
+  });
+  assert.equal(group.secondsPerFrame, 1);
+  assert.equal(Object.hasOwn(group, "primaryClock"), false);
+  assert.equal(
+    bundle.config.pages[0].sections[0].panels[0].interaction.timeSync,
+    null,
+  );
 });
 
 test("bundle, metadata, and source records are exact version 3 data contracts", () => {
@@ -1107,14 +1140,12 @@ test("detected temporal values require deterministic evidence before enabling ti
   invalid.dataSources["uploaded-cases"].csvText = "date,cases\nnot a date,4\n";
   invalid.dataSources["uploaded-cases"].parsingMetadata = {};
   invalid.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
-  invalid.timeSyncGroups[0].primaryClock.timeField = "date";
   assert.throws(() => validateDashboardConfig(invalid), /does not validate as temporal|temporal evidence/i);
 
   const validIso = version3Dashboard();
   validIso.dataSources["uploaded-cases"].csvText = "date,cases\n2027-05-01,4\n";
   validIso.dataSources["uploaded-cases"].parsingMetadata = {};
   validIso.pages[0].sections[0].panels[0].roles.observation = { field: "date" };
-  validIso.timeSyncGroups[0].primaryClock.timeField = "date";
   assert.doesNotThrow(() => validateDashboardConfig(validIso));
 });
 

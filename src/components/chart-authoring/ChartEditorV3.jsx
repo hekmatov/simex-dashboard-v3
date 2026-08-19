@@ -356,11 +356,12 @@ export default function ChartEditorV3({
       };
     }
   });
-  const changeMembership = (groupId) => {
+  const changeMembership = (groupId, selected) => {
     const timeRole = timeSyncField?.timeRoles?.[0]?.value;
     dispatch({
       type: "updateTimeSyncMembership",
       groupId,
+      selected,
       timeRole,
     });
   };
@@ -704,36 +705,44 @@ function updateEditorMembership(state, action, context) {
     action.groupId,
     "Time synchronization group",
   );
-  const groups = structuredClone(state.timeSyncGroups);
-  let previousMember = null;
-  for (const group of groups) {
-    const members = Array.isArray(group.members) ? group.members : [];
-    previousMember ??= members.find(({ chartId }) => chartId === state.draft.id);
-    group.members = members.filter(({ chartId }) => chartId !== state.draft.id);
+  const selected = action.selected ?? groupId !== null;
+  if (typeof selected !== "boolean") {
+    throw new TypeError("Time synchronization membership selection must be boolean.");
   }
-  let nextGroups = groups;
-  if (groupId !== null) {
+  let nextGroups = structuredClone(state.timeSyncGroups);
+  if (groupId === null) {
+    for (const group of nextGroups) {
+      const members = Array.isArray(group.members) ? group.members : [];
+      group.members = members.filter(({ chartId }) => chartId !== state.draft.id);
+    }
+  } else {
     const target = nextGroups.find(({ id }) => id === groupId);
     if (!target) {
       throw new Error(`Unknown time synchronization group "${groupId}".`);
     }
+    const members = Array.isArray(target.members) ? target.members : [];
+    const previousMember = members.find(
+      ({ chartId }) => chartId === state.draft.id
+    );
+    target.members = members.filter(({ chartId }) => chartId !== state.draft.id);
     const timeRole = requiredString(
       action.timeRole,
       "Time synchronization temporal role",
     );
-    target.members.push({
-      chartId: state.draft.id,
-      timeRole,
-      ...(previousMember?.matching
-        ? { matching: structuredClone(previousMember.matching) }
-        : {}),
-    });
+    if (selected) {
+      target.members.push({
+        chartId: state.draft.id,
+        timeRole,
+        ...(previousMember?.matching
+          ? { matching: structuredClone(previousMember.matching) }
+          : {}),
+      });
+    }
   }
-  nextGroups = nextGroups.filter(({ members }) => members.length > 0);
   const chart = setAtPath(
     state.draft,
     ["interaction", "timeSync"],
-    groupId === null ? null : { groupId },
+    null,
   );
   validateEditorGroups(chart, nextGroups, context);
   return {
@@ -752,6 +761,7 @@ function requestEditorConversion(state, targetTypeId, context) {
   const roleAssignments = {};
   const roleFields = conversionRoleFields({
     chart: state.draft,
+    groups: state.timeSyncGroups,
     targetSchema,
     plan,
   });
@@ -927,10 +937,10 @@ function applyEditorConversion(state, context) {
   }
 }
 
-function conversionRoleFields({ chart, targetSchema, plan }) {
+function conversionRoleFields({ chart, groups, targetSchema, plan }) {
   const fields = [...plan.requiredRoles];
   if (
-    chart.interaction?.timeSync
+    findChartTimeSyncMember(groups, chart.id)
     && targetSchema.capabilities.timeSync
   ) {
     const existingIds = new Set(fields.map(({ id }) => id));
@@ -955,7 +965,7 @@ function conversionTimeSyncConsequence({
   playback,
 }) {
   const member = findChartTimeSyncMember(groups, chart.id);
-  if (!chart.interaction?.timeSync || !member) return null;
+  if (!member) return null;
   if (
     !targetSchema.capabilities.timeSync
     || playback?.selection?.mode === "remove"
@@ -1004,10 +1014,7 @@ function conversionPlaybackState({
   profile,
   previousPlayback,
 }) {
-  const synchronized = Boolean(
-    chart.interaction?.timeSync
-    && findChartTimeSyncMember(groups, chart.id),
-  );
+  const synchronized = Boolean(findChartTimeSyncMember(groups, chart.id));
   if (!synchronized) return null;
   const selectable = targetSchema.capabilities.timeSync;
   const effectiveRoles = effectiveConversionRoles(

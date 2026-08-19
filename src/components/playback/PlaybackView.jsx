@@ -28,9 +28,7 @@ export default function PlaybackView({ accessibilityEnabled = false } = {}) {
   const chartsById = indexCharts(charts);
   const members = activeGroup.members
     .map((member) => chartsById.get(member.chartId))
-    .filter((chart) => (
-      chart?.interaction?.timeSync?.groupId === activeGroup.id
-    ));
+    .filter(Boolean);
   const resolvedMembers = members.map((chart) => resolveMember({
     chart,
     loadedData,

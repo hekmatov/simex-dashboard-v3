@@ -13,7 +13,7 @@ import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
 import {
-  buildPrimaryClock,
+  buildTimeGroupClock,
   validateTimeSyncGroups,
 } from "../src/charting/time/timeSyncModel.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
@@ -410,6 +410,7 @@ test("the municipal and national clocks validate and every national member is re
   const { dashboard, profiles } = await loadTrackedInputs();
   const sources = createSourceLoader(dashboard);
   const entries = configuredCharts(dashboard);
+  const charts = entries.map(({ chart }) => chart);
   const loadedData = {};
   for (const sourceId of new Set(entries.map(({ chart }) => chart.sourceId))) {
     loadedData[sourceId] = await sources.rows(sourceId);
@@ -420,21 +421,28 @@ test("the municipal and national clocks validate and every national member is re
     "national_outbreak",
   ]);
   assert.doesNotThrow(() => validateTimeSyncGroups(dashboard.timeSyncGroups, {
-    charts: entries.map(({ chart }) => chart),
+    charts,
     loadedData,
     profiles,
+    timezone: dashboard.timezone,
   }));
   for (const group of dashboard.timeSyncGroups) {
-    const clock = buildPrimaryClock(group, loadedData, profiles);
+    const clock = buildTimeGroupClock(group, {
+      charts,
+      loadedData,
+      profiles,
+      timezone: dashboard.timezone,
+    });
     assert.ok(clock.length > 1, `${group.id} needs a usable playback clock`);
     assert.deepEqual([...clock].sort((left, right) => left - right), clock);
   }
 
   const municipal = dashboard.timeSyncGroups[0];
-  assert.deepEqual(municipal.primaryClock, {
-    sourceId: "bio_municipal_infections_harmonized_2021",
-    timeField: "Datum",
+  assert.deepEqual(municipal.period, {
+    start: "2020-02-27",
+    end: "2021-04-17",
   });
+  assert.equal(municipal.secondsPerFrame, 1);
   assert.deepEqual(municipal.members.map(({ chartId }) => chartId), [
     "bio_municipality_choropleth_animation",
     "bio_municipality_aggregate",
@@ -445,13 +453,14 @@ test("the municipal and national clocks validate and every national member is re
   assert.deepEqual(national, {
     id: "national_outbreak",
     name: "National outbreak and health-system playback",
-    primaryClock: {
-      sourceId: "bio_cases",
-      timeField: "date",
+    period: {
+      start: "2027-02-20",
+      end: "2027-08-15",
     },
     matching: {
       policy: "exact",
     },
+    secondsPerFrame: 1,
     members: [
       { chartId: "bio_confirmed_cases", timeRole: "observation" },
       { chartId: "bio_daily_cases_bar", timeRole: "observation" },
@@ -466,7 +475,12 @@ test("the municipal and national clocks validate and every national member is re
   );
 
   const chartById = new Map(entries.map(({ chart }) => [chart.id, chart]));
-  const clock = buildPrimaryClock(national, loadedData, profiles);
+  const clock = buildTimeGroupClock(national, {
+    charts,
+    loadedData,
+    profiles,
+    timezone: dashboard.timezone,
+  });
   for (const activeEpochMs of clock) {
     for (const member of national.members) {
       const chart = chartById.get(member.chartId);

@@ -37,8 +37,9 @@ test("authored Collection Displays cannot join Time Groups", () => {
   const groups = [{
     id: "exercise",
     name: "Exercise timeline",
-    primaryClock: { sourceId: "primary", timeField: "observed" },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{ chartId: chart.id, timeRole: "observation" }],
   }];
 
@@ -53,13 +54,17 @@ test("authored Collection Displays cannot join Time Groups", () => {
 });
 
 test("Collection authoring omits new Time Group assignment and preserves removal for legacy membership", () => {
-  const unsynchronized = collectionChart({ timeSync: null });
-  const synchronized = collectionChart();
+  const unsynchronized = collectionChart({
+    id: "new-collection",
+    timeSync: null,
+  });
+  const synchronized = collectionChart({ id: "legacy-collection" });
   const groups = [{
     id: "exercise",
     name: "Exercise timeline",
-    primaryClock: { sourceId: "primary", timeField: "observed" },
+    period: { start: "2027-05-01", end: "2027-05-02" },
     matching: { policy: "exact" },
+    secondsPerFrame: 1,
     members: [{ chartId: synchronized.id, timeRole: "observation" }],
   }];
 
@@ -116,9 +121,9 @@ test("the tracked dashboard keeps authored Collection Displays outside Time Grou
   }
 });
 
-function collectionChart({ timeSync = { groupId: "exercise" } } = {}) {
+function collectionChart({ id = "collection-chart", timeSync = { groupId: "exercise" } } = {}) {
   return {
-    id: "collection-chart",
+    id,
     typeId: "kpi",
     title: "Cases over time",
     sourceId: "primary",
