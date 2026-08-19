@@ -11,6 +11,7 @@
     "icons:check": "node scripts/build-icon-reference.mjs --check",
     "build:dataset-profiles": "node scripts/build-dataset-profiles.mjs",
     "build:quorum-catalogue": "node scripts/build-quorum-catalogue.mjs",
+    "check:v3-runtime-boundaries": "node scripts/check-v3-runtime-boundaries.mjs",
     "predev": "node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs",
     "dev": "vite --host 0.0.0.0",
     "prebuild": "node scripts/build-icon-reference.mjs --check && node scripts/build-dataset-profiles.mjs && node scripts/build-portable-data.mjs && node scripts/build-quorum-catalogue.mjs",
