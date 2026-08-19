@@ -145,6 +145,101 @@
   padding: 4px 8px;
 }
 
+.build-page-navigation {
+  align-items: stretch;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: visible;
+}
+
+.build-page-tab-scroller {
+  align-items: stretch;
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 2px;
+}
+
+.build-page-tab-item {
+  align-items: stretch;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.build-page-tab-item.dragging {
+  opacity: 0.55;
+}
+
+.build-page-tab {
+  max-width: 260px;
+  min-height: 44px;
+  text-align: left;
+  white-space: normal;
+}
+
+.build-page-action-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.build-page-action-rail button {
+  align-items: center;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  width: 30px;
+}
+
+.build-add-page,
+.build-page-navigation > .dashboard-look-trigger {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.build-page-orbit {
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-strong, #9aa9b5);
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgb(8 34 74 / 22%);
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  position: fixed;
+  width: min(300px, calc(100vw - 24px));
+  z-index: 1210;
+}
+
+.build-page-orbit h2,
+.build-page-orbit p {
+  margin: 0;
+}
+
+.build-page-orbit label {
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.build-page-orbit input {
+  min-height: 44px;
+  width: 100%;
+}
+
+.build-page-orbit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .build-command-area {
   gap: 10px;
 }
@@ -267,6 +362,84 @@
   display: grid;
   gap: 8px;
   padding-top: 14px;
+}
+
+.build-section-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.build-section-title-button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  min-height: 44px;
+  padding: 2px 4px;
+  text-align: left;
+}
+
+.build-section-title-button:hover,
+.build-section-title-button:focus-visible {
+  background: var(--simex-accent-soft, #e8e4da);
+  border-color: var(--simex-border-subtle, #b7b0a2);
+}
+
+.build-section-title-field {
+  display: block;
+}
+
+.build-section-title-field input {
+  font: inherit;
+  font-weight: 700;
+  max-width: min(620px, 70vw);
+  min-height: 44px;
+  width: 100%;
+}
+
+.build-section-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.build-section-actions button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px;
+}
+
+.build-empty-section {
+  align-items: center;
+  background: var(--simex-surface-panel-alt, #faf6ec);
+  border: 1px dashed var(--simex-border-subtle, #b7b0a2);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 92px;
+  padding: 16px;
+}
+
+.build-empty-section p {
+  margin: 0;
+}
+
+.build-add-section-row {
+  display: flex;
+  justify-content: flex-start;
+  padding: 8px 0 16px;
+}
+
+.build-add-section-row button {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
 }
 
 .build-inspector label {
@@ -397,6 +570,20 @@
     position: fixed;
     right: 0;
     z-index: 100;
+  }
+
+  .build-page-navigation {
+    flex-wrap: wrap;
+  }
+
+  .build-page-tab-scroller {
+    flex-basis: 100%;
+  }
+
+  .build-section-header,
+  .build-empty-section {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .build-sheet-close {

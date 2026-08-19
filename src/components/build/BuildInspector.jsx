@@ -40,19 +40,11 @@ export default function BuildInspector({
     return (
       <section className="build-inspector" aria-labelledby="build-inspector-title">
         <p className="eyebrow">Section</p>
-        <h2 id="build-inspector-title">{section.title || "Untitled section"}</h2>
-        <label>
-          Section title
-          <input
-            ref={labelRef}
-            disabled={disabled}
-            value={draft.title ?? ""}
-            onChange={(event) => onSectionChange?.(section, { title: event.target.value })}
-          />
-        </label>
+        <h2 id="build-inspector-title">{draft.title || "Untitled section"}</h2>
         <label>
           Description
           <textarea
+            ref={labelRef}
             disabled={disabled}
             value={draft.description ?? ""}
             onChange={(event) => onSectionChange?.(section, { description: event.target.value })}
@@ -66,19 +58,11 @@ export default function BuildInspector({
     return (
       <section className="build-inspector" aria-labelledby="build-inspector-title">
         <p className="eyebrow">Page</p>
-        <h2 id="build-inspector-title">{page.label || page.title || "Untitled page"}</h2>
-        <label>
-          Page label
-          <input
-            ref={labelRef}
-            disabled={disabled}
-            value={draft.label ?? ""}
-            onChange={(event) => onPageChange?.(page.id, { label: event.target.value })}
-          />
-        </label>
+        <h2 id="build-inspector-title">{draft.label || page.title || "Untitled page"}</h2>
         <label>
           Page title
           <input
+            ref={labelRef}
             disabled={disabled}
             value={draft.title ?? ""}
             onChange={(event) => onPageChange?.(page.id, { title: event.target.value })}

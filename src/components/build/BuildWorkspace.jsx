@@ -4,6 +4,7 @@ import DeviceLayoutControl from "../DeviceLayoutControl.jsx";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import BuildInspector from "./BuildInspector.jsx";
+import BuildPageNavigation from "./BuildPageNavigation.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import UnitOrbit from "./UnitOrbit.jsx";
 
@@ -29,10 +30,11 @@ export default function BuildWorkspace({
   onDashboardChange,
   onPageChange,
   onSectionChange,
+  onPageReorder,
+  onSectionReorder,
   onAddPage,
   onAddSection,
   onAddChart,
-  onRemovePage,
   onFinish,
   onReset,
   onImport,
@@ -88,9 +90,6 @@ export default function BuildWorkspace({
       selection={selection}
       disabled={locked}
       onSelect={chooseSelection}
-      onAddPage={onAddPage}
-      onAddSection={onAddSection}
-      onRemovePage={onRemovePage}
     />
   );
   const inspector = (
@@ -118,21 +117,17 @@ export default function BuildWorkspace({
         </div>
         <span>{dashboard.lastUpdated}</span>
       </header>
-      <nav className="build-page-tabs" aria-label="Dashboard pages">
-        {(dashboard.pages ?? []).map((page) => (
-          <button
-            key={page.id}
-            type="button"
-            className={page.id === activePage?.id ? "active" : "secondary"}
-            disabled={locked}
-            aria-current={page.id === activePage?.id ? "page" : undefined}
-            onClick={() => chooseSelection({ kind: "page", pageId: page.id })}
-          >
-            {page.label || page.title || "Untitled page"}
-          </button>
-        ))}
-        <button type="button" className="secondary dashboard-look-trigger" onClick={onOpenDashboardLook}>Dashboard look</button>
-      </nav>
+      <BuildPageNavigation
+        pages={dashboard.pages}
+        activePageId={activePage?.id}
+        pageDrafts={pageDrafts}
+        disabled={locked}
+        onSelectPage={(pageId) => chooseSelection({ kind: "page", pageId })}
+        onAddPage={onAddPage}
+        onPageChange={onPageChange}
+        onPageReorder={onPageReorder}
+        onOpenDashboardLook={onOpenDashboardLook}
+      />
       <section className="build-command-area" aria-label="Build commands">
         <div className="build-command-title">
           <p className="eyebrow">Workspace</p>
@@ -140,7 +135,7 @@ export default function BuildWorkspace({
         </div>
         <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
         <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
-        <button type="button" className="secondary" disabled={locked} onClick={onAddChart}>Add chart</button>
+        <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
         <button type="button" className="secondary" disabled={locked} onClick={() => importInputRef.current?.click()}>Import</button>
         <button type="button" className="secondary" disabled={locked} onClick={onExport}>Export</button>
         <input
@@ -191,7 +186,12 @@ export default function BuildWorkspace({
             buildState={{
               selection,
               disabled: locked,
+              sectionDrafts,
               onSelect: chooseSelection,
+              onRenameSection: onSectionChange,
+              onReorderSection: onSectionReorder,
+              onAddSection,
+              onAddChart,
             }}
           />
         </section>

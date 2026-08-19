@@ -48,12 +48,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPageAdd,
   onPageRemove,
   onPageChange,
+  onPageReorder,
   onDashboardChange,
   onBackgroundPersistenceError,
   onApplyPendingEdits,
   onPanelEditCommit,
   onPanelEditCancel,
   onSectionChange,
+  onSectionReorder,
   onSectionInsert,
   onVantaBackgroundChange,
   onChartCreate,
@@ -405,6 +407,28 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
+  function reorderBuildPage(pageId, targetIndex) {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    void performModeratorOperation("reorder-page", async () => {
+      await pendingEdits.flush();
+      await onPageReorder?.(pageId, targetIndex);
+      setBuildSelection({ kind: "page", pageId });
+    });
+  }
+
+  function reorderBuildSection(sectionId, targetIndex) {
+    if (moderatorOperationGateRef.current.isActive() || !activePage) return;
+    void performModeratorOperation("reorder-section", async () => {
+      await pendingEdits.flush();
+      await onSectionReorder?.(activePage.id, sectionId, targetIndex);
+      setBuildSelection((current) => (
+        current?.kind === "section" && current.sectionId === sectionId
+          ? current
+          : { kind: "page", pageId: activePage.id }
+      ));
+    });
+  }
+
   function openBackgroundSettings() {
     if (moderatorOperationGateRef.current.isActive()) return;
     setBackgroundDraft(sanitizeVantaSettings(dashboard.vantaBackground));
@@ -620,9 +644,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setBuildSelection(nextSelection);
   }
 
-  function openChartWizard() {
+  function openChartWizard(sectionId) {
     if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
-    const section = buildSelection?.kind === "section"
+    const section = sectionId
+      ? activePage?.sections?.find(({ id }) => id === sectionId)
+      : buildSelection?.kind === "section"
       ? activePage?.sections?.find(({ id }) => id === buildSelection.sectionId)
       : activePage?.sections?.[0];
     if (!activePage || !section) return;
@@ -845,10 +871,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onDashboardChange={changeDashboardText}
           onPageChange={changePage}
           onSectionChange={changeSection}
+          onPageReorder={reorderBuildPage}
+          onSectionReorder={reorderBuildSection}
           onAddPage={addPage}
           onAddSection={addSection}
           onAddChart={openChartWizard}
-          onRemovePage={removeActivePage}
           onFinish={saveEditMode}
           onReset={() => setResetEditSessionConfirmation(true)}
           onImport={onImportConfig}

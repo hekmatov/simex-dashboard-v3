@@ -2,6 +2,10 @@ import React from "react";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import {
+  reorderPage,
+  reorderSection,
+} from "./components/build/buildStructureModel.js";
 import DashboardLookDrawer from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
 import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
@@ -706,6 +710,9 @@ export default function App() {
       onPageChange={(pageId, updates) => mutateDashboard((next) => {
         Object.assign(next.pages.find(({ id }) => id === pageId), updates);
       })}
+      onPageReorder={(pageId, targetIndex) => mutateDashboard((next) => {
+        reorderPage(next, pageId, targetIndex);
+      })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
       onBackgroundPersistenceError={reportBackgroundPersistenceError}
       onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
@@ -716,6 +723,9 @@ export default function App() {
       onSectionChange={(pageId, sectionId, updates) => mutateDashboard((next) => {
         const page = next.pages.find(({ id }) => id === pageId);
         Object.assign(page.sections.find(({ id }) => id === sectionId), updates);
+      })}
+      onSectionReorder={(pageId, sectionId, targetIndex) => mutateDashboard((next) => {
+        reorderSection(next, pageId, sectionId, targetIndex);
       })}
       onSectionInsert={(pageId, sectionId, panelId, section) => mutateDashboard((next) => {
         insertSectionAtPanel(next, pageId, sectionId, panelId, section);

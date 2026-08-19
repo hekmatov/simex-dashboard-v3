@@ -5,9 +5,6 @@ export default function BuildStructureRail({
   selection,
   disabled = false,
   onSelect,
-  onAddPage,
-  onAddSection,
-  onRemovePage,
 }) {
   const isSelected = (kind, id) => (
     selection?.kind === kind
@@ -30,34 +27,17 @@ export default function BuildStructureRail({
       >
         Scenario
       </button>
-      <div className="build-structure-actions">
-        <button type="button" disabled={disabled} onClick={onAddPage}>New page</button>
-        <button type="button" disabled={disabled} onClick={onAddSection}>New section</button>
-      </div>
       <ul className="build-structure-list">
         {(dashboard.pages ?? []).map((page) => (
           <li key={page.id}>
-            <div className="build-structure-row">
-              <button
-                type="button"
-                className={isSelected("page", page.id) ? "active" : "secondary"}
-                disabled={disabled}
-                onClick={() => onSelect?.({ kind: "page", pageId: page.id })}
-              >
-                {page.label || page.title || "Untitled page"}
-              </button>
-              {(dashboard.pages?.length ?? 0) > 1 && (
-                <button
-                  type="button"
-                  className="secondary build-structure-remove"
-                  disabled={disabled}
-                  aria-label={`Remove ${page.label || page.title || "page"}`}
-                  onClick={() => onRemovePage?.(page.id)}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              className={isSelected("page", page.id) ? "active" : "secondary"}
+              disabled={disabled}
+              onClick={() => onSelect?.({ kind: "page", pageId: page.id })}
+            >
+              {page.label || page.title || "Untitled page"}
+            </button>
             <ul>
               {(page.sections ?? []).map((section) => (
                 <li key={section.id}>

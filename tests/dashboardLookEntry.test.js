@@ -78,7 +78,7 @@ test("Build keeps Dashboard look beside the page tabs", () => {
 
   assert.match(
     html,
-    /class="build-page-tabs"[\s\S]*>Biomedical<\/button>[\s\S]*>Dashboard look<\/button>[\s\S]*<\/nav>/,
+    /class="build-page-tabs build-page-navigation"[\s\S]*>Biomedical<\/button>[\s\S]*>Add page<\/span>[\s\S]*>Dashboard look<\/button>[\s\S]*<\/nav>/,
   );
 });
 
