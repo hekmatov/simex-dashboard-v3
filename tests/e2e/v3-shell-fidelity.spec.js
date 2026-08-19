@@ -228,3 +228,109 @@ test("look drawer phone sheet", async ({ page }) => {
   await expect(page.locator(".look-drawer-click-catcher")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(drawer.getByRole("button", { name: "Close", exact: true })).toHaveCSS("min-height", "44px");
 });
+
+test("best-effort phone banner preserves state and leaves Present operable", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+
+  const appFrame = page.locator(".app-frame");
+  const workspace = page.locator(".build-workspace");
+  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  await target.scrollIntoViewIfNeeded();
+  const editChart = target.getByRole("button", { name: "Edit chart", exact: true });
+  await editChart.focus();
+  await expect(editChart).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  const editor = page.locator(".chart-editor-v3");
+  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  const chartDraft = editor.getByLabel("Chart title");
+  const layoutDraft = editor.getByLabel("Title alignment");
+  const saveChanges = editor.getByRole("button", { name: "Save changes", exact: true });
+  await chartDraft.fill("Phone-preserved confirmed cases");
+  await layoutDraft.selectOption("center");
+  await chartDraft.click();
+  await expect(chartDraft).toBeFocused();
+  await expect(saveChanges).toBeEnabled();
+
+  const before = await page.evaluate(() => {
+    const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
+    return {
+      scrollY: window.scrollY,
+      targetId: targetElement?.getAttribute("data-build-placement-id"),
+      targetTop: targetElement?.getBoundingClientRect().top,
+    };
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const buildNotice = page.locator('[data-phone-mode-notice="build"]');
+  await expect(buildNotice).toBeVisible();
+  await expect(buildNotice.getByRole("button", { name: "Switch to View", exact: true }))
+    .toHaveCount(1);
+  await expect(workspace).toHaveCount(1);
+  await expect(chartDraft).toBeEnabled();
+  await expect(layoutDraft).toBeEnabled();
+  await expect(saveChanges).toBeEnabled();
+  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
+  await expect(layoutDraft).toHaveValue("center");
+  await expect(chartDraft).toBeFocused();
+  await expect(target).toHaveAttribute("data-build-placement-id", "bio_confirmed_cases");
+  expect(await page.evaluate(() => window.scrollY)).toBe(before.scrollY);
+
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await expect(buildNotice).toBeHidden();
+  await expect(workspace).toHaveCount(1);
+  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
+  await expect(layoutDraft).toHaveValue("center");
+  await expect(chartDraft).toBeFocused();
+  const after = await page.evaluate(() => {
+    const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
+    return {
+      scrollY: window.scrollY,
+      targetId: targetElement?.getAttribute("data-build-placement-id"),
+      targetTop: targetElement?.getBoundingClientRect().top,
+    };
+  });
+  expect(after.scrollY).toBe(before.scrollY);
+  expect(after.targetId).toBe(before.targetId);
+  expect(Math.abs(after.targetTop - before.targetTop)).toBeLessThanOrEqual(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const switchToView = buildNotice.getByRole("button", { name: "Switch to View", exact: true });
+  const switchTarget = await switchToView.boundingBox();
+  expect(switchTarget.width).toBeGreaterThanOrEqual(44);
+  expect(switchTarget.height).toBeGreaterThanOrEqual(44);
+  await switchToView.click();
+  await expect(appFrame).toHaveAttribute("data-dashboard-mode", "build");
+  await expect(page.getByRole("alert")).toHaveText(
+    "Finish or cancel the open chart editor before leaving Build.",
+  );
+  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
+
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await buildNotice.getByRole("button", { name: "Switch to View", exact: true }).click();
+  await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
+
+  const presentMode = page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Present", exact: true });
+  await presentMode.focus();
+  await expect(presentMode).toBeFocused();
+  await page.keyboard.press("Enter");
+  const presentWorkspace = page.locator(".present-workspace");
+  await expect(page.locator('[data-phone-mode-notice="present"]')).toBeVisible();
+  await expect(presentWorkspace).toHaveCount(1);
+  await expect(presentWorkspace.getByLabel("Current page")).toBeEnabled();
+  const blackout = presentWorkspace.getByRole("button", { name: "Blackout", exact: true });
+  const restore = presentWorkspace.getByRole("button", { name: "Restore", exact: true });
+  await expect(blackout).toBeEnabled();
+  await blackout.click();
+  await expect(blackout).toBeDisabled();
+  await expect(restore).toBeEnabled();
+});

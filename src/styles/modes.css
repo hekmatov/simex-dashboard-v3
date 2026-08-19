@@ -672,10 +672,6 @@
 }
 
 @media (max-width: 767px) {
-  .unit-orbit {
-    display: none;
-  }
-
   .build-mode-shell {
     padding: 12px;
   }
@@ -924,6 +920,8 @@
     justify-content: space-between;
     min-height: 56px;
     padding: 6px 10px;
+    position: relative;
+    z-index: 1301;
   }
 
   .phone-mode-banner button {
@@ -931,7 +929,9 @@
     border-radius: 2px;
     color: var(--simex-on-accent);
     flex: 0 0 auto;
+    font: inherit;
     min-height: var(--simex-control-min);
+    min-width: var(--simex-control-min);
   }
 
   .app-frame-bar {

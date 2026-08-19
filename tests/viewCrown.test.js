@@ -36,30 +36,35 @@ const dashboard = {
   }],
 };
 
-test("ordinary View pins Compare charts inside the dashboard and Page crown row", () => {
+test("AppFrame crown owns page location without a duplicate View-local row", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
-    React.createElement(
-      PlaybackProvider,
-      { groups: [], charts: [], loadedData: {}, profiles: {} },
-      React.createElement(ViewShell, {
-        activePage: dashboard.pages[0],
-        dashboard,
-        displayState: { displayed_chart_ids: [], layout: "solo" },
-        companionStatusLabel: "Companion unavailable",
-        iconLanguageStyles: {},
-        geoDataSources: {},
-        onActivePageChange: () => {},
-        onCompareCharts: () => {},
-        onDisplayAction: () => {},
-      }),
-    ),
+    React.createElement(AppFrame, {
+      mode: "view",
+      dashboardIdentity: dashboard,
+      activePage: dashboard.pages[0],
+      pages: dashboard.pages,
+      onModeRequest: () => {},
+      onPageRequest: () => {},
+      children: React.createElement(
+        PlaybackProvider,
+        { groups: [], charts: [], loadedData: {}, profiles: {} },
+        React.createElement(ViewShell, {
+          activePage: dashboard.pages[0],
+          dashboard,
+          displayState: { displayed_chart_ids: [], layout: "solo" },
+          companionStatusLabel: "Companion unavailable",
+          iconLanguageStyles: {},
+          geoDataSources: {},
+          onActivePageChange: () => {},
+          onCompareCharts: () => {},
+          onDisplayAction: () => {},
+        }),
+      ),
+    }),
   ));
 
-  assert.match(html, /class="dashboard-location-row"/);
-  assert.match(
-    html,
-    /class="dashboard-location-row"[\s\S]*aria-label="Dashboard pages"[\s\S]*aria-label="View page actions"[\s\S]*>Compare charts<\/button>[\s\S]*<\/section>/,
-  );
+  assert.equal((html.match(/data-command-crown-layer="location"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /class="dashboard-location-row"/);
   assert.equal((html.match(/>Compare charts<\/button>/g) ?? []).length, 1);
 });
 
@@ -85,6 +90,39 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
   assert.match(build, />Switch to View<\/button>/);
   assert.match(build, /data-command-crown-layer="mode"[\s\S]*data-command-crown-layer="location"[\s\S]*data-command-crown-layer="context"/);
   assert.doesNotMatch(view, /class="phone-mode-banner"/);
+});
+
+test("best-effort phone notices preserve mounted Build and Present workspaces", () => {
+  for (const [mode, label] of [["build", "Build"], ["present", "Present"]]) {
+    const html = renderToStaticMarkup(React.createElement(AppFrame, {
+      mode,
+      density: "compact",
+      onModeRequest: () => {},
+      dashboardIdentity: { title: "Biomedical situational awareness", scenarioLabel: "HeV-A26 Day 2 Simulation" },
+      activePage: { id: "biomedical", label: "Biomedical" },
+      pages: [{ id: "biomedical", label: "Biomedical" }],
+      onPageRequest: () => {},
+      children: React.createElement("main", { className: `${mode}-workspace` }, `${label} workspace`),
+    }));
+    const notice = html.match(new RegExp(`<section[^>]*data-phone-mode-notice="${mode}"[\\s\\S]*?<\\/section>`))?.[0];
+
+    assert.ok(notice, `${label} renders its persistent phone notice`);
+    assert.match(notice, new RegExp(`${label} is not supported at phone size\\. View remains available\\.`));
+    assert.equal((notice.match(/<button\b/g) ?? []).length, 1);
+    assert.equal((notice.match(/>Switch to View<\/button>/g) ?? []).length, 1);
+    assert.doesNotMatch(notice, />\s*(Close|Dismiss)\s*</i);
+    assert.match(
+      html,
+      new RegExp(`data-phone-mode-notice="${mode}"[\\s\\S]*data-command-crown-layer="mode"[\\s\\S]*class="${mode}-workspace"`),
+    );
+  }
+
+  const view = renderToStaticMarkup(React.createElement(AppFrame, {
+    mode: "view",
+    onModeRequest: () => {},
+    children: React.createElement("div", null, "View workspace"),
+  }));
+  assert.doesNotMatch(view, /data-phone-mode-notice=/);
 });
 
 test("ordinary View preserves an empty Section and routes its exact recovery action to Build", () => {

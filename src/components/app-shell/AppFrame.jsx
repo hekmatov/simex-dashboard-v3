@@ -1,6 +1,7 @@
 import React from "react";
 
 import DashboardCommandCrown from "./DashboardCommandCrown.jsx";
+import PhoneModeNotice from "./PhoneModeNotice.jsx";
 
 export default function AppFrame({
   mode,
@@ -32,14 +33,10 @@ export default function AppFrame({
       data-resolved-appearance={theme?.resolvedAppearance}
       style={{ ...theme?.cssVariables, ...theme?.styleVariables }}
     >
-      {phoneUnsupported && (
-        <section className="phone-mode-banner" role="status" aria-label={`${mode} phone support notice`}>
-          <span>
-            {mode === "build" ? "Build" : "Present"} is not supported at phone width. Your current state is retained.
-          </span>
-          <button type="button" onClick={() => onModeRequest?.("view")}>Switch to View</button>
-        </section>
-      )}
+      {phoneUnsupported && <PhoneModeNotice
+        mode={mode}
+        onSwitchToView={() => onModeRequest?.("view")}
+      />}
       <DashboardCommandCrown
         mode={mode}
         dashboardIdentity={dashboardIdentity}
