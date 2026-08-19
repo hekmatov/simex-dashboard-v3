@@ -5,7 +5,7 @@ Status: implementation evidence for V3 Design master review; this document does 
 
 ## Scope and method
 
-This review compares the live V3 dashboard shared surfaces with the accepted Sketch 003 visual-language winner, using Sketches 009, 010, 017, and 019 only for their declared shared boundaries. It covers the three native style/signature pairs in Light and Dark, the complete 15-profile outer-paint matrix, and ultra-wide side-background continuity.
+This review compares the live V3 dashboard shared surfaces with the accepted Sketch 003 visual-language winner, using Sketches 009, 010, 017, and 019 only for their declared shared boundaries. It covers the three native style/signature pairs in Light and Dark, every token in the complete 15-profile palette matrix, and ultra-wide side-background continuity.
 
 Reference and production screenshots use equal 1440 x 1080 crops at the top of the dashboard. The reference was selected in the Sketch 003 review UI at a 1920 x 1080 browser viewport and captured from `.product-viewport`. Production was selected through the live Dashboard look preview in a fresh context and captured at 1440 x 1080 after the non-persistent drawer layer was hidden. No `Set` action was invoked and no dashboard or browser preference was persisted. Ultra-wide production screenshots use the full 1920 x 1080 and 2560 x 1440 viewports.
 
@@ -23,7 +23,7 @@ The accepted sketch uses demonstration data and panel topology, while production
 | --- | --- |
 | ![Evidence Ledger Dark reference](screenshots/evidence-ledger-dark-reference.png) | ![Evidence Ledger Dark production](screenshots/evidence-ledger-dark-production.png) |
 
-The live result now reads as the accepted ruled editorial surface: warm vellum outer/canvas separation, crisp borders, 2px panels and controls, serif hierarchy, and no elevation. The reference demo wrapper computes square while the accepted shared style token is 2px; production follows the accepted token and the visual difference is not material at the captured scale.
+The live result now reads as the accepted ruled editorial surface: warm vellum outer/canvas separation, a square canonical shell, crisp borders, 2px panels and controls, serif hierarchy, and no elevation.
 
 ### Humanist Standard / Common Ground
 
@@ -35,7 +35,7 @@ The live result now reads as the accepted ruled editorial surface: warm vellum o
 | --- | --- |
 | ![Humanist Standard Dark reference](screenshots/humanist-standard-dark-reference.png) | ![Humanist Standard Dark production](screenshots/humanist-standard-dark-production.png) |
 
-The live result now carries the accepted soft grammar instead of the former generic shape: 18px shell, 14px panels, 10px controls, quiet green surface layering, and visible low-amplitude elevation in both appearances.
+The live result now carries the accepted soft grammar instead of the former generic shape: 18px shell, 14px panels, 10px controls, quiet green surface layering, translucent shell/section/panel contours, and the accepted low-amplitude green shell elevation in both appearances.
 
 ### Signal + Instrument / Calibrated Steel
 
@@ -63,7 +63,10 @@ Measurements are recorded in [screenshots/measurements.json](screenshots/measure
 | Panel gap | 16px | 16px | Match |
 | Panel internal padding | 12px plot frame contract | 12px | Match |
 | Evidence panel radius / shadow | 2px / none | 2px / none | Match |
+| Evidence shell / panel / control radius | 0px / 2px / 2px | 0px / 2px / 2px | Match |
 | Humanist shell / panel / control radius | 18px / 14px / 10px | 18px / 14px / 10px | Match |
+| Humanist shell / section / panel contour | 78% / 70–75% / 82% profile rule alpha | Same computed colors and alpha | Match |
+| Humanist shell shadow, Light and Dark | `0 16px 38px rgb(25 55 48 / 12%)` | Same computed shadow | Match |
 | Humanist panel shadow, Light | `0 8px 20px rgb(36 57 52 / 10%)` | Same computed shadow | Match |
 | Humanist panel shadow, Dark | `0 10px 24px rgb(0 0 0 / 24%)` | Same computed shadow | Match |
 | Signal shell / panel / control radius | 6px / 4px / 3px | 6px / 4px / 3px | Match |
@@ -75,7 +78,7 @@ The production panel widths and row heights differ from the sketch fixture becau
 
 ## All 15 profile paint evidence
 
-The browser contract selected every profile in both Light and Dark and asserted both the live profile attribute and the actual `.app-frame` outer background. All 30 combinations passed.
+The browser contract parses the accepted Sketch 003 palette catalogue, selects every profile in both Light and Dark, and compares all 33 live CSS variables with the accepted values. All 990 token comparisons passed, along with each live profile attribute and rendered `.app-frame` outer background. The outer values below are a compact index into that complete matrix.
 
 | Profile | Light outer | Dark outer |
 | --- | --- | --- |
@@ -113,6 +116,8 @@ The twelve full-viewport screenshots are stored as `screenshots/<style>-<appeara
 ## Material corrections made
 
 - Mapped shared shells, panels, controls, and elevation to the native style grammar instead of generic component radii.
+- Restored Evidence Ledger's square canonical shell while retaining its accepted 2px panels and controls.
+- Restored Humanist's translucent shell, section, and panel rules plus the accepted green 12% shell elevation in both Light and Dark.
 - Restored the Sketch 003 section frame: exact header padding, border rules, 18px panel inset, 16px grid gap, and 12px panel/plot padding.
 - Set the canonical shared frame to the accepted 1392px maximum while keeping it centered and preserving View/Build parity.
 - Made the full-width app and Audience root consume the selected outer paint; mapped Audience display and cells to shared canvas/panel tokens.
@@ -127,7 +132,9 @@ The twelve full-viewport screenshots are stored as `screenshots/<style>-<appeara
 - A later browser RED measured Signal Dark plot paint as `rgb(255, 255, 255)` instead of `rgb(22, 33, 38)`.
 - The final visual pass exposed low-contrast renderer-owned navy labels on the accepted dark plot surface; the focused unit RED captured the missing projected title/legend defaults.
 - `node --test tests/chartRenderingV3.test.js`: 44 passed.
-- `pnpm exec playwright test tests/e2e/v3-style-fidelity.spec.js --project=chromium`: 4 passed. This includes native style signatures, dark chart surface behavior, all 30 profile/appearance paint combinations, and 12 ultra-wide continuity measurements.
+- `node --test tests/dashboardStyleGrammar.test.js`: 2 passed, including accepted Dark elevation.
+- `pnpm exec playwright test tests/e2e/v3-style-fidelity.spec.js --project=chromium`: 5 passed. This includes native style signatures, Humanist contour/elevation, dark chart surface behavior, 990 accepted palette-token comparisons, and 12 ultra-wide continuity measurements.
+- `pnpm exec playwright test tests/e2e/v3-shell-fidelity.spec.js --project=chromium`: 11 passed. All 76 View/Build geometry comparisons at each supported viewport reported exact `0.00` x/y/width/height deltas; phone state/draft preservation and Present operability also passed.
 - `pnpm build`: passed (768 modules transformed). Vite reported its existing large-chunk advisory only.
 
 ## Boundaries and limitations

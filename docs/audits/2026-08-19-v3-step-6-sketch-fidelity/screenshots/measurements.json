@@ -51,7 +51,7 @@
         "y": 164,
         "width": 1392,
         "height": 9775.15625,
-        "radius": "2px",
+        "radius": "0px",
         "border": "1px solid rgb(80, 89, 93)",
         "shadow": "none",
         "paint": "rgb(247, 242, 232)"
@@ -178,7 +178,7 @@
         "y": 164,
         "width": 1392,
         "height": 9775.15625,
-        "radius": "2px",
+        "radius": "0px",
         "border": "1px solid rgb(194, 186, 171)",
         "shadow": "none",
         "paint": "rgb(33, 31, 26)"
@@ -306,7 +306,7 @@
         "width": 1392,
         "height": 9775.15625,
         "radius": "18px",
-        "border": "1px solid rgb(97, 115, 109)",
+        "border": "1px solid color(srgb 0.380392 0.45098 0.427451 / 0.78)",
         "shadow": "rgba(25, 55, 48, 0.12) 0px 16px 38px 0px",
         "paint": "rgb(240, 245, 241)"
       },
@@ -317,7 +317,7 @@
         "height": 98.390625,
         "padding": "22px 18px 14px",
         "borderTop": "0px none rgb(29, 43, 42)",
-        "borderBottom": "1px solid rgb(183, 197, 191)",
+        "borderBottom": "1px solid color(srgb 0.717647 0.772549 0.74902 / 0.75)",
         "paint": "color(srgb 0.946824 0.964549 0.949804)"
       },
       "grid": {
@@ -335,7 +335,7 @@
         "height": 418,
         "padding": "12px",
         "radius": "14px",
-        "border": "1px solid rgb(183, 197, 191)",
+        "border": "1px solid color(srgb 0.717647 0.772549 0.74902 / 0.82)",
         "shadow": "rgba(36, 57, 52, 0.1) 0px 8px 20px 0px",
         "paint": "rgb(252, 253, 251)"
       },
@@ -433,8 +433,8 @@
         "width": 1392,
         "height": 9775.15625,
         "radius": "18px",
-        "border": "1px solid rgb(154, 175, 166)",
-        "shadow": "rgba(0, 0, 0, 0.28) 0px 16px 38px 0px",
+        "border": "1px solid color(srgb 0.603922 0.686275 0.65098 / 0.78)",
+        "shadow": "rgba(25, 55, 48, 0.12) 0px 16px 38px 0px",
         "paint": "rgb(25, 35, 31)"
       },
       "sectionHeader": {
@@ -444,7 +444,7 @@
         "height": 98.390625,
         "padding": "22px 18px 14px",
         "borderTop": "0px none rgb(238, 245, 241)",
-        "borderBottom": "1px solid rgb(82, 101, 93)",
+        "borderBottom": "1px solid color(srgb 0.321569 0.396078 0.364706 / 0.75)",
         "paint": "color(srgb 0.102275 0.142431 0.126275)"
       },
       "grid": {
@@ -462,7 +462,7 @@
         "height": 418,
         "padding": "12px",
         "radius": "14px",
-        "border": "1px solid rgb(82, 101, 93)",
+        "border": "1px solid color(srgb 0.321569 0.396078 0.364706 / 0.82)",
         "shadow": "rgba(0, 0, 0, 0.24) 0px 10px 24px 0px",
         "paint": "rgb(34, 46, 41)"
       },

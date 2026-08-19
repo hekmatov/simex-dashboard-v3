@@ -60,5 +60,6 @@ test("style elevation resolves independently for dark appearance", () => {
   const signal = renderStyle("signal-instrument", "dark");
 
   assert.match(humanist, /--simex-style-panel-shadow:0 10px 24px/);
+  assert.match(humanist, /--simex-style-shell-shadow:0 16px 38px rgb\(25 55 48 \/ 12%\)/);
   assert.match(signal, /--simex-style-panel-shadow:0 1px 2px rgb\(0 0 0 \/ 38%\)/);
 });

@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const NATIVE_STYLES = Object.freeze([
   Object.freeze({
     id: "evidence-ledger", label: "Evidence Ledger",
     profile: "evidence-ledger/brighter-vellum",
-    shellRadius: "2px", panelRadius: "2px", controlRadius: "2px",
+    shellRadius: "0px", panelRadius: "2px", controlRadius: "2px",
     panelShadow: "none", shellShadow: "none",
     sectionPaint: "rgb(247, 242, 232)",
   }),
@@ -43,6 +44,61 @@ const PROFILE_OUTER = Object.freeze({
   "graphpad/lakeside-reference": ["#dde4e3", "#0e1515"],
   "utility/monochrome-reserve": ["#d6d6d6", "#0d0d0d"],
 });
+
+const PROFILE_CATALOGUE_IDS = Object.freeze({
+  "evidence-ledger/brighter-vellum": "brighter-vellum",
+  "evidence-ledger/ash-register": "ash-register",
+  "evidence-ledger/cool-archive": "cool-archive",
+  "humanist-standard/common-ground": "common-ground",
+  "humanist-standard/quiet-commons": "quiet-commons",
+  "humanist-standard/open-forum": "open-forum",
+  "signal-instrument/calibrated-steel": "calibrated-steel",
+  "signal-instrument/quiet-telemetry": "quiet-telemetry",
+  "signal-instrument/amber-vector": "amber-vector",
+  "utility/prismatic-index": "prismatic-index",
+  "utility/chromatic-polarity": "chromatic-polarity",
+  "utility/luminance-ladder": "luminance-ladder",
+  "graphpad/sunrise-reference": "sunrise-reference-faithful",
+  "graphpad/lakeside-reference": "lakeside-reference-faithful",
+  "utility/monochrome-reserve": "monochrome-reserve",
+});
+
+const TOKEN_TO_VARIABLE = Object.freeze({
+  OUT: "--simex-surface-outer",
+  CAN: "--simex-surface-canvas",
+  PAN: "--simex-surface-panel",
+  ALT: "--simex-surface-panel-alt",
+  INK: "--simex-text-strong",
+  "INK-S": "--simex-text-muted",
+  "INK-F": "--simex-text-faint",
+  RULE: "--simex-border-subtle",
+  "RULE+": "--simex-border-strong",
+  ACC: "--simex-accent",
+  "ACC-S": "--simex-accent-soft",
+  "ON-ACC": "--simex-on-accent",
+  FOCUS: "--simex-focus",
+  SEL: "--simex-selected",
+  "SEL-S": "--simex-selected-soft",
+  CHR: "--simex-chrono",
+  "CHR-S": "--simex-chrono-soft",
+  INFO: "--simex-info",
+  "INFO-S": "--simex-info-soft",
+  OK: "--simex-success",
+  "OK-S": "--simex-success-soft",
+  WARN: "--simex-warning",
+  "WARN-S": "--simex-warning-soft",
+  ERR: "--simex-error",
+  "ERR-S": "--simex-error-soft",
+  GRID: "--simex-gridline",
+  MARK: "--simex-chart-mark",
+  D1: "--simex-data-1", D2: "--simex-data-2", D3: "--simex-data-3",
+  D4: "--simex-data-4", D5: "--simex-data-5", D6: "--simex-data-6",
+});
+
+const APPROVED_TOKEN_MATRIX = readApprovedTokenMatrix(await readFile(
+  new URL("../../.planning/sketches/003-dashboard-visual-language/palette-catalog.html", import.meta.url),
+  "utf8",
+));
 
 test.describe.configure({ timeout: 150_000 });
 
@@ -99,6 +155,44 @@ test("native style signatures resolve real shell, section, panel, and control pa
   }
 });
 
+test("Humanist contours retain accepted translucency and steady shell elevation", async ({ page }) => {
+  await openBiomedicalLook(page);
+  await page.getByLabel("Humanist Standard", { exact: true }).check();
+  await page.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
+  for (const appearance of ["Light", "Dark"]) {
+    await page.getByLabel(appearance, { exact: true }).check();
+    const metrics = await page.evaluate(() => {
+      const app = document.querySelector(".app-frame");
+      const sections = document.querySelectorAll("[data-canonical-section-id]");
+      const mix = (variable, percentage) => {
+        const probe = document.createElement("span");
+        probe.style.color = `color-mix(in srgb, var(${variable}) ${percentage}%, transparent)`;
+        app.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      return {
+        actual: {
+          shell: getComputedStyle(document.querySelector(".canonical-dashboard-frame")).borderTopColor,
+          panel: getComputedStyle(document.querySelector("[data-canonical-panel-id]")).borderTopColor,
+          sectionBottom: getComputedStyle(sections[0].querySelector(".section-header")).borderBottomColor,
+          sectionTop: getComputedStyle(sections[1].querySelector(".section-header")).borderTopColor,
+        },
+        expected: {
+          shell: mix("--simex-border-strong", 78),
+          panel: mix("--simex-border-subtle", 82),
+          sectionBottom: mix("--simex-border-subtle", 75),
+          sectionTop: mix("--simex-border-strong", 70),
+        },
+        shellShadow: getComputedStyle(document.querySelector(".canonical-dashboard-frame")).boxShadow,
+      };
+    });
+    expect(metrics.actual).toEqual(metrics.expected);
+    expect(metrics.shellShadow).toBe("rgba(25, 55, 48, 0.12) 0px 16px 38px 0px");
+  }
+});
+
 test("native Dark charts yield legacy white defaults to profile surfaces", async ({ page }) => {
   await openBiomedicalLook(page);
   await page.getByLabel("Signal + Instrument", { exact: true }).check();
@@ -108,7 +202,7 @@ test("native Dark charts yield legacy white defaults to profile surfaces", async
     .toHaveCSS("background-color", "rgb(22, 33, 38)");
 });
 
-test("all 15 profiles paint their approved Light and Dark outer surfaces", async ({ page }) => {
+test("all 15 profiles project every approved Light and Dark palette token", async ({ page }) => {
   await openBiomedicalLook(page);
   const appFrame = page.locator(".app-frame");
   for (const [profile, approvedOuter] of Object.entries(PROFILE_OUTER)) {
@@ -116,6 +210,14 @@ test("all 15 profiles paint their approved Light and Dark outer surfaces", async
     for (const [index, appearance] of ["Light", "Dark"].entries()) {
       await page.getByLabel(appearance, { exact: true }).check();
       await expect(appFrame).toHaveAttribute("data-dashboard-color-profile", profile);
+      const actualTokens = await appFrame.evaluate((element, entries) => {
+        const style = getComputedStyle(element);
+        return Object.fromEntries(entries.map(([token, variable]) => [
+          token,
+          style.getPropertyValue(variable).trim().toLowerCase(),
+        ]));
+      }, Object.entries(TOKEN_TO_VARIABLE));
+      expect(actualTokens).toEqual(APPROVED_TOKEN_MATRIX[profile][appearance.toLowerCase()]);
       await expect(appFrame).toHaveCSS("background-color", rgb(approvedOuter[index]));
     }
   }
@@ -172,4 +274,30 @@ async function openBiomedicalLook(page) {
 function rgb(hex) {
   const value = Number.parseInt(hex.slice(1), 16);
   return `rgb(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255})`;
+}
+
+function readApprovedTokenMatrix(html) {
+  const tokenNames = new Set(Object.keys(TOKEN_TO_VARIABLE));
+  return Object.freeze(Object.fromEntries(Object.entries(PROFILE_CATALOGUE_IDS).map(
+    ([profile, catalogueId]) => [profile, Object.freeze(Object.fromEntries(
+      ["light", "dark"].map((appearance) => {
+        const row = html.match(new RegExp(
+          `<tr id="${appearance}-${catalogueId}">([\\s\\S]*?)<\\/tr>`,
+          "i",
+        ));
+        if (!row) throw new Error(`Missing accepted palette row: ${appearance}-${catalogueId}`);
+        const tokens = Object.fromEntries([...row[1].matchAll(
+          /\b([A-Z][A-Z0-9+-]*)\s+(#[0-9A-F]{6})/gi,
+        )]
+          .map(([, token, value]) => [token.toUpperCase(), value.toLowerCase()])
+          .filter(([token]) => tokenNames.has(token)));
+        if (Object.keys(tokens).length !== tokenNames.size) {
+          throw new Error(
+            `Accepted palette row ${appearance}-${catalogueId} has ${Object.keys(tokens).length} of ${tokenNames.size} tokens.`,
+          );
+        }
+        return [appearance, Object.freeze(tokens)];
+      }),
+    ))],
+  )));
 }

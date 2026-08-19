@@ -28,7 +28,7 @@ const STYLE_GRAMMARS = Object.freeze({
     }),
     shellShadow: Object.freeze({
       light: "0 16px 38px rgb(25 55 48 / 12%)",
-      dark: "0 16px 38px rgb(0 0 0 / 28%)",
+      dark: "0 16px 38px rgb(25 55 48 / 12%)",
     }),
   }),
   "signal-instrument": Object.freeze({

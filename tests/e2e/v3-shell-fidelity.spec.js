@@ -392,7 +392,7 @@ test("look drawer preserves geometry", async ({ page }) => {
   await expect(page.locator(".canonical-dashboard-frame .dashboard-header"))
     .toHaveCSS("background-color", "rgb(255, 253, 248)");
   await expect(page.locator(".canonical-dashboard-frame .dashboard-header"))
-    .toHaveCSS("border-top-left-radius", "10px");
+    .toHaveCSS("border-top-left-radius", "0px");
   const before = await readCanonicalGeometry(page);
 
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();

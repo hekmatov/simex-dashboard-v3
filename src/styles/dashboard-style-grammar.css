@@ -1,5 +1,6 @@
-/* Approved Sketch 003 style grammars. These rules change paint only: no
-   placement, dimensions, spacing, overflow, or dashboard geometry. */
+/* Approved Sketch 003 style grammars. The base rules establish style paint;
+   the shared-surface calibration below also aligns the accepted frame width,
+   section spacing, and panel insets without changing dashboard content. */
 .app-frame {
   font-family: var(--simex-style-body-font);
 }
@@ -232,7 +233,7 @@
   background-color: var(--simex-surface-outer);
 }
 
-.app-frame > .canonical-dashboard-frame {
+.app-frame .canonical-dashboard-frame {
   border: 1px solid var(--simex-border-strong);
   border-radius: var(--simex-style-surface-radius);
   box-shadow: var(--simex-style-shell-shadow);
@@ -291,7 +292,7 @@
 }
 
 @media (max-width: 1000px) {
-  .app-frame > .canonical-dashboard-frame {
+  .app-frame .canonical-dashboard-frame {
     width: calc(100% - 24px);
   }
 }
@@ -302,6 +303,31 @@
 
 .app-frame[data-dashboard-style="humanist-standard"] .canonical-dashboard-frame .section-header {
   background: color-mix(in srgb, var(--simex-surface-canvas) 88%, var(--simex-surface-panel));
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] .canonical-dashboard-frame,
+.app-frame[data-dashboard-style="evidence-ledger"] .canonical-dashboard-frame :is(
+  .dashboard-header,
+  .dashboard-footer
+) {
+  border-radius: 0;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .canonical-dashboard-frame {
+  border-color: color-mix(in srgb, var(--simex-border-strong) 78%, transparent);
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .canonical-dashboard-frame .section-header {
+  border-bottom-color: color-mix(in srgb, var(--simex-border-subtle) 75%, transparent);
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .canonical-dashboard-frame
+  .dashboard-section:not(:first-child) > .section-header {
+  border-top-color: color-mix(in srgb, var(--simex-border-strong) 70%, transparent);
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .canonical-dashboard-frame .chart-panel {
+  border-color: color-mix(in srgb, var(--simex-border-subtle) 82%, transparent);
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] .canonical-dashboard-frame .section-header {
