@@ -100,6 +100,25 @@ test("Vanta follows reduced-motion preference changes", async ({ page }) => {
   await expect(page.locator("#vanta-background .vanta-canvas")).toHaveCount(0);
 });
 
+test("Vanta startup failure leaves the dashboard usable", async ({ page }) => {
+  await page.route("**/vendor/vanta.net.min.js", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/javascript",
+    body: `window.VANTA = {
+      NET() {
+        throw new Error("forced WebGL initialization failure");
+      },
+    };`,
+  }));
+
+  await page.goto("/");
+
+  await expect(page.locator("#root")).not.toBeEmpty({ timeout: 10_000 });
+  await expect(
+    page.getByRole("heading", { name: LANDING_HEADLINE }),
+  ).toBeVisible({ timeout: 10_000 });
+});
+
 test("route-card supporting text uses high-contrast foregrounds", async ({ page }) => {
   await page.goto("/");
   await expectLandingReady(page);

@@ -1011,25 +1011,30 @@ function loadDeviceLayout() {
 function initializeVantaBackground(settings) {
   const element = document.getElementById("vanta-background");
   if (!element || !window.VANTA?.NET || !window.THREE) return null;
-  const effect = window.VANTA.NET({
-    el: element,
-    mouseControls: settings.mouseControls,
-    touchControls: settings.touchControls,
-    gyroControls: false,
-    minHeight: 200,
-    minWidth: 200,
-    scale: 1,
-    scaleMobile: 1,
-    color: hexToNumber(settings.networkColor),
-    backgroundColor: hexToNumber(settings.backgroundColor),
-    points: settings.points,
-    maxDistance: settings.maxDistance,
-    spacing: settings.spacing,
-    speed: settings.speed,
-  });
-  applyVantaNetSpeed(effect, settings.speed);
-  window.setTimeout(() => applyVantaNetSpeed(effect, settings.speed), 120);
-  return effect;
+  try {
+    const effect = window.VANTA.NET({
+      el: element,
+      mouseControls: settings.mouseControls,
+      touchControls: settings.touchControls,
+      gyroControls: false,
+      minHeight: 200,
+      minWidth: 200,
+      scale: 1,
+      scaleMobile: 1,
+      color: hexToNumber(settings.networkColor),
+      backgroundColor: hexToNumber(settings.backgroundColor),
+      points: settings.points,
+      maxDistance: settings.maxDistance,
+      spacing: settings.spacing,
+      speed: settings.speed,
+    });
+    applyVantaNetSpeed(effect, settings.speed);
+    window.setTimeout(() => applyVantaNetSpeed(effect, settings.speed), 120);
+    return effect;
+  } catch {
+    element.replaceChildren();
+    return null;
+  }
 }
 
 function applyVantaNetSpeed(effect, speed) {
