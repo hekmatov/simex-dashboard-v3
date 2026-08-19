@@ -241,6 +241,32 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
 });
 
+test("repeated public Add Page requests use current dashboard state and unique IDs", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+
+  const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
+  const addPage = pinned.getByRole("button", { name: "Add Page", exact: true });
+  const frame = page.locator(".canonical-dashboard-frame");
+  const crownPages = page.locator(".dashboard-command-page-scroller");
+
+  await addPage.click();
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "new_page");
+  await expect(addPage).toBeEnabled();
+
+  await addPage.click();
+  await expect(frame).toHaveAttribute("data-canonical-page-id", "new_page_2");
+  await expect(crownPages.getByRole("button", { name: "New page", exact: true }))
+    .toHaveCount(2);
+  const labels = await crownPages.locator("button").evaluateAll((buttons) => (
+    buttons.map((button) => button.textContent?.trim())
+  ));
+  expect(labels.filter((label) => label === "New page")).toHaveLength(2);
+});
+
 test("active comparison selection disables repeated crown activation without clearing selection", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");

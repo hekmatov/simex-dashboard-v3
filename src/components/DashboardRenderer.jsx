@@ -82,6 +82,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [multiPanelIds, setMultiPanelIds] = React.useState([]);
   const multiPanelIdsRef = React.useRef(multiPanelIds);
   multiPanelIdsRef.current = multiPanelIds;
+  const dashboardStateRef = React.useRef(dashboard);
+  dashboardStateRef.current = dashboard;
   const importInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
@@ -404,7 +406,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function addPage() {
     if (moderatorOperationGateRef.current.isActive()) return;
     const label = "New page";
-    const pageId = uniquePageId(dashboard, label);
+    const pageId = uniquePageId(dashboardStateRef.current, label);
     void performModeratorOperation("add-page", async () => {
       await pendingEdits.flush();
       await onPageAdd({
