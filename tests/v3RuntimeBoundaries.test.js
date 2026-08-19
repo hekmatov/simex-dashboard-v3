@@ -8,7 +8,7 @@ const boundaryModule = await import(
 ).catch(() => null);
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "d8b0d7ac09cca77d89c3d14a252054ef8e3eaf560bea90fc10a1966ef86d983d";
+  "629750df889430c42739593008e686c759f2ab310f76aeec72b091730e8869b0";
 
 test("runtime boundary inspector is available", () => {
   assert.equal(
@@ -22,6 +22,7 @@ test("V3 runtime has no remote dependency and preserves Quorum and canonical ren
   assert.ok(boundaryModule, "runtime boundary inspector must be implemented");
   const inputs = await repositoryInputs();
   const inventory = boundaryModule.inspectRuntimeBoundaries(inputs);
+  assert.ok(Object.hasOwn(inputs.sourceFiles, "src/styles.css"));
 
   assert.deepEqual(inventory.remoteRuntimeDependencies, []);
   assert.equal(inventory.quorumContractHash, EXPECTED_QUORUM_CONTRACT_HASH);
@@ -80,6 +81,143 @@ test("a forked mode renderer fails with the exact entrypoint field", async () =>
   );
 });
 
+test("source CSS and JSX remote assets report exact paths and fields", async () => {
+  const inputs = await repositoryInputs();
+  const fixtures = [
+    {
+      path: "src/runtime-boundary-fixture.css",
+      source: '@import "https://cdn.example.invalid/theme.css";',
+      field: "asset URL",
+      value: "https://cdn.example.invalid/theme.css",
+    },
+    {
+      path: "src/runtime-boundary-fixture.css",
+      source: '.fixture { background: url("https://cdn.example.invalid/texture.png"); }',
+      field: "asset URL",
+      value: "https://cdn.example.invalid/texture.png",
+    },
+    {
+      path: "src/runtime-boundary-fixture.jsx",
+      source: 'export default <img src="https://cdn.example.invalid/plot.png" />;',
+      field: "asset URL",
+      value: "https://cdn.example.invalid/plot.png",
+    },
+    {
+      path: "src/runtime-boundary-fixture.jsx",
+      source: 'export default <img src={"https://cdn.example.invalid/expression.png"} />;',
+      field: "asset URL",
+      value: "https://cdn.example.invalid/expression.png",
+    },
+  ];
+
+  for (const fixture of fixtures) {
+    const changed = {
+      ...inputs,
+      sourceFiles: { ...inputs.sourceFiles, [fixture.path]: fixture.source },
+    };
+    assertBoundaryError(
+      () => boundaryModule.inspectRuntimeBoundaries(changed),
+      `Remote runtime dependency at ${fixture.path} ${fixture.field}: ${fixture.value}`,
+    );
+  }
+});
+
+test("source import and runtime URL variants report exact paths and fields", async () => {
+  const inputs = await repositoryInputs();
+  const filePath = "src/runtime-boundary-fixture.js";
+  const fixtures = [
+    {
+      source: 'import "https://cdn.example.invalid/static.js";',
+      field: "import",
+      value: "https://cdn.example.invalid/static.js",
+    },
+    {
+      source: 'const module = import("https://cdn.example.invalid/dynamic.js");',
+      field: "import",
+      value: "https://cdn.example.invalid/dynamic.js",
+    },
+    {
+      source: 'fetch("https://api.example.invalid/state");',
+      field: "runtime URL",
+      value: "https://api.example.invalid/state",
+    },
+    {
+      source: 'const asset = new URL("https://cdn.example.invalid/asset.bin", import.meta.url);',
+      field: "runtime URL",
+      value: "https://cdn.example.invalid/asset.bin",
+    },
+  ];
+
+  for (const fixture of fixtures) {
+    const changed = {
+      ...inputs,
+      sourceFiles: { ...inputs.sourceFiles, [filePath]: fixture.source },
+    };
+    assertBoundaryError(
+      () => boundaryModule.inspectRuntimeBoundaries(changed),
+      `Remote runtime dependency at ${filePath} ${fixture.field}: ${fixture.value}`,
+    );
+  }
+});
+
+test("recursive catalogue schema reports exact contract and nested field drift", async () => {
+  const cataloguePath = "public/integration/quorum-chart-catalogue.json";
+  const fixtures = [
+    {
+      mutate: (catalogue) => {
+        catalogue.contract_version = "3";
+      },
+      message: `${cataloguePath} contract_version: expected literal "2"`,
+    },
+    {
+      mutate: (catalogue) => {
+        catalogue.chart_types[0].capabilities.remote_origin = true;
+      },
+      message: `${cataloguePath} chart_types[0].capabilities.remote_origin: unexpected field`,
+    },
+    {
+      mutate: (catalogue) => {
+        delete catalogue.chart_types[0].capabilities.zoom;
+      },
+      message: `${cataloguePath} chart_types[0].capabilities.zoom: missing required field`,
+    },
+    {
+      mutate: (catalogue) => {
+        delete catalogue.charts[0].title;
+      },
+      message: `${cataloguePath} charts[0].title: missing required field`,
+    },
+  ];
+
+  for (const fixture of fixtures) {
+    const inputs = await repositoryInputs();
+    const catalogue = JSON.parse(inputs.publicFiles[cataloguePath]);
+    fixture.mutate(catalogue);
+    inputs.publicFiles[cataloguePath] = JSON.stringify(catalogue);
+    assertBoundaryError(
+      () => boundaryModule.inspectRuntimeBoundaries(inputs),
+      fixture.message,
+    );
+  }
+
+  const contentInputs = await repositoryInputs();
+  const changedContent = JSON.parse(contentInputs.publicFiles[cataloguePath]);
+  changedContent.catalogue_revision = "2099-12-31";
+  changedContent.charts[0].title = "Mutable content change";
+  contentInputs.publicFiles[cataloguePath] = JSON.stringify(changedContent);
+  assert.equal(
+    boundaryModule.inspectRuntimeBoundaries(contentInputs).quorumContractHash,
+    EXPECTED_QUORUM_CONTRACT_HASH,
+  );
+});
+
+function assertBoundaryError(action, expectedMessage) {
+  assert.throws(action, (error) => {
+    assert.equal(error.message, expectedMessage);
+    return true;
+  });
+}
+
 function canonicalEntrypoint(mode, entrypoint) {
   return {
     mode,
@@ -98,7 +236,7 @@ async function repositoryInputs() {
   publicFiles["index.html"] = await readFile("index.html", "utf8");
   return {
     packageJson: JSON.parse(await readFile("package.json", "utf8")),
-    sourceFiles: await readTextTree("src", new Set([".js", ".jsx"])),
+    sourceFiles: await readTextTree("src", new Set([".css", ".html", ".js", ".jsx"])),
     publicFiles,
   };
 }

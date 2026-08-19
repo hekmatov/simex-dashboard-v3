@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "d8b0d7ac09cca77d89c3d14a252054ef8e3eaf560bea90fc10a1966ef86d983d";
+  "629750df889430c42739593008e686c759f2ab310f76aeec72b091730e8869b0";
 const PROTOCOL_PATH = "src/lib/quorumCompanionProtocol.js";
 const CATALOGUE_PATH = "public/integration/quorum-chart-catalogue.json";
 const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";
@@ -16,6 +16,228 @@ const MODE_ENTRYPOINTS = Object.freeze([
   ["present", "src/components/presentation/PresentWorkspace.jsx"],
   ["audience", "src/components/presentation/AudienceDisplay.jsx"],
 ]);
+const SCHEMA_TEXT = schemaScalar("string");
+const SCHEMA_NUMBER = schemaScalar("number");
+const SCHEMA_BOOLEAN = schemaScalar("boolean");
+const SCHEMA_TEXT_ARRAY = schemaArray(SCHEMA_TEXT);
+const ROLE_SCHEMA = schemaObject({
+  accepted_semantic_types: SCHEMA_TEXT_ARRAY,
+  cardinality: schemaObject({
+    max: schemaNullable(SCHEMA_NUMBER),
+    min: SCHEMA_NUMBER,
+  }),
+  label: SCHEMA_TEXT,
+  required: SCHEMA_BOOLEAN,
+  role_id: SCHEMA_TEXT,
+});
+const COLLECTION_SCHEMA = schemaNullable(schemaObject({
+  grid: schemaObject({
+    max_columns: SCHEMA_NUMBER,
+    max_rows: SCHEMA_NUMBER,
+    min_columns: SCHEMA_NUMBER,
+    min_rows: SCHEMA_NUMBER,
+  }),
+  layout_modes: SCHEMA_TEXT_ARRAY,
+  priority_methods: SCHEMA_TEXT_ARRAY,
+  ranking_modes: SCHEMA_TEXT_ARRAY,
+}));
+const MANUAL_DATA_SCHEMA = schemaAnyOf([
+  schemaLiteral(null),
+  schemaObject({ maxRows: SCHEMA_NUMBER }),
+  schemaObject({
+    fields: SCHEMA_TEXT_ARRAY,
+    maxRows: SCHEMA_NUMBER,
+    minRows: SCHEMA_NUMBER,
+  }),
+]);
+const GEOGRAPHY_SCHEMA = schemaNullable(schemaObject({
+  data_source: schemaObject({
+    descriptor_kind: SCHEMA_TEXT,
+    presentation_field: SCHEMA_TEXT,
+    required: SCHEMA_BOOLEAN,
+  }),
+  geography_role_id: SCHEMA_TEXT,
+  join: schemaObject({
+    ambiguous_property_match: SCHEMA_TEXT,
+    default_strategy: schemaNullable(SCHEMA_TEXT),
+    explicit_strategy: SCHEMA_TEXT,
+    feature_id_precedence: SCHEMA_TEXT,
+    inferred_strategies: SCHEMA_TEXT_ARRAY,
+    presentation_field: SCHEMA_TEXT,
+  }),
+  version: SCHEMA_NUMBER,
+}));
+const TEMPORAL_SCHEMA = schemaNullable(schemaObject({
+  interpolation_eligible: SCHEMA_BOOLEAN,
+  interpolation_requires_explicit_permission: SCHEMA_BOOLEAN,
+  matching_policies: SCHEMA_TEXT_ARRAY,
+  time_role_ids: SCHEMA_TEXT_ARRAY,
+}));
+const CHART_TYPE_SCHEMA = schemaObject({
+  capabilities: schemaObject({
+    collection: SCHEMA_BOOLEAN,
+    time_sync: SCHEMA_BOOLEAN,
+    zoom: SCHEMA_BOOLEAN,
+  }),
+  collection: COLLECTION_SCHEMA,
+  conversion: schemaObject({
+    compatible_type_ids: SCHEMA_TEXT_ARRAY,
+    rules: schemaObject({
+      compatible_when: SCHEMA_TEXT_ARRAY,
+      missing_required_target_roles: SCHEMA_TEXT,
+      otherwise: SCHEMA_TEXT,
+      preserve_roles_when: SCHEMA_TEXT_ARRAY,
+      version: SCHEMA_NUMBER,
+    }),
+  }),
+  data_constraints: schemaObject({
+    manual_data: MANUAL_DATA_SCHEMA,
+    source_kinds: SCHEMA_TEXT_ARRAY,
+    transforms: SCHEMA_TEXT_ARRAY,
+  }),
+  data_family: SCHEMA_TEXT,
+  description: SCHEMA_TEXT,
+  geography: GEOGRAPHY_SCHEMA,
+  group_id: SCHEMA_TEXT,
+  label: SCHEMA_TEXT,
+  mark: SCHEMA_TEXT,
+  presentation_section_ids: SCHEMA_TEXT_ARRAY,
+  purpose: SCHEMA_TEXT,
+  renderer: SCHEMA_TEXT,
+  role_ids: SCHEMA_TEXT_ARRAY,
+  roles: schemaArray(ROLE_SCHEMA),
+  temporal: TEMPORAL_SCHEMA,
+  type_id: SCHEMA_TEXT,
+});
+const CONFIGURED_CHART_SCHEMA = schemaObject({
+  aliases: SCHEMA_TEXT_ARRAY,
+  chart_id: SCHEMA_TEXT,
+  collection_capability: SCHEMA_BOOLEAN,
+  description: SCHEMA_TEXT,
+  keywords: SCHEMA_TEXT_ARRAY,
+  page_id: SCHEMA_TEXT,
+  role_ids: SCHEMA_TEXT_ARRAY,
+  section_id: SCHEMA_TEXT,
+  supported_display_modes: SCHEMA_TEXT_ARRAY,
+  time_sync_group_id: schemaNullable(SCHEMA_TEXT),
+  title: SCHEMA_TEXT,
+  type_id: SCHEMA_TEXT,
+});
+const CATALOGUE_SCHEMA = schemaObject({
+  catalogue_id: SCHEMA_TEXT,
+  catalogue_revision: SCHEMA_TEXT,
+  chart_schema_version: schemaLiteral(3),
+  chart_types: schemaArray(CHART_TYPE_SCHEMA),
+  charts: schemaArray(CONFIGURED_CHART_SCHEMA),
+  contract_version: schemaLiteral("2"),
+  dashboard_semantic_digest: SCHEMA_TEXT,
+  digest: SCHEMA_TEXT,
+});
+
+function schemaScalar(type) {
+  return { kind: "scalar", type };
+}
+
+function schemaLiteral(value) {
+  return { kind: "literal", value };
+}
+
+function schemaObject(fields) {
+  return { kind: "object", fields };
+}
+
+function schemaArray(item) {
+  return { kind: "array", item };
+}
+
+function schemaNullable(schema) {
+  return { kind: "nullable", schema };
+}
+
+function schemaAnyOf(variants) {
+  return { kind: "anyOf", variants };
+}
+
+function validateSchema(value, schema, fieldPath) {
+  if (schema.kind === "literal") {
+    if (!Object.is(value, schema.value)) {
+      throw new Error(
+        `${fieldPath}: expected literal ${JSON.stringify(schema.value)}`,
+      );
+    }
+    return;
+  }
+  if (schema.kind === "scalar") {
+    if (typeof value !== schema.type) {
+      throw new Error(`${fieldPath}: expected ${schema.type}`);
+    }
+    return;
+  }
+  if (schema.kind === "nullable") {
+    if (value !== null) validateSchema(value, schema.schema, fieldPath);
+    return;
+  }
+  if (schema.kind === "anyOf") {
+    const errors = [];
+    for (const variant of schema.variants) {
+      try {
+        validateSchema(value, variant, fieldPath);
+        return;
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    throw errors.at(-1);
+  }
+  if (schema.kind === "array") {
+    if (!Array.isArray(value)) {
+      throw new Error(`${fieldPath}: expected array`);
+    }
+    value.forEach((item, index) => {
+      validateSchema(item, schema.item, `${fieldPath}[${index}]`);
+    });
+    return;
+  }
+  if (schema.kind === "object") {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`${fieldPath}: expected object`);
+    }
+    for (const field of Object.keys(schema.fields)) {
+      if (!Object.hasOwn(value, field)) {
+        throw new Error(`${schemaFieldPath(fieldPath, field)}: missing required field`);
+      }
+    }
+    for (const field of Object.keys(value)) {
+      if (!Object.hasOwn(schema.fields, field)) {
+        throw new Error(`${schemaFieldPath(fieldPath, field)}: unexpected field`);
+      }
+    }
+    for (const [field, childSchema] of Object.entries(schema.fields)) {
+      validateSchema(value[field], childSchema, schemaFieldPath(fieldPath, field));
+    }
+    return;
+  }
+  throw new Error(`${fieldPath}: unknown schema kind`);
+}
+
+function schemaFieldPath(fieldPath, field) {
+  return fieldPath === CATALOGUE_PATH
+    ? `${fieldPath} ${field}`
+    : `${fieldPath}.${field}`;
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).toSorted().map((key) => (
+      `${JSON.stringify(key)}:${stableJson(value[key])}`
+    )).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 
 export function inspectRuntimeBoundaries({
   packageJson,
@@ -65,13 +287,27 @@ function findRemoteRuntimeDependencies({ packageJson, sourceFiles, publicFiles }
   }
 
   for (const [filePath, source] of Object.entries(sourceFiles)) {
-    for (const specifier of parseImportSpecifiers(source)) {
-      if (isRemoteUrl(specifier)) {
-        findings.push({ path: filePath, field: "import", value: specifier });
+    const extension = path.posix.extname(filePath).toLowerCase();
+    if (extension === ".css") {
+      for (const value of stylesheetUrls(source)) {
+        findings.push({ path: filePath, field: "asset URL", value });
       }
-    }
-    for (const value of runtimeUrlCalls(source)) {
-      findings.push({ path: filePath, field: "runtime URL", value });
+    } else if ([".html", ".svg"].includes(extension)) {
+      for (const value of attributeUrls(source)) {
+        findings.push({ path: filePath, field: "asset URL", value });
+      }
+    } else if ([".js", ".jsx"].includes(extension)) {
+      for (const specifier of parseImportSpecifiers(source)) {
+        if (isRemoteUrl(specifier)) {
+          findings.push({ path: filePath, field: "import", value: specifier });
+        }
+      }
+      for (const value of runtimeUrlCalls(source)) {
+        findings.push({ path: filePath, field: "runtime URL", value });
+      }
+      for (const value of attributeUrls(source)) {
+        findings.push({ path: filePath, field: "asset URL", value });
+      }
     }
   }
 
@@ -123,14 +359,11 @@ function readQuorumContractHash(sourceFiles, publicFiles) {
   } catch {
     throw new Error(`${CATALOGUE_PATH} schema: invalid JSON`);
   }
-  const catalogueSchema = {
-    contractVersion: catalogue.contract_version,
-    chartSchemaVersion: catalogue.chart_schema_version,
-    topLevelFields: Object.keys(catalogue).toSorted(),
-    chartTypeFields: unionObjectKeys(catalogue.chart_types),
-    chartFields: unionObjectKeys(catalogue.charts),
-  };
-  const payload = JSON.stringify({ protocolSource, catalogueSchema });
+  validateSchema(catalogue, CATALOGUE_SCHEMA, CATALOGUE_PATH);
+  const payload = stableJson({
+    protocolSource,
+    catalogueSchema: CATALOGUE_SCHEMA,
+  });
   return createHash("sha256").update(payload).digest("hex");
 }
 
@@ -205,15 +438,27 @@ function resolveSourceImport(fromPath, specifier, sourceFiles) {
 
 function runtimeUrlCalls(source) {
   const values = [];
-  const pattern = /\b(?:fetch|import)\s*\(\s*["'](https?:\/\/[^"']+)["']/gi;
-  for (const match of source.matchAll(pattern)) values.push(match[1]);
+  const patterns = [
+    /\bfetch\s*\(\s*["'](https?:\/\/[^"']+)["']/gi,
+    /\bnew\s+URL\s*\(\s*["'](https?:\/\/[^"']+)["']/gi,
+    /\b(?:WebSocket|EventSource|Worker|SharedWorker)\s*\(\s*["'](https?:\/\/[^"']+)["']/gi,
+    /\bnavigator\.sendBeacon\s*\(\s*["'](https?:\/\/[^"']+)["']/gi,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) values.push(match[1]);
+  }
   return values;
 }
 
 function attributeUrls(source) {
   const values = [];
-  const pattern = /\b(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']/gi;
-  for (const match of source.matchAll(pattern)) values.push(match[1]);
+  const patterns = [
+    /\b(?:src|href)\s*=\s*["'](https?:\/\/[^"']+)["']/gi,
+    /\b(?:src|href)\s*=\s*\{\s*["'](https?:\/\/[^"']+)["']\s*\}/gi,
+  ];
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) values.push(match[1]);
+  }
   return values;
 }
 
@@ -256,14 +501,6 @@ function jsonRemoteUrls(source, filePath) {
   }
 }
 
-function unionObjectKeys(values) {
-  if (!Array.isArray(values)) return [];
-  return [...new Set(values.flatMap((value) => (
-    value && typeof value === "object" && !Array.isArray(value)
-      ? Object.keys(value)
-      : []
-  )))].toSorted();
-}
 
 function requiredTextFile(files, filePath) {
   const source = files[filePath];
@@ -306,7 +543,7 @@ async function readRepositoryInputs() {
   publicFiles["index.html"] = await readFile("index.html", "utf8");
   return {
     packageJson: JSON.parse(await readFile("package.json", "utf8")),
-    sourceFiles: await readTextTree("src", new Set([".js", ".jsx"])),
+    sourceFiles: await readTextTree("src", new Set([".css", ".html", ".js", ".jsx"])),
     publicFiles,
   };
 }
