@@ -5,6 +5,7 @@ import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
+import UnitOrbit from "./UnitOrbit.jsx";
 
 export default function BuildWorkspace({
   dashboard,
@@ -14,6 +15,7 @@ export default function BuildWorkspace({
   pageDrafts,
   sectionDrafts,
   chartEditor,
+  onCloseChartEditor,
   chartDraftOpen = false,
   mutationsDisabled = false,
   deviceLayout,
@@ -43,6 +45,7 @@ export default function BuildWorkspace({
   const [openSheet, setOpenSheet] = React.useState(null);
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
+  const selectedChart = findSelectedChart(dashboard, selection);
   const inspectorFocusKey = tablet
     ? (openSheet === "inspector" ? focusLabelKey : 0)
     : focusLabelKey;
@@ -63,8 +66,8 @@ export default function BuildWorkspace({
 
   React.useEffect(() => {
     if (!tablet || focusLabelKey <= 0) return;
-    setOpenSheet("inspector");
-  }, [focusLabelKey, tablet]);
+    setOpenSheet(selection?.kind === "chart" ? null : "inspector");
+  }, [focusLabelKey, selection?.kind, tablet]);
 
   const chooseSelection = (next) => {
     if (locked) return;
@@ -72,7 +75,7 @@ export default function BuildWorkspace({
     if (next.pageId && next.pageId !== activePage?.id) {
       onActivePageChange?.(next.pageId);
     }
-    if (tablet) setOpenSheet("inspector");
+    if (tablet) setOpenSheet(next.kind === "chart" ? null : "inspector");
   };
   const open = (name) => {
     if (!locked) setOpenSheet(name);
@@ -98,7 +101,6 @@ export default function BuildWorkspace({
       pageDrafts={pageDrafts}
       sectionDrafts={sectionDrafts}
       disabled={locked}
-      chartEditor={chartEditor}
       focusLabelKey={inspectorFocusKey}
       onDashboardChange={onDashboardChange}
       onPageChange={onPageChange}
@@ -206,6 +208,23 @@ export default function BuildWorkspace({
           {inspector}
         </ModalFocusScope>
       </section>
+      {selection?.kind === "chart" && chartEditor && (
+        <UnitOrbit
+          anchorPlacementId={selection.placementId}
+          chartTitle={selectedChart?.title}
+          onRequestClose={onCloseChartEditor}
+        >
+          {chartEditor}
+        </UnitOrbit>
+      )}
     </main>
   );
+}
+
+function findSelectedChart(dashboard, selection) {
+  if (selection?.kind !== "chart") return null;
+  const page = (dashboard.pages ?? []).find(({ id }) => id === selection.pageId);
+  const section = (page?.sections ?? []).find(({ id }) => id === selection.sectionId);
+  const placement = (section?.panels ?? []).find(({ id }) => id === selection.placementId);
+  return placement?.chart ?? placement ?? null;
 }

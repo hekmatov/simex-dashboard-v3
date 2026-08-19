@@ -16,6 +16,7 @@ function ChartPanel({
   accessibilityEnabled = false,
   suspended = false,
   editMode = false,
+  placementId,
   editDisabled = false,
   isDragging = false,
   isDragTarget = false,
@@ -107,6 +108,8 @@ function ChartPanel({
         isDragTarget ? "drag-target" : "",
       ].filter(Boolean).join(" ")}
       data-panel-id={chart.id}
+      data-build-placement-id={editMode && placementId ? placementId : undefined}
+      tabIndex={editMode && placementId ? -1 : undefined}
       draggable={editMode && !editDisabled}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -116,7 +119,7 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
+            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editDisabled} data-build-edit-for={placementId} onClick={() => {
               if (!editDisabled) onEdit?.();
             }} />
             <IconControl interactionId="shell.start-section" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {

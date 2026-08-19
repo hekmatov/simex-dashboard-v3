@@ -62,6 +62,7 @@ export default function DashboardCanvas({
                       dataSources={dashboard.dataSources}
                       accessibilityEnabled={accessibilityEnabled}
                       editMode={Boolean(buildState)}
+                      placementId={placement.id}
                       editDisabled={Boolean(buildState?.disabled)}
                       isSelected={selected}
                       onEdit={buildState ? () => requestBuildChartSelection(

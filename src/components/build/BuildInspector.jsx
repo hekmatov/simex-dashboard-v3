@@ -7,7 +7,6 @@ export default function BuildInspector({
   pageDrafts = {},
   sectionDrafts = {},
   disabled = false,
-  chartEditor,
   focusLabelKey = 0,
   onDashboardChange,
   onPageChange,
@@ -16,14 +15,22 @@ export default function BuildInspector({
   const labelRef = React.useRef(null);
   const page = (dashboard.pages ?? []).find(({ id }) => id === selection?.pageId);
   const section = (page?.sections ?? []).find(({ id }) => id === selection?.sectionId);
+  const placement = (section?.panels ?? []).find(({ id }) => id === selection?.placementId);
+  const chart = placement?.chart ?? placement;
   const group = (dashboard.timeSyncGroups ?? []).find(({ id }) => id === selection?.groupId);
 
   React.useEffect(() => {
     if (focusLabelKey > 0) labelRef.current?.focus();
   }, [focusLabelKey, selection?.kind, selection?.pageId, selection?.sectionId]);
 
-  if (selection?.kind === "chart" && chartEditor) {
-    return <section className="build-inspector" aria-label="Chart inspector">{chartEditor}</section>;
+  if (selection?.kind === "chart" && chart) {
+    return (
+      <section className="build-inspector build-chart-selection" aria-labelledby="build-inspector-title">
+        <p className="eyebrow">Selected chart</p>
+        <h2 id="build-inspector-title">{chart.title || "Untitled chart"}</h2>
+        <p>Editing in the Unit Orbit attached to this chart.</p>
+      </section>
+    );
   }
   if (selection?.kind === "timeGroup" && group) {
     return <TimeGroupSummary dashboard={dashboard} group={group} />;

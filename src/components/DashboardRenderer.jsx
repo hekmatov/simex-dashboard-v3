@@ -809,6 +809,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           pageDrafts={pageDrafts}
           sectionDrafts={sectionDrafts}
           chartEditor={selectedChartEditor}
+          onCloseChartEditor={cancelSelectedPanel}
           chartDraftOpen={chartAuthoringActive}
           mutationsDisabled={moderatorMutationLocked}
           deviceLayout={deviceLayout}
