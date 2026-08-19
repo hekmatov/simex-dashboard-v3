@@ -924,6 +924,12 @@
     z-index: 1301;
   }
 
+  /* Let empty View action-rail space pass through to the phone crown while
+     retaining direct pointer actions on the rail's own controls. */
+  .canonical-dashboard-frame.view-shell .view-page-actions {
+    pointer-events: none;
+  }
+
   .phone-mode-banner button {
     background: var(--simex-accent);
     border-radius: 2px;

@@ -239,6 +239,20 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
+  const layoutDraftValue = "Phone-preserved Biomedical layout";
+  const pageLayoutControls = page.locator(".build-page-navigation");
+  const editPageLayout = pageLayoutControls
+    .getByRole("button", { name: "Edit Biomedical", exact: true });
+  await editPageLayout.focus();
+  await expect(editPageLayout).toBeFocused();
+  await page.keyboard.press("Enter");
+  const pageLayoutEditor = page.getByRole("complementary", { name: "Edit Page Biomedical" });
+  await pageLayoutEditor.getByLabel("Page name").fill(layoutDraftValue);
+  await pageLayoutEditor.getByRole("button", { name: "Apply", exact: true }).click();
+  const layoutDraft = pageLayoutControls
+    .getByRole("button", { name: layoutDraftValue, exact: true });
+  await expect(layoutDraft).toBeVisible();
+
   const appFrame = page.locator(".app-frame");
   const workspace = page.locator(".build-workspace");
   const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
@@ -251,10 +265,8 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   const editor = page.locator(".chart-editor-v3");
   await editor.getByRole("button", { name: "Appearance", exact: true }).click();
   const chartDraft = editor.getByLabel("Chart title");
-  const layoutDraft = editor.getByLabel("Title alignment");
   const saveChanges = editor.getByRole("button", { name: "Save changes", exact: true });
   await chartDraft.fill("Phone-preserved confirmed cases");
-  await layoutDraft.selectOption("center");
   await chartDraft.click();
   await expect(chartDraft).toBeFocused();
   await expect(saveChanges).toBeEnabled();
@@ -275,20 +287,21 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     .toHaveCount(1);
   await expect(workspace).toHaveCount(1);
   await expect(chartDraft).toBeEnabled();
-  await expect(layoutDraft).toBeEnabled();
   await expect(saveChanges).toBeEnabled();
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await expect(layoutDraft).toHaveValue("center");
+  await expect(layoutDraft).toHaveText(layoutDraftValue);
   await expect(chartDraft).toBeFocused();
   await expect(target).toHaveAttribute("data-build-placement-id", "bio_confirmed_cases");
+  await expect(target).toHaveClass(/\bselected\b/);
   expect(await page.evaluate(() => window.scrollY)).toBe(before.scrollY);
 
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(buildNotice).toBeHidden();
   await expect(workspace).toHaveCount(1);
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await expect(layoutDraft).toHaveValue("center");
+  await expect(layoutDraft).toHaveText(layoutDraftValue);
   await expect(chartDraft).toBeFocused();
+  await expect(target).toHaveClass(/\bselected\b/);
   const after = await page.evaluate(() => {
     const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
     return {
@@ -320,9 +333,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
 
   const presentMode = page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Present", exact: true });
-  await presentMode.focus();
-  await expect(presentMode).toBeFocused();
-  await page.keyboard.press("Enter");
+  await presentMode.click();
   const presentWorkspace = page.locator(".present-workspace");
   await expect(page.locator('[data-phone-mode-notice="present"]')).toBeVisible();
   await expect(presentWorkspace).toHaveCount(1);
