@@ -12,9 +12,6 @@ export default function AudienceDisplay({
     return <AudienceWaiting />;
   }
 
-  const activePage = (dashboard.pages ?? []).find(
-    ({ id }) => id === presentationState.active_page_id,
-  );
   const timeGroup = presentationState.time
     ? (dashboard.timeSyncGroups ?? []).find(
       ({ id }) => id === presentationState.time.group_id,
@@ -26,18 +23,15 @@ export default function AudienceDisplay({
   );
   const facts = presentationState.audience_facts;
   const dashboardName = facts.dashboard_name ? dashboard.title : null;
-  const pageName = facts.page && activePage
-    ? activePage.label ?? activePage.title ?? activePage.id
-    : null;
   const parentName = facts.parent_time_group ? timeGroup?.name ?? null : null;
   const sceneName = null;
   const sceneDate = facts.scene_date
     ? canonicalTime(presentationState.time?.active_epoch_ms)
     : null;
   const sharedHeaderVisible = Boolean(
-    dashboardName || pageName || parentName || sceneName,
+    dashboardName || parentName || sceneName,
   );
-  const context = [pageName, parentName].filter(Boolean);
+  const context = [parentName].filter(Boolean);
 
   return (
     <main

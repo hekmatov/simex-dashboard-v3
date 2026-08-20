@@ -155,6 +155,26 @@ test("Audience facts hide independently, collapse the shared header, and never r
   assert.match(dateOnly, /data-displayed-chart-id="chart-a"/);
 });
 
+test("audience display never renders the page name from legacy audience facts", () => {
+  const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    presentationState: {
+      ...twoChartScene,
+      audience_facts: {
+        dashboard_name: false,
+        page: true,
+        parent_time_group: false,
+        scene_name: false,
+        scene_date: false,
+      },
+    },
+  }));
+
+  assert.doesNotMatch(html, />Biomedical response</);
+  assert.match(html, /data-displayed-chart-id="chart-a"/);
+});
+
 test("audience retains a disconnected scene and blackouts it without unmounting charts or exposing chrome", () => {
   assert.equal(typeof audienceModule?.default, "function", "AudienceDisplay must be implemented");
   const disconnected = renderToStaticMarkup(React.createElement(audienceModule.default, {
