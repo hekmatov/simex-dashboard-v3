@@ -612,7 +612,8 @@ test("section headers preserve wrapped title geometry in View and Build", async 
   const readHeader = () => page.locator("[data-canonical-section-id]").first().evaluate((section, title) => {
     const header = section.querySelector(".section-header");
     const heading = header.querySelector("h2");
-    heading.textContent = title;
+    const titleMeasurement = heading.querySelector('[aria-hidden="true"]') ?? heading;
+    titleMeasurement.textContent = title;
     return {
       headerHeight: header.getBoundingClientRect().height,
       titleHeight: heading.getBoundingClientRect().height,
