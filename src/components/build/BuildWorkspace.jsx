@@ -14,6 +14,7 @@ export default function BuildWorkspace({
   dashboard,
   activePage,
   pageType,
+  buildPanelOpen = false,
   selection,
   dashboardDraft,
   pageDrafts,
@@ -113,6 +114,7 @@ export default function BuildWorkspace({
     <CanonicalDashboardFrame
       mode="build"
       pageType={pageType}
+      buildPanelOpen={buildPanelOpen}
       pageId={activePage?.id}
       dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
       pageContent={(
@@ -137,7 +139,14 @@ export default function BuildWorkspace({
       )}
       footer={<CanonicalDashboardFooter dashboard={dashboard} />}
       overlayLayer={(
-        <div className="build-authoring-layer" data-device-layout={deviceLayout}>
+        <div
+          id="build-authoring-panel"
+          className="build-authoring-layer"
+          data-device-layout={deviceLayout}
+          data-open={buildPanelOpen ? "true" : "false"}
+          aria-hidden={buildPanelOpen ? undefined : "true"}
+          inert={!buildPanelOpen}
+        >
           <BuildPageNavigation
             pages={dashboard.pages}
             activePageId={activePage?.id}

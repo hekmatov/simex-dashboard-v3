@@ -1328,3 +1328,39 @@
     padding: 10px;
   }
 }
+
+/* Build authoring drawer: closed geometry remains canonical; the open desktop
+   state reserves the drawer width instead of covering the dashboard frame. */
+.build-authoring-layer {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(100% + 24px));
+  transition: opacity 160ms ease, transform 180ms ease, visibility 180ms;
+  visibility: hidden;
+}
+
+.build-authoring-layer[data-open="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+@media (min-width: 900px) {
+  .canonical-dashboard-frame.build-workspace {
+    transition: margin-right 180ms ease, width 180ms ease;
+  }
+
+  .canonical-dashboard-frame.build-workspace[data-build-panel-open="true"] {
+    margin-left: auto;
+    margin-right: 404px;
+    width: calc(100% - 416px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build-authoring-layer,
+  .canonical-dashboard-frame.build-workspace {
+    transition: none;
+  }
+}

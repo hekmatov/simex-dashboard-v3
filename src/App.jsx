@@ -96,6 +96,7 @@ export default function App() {
   }));
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
+  const [buildPanelOpen, setBuildPanelOpen] = React.useState(false);
   const [compareSelectionActive, setCompareSelectionActive] = React.useState(false);
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
@@ -220,6 +221,17 @@ export default function App() {
         onClick={openDashboardLook}
       >
         Dashboard look
+      </button>
+      <button
+        type="button"
+        className="secondary build-panel-toggle"
+        aria-controls="build-authoring-panel"
+        aria-expanded={buildPanelOpen}
+        aria-pressed={buildPanelOpen}
+        disabled={modeDisabled}
+        onClick={() => setBuildPanelOpen((open) => !open)}
+      >
+        Build panel
       </button>
     </>
   ) : null;
@@ -966,6 +978,7 @@ export default function App() {
       onResetEditSession={resetEditSession}
       onOpenDashboardLook={openDashboardLook}
       themeProjection={dashboardThemeProjection}
+      buildPanelOpen={buildPanelOpen}
       operationError={operationError}
     />
     <DashboardLookDrawer

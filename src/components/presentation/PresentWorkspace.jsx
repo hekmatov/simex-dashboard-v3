@@ -135,41 +135,6 @@ export default function PresentWorkspace({
               playing={playback.playing}
               themeProjection={themeProjection}
             />
-            <fieldset className="present-audience-information">
-              <legend>Display on audience</legend>
-              <p>Shared information can be hidden without changing its value.</p>
-              {audienceInformation.map((fact) => {
-                const available = Boolean(fact.value);
-                const descriptionId = `present-audience-fact-${fact.key}`;
-                return (
-                  <label
-                    className={`present-audience-fact${available ? "" : " is-unavailable"}`}
-                    key={fact.key}
-                    title={available ? undefined : fact.unavailableReason}
-                  >
-                    <input
-                      type="checkbox"
-                      aria-label={`Display ${fact.label}`}
-                      aria-describedby={descriptionId}
-                      checked={audienceFacts[fact.key] === true}
-                      disabled={!available}
-                      onChange={(event) => setAudienceFactVisible(
-                        fact.key,
-                        event.target.checked,
-                      )}
-                    />
-                    <span>
-                      <strong>{fact.label}</strong>
-                      <small id={descriptionId}>
-                        {fact.value ?? fact.unavailableReason}
-                      </small>
-                    </span>
-                  </label>
-                );
-              })}
-            </fieldset>
-
-            <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
           </div>
           <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">
             <div className="present-panel-heading">
@@ -232,6 +197,40 @@ export default function PresentWorkspace({
               ))}
             </div>
           </section>
+          <fieldset className="present-audience-information">
+            <legend>Display on audience</legend>
+            <p>Shared information can be hidden without changing its value.</p>
+            {audienceInformation.map((fact) => {
+              const available = Boolean(fact.value);
+              const descriptionId = `present-audience-fact-${fact.key}`;
+              return (
+                <label
+                  className={`present-audience-fact${available ? "" : " is-unavailable"}`}
+                  key={fact.key}
+                  title={available ? undefined : fact.unavailableReason}
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={`Display ${fact.label}`}
+                    aria-describedby={descriptionId}
+                    checked={audienceFacts[fact.key] === true}
+                    disabled={!available}
+                    onChange={(event) => setAudienceFactVisible(
+                      fact.key,
+                      event.target.checked,
+                    )}
+                  />
+                  <span>
+                    <strong>{fact.label}</strong>
+                    <small id={descriptionId}>
+                      {fact.value ?? fact.unavailableReason}
+                    </small>
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+          <p className="present-scene-summary">{sceneSummary(activePage, selectedCharts)}</p>
         </aside>
 
         <section className="present-scene-panel" aria-label="Choose charts for the audience scene">

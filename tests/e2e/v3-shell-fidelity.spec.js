@@ -228,7 +228,9 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button")).toHaveCount(2);
+  await expect(pinned.getByRole("button", { name: "Build panel", exact: true }))
+    .toHaveCount(1);
+  await expect(pinned.getByRole("button")).toHaveCount(3);
   await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
     .toHaveCount(0);
   await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))

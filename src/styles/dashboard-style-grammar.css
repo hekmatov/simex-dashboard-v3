@@ -363,9 +363,15 @@
 .app-frame .dashboard-command-pinned-actions > :is(
   .dashboard-look-trigger,
   .build-time-groups,
-  .build-add-page
+  .build-add-page,
+  .build-panel-toggle
 ) {
   background: var(--simex-surface-panel-alt);
+}
+
+.app-frame .dashboard-command-pinned-actions > .build-panel-toggle[aria-pressed="true"] {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
 }
 
 .app-frame .dashboard-command-pinned-actions > .chrono-view-button {
@@ -379,6 +385,14 @@
 
 .app-frame .dashboard-command-pinned-actions > .view-comparison-button {
   background: var(--simex-accent-soft);
+}
+
+.app-frame :is(
+  .canonical-dashboard-frame,
+  .build-authoring-layer,
+  .present-workspace
+) :is(.eyebrow, .subtitle, .dashboard-meta dt) {
+  color: var(--simex-text-muted);
 }
 
 .app-frame .build-authoring-layer {
@@ -406,6 +420,30 @@
   border-radius: var(--simex-style-panel-radius);
   box-shadow: var(--simex-style-panel-shadow);
   color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer button {
+  background: var(--simex-accent);
+  border: 1px solid var(--simex-accent);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-on-accent);
+}
+
+.app-frame .build-authoring-layer button.secondary {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer button.active,
+.app-frame .build-authoring-layer button[aria-current="page"] {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer button:disabled {
+  opacity: 0.55;
 }
 
 .app-frame .build-authoring-layer :is(input, select, textarea) {
@@ -481,6 +519,28 @@
   .audience-snapshot-frame p
 ) {
   color: var(--simex-text-muted);
+}
+
+.app-frame .present-workspace :is(
+  .present-audience-information > p,
+  .present-audience-fact small,
+  .present-audience-fact.is-unavailable,
+  .present-chart-choice.is-unavailable
+) {
+  color: var(--simex-text-muted);
+}
+
+.audience-display :is(
+  .audience-shared-header p,
+  .audience-waiting-ready
+) {
+  color: var(--simex-text-muted);
+}
+
+.audience-display .audience-scene-date {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
 }
 
 .app-frame .present-chart-order {

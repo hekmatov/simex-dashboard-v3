@@ -226,6 +226,98 @@ test("Present gives the audience monitor half the workspace without duplicate Pa
   await expect(page.getByLabel("Display Page")).toHaveCount(0);
 });
 
+test("Build panel toggles from the shared Page row and clears the chart frame", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+
+  const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
+  const look = pinned.getByRole("button", { name: "Dashboard look", exact: true });
+  const toggle = pinned.getByRole("button", { name: "Build panel", exact: true });
+  const drawer = page.locator(".build-authoring-layer");
+  const frame = page.locator(".canonical-dashboard-frame.build-workspace");
+
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(look.evaluate((node) => node.nextElementSibling?.textContent?.trim())).resolves.toBe("Build panel");
+  await expect(drawer).toBeHidden();
+  const closed = await frame.boundingBox();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(drawer).toBeVisible();
+  const openFrame = await frame.boundingBox();
+  const openDrawer = await drawer.boundingBox();
+  expect(openFrame.x + openFrame.width).toBeLessThanOrEqual(openDrawer.x - 8);
+
+  await toggle.click();
+  await expect(drawer).toBeHidden();
+  const restored = await frame.boundingBox();
+  expect(restored).toEqual(closed);
+});
+
+test("Build and Present headings and nested controls shed V2 blue-green paint", async ({ page }) => {
+  await openBiomedicalLook(page);
+  await page.getByLabel("Evidence Ledger", { exact: true }).check();
+  await page.locator('[data-profile-option="evidence-ledger/brighter-vellum"] input').check();
+  await page.getByLabel("Light", { exact: true }).check();
+  const setLook = page.getByRole("button", { name: "Set dashboard look", exact: true });
+  if (await setLook.isEnabled()) await setLook.click();
+  await page.getByRole("dialog", { name: "Dashboard look" })
+    .getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+  const toggle = page.getByRole("button", { name: "Build panel", exact: true });
+  if (await toggle.count()) await toggle.click();
+  await expect(toggle).toHaveCSS("background-color", "rgb(240, 226, 220)");
+
+  const buildPaint = await page.evaluate(() => ({
+    headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
+    workspaceEyebrow: getComputedStyle(document.querySelector(".build-command-title .eyebrow")).color,
+    structureEyebrow: getComputedStyle(document.querySelector(".build-region-heading .eyebrow")).color,
+    structureButton: getComputedStyle(document.querySelector(".build-canvas-toolbar button")).backgroundColor,
+    railButton: getComputedStyle(document.querySelector(".build-structure-list button.secondary")).backgroundColor,
+    panelToggle: getComputedStyle(document.querySelector(".build-panel-toggle")).backgroundColor,
+  }));
+  expect(buildPaint).toEqual({
+    headerEyebrow: "rgb(85, 90, 85)",
+    workspaceEyebrow: "rgb(85, 90, 85)",
+    structureEyebrow: "rgb(85, 90, 85)",
+    structureButton: "rgb(44, 56, 61)",
+    railButton: "rgb(250, 246, 236)",
+    panelToggle: "rgb(240, 226, 220)",
+  });
+
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.locator(".present-displayed-panel .eyebrow"))
+    .toHaveCSS("color", "rgb(85, 90, 85)");
+});
+
+test("Present orders monitor, displayed charts, then options and captures a sharp preview", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Present", exact: true }).click();
+
+  const order = await page.evaluate(() => {
+    const monitor = document.querySelector(".audience-snapshot-monitor");
+    const displayed = document.querySelector(".present-displayed-panel");
+    const options = document.querySelector(".present-audience-information");
+    return {
+      monitorBeforeDisplayed: Boolean(monitor.compareDocumentPosition(displayed) & Node.DOCUMENT_POSITION_FOLLOWING),
+      displayedBeforeOptions: Boolean(displayed.compareDocumentPosition(options) & Node.DOCUMENT_POSITION_FOLLOWING),
+    };
+  });
+  expect(order).toEqual({ monitorBeforeDisplayed: true, displayedBeforeOptions: true });
+
+  const preview = page.locator('.audience-snapshot-frame img[alt="Current audience scene"]');
+  await expect(preview).toBeVisible();
+  await expect.poll(() => preview.evaluate((image) => [image.naturalWidth, image.naturalHeight]))
+    .toEqual([960, 540]);
+});
+
 test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);
@@ -269,6 +361,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
+    await page.getByRole("button", { name: "Build panel", exact: true }).click();
     await expect(page.locator(".build-authoring-layer")).toBeVisible();
     await expect(page.locator(".dashboard-command-pinned-actions .build-time-groups"))
       .toHaveCSS("background-color", style.panelAltPaint);

@@ -89,17 +89,17 @@ export default function AudienceSnapshotMonitor({
         const { default: html2canvas } = await import("html2canvas");
         if (cancelled || !sourceRef.current) return;
         const canvas = await html2canvas(sourceRef.current, {
-          backgroundColor: "#f7f9fc",
+          backgroundColor: captureSource.themeProjection.cssVariables["--simex-surface-canvas"] ?? "#f7f9fc",
           height: 720,
           logging: false,
-          scale: 0.25,
+          scale: 0.75,
           useCORS: true,
           width: 1280,
           windowHeight: 720,
           windowWidth: 1280,
         });
         if (!cancelled) {
-          setImageUrl(canvas.toDataURL("image/jpeg", 0.78));
+          setImageUrl(canvas.toDataURL("image/jpeg", 0.86));
           setCaptureUnavailable(false);
         }
       } catch {

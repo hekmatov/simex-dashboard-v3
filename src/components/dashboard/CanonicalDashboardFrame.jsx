@@ -4,6 +4,7 @@ export default function CanonicalDashboardFrame({
   mode,
   pageType,
   pageId,
+  buildPanelOpen = false,
   dashboardHeader,
   pageContent,
   overlayLayer,
@@ -15,6 +16,7 @@ export default function CanonicalDashboardFrame({
       data-canonical-page-id={pageId}
       data-canonical-mode={mode}
       data-page-type={pageType}
+      data-build-panel-open={mode === "build" ? String(buildPanelOpen) : undefined}
     >
       <div className="canonical-dashboard-header">{dashboardHeader}</div>
       <div className="canonical-dashboard-content">{pageContent}</div>

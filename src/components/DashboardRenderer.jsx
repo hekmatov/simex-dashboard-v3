@@ -69,6 +69,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onExportConfig,
   onResetEditSession,
   onOpenDashboardLook,
+  buildPanelOpen = false,
   operationError = "",
   themeProjection,
 }, ref) {
@@ -876,6 +877,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           dashboard={dashboard}
           activePage={activePage}
           pageType={landingActive ? "landing" : "analytical"}
+          buildPanelOpen={buildPanelOpen}
           selection={buildSelection}
           dashboardDraft={dashboardDraft}
           pageDrafts={pageDrafts}

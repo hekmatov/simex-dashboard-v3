@@ -445,6 +445,7 @@
     overflow: hidden;
     position: sticky;
     top: 16px;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
   }
 
   .present-displayed-panel {
