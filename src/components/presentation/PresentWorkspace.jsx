@@ -7,7 +7,6 @@ import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
 export default function PresentWorkspace({
   dashboard,
   activePageId,
-  onActivePageChange,
   onModeRequest,
   onOpenDashboardLook,
   runtime,
@@ -53,7 +52,6 @@ export default function PresentWorkspace({
   const atLastTime = !hasClock || playback.activeIndex >= playback.clock.length - 1;
   const audienceInformation = audienceInformationRows({
     dashboard,
-    activePage,
     activeGroup: playback.activeGroup,
     activeEpochMs: playback.activeEpochMs,
   });
@@ -137,21 +135,6 @@ export default function PresentWorkspace({
               playing={playback.playing}
               themeProjection={themeProjection}
             />
-            <label className="present-field">
-              <span>Current page</span>
-              <select
-                aria-label="Current page"
-                value={activePage?.id ?? ""}
-                onChange={(event) => onActivePageChange?.(event.target.value)}
-              >
-                {(dashboard?.pages ?? []).map((page) => (
-                  <option key={page.id} value={page.id}>
-                    {page.label ?? page.title ?? page.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <fieldset className="present-audience-information">
               <legend>Display on audience</legend>
               <p>Shared information can be hidden without changing its value.</p>
@@ -386,7 +369,6 @@ export default function PresentWorkspace({
 
 function audienceInformationRows({
   dashboard,
-  activePage,
   activeGroup,
   activeEpochMs,
 }) {
@@ -396,12 +378,6 @@ function audienceInformationRows({
       label: "Dashboard name",
       value: optionalText(dashboard?.title),
       unavailableReason: "This dashboard has no name.",
-    },
-    {
-      key: "page",
-      label: "Page",
-      value: optionalText(activePage?.label ?? activePage?.title ?? activePage?.id),
-      unavailableReason: "No Page is selected.",
     },
     {
       key: "parent_time_group",

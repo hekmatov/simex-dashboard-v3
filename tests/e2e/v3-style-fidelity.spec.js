@@ -211,6 +211,21 @@ test("native Dark charts yield legacy white defaults to profile surfaces", async
     .toHaveCSS("background-color", "rgb(22, 33, 38)");
 });
 
+test("Present gives the audience monitor half the workspace without duplicate Page controls", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Present", exact: true }).click();
+
+  const widths = await page.evaluate(() => ({
+    context: document.querySelector(".present-context-panel").getBoundingClientRect().width,
+    scene: document.querySelector(".present-scene-panel").getBoundingClientRect().width,
+  }));
+  expect(Math.abs(widths.context - widths.scene)).toBeLessThanOrEqual(1);
+  await expect(page.getByLabel("Current page")).toHaveCount(0);
+  await expect(page.getByLabel("Display Page")).toHaveCount(0);
+});
+
 test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);

@@ -145,13 +145,14 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /Display on audience/);
   for (const label of [
     "Dashboard name",
-    "Page",
     "Parent Time Group",
     "Scene name",
     "Scene date",
   ]) {
     assert.match(html, new RegExp(`>${label}<`));
   }
+  assert.doesNotMatch(html, /aria-label="Current page"/);
+  assert.doesNotMatch(html, /aria-label="Display Page"/);
   assert.match(html, /Response overview/);
   assert.match(html, /Biomedical/);
   assert.match(html, /aria-label="Display Scene name"[^>]*disabled=""/);

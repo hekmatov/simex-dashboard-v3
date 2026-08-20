@@ -527,7 +527,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   const presentWorkspace = page.locator(".present-workspace");
   await expect(page.locator('[data-phone-mode-notice="present"]')).toBeVisible();
   await expect(presentWorkspace).toHaveCount(1);
-  await expect(presentWorkspace.getByLabel("Current page")).toBeEnabled();
+  await expect(presentWorkspace.getByLabel("Current page")).toHaveCount(0);
   const blackout = presentWorkspace.getByRole("button", { name: "Blackout", exact: true });
   const restore = presentWorkspace.getByRole("button", { name: "Restore", exact: true });
   await expect(blackout).toBeEnabled();

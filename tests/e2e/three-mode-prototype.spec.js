@@ -30,7 +30,9 @@ test("View, Build, and Present remain visible while preserving the active page",
     .toHaveAttribute("aria-current", "page");
 
   await modes.getByRole("button", { name: "Present" }).click();
-  await expect(page.getByLabel("Current page")).toHaveValue("biomedical");
+  await expect(page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }))
+    .toHaveAttribute("aria-current", "page");
 
   await modes.getByRole("button", { name: "View" }).click();
   await expect(page.getByRole("navigation", { name: "Dashboard pages" })
