@@ -252,7 +252,16 @@
   border-bottom: 1px solid var(--simex-border-subtle);
   border-radius: 0;
   box-shadow: none;
-  padding: 22px 18px 14px;
+  padding: 10px 18px 8px;
+}
+
+.app-frame .canonical-dashboard-frame .section-title-block {
+  display: grid;
+  gap: 0;
+}
+
+.app-frame .canonical-dashboard-frame .section-title-block > p {
+  margin-top: 4px;
 }
 
 .app-frame .canonical-dashboard-frame .dashboard-section:not(:first-child) > .section-header {
@@ -261,7 +270,7 @@
 
 .app-frame .canonical-dashboard-frame .dashboard-section > .layout-grid {
   gap: 16px;
-  padding: 18px;
+  padding: 16px 18px 18px;
 }
 
 .app-frame .canonical-dashboard-frame .chart-panel {

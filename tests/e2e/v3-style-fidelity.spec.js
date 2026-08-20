@@ -135,7 +135,7 @@ test("native style signatures resolve real shell, section, panel, and control pa
         panel: take(css("[data-canonical-panel-id]"), ["borderRadius", "boxShadow", "borderTopWidth", "borderTopStyle", "padding"]),
         control: take(css('[data-command-crown-pinned-actions="true"] .dashboard-look-trigger'), ["borderRadius"]),
         header: take(css("[data-canonical-section-id] .section-header"), ["padding", "borderBottomWidth", "borderBottomStyle", "backgroundColor"]),
-        grid: take(css("[data-canonical-section-id] > .layout-grid"), ["padding", "columnGap", "rowGap"]),
+        grid: take(css("[data-canonical-section-id] > .layout-grid"), ["paddingTop", "columnGap", "rowGap"]),
         headerBottomToPanelBorder: panelRect.top - headerRect.bottom,
       };
     });
@@ -154,14 +154,52 @@ test("native style signatures resolve real shell, section, panel, and control pa
     });
     expect(metrics.control).toEqual({ borderRadius: style.controlRadius });
     expect(metrics.header).toEqual({
-      padding: "22px 18px 14px",
+      padding: "10px 18px 8px",
       borderBottomWidth: "1px",
       borderBottomStyle: "solid",
       backgroundColor: style.sectionPaint,
     });
-    expect(metrics.grid).toEqual({ padding: "18px", columnGap: "16px", rowGap: "16px" });
-    expect(metrics.headerBottomToPanelBorder).toBe(18);
+    expect(metrics.grid).toEqual({ paddingTop: "16px", columnGap: "16px", rowGap: "16px" });
+    expect(metrics.headerBottomToPanelBorder).toBe(16);
   }
+});
+
+test("section headers adapt only to title and description content", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/");
+
+  const metrics = await page.evaluate(() => {
+    const section = document.querySelector("[data-canonical-section-id]");
+    const header = section.querySelector(".section-header");
+    const title = header.querySelector("h2");
+    const description = header.querySelector("p");
+    const lineHeight = Number.parseFloat(getComputedStyle(title).lineHeight);
+    const oneLineHeight = header.getBoundingClientRect().height;
+    const originalTitle = title.textContent;
+    const originalDescription = description.textContent;
+
+    title.textContent = "Medication patterns, longitudinal outcomes, and service demand across the enrolled study population";
+    const wrappedHeight = header.getBoundingClientRect().height;
+
+    description.remove();
+    const withoutDescriptionHeight = header.getBoundingClientRect().height;
+    description.textContent = originalDescription;
+    header.querySelector(".section-title-block").append(description);
+    const restoredDescriptionHeight = header.getBoundingClientRect().height;
+    title.textContent = originalTitle;
+
+    return {
+      lineHeight,
+      titleHeightDelta: wrappedHeight - oneLineHeight,
+      descriptionHeightDelta: restoredDescriptionHeight - withoutDescriptionHeight,
+      descriptionHeight: description.getBoundingClientRect().height,
+      descriptionGap: Number.parseFloat(getComputedStyle(description).marginTop),
+    };
+  });
+
+  expect(metrics.titleHeightDelta).toBe(metrics.lineHeight);
+  expect(metrics.descriptionGap).toBe(4);
+  expect(metrics.descriptionHeightDelta).toBe(metrics.descriptionHeight + 4);
 });
 
 test("Humanist contours retain accepted translucency and steady shell elevation", async ({ page }) => {

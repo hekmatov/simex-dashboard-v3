@@ -1284,17 +1284,15 @@
   position: relative;
 }
 
-.canonical-dashboard-frame .build-section-header h2 {
-  height: 1.2em;
-}
-
 .canonical-dashboard-frame .build-section-title-button {
   border: 1px solid transparent;
   line-height: inherit;
-  margin-block: calc((1.2em - 44px) / 2);
   min-height: 44px;
   min-width: 44px;
   padding: 2px 4px;
+  position: absolute;
+  top: 0;
+  left: 14px;
 }
 
 .canonical-dashboard-frame .build-section-actions,
