@@ -601,3 +601,30 @@ function readApprovedTokenMatrix(html) {
     ))],
   )));
 }
+test("section headers preserve wrapped title geometry in View and Build", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+
+  const wrappedTitle = "Medication patterns, longitudinal outcomes, and service demand across the enrolled study population";
+  const readHeader = () => page.locator("[data-canonical-section-id]").first().evaluate((section, title) => {
+    const header = section.querySelector(".section-header");
+    const heading = header.querySelector("h2");
+    heading.textContent = title;
+    return {
+      headerHeight: header.getBoundingClientRect().height,
+      titleHeight: heading.getBoundingClientRect().height,
+    };
+  }, wrappedTitle);
+
+  const view = await readHeader();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  const build = await readHeader();
+
+  expect(build.titleHeight).toBe(view.titleHeight);
+  expect(build.headerHeight).toBe(view.headerHeight);
+});

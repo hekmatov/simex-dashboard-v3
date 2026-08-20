@@ -286,6 +286,7 @@ function BuildSectionHeader({
           </label>
         ) : (
           <h2>
+            <span aria-hidden="true">{title}</span>
             <button
               ref={titleButtonRef}
               type="button"

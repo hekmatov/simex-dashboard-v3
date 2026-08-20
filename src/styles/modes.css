@@ -1286,6 +1286,7 @@
 
 .canonical-dashboard-frame .build-section-title-button {
   border: 1px solid transparent;
+  color: transparent;
   line-height: inherit;
   min-height: 44px;
   min-width: 44px;
