@@ -351,3 +351,139 @@
   border-radius: var(--simex-style-panel-radius);
   box-shadow: var(--simex-style-panel-shadow);
 }
+
+/* Selected-look propagation for shared mode chrome. These selectors are
+   intentionally late so the accepted style grammar wins over legacy mode CSS. */
+.app-frame .dashboard-command-pinned-actions > :is(button, select) {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .dashboard-command-pinned-actions > :is(
+  .dashboard-look-trigger,
+  .build-time-groups,
+  .build-add-page
+) {
+  background: var(--simex-surface-panel-alt);
+}
+
+.app-frame .dashboard-command-pinned-actions > .chrono-view-button {
+  background: var(--simex-surface-panel);
+}
+
+.app-frame .dashboard-command-pinned-actions > .chrono-view-button[aria-pressed="true"] {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+}
+
+.app-frame .dashboard-command-pinned-actions > .view-comparison-button {
+  background: var(--simex-accent-soft);
+}
+
+.app-frame .build-authoring-layer {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer :is(
+  .build-page-tabs,
+  .build-command-area,
+  .build-canvas-toolbar
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: none;
+}
+
+.app-frame .build-authoring-layer .build-side-sheet {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer :is(input, select, textarea) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace {
+  background: var(--simex-surface-canvas);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-status-strip {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-shell-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.present-context-panel, .present-scene-panel) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-panel-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(
+  .audience-snapshot-frame,
+  .present-selected-chart,
+  .present-chart-group
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-action-dock {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace :is(input, select, textarea) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace button {
+  background: var(--simex-accent);
+  border: 1px solid var(--simex-accent);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-on-accent);
+}
+
+.app-frame .present-workspace button.secondary,
+.app-frame .present-status-strip .dashboard-look-trigger {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace :is(
+  .present-status-strip p,
+  .present-scene-summary,
+  .present-holding-scene,
+  .present-chart-limit-status,
+  .audience-snapshot-heading > span,
+  .audience-snapshot-frame p
+) {
+  color: var(--simex-text-muted);
+}
+
+.app-frame .present-chart-order {
+  background: var(--simex-accent);
+  color: var(--simex-on-accent);
+}

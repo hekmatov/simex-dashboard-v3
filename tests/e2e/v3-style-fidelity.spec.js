@@ -5,25 +5,34 @@ const NATIVE_STYLES = Object.freeze([
   Object.freeze({
     id: "evidence-ledger", label: "Evidence Ledger",
     profile: "evidence-ledger/brighter-vellum",
-    shellRadius: "0px", panelRadius: "2px", controlRadius: "2px",
+    shellRadius: "0px", surfaceRadius: "2px", panelRadius: "2px", controlRadius: "2px",
     panelShadow: "none", shellShadow: "none",
     sectionPaint: "rgb(247, 242, 232)",
+    canvasPaint: "rgb(247, 242, 232)", panelPaint: "rgb(255, 253, 248)",
+    panelAltPaint: "rgb(250, 246, 236)", accentSoftPaint: "rgb(232, 228, 218)",
+    textPaint: "rgb(29, 37, 41)", borderPaint: "rgb(183, 176, 162)",
   }),
   Object.freeze({
     id: "humanist-standard", label: "Humanist Standard",
     profile: "humanist-standard/common-ground",
-    shellRadius: "18px", panelRadius: "14px", controlRadius: "10px",
+    shellRadius: "18px", surfaceRadius: "18px", panelRadius: "14px", controlRadius: "10px",
     panelShadow: "rgba(36, 57, 52, 0.1) 0px 8px 20px 0px",
     shellShadow: "rgba(25, 55, 48, 0.12) 0px 16px 38px 0px",
     sectionPaint: "color(srgb 0.946824 0.964549 0.949804)",
+    canvasPaint: "rgb(240, 245, 241)", panelPaint: "rgb(252, 253, 251)",
+    panelAltPaint: "rgb(242, 247, 243)", accentSoftPaint: "rgb(220, 235, 229)",
+    textPaint: "rgb(29, 43, 42)", borderPaint: "rgb(183, 197, 191)",
   }),
   Object.freeze({
     id: "signal-instrument", label: "Signal + Instrument",
     profile: "signal-instrument/calibrated-steel",
-    shellRadius: "6px", panelRadius: "4px", controlRadius: "3px",
+    shellRadius: "6px", surfaceRadius: "6px", panelRadius: "4px", controlRadius: "3px",
     panelShadow: "rgba(19, 38, 45, 0.14) 0px 1px 2px 0px, rgba(255, 255, 255, 0.55) 0px 1px 0px 0px inset",
     shellShadow: "rgba(19, 38, 45, 0.14) 0px 4px 12px 0px, rgba(255, 255, 255, 0.45) 0px 1px 0px 0px inset",
     sectionPaint: "color(srgb 0.925882 0.94549 0.946902)",
+    canvasPaint: "rgb(232, 237, 239)", panelPaint: "rgb(248, 250, 249)",
+    panelAltPaint: "rgb(237, 242, 242)", accentSoftPaint: "rgb(215, 230, 232)",
+    textPaint: "rgb(23, 37, 43)", borderPaint: "rgb(170, 185, 189)",
   }),
 ]);
 
@@ -202,6 +211,136 @@ test("native Dark charts yield legacy white defaults to profile surfaces", async
     .toHaveCSS("background-color", "rgb(22, 33, 38)");
 });
 
+test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {
+  for (const style of NATIVE_STYLES) {
+    await openBiomedicalLook(page);
+    await page.getByLabel(style.label, { exact: true }).check();
+    await page.locator(`[data-profile-option="${style.profile}"] input`).check();
+    await page.getByLabel("Light", { exact: true }).check();
+
+    const setLook = page.getByRole("button", { name: "Set dashboard look", exact: true });
+    if (await setLook.isEnabled()) await setLook.click();
+    await page.getByRole("dialog", { name: "Dashboard look" })
+      .getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByLabel("Dashboard mode")
+      .getByRole("button", { name: "View", exact: true }).click();
+    await expect(page.locator(".view-shell")).toBeVisible();
+    await expect(page.locator(".dashboard-command-pinned-actions .dashboard-look-trigger"))
+      .toHaveCSS("background-color", style.panelAltPaint);
+
+    const viewChrome = await readChrome(page, {
+      dashboardLook: ".dashboard-command-pinned-actions .dashboard-look-trigger",
+      chrono: ".dashboard-command-pinned-actions .chrono-view-button",
+      compare: ".dashboard-command-pinned-actions .view-comparison-button",
+    });
+    expect(viewChrome.dashboardLook).toMatchObject({
+      backgroundColor: style.panelAltPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+    expect(viewChrome.chrono).toMatchObject({
+      backgroundColor: style.panelPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+    expect(viewChrome.compare).toMatchObject({
+      backgroundColor: style.accentSoftPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+
+    await page.getByLabel("Dashboard mode")
+      .getByRole("button", { name: "Build", exact: true }).click();
+    await expect(page.locator(".build-authoring-layer")).toBeVisible();
+    await expect(page.locator(".dashboard-command-pinned-actions .build-time-groups"))
+      .toHaveCSS("background-color", style.panelAltPaint);
+    const buildChrome = await readChrome(page, {
+      layer: ".build-authoring-layer",
+      structure: ".build-authoring-layer .build-structure-sheet",
+      inspector: ".build-authoring-layer .build-inspector-sheet",
+      look: ".dashboard-command-pinned-actions .dashboard-look-trigger",
+      timeGroups: ".dashboard-command-pinned-actions .build-time-groups",
+    });
+    expect(buildChrome.layer).toMatchObject({
+      backgroundColor: style.panelPaint,
+      borderRadius: style.surfaceRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+    for (const surface of [buildChrome.structure, buildChrome.inspector]) {
+      expect(surface).toMatchObject({
+        backgroundColor: style.panelAltPaint,
+        borderRadius: style.panelRadius,
+        borderTopColor: style.borderPaint,
+        color: style.textPaint,
+      });
+    }
+    for (const control of [buildChrome.look, buildChrome.timeGroups]) {
+      expect(control).toMatchObject({
+        backgroundColor: style.panelAltPaint,
+        borderRadius: style.controlRadius,
+        borderTopColor: style.borderPaint,
+        color: style.textPaint,
+      });
+    }
+
+    await page.getByLabel("Dashboard mode")
+      .getByRole("button", { name: "Present", exact: true }).click();
+    await expect(page.locator(".present-workspace")).toBeVisible();
+    await expect(page.locator(".present-status-strip .dashboard-look-trigger"))
+      .toHaveCSS("background-color", style.panelAltPaint);
+    const presentChrome = await readChrome(page, {
+      workspace: ".present-workspace",
+      status: ".present-status-strip",
+      context: ".present-context-panel",
+      scene: ".present-scene-panel",
+      snapshot: ".audience-snapshot-frame",
+      group: ".present-chart-group",
+      dock: ".present-action-dock",
+      look: ".present-status-strip .dashboard-look-trigger",
+    });
+    expect(presentChrome.workspace).toMatchObject({
+      backgroundColor: style.canvasPaint,
+      color: style.textPaint,
+    });
+    expect(presentChrome.status).toMatchObject({
+      backgroundColor: style.panelPaint,
+      borderRadius: style.surfaceRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+    for (const surface of [presentChrome.context, presentChrome.scene]) {
+      expect(surface).toMatchObject({
+        backgroundColor: style.panelPaint,
+        borderRadius: style.panelRadius,
+        borderTopColor: style.borderPaint,
+        color: style.textPaint,
+      });
+    }
+    for (const surface of [presentChrome.snapshot, presentChrome.group]) {
+      expect(surface).toMatchObject({
+        backgroundColor: style.panelAltPaint,
+        borderRadius: style.controlRadius,
+        borderTopColor: style.borderPaint,
+      });
+    }
+    expect(presentChrome.dock).toMatchObject({
+      backgroundColor: style.panelPaint,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+    expect(presentChrome.look).toMatchObject({
+      backgroundColor: style.panelAltPaint,
+      borderRadius: style.controlRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+  }
+});
+
 test("all 15 profiles project every approved Light and Dark palette token", async ({ page }) => {
   await openBiomedicalLook(page);
   const appFrame = page.locator(".app-frame");
@@ -269,6 +408,21 @@ async function openBiomedicalLook(page) {
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
+}
+
+async function readChrome(page, selectors) {
+  return page.evaluate((entries) => Object.fromEntries(Object.entries(entries).map(
+    ([name, selector]) => {
+      const style = getComputedStyle(document.querySelector(selector));
+      return [name, {
+        backgroundColor: style.backgroundColor,
+        borderRadius: style.borderRadius,
+        borderTopColor: style.borderTopColor,
+        boxShadow: style.boxShadow,
+        color: style.color,
+      }];
+    },
+  )), selectors);
 }
 
 function rgb(hex) {
