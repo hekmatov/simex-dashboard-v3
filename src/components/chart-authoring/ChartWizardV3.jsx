@@ -38,6 +38,7 @@ import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
+const noop = () => {};
 
 const STEP_TITLES = Object.freeze({
   type: "Choose the chart format",
@@ -85,6 +86,7 @@ export default function ChartWizardV3({
   existingCharts = [],
   disabled = false,
   onClose,
+  onDirtyChange = noop,
   onCreate,
 }) {
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
@@ -157,6 +159,20 @@ export default function ChartWizardV3({
     setSubmissionError("");
     setPendingSourceUi(null);
   }, [open]);
+
+  const dirty = isChartWizardStateDirty({
+    open,
+    wizard,
+    sourceKind,
+    manualTable,
+    localRows,
+  });
+  React.useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+  React.useEffect(() => (
+    () => onDirtyChange(false)
+  ), [onDirtyChange]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -729,6 +745,23 @@ export default function ChartWizardV3({
       },
       disabled: disabled || submitting,
     }),
+  );
+}
+
+export function isChartWizardStateDirty({
+  open = false,
+  wizard,
+  sourceKind = "",
+  manualTable = null,
+  localRows = {},
+} = {}) {
+  if (!open || wizard?.closed) return false;
+  return Boolean(
+    wizard?.draft
+    || wizard?.source
+    || sourceKind
+    || manualTable
+    || Object.keys(localRows ?? {}).length > 0
   );
 }
 

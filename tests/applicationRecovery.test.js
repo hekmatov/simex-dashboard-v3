@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
@@ -11,9 +10,10 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: ApplicationRecovery }, recoveryModel] = await Promise.all([
+const [{ default: ApplicationRecovery }, recoveryModel, { default: BuildWorkspace }] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/ApplicationRecovery.jsx"),
   vite.ssrLoadModule("/src/lib/applicationRecovery.js"),
+  vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
 ]);
 await vite.close();
 
@@ -73,10 +73,33 @@ test("failed recovery hydration leaves storage untouched and maps package errors
   );
 });
 
-test("Build does not expose package actions before the Scenario Passport owns their consequences", async () => {
-  const source = await readFile(
-    new URL("../src/components/build/BuildWorkspace.jsx", import.meta.url),
-    "utf8",
-  );
-  assert.doesNotMatch(source, />Import<\/button>|>Export<\/button>|onImport|onExport/);
+test("Build exposes visible package controls with the approved SimEx icons", () => {
+  const page = {
+    id: "home",
+    label: "Home",
+    title: "Home",
+    sections: [{ id: "overview", title: "Overview", panels: [] }],
+  };
+  const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {
+    dashboard: {
+      id: "dashboard",
+      title: "Dashboard",
+      pages: [page],
+      timeSyncGroups: [],
+      dataSources: {},
+    },
+    activePage: page,
+    pageType: "analytical",
+    dashboardDraft: {},
+    pageDrafts: {},
+    sectionDrafts: {},
+    deviceLayout: "auto",
+    onImportPackage() {},
+    onExportPackage() {},
+  }));
+
+  assert.match(html, />Import package<\/span>/);
+  assert.match(html, />Export package<\/span>/);
+  assert.match(html, /data-icon-id="import"/);
+  assert.match(html, /data-icon-id="export"/);
 });

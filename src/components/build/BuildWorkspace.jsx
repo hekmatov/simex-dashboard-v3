@@ -1,6 +1,7 @@
 import React from "react";
 
 import DeviceLayoutControl from "../DeviceLayoutControl.jsx";
+import { SimExIcon } from "../common/SimExIcon.js";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "../dashboard/CanonicalDashboardFrame.jsx";
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
@@ -47,6 +48,8 @@ export default function BuildWorkspace({
   onAddChart,
   onFinish,
   onReset,
+  onImportPackage,
+  onExportPackage,
   onOpenBackground,
   onDeviceLayoutChange,
   onDisplayAction,
@@ -210,6 +213,16 @@ export default function BuildWorkspace({
             <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
             <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
+            <div className="build-package-actions" aria-label="Dashboard packages">
+              <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onMouseDown={(event) => event.preventDefault()} onClick={onImportPackage}>
+                <SimExIcon iconId="import" size={18} />
+                <span>Import package</span>
+              </button>
+              <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onClick={onExportPackage}>
+                <SimExIcon iconId="export" size={18} />
+                <span>Export package</span>
+              </button>
+            </div>
             <fieldset className="build-device-layout-fieldset" disabled={locked}>
               <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
             </fieldset>

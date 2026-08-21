@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+
+import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 
 async function openBuildStructure(page) {
   await page.setViewportSize({ width: 1200, height: 900 });
@@ -11,6 +14,33 @@ async function openBuildStructure(page) {
     .click();
   await page.getByRole("button", { name: "Build panel", exact: true }).click();
   await expect(page.getByRole("tree")).toBeVisible();
+}
+
+async function packageFixture() {
+  const config = JSON.parse(await readFile(
+    new URL("../../public/config/dashboard.json", import.meta.url),
+    "utf8",
+  ));
+  config.datasetProfiles = JSON.parse(await readFile(
+    new URL("../../public/config/dataset-profiles.json", import.meta.url),
+    "utf8",
+  ));
+  const importedPage = structuredClone(
+    config.pages.find(({ id }) => id === "biomedical"),
+  );
+  importedPage.id = "imported_package_page";
+  importedPage.label = "Imported Package Page";
+  importedPage.title = "Imported Package Page";
+  importedPage.sections[0].title = "Imported Section";
+  const firstPlacement = importedPage.sections[0].panels[0];
+  (firstPlacement.chart ?? firstPlacement).title = "Imported Panel";
+  config.id = "imported-package-dashboard";
+  config.title = "Imported package dashboard";
+  config.pages = [importedPage];
+  config.timeSyncGroups = [];
+  return serializeDashboardBundle(config, {
+    now: "2026-08-21T09:10:11.000Z",
+  });
 }
 
 test("cross-page tree selection reveals the canonical target before opening Unit Orbit", async ({ page }) => {
@@ -152,4 +182,82 @@ test("a rejected delayed Page rename retains the inline value for retry", async 
 
   await expect(rename).toBeVisible();
   await expect(rename).toHaveValue("Rejected rename");
+});
+
+test("package import skips cosmetic warnings and reviews the manifest before atomic load", async ({ page }) => {
+  await openBuildStructure(page);
+  const fixture = await packageFixture();
+  const importedTab = page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Imported Package Page", exact: true });
+
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await look.locator('input[name="dashboard-style"]').nth(1).check();
+  await look.getByRole("button", { name: /Use Humanist Standard Signature/i }).click();
+  await look.getByRole("button", { name: "Set dashboard look", exact: true }).click();
+  await expect(look.getByText("Dashboard look set.", { exact: true })).toBeVisible();
+  await look.getByRole("button", { name: "Close", exact: true }).click();
+
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  const chooser = await chooserPromise;
+  await expect(page.getByText(
+    "Unsaved changes to this dashboard will be lost.", { exact: true },
+  )).toHaveCount(0);
+  await chooser.setFiles({
+    name: "imported-dashboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(fixture)),
+  });
+
+  const review = page.getByRole("dialog", { name: "Review package contents" });
+  await expect(review).toBeVisible();
+  await expect(review.locator("time")).toHaveAttribute(
+    "datetime",
+    "2026-08-21T09:10:11.000Z",
+  );
+  await expect(review.getByText("Page: Imported Package Page", { exact: true })).toBeVisible();
+  await expect(review.getByText("Section: Imported Section", { exact: true })).toBeVisible();
+  await expect(review.getByText("Panel: Imported Panel", { exact: true })).toBeVisible();
+  await expect(importedTab).toHaveCount(0);
+
+  await review.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(review).toHaveCount(0);
+  await expect(importedTab).toHaveCount(0);
+
+  const secondChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  const secondChooser = await secondChooserPromise;
+  await secondChooser.setFiles({
+    name: "imported-dashboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(fixture)),
+  });
+  const secondReview = page.getByRole("dialog", { name: "Review package contents" });
+  await expect(secondReview).toBeVisible();
+  await expect(importedTab).toHaveCount(0);
+  await secondReview.getByRole("button", { name: "Load package", exact: true }).click();
+  await expect(secondReview).toHaveCount(0);
+  await expect(importedTab).toBeVisible();
+});
+
+test("cancelling the authored-content import warning preserves inline rename state", async ({ page }) => {
+  await openBuildStructure(page);
+  const tree = page.getByRole("tree");
+  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
+  await rename.fill("Pending package-safe rename");
+
+  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
+  await expect(warning.getByText(
+    "Unsaved changes to this dashboard will be lost.", { exact: true },
+  )).toBeVisible();
+  await warning.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await expect(rename).toBeVisible();
+  await expect(rename).toHaveValue("Pending package-safe rename");
+  await expect(rename.locator("xpath=..")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".canonical-dashboard-frame"))
+    .toHaveAttribute("data-canonical-page-id", "socio_economic");
 });

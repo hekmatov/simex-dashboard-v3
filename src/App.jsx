@@ -3,6 +3,7 @@ import React from "react";
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
 import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
   reorderPage,
@@ -25,6 +26,7 @@ import {
   recoveryPackageError,
   recoveryPackageSummary,
 } from "./lib/applicationRecovery.js";
+import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -88,6 +90,9 @@ export default function App() {
   const [recoveryBusy, setRecoveryBusy] = React.useState(false);
   const [recoveryError, setRecoveryError] = React.useState("");
   const [recoveryImportCandidate, setRecoveryImportCandidate] = React.useState(null);
+  const [packageImportCandidate, setPackageImportCandidate] = React.useState(null);
+  const [packageImportBusy, setPackageImportBusy] = React.useState(false);
+  const [packageImportError, setPackageImportError] = React.useState("");
   const [mode, setMode] = React.useState(() => resolveInitialDashboardMode({
     storedMode: dashboardEntry.surface === "workspace"
       ? readDashboardModePreference()
@@ -765,15 +770,39 @@ export default function App() {
     });
   }
 
-  function importConfig(file) {
-    if (!file) return;
-    file.text()
-      .then((text) => parseDashboardBundle(text))
-      .then((config) => commitConfiguration(config))
-      .then(() => setOperationError(""))
-      .catch((importError) => setOperationError(
-        `Could not import dashboard bundle: ${importError.message}`,
-      ));
+  async function inspectImportPackage(file) {
+    if (!file) return null;
+    setPackageImportError("");
+    try {
+      const candidate = parseDashboardPackageCandidate(await file.text());
+      setPackageImportCandidate(candidate);
+      setOperationError("");
+      return candidate;
+    } catch (importError) {
+      setPackageImportCandidate(null);
+      setOperationError(`Could not import dashboard bundle: ${importError.message}`);
+      return null;
+    }
+  }
+
+  async function confirmImportPackage() {
+    if (!packageImportCandidate || packageImportBusy) return null;
+    setPackageImportBusy(true);
+    setPackageImportError("");
+    try {
+      const committed = await commitConfiguration(packageImportCandidate.config);
+      dashboardRendererRef.current?.resetAfterPackageImport?.();
+      setPackageImportCandidate(null);
+      setOperationError("");
+      return committed;
+    } catch (importError) {
+      setPackageImportError(
+        importError?.message || "Dashboard package could not be loaded.",
+      );
+      return null;
+    } finally {
+      setPackageImportBusy(false);
+    }
   }
 
   function exportConfig(configOverride) {
@@ -973,7 +1002,7 @@ export default function App() {
       onPanelReorder={(sourceId, targetId) => mutateDashboard(
         (next) => reorderPanels(next, sourceId, targetId),
       )}
-      onImportConfig={importConfig}
+      onImportConfig={inspectImportPackage}
       onExportConfig={exportConfig}
       onResetEditSession={resetEditSession}
       onOpenDashboardLook={openDashboardLook}
@@ -993,6 +1022,17 @@ export default function App() {
       onSetDashboardLook={setDashboardLook}
       onSetChartColors={setDashboardChartColors}
       onSetAppearance={setDashboardAppearance}
+    />
+    <DashboardPackageReviewDialog
+      candidate={packageImportCandidate}
+      busy={packageImportBusy}
+      error={packageImportError}
+      onConfirm={confirmImportPackage}
+      onCancel={() => {
+        if (packageImportBusy) return;
+        setPackageImportCandidate(null);
+        setPackageImportError("");
+      }}
     />
     </AppFrame>
     </PlaybackProvider>

@@ -3,6 +3,10 @@
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
+import {
+  createBuildDirtyState,
+  hasUnsavedAuthoredContent,
+} from "./build/buildDirtyState.js";
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
@@ -80,6 +84,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [buildSelection, setBuildSelection] = React.useState(null);
   const [chartEditorPlacementId, setChartEditorPlacementId] = React.useState(null);
   const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
+  const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
+  const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
+  const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
+  const [externalDirty, setExternalDirty] = React.useState({
+    timeGroup: false,
+    scene: false,
+    dashboardMetadata: false,
+  });
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
   const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
   const [buildSelectionError, setBuildSelectionError] = React.useState("");
@@ -157,6 +169,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
   const buildDraftLocked = Boolean(chartWizardTarget || chartEditorDirty);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
+  const authoredDirty = hasUnsavedAuthoredContent({
+    ...createBuildDirtyState(),
+    chartEditor: chartEditorDirty,
+    chartWizard: chartWizardDirty,
+    inlineRename: inlineRenameDirty,
+    pendingContent: pendingEdits.hasPending(),
+    timeGroup: externalDirty.timeGroup,
+    scene: externalDirty.scene,
+    dashboardMetadata: externalDirty.dashboardMetadata,
+  });
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
   const iconAccent = dashboard.globalStyles?.iconAccent ?? ICON_TOKENS.accentBase;
@@ -176,8 +198,26 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     () => validatedGeoDataSources(dashboard),
     [dashboard.dataSources, dashboard.loadedData],
   );
+  const setAuthoredDirtyFlag = React.useCallback((key, dirty) => {
+    if (!["timeGroup", "scene", "dashboardMetadata"].includes(key)) return false;
+    setExternalDirty((current) => ({ ...current, [key]: dirty === true }));
+    return true;
+  }, []);
 
   React.useImperativeHandle(ref, () => ({
+    setAuthoredDirtyFlag,
+    resetAfterPackageImport() {
+      pendingEdits.cancel();
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+      setChartEditorDirty(false);
+      setChartWizardTarget(null);
+      setChartWizardDirty(false);
+      setInlineRenameDirty(false);
+      setExternalDirty({ timeGroup: false, scene: false, dashboardMetadata: false });
+      setBuildSelection(null);
+      setPackageImportConfirmation(false);
+    },
     requestCompareCharts() {
       if (buildMode || multiSelectMode) return;
       startMultiFullscreenSelection();
@@ -207,7 +247,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
       return { ok: true };
     },
-  }), [buildMode, buildDraftLocked, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, pendingEdits]);
+  }), [buildMode, buildDraftLocked, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, pendingEdits, setAuthoredDirtyFlag]);
 
   React.useEffect(() => {
     onComparisonSelectionChange?.(multiSelectMode);
@@ -335,6 +375,41 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function flushPendingEditsInBackground() {
     void pendingEdits.flushInBackground();
+  }
+
+  function handleInlineRenameDirtyChange(dirty) {
+    setInlineRenameDirty(dirty === true);
+    onInlineRenameDirtyChange?.(dirty === true);
+  }
+
+  function requestDashboardPackageImport() {
+    setBuildSelectionError("");
+    if (authoredDirty) {
+      setPackageImportConfirmation(true);
+      return;
+    }
+    importInputRef.current?.click();
+  }
+
+  function confirmDashboardPackageImport() {
+    setPackageImportConfirmation(false);
+    importInputRef.current?.click();
+  }
+
+  async function exportDashboardPackage() {
+    setBuildSelectionError("");
+    if (chartEditorDirty || chartWizardDirty) {
+      setBuildSelectionError("Save or cancel the changed chart before exporting a dashboard package.");
+      return;
+    }
+    try {
+      const snapshot = dashboardWithCurrentDrafts();
+      await pendingEdits.flush();
+      await onCommitPendingConfiguration?.();
+      onExportConfig(snapshot);
+    } catch (error) {
+      setBuildSelectionError(boundedModeratorMessage(error));
+    }
   }
 
   function confirmPanelRemoval() {
@@ -1028,7 +1103,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onActivePageChange={onActivePageChange}
           onActivate={requestBuildSelection}
           onRename={renameBuildSelection}
-          onInlineRenameDirtyChange={onInlineRenameDirtyChange}
+          onInlineRenameDirtyChange={handleInlineRenameDirtyChange}
           revealRequest={buildRevealRequest}
           onRevealComplete={completeBuildReveal}
           onDashboardChange={changeDashboardText}
@@ -1042,6 +1117,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onAddChart={openChartWizard}
           onFinish={saveEditMode}
           onReset={() => setResetEditSessionConfirmation(true)}
+          onImportPackage={requestDashboardPackageImport}
+          onExportPackage={exportDashboardPackage}
           onOpenBackground={openBackgroundSettings}
           onDeviceLayoutChange={onDeviceLayoutChange}
           onDisplayAction={onDisplayAction}
@@ -1056,6 +1133,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         geoDataSources={geoDataSources}
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
+        onDirtyChange={setChartWizardDirty}
         onClose={() => {
           if (!moderatorOperationGateRef.current.isActive()) setChartWizardTarget(null);
         }}
@@ -1067,6 +1145,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           await onChartCreate(payload, chartWizardTarget);
           setChartWizardTarget(null);
         }}
+      />
+      <input
+        ref={importInputRef}
+        className="visually-hidden"
+        type="file"
+        accept="application/json,.json"
+        onChange={(event) => {
+          onImportConfig(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+      />
+      <ConfirmDialog
+        open={packageImportConfirmation}
+        title="Discard unsaved dashboard changes?"
+        message="Unsaved changes to this dashboard will be lost."
+        cancelLabel="Cancel"
+        confirmLabel="Choose package"
+        onConfirm={confirmDashboardPackageImport}
+        onCancel={() => setPackageImportConfirmation(false)}
       />
       <ConfirmDialog
         open={resetEditSessionConfirmation}

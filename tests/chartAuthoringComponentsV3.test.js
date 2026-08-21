@@ -117,6 +117,7 @@ const {
   createChartWizardState,
   createWizardCloseHandlers,
   createWizardPreparation,
+  isChartWizardStateDirty,
   parseUploadedCsvFile,
   submitWizardDraft,
 } = await import(
@@ -127,8 +128,8 @@ const {
   acceptEditorSave,
   applyChartEditorSave,
   buildDashboardEditorProfiles,
-  chartEditorStateIsDirty,
   createChartEditorState,
+  isChartEditorStateDirty,
   rebaseChartEditorState,
   reduceChartEditorState,
   saveChartEditorState,
@@ -2273,27 +2274,48 @@ test("editor state isolates mutation and same-authority rerenders preserve the d
   assert.equal(rerendered, edited);
 });
 
-test("chart editor dirty projection tracks chart changes against saved authority", () => {
+test("chart editor dirty projection clears only when the changed draft becomes saved authority", () => {
   const state = createChartEditorState({
     chart: validLineChart(),
     timeSyncGroups: [],
     revision: 7,
   });
-  assert.equal(chartEditorStateIsDirty(state), false);
+  assert.equal(isChartEditorStateDirty(state), false);
 
   const editedChart = reduceChartEditorState(state, {
     type: "updateChart",
     path: ["title"],
     value: "Unsaved title",
   });
-  assert.equal(chartEditorStateIsDirty(editedChart), true);
+  assert.equal(isChartEditorStateDirty(editedChart), true);
 
-  const restoredChart = reduceChartEditorState(editedChart, {
-    type: "updateChart",
-    path: ["title"],
-    value: state.savedChart.title,
+  const savedChart = acceptEditorSave(editedChart, {
+    chart: editedChart.draft,
+    timeSyncGroups: editedChart.timeSyncGroups,
   });
-  assert.equal(chartEditorStateIsDirty(restoredChart), false);
+  assert.equal(isChartEditorStateDirty(savedChart), false);
+});
+
+test("chart wizard dirty projection ignores an untouched open wizard and clears on close", () => {
+  const initial = createChartWizardState({
+    loadedData: {},
+    profiles: {},
+    timeSyncGroups: [],
+    existingCharts: [],
+  });
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: initial }), false);
+
+  const changed = reduceWizardState(initial, {
+    type: "selectType",
+    typeId: "line",
+    chart: { id: "new-chart", title: "New chart" },
+  });
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: changed }), true);
+
+  const closing = reduceWizardState(changed, { type: "requestClose" });
+  const discarded = reduceWizardState(closing, { type: "confirmClose" });
+  assert.equal(isChartWizardStateDirty({ open: true, wizard: discarded }), false);
+  assert.equal(isChartWizardStateDirty({ open: false, wizard: changed }), false);
 });
 
 test("a new saved revision rebases and reset restores that most recent saved state", () => {

@@ -225,6 +225,9 @@ export function createDebouncedDashboardEdits({
       restorationGeneration += 1;
       disposed = true;
     },
+    hasPending() {
+      return pending.size > 0;
+    },
     pendingCount() {
       return pending.size;
     },

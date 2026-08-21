@@ -163,7 +163,7 @@ export function acceptEditorSave(state, payload) {
   };
 }
 
-export function chartEditorStateIsDirty(state) {
+export function isChartEditorStateDirty(state) {
   assertEditorState(state);
   return stableSerialize({
     chart: state.draft,
@@ -173,6 +173,8 @@ export function chartEditorStateIsDirty(state) {
     timeSyncGroups: state.savedTimeSyncGroups,
   });
 }
+
+export const chartEditorStateIsDirty = isChartEditorStateDirty;
 
 export function buildDashboardEditorProfiles({
   loadedData = {},
@@ -289,7 +291,7 @@ export default function ChartEditorV3({
       revision: savedRevision,
     }));
   }, [incomingKey]);
-  const dirty = chartEditorStateIsDirty(state);
+  const dirty = isChartEditorStateDirty(state);
   React.useEffect(() => {
     onDirtyChange(dirty);
     return () => onDirtyChange(false);
