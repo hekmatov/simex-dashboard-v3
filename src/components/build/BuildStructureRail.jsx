@@ -64,7 +64,10 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
   };
   const commitRename = async (node) => {
     const value = renameValue.trim();
-    if (value && value !== labelFor(node)) await onRename?.(selectionFor(node), value);
+    if (value && value !== labelFor(node)) {
+      const saved = await onRename?.(selectionFor(node), value);
+      if (!saved) return;
+    }
     cancelRename(node);
   };
   const row = (node) => {
