@@ -4,7 +4,7 @@
 
 **Goal:** Reconcile the assembled V3 dashboard with the four normative contracts and all 20 accepted Step 4 sketches, preserving valid implementation while making Steps 6–8 independently executable and testable.
 
-**Architecture:** Keep one authoritative V3 dashboard content model, one canonical View/Build renderer, explicit Build draft slots, derived temporal ledgers, and one versioned passive presentation projection. Step 6 establishes shared shell, tokens, mode boundary, and exact geometry proof; Step 7 owns View/Build and authoring; Step 8 consumes the saved Scene contract for Present/Audience.
+**Architecture:** Keep one authoritative V3 dashboard content model, one canonical View/Build renderer and saved layout model, explicit Build draft slots, derived temporal ledgers, and one versioned passive presentation projection. Step 6 establishes shared shell, tokens, and mode boundary; Step 7 owns the shared canvas contract plus View/Build authoring; Step 8 consumes the saved Scene contract for Present/Audience.
 
 **Tech Stack:** React 19, Vite 6, JavaScript ES modules, CSS, ECharts 5, Node test runner, React DOM test utilities, Playwright, BroadcastChannel, SimEx icon catalogue.
 
@@ -17,7 +17,7 @@
 - Version 3 remains the only content/runtime authority. Do not duplicate dashboard content or temporal state between shells.
 - Preserve the dirty worktree. Step 5 owns only the four dated 2026-08-19 planning documents.
 - Do not resolve or stage the approved Vanta removal or the two pre-existing untracked files.
-- Build and View use identical canonical canvas, grid, sections, panels, and plots. At every supported comparison viewport each rounded two-decimal geometry delta must be exactly `0.00`.
+- Build and View use the same canonical renderer, saved layout model, responsive rules, stable content identities, and maximum canvas-width token. Build's maximum width cannot exceed View's, and the same effective width receives the same responsive behavior. Transient Build authoring surfaces may compress or reposition the canvas; exact rectangle equality, zero overlap, and automatic horizontal-scroll prohibition are retired. Opening authoring chrome never mutates saved layout, the selected target remains usable, and closing transient chrome restores the prior Build canvas, selection, focus, and scroll state. Dashboard Look retains its accepted transient-compression exemption.
 - Below 768 px, Build and Present are available as best-effort mounted surfaces. Show a persistent, non-dismissible notice above product chrome with **Switch to View**; do not redirect, disable controls, replace/unmount the workspace, or discard drafts/session state.
 - Audience is passive and last-valid-output safe. Visual fidelity is acceptance behavior, not deferred polish.
 - Step 9 owns final cross-mode viewport, accessibility, keyboard, touch, and UAT acceptance; Steps 6–8 own every known defect and targeted check listed here.
@@ -125,7 +125,7 @@ Audit evidence used realistic packaged content at 390×844, 768×1024, 1024×768
 
 | ID | Finding | Type | Exact owner |
 |---|---|---|---|
-| F-01 | View/Build canonical widths and offsets diverge; permanent Build columns compress targets. | Implementation defect | S6-3, S7-1, S7-2 |
+| F-01 | View/Build must share the canonical renderer, saved layout model, responsive rules, content identities, and maximum-width contract; Build authoring chrome must preserve target usability and restore canvas state without mutating saved layout. | Implementation defect | S6-3, S7-1, S7-2 |
 | F-02 | Crown/header rows, gutters, and page offsets do not consistently match accepted hierarchy. | Implementation defect | S6-2, S6-3 |
 | F-03 | Default neutral colours, radii, elevation, typography, and focus grammar are uneven. | Implementation defect | S6-1, S6-4 |
 | F-04 | Look/style application is incomplete across chart cards and Build editors. | Implementation defect | S6-4 shared resolver; S7-2 chrome; S7-3 cards; S7-4 structure/Scenario; S7-6 Time Group; S7-8 Scene; S7-9 Time Content; S7-15/S7-16 chart wizard; S7-17 Chrono; S7-18 states; S7-19 drawers/footer |
@@ -159,7 +159,7 @@ No material unresolved design decision was found. If calibration would change ob
 
 ```text
 Step 6
-S6-1 tokens ─┬─> S6-2 crown ─> S6-3 exact geometry
+S6-1 tokens ─┬─> S6-2 crown ─> S6-3 shared canvas contract
              └─> S6-4 propagation/recovery
 S6-5 phone mounted-notice boundary
 S6-6 dependency/Quorum/canonical-entrypoint ledger
@@ -194,7 +194,7 @@ Execution order is Step 6; Step 7 in the dependency order shown; Step 8 only aft
 |---|---|
 | Shared mode/model, crown, responsive boundary | S6-2, S6-5 |
 | Tokens/styles/profiles/appearance/focus/state grammar | S6-1, S6-4; exact component owners F-04/F-05 |
-| Exact View/Build geometry | S6-3; regression in S7-2, S7-19 |
+| Shared View/Build renderer, saved layout, maximum/effective-width responsive behavior, and Build restoration | S6-3; regression in S7-2, S7-19 |
 | Dual layout/chart drafts and auxiliary parking | S7-1; consumers S7-3, S7-4, S7-6, S7-8, S7-9, S7-10 |
 | View focus/comparison, collection/Orbit, structure/Scenario | S7-2, S7-3, S7-4 |
 | Temporal schema/migration/ledgers/matching/provenance/Needs-attention | S7-5 |
@@ -248,25 +248,27 @@ Execution order is Step 6; Step 7 in the dependency order shown; Step 8 only aft
 
 All normative temporal sections and all chart-creation requirement families have an exact owner; none relies on an unspecified “owning slice.”
 
-## 10. Exact geometry proof and phone boundary
+## 10. Shared canvas proof and phone boundary
 
-S6-3 captures View and Build with identical content/state at `768x1024`, `1024x768`, `1200x900`, and `1440x900`. It compares stable IDs and DOMRects for:
+S6-3 and the Step 7 regression fixtures capture View and Build with identical saved content/state at `768x1024`, `1024x768`, `1200x900`, and `1440x900`. They verify:
 
-- canonical canvas;
-- canonical grid;
-- every section;
-- every panel/placement;
-- every chart plot.
+- the same canonical renderer and saved layout model;
+- the same stable page, section, panel/placement, and chart-plot identities;
+- the same maximum canvas-width token, with Build never exceeding View;
+- the same responsive behavior at the same effective canvas width;
+- no saved size, order, placement, or layout mutation merely from opening authoring chrome;
+- sufficient visibility and usability of the selected editing target; and
+- restoration of the prior Build canvas, selection, focus, and scroll state after transient authoring chrome closes.
 
-For each `x`, `y`, `width`, and `height`, compute the absolute delta, round with `toFixed(2)`, and require the string `0.00`. Missing/extra IDs fail before dimensions. Any non-zero rounded delta fails; do not use a numeric tolerance.
+Missing or extra canonical content identities fail. Exact cross-mode frame, grid, section, panel, plot, or rectangle equality is not required. Transient compression, repositioning, overlap, or horizontal scrolling may occur when authoring chrome is open, provided the target remains usable, saved layout is unchanged, and close restoration passes. Dashboard Look retains its accepted transient-compression exemption.
 
-The `390x844` phone test is separate: Build and Present remain mounted and operational; the non-dismissible notice is above product chrome; **Switch to View** is available; resizing with simultaneous dirty layout/chart drafts preserves both, focus target, scroll, and session. Phone is not part of the exact authoring-geometry acceptance matrix.
+The `390x844` phone test is separate: Build and Present remain mounted and operational; the non-dismissible notice is above product chrome; **Switch to View** is available; resizing with simultaneous dirty layout/chart drafts preserves both, focus target, scroll, and session. Phone remains outside the supported authoring acceptance matrix.
 
 ## 11. Step 9 verification hooks
 
 Steps 6–8 leave these named hooks for final acceptance:
 
-- `tests/e2e/v3-shell-fidelity.spec.js`: exported `WORKSPACE_VIEWPORTS`, `readCanonicalGeometry`, and `compareCanonicalGeometry` helpers.
+- `tests/e2e/v3-shell-fidelity.spec.js`: exported `WORKSPACE_VIEWPORTS` plus stable canonical-identity and effective-width canvas helpers. Existing geometry readers may remain diagnostic but do not impose exact View/Build rectangle equality.
 - `tests/e2e/v3-build-workspace.spec.js`: simultaneous layout/chart drafts, parked auxiliary, structure, collection, and restoration fixtures.
 - `tests/e2e/v3-temporal-authoring.spec.js`: Time Group, Scene, Time Content, repair, and return-context fixtures.
 - `tests/e2e/v3-chart-creation.spec.js`: application-session-resumable exact six-stage draft, reload loss, meaningful exit warning, Chart type catalogue, independent proof revisions, companion/durable-repair ownership, drift, ambiguous outcome, and durable committed handoff fixtures.

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Finish the authoring and viewing vertical slices while preserving the V3 content model, exact View-equivalent Build geometry, independent layout/chart drafts, and deterministic temporal and chart-creation behavior.
+**Goal:** Finish the authoring and viewing vertical slices while preserving the V3 content model, one canonical View/Build renderer and saved layout model, independent layout/chart drafts, and deterministic temporal and chart-creation behavior.
 
 **Architecture:** `App.jsx` owns the mode and session entry points; `DashboardRenderer` remains the one dashboard renderer. Build decorates that renderer through explicit authoring state. Saved temporal content lives in the V3 dashboard bundle; ledgers, provenance, Needs-attention, drafts, and View playback remain derived or session state.
 
@@ -12,8 +12,11 @@
 
 ## Global Constraints
 
-- Execute after Step 6. Consume `DashboardMode`, `PhoneModeNotice`, `WORKSPACE_VIEWPORTS`, `readCanonicalGeometry`, `compareCanonicalGeometry`, and the shared tokens/components defined there.
+- Execute after Step 6. Consume `DashboardMode`, `PhoneModeNotice`, `WORKSPACE_VIEWPORTS`, the canonical renderer and stable identity selectors, and the shared tokens/components defined there.
 - Do not duplicate dashboard content or temporal state between View and Build shells. Build must render the same canonical page, section, panel, and plot nodes as View.
+- View and Build use the same saved layout model, responsive rules, and maximum canvas-width token. Build's maximum canvas width must not exceed View's, and the same effective canvas width must receive the same responsive behavior.
+- Transient Build authoring surfaces may compress or reposition the canvas. Exact cross-mode frame, panel, plot, grid, or rectangle equality is not required; automatic horizontal-scroll and zero-overlap are not acceptance requirements.
+- The selected editing target must remain sufficiently visible and usable. Opening authoring chrome must not mutate saved panel sizes, order, placement, or layout. Closing transient authoring chrome must restore the previous Build canvas, selection, focus, and scroll state. Dashboard Look retains its accepted transient-compression exemption.
 - Preserve the current V3 configuration entry point and existing valid tests. Migrate data explicitly; never reinterpret legacy timestamps silently.
 - A dirty layout draft and a dirty selected-chart property draft may coexist. Only incompatible auxiliary authoring surfaces are parked.
 - Persist one dashboard IANA timezone. Store timestamps as UTC instants. Do not persist ledgers, availability, provenance, Needs-attention, or View-session overrides.
@@ -80,17 +83,17 @@ export function reduceBuildDraftCoordinator(state, action) {}
 - Modify: `tests/e2e/v3-build-workspace.spec.js`
 
 **Interfaces:**
-- Consumes: Step 6 crown, mode classes, exact geometry IDs, and S7-1 coordinator.
-- Produces: canonical rendering in View and Build plus overlay edit handles, selected-chart property tray, focus-visible states, and preserved canvas geometry.
+- Consumes: Step 6 crown, mode classes, stable canonical identity selectors, shared canvas-width/responsive rules, and S7-1 coordinator.
+- Produces: canonical rendering in View and Build plus progressive edit handles, selected-chart property tray, focus-visible states, target usability, and deterministic canvas restoration.
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing component assertions that authoring controls are outside canonical geometry nodes and selected panels remain visible and stationary when their tray opens.
-- [ ] **Run test to verify it fails.** Run `node --test tests/buildWorkspaceV3.test.js`; expect the new geometry/chrome assertions to fail.
-- [ ] **Write minimal implementation.** Move authoring affordances to overlays/portals, apply approved shared tokens, and keep header, section, footer, panel, chart, and empty-state hierarchy intact.
-- [ ] **Write minimal implementation.** Add `View and Build expose identical canonical nodes while edit chrome overlays targets` to the Build E2E file.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/buildWorkspaceV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "View and Build expose identical canonical nodes while edit chrome overlays targets"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/buildWorkspaceV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "fix(build): preserve canonical geometry under edit chrome"`.
+- [ ] **Write the failing test.** Add failing component assertions that View and Build render the same canonical identities from the same saved layout, share maximum-width and effective-width responsive rules, opening authoring chrome does not mutate saved layout, and the selected panel remains sufficiently visible and usable while its tray is open.
+- [ ] **Run test to verify it fails.** Run `node --test tests/buildWorkspaceV3.test.js`; expect the new canvas-contract and restoration assertions to fail.
+- [ ] **Write minimal implementation.** Implement progressive authoring surfaces, apply approved shared tokens, and keep header, section, footer, panel, chart, and empty-state hierarchy intact while permitting transient canvas compression or repositioning.
+- [ ] **Write minimal implementation.** Add `Build authoring chrome preserves canonical content and restores canvas state` to the Build E2E file, covering selection, focus, scroll, target usability, and saved-layout immutability across open/close.
+- [ ] **Run tests to verify they pass.** Run `node --test tests/buildWorkspaceV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "Build authoring chrome preserves canonical content and restores canvas state"`; expect pass.
+- [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/buildWorkspaceV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "fix(build): honor canonical canvas authoring contract"`.
 
 ### Task S7-3: Complete chart collection, Unit Orbit, and panel editing
 
@@ -110,8 +113,8 @@ export function reduceBuildDraftCoordinator(state, action) {}
 - [ ] **Write the failing test.** Write failing tests for selected-card identity, compatible-unit filtering, empty/no-result distinction, validation errors, failed-save retry, and focus restoration.
 - [ ] **Run test to verify it fails.** Run `node --test tests/panelEditingV3.test.js`; expect failure because the contract is incomplete.
 - [ ] **Write minimal implementation.** Implement the collection/orbit/property flow using the chart draft slot and existing chart IDs; never create a second chart model.
-- [ ] **Add the E2E test.** Add E2E case `chart collection orbit and property editing complete without moving the plot`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/panelEditingV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "chart collection orbit and property editing complete without moving the plot"`; expect pass.
+- [ ] **Add the E2E test.** Add E2E case `chart collection orbit and property editing preserve saved layout and restore the canvas`.
+- [ ] **Run tests to verify they pass.** Run `node --test tests/panelEditingV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "chart collection orbit and property editing preserve saved layout and restore the canvas"`; expect pass.
 - [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/panelEditingV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): complete panel editing and unit orbit"`.
 
 ### Task S7-4: Complete Structure and Scenario authoring
@@ -126,15 +129,15 @@ export function reduceBuildDraftCoordinator(state, action) {}
 
 **Interfaces:**
 - Consumes: V3 page/section/panel schema, S7-1 auxiliary lifecycle, Sketches 011, 013, 015, and 020.
-- Produces: validated reorder/add/remove/rename operations and Scenario editing without canvas reflow.
+- Produces: validated reorder/add/remove/rename operations and Scenario editing without authoring-chrome mutation of the saved layout.
 
 **Steps:**
 
 - [ ] **Write the failing test.** Add failing tests for stable IDs, forbidden orphaning, keyboard reorder, Save/Discard/Stay, conflict parking, validation/retry, and restoration.
 - [ ] **Run test to verify it fails.** Run `node --test tests/structureScenarioAuthoring.test.js`; expect missing-module failure.
 - [ ] **Write minimal implementation.** Implement schema-backed commands and overlay surfaces; apply mutations only after validation and an atomic coordinator success action.
-- [ ] **Add the E2E test.** Add E2E case `structure and scenario edits preserve canvas and recover from failed save`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/structureScenarioAuthoring.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "structure and scenario edits preserve canvas and recover from failed save"`; expect pass.
+- [ ] **Add the E2E test.** Add E2E case `structure and scenario edits preserve saved layout and recover canvas state after failed save`.
+- [ ] **Run tests to verify they pass.** Run `node --test tests/structureScenarioAuthoring.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "structure and scenario edits preserve saved layout and recover canvas state after failed save"`; expect pass.
 - [ ] **Commit.** Run `git add src/components/build/StructureAuthoring.jsx src/components/build/ScenarioAuthoring.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/structureScenarioAuthoring.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): add structure and scenario authoring"`.
 
 ### Task S7-5: Establish temporal schemas, UTC migration, ledgers, matching, and provenance
@@ -588,7 +591,7 @@ export function reducePlaybackState(state, action) {}
 - [ ] **Write the failing test.** Add failing playback tests for endpoint stopping and safety pause on seek, previous/next, group/Scene/scope/matching/trace changes, page navigation, document hidden, mode exit, blackout, connection loss, reconnect, and end; reduced motion prevents automatic play.
 - [ ] **Write the failing test.** Add failing component tests for availability overlay, per-chart colour association plus non-colour labels/patterns, signed/mixed provenance, disabled unavailable actions, and focus retention.
 - [ ] **Run test to verify it fails.** Run `node --test tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js`; expect failures for absent scope, trace, availability, movement, and safety-pause state/actions.
-- [ ] **Write minimal implementation.** Implement the reducer/controller. Session matching and cadence overrides stay session-only. Scene focus projects its saved chart subset without replacing the page or its canonical geometry.
+- [ ] **Write minimal implementation.** Implement the reducer/controller. Session matching and cadence overrides stay session-only. Scene focus projects its saved chart subset without replacing the page or mutating its saved canonical layout.
 - [ ] **Add the E2E test.** Add E2E case `View Chrono seeks scopes traces moves and safety-pauses without losing session`.
 - [ ] **Run tests to verify they pass.** Run `node --test tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js && pnpm exec playwright test tests/e2e/v3-view-chrono.spec.js --grep "View Chrono seeks scopes traces moves and safety-pauses without losing session"`; expect pass.
 - [ ] **Commit.** Run `git add src/components/playback/ChronoController.jsx src/charting/time/playbackReducer.js src/components/DashboardRenderer.jsx src/styles.css tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js tests/e2e/v3-view-chrono.spec.js && git commit -m "feat(view): implement complete chrono session"`.
@@ -625,16 +628,16 @@ export function reducePlaybackState(state, action) {}
 - Create: `tests/e2e/v3-step7-fidelity.spec.js`
 
 **Interfaces:**
-- Consumes: chart source metadata, shared dialog/drawer primitives, and `compareCanonicalGeometry`.
+- Consumes: chart source metadata, shared dialog/drawer primitives, stable canonical identities, and the Build canvas restoration contract.
 - Produces: source drawer/dialog, complete page/section/footer termination, and Step 7 visual acceptance evidence.
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests for source metadata, keyboard/focus return, unavailable source, loading/error recovery, and unchanged chart plot geometry.
+- [ ] **Write the failing test.** Add failing tests for source metadata, keyboard/focus return, unavailable source, loading/error recovery, saved-layout immutability, and restored Build canvas/selection/scroll state.
 - [ ] **Run test to verify it fails.** Run `node --test tests/sourceViewer.test.js`; expect missing-module failure.
 - [ ] **Write minimal implementation.** Implement the approved source viewer and calibrate Step 7-owned cards, headers, drawers, wizards, editor trays, Chrono, footer, typography, icons, spacing, overflow, and states.
-- [ ] **Write the failing test.** Add viewport cases at `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`; the phone case verifies best-effort mounted Build plus the Step 6 banner, while supported viewports use exact `0.00` View/Build canonical geometry deltas.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/sourceViewer.test.js && pnpm exec playwright test tests/e2e/v3-step7-fidelity.spec.js`; expect pass with no horizontal document overflow and all screenshot/assertion cases passing.
+- [ ] **Write the failing test.** Add viewport cases at `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`; the phone case verifies best-effort mounted Build plus the Step 6 banner, while supported viewports verify shared canonical identities, maximum-width and effective-width responsive rules, selected-target usability, saved-layout immutability, and close restoration. Exact cross-mode rectangles, zero overlap, and automatic horizontal-scroll prohibition are not asserted.
+- [ ] **Run tests to verify they pass.** Run `node --test tests/sourceViewer.test.js && pnpm exec playwright test tests/e2e/v3-step7-fidelity.spec.js`; expect pass with all canvas-contract, screenshot, and interaction assertions passing.
 - [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/SourceViewer.jsx src/styles.css tests/sourceViewer.test.js tests/e2e/v3-step7-fidelity.spec.js && git commit -m "fix(view-build): complete source and visual fidelity"`.
 
 ## Step 7 completion check
@@ -646,4 +649,4 @@ node --test tests/buildDraftCoordinator.test.js tests/buildWorkspaceV3.test.js t
 pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js tests/e2e/v3-temporal-authoring.spec.js tests/e2e/v3-chart-creation.spec.js tests/e2e/v3-view-chrono.spec.js tests/e2e/v3-step7-fidelity.spec.js
 ```
 
-Expected: both commands exit `0`; every supported View/Build canonical node delta rounds to exactly `0.00`; phone Build stays mounted with drafts intact under the notice; all temporal and chart-creation recovery paths are deterministic; the chart workflow has exactly the six binding stages, in-session suspension resumes from memory, reload starts without a draft, linked companion and durable-repair ownership never cross, and both proof revisions remain independent validations.
+Expected: both commands exit `0`; View and Build use the same canonical renderer, saved layout, responsive rules, and maximum-width token; Build never exceeds View's maximum width; equivalent effective widths respond equivalently; authoring chrome leaves saved layout untouched and restores prior Build canvas/selection/focus/scroll state when closed; selected targets remain usable; phone Build stays mounted with drafts intact under the notice; all temporal and chart-creation recovery paths are deterministic; the chart workflow has exactly the six binding stages, in-session suspension resumes from memory, reload starts without a draft, linked companion and durable-repair ownership never cross, and both proof revisions remain independent validations.
