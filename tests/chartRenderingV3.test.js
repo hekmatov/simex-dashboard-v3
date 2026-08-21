@@ -421,6 +421,35 @@ test("ECharts title and legend defaults consume projected profile text colors", 
   assert.equal(presented.option.legend.textStyle.color, "#C1CFD4");
 });
 
+test("bullet and pie charts inherit the active dashboard data palette unless authored", () => {
+  const theme = {
+    textStrong: "#F8FAF9",
+    textMuted: "#C1CFD4",
+    dataColors: ["#85CCD6", "#E09AA7", "#C1AFE4", "#8BC7AA", "#E2BF72", "#F1A1A9"],
+  };
+  const themed = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      series: [
+        { type: "bar", data: [72] },
+        { type: "scatter", data: [80] },
+      ],
+    },
+  }, { presentation: { title: { align: "left" } } }, false, theme);
+  const authored = applyEChartsPresentation({
+    kind: "echarts",
+    option: {
+      color: ["#112233", "#445566"],
+      series: [{ type: "pie", data: [{ value: 4 }, { value: 6 }] }],
+    },
+  }, { presentation: { title: { align: "left" } } }, false, theme);
+
+  assert.deepEqual(themed.option.color, [
+    "#85CCD6", "#E09AA7", "#C1AFE4", "#8BC7AA", "#E2BF72", "#F1A1A9",
+  ]);
+  assert.deepEqual(authored.option.color, ["#112233", "#445566"]);
+});
+
 test("axis series honor validated label visibility, position, and formatting", () => {
   const enabled = buildRenderModel({
     chart: chart("bar", {

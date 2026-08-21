@@ -23,9 +23,6 @@ export default function DashboardLookDrawer({
   error = "",
   onCancel,
   onPreviewChange,
-  onSetDashboardLook,
-  onSetChartColors,
-  onSetAppearance,
 }) {
   if (!open || !saved || !preview) return null;
   const lookChanged = saved.dashboardStyle !== preview.dashboardStyle
@@ -65,9 +62,9 @@ export default function DashboardLookDrawer({
           <div>
             <p className="eyebrow">Dashboard settings</p>
             <h2 id="look-drawer-title">Dashboard look</h2>
-            <p id="look-drawer-description">Preview the live dashboard, then set only the scope you intend.</p>
+            <p id="look-drawer-description">Selections are saved automatically and applied to the live dashboard.</p>
           </div>
-          <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Close</button>
+          <button type="button" className="secondary" onClick={onCancel}>Close</button>
         </header>
 
         <div className="look-drawer-scroll">
@@ -192,29 +189,10 @@ export default function DashboardLookDrawer({
 
         <footer className="look-drawer-footer">
           <div className="look-drawer-feedback" aria-live="polite">
-            {error ? <span className="look-drawer-error" role="alert">{error}</span> : status}
+            {error
+              ? <span className="look-drawer-error" role="alert">{error}</span>
+              : status || (busy ? "Saving selection…" : "Selections are saved automatically.")}
           </div>
-          <button
-            type="button"
-            disabled={busy || !lookChanged}
-            onClick={onSetDashboardLook}
-          >
-            {savingScope === "look" ? "Setting dashboard look…" : "Set dashboard look"}
-          </button>
-          <button
-            type="button"
-            disabled={busy || !chartColorsChanged}
-            onClick={onSetChartColors}
-          >
-            {savingScope === "charts" ? "Setting chart colors…" : "Set chart colors"}
-          </button>
-          <button
-            type="button"
-            disabled={busy || !appearanceChanged}
-            onClick={onSetAppearance}
-          >
-            {savingScope === "appearance" ? "Setting appearance…" : "Set appearance"}
-          </button>
         </footer>
       </ModalFocusScope>
     </div>

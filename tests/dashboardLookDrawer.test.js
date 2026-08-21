@@ -35,7 +35,7 @@ const preview = {
   appearancePreference: "dark",
 };
 
-test("approved look drawer exposes all values with scoped actions and no visual scrim", () => {
+test("approved look drawer exposes all values with immediate persistence and no visual scrim", () => {
   assert.equal(typeof Drawer, "function");
   if (typeof Drawer !== "function") return;
 
@@ -45,9 +45,6 @@ test("approved look drawer exposes all values with scoped actions and no visual 
     preview,
     onCancel: () => {},
     onPreviewChange: () => {},
-    onSetDashboardLook: () => {},
-    onSetChartColors: () => {},
-    onSetAppearance: () => {},
   }));
 
   assert.match(html, /role="dialog"/);
@@ -55,9 +52,8 @@ test("approved look drawer exposes all values with scoped actions and no visual 
   assert.match(html, /class="look-drawer-click-catcher"/);
   assert.doesNotMatch(html, /scrim|backdrop-filter|opacity:/i);
   assert.equal((html.match(/data-profile-option=/g) ?? []).length, 15);
-  assert.match(html, />Set dashboard look<\/button>/);
-  assert.match(html, />Set chart colors<\/button>/);
-  assert.match(html, />Set appearance<\/button>/);
+  assert.doesNotMatch(html, />Set (?:dashboard look|chart colors|appearance)<\/button>/);
+  assert.match(html, /Selections are saved automatically/);
   assert.match(html, /Saved[\s\S]*Preview/);
 });
 

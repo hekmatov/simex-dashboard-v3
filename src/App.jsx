@@ -597,7 +597,6 @@ export default function App() {
   }
 
   function cancelDashboardLook() {
-    if (lookSavingScope) return;
     setLookDrawerOpen(false);
     setLookPreview(null);
     setLookStatus("");
@@ -605,59 +604,40 @@ export default function App() {
   }
 
   function changeDashboardLookPreview(nextPreview) {
+    const previous = lookPreview;
     setLookPreview(nextPreview);
     setLookStatus("");
     setLookError("");
-  }
+    if (!previous) return;
 
-  async function setDashboardLook() {
-    if (!lookPreview) return;
-    await commitDashboardLookScope(
-      "look",
-      dashboardLookUpdates(lookPreview),
-      "Dashboard look set.",
-    );
-  }
-
-  async function setDashboardChartColors() {
-    if (!lookPreview) return;
-    await commitDashboardLookScope(
-      "charts",
-      chartColorUpdates(lookPreview),
-      "Chart colors set.",
-    );
-  }
-
-  async function commitDashboardLookScope(scope, updates, successMessage) {
-    if (lookSavingScope) return;
-    setLookSavingScope(scope);
-    setLookStatus("");
-    setLookError("");
-    try {
-      await ensureDashboardCommitController().mutate((next) => {
-        next.globalStyles = { ...(next.globalStyles ?? {}), ...updates };
+    const dashboardChanged = previous.dashboardStyle !== nextPreview.dashboardStyle
+      || previous.dashboardColorProfile !== nextPreview.dashboardColorProfile
+      || previous.chartColorMode !== nextPreview.chartColorMode;
+    if (dashboardChanged) {
+      setLookSavingScope("auto");
+      void ensureDashboardCommitController().mutate((next) => {
+        next.globalStyles = {
+          ...(next.globalStyles ?? {}),
+          ...dashboardLookUpdates(nextPreview),
+          ...chartColorUpdates(nextPreview),
+        };
+      }).then(() => {
+        setLookStatus("Dashboard look saved.");
+      }).catch((commitError) => {
+        setLookError(boundedBackgroundPersistenceError(commitError).message);
+      }).finally(() => {
+        setLookSavingScope("");
       });
-      setLookStatus(successMessage);
-    } catch (commitError) {
-      setLookError(boundedBackgroundPersistenceError(commitError).message);
-    } finally {
-      setLookSavingScope("");
     }
-  }
 
-  function setDashboardAppearance() {
-    if (!lookPreview || lookSavingScope) return;
-    setLookSavingScope("appearance");
-    setLookStatus("");
-    setLookError("");
-    try {
-      persistAppearancePreference(lookPreview.appearancePreference);
-      setAppearancePreference(lookPreview.appearancePreference);
-      setLookStatus("Appearance set for this browser.");
-    } catch (preferenceError) {
-      setLookError(boundedBackgroundPersistenceError(preferenceError).message);
-    } finally {
-      setLookSavingScope("");
+    if (previous.appearancePreference !== nextPreview.appearancePreference) {
+      try {
+        persistAppearancePreference(nextPreview.appearancePreference);
+        setAppearancePreference(nextPreview.appearancePreference);
+        setLookStatus("Appearance saved for this browser.");
+      } catch (preferenceError) {
+        setLookError(boundedBackgroundPersistenceError(preferenceError).message);
+      }
     }
   }
 
@@ -1029,9 +1009,6 @@ export default function App() {
       error={lookError}
       onCancel={cancelDashboardLook}
       onPreviewChange={changeDashboardLookPreview}
-      onSetDashboardLook={setDashboardLook}
-      onSetChartColors={setDashboardChartColors}
-      onSetAppearance={setDashboardAppearance}
     />
     <DashboardPackageReviewDialog
       candidate={packageImportCandidate}

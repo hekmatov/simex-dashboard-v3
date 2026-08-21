@@ -14,6 +14,14 @@ const DEFAULT_CHART_TEXT_THEME = Object.freeze({
   gridline: "#D9DDE1",
   surfacePanel: "#FFFFFF",
   surfacePanelAlt: "#F4F5F5",
+  dataColors: Object.freeze([
+    "#4E79A7",
+    "#F28E2B",
+    "#E15759",
+    "#76B7B2",
+    "#59A14F",
+    "#EDC948",
+  ]),
 });
 
 export default function EChartsChartView({
@@ -57,6 +65,10 @@ export default function EChartsChartView({
         || DEFAULT_CHART_TEXT_THEME.surfacePanel,
       surfacePanelAlt: style.getPropertyValue("--simex-surface-panel-alt").trim()
         || DEFAULT_CHART_TEXT_THEME.surfacePanelAlt,
+      dataColors: [1, 2, 3, 4, 5, 6].map((index) => (
+        style.getPropertyValue(`--simex-data-${index}`).trim()
+          || DEFAULT_CHART_TEXT_THEME.dataColors[index - 1]
+      )),
     };
     setTextTheme((current) => Object.keys(next).every((key) => current[key] === next[key]) ? current : next);
   });
@@ -148,6 +160,10 @@ export function applyEChartsPresentation(
   const gridline = normalizedTextColor(textTheme?.gridline, borderSubtle);
   const surfacePanel = normalizedTextColor(textTheme?.surfacePanel, DEFAULT_CHART_TEXT_THEME.surfacePanel);
   const surfacePanelAlt = normalizedTextColor(textTheme?.surfacePanelAlt, surfacePanel);
+  const dataColors = normalizedDataColors(
+    textTheme?.dataColors,
+    DEFAULT_CHART_TEXT_THEME.dataColors,
+  );
   const backgroundColor = resolveChartSurfaceBackground(
     chart?.presentation?.background,
     { themeDefault: "transparent" },
@@ -156,6 +172,7 @@ export function applyEChartsPresentation(
     ...model,
     option: {
       ...optionWithoutBackground,
+      color: Array.isArray(option.color) && option.color.length > 0 ? option.color : dataColors,
       textStyle: {
         ...(option.textStyle ?? {}),
         color: textStrong,
@@ -362,6 +379,14 @@ function normalizedTitleAlignment(value) {
 function normalizedTextColor(value, fallback) {
   const color = typeof value === "string" ? value.trim() : "";
   return /^#[0-9a-f]{6}$/i.test(color) ? color.toUpperCase() : fallback;
+}
+
+function normalizedDataColors(value, fallback) {
+  if (!Array.isArray(value) || value.length === 0) return [...fallback];
+  const colors = value
+    .map((color) => normalizedTextColor(color, ""))
+    .filter(Boolean);
+  return colors.length > 0 ? colors : [...fallback];
 }
 
 function summaryFor(model, chart) {
