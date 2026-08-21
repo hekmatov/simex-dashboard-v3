@@ -869,7 +869,7 @@
   left: 22px;
   pointer-events: none;
   position: absolute;
-  top: 50%;
+  top: calc(50% + 8px);
   width: 0;
   z-index: 0;
 }
@@ -899,6 +899,10 @@
   top: 0;
   width: 24px;
   z-index: 0;
+}
+
+.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap[aria-expanded]::before {
+  width: 16px;
 }
 
 .app-frame .build-authoring-layer .build-tree-row {
