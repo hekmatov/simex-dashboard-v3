@@ -26,6 +26,7 @@ import {
   recoveryPackageError,
   recoveryPackageSummary,
 } from "./lib/applicationRecovery.js";
+import { browserStorage } from "./lib/browserStorage.js";
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import {
@@ -281,7 +282,7 @@ export default function App() {
         };
         trackedDatasetProfilesRef.current = trackedProfiles;
         const stored = readDashboardStorage(
-          localStorage,
+          browserStorage,
           DASHBOARD_STORAGE_KEY,
           { profiles: trackedProfiles },
         );
@@ -466,7 +467,7 @@ export default function App() {
         stored,
         configuredFallbackProfiles,
       );
-      localStorage.setItem(
+      browserStorage.setItem(
         DASHBOARD_STORAGE_KEY,
         JSON.stringify(
           configurationForStorage(loaded, trackedProfiles),
@@ -532,7 +533,7 @@ export default function App() {
           trackedProfiles,
           definition.portableSources,
         ),
-        persist: (candidate) => localStorage.setItem(
+        persist: (candidate) => browserStorage.setItem(
           DASHBOARD_STORAGE_KEY,
           JSON.stringify(
             configurationForStorage(candidate, trackedProfiles),
@@ -908,7 +909,7 @@ export default function App() {
       deviceLayout={deviceLayout}
       onDeviceLayoutChange={(layout) => {
         setDeviceLayout(layout);
-        localStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
+        browserStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
       }}
       onChartCreate={createChart}
       onChartSave={saveChart}
@@ -1160,7 +1161,7 @@ function isStorageQuotaError(error) {
 }
 
 function loadDeviceLayout() {
-  const layout = localStorage.getItem(DEVICE_LAYOUT_STORAGE_KEY);
+  const layout = browserStorage.getItem(DEVICE_LAYOUT_STORAGE_KEY);
   return ["auto", "tablet", "phone"].includes(layout) ? layout : "auto";
 }
 

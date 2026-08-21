@@ -1,4 +1,5 @@
 import { resolveDashboardStyleGrammar } from "./dashboardStyleGrammar.js";
+import { browserStorage } from "../lib/browserStorage.js";
 
 export const DASHBOARD_VISUAL_CONTRACT = Object.freeze({
   radiusControl: 6,
@@ -225,7 +226,7 @@ export function createDashboardThemeProjection(theme = {}) {
   return Object.freeze({ ...metadata, cssVariables, key });
 }
 
-export function readAppearancePreference(storage = globalThis.localStorage) {
+export function readAppearancePreference(storage = browserStorage) {
   try {
     const value = storage?.getItem(APPEARANCE_STORAGE_KEY);
     return APPEARANCE_PREFERENCES.includes(value) ? value : "system";
@@ -234,11 +235,11 @@ export function readAppearancePreference(storage = globalThis.localStorage) {
   }
 }
 
-export function persistAppearancePreference(value, storage = globalThis.localStorage) {
+export function persistAppearancePreference(value, storage = browserStorage) {
   if (!APPEARANCE_PREFERENCES.includes(value)) {
     throw new TypeError("Dashboard appearance preference must be light, dark, or system.");
   }
-  storage?.setItem(APPEARANCE_STORAGE_KEY, value);
+  storage?.setItem?.(APPEARANCE_STORAGE_KEY, value);
   return value;
 }
 
