@@ -763,3 +763,28 @@
     width: calc(100% - var(--look-drawer-width) - 24px);
   }
 }
+
+/* Target collections are shared chart surfaces, not legacy light-only cards. */
+.app-frame .chart-target-collection-item {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-view-title, .chart-target-collection-label) {
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(
+  .chart-view-description,
+  .chart-view-provenance,
+  .collection-page-status
+) {
+  color: var(--simex-text-muted);
+}
+
+.app-frame .chart-target-collection-view .collection-carousel-controls .simex-icon-control {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}

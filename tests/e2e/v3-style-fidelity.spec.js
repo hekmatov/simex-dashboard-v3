@@ -111,6 +111,65 @@ const APPROVED_TOKEN_MATRIX = readApprovedTokenMatrix(await readFile(
 
 test.describe.configure({ timeout: 150_000 });
 
+test("target collections inherit dark shared surfaces and text", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("simex-dashboard-appearance-v3", "dark");
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  const panel = page.locator('[data-panel-id="bio_icu_capacity_bullet"]');
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator(".chart-target-collection-item").first()).toBeVisible();
+
+  const paints = await panel.evaluate((node) => {
+    const rootStyle = getComputedStyle(node.closest(".app-frame"));
+    const read = (selector, property) => getComputedStyle(node.querySelector(selector))[property];
+    return {
+      expectedPanel: rootStyle.getPropertyValue("--simex-surface-panel-alt").trim(),
+      expectedStrong: rootStyle.getPropertyValue("--simex-text-strong").trim(),
+      expectedMuted: rootStyle.getPropertyValue("--simex-text-muted").trim(),
+      itemBackground: read(".chart-target-collection-item", "backgroundColor"),
+      titleColor: read(".chart-view-title", "color"),
+      labelColor: read(".chart-target-collection-label", "color"),
+      statusColor: read(".collection-page-status", "color"),
+    };
+  });
+
+  expect(paints).toEqual({
+    expectedPanel: "#25231d",
+    expectedStrong: "#f5efe4",
+    expectedMuted: "#c9c1b3",
+    itemBackground: "rgb(37, 35, 29)",
+    titleColor: "rgb(245, 239, 228)",
+    labelColor: "rgb(245, 239, 228)",
+    statusColor: "rgb(201, 193, 179)",
+  });
+});
+
+test("expanded Orbit starts below the live command crown", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.locator("[data-build-edit-for]").first().click();
+  const orbit = page.locator(".unit-orbit");
+  await expect(orbit).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const crown = document.querySelector(".dashboard-command-crown").getBoundingClientRect();
+    const editor = document.querySelector(".unit-orbit").getBoundingClientRect();
+    return {
+      crownBottom: crown.bottom,
+      orbitTop: editor.top,
+      orbitHeight: editor.height,
+    };
+  });
+
+  expect(geometry.orbitTop).toBeGreaterThanOrEqual(geometry.crownBottom + 12);
+  expect(geometry.orbitHeight).toBeGreaterThanOrEqual(600);
+});
+
 test("native style signatures resolve real shell, section, panel, and control paint", async ({ page }) => {
   await openBiomedicalLook(page);
   for (const style of NATIVE_STYLES) {

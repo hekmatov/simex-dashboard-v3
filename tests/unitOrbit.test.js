@@ -71,6 +71,26 @@ test("Unit Orbit requests one recenter when no nonintersecting candidate has usa
   assert.deepEqual(result, { needsRecenter: true });
 });
 
+test("Unit Orbit fallback docks below protected chrome and fills the viewport", () => {
+  assert.equal(
+    typeof orbitModule?.constrainedUnitOrbitPlacement,
+    "function",
+    "Unit Orbit must expose its constrained fallback placement",
+  );
+  const result = orbitModule.constrainedUnitOrbitPlacement({
+    orbitSize: { width: 420, height: 980 },
+    viewport,
+    protectedRects: [rect(0, 0, 1440, 100)],
+  });
+
+  assert.deepEqual(result, {
+    side: "viewport",
+    left: 1008,
+    top: 112,
+    maxHeight: 776,
+  });
+});
+
 test("Unit Orbit dismisses only pointer activity outside its surface", () => {
   assert.equal(typeof orbitModule?.isUnitOrbitOutsidePointer, "function");
   const inside = {};

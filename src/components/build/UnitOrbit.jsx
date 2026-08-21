@@ -7,6 +7,7 @@ const DEFAULT_MIN_HEIGHT = 280;
 const DEFAULT_WIDTH = 420;
 const PROTECTED_SELECTORS = [
   ".app-frame-bar",
+  ".dashboard-command-crown",
   ".build-header",
   ".build-page-tabs",
   ".build-command-area",
@@ -128,7 +129,11 @@ export default function UnitOrbit({
       }
 
       setPlacement(result.needsRecenter
-        ? constrainedFallback(currentAnchor.getBoundingClientRect(), orbitSize, window)
+        ? constrainedUnitOrbitPlacement({
+            orbitSize,
+            viewport: { width: window.innerWidth, height: window.innerHeight },
+            protectedRects: protectedElementRects(),
+          })
         : result);
     };
     const schedule = () => {
@@ -231,31 +236,28 @@ function candidate(side, left, top, width, maxHeight) {
   };
 }
 
-function constrainedFallback(anchorRect, orbitSize, windowObject) {
-  const width = Math.min(orbitSize.width, windowObject.innerWidth - (DEFAULT_MARGIN * 2));
-  const left = clamp(
-    anchorRect.left,
-    DEFAULT_MARGIN,
-    Math.max(DEFAULT_MARGIN, windowObject.innerWidth - DEFAULT_MARGIN - width),
+export function constrainedUnitOrbitPlacement({
+  orbitSize,
+  viewport,
+  protectedRects = [],
+  gap = DEFAULT_GAP,
+  margin = DEFAULT_MARGIN,
+}) {
+  const width = Math.min(orbitSize.width, viewport.width - (margin * 2));
+  const protectedBottom = protectedRects.reduce(
+    (bottom, rect) => (
+      rect.bottom > 0 && rect.top < viewport.height
+        ? Math.max(bottom, rect.bottom + gap)
+        : bottom
+    ),
+    margin,
   );
-  const belowHeight = windowObject.innerHeight - DEFAULT_MARGIN - anchorRect.bottom - DEFAULT_GAP;
-  const aboveHeight = anchorRect.top - DEFAULT_GAP - DEFAULT_MARGIN;
-  if (belowHeight >= aboveHeight && belowHeight > 0) {
-    return { side: "below", left, top: anchorRect.bottom + DEFAULT_GAP, maxHeight: belowHeight };
-  }
-  if (aboveHeight > 0) {
-    return {
-      side: "above",
-      left,
-      top: DEFAULT_MARGIN,
-      maxHeight: aboveHeight,
-    };
-  }
+  const top = clamp(protectedBottom, margin, Math.max(margin, viewport.height - margin - 120));
   return {
     side: "viewport",
-    left: DEFAULT_MARGIN,
-    top: DEFAULT_MARGIN,
-    maxHeight: Math.max(120, windowObject.innerHeight - (DEFAULT_MARGIN * 2)),
+    left: Math.max(margin, viewport.width - margin - width),
+    top,
+    maxHeight: Math.max(120, viewport.height - margin - top),
   };
 }
 
