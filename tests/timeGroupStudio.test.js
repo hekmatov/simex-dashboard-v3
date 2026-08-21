@@ -1,0 +1,320 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createServer } from "vite";
+
+import {
+  TIME_GROUP_STAGES,
+  createTimeGroupDraft,
+  deriveAvailabilityRows,
+  reduceTimeGroupDraft,
+  toSavedTimeGroup,
+  validateTimeGroupStage,
+} from "../src/components/time/timeGroupDraft.js";
+
+const DAY_MS = 24 * 60 * 60 * 1_000;
+const JAN_1 = Date.UTC(2027, 0, 1);
+const JAN_2 = JAN_1 + DAY_MS;
+const JAN_3 = JAN_2 + DAY_MS;
+const JAN_4 = JAN_3 + DAY_MS;
+
+const vite = await createServer({
+  root: process.cwd(),
+  configFile: false,
+  appType: "custom",
+  logLevel: "silent",
+  server: { middlewareMode: true },
+});
+const ledgerModule = await vite.ssrLoadModule("/src/components/time/AvailabilityLedger.jsx");
+const studioModule = await vite.ssrLoadModule("/src/components/time/TimeGroupStudio.jsx");
+await vite.close();
+
+test("Time Group draft exposes the approved four stages and validates before advancing", () => {
+  assert.deepEqual(TIME_GROUP_STAGES, ["period", "charts", "defaults", "review"]);
+  let draft = createTimeGroupDraft({
+    group: { id: "group-1", name: "Winter response" },
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+  });
+
+  draft = reduceTimeGroupDraft(draft, { type: "NEXT_STAGE" });
+  assert.equal(draft.stage, "period");
+  assert.equal(draft.status, "error");
+  assert.equal(draft.error.code, "PERIOD_REQUIRED");
+
+  draft = reduceTimeGroupDraft(draft, {
+    type: "SET_PERIOD",
+    period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+  });
+  draft = reduceTimeGroupDraft(draft, { type: "NEXT_STAGE" });
+  assert.equal(draft.stage, "charts");
+  assert.equal(draft.error, null);
+});
+
+test("availability rows include variable ranges and retain selected zero-observation members in Needs attention", () => {
+  const rows = deriveAvailabilityRows({
+    charts: chartFixtures(),
+    period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+    selectedChartIds: ["empty-chart", "ready-chart"],
+  });
+
+  assert.deepEqual(
+    rows.map(({ chartId }) => chartId),
+    ["empty-chart", "ready-chart", "categorical-chart"],
+  );
+  assert.deepEqual(rows[0], {
+    chartId: "empty-chart",
+    label: "No current observations",
+    pageLabel: "Biomedical",
+    sectionLabel: "Pressure",
+    selected: true,
+    needsAttention: true,
+    statusText: "Needs attention — no observations in period",
+    variables: [{
+      variableId: "beds",
+      label: "Beds",
+      earliestEpochMs: JAN_4,
+      latestEpochMs: JAN_4,
+      inPeriodCount: 0,
+      ticks: [],
+    }],
+  });
+  assert.equal(rows[1].variables[0].inPeriodCount, 2);
+  assert.deepEqual(rows[1].variables[0].ticks, [JAN_1, JAN_3]);
+});
+
+test("defaults require member fallback for unsupported Interpolate and positive finite cadence", () => {
+  let draft = createTimeGroupDraft({
+    group: {
+      id: "group-1",
+      name: "Winter response",
+      period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+      chartIds: ["categorical-chart"],
+      defaultMatching: "Interpolate",
+      memberFallbacks: {},
+      secondsPerFrame: 0,
+    },
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "defaults",
+  });
+
+  assert.equal(validateTimeGroupStage(draft, "defaults").code, "MEMBER_FALLBACK_REQUIRED");
+  draft = reduceTimeGroupDraft(draft, {
+    type: "SET_MEMBER_FALLBACK",
+    chartId: "categorical-chart",
+    policy: "Snap to Latest",
+  });
+  assert.equal(validateTimeGroupStage(draft, "defaults").code, "CADENCE_INVALID");
+  draft = reduceTimeGroupDraft(draft, { type: "SET_SECONDS_PER_FRAME", secondsPerFrame: 2.5 });
+  assert.equal(validateTimeGroupStage(draft, "defaults"), null);
+});
+
+test("shortening a group requires explicit edit-or-clamp resolution for every affected Scene", () => {
+  let draft = createTimeGroupDraft({
+    group: groupFixture(),
+    charts: chartFixtures(),
+    scenes: sceneFixtures(),
+    timeZone: "UTC",
+    initialStage: "review",
+  });
+  draft = reduceTimeGroupDraft(draft, {
+    type: "SET_PERIOD",
+    period: { startEpochMs: JAN_2, endEpochMs: JAN_3 },
+  });
+
+  assert.deepEqual(draft.sceneConsequences, [
+    { sceneId: "scene-before", resolution: null },
+    { sceneId: "scene-after", resolution: null },
+  ]);
+  draft = reduceTimeGroupDraft(draft, {
+    type: "RESOLVE_SCENE_CONSEQUENCE",
+    sceneId: "scene-before",
+    resolution: "edit",
+  });
+  draft = reduceTimeGroupDraft(draft, { type: "SAVE_REQUEST" });
+  assert.equal(draft.status, "error");
+  assert.equal(draft.error.code, "SCENE_CONSEQUENCE_REQUIRED");
+
+  draft = reduceTimeGroupDraft(draft, {
+    type: "RESOLVE_SCENE_CONSEQUENCE",
+    sceneId: "scene-after",
+    resolution: "clamp",
+  });
+  draft = reduceTimeGroupDraft(draft, { type: "SAVE_REQUEST" });
+  assert.equal(draft.status, "saving");
+  assert.deepEqual(draft.scenes, sceneFixtures());
+});
+
+test("Save, failed retry, Discard, and Stay preserve the last saved group", () => {
+  let draft = createTimeGroupDraft({
+    group: groupFixture(),
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "review",
+  });
+  draft = reduceTimeGroupDraft(draft, { type: "SET_NAME", name: "Updated response" });
+  const stay = reduceTimeGroupDraft(draft, { type: "STAY" });
+  assert.equal(stay.status, "dirty");
+
+  let saving = reduceTimeGroupDraft(stay, { type: "SAVE_REQUEST" });
+  assert.equal(saving.status, "saving");
+  saving = reduceTimeGroupDraft(saving, {
+    type: "SAVE_FAILED",
+    error: { code: "STORAGE_BUSY", message: "Retry save", retryable: true },
+  });
+  assert.equal(saving.status, "error");
+  assert.equal(saving.value.name, "Updated response");
+  assert.equal(saving.baseline.name, "Winter response");
+  assert.equal(reduceTimeGroupDraft(saving, { type: "SAVE_REQUEST" }).status, "saving");
+
+  const discarded = reduceTimeGroupDraft(saving, { type: "DISCARD" });
+  assert.equal(discarded.status, "clean");
+  assert.equal(discarded.value.name, "Winter response");
+
+  const saved = toSavedTimeGroup(stay);
+  assert.deepEqual(Object.keys(saved), [
+    "id",
+    "name",
+    "period",
+    "chartIds",
+    "defaultMatching",
+    "memberFallbacks",
+    "secondsPerFrame",
+  ]);
+});
+
+test("suspension restores stage, focus, scroll, and invoking target deterministically", () => {
+  const restoration = {
+    stage: "charts",
+    focusId: "time-group-chart-empty-chart",
+    scrollTop: 618,
+    targetId: "time-group-group-1",
+  };
+  let draft = createTimeGroupDraft({
+    group: groupFixture(),
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "charts",
+  });
+  draft = reduceTimeGroupDraft(draft, { type: "SUSPEND", restoration });
+  assert.equal(draft.status, "suspended");
+  draft = reduceTimeGroupDraft(draft, { type: "RESUME" });
+  assert.equal(draft.status, "clean");
+  assert.equal(draft.stage, "charts");
+  assert.deepEqual(draft.restoration, restoration);
+});
+
+test("Availability Ledger communicates status with text rather than colour alone", () => {
+  const html = renderToStaticMarkup(React.createElement(ledgerModule.default, {
+    rows: deriveAvailabilityRows({
+      charts: chartFixtures(),
+      period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+      selectedChartIds: ["empty-chart", "ready-chart"],
+    }),
+  }));
+
+  assert.match(html, /aria-label="Chart availability"/);
+  assert.match(html, /Needs attention — no observations in period/);
+  assert.match(html, /2 observations in period/);
+  assert.match(html, /Biomedical · Pressure/);
+  assert.match(html, /data-status="needs-attention"/);
+});
+
+test("Time Group Studio renders all stages, current-step semantics, and Save Discard Stay actions", () => {
+  const draft = createTimeGroupDraft({
+    group: groupFixture(),
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "charts",
+  });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, {
+    draft,
+    onAction() {},
+  }));
+
+  assert.match(html, /Time Group Studio/);
+  assert.match(html, />Choose period</);
+  assert.match(html, />Choose charts</);
+  assert.match(html, />Set defaults</);
+  assert.match(html, />Name and review</);
+  assert.match(html, /aria-current="step"[^>]*>Choose charts/);
+  assert.match(html, />Save Time Group</);
+  assert.match(html, />Discard</);
+  assert.match(html, />Stay/);
+});
+
+function groupFixture() {
+  return {
+    id: "group-1",
+    name: "Winter response",
+    period: { startEpochMs: JAN_1, endEpochMs: JAN_4 },
+    chartIds: ["ready-chart"],
+    defaultMatching: "Concurrent only",
+    memberFallbacks: {},
+    secondsPerFrame: 2.5,
+  };
+}
+
+function sceneFixtures() {
+  return [{
+    id: "scene-before",
+    groupId: "group-1",
+    period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+  }, {
+    id: "scene-after",
+    groupId: "group-1",
+    period: { startEpochMs: JAN_2, endEpochMs: JAN_4 },
+  }, {
+    id: "scene-safe",
+    groupId: "group-1",
+    period: { startEpochMs: JAN_2, endEpochMs: JAN_3 },
+  }];
+}
+
+function chartFixtures() {
+  return [{
+    id: "ready-chart",
+    label: "Ready chart",
+    pageLabel: "Biomedical",
+    sectionLabel: "Overview",
+    interpolationAllowed: true,
+    variables: [{
+      id: "cases",
+      label: "Cases",
+      observations: [
+        { epochMs: JAN_1, value: 10 },
+        { epochMs: JAN_3, value: 30 },
+      ],
+    }],
+  }, {
+    id: "empty-chart",
+    label: "No current observations",
+    pageLabel: "Biomedical",
+    sectionLabel: "Pressure",
+    interpolationAllowed: true,
+    variables: [{
+      id: "beds",
+      label: "Beds",
+      observations: [{ epochMs: JAN_4, value: 40 }],
+    }],
+  }, {
+    id: "categorical-chart",
+    label: "Categories",
+    pageLabel: "Socio-economic",
+    sectionLabel: "Signals",
+    interpolationAllowed: false,
+    variables: [{
+      id: "state",
+      label: "State",
+      observations: [{ epochMs: JAN_2, value: "alert" }],
+    }],
+  }];
+}
