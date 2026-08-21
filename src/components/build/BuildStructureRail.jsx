@@ -1,7 +1,7 @@
 import React from "react";
 
 import { SimExIcon } from "../common/SimExIcon.js";
-import { createDelayedTreeActivation, selectionKey, visibleBuildTreeNodes } from "./buildTreeInteraction.js";
+import { createDelayedTreeActivation, focusedTreeKeyAfterCollapse, selectionKey, visibleBuildTreeNodes } from "./buildTreeInteraction.js";
 
 const iconForKind = { page: "addTab", section: "section", chart: "chartMixed" };
 
@@ -32,11 +32,18 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     setFocusedKey(key);
     requestAnimationFrame(() => refs.current.get(key)?.focus());
   };
-  const toggle = (key) => setExpandedKeys((old) => {
-    const next = new Set(old);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    return next;
-  });
+  const toggle = (key) => {
+    const collapsing = expandedKeys.has(key);
+    const nextFocusedKey = collapsing
+      ? focusedTreeKeyAfterCollapse(focusedKey, key)
+      : focusedKey;
+    setExpandedKeys((old) => {
+      const next = new Set(old);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+    if (collapsing && nextFocusedKey !== focusedKey) focus(nextFocusedKey);
+  };
   const labelFor = (node) => {
     const page = (dashboard.pages ?? []).find((item) => item.id === node.pageId);
     if (node.kind === "page") return page?.label || page?.title || "Untitled page";

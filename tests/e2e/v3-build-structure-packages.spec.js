@@ -364,3 +364,40 @@ test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a 4
     (items) => items.filter((item) => item.tabIndex === 0).length,
   )).toBe(1);
 });
+
+test("pointer collapse moves descendant roving focus to the collapsing Section and Page", async ({ page }) => {
+  await openBuildStructure(page);
+  const tree = page.getByRole("tree");
+  const socio = tree.getByRole("treeitem", { name: "Socio-economic", exact: true });
+  const section = tree.getByRole("treeitem", {
+    name: "Public response and policy signals",
+    exact: true,
+  });
+  const chart = tree.getByRole("treeitem", {
+    name: "Risk perception over time",
+    exact: true,
+  });
+  const rovingCount = () => tree.locator('[role="treeitem"]').evaluateAll(
+    (items) => items.filter((item) => item.tabIndex === 0).length,
+  );
+
+  await chart.focus();
+  await expect(chart).toBeFocused();
+  await section.getByRole("button", {
+    name: "Collapse Public response and policy signals",
+    exact: true,
+  }).click();
+  await expect(section).toBeFocused();
+  expect(await rovingCount()).toBe(1);
+  await expect(chart).toHaveCount(0);
+
+  await section.getByRole("button", {
+    name: "Expand Public response and policy signals",
+    exact: true,
+  }).click();
+  await chart.focus();
+  await socio.getByRole("button", { name: "Collapse Socio-economic", exact: true }).click();
+  await expect(socio).toBeFocused();
+  expect(await rovingCount()).toBe(1);
+  await expect(section).toHaveCount(0);
+});
