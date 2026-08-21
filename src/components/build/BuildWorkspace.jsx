@@ -83,6 +83,7 @@ export default function BuildWorkspace({
   onSectionReorder,
   onAddSection,
   onAddChart,
+  chartDraftAvailable = false,
   onFinish,
   onReset,
   onImportPackage,
@@ -463,7 +464,7 @@ export default function BuildWorkspace({
             </div>
             <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
             <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
-            <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>{chartDraftAvailable ? "Resume chart draft" : "Add chart"}</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("time-content")}>Time Content</button>

@@ -87,6 +87,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [chartEditorVisible, setChartEditorVisible] = React.useState(false);
   const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
+  const [chartWizardSuspended, setChartWizardSuspended] = React.useState(false);
+  const [chartWizardSuspendedTarget, setChartWizardSuspendedTarget] = React.useState(null);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
   const [externalDirty, setExternalDirty] = React.useState({
@@ -917,6 +919,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function openChartWizard(sectionId) {
     if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
+    if (chartWizardSuspended && chartWizardSuspendedTarget) {
+      setChartWizardTarget(chartWizardSuspendedTarget);
+      setChartWizardSuspended(false);
+      return;
+    }
     const section = sectionId
       ? activePage?.sections?.find(({ id }) => id === sectionId)
       : buildSelection?.kind === "section"
@@ -924,6 +931,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       : activePage?.sections?.[0];
     if (!activePage || !section) return;
     setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
+    setChartWizardSuspended(false);
   }
 
   function recoverEmptySectionInBuild(sectionId) {
@@ -1175,6 +1183,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onSectionReorder={reorderBuildSection}
           onAddSection={addSection}
           onAddChart={openChartWizard}
+          chartDraftAvailable={chartWizardSuspended}
           onFinish={saveEditMode}
           onReset={() => setResetEditSessionConfirmation(true)}
           onImportPackage={requestDashboardPackageImport}
@@ -1195,6 +1204,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
         onDirtyChange={setChartWizardDirty}
+        onSuspendedChange={(suspended) => {
+          setChartWizardSuspended(suspended);
+          setChartWizardSuspendedTarget(suspended ? chartWizardTarget : null);
+        }}
         onClose={() => {
           if (!moderatorOperationGateRef.current.isActive()) setChartWizardTarget(null);
         }}
@@ -1204,6 +1217,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           }
           await pendingEdits.flush();
           await onChartCreate(payload, chartWizardTarget);
+          setChartWizardSuspended(false);
+          setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
         }}
       />
@@ -1632,6 +1647,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           const target = chartWizardTarget;
           await pendingEdits.flush();
           await onChartCreate(payload, target);
+          setChartWizardSuspended(false);
+          setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
         }}
       />

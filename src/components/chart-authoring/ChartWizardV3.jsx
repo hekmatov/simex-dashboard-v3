@@ -89,6 +89,7 @@ export default function ChartWizardV3({
   disabled = false,
   onClose,
   onDirtyChange = noop,
+  onSuspendedChange = noop,
   onCreate,
 }) {
   const safeDataSources = isRecord(dataSources) ? dataSources : {};
@@ -151,6 +152,7 @@ export default function ChartWizardV3({
       },
     }));
     setSubmissionError("");
+    onSuspendedChange(true);
     onClose?.();
   }
 
@@ -529,7 +531,10 @@ export default function ChartWizardV3({
     if (operationLocked()) return;
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
-    if (closed.closed && typeof onClose === "function") onClose();
+    if (closed.closed) {
+      onSuspendedChange(false);
+      if (typeof onClose === "function") onClose();
+    }
   }
 
   return React.createElement(

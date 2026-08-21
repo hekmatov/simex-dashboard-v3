@@ -6,9 +6,15 @@
 }
 
 /* Step 7 chart creation: six stable stages with independent proof ledgers. */
-.chart-wizard-v3 {
+.chart-wizard.chart-wizard-v3 {
+  background: #fff;
+  color-scheme: light;
   max-width: min(1180px, calc(100vw - 32px));
   width: 100%;
+}
+
+.chart-wizard-v3 .chart-wizard-body {
+  background: #fff;
 }
 
 .chart-wizard-step-tabs {
