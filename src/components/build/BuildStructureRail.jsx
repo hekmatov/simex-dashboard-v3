@@ -78,6 +78,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     const expanded = expandedKeys.has(node.key);
     const isRenaming = renameKey === node.key;
     const keyDown = (event) => {
+      if (disabled) return;
       if (event.key === "ArrowDown" && nodes[index + 1]) { event.preventDefault(); focus(nodes[index + 1].key); }
       if (event.key === "ArrowUp" && nodes[index - 1]) { event.preventDefault(); focus(nodes[index - 1].key); }
       if (event.key === "ArrowRight" && node.hasChildren) { event.preventDefault(); if (!expanded) toggle(node.key); else if (nodes[index + 1]) focus(nodes[index + 1].key); }
@@ -86,11 +87,75 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
       if (event.key === "F2") { event.preventDefault(); void beginRename(node); }
       if (event.key === "Escape" && isRenaming) { event.preventDefault(); cancelRename(node); }
     };
-    return <li key={node.key} className="build-tree-item-wrap">
-      <div className={`build-tree-row${selected ? " is-selected" : ""}${isRenaming ? " is-renaming" : ""}`} data-build-node-kind={node.kind} aria-selected={selected}>
-        {node.hasChildren ? <button type="button" className="build-tree-caret" aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`} aria-expanded={expanded} disabled={disabled} onClick={() => toggle(node.key)}>⌄</button> : <span className="build-tree-caret-spacer" aria-hidden="true" />}
+    return <li
+      key={node.key}
+      ref={(element) => {
+        if (element) refs.current.set(node.key, element);
+        else refs.current.delete(node.key);
+      }}
+      role="treeitem"
+      className="build-tree-item-wrap"
+      data-build-node-kind={node.kind}
+      aria-label={label}
+      aria-expanded={node.hasChildren ? expanded : undefined}
+      aria-selected={selected}
+      aria-disabled={disabled || undefined}
+      tabIndex={isRenaming ? -1 : activeTab ? 0 : -1}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) setFocusedKey(node.key);
+      }}
+      onKeyDown={keyDown}
+      onClick={(event) => {
+        if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
+        if (disabled || isRenaming || event.defaultPrevented) return;
+        controller.click(() => void activate(selectionFor(node)));
+      }}
+      onDoubleClick={(event) => {
+        if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
+        if (disabled || isRenaming || event.defaultPrevented) return;
+        controller.doubleClick(() => void beginRename(node));
+      }}
+    >
+      <div className={`build-tree-row${selected ? " is-selected" : ""}${isRenaming ? " is-renaming" : ""}`}>
+        {node.hasChildren ? (
+          <button
+            type="button"
+            className="build-tree-caret"
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
+            tabIndex={-1}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggle(node.key);
+            }}
+            onDoubleClick={(event) => event.stopPropagation()}
+          >⌄</button>
+        ) : <span className="build-tree-caret-spacer" aria-hidden="true" />}
         <span data-build-tree-icon={node.kind}><SimExIcon iconId={iconForKind[node.kind]} size={16} /></span>
-        {isRenaming ? <input autoFocus aria-label={`Rename ${node.kind} ${label}`} value={renameValue} onChange={(event) => { setRenameValue(event.target.value); onRenameDirtyChange?.(event.target.value.trim() !== label.trim()); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void commitRename(node); } if (event.key === "Escape") { event.preventDefault(); cancelRename(node); } }} onBlur={(event) => { if (event.relatedTarget?.closest?.('[role="dialog"]')) return; if (renameValue.trim() && renameValue.trim() !== label) void commitRename(node); else cancelRename(node); }} /> : <button ref={(element) => { if (element) refs.current.set(node.key, element); else refs.current.delete(node.key); }} type="button" role="treeitem" className="build-tree-label" data-build-node-kind={node.kind} aria-expanded={node.hasChildren ? expanded : undefined} aria-selected={selected} tabIndex={activeTab ? 0 : -1} disabled={disabled} onFocus={() => setFocusedKey(node.key)} onKeyDown={keyDown} onClick={() => controller.click(() => void activate(selectionFor(node)))} onDoubleClick={() => controller.doubleClick(() => void beginRename(node))}>{label}</button>}
+        {isRenaming ? (
+          <input
+            autoFocus
+            aria-label={`Rename ${node.kind} ${label}`}
+            value={renameValue}
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              setRenameValue(event.target.value);
+              onRenameDirtyChange?.(event.target.value.trim() !== label.trim());
+            }}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              if (event.key === "Enter") { event.preventDefault(); void commitRename(node); }
+              if (event.key === "Escape") { event.preventDefault(); cancelRename(node); }
+            }}
+            onBlur={(event) => {
+              if (event.relatedTarget?.closest?.('[role="dialog"]')) return;
+              if (renameValue.trim() && renameValue.trim() !== label) void commitRename(node);
+              else cancelRename(node);
+            }}
+          />
+        ) : <span className="build-tree-label">{label}</span>}
       </div>
       {node.hasChildren && expanded && <ul role="group" className="build-tree-group">{nodes.filter((item) => item.parentKey === node.key).map(row)}</ul>}
     </li>;

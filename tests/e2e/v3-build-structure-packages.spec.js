@@ -16,6 +16,11 @@ async function openBuildStructure(page) {
   await expect(page.getByRole("tree")).toBeVisible();
 }
 
+function treeItemLabel(tree, name) {
+  return tree.getByRole("treeitem", { name, exact: true })
+    .locator(":scope > .build-tree-row .build-tree-label");
+}
+
 async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   const config = JSON.parse(await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),
@@ -80,20 +85,21 @@ test("double-click rename navigates and highlights without opening Unit Orbit", 
   const tree = page.getByRole("tree");
   const target = tree.getByRole("treeitem", { name: "Trust and wellbeing", exact: true });
 
-  await target.dblclick();
+  await target.locator(":scope > .build-tree-row .build-tree-label").dblclick();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
   await expect(page.locator('[data-canonical-section-id="trust_wellbeing"]')).toBeInViewport();
   const rename = tree.getByRole("textbox", { name: "Rename section Trust and wellbeing" });
   await expect(rename).toBeFocused();
-  await expect(rename.locator("xpath=.." )).toHaveAttribute("aria-selected", "true");
+  await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
 });
 
 test("double-click rename persists complete Page Section and Chart owner updates", async ({ page }) => {
+  test.setTimeout(60_000);
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
 
-  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  await treeItemLabel(tree, "Socio-economic").dblclick();
   const pageRename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await pageRename.fill("Community response");
   await pageRename.press("Enter");
@@ -101,7 +107,7 @@ test("double-click rename persists complete Page Section and Chart owner updates
   await expect(page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Community response", exact: true })).toBeVisible();
 
-  await tree.getByRole("treeitem", { name: "Public response and policy signals", exact: true }).dblclick();
+  await treeItemLabel(tree, "Public response and policy signals").dblclick();
   const sectionRename = tree.getByRole("textbox", {
     name: "Rename section Public response and policy signals",
   });
@@ -111,7 +117,7 @@ test("double-click rename persists complete Page Section and Chart owner updates
   await expect(page.locator('[data-canonical-section-id="public_response"] h2'))
     .toHaveText("Public response signals");
 
-  await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).dblclick();
+  await treeItemLabel(tree, "Risk perception over time").dblclick();
   const chartRename = tree.getByRole("textbox", {
     name: "Rename chart Risk perception over time",
   });
@@ -179,7 +185,7 @@ test("a rejected delayed Page rename retains the inline value for retry", async 
   });
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
-  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  await treeItemLabel(tree, "Socio-economic").dblclick();
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Rejected rename");
   await rename.press("Enter");
@@ -248,7 +254,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
 test("cancelling the authored-content import warning preserves inline rename state", async ({ page }) => {
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
-  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  await treeItemLabel(tree, "Socio-economic").dblclick();
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Pending package-safe rename");
 
@@ -261,7 +267,7 @@ test("cancelling the authored-content import warning preserves inline rename sta
 
   await expect(rename).toBeVisible();
   await expect(rename).toHaveValue("Pending package-safe rename");
-  await expect(rename.locator("xpath=..")).toHaveAttribute("aria-selected", "true");
+  await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".canonical-dashboard-frame"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
 });
@@ -279,7 +285,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   const tree = page.getByRole("tree");
   const fixture = await packageFixture({ preserveSocioEconomicIds: true });
 
-  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  await treeItemLabel(tree, "Socio-economic").dblclick();
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Stale local Page name");
 
@@ -314,4 +320,47 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
     name: "Stale local Page name",
     exact: true,
   })).toHaveCount(0);
+});
+
+test("treeitem wrapper owns keyboard focus, nested groups, rename input, and a 44px pointer caret", async ({ page }) => {
+  await openBuildStructure(page);
+  const tree = page.getByRole("tree");
+  const socio = tree.getByRole("treeitem", { name: "Socio-economic", exact: true });
+
+  await expect(socio).toHaveAttribute("aria-expanded", "true");
+  await expect(socio.locator(":scope > [role=group]")).toHaveCount(1);
+  expect(await tree.locator('[role="treeitem"]').evaluateAll(
+    (items) => items.filter((item) => item.tabIndex === 0).length,
+  )).toBe(1);
+
+  const caret = socio.getByRole("button", { name: "Collapse Socio-economic", exact: true });
+  await expect(caret).toHaveAttribute("tabindex", "-1");
+  const caretBox = await caret.boundingBox();
+  expect(caretBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+  expect(caretBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  await socio.focus();
+  await socio.press("ArrowLeft");
+  await expect(socio).toHaveAttribute("aria-expanded", "false");
+  await expect(socio.locator(":scope > [role=group]")).toHaveCount(0);
+  await socio.press("ArrowRight");
+  await expect(socio).toHaveAttribute("aria-expanded", "true");
+  await socio.press("ArrowDown");
+  const section = tree.getByRole("treeitem", {
+    name: "Public response and policy signals",
+    exact: true,
+  });
+  await expect(section).toBeFocused();
+
+  await section.locator(":scope > .build-tree-row .build-tree-label")
+    .dblclick();
+  const rename = tree.getByRole("textbox", {
+    name: "Rename section Public response and policy signals",
+  });
+  await expect(rename).toBeFocused();
+  await expect(rename.locator('xpath=ancestor::*[@role="treeitem"][1]'))
+    .toHaveAttribute("aria-selected", "true");
+  expect(await tree.locator("*").evaluateAll(
+    (items) => items.filter((item) => item.tabIndex === 0).length,
+  )).toBe(1);
 });

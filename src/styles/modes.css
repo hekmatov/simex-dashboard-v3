@@ -1450,3 +1450,34 @@
   outline: 3px solid var(--simex-focus);
   outline-offset: 2px;
 }
+
+.build-tree-item-wrap {
+  outline: 0;
+}
+
+.build-tree-row {
+  grid-template-columns: 44px 18px minmax(0, 1fr);
+}
+
+.build-tree-caret,
+.build-tree-caret-spacer {
+  width: 44px;
+}
+
+.build-tree-label {
+  align-items: center;
+  display: flex;
+}
+
+.build-tree-row.is-selected {
+  box-shadow: inset 3px 0 0 var(--simex-selected);
+}
+
+.build-tree-row.is-selected .build-tree-label {
+  box-shadow: none;
+}
+
+.build-tree-item-wrap:focus > .build-tree-row {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: 2px;
+}
