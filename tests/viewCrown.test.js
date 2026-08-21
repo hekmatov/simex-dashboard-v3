@@ -89,7 +89,8 @@ test("unsupported phone modes expose one persistent Switch to View action", () =
 
   assert.match(build, /class="phone-mode-banner"/);
   assert.match(build, />Switch to View<\/button>/);
-  assert.match(build, /data-command-crown-layer="mode"[\s\S]*data-command-crown-layer="location"[\s\S]*data-command-crown-layer="context"/);
+  assert.match(build, /data-command-crown-layer="mode"[\s\S]*data-command-crown-layer="location"/);
+  assert.doesNotMatch(build, /data-command-crown-layer="context"/);
   assert.doesNotMatch(view, /class="phone-mode-banner"/);
 });
 

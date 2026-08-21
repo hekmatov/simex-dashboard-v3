@@ -28,10 +28,13 @@ export async function readCanonicalGeometry(page, expectedIds = null, { hydrate 
   });
 
   if (hydrate) {
-    const panels = page.locator("[data-canonical-panel-id], .chart-panel");
-    for (let index = 0; index < await panels.count(); index += 1) {
-      await panels.nth(index).scrollIntoViewIfNeeded();
-    }
+    await page.evaluate(async () => {
+      const panels = [...document.querySelectorAll("[data-canonical-panel-id], .chart-panel")];
+      for (const panel of panels) {
+        panel.scrollIntoView({ block: "center", inline: "nearest" });
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+    });
   }
   if (expectedIds?.plot?.length) {
     await expect.poll(
@@ -191,7 +194,7 @@ test("open Build panel preserves the central canvas and reveals the edited chart
   expect(clearance.chartRight).toBeLessThanOrEqual(clearance.panelLeft - 12);
 });
 
-test("Build section rename target keeps 44px activation and 3px focus", async ({ page }) => {
+test("Build Structure double click navigates, highlights, and focuses section rename", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller")
@@ -201,25 +204,17 @@ test("Build section rename target keeps 44px activation and 3px focus", async ({
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  const renameButton = page.locator(".build-section-title-button").first();
-  await expect(renameButton).toBeVisible();
-  const target = await renameButton.boundingBox();
-  expect(target.width).toBeGreaterThanOrEqual(44);
-  expect(target.height).toBeGreaterThanOrEqual(44);
-
-  await page.keyboard.press("Tab");
-  await renameButton.focus();
-  const focus = await renameButton.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      outlineWidth: style.outlineWidth,
-      outlineStyle: style.outlineStyle,
-    };
-  });
-  expect(focus).toEqual({
-    outlineWidth: "3px",
-    outlineStyle: "solid",
-  });
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  const structure = page.getByRole("navigation", { name: "Dashboard structure" });
+  const section = structure.getByRole("treeitem", { name: "Outbreak dynamics", exact: true });
+  await section.locator(":scope > .build-tree-row .build-tree-label").dblclick();
+  await expect(section).toHaveAttribute("aria-selected", "true");
+  const rename = structure.getByRole("textbox", { name: "Rename section Outbreak dynamics" });
+  await expect(rename).toBeFocused();
+  await expect(rename).toHaveValue("Outbreak dynamics");
+  const target = await rename.boundingBox();
+  expect(target?.height).toBeGreaterThanOrEqual(44);
+  await rename.press("Escape");
 });
 
 test("dirty Build chart blocks crown Page navigation until the draft resolves", async ({ page }) => {
@@ -251,6 +246,10 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
     "Finish or cancel the open chart editor before changing Page.",
   );
 
+  await editChart.focus();
+  await page.keyboard.press("Enter");
+  await expect(editor).toBeVisible();
+  await expect(title).toHaveValue("Draft survives crown navigation");
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await crownPages.getByRole("button", { name: "Socio-economic", exact: true }).click();
@@ -279,7 +278,9 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Build panel", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button")).toHaveCount(3);
+  await expect(pinned.getByRole("button", { name: "Time Groups", exact: true }))
+    .toHaveCount(1);
+  await expect(pinned.getByRole("button")).toHaveCount(4);
   await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
     .toHaveCount(0);
   await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
@@ -343,29 +344,25 @@ test("active comparison selection disables repeated crown activation without cle
   await expect(compareCharts).toBeEnabled();
 });
 
-test("live Build Page actions expose 44px targets and a visible 3px focus ring", async ({ page }) => {
+test("live Build Structure tree exposes a 44px caret and visible 3px focus", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  const actionRail = page.getByLabel("Home Page actions");
-  const actions = actionRail.getByRole("button");
-  await expect(actions).toHaveCount(3);
-  for (const action of await actions.all()) {
-    const box = await action.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-  }
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  const structure = page.getByRole("navigation", { name: "Dashboard structure" });
+  const home = structure.getByRole("treeitem", { name: "Home", exact: true });
+  const caret = home.getByRole("button", { name: "Collapse Home", exact: true });
+  const target = await caret.boundingBox();
+  expect(target?.width).toBeGreaterThanOrEqual(44);
+  expect(target?.height).toBeGreaterThanOrEqual(44);
 
-  const edit = actionRail.getByRole("button", { name: "Edit Home", exact: true });
-  await edit.focus();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Shift+Tab");
-  await expect(edit).toBeFocused();
-  const focus = await edit.evaluate((element) => {
-    const style = window.getComputedStyle(element);
+  await home.focus();
+  await expect(home).toBeFocused();
+  const focus = await home.locator(":scope > .build-tree-row").evaluate((element) => {
+    const style = getComputedStyle(element);
     return {
       outlineStyle: style.outlineStyle,
       outlineWidth: style.outlineWidth,
@@ -375,6 +372,8 @@ test("live Build Page actions expose 44px targets and a visible 3px focus ring",
     outlineStyle: "solid",
     outlineWidth: "3px",
   });
+  await expect(page.locator(".build-page-navigation [aria-label$='Page actions']"))
+    .toHaveCount(0);
 });
 
 test("canonical View and Build frames project landing and analytical Page metadata", async ({ page }) => {
@@ -539,17 +538,15 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     .click();
 
   const layoutDraftValue = "Phone-preserved Biomedical layout";
-  const pageLayoutControls = page.locator(".build-page-navigation");
-  const editPageLayout = pageLayoutControls
-    .getByRole("button", { name: "Edit Biomedical", exact: true });
-  await editPageLayout.focus();
-  await expect(editPageLayout).toBeFocused();
-  await page.keyboard.press("Enter");
-  const pageLayoutEditor = page.getByRole("complementary", { name: "Edit Page Biomedical" });
-  await pageLayoutEditor.getByLabel("Page name").fill(layoutDraftValue);
-  await pageLayoutEditor.getByRole("button", { name: "Apply", exact: true }).click();
-  const layoutDraft = pageLayoutControls
-    .getByRole("button", { name: layoutDraftValue, exact: true });
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  const structure = page.getByRole("navigation", { name: "Dashboard structure" });
+  const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
+  await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();
+  const pageRename = structure.getByRole("textbox", { name: "Rename page Biomedical" });
+  await pageRename.fill(layoutDraftValue);
+  await pageRename.press("Enter");
+  const renamedPage = structure.getByRole("treeitem", { name: layoutDraftValue, exact: true });
+  const layoutDraft = renamedPage.locator(":scope > .build-tree-row .build-tree-label");
   await expect(layoutDraft).toBeVisible();
 
   const appFrame = page.locator(".app-frame");
@@ -625,8 +622,16 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   );
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
 
+  await editChart.focus();
+  await page.keyboard.press("Enter");
+  await expect(editor).toBeVisible();
+  await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(editor).toHaveCount(0);
+  await renamedPage.getByRole("button", { name: `Collapse ${layoutDraftValue}`, exact: true }).click();
+  await expect(renamedPage).toHaveAttribute("aria-expanded", "false");
+  await renamedPage.getByRole("button", { name: `Expand ${layoutDraftValue}`, exact: true }).click();
+  await expect(renamedPage).toHaveAttribute("aria-expanded", "true");
   await buildNotice.getByRole("button", { name: "Switch to View", exact: true }).click();
   await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
 
