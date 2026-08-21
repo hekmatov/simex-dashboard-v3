@@ -19,6 +19,7 @@ export default function AppFrame({
   density,
   children,
   theme,
+  lookDrawerOpen = false,
 }) {
   const phoneUnsupported = mode === "build" || mode === "present";
   return (
@@ -31,6 +32,7 @@ export default function AppFrame({
       data-chart-color-mode={theme?.chartColorMode}
       data-appearance-preference={theme?.appearancePreference}
       data-resolved-appearance={theme?.resolvedAppearance}
+      data-look-drawer-open={lookDrawerOpen ? "true" : undefined}
       style={{ ...theme?.cssVariables, ...theme?.styleVariables }}
     >
       {phoneUnsupported && <PhoneModeNotice

@@ -10,6 +10,10 @@ const MAX_RUNTIME_ERROR_LENGTH = 240;
 const DEFAULT_CHART_TEXT_THEME = Object.freeze({
   textStrong: "#18334E",
   textMuted: "#49627A",
+  borderSubtle: "#C7CBCF",
+  gridline: "#D9DDE1",
+  surfacePanel: "#FFFFFF",
+  surfacePanelAlt: "#F4F5F5",
 });
 
 export default function EChartsChartView({
@@ -45,12 +49,16 @@ export default function EChartsChartView({
         || DEFAULT_CHART_TEXT_THEME.textStrong,
       textMuted: style.getPropertyValue("--simex-text-muted").trim()
         || DEFAULT_CHART_TEXT_THEME.textMuted,
+      borderSubtle: style.getPropertyValue("--simex-border-subtle").trim()
+        || DEFAULT_CHART_TEXT_THEME.borderSubtle,
+      gridline: style.getPropertyValue("--simex-gridline").trim()
+        || DEFAULT_CHART_TEXT_THEME.gridline,
+      surfacePanel: style.getPropertyValue("--simex-surface-panel").trim()
+        || DEFAULT_CHART_TEXT_THEME.surfacePanel,
+      surfacePanelAlt: style.getPropertyValue("--simex-surface-panel-alt").trim()
+        || DEFAULT_CHART_TEXT_THEME.surfacePanelAlt,
     };
-    setTextTheme((current) => (
-      current.textStrong === next.textStrong && current.textMuted === next.textMuted
-        ? current
-        : next
-    ));
+    setTextTheme((current) => Object.keys(next).every((key) => current[key] === next[key]) ? current : next);
   });
 
   React.useEffect(() => {
@@ -136,6 +144,10 @@ export function applyEChartsPresentation(
     DEFAULT_CHART_TEXT_THEME.textStrong,
   );
   const textMuted = normalizedTextColor(textTheme?.textMuted, textStrong);
+  const borderSubtle = normalizedTextColor(textTheme?.borderSubtle, DEFAULT_CHART_TEXT_THEME.borderSubtle);
+  const gridline = normalizedTextColor(textTheme?.gridline, borderSubtle);
+  const surfacePanel = normalizedTextColor(textTheme?.surfacePanel, DEFAULT_CHART_TEXT_THEME.surfacePanel);
+  const surfacePanelAlt = normalizedTextColor(textTheme?.surfacePanelAlt, surfacePanel);
   const backgroundColor = resolveChartSurfaceBackground(
     chart?.presentation?.background,
     { themeDefault: "transparent" },
@@ -145,8 +157,8 @@ export function applyEChartsPresentation(
     option: {
       ...optionWithoutBackground,
       textStyle: {
-        color: textStrong,
         ...(option.textStyle ?? {}),
+        color: textStrong,
       },
       ...(option.title === undefined
         ? {}
@@ -158,6 +170,18 @@ export function applyEChartsPresentation(
       ...(option.legend === undefined
         ? {}
         : { legend: normalizedLegend(option.legend, textMuted) }),
+      ...(option.xAxis === undefined
+        ? {}
+        : { xAxis: normalizedAxis(option.xAxis, textMuted, borderSubtle, gridline) }),
+      ...(option.yAxis === undefined
+        ? {}
+        : { yAxis: normalizedAxis(option.yAxis, textMuted, borderSubtle, gridline) }),
+      ...(option.tooltip === undefined
+        ? {}
+        : { tooltip: normalizedTooltip(option.tooltip, textStrong, borderSubtle, surfacePanel) }),
+      ...(option.series === undefined
+        ? {}
+        : { series: normalizedSeries(option.series, textStrong, textMuted, surfacePanelAlt) }),
       aria: {
         ...(option.aria ?? {}),
         enabled: accessibilityEnabled,
@@ -247,10 +271,10 @@ function normalizedTitle(value, align, textColor) {
         left: align,
         top: value.top ?? 0,
         textStyle: {
-          color: textColor,
           fontSize: 16,
           fontWeight: 600,
           ...(value.textStyle ?? {}),
+          color: textColor,
         },
       }
     : { text: "", left: align, top: 0 };
@@ -267,13 +291,70 @@ function normalizedLegend(value, textColor) {
     itemWidth: value.itemWidth ?? 16,
     itemHeight: value.itemHeight ?? 10,
     textStyle: {
-      color: textColor,
       fontSize: 11,
       ...(value.textStyle ?? {}),
+      color: textColor,
     },
   };
 }
 
+function normalizedAxis(value, textColor, borderColor, gridColor) {
+  const normalize = (axis = {}) => ({
+    ...axis,
+    axisLabel: { ...(axis.axisLabel ?? {}), color: textColor },
+    nameTextStyle: { ...(axis.nameTextStyle ?? {}), color: textColor },
+    axisLine: {
+      ...(axis.axisLine ?? {}),
+      lineStyle: { ...(axis.axisLine?.lineStyle ?? {}), color: borderColor },
+    },
+    axisTick: {
+      ...(axis.axisTick ?? {}),
+      lineStyle: { ...(axis.axisTick?.lineStyle ?? {}), color: borderColor },
+    },
+    splitLine: {
+      ...(axis.splitLine ?? {}),
+      lineStyle: { ...(axis.splitLine?.lineStyle ?? {}), color: gridColor },
+    },
+  });
+  return Array.isArray(value) ? value.map(normalize) : normalize(value);
+}
+
+function normalizedTooltip(value, textColor, borderColor, backgroundColor) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  return {
+    ...value,
+    backgroundColor,
+    borderColor,
+    textStyle: { ...(value.textStyle ?? {}), color: textColor },
+  };
+}
+
+function normalizedSeries(value, textStrong, textMuted, surfaceAlt) {
+  if (!Array.isArray(value)) return value;
+  return value.map((series) => {
+    if (!series || typeof series !== "object") return series;
+    return {
+      ...series,
+      ...(series.label === undefined
+        ? {}
+        : { label: { ...series.label, color: textStrong } }),
+      ...(series.detail === undefined
+        ? {}
+        : { detail: { ...series.detail, color: textStrong } }),
+      ...(series.title === undefined
+        ? {}
+        : { title: { ...series.title, color: textMuted } }),
+      ...(series.type === "gauge" && series.axisLine?.lineStyle?.color === undefined
+        ? {
+            axisLine: {
+              ...(series.axisLine ?? {}),
+              lineStyle: { ...(series.axisLine?.lineStyle ?? {}), color: [[1, surfaceAlt]] },
+            },
+          }
+        : {}),
+    };
+  });
+}
 function normalizedTitleAlignment(value) {
   return ["left", "center", "right"].includes(value) ? value : "left";
 }

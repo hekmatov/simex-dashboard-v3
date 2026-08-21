@@ -1,9 +1,7 @@
 import React from "react";
 
-import { SimExIcon } from "../common/SimExIcon.js";
 import { createDelayedTreeActivation, focusedTreeKeyAfterCollapse, selectionKey, visibleBuildTreeNodes } from "./buildTreeInteraction.js";
 
-const iconForKind = { page: "addTab", section: "section", chart: "chartMixed" };
 
 function allExpanded(dashboard) {
   return new Set((dashboard.pages ?? []).flatMap((page) => [
@@ -131,15 +129,16 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
             aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
             tabIndex={-1}
             disabled={disabled}
+            aria-expanded={expanded}
             onMouseDown={(event) => event.preventDefault()}
             onClick={(event) => {
               event.stopPropagation();
               toggle(node.key);
             }}
             onDoubleClick={(event) => event.stopPropagation()}
-          >⌄</button>
+          ><span aria-hidden="true" /></button>
         ) : <span className="build-tree-caret-spacer" aria-hidden="true" />}
-        <span data-build-tree-icon={node.kind}><SimExIcon iconId={iconForKind[node.kind]} size={16} /></span>
+        <span className="build-tree-kind-icon" data-build-tree-icon={node.kind} aria-hidden="true" />
         {isRenaming ? (
           <input
             autoFocus

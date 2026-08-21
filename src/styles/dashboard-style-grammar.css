@@ -557,3 +557,209 @@
   color: var(--simex-on-accent);
 }
 .app-frame[data-dashboard-style="evidence-ledger"] .build-tree-group{--build-tree-line:var(--simex-border-strong);--build-tree-line-width:1px;--build-tree-elbow-radius:0}.app-frame[data-dashboard-style="humanist-standard"] .build-tree-group{--build-tree-line:color-mix(in srgb,var(--simex-border-subtle) 72%,transparent);--build-tree-line-width:1px;--build-tree-elbow-radius:6px}.app-frame[data-dashboard-style="signal-instrument"] .build-tree-group{--build-tree-line:var(--simex-accent);--build-tree-line-width:2px;--build-tree-elbow-radius:0}
+
+/* Rapid shared-surface visual corrections: Look push layout, dark controls, and Carbon tree. */
+@media (min-width: 900px) {
+  .app-frame[data-look-drawer-open="true"] > :is(.canonical-dashboard-frame, .present-workspace) {
+    --look-drawer-width: min(520px, 42vw);
+    margin-left: auto;
+    margin-right: calc(var(--look-drawer-width) + 12px);
+    transition: margin-right 180ms ease, width 180ms ease;
+    width: calc(100% - var(--look-drawer-width) - 24px);
+  }
+}
+
+.look-drawer-layer {
+  color: var(--simex-text-strong);
+}
+
+.look-drawer :is(h2, legend, label, strong, .look-profile-copy, .look-style-choice span, .look-segmented-options span) {
+  color: var(--simex-text-strong);
+}
+
+.look-drawer :is(.eyebrow, p, small, .look-state-summary span, .look-drawer-feedback) {
+  color: var(--simex-text-muted);
+}
+
+.look-drawer :is(.secondary, .look-signature-button, .look-drawer-header > button) {
+  background: var(--simex-surface-panel-alt) !important;
+  border: 1px solid var(--simex-border-subtle) !important;
+  color: var(--simex-text-strong) !important;
+}
+
+.look-drawer-footer button:not(.secondary) {
+  background: var(--simex-accent) !important;
+  border: 1px solid var(--simex-accent) !important;
+  color: var(--simex-on-accent) !important;
+}
+
+.look-drawer button:disabled {
+  opacity: 0.52;
+}
+
+.look-drawer input[type="radio"] {
+  accent-color: var(--simex-selected);
+}
+
+.app-frame :is(.kpi-card, .delta-card) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.kpi-card, .delta-card) :is(span, small) {
+  color: var(--simex-text-muted);
+}
+
+.app-frame :is(.kpi-card, .delta-card) strong {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .delta-positive { color: var(--simex-success); }
+.app-frame .delta-negative { color: var(--simex-error); }
+
+.build-tree-root,
+.build-tree-group {
+  list-style: none;
+  margin-block: 0;
+  padding-block: 0;
+}
+
+.build-tree-group {
+  margin-left: 22px;
+  padding-left: 14px;
+  position: relative;
+}
+
+.build-tree-group::before {
+  background: none;
+  border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  bottom: 22px;
+  height: auto;
+  left: 0;
+  top: 0;
+  width: 0;
+}
+
+.build-tree-group > .build-tree-item-wrap::before {
+  background: none;
+  border: 0;
+  border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
+  height: 22px;
+  left: -14px;
+  top: 0;
+  width: 14px;
+}
+
+.build-tree-row {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none;
+  gap: 6px;
+  grid-template-columns: 44px 20px minmax(0, 1fr);
+}
+
+.app-frame .build-authoring-layer .build-tree-caret {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--simex-text-muted) !important;
+  padding: 0;
+}
+
+.app-frame .build-authoring-layer .build-tree-caret:hover {
+  background: var(--simex-surface-panel-alt) !important;
+  color: var(--simex-text-strong) !important;
+}
+
+.build-tree-caret > span {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  display: block;
+  height: 8px;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+  width: 8px;
+}
+
+.build-tree-caret[aria-expanded="true"] > span {
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.build-tree-kind-icon {
+  color: var(--build-tree-icon, var(--simex-text-muted));
+  display: block;
+  height: 18px;
+  position: relative;
+  width: 18px;
+}
+
+.build-tree-kind-icon[data-build-tree-icon="page"] {
+  border: 1.5px solid currentColor;
+  border-radius: var(--build-tree-icon-radius, 1px);
+  width: 15px;
+}
+
+.build-tree-kind-icon[data-build-tree-icon="page"]::after {
+  border-bottom: 1.5px solid currentColor;
+  border-left: 1.5px solid currentColor;
+  content: "";
+  height: 5px;
+  position: absolute;
+  right: -1.5px;
+  top: -1.5px;
+  width: 5px;
+}
+
+.build-tree-kind-icon[data-build-tree-icon="section"] {
+  background:
+    linear-gradient(currentColor, currentColor) 1px 2px / 16px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 1px 8px / 12px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 1px 14px / 16px 2px no-repeat;
+}
+
+.build-tree-kind-icon[data-build-tree-icon="chart"] {
+  background:
+    linear-gradient(currentColor, currentColor) 1px 11px / 3px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 7px 6px / 3px 11px no-repeat,
+    linear-gradient(currentColor, currentColor) 13px 2px / 3px 15px no-repeat;
+  border-bottom: 1px solid currentColor;
+}
+
+.build-tree-row.is-selected {
+  background: var(--simex-selected-soft) !important;
+  box-shadow: inset 3px 0 0 var(--simex-selected);
+}
+
+.app-frame[data-dashboard-style="evidence-ledger"] .build-structure-rail {
+  --build-tree-icon: var(--simex-text-strong);
+  --build-tree-icon-radius: 0;
+}
+
+.app-frame[data-dashboard-style="humanist-standard"] .build-structure-rail {
+  --build-tree-icon: var(--simex-accent);
+  --build-tree-icon-radius: 4px;
+}
+
+.app-frame[data-dashboard-style="signal-instrument"] .build-structure-rail {
+  --build-tree-icon: var(--simex-accent);
+  --build-tree-icon-radius: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-frame[data-look-drawer-open="true"] > :is(.canonical-dashboard-frame, .present-workspace),
+  .build-tree-caret > span {
+    transition: none;
+  }
+}
+
+/* DashboardRenderer keeps the canonical frame inside its app-shell main. */
+@media (min-width: 900px) {
+  .app-frame[data-look-drawer-open="true"] :is(.canonical-dashboard-frame, .present-workspace) {
+    --look-drawer-width: min(520px, 42vw);
+    margin-left: auto;
+    margin-right: calc(var(--look-drawer-width) + 12px);
+    width: calc(100% - var(--look-drawer-width) - 24px);
+  }
+}

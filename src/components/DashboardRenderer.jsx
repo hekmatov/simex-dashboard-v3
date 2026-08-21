@@ -13,7 +13,6 @@ import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
 import DeviceLayoutControl from "./DeviceLayoutControl.jsx";
 import FullscreenDisplay from "./FullscreenDisplay.jsx";
-import InstallDashboardPrompt from "./InstallDashboardPrompt.jsx";
 import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
@@ -1629,10 +1628,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       />
       <DashboardFooter dashboard={dashboard} />
       <div className="dashboard-device-tools">
-        <span className="companion-status" role="status">
-          {companionStatusLabel}
-        </span>
-        <InstallDashboardPrompt />
         <DeviceLayoutControl value={deviceLayout} onChange={onDeviceLayoutChange} />
       </div>
     </main>

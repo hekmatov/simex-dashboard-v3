@@ -1,7 +1,6 @@
 import React from "react";
 
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
-import InstallDashboardPrompt from "../InstallDashboardPrompt.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "../dashboard/CanonicalDashboardFrame.jsx";
@@ -96,10 +95,6 @@ export default function ViewShell({
             timeContextForChart={playback.timeContextForChart}
             accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
           />
-          <div className="dashboard-device-tools">
-            <span className="companion-status" role="status">{companionStatusLabel}</span>
-            <InstallDashboardPrompt />
-          </div>
         </>
       )}
     />

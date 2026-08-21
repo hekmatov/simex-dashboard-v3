@@ -7,7 +7,6 @@ import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "../dashboard/
 import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import DashboardHeader from "../dashboard/DashboardHeader.jsx";
 import BuildInspector from "./BuildInspector.jsx";
-import BuildPageNavigation from "./BuildPageNavigation.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import UnitOrbit from "./UnitOrbit.jsx";
 
@@ -198,15 +197,6 @@ export default function BuildWorkspace({
           aria-hidden={buildPanelOpen ? undefined : "true"}
           inert={!buildPanelOpen}
         >
-          <BuildPageNavigation
-            pages={dashboard.pages}
-            activePageId={activePage?.id}
-            pageDrafts={pageDrafts}
-            disabled={navigationLocked}
-            onSelectPage={(pageId) => void chooseSelection({ kind: "page", pageId }, { intent: "activate" })}
-            onPageChange={onPageChange}
-            onPageReorder={onPageReorder}
-          />
           <section className="build-command-area" aria-label="Build commands">
             <div className="build-command-title">
               <p className="eyebrow">Workspace</p>

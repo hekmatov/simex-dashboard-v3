@@ -908,6 +908,7 @@ export default function App() {
       onPageRequest={requestPage}
       density={densityForDashboardMode(mode)}
       theme={dashboardTheme}
+      lookDrawerOpen={lookDrawerOpen}
     >
     <DashboardRenderer
       ref={dashboardRendererRef}
