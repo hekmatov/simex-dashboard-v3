@@ -53,14 +53,25 @@ test("approved look drawer exposes all values with immediate persistence and no 
   assert.doesNotMatch(html, /scrim|backdrop-filter|opacity:/i);
   assert.equal((html.match(/data-profile-option=/g) ?? []).length, 15);
   assert.doesNotMatch(html, />Set (?:dashboard look|chart colors|appearance)<\/button>/);
+  assert.doesNotMatch(html, /Saved[\s\S]*Preview/);
+  assert.doesNotMatch(html, /Use [^<]+ Signature/);
+  assert.doesNotMatch(html, /Changing style preserves|approved profiles remain|profile<\/small>/i);
   assert.match(html, /Selections are saved automatically/);
-  assert.match(html, /Saved[\s\S]*Preview/);
+
+  const appearancePosition = html.indexOf("<legend>Appearance</legend>");
+  const stylePosition = html.indexOf("<legend>Visual style</legend>");
+  assert.ok(appearancePosition >= 0 && appearancePosition < stylePosition);
+  assert.match(html, /name="appearance"[^>]*value="system"/);
+  assert.match(html, /name="appearance"[^>]*value="light"/);
+  assert.match(html, /name="appearance"[^>]*value="dark"/);
+  assert.match(html, /data-icon-id="auto"/);
+  assert.match(html, /data-icon-id="appearanceLight"/);
+  assert.match(html, /data-icon-id="appearanceDark"/);
 });
 
 test("look ownership helpers keep the three commit scopes independent", () => {
   assert.equal(typeof lookModel.dashboardLookUpdates, "function");
   assert.equal(typeof lookModel.chartColorUpdates, "function");
-  assert.equal(typeof lookModel.signatureProfileForStyle, "function");
   if (typeof lookModel.dashboardLookUpdates !== "function") return;
 
   assert.deepEqual(lookModel.dashboardLookUpdates(preview), {
@@ -70,10 +81,6 @@ test("look ownership helpers keep the three commit scopes independent", () => {
   assert.deepEqual(lookModel.chartColorUpdates(preview), {
     chartColorMode: "profile",
   });
-  assert.equal(
-    lookModel.signatureProfileForStyle("humanist-standard"),
-    "humanist-standard/common-ground",
-  );
 });
 
 test("look drawer preview carries resolved shared-surface attributes without mutating saved values", () => {

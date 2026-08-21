@@ -5,14 +5,39 @@ import {
   DASHBOARD_STYLES,
   resolveDashboardTheme,
 } from "../../theme/dashboardTheme.js";
-import {
-  resolveDashboardLookSurfaceAttributes,
-  signatureProfileForStyle,
-} from "../../theme/dashboardLookDraft.js";
+import { resolveDashboardLookSurfaceAttributes } from "../../theme/dashboardLookDraft.js";
+import { SimExIcon } from "../common/SimExIcon.js";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 
-const STYLE_NAMES = new Map(DASHBOARD_STYLES.map(({ id, name }) => [id, name]));
-const PROFILE_NAMES = new Map(DASHBOARD_COLOR_PROFILES.map(({ id, name }) => [id, name]));
+const APPEARANCE_OPTIONS = Object.freeze([
+  Object.freeze({ value: "system", label: "System", iconId: "auto" }),
+  Object.freeze({ value: "light", label: "Light", iconId: "appearanceLight" }),
+  Object.freeze({ value: "dark", label: "Dark", iconId: "appearanceDark" }),
+]);
+
+function AppearanceIcon({ iconId }) {
+  if (iconId === "auto") return <SimExIcon iconId="auto" size={20} />;
+  return (
+    <svg
+      className="simex-icon"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      focusable="false"
+      aria-hidden="true"
+      data-icon-id={iconId}
+    >
+      {iconId === "appearanceLight" ? (
+        <>
+          <circle cx="12" cy="12" r="3.5" />
+          <path className="accent-stroke" d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+        </>
+      ) : (
+        <path className="accent-stroke" d="M18.7 15.2A7.5 7.5 0 0 1 8.8 5.3 7.8 7.8 0 1 0 18.7 15.2Z" />
+      )}
+    </svg>
+  );
+}
 
 export default function DashboardLookDrawer({
   open,
@@ -25,12 +50,7 @@ export default function DashboardLookDrawer({
   onPreviewChange,
 }) {
   if (!open || !saved || !preview) return null;
-  const lookChanged = saved.dashboardStyle !== preview.dashboardStyle
-    || saved.dashboardColorProfile !== preview.dashboardColorProfile;
-  const chartColorsChanged = saved.chartColorMode !== preview.chartColorMode;
-  const appearanceChanged = saved.appearancePreference !== preview.appearancePreference;
   const busy = savingScope !== "";
-
   const surface = resolveDashboardLookSurfaceAttributes(preview);
   const update = (field, value) => onPreviewChange?.({ ...preview, [field]: value });
 
@@ -68,53 +88,45 @@ export default function DashboardLookDrawer({
         </header>
 
         <div className="look-drawer-scroll">
-          <section className="look-state-summary" aria-label="Saved and preview values">
-            <div>
-              <strong>Saved</strong>
-              <span>{STYLE_NAMES.get(saved.dashboardStyle)}</span>
-              <span>{PROFILE_NAMES.get(saved.dashboardColorProfile)}</span>
-              <span>{chartColorLabel(saved.chartColorMode)}</span>
-              <span>{appearanceLabel(saved.appearancePreference)}</span>
+          <fieldset className="look-control-section look-appearance-section" disabled={busy}>
+            <legend>Appearance</legend>
+            <div className="look-appearance-options">
+              {APPEARANCE_OPTIONS.map(({ value, label, iconId }) => (
+                <label className="look-appearance-option" key={value}>
+                  <input
+                    type="radio"
+                    name="appearance"
+                    value={value}
+                    checked={preview.appearancePreference === value}
+                    onChange={() => update("appearancePreference", value)}
+                  />
+                  <AppearanceIcon iconId={iconId} />
+                  <span>{label}</span>
+                </label>
+              ))}
             </div>
-            <div data-preview-changed={lookChanged || chartColorsChanged || appearanceChanged || undefined}>
-              <strong>Preview</strong>
-              <span>{STYLE_NAMES.get(preview.dashboardStyle)}</span>
-              <span>{PROFILE_NAMES.get(preview.dashboardColorProfile)}</span>
-              <span>{chartColorLabel(preview.chartColorMode)}</span>
-              <span>{appearanceLabel(preview.appearancePreference)}</span>
-            </div>
-          </section>
+          </fieldset>
 
           <fieldset className="look-control-section" disabled={busy}>
             <legend>Visual style</legend>
-            <p>Changing style preserves the selected colour profile.</p>
             <div className="look-choice-list">
               {DASHBOARD_STYLES.map((style) => (
-                <div className="look-style-choice" key={style.id}>
-                  <label>
-                    <input
-                      type="radio"
-                      name="dashboard-style"
-                      checked={preview.dashboardStyle === style.id}
-                      onChange={() => update("dashboardStyle", style.id)}
-                    />
-                    <span>{style.name}</span>
-                  </label>
-                  <button
-                    type="button"
-                    className="secondary look-signature-button"
-                    onClick={() => update("dashboardColorProfile", signatureProfileForStyle(style.id))}
-                  >
-                    Use {style.name} Signature
-                  </button>
-                </div>
+                <label className="look-style-choice" key={style.id}>
+                  <input
+                    type="radio"
+                    name="dashboard-style"
+                    value={style.id}
+                    checked={preview.dashboardStyle === style.id}
+                    onChange={() => update("dashboardStyle", style.id)}
+                  />
+                  <span>{style.name}</span>
+                </label>
               ))}
             </div>
           </fieldset>
 
           <fieldset className="look-control-section" disabled={busy}>
             <legend>Colour profile</legend>
-            <p>All approved profiles remain available independently of style.</p>
             <div className="look-profile-grid">
               {DASHBOARD_COLOR_PROFILES.map((profile) => {
                 const sample = resolveDashboardTheme({
@@ -129,12 +141,12 @@ export default function DashboardLookDrawer({
                     <input
                       type="radio"
                       name="dashboard-profile"
+                      value={profile.id}
                       checked={preview.dashboardColorProfile === profile.id}
                       onChange={() => update("dashboardColorProfile", profile.id)}
                     />
                     <span className="look-profile-copy">
                       <strong>{profile.name}</strong>
-                      <small>{provenanceLabel(profile.sourceStyle)}</small>
                     </span>
                     <span className="look-profile-swatches" aria-hidden="true">
                       <i style={{ background: sample.cssVariables["--simex-surface-panel"] }} />
@@ -149,8 +161,7 @@ export default function DashboardLookDrawer({
 
           <fieldset className="look-control-section" disabled={busy}>
             <legend>Chart colors</legend>
-            <p>This changes chart marks and matching legend swatches only.</p>
-            <div className="look-segmented-options">
+            <div className="look-segmented-options look-chart-color-options">
               {[
                 ["profile", "Profile colors"],
                 ["standard", "Standard chart colors"],
@@ -159,28 +170,11 @@ export default function DashboardLookDrawer({
                   <input
                     type="radio"
                     name="chart-colors"
+                    value={value}
                     checked={preview.chartColorMode === value}
                     onChange={() => update("chartColorMode", value)}
                   />
                   <span>{label}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className="look-control-section" disabled={busy}>
-            <legend>Personal appearance</legend>
-            <p>Stored for this browser user, separately from the dashboard.</p>
-            <div className="look-segmented-options">
-              {["light", "dark", "system"].map((value) => (
-                <label key={value}>
-                  <input
-                    type="radio"
-                    name="appearance"
-                    checked={preview.appearancePreference === value}
-                    onChange={() => update("appearancePreference", value)}
-                  />
-                  <span>{appearanceLabel(value)}</span>
                 </label>
               ))}
             </div>
@@ -197,18 +191,4 @@ export default function DashboardLookDrawer({
       </ModalFocusScope>
     </div>
   );
-}
-
-function chartColorLabel(value) {
-  return value === "standard" ? "Standard chart colors" : "Profile colors";
-}
-
-function appearanceLabel(value) {
-  return value === "light" ? "Light" : value === "dark" ? "Dark" : "System";
-}
-
-function provenanceLabel(sourceStyle) {
-  if (sourceStyle === "utility") return "Portfolio utility profile";
-  if (sourceStyle === "graphpad") return "Accepted GraphPad reference profile";
-  return `${STYLE_NAMES.get(sourceStyle)} profile`;
 }

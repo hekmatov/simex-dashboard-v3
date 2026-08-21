@@ -22,14 +22,16 @@ const CANONICAL_ATTRIBUTES = Object.freeze({
   plot: "data-canonical-plot-id",
 });
 
-export async function readCanonicalGeometry(page, expectedIds = null) {
+export async function readCanonicalGeometry(page, expectedIds = null, { hydrate = true } = {}) {
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
 
-  const panels = page.locator("[data-canonical-panel-id], .chart-panel");
-  for (let index = 0; index < await panels.count(); index += 1) {
-    await panels.nth(index).scrollIntoViewIfNeeded();
+  if (hydrate) {
+    const panels = page.locator("[data-canonical-panel-id], .chart-panel");
+    for (let index = 0; index < await panels.count(); index += 1) {
+      await panels.nth(index).scrollIntoViewIfNeeded();
+    }
   }
   if (expectedIds?.plot?.length) {
     await expect.poll(
@@ -431,26 +433,84 @@ function formatRect(rect) {
   return `x=${rect.x.toFixed(2)} y=${rect.y.toFixed(2)} width=${rect.width.toFixed(2)} height=${rect.height.toFixed(2)}`;
 }
 
-test("look drawer preserves geometry", async ({ page }) => {
+test("look drawer allows transient compression and restores dashboard geometry and state", async ({ page, request }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const fixtureResponse = await request.get("/config/dashboard.json");
+  expect(fixtureResponse.ok()).toBe(true);
+  const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
+
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Biomedical", exact: true })
     .click();
   await expect(page.locator(".chart-panel").first()).toBeVisible();
-  await expect(page.locator(".canonical-dashboard-frame .dashboard-header"))
-    .toHaveCSS("background-color", "rgb(255, 253, 248)");
-  await expect(page.locator(".canonical-dashboard-frame .dashboard-header"))
-    .toHaveCSS("border-top-left-radius", "0px");
-  const before = await readCanonicalGeometry(page);
+  const before = await readCanonicalGeometry(page, expectedIds);
+  const contentBefore = await page.evaluate(() => ({
+    panels: [...document.querySelectorAll("[data-canonical-panel-id]")]
+      .map((element) => [element.getAttribute("data-canonical-panel-id"), element.getAttribute("data-footprint")]),
+    sections: [...document.querySelectorAll("[data-canonical-section-id]")]
+      .map((element) => element.getAttribute("data-canonical-section-id")),
+  }));
 
-  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
-  const after = await readCanonicalGeometry(page);
-  const changes = compareCanonicalGeometry(before, after).filter(({ delta }) => (
-    Object.values(delta).some((value) => value !== "0.00")
-  ));
-  expect(changes).toEqual([]);
+  await page.evaluate(() => window.scrollTo(0, 700));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  const trigger = page.getByRole("button", { name: "Dashboard look", exact: true });
+  await trigger.evaluate((button) => button.click());
+  const drawer = page.getByRole("dialog", { name: "Dashboard look" });
+  await expect(drawer).toBeVisible();
+  const drawerBox = await drawer.boundingBox();
+  expect(drawerBox.width).toBeGreaterThanOrEqual(380);
+  expect(drawerBox.width).toBeLessThanOrEqual(420);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+
+  const system = drawer.getByLabel("System", { exact: true });
+  const dark = drawer.getByLabel("Dark", { exact: true });
+  await drawer.getByRole("button", { name: "Close", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(system).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(dark).toBeFocused();
+  await expect(dark).toBeChecked();
+  const focus = await dark.evaluate((element) => {
+    const style = getComputedStyle(element.closest("label"));
+    return { width: style.outlineWidth, style: style.outlineStyle };
+  });
+  expect(focus).toEqual({ width: "3px", style: "solid" });
+  await expect(page.locator(".look-drawer-layer")).toHaveAttribute("data-resolved-appearance", "dark");
+  expect(await drawer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await expect(drawer.locator('[data-icon-id="auto"]')).toHaveCount(1);
+  await expect(drawer.locator('[data-icon-id="appearanceLight"]')).toHaveCount(1);
+  await expect(drawer.locator('[data-icon-id="appearanceDark"]')).toHaveCount(1);
+
+  await drawer.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(drawer).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await trigger.click();
+  await expect(drawer).toBeVisible();
+  const openGeometry = await readCanonicalGeometry(page, expectedIds, { hydrate: false });
+  const closedCanvas = before.geometry.canvas[0];
+  const openCanvas = openGeometry.geometry.canvas[0];
+  expect(closedCanvas.width - openCanvas.width).toBeGreaterThan(0);
+  expect(closedCanvas.width - openCanvas.width).toBeLessThanOrEqual(420);
+
+  await drawer.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(drawer).toHaveCount(0);
+  const restored = await readCanonicalGeometry(page, expectedIds, { hydrate: false });
+  const restorationMismatches = compareCentralCanvasGeometry(before, restored, expectedIds)
+    .filter(({ delta }) => Object.values(delta).some((value) => value !== "0.00"));
+  expect(restorationMismatches).toEqual([]);
+  const contentAfter = await page.evaluate(() => ({
+    panels: [...document.querySelectorAll("[data-canonical-panel-id]")]
+      .map((element) => [element.getAttribute("data-canonical-panel-id"), element.getAttribute("data-footprint")]),
+    sections: [...document.querySelectorAll("[data-canonical-section-id]")]
+      .map((element) => element.getAttribute("data-canonical-section-id")),
+  }));
+  expect(contentAfter).toEqual(contentBefore);
 });
 
 test("look drawer phone sheet", async ({ page }) => {
