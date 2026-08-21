@@ -1382,6 +1382,153 @@
     transition: none;
   }
 }
+
+.build-context-shelf {
+  align-items: center;
+  border-block: 1px solid var(--simex-border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-block: 8px;
+}
+
+.build-authoring-auxiliary,
+.structure-authoring,
+.scenario-authoring {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.build-authoring-auxiliary {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: 10px;
+  box-shadow: 0 18px 42px rgb(8 34 74 / 18%);
+  max-height: min(680px, calc(100vh - 220px));
+  overflow: auto;
+  padding: 14px;
+}
+
+.build-surface-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.build-surface-heading h2,
+.build-surface-heading p {
+  margin: 0;
+}
+
+.build-draft-status {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 999px;
+  color: var(--simex-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.build-draft-status[data-status="dirty"],
+.build-draft-status[data-status="error"],
+.build-draft-status[data-status="suspended"] {
+  border-color: var(--simex-warning, #a86408);
+  color: var(--simex-text-strong);
+}
+
+.structure-page-list,
+.structure-page-card,
+.structure-page-card ol {
+  display: grid;
+  gap: 10px;
+}
+
+.structure-page-card {
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.structure-page-card > header,
+.structure-page-card li,
+.structure-inline-actions,
+.build-surface-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.structure-page-card > header,
+.structure-page-card li {
+  justify-content: space-between;
+}
+
+.structure-page-card ol {
+  list-style-position: inside;
+  margin: 0;
+  padding: 0;
+}
+
+.structure-inline-actions button {
+  min-height: 44px;
+}
+
+.scenario-authoring > label {
+  display: grid;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.scenario-source-provenance {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+}
+
+.scenario-source-provenance div {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
+.scenario-source-provenance dt {
+  color: var(--simex-text-muted);
+  font-weight: 700;
+}
+
+.scenario-source-provenance dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.build-surface-actions {
+  border-top: 1px solid var(--simex-border-subtle);
+  justify-content: flex-end;
+  padding-top: 12px;
+}
+
+@media (max-width: 899px) {
+  .structure-page-card > header,
+  .structure-page-card li,
+  .build-surface-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .structure-inline-actions,
+  .build-surface-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .build-tree-root,.build-tree-group{list-style:none;margin:0;padding:0}.build-tree-group{margin-left:16px;position:relative}.build-tree-group::before{background:var(--build-tree-line,var(--simex-border-subtle));content:"";height:calc(100% - 22px);left:-10px;position:absolute;top:0;width:var(--build-tree-line-width,1px)}.build-tree-item-wrap{list-style:none;position:relative}.build-tree-group>.build-tree-item-wrap::before{background:var(--build-tree-line,var(--simex-border-subtle));border-radius:0 0 0 var(--build-tree-elbow-radius,0);content:"";height:22px;left:-10px;position:absolute;top:0;width:10px;border-bottom:var(--build-tree-line-width,1px) solid var(--build-tree-line,var(--simex-border-subtle))}.build-tree-row{align-items:center;display:grid;gap:6px;grid-template-columns:30px 18px minmax(0,1fr);min-height:44px}.build-tree-caret,.build-tree-caret-spacer{align-items:center;background:transparent;border:0;display:inline-flex;height:44px;justify-content:center;padding:0;width:30px}.build-tree-label{background:transparent!important;border:0!important;color:inherit!important;font:inherit;min-height:44px;padding:6px 4px;text-align:left;width:100%}.build-tree-row.is-selected .build-tree-label{box-shadow:inset 3px 0 0 var(--simex-selected);font-weight:700}.build-tree-row:focus-within{outline:3px solid var(--simex-focus);outline-offset:2px}.build-tree-row input{min-height:44px;width:100%}
 
 .build-package-actions {

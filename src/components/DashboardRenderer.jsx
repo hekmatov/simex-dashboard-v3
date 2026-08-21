@@ -55,6 +55,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPageRemove,
   onPageChange,
   onPageReorder,
+  onStructureChange,
   onDashboardChange,
   onTimeGroupChange,
   onBackgroundPersistenceError,
@@ -678,6 +679,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
+  function commitStructureDraft(value) {
+    return runModeratorTransaction({
+      flush: () => pendingEdits.flush(),
+      commit: () => onStructureChange?.(value),
+    });
+  }
+
+  function commitScenarioDraft(value) {
+    return runModeratorTransaction({
+      flush: () => pendingEdits.flush(),
+      commit: () => onDashboardChange?.({
+        scenarioLabel: value.scenarioLabel,
+        programLabel: value.programLabel,
+        lastUpdated: value.lastUpdated,
+      }),
+      onCommitted: () => setDashboardDraft(dashboardTextDraftFromDashboard(value)),
+    });
+  }
+
   function changeSectionByIds(pageId, sectionId, updates) {
     if (moderatorOperationGateRef.current.isActive()) return;
     const page = dashboard.pages.find((candidate) => candidate.id === pageId);
@@ -1145,6 +1165,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           treeResetGeneration={buildTreeResetGeneration}
           onRevealComplete={completeBuildReveal}
           onDashboardChange={changeDashboardText}
+          onStructureCommit={commitStructureDraft}
+          onScenarioCommit={commitScenarioDraft}
           onPageChange={changePage}
           onSectionChange={changeSection}
           onTimeGroupChange={onTimeGroupChange}

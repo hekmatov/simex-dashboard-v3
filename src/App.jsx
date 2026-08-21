@@ -1030,6 +1030,11 @@ export default function App() {
       onPageReorder={(pageId, targetIndex) => mutateDashboard((next) => {
         reorderPage(next, pageId, targetIndex);
       })}
+      onStructureChange={(structure) => mutateDashboard((next) => {
+        next.pages = structure.pages;
+        if (Array.isArray(structure.timeSyncGroups)) next.timeSyncGroups = structure.timeSyncGroups;
+        if (Array.isArray(structure.scenes)) next.scenes = structure.scenes;
+      })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
       onTimeGroupChange={(groupId, updates) => mutateDashboard((next) => {
         const group = next.timeSyncGroups?.find(({ id }) => id === groupId);

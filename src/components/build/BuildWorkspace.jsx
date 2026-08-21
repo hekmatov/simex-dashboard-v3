@@ -8,6 +8,14 @@ import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import DashboardHeader from "../dashboard/DashboardHeader.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
+import ScenarioAuthoring, {
+  createScenarioDraft,
+  reduceScenarioDraft,
+} from "./ScenarioAuthoring.jsx";
+import StructureAuthoring, {
+  createStructureDraft,
+  reduceStructureDraft,
+} from "./StructureAuthoring.jsx";
 import UnitOrbit from "./UnitOrbit.jsx";
 
 export default function BuildWorkspace({
@@ -39,6 +47,8 @@ export default function BuildWorkspace({
   treeResetGeneration = 0,
   onRevealComplete,
   onDashboardChange,
+  onStructureCommit,
+  onScenarioCommit,
   onPageChange,
   onSectionChange,
   onTimeGroupChange,
@@ -56,6 +66,10 @@ export default function BuildWorkspace({
   onDisplayAction,
 }) {
   const [openSheet, setOpenSheet] = React.useState(null);
+  const [activeAuxiliary, setActiveAuxiliary] = React.useState(null);
+  const [parkedAuxiliaries, setParkedAuxiliaries] = React.useState([]);
+  const [structureDraft, setStructureDraft] = React.useState(() => createStructureDraft(dashboard));
+  const [scenarioDraft, setScenarioDraft] = React.useState(() => createScenarioDraft({ ...dashboard, ...dashboardDraft }));
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
   const navigationLocked = mutationsDisabled || chartDraftDirty;
@@ -137,6 +151,110 @@ export default function BuildWorkspace({
   };
   const close = () => setOpenSheet(null);
 
+  const captureRestoration = React.useCallback(() => ({
+    focusId: document.activeElement?.id || null,
+    scrollTop: window.scrollY,
+    targetId: selection?.placementId ?? selection?.sectionId ?? selection?.pageId ?? null,
+    activeCommand: activeAuxiliary,
+  }), [activeAuxiliary, selection]);
+
+  const restoreCanvas = React.useCallback((restoration) => {
+    if (!restoration) return;
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: restoration.scrollTop ?? 0, behavior: "auto" });
+      if (restoration.focusId) document.getElementById(restoration.focusId)?.focus();
+    });
+  }, []);
+
+  const openAuxiliary = (surface) => {
+    if (locked || activeAuxiliary === surface) return;
+    const restoration = captureRestoration();
+    if (activeAuxiliary) {
+      setParkedAuxiliaries((current) => [
+        ...current.filter((entry) => entry.surface !== activeAuxiliary),
+        { surface: activeAuxiliary, restoration },
+      ]);
+    }
+    setActiveAuxiliary(surface);
+    window.requestAnimationFrame(() => {
+      const selected = selection?.placementId
+        ? document.querySelector(`[data-canonical-placement-id="${CSS.escape(selection.placementId)}"]`)
+        : null;
+      selected?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+    });
+  };
+
+  const closeAuxiliary = () => {
+    const next = parkedAuxiliaries.at(-1) ?? null;
+    setParkedAuxiliaries((current) => current.slice(0, -1));
+    setActiveAuxiliary(next?.surface ?? null);
+    restoreCanvas(next?.restoration ?? captureRestoration());
+  };
+
+  const resumeAuxiliary = (surface) => {
+    if (activeAuxiliary === surface) return;
+    const parked = parkedAuxiliaries.find((entry) => entry.surface === surface);
+    if (!parked) return;
+    if (activeAuxiliary) {
+      setParkedAuxiliaries((current) => [
+        ...current.filter((entry) => entry.surface !== surface && entry.surface !== activeAuxiliary),
+        { surface: activeAuxiliary, restoration: captureRestoration() },
+      ]);
+    } else {
+      setParkedAuxiliaries((current) => current.filter((entry) => entry.surface !== surface));
+    }
+    setActiveAuxiliary(surface);
+    restoreCanvas(parked.restoration);
+  };
+
+  const dispatchStructure = (action) => {
+    let normalized = action;
+    if (action.type === "REQUEST_ADD_PAGE") {
+      const id = stableDraftId("page");
+      normalized = {
+        type: "ADD_PAGE",
+        page: { id, label: "New Page", title: "New Page", sections: [] },
+        initialSection: { id: `${id}-section`, title: "New Section", panels: [] },
+      };
+    }
+    if (action.type === "REQUEST_ADD_SECTION") {
+      normalized = {
+        type: "ADD_SECTION",
+        pageId: action.pageId,
+        section: { id: stableDraftId("section"), title: "New Section", panels: [] },
+      };
+    }
+    if (normalized.type === "SAVE_REQUEST") {
+      const saving = reduceStructureDraft(structureDraft, normalized);
+      setStructureDraft(saving);
+      if (saving.status !== "saving") return;
+      Promise.resolve(onStructureCommit?.(saving.value))
+        .then(() => setStructureDraft((current) => reduceStructureDraft(current, { type: "SAVE_SUCCEEDED" })))
+        .catch((error) => setStructureDraft((current) => reduceStructureDraft(current, {
+          type: "SAVE_FAILED",
+          error: storageFacingError(error, "STRUCTURE_SAVE_FAILED"),
+        })));
+      return;
+    }
+    setStructureDraft((current) => reduceStructureDraft(current, normalized));
+  };
+
+  const dispatchScenario = (action) => {
+    if (action.type === "SAVE_REQUEST") {
+      const saving = reduceScenarioDraft(scenarioDraft, action);
+      setScenarioDraft(saving);
+      if (saving.status !== "saving") return;
+      Promise.resolve(onScenarioCommit?.(saving.value))
+        .then(() => setScenarioDraft((current) => reduceScenarioDraft(current, { type: "SAVE_SUCCEEDED" })))
+        .catch((error) => setScenarioDraft((current) => reduceScenarioDraft(current, {
+          type: "SAVE_FAILED",
+          error: storageFacingError(error, "SCENARIO_SAVE_FAILED"),
+        })));
+      return;
+    }
+    setScenarioDraft((current) => reduceScenarioDraft(current, action));
+  };
+
   const structure = (
     <BuildStructureRail
       key={treeResetGeneration}
@@ -196,6 +314,7 @@ export default function BuildWorkspace({
         <div
           id="build-authoring-panel"
           className="build-authoring-layer"
+          data-build-auxiliary-contract="context-shelf"
           data-device-layout={deviceLayout}
           data-open={buildPanelOpen ? "true" : "false"}
           aria-hidden={buildPanelOpen ? undefined : "true"}
@@ -209,6 +328,8 @@ export default function BuildWorkspace({
             <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
             <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>
             <div className="build-package-actions" aria-label="Dashboard packages">
               <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onMouseDown={(event) => event.preventDefault()} onClick={onImportPackage}>
                 <SimExIcon iconId="import" size={18} />
@@ -228,6 +349,33 @@ export default function BuildWorkspace({
             </fieldset>
           </section>
           {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
+          {parkedAuxiliaries.length > 0 && (
+            <nav className="build-context-shelf" aria-label="Parked Build work">
+              {parkedAuxiliaries.map(({ surface }) => (
+                <button key={surface} type="button" className="secondary" onClick={() => resumeAuxiliary(surface)}>
+                  Resume {surface === "structure" ? "Structure" : "Scenario"}
+                </button>
+              ))}
+            </nav>
+          )}
+          {activeAuxiliary && (
+            <ModalFocusScope
+              as="aside"
+              open
+              className="build-authoring-auxiliary"
+              role="dialog"
+              aria-modal="false"
+              aria-label={activeAuxiliary === "structure" ? "Structure authoring" : "Scenario details"}
+              onEscape={closeAuxiliary}
+            >
+              <button type="button" className="build-sheet-close" onClick={closeAuxiliary}>Close</button>
+              {activeAuxiliary === "structure" ? (
+                <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />
+              ) : (
+                <ScenarioAuthoring draft={scenarioDraft} disabled={locked} onAction={dispatchScenario} />
+              )}
+            </ModalFocusScope>
+          )}
           <section className="build-canvas-toolbar" aria-label="Build regions">
             <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
             <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>
@@ -289,4 +437,19 @@ function findSelectedChart(dashboard, selection) {
   const section = (page?.sections ?? []).find(({ id }) => id === selection.sectionId);
   const placement = (section?.panels ?? []).find(({ id }) => id === selection.placementId);
   return placement?.chart ?? placement ?? null;
+}
+
+function stableDraftId(prefix) {
+  const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${random}`;
+}
+
+function storageFacingError(error, fallbackCode) {
+  const message = error?.message || "The draft could not be saved.";
+  const quota = error?.name === "QuotaExceededError" || /quota|storage full/i.test(message);
+  return {
+    code: quota ? "QUOTA_EXHAUSTED" : error?.code ?? fallbackCode,
+    message,
+    retryable: true,
+  };
 }
