@@ -126,15 +126,13 @@ export default function DashboardCanvas({
               }
               const sectionDraft = buildState?.sectionDrafts?.[section.id] ?? section;
               return (
-                <section className="dashboard-section" data-canonical-section-id={section.id} key={section.id}>
+                <section className={`dashboard-section${buildState?.selection?.kind === "section" && buildState.selection.sectionId === section.id ? " is-build-selected" : ""}`} data-canonical-section-id={section.id} key={section.id}>
                   {buildState ? (
                     <BuildSectionHeader
-                      section={section}
                       sectionDraft={sectionDraft}
                       index={sectionIndex}
                       count={activePage.sections?.length ?? 0}
                       disabled={Boolean(buildState.disabled)}
-                      onRename={(updates) => buildState.onRenameSection?.(section, updates)}
                       onReorder={(targetIndex) => buildState.onReorderSection?.(section.id, targetIndex)}
                     />
                   ) : (
@@ -226,82 +224,18 @@ function setCanonicalAttribute(element, name, value) {
 }
 
 function BuildSectionHeader({
-  section,
   sectionDraft,
   index,
   count,
   disabled,
-  onRename,
   onReorder,
 }) {
   const title = sectionDraft.title || "Untitled section";
-  const [editing, setEditing] = React.useState(false);
-  const [value, setValue] = React.useState(title);
-  const titleButtonRef = React.useRef(null);
-  const endingRef = React.useRef(false);
-
-  React.useEffect(() => {
-    if (!editing) setValue(title);
-  }, [editing, title]);
-
-  const restoreTitleFocus = () => {
-    window.requestAnimationFrame(() => titleButtonRef.current?.focus());
-  };
-  const finish = (commit) => {
-    if (endingRef.current) return;
-    endingRef.current = true;
-    const nextTitle = value.trim();
-    if (commit && nextTitle && nextTitle !== sectionDraft.title) {
-      onRename?.({ title: nextTitle });
-    } else if (!commit) {
-      setValue(title);
-    }
-    setEditing(false);
-    restoreTitleFocus();
-    window.requestAnimationFrame(() => { endingRef.current = false; });
-  };
 
   return (
     <div className="section-header build-section-header">
       <div className="section-title-block">
-        {editing ? (
-          <label className="build-section-title-field">
-            <span className="visually-hidden">Section title</span>
-            <input
-              autoFocus
-              value={value}
-              disabled={disabled}
-              onChange={(event) => setValue(event.target.value)}
-              onBlur={() => finish(true)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  finish(true);
-                } else if (event.key === "Escape") {
-                  event.preventDefault();
-                  finish(false);
-                }
-              }}
-            />
-          </label>
-        ) : (
-          <h2>
-            <span aria-hidden="true">{title}</span>
-            <button
-              ref={titleButtonRef}
-              type="button"
-              className="build-section-title-button"
-              disabled={disabled}
-              aria-label={`Rename ${title}`}
-              onClick={() => {
-                setValue(title);
-                setEditing(true);
-              }}
-            >
-              {title}
-            </button>
-          </h2>
-        )}
+        <h2>{title}</h2>
         {sectionDraft.description && <p>{sectionDraft.description}</p>}
       </div>
       <div className="build-section-actions" aria-label={`${title} Section actions`}>

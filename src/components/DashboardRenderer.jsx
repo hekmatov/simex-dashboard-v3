@@ -39,6 +39,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onActivePageChange,
   onModeRequest,
   onBuildDraftLockChange,
+  onInlineRenameDirtyChange,
   onComparisonSelectionChange,
   onCommitPendingConfiguration,
   displayState,
@@ -77,6 +78,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const editMode = buildMode;
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
   const [buildSelection, setBuildSelection] = React.useState(null);
+  const [chartEditorPlacementId, setChartEditorPlacementId] = React.useState(null);
+  const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
+  const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
+  const [buildSelectionError, setBuildSelectionError] = React.useState("");
   const [focusInspectorLabelKey, setFocusInspectorLabelKey] = React.useState(0);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
   const [dragOverPanelId, setDragOverPanelId] = React.useState(null);
@@ -86,6 +91,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   multiPanelIdsRef.current = multiPanelIds;
   const dashboardStateRef = React.useRef(dashboard);
   dashboardStateRef.current = dashboard;
+  const buildRevealRequestIdRef = React.useRef(0);
+  const buildRevealResolversRef = React.useRef(new Map());
+  const appliedBuildRevealIdRef = React.useRef(0);
   const importInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
@@ -141,10 +149,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
   const presentationRuntime = usePresentationRuntime(presentationValidChartIds);
   const landingActive = hasLandingPresentation(activePage);
-  const selectedPlacement = findPanelPlacement(
-    dashboard,
-    buildSelection?.kind === "chart" ? buildSelection.placementId : selectedPanelId,
-  );
+  const selectedPlacement = findPanelPlacement(dashboard, chartEditorPlacementId);
   const selectedPanel = selectedPlacement?.chart ?? null;
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
@@ -213,6 +218,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   React.useEffect(() => {
     if (!editMode) {
       setSelectedPanelId(null);
+      setChartEditorPlacementId(null);
     }
   }, [editMode]);
 
@@ -225,6 +231,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, [onBuildDraftLockChange]);
 
   React.useEffect(() => () => pendingEdits.cancel(), [pendingEdits]);
+  React.useEffect(() => () => {
+    for (const resolve of buildRevealResolversRef.current.values()) resolve(false);
+    buildRevealResolversRef.current.clear();
+  }, []);
 
   React.useEffect(() => {
     if (!multiSelectMode) return undefined;
@@ -254,12 +264,36 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, [dashboard.programLabel, dashboard.scenarioLabel, dashboard.lastUpdated]);
 
   React.useEffect(() => {
+    if (pendingBuildSelection) return;
     setBuildSelection((current) => reconcileBuildSelection(
       current,
       dashboard,
       activePage?.id,
     ));
-  }, [dashboard, activePage?.id]);
+  }, [dashboard, activePage?.id, pendingBuildSelection]);
+
+  React.useEffect(() => {
+    if (
+      !pendingBuildSelection
+      || pendingBuildSelection.selection.pageId !== activePage?.id
+      || appliedBuildRevealIdRef.current === pendingBuildSelection.requestId
+    ) return;
+    appliedBuildRevealIdRef.current = pendingBuildSelection.requestId;
+    const { requestId, selection, intent } = pendingBuildSelection;
+    setBuildSelection(selection);
+    if (selection.kind === "chart" && intent === "activate") {
+      if (!chartEditBaseline) setChartEditBaseline(dashboardWithCurrentDrafts());
+      setChartEditorPlacementId(selection.placementId);
+    } else {
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+    }
+    setBuildRevealRequest({
+      id: requestId,
+      selection,
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
+    });
+  }, [activePage?.id, chartEditBaseline, pendingBuildSelection]);
 
   function navigateToPage(pageId) {
     if (moderatorOperationGateRef.current.isActive()) return;
@@ -313,6 +347,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await pendingEdits.flush();
       await onPanelRemove(panelId);
       setChartEditBaseline(null);
+      setChartEditorPlacementId((current) => (current === panelId ? null : current));
       setSelectedPanelId((current) => (current === panelId ? null : current));
       setPendingRemovalPanelId(null);
     });
@@ -496,7 +531,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       commit: () => onChartSave(payload),
       onCommitted: () => {
         setChartEditBaseline(null);
-        setBuildSelection({ kind: "page", pageId: activePage?.id });
+        setChartEditorPlacementId(null);
       },
     });
   }
@@ -508,7 +543,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onPanelEditCancel(chartEditBaseline);
     }
     setChartEditBaseline(null);
-    setBuildSelection({ kind: "page", pageId: activePage?.id });
+    setChartEditorPlacementId(null);
   }
 
   function changePage(pageId, updates) {
@@ -526,6 +561,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
+  function changeSection(section, updates) {
+    changeSectionByIds(activePage.id, section.id, updates);
+  }
+
   function changeDashboardText(updates) {
     if (moderatorOperationGateRef.current.isActive()) return;
     const nextDraft = { ...dashboardDraft, ...updates };
@@ -536,17 +575,20 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
-  function changeSection(section, updates) {
+  function changeSectionByIds(pageId, sectionId, updates) {
     if (moderatorOperationGateRef.current.isActive()) return;
+    const page = dashboard.pages.find((candidate) => candidate.id === pageId);
+    const section = page?.sections?.find((candidate) => candidate.id === sectionId);
+    if (!section) return;
     const baseSection = sectionDrafts[section.id] ?? sectionDraftFromSection(section);
     const nextDraft = { ...baseSection, ...updates };
     setSectionDrafts((current) => ({
       ...current,
       [section.id]: nextDraft,
     }));
-    pendingEdits.schedule(`section:${activePage.id}:${section.id}`, {
+    pendingEdits.schedule(`section:${pageId}:${section.id}`, {
       type: "section",
-      pageId: activePage.id,
+      pageId,
       sectionId: section.id,
       updates: nextDraft,
     });
@@ -646,33 +688,77 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   function openPanelEditor(panelId) {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    if (!chartEditBaseline) {
-      setChartEditBaseline(dashboardWithCurrentDrafts());
-    }
-    const placement = findPanelPlacement(dashboard, panelId);
-    const page = dashboard.pages.find((candidate) => (
-      candidate.sections?.some((section) => section.panels?.some(({ id }) => id === panelId))
-    ));
-    const section = page?.sections?.find((candidate) => (
-      candidate.panels?.some(({ id }) => id === panelId)
-    ));
-    if (!placement || !page || !section) return;
-    setBuildSelection({
-      kind: "chart",
-      pageId: page.id,
-      sectionId: section.id,
-      placementId: panelId,
-      chartId: placement.chart.id,
-    });
+    const selection = selectionForPlacement(dashboard, panelId);
+    if (selection) void requestBuildSelection(selection, { intent: "activate" });
   }
 
-  function selectBuildItem(nextSelection) {
-    if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
-    if (nextSelection?.kind === "chart" && !chartEditBaseline) {
-      setChartEditBaseline(dashboardWithCurrentDrafts());
+  function requestBuildSelection(nextSelection, { intent = "activate" } = {}) {
+    if (
+      moderatorOperationGateRef.current.isActive()
+      || !isValidBuildSelection(dashboardStateRef.current, nextSelection)
+    ) return Promise.resolve(false);
+    if (
+      chartEditorPlacementId
+      && !(nextSelection.kind === "chart"
+        && nextSelection.placementId === chartEditorPlacementId
+        && intent === "activate")
+    ) {
+      setBuildSelectionError("Finish or cancel the open chart editor before changing Page.");
+      return Promise.resolve(false);
     }
-    setBuildSelection(nextSelection);
+    setBuildSelectionError("");
+    if (nextSelection.kind === "timeGroup") {
+      setBuildSelection(nextSelection);
+      setChartEditorPlacementId(null);
+      setFocusInspectorLabelKey((current) => current + 1);
+      return Promise.resolve(true);
+    }
+    const requestId = ++buildRevealRequestIdRef.current;
+    for (const [id, resolve] of buildRevealResolversRef.current) {
+      if (id !== requestId) resolve(false);
+    }
+    buildRevealResolversRef.current.clear();
+    const result = new Promise((resolve) => {
+      buildRevealResolversRef.current.set(requestId, resolve);
+    });
+    setPendingBuildSelection({ requestId, selection: nextSelection, intent });
+    if (nextSelection.pageId && nextSelection.pageId !== activePage?.id) {
+      void onActivePageChange(nextSelection.pageId);
+    }
+    return result;
+  }
+
+  function completeBuildReveal(requestId) {
+    if (pendingBuildSelection?.requestId !== requestId) return;
+    buildRevealResolversRef.current.get(requestId)?.(true);
+    buildRevealResolversRef.current.delete(requestId);
+    setPendingBuildSelection(null);
+    setBuildRevealRequest(null);
+  }
+
+  async function renameBuildSelection(selection, value) {
+    const title = value.trim();
+    if (!title || !isValidBuildSelection(dashboardStateRef.current, selection)) return false;
+    await pendingEdits.flush();
+    if (selection.kind === "page") {
+      changePage(selection.pageId, { label: title });
+      return true;
+    }
+    if (selection.kind === "section") {
+      changeSectionByIds(selection.pageId, selection.sectionId, { title });
+      return true;
+    }
+    if (selection.kind !== "chart") return false;
+    const placement = findPanelPlacement(dashboardStateRef.current, selection.placementId);
+    if (!placement?.chart) return false;
+    const result = await performModeratorOperation("rename-chart", async () => {
+      await onChartSave({
+        chart: structuredClone({ ...placement.chart, title }),
+        timeSyncGroups: structuredClone(dashboardStateRef.current.timeSyncGroups ?? []),
+      });
+      return true;
+    });
+    return result === true;
   }
 
   function openChartWizard(sectionId) {
@@ -883,12 +969,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           pageDrafts={pageDrafts}
           sectionDrafts={sectionDrafts}
           chartEditor={selectedChartEditor}
+          chartEditorPlacementId={chartEditorPlacementId}
           onCloseChartEditor={cancelSelectedPanel}
           chartDraftOpen={chartAuthoringActive}
           mutationsDisabled={moderatorMutationLocked}
           deviceLayout={deviceLayout}
           focusLabelKey={focusInspectorLabelKey}
-          operationError={operationError || moderatorOperation.error}
+          operationError={operationError || buildSelectionError || moderatorOperation.error}
           geoDataSources={geoDataSources}
           appearanceControls={(
             <>
@@ -914,7 +1001,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             </>
           )}
           onActivePageChange={onActivePageChange}
-          onSelectionChange={selectBuildItem}
+          onActivate={requestBuildSelection}
+          onRename={renameBuildSelection}
+          onInlineRenameDirtyChange={onInlineRenameDirtyChange}
+          revealRequest={buildRevealRequest}
+          onRevealComplete={completeBuildReveal}
           onDashboardChange={changeDashboardText}
           onPageChange={changePage}
           onSectionChange={changeSection}
@@ -1704,6 +1795,37 @@ function slugify(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function selectionForPlacement(dashboard, placementId) {
+  for (const page of dashboard.pages ?? []) {
+    for (const section of page.sections ?? []) {
+      const placement = section.panels?.find(({ id }) => id === placementId);
+      if (placement) return {
+        kind: "chart",
+        pageId: page.id,
+        sectionId: section.id,
+        placementId,
+        chartId: (placement.chart ?? placement).id,
+      };
+    }
+  }
+  return null;
+}
+
+function isValidBuildSelection(dashboard, selection) {
+  if (!selection?.kind) return false;
+  if (selection.kind === "timeGroup") {
+    return (dashboard.timeSyncGroups ?? []).some(({ id }) => id === selection.groupId);
+  }
+  const page = (dashboard.pages ?? []).find(({ id }) => id === selection.pageId);
+  if (!page) return false;
+  if (selection.kind === "page") return true;
+  const section = (page.sections ?? []).find(({ id }) => id === selection.sectionId);
+  if (!section) return false;
+  if (selection.kind === "section") return true;
+  return selection.kind === "chart"
+    && (section.panels ?? []).some(({ id }) => id === selection.placementId);
 }
 
 

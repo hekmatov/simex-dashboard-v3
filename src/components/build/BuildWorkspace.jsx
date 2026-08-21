@@ -20,6 +20,7 @@ export default function BuildWorkspace({
   pageDrafts,
   sectionDrafts,
   chartEditor,
+  chartEditorPlacementId = null,
   onCloseChartEditor,
   chartDraftOpen = false,
   mutationsDisabled = false,
@@ -29,7 +30,11 @@ export default function BuildWorkspace({
   appearanceControls,
   geoDataSources,
   onActivePageChange,
-  onSelectionChange,
+  onActivate,
+  onRename,
+  onInlineRenameDirtyChange,
+  revealRequest = null,
+  onRevealComplete,
   onDashboardChange,
   onPageChange,
   onSectionChange,
@@ -72,14 +77,52 @@ export default function BuildWorkspace({
     setOpenSheet(selection?.kind === "chart" ? null : "inspector");
   }, [focusLabelKey, selection?.kind, tablet]);
 
-  const chooseSelection = (next) => {
-    if (locked) return;
-    onSelectionChange?.(next);
-    if (next.pageId && next.pageId !== activePage?.id) {
-      onActivePageChange?.(next.pageId);
-    }
+  const chooseSelection = (next, options) => {
+    if (locked) return Promise.resolve(false);
     if (tablet) setOpenSheet(next.kind === "chart" ? null : "inspector");
+    return onActivate?.(next, options) ?? Promise.resolve(false);
   };
+
+  React.useEffect(() => {
+    if (!revealRequest) return undefined;
+    let cancelled = false;
+    let frame = 0;
+    let attempts = 0;
+    const { id, selection } = revealRequest;
+    const escaped = (value) => CSS.escape(String(value));
+    const selector = selection.kind === "section"
+      ? `[data-canonical-section-id="${escaped(selection.sectionId)}"]`
+      : selection.kind === "chart"
+        ? `[data-canonical-placement-id="${escaped(selection.placementId)}"]`
+        : `[data-canonical-canvas-id="${escaped(selection.pageId)}"]`;
+    const reveal = () => {
+      if (cancelled) return;
+      const target = document.querySelector(selector);
+      if (!target) {
+        frame = window.requestAnimationFrame(reveal);
+        return;
+      }
+      if (attempts === 0) {
+        target.scrollIntoView({ block: "center", inline: "nearest", behavior: revealRequest.behavior });
+      }
+      attempts += 1;
+      const rect = target.getBoundingClientRect();
+      const intersectsViewport = rect.bottom > 0
+        && rect.right > 0
+        && rect.top < window.innerHeight
+        && rect.left < window.innerWidth;
+      if (intersectsViewport) {
+        onRevealComplete?.(id);
+        return;
+      }
+      if (attempts < 90) frame = window.requestAnimationFrame(reveal);
+    };
+    frame = window.requestAnimationFrame(reveal);
+    return () => {
+      cancelled = true;
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [onRevealComplete, revealRequest]);
   const open = (name) => {
     if (!locked) setOpenSheet(name);
   };
@@ -90,7 +133,9 @@ export default function BuildWorkspace({
       dashboard={dashboard}
       selection={selection}
       disabled={locked}
-      onSelect={chooseSelection}
+      onActivate={chooseSelection}
+      onRename={onRename}
+      onRenameDirtyChange={onInlineRenameDirtyChange}
     />
   );
   const inspector = (
@@ -123,14 +168,13 @@ export default function BuildWorkspace({
           dashboard={dashboard}
           surface="build"
           geoDataSources={geoDataSources}
-          onNavigate={(pageId) => chooseSelection({ kind: "page", pageId })}
+          onNavigate={(pageId) => void chooseSelection({ kind: "page", pageId }, { intent: "activate" })}
           onDisplayAction={onDisplayAction}
           buildState={{
             selection,
             disabled: locked,
             sectionDrafts,
-            onSelect: chooseSelection,
-            onRenameSection: onSectionChange,
+            onSelect: (next) => void chooseSelection(next, { intent: "activate" }),
             onReorderSection: onSectionReorder,
             onAddSection,
             onAddChart,
@@ -152,7 +196,7 @@ export default function BuildWorkspace({
             activePageId={activePage?.id}
             pageDrafts={pageDrafts}
             disabled={locked}
-            onSelectPage={(pageId) => chooseSelection({ kind: "page", pageId })}
+            onSelectPage={(pageId) => void chooseSelection({ kind: "page", pageId }, { intent: "activate" })}
             onPageChange={onPageChange}
             onPageReorder={onPageReorder}
           />
@@ -203,9 +247,9 @@ export default function BuildWorkspace({
               {inspector}
             </ModalFocusScope>
           </section>
-          {selection?.kind === "chart" && chartEditor && (
+          {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
-              anchorPlacementId={selection.placementId}
+              anchorPlacementId={chartEditorPlacementId}
               chartTitle={selectedChart?.title}
               onRequestClose={onCloseChartEditor}
             >

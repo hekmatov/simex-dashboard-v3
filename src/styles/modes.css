@@ -494,6 +494,11 @@
   padding: 6px;
 }
 
+.dashboard-section.is-build-selected {
+  outline: 3px double var(--simex-selected);
+  outline-offset: -3px;
+}
+
 .build-empty-section {
   align-items: center;
   background: var(--simex-surface-panel-alt, #faf6ec);
@@ -1325,6 +1330,14 @@
   .canonical-dashboard-frame .dashboard-header {
     gap: 10px;
     padding: 10px;
+  }
+}
+
+/* At the compact workspace breakpoint the Build crown is two pixels taller.
+   Offset only its shared frame so canonical View/Build targets remain exact. */
+@media (min-width: 768px) and (max-width: 899px) {
+  .canonical-dashboard-frame.build-workspace {
+    top: -2px;
   }
 }
 
