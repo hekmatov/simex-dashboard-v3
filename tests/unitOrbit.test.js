@@ -17,6 +17,29 @@ await vite.close();
 const viewport = { width: 1440, height: 900 };
 const orbitSize = { width: 400, height: 620 };
 
+test("Unit Orbit measures the editor's inner scroll content", () => {
+  assert.equal(
+    typeof orbitModule?.resolveUnitOrbitSize,
+    "function",
+    "Unit Orbit must expose its content measurement",
+  );
+  const innerScroller = { scrollHeight: 1549 };
+  const orbit = {
+    scrollHeight: 278,
+    getBoundingClientRect() {
+      return { width: 420, height: 280 };
+    },
+    querySelector(selector) {
+      return selector === ".unit-orbit-scroll" ? innerScroller : null;
+    },
+  };
+
+  assert.deepEqual(
+    orbitModule.resolveUnitOrbitSize(orbit, 1440),
+    { width: 420, height: 1549 },
+  );
+});
+
 test("Unit Orbit chooses right, then left, without intersecting the selected chart", () => {
   assert.equal(
     typeof orbitModule?.positionUnitOrbit,

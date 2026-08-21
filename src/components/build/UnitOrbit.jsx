@@ -18,6 +18,19 @@ export function isUnitOrbitOutsidePointer(orbit, target) {
   return Boolean(orbit && target && !orbit.contains(target));
 }
 
+export function resolveUnitOrbitSize(orbit, viewportWidth) {
+  const rect = orbit.getBoundingClientRect();
+  const innerScroller = orbit.querySelector(".unit-orbit-scroll");
+  return {
+    width: rect.width || Math.min(DEFAULT_WIDTH, viewportWidth - (DEFAULT_MARGIN * 2)),
+    height: Math.max(
+      rect.height,
+      innerScroller?.scrollHeight ?? orbit.scrollHeight,
+      DEFAULT_MIN_HEIGHT,
+    ),
+  };
+}
+
 export function positionUnitOrbit({
   anchorRect,
   orbitSize,
@@ -109,11 +122,7 @@ export default function UnitOrbit({
       const currentAnchor = findAnchor(anchorPlacementId);
       const orbit = orbitRef.current;
       if (!currentAnchor || !orbit) return;
-      const orbitRect = orbit.getBoundingClientRect();
-      const orbitSize = {
-        width: orbitRect.width || Math.min(DEFAULT_WIDTH, window.innerWidth - (DEFAULT_MARGIN * 2)),
-        height: Math.max(orbitRect.height, orbit.scrollHeight, DEFAULT_MIN_HEIGHT),
-      };
+      const orbitSize = resolveUnitOrbitSize(orbit, window.innerWidth);
       const result = positionUnitOrbit({
         anchorRect: currentAnchor.getBoundingClientRect(),
         orbitSize,
@@ -148,7 +157,14 @@ export default function UnitOrbit({
       ? null
       : new ResizeObserver(schedule);
     observer?.observe(anchor);
-    if (orbitRef.current) observer?.observe(orbitRef.current);
+    if (orbitRef.current) {
+      observer?.observe(orbitRef.current);
+      const innerScroller = orbitRef.current.querySelector(".unit-orbit-scroll");
+      if (innerScroller) {
+        observer?.observe(innerScroller);
+        [...innerScroller.children].forEach((child) => observer?.observe(child));
+      }
+    }
 
     return () => {
       if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
