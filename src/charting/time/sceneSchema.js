@@ -75,7 +75,7 @@ export function validateScene(scene, context = {}) {
   }
 
   const scenePeriod = validatePeriod(scene.period, "Scene period");
-  const groupPeriod = validatePeriod(group.period, "Parent Time Group period");
+  const groupPeriod = validateParentPeriod(group.period);
   if (scenePeriod.start < groupPeriod.start || scenePeriod.end > groupPeriod.end) {
     throw new Error("Scene period must be contained within its parent Time Group period.");
   }
@@ -214,6 +214,23 @@ function validatePeriod(period, description) {
   const end = Date.parse(period.end);
   if (end < start) throw new Error(`${description} end must be on or after start.`);
   return { start, end };
+}
+
+function validateParentPeriod(period) {
+  if (
+    typeof period?.start === "string"
+    && typeof period?.end === "string"
+    && /^\d{4}-\d{2}-\d{2}$/.test(period.start)
+    && /^\d{4}-\d{2}-\d{2}$/.test(period.end)
+  ) {
+    const start = Date.parse(`${period.start}T00:00:00.000Z`);
+    const endStart = Date.parse(`${period.end}T00:00:00.000Z`);
+    if (!Number.isFinite(start) || !Number.isFinite(endStart) || endStart < start) {
+      throw new Error("Parent Time Group period is invalid.");
+    }
+    return { start, end: endStart + 86_400_000 - 1 };
+  }
+  return validatePeriod(period, "Parent Time Group period");
 }
 
 function requireRecord(value, description) {

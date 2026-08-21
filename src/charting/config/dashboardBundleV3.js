@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { profileDataset } from "../data/profileDataset.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
+import { validateScene } from "../time/sceneSchema.js";
 import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
 import {
   normalizeDashboardTemporalConfig,
@@ -402,6 +403,18 @@ export function validateDashboardConfig(config) {
     profiles: validationProfiles,
     timezone: config.timezone,
   });
+  const sceneCharts = chartReferences.map(({ chart, pageId }) => ({
+    ...chart,
+    pageId,
+  }));
+  for (const scene of config.scenes ?? []) {
+    validateScene(scene, {
+      groups: config.timeSyncGroups ?? [],
+      pages: config.pages,
+      charts: sceneCharts,
+      scenes: config.scenes,
+    });
+  }
   return config;
 }
 

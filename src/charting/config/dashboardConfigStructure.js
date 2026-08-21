@@ -35,6 +35,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
         "layout",
         "programLabel",
         "scenarioLabel",
+        "scenes",
         "timeSyncGroups",
         "vantaBackground",
       ],
@@ -168,6 +169,9 @@ export function validateDashboardStructure(
   }
   if (config.timeSyncGroups !== undefined) {
     denseArray(config.timeSyncGroups, "Dashboard timeSyncGroups");
+  }
+  if (config.scenes !== undefined) {
+    denseArray(config.scenes, "Dashboard scenes");
   }
   if (config.datasetProfiles !== undefined) {
     ordinaryRecord(config.datasetProfiles, "Dashboard datasetProfiles");

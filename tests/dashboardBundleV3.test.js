@@ -239,6 +239,40 @@ test("version 3 bundles round-trip uploaded and inline sources", () => {
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
+test("saved Scenes round-trip as one validated dashboard-content truth", () => {
+  const dashboard = version3Dashboard();
+  dashboard.scenes = [{
+    id: "scene-outbreak",
+    name: "Outbreak briefing",
+    pageId: "overview",
+    groupId: "outbreak",
+    period: {
+      start: "2027-05-01T00:00:00.000Z",
+      end: "2027-05-01T00:00:00.000Z",
+    },
+    frames: {
+      mode: "source",
+      chartId: "outbreak-trend",
+      selection: "selected",
+      selectedEpochs: [Date.parse("2027-05-01T00:00:00.000Z")],
+    },
+    members: [{ chartId: "outbreak-trend", width: 4 }],
+    present: { chartIds: ["outbreak-trend"], layout: "single" },
+    audience: {
+      datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 },
+    },
+  }];
+
+  assert.strictEqual(validateDashboardConfig(dashboard), dashboard);
+  const bundle = serializeDashboardBundle(dashboard);
+  assert.deepEqual(bundle.config.scenes, dashboard.scenes);
+  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)).scenes, dashboard.scenes);
+
+  const invalid = structuredClone(dashboard);
+  invalid.scenes[0].members[0].chartId = "missing-chart";
+  assert.throws(() => validateDashboardConfig(invalid), /parent Time Group|does not exist/);
+});
+
 test("dashboard persistence migrates legacy temporal authority to the canonical contract", () => {
   const dashboard = version3Dashboard();
   delete dashboard.timezone;
