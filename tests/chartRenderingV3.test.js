@@ -22,6 +22,7 @@ export async function load(url, context, nextLoad) {
 
 const {
   applyEChartsPresentation,
+  sameChartTextTheme,
 } = await import("../src/components/charts/EChartsChartView.jsx");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
@@ -448,6 +449,21 @@ test("bullet and pie charts inherit the active dashboard data palette unless aut
     "#85CCD6", "#E09AA7", "#C1AFE4", "#8BC7AA", "#E2BF72", "#F1A1A9",
   ]);
   assert.deepEqual(authored.option.color, ["#112233", "#445566"]);
+});
+
+test("equivalent chart text themes compare data palettes by value", () => {
+  const current = {
+    textStrong: "#18334E",
+    textMuted: "#49627A",
+    dataColors: ["#4E79A7", "#F28E2B"],
+  };
+  const next = {
+    textStrong: "#18334E",
+    textMuted: "#49627A",
+    dataColors: ["#4E79A7", "#F28E2B"],
+  };
+  assert.equal(sameChartTextTheme(current, next), true);
+  assert.equal(sameChartTextTheme(current, { ...next, dataColors: ["#4E79A7", "#E15759"] }), false);
 });
 
 test("axis series honor validated label visibility, position, and formatting", () => {

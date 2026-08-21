@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 import DeviceLayoutControl from "../DeviceLayoutControl.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
@@ -386,24 +387,27 @@ export default function BuildWorkspace({
               ))}
             </nav>
           )}
-          {activeAuxiliary && (
-            <ModalFocusScope
-              as="aside"
-              open
+          {activeAuxiliary && typeof document !== "undefined" && createPortal((
+            <aside
               className="build-authoring-auxiliary"
               role="dialog"
               aria-modal="false"
               aria-label={activeAuxiliary === "structure" ? "Structure authoring" : "Scenario details"}
-              onEscape={closeAuxiliary}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                closeAuxiliary();
+              }}
             >
-              <button type="button" className="build-sheet-close" onClick={closeAuxiliary}>Close</button>
+              <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
               {activeAuxiliary === "structure" ? (
                 <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />
               ) : (
                 <ScenarioAuthoring draft={scenarioDraft} disabled={locked} onAction={dispatchScenario} />
               )}
-            </ModalFocusScope>
-          )}
+            </aside>
+          ), document.body)}
           <section className="build-canvas-toolbar" aria-label="Build regions">
             <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
             <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>

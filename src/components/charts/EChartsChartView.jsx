@@ -70,7 +70,7 @@ export default function EChartsChartView({
           || DEFAULT_CHART_TEXT_THEME.dataColors[index - 1]
       )),
     };
-    setTextTheme((current) => Object.keys(next).every((key) => current[key] === next[key]) ? current : next);
+    setTextTheme((current) => sameChartTextTheme(current, next) ? current : next);
   });
 
   React.useEffect(() => {
@@ -206,6 +206,23 @@ export function applyEChartsPresentation(
       ...(backgroundColor ? { backgroundColor } : {}),
     },
   };
+}
+
+export function sameChartTextTheme(current = {}, next = {}) {
+  const keys = new Set([...Object.keys(current), ...Object.keys(next)]);
+  for (const key of keys) {
+    if (key === "dataColors") {
+      const currentColors = current.dataColors ?? [];
+      const nextColors = next.dataColors ?? [];
+      if (
+        currentColors.length !== nextColors.length
+        || currentColors.some((color, index) => color !== nextColors[index])
+      ) return false;
+      continue;
+    }
+    if (current[key] !== next[key]) return false;
+  }
+  return true;
 }
 
 export function createEChartsLifecycle({
