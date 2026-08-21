@@ -1186,6 +1186,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       </div>
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
+        destination={chartWizardTarget}
         disabled={moderatorMutationLocked}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
@@ -1612,6 +1613,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       </PlaybackSurface>
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
+        destination={chartWizardTarget}
         disabled={moderatorMutationLocked}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}

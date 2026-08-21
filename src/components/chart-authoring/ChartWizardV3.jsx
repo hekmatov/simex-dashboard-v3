@@ -6,9 +6,10 @@ import {
 } from "../../charting/forms/formModel.js";
 import {
   createWizardState,
+  CHART_CREATION_STAGES,
+  CHART_CREATION_STAGE_LABELS,
   finalizeWizardDraft,
   reduceWizardState,
-  WIZARD_STEPS,
 } from "../../charting/forms/wizardDraft.js";
 import {
   createManualDataTemplate,
@@ -35,23 +36,22 @@ import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
 import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
+import { requestRenderProof } from "../../charting/forms/chartProof.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
 const noop = () => {};
 
-const STEP_TITLES = Object.freeze({
-  type: "Choose the chart format",
-  source: "Select data to show",
-  roles: "Tell the chart what each column means",
-  style: "Preview and refine the chart",
-});
+const CREATION_STAGE_LABELS = Object.freeze(Object.fromEntries(
+  CHART_CREATION_STAGES.map((stage, index) => [stage, CHART_CREATION_STAGE_LABELS[index]]),
+));
 
-const STEP_INTERACTIONS = Object.freeze({
-  type: "wizard.select-chart-type",
-  source: "wizard.select-data-source",
-  roles: "wizard.configure-data-roles",
-  style: "wizard.style-and-layout",
+const LEGACY_STEP_FOR_STAGE = Object.freeze({
+  "chart-type": "type",
+  "data-source": "source",
+  "map-and-prepare-data": "roles",
+  "configure-chart": "style",
+  "review-and-create": "style",
 });
 
 export function createWizardCloseHandlers({
@@ -84,6 +84,8 @@ export default function ChartWizardV3({
   geoDataSources,
   timeSyncGroups,
   existingCharts = [],
+  destination = null,
+  dashboardRevision = null,
   disabled = false,
   onClose,
   onDirtyChange = noop,
@@ -106,6 +108,8 @@ export default function ChartWizardV3({
     profiles: safeDatasetProfiles,
     timeSyncGroups: safeGroups,
     existingCharts: safeExistingCharts,
+    destination,
+    dashboardRevision,
   }));
   const [query, setQuery] = React.useState("");
   const [localRows, setLocalRows] = React.useState({});
@@ -137,28 +141,30 @@ export default function ChartWizardV3({
   function requestClose() {
     if (operationLocked()) return;
     setWizard((current) => reduceWizardState(current, {
-      type: "requestClose",
+      type: "suspend",
+      restoration: {
+        stage: current.stage,
+        focusId: `chart-stage-${current.stage}`,
+        invokerId: "build-add-chart",
+        scrollTop: wizardDialogRef.current?.scrollTop ?? 0,
+        targetId: current.draft?.id ?? null,
+      },
     }));
     setSubmissionError("");
+    onClose?.();
   }
 
   React.useEffect(() => {
     if (!open) return;
-    setWizard(createChartWizardState({
-      loadedData: safeLoadedData,
-      profiles: safeDatasetProfiles,
-      timeSyncGroups: safeGroups,
-      existingCharts: safeExistingCharts,
-    }));
-    setQuery("");
-    setLocalRows({});
-    setSourceKind("");
-    setManualTable(null);
-    setManualErrors([]);
-    setUploadError("");
-    setSubmissionError("");
-    setPendingSourceUi(null);
-  }, [open]);
+    setWizard((current) => {
+      const resumed = current.suspension
+        ? reduceWizardState(current, { type: "resume" })
+        : current;
+      return resumed.destination || !destination
+        ? resumed
+        : reduceWizardState(resumed, { type: "setDestination", destination });
+    });
+  }, [open, destination?.pageId, destination?.sectionId]);
 
   const dirty = isChartWizardStateDirty({
     open,
@@ -180,7 +186,7 @@ export default function ChartWizardV3({
       "[data-modal-initial-focus=\"true\"]",
     );
     selectedStep?.focus?.({ preventScroll: true });
-  }, [open, wizard.activeStep, wizardDialogRef]);
+  }, [open, wizard.stage, wizardDialogRef]);
 
   const runtimeLoadedData = React.useMemo(
     () => mergeCollections(safeLoadedData, localRows),
@@ -239,13 +245,42 @@ export default function ChartWizardV3({
         includeCitation: false,
       })
     : { sections: [], valid: false };
-  const active = form.steps.find(({ id }) => id === wizard.activeStep)
-    ?? form.steps[0];
-  const activeStepIndex = WIZARD_STEPS.indexOf(wizard.activeStep);
+  const activeLegacyStep = LEGACY_STEP_FOR_STAGE[wizard.stage] ?? "type";
+  const active = form.steps.find(({ id }) => id === activeLegacyStep)
+    ?? form.steps[0]
+    ?? { prerequisites: [] };
+  const activeStageIndex = CHART_CREATION_STAGES.indexOf(wizard.stage);
   const dataSection = editor.sections.find(({ id }) => id === "data") ?? null;
   const timeSyncField = editor.sections
     .flatMap(({ fields }) => fields)
     .find(({ id }) => id === "timeSync");
+  const configurationSections = editor.sections
+    .filter(({ id }) => id !== "data")
+    .map((section) => ({
+      ...section,
+      fields: section.fields.filter(({ id }) => id !== "timeSync"),
+    }))
+    .filter(({ fields }) => fields.length > 0);
+  const renderProof = requestRenderProof({
+    draftRevision: runtime.prepared?.meta?.formPreparationKey ?? "unprepared",
+    chart: wizard.draft,
+    preparedData: runtime.prepared,
+  });
+  const placementProof = {
+    status: wizard.destination?.pageId && wizard.destination?.sectionId
+      ? "valid"
+      : "invalid",
+    orderedText: wizard.destination?.pageId && wizard.destination?.sectionId
+      ? `Page ${wizard.destination.pageId}; section ${wizard.destination.sectionId}; append; standard width; standard height.`
+      : "Choose a page and section before placement can be validated.",
+  };
+  const creationStageStatuses = deriveVisibleStageStatuses({
+    wizard,
+    form,
+    placementProof,
+    renderProof,
+    canCreate,
+  });
 
   const dispatch = (action) => {
     setWizard((current) => reduceWizardState({
@@ -253,6 +288,15 @@ export default function ChartWizardV3({
       loadedData: runtimeLoadedData,
       profiles,
     }, action));
+    setSubmissionError("");
+  };
+  const navigateCreationStage = (stage) => {
+    setWizard((current) => {
+      let next = reduceWizardState(current, { type: "setStage", stage });
+      const legacyStep = LEGACY_STEP_FOR_STAGE[stage];
+      if (legacyStep) next = reduceWizardState(next, { type: "navigate", step: legacyStep });
+      return next;
+    });
     setSubmissionError("");
   };
   const updatePath = (path, value) => dispatch({
@@ -513,7 +557,7 @@ export default function ChartWizardV3({
           React.createElement(
             "h2",
             { id: "chart-wizard-title" },
-            STEP_TITLES[wizard.activeStep],
+            CREATION_STAGE_LABELS[wizard.stage],
           ),
         ),
         React.createElement(IconControl, {
@@ -529,26 +573,43 @@ export default function ChartWizardV3({
           className: "chart-wizard-step-tabs",
           "aria-label": "Chart creation steps",
         },
-        form.steps.map((step) => React.createElement(IconControl, {
-          key: step.id,
-          interactionId: STEP_INTERACTIONS[step.id],
+        CHART_CREATION_STAGES.map((stage) => React.createElement("button", {
+          key: stage,
+          id: `chart-stage-${stage}`,
+          type: "button",
           className: "chart-wizard-step-button",
-          ariaLabel: step.label,
-          tooltip: step.label,
-          tooltipPlacement: "below",
           "data-modal-initial-focus":
-            wizard.activeStep === step.id ? "true" : undefined,
-          "aria-current": wizard.activeStep === step.id ? "step" : undefined,
-          "data-complete": step.complete ? "true" : "false",
-          pressed: wizard.activeStep === step.id,
+            wizard.stage === stage ? "true" : undefined,
+          "aria-current": wizard.stage === stage ? "step" : undefined,
+          "aria-label": `${CREATION_STAGE_LABELS[stage]}. ${creationStageStatuses[stage]}.`,
+          "data-status": creationStageStatuses[stage],
+          tabIndex: wizard.stage === stage ? 0 : -1,
           disabled: disabled || submitting,
-          onClick: () => dispatch({ type: "navigate", step: step.id }),
-        })),
+          onClick: () => navigateCreationStage(stage),
+          onKeyDown: (event) => handleStageNavigationKey(event, stage, navigateCreationStage),
+        }, React.createElement("span", null, CREATION_STAGE_LABELS[stage]), React.createElement("small", null, creationStageStatuses[stage]))),
       ),
       React.createElement(
         "div",
         { className: "chart-wizard-body" },
-        wizard.activeStep === "type"
+        wizard.stage === "destination"
+          ? React.createElement(
+              "section",
+              { className: "chart-wizard-step chart-wizard-destination", "aria-labelledby": "chart-destination-heading" },
+              React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
+              React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
+              React.createElement(
+                "dl",
+                { className: "chart-destination-ledger" },
+                React.createElement("div", null, React.createElement("dt", null, "Page"), React.createElement("dd", null, wizard.destination?.pageId ?? "Needs attention")),
+                React.createElement("div", null, React.createElement("dt", null, "Section"), React.createElement("dd", null, wizard.destination?.sectionId ?? "Needs attention")),
+                React.createElement("div", null, React.createElement("dt", null, "Insertion"), React.createElement("dd", null, wizard.destination?.position ?? "Append to section")),
+                React.createElement("div", null, React.createElement("dt", null, "Panel preset"), React.createElement("dd", null, "Standard width · Standard height")),
+              ),
+              React.createElement("p", { className: "chart-proof-state", role: "status" }, placementProof.orderedText),
+            )
+          : null,
+        wizard.stage === "chart-type"
           ? React.createElement(ChartTypePicker, {
               value: wizard.draft?.typeId ?? "",
               query,
@@ -567,10 +628,11 @@ export default function ChartWizardV3({
                     title: "",
                   },
                 });
+                navigateCreationStage("data-source");
               },
             })
           : null,
-        wizard.activeStep === "source"
+        wizard.stage === "data-source"
           ? React.createElement(DataSourceStep, {
               dataSources: safeDataSources,
               loadedData: safeLoadedData,
@@ -602,7 +664,7 @@ export default function ChartWizardV3({
               onRequestClear: () => dispatch({ type: "requestClearSource" }),
             })
           : null,
-        wizard.activeStep === "roles"
+        wizard.stage === "map-and-prepare-data"
           ? React.createElement(DataRolesStep, {
               section: dataSection,
               prerequisites: active.prerequisites,
@@ -614,14 +676,23 @@ export default function ChartWizardV3({
               onChange: updateAuthoringPath,
             })
           : null,
-        wizard.activeStep === "style"
+        wizard.stage === "map-and-prepare-data" && wizard.draft
+          ? React.createElement(ChartTimeMemberships, {
+              chart: wizard.draft,
+              groups: wizard.timeSyncGroups,
+              timeRole: timeSyncField?.timeRoles?.find(({ field }) => typeof field === "string")?.value
+                ?? timeSyncField?.timeRoles?.[0]?.value,
+              onChange: changeMembership,
+            })
+          : null,
+        wizard.stage === "configure-chart"
           ? React.createElement(StyleLayoutStep, {
               chart: wizard.draft,
               rows,
               geoData,
               profile: runtime.profile,
               prepared: runtime.prepared,
-              sections: editor.sections,
+              sections: configurationSections,
               prerequisites: active.prerequisites,
               columns: runtime.profile?.columns ?? [],
               charts: chartsWithDraft(wizard.charts, wizard.draft),
@@ -634,6 +705,15 @@ export default function ChartWizardV3({
                 value: nextGroups,
               }),
               onValidationError: (error) => setSubmissionError(safeMessage(error)),
+            })
+          : null,
+        wizard.stage === "review-and-create"
+          ? React.createElement(ChartCreationReview, {
+              wizard,
+              source,
+              renderProof,
+              placementProof,
+              canCreate,
             })
           : null,
         submissionError
@@ -650,7 +730,7 @@ export default function ChartWizardV3({
         React.createElement(
           "span",
           { role: "status" },
-          active.prerequisites[0] ?? "",
+          `${CREATION_STAGE_LABELS[wizard.stage]}: ${creationStageStatuses[wizard.stage]}`,
         ),
         React.createElement(
           "div",
@@ -659,29 +739,37 @@ export default function ChartWizardV3({
             interactionId: "collection.previous-page",
             ariaLabel: "Previous step",
             tooltip: "Previous step",
-            disabled: disabled || submitting || activeStepIndex <= 0,
-            onClick: () => dispatch({
-              type: "navigate",
-              step: WIZARD_STEPS[activeStepIndex - 1],
-            }),
+            disabled: disabled || submitting || activeStageIndex <= 0,
+            onClick: () => navigateCreationStage(CHART_CREATION_STAGES[activeStageIndex - 1]),
           }),
           React.createElement(IconControl, {
             interactionId: "collection.next-page",
             ariaLabel: "Next step",
             tooltip: "Next step",
-            disabled: disabled || submitting || activeStepIndex >= WIZARD_STEPS.length - 1,
-            onClick: () => dispatch({
-              type: "navigate",
-              step: WIZARD_STEPS[activeStepIndex + 1],
-            }),
+            disabled: disabled || submitting || activeStageIndex >= CHART_CREATION_STAGES.length - 1,
+            onClick: () => navigateCreationStage(CHART_CREATION_STAGES[activeStageIndex + 1]),
           }),
-          React.createElement(IconControl, {
-            interactionId: "wizard.create-chart",
-            ariaLabel: submitting ? "Creating chart" : "Create chart",
-            tooltip: submitting ? "Creating chart" : "Create chart",
-            disabled: disabled || !canCreate || submitting,
-            onClick: finish,
-          }),
+          React.createElement(
+            "button",
+            {
+              type: "button",
+              className: "secondary chart-wizard-discard",
+              disabled: disabled || submitting,
+              onClick: () => dispatch({ type: "requestClose" }),
+            },
+            "Discard chart draft",
+          ),
+          wizard.stage === "review-and-create"
+            ? React.createElement(IconControl, {
+                interactionId: "wizard.create-chart",
+                ariaLabel: submitting ? "Creating chart" : "Create chart",
+                tooltip: submitting ? "Creating chart" : "Create chart",
+                disabled: disabled || !canCreate || submitting
+                  || placementProof.status !== "valid"
+                  || renderProof.status !== "valid",
+                onClick: finish,
+              })
+            : null,
         ),
       ),
     ),
@@ -746,6 +834,156 @@ export default function ChartWizardV3({
       disabled: disabled || submitting,
     }),
   );
+}
+
+function ChartTimeMemberships({ chart, groups = [], timeRole, onChange = noop }) {
+  if (!Array.isArray(groups) || groups.length === 0) {
+    return React.createElement(
+      "section",
+      { className: "chart-time-memberships", "aria-labelledby": "chart-time-memberships-title" },
+      React.createElement("h3", { id: "chart-time-memberships-title" }, "Time Group memberships"),
+      React.createElement("p", null, "No saved Time Groups are available. Create or repair groups in Time Group Studio."),
+    );
+  }
+  return React.createElement(
+    "section",
+    { className: "chart-time-memberships", "aria-labelledby": "chart-time-memberships-title" },
+    React.createElement("h3", { id: "chart-time-memberships-title" }, "Time Group memberships"),
+    React.createElement("p", null, "Select zero or multiple memberships. Matching and fallback policy remain owned by Time Group Studio."),
+    React.createElement(
+      "div",
+      { className: "chart-time-membership-list" },
+      groups.map((group) => {
+        const selected = group.members?.some(({ chartId }) => chartId === chart.id) ?? false;
+        return React.createElement(
+          "label",
+          { key: group.id, className: "chart-time-membership-option" },
+          React.createElement("input", {
+            type: "checkbox",
+            checked: selected,
+            disabled: !timeRole,
+            onChange: (event) => onChange(group.id, event.target.checked),
+          }),
+          React.createElement("span", null, group.label ?? group.name ?? group.id),
+          React.createElement("small", null, selected ? `Uses ${timeRole}` : "Not selected"),
+        );
+      }),
+    ),
+  );
+}
+
+function ChartCreationReview({
+  wizard,
+  source,
+  renderProof,
+  placementProof,
+  canCreate,
+}) {
+  const memberships = (wizard.timeSyncGroups ?? []).filter((group) => (
+    group.members?.some(({ chartId }) => chartId === wizard.draft?.id)
+  ));
+  const mappingCount = Object.keys(wizard.draft?.roles ?? {}).length;
+  const transformCount = (wizard.draft?.transformations?.filters?.length ?? 0)
+    + (wizard.draft?.transformations?.grouping?.length ?? 0);
+  return React.createElement(
+    "section",
+    { className: "chart-creation-review", "aria-labelledby": "chart-creation-review-title" },
+    React.createElement("h3", { id: "chart-creation-review-title" }, "Review and create"),
+    React.createElement("p", null, "Review every persisted value and both independent validations before creating the chart."),
+    React.createElement(
+      "dl",
+      { className: "chart-review-ledger" },
+      reviewEntry("Destination", placementProof.orderedText),
+      reviewEntry("Chart type", wizard.draft?.typeId ?? "Needs attention"),
+      reviewEntry("Schema revision", wizard.chartTypeRevision ?? wizard.draft?.version ?? "Current V3 registry"),
+      reviewEntry("Data source", wizard.draft?.sourceId ?? "Needs attention"),
+      reviewEntry("Provenance", source?.provenance?.label ?? source?.kind ?? "Saved dashboard source"),
+      reviewEntry("Mapping", `${mappingCount} assigned roles`),
+      reviewEntry("Preparation", `${transformCount} configured transforms`),
+      reviewEntry("Configuration", wizard.draft?.title?.trim() || "Title needs attention"),
+      reviewEntry("Canonical render proof", `${renderProof.status}; ${renderProof.rendererReadyCount} renderer-ready outputs`),
+      reviewEntry("Placement proof", placementProof.status),
+      reviewEntry("Time Group memberships", memberships.length > 0
+        ? memberships.map((group) => group.label ?? group.name ?? group.id).join(", ")
+        : "None"),
+      reviewEntry("Companion proposals", wizard.companions?.length
+        ? `${wizard.companions.length} referenced proposals`
+        : "None"),
+    ),
+    !canCreate || renderProof.status !== "valid" || placementProof.status !== "valid"
+      ? React.createElement("p", { className: "wizard-error", role: "alert" }, "Creation is not ready. Use the owning stage to repair the current issue.")
+      : React.createElement("p", { className: "chart-proof-state", role: "status" }, "All current values and both proofs are ready."),
+  );
+}
+
+function reviewEntry(label, value) {
+  return React.createElement(
+    "div",
+    { key: label },
+    React.createElement("dt", null, label),
+    React.createElement("dd", null, value),
+  );
+}
+
+function deriveVisibleStageStatuses({
+  wizard,
+  form,
+  placementProof,
+  renderProof,
+  canCreate,
+}) {
+  const legacyComplete = Object.fromEntries(
+    form.steps.map(({ id, complete }) => [id, Boolean(complete)]),
+  );
+  const complete = {
+    destination: placementProof.status === "valid",
+    "chart-type": Boolean(wizard.draft?.typeId),
+    "data-source": legacyComplete.source === true,
+    "map-and-prepare-data": legacyComplete.roles === true,
+    "configure-chart": legacyComplete.style === true && renderProof.status === "valid",
+    "review-and-create": canCreate
+      && placementProof.status === "valid"
+      && renderProof.status === "valid",
+  };
+  const prerequisites = {
+    destination: true,
+    "chart-type": complete.destination,
+    "data-source": complete["chart-type"],
+    "map-and-prepare-data": complete["data-source"],
+    "configure-chart": complete["map-and-prepare-data"],
+    "review-and-create": complete["configure-chart"],
+  };
+  return Object.fromEntries(CHART_CREATION_STAGES.map((stage) => [
+    stage,
+    complete[stage]
+      ? "Complete"
+      : !prerequisites[stage]
+        ? "Waiting on prerequisite"
+        : wizard.errors?.some((error) => error.stage === stage)
+          ? "Needs attention"
+          : wizard.stage === stage
+            ? "In progress"
+            : "Not started",
+  ]));
+}
+
+function handleStageNavigationKey(event, stage) {
+  const index = CHART_CREATION_STAGES.indexOf(stage);
+  let targetIndex = null;
+  if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+    targetIndex = (index + 1) % CHART_CREATION_STAGES.length;
+  } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+    targetIndex = (index - 1 + CHART_CREATION_STAGES.length) % CHART_CREATION_STAGES.length;
+  } else if (event.key === "Home") {
+    targetIndex = 0;
+  } else if (event.key === "End") {
+    targetIndex = CHART_CREATION_STAGES.length - 1;
+  }
+  if (targetIndex === null) return;
+  event.preventDefault();
+  event.currentTarget.parentElement
+    ?.querySelector(`#chart-stage-${CHART_CREATION_STAGES[targetIndex]}`)
+    ?.focus();
 }
 
 export function isChartWizardStateDirty({
@@ -935,12 +1173,16 @@ export function createChartWizardState({
   profiles = {},
   timeSyncGroups,
   existingCharts = [],
+  destination = null,
+  dashboardRevision = null,
 }) {
   return createWizardState({
     loadedData,
     profiles,
     timeSyncGroups,
     charts: existingCharts,
+    destination,
+    dashboardRevision,
   });
 }
 
