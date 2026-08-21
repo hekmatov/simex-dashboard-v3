@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { matchTemporalObservation } from "../src/charting/time/temporalMatch.js";
+import {
+  MATCHING_POLICY_LABELS,
+  matchTemporalObservation,
+  resolveMatchingPolicy,
+  resolveSecondsPerFrame,
+  summarizeTemporalProvenance,
+} from "../src/charting/time/temporalMatch.js";
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
@@ -180,16 +186,17 @@ test("nearest matching returns missing when every observation is outside toleran
   }), missing);
 });
 
-test("nearest matching rejects an equidistant tie instead of choosing an arbitrary observation", () => {
-  assert.throws(
-    () => matchTemporalObservation({
-      observations: samples,
-      activeEpochMs: MAY_2,
-      policy: "nearest",
-      toleranceMs: DAY_MS,
-    }),
-    /Nearest temporal match is ambiguous/,
-  );
+test("nearest matching resolves an equidistant tie to the earlier observation", () => {
+  const match = matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_2,
+    policy: "nearest",
+    toleranceMs: DAY_MS,
+  });
+
+  assert.equal(match.status, "nearest");
+  assert.strictEqual(match.observation, samples[0]);
+  assert.equal(match.sourceEpochMs, MAY_1);
 });
 
 test("numeric interpolation reports both bounds and uses the active timestamp", () => {
@@ -455,4 +462,164 @@ test("unknown temporal matching policies are rejected even at an exact timestamp
     }),
     /Unknown temporal matching policy "futureGuess"/,
   );
+});
+
+test("approved policy resolution follows group, member, Scene, and View-session precedence", () => {
+  assert.deepEqual(resolveMatchingPolicy({
+    groupDefault: MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
+    memberFallback: MATCHING_POLICY_LABELS.SNAP_TO_LATEST,
+    sceneOverride: MATCHING_POLICY_LABELS.INTERPOLATE,
+    sessionOverride: MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST,
+  }), {
+    policy: "Snap to Closest",
+    source: "session",
+  });
+
+  assert.deepEqual(resolveMatchingPolicy({
+    groupDefault: MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
+    memberFallback: MATCHING_POLICY_LABELS.SNAP_TO_LATEST,
+    sceneOverride: MATCHING_POLICY_LABELS.INTERPOLATE,
+    sessionOverride: MATCHING_POLICY_LABELS.USE_AUTHORED_SETTINGS,
+  }), {
+    policy: "Interpolate",
+    source: "scene",
+  });
+});
+
+test("approved labels return provenance-rich concurrent, snapped, missing, and unavailable results", () => {
+  const concurrent = matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_1,
+    policy: MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
+  });
+  assert.deepEqual(concurrent, {
+    status: "concurrent",
+    observation: samples[0],
+    observationEpochs: [MAY_1],
+    signedOffsetMs: 0,
+    reason: null,
+  });
+
+  assert.deepEqual(matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_2,
+    policy: MATCHING_POLICY_LABELS.SNAP_TO_LATEST,
+  }), {
+    status: "snapped-latest",
+    observation: samples[0],
+    observationEpochs: [MAY_1],
+    signedOffsetMs: -DAY_MS,
+    reason: null,
+  });
+
+  assert.deepEqual(matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_2,
+    policy: MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST,
+  }).observation, samples[0]);
+
+  assert.equal(matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_2,
+    policy: MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
+  }).status, "missing");
+
+  assert.deepEqual(matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_2,
+    policy: MATCHING_POLICY_LABELS.INTERPOLATE,
+    interpolationAllowed: false,
+  }), {
+    status: "unavailable",
+    observation: null,
+    observationEpochs: [],
+    signedOffsetMs: null,
+    reason: "interpolation-not-supported",
+  });
+});
+
+test("approved Interpolate requires numeric bounds on both sides and never extrapolates", () => {
+  assert.deepEqual(matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_2,
+    policy: MATCHING_POLICY_LABELS.INTERPOLATE,
+    interpolationAllowed: true,
+  }), {
+    status: "interpolated",
+    observation: { value: 15, epochMs: MAY_2 },
+    observationEpochs: [MAY_1, MAY_3],
+    signedOffsetMs: null,
+    reason: null,
+  });
+
+  assert.equal(matchTemporalObservation({
+    observations: samples,
+    activeEpochMs: MAY_4,
+    policy: MATCHING_POLICY_LABELS.INTERPOLATE,
+    interpolationAllowed: true,
+  }).status, "missing");
+  assert.equal(matchTemporalObservation({
+    observations: [samples[0], { epochMs: MAY_3, value: "20" }],
+    activeEpochMs: MAY_2,
+    policy: MATCHING_POLICY_LABELS.INTERPOLATE,
+    interpolationAllowed: true,
+  }).status, "unavailable");
+});
+
+test("provenance summaries distinguish concurrent, interpolated, same-offset, and mixed dates", () => {
+  assert.deepEqual(summarizeTemporalProvenance([
+    { status: "concurrent", signedOffsetMs: 0 },
+  ], { timeZone: "UTC" }), {
+    kind: "concurrent",
+    compactLabel: "Concurrent",
+    accessibleLabel: "Concurrent",
+  });
+  assert.deepEqual(summarizeTemporalProvenance([
+    { status: "interpolated", signedOffsetMs: null },
+  ], { timeZone: "UTC" }), {
+    kind: "interpolated",
+    compactLabel: "Interpolated",
+    accessibleLabel: "Interpolated",
+  });
+  assert.deepEqual(summarizeTemporalProvenance([
+    { status: "snapped-latest", signedOffsetMs: -DAY_MS },
+    { status: "snapped-latest", signedOffsetMs: -DAY_MS },
+  ], { timeZone: "UTC" }), {
+    kind: "single-offset",
+    compactLabel: "-1d",
+    accessibleLabel: "1 day earlier",
+  });
+  assert.deepEqual(summarizeTemporalProvenance([
+    { status: "snapped-latest", signedOffsetMs: -DAY_MS },
+    { status: "snapped-closest", signedOffsetMs: 2 * DAY_MS },
+  ], { timeZone: "UTC" }), {
+    kind: "mixed-offsets",
+    compactLabel: "-1…+2d",
+    accessibleLabel: "Mixed dates",
+  });
+});
+
+test("Scene cadence inherits the group while View and Present overrides remain session-only", () => {
+  assert.deepEqual(resolveSecondsPerFrame({ groupDefault: 2.5 }), {
+    secondsPerFrame: 2.5,
+    source: "group",
+    persisted: true,
+  });
+  assert.deepEqual(resolveSecondsPerFrame({
+    groupDefault: 2.5,
+    sceneOverride: 1.25,
+  }), {
+    secondsPerFrame: 1.25,
+    source: "scene",
+    persisted: true,
+  });
+  assert.deepEqual(resolveSecondsPerFrame({
+    groupDefault: 2.5,
+    sceneOverride: 1.25,
+    sessionOverride: 0.5,
+  }), {
+    secondsPerFrame: 0.5,
+    source: "session",
+    persisted: false,
+  });
 });
