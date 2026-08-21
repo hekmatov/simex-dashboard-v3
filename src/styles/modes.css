@@ -71,6 +71,16 @@
   padding: 0 24px;
 }
 
+.app-persistence-notice {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+  margin: 10px auto 0;
+  max-width: 1392px;
+  padding: 10px 14px;
+  width: calc(100% - 48px);
+}
+
 .audience-waiting {
   align-items: center;
   background: #020816;

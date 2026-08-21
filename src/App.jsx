@@ -71,6 +71,12 @@ import {
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
+const SESSION_ONLY_MESSAGES = Object.freeze({
+  dashboard: "Dashboard changes are applied for this session but cannot be retained after reload.",
+  dashboardLook: "Dashboard look applied for this session but cannot be retained after reload.",
+  appearance: "Appearance applied for this session but cannot be retained after reload.",
+  deviceLayout: "Device layout is applied for this session but cannot be retained after reload.",
+});
 const DEFAULT_VANTA_BACKGROUND = {
   backgroundColor: "#f7f9fc",
   networkColor: "#f1a1ad",
@@ -89,6 +95,7 @@ export default function App() {
   const [dashboard, setDashboard] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [operationError, setOperationError] = React.useState("");
+  const [persistenceNotices, setPersistenceNotices] = React.useState({});
   const [recoveryBusy, setRecoveryBusy] = React.useState(false);
   const [recoveryError, setRecoveryError] = React.useState("");
   const [recoveryImportCandidate, setRecoveryImportCandidate] = React.useState(null);
@@ -127,6 +134,7 @@ export default function App() {
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
   const dashboardCommitControllerRef = React.useRef(null);
+  const lastDashboardPersistenceRef = React.useRef(true);
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
@@ -442,6 +450,26 @@ export default function App() {
     return dashboardCommitControllerRef.current;
   }
 
+  function reportPersistence(scope, persisted, message) {
+    setPersistenceNotices((current) => {
+      const next = { ...current };
+      if (persisted) delete next[scope];
+      else next[scope] = message;
+      return next;
+    });
+  }
+
+  function persistDashboardStorage(serialized) {
+    const persisted = browserStorage.setItem(DASHBOARD_STORAGE_KEY, serialized);
+    lastDashboardPersistenceRef.current = persisted;
+    reportPersistence(
+      "dashboard",
+      persisted,
+      SESSION_ONLY_MESSAGES.dashboard,
+    );
+    return persisted;
+  }
+
   async function persistConfiguration(nextConfig) {
     try {
       const trackedProfiles = trackedDatasetProfilesRef.current;
@@ -467,14 +495,11 @@ export default function App() {
         stored,
         configuredFallbackProfiles,
       );
-      browserStorage.setItem(
-        DASHBOARD_STORAGE_KEY,
-        JSON.stringify(
-          configurationForStorage(loaded, trackedProfiles),
-          null,
-          2,
-        ),
-      );
+      persistDashboardStorage(JSON.stringify(
+        configurationForStorage(loaded, trackedProfiles),
+        null,
+        2,
+      ));
       dashboardRef.current = loaded;
       setDashboard(loaded);
       setError(null);
@@ -533,14 +558,11 @@ export default function App() {
           trackedProfiles,
           definition.portableSources,
         ),
-        persist: (candidate) => browserStorage.setItem(
-          DASHBOARD_STORAGE_KEY,
-          JSON.stringify(
-            configurationForStorage(candidate, trackedProfiles),
-            null,
-            2,
-          ),
-        ),
+        persist: (candidate) => persistDashboardStorage(JSON.stringify(
+          configurationForStorage(candidate, trackedProfiles),
+          null,
+          2,
+        )),
       });
       dashboardRef.current = loaded;
       replaceRecoveryDashboardController(loaded);
@@ -623,7 +645,9 @@ export default function App() {
           ...chartColorUpdates(nextPreview),
         };
       }).then(() => {
-        setLookStatus("Dashboard look saved.");
+        setLookStatus(lastDashboardPersistenceRef.current
+          ? "Dashboard look saved."
+          : SESSION_ONLY_MESSAGES.dashboardLook);
       }).catch((commitError) => {
         setLookError(boundedBackgroundPersistenceError(commitError).message);
       }).finally(() => {
@@ -633,9 +657,16 @@ export default function App() {
 
     if (previous.appearancePreference !== nextPreview.appearancePreference) {
       try {
-        persistAppearancePreference(nextPreview.appearancePreference);
+        const persisted = persistAppearancePreference(nextPreview.appearancePreference);
         setAppearancePreference(nextPreview.appearancePreference);
-        setLookStatus("Appearance saved for this browser.");
+        reportPersistence(
+          "appearance",
+          persisted,
+          SESSION_ONLY_MESSAGES.appearance,
+        );
+        setLookStatus(persisted
+          ? "Appearance saved for this browser."
+          : SESSION_ONLY_MESSAGES.appearance);
       } catch (preferenceError) {
         setLookError(boundedBackgroundPersistenceError(preferenceError).message);
       }
@@ -888,6 +919,7 @@ export default function App() {
       pageActions={commandCrownPageActions}
       onPageRequest={requestPage}
       density={densityForDashboardMode(mode)}
+      persistenceNotice={Object.values(persistenceNotices).join(" ")}
       theme={dashboardTheme}
       lookDrawerOpen={lookDrawerOpen}
     >
@@ -909,7 +941,12 @@ export default function App() {
       deviceLayout={deviceLayout}
       onDeviceLayoutChange={(layout) => {
         setDeviceLayout(layout);
-        browserStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
+        const persisted = browserStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
+        reportPersistence(
+          "deviceLayout",
+          persisted,
+          SESSION_ONLY_MESSAGES.deviceLayout,
+        );
       }}
       onChartCreate={createChart}
       onChartSave={saveChart}

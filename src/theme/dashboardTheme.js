@@ -239,8 +239,8 @@ export function persistAppearancePreference(value, storage = browserStorage) {
   if (!APPEARANCE_PREFERENCES.includes(value)) {
     throw new TypeError("Dashboard appearance preference must be light, dark, or system.");
   }
-  storage?.setItem?.(APPEARANCE_STORAGE_KEY, value);
-  return value;
+  if (typeof storage?.setItem !== "function") return false;
+  return storage.setItem(APPEARANCE_STORAGE_KEY, value) !== false;
 }
 
 function tokenRecord(serialized) {

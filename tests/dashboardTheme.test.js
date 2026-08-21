@@ -165,9 +165,12 @@ test("appearance preference persistence rejects unknown stored values", () => {
   };
 
   assert.equal(themeModule.readAppearancePreference(storage), "system");
-  themeModule.persistAppearancePreference("dark", storage);
+  assert.equal(themeModule.persistAppearancePreference("dark", storage), true);
   assert.equal(values.get(themeModule.APPEARANCE_STORAGE_KEY), "dark");
   assert.equal(themeModule.readAppearancePreference(storage), "dark");
+  assert.equal(themeModule.persistAppearancePreference("dark", {
+    setItem() { return false; },
+  }), false);
   assert.throws(
     () => themeModule.persistAppearancePreference("sepia", storage),
     /appearance preference/i,

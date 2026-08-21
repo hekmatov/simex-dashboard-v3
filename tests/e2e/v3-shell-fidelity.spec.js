@@ -512,6 +512,81 @@ test("look drawer allows transient compression and restores dashboard geometry a
   expect(contentAfter).toEqual(contentBefore);
 });
 
+test("denied Dashboard Look and appearance writes remain live with session-only feedback", async ({ page }) => {
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function denyLookPersistence(key, value) {
+      if (
+        key === "simex-dashboard-config-v3-three-mode-v1"
+        || key === "simex-dashboard-appearance-v3"
+      ) {
+        throw new DOMException("Storage denied", "SecurityError");
+      }
+      return setItem.call(this, key, value);
+    };
+  });
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Dashboard look" });
+  const feedback = drawer.locator(".look-drawer-feedback");
+
+  await drawer.getByLabel("Humanist Standard", { exact: true }).check();
+  await expect(page.locator(".app-frame")).toHaveAttribute(
+    "data-dashboard-style", "humanist-standard",
+  );
+  await expect(feedback).toHaveText(
+    "Dashboard look applied for this session but cannot be retained after reload.",
+  );
+  await expect(feedback).not.toContainText("saved");
+
+  await drawer.getByLabel("Dark", { exact: true }).check();
+  await expect(page.locator(".app-frame")).toHaveAttribute("data-resolved-appearance", "dark");
+  await expect(feedback).toHaveText(
+    "Appearance applied for this session but cannot be retained after reload.",
+  );
+  await expect(page.locator(".app-persistence-notice")).toContainText(
+    "Appearance applied for this session but cannot be retained after reload.",
+  );
+});
+
+test("denied dashboard and device-layout writes remain usable with session-only feedback", async ({ page }) => {
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function denyConfigurationPersistence(key, value) {
+      if (
+        key === "simex-dashboard-config-v3-three-mode-v1"
+        || key === "simex-dashboard-device-layout-v3"
+      ) {
+        throw new DOMException("Storage denied", "SecurityError");
+      }
+      return setItem.call(this, key, value);
+    };
+  });
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  const structure = page.getByRole("navigation", { name: "Dashboard structure" });
+  const home = structure.getByRole("treeitem", { name: "Home", exact: true });
+  await home.locator(":scope > .build-tree-row .build-tree-label").dblclick();
+  const rename = structure.getByRole("textbox", { name: "Rename page Home" });
+  await rename.fill("Session-only Home");
+  await rename.press("Enter");
+  await expect(page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Session-only Home", exact: true })).toBeVisible();
+  await expect(page.locator(".app-persistence-notice")).toContainText(
+    "Dashboard changes are applied for this session but cannot be retained after reload.",
+  );
+
+  const layout = page.getByRole("group", { name: "Choose a layout for this device" });
+  await layout.getByRole("button", { name: "Tablet", exact: true }).click();
+  await expect(layout.getByRole("button", { name: "Tablet", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".app-persistence-notice")).toContainText(
+    "Device layout is applied for this session but cannot be retained after reload.",
+  );
+});
+
 test("look drawer phone sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

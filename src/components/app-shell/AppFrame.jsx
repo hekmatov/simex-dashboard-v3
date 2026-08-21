@@ -8,6 +8,7 @@ export default function AppFrame({
   onModeRequest,
   modeDisabled = false,
   blockedReason = "",
+  persistenceNotice = "",
   dashboardIdentity,
   activePage,
   pages,
@@ -54,6 +55,9 @@ export default function AppFrame({
         disabledReason={blockedReason}
       />
       {blockedReason && <p className="mode-switch-error" role="alert">{blockedReason}</p>}
+      {persistenceNotice && (
+        <p className="app-persistence-notice" role="status">{persistenceNotice}</p>
+      )}
       {children}
     </div>
   );
