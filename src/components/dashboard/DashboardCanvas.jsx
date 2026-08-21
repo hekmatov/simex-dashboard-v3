@@ -242,23 +242,31 @@ function BuildSectionHeader({
       <div className="build-section-actions" aria-label={`${title} Section actions`}>
         <button
           type="button"
-          className="secondary"
+          className="secondary build-section-move-button"
           disabled={disabled || index === 0}
           aria-label={`Move ${title} earlier`}
           title={`Move ${title} earlier`}
           onClick={() => onReorder(index - 1)}
         >
-          <SimExIcon iconId="reorderPrevious" size={18} />
+          <SimExIcon
+            iconId="reorderPrevious"
+            className="build-section-move-icon build-section-move-icon--up"
+            size={18}
+          />
         </button>
         <button
           type="button"
-          className="secondary"
+          className="secondary build-section-move-button"
           disabled={disabled || index === count - 1}
           aria-label={`Move ${title} later`}
           title={`Move ${title} later`}
           onClick={() => onReorder(index + 1)}
         >
-          <SimExIcon iconId="reorderNext" size={18} />
+          <SimExIcon
+            iconId="reorderNext"
+            className="build-section-move-icon build-section-move-icon--down"
+            size={18}
+          />
         </button>
       </div>
     </div>

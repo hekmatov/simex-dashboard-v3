@@ -788,3 +788,98 @@
   border-color: var(--simex-border-subtle);
   color: var(--simex-text-strong);
 }
+
+/* Build authoring controls inherit the active dashboard grammar and profile. */
+.app-frame .canonical-dashboard-frame .build-section-move-button,
+.app-frame .build-authoring-layer .accessibility-edit-toggle {
+  background: var(--simex-surface-panel-alt) !important;
+  border: 1px solid var(--simex-border-subtle) !important;
+  border-radius: var(--simex-style-control-radius, var(--simex-component-control-radius)) !important;
+  color: var(--simex-text-strong) !important;
+}
+
+.app-frame .canonical-dashboard-frame .build-section-move-button:hover:not(:disabled),
+.app-frame .build-authoring-layer .accessibility-edit-toggle:hover {
+  background: var(--simex-selected-soft) !important;
+  border-color: var(--simex-selected) !important;
+}
+
+.app-frame .canonical-dashboard-frame .build-section-move-button:focus-visible,
+.app-frame .build-authoring-layer .accessibility-edit-toggle:focus-within {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-component-focus, var(--simex-focus));
+  outline-offset: 2px;
+}
+
+.app-frame .canonical-dashboard-frame .build-section-move-button:disabled {
+  background: var(--simex-surface-panel-alt) !important;
+  color: var(--simex-text-muted) !important;
+  opacity: 0.48;
+}
+
+.app-frame .canonical-dashboard-frame .build-section-move-button .accent-stroke {
+  stroke: currentColor;
+}
+
+.app-frame .canonical-dashboard-frame .build-section-move-button .soft-fill {
+  fill: color-mix(in srgb, currentColor 34%, transparent);
+}
+
+.build-section-move-icon {
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+.app-frame .build-authoring-layer .accessibility-edit-toggle span {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer .accessibility-edit-toggle small {
+  color: var(--simex-text-muted);
+}
+
+.app-frame .build-authoring-layer .accessibility-edit-toggle input {
+  accent-color: var(--simex-selected);
+}
+
+/* Carbon-style branch guides align beneath the parent caret and stop at the
+   last direct child's horizontal connector, even when that child is open. */
+.app-frame .build-authoring-layer .build-tree-group {
+  margin-left: 0;
+  padding-left: 14px;
+}
+
+.app-frame .build-authoring-layer .build-tree-group::before {
+  content: none;
+}
+
+.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap::after {
+  border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  content: "";
+  height: 100%;
+  left: 8px;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 0;
+  z-index: 0;
+}
+
+.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap:last-child::after {
+  height: 22px;
+}
+
+.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap::before {
+  border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
+  height: 22px;
+  left: 8px;
+  pointer-events: none;
+  top: 0;
+  width: 14px;
+  z-index: 0;
+}
+
+.app-frame .build-authoring-layer .build-tree-row {
+  position: relative;
+  z-index: 1;
+}
