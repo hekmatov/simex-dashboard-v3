@@ -36,6 +36,7 @@ export default function BuildWorkspace({
   onRename,
   onInlineRenameDirtyChange,
   revealRequest = null,
+  treeResetGeneration = 0,
   onRevealComplete,
   onDashboardChange,
   onPageChange,
@@ -135,6 +136,7 @@ export default function BuildWorkspace({
 
   const structure = (
     <BuildStructureRail
+      key={treeResetGeneration}
       dashboard={dashboard}
       selection={selection}
       disabled={navigationLocked}

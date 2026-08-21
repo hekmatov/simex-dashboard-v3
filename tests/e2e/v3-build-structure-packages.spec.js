@@ -16,7 +16,7 @@ async function openBuildStructure(page) {
   await expect(page.getByRole("tree")).toBeVisible();
 }
 
-async function packageFixture() {
+async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   const config = JSON.parse(await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),
     "utf8",
@@ -25,13 +25,17 @@ async function packageFixture() {
     new URL("../../public/config/dataset-profiles.json", import.meta.url),
     "utf8",
   ));
-  const importedPage = structuredClone(
-    config.pages.find(({ id }) => id === "biomedical"),
-  );
-  importedPage.id = "imported_package_page";
-  importedPage.label = "Imported Package Page";
-  importedPage.title = "Imported Package Page";
+  const importedPage = structuredClone(config.pages.find(({ id }) => (
+    id === (preserveSocioEconomicIds ? "socio_economic" : "biomedical")
+  )));
+  if (!preserveSocioEconomicIds) importedPage.id = "imported_package_page";
+  importedPage.label = preserveSocioEconomicIds
+    ? "Imported Same-ID Page"
+    : "Imported Package Page";
+  importedPage.title = importedPage.label;
   importedPage.sections[0].title = "Imported Section";
+  importedPage.sections = importedPage.sections.slice(0, 1);
+  importedPage.sections[0].panels = importedPage.sections[0].panels.slice(0, 1);
   const firstPlacement = importedPage.sections[0].panels[0];
   (firstPlacement.chart ?? firstPlacement).title = "Imported Panel";
   config.id = "imported-package-dashboard";
@@ -260,4 +264,54 @@ test("cancelling the authored-content import warning preserves inline rename sta
   await expect(rename.locator("xpath=..")).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".canonical-dashboard-frame"))
     .toHaveAttribute("data-canonical-page-id", "socio_economic");
+});
+
+test("successful same-ID import resets dirty rename state and disposes delayed tree activation", async ({ page }) => {
+  await page.addInitScript(() => {
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = (callback, delay, ...args) => nativeSetTimeout(
+      callback,
+      delay === 500 ? 2_000 : delay,
+      ...args,
+    );
+  });
+  await openBuildStructure(page);
+  const tree = page.getByRole("tree");
+  const fixture = await packageFixture({ preserveSocioEconomicIds: true });
+
+  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
+  await rename.fill("Stale local Page name");
+
+  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
+  const chooserPromise = page.waitForEvent("filechooser");
+  await warning.getByRole("button", { name: "Choose package", exact: true }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: "same-id-dashboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(fixture)),
+  });
+
+  const review = page.getByRole("dialog", { name: "Review package contents" });
+  await expect(review).toBeVisible();
+  await tree.getByRole("treeitem", {
+    name: "Risk perception over time",
+    exact: true,
+  }).evaluate((element) => element.click());
+  await review.getByRole("button", { name: "Load package", exact: true }).click();
+
+  await expect(review).toHaveCount(0);
+  await expect(tree.getByRole("textbox")).toHaveCount(0);
+  await expect(tree.getByRole("treeitem", {
+    name: "Imported Same-ID Page",
+    exact: true,
+  })).toBeVisible();
+  await page.waitForTimeout(2_200);
+  await expect(page.locator(".unit-orbit")).toHaveCount(0);
+  await expect(tree.getByRole("treeitem", {
+    name: "Stale local Page name",
+    exact: true,
+  })).toHaveCount(0);
 });

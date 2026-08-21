@@ -95,6 +95,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   });
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
   const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
+  const [buildTreeResetGeneration, setBuildTreeResetGeneration] = React.useState(0);
   const [buildSelectionError, setBuildSelectionError] = React.useState("");
   const [focusInspectorLabelKey, setFocusInspectorLabelKey] = React.useState(0);
   const [draggingPanelId, setDraggingPanelId] = React.useState(null);
@@ -214,6 +215,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     resetAfterPackageImport(importedDashboard) {
       const rebasedDrafts = createImportedRendererDraftState(importedDashboard);
       pendingEdits.cancel();
+      for (const resolve of buildRevealResolversRef.current.values()) resolve(false);
+      buildRevealResolversRef.current.clear();
+      buildRevealRequestIdRef.current += 1;
+      appliedBuildRevealIdRef.current = 0;
       setDashboardDraft(rebasedDrafts.dashboardDraft);
       setPageDrafts(rebasedDrafts.pageDrafts);
       setSectionDrafts(rebasedDrafts.sectionDrafts);
@@ -224,11 +229,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartWizardDirty(false);
       setInlineRenameDirty(false);
       setExternalDirty({ timeGroup: false, scene: false, dashboardMetadata: false });
+      onInlineRenameDirtyChange?.(false);
       setBuildSelection(null);
       setPendingBuildSelection(null);
       setBuildRevealRequest(null);
       setBuildSelectionError("");
       setPackageImportConfirmation(false);
+      setBuildTreeResetGeneration((current) => current + 1);
     },
     requestCompareCharts() {
       if (buildMode || multiSelectMode) return;
@@ -259,7 +266,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
       return { ok: true };
     },
-  }), [buildMode, buildDraftLocked, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, pendingEdits, setAuthoredDirtyFlag]);
+  }), [buildMode, buildDraftLocked, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, onInlineRenameDirtyChange, pendingEdits, setAuthoredDirtyFlag]);
 
   React.useEffect(() => {
     onComparisonSelectionChange?.(multiSelectMode);
@@ -1117,6 +1124,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onRename={renameBuildSelection}
           onInlineRenameDirtyChange={handleInlineRenameDirtyChange}
           revealRequest={buildRevealRequest}
+          treeResetGeneration={buildTreeResetGeneration}
           onRevealComplete={completeBuildReveal}
           onDashboardChange={changeDashboardText}
           onPageChange={changePage}
