@@ -733,16 +733,22 @@
 }
 
 .app-frame[data-dashboard-style="evidence-ledger"] .build-structure-rail {
+  --build-tree-line: var(--simex-border-strong);
+  --build-tree-line-width: 1px;
   --build-tree-icon: var(--simex-text-strong);
   --build-tree-icon-radius: 0;
 }
 
 .app-frame[data-dashboard-style="humanist-standard"] .build-structure-rail {
+  --build-tree-line: color-mix(in srgb, var(--simex-border-subtle) 72%, transparent);
+  --build-tree-line-width: 1px;
   --build-tree-icon: var(--simex-accent);
   --build-tree-icon-radius: 4px;
 }
 
 .app-frame[data-dashboard-style="signal-instrument"] .build-structure-rail {
+  --build-tree-line: var(--simex-accent);
+  --build-tree-line-width: 2px;
   --build-tree-icon: var(--simex-accent);
   --build-tree-icon-radius: 1px;
 }
@@ -845,18 +851,34 @@
    last direct child's horizontal connector, even when that child is open. */
 .app-frame .build-authoring-layer .build-tree-group {
   margin-left: 0;
-  padding-left: 14px;
+  padding-left: 24px;
+}
+
+.app-frame .build-authoring-layer .build-tree-root > .build-tree-item-wrap {
+  gap: 0;
 }
 
 .app-frame .build-authoring-layer .build-tree-group::before {
   content: none;
 }
 
+.app-frame .build-authoring-layer .build-tree-item-wrap[aria-expanded="true"] > .build-tree-row::before {
+  border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
+  bottom: 0;
+  content: "";
+  left: 22px;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  width: 0;
+  z-index: 0;
+}
+
 .app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap::after {
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   content: "";
   height: 100%;
-  left: 8px;
+  left: -2px;
   pointer-events: none;
   position: absolute;
   top: 0;
@@ -872,10 +894,10 @@
   border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
   height: 22px;
-  left: 8px;
+  left: -2px;
   pointer-events: none;
   top: 0;
-  width: 14px;
+  width: 24px;
   z-index: 0;
 }
 
