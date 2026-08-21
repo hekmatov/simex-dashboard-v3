@@ -17,6 +17,33 @@ export const WIZARD_STEPS = Object.freeze([
   "style",
 ]);
 
+export const CHART_CREATION_STAGES = Object.freeze([
+  "destination",
+  "chart-type",
+  "data-source",
+  "map-and-prepare-data",
+  "configure-chart",
+  "review-and-create",
+]);
+
+export const CHART_CREATION_STAGE_LABELS = Object.freeze([
+  "Destination",
+  "Chart type",
+  "Data source",
+  "Map and prepare data",
+  "Configure chart",
+  "Review and create",
+]);
+
+const CHART_CREATION_STATUSES = new Set([
+  "editing",
+  "validating",
+  "committing",
+  "failed",
+  "ambiguous",
+  "committed",
+]);
+
 const DANGEROUS_PATH_SEGMENTS = new Set([
   "__proto__",
   "prototype",
@@ -27,7 +54,28 @@ export function createWizardState(options = {}) {
   if (!isRecord(options)) {
     throw new TypeError("Wizard state options must be an object.");
   }
-  return {
+  const state = {
+    draftId: options.draftId ?? options.draft?.id ?? null,
+    stage: CHART_CREATION_STAGES.includes(options.stage)
+      ? options.stage
+      : "destination",
+    status: CHART_CREATION_STATUSES.has(options.status)
+      ? options.status
+      : "editing",
+    destination: cloneOptional(options.destination),
+    chartTypeId: options.chartTypeId ?? options.draft?.typeId ?? null,
+    profileRevision: options.profileRevision ?? null,
+    mapping: cloneOptional(options.mapping),
+    preparation: cloneOptional(options.preparation),
+    configuration: cloneOptional(options.configuration),
+    companions: structuredClone(options.companions ?? []),
+    renderProofRevision: options.renderProofRevision ?? null,
+    placementProofRevision: options.placementProofRevision ?? null,
+    dashboardRevision: options.dashboardRevision ?? null,
+    errors: structuredClone(options.errors ?? []),
+    suspension: cloneOptional(options.suspension),
+    handoff: cloneOptional(options.handoff),
+    discarded: options.discarded === true,
     activeStep: WIZARD_STEPS.includes(options.activeStep)
       ? options.activeStep
       : "type",
@@ -44,6 +92,7 @@ export function createWizardState(options = {}) {
     pendingSourceChange: null,
     closed: false,
   };
+  return withStageStatuses(state);
 }
 
 export function reduceWizardState(state, action) {
@@ -51,8 +100,145 @@ export function reduceWizardState(state, action) {
   if (!isRecord(action) || typeof action.type !== "string") {
     throw new TypeError("Wizard actions require a type.");
   }
+  if (state.status === "ambiguous" && action.type !== "reconciled") {
+    return state;
+  }
+  if (state.status === "committed") return state;
+  if (state.status === "committing" && action.type !== "commitResult") {
+    return state;
+  }
 
   switch (action.type) {
+    case "start":
+      requiredString(action.draftId, "Chart draft id");
+      return chartState(state, {
+        draftId: action.draftId,
+        dashboardRevision: action.dashboardRevision ?? state.dashboardRevision,
+        status: "editing",
+        discarded: false,
+      });
+    case "suspend": {
+      const restoration = normalizeRestoration(action.restoration, state.stage);
+      return chartState(state, {
+        suspension: {
+          reason: "in-app",
+          restoration,
+          resumeFocusId: resolveResumeFocus(state, restoration),
+        },
+      });
+    }
+    case "resume": {
+      const restoration = state.suspension?.restoration;
+      return chartState(state, {
+        stage: CHART_CREATION_STAGES.includes(restoration?.stage)
+          ? restoration.stage
+          : state.stage,
+        suspension: state.suspension
+          ? { ...state.suspension, resumed: true }
+          : null,
+      });
+    }
+    case "setDestination":
+      return chartState(state, {
+        destination: cloneOptional(action.destination),
+        status: "editing",
+        discarded: false,
+      });
+    case "setChartType":
+      requiredString(action.chartTypeId, "Chart type id");
+      return chartState(state, {
+        chartTypeId: action.chartTypeId,
+        chartTypeRevision: action.schemaRevision ?? null,
+        status: "editing",
+        discarded: false,
+      });
+    case "setSource":
+      return chartState(state, {
+        source: cloneOptional(action.source),
+        profileRevision: null,
+        status: "editing",
+        discarded: false,
+      });
+    case "profileSucceeded":
+      return chartState(state, {
+        profileRevision: action.profile?.revision ?? null,
+        status: "editing",
+        errors: withoutErrorCode(state.errors, "PROFILE_DRIFT"),
+      });
+    case "profileDrifted":
+      return chartState(state, {
+        status: "failed",
+        errors: [{
+          code: "PROFILE_DRIFT",
+          stage: "data-source",
+          currentRevision: action.currentRevision,
+          focusId: "chart-draft-data-source",
+        }],
+      });
+    case "setMapping":
+      return chartState(state, {
+        mapping: cloneOptional(action.mapping),
+        status: "editing",
+        discarded: false,
+      });
+    case "setPreparation":
+      return chartState(state, {
+        preparation: cloneOptional(action.preparation),
+        status: "editing",
+        discarded: false,
+      });
+    case "setConfiguration":
+      return chartState(state, {
+        configuration: cloneOptional(action.configuration),
+        status: "editing",
+        discarded: false,
+      });
+    case "setCompanionOutcome":
+      return chartState(state, {
+        companions: replaceCompanionOutcome(state.companions, action.outcome),
+        status: "editing",
+        discarded: false,
+      });
+    case "reviseRenderProof":
+      return chartState(state, {
+        renderProofRevision: action.proof?.revision ?? null,
+        status: "editing",
+      });
+    case "revisePlacementProof":
+      return chartState(state, {
+        placementProofRevision: action.proof?.revision ?? null,
+        status: "editing",
+      });
+    case "setStage":
+      assertChartCreationStage(action.stage);
+      return chartState(state, { stage: action.stage });
+    case "back": {
+      const index = CHART_CREATION_STAGES.indexOf(state.stage);
+      return index <= 0
+        ? state
+        : chartState(state, { stage: CHART_CREATION_STAGES[index - 1] });
+    }
+    case "revalidate":
+      return chartState(state, {
+        status: action.result?.ok === true ? "editing" : "failed",
+        errors: structuredClone(action.result?.errors ?? []),
+      });
+    case "commitStarted":
+      requiredString(action.transactionId, "Chart creation transaction id");
+      return chartState(state, {
+        status: "committing",
+        errors: [],
+        handoff: {
+          ...(state.handoff ?? {}),
+          transactionId: action.transactionId,
+        },
+      });
+    case "commitResult":
+      return applyCommitResult(state, action.result);
+    case "reconciled":
+      return applyReconciliation(state, action.result);
+    case "discard":
+      return discardSessionDraft(state);
     case "navigate":
       return navigate(state, action.step);
     case "selectType":
@@ -119,6 +305,59 @@ export function finalizeWizardDraft(state) {
   return result;
 }
 
+export function deriveChartCreationStageStatuses(state) {
+  const errorsByStage = new Set(
+    (state.errors ?? []).map(({ stage }) => stage).filter(Boolean),
+  );
+  const result = {};
+  const destinationComplete = meaningfulValue(state.destination);
+  result.destination = stageStatus(state, "destination", {
+    complete: destinationComplete,
+    waiting: false,
+    needsAttention: errorsByStage.has("destination"),
+  });
+
+  const chartTypeComplete = destinationComplete && meaningfulValue(state.chartTypeId);
+  result["chart-type"] = stageStatus(state, "chart-type", {
+    complete: chartTypeComplete,
+    waiting: !destinationComplete,
+    needsAttention: errorsByStage.has("chart-type"),
+  });
+
+  const sourceComplete = chartTypeComplete
+    && meaningfulValue(state.source)
+    && meaningfulValue(state.profileRevision);
+  result["data-source"] = stageStatus(state, "data-source", {
+    complete: sourceComplete,
+    waiting: !chartTypeComplete,
+    needsAttention: errorsByStage.has("data-source"),
+  });
+
+  const mappingComplete = sourceComplete
+    && meaningfulValue(state.mapping)
+    && meaningfulValue(state.preparation);
+  result["map-and-prepare-data"] = stageStatus(state, "map-and-prepare-data", {
+    complete: mappingComplete,
+    waiting: !sourceComplete,
+    needsAttention: errorsByStage.has("map-and-prepare-data"),
+  });
+
+  const configurationComplete = mappingComplete && meaningfulValue(state.configuration);
+  result["configure-chart"] = stageStatus(state, "configure-chart", {
+    complete: configurationComplete,
+    waiting: !mappingComplete,
+    needsAttention: errorsByStage.has("configure-chart"),
+  });
+
+  result["review-and-create"] = stageStatus(state, "review-and-create", {
+    complete: state.status === "committed",
+    waiting: !configurationComplete,
+    needsAttention: errorsByStage.has("review-and-create")
+      || state.status === "ambiguous",
+  });
+  return result;
+}
+
 function navigate(state, step) {
   if (!WIZARD_STEPS.includes(step)) {
     throw new Error(`Unknown wizard step "${step}".`);
@@ -137,9 +376,13 @@ function selectType(state, action) {
   const groups = previousDraftId
     ? removeChartFromGroups(state.timeSyncGroups, previousDraftId)
     : state.timeSyncGroups;
-  return {
+  return withStageStatuses({
     ...state,
     activeStep: "source",
+    stage: "data-source",
+    chartTypeId: action.typeId,
+    chartTypeRevision: action.schemaRevision ?? state.chartTypeRevision ?? null,
+    discarded: false,
     draft: createChartDraft(action.typeId, {
       ...overrides,
       ...(draftId ? { id: draftId } : {}),
@@ -151,7 +394,7 @@ function selectType(state, action) {
     confirmation: null,
     pendingSourceChange: null,
     closed: false,
-  };
+  });
 }
 
 function selectSource(state, action) {
@@ -598,6 +841,172 @@ function requiredString(value, description) {
   if (typeof value !== "string" || value.trim() === "") {
     throw new Error(`${description} is required.`);
   }
+}
+
+function chartState(state, patch) {
+  return withStageStatuses({ ...state, ...patch });
+}
+
+function withStageStatuses(state) {
+  return {
+    ...state,
+    stageStatuses: deriveChartCreationStageStatuses(state),
+  };
+}
+
+function stageStatus(state, stage, { complete, waiting, needsAttention }) {
+  if (needsAttention) return "Needs attention";
+  if (waiting) return "Waiting on prerequisite";
+  if (complete) return "Complete";
+  return state.stage === stage ? "In progress" : "Not started";
+}
+
+function assertChartCreationStage(stage) {
+  if (!CHART_CREATION_STAGES.includes(stage)) {
+    throw new Error(`Unknown chart creation stage "${stage}".`);
+  }
+}
+
+function normalizeRestoration(restoration, fallbackStage) {
+  const value = isRecord(restoration) ? restoration : {};
+  return {
+    stage: CHART_CREATION_STAGES.includes(value.stage) ? value.stage : fallbackStage,
+    focusId: nonEmptyString(value.focusId) ? value.focusId : null,
+    invokerId: nonEmptyString(value.invokerId) ? value.invokerId : null,
+    scrollTop: Number.isFinite(value.scrollTop) ? value.scrollTop : 0,
+    targetId: nonEmptyString(value.targetId) ? value.targetId : null,
+  };
+}
+
+function resolveResumeFocus(state, restoration) {
+  if (restoration.focusId) return restoration.focusId;
+  const issueFocus = (state.errors ?? []).find(({ focusId }) => nonEmptyString(focusId))?.focusId;
+  return issueFocus ?? firstMeaningfulControl(restoration.stage);
+}
+
+function firstMeaningfulControl(stage) {
+  return {
+    destination: "chart-draft-destination",
+    "chart-type": "chart-draft-chart-type",
+    "data-source": "chart-draft-data-source",
+    "map-and-prepare-data": "chart-draft-mapping",
+    "configure-chart": "chart-draft-configuration",
+    "review-and-create": "chart-draft-review",
+  }[stage];
+}
+
+function replaceCompanionOutcome(companions, outcome) {
+  if (!isRecord(outcome)) {
+    throw new TypeError("A chart companion outcome must be an object.");
+  }
+  const identity = outcome.id ?? outcome.kind ?? null;
+  if (!identity) return [...companions, structuredClone(outcome)];
+  const index = companions.findIndex((entry) => (
+    (entry.id ?? entry.kind) === identity
+  ));
+  if (index < 0) return [...companions, structuredClone(outcome)];
+  return companions.map((entry, entryIndex) => (
+    entryIndex === index ? structuredClone(outcome) : entry
+  ));
+}
+
+function applyCommitResult(state, result) {
+  if (state.status !== "committing") return state;
+  const outcome = result?.status;
+  if (outcome === "committed") {
+    return chartState(state, {
+      status: "committed",
+      errors: [],
+      handoff: { ...(state.handoff ?? {}), ...structuredClone(result) },
+    });
+  }
+  if (outcome === "ambiguous") {
+    return chartState(state, {
+      status: "ambiguous",
+      errors: [{
+        code: "COMMIT_OUTCOME_AMBIGUOUS",
+        stage: "review-and-create",
+        message: result?.message ?? "The durable chart outcome is still being determined.",
+      }],
+      handoff: { ...(state.handoff ?? {}), ...structuredClone(result) },
+    });
+  }
+  return chartState(state, {
+    status: "failed",
+    errors: structuredClone(result?.errors ?? [{
+      code: "CHART_COMMIT_FAILED",
+      stage: "review-and-create",
+      message: result?.message ?? "The chart could not be created.",
+    }]),
+    handoff: { ...(state.handoff ?? {}), ...structuredClone(result ?? {}) },
+  });
+}
+
+function applyReconciliation(state, result) {
+  if (state.status !== "ambiguous") return state;
+  if (result?.status === "committed") {
+    return chartState(state, {
+      status: "committed",
+      errors: [],
+      handoff: { ...(state.handoff ?? {}), ...structuredClone(result) },
+    });
+  }
+  return chartState(state, {
+    status: "failed",
+    errors: structuredClone(result?.errors ?? [{
+      code: "CHART_COMMIT_NOT_FOUND",
+      stage: "review-and-create",
+      message: result?.message ?? "No committed chart was found; the draft is retained.",
+    }]),
+    handoff: { ...(state.handoff ?? {}), ...structuredClone(result ?? {}) },
+  });
+}
+
+function discardSessionDraft(state) {
+  return withStageStatuses({
+    ...state,
+    draftId: null,
+    stage: "destination",
+    status: "editing",
+    destination: null,
+    chartTypeId: null,
+    chartTypeRevision: null,
+    source: null,
+    profileRevision: null,
+    mapping: null,
+    preparation: null,
+    configuration: null,
+    companions: [],
+    renderProofRevision: null,
+    placementProofRevision: null,
+    errors: [],
+    suspension: null,
+    handoff: null,
+    discarded: true,
+    draft: null,
+    confirmation: null,
+    pendingSourceChange: null,
+    closed: true,
+  });
+}
+
+function withoutErrorCode(errors, code) {
+  return (errors ?? []).filter((error) => error.code !== code);
+}
+
+function meaningfulValue(value) {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (isRecord(value)) return Object.keys(value).length > 0;
+  return true;
+}
+
+function cloneOptional(value) {
+  return value === undefined || value === null ? null : structuredClone(value);
+}
+
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "";
 }
 
 function isRecord(value) {
