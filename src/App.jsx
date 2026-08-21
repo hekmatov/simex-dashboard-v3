@@ -27,6 +27,7 @@ import {
   recoveryPackageSummary,
 } from "./lib/applicationRecovery.js";
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
+import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -790,8 +791,16 @@ export default function App() {
     setPackageImportBusy(true);
     setPackageImportError("");
     try {
-      const committed = await commitConfiguration(packageImportCandidate.config);
-      dashboardRendererRef.current?.resetAfterPackageImport?.();
+      const committed = await commitDashboardPackageImport({
+        candidate: packageImportCandidate,
+        prepare: async () => {
+          await dashboardRendererRef.current?.prepareForPackageImport?.();
+        },
+        replace: commitConfiguration,
+        rebase: (importedDashboard) => {
+          dashboardRendererRef.current?.resetAfterPackageImport?.(importedDashboard);
+        },
+      });
       setPackageImportCandidate(null);
       setOperationError("");
       return committed;

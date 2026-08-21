@@ -26,6 +26,7 @@ import {
   findPanelPlacement,
 } from "../lib/dashboardSelectors.js";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
+import { createImportedRendererDraftState } from "../lib/dashboardPackageImportTransaction.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
 import {
   createSubmissionGate,
@@ -206,8 +207,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   React.useImperativeHandle(ref, () => ({
     setAuthoredDirtyFlag,
-    resetAfterPackageImport() {
+    async prepareForPackageImport() {
+      await pendingEdits.flush();
+      await onCommitPendingConfiguration?.();
+    },
+    resetAfterPackageImport(importedDashboard) {
+      const rebasedDrafts = createImportedRendererDraftState(importedDashboard);
       pendingEdits.cancel();
+      setDashboardDraft(rebasedDrafts.dashboardDraft);
+      setPageDrafts(rebasedDrafts.pageDrafts);
+      setSectionDrafts(rebasedDrafts.sectionDrafts);
       setChartEditorPlacementId(null);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
@@ -216,6 +225,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setInlineRenameDirty(false);
       setExternalDirty({ timeGroup: false, scene: false, dashboardMetadata: false });
       setBuildSelection(null);
+      setPendingBuildSelection(null);
+      setBuildRevealRequest(null);
+      setBuildSelectionError("");
       setPackageImportConfirmation(false);
     },
     requestCompareCharts() {
