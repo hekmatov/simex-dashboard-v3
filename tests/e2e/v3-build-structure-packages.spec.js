@@ -165,7 +165,7 @@ test("an untouched chart editor closes transactionally when tree navigation chan
   await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();
   await expect(page.locator(".unit-orbit")).toBeVisible();
 
-  await tree.getByRole("treeitem", { name: "Public response and policy signals", exact: true }).click();
+  await treeItemLabel(tree, "Public response and policy signals").click();
   await expect(page.locator('[data-canonical-section-id="public_response"]')).toBeInViewport();
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
   await expect(page.getByText(
