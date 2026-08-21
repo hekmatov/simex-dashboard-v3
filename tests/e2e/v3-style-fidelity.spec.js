@@ -355,13 +355,12 @@ test("Build panel toggles from the shared Page row and clears the chart frame", 
 
 test("Build and Present headings and nested controls shed V2 blue-green paint", async ({ page }) => {
   await openBiomedicalLook(page);
-  await page.getByLabel("Evidence Ledger", { exact: true }).check();
-  await page.locator('[data-profile-option="evidence-ledger/brighter-vellum"] input').check();
-  await page.getByLabel("Light", { exact: true }).check();
-  const setLook = page.getByRole("button", { name: "Set dashboard look", exact: true });
-  if (await setLook.isEnabled()) await setLook.click();
-  await page.getByRole("dialog", { name: "Dashboard look" })
-    .getByRole("button", { name: "Close", exact: true }).click();
+  const look = await selectAutoSavedLook(
+    page,
+    "Evidence Ledger",
+    "evidence-ledger/brighter-vellum",
+  );
+  await look.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
@@ -418,14 +417,8 @@ test("Present orders monitor, displayed charts, then options and captures a shar
 test("selected dashboard style reaches crown, Build authoring, and Present chrome", async ({ page }) => {
   for (const style of NATIVE_STYLES) {
     await openBiomedicalLook(page);
-    await page.getByLabel(style.label, { exact: true }).check();
-    await page.locator(`[data-profile-option="${style.profile}"] input`).check();
-    await page.getByLabel("Light", { exact: true }).check();
-
-    const setLook = page.getByRole("button", { name: "Set dashboard look", exact: true });
-    if (await setLook.isEnabled()) await setLook.click();
-    await page.getByRole("dialog", { name: "Dashboard look" })
-      .getByRole("button", { name: "Close", exact: true }).click();
+    const look = await selectAutoSavedLook(page, style.label, style.profile);
+    await look.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "View", exact: true }).click();
     await expect(page.locator(".view-shell")).toBeVisible();
@@ -613,6 +606,34 @@ async function openBiomedicalLook(page) {
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Dashboard look" })).toBeVisible();
+}
+
+async function selectAutoSavedLook(page, styleLabel, profileId) {
+  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  const feedback = look.locator(".look-drawer-feedback");
+  const style = look.getByLabel(styleLabel, { exact: true });
+  if (await style.isChecked()) {
+    const alternative = styleLabel === "Humanist Standard"
+      ? "Evidence Ledger"
+      : "Humanist Standard";
+    await look.getByLabel(alternative, { exact: true }).check();
+    await expect(feedback).toHaveText("Dashboard look saved.");
+  }
+  await style.check();
+  await expect(feedback).toHaveText("Dashboard look saved.");
+  await look.locator(`[data-profile-option="${profileId}"] input`).check();
+  await expect(feedback).toHaveText("Dashboard look saved.");
+
+  const light = look.getByLabel("Light", { exact: true });
+  if (!(await light.isChecked())) {
+    await light.check();
+    await expect(feedback).toHaveText("Appearance saved for this browser.");
+  }
+  await expect(page.locator(".app-frame")).toHaveAttribute(
+    "data-dashboard-color-profile",
+    profileId,
+  );
+  return look;
 }
 
 async function readChrome(page, selectors) {

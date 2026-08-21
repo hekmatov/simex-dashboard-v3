@@ -202,10 +202,9 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
 
   await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
   const look = page.getByRole("dialog", { name: "Dashboard look" });
-  await look.locator('input[name="dashboard-style"]').nth(1).check();
-  await look.getByRole("button", { name: /Use Humanist Standard Signature/i }).click();
-  await look.getByRole("button", { name: "Set dashboard look", exact: true }).click();
-  await expect(look.getByText("Dashboard look set.", { exact: true })).toBeVisible();
+  await look.getByLabel("Humanist Standard", { exact: true }).check();
+  await look.locator('[data-profile-option="humanist-standard/common-ground"] input').check();
+  await expect(look.locator(".look-drawer-feedback")).toHaveText("Dashboard look saved.");
   await look.getByRole("button", { name: "Close", exact: true }).click();
 
   const chooserPromise = page.waitForEvent("filechooser");
