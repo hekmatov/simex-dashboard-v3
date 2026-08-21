@@ -877,7 +877,7 @@
 .app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap::after {
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   content: "";
-  height: 100%;
+  height: calc(100% + 6px);
   left: -2px;
   pointer-events: none;
   position: absolute;
