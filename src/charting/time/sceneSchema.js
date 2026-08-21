@@ -181,9 +181,9 @@ function validatePresent(present, memberIds) {
   }
   if (memberIds.length <= 4 && (
     present.chartIds.length !== memberIds.length
-    || present.chartIds.some((chartId, index) => chartId !== memberIds[index])
+    || present.chartIds.some((chartId) => !memberIds.includes(chartId))
   )) {
-    throw new Error("Scenes with four or fewer charts must include all Scene members in Present order.");
+    throw new Error("Scenes with four or fewer charts must include all Scene members in their authored Present order.");
   }
   if (present.layout !== PRESENT_LAYOUTS[present.chartIds.length]) {
     throw new Error(`Scene Present layout must be "${PRESENT_LAYOUTS[present.chartIds.length]}" for this chart count.`);
