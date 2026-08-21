@@ -92,6 +92,7 @@ export function positionUnitOrbit({
 export default function UnitOrbit({
   anchorPlacementId,
   chartTitle = "Selected chart",
+  capabilities = [],
   onRequestClose,
   open = true,
   children,
@@ -224,6 +225,7 @@ export default function UnitOrbit({
       hidden={!open}
       inert={!open ? "" : undefined}
       data-unit-orbit-side={placement?.side}
+      data-unit-orbit-capabilities={capabilities.map(({ id }) => id).join(" ")}
       style={{
         left: placement ? `${placement.left}px` : `${DEFAULT_MARGIN}px`,
         top: placement ? `${placement.top}px` : `${DEFAULT_MARGIN}px`,

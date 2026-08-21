@@ -8,6 +8,15 @@ import DashboardCanvas from "../dashboard/DashboardCanvas.jsx";
 import DashboardHeader from "../dashboard/DashboardHeader.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
+import {
+  captureBuildCanvasState,
+  restoreBuildCanvasState,
+  selectedTargetUsability,
+} from "./buildCanvasRestoration.js";
+import {
+  collectChartPlacements,
+  compatibleUnitOrbitCapabilities,
+} from "./panelEditingModel.js";
 import ScenarioAuthoring, {
   createScenarioDraft,
   reduceScenarioDraft,
@@ -73,7 +82,11 @@ export default function BuildWorkspace({
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
   const navigationLocked = mutationsDisabled || chartDraftDirty;
-  const selectedChart = findSelectedChart(dashboard, selection);
+  const selectedChartItem = selection?.kind === "chart"
+    ? collectChartPlacements(dashboard).find(({ placementId }) => placementId === selection.placementId)
+    : null;
+  const selectedChart = selectedChartItem?.chart ?? null;
+  const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
   const inspectorFocusKey = tablet
     ? (openSheet === "inspector" ? focusLabelKey : 0)
     : focusLabelKey;
@@ -152,19 +165,30 @@ export default function BuildWorkspace({
   const close = () => setOpenSheet(null);
 
   const captureRestoration = React.useCallback(() => ({
-    focusId: document.activeElement?.id || null,
-    scrollTop: window.scrollY,
-    targetId: selection?.placementId ?? selection?.sectionId ?? selection?.pageId ?? null,
+    ...captureBuildCanvasState({
+      layout: dashboard,
+      selection,
+      focusId: document.activeElement?.id || null,
+      scrollTop: window.scrollY,
+      scrollLeft: window.scrollX,
+      effectiveCanvasWidth: document.querySelector(".canonical-dashboard-frame")?.clientWidth ?? window.innerWidth,
+    }),
     activeCommand: activeAuxiliary,
-  }), [activeAuxiliary, selection]);
+  }), [activeAuxiliary, dashboard, selection]);
 
   const restoreCanvas = React.useCallback((restoration) => {
     if (!restoration) return;
+    let commands;
+    try {
+      commands = restoreBuildCanvasState(restoration, dashboard);
+    } catch {
+      return;
+    }
     window.requestAnimationFrame(() => {
-      window.scrollTo({ top: restoration.scrollTop ?? 0, behavior: "auto" });
-      if (restoration.focusId) document.getElementById(restoration.focusId)?.focus();
+      window.scrollTo({ top: commands.scrollTop, left: commands.scrollLeft, behavior: "auto" });
+      if (commands.focusId) document.getElementById(commands.focusId)?.focus();
     });
-  }, []);
+  }, [dashboard]);
 
   const openAuxiliary = (surface) => {
     if (locked || activeAuxiliary === surface) return;
@@ -180,7 +204,11 @@ export default function BuildWorkspace({
       const selected = selection?.placementId
         ? document.querySelector(`[data-canonical-placement-id="${CSS.escape(selection.placementId)}"]`)
         : null;
-      selected?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+      const usability = selectedTargetUsability({
+        targetRect: selected?.getBoundingClientRect() ?? null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+      });
+      if (!usability.usable) selected?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
     });
   };
 
@@ -410,6 +438,7 @@ export default function BuildWorkspace({
             <UnitOrbit
               anchorPlacementId={chartEditorPlacementId}
               chartTitle={selectedChart?.title}
+              capabilities={unitOrbitCapabilities}
               open={chartEditorOpen}
               onRequestClose={onCloseChartEditor}
             >
@@ -429,14 +458,6 @@ export function buildSelectionAllowedWhileLocked(current, next, { intent = "acti
     && typeof current.placementId === "string"
     && current.placementId !== ""
     && current.placementId === next.placementId;
-}
-
-function findSelectedChart(dashboard, selection) {
-  if (selection?.kind !== "chart") return null;
-  const page = (dashboard.pages ?? []).find(({ id }) => id === selection.pageId);
-  const section = (page?.sections ?? []).find(({ id }) => id === selection.sectionId);
-  const placement = (section?.panels ?? []).find(({ id }) => id === selection.placementId);
-  return placement?.chart ?? placement ?? null;
 }
 
 function stableDraftId(prefix) {
