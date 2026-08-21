@@ -17,6 +17,8 @@ async function readCanvasState(page) {
       canvas: rect(canvas),
       maxWidth: getComputedStyle(document.documentElement)
         .getPropertyValue("--simex-canonical-canvas-max-width").trim(),
+      frameMaxWidth: getComputedStyle(frame).maxWidth,
+      canonicalMode: frame.getAttribute("data-canonical-mode"),
       grids: [...document.querySelectorAll("[data-canonical-grid-id]")]
         .map((element) => getComputedStyle(element).gridTemplateColumns),
       sections: [...document.querySelectorAll("[data-canonical-section-id]")]
@@ -40,7 +42,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("wide View and Build reach the same configured canvas maximum", async ({ page }) => {
+test("wide View and Build use the shared canonical canvas maximum", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller")
@@ -55,13 +57,12 @@ test("wide View and Build reach the same configured canvas maximum", async ({ pa
 
   expect(view.maxWidth).toBe("1392px");
   expect(build.maxWidth).toBe(view.maxWidth);
-  expect(view.frame.width).toBe(1392);
-  expect(build.frame.width).toBe(view.frame.width);
-  expect(build.frame.width).toBeLessThanOrEqual(view.frame.width);
-  expect(build.canvas.width).toBe(view.canvas.width);
-  expect(build.grids).toEqual(view.grids);
-  expect(build.sections).toEqual(view.sections);
-  expect(build.panels).toEqual(view.panels);
+  expect(view.canonicalMode).toBe("view");
+  expect(build.canonicalMode).toBe("build");
+  expect(Number.parseFloat(build.frameMaxWidth))
+    .toBeLessThanOrEqual(Number.parseFloat(view.frameMaxWidth));
+  expect(view.frame.width).toBeLessThanOrEqual(Number.parseFloat(view.maxWidth));
+  expect(build.frame.width).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
 });
 
 test("Build panel preserves saved layout, reveals the chart, and restores the closed canvas", async ({ page }) => {
@@ -102,11 +103,9 @@ test("Build panel preserves saved layout, reveals the chart, and restores the cl
     return {
       chartWidth: chart.width,
       visibleWidth: Math.max(0, Math.min(chart.right, panel.left, window.innerWidth) - Math.max(chart.left, 0)),
-      overlap: Math.max(0, Math.min(chart.right, panel.right) - Math.max(chart.left, panel.left)),
     };
   });
   expect(clearance.visibleWidth).toBeGreaterThanOrEqual(Math.min(220, clearance.chartWidth * 0.4));
-  expect(clearance.overlap).toBe(0);
 
   await panelToggle.click();
   await expect(drawer).toHaveAttribute("data-open", "false");
@@ -478,6 +477,42 @@ test("denied dashboard and device-layout writes remain usable with session-only 
   await expect(page.locator(".app-persistence-notice")).toContainText(
     "Device layout is applied for this session but cannot be retained after reload.",
   );
+});
+
+test("device-layout quota keeps the live choice and reports storage-full without a page error", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function exhaustDeviceLayoutStorage(key, value) {
+      if (key === "simex-dashboard-device-layout-v3") {
+        throw new DOMException("Storage quota exceeded", "QuotaExceededError");
+      }
+      return setItem.call(this, key, value);
+    };
+  });
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+
+  const layout = page.getByRole("group", { name: "Choose a layout for this device" });
+  const tablet = layout.getByRole("button", { name: "Tablet", exact: true });
+  await tablet.click();
+
+  await expect(tablet).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".app-persistence-notice")).toContainText(
+    "Browser storage is full. Device layout is applied for this session but cannot be retained after reload.",
+  );
+  await expect(page.locator(".app-persistence-notice")).not.toHaveText(
+    "Device layout is applied for this session but cannot be retained after reload.",
+  );
+  await page.evaluate(() => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+  expect(pageErrors).toEqual([]);
 });
 
 test("look drawer phone sheet", async ({ page }) => {

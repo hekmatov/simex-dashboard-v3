@@ -76,6 +76,7 @@ const SESSION_ONLY_MESSAGES = Object.freeze({
   dashboardLook: "Dashboard look applied for this session but cannot be retained after reload.",
   appearance: "Appearance applied for this session but cannot be retained after reload.",
   deviceLayout: "Device layout is applied for this session but cannot be retained after reload.",
+  deviceLayoutStorageFull: "Browser storage is full. Device layout is applied for this session but cannot be retained after reload.",
 });
 const DEFAULT_VANTA_BACKGROUND = {
   backgroundColor: "#f7f9fc",
@@ -958,12 +959,22 @@ export default function App() {
       deviceLayout={deviceLayout}
       onDeviceLayoutChange={(layout) => {
         setDeviceLayout(layout);
-        const persisted = browserStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
-        reportPersistence(
-          "deviceLayout",
-          persisted,
-          SESSION_ONLY_MESSAGES.deviceLayout,
-        );
+        try {
+          const persisted = browserStorage.setItem(DEVICE_LAYOUT_STORAGE_KEY, layout);
+          reportPersistence(
+            "deviceLayout",
+            persisted,
+            SESSION_ONLY_MESSAGES.deviceLayout,
+          );
+        } catch (storageError) {
+          reportPersistence(
+            "deviceLayout",
+            false,
+            isStorageQuotaError(storageError)
+              ? SESSION_ONLY_MESSAGES.deviceLayoutStorageFull
+              : SESSION_ONLY_MESSAGES.deviceLayout,
+          );
+        }
       }}
       onChartCreate={createChart}
       onChartSave={saveChart}
