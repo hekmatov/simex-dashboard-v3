@@ -4,6 +4,11 @@ import {
   normalizeChartInstance,
   validateChartInstance,
 } from "../../charting/config/chartConfigV3.js";
+import {
+  legacySizeForFootprint,
+  resolveChartFootprint,
+} from "../chartPanelLayout.js";
+import ChartFootprintPicker from "./ChartFootprintPicker.jsx";
 import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { profileDataset } from "../../charting/data/profileDataset.js";
 import { enforceRenderReadiness } from "../../charting/rendering/buildRenderModel.js";
@@ -559,6 +564,19 @@ export default function ChartEditorV3({
               )),
             ),
           ),
+          React.createElement(ChartFootprintPicker, {
+            value: resolveChartFootprint(state.draft.layout),
+            disabled: disabled || submitting,
+            onChange: ({ columns, rows }) => updateChartPath(
+              ["layout"],
+              {
+                ...(state.draft.layout ?? {}),
+                size: legacySizeForFootprint({ columns, rows }),
+                width: columns,
+                height: rows,
+              },
+            ),
+          }),
         ),
         React.createElement(
           "div",

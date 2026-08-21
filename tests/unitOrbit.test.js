@@ -10,6 +10,8 @@ const vite = await createServer({
 });
 const orbitModule = await vite.ssrLoadModule("/src/components/build/UnitOrbit.jsx")
   .catch(() => null);
+const workspaceModule = await vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx")
+  .catch(() => null);
 await vite.close();
 
 const viewport = { width: 1440, height: 900 };
@@ -67,6 +69,36 @@ test("Unit Orbit requests one recenter when no nonintersecting candidate has usa
   });
 
   assert.deepEqual(result, { needsRecenter: true });
+});
+
+test("Unit Orbit dismisses only pointer activity outside its surface", () => {
+  assert.equal(typeof orbitModule?.isUnitOrbitOutsidePointer, "function");
+  const inside = {};
+  const outside = {};
+  const orbit = {
+    contains(target) {
+      return target === inside;
+    },
+  };
+
+  assert.equal(orbitModule.isUnitOrbitOutsidePointer(orbit, inside), false);
+  assert.equal(orbitModule.isUnitOrbitOutsidePointer(orbit, outside), true);
+  assert.equal(orbitModule.isUnitOrbitOutsidePointer(null, outside), false);
+});
+
+test("a dirty Build workspace allows only the current chart to reopen", () => {
+  const current = { kind: "chart", placementId: "confirmed-cases" };
+  assert.equal(
+    workspaceModule.buildSelectionAllowedWhileLocked(current, current),
+    true,
+  );
+  assert.equal(
+    workspaceModule.buildSelectionAllowedWhileLocked(current, {
+      kind: "chart",
+      placementId: "age-distribution",
+    }),
+    false,
+  );
 });
 
 function rect(left, top, right, bottom) {

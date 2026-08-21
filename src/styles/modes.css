@@ -593,6 +593,7 @@
   border: 1px solid var(--simex-border-strong, #9aa9b5);
   border-radius: 8px;
   box-shadow: 0 18px 52px rgb(8 34 74 / 24%);
+  height: var(--unit-orbit-max-height);
   max-height: var(--unit-orbit-max-height);
   overflow: hidden;
   position: fixed;
@@ -601,6 +602,7 @@
 }
 
 .unit-orbit-scroll {
+  height: 100%;
   max-height: var(--unit-orbit-max-height);
   overflow: auto;
   overscroll-behavior: contain;
@@ -1480,4 +1482,143 @@
 .build-tree-item-wrap:focus > .build-tree-row {
   outline: 3px solid var(--simex-focus);
   outline-offset: 2px;
+}
+
+/* Approved Sketch 002: every chart owns one bounded 4-column × 2-row footprint. */
+.chart-panel-footprint {
+  grid-column: span var(--chart-footprint-columns);
+  grid-row: span var(--chart-footprint-rows);
+}
+
+.chart-footprint-control {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-component-control-radius, 8px);
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.chart-footprint-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.chart-footprint-heading h3 {
+  color: var(--simex-text-strong);
+  font-size: 15px;
+  margin: 2px 0 0;
+}
+
+.chart-footprint-limit {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-component-control-radius, 6px);
+  color: var(--simex-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 7px;
+}
+
+.chart-footprint-picker {
+  display: grid;
+  gap: 6px 8px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+}
+
+.chart-footprint-corner {
+  align-self: end;
+  color: var(--simex-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  grid-column: 1;
+  grid-row: 1;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.chart-footprint-column-cues,
+.chart-footprint-row-cues {
+  color: var(--simex-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.chart-footprint-column-cues {
+  display: grid;
+  gap: 5px;
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+}
+
+.chart-footprint-row-cues {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-rows: repeat(2, 44px);
+  text-align: right;
+}
+
+.chart-footprint-grid {
+  display: grid;
+  gap: 5px;
+  grid-column: 2;
+  grid-row: 2;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  grid-template-rows: repeat(2, 44px);
+}
+
+.chart-footprint-cell {
+  align-items: center;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  color: var(--simex-text-strong);
+  display: grid;
+  font-size: 10px;
+  font-weight: 800;
+  justify-items: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 2px;
+}
+
+.chart-footprint-cell[data-included="true"] {
+  background: color-mix(in srgb, var(--simex-accent) 18%, var(--simex-surface-panel));
+  border-color: var(--simex-accent);
+}
+
+.chart-footprint-cell[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--simex-selected);
+}
+
+.chart-footprint-cell:focus-visible {
+  outline: 3px solid var(--simex-focus);
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+.chart-footprint-status {
+  color: var(--simex-text-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .chart-panel-footprint,
+  .app-shell[data-device-layout="phone"] .chart-panel-footprint {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .chart-footprint-picker {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
 }

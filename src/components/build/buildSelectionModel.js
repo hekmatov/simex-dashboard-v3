@@ -50,7 +50,14 @@ export function requestBuildChartSelection(buildState, {
   placementId,
   chartId,
 } = {}) {
-  if (buildState?.disabled || typeof buildState?.onSelect !== "function") {
+  const reopeningCurrent = buildState?.selection?.kind === "chart"
+    && typeof placementId === "string"
+    && placementId !== ""
+    && buildState.selection.placementId === placementId;
+  if (
+    (buildState?.disabled && !reopeningCurrent)
+    || typeof buildState?.onSelect !== "function"
+  ) {
     return false;
   }
   buildState.onSelect({

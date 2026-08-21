@@ -136,6 +136,10 @@ test("blocks a Build chart request while disabled", () => {
   let selections = 0;
   const accepted = requestBuildChartSelection({
     disabled: true,
+    selection: {
+      kind: "chart",
+      placementId: "placement-other-chart",
+    },
     onSelect() { selections += 1; },
   }, {
     pageId: "overview",
@@ -146,4 +150,33 @@ test("blocks a Build chart request while disabled", () => {
 
   assert.equal(accepted, false);
   assert.equal(selections, 0);
+});
+
+test("a disabled Build canvas still routes the current chart reopen request", () => {
+  let selected = null;
+  const accepted = requestBuildChartSelection({
+    disabled: true,
+    selection: {
+      kind: "chart",
+      pageId: "overview",
+      sectionId: "overview-section",
+      placementId: "placement-overview-alerts",
+      chartId: "chart-alerts",
+    },
+    onSelect(next) { selected = next; },
+  }, {
+    pageId: "overview",
+    sectionId: "overview-section",
+    placementId: "placement-overview-alerts",
+    chartId: "chart-alerts",
+  });
+
+  assert.equal(accepted, true);
+  assert.deepEqual(selected, {
+    kind: "chart",
+    pageId: "overview",
+    sectionId: "overview-section",
+    placementId: "placement-overview-alerts",
+    chartId: "chart-alerts",
+  });
 });

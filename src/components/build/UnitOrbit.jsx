@@ -13,6 +13,10 @@ const PROTECTED_SELECTORS = [
   ".build-canvas-toolbar",
 ];
 
+export function isUnitOrbitOutsidePointer(orbit, target) {
+  return Boolean(orbit && target && !orbit.contains(target));
+}
+
 export function positionUnitOrbit({
   anchorRect,
   orbitSize,
@@ -75,6 +79,7 @@ export default function UnitOrbit({
   anchorPlacementId,
   chartTitle = "Selected chart",
   onRequestClose,
+  open = true,
   children,
 }) {
   const orbitRef = React.useRef(null);
@@ -85,6 +90,7 @@ export default function UnitOrbit({
   const [placement, setPlacement] = React.useState(null);
 
   React.useLayoutEffect(() => {
+    if (!open) return undefined;
     if (typeof document === "undefined" || typeof window === "undefined") return undefined;
     const anchor = findAnchor(anchorPlacementId);
     if (!anchor) return undefined;
@@ -149,10 +155,10 @@ export default function UnitOrbit({
         : findAnchor(anchorPlacementId);
       window.requestAnimationFrame(() => focusTarget?.focus?.({ preventScroll: true }));
     };
-  }, [anchorPlacementId]);
+  }, [anchorPlacementId, open]);
 
   React.useEffect(() => {
-    if (!placement || focusedRef.current) return undefined;
+    if (!open || !placement || focusedRef.current) return undefined;
     const frame = window.requestAnimationFrame(() => {
       const orbit = orbitRef.current;
       const focusTarget = orbit?.querySelector(
@@ -162,10 +168,11 @@ export default function UnitOrbit({
       focusedRef.current = true;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [placement]);
+  }, [open, placement]);
 
   React.useEffect(() => {
     if (typeof document === "undefined") return undefined;
+    if (!open) return undefined;
     const handleKeyDown = (event) => {
       if (event.key !== "Escape" || document.querySelector('[aria-modal="true"]')) return;
       event.preventDefault();
@@ -173,7 +180,18 @@ export default function UnitOrbit({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onRequestClose]);
+  }, [onRequestClose, open]);
+
+  React.useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+    const handlePointerDown = (event) => {
+      if (!isUnitOrbitOutsidePointer(orbitRef.current, event.target)) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      onRequestClose?.();
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [onRequestClose, open]);
 
   if (typeof document === "undefined") return null;
   return createPortal(
@@ -181,11 +199,14 @@ export default function UnitOrbit({
       ref={orbitRef}
       className="unit-orbit"
       aria-label={`Chart settings for ${chartTitle}`}
+      aria-hidden={open ? undefined : "true"}
+      hidden={!open}
+      inert={!open ? "" : undefined}
       data-unit-orbit-side={placement?.side}
       style={{
         left: placement ? `${placement.left}px` : `${DEFAULT_MARGIN}px`,
         top: placement ? `${placement.top}px` : `${DEFAULT_MARGIN}px`,
-        visibility: placement ? "visible" : "hidden",
+        visibility: open && placement ? "visible" : "hidden",
         "--unit-orbit-max-height": `${placement?.maxHeight ?? DEFAULT_MIN_HEIGHT}px`,
       }}
     >

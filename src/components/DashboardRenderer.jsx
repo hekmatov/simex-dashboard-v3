@@ -83,6 +83,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
   const [buildSelection, setBuildSelection] = React.useState(null);
   const [chartEditorPlacementId, setChartEditorPlacementId] = React.useState(null);
+  const [chartEditorVisible, setChartEditorVisible] = React.useState(false);
   const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
@@ -222,6 +223,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setPageDrafts(rebasedDrafts.pageDrafts);
       setSectionDrafts(rebasedDrafts.sectionDrafts);
       setChartEditorPlacementId(null);
+      setChartEditorVisible(false);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
       setChartWizardTarget(null);
@@ -279,6 +281,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (!editMode) {
       setSelectedPanelId(null);
       setChartEditorPlacementId(null);
+      setChartEditorVisible(false);
       setChartEditorDirty(false);
       setChartEditBaseline(null);
     }
@@ -437,6 +440,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await pendingEdits.flush();
       await onPanelRemove(panelId);
       setChartEditBaseline(null);
+      setChartEditorVisible(false);
       setChartEditorPlacementId((current) => (current === panelId ? null : current));
       setSelectedPanelId((current) => (current === panelId ? null : current));
       setPendingRemovalPanelId(null);
@@ -621,6 +625,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       commit: () => onChartSave(payload),
       onCommitted: () => {
         setChartEditBaseline(null);
+        setChartEditorVisible(false);
         setChartEditorPlacementId(null);
         setChartEditorDirty(false);
       },
@@ -634,8 +639,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onPanelEditCancel(chartEditBaseline);
     }
     setChartEditBaseline(null);
+    setChartEditorVisible(false);
     setChartEditorPlacementId(null);
     setChartEditorDirty(false);
+  }
+
+  function dismissSelectedPanel() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    setChartEditorVisible(false);
   }
 
   function changePage(pageId, updates) {
@@ -800,14 +811,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       return Promise.resolve(false);
     }
     setBuildSelectionError("");
-    if (reactivatingCurrentChart) return Promise.resolve(true);
+    if (reactivatingCurrentChart) {
+      setChartEditorVisible(true);
+      return Promise.resolve(true);
+    }
     if (chartEditorPlacementId) {
+      setChartEditorVisible(false);
       setChartEditorPlacementId(null);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
     }
     if (nextSelection.kind === "timeGroup") {
       setBuildSelection(nextSelection);
+      setChartEditorVisible(false);
       setChartEditorPlacementId(null);
       setFocusInspectorLabelKey((current) => current + 1);
       return Promise.resolve(true);
@@ -833,8 +849,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (selection.kind === "chart" && intent === "activate") {
       setChartEditBaseline(dashboardWithCurrentDrafts());
       setChartEditorPlacementId(selection.placementId);
+      setChartEditorVisible(true);
       setChartEditorDirty(false);
     } else {
+      setChartEditorVisible(false);
       setChartEditorPlacementId(null);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
@@ -1087,7 +1105,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           sectionDrafts={sectionDrafts}
           chartEditor={selectedChartEditor}
           chartEditorPlacementId={chartEditorPlacementId}
-          onCloseChartEditor={cancelSelectedPanel}
+          chartEditorOpen={chartEditorVisible}
+          onCloseChartEditor={dismissSelectedPanel}
           chartDraftOpen={chartAuthoringActive}
           chartDraftDirty={chartEditorDirty}
           mutationsDisabled={moderatorMutationLocked}

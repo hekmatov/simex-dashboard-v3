@@ -21,6 +21,7 @@ export default function BuildWorkspace({
   sectionDrafts,
   chartEditor,
   chartEditorPlacementId = null,
+  chartEditorOpen = true,
   onCloseChartEditor,
   chartDraftOpen = false,
   chartDraftDirty = false,
@@ -83,7 +84,10 @@ export default function BuildWorkspace({
   }, [focusLabelKey, selection?.kind, tablet]);
 
   const chooseSelection = (next, options) => {
-    if (navigationLocked) return Promise.resolve(false);
+    if (
+      navigationLocked
+      && !buildSelectionAllowedWhileLocked(selection, next, options)
+    ) return Promise.resolve(false);
     if (tablet) setOpenSheet(next.kind === "chart" ? null : "inspector");
     return onActivate?.(next, options) ?? Promise.resolve(false);
   };
@@ -258,6 +262,7 @@ export default function BuildWorkspace({
             <UnitOrbit
               anchorPlacementId={chartEditorPlacementId}
               chartTitle={selectedChart?.title}
+              open={chartEditorOpen}
               onRequestClose={onCloseChartEditor}
             >
               {chartEditor}
@@ -267,6 +272,15 @@ export default function BuildWorkspace({
       )}
     />
   );
+}
+
+export function buildSelectionAllowedWhileLocked(current, next, { intent = "activate" } = {}) {
+  return intent === "activate"
+    && current?.kind === "chart"
+    && next?.kind === "chart"
+    && typeof current.placementId === "string"
+    && current.placementId !== ""
+    && current.placementId === next.placementId;
 }
 
 function findSelectedChart(dashboard, selection) {

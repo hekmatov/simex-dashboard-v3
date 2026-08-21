@@ -3,7 +3,11 @@ import React from "react";
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
 import { IconControl } from "./common/SimExIcon.js";
-import { chartPanelLayoutClass } from "./chartPanelLayout.js";
+import {
+  chartPanelFootprintStyle,
+  chartPanelLayoutClass,
+  resolveChartFootprint,
+} from "./chartPanelLayout.js";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
 
 function ChartPanel({
@@ -18,6 +22,7 @@ function ChartPanel({
   editMode = false,
   placementId,
   editDisabled = false,
+  editControlDisabled = editDisabled,
   isDragging = false,
   isDragTarget = false,
   isSelected = false,
@@ -36,6 +41,7 @@ function ChartPanel({
   onStartSection,
 }) {
   const chart = panel?.chart ?? panel;
+  const footprint = resolveChartFootprint(chart.layout);
   const citation = resolveChartCitation({
     chart,
     dataSources,
@@ -101,6 +107,7 @@ function ChartPanel({
       className={[
         "chart-panel",
         chartPanelLayoutClass(chart.layout?.size),
+        "chart-panel-footprint",
         editMode ? "chart-panel-has-actions" : "",
         isSelected ? "selected" : "",
         isMultiSelected ? "chart-panel-multi-selected" : "",
@@ -109,6 +116,8 @@ function ChartPanel({
       ].filter(Boolean).join(" ")}
       data-panel-id={chart.id}
       data-build-placement-id={editMode && placementId ? placementId : undefined}
+      data-footprint={`${footprint.columns}x${footprint.rows}`}
+      style={chartPanelFootprintStyle(chart.layout)}
       tabIndex={editMode && placementId ? -1 : undefined}
       draggable={editMode && !editDisabled}
       onDragStart={onDragStart}
@@ -119,8 +128,8 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editDisabled} data-build-edit-for={placementId} onClick={() => {
-              if (!editDisabled) onEdit?.();
+            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editControlDisabled} data-build-edit-for={placementId} onClick={() => {
+              if (!editControlDisabled) onEdit?.();
             }} />
             <IconControl interactionId="shell.start-section" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onStartSection?.();

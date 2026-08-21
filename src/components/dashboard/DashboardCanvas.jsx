@@ -162,6 +162,7 @@ export default function DashboardCanvas({
                             editMode={Boolean(buildState)}
                             placementId={placement.id}
                             editDisabled={Boolean(buildState?.disabled)}
+                            editControlDisabled={Boolean(buildState?.disabled) && !selected}
                             isSelected={selected}
                             onEdit={buildState ? () => requestBuildChartSelection(
                               buildState,
