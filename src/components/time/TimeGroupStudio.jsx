@@ -52,12 +52,36 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
           <fieldset>
             <legend>Choose period</legend>
             <label>
-              Start epoch milliseconds
-              <input id="period-start" readOnly value={value.period?.startEpochMs ?? ""} />
+              Start date
+              <input
+                id="period-start"
+                type="date"
+                disabled={busy}
+                value={dateInputValue(value.period?.startEpochMs)}
+                onChange={(event) => onAction?.({
+                  type: "SET_PERIOD",
+                  period: {
+                    ...value.period,
+                    startEpochMs: Date.parse(`${event.target.value}T00:00:00.000Z`),
+                  },
+                })}
+              />
             </label>
             <label>
-              End epoch milliseconds
-              <input id="period-end" readOnly value={value.period?.endEpochMs ?? ""} />
+              End date
+              <input
+                id="period-end"
+                type="date"
+                disabled={busy}
+                value={dateInputValue(value.period?.endEpochMs)}
+                onChange={(event) => onAction?.({
+                  type: "SET_PERIOD",
+                  period: {
+                    ...value.period,
+                    endEpochMs: Date.parse(`${event.target.value}T00:00:00.000Z`),
+                  },
+                })}
+              />
             </label>
             <p>Dashboard timezone: {draft?.timeZone ?? "UTC"}</p>
           </fieldset>
@@ -212,4 +236,8 @@ function matchingLabels() {
     MATCHING_POLICY_LABELS.SNAP_TO_LATEST,
     MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST,
   ];
+}
+
+function dateInputValue(epochMs) {
+  return Number.isFinite(epochMs) ? new Date(epochMs).toISOString().slice(0, 10) : "";
 }

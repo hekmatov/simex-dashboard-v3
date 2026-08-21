@@ -249,6 +249,13 @@ test("Time Group Studio renders all stages, current-step semantics, and Save Dis
   assert.match(html, />Save Time Group</);
   assert.match(html, />Discard</);
   assert.match(html, />Stay/);
+
+  const periodHtml = renderToStaticMarkup(React.createElement(studioModule.default, {
+    draft: { ...draft, stage: "period" },
+    onAction() {},
+  }));
+  assert.equal((periodHtml.match(/type="date"/g) ?? []).length, 2);
+  assert.doesNotMatch(periodHtml, /readOnly/);
 });
 
 function groupFixture() {

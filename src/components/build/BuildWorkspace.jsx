@@ -27,6 +27,22 @@ import StructureAuthoring, {
   reduceStructureDraft,
 } from "./StructureAuthoring.jsx";
 import UnitOrbit from "./UnitOrbit.jsx";
+import SceneStudio from "../time/SceneStudio.jsx";
+import {
+  createSceneDraft,
+  reduceSceneDraft,
+} from "../time/sceneDraft.js";
+import TimeContentLibrary from "../time/TimeContentLibrary.jsx";
+import {
+  createTimeContentState,
+  reduceTimeContent,
+} from "../time/timeContentState.js";
+import TimeGroupStudio from "../time/TimeGroupStudio.jsx";
+import {
+  createTimeGroupDraft,
+  reduceTimeGroupDraft,
+  toSavedTimeGroup,
+} from "../time/timeGroupDraft.js";
 
 export default function BuildWorkspace({
   dashboard,
@@ -80,6 +96,18 @@ export default function BuildWorkspace({
   const [parkedAuxiliaries, setParkedAuxiliaries] = React.useState([]);
   const [structureDraft, setStructureDraft] = React.useState(() => createStructureDraft(dashboard));
   const [scenarioDraft, setScenarioDraft] = React.useState(() => createScenarioDraft({ ...dashboard, ...dashboardDraft }));
+  const temporalCharts = React.useMemo(() => temporalAuthoringCharts(dashboard), [dashboard]);
+  const [timeGroupDraft, setTimeGroupDraft] = React.useState(() => createTimeGroupDraft(
+    timeGroupDraftInput(dashboard, temporalAuthoringCharts(dashboard)),
+  ));
+  const [sceneDraft, setSceneDraft] = React.useState(() => createSceneDraft(
+    initialScene(dashboard, activePage?.id),
+    sceneValidationContext(dashboard),
+  ));
+  const [timeContentState, setTimeContentState] = React.useState(() => createTimeContentState({
+    items: timeContentItems(dashboard),
+    pageId: activePage?.id ?? null,
+  }));
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
   const navigationLocked = mutationsDisabled || chartDraftDirty;
@@ -284,6 +312,85 @@ export default function BuildWorkspace({
     setScenarioDraft((current) => reduceScenarioDraft(current, action));
   };
 
+  const commitTemporalContent = (updates) => onStructureCommit?.({
+    pages: dashboard.pages,
+    timeSyncGroups: updates.timeSyncGroups ?? dashboard.timeSyncGroups ?? [],
+    scenes: updates.scenes ?? dashboard.scenes ?? [],
+  });
+
+  const dispatchTimeGroup = (action) => {
+    if (action.type === "SAVE_REQUEST") {
+      const saving = reduceTimeGroupDraft(timeGroupDraft, action);
+      setTimeGroupDraft(saving);
+      if (saving.status !== "saving") return;
+      const savedGroup = toSavedTimeGroup(saving);
+      const timeSyncGroups = mergeTimeGroup(dashboard.timeSyncGroups ?? [], savedGroup, temporalCharts);
+      Promise.resolve(commitTemporalContent({ timeSyncGroups }))
+        .then(() => setTimeGroupDraft((current) => reduceTimeGroupDraft(current, {
+          type: "SAVE_SUCCEEDED",
+          savedValue: savedGroup,
+        })))
+        .catch((error) => setTimeGroupDraft((current) => reduceTimeGroupDraft(current, {
+          type: "SAVE_FAILED",
+          error: storageFacingError(error, "TIME_GROUP_SAVE_FAILED"),
+        })));
+      return;
+    }
+    setTimeGroupDraft((current) => reduceTimeGroupDraft(current, action));
+  };
+
+  const dispatchScene = (action) => {
+    if (action.type === "SAVE_REQUEST") {
+      const saving = reduceSceneDraft(sceneDraft, action);
+      setSceneDraft(saving);
+      if (saving.status !== "saving") return;
+      const scenes = mergeScene(dashboard.scenes ?? [], saving.value);
+      Promise.resolve(commitTemporalContent({ scenes }))
+        .then(() => setSceneDraft((current) => reduceSceneDraft(current, {
+          type: "SAVE_SUCCEEDED",
+          savedValue: saving.value,
+        })))
+        .catch((error) => setSceneDraft((current) => reduceSceneDraft(current, {
+          type: "SAVE_FAILED",
+          error: storageFacingError(error, "SCENE_SAVE_FAILED"),
+        })));
+      return;
+    }
+    setSceneDraft((current) => reduceSceneDraft(current, action));
+  };
+
+  const dispatchTimeContent = (action) => {
+    const next = reduceTimeContent(timeContentState, action);
+    setTimeContentState(next);
+    if (action.type !== "REQUEST_INTENT" || next.conflict || !next.operation) return;
+    const { item, intent, handoff } = next.operation;
+    if (handoff.surface === "time-group" && intent !== "remove") {
+      const group = dashboard.timeSyncGroups?.find(({ id }) => id === item.id);
+      const source = intent === "create" ? null : group;
+      const input = timeGroupDraftInput(dashboard, temporalCharts, source);
+      if (intent === "duplicate") {
+        input.group.id = stableDraftId("time-group");
+        input.group.name = `Copy of ${input.group.name}`;
+      }
+      setTimeGroupDraft(createTimeGroupDraft({ ...input, initialStage: handoff.stage }));
+      openAuxiliary("time-group");
+    }
+    if (handoff.surface === "scene" && intent !== "remove") {
+      const existing = dashboard.scenes?.find(({ id }) => id === item.id);
+      const source = intent === "create" ? initialScene(dashboard, activePage?.id) : existing;
+      const value = structuredClone(source ?? initialScene(dashboard, activePage?.id));
+      if (intent === "duplicate") {
+        value.id = stableDraftId("scene");
+        value.name = `Copy of ${value.name}`;
+      }
+      setSceneDraft({
+        ...createSceneDraft(value, sceneValidationContext(dashboard)),
+        stage: handoff.stage,
+      });
+      openAuxiliary("scene");
+    }
+  };
+
   const structure = (
     <BuildStructureRail
       key={treeResetGeneration}
@@ -359,6 +466,9 @@ export default function BuildWorkspace({
             <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>Add chart</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("time-content")}>Time Content</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("time-group")}>Time Group Studio</button>
+            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scene")}>Scene Studio</button>
             <div className="build-package-actions" aria-label="Dashboard packages">
               <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onMouseDown={(event) => event.preventDefault()} onClick={onImportPackage}>
                 <SimExIcon iconId="import" size={18} />
@@ -382,7 +492,7 @@ export default function BuildWorkspace({
             <nav className="build-context-shelf" aria-label="Parked Build work">
               {parkedAuxiliaries.map(({ surface }) => (
                 <button key={surface} type="button" className="secondary" onClick={() => resumeAuxiliary(surface)}>
-                  Resume {surface === "structure" ? "Structure" : "Scenario"}
+                  Resume {auxiliaryLabel(surface)}
                 </button>
               ))}
             </nav>
@@ -390,9 +500,10 @@ export default function BuildWorkspace({
           {activeAuxiliary && typeof document !== "undefined" && createPortal((
             <aside
               className="build-authoring-auxiliary"
+              data-authoring-surface={activeAuxiliary}
               role="dialog"
               aria-modal="false"
-              aria-label={activeAuxiliary === "structure" ? "Structure authoring" : "Scenario details"}
+              aria-label={`${auxiliaryLabel(activeAuxiliary)} authoring`}
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;
                 event.preventDefault();
@@ -401,11 +512,18 @@ export default function BuildWorkspace({
               }}
             >
               <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
-              {activeAuxiliary === "structure" ? (
-                <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />
-              ) : (
-                <ScenarioAuthoring draft={scenarioDraft} disabled={locked} onAction={dispatchScenario} />
+              {activeAuxiliary === "structure" && <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />}
+              {activeAuxiliary === "scenario" && <ScenarioAuthoring draft={scenarioDraft} disabled={locked} onAction={dispatchScenario} />}
+              {activeAuxiliary === "time-group" && <TimeGroupStudio draft={timeGroupDraft} disabled={locked} onAction={dispatchTimeGroup} />}
+              {activeAuxiliary === "scene" && (
+                <SceneStudio
+                  draft={sceneDraft}
+                  charts={sceneEligibleCharts(dashboard, temporalCharts, sceneDraft.value)}
+                  disabled={locked}
+                  onAction={dispatchScene}
+                />
               )}
+              {activeAuxiliary === "time-content" && <TimeContentLibrary state={timeContentState} onAction={dispatchTimeContent} />}
             </aside>
           ), document.body)}
           <section className="build-canvas-toolbar" aria-label="Build regions">
@@ -477,4 +595,237 @@ function storageFacingError(error, fallbackCode) {
     message,
     retryable: true,
   };
+}
+
+function auxiliaryLabel(surface) {
+  return ({
+    structure: "Structure",
+    scenario: "Scenario",
+    "time-content": "Time Content",
+    "time-group": "Time Group",
+    scene: "Scene",
+  })[surface] ?? "Build work";
+}
+
+function timeGroupDraftInput(dashboard, charts, groupOverride = undefined) {
+  const group = groupOverride === undefined ? dashboard.timeSyncGroups?.[0] : groupOverride;
+  const start = Date.parse(`${group?.period?.start ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const end = Date.parse(`${group?.period?.end ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const memberFallbacks = Object.fromEntries((group?.members ?? [])
+    .filter((member) => member.matching?.policy)
+    .map((member) => [member.chartId, matchingLabel(member.matching.policy)]));
+  return {
+    group: {
+      id: group?.id ?? stableDraftId("time-group"),
+      name: group?.name ?? "",
+      period: { startEpochMs: start, endEpochMs: end },
+      chartIds: (group?.members ?? []).map(({ chartId }) => chartId),
+      defaultMatching: matchingLabel(group?.matching?.policy ?? "exact"),
+      memberFallbacks,
+      secondsPerFrame: group?.secondsPerFrame ?? 1,
+    },
+    charts,
+    scenes: (dashboard.scenes ?? []).map((scene) => ({
+      ...scene,
+      period: {
+        startEpochMs: Date.parse(scene.period?.start),
+        endEpochMs: Date.parse(scene.period?.end),
+      },
+    })),
+    timeZone: dashboard.timezone ?? dashboard.timeZone ?? "UTC",
+  };
+}
+
+function temporalAuthoringCharts(dashboard) {
+  const memberships = new Map();
+  for (const group of dashboard.timeSyncGroups ?? []) {
+    for (const member of group.members ?? []) memberships.set(member.chartId, member);
+  }
+  return collectChartPlacements(dashboard).map((placement) => {
+    const chart = placement.chart;
+    const member = memberships.get(chart.id);
+    const timeField = bindingField(chart.roles?.[member?.timeRole])
+      ?? temporalRoleField(chart.roles);
+    const rows = dashboard.loadedData?.[chart.sourceId] ?? [];
+    const valueFields = Object.entries(chart.roles ?? {})
+      .filter(([role]) => role !== member?.timeRole)
+      .flatMap(([, binding]) => bindingFields(binding))
+      .filter((field) => field && field !== timeField);
+    const variables = valueFields.map((field) => ({
+      id: field,
+      label: field,
+      observations: rows.map((row) => ({
+        epochMs: parseEpoch(row?.[timeField]),
+        value: row?.[field],
+      })).filter(({ epochMs }) => Number.isFinite(epochMs)),
+    }));
+    return {
+      id: chart.id,
+      title: chart.title,
+      label: chart.title ?? chart.id,
+      pageId: placement.pageId,
+      pageLabel: dashboard.pages?.find(({ id }) => id === placement.pageId)?.label
+        ?? dashboard.pages?.find(({ id }) => id === placement.pageId)?.title
+        ?? placement.pageId,
+      sectionId: placement.sectionId,
+      sectionLabel: dashboard.pages?.find(({ id }) => id === placement.pageId)
+        ?.sections?.find(({ id }) => id === placement.sectionId)?.title ?? placement.sectionId,
+      interpolationAllowed: chart.interaction?.timeSync?.interpolationAllowed === true,
+      variables,
+      sourceChart: chart,
+      timeRole: member?.timeRole ?? temporalRoleName(chart.roles),
+    };
+  });
+}
+
+function initialScene(dashboard, preferredPageId) {
+  if (dashboard.scenes?.[0]) return structuredClone(dashboard.scenes[0]);
+  const group = dashboard.timeSyncGroups?.[0];
+  const placements = collectChartPlacements(dashboard);
+  const memberIds = new Set((group?.members ?? []).map(({ chartId }) => chartId));
+  const eligible = placements.filter(({ chart, pageId }) => (
+    memberIds.has(chart.id) && (!preferredPageId || pageId === preferredPageId)
+  ));
+  const fallback = eligible.length > 0
+    ? eligible
+    : placements.filter(({ chart }) => memberIds.has(chart.id));
+  const selected = fallback.slice(0, Math.max(1, Math.min(4, fallback.length)));
+  const pageId = selected[0]?.pageId ?? preferredPageId ?? dashboard.pages?.[0]?.id ?? "page";
+  const chartIds = selected.map(({ chart }) => chart.id);
+  const firstChartId = chartIds[0] ?? "select-chart";
+  const startDate = group?.period?.start ?? new Date().toISOString().slice(0, 10);
+  const endDate = group?.period?.end ?? startDate;
+  return {
+    id: stableDraftId("scene"),
+    name: "",
+    pageId,
+    groupId: group?.id ?? "select-time-group",
+    period: {
+      start: `${startDate}T00:00:00.000Z`,
+      end: `${endDate}T00:00:00.000Z`,
+    },
+    frames: { mode: "source", chartId: firstChartId, selection: "all" },
+    members: chartIds.map((chartId) => ({ chartId, width: 2 })),
+    present: {
+      chartIds,
+      layout: ({ 1: "single", 2: "split", 3: "trio", 4: "quad" })[chartIds.length] ?? "single",
+    },
+    audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+  };
+}
+
+function sceneValidationContext(dashboard) {
+  return {
+    groups: dashboard.timeSyncGroups ?? [],
+    pages: dashboard.pages ?? [],
+    charts: collectChartPlacements(dashboard).map(({ chart, pageId }) => ({ ...chart, pageId })),
+    scenes: dashboard.scenes ?? [],
+  };
+}
+
+function sceneEligibleCharts(dashboard, charts, scene) {
+  const group = dashboard.timeSyncGroups?.find(({ id }) => id === scene?.groupId);
+  const memberIds = new Set((group?.members ?? []).map(({ chartId }) => chartId));
+  return charts.filter((chart) => memberIds.has(chart.id) && chart.pageId === scene?.pageId);
+}
+
+function timeContentItems(dashboard) {
+  const scenesByGroup = new Map();
+  for (const scene of dashboard.scenes ?? []) {
+    const list = scenesByGroup.get(scene.groupId) ?? [];
+    list.push(scene);
+    scenesByGroup.set(scene.groupId, list);
+  }
+  return [
+    ...(dashboard.timeSyncGroups ?? []).map((group) => ({
+      id: group.id,
+      type: "group",
+      name: group.name,
+      sceneCount: scenesByGroup.get(group.id)?.length ?? 0,
+      needsAttention: [],
+    })),
+    ...(dashboard.scenes ?? []).map((scene) => ({
+      ...scene,
+      type: "scene",
+      pageLabel: dashboard.pages?.find(({ id }) => id === scene.pageId)?.label ?? scene.pageId,
+      needsAttention: [],
+    })),
+  ];
+}
+
+function mergeTimeGroup(groups, saved, charts) {
+  const existing = groups.find(({ id }) => id === saved.id);
+  const chartById = new Map(charts.map((chart) => [chart.id, chart]));
+  const memberById = new Map((existing?.members ?? []).map((member) => [member.chartId, member]));
+  const next = {
+    ...(existing ?? {}),
+    id: saved.id,
+    name: saved.name,
+    period: {
+      start: new Date(saved.period.startEpochMs).toISOString().slice(0, 10),
+      end: new Date(saved.period.endEpochMs).toISOString().slice(0, 10),
+    },
+    matching: matchingValue(saved.defaultMatching),
+    secondsPerFrame: saved.secondsPerFrame,
+    members: saved.chartIds.map((chartId) => ({
+      ...(memberById.get(chartId) ?? {}),
+      chartId,
+      timeRole: memberById.get(chartId)?.timeRole ?? chartById.get(chartId)?.timeRole ?? "observation",
+      ...(saved.memberFallbacks?.[chartId]
+        ? { matching: matchingValue(saved.memberFallbacks[chartId]) }
+        : {}),
+    })),
+  };
+  return existing
+    ? groups.map((group) => group.id === saved.id ? next : group)
+    : [...groups, next];
+}
+
+function mergeScene(scenes, saved) {
+  return scenes.some(({ id }) => id === saved.id)
+    ? scenes.map((scene) => scene.id === saved.id ? structuredClone(saved) : scene)
+    : [...scenes, structuredClone(saved)];
+}
+
+function matchingLabel(policy) {
+  return ({
+    exact: "Concurrent only",
+    lastKnown: "Snap to Latest",
+    nearest: "Snap to Closest",
+    interpolate: "Interpolate",
+  })[policy] ?? policy;
+}
+
+function matchingValue(label) {
+  const policy = ({
+    "Concurrent only": "exact",
+    "Snap to Latest": "lastKnown",
+    "Snap to Closest": "nearest",
+    Interpolate: "interpolate",
+  })[label] ?? label;
+  return policy === "nearest" ? { policy, toleranceMs: 0 } : { policy };
+}
+
+function bindingFields(binding) {
+  if (Array.isArray(binding)) return binding.flatMap(bindingFields);
+  const field = bindingField(binding);
+  return field ? [field] : [];
+}
+
+function bindingField(binding) {
+  return typeof binding === "string" ? binding : binding?.field;
+}
+
+function temporalRoleName(roles = {}) {
+  return Object.keys(roles).find((role) => /time|date|observation/i.test(role)) ?? "observation";
+}
+
+function temporalRoleField(roles = {}) {
+  return bindingField(roles[temporalRoleName(roles)]);
+}
+
+function parseEpoch(value) {
+  if (Number.isFinite(value)) return value;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }

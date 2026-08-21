@@ -209,6 +209,9 @@ test("Build workspace binds Structure and Scenario to the Context Shelf lifecycl
   assert.match(html, /data-build-auxiliary-contract="context-shelf"/);
   assert.match(html, />Pages &amp; sections</);
   assert.match(html, />Scenario details</);
+  assert.match(html, />Time Content</);
+  assert.match(html, />Time Group Studio</);
+  assert.match(html, />Scene Studio</);
 });
 
 function structureFixture() {
