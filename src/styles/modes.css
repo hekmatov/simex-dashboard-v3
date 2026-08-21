@@ -1345,14 +1345,6 @@
   }
 }
 
-/* At the compact workspace breakpoint the Build crown is two pixels taller.
-   Offset only its shared frame so canonical View/Build targets remain exact. */
-@media (min-width: 768px) and (max-width: 899px) {
-  .canonical-dashboard-frame.build-workspace {
-    top: -2px;
-  }
-}
-
 /* Build authoring drawer: closed geometry remains canonical; the open desktop
    state reserves the drawer width instead of covering the dashboard frame. */
 .build-authoring-layer {
@@ -1378,7 +1370,7 @@
   .canonical-dashboard-frame.build-workspace[data-build-panel-open="true"] {
     /* Keep the canonical canvas at its closed width. The fixed authoring panel
        repositions the intact frame instead of forcing a responsive reflow. */
-    margin-left: max(-380px, calc((100vw - 1392px) / 2 - 404px));
+    margin-left: max(-380px, calc((100vw - var(--simex-canonical-canvas-max-width)) / 2 - 404px));
     margin-right: auto;
     width: calc(100% - 48px);
   }

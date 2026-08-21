@@ -138,6 +138,7 @@ export default function App() {
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
+  const buildPanelScrollRef = React.useRef(null);
 
   const validChartIds = React.useMemo(
     () => new Set(configuredCharts(dashboard).map(({ id }) => id)),
@@ -195,6 +196,22 @@ export default function App() {
     dashboard?.title,
   ]);
 
+  function toggleBuildPanel() {
+    if (!buildPanelOpen) {
+      buildPanelScrollRef.current = { left: window.scrollX, top: window.scrollY };
+      setBuildPanelOpen(true);
+      return;
+    }
+    const previousScroll = buildPanelScrollRef.current;
+    setBuildPanelOpen(false);
+    buildPanelScrollRef.current = null;
+    if (previousScroll) {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        window.scrollTo(previousScroll);
+      }));
+    }
+  }
+
   const commandCrownPageActions = mode === "view" ? (
     <>
       <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
@@ -244,7 +261,7 @@ export default function App() {
         aria-expanded={buildPanelOpen}
         aria-pressed={buildPanelOpen}
         disabled={modeDisabled}
-        onClick={() => setBuildPanelOpen((open) => !open)}
+        onClick={toggleBuildPanel}
       >
         Build panel
       </button>

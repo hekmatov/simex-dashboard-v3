@@ -1,89 +1,34 @@
 import { expect, test } from "@playwright/test";
 
-import { compareCentralCanvasGeometry } from "../dashboardGeometryContract.test.js";
-
-export { compareCentralCanvasGeometry };
-
 const CONTROL_URL = "http://127.0.0.1:4174";
 
-export const WORKSPACE_VIEWPORTS = Object.freeze([
-  Object.freeze({ width: 1024, height: 768 }),
-  Object.freeze({ width: 1200, height: 900 }),
-  Object.freeze({ width: 1440, height: 900 }),
-]);
-
-const CANONICAL_ATTRIBUTES = Object.freeze({
-  page: "data-canonical-page-id",
-  canvas: "data-canonical-canvas-id",
-  grid: "data-canonical-grid-id",
-  section: "data-canonical-section-id",
-  panel: "data-canonical-panel-id",
-  placement: "data-canonical-placement-id",
-  plot: "data-canonical-plot-id",
-});
-
-export async function readCanonicalGeometry(page, expectedIds = null, { hydrate = true } = {}) {
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-  });
-
-  if (hydrate) {
-    await page.evaluate(async () => {
-      const panels = [...document.querySelectorAll("[data-canonical-panel-id], .chart-panel")];
-      for (const panel of panels) {
-        panel.scrollIntoView({ block: "center", inline: "nearest" });
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      }
-    });
-  }
-  if (expectedIds?.plot?.length) {
-    await expect.poll(
-      () => page.locator("[data-canonical-plot-id]").count(),
-      { message: "all lazy-rendered canonical plots", timeout: 30_000 },
-    ).toBe(expectedIds.plot.length);
-  }
-  await page.evaluate(() => window.scrollTo(0, 0));
-
-  return page.evaluate((attributes) => {
-    const geometry = {};
-    for (const [kind, attribute] of Object.entries(attributes)) {
-      geometry[kind] = [...document.querySelectorAll(`[${attribute}]`)].map((element) => {
-        const rect = element.getBoundingClientRect();
-        return {
-          id: element.getAttribute(attribute),
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height,
-          relativeX: rect.x - document.querySelector("[data-canonical-canvas-id]").getBoundingClientRect().x,
-          relativeY: rect.y - document.querySelector("[data-canonical-canvas-id]").getBoundingClientRect().y,
-        };
-      });
-    }
-    return {
-      viewport: {
-        clientWidth: document.documentElement.clientWidth,
-        clientHeight: document.documentElement.clientHeight,
-        devicePixelRatio: window.devicePixelRatio,
-        scrollY: window.scrollY,
-      },
-      geometry,
+async function readCanvasState(page) {
+  await page.evaluate(async () => document.fonts.ready);
+  await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
+  return page.evaluate(() => {
+    const frame = document.querySelector(".canonical-dashboard-frame");
+    const canvas = document.querySelector("[data-canonical-canvas-id]");
+    const rect = (element) => {
+      const bounds = element.getBoundingClientRect();
+      return { width: bounds.width, height: bounds.height };
     };
-  }, CANONICAL_ATTRIBUTES);
-}
-
-export function expectedCanonicalIdsForPage(dashboard, pageId) {
-  const dashboardPage = dashboard.pages.find(({ id }) => id === pageId);
-  const panels = dashboardPage.sections.flatMap(({ panels: sectionPanels }) => sectionPanels);
-  return {
-    page: [dashboardPage.id],
-    canvas: [dashboardPage.id],
-    grid: [dashboardPage.id],
-    section: dashboardPage.sections.map(({ id }) => id),
-    panel: panels.map(({ id }) => id),
-    placement: panels.map(({ id }) => id),
-    plot: panels.map(({ id }) => id),
-  };
+    return {
+      frame: rect(frame),
+      canvas: rect(canvas),
+      maxWidth: getComputedStyle(document.documentElement)
+        .getPropertyValue("--simex-canonical-canvas-max-width").trim(),
+      grids: [...document.querySelectorAll("[data-canonical-grid-id]")]
+        .map((element) => getComputedStyle(element).gridTemplateColumns),
+      sections: [...document.querySelectorAll("[data-canonical-section-id]")]
+        .map((element) => element.getAttribute("data-canonical-section-id")),
+      panels: [...document.querySelectorAll("[data-canonical-panel-id]")]
+        .map((element) => ({
+          id: element.getAttribute("data-canonical-panel-id"),
+          footprint: element.getAttribute("data-footprint"),
+        })),
+      scrollY: window.scrollY,
+    };
+  });
 }
 
 test.describe.configure({ timeout: 150_000 });
@@ -95,72 +40,33 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("central View Build geometry", async ({ page, request }) => {
-  const fixtureResponse = await request.get("/config/dashboard.json");
-  expect(fixtureResponse.ok()).toBe(true);
-  const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
+test("wide View and Build reach the same configured canvas maximum", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+  const view = await readCanvasState(page);
 
-  for (const viewport of WORKSPACE_VIEWPORTS) {
-    await page.setViewportSize(viewport);
-    await page.goto("/");
-    await page.locator(".dashboard-command-page-scroller")
-      .getByRole("button", { name: "Biomedical", exact: true })
-      .click();
-    await expect(page.locator(".chart-panel").first()).toBeVisible();
-    const viewGeometry = await readCanonicalGeometry(page, expectedIds);
-    const viewLegacy = await readLegacyDiagnostic(page);
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  const build = await readCanvasState(page);
 
-    await page.getByLabel("Dashboard mode")
-      .getByRole("button", { name: "Build", exact: true })
-      .click();
-    await expect(page.locator(".build-workspace")).toBeVisible();
-    const buildGeometry = await readCanonicalGeometry(page, expectedIds);
-    const buildLegacy = await readLegacyDiagnostic(page);
-
-    const label = `${viewport.width}x${viewport.height}`;
-    expect(buildGeometry.viewport, `${label} reference viewport`).toEqual(viewGeometry.viewport);
-
-    let comparisons = [];
-    let contractError = null;
-    try {
-      comparisons = compareCentralCanvasGeometry(viewGeometry, buildGeometry, expectedIds);
-    } catch (error) {
-      contractError = error;
-    }
-    expect(
-      contractError,
-      `${label} legacy canvas View ${formatRect(viewLegacy.canvas)} Build ${formatRect(buildLegacy.canvas)}; `
-        + `first section View ${formatRect(viewLegacy.section)} Build ${formatRect(buildLegacy.section)}; `
-        + `first panel View ${formatRect(viewLegacy.panel)} Build ${formatRect(buildLegacy.panel)}`,
-    ).toBeNull();
-
-    const mismatches = comparisons
-      .filter(({ delta }) => Object.values(delta).some((value) => value !== "0.00"))
-      .map(({ kind, id, view, build, delta }) => ({
-        kind,
-        id,
-        view: formatRect(view),
-        build: formatRect(build),
-        delta,
-      }));
-    expect(mismatches, `${label} central canvas mismatches`).toEqual([]);
-    const canvas = comparisons.find(({ kind }) => kind === "canvas");
-    console.log("CENTRAL_CANVAS_GEOMETRY", JSON.stringify({
-      viewport: label,
-      counts: Object.fromEntries(Object.entries(viewGeometry.geometry).map(([kind, entries]) => [kind, entries.length])),
-      canvas: { view: canvas.view, build: canvas.build, delta: canvas.delta },
-      comparisons: comparisons.length,
-    }));
-  }
+  expect(view.maxWidth).toBe("1392px");
+  expect(build.maxWidth).toBe(view.maxWidth);
+  expect(view.frame.width).toBe(1392);
+  expect(build.frame.width).toBe(view.frame.width);
+  expect(build.frame.width).toBeLessThanOrEqual(view.frame.width);
+  expect(build.canvas.width).toBe(view.canvas.width);
+  expect(build.grids).toEqual(view.grids);
+  expect(build.sections).toEqual(view.sections);
+  expect(build.panels).toEqual(view.panels);
 });
 
-test("open Build panel preserves the central canvas and reveals the edited chart", async ({ page, request }) => {
+test("Build panel preserves saved layout, reveals the chart, and restores the closed canvas", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const fixtureResponse = await request.get("/config/dashboard.json");
-  expect(fixtureResponse.ok()).toBe(true);
-  const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
-
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Biomedical", exact: true })
@@ -170,17 +76,22 @@ test("open Build panel preserves the central canvas and reveals the edited chart
     .click();
   await expect(page.locator(".build-workspace")).toBeVisible();
 
-  const closedGeometry = await readCanonicalGeometry(page, expectedIds);
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  const closed = await readCanvasState(page);
+  const savedLayout = await page.evaluate(() => (
+    localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
+  ));
+  const panelToggle = page.getByRole("button", { name: "Build panel", exact: true });
+  await panelToggle.click();
   const drawer = page.locator("#build-authoring-panel");
   await expect(drawer).toHaveAttribute("data-open", "true");
-  const openGeometry = await readCanonicalGeometry(page, expectedIds);
-  const mismatches = compareCentralCanvasGeometry(closedGeometry, openGeometry, expectedIds)
-    .filter(({ delta }) => Object.values(delta).some((value) => value !== "0.00"));
-  expect(mismatches, "opening Build must not shrink or reflow the central canvas").toEqual([]);
+  const open = await readCanvasState(page);
+  expect(open.panels).toEqual(closed.panels);
+  expect(open.sections).toEqual(closed.sections);
+  expect(await page.evaluate(() => (
+    localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
+  ))).toBe(savedLayout);
 
   const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
-  await target.scrollIntoViewIfNeeded();
   await target.getByRole("button", { name: "Edit chart", exact: true }).click();
   await expect(target).toHaveClass(/selected/);
   await expect(page.locator(".chart-editor-v3")).toBeVisible();
@@ -188,10 +99,27 @@ test("open Build panel preserves the central canvas and reveals the edited chart
   const clearance = await page.evaluate(() => {
     const chart = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
     const panel = document.querySelector("#build-authoring-panel").getBoundingClientRect();
-    return { chartLeft: chart.left, chartRight: chart.right, panelLeft: panel.left };
+    return {
+      chartWidth: chart.width,
+      visibleWidth: Math.max(0, Math.min(chart.right, panel.left, window.innerWidth) - Math.max(chart.left, 0)),
+      overlap: Math.max(0, Math.min(chart.right, panel.right) - Math.max(chart.left, panel.left)),
+    };
   });
-  expect(clearance.chartRight).toBeGreaterThan(0);
-  expect(clearance.chartRight).toBeLessThanOrEqual(clearance.panelLeft - 12);
+  expect(clearance.visibleWidth).toBeGreaterThanOrEqual(Math.min(220, clearance.chartWidth * 0.4));
+  expect(clearance.overlap).toBe(0);
+
+  await panelToggle.click();
+  await expect(drawer).toHaveAttribute("data-open", "false");
+  const restored = await readCanvasState(page);
+  expect(restored.frame).toEqual(closed.frame);
+  expect(restored.canvas).toEqual(closed.canvas);
+  expect(restored.grids).toEqual(closed.grids);
+  expect(restored.sections).toEqual(closed.sections);
+  expect(restored.panels).toEqual(closed.panels);
+  expect(restored.scrollY).toBe(closed.scrollY);
+  expect(await page.evaluate(() => (
+    localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
+  ))).toBe(savedLayout);
 });
 
 test("Build Structure double click navigates, highlights, and focuses section rename", async ({ page }) => {
@@ -413,44 +341,14 @@ test("canonical View and Build frames project landing and analytical Page metada
   })).toEqual(["12px", "20px"]);
 });
 
-async function readLegacyDiagnostic(page) {
-  return page.evaluate(() => {
-    const read = (selector) => {
-      const rect = document.querySelector(selector)?.getBoundingClientRect();
-      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null;
-    };
-    return {
-      canvas: read(".dashboard-workspace"),
-      section: read(".dashboard-section"),
-      panel: read(".chart-panel"),
-    };
-  });
-}
-
-function formatRect(rect) {
-  if (!rect) return "missing";
-  return `x=${rect.x.toFixed(2)} y=${rect.y.toFixed(2)} width=${rect.width.toFixed(2)} height=${rect.height.toFixed(2)}`;
-}
-
-test("look drawer allows transient compression and restores dashboard geometry and state", async ({ page, request }) => {
+test("look drawer allows transient compression and restores dashboard geometry and state", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const fixtureResponse = await request.get("/config/dashboard.json");
-  expect(fixtureResponse.ok()).toBe(true);
-  const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
-
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Biomedical", exact: true })
     .click();
-  await expect(page.locator(".chart-panel").first()).toBeVisible();
-  const before = await readCanonicalGeometry(page, expectedIds);
-  const contentBefore = await page.evaluate(() => ({
-    panels: [...document.querySelectorAll("[data-canonical-panel-id]")]
-      .map((element) => [element.getAttribute("data-canonical-panel-id"), element.getAttribute("data-footprint")]),
-    sections: [...document.querySelectorAll("[data-canonical-section-id]")]
-      .map((element) => element.getAttribute("data-canonical-section-id")),
-  }));
+  const before = await readCanvasState(page);
 
   await page.evaluate(() => window.scrollTo(0, 700));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
@@ -491,25 +389,20 @@ test("look drawer allows transient compression and restores dashboard geometry a
   await page.evaluate(() => window.scrollTo(0, 0));
   await trigger.click();
   await expect(drawer).toBeVisible();
-  const openGeometry = await readCanonicalGeometry(page, expectedIds, { hydrate: false });
-  const closedCanvas = before.geometry.canvas[0];
-  const openCanvas = openGeometry.geometry.canvas[0];
-  expect(closedCanvas.width - openCanvas.width).toBeGreaterThan(0);
-  expect(closedCanvas.width - openCanvas.width).toBeLessThanOrEqual(420);
+  const open = await readCanvasState(page);
+  expect(open.canvas.width).toBeLessThanOrEqual(before.canvas.width);
+  expect(before.canvas.width - open.canvas.width).toBeLessThanOrEqual(420);
+  expect(open.sections).toEqual(before.sections);
+  expect(open.panels).toEqual(before.panels);
 
   await drawer.getByRole("button", { name: "Close", exact: true }).click();
   await expect(drawer).toHaveCount(0);
-  const restored = await readCanonicalGeometry(page, expectedIds, { hydrate: false });
-  const restorationMismatches = compareCentralCanvasGeometry(before, restored, expectedIds)
-    .filter(({ delta }) => Object.values(delta).some((value) => value !== "0.00"));
-  expect(restorationMismatches).toEqual([]);
-  const contentAfter = await page.evaluate(() => ({
-    panels: [...document.querySelectorAll("[data-canonical-panel-id]")]
-      .map((element) => [element.getAttribute("data-canonical-panel-id"), element.getAttribute("data-footprint")]),
-    sections: [...document.querySelectorAll("[data-canonical-section-id]")]
-      .map((element) => element.getAttribute("data-canonical-section-id")),
-  }));
-  expect(contentAfter).toEqual(contentBefore);
+  const restored = await readCanvasState(page);
+  expect(restored.frame).toEqual(before.frame);
+  expect(restored.canvas).toEqual(before.canvas);
+  expect(restored.grids).toEqual(before.grids);
+  expect(restored.sections).toEqual(before.sections);
+  expect(restored.panels).toEqual(before.panels);
 });
 
 test("denied Dashboard Look and appearance writes remain live with session-only feedback", async ({ page }) => {

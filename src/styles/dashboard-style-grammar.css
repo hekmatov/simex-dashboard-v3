@@ -237,7 +237,7 @@
   border: 1px solid var(--simex-border-strong);
   border-radius: var(--simex-style-surface-radius);
   box-shadow: var(--simex-style-shell-shadow);
-  max-width: 1392px;
+  max-width: var(--simex-canonical-canvas-max-width);
   padding: 0;
   width: calc(100% - 48px);
 }
