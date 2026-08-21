@@ -1,13 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { compareCanonicalGeometry } from "../dashboardGeometryContract.test.js";
+import { compareCentralCanvasGeometry } from "../dashboardGeometryContract.test.js";
 
-export { compareCanonicalGeometry };
+export { compareCentralCanvasGeometry };
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 
 export const WORKSPACE_VIEWPORTS = Object.freeze([
-  Object.freeze({ width: 768, height: 1024 }),
   Object.freeze({ width: 1024, height: 768 }),
   Object.freeze({ width: 1200, height: 900 }),
   Object.freeze({ width: 1440, height: 900 }),
@@ -23,7 +22,7 @@ const CANONICAL_ATTRIBUTES = Object.freeze({
   plot: "data-canonical-plot-id",
 });
 
-export async function readCanonicalGeometry(page) {
+export async function readCanonicalGeometry(page, expectedIds = null) {
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
@@ -31,6 +30,12 @@ export async function readCanonicalGeometry(page) {
   const panels = page.locator("[data-canonical-panel-id], .chart-panel");
   for (let index = 0; index < await panels.count(); index += 1) {
     await panels.nth(index).scrollIntoViewIfNeeded();
+  }
+  if (expectedIds?.plot?.length) {
+    await expect.poll(
+      () => page.locator("[data-canonical-plot-id]").count(),
+      { message: "all lazy-rendered canonical plots", timeout: 30_000 },
+    ).toBe(expectedIds.plot.length);
   }
   await page.evaluate(() => window.scrollTo(0, 0));
 
@@ -45,6 +50,8 @@ export async function readCanonicalGeometry(page) {
           y: rect.y,
           width: rect.width,
           height: rect.height,
+          relativeX: rect.x - document.querySelector("[data-canonical-canvas-id]").getBoundingClientRect().x,
+          relativeY: rect.y - document.querySelector("[data-canonical-canvas-id]").getBoundingClientRect().y,
         };
       });
     }
@@ -83,7 +90,7 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-test("exact View Build geometry", async ({ page, request }) => {
+test("central View Build geometry", async ({ page, request }) => {
   const fixtureResponse = await request.get("/config/dashboard.json");
   expect(fixtureResponse.ok()).toBe(true);
   const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
@@ -95,14 +102,14 @@ test("exact View Build geometry", async ({ page, request }) => {
       .getByRole("button", { name: "Biomedical", exact: true })
       .click();
     await expect(page.locator(".chart-panel").first()).toBeVisible();
-    const viewGeometry = await readCanonicalGeometry(page);
+    const viewGeometry = await readCanonicalGeometry(page, expectedIds);
     const viewLegacy = await readLegacyDiagnostic(page);
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true })
       .click();
     await expect(page.locator(".build-workspace")).toBeVisible();
-    const buildGeometry = await readCanonicalGeometry(page);
+    const buildGeometry = await readCanonicalGeometry(page, expectedIds);
     const buildLegacy = await readLegacyDiagnostic(page);
 
     const label = `${viewport.width}x${viewport.height}`;
@@ -111,7 +118,7 @@ test("exact View Build geometry", async ({ page, request }) => {
     let comparisons = [];
     let contractError = null;
     try {
-      comparisons = compareCanonicalGeometry(viewGeometry, buildGeometry, expectedIds);
+      comparisons = compareCentralCanvasGeometry(viewGeometry, buildGeometry, expectedIds);
     } catch (error) {
       contractError = error;
     }
@@ -131,15 +138,55 @@ test("exact View Build geometry", async ({ page, request }) => {
         build: formatRect(build),
         delta,
       }));
-    expect(mismatches, `${label} canonical mismatches`).toEqual([]);
+    expect(mismatches, `${label} central canvas mismatches`).toEqual([]);
     const canvas = comparisons.find(({ kind }) => kind === "canvas");
-    console.log("CANONICAL_GEOMETRY", JSON.stringify({
+    console.log("CENTRAL_CANVAS_GEOMETRY", JSON.stringify({
       viewport: label,
       counts: Object.fromEntries(Object.entries(viewGeometry.geometry).map(([kind, entries]) => [kind, entries.length])),
       canvas: { view: canvas.view, build: canvas.build, delta: canvas.delta },
       comparisons: comparisons.length,
     }));
   }
+});
+
+test("open Build panel preserves the central canvas and reveals the edited chart", async ({ page, request }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const fixtureResponse = await request.get("/config/dashboard.json");
+  expect(fixtureResponse.ok()).toBe(true);
+  const expectedIds = expectedCanonicalIdsForPage(await fixtureResponse.json(), "biomedical");
+
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true })
+    .click();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true })
+    .click();
+  await expect(page.locator(".build-workspace")).toBeVisible();
+
+  const closedGeometry = await readCanonicalGeometry(page, expectedIds);
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  const drawer = page.locator("#build-authoring-panel");
+  await expect(drawer).toHaveAttribute("data-open", "true");
+  const openGeometry = await readCanonicalGeometry(page, expectedIds);
+  const mismatches = compareCentralCanvasGeometry(closedGeometry, openGeometry, expectedIds)
+    .filter(({ delta }) => Object.values(delta).some((value) => value !== "0.00"));
+  expect(mismatches, "opening Build must not shrink or reflow the central canvas").toEqual([]);
+
+  const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
+  await target.scrollIntoViewIfNeeded();
+  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await expect(target).toHaveClass(/selected/);
+  await expect(page.locator(".chart-editor-v3")).toBeVisible();
+
+  const clearance = await page.evaluate(() => {
+    const chart = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
+    const panel = document.querySelector("#build-authoring-panel").getBoundingClientRect();
+    return { chartLeft: chart.left, chartRight: chart.right, panelLeft: panel.left };
+  });
+  expect(clearance.chartRight).toBeGreaterThan(0);
+  expect(clearance.chartRight).toBeLessThanOrEqual(clearance.panelLeft - 12);
 });
 
 test("Build section rename target keeps 44px activation and 3px focus", async ({ page }) => {

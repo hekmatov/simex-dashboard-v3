@@ -1362,13 +1362,15 @@
 
 @media (min-width: 900px) {
   .canonical-dashboard-frame.build-workspace {
-    transition: margin-right 180ms ease, width 180ms ease;
+    transition: margin-left 180ms ease, margin-right 180ms ease;
   }
 
   .canonical-dashboard-frame.build-workspace[data-build-panel-open="true"] {
-    margin-left: auto;
-    margin-right: 404px;
-    width: calc(100% - 416px);
+    /* Keep the canonical canvas at its closed width. The fixed authoring panel
+       repositions the intact frame instead of forcing a responsive reflow. */
+    margin-left: max(-380px, calc((100vw - 1392px) / 2 - 404px));
+    margin-right: auto;
+    width: calc(100% - 48px);
   }
 }
 

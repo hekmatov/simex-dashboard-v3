@@ -11,6 +11,14 @@ const CANONICAL_KINDS = Object.freeze([
   "plot",
 ]);
 
+const CENTRAL_CANVAS_KINDS = Object.freeze([
+  "canvas",
+  "grid",
+  "section",
+  "panel",
+  "plot",
+]);
+
 export function canonicalDelta(viewValue, buildValue) {
   return Math.abs(viewValue - buildValue).toFixed(2);
 }
@@ -88,6 +96,50 @@ export function compareCanonicalGeometry(viewGeometry, buildGeometry, expectedGe
     }
   }
   return comparisons;
+}
+
+export function compareCentralCanvasGeometry(viewGeometry, buildGeometry, expectedGeometryIds) {
+  const idErrors = [];
+
+  for (const kind of CENTRAL_CANVAS_KINDS) {
+    const viewEntries = viewGeometry.geometry[kind] ?? [];
+    const buildEntries = buildGeometry.geometry[kind] ?? [];
+    const viewIds = viewEntries.map(({ id }) => id);
+    const buildIds = buildEntries.map(({ id }) => id);
+    const expectedIds = expectedGeometryIds?.[kind] ?? [];
+
+    if (new Set(viewIds).size !== viewIds.length) idErrors.push(`${kind}: duplicate View IDs`);
+    if (new Set(buildIds).size !== buildIds.length) idErrors.push(`${kind}: duplicate Build IDs`);
+    if (viewIds.join("\u0000") !== expectedIds.join("\u0000")) {
+      idErrors.push(`${kind}: View IDs do not match the fixture`);
+    }
+    if (buildIds.join("\u0000") !== expectedIds.join("\u0000")) {
+      idErrors.push(`${kind}: Build IDs do not match the fixture`);
+    }
+  }
+
+  if (idErrors.length > 0) {
+    throw new Error(`Central canvas ID mismatch:\n${idErrors.join("\n")}`);
+  }
+
+  return CENTRAL_CANVAS_KINDS.flatMap((kind) => {
+    const buildById = new Map(buildGeometry.geometry[kind].map((entry) => [entry.id, entry]));
+    return viewGeometry.geometry[kind].map((view) => {
+      const build = buildById.get(view.id);
+      return {
+        kind,
+        id: view.id,
+        view,
+        build,
+        delta: {
+          width: canonicalDelta(view.width, build.width),
+          height: canonicalDelta(view.height, build.height),
+          relativeX: canonicalDelta(view.relativeX, build.relativeX),
+          relativeY: canonicalDelta(view.relativeY, build.relativeY),
+        },
+      };
+    });
+  });
 }
 
 export function requireExactCanonicalGeometry(comparisons) {
@@ -168,5 +220,33 @@ if (invokedDirectly) {
       () => compareCanonicalGeometry(geometryFor(extraIds), geometryFor(extraIds), expectedIds),
       /unexpected/,
     );
+  });
+
+  test("central canvas geometry ignores outer offsets but rejects an internal reflow", () => {
+    const expectedIds = {
+      canvas: ["biomedical"], grid: ["biomedical"], section: ["outbreak_dynamics"],
+      panel: ["confirmed", "daily"], plot: ["confirmed", "daily"],
+    };
+    const geometry = (outerX, outerY, dailyRelativeY = 120) => ({
+      geometry: {
+        canvas: [{ id: "biomedical", x: outerX, y: outerY, width: 960, height: 640, relativeX: 0, relativeY: 0 }],
+        grid: [{ id: "biomedical", x: outerX + 18, y: outerY + 80, width: 924, height: 520, relativeX: 18, relativeY: 80 }],
+        section: [{ id: "outbreak_dynamics", x: outerX, y: outerY + 64, width: 960, height: 560, relativeX: 0, relativeY: 64 }],
+        panel: [
+          { id: "confirmed", x: outerX + 18, y: outerY + 80, width: 446, height: 104, relativeX: 18, relativeY: 80 },
+          { id: "daily", x: outerX + 478, y: outerY + dailyRelativeY, width: 446, height: 104, relativeX: 478, relativeY: dailyRelativeY },
+        ],
+        plot: [
+          { id: "confirmed", x: outerX + 30, y: outerY + 92, width: 422, height: 80, relativeX: 30, relativeY: 92 },
+          { id: "daily", x: outerX + 490, y: outerY + dailyRelativeY + 12, width: 422, height: 80, relativeX: 490, relativeY: dailyRelativeY + 12 },
+        ],
+      },
+    });
+
+    const offsetOnly = compareCentralCanvasGeometry(geometry(20, 110), geometry(-380, 112), expectedIds);
+    assert.equal(offsetOnly.every(({ delta }) => Object.values(delta).every((value) => value === "0.00")), true);
+
+    const reflowed = compareCentralCanvasGeometry(geometry(20, 110), geometry(-380, 112, 180), expectedIds);
+    assert.equal(reflowed.some(({ id, delta }) => id === "daily" && delta.relativeY !== "0.00"), true);
   });
 }
