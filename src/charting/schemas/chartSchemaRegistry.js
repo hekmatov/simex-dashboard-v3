@@ -22,9 +22,15 @@ export function createChartSchemaRegistry(rawSchemas) {
   for (const [typeId, schema] of byType) byType.set(typeId, deepFreeze(schema));
   const listedSchemas = deepFreeze([...byType.values()]);
   const groups = deepFreeze(CHART_SCHEMA_GROUPS.map((group) => ({ ...group, charts: listedSchemas.filter(({ group: id }) => id === group.id) })).filter(({ charts }) => charts.length > 0));
-  return deepFreeze({ list: () => listedSchemas, get(typeId) { const schema = byType.get(typeId); if (!schema) throw new Error(`Unknown chart type "${typeId}".`); return schema; }, groups: () => groups });
+  return deepFreeze({
+    revision: `${CHART_SCHEMA_VERSION}:${listedSchemas.map(({ typeId }) => typeId).join(",")}`,
+    list: () => listedSchemas,
+    get(typeId) { const schema = byType.get(typeId); if (!schema) throw new Error(`Unknown chart type "${typeId}".`); return schema; },
+    groups: () => groups,
+  });
 }
 const registry = createChartSchemaRegistry([...axisSchemas, ...compositionSchemas, ...targetSchemas, ...relationshipSchemas, ...readinessSchemas, ...timelineSchemas, ...geographySchemas, ...operationalSchemas]);
+export const chartSchemaRegistry = registry;
 export { CHART_SCHEMA_VERSION };
 export const listChartSchemas = () => registry.list();
 export const getChartSchema = (typeId) => registry.get(typeId);
