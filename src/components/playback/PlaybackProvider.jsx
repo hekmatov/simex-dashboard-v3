@@ -15,6 +15,7 @@ const MAX_STATUS_LENGTH = 240;
 
 export function PlaybackProvider({
   groups = EMPTY_ARRAY,
+  scenes = EMPTY_ARRAY,
   charts = EMPTY_ARRAY,
   loadedData = {},
   profiles = {},
@@ -37,6 +38,7 @@ export function PlaybackProvider({
     reducePlaybackState,
     {
       groups: validatedGroups,
+      scenes,
       charts,
       initialState,
       initialPosition,
@@ -49,17 +51,31 @@ export function PlaybackProvider({
   const dispatch = React.useCallback(
     (action) => dispatchPlaybackAction(baseDispatch, action, {
       groups: validatedGroups,
+      scenes,
       activeGroupId: state.activeGroupId,
     }),
-    [baseDispatch, state.activeGroupId, validatedGroups],
+    [baseDispatch, scenes, state.activeGroupId, validatedGroups],
+  );
+  const activeScene = React.useMemo(
+    () => resolveActiveScene(scenes, state.activeSceneId),
+    [scenes, state.activeSceneId],
   );
   const activeGroup = React.useMemo(
-    () => resolveActiveGroup(validatedGroups, state.activeGroupId),
-    [validatedGroups, state.activeGroupId],
+    () => resolveActiveGroup(
+      validatedGroups,
+      activeScene?.groupId ?? state.activeGroupId,
+    ),
+    [activeScene, validatedGroups, state.activeGroupId],
   );
-  const clock = React.useMemo(
+  const groupClock = React.useMemo(
     () => buildTimeGroupClock(activeGroup, temporalContext),
     [activeGroup, temporalContext],
+  );
+  const clock = React.useMemo(
+    () => activeScene
+      ? buildScenePlaybackClock(activeScene, groupClock)
+      : groupClock,
+    [activeScene, groupClock],
   );
   const activeIndex = clock.length === 0
     ? 0
@@ -71,9 +87,25 @@ export function PlaybackProvider({
     && activeIndex < clock.length - 1
   );
   const playing = state.playing === true && canAdvance;
+  const participatingMembers = React.useMemo(
+    () => selectParticipatingMembers(activeGroup, activeScene, state.scope),
+    [activeGroup, activeScene, state.scope],
+  );
+  const participatingChartIds = React.useMemo(
+    () => Object.freeze(participatingMembers.map(({ chartId }) => chartId)),
+    [participatingMembers],
+  );
   const memberTimeContexts = React.useMemo(
-    () => buildMemberTimeContexts(activeGroup, activeEpochMs),
-    [activeGroup, activeEpochMs],
+    () => buildMemberTimeContexts(
+      activeGroup ? { ...activeGroup, members: participatingMembers } : null,
+      activeEpochMs,
+      {
+        scene: activeScene,
+        sessionMatchingOverride: state.matchingOverride,
+        traceMode: state.traceMode,
+      },
+    ),
+    [activeEpochMs, activeGroup, activeScene, participatingMembers, state.matchingOverride, state.traceMode],
   );
   const timeContextForChart = React.useCallback(
     (chartId) => state.playbackView === true
@@ -115,16 +147,27 @@ export function PlaybackProvider({
     activeEpochMs,
     activeGroup,
     activeGroupId: activeGroup?.id ?? null,
+    activeScene,
+    activeSceneId: activeScene?.id ?? null,
     activeIndex,
+    availabilityVisible: state.availabilityVisible,
     charts,
     clock,
+    connection: state.connection,
     dispatch,
     groups: validatedGroups,
     loadedData,
+    matchingOverride: state.matchingOverride,
+    participatingChartIds,
+    placement: state.placement,
     playbackView: state.playbackView,
     playing,
     profiles,
+    scenes,
+    scope: state.scope,
+    source: state.source,
     speed: state.speed,
+    traceMode: state.traceMode,
     status: playbackStatus(activeGroup, clock, activeEpochMs),
     timeContext: state.playbackView === true
       && activeGroup
@@ -135,12 +178,22 @@ export function PlaybackProvider({
   }), [
     activeEpochMs,
     activeGroup,
+    activeScene,
     activeIndex,
     charts,
     clock,
     loadedData,
+    participatingChartIds,
     profiles,
+    scenes,
+    state.availabilityVisible,
+    state.connection,
+    state.matchingOverride,
+    state.placement,
     state.playbackView,
+    state.scope,
+    state.source,
+    state.traceMode,
     playing,
     state.speed,
     timeContextForChart,
@@ -223,13 +276,21 @@ export function createPlaybackTimer({
   };
 }
 
-export function buildMemberTimeContexts(group, activeEpochMs) {
+export function buildMemberTimeContexts(group, activeEpochMs, {
+  scene = null,
+  sessionMatchingOverride = "authored",
+  traceMode,
+} = {}) {
   const contexts = Object.create(null);
   if (!group || !Number.isFinite(activeEpochMs)) return Object.freeze(contexts);
   for (const member of group.members) {
-    const sourceMatching = member.matching ?? group.matching;
+    const sceneMember = scene?.members?.find(({ chartId }) => chartId === member.chartId);
+    const sourceMatching = sessionMatchingPolicy(sessionMatchingOverride)
+      ?? sceneMember?.matching
+      ?? member.matching
+      ?? group.matching;
     const matching = Object.freeze({
-      policy: sourceMatching.policy,
+      policy: sourceMatching?.policy ?? sourceMatching,
       ...(sourceMatching.toleranceMs === undefined
         ? {}
         : { toleranceMs: sourceMatching.toleranceMs }),
@@ -238,6 +299,8 @@ export function buildMemberTimeContexts(group, activeEpochMs) {
       groupId: group.id,
       activeEpochMs,
       matching,
+      ...(traceMode === undefined ? {} : { traceMode }),
+      ...(scene ? { sceneId: scene.id } : {}),
     });
   }
   return Object.freeze(contexts);
@@ -246,28 +309,32 @@ export function buildMemberTimeContexts(group, activeEpochMs) {
 export function dispatchPlaybackAction(
   baseDispatch,
   action,
-  { groups = EMPTY_ARRAY, activeGroupId = null } = {},
+  { groups = EMPTY_ARRAY, scenes = EMPTY_ARRAY, activeGroupId = null } = {},
 ) {
   if (typeof baseDispatch !== "function") {
     throw new TypeError("Playback dispatch must be a function.");
   }
   baseDispatch(action);
-  if (
-    action?.type !== "setGroup"
-    || action.groupId === activeGroupId
-  ) {
+  if (action?.type === "setGroup") {
+    if (action.groupId === activeGroupId) return;
+    const selectedGroup = groups.find(({ id }) => id === action.groupId);
+    if (!selectedGroup) return;
+    baseDispatch({ type: "setSpeed", speed: selectedGroup.secondsPerFrame });
     return;
   }
-  const selectedGroup = groups.find(({ id }) => id === action.groupId);
-  if (!selectedGroup) return;
+  if (action?.type !== "setScene") return;
+  const selectedScene = scenes.find(({ id }) => id === action.sceneId);
+  const selectedGroup = groups.find(({ id }) => id === selectedScene?.groupId);
+  if (!selectedScene || !selectedGroup) return;
   baseDispatch({
     type: "setSpeed",
-    speed: selectedGroup.secondsPerFrame,
+    speed: selectedScene.secondsPerFrame ?? selectedGroup.secondsPerFrame,
   });
 }
 
 function initializePlaybackState({
   groups,
+  scenes,
   charts,
   initialState,
   initialPosition,
@@ -283,18 +350,21 @@ function initializePlaybackState({
     ? supplied.activeGroupId
     : groups[0]?.id ?? null;
   const activeGroup = resolveActiveGroup(groups, activeGroupId);
-  const clock = buildTimeGroupClock(activeGroup, {
+  const activeScene = resolveActiveScene(scenes, supplied.activeSceneId);
+  const groupClock = buildTimeGroupClock(activeGroup, {
     charts,
     loadedData,
     profiles,
     timezone,
   });
+  const clock = activeScene ? buildScenePlaybackClock(activeScene, groupClock) : groupClock;
   const hasSuppliedIndex = Object.hasOwn(supplied, "activeIndex");
   const hasSuppliedSpeed = Object.hasOwn(supplied, "speed");
   return {
     ...initialPlaybackState,
     ...supplied,
     activeGroupId,
+    activeSceneId: activeScene?.id ?? null,
     activeIndex: hasSuppliedIndex
       ? supplied.activeIndex
       : initialPosition === "latest" && clock.length > 0
@@ -302,7 +372,9 @@ function initializePlaybackState({
         : 0,
     speed: hasSuppliedSpeed
       ? supplied.speed
-      : activeGroup?.secondsPerFrame ?? initialPlaybackState.speed,
+      : activeScene?.secondsPerFrame
+        ?? activeGroup?.secondsPerFrame
+        ?? initialPlaybackState.speed,
   };
 }
 
@@ -312,6 +384,45 @@ function resolveActiveGroup(groups, groupId) {
     if (selected) return selected;
   }
   return groups[0] ?? null;
+}
+
+function resolveActiveScene(scenes, sceneId) {
+  if (!sceneId || !Array.isArray(scenes)) return null;
+  return scenes.find((scene) => scene?.id === sceneId) ?? null;
+}
+
+export function buildScenePlaybackClock(scene, groupClock) {
+  if (!scene || !Array.isArray(groupClock)) return Object.freeze([]);
+  const start = Date.parse(scene.period?.start);
+  const end = Date.parse(scene.period?.end);
+  const withinPeriod = groupClock.filter((epochMs) => (
+    (!Number.isFinite(start) || epochMs >= start)
+    && (!Number.isFinite(end) || epochMs <= end)
+  ));
+  if (scene.frames?.mode !== "source" || scene.frames.selection !== "selected") {
+    return Object.freeze(withinPeriod);
+  }
+  const available = new Set(withinPeriod);
+  return Object.freeze((scene.frames.selectedEpochs ?? []).filter((epochMs) => available.has(epochMs)));
+}
+
+function selectParticipatingMembers(group, scene, scope) {
+  if (!group) return EMPTY_ARRAY;
+  if (scene) {
+    const selected = new Set((scene.members ?? []).map(({ chartId }) => chartId));
+    return Object.freeze(group.members.filter(({ chartId }) => selected.has(chartId)));
+  }
+  if (scope === "group-only" || scope === "all-page") return group.members;
+  return group.members;
+}
+
+function sessionMatchingPolicy(value) {
+  return ({
+    concurrent: { policy: "exact" },
+    interpolate: { policy: "interpolate" },
+    latest: { policy: "lastKnown" },
+    closest: { policy: "nearest" },
+  })[value] ?? null;
 }
 
 function playbackStatus(group, clock, activeEpochMs) {

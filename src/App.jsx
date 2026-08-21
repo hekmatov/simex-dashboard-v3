@@ -920,6 +920,7 @@ export default function App() {
   return (
     <PlaybackProvider
       groups={playbackGroups}
+      scenes={dashboard.scenes ?? []}
       charts={configuredCharts(dashboard)}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}

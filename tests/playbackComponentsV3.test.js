@@ -38,11 +38,161 @@ const {
 const { default: PlaybackControls } = await import("../src/components/playback/PlaybackControls.jsx");
 const { default: PlaybackSurface } = await import("../src/components/playback/PlaybackSurface.jsx");
 const { default: PlaybackView } = await import("../src/components/playback/PlaybackView.jsx");
+const { default: ChronoController } = await import("../src/components/playback/ChronoController.jsx");
 const { default: ChartView } = await import("../src/components/charts/ChartView.jsx");
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
 const MAY_3 = Date.UTC(2027, 4, 3);
+
+test("View Chrono reducer owns source, scope, trace, matching, availability, and placement", () => {
+  const group = reducePlaybackState(initialPlaybackState, {
+    type: "setGroup",
+    groupId: "exercise",
+    period: { start: MAY_1, end: MAY_3 },
+  });
+  assert.deepEqual(group.source, { kind: "group", id: "exercise" });
+  assert.deepEqual(group.period, { start: MAY_1, end: MAY_3 });
+  assert.equal(group.playing, false);
+
+  const scene = reducePlaybackState(group, {
+    type: "setScene",
+    sceneId: "scene-a",
+    period: { start: MAY_2, end: MAY_3 },
+  });
+  assert.deepEqual(scene.source, { kind: "scene", id: "scene-a" });
+  assert.equal(scene.activeSceneId, "scene-a");
+
+  const scoped = reducePlaybackState(scene, { type: "setScope", scope: "group-only" });
+  const matched = reducePlaybackState(scoped, { type: "setMatchingOverride", policy: "closest" });
+  const traced = reducePlaybackState(matched, { type: "setTraceMode", mode: "full" });
+  const available = reducePlaybackState(traced, { type: "toggleAvailability" });
+  const moved = reducePlaybackState(available, { type: "moveController", placement: "mast" });
+  assert.equal(moved.scope, "group-only");
+  assert.equal(moved.matchingOverride, "closest");
+  assert.equal(moved.traceMode, "full");
+  assert.equal(moved.availabilityVisible, true);
+  assert.equal(moved.placement, "mast");
+  assert.equal(moved.activeIndex, group.activeIndex);
+});
+
+test("View Chrono safety-pauses all consequential session changes", () => {
+  const playing = {
+    ...initialPlaybackState,
+    playbackView: true,
+    playing: true,
+    activeIndex: 1,
+    frameIndex: 1,
+    connection: "connected",
+  };
+  for (const action of [
+    { type: "seek", index: 2, clockLength: 4 },
+    { type: "previous", clockLength: 4 },
+    { type: "next", clockLength: 4 },
+    { type: "setScope", scope: "all-page" },
+    { type: "setMatchingOverride", policy: "authored" },
+    { type: "setTraceMode", mode: "reveal" },
+    { type: "navigate" },
+    { type: "documentHidden" },
+    { type: "modeExit" },
+    { type: "blackout", active: true },
+    { type: "connectionLost" },
+    { type: "reconnected" },
+    { type: "end", clockLength: 4 },
+  ]) {
+    assert.equal(reducePlaybackState(playing, action).playing, false, action.type);
+  }
+  assert.equal(reducePlaybackState(playing, { type: "connectionLost" }).connection, "lost");
+  assert.equal(reducePlaybackState(playing, { type: "reconnected" }).connection, "connected");
+});
+
+test("reduced motion prevents automatic Chrono play", () => {
+  const state = {
+    ...initialPlaybackState,
+    playbackView: true,
+    reducedMotion: true,
+  };
+  assert.equal(reducePlaybackState(state, {
+    type: "play",
+    clockLength: 3,
+    automatic: true,
+  }).playing, false);
+});
+
+test("View Chrono exposes group and Scene sources with viewer-only controls", () => {
+  const html = renderPlayback(React.createElement(ChronoController), {
+    scenes: [{
+      id: "scene-a",
+      name: "First operational picture",
+      groupId: "exercise",
+      pageId: "overview",
+      period: { start: "2027-05-01T00:00:00.000Z", end: "2027-05-03T00:00:00.000Z" },
+      members: [{ chartId: "primary-chart", width: 4 }],
+      frames: { mode: "source", chartId: "primary-chart", selection: "all" },
+    }],
+    initialState: {
+      ...initialPlaybackState,
+      activeGroupId: "exercise",
+      playbackView: true,
+    },
+  });
+
+  assert.match(html, /aria-label="Chrono source"/);
+  assert.match(html, />Default page timeline</);
+  assert.match(html, />Exercise timeline</);
+  assert.match(html, />First operational picture</);
+  assert.match(html, /aria-label="Chrono chart scope"/);
+  assert.match(html, />All page charts</);
+  assert.match(html, />Group only</);
+  assert.match(html, /aria-label="Chrono matching policy"/);
+  assert.match(html, />Use authored settings</);
+  assert.match(html, />Concurrent only</);
+  assert.match(html, />Interpolate</);
+  assert.match(html, />Snap to Latest</);
+  assert.match(html, />Snap to Closest</);
+  assert.match(html, /aria-label="Chrono trace behavior"/);
+  assert.match(html, />Reveal to frame</);
+  assert.match(html, />Full timeline</);
+  assert.match(html, /aria-label="Show availability information"/);
+  assert.match(html, /aria-label="Move Chrono controls to mast"/);
+  assert.doesNotMatch(html, /Save Scene|Edit Time Group|Build/);
+});
+
+test("Scene selection constrains the playback clock and participating charts", () => {
+  function Probe() {
+    const playback = usePlayback();
+    return React.createElement("output", null, JSON.stringify({
+      activeScene: playback.activeScene?.id ?? null,
+      clock: playback.clock,
+      charts: playback.participatingChartIds,
+    }));
+  }
+  const html = renderPlayback(React.createElement(Probe), {
+    scenes: [{
+      id: "scene-a",
+      name: "First operational picture",
+      groupId: "exercise",
+      pageId: "overview",
+      period: { start: "2027-05-02T00:00:00.000Z", end: "2027-05-03T00:00:00.000Z" },
+      members: [{ chartId: "primary-chart", width: 4 }],
+      frames: {
+        mode: "source",
+        chartId: "primary-chart",
+        selection: "selected",
+        selectedEpochs: [MAY_2, MAY_3],
+      },
+    }],
+    initialState: {
+      ...initialPlaybackState,
+      activeGroupId: "exercise",
+      activeSceneId: "scene-a",
+      source: { kind: "scene", id: "scene-a" },
+      playbackView: true,
+    },
+  });
+
+  assert.equal(html, `<output>{&quot;activeScene&quot;:&quot;scene-a&quot;,&quot;clock&quot;:[${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;primary-chart&quot;]}</output>`);
+});
 
 test("playback controls expose semantic transport, time selection, speed, and view actions", () => {
   const html = renderPlayback(

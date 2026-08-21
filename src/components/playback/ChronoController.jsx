@@ -7,15 +7,23 @@ const FRAME_TICKS_ID = "chrono-frame-ticks";
 
 export default function ChronoController() {
   const playback = usePlayback();
-  const [position, setPosition] = React.useState("bottom");
   const {
+    activeGroup,
+    activeScene,
     activeEpochMs,
     activeIndex,
+    availabilityVisible,
     clock,
     dispatch,
+    groups,
+    matchingOverride,
+    placement,
     playing,
+    scenes,
+    scope,
     speed,
     status,
+    traceMode,
   } = playback;
   const hasClock = clock.length > 0;
   const atStart = !hasClock || activeIndex <= 0;
@@ -24,9 +32,56 @@ export default function ChronoController() {
   return React.createElement(
     "section",
     {
-      className: `playback-controls playback-controls--floating playback-controls--${position}`,
+      className: `playback-controls playback-controls--floating playback-controls--${placement === "mast" ? "top" : "bottom"}`,
       "aria-label": "Chrono playback controls",
     },
+    React.createElement(
+      "div",
+      { className: "chrono-session-controls" },
+      React.createElement(
+        "label",
+        { className: "playback-select" },
+        React.createElement("span", null, "Source"),
+        React.createElement(
+          "select",
+          {
+            "aria-label": "Chrono source",
+            value: activeScene
+              ? `scene:${activeScene.id}`
+              : playback.source?.kind === "default"
+                ? "default"
+                : `group:${activeGroup?.id ?? ""}`,
+            onChange: (event) => selectSource(event.target.value, { dispatch, groups, scenes }),
+          },
+          React.createElement("option", { value: "default" }, "Default page timeline"),
+          groups.map((group) => React.createElement(
+            "option",
+            { key: `group:${group.id}`, value: `group:${group.id}` },
+            group.name,
+          )),
+          scenes.map((scene) => React.createElement(
+            "option",
+            { key: `scene:${scene.id}`, value: `scene:${scene.id}` },
+            scene.name,
+          )),
+        ),
+      ),
+      selectControl("Chrono chart scope", "Scope", scope, [
+        ["all-page", "All page charts"],
+        ["group-only", "Group only"],
+      ], (value) => dispatch({ type: "setScope", scope: value })),
+      selectControl("Chrono matching policy", "Matching", matchingOverride, [
+        ["authored", "Use authored settings"],
+        ["concurrent", "Concurrent only"],
+        ["interpolate", "Interpolate"],
+        ["latest", "Snap to Latest"],
+        ["closest", "Snap to Closest"],
+      ], (value) => dispatch({ type: "setMatchingOverride", policy: value })),
+      selectControl("Chrono trace behavior", "Trace", traceMode, [
+        ["reveal", "Reveal to frame"],
+        ["full", "Full timeline"],
+      ], (value) => dispatch({ type: "setTraceMode", mode: value })),
+    ),
     React.createElement(
       "div",
       { className: "playback-transport" },
@@ -135,17 +190,44 @@ export default function ChronoController() {
       "button",
       {
         type: "button",
-        className: "secondary chrono-position-button",
-        "aria-label": position === "bottom"
-          ? "Move Chrono controls to top"
-          : "Move Chrono controls to bottom",
-        title: position === "bottom" ? "Move to top" : "Move to bottom",
-        onClick: () => setPosition((current) => (
-          current === "bottom" ? "top" : "bottom"
-        )),
+        className: "secondary chrono-availability-button",
+        "aria-label": "Show availability information",
+        "aria-expanded": availabilityVisible,
+        onClick: () => dispatch({ type: "toggleAvailability" }),
       },
-      position === "bottom" ? "↑" : "↓",
+      "Availability",
     ),
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "secondary chrono-position-button",
+        "aria-label": placement === "deck"
+          ? "Move Chrono controls to mast"
+          : "Move Chrono controls to deck",
+        title: placement === "deck" ? "Move to mast" : "Move to deck",
+        onClick: () => dispatch({
+          type: "moveController",
+          placement: placement === "deck" ? "mast" : "deck",
+        }),
+      },
+      placement === "deck" ? "↑" : "↓",
+    ),
+    availabilityVisible
+      ? React.createElement(
+          "aside",
+          { className: "chrono-availability", "aria-label": "Frame availability and provenance" },
+          React.createElement("strong", null, "Availability at this frame"),
+          React.createElement(
+            "ul",
+            null,
+            React.createElement("li", { "data-availability": "available" }, "Available — concurrent observation"),
+            React.createElement("li", { "data-availability": "missing" }, "Missing — no observation at this frame"),
+            React.createElement("li", { "data-availability": "interpolated" }, "Interpolated — derived between observations"),
+            React.createElement("li", { "data-availability": "snapped" }, "Snapped — source date differs from frame"),
+          ),
+        )
+      : null,
     React.createElement(
       "p",
       {
@@ -157,6 +239,42 @@ export default function ChronoController() {
       status,
     ),
   );
+}
+
+function selectControl(ariaLabel, label, value, options, onChange) {
+  return React.createElement(
+    "label",
+    { className: "playback-select" },
+    React.createElement("span", null, label),
+    React.createElement(
+      "select",
+      {
+        "aria-label": ariaLabel,
+        value,
+        onChange: (event) => onChange(event.target.value),
+      },
+      options.map(([optionValue, optionLabel]) => React.createElement(
+        "option",
+        { key: optionValue, value: optionValue },
+        optionLabel,
+      )),
+    ),
+  );
+}
+
+function selectSource(value, { dispatch, groups, scenes }) {
+  if (value === "default") {
+    dispatch({ type: "setGroup", groupId: null });
+    return;
+  }
+  const [kind, id] = value.split(":");
+  if (kind === "scene") {
+    const scene = scenes.find((candidate) => candidate.id === id);
+    dispatch({ type: "setScene", sceneId: id, period: scene?.period });
+    return;
+  }
+  const group = groups.find((candidate) => candidate.id === id);
+  dispatch({ type: "setGroup", groupId: id, period: group?.period });
 }
 
 function canonicalTime(epochMs) {

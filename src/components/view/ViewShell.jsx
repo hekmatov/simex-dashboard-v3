@@ -27,11 +27,20 @@ export default function ViewShell({
   onCancelMultiSelection,
 }) {
   const playback = usePlayback();
-  const chronoSection = playback.playbackView === true && playback.activeGroup
+  React.useEffect(() => {
+    playback.dispatch({ type: "navigate" });
+  }, [activePage?.id]);
+  React.useEffect(() => () => {
+    playback.dispatch({ type: "modeExit" });
+  }, []);
+  const chronoSource = playback.activeScene ?? playback.activeGroup;
+  const chronoSection = playback.playbackView === true && chronoSource
     ? {
-        id: playback.activeGroup.id,
-        title: playback.activeGroup.name,
-        chartIds: playback.activeGroup.members.map(({ chartId }) => chartId),
+        id: chronoSource.id,
+        title: chronoSource.name,
+        chartIds: playback.activeScene || playback.scope === "group-only"
+          ? playback.participatingChartIds
+          : pageChartIds(activePage),
       }
     : null;
 
@@ -99,4 +108,10 @@ export default function ViewShell({
       )}
     />
   );
+}
+
+function pageChartIds(page) {
+  return (page?.sections ?? []).flatMap((section) => (
+    section.panels ?? []
+  ).map((placement) => (placement.chart ?? placement).id));
 }

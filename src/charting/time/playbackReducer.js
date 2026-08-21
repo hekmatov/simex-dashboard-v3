@@ -1,8 +1,21 @@
 export const initialPlaybackState = Object.freeze({
+  source: Object.freeze({ kind: "default", id: null }),
+  scope: "all-page",
+  frameIndex: 0,
+  period: null,
   activeGroupId: null,
+  activeSceneId: null,
   activeIndex: 0,
   playing: false,
   speed: 1,
+  secondsPerFrame: 1,
+  matchingOverride: "authored",
+  traceMode: "reveal",
+  availabilityVisible: false,
+  placement: "deck",
+  connection: "connected",
+  blackoutActive: false,
+  reducedMotion: false,
   playbackView: false,
 });
 
@@ -26,7 +39,10 @@ export function reducePlaybackState(state, action) {
     const activeIndex = clampStateIndex(state.activeIndex, clockLength);
     return withChanges(state, {
       activeIndex,
+      frameIndex: activeIndex,
       playing: (
+        !(action.automatic === true && state.reducedMotion === true)
+        &&
         state.playbackView === true
         && clockLength > 1
         && activeIndex < clockLength - 1
@@ -42,6 +58,7 @@ export function reducePlaybackState(state, action) {
     const activeIndex = clampStateIndex(state.activeIndex, clockLength);
     return withChanges(state, {
       activeIndex: Math.max(0, activeIndex - 1),
+      frameIndex: Math.max(0, activeIndex - 1),
       playing: false,
     });
   }
@@ -51,6 +68,7 @@ export function reducePlaybackState(state, action) {
     const activeIndex = clampStateIndex(state.activeIndex, clockLength);
     return withChanges(state, {
       activeIndex: Math.min(clockLength - 1, activeIndex + 1),
+      frameIndex: Math.min(clockLength - 1, activeIndex + 1),
       playing: false,
     });
   }
@@ -62,6 +80,7 @@ export function reducePlaybackState(state, action) {
     if (clockLength === 0) return emptyClockState(state);
     return withChanges(state, {
       activeIndex: clamp(action.index, 0, clockLength - 1),
+      frameIndex: clamp(action.index, 0, clockLength - 1),
       playing: false,
     });
   }
@@ -74,7 +93,11 @@ export function reducePlaybackState(state, action) {
         "Playback seconds per frame must be a positive finite number.",
       );
     }
-    return withChanges(state, { speed: action.speed });
+    return withChanges(state, {
+      speed: action.speed,
+      secondsPerFrame: action.speed,
+      playing: false,
+    });
   }
   if (action.type === "setGroup") {
     if (
@@ -86,8 +109,95 @@ export function reducePlaybackState(state, action) {
       );
     }
     return withChanges(state, {
+      source: action.groupId === null
+        ? { kind: "default", id: null }
+        : { kind: "group", id: action.groupId },
       activeGroupId: action.groupId,
+      activeSceneId: null,
       activeIndex: 0,
+      frameIndex: 0,
+      period: action.period === undefined
+        ? state.period
+        : structuredClone(action.period),
+      playing: false,
+    });
+  }
+  if (action.type === "setScene") {
+    if (
+      action.sceneId !== null
+      && (typeof action.sceneId !== "string" || action.sceneId.trim() === "")
+    ) {
+      throw new TypeError("Playback sceneId must be null or a non-empty string.");
+    }
+    return withChanges(state, {
+      source: action.sceneId === null
+        ? { kind: "default", id: null }
+        : { kind: "scene", id: action.sceneId },
+      activeSceneId: action.sceneId,
+      activeIndex: 0,
+      frameIndex: 0,
+      period: action.period === undefined
+        ? state.period
+        : structuredClone(action.period),
+      playing: false,
+    });
+  }
+  if (action.type === "setScope") {
+    if (!["all-page", "group-only"].includes(action.scope)) {
+      throw new TypeError("Playback scope must be all-page or group-only.");
+    }
+    return withChanges(state, { scope: action.scope, playing: false });
+  }
+  if (action.type === "setMatchingOverride") {
+    if (!["authored", "concurrent", "interpolate", "latest", "closest"].includes(action.policy)) {
+      throw new TypeError("Playback matching override is invalid.");
+    }
+    return withChanges(state, {
+      matchingOverride: action.policy,
+      playing: false,
+    });
+  }
+  if (action.type === "setTraceMode") {
+    if (!["reveal", "full"].includes(action.mode)) {
+      throw new TypeError("Playback trace mode must be reveal or full.");
+    }
+    return withChanges(state, { traceMode: action.mode, playing: false });
+  }
+  if (action.type === "toggleAvailability") {
+    return withChanges(state, {
+      availabilityVisible: !state.availabilityVisible,
+    });
+  }
+  if (action.type === "moveController") {
+    if (!["deck", "mast"].includes(action.placement)) {
+      throw new TypeError("Chrono placement must be deck or mast.");
+    }
+    return withChanges(state, { placement: action.placement });
+  }
+  if (["navigate", "documentHidden", "modeExit"].includes(action.type)) {
+    return withChanges(state, { playing: false });
+  }
+  if (action.type === "blackout") {
+    if (typeof action.active !== "boolean") {
+      throw new TypeError("Playback blackout state must be boolean.");
+    }
+    return withChanges(state, {
+      blackoutActive: action.active,
+      playing: action.active ? false : state.playing,
+    });
+  }
+  if (action.type === "connectionLost") {
+    return withChanges(state, { connection: "lost", playing: false });
+  }
+  if (action.type === "reconnected") {
+    return withChanges(state, { connection: "connected", playing: false });
+  }
+  if (action.type === "end") {
+    const clockLength = validClockLength(action.clockLength ?? 0);
+    const finalIndex = clockLength > 0 ? clockLength - 1 : 0;
+    return withChanges(state, {
+      activeIndex: finalIndex,
+      frameIndex: finalIndex,
       playing: false,
     });
   }
@@ -124,6 +234,7 @@ function tick(state, clockLength) {
   const nextIndex = activeIndex + 1;
   return withChanges(state, {
     activeIndex: nextIndex,
+    frameIndex: nextIndex,
     playing: nextIndex < clockLength - 1,
   });
 }
@@ -131,6 +242,7 @@ function tick(state, clockLength) {
 function emptyClockState(state) {
   return withChanges(state, {
     activeIndex: 0,
+    frameIndex: 0,
     playing: false,
   });
 }
