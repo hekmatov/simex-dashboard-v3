@@ -163,6 +163,17 @@ export function acceptEditorSave(state, payload) {
   };
 }
 
+export function chartEditorStateIsDirty(state) {
+  assertEditorState(state);
+  return stableSerialize({
+    chart: state.draft,
+    timeSyncGroups: state.timeSyncGroups,
+  }) !== stableSerialize({
+    chart: state.savedChart,
+    timeSyncGroups: state.savedTimeSyncGroups,
+  });
+}
+
 export function buildDashboardEditorProfiles({
   loadedData = {},
   dataSources = {},
@@ -252,6 +263,7 @@ export default function ChartEditorV3({
   onSave = noop,
   onReset = noop,
   onCancel = noop,
+  onDirtyChange = noop,
   onRemove,
   onApplyCitationToSourceCharts,
 } = {}) {
@@ -277,6 +289,11 @@ export default function ChartEditorV3({
       revision: savedRevision,
     }));
   }, [incomingKey]);
+  const dirty = chartEditorStateIsDirty(state);
+  React.useEffect(() => {
+    onDirtyChange(dirty);
+    return () => onDirtyChange(false);
+  }, [dirty, onDirtyChange]);
 
   const safeRows = Array.isArray(rows) ? rows : [];
   const geoSources = validatedGeoSourceOptions(

@@ -79,6 +79,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
   const [buildSelection, setBuildSelection] = React.useState(null);
   const [chartEditorPlacementId, setChartEditorPlacementId] = React.useState(null);
+  const [chartEditorDirty, setChartEditorDirty] = React.useState(false);
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
   const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
   const [buildSelectionError, setBuildSelectionError] = React.useState("");
@@ -154,6 +155,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
   );
+  const buildDraftLocked = Boolean(chartWizardTarget || chartEditorDirty);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const globalPanelColors = React.useMemo(() => resolveGlobalPanelColors(dashboard), [dashboard.globalStyles]);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
@@ -193,7 +195,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
-      if (chartAuthoringActive) {
+      if (buildDraftLocked) {
         return {
           ok: false,
           reason: destination === "page"
@@ -205,7 +207,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
       return { ok: true };
     },
-  }), [buildMode, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, pendingEdits]);
+  }), [buildMode, buildDraftLocked, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, pendingEdits]);
 
   React.useEffect(() => {
     onComparisonSelectionChange?.(multiSelectMode);
@@ -219,12 +221,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (!editMode) {
       setSelectedPanelId(null);
       setChartEditorPlacementId(null);
+      setChartEditorDirty(false);
+      setChartEditBaseline(null);
     }
   }, [editMode]);
 
   React.useEffect(() => {
-    onBuildDraftLockChange?.(buildMode && chartAuthoringActive);
-  }, [buildMode, chartAuthoringActive, onBuildDraftLockChange]);
+    onBuildDraftLockChange?.(buildMode && buildDraftLocked);
+  }, [buildMode, buildDraftLocked, onBuildDraftLockChange]);
 
   React.useEffect(() => () => {
     onBuildDraftLockChange?.(false);
@@ -281,19 +285,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     appliedBuildRevealIdRef.current = pendingBuildSelection.requestId;
     const { requestId, selection, intent } = pendingBuildSelection;
     setBuildSelection(selection);
-    if (selection.kind === "chart" && intent === "activate") {
-      if (!chartEditBaseline) setChartEditBaseline(dashboardWithCurrentDrafts());
-      setChartEditorPlacementId(selection.placementId);
-    } else {
-      setChartEditorPlacementId(null);
-      setChartEditBaseline(null);
-    }
     setBuildRevealRequest({
       id: requestId,
       selection,
       behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth",
     });
-  }, [activePage?.id, chartEditBaseline, pendingBuildSelection]);
+  }, [activePage?.id, pendingBuildSelection]);
 
   function navigateToPage(pageId) {
     if (moderatorOperationGateRef.current.isActive()) return;
@@ -532,6 +529,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onCommitted: () => {
         setChartEditBaseline(null);
         setChartEditorPlacementId(null);
+        setChartEditorDirty(false);
       },
     });
   }
@@ -544,6 +542,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
     setChartEditBaseline(null);
     setChartEditorPlacementId(null);
+    setChartEditorDirty(false);
   }
 
   function changePage(pageId, updates) {
@@ -697,16 +696,23 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       moderatorOperationGateRef.current.isActive()
       || !isValidBuildSelection(dashboardStateRef.current, nextSelection)
     ) return Promise.resolve(false);
+    const reactivatingCurrentChart = nextSelection.kind === "chart"
+      && nextSelection.placementId === chartEditorPlacementId
+      && intent === "activate";
     if (
-      chartEditorPlacementId
-      && !(nextSelection.kind === "chart"
-        && nextSelection.placementId === chartEditorPlacementId
-        && intent === "activate")
+      chartEditorDirty
+      && !reactivatingCurrentChart
     ) {
       setBuildSelectionError("Finish or cancel the open chart editor before changing Page.");
       return Promise.resolve(false);
     }
     setBuildSelectionError("");
+    if (reactivatingCurrentChart) return Promise.resolve(true);
+    if (chartEditorPlacementId) {
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+      setChartEditorDirty(false);
+    }
     if (nextSelection.kind === "timeGroup") {
       setBuildSelection(nextSelection);
       setChartEditorPlacementId(null);
@@ -730,6 +736,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function completeBuildReveal(requestId) {
     if (pendingBuildSelection?.requestId !== requestId) return;
+    const { selection, intent } = pendingBuildSelection;
+    if (selection.kind === "chart" && intent === "activate") {
+      setChartEditBaseline(dashboardWithCurrentDrafts());
+      setChartEditorPlacementId(selection.placementId);
+      setChartEditorDirty(false);
+    } else {
+      setChartEditorPlacementId(null);
+      setChartEditBaseline(null);
+      setChartEditorDirty(false);
+    }
     buildRevealResolversRef.current.get(requestId)?.(true);
     buildRevealResolversRef.current.delete(requestId);
     setPendingBuildSelection(null);
@@ -739,14 +755,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   async function renameBuildSelection(selection, value) {
     const title = value.trim();
     if (!title || !isValidBuildSelection(dashboardStateRef.current, selection)) return false;
-    await pendingEdits.flush();
-    if (selection.kind === "page") {
-      changePage(selection.pageId, { label: title });
-      return true;
-    }
-    if (selection.kind === "section") {
-      changeSectionByIds(selection.pageId, selection.sectionId, { title });
-      return true;
+    try {
+      await pendingEdits.flush();
+      if (selection.kind === "page") {
+        changePage(selection.pageId, { label: title });
+        await pendingEdits.flush();
+        return true;
+      }
+      if (selection.kind === "section") {
+        changeSectionByIds(selection.pageId, selection.sectionId, { title });
+        await pendingEdits.flush();
+        return true;
+      }
+    } catch (error) {
+      setBuildSelectionError(boundedModeratorMessage(error));
+      return false;
     }
     if (selection.kind !== "chart") return false;
     const placement = findPanelPlacement(dashboardStateRef.current, selection.placementId);
@@ -953,6 +976,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onSave={saveSelectedChartV3}
       onApplyCitationToSourceCharts={onApplyCitationToSourceCharts}
       onCancel={cancelSelectedPanel}
+      onDirtyChange={setChartEditorDirty}
       onRemove={() => removePanel(selectedPlacement.panelId)}
     />
   ) : null;
@@ -972,6 +996,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           chartEditorPlacementId={chartEditorPlacementId}
           onCloseChartEditor={cancelSelectedPanel}
           chartDraftOpen={chartAuthoringActive}
+          chartDraftDirty={chartEditorDirty}
           mutationsDisabled={moderatorMutationLocked}
           deviceLayout={deviceLayout}
           focusLabelKey={focusInspectorLabelKey}

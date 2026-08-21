@@ -23,6 +23,7 @@ export default function BuildWorkspace({
   chartEditorPlacementId = null,
   onCloseChartEditor,
   chartDraftOpen = false,
+  chartDraftDirty = false,
   mutationsDisabled = false,
   deviceLayout,
   focusLabelKey,
@@ -53,6 +54,7 @@ export default function BuildWorkspace({
   const [openSheet, setOpenSheet] = React.useState(null);
   const [tablet, setTablet] = React.useState(false);
   const locked = mutationsDisabled || chartDraftOpen;
+  const navigationLocked = mutationsDisabled || chartDraftDirty;
   const selectedChart = findSelectedChart(dashboard, selection);
   const inspectorFocusKey = tablet
     ? (openSheet === "inspector" ? focusLabelKey : 0)
@@ -78,7 +80,7 @@ export default function BuildWorkspace({
   }, [focusLabelKey, selection?.kind, tablet]);
 
   const chooseSelection = (next, options) => {
-    if (locked) return Promise.resolve(false);
+    if (navigationLocked) return Promise.resolve(false);
     if (tablet) setOpenSheet(next.kind === "chart" ? null : "inspector");
     return onActivate?.(next, options) ?? Promise.resolve(false);
   };
@@ -132,7 +134,7 @@ export default function BuildWorkspace({
     <BuildStructureRail
       dashboard={dashboard}
       selection={selection}
-      disabled={locked}
+      disabled={navigationLocked}
       onActivate={chooseSelection}
       onRename={onRename}
       onRenameDirtyChange={onInlineRenameDirtyChange}
@@ -172,7 +174,7 @@ export default function BuildWorkspace({
           onDisplayAction={onDisplayAction}
           buildState={{
             selection,
-            disabled: locked,
+            disabled: navigationLocked,
             sectionDrafts,
             onSelect: (next) => void chooseSelection(next, { intent: "activate" }),
             onReorderSection: onSectionReorder,
@@ -195,7 +197,7 @@ export default function BuildWorkspace({
             pages={dashboard.pages}
             activePageId={activePage?.id}
             pageDrafts={pageDrafts}
-            disabled={locked}
+            disabled={navigationLocked}
             onSelectPage={(pageId) => void chooseSelection({ kind: "page", pageId }, { intent: "activate" })}
             onPageChange={onPageChange}
             onPageReorder={onPageReorder}

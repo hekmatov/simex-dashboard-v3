@@ -88,3 +88,68 @@ test("double-click rename persists complete Page Section and Chart owner updates
     .toHaveAttribute("aria-label", "Risk perception trend actions");
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
 });
+
+test("chart activation acknowledges the canonical reveal before mounting Unit Orbit", async ({ page }) => {
+  await openBuildStructure(page);
+  await page.evaluate(() => {
+    globalThis.__task3ActivationOrder = [];
+    const scrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function task3ScrollIntoView(...args) {
+      if (this.getAttribute?.("data-canonical-placement-id") === "socio_risk_perception") {
+        globalThis.__task3ActivationOrder.push("reveal");
+      }
+      return scrollIntoView?.apply(this, args);
+    };
+    const observer = new MutationObserver(() => {
+      if (
+        document.querySelector(".unit-orbit")
+        && !globalThis.__task3ActivationOrder.includes("orbit")
+      ) globalThis.__task3ActivationOrder.push("orbit");
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+
+  await page.getByRole("tree")
+    .getByRole("treeitem", { name: "Risk perception over time", exact: true })
+    .click();
+  await expect(page.locator(".unit-orbit")).toBeVisible();
+  const order = await page.evaluate(() => globalThis.__task3ActivationOrder);
+  expect(order).toContain("reveal");
+  expect(order).toContain("orbit");
+  expect(order.indexOf("reveal")).toBeLessThan(order.indexOf("orbit"));
+});
+
+test("an untouched chart editor closes transactionally when tree navigation changes target", async ({ page }) => {
+  await openBuildStructure(page);
+  const tree = page.getByRole("tree");
+  await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();
+  await expect(page.locator(".unit-orbit")).toBeVisible();
+
+  await tree.getByRole("treeitem", { name: "Public response and policy signals", exact: true }).click();
+  await expect(page.locator('[data-canonical-section-id="public_response"]')).toBeInViewport();
+  await expect(page.locator(".unit-orbit")).toHaveCount(0);
+  await expect(page.getByText(
+    "Finish or cancel the open chart editor before changing Page.", { exact: true },
+  )).toHaveCount(0);
+});
+
+test("a rejected delayed Page rename retains the inline value for retry", async ({ page }) => {
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function rejectTask3Rename(key, value) {
+      if (key === "simex-dashboard-config-v3-three-mode-v1") {
+        throw new DOMException("Storage full", "QuotaExceededError");
+      }
+      return setItem.call(this, key, value);
+    };
+  });
+  await openBuildStructure(page);
+  const tree = page.getByRole("tree");
+  await tree.getByRole("treeitem", { name: "Socio-economic", exact: true }).dblclick();
+  const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
+  await rename.fill("Rejected rename");
+  await rename.press("Enter");
+
+  await expect(rename).toBeVisible();
+  await expect(rename).toHaveValue("Rejected rename");
+});

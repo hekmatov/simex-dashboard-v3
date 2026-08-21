@@ -127,6 +127,7 @@ const {
   acceptEditorSave,
   applyChartEditorSave,
   buildDashboardEditorProfiles,
+  chartEditorStateIsDirty,
   createChartEditorState,
   rebaseChartEditorState,
   reduceChartEditorState,
@@ -2270,6 +2271,29 @@ test("editor state isolates mutation and same-authority rerenders preserve the d
   assert.equal(edited.draft.title, "Locally edited");
   assert.notEqual(edited.draft, saved);
   assert.equal(rerendered, edited);
+});
+
+test("chart editor dirty projection tracks chart changes against saved authority", () => {
+  const state = createChartEditorState({
+    chart: validLineChart(),
+    timeSyncGroups: [],
+    revision: 7,
+  });
+  assert.equal(chartEditorStateIsDirty(state), false);
+
+  const editedChart = reduceChartEditorState(state, {
+    type: "updateChart",
+    path: ["title"],
+    value: "Unsaved title",
+  });
+  assert.equal(chartEditorStateIsDirty(editedChart), true);
+
+  const restoredChart = reduceChartEditorState(editedChart, {
+    type: "updateChart",
+    path: ["title"],
+    value: state.savedChart.title,
+  });
+  assert.equal(chartEditorStateIsDirty(restoredChart), false);
 });
 
 test("a new saved revision rebases and reset restores that most recent saved state", () => {
