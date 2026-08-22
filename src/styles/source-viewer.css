@@ -1,0 +1,71 @@
+.source-viewer-backdrop {
+  align-items: stretch;
+  background: color-mix(in srgb, #071015 44%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: flex-end;
+  position: fixed;
+  z-index: 80;
+}
+
+.source-viewer-panel {
+  background: var(--simex-surface-panel);
+  border-left: 1px solid var(--simex-border-strong);
+  box-shadow: -18px 0 48px rgb(0 0 0 / 18%);
+  display: grid;
+  gap: 18px;
+  grid-auto-rows: max-content;
+  max-width: 100%;
+  overflow: auto;
+  padding: 24px;
+  width: min(460px, 92vw);
+}
+
+.source-viewer-panel-header {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.source-viewer-panel-header h2,
+.source-viewer-eyebrow {
+  margin: 0;
+}
+
+.source-viewer-eyebrow {
+  color: var(--simex-text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.source-viewer-metadata {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+  row-gap: 8px;
+}
+
+.source-viewer-metadata dt {
+  color: var(--simex-text-muted);
+  font-weight: 700;
+  padding-right: 16px;
+}
+
+.source-viewer-metadata dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.chart-source-viewer-button {
+  min-height: 40px;
+}
+
+@media (max-width: 700px) {
+  .source-viewer-panel {
+    padding: 18px;
+    width: 100%;
+  }
+}

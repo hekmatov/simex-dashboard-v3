@@ -2,6 +2,7 @@ import React from "react";
 
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
+import SourceViewer from "./SourceViewer.jsx";
 import { IconControl } from "./common/SimExIcon.js";
 import {
   chartPanelFootprintStyle,
@@ -50,6 +51,7 @@ function ChartPanel({
   const holdTimer = React.useRef(null);
   const suppressFullscreenClickUntil = React.useRef(0);
   const panelRef = React.useRef(null);
+  const [sourceViewerRestoration, setSourceViewerRestoration] = React.useState(null);
   const [chartVisible, setChartVisible] = React.useState(
     () => typeof IntersectionObserver === "undefined",
   );
@@ -172,9 +174,46 @@ function ChartPanel({
         onFullscreenHoldStart: multiSelectMode ? undefined : beginFullscreenHold,
         onFullscreenHoldEnd: clearHold,
         onFullscreen: handleFullscreenClick,
+        onViewSource: () => setSourceViewerRestoration(captureSourceViewerRestoration({
+          chartId: chart.id,
+          selected: isSelected,
+          panelElement: panelRef.current,
+        })),
       })}
+      <SourceViewer
+        open={sourceViewerRestoration !== null}
+        chartId={chart.id}
+        sourceId={chart.sourceId}
+        source={dataSources?.[chart.sourceId]}
+        restoration={sourceViewerRestoration}
+        onClose={() => setSourceViewerRestoration(null)}
+        onRestore={restoreSourceViewerContext}
+      />
     </article>
   );
+}
+
+function captureSourceViewerRestoration({ chartId, selected, panelElement }) {
+  const scroller = typeof document === "undefined"
+    ? null
+    : document.querySelector(".dashboard-command-page-scroller");
+  const bounds = panelElement?.getBoundingClientRect?.();
+  return Object.freeze({
+    selectedChartId: selected ? chartId : null,
+    focusId: typeof document === "undefined" ? null : document.activeElement?.id ?? null,
+    scrollTop: scroller?.scrollTop ?? 0,
+    canvas: bounds
+      ? Object.freeze({ width: bounds.width, height: bounds.height })
+      : null,
+  });
+}
+
+function restoreSourceViewerContext(restoration) {
+  if (!restoration || typeof document === "undefined") return;
+  const scroller = document.querySelector(".dashboard-command-page-scroller");
+  if (scroller && Number.isFinite(restoration.scrollTop)) {
+    scroller.scrollTop = restoration.scrollTop;
+  }
 }
 
 export default React.memo(ChartPanel);

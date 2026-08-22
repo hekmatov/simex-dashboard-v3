@@ -13,6 +13,7 @@ export default function ChartPanelActions({
   onFullscreen,
   onFullscreenHoldStart,
   onFullscreenHoldEnd,
+  onViewSource,
 }) {
   const [infoOpen, setInfoOpen] = React.useState(false);
   const railRef = React.useRef(null);
@@ -65,6 +66,20 @@ export default function ChartPanelActions({
           { className: "chart-source-popover", role: "status" },
           React.createElement("strong", null, "Source"),
           React.createElement("span", null, citation || "Unavailable"),
+          typeof onViewSource === "function"
+            ? React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className: "secondary chart-source-viewer-button",
+                  onClick: () => {
+                    setInfoOpen(false);
+                    onViewSource();
+                  },
+                },
+                "View source",
+              )
+            : null,
         )
       : null,
     !selectionMode
