@@ -4,13 +4,14 @@ import {
 } from "./frameLedger.js";
 import { validateIanaTimeZone } from "./temporalSchema.js";
 
-export function deriveTemporalNeedsAttention({
-  timeZone,
-  groups = [],
-  scenes = [],
-  charts = [],
-  schemaRevisions = {},
-} = {}) {
+export function deriveTemporalNeedsAttention(input = {}) {
+  const timeZone = input.timeZone ?? input.timezone;
+  const groups = (input.groups ?? input.timeSyncGroups ?? [])
+    .map((group) => normalizeRuntimeGroup(group, timeZone));
+  const scenes = (input.scenes ?? [])
+    .map((scene) => normalizeRuntimeScene(scene));
+  const charts = input.charts ?? [];
+  const schemaRevisions = input.schemaRevisions ?? {};
   const findings = [];
   const chartsById = new Map(charts.map((chart) => [chart.id, chart]));
   const groupsById = new Map(groups.map((group) => [group.id, group]));
@@ -159,6 +160,107 @@ export function deriveTemporalNeedsAttention({
   }
 
   return Object.freeze(findings.map(Object.freeze));
+}
+
+function normalizeRuntimeGroup(group, timeZone) {
+  return {
+    ...group,
+    period: normalizeRuntimePeriod(group?.period, timeZone, { inclusiveDateEnd: true }),
+  };
+}
+
+function normalizeRuntimeScene(scene) {
+  const members = scene?.members ?? [];
+  const frames = scene?.frames;
+  return {
+    ...scene,
+    period: normalizeRuntimePeriod(scene?.period, "UTC"),
+    chartIds: scene?.chartIds ?? members.map(({ chartId }) => chartId),
+    frameRule: scene?.frameRule ?? runtimeFrameRule(frames),
+  };
+}
+
+function runtimeFrameRule(frames) {
+  if (!frames) return frames;
+  if (frames.mode === "source") {
+    return {
+      type: "source",
+      chartId: frames.chartId,
+      mode: frames.selection,
+      ...(frames.selection === "selected"
+        ? { selectedEpochMs: frames.selectedEpochs }
+        : {}),
+    };
+  }
+  if (frames.mode === "calendar") {
+    return {
+      type: "calendar",
+      interval: frames.interval?.value,
+      unit: frames.interval?.unit,
+    };
+  }
+  return frames;
+}
+
+function normalizeRuntimePeriod(period, timeZone, { inclusiveDateEnd = false } = {}) {
+  if (Number.isFinite(period?.startEpochMs) && Number.isFinite(period?.endEpochMs)) {
+    return period;
+  }
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+  if (dateOnly.test(period?.start) && dateOnly.test(period?.end)) {
+    const startEpochMs = zonedDateStart(period.start, timeZone);
+    const endStart = zonedDateStart(period.end, timeZone);
+    return {
+      startEpochMs,
+      endEpochMs: inclusiveDateEnd ? nextZonedDateStart(period.end, timeZone) - 1 : endStart,
+    };
+  }
+  return {
+    startEpochMs: Date.parse(period?.start),
+    endEpochMs: Date.parse(period?.end),
+  };
+}
+
+function nextZonedDateStart(date, timeZone) {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  return zonedDateStart(next.toISOString().slice(0, 10), timeZone);
+}
+
+function zonedDateStart(date, timeZone) {
+  const [year, month, day] = date.split("-").map(Number);
+  const desired = Date.UTC(year, month - 1, day);
+  let candidate = desired;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const parts = zonedDateParts(candidate, timeZone);
+    const renderedAsUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+    const next = candidate + (desired - renderedAsUtc);
+    if (next === candidate) break;
+    candidate = next;
+  }
+  return candidate;
+}
+
+function zonedDateParts(epochMs, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US-u-ca-gregory", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(epochMs);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return {
+    year: Number(values.year),
+    month: Number(values.month),
+    day: Number(values.day),
+    hour: Number(values.hour),
+    minute: Number(values.minute),
+    second: Number(values.second),
+  };
 }
 
 export function deriveGroupPeriodChangeConsequence({ groupId, nextPeriod, scenes = [] } = {}) {

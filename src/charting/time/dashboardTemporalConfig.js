@@ -1,4 +1,5 @@
 import { parseTemporalValue } from "../data/temporal.js";
+import { migrateDashboardTimezoneToUtc } from "./migrateTemporalConfig.js";
 
 const CANONICAL_GROUP_KEYS = Object.freeze([
   "id",
@@ -22,10 +23,7 @@ export function normalizeDashboardTemporalConfig(
     throw new TypeError("Dashboard configuration must be an object.");
   }
 
-  const normalized = structuredClone(config);
-  if (normalized.timezone === undefined) {
-    normalized.timezone = timezoneFallback;
-  }
+  const normalized = migrateDashboardTimezoneToUtc(config, { timezoneFallback });
 
   if (Array.isArray(normalized.timeSyncGroups)) {
     normalized.timeSyncGroups = normalized.timeSyncGroups.map((group) => (

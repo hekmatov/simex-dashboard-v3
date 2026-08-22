@@ -5,9 +5,12 @@ import {
 
 const EXPLICIT_OFFSET = /(?:Z|[+-]\d{2}:\d{2})$/;
 
-export function migrateDashboardTimezoneToUtc(bundle) {
+export function migrateDashboardTimezoneToUtc(bundle, { timezoneFallback = "UTC" } = {}) {
   if (bundle === null || typeof bundle !== "object" || Array.isArray(bundle)) {
     throw new TypeError("Temporal bundle must be an object.");
+  }
+  if (isLiveDashboard(bundle)) {
+    return migrateLiveDashboard(bundle, timezoneFallback);
   }
   if (
     bundle.dashboard === null
@@ -40,6 +43,30 @@ export function migrateDashboardTimezoneToUtc(bundle) {
 
   validateTemporalBundle(migrated);
   return migrated;
+}
+
+function migrateLiveDashboard(value, timezoneFallback) {
+  const migrated = structuredClone(value);
+  if (migrated.timeZone !== undefined && migrated.timezone !== undefined) {
+    throw new Error("Legacy dashboard contains conflicting timeZone and timezone fields.");
+  }
+  migrated.timezone = migrated.timezone ?? migrated.timeZone ?? timezoneFallback;
+  validateIanaTimeZone(migrated.timezone);
+  delete migrated.timeZone;
+
+  for (const [sceneIndex, scene] of (migrated.scenes ?? []).entries()) {
+    normalizePeriod(scene?.period, `dashboard.scenes[${sceneIndex}].period`);
+  }
+  return migrated;
+}
+
+function isLiveDashboard(value) {
+  return !Object.hasOwn(value, "dashboard") && (
+    Object.hasOwn(value, "configVersion")
+    || Object.hasOwn(value, "pages")
+    || Object.hasOwn(value, "timeSyncGroups")
+    || Object.hasOwn(value, "scenes")
+  );
 }
 
 function normalizePeriod(period, path) {
