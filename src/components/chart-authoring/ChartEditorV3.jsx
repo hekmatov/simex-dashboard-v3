@@ -38,6 +38,7 @@ import ChartPreview from "./ChartPreview.jsx";
 import ContextualTabs from "./ContextualTabs.jsx";
 import EditSessionActions from "./EditSessionActions.jsx";
 import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
+import { compileAuthoredChartRuntimeArtifact } from "../../charting/runtime/authoredChartRuntimeArtifact.js";
 
 const DANGEROUS_PATH_SEGMENTS = new Set([
   "__proto__",
@@ -265,6 +266,7 @@ export default function ChartEditorV3({
   loadedData = {},
   profiles = {},
   parsingMetadata = {},
+  timezone = "UTC",
   disabled = false,
   surface = "dialog",
   onSave = noop,
@@ -484,12 +486,29 @@ export default function ChartEditorV3({
     return submissionGateRef.current.run(async () => {
       setSubmitting(true);
       try {
-        const payload = saveChartEditorState(state, {
+        const saved = saveChartEditorState(state, {
           existingCharts,
           loadedData: runtimeLoadedData,
           profiles: runtimeProfiles,
           profile,
         });
+        const payload = {
+          ...saved,
+          runtimeArtifact: compileAuthoredChartRuntimeArtifact({
+            chart: saved.chart,
+            prepared,
+            source: readEntry(dataSources, saved.chart.sourceId)
+              ?? { id: saved.chart.sourceId },
+            profile,
+            geoSource: readEntry(
+              dataSources,
+              saved.chart.presentation?.map?.geoSource,
+            ),
+            timeSyncGroups: saved.timeSyncGroups ?? state.timeSyncGroups,
+            rows: safeRows,
+            timezone,
+          }),
+        };
         await onSave(payload);
         setState((current) => acceptEditorSave(current, payload));
       } catch (error) {

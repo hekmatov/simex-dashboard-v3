@@ -2,6 +2,10 @@ import { prepareChartData } from "../data/prepareChartData.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { buildAccessibilityCompanionForFamily } from "./accessibilityRows.js";
 import { buildRenderModel } from "./buildRenderModel.js";
+import { chartPreparationIdentity } from "../runtime/chartPreparationIdentity.js";
+import { compileChartRuntimeArtifact } from "../runtime/chartRuntimeArtifact.js";
+import { chartRuntimeArtifactRegistry } from "../runtime/chartRuntimeArtifactRegistry.js";
+import { projectRuntimeArtifact } from "../runtime/projectRuntimeArtifact.js";
 
 const MAX_MESSAGE_LENGTH = 240;
 const STATIC_RENDERING_CACHE = new WeakMap();
@@ -12,12 +16,85 @@ export function resolveChartRendering(input = {}) {
     const renderingInput = captureRenderingInput(input);
     const cached = readStaticRenderingCache(renderingInput);
     if (cached) return cached;
+    const artifactResolution = resolveRuntimeArtifactRendering(renderingInput);
+    if (artifactResolution) {
+      writeStaticRenderingCache(renderingInput, artifactResolution);
+      return artifactResolution;
+    }
     const resolved = resolveCapturedChartRendering(renderingInput);
+    publishCompatibilityArtifact(renderingInput, resolved);
     writeStaticRenderingCache(renderingInput, resolved);
     return resolved;
   } catch {
     return invalidRenderingResolution();
   }
+}
+
+function resolveRuntimeArtifactRendering(renderingInput) {
+  const identity = renderingArtifactIdentity(renderingInput);
+  if (!identity) return null;
+  const artifact = chartRuntimeArtifactRegistry.get(identity);
+  if (!artifact) return null;
+  const prepared = renderingInput.timeContext
+    ? projectRuntimeArtifact({
+        artifact,
+        chart: renderingInput.chart,
+        timeContext: renderingInput.timeContext,
+      })
+    : artifact.prepared;
+  return prepared
+    ? resolvePreparedChartRendering(renderingInput, prepared)
+    : null;
+}
+
+function publishCompatibilityArtifact(renderingInput, resolution) {
+  if (renderingInput.timeContext || !resolution?.prepared) return;
+  const identity = renderingArtifactIdentity(renderingInput);
+  if (!identity || chartRuntimeArtifactRegistry.get(identity)) return;
+  try {
+    const source = renderingSource(renderingInput, renderingInput.chart?.sourceId);
+    const artifact = compileChartRuntimeArtifact({
+      identity,
+      chart: renderingInput.chart,
+      source,
+      prepared: resolution.prepared,
+    });
+    chartRuntimeArtifactRegistry.publish(artifact).persistence.catch(() => {});
+  } catch {
+    // Rendering remains available even when an optional artifact cannot be compiled.
+  }
+}
+
+function renderingArtifactIdentity(renderingInput) {
+  try {
+    const chart = renderingInput.chart;
+    const geoSourceId = chart?.presentation?.map?.geoSource;
+    return chartPreparationIdentity({
+      chart,
+      source: renderingSource(renderingInput, chart?.sourceId),
+      profile: renderingInput.datasetProfile,
+      geoSource: renderingSource(renderingInput, geoSourceId),
+    });
+  } catch {
+    return null;
+  }
+}
+
+function renderingSource(renderingInput, sourceId) {
+  if (!sourceId) return null;
+  const sources = renderingInput.renderContext?.sources;
+  const descriptor = sources instanceof Map
+    ? sources.get(sourceId)
+    : Array.isArray(sources)
+      ? sources.find((source) => source?.id === sourceId)
+      : sources?.[sourceId];
+  const metadata = renderingInput.renderContext?.sourceMetadata;
+  const sourceMetadata = metadata instanceof Map
+    ? metadata.get(sourceId)
+    : metadata?.[sourceId];
+  return descriptor || sourceMetadata
+    ? { ...(descriptor ?? {}), ...(sourceMetadata ?? {}), id: sourceId }
+    : { id: sourceId };
 }
 
 export function resolvePreparedChartRendering(input = {}, prepared) {

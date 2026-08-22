@@ -1,4 +1,5 @@
 import React from "react";
+import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
@@ -768,16 +769,38 @@ export default function App() {
     return resetDashboard;
   }
 
-  function createChart(payload, target) {
-    return ensureDashboardCommitController().mutate((current) => (
+  async function createChart(payload, target) {
+    const committed = await ensureDashboardCommitController().mutate((current) => (
       integrateCreatedChart(current, payload, target)
     ));
+    publishCommittedChartArtifact(payload?.runtimeArtifact);
+    return committed;
   }
 
-  function saveChart(payload) {
-    return ensureDashboardCommitController().mutate((current) => (
+  async function saveChart(payload) {
+    const committed = await ensureDashboardCommitController().mutate((current) => (
       integrateSavedChart(current, payload)
     ));
+    publishCommittedChartArtifact(payload?.runtimeArtifact);
+    return committed;
+  }
+
+  function publishCommittedChartArtifact(artifact) {
+    if (!artifact) return;
+    chartRuntimeArtifactRegistry.configure({
+      onPersistenceFailure: (artifactError) => {
+        const message = artifactError?.code === "ARTIFACT_QUOTA_EXHAUSTED"
+          ? "Chart optimization storage is full. This session remains fast."
+          : "Couldn’t persist optimized chart data. This session remains fast.";
+        setOperationError(message);
+        window.setTimeout(() => {
+          setOperationError((current) => current === message ? "" : current);
+        }, 4500);
+      },
+    });
+    chartRuntimeArtifactRegistry.publish(artifact).persistence.catch(() => {
+      // The registry reports a bounded flash; the committed dashboard stays live.
+    });
   }
 
   function removeChart(panelId) {

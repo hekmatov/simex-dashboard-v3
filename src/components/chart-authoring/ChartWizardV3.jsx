@@ -44,6 +44,7 @@ import {
 import { resolveDestination } from "../../charting/forms/chartDestination.js";
 import { planIdentityPlacement } from "../../charting/forms/chartPlacement.js";
 import { deriveChartCreationIssues } from "../../charting/forms/chartCreationIssues.js";
+import { compileAuthoredChartRuntimeArtifact } from "../../charting/runtime/authoredChartRuntimeArtifact.js";
 import {
   legacySizeForFootprint,
   resolveChartFootprint,
@@ -596,6 +597,20 @@ export default function ChartWizardV3({
       setSubmitting(true);
       try {
         const finalized = finalizeWizardDraft(syncedWizard);
+        const runtimeArtifact = compileAuthoredChartRuntimeArtifact({
+          chart: finalized.chart,
+          prepared: runtime.prepared,
+          source: finalized.source ?? source ?? { id: finalized.chart.sourceId },
+          profile: runtime.profile,
+          geoSource: readEntry(
+            safeDataSources,
+            finalized.chart.presentation?.map?.geoSource,
+          ),
+          timeSyncGroups: finalized.timeSyncGroups ?? wizard.timeSyncGroups,
+          rows,
+          timezone: dashboard?.timezone ?? "UTC",
+        });
+        const finalizedWithRuntime = { ...finalized, runtimeArtifact };
         transactionIdRef.current ??= [
           "chart-create",
           finalized.chart.id,
@@ -604,7 +619,7 @@ export default function ChartWizardV3({
         const snapshot = createChartCreateSnapshot({
           transactionId: transactionIdRef.current,
           draftId: wizard.draftId ?? finalized.chart.id,
-          finalized,
+          finalized: finalizedWithRuntime,
           destination: wizard.destination ?? destination,
           dashboardRevision: wizard.dashboardRevision ?? dashboardRevision,
           permissionRevision: "chart-create-current",
