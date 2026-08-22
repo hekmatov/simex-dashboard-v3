@@ -37,6 +37,10 @@ import DataSourceStep from "./DataSourceStep.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
 import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
 import { requestRenderProof } from "../../charting/forms/chartProof.js";
+import {
+  createChartCreateSnapshot,
+  executeChartCreate,
+} from "../../charting/forms/chartCreateController.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
@@ -119,6 +123,7 @@ export default function ChartWizardV3({
   const [manualErrors, setManualErrors] = React.useState([]);
   const [uploadError, setUploadError] = React.useState("");
   const [submissionError, setSubmissionError] = React.useState("");
+  const transactionIdRef = React.useRef(null);
   const submissionGateRef = React.useRef(null);
   if (submissionGateRef.current === null) {
     submissionGateRef.current = createSubmissionGate();
@@ -518,8 +523,65 @@ export default function ChartWizardV3({
     return submissionGateRef.current.run(async () => {
       setSubmitting(true);
       try {
-        await submitWizardDraft(syncedWizard, onCreate);
-        setSubmissionError("");
+        const finalized = finalizeWizardDraft(syncedWizard);
+        transactionIdRef.current ??= [
+          "chart-create",
+          finalized.chart.id,
+          wizard.dashboardRevision ?? dashboardRevision ?? "session",
+        ].join(":");
+        const snapshot = createChartCreateSnapshot({
+          transactionId: transactionIdRef.current,
+          draftId: wizard.draftId ?? finalized.chart.id,
+          finalized,
+          destination: wizard.destination ?? destination,
+          dashboardRevision: wizard.dashboardRevision ?? dashboardRevision,
+          permissionRevision: "chart-create-current",
+          schemaRevision: wizard.chartTypeRevision
+            ?? getChartSchema(finalized.chart.typeId).version,
+          source: {
+            ...(source ?? {}),
+            id: finalized.chart.sourceId,
+            profileRevision: wizard.profileRevision
+              ?? runtime.profile?.revision
+              ?? "profile-current",
+          },
+          renderProof,
+          placementProof,
+          priorScrollAnchor: wizardDialogRef.current?.scrollTop ?? 0,
+        });
+        setWizard((current) => reduceWizardState(current, {
+          type: "commitStarted",
+          transactionId: transactionIdRef.current,
+        }));
+        const result = await executeChartCreate(snapshot, {
+          persist: async (payload) => {
+            if (typeof onCreate !== "function") {
+              throw new TypeError("Chart creation requires an onCreate callback.");
+            }
+            await onCreate(payload);
+            return { dashboardRevision: dashboardRevision ?? "session-current" };
+          },
+        });
+        if (result.status === "validation-failed") {
+          setWizard((current) => reduceWizardState(current, {
+            type: "commitResult",
+            result: { status: "failed", error: result.errors[0] },
+          }));
+          setSubmissionError(result.errors[0]?.message ?? "The reviewed chart changed before creation.");
+        } else {
+          setWizard((current) => reduceWizardState(current, {
+            type: "commitResult",
+            result,
+          }));
+          if (result.status === "committed") {
+            setSubmissionError("");
+            onSuspendedChange(false);
+          } else if (result.status === "ambiguous") {
+            setSubmissionError("Creation outcome is uncertain. Reconcile this transaction before retrying.");
+          } else {
+            setSubmissionError(result.error?.message ?? "The chart could not be created.");
+          }
+        }
       } catch (error) {
         setSubmissionError(safeMessage(error));
       } finally {
