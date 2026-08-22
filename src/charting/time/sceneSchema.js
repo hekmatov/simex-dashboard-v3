@@ -53,13 +53,13 @@ export function validateScene(scene, context = {}) {
   requiredText(scene.id, "Scene id");
   requiredText(scene.name, "Scene name");
   requiredText(scene.pageId, "Scene pageId");
-  requiredText(scene.groupId, "Scene groupId");
+  requiredText(scene.chronoGroupId, "Scene chronoGroupId");
 
-  const groups = context.groups ?? context.timeGroups ?? [];
+  const groups = context.chronoGroups ?? [];
   const pages = context.pages ?? [];
   const charts = context.charts ?? [];
-  const group = context.group ?? groups.find((candidate) => candidate?.id === scene.groupId);
-  if (!group) throw new Error(`Scene parent Time Group "${scene.groupId}" does not exist.`);
+  const group = context.group ?? groups.find((candidate) => candidate?.id === scene.chronoGroupId);
+  if (!group) throw new Error(`Scene parent Chrono Group "${scene.chronoGroupId}" does not exist.`);
   if (!pages.some((page) => page?.id === scene.pageId)) {
     throw new Error(`Scene owning page "${scene.pageId}" does not exist.`);
   }
@@ -69,15 +69,15 @@ export function validateScene(scene, context = {}) {
     candidate?.id !== scene.id
     && typeof candidate?.name === "string"
     && candidate.name.trim().toLocaleLowerCase() === scene.name.trim().toLocaleLowerCase()
-    && (candidate.groupId === undefined || candidate.groupId === scene.groupId)
+    && (candidate.chronoGroupId === undefined || candidate.chronoGroupId === scene.chronoGroupId)
   ))) {
-    throw new Error(`Scene name "${scene.name}" must be unique within its parent Time Group.`);
+    throw new Error(`Scene name "${scene.name}" must be unique within its parent Chrono Group.`);
   }
 
   const scenePeriod = validatePeriod(scene.period, "Scene period");
   const groupPeriod = validateParentPeriod(group.period);
   if (scenePeriod.start < groupPeriod.start || scenePeriod.end > groupPeriod.end) {
-    throw new Error("Scene period must be contained within its parent Time Group period.");
+    throw new Error("Scene period must be contained within its parent Chrono Group period.");
   }
 
   if (!Array.isArray(scene.members) || scene.members.length === 0) {
@@ -97,7 +97,7 @@ export function validateScene(scene, context = {}) {
     }
     memberIds.add(member.chartId);
     if (!groupChartIds.has(member.chartId)) {
-      throw new Error(`Scene chart "${member.chartId}" must belong to its parent Time Group.`);
+      throw new Error(`Scene chart "${member.chartId}" must belong to its parent Chrono Group.`);
     }
     const chart = chartsById.get(member.chartId);
     if (!chart) throw new Error(`Scene chart "${member.chartId}" does not exist.`);
@@ -226,11 +226,11 @@ function validateParentPeriod(period) {
     const start = Date.parse(`${period.start}T00:00:00.000Z`);
     const endStart = Date.parse(`${period.end}T00:00:00.000Z`);
     if (!Number.isFinite(start) || !Number.isFinite(endStart) || endStart < start) {
-      throw new Error("Parent Time Group period is invalid.");
+      throw new Error("Parent Chrono Group period is invalid.");
     }
     return { start, end: endStart + 86_400_000 - 1 };
   }
-  return validatePeriod(period, "Parent Time Group period");
+  return validatePeriod(period, "Parent Chrono Group period");
 }
 
 function requireRecord(value, description) {

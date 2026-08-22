@@ -10,9 +10,11 @@ import {
   reorderPage,
   reorderSection,
 } from "./components/build/buildStructureModel.js";
-import DashboardLookDrawer from "./components/dashboard-look/index.js";
+import DashboardLookDrawer, {
+  DashboardLookPersistenceFlash,
+} from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
-import { chartsForPlaybackPage } from "./charting/time/playbackPageScope.js";
+import { createPlaybackChartCollectionSelector } from "./charting/time/playbackPageScope.js";
 import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
@@ -36,6 +38,7 @@ import {
   reduceDisplayState,
 } from "./lib/displayController.js";
 import {
+  awaitDashboardCommitQueue,
   applyDashboardEdits,
   createSerializedDashboardCommitController,
 } from "./lib/dashboardCommitController.js";
@@ -66,10 +69,14 @@ import {
   resolveDashboardTheme,
 } from "./theme/dashboardTheme.js";
 import {
+  applyDashboardLookConfiguration,
   chartColorUpdates,
+  closeDashboardLookInBackground,
+  createDashboardLookCommitScheduler,
   createDashboardLookPreview,
   dashboardLookUpdates,
 } from "./theme/dashboardLookDraft.js";
+import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.jsx";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
@@ -80,17 +87,7 @@ const SESSION_ONLY_MESSAGES = Object.freeze({
   deviceLayout: "Device layout is applied for this session but cannot be retained after reload.",
   deviceLayoutStorageFull: "Browser storage is full. Device layout is applied for this session but cannot be retained after reload.",
 });
-const DEFAULT_VANTA_BACKGROUND = {
-  backgroundColor: "#f7f9fc",
-  networkColor: "#f1a1ad",
-  mouseControls: false,
-  touchControls: false,
-  points: 6,
-  maxDistance: 17,
-  spacing: 18,
-  speed: 0.45,
-};
-
+const DASHBOARD_LOOK_PERSISTENCE_WARNING = "Couldn’t save dashboard appearance. Your selection remains active for this session.";
 export default function App() {
   const [dashboardEntry] = React.useState(() => parseDashboardEntry(
     typeof window === "undefined" ? "" : window.location.search,
@@ -129,6 +126,7 @@ export default function App() {
   const [lookSavingScope, setLookSavingScope] = React.useState("");
   const [lookStatus, setLookStatus] = React.useState("");
   const [lookError, setLookError] = React.useState("");
+  const [lookPersistenceFlash, setLookPersistenceFlash] = React.useState("");
   const [prefersDark, setPrefersDark] = React.useState(() => (
     typeof window !== "undefined"
       && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true
@@ -137,23 +135,23 @@ export default function App() {
   const dashboardRef = React.useRef(null);
   const trackedDatasetProfilesRef = React.useRef({});
   const dashboardCommitControllerRef = React.useRef(null);
+  const lookCommitSchedulerRef = React.useRef(null);
+  const playbackChartSelectorRef = React.useRef(createPlaybackChartCollectionSelector());
   const lastDashboardPersistenceRef = React.useRef(true);
   const validChartIdsRef = React.useRef(new Set());
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
   const buildPanelScrollRef = React.useRef(null);
-
+  const playbackChartCollections = playbackChartSelectorRef.current(dashboard, activePageId);
   const validChartIds = React.useMemo(
-    () => new Set(configuredCharts(dashboard).map(({ id }) => id)),
-    [dashboard?.pages],
+    () => new Set(playbackChartCollections.charts.map(({ id }) => id)),
+    [playbackChartCollections.charts],
   );
   validChartIdsRef.current = validChartIds;
   const playbackGroups = React.useMemo(
-    () => readyTimeSyncGroups(dashboard),
-    [dashboard?.dataSourceStates, dashboard?.pages, dashboard?.timeSyncGroups],
+    () => readyChronoGroups(dashboard),
+    [dashboard?.dataSourceStates, dashboard?.pages, dashboard?.chronoGroups],
   );
-  const vantaSettings = sanitizeVantaSettings(dashboard?.vantaBackground);
-  const vantaSettingsKey = JSON.stringify(vantaSettings);
   const savedDashboardTheme = React.useMemo(() => resolveDashboardTheme({
     globalStyles: dashboard?.globalStyles,
     appearancePreference,
@@ -172,6 +170,27 @@ export default function App() {
     () => createDashboardThemeProjection(dashboardTheme),
     [dashboardTheme],
   );
+
+  if (lookCommitSchedulerRef.current === null) {
+    lookCommitSchedulerRef.current = createDashboardLookCommitScheduler({
+      onCommit: commitDashboardLookPreview,
+      onError: (commitError) => {
+        setLookPersistenceFlash(DASHBOARD_LOOK_PERSISTENCE_WARNING);
+        setLookSavingScope("");
+      },
+    });
+  }
+
+  React.useEffect(() => () => {
+    const scheduler = lookCommitSchedulerRef.current;
+    void scheduler?.flush().finally(() => scheduler.dispose());
+  }, []);
+
+  React.useEffect(() => {
+    if (!lookPersistenceFlash) return undefined;
+    const timerId = window.setTimeout(() => setLookPersistenceFlash(""), 4500);
+    return () => window.clearTimeout(timerId);
+  }, [lookPersistenceFlash]);
 
   const commandCrownProjection = React.useMemo(() => {
     const pages = Object.freeze((dashboard?.pages ?? []).map((page) => Object.freeze({
@@ -235,11 +254,11 @@ export default function App() {
     <>
       <button
         type="button"
-        className="secondary build-time-groups"
-        disabled={modeDisabled || buildDraftLocked || (dashboard?.timeSyncGroups?.length ?? 0) === 0}
-        onClick={() => dashboardRendererRef.current?.requestTimeGroupAuthoring?.()}
+        className="secondary build-chrono-groups"
+        disabled={modeDisabled || buildDraftLocked || (dashboard?.chronoGroups?.length ?? 0) === 0}
+        onClick={() => dashboardRendererRef.current?.requestChronoGroupAuthoring?.()}
       >
-        Time Groups
+        Chrono Groups
       </button>
       <button
         type="button"
@@ -279,25 +298,6 @@ export default function App() {
     colorScheme.addEventListener?.("change", applyColorScheme);
     return () => colorScheme.removeEventListener?.("change", applyColorScheme);
   }, []);
-
-  React.useEffect(() => {
-    if (dashboardEntry.surface === "audience") return undefined;
-    if (!dashboard) return undefined;
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    let effect = null;
-    const applyMotionPreference = () => {
-      effect?.destroy?.();
-      effect = reducedMotion?.matches
-        ? null
-        : initializeVantaBackground(vantaSettings);
-    };
-    applyMotionPreference();
-    reducedMotion?.addEventListener?.("change", applyMotionPreference);
-    return () => {
-      reducedMotion?.removeEventListener?.("change", applyMotionPreference);
-      effect?.destroy?.();
-    };
-  }, [Boolean(dashboard), dashboardEntry.surface, vantaSettingsKey]);
 
   React.useEffect(() => {
     let disposed = false;
@@ -536,6 +536,39 @@ export default function App() {
     }
   }
 
+  async function persistDashboardLookConfiguration(nextConfig) {
+    try {
+      const trackedProfiles = trackedDatasetProfilesRef.current;
+      const stored = configurationForStorage(nextConfig, trackedProfiles);
+      const configuredFallbackProfiles = profilesForConfiguredCsvSources(
+        stored.dataSources,
+        trackedProfiles,
+      );
+      validateDashboardConfig({
+        ...stored,
+        datasetProfiles: {
+          ...configuredFallbackProfiles,
+          ...(stored.datasetProfiles ?? {}),
+        },
+      });
+      persistDashboardStorage(JSON.stringify(stored, null, 2));
+      const loaded = applyDashboardLookConfiguration(nextConfig, dashboardRef.current);
+      dashboardRef.current = loaded;
+      setDashboard(loaded);
+      setError(null);
+      setOperationError("");
+      return nextConfig;
+    } catch (commitError) {
+      if (isStorageQuotaError(commitError)) {
+        throw new Error(
+          "Browser storage is full. Remove an uploaded dataset or choose a smaller CSV, then try again.",
+          { cause: commitError },
+        );
+      }
+      throw commitError;
+    }
+  }
+
   function commitConfiguration(nextConfig) {
     return ensureDashboardCommitController().replace(
       configurationForPortableUse(nextConfig),
@@ -640,10 +673,30 @@ export default function App() {
   }
 
   function cancelDashboardLook() {
-    setLookDrawerOpen(false);
-    setLookPreview(null);
-    setLookStatus("");
-    setLookError("");
+    const selectedPreview = lookPreview;
+    closeDashboardLookInBackground({
+      scheduler: lookCommitSchedulerRef.current,
+      onApply: () => {
+        if (!selectedPreview || !dashboardRef.current) return;
+        const current = dashboardRef.current;
+        const next = applyDashboardLookConfiguration({
+          ...current,
+          globalStyles: {
+            ...(current.globalStyles ?? {}),
+            ...dashboardLookUpdates(selectedPreview),
+            ...chartColorUpdates(selectedPreview),
+          },
+        }, current);
+        dashboardRef.current = next;
+        setDashboard(next);
+      },
+      onClose: () => {
+        setLookDrawerOpen(false);
+        setLookPreview(null);
+        setLookStatus("");
+        setLookError("");
+      },
+    });
   }
 
   function changeDashboardLookPreview(nextPreview) {
@@ -657,22 +710,7 @@ export default function App() {
       || previous.dashboardColorProfile !== nextPreview.dashboardColorProfile
       || previous.chartColorMode !== nextPreview.chartColorMode;
     if (dashboardChanged) {
-      setLookSavingScope("auto");
-      void ensureDashboardCommitController().mutate((next) => {
-        next.globalStyles = {
-          ...(next.globalStyles ?? {}),
-          ...dashboardLookUpdates(nextPreview),
-          ...chartColorUpdates(nextPreview),
-        };
-      }).then(() => {
-        setLookStatus(lastDashboardPersistenceRef.current
-          ? "Dashboard look saved."
-          : SESSION_ONLY_MESSAGES.dashboardLook);
-      }).catch((commitError) => {
-        setLookError(boundedBackgroundPersistenceError(commitError).message);
-      }).finally(() => {
-        setLookSavingScope("");
-      });
+      lookCommitSchedulerRef.current.schedule(nextPreview);
     }
 
     if (previous.appearancePreference !== nextPreview.appearancePreference) {
@@ -691,6 +729,22 @@ export default function App() {
         setLookError(boundedBackgroundPersistenceError(preferenceError).message);
       }
     }
+  }
+
+  async function commitDashboardLookPreview(nextPreview) {
+    setLookSavingScope("auto");
+    setLookError("");
+    await ensureDashboardCommitController().mutateWithCommit((next) => {
+      next.globalStyles = {
+        ...(next.globalStyles ?? {}),
+        ...dashboardLookUpdates(nextPreview),
+        ...chartColorUpdates(nextPreview),
+      };
+    }, persistDashboardLookConfiguration);
+    setLookStatus(lastDashboardPersistenceRef.current
+      ? "Dashboard look saved."
+      : SESSION_ONLY_MESSAGES.dashboardLook);
+    setLookSavingScope("");
   }
 
   function reportBackgroundPersistence(promise) {
@@ -719,7 +773,10 @@ export default function App() {
         setEditBaseline(null);
       }
       if (nextMode === "build") {
-        setEditBaseline(configurationForPortableUse(dashboardRef.current ?? dashboard));
+        setEditBaseline(configurationForEditBaseline(
+          dashboardRef.current ?? dashboard,
+          trackedDatasetProfilesRef.current,
+        ));
       }
       setMode(nextMode);
       persistDashboardModePreference(nextMode);
@@ -816,7 +873,7 @@ export default function App() {
         }
       }
       if (removedChartId === null) return;
-      next.timeSyncGroups = (next.timeSyncGroups ?? []).flatMap((group) => {
+      next.chronoGroups = (next.chronoGroups ?? []).flatMap((group) => {
         const members = group.members.filter(
           ({ chartId }) => chartId !== removedChartId,
         );
@@ -942,11 +999,12 @@ export default function App() {
   }
 
   return (
+    <DashboardChartThemeProvider projection={dashboardThemeProjection}>
     <PlaybackProvider
       groups={playbackGroups}
       scenes={dashboard.scenes ?? []}
-      charts={configuredCharts(dashboard)}
-      pageCharts={chartsForPlaybackPage(dashboard, activePageId)}
+      charts={playbackChartCollections.charts}
+      pageCharts={playbackChartCollections.pageCharts}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}
       timezone={dashboard.timezone}
@@ -976,8 +1034,8 @@ export default function App() {
       onModeRequest={requestMode}
       onBuildDraftLockChange={setBuildDraftLocked}
       onComparisonSelectionChange={setCompareSelectionActive}
-      onCommitPendingConfiguration={() => ensureDashboardCommitController().mutate(
-        (current) => current,
+      onCommitPendingConfiguration={() => awaitDashboardCommitQueue(
+        ensureDashboardCommitController(),
       )}
       displayState={displayState}
       onDisplayAction={dispatchDisplayAction}
@@ -1020,7 +1078,7 @@ export default function App() {
             .map((panel) => (panel.chart ?? panel).id),
         );
         next.pages = next.pages.filter(({ id }) => id !== pageId);
-        next.timeSyncGroups = (next.timeSyncGroups ?? []).flatMap((group) => {
+        next.chronoGroups = (next.chronoGroups ?? []).flatMap((group) => {
           const members = group.members.filter(
             ({ chartId }) => !removedChartIds.has(chartId),
           );
@@ -1058,14 +1116,10 @@ export default function App() {
       })}
       onStructureChange={(structure) => mutateDashboard((next) => {
         next.pages = structure.pages;
-        if (Array.isArray(structure.timeSyncGroups)) next.timeSyncGroups = structure.timeSyncGroups;
+        if (Array.isArray(structure.chronoGroups)) next.chronoGroups = structure.chronoGroups;
         if (Array.isArray(structure.scenes)) next.scenes = structure.scenes;
       })}
       onDashboardChange={(updates) => mutateDashboard((next) => Object.assign(next, updates))}
-      onTimeGroupChange={(groupId, updates) => mutateDashboard((next) => {
-        const group = next.timeSyncGroups?.find(({ id }) => id === groupId);
-        if (group) Object.assign(group, updates);
-      })}
       onBackgroundPersistenceError={reportBackgroundPersistenceError}
       onApplyPendingEdits={(edits) => ensureDashboardCommitController().mutate(
         (next) => applyDashboardEdits(next, edits),
@@ -1082,9 +1136,6 @@ export default function App() {
       onSectionInsert={(pageId, sectionId, panelId, section) => mutateDashboard((next) => {
         insertSectionAtPanel(next, pageId, sectionId, panelId, section);
       })}
-      onVantaBackgroundChange={(vantaBackground) => mutateDashboard(
-        (next) => { next.vantaBackground = vantaBackground; },
-      )}
       onPanelRemove={removeChart}
       onPanelReorder={(sourceId, targetId) => mutateDashboard(
         (next) => reorderPanels(next, sourceId, targetId),
@@ -1093,8 +1144,8 @@ export default function App() {
       onExportConfig={exportConfig}
       onResetEditSession={resetEditSession}
       onOpenDashboardLook={openDashboardLook}
-      themeProjection={dashboardThemeProjection}
       buildPanelOpen={buildPanelOpen}
+      themeProjection={dashboardThemeProjection}
       operationError={operationError}
     />
     <DashboardLookDrawer
@@ -1107,6 +1158,7 @@ export default function App() {
       onCancel={cancelDashboardLook}
       onPreviewChange={changeDashboardLookPreview}
     />
+    <DashboardLookPersistenceFlash message={lookPersistenceFlash} />
     <DashboardPackageReviewDialog
       candidate={packageImportCandidate}
       busy={packageImportBusy}
@@ -1120,6 +1172,7 @@ export default function App() {
     />
     </AppFrame>
     </PlaybackProvider>
+    </DashboardChartThemeProvider>
   );
 }
 
@@ -1145,6 +1198,10 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
   return config;
 }
 
+export function configurationForEditBaseline(dashboard, fallbackProfiles = {}) {
+  return configurationForStorage(dashboard, fallbackProfiles);
+}
+
 function configurationForSemanticUse(dashboard) {
   const {
     chartDataStates: _chartDataStates,
@@ -1166,8 +1223,8 @@ function configurationForPortableUse(dashboard) {
   return structuredClone(portableDashboard);
 }
 
-export function readyTimeSyncGroups(dashboard) {
-  const groups = dashboard?.timeSyncGroups ?? [];
+export function readyChronoGroups(dashboard) {
+  const groups = dashboard?.chronoGroups ?? [];
   const sourceStates = dashboard?.dataSourceStates;
   if (!sourceStates) return groups;
   const sourceByChartId = new Map(
@@ -1259,80 +1316,6 @@ function isStorageQuotaError(error) {
 function loadDeviceLayout() {
   const layout = browserStorage.getItem(DEVICE_LAYOUT_STORAGE_KEY);
   return ["auto", "tablet", "phone"].includes(layout) ? layout : "auto";
-}
-
-function initializeVantaBackground(settings) {
-  const element = document.getElementById("vanta-background");
-  if (!element || !window.VANTA?.NET || !window.THREE) return null;
-  try {
-    const effect = window.VANTA.NET({
-      el: element,
-      mouseControls: settings.mouseControls,
-      touchControls: settings.touchControls,
-      gyroControls: false,
-      minHeight: 200,
-      minWidth: 200,
-      scale: 1,
-      scaleMobile: 1,
-      color: hexToNumber(settings.networkColor),
-      backgroundColor: hexToNumber(settings.backgroundColor),
-      points: settings.points,
-      maxDistance: settings.maxDistance,
-      spacing: settings.spacing,
-      speed: settings.speed,
-    });
-    applyVantaNetSpeed(effect, settings.speed);
-    window.setTimeout(() => applyVantaNetSpeed(effect, settings.speed), 120);
-    return effect;
-  } catch {
-    element.replaceChildren();
-    return null;
-  }
-}
-
-function applyVantaNetSpeed(effect, speed) {
-  window.requestAnimationFrame(() => {
-    for (const point of effect?.points ?? []) {
-      point._simexBaseR ??= point.r;
-      point.r = point._simexBaseR * speed;
-    }
-  });
-}
-
-function sanitizeVantaSettings(settings) {
-  const value = { ...DEFAULT_VANTA_BACKGROUND, ...(settings ?? {}) };
-  return {
-    backgroundColor: normalizeHexColor(
-      value.backgroundColor,
-      DEFAULT_VANTA_BACKGROUND.backgroundColor,
-    ),
-    networkColor: normalizeHexColor(
-      value.networkColor,
-      DEFAULT_VANTA_BACKGROUND.networkColor,
-    ),
-    mouseControls: Boolean(value.mouseControls),
-    touchControls: Boolean(value.touchControls),
-    points: clampNumber(value.points, 3, 18),
-    maxDistance: clampNumber(value.maxDistance, 8, 32),
-    spacing: clampNumber(value.spacing, 10, 34),
-    speed: clampNumber(value.speed, 0.1, 2),
-  };
-}
-
-function normalizeHexColor(value, fallback) {
-  return /^#[0-9a-f]{6}$/i.test(String(value ?? "")) ? value : fallback;
-}
-
-function clampNumber(value, minimum, maximum) {
-  const number = Number(value);
-  return Number.isFinite(number)
-    ? Math.min(Math.max(number, minimum), maximum)
-    : minimum;
-}
-
-function hexToNumber(value) {
-  const parsed = Number.parseInt(String(value).replace("#", ""), 16);
-  return Number.isFinite(parsed) ? parsed : 0xf1a1ad;
 }
 
 async function fetchJson(url) {

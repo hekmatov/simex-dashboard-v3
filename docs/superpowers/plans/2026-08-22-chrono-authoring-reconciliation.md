@@ -32,12 +32,12 @@
 - Rename: `src/charting/time/timeSyncModel.js` → `src/charting/time/chronoGroupModel.js`
 - Rename: `src/charting/time/migrateTemporalConfig.js` → `src/charting/time/normalizeTemporalConfig.js`
 - Rename: `src/components/chart-authoring/TimeSyncSettingsField.jsx` → `src/components/chart-authoring/ChronoMembershipSettingsField.jsx`
-- Rename: `src/components/time/timeGroupDraft.js` → `src/components/time/chronoGroupDraft.js`
-- Rename: `src/components/time/TimeGroupStudio.jsx` → `src/components/time/ChronoGroupEditor.jsx`
+- Rename: `src/components/time/chronoGroupDraft.js` → `src/components/time/chronoGroupDraft.js`
+- Rename: `src/components/time/ChronoGroupStudio.jsx` → `src/components/time/ChronoGroupEditor.jsx`
 - Rename: `tests/timeSyncModelV3.test.js` → `tests/chronoGroupModelV3.test.js`
-- Rename: `tests/timeGroupStudio.test.js` → `tests/chronoGroupEditor.test.js`
-- Rename: `tests/timeGroupAuthoringAuthority.test.js` → `tests/chronoGroupAuthoringAuthority.test.js`
-- Rename: `tests/buildTimeGroupAccess.test.js` → `tests/buildChronoGroupAccess.test.js`
+- Rename: `tests/chronoGroupStudio.test.js` → `tests/chronoGroupEditor.test.js`
+- Rename: `tests/chronoGroupAuthoringAuthority.test.js` → `tests/chronoGroupAuthoringAuthority.test.js`
+- Rename: `tests/buildChronoGroupAccess.test.js` → `tests/buildChronoGroupAccess.test.js`
 - Rename: `tests/temporalSchemaMigration.test.js` → `tests/chronoSchemaNormalization.test.js`
 - Create: `tests/chronoTerminology.test.js`
 - Modify: `public/config/dashboard.json`

@@ -38,29 +38,29 @@ export function validateTemporalBundle(bundle) {
   }
   validateIanaTimeZone(dashboard.timeZone);
 
-  const groups = dashboard.timeGroups ?? [];
+  const groups = dashboard.chronoGroups ?? [];
   if (!Array.isArray(groups)) {
-    throw new TypeError("dashboard.timeGroups must be an array.");
+    throw new TypeError("dashboard.chronoGroups must be an array.");
   }
   for (const [groupIndex, group] of groups.entries()) {
-    const checkedGroup = requireRecord(group, `dashboard.timeGroups[${groupIndex}]`);
-    validatePeriod(checkedGroup.period, `dashboard.timeGroups[${groupIndex}].period`);
+    const checkedGroup = requireRecord(group, `dashboard.chronoGroups[${groupIndex}]`);
+    validatePeriod(checkedGroup.period, `dashboard.chronoGroups[${groupIndex}].period`);
     const scenes = checkedGroup.scenes ?? [];
     if (!Array.isArray(scenes)) {
-      throw new TypeError(`dashboard.timeGroups[${groupIndex}].scenes must be an array.`);
+      throw new TypeError(`dashboard.chronoGroups[${groupIndex}].scenes must be an array.`);
     }
     for (const [sceneIndex, scene] of scenes.entries()) {
       const checkedScene = requireRecord(
         scene,
-        `dashboard.timeGroups[${groupIndex}].scenes[${sceneIndex}]`,
+        `dashboard.chronoGroups[${groupIndex}].scenes[${sceneIndex}]`,
       );
       validatePeriod(
         checkedScene.period,
-        `dashboard.timeGroups[${groupIndex}].scenes[${sceneIndex}].period`,
+        `dashboard.chronoGroups[${groupIndex}].scenes[${sceneIndex}].period`,
       );
       validateSelectedInstants(
         checkedScene.frameRule,
-        `dashboard.timeGroups[${groupIndex}].scenes[${sceneIndex}].frameRule`,
+        `dashboard.chronoGroups[${groupIndex}].scenes[${sceneIndex}].frameRule`,
       );
     }
   }

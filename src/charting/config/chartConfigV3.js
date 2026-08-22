@@ -546,7 +546,7 @@ function validateInteraction(chart, schema, temporalRoles) {
   if (!schema.capabilities.timeSync || temporalRoles.size === 0) throw new Error(`Chart type "${schema.typeId}" needs an effective temporal role before time synchronization can be enabled.`);
   ensureObject(timeSync, "Chart time synchronization");
   checkKnownKeys(timeSync, new Set(["groupId"]), "chart time synchronization");
-  requiredString(timeSync.groupId, "Chart time synchronization groupId");
+  requiredString(timeSync.groupId, "Chart Chrono Group ID");
 }
 
 function validateLayout(chart) {

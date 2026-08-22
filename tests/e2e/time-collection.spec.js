@@ -735,7 +735,7 @@ function biomedicalSection(dashboard) {
 }
 
 function nationalGroup(dashboard) {
-  return dashboard.timeSyncGroups.find(({ id }) => (
+  return dashboard.chronoGroups.find(({ id }) => (
     id === "national_outbreak"
   ));
 }

@@ -111,7 +111,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
     datasetProfiles: {
       external_cases: profile,
     },
-    timeSyncGroups: [],
+    chronoGroups: [],
     pages: [{
       ...structuredClone(sourcePage),
       id: "replacement",
@@ -240,7 +240,7 @@ test("removing a page also removes its synchronized chart memberships", async ({
     const stored = JSON.parse(localStorage.getItem(key));
     return {
       pages: stored.pages.map(({ id }) => id),
-      groups: stored.timeSyncGroups,
+      groups: stored.chronoGroups,
     };
   }, STORAGE_KEY)).toEqual({
     pages: ["home", "socio_economic"],

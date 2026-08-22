@@ -27,7 +27,7 @@ const STATE_FIELDS = [
 const AUDIENCE_FACT_FIELDS = [
   "dashboard_name",
   "page",
-  "parent_time_group",
+  "parent_chrono_group",
   "scene_name",
   "scene_date",
 ];
@@ -120,7 +120,7 @@ function validateTime(time) {
   if (time === null) return;
   assertPlainObject(time, "presentation time");
   assertExactFields(time, TIME_FIELDS, "presentation time");
-  assertIdentifier(time.group_id, "time group ID");
+  assertIdentifier(time.group_id, "chrono group ID");
   if (!Number.isFinite(time.active_epoch_ms)) {
     throw new Error("presentation time must use a finite epoch value");
   }

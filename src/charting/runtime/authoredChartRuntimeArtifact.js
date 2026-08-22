@@ -9,14 +9,14 @@ export function compileAuthoredChartRuntimeArtifact({
   profile,
   geoSource = null,
   temporalAvailability,
-  timeSyncGroups = [],
+  chronoGroups = [],
   rows = [],
   timezone = "UTC",
 } = {}) {
   const identity = chartPreparationIdentity({ chart, source, profile, geoSource });
   const availability = temporalAvailability ?? collectAuthoredAvailability({
     chart,
-    timeSyncGroups,
+    chronoGroups,
     rows,
     profile,
     timezone,
@@ -30,9 +30,9 @@ export function compileAuthoredChartRuntimeArtifact({
   });
 }
 
-function collectAuthoredAvailability({ chart, timeSyncGroups, rows, profile, timezone }) {
+function collectAuthoredAvailability({ chart, chronoGroups, rows, profile, timezone }) {
   const epochs = new Set();
-  for (const group of timeSyncGroups ?? []) {
+  for (const group of chronoGroups ?? []) {
     const member = group?.members?.find(({ chartId }) => chartId === chart.id);
     if (!member) continue;
     for (const epochMs of collectTemporalAvailability({

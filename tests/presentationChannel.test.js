@@ -13,7 +13,7 @@ const firstScene = {
   audience_facts: {
     dashboard_name: true,
     page: true,
-    parent_time_group: true,
+    parent_chrono_group: true,
     scene_name: true,
     scene_date: true,
   },

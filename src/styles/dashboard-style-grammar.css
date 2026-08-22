@@ -371,7 +371,7 @@
 
 .app-frame .dashboard-command-pinned-actions > :is(
   .dashboard-look-trigger,
-  .build-time-groups,
+  .build-chrono-groups,
   .build-add-page,
   .build-panel-toggle
 ) {
@@ -958,7 +958,7 @@
 :is(.build-authoring-auxiliary, .unit-orbit) :is(
   h1, h2, h3, h4,
   .build-surface-heading,
-  .time-content-library__header
+  .temporal-studio__header
 ) {
   color: var(--simex-text-strong);
   font-family: var(--simex-style-heading-font);
@@ -970,7 +970,7 @@
   small,
   .eyebrow,
   .build-draft-status,
-  .time-content-library__empty,
+  .temporal-studio__empty,
   .chart-authoring-detected,
   .chart-proof-state
 ) {
@@ -983,10 +983,10 @@
   .scene-stage-body > section,
   .scene-shared-settings,
   .scene-arrangement-board,
-  .time-content-library__browse,
-  .time-content-library__conflict,
-  .time-content-card,
-  .time-availability-ledger > ol > li,
+  .temporal-studio__browse,
+  .temporal-studio__conflict,
+  .temporal-content-card,
+  .time-availability-ledger__region > ol > li,
   .chart-authoring-section,
   .chart-editor-tab-panel
 ) {
@@ -1034,13 +1034,13 @@
   color: var(--simex-text-strong);
 }
 
-.build-authoring-auxiliary :is(.time-group-studio nav, .scene-stage-navigation) button {
+.build-authoring-auxiliary :is(.chrono-group-studio nav, .scene-stage-navigation) button {
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-strong);
   color: var(--simex-text-strong);
 }
 
-.build-authoring-auxiliary :is(.time-group-studio nav, .scene-stage-navigation) button[aria-current="step"] {
+.build-authoring-auxiliary :is(.chrono-group-studio nav, .scene-stage-navigation) button[aria-current="step"] {
   background: var(--simex-accent);
   border-color: var(--simex-accent);
   color: var(--simex-on-accent);

@@ -46,7 +46,7 @@ async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   config.id = "imported-package-dashboard";
   config.title = "Imported package dashboard";
   config.pages = [importedPage];
-  config.timeSyncGroups = [];
+  config.chronoGroups = [];
   return serializeDashboardBundle(config, {
     now: "2026-08-21T09:10:11.000Z",
   });

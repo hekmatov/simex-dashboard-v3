@@ -3316,7 +3316,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "chrono_group_id": "national_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3345,7 +3345,7 @@
         "measurement",
         "time"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -3372,7 +3372,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "chrono_group_id": "national_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3401,7 +3401,7 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -3428,7 +3428,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "chrono_group_id": "national_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3457,7 +3457,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3486,7 +3486,7 @@
         "target",
         "time"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -3513,7 +3513,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3542,7 +3542,7 @@
         "target",
         "time"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -3569,7 +3569,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3596,7 +3596,7 @@
         "category",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3623,7 +3623,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": "municipal_outbreak",
+      "chrono_group_id": "municipal_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3653,7 +3653,7 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": "municipal_outbreak",
+      "chrono_group_id": "municipal_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3682,7 +3682,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "chrono_group_id": "national_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3710,7 +3710,7 @@
         "entity",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -3740,7 +3740,7 @@
         "x",
         "y"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3766,7 +3766,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": "national_outbreak",
+      "chrono_group_id": "national_outbreak",
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3794,7 +3794,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3821,7 +3821,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3847,7 +3847,7 @@
       "role_ids": [
         "columns"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3875,7 +3875,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3903,7 +3903,7 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3930,7 +3930,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3958,7 +3958,7 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -3986,7 +3986,7 @@
         "entity",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -4013,7 +4013,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4041,7 +4041,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4068,7 +4068,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4095,7 +4095,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4122,7 +4122,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4149,7 +4149,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4177,7 +4177,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4204,7 +4204,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4232,7 +4232,7 @@
         "measurement",
         "time"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -4261,7 +4261,7 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4289,7 +4289,7 @@
         "time",
         "value"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -4317,7 +4317,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4343,7 +4343,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4369,7 +4369,7 @@
         "measurements",
         "observation"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": false,
       "supported_display_modes": [
         "fullscreen",
@@ -4397,7 +4397,7 @@
         "measurement",
         "time"
       ],
-      "time_sync_group_id": null,
+      "chrono_group_id": null,
       "collection_capability": true,
       "supported_display_modes": [
         "fullscreen",
@@ -4405,6 +4405,6 @@
       ]
     }
   ],
-  "dashboard_semantic_digest": "7dd62904e4fdf995efe7025ce99039e9b89b0e8991534b118f16ae52555264a9",
-  "digest": "436bd0616fe57f518214cf5f2b890cdaa6d5e464d798a367d6811a4197553fec"
+  "dashboard_semantic_digest": "f78096e13bcb29b2694ead85e0a9de047bb55aeb58d23d3507715f99eb1f0856",
+  "digest": "83868f48334247e417892c8884ffd4e142028e12a18d065edaf7a1ac20b59b80"
 }

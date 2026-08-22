@@ -11,7 +11,7 @@ import {
   validateChartInstance,
 } from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
-import { validateTimeSyncGroups } from "../src/charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../src/charting/time/chronoGroupModel.js";
 
 function profile() {
   return {
@@ -46,7 +46,7 @@ const loadedRows = [
 
 function synchronizedState() {
   let state = createWizardState({
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
       period: { start: "2027-05-01", end: "2027-05-02" },
@@ -273,20 +273,20 @@ test("a group-member matching edit is immutable and validates the whole group co
     },
   });
 
-  assert.notEqual(next.timeSyncGroups, state.timeSyncGroups);
+  assert.notEqual(next.chronoGroups, state.chronoGroups);
   assert.notEqual(
-    next.timeSyncGroups[0].members,
-    state.timeSyncGroups[0].members,
+    next.chronoGroups[0].members,
+    state.chronoGroups[0].members,
   );
   assert.equal(
-    state.timeSyncGroups[0].members[0].matching,
+    state.chronoGroups[0].members[0].matching,
     undefined,
   );
-  assert.deepEqual(next.timeSyncGroups[0].members[0].matching, {
+  assert.deepEqual(next.chronoGroups[0].members[0].matching, {
     policy: "nearest",
     toleranceMs: 3_600_000,
   });
-  assert.doesNotThrow(() => validateTimeSyncGroups(next.timeSyncGroups, {
+  assert.doesNotThrow(() => validateChronoGroups(next.chronoGroups, {
     charts: [next.draft],
     loadedData: next.loadedData,
     profiles: next.profiles,
@@ -309,7 +309,7 @@ test("invalid member edits fail before malformed groups enter wizard state", () 
     /nearest.*toleranceMs/i,
   );
   assert.equal(
-    state.timeSyncGroups[0].members[0].matching,
+    state.chronoGroups[0].members[0].matching,
     undefined,
   );
 });
@@ -335,11 +335,11 @@ test("finalization normalizes the chart and returns group edits separately", () 
   assert.equal(result.chart.interaction.timeSync, null);
   assert.equal("temporalMatch" in result.chart.transformations, false);
   assert.equal(
-    result.timeSyncGroups[0].members[0].matching.policy,
+    result.chronoGroups[0].members[0].matching.policy,
     "lastKnown",
   );
   assert.notEqual(result.chart, state.draft);
-  assert.notEqual(result.timeSyncGroups, state.timeSyncGroups);
+  assert.notEqual(result.chronoGroups, state.chronoGroups);
 });
 
 test("unrelated populated synchronization groups validate against authoritative existing charts", () => {
@@ -359,7 +359,7 @@ test("unrelated populated synchronization groups validate against authoritative 
   });
   let state = createWizardState({
     charts: [existing],
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
       period: { start: "2027-05-01", end: "2027-05-02" },
@@ -390,7 +390,7 @@ test("unrelated populated synchronization groups validate against authoritative 
 
   const result = finalizeWizardDraft(state);
   assert.equal(result.chart.interaction.timeSync, null);
-  assert.equal(result.timeSyncGroups[0].members[0].chartId, "existing-trend");
+  assert.equal(result.chronoGroups[0].members[0].chartId, "existing-trend");
   assert.equal(state.charts[0].id, "existing-trend");
 });
 
@@ -415,7 +415,7 @@ test("changing chart type keeps logical identity and removes only the draft's st
   ];
   let state = createWizardState({
     charts: [existing],
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
       period: { start: "2027-05-01", end: "2027-05-02" },
@@ -468,10 +468,10 @@ test("changing chart type keeps logical identity and removes only the draft's st
   assert.equal(state.draft.id, "changing-chart");
   assert.equal(state.draft.interaction.timeSync, null);
   assert.deepEqual(
-    state.timeSyncGroups[0].members.map(({ chartId }) => chartId),
+    state.chronoGroups[0].members.map(({ chartId }) => chartId),
     ["existing-trend"],
   );
-  assert.equal(beforeTypeChange.timeSyncGroups[0].members.length, 2);
+  assert.equal(beforeTypeChange.chronoGroups[0].members.length, 2);
 
   state = reduceWizardState(state, {
     type: "selectSource",
@@ -537,7 +537,7 @@ test("changing the sole member's type removes only the now-empty runtime group",
   ];
   let state = createWizardState({
     charts: [existing],
-    timeSyncGroups: [draftGroup, unrelatedGroup],
+    chronoGroups: [draftGroup, unrelatedGroup],
     loadedData: {
       "exercise-data": loadedRows,
       "category-data": categoryRows,
@@ -578,12 +578,12 @@ test("changing the sole member's type removes only the now-empty runtime group",
     chart: { title: "Readiness mix" },
   });
 
-  assert.equal(state.timeSyncGroups.length, 1);
+  assert.equal(state.chronoGroups.length, 1);
   assert.equal(
-    state.timeSyncGroups[0],
-    beforeTypeChange.timeSyncGroups[1],
+    state.chronoGroups[0],
+    beforeTypeChange.chronoGroups[1],
   );
-  assert.equal(beforeTypeChange.timeSyncGroups[0].members.length, 1);
+  assert.equal(beforeTypeChange.chronoGroups[0].members.length, 1);
 
   state = reduceWizardState(state, {
     type: "selectSource",
@@ -600,10 +600,10 @@ test("changing the sole member's type removes only the now-empty runtime group",
     value: { field: "value" },
   });
   const result = finalizeWizardDraft(state);
-  assert.equal(result.timeSyncGroups.length, 1);
-  assert.equal(result.timeSyncGroups[0].id, "unrelated-clock");
-  assert.equal(result.timeSyncGroups[0].members[0].chartId, "unrelated-trend");
-  assert.doesNotThrow(() => validateTimeSyncGroups(result.timeSyncGroups, {
+  assert.equal(result.chronoGroups.length, 1);
+  assert.equal(result.chronoGroups[0].id, "unrelated-clock");
+  assert.equal(result.chronoGroups[0].members[0].chartId, "unrelated-trend");
+  assert.doesNotThrow(() => validateChronoGroups(result.chronoGroups, {
     charts: [existing, result.chart],
     loadedData: state.loadedData,
     profiles: state.profiles,
@@ -612,7 +612,7 @@ test("changing the sole member's type removes only the now-empty runtime group",
 
 test("preexisting empty runtime groups fail finalization instead of being filtered", () => {
   let state = createWizardState({
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "empty-clock",
       name: "Empty clock",
       period: { start: "2027-05-01", end: "2027-05-02" },

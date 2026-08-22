@@ -13,9 +13,9 @@ import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
 import {
-  buildTimeGroupClock,
-  validateTimeSyncGroups,
-} from "../src/charting/time/timeSyncModel.js";
+  buildChronoGroupClock,
+  validateChronoGroups,
+} from "../src/charting/time/chronoGroupModel.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 
 const ROOT = process.cwd();
@@ -436,18 +436,18 @@ test("the municipal and national clocks validate and every national member is re
     loadedData[sourceId] = await sources.rows(sourceId);
   }
 
-  assert.deepEqual(dashboard.timeSyncGroups.map(({ id }) => id), [
+  assert.deepEqual(dashboard.chronoGroups.map(({ id }) => id), [
     "municipal_outbreak",
     "national_outbreak",
   ]);
-  assert.doesNotThrow(() => validateTimeSyncGroups(dashboard.timeSyncGroups, {
+  assert.doesNotThrow(() => validateChronoGroups(dashboard.chronoGroups, {
     charts,
     loadedData,
     profiles,
     timezone: dashboard.timezone,
   }));
-  for (const group of dashboard.timeSyncGroups) {
-    const clock = buildTimeGroupClock(group, {
+  for (const group of dashboard.chronoGroups) {
+    const clock = buildChronoGroupClock(group, {
       charts,
       loadedData,
       profiles,
@@ -457,7 +457,7 @@ test("the municipal and national clocks validate and every national member is re
     assert.deepEqual([...clock].sort((left, right) => left - right), clock);
   }
 
-  const municipal = dashboard.timeSyncGroups[0];
+  const municipal = dashboard.chronoGroups[0];
   assert.deepEqual(municipal.period, {
     start: "2020-02-27",
     end: "2021-04-17",
@@ -469,7 +469,7 @@ test("the municipal and national clocks validate and every national member is re
   ]);
   assert.deepEqual(municipal.matching, { policy: "exact" });
 
-  const national = dashboard.timeSyncGroups[1];
+  const national = dashboard.chronoGroups[1];
   assert.deepEqual(national, {
     id: "national_outbreak",
     name: "National outbreak and health-system playback",
@@ -495,7 +495,7 @@ test("the municipal and national clocks validate and every national member is re
   );
 
   const chartById = new Map(entries.map(({ chart }) => [chart.id, chart]));
-  const clock = buildTimeGroupClock(national, {
+  const clock = buildChronoGroupClock(national, {
     charts,
     loadedData,
     profiles,
@@ -607,23 +607,12 @@ test("showcase landing metadata is retained byte-for-byte at the semantic JSON l
       title: home.sections[0].title,
       description: home.sections[0].description,
       layout: home.sections[0].layout,
-      vantaBackground: home.sections[0].vantaBackground,
     },
     {
       id: "home_overview",
       title: "Scenario overview",
       description: "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
       layout: "two-column",
-      vantaBackground: {
-        backgroundColor: "#f7f9fc",
-        networkColor: "#f1a1ad",
-        mouseControls: false,
-        touchControls: false,
-        points: 6,
-        maxDistance: 17,
-        spacing: 18,
-        speed: 0.45,
-      },
     },
   );
 });

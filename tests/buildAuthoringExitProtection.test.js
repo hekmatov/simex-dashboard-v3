@@ -14,8 +14,8 @@ import {
   installChartDraftUnloadGuard,
 } from "../src/charting/forms/chartDraftUnloadGuard.js";
 
-test("Structure, Scenario, Time Group, and Scene drafts independently lock Build exit", () => {
-  for (const key of ["structure", "scenario", "timeGroup", "scene"]) {
+test("Structure, Scenario, Chrono Group, and Scene drafts independently lock Build exit", () => {
+  for (const key of ["structure", "scenario", "chronoGroup", "scene"]) {
     const draft = {
       baseline: { name: "Saved" },
       value: { name: "Changed" },
@@ -35,19 +35,19 @@ test("saved, discarded, and pristine local drafts do not lock Build exit", () =>
   assert.equal(hasActiveLocalAuthoringDrafts({
     structure: { baseline: savedValue, value: structuredClone(savedValue), status: "clean" },
     scenario: { baseline: savedValue, value: structuredClone(savedValue), status: "clean" },
-    timeGroup: { baseline: savedValue, value: structuredClone(savedValue), status: "clean" },
+    chronoGroup: { baseline: savedValue, value: structuredClone(savedValue), status: "clean" },
     scene: { baseline: savedValue, value: structuredClone(savedValue), status: "suspended", suspendedStatus: "clean" },
   }), false);
 });
 
 test("Build leave explains the approved Save, Discard, or Stay boundary", () => {
   assert.equal(buildLeaveBlockReason({
-    timeGroup: {
+    chronoGroup: {
       baseline: { name: "Saved" },
       value: { name: "Changed" },
       status: "dirty",
     },
-  }), "Save or discard changes to Time Group before leaving this edit. Stay in Build to continue editing.");
+  }), "Save or discard changes to Chrono Group before leaving this edit. Stay in Build to continue editing.");
   assert.equal(buildLeaveBlockReason({}), "");
 });
 
@@ -103,7 +103,7 @@ test("Build runtime reports local drafts and wires the shared chart session guar
   ]);
 
   assert.match(workspace, /onLocalDraftsChange/);
-  assert.match(workspace, /structure:\s*structureDraft[\s\S]*scenario:\s*scenarioDraft[\s\S]*timeGroup:\s*timeGroupDraft[\s\S]*scene:\s*sceneDraft/);
+  assert.match(workspace, /structure:\s*structureDraft[\s\S]*scenario:\s*scenarioDraft[\s\S]*chronoGroup:\s*chronoGroupDraft[\s\S]*scene:\s*sceneDraft/);
   assert.match(renderer, /createChartDraftSessionStore/);
   assert.match(renderer, /installChartDraftUnloadGuard/);
   assert.match(renderer, /initialDraftState=\{chartDraftSessionStore\.get\(chartDraftSessionKey\)\}/);

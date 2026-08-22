@@ -91,7 +91,7 @@ The replacement boundary is narrow: replace the permanent Build triptych composi
 | `0622d94` | Atomic application recovery | Retain with visual correction | S6-4 |
 | `e44177e` | Empty Present catalogue recovery | Retain with behavioral correction | S8-3, S8-7 |
 | `7f14dfc` | Empty View section recovery | Retain with visual correction | S7-18 |
-| `fb36ca0` | Time Groups as playback authority | Retain runtime; complete authoring | S7-5, S7-6, S7-9, S7-17 |
+| `fb36ca0` | Chrono Groups as playback authority | Retain runtime; complete authoring | S7-5, S7-6, S7-9, S7-17 |
 | `19b7ef6` | Background-render containment | Retain as implemented | S6-4; Vanta removal remains user-owned |
 
 ## 5. Approved-sketch coverage — 20/20 mapped
@@ -102,7 +102,7 @@ The replacement boundary is narrow: replace the permanent Build triptych composi
 | 002 | Unit Orbit, direct order, 2×4 footprint, dual draft | Orbit exists; geometry and dual draft incomplete | Adjust S7-1, S7-3 |
 | 003 | Three styles, 15 profiles, Profile/Standard, Light/Dark/System | Value resolver exists; propagation uneven | Retain S6-1; correct S6-4, S7-19, S8-7 |
 | 004 | Exact six-stage chart-creation workflow | Current four-tab shell contradicts contract | Replace shell, retain engines: S7-10–S7-16 |
-| 005 | Four-stage Time Group Studio and Availability Ledger | Saved runtime only | Complete S7-5, S7-6 |
+| 005 | Four-stage Chrono Studio and Availability Ledger | Saved runtime only | Complete S7-5, S7-6 |
 | 006 | Two-stage Scene flow and Balanced Twin Canvas | Saved Scene/studio absent | Complete S7-7, S7-8 |
 | 007 | Chrono deck default, mast alternative, same session | Runtime exists; full controller incomplete | Adjust S7-17 |
 | 008 | Present monitor plus Live Sidecar | Catalogue-first page contradicts winner | Replace composition S8-3, S8-7 |
@@ -128,10 +128,10 @@ Audit evidence used realistic packaged content at 390×844, 768×1024, 1024×768
 | F-01 | View/Build must share the canonical renderer, saved layout model, responsive rules, content identities, and maximum-width contract; Build authoring chrome must preserve target usability and restore canvas state without mutating saved layout. | Implementation defect | S6-3, S7-1, S7-2 |
 | F-02 | Crown/header rows, gutters, and page offsets do not consistently match accepted hierarchy. | Implementation defect | S6-2, S6-3 |
 | F-03 | Default neutral colours, radii, elevation, typography, and focus grammar are uneven. | Implementation defect | S6-1, S6-4 |
-| F-04 | Look/style application is incomplete across chart cards and Build editors. | Implementation defect | S6-4 shared resolver; S7-2 chrome; S7-3 cards; S7-4 structure/Scenario; S7-6 Time Group; S7-8 Scene; S7-9 Time Content; S7-15/S7-16 chart wizard; S7-17 Chrono; S7-18 states; S7-19 drawers/footer |
+| F-04 | Look/style application is incomplete across chart cards and Build editors. | Implementation defect | S6-4 shared resolver; S7-2 chrome; S7-3 cards; S7-4 structure/Scenario; S7-6 Chrono Group; S7-8 Scene; S7-9 Time Content; S7-15/S7-16 chart wizard; S7-17 Chrono; S7-18 states; S7-19 drawers/footer |
 | F-05 | Look/style application is incomplete across Present/Audience and global recovery. | Implementation defect | S6-4 global recovery; S8-3 controller; S8-4 Audience; S8-5 composition; S8-6 icons/states; S8-7 final Step 8 calibration |
 | F-06 | Four-tab chart creation lacks the exact six stages; Chart type lacks explicit catalogue ownership; draft lifetime and companion transactions are incorrect; render/placement proofs need independent validation without a Proof stage. | Implementation defect | S7-10–S7-16 |
-| F-07 | Time Group Studio, ledger, saved Scene/studio, and Time Content are absent. | Implementation defect | S7-5–S7-9 |
+| F-07 | Chrono Studio, ledger, saved Scene/studio, and Time Content are absent. | Implementation defect | S7-5–S7-9 |
 | F-08 | Chrono lacks complete scope, projection, seek, trace, movement, ownership, and safety pauses. | Implementation defect | S7-17 |
 | F-09 | Present is a long catalogue rather than monitor plus compact Live Sidecar. | Implementation defect | S8-3, S8-7 |
 | F-10 | Audience lacks real Scene/date projection, complete holding/blank/recovery hierarchy, and the passive neutral projection required when END cannot close the surface. | Implementation defect | S8-1, S8-4, S8-5, S8-7 |
@@ -148,10 +148,10 @@ No material unresolved design decision was found. If calibration would change ob
 
 | Disposition | Slices |
 |---|---|
-| Retain as implemented | V3 registry/schema foundation; canonical render preparation; theme value validation; progressive source states; source sorting; strict Time Group runtime; display reducer; protocol sequence/heartbeat foundation; root recovery. |
+| Retain as implemented | V3 registry/schema foundation; canonical render preparation; theme value validation; progressive source states; source sorting; strict Chrono Group runtime; display reducer; protocol sequence/heartbeat foundation; root recovery. |
 | Retain with visual correction | Theme grammars, crown, look drawer, state plates, immersive View, recovery rails, Audience facts, headers/footers/dialogs/drawers. |
 | Retain with behavioral correction | Chrono, collections, Unit Orbit, inline structure, optional Audience facts, presentation runtime. |
-| Complete missing coverage | Dual draft/Context Shelf; structure/Scenario; temporal foundation; Time Group/Scene/Time Content; six-stage chart creation; View Chrono; source lifecycle; complete Present/Audience lifecycle. |
+| Complete missing coverage | Dual draft/Context Shelf; structure/Scenario; temporal foundation; Chrono Group/Scene/Time Content; six-stage chart creation; View Chrono; source lifecycle; complete Present/Audience lifecycle. |
 | Replace because contradictory | Permanent Build triptych and catalogue-first Present body only; retain compatible state/model helpers. |
 | Defer with explicit reason | Only Step 9 final cross-mode accessibility, keyboard, touch, viewport/UAT and room-distance acceptance, because Steps 6–8 already own known implementation defects and local checks. User-owned Vanta removal remains outside this plan because it is independently owned. |
 
@@ -167,7 +167,7 @@ S6-6 dependency/Quorum/canonical-entrypoint ledger
        v
 Step 7
 S7-1 dual draft ─> S7-2/S7-3/S7-4
-S7-5 temporal foundation ─> S7-6 Time Group ─┐
+S7-5 temporal foundation ─> S7-6 Chrono Group ─┐
                          └─> S7-7 Scene schema ─> S7-8 Scene Studio ─> S7-9 Time Content
 S7-10 session-only exact-stage draft ─> S7-11 Destination/placement proof
                                     └> S7-12 Chart type/catalogue ─> S7-13 Data source/profile
@@ -198,7 +198,7 @@ Execution order is Step 6; Step 7 in the dependency order shown; Step 8 only aft
 | Dual layout/chart drafts and auxiliary parking | S7-1; consumers S7-3, S7-4, S7-6, S7-8, S7-9, S7-10 |
 | View focus/comparison, collection/Orbit, structure/Scenario | S7-2, S7-3, S7-4 |
 | Temporal schema/migration/ledgers/matching/provenance/Needs-attention | S7-5 |
-| Time Group Studio/Availability | S7-6 |
+| Chrono Studio/Availability | S7-6 |
 | Saved Scene contract/date position/two-stage UI | S7-7, S7-8 |
 | Time Content operations/handoffs/session separation | S7-9 |
 | Chart creation session state, exact six stages, Destination, Chart type/catalogue, Data source, Map/prepare linked ownership, Configure/proofs, Review/create/commit | S7-10, S7-11, S7-12, S7-13, S7-14, S7-15, S7-16 |
@@ -220,7 +220,7 @@ Execution order is Step 6; Step 7 in the dependency order shown; Step 8 only aft
 | Matching hierarchy; **Concurrent only**, **Interpolate**, **Snap to Latest**, and **Snap to Closest**; closest ties choose the earlier observation; unsupported-policy reasons | S7-5 |
 | Interpolation eligibility and no extrapolation | S7-5 |
 | Provenance, signed/mixed offsets, accessible labels | S7-5, display S7-17 |
-| Time Group stages/defaults/review/availability/cadence | S7-6 |
+| Chrono Group stages/defaults/review/availability/cadence | S7-6 |
 | Full Scene semantics and earlier five-stage obligations | S7-7; two-stage interaction S7-8 |
 | Copy/move/delete and repair consequences | S7-9 owner operations/handoffs |
 | View Chrono **All page charts** versus **Group only**, availability/colour association, direct seek/frame-period context, authored plus session matching, **Reveal to frame** default, **Full timeline** marker, **Scene-focused** projection, deck/mast continuity, endpoint and all safety pauses | S7-17 |
@@ -270,7 +270,7 @@ Steps 6–8 leave these named hooks for final acceptance:
 
 - `tests/e2e/v3-shell-fidelity.spec.js`: exported `WORKSPACE_VIEWPORTS` plus stable canonical-identity and effective-width canvas helpers. Existing geometry readers may remain diagnostic but do not impose exact View/Build rectangle equality.
 - `tests/e2e/v3-build-workspace.spec.js`: simultaneous layout/chart drafts, parked auxiliary, structure, collection, and restoration fixtures.
-- `tests/e2e/v3-temporal-authoring.spec.js`: Time Group, Scene, Time Content, repair, and return-context fixtures.
+- `tests/e2e/v3-temporal-authoring.spec.js`: Chrono Group, Scene, Time Content, repair, and return-context fixtures.
 - `tests/e2e/v3-chart-creation.spec.js`: application-session-resumable exact six-stage draft, reload loss, meaningful exit warning, Chart type catalogue, independent proof revisions, companion/durable-repair ownership, drift, ambiguous outcome, and durable committed handoff fixtures.
 - `tests/e2e/v3-view-chrono.spec.js`: scope, source, seek, trace, availability, movement, endpoint, and safety-pause fixtures.
 - `tests/e2e/v3-present-audience.spec.js`: valid/invalid Scene, holding/blank/blackout, disconnect/reconnect, END close succeeded, END close denied/surface remains, neutral Ended projection, old-event rejection, explicit new-session allocation, and last-valid fixtures.

@@ -29,7 +29,7 @@ const dashboard = {
       }],
     },
   ],
-  timeSyncGroups: [{ id: "exercise-clock", name: "Exercise clock" }],
+  chronoGroups: [{ id: "exercise-clock", name: "Exercise clock" }],
 };
 
 test("reconciles a removed page selection to the active page", () => {

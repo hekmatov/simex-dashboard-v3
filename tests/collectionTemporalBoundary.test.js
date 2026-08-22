@@ -8,7 +8,7 @@ import {
   buildEditorFormModel,
   buildFormPreparationKey,
 } from "../src/charting/forms/formModel.js";
-import { validateTimeSyncGroups } from "../src/charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../src/charting/time/chronoGroupModel.js";
 
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
@@ -32,7 +32,7 @@ const profile = profileDataset(rows, {
   observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
 });
 
-test("authored Collection Displays cannot join Time Groups", () => {
+test("authored Collection Displays cannot join Chrono Groups", () => {
   const chart = collectionChart();
   const groups = [{
     id: "exercise",
@@ -44,16 +44,16 @@ test("authored Collection Displays cannot join Time Groups", () => {
   }];
 
   assert.throws(
-    () => validateTimeSyncGroups(groups, {
+    () => validateChronoGroups(groups, {
       charts: [chart],
       loadedData: { primary: rows },
       profiles: { primary: profile },
     }),
-    /Collection displays cannot join Time Groups/i,
+    /Collection displays cannot join Chrono Groups/i,
   );
 });
 
-test("Collection authoring omits new Time Group assignment and preserves removal for legacy membership", () => {
+test("Collection authoring omits new Chrono Group assignment and preserves removal for legacy membership", () => {
   const unsynchronized = collectionChart({
     id: "new-collection",
     timeSync: null,
@@ -72,7 +72,7 @@ test("Collection authoring omits new Time Group assignment and preserves removal
     chart: unsynchronized,
     profile,
     prepared: preparedFor(unsynchronized),
-    timeSyncGroups: groups,
+    chronoGroups: groups,
   }).sections.flatMap(({ fields }) => fields);
   assert.equal(newFields.some(({ id }) => id === "timeSync"), false);
 
@@ -80,10 +80,10 @@ test("Collection authoring omits new Time Group assignment and preserves removal
     chart: synchronized,
     profile,
     prepared: preparedFor(synchronized),
-    timeSyncGroups: groups,
+    chronoGroups: groups,
   }).sections.flatMap(({ fields }) => fields).find(({ id }) => id === "timeSync");
   assert.equal(legacyField.ineligible, true);
-  assert.match(legacyField.help, /cannot join Time Groups/i);
+  assert.match(legacyField.help, /cannot join Chrono Groups/i);
 });
 
 test("Collection rotation never pauses for Chrono playback", () => {
@@ -100,7 +100,7 @@ test("Collection rotation never pauses for Chrono playback", () => {
   }), false);
 });
 
-test("the tracked dashboard keeps authored Collection Displays outside Time Groups", async () => {
+test("the tracked dashboard keeps authored Collection Displays outside Chrono Groups", async () => {
   const dashboard = JSON.parse(await readFile(
     new URL("../public/config/dashboard.json", import.meta.url),
     "utf8",
@@ -109,7 +109,7 @@ test("the tracked dashboard keeps authored Collection Displays outside Time Grou
     (chart) => chart.presentation?.collection != null,
   );
   const memberIds = new Set(
-    dashboard.timeSyncGroups.flatMap(({ members }) => (
+    dashboard.chronoGroups.flatMap(({ members }) => (
       members.map(({ chartId }) => chartId)
     )),
   );

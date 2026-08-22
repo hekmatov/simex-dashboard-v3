@@ -9,7 +9,7 @@ import {
 test("wizard create adapter revalidates then persists the complete payload exactly once", async () => {
   const payload = {
     chart: { id: "chart-a", typeId: "line", sourceId: "cases" },
-    timeSyncGroups: [{ id: "exercise", members: [{ chartId: "chart-a" }] }],
+    chronoGroups: [{ id: "exercise", members: [{ chartId: "chart-a" }] }],
   };
   const snapshot = createChartCreateSnapshot({
     transactionId: "create-chart-a",

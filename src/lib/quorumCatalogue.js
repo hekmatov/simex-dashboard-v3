@@ -30,14 +30,14 @@ import {
   isTimeSyncInterpolationEligible,
   TIME_SYNC_MATCHING_POLICIES,
   validateEffectiveTimeSyncMatching,
-} from "../charting/time/timeSyncModel.js";
+} from "../charting/time/chronoGroupModel.js";
 import { validateDataSourceDescriptor } from "./loadDashboard.js";
 
 const CONTRACT_VERSION = "2";
 const CATALOGUE_ID = "simex-dashboard";
 const DISPLAY_MODES = Object.freeze(["fullscreen", "multi_fullscreen"]);
 const PLAYBACK_DISPLAY_MODE = "playback";
-const TIME_GROUP_KEYS = new Set([
+const CHRONO_GROUP_KEYS = new Set([
   "id",
   "name",
   "period",
@@ -64,7 +64,7 @@ export function buildChartCatalogue(dashboard, aliasConfig) {
       ALIAS_KEYS,
       `alias metadata for chart ${entry.chart.id}`,
     );
-    const timeSyncGroupId = context.membershipByChartId.get(entry.chart.id) ?? null;
+    const chronoGroupId = context.membershipByChartId.get(entry.chart.id) ?? null;
     return {
       chart_id: entry.chart.id,
       type_id: entry.chart.typeId,
@@ -81,9 +81,9 @@ export function buildChartCatalogue(dashboard, aliasConfig) {
         `keywords for chart ${entry.chart.id}`,
       ),
       role_ids: Object.keys(entry.chart.roles).sort(compareText),
-      time_sync_group_id: timeSyncGroupId,
+      chrono_group_id: chronoGroupId,
       collection_capability: entry.schema.capabilities.collection,
-      supported_display_modes: timeSyncGroupId === null
+      supported_display_modes: chronoGroupId === null
         ? [...DISPLAY_MODES]
         : [...DISPLAY_MODES, PLAYBACK_DISPLAY_MODE],
     };
@@ -352,18 +352,18 @@ function buildDashboardContext(dashboard) {
     })),
   }));
   const chartsById = new Map(charts.map((entry) => [entry.chart.id, entry]));
-  const timeSyncGroups = root.timeSyncGroups === undefined
+  const chronoGroups = root.chronoGroups === undefined
     ? []
-    : requiredArray(root.timeSyncGroups, "dashboard timeSyncGroups");
+    : requiredArray(root.chronoGroups, "dashboard chronoGroups");
   const membershipByChartId = validateTimeMembership(
-    timeSyncGroups,
+    chronoGroups,
     chartsById,
   );
 
   return {
     catalogueRevision,
     dataSources,
-    timeSyncGroups,
+    chronoGroups,
     pages,
     charts,
     membershipByChartId,
@@ -400,42 +400,42 @@ function validateTimeMembership(groups, chartsById) {
   const membershipByChartId = new Map();
 
   for (const rawGroup of groups) {
-    const group = requiredRecord(rawGroup, "time synchronization group");
-    rejectUnknownKeys(group, TIME_GROUP_KEYS, "time synchronization group");
-    const groupId = requiredText(group.id, "time synchronization group ID");
+    const group = requiredRecord(rawGroup, "Chrono Group");
+    rejectUnknownKeys(group, CHRONO_GROUP_KEYS, "Chrono Group");
+    const groupId = requiredText(group.id, "Chrono Group ID");
     if (groupIds.has(groupId)) {
-      throw new Error(`duplicate time synchronization group ID: ${groupId}`);
+      throw new Error(`duplicate Chrono Group ID: ${groupId}`);
     }
     groupIds.add(groupId);
-    requiredText(group.name, `name for time synchronization group ${groupId}`);
+    requiredText(group.name, `name for Chrono Group ${groupId}`);
     validateTimePeriod(group.period, groupId);
     if (!Number.isFinite(group.secondsPerFrame) || group.secondsPerFrame <= 0) {
       throw new Error(
-        `time synchronization group ${groupId} secondsPerFrame must be positive and finite`,
+        `Chrono Group ${groupId} secondsPerFrame must be positive and finite`,
       );
     }
     validateEffectiveTimeSyncMatching(
       group.matching,
-      `time synchronization group ${groupId}`,
+      `Chrono Group ${groupId}`,
     );
 
     const memberIds = new Set();
     for (const rawMember of requiredArray(
       group.members,
-      `members for time synchronization group ${groupId}`,
+      `members for Chrono Group ${groupId}`,
     )) {
       const member = requiredRecord(
         rawMember,
-        `member for time synchronization group ${groupId}`,
+        `member for Chrono Group ${groupId}`,
       );
       rejectUnknownKeys(
         member,
         TIME_MEMBER_KEYS,
-        `member for time synchronization group ${groupId}`,
+        `member for Chrono Group ${groupId}`,
       );
       const chartId = requiredText(
         member.chartId,
-        `member chart ID for time synchronization group ${groupId}`,
+        `member chart ID for Chrono Group ${groupId}`,
       );
       const timeRole = requiredText(
         member.timeRole,
@@ -443,12 +443,12 @@ function validateTimeMembership(groups, chartsById) {
       );
       if (memberIds.has(chartId)) {
         throw new Error(
-          `duplicate member chart ${chartId} in time synchronization group ${groupId}`,
+          `duplicate member chart ${chartId} in Chrono Group ${groupId}`,
         );
       }
       if (membershipByChartId.has(chartId)) {
         throw new Error(
-          `Quorum catalogue v2 cannot represent multiple Time Group memberships for chart ${chartId}`,
+          `Quorum catalogue v2 cannot represent multiple Chrono Group memberships for chart ${chartId}`,
         );
       }
       memberIds.add(chartId);
@@ -489,29 +489,29 @@ function validateTimeMembership(groups, chartsById) {
 function validateTimePeriod(value, groupId) {
   const period = requiredRecord(
     value,
-    `period for time synchronization group ${groupId}`,
+    `period for Chrono Group ${groupId}`,
   );
   rejectUnknownKeys(
     period,
     TIME_PERIOD_KEYS,
-    `period for time synchronization group ${groupId}`,
+    `period for Chrono Group ${groupId}`,
   );
   const start = requiredText(
     period.start,
-    `period start for time synchronization group ${groupId}`,
+    `period start for Chrono Group ${groupId}`,
   );
   const end = requiredText(
     period.end,
-    `period end for time synchronization group ${groupId}`,
+    `period end for Chrono Group ${groupId}`,
   );
   if (!CANONICAL_DATE_ONLY.test(start) || !CANONICAL_DATE_ONLY.test(end)) {
     throw new Error(
-      `time synchronization group ${groupId} period must use canonical YYYY-MM-DD dates`,
+      `Chrono Group ${groupId} period must use canonical YYYY-MM-DD dates`,
     );
   }
   if (end < start) {
     throw new Error(
-      `time synchronization group ${groupId} period end must be on or after start`,
+      `Chrono Group ${groupId} period end must be on or after start`,
     );
   }
 }

@@ -52,7 +52,7 @@ Page
     └── Chart
 ```
 
-Time Groups remain a separate authored collection below the Page hierarchy and continue to expose Scene authoring from their inspector.
+Chrono Groups remain a separate authored collection below the Page hierarchy and continue to expose Scene authoring from their inspector.
 
 ### Semantics
 
@@ -142,7 +142,7 @@ The following changed-but-unsaved states are dirty:
 - Changed Add Chart wizard fields.
 - Pending Page, Section, or Chart inline rename.
 - Pending Page or Section content edits.
-- Pending Time Group or Scene authoring.
+- Pending Chrono Group or Scene authoring.
 - Pending Program, Scenario, or Updated-date metadata.
 
 The following are not content-dirty:
@@ -180,7 +180,7 @@ Build's command area gains style-aware **Import package** and **Export package**
 
 ### Export flow
 
-- Export flushes pending Page, Section, Time Group, Scene, and dashboard-metadata edits before serialization.
+- Export flushes pending Page, Section, Chrono Group, Scene, and dashboard-metadata edits before serialization.
 - An actively changed Chart editor or Add Chart wizard must be saved or cancelled before export because those drafts are not yet part of the dashboard contract.
 - Untouched authoring surfaces do not block export.
 - The exported package includes the saved dashboard style and color profile.
@@ -238,7 +238,7 @@ Use TDD for each behavior and the cheapest check that can falsify it.
 - Replacing the V3 dashboard configuration/runtime contract.
 - Moving persisted dashboard ownership out of `App`.
 - A general file manager or package history browser.
-- New chart, Time Group, or Scene authoring models beyond the access and dirty-state integration described here.
+- New chart, Chrono Group, or Scene authoring models beyond the access and dirty-state integration described here.
 - Removing the protocol fields needed for existing dashboard or audience compatibility.
 
 ## Acceptance Criteria

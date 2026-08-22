@@ -43,7 +43,7 @@ Requested browser viewport sizes are reported separately from the page's `docume
 
 At 1440 × 900, the controller is a two-column surface: a 360 px context/monitor panel, a 20 px body gap, and the chart-selection region. The action dock remains at the bottom of the viewport while the document scrolls. At 1024 × 768, that two-column relationship remains; the chart region narrows to 581 px and the dock wraps to 175 px high. These values describe the current implementation, not recommended dimensions.
 
-The context panel is sticky and its overflow is hidden. The chart-choice region drives nearly all page height. This keeps the monitor and basic context near the moderator, but chart discovery, selection, ordering, time-group controls, and dock actions are split across a long vertical route. The 1440 empty baseline is shown in [runtime-controller-1440x900-empty-not-open.png](screenshots/runtime-controller-1440x900-empty-not-open.png); the 1024 baseline is shown in [runtime-controller-1024x768-empty-not-open.png](screenshots/runtime-controller-1024x768-empty-not-open.png).
+The context panel is sticky and its overflow is hidden. The chart-choice region drives nearly all page height. This keeps the monitor and basic context near the moderator, but chart discovery, selection, ordering, Chrono Group controls, and dock actions are split across a long vertical route. The 1440 empty baseline is shown in [runtime-controller-1440x900-empty-not-open.png](screenshots/runtime-controller-1440x900-empty-not-open.png); the 1024 baseline is shown in [runtime-controller-1024x768-empty-not-open.png](screenshots/runtime-controller-1024x768-empty-not-open.png).
 
 ### Control hierarchy and targets
 
@@ -54,7 +54,7 @@ The context panel is sticky and its overflow is hidden. The chart-choice region 
 | Scene title and layout | Context/scene controls | Selects and inputs have a source-defined 44 px minimum | Grouping is understandable, but its relationship to chart count and scene state must remain explicit. |
 | Chart inclusion | Long chart-choice region | Choice checkbox 20 × 20 px | Selection is comprehensive but scroll-heavy. At four charts, unchecked choices become unavailable until a selected chart is removed. |
 | Ordering | Selected-chart controls | Source-defined 44 px controls | Ordering is available, but its reachability depends on the selected-chart position in the long surface. |
-| Playback | Time-group controls plus slider | 44 px source minimum for inputs; Previous/Next observed at 44 px | Endpoint enabled states are clear; continuous playback behavior is absent and unresolved. |
+| Playback | Chrono Group controls plus slider | 44 px source minimum for inputs; Previous/Next observed at 44 px | Endpoint enabled states are clear; continuous playback behavior is absent and unresolved. |
 | Live actions | Sticky action dock | Main actions observed at 44 px high; Open/Reopen observed at 39 px high | Blackout/Restore and End remain accessible; Open/Reopen is visually and physically smaller than the primary dock actions. |
 
 **Source-derived responsive note:** below 900 px the controller body changes to one column; below 768 px several action groups become single-column stacks. Those controller breakpoints were not part of the required live viewport set and were not treated as observed evidence.
@@ -80,10 +80,10 @@ The playback sequence was exercised with four charts connected:
 | Step | Observed position and enabled state |
 | --- | --- |
 | Municipal outbreak playback selected | Slider 414 of 414; Previous enabled; Next disabled. |
-| Switched to national time group | Slider 0 of 176; Previous disabled; Next enabled. |
+| Switched to national Chrono Group | Slider 0 of 176; Previous disabled; Next enabled. |
 | Pressed Next once | Slider 1 of 176; Previous and Next enabled. |
 
-The controller provides Previous, Next, time-group selection, and direct slider positioning. No Play or Pause action appeared. [runtime-controller-1440x900-playback-four-chart.png](screenshots/runtime-controller-1440x900-playback-four-chart.png) records the realistic four-chart playback state.
+The controller provides Previous, Next, Chrono Group selection, and direct slider positioning. No Play or Pause action appeared. [runtime-controller-1440x900-playback-four-chart.png](screenshots/runtime-controller-1440x900-playback-four-chart.png) records the realistic four-chart playback state.
 
 This evidence establishes the present interaction, but not its adequacy for live facilitation. The expected cue frequency, whether frames advance automatically, and how a moderator should recover from overshooting remain open.
 

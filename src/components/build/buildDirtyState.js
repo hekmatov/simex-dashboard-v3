@@ -5,7 +5,7 @@ const AUTHORED_DIRTY_KEYS = Object.freeze([
   "chartWizard",
   "inlineRename",
   "pendingContent",
-  "timeGroup",
+  "chronoGroup",
   "scene",
   "dashboardMetadata",
 ]);
@@ -18,7 +18,7 @@ export function createBuildDirtyState() {
     chartWizard: false,
     inlineRename: false,
     pendingContent: false,
-    timeGroup: false,
+    chronoGroup: false,
     scene: false,
     dashboardMetadata: false,
   };
@@ -31,7 +31,7 @@ export function hasUnsavedAuthoredContent(state = {}) {
 const LOCAL_AUTHORING_DRAFT_KEYS = Object.freeze([
   "structure",
   "scenario",
-  "timeGroup",
+  "chronoGroup",
   "scene",
 ]);
 
@@ -51,7 +51,7 @@ export function buildLeaveBlockReason(drafts = {}) {
   const label = ({
     structure: "Structure",
     scenario: "Scenario",
-    timeGroup: "Time Group",
+    chronoGroup: "Chrono Group",
     scene: "Scene",
   })[active.key];
   return `Save or discard changes to ${label} before leaving this edit. Stay in Build to continue editing.`;

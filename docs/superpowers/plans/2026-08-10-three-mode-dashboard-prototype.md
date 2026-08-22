@@ -413,7 +413,7 @@ Inspector surfaces:
 - page label/title/description;
 - section title/description;
 - selected chart editor;
-- time-group read-only summary.
+- Chrono Group read-only summary.
 
 Reuse current controlled drafts and 650 ms pendingEdits. Keep time membership in
 chart forms. Move DeviceLayoutControl, import/export, Finish Build, Reset, and
@@ -651,7 +651,7 @@ Audience passes no cell controls.
 - [ ] **Step 4: Reuse playback time without a second playback engine**
 
 Export buildMemberTimeContexts from PlaybackProvider. Audience finds the local
-time group from presentationState.time.group_id and derives per-chart contexts
+Chrono Group from presentationState.time.group_id and derives per-chart contexts
 from the received epoch. It does not mount a controlled PlaybackProvider or
 receive data through the channel.
 

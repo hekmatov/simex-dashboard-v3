@@ -12,15 +12,13 @@ export default function BuildInspector({
   onPageChange,
   onPageRemove,
   onSectionChange,
-  onTimeGroupChange,
-  onOpenSceneComposer,
 }) {
   const labelRef = React.useRef(null);
   const page = (dashboard.pages ?? []).find(({ id }) => id === selection?.pageId);
   const section = (page?.sections ?? []).find(({ id }) => id === selection?.sectionId);
   const placement = (section?.panels ?? []).find(({ id }) => id === selection?.placementId);
   const chart = placement?.chart ?? placement;
-  const group = (dashboard.timeSyncGroups ?? []).find(({ id }) => id === selection?.groupId);
+  const group = (dashboard.chronoGroups ?? []).find(({ id }) => id === selection?.chronoGroupId);
 
   React.useEffect(() => {
     if (focusLabelKey > 0) labelRef.current?.focus();
@@ -35,17 +33,8 @@ export default function BuildInspector({
       </section>
     );
   }
-  if (selection?.kind === "timeGroup" && group) {
-    return (
-      <TimeGroupEditor
-        dashboard={dashboard}
-        group={group}
-        disabled={disabled}
-        labelRef={labelRef}
-        onChange={(updates) => onTimeGroupChange?.(group.id, updates)}
-        onOpenSceneComposer={onOpenSceneComposer}
-      />
-    );
+  if (selection?.kind === "chronoGroup" && group) {
+    return <ChronoGroupSummary group={group} />;
   }
   if (selection?.kind === "section" && page && section) {
     const draft = sectionDrafts[section.id] ?? section;
@@ -136,101 +125,13 @@ export default function BuildInspector({
   );
 }
 
-function TimeGroupEditor({ dashboard, group, disabled, labelRef, onChange, onOpenSceneComposer }) {
-  const charts = new Map((dashboard.pages ?? []).flatMap((page) => (
-    (page.sections ?? []).flatMap((section) => (
-      (section.panels ?? []).map((placement) => {
-        const chart = placement.chart ?? placement;
-        return [chart.id, chart];
-      })
-    ))
-  )));
+function ChronoGroupSummary({ group }) {
   return (
-    <section className="build-inspector build-time-group-summary" aria-labelledby="build-inspector-title">
-      <p className="eyebrow">Time Group</p>
-      <h2 id="build-inspector-title">{group.name || "Unnamed Time Group"}</h2>
-      <label>
-        Name
-        <input
-          ref={labelRef}
-          aria-label="Time Group name"
-          disabled={disabled}
-          value={group.name ?? ""}
-          onChange={(event) => onChange?.({ name: event.target.value })}
-        />
-      </label>
-      <label>
-        Start
-        <input
-          aria-label="Time Group start"
-          type="date"
-          disabled={disabled}
-          value={group.period?.start ?? ""}
-          onChange={(event) => {
-            const start = event.target.value;
-            if (start && (!group.period?.end || start <= group.period.end)) {
-              onChange?.({ period: { ...group.period, start } });
-            }
-          }}
-        />
-      </label>
-      <label>
-        End
-        <input
-          aria-label="Time Group end"
-          type="date"
-          disabled={disabled}
-          value={group.period?.end ?? ""}
-          onChange={(event) => {
-            const end = event.target.value;
-            if (end && (!group.period?.start || end >= group.period.start)) {
-              onChange?.({ period: { ...group.period, end } });
-            }
-          }}
-        />
-      </label>
-      <label>
-        Matching
-        <select
-          aria-label="Time Group matching"
-          disabled={disabled}
-          value={group.matching?.policy ?? "exact"}
-          onChange={(event) => onChange?.({ matching: { policy: event.target.value } })}
-        >
-          <option value="exact">Concurrent only</option>
-          <option value="lastKnown">Snap to latest</option>
-        </select>
-      </label>
-      <label>
-        Seconds per frame
-        <input
-          aria-label="Seconds per frame"
-          type="number"
-          min="0.1"
-          step="0.1"
-          disabled={disabled}
-          value={group.secondsPerFrame ?? 1}
-          onChange={(event) => {
-            const secondsPerFrame = Number(event.target.value);
-            if (secondsPerFrame > 0) onChange?.({ secondsPerFrame });
-          }}
-        />
-      </label>
-      <p>Dashboard timezone: {dashboard.timezone || "Not configured"}</p>
-      <h3>Member charts</h3>
-      <ul>
-        {(group.members ?? []).map((member) => (
-          <li key={`${member.chartId}:${member.timeRole}`}>
-            {charts.get(member.chartId)?.title || member.chartId} — {member.timeRole || "time role"}
-          </li>
-        ))}
-      </ul>
-      <hr />
-      <h3>Scenes</h3>
-      <p>Compose a live audience Scene from this dashboard in Present.</p>
-      <button type="button" disabled={disabled} onClick={onOpenSceneComposer}>
-        Open live Scene composer
-      </button>
+    <section className="build-inspector build-chrono-group-summary" aria-labelledby="build-inspector-title">
+      <p className="eyebrow">Chrono Group</p>
+      <h2 id="build-inspector-title">{group.name || "Unnamed Chrono Group"}</h2>
+      <p>{group.members?.length ?? 0} member charts</p>
+      <p>Open this group in Chrono Studio to inspect its content or begin an edit.</p>
     </section>
   );
 }

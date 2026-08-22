@@ -47,6 +47,7 @@ const ROLE_KEYS = [
 const CHART_KEYS = [
   "aliases",
   "chart_id",
+  "chrono_group_id",
   "collection_capability",
   "description",
   "keywords",
@@ -54,7 +55,6 @@ const CHART_KEYS = [
   "role_ids",
   "section_id",
   "supported_display_modes",
-  "time_sync_group_id",
   "title",
   "type_id",
 ];
@@ -91,7 +91,7 @@ test("catalogue v2 covers every registered type and configured chart", async () 
   assert.ok(catalogue.charts.some(({ type_id }) => type_id === "pie"));
   assert.ok(
     catalogue.charts.some(
-      ({ time_sync_group_id }) => time_sync_group_id === "municipal_outbreak",
+      ({ chrono_group_id }) => chrono_group_id === "municipal_outbreak",
     ),
   );
 });
@@ -244,7 +244,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   const municipal = catalogue.charts.find(
     ({ chart_id }) => chart_id === "bio_municipality_choropleth_animation",
   );
-  assert.equal(municipal.time_sync_group_id, "municipal_outbreak");
+  assert.equal(municipal.chrono_group_id, "municipal_outbreak");
   assert.deepEqual(municipal.supported_display_modes, [
     "fullscreen",
     "multi_fullscreen",
@@ -255,7 +255,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
     ({ chart_id }) => chart_id === "bio_mortality_age",
   );
   assert.equal(mortality.type_id, "pie");
-  assert.equal(mortality.time_sync_group_id, null);
+  assert.equal(mortality.chrono_group_id, null);
   assert.equal(mortality.collection_capability, false);
   assert.deepEqual(mortality.supported_display_modes, [
     "fullscreen",
@@ -268,7 +268,7 @@ test("configured chart descriptors use exact roles, groups, and display capabili
   assert.equal(collection.collection_capability, true);
 });
 
-test("canonical Time Groups preserve a sole membership in catalogue v2", async () => {
+test("canonical Chrono Groups preserve a sole membership in catalogue v2", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const canonical = structuredClone(dashboard);
   for (const { chart } of configuredCharts(canonical)) {
@@ -280,7 +280,7 @@ test("canonical Time Groups preserve a sole membership in catalogue v2", async (
     ({ chart_id }) => chart_id === "bio_municipality_choropleth_animation",
   );
 
-  assert.equal(municipal.time_sync_group_id, "municipal_outbreak");
+  assert.equal(municipal.chrono_group_id, "municipal_outbreak");
   assert.deepEqual(municipal.supported_display_modes, [
     "fullscreen",
     "multi_fullscreen",
@@ -288,17 +288,17 @@ test("canonical Time Groups preserve a sole membership in catalogue v2", async (
   ]);
 });
 
-test("catalogue v2 rejects multiple Time Group memberships actionably", async () => {
+test("catalogue v2 rejects multiple Chrono Group memberships actionably", async () => {
   const { dashboard, aliases } = await trackedInputs();
   const changed = structuredClone(dashboard);
-  changed.timeSyncGroups[1].members.push({
+  changed.chronoGroups[1].members.push({
     chartId: "bio_municipality_choropleth_animation",
     timeRole: "time",
   });
 
   assert.throws(
     () => catalogueModule.buildChartCatalogue(changed, aliases),
-    /Quorum catalogue v2 cannot represent multiple Time Group memberships/i,
+    /Quorum catalogue v2 cannot represent multiple Chrono Group memberships/i,
   );
 });
 
@@ -344,7 +344,7 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedTime = structuredClone(dashboard);
-  changedTime.timeSyncGroups[0].matching.policy = "lastKnown";
+  changedTime.chronoGroups[0].matching.policy = "lastKnown";
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(changedTime, aliases),
@@ -353,7 +353,7 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedMemberPolicy = structuredClone(dashboard);
-  changedMemberPolicy.timeSyncGroups[0].members[0].matching = {
+  changedMemberPolicy.chronoGroups[0].members[0].matching = {
     policy: "lastKnown",
   };
   assert.notDeepEqual(
@@ -367,7 +367,7 @@ test("dashboard semantic digest includes all packaged semantics and rejects runt
   );
 
   const changedMembershipOrder = structuredClone(dashboard);
-  changedMembershipOrder.timeSyncGroups[1].members.reverse();
+  changedMembershipOrder.chronoGroups[1].members.reverse();
   assert.notDeepEqual(
     Buffer.from(
       catalogueModule.canonicalDashboardSemanticsBytes(
@@ -636,14 +636,14 @@ test("producer rejects invalid v3 instances, aliases, and time membership", asyn
     "unknown alias property": (changed) => {
       changed.aliases.bio_confirmed_cases.legacyKeywords = [];
     },
-    "unknown time-group property": (changed) => {
-      changed.dashboard.timeSyncGroups[0].legacyClock = {};
+    "unknown chrono-group property": (changed) => {
+      changed.dashboard.chronoGroups[0].legacyClock = {};
     },
     "unknown time-member property": (changed) => {
-      changed.dashboard.timeSyncGroups[0].members[0].legacyPolicy = "exact";
+      changed.dashboard.chronoGroups[0].members[0].legacyPolicy = "exact";
     },
-    "invalid time-group period": (changed) => {
-      changed.dashboard.timeSyncGroups[0].period.end = "2019-01-01";
+    "invalid chrono-group period": (changed) => {
+      changed.dashboard.chronoGroups[0].period.end = "2019-01-01";
     },
   };
 

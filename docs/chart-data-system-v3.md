@@ -334,7 +334,7 @@ remain intact.
 ## Time synchronization
 
 The dashboard owns a validated IANA `timezone`; legacy bundles that omit it
-normalize to `UTC`. A canonical Time Group contains exactly:
+normalize to `UTC`. A canonical Chrono Group contains exactly:
 
 - stable `id` and `name` values;
 - an inclusive `period` with canonical `YYYY-MM-DD` `start` and `end` dates;
@@ -342,7 +342,7 @@ normalize to `UTC`. A canonical Time Group contains exactly:
 - a positive finite `secondsPerFrame` cadence;
 - validated `members`.
 
-`timeSyncGroups[].members` is the sole membership authority. Each member
+`chronoGroups[].members` is the sole membership authority. Each member
 declares `chartId` and `timeRole`, with an optional validated `matching`
 override. The same chart can belong to multiple groups. Chart-local
 `interaction.timeSync` values are normalized away and are never read as an
@@ -355,7 +355,7 @@ is valid, and at least one plotted value is nonmissing. Date-only observations
 are compared directly; instant observations are assigned to calendar dates in
 the dashboard timezone. There is no designated primary clock.
 
-Collection displays are ineligible for Time Group membership and fail
+Collection displays are ineligible for Chrono Group membership and fail
 validation when supplied as members.
 
 ### Matching
@@ -388,7 +388,7 @@ Collection Display is independent of any one visualization. A collection item
 is produced by the chart family; `CollectionDisplay` decides how repeated
 items are presented.
 
-Collection displays are excluded from Time Groups. Their internal paging,
+Collection displays are excluded from Chrono Groups. Their internal paging,
 ranking, and carousel rotation do not receive group time contexts.
 
 The current registry declares collection capability for `kpi`, `gauge`,
@@ -449,7 +449,7 @@ Every saved chart uses `configVersion: 3`. Dashboard validation checks:
 - exact top-level and nested shapes;
 - chart type and role references;
 - source existence and role compatibility;
-- time-group membership in both directions;
+- Chrono Group membership in both directions;
 - collection and comparison subcontracts;
 - schema-applicable series appearance;
 - page, section, landing, and chart identity;
@@ -500,7 +500,7 @@ Object keys use JavaScript UTF-16 ordering, arrays preserve declared order, and
 the result is deterministic. Quorum validates the exact contract version 2
 snapshot without changing its version 1 companion protocol.
 
-Catalogue contract version 2 can represent only one Time Group membership per
+Catalogue contract version 2 can represent only one Chrono Group membership per
 chart. Catalogue generation fails with an actionable error when a canonical
 dashboard uses multiple memberships for one chart; supporting that valid
 dashboard shape in Quorum requires a coordinated catalogue contract version 3
@@ -536,7 +536,7 @@ Primary suites include:
 | Rendering | `tests/chartRenderingV3.test.js` |
 | Series appearance and persistence | `tests/chartSchemasV3.test.js`, `tests/chartFormModelV3.test.js`, `tests/dashboardBundleV3.test.js` |
 | Conversion | `tests/chartConversionV3.test.js` |
-| Time groups and matching | `tests/timeSyncModelV3.test.js`, `tests/temporalMatchingV3.test.js` |
+| Chrono Groups and matching | `tests/timeSyncModelV3.test.js`, `tests/temporalMatchingV3.test.js` |
 | Playback projection | `tests/timeAwareChartDataV3.test.js` |
 | Collection Display | `tests/collectionModelV3.test.js`, `tests/collectionComponentsV3.test.js` |
 | Delta comparison | `tests/deltaComparisonV3.test.js` |

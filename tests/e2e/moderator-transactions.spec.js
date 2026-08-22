@@ -520,7 +520,7 @@ test("removal followed by another editor cancel does not resurrect the chart", a
   const panelIds = saved.pages.flatMap(({ sections }) => (
     sections.flatMap(({ panels }) => panels.map(({ id }) => id))
   ));
-  const synchronizedChartIds = (saved.timeSyncGroups ?? []).flatMap(({ members }) => (
+  const synchronizedChartIds = (saved.chronoGroups ?? []).flatMap(({ members }) => (
     members.map(({ chartId }) => chartId)
   ));
   expect(panelIds).not.toContain(removedPanelId);

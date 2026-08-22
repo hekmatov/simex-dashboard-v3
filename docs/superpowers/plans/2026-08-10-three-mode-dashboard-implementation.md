@@ -73,8 +73,8 @@ The sequence is intentional. Present cannot safely start until active-page and p
 - src/components/view/ViewShell.jsx — comfortable personal-view composition.
 - src/components/build/buildSelectionModel.js — placement-aware Build selection and reconciliation.
 - src/components/build/BuildWorkspace.jsx — desktop three-region and tablet-sheet composition.
-- src/components/build/BuildStructureRail.jsx — scenario/page/section/placement/time-group navigation.
-- src/components/build/BuildInspector.jsx — scenario, page, section, chart, and time-group inspector surfaces.
+- src/components/build/BuildStructureRail.jsx — scenario/page/section/placement/Chrono Group navigation.
+- src/components/build/BuildInspector.jsx — scenario, page, section, chart, and Chrono Group inspector surfaces.
 - src/components/build/BuildCommandBar.jsx — finish/reset/add/import/export/appearance commands.
 - src/components/common/TextEntryDialog.jsx — accessible replacement for structural window.prompt calls.
 - src/styles/tokens.css — semantic tokens and density variables for touched surfaces.
@@ -423,7 +423,7 @@ Move the existing provider, unchanged, around the workspace renderer:
 
 ~~~jsx
 <PlaybackProvider
-  groups={dashboard.timeSyncGroups ?? []}
+  groups={dashboard.chronoGroups ?? []}
   charts={configuredCharts(dashboard)}
   loadedData={dashboard.loadedData ?? {}}
   profiles={dashboard.datasetProfiles ?? {}}
@@ -759,7 +759,7 @@ Cover:
 - wrapped placement retaining both placementId and chartId;
 - reconciliation after page/panel removal;
 - empty sections;
-- time-group summary selection.
+- Chrono Group summary selection.
 
 - [ ] **Step 2: Run the focused test and confirm failure**
 
@@ -788,7 +788,7 @@ Render ordinary nested lists and buttons, not an ARIA tree. The hierarchy is:
 2. Pages
 3. Sections
 4. Panel placements
-5. Time groups
+5. Chrono Groups
 
 Page selection also navigates the shared canvas. Panel buttons announce the chart title but retain placement ID in the callback.
 
@@ -862,7 +862,7 @@ The canvas header, page title, and section headings become read-only in every mo
 - Scenario: program label, scenario label, last updated
 - Page: label, title, description
 - Section: title, description
-- Time group: name and current member/matching summary; membership stays in chart forms
+- Chrono Group: name and current member/matching summary; membership stays in chart forms
 
 Continue using the existing 650 ms pendingEdits scheduler.
 
@@ -947,7 +947,7 @@ While the inspector chart draft is open, disable rail selection changes, structu
 
 - [ ] **Step 5: Replace prompt and confirm calls**
 
-Use TextEntryDialog for add-page and section-split naming. Use the existing ConfirmDialog for page removal. Keep chart cleanup from time groups and landing references inside the serialized App mutation.
+Use TextEntryDialog for add-page and section-split naming. Use the existing ConfirmDialog for page removal. Keep chart cleanup from Chrono Groups and landing references inside the serialized App mutation.
 
 - [ ] **Step 6: Add keyboard reorder actions**
 

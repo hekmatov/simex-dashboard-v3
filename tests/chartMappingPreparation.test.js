@@ -170,15 +170,15 @@ test("preparation recomputes effective output and blocks a causally named empty 
   assert.equal(validated.errors.at(-1).code, "EFFECTIVE_OUTPUT_EMPTY");
 });
 
-test("zero or multiple Time Group memberships preserve only group identity and time field", () => {
+test("zero or multiple Chrono Group memberships preserve only group identity and time field", () => {
   const zero = validateChartMapping({
     chartTypeId: "line",
     profile: profileFixture(),
     mapping: { measurements: ["cases"], observation: "date" },
-    preparation: { ...acceptedPreparation(), timeGroupMemberships: [] },
+    preparation: { ...acceptedPreparation(), chronoGroupMemberships: [] },
   });
   assert.equal(zero.valid, true);
-  assert.deepEqual(zero.value.timeGroupMemberships, []);
+  assert.deepEqual(zero.value.chronoGroupMemberships, []);
 
   const multiple = validateChartMapping({
     chartTypeId: "line",
@@ -186,14 +186,14 @@ test("zero or multiple Time Group memberships preserve only group identity and t
     mapping: { measurements: ["cases"], observation: "date" },
     preparation: {
       ...acceptedPreparation(),
-      timeGroupMemberships: [
+      chronoGroupMemberships: [
         { groupId: "winter", timeField: "date" },
         { groupId: "executive", timeField: "date" },
       ],
     },
   });
   assert.equal(multiple.valid, true);
-  assert.deepEqual(multiple.value.timeGroupMemberships, [
+  assert.deepEqual(multiple.value.chronoGroupMemberships, [
     { groupId: "winter", timeField: "date" },
     { groupId: "executive", timeField: "date" },
   ]);
@@ -206,7 +206,7 @@ test("zero or multiple Time Group memberships preserve only group identity and t
     mapping: { measurements: ["cases"], observation: "date" },
     preparation: {
       ...acceptedPreparation(),
-      timeGroupMemberships: [{ groupId: "winter", timeField: "date", matching: "Interpolate" }],
+      chronoGroupMemberships: [{ groupId: "winter", timeField: "date", matching: "Interpolate" }],
     },
   });
   assert.equal(policyLeak.valid, false);
@@ -231,7 +231,7 @@ function acceptedPreparation() {
     duplicateTimeCount: 1,
     missingValues: { rule: "drop", accepted: true, affectedCount: 1 },
     duplicates: { rule: "latest", accepted: true, affectedCount: 1 },
-    timeGroupMemberships: [],
+    chronoGroupMemberships: [],
   };
 }
 

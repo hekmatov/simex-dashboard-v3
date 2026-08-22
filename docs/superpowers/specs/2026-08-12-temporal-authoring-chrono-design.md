@@ -10,7 +10,7 @@
 
 ## 1. Purpose and precedence
 
-This document is the normative temporal-design addendum to the accepted three-mode dashboard UI contract. It closes the previously unresolved workflows for creating and managing synchronized time groups, authoring reusable scenes, exploring temporal availability, and using those objects in View Chrono and Present.
+This document is the normative temporal-design addendum to the accepted three-mode dashboard UI contract. It closes the previously unresolved workflows for creating and managing Chrono Groups, authoring reusable scenes, exploring temporal availability, and using those objects in View Chrono and Present.
 
 When this document conflicts with the companion UI contract on temporal behavior, this document takes precedence. In particular, it supersedes:
 
@@ -30,10 +30,10 @@ This contract is candidate-neutral. It defines ownership, behavior, state, discl
 |---|---|
 | Dashboard timezone | The single IANA timezone used for period interpretation, calendar frame generation, displayed timestamps, day aggregation, and signed date offsets. Existing dashboards without the field migrate explicitly to UTC. Groups and scenes cannot override it. |
 | Available observation | A valid timestamp paired with a valid, non-null value for one plotted variable, calculated from the chart's effective data after saved filters, transformations, grouping, and aggregation. Duplicate timestamps for the same variable count once. |
-| Time group | A dashboard-wide authored object that identifies temporally related charts, owns an inclusive master period, supplies default temporal matching and playback delay, and owns zero or more page-scoped scenes. |
-| Scene | A saved, reusable, page-scoped child of one time group. It owns a contained period, chart composition/order/widths, frame-generation rule, optional matching and playback-delay overrides, and a Present subset/layout. |
+| Chrono Group | A dashboard-wide authored object that identifies temporally related charts, owns an inclusive master period, supplies default temporal matching and playback delay, and owns zero or more page-scoped scenes. |
+| Scene | A saved, reusable, page-scoped child of one Chrono Group. It owns a contained period, chart composition/order/widths, frame-generation rule, optional matching and playback-delay overrides, and a Present subset/layout. |
 | Frame | One ordered playback timestamp. A frame does not imply that every variable has an observation at that timestamp. Each variable resolves independently under the effective matching policy. |
-| Default Chrono | Playback of a time group without selecting one of its authored scenes. Its frame ledger is derived from member observations. |
+| Default Chrono | Playback of a Chrono Group without selecting one of its authored scenes. Its frame ledger is derived from member observations. |
 | Frame source | The participating scene chart whose plotted-variable timestamps generate candidate scene frames. This is the user-facing term; `pacemaker` is not product copy. |
 | Concurrent only | Resolve a variable only when it has an observation exactly concurrent with the frame timestamp. This is the user-facing label for exact matching. |
 | Interpolate | Resolve an eligible numeric variable by linear, date-proximity-weighted interpolation between valid observations on both sides of the frame. Interpolation never extrapolates. |
@@ -50,9 +50,9 @@ This contract is candidate-neutral. It defines ownership, behavior, state, discl
 
 The dashboard stores exactly one timezone. Date-only values remain calendar dates in that timezone. Timestamp values are normalized for comparison and ordering but displayed in the dashboard timezone.
 
-### 3.2 Saved time group
+### 3.2 Saved Chrono Group
 
-A committed time group contains:
+A committed Chrono Group contains:
 
 - a stable unique ID;
 - a dashboard-unique non-empty name;
@@ -63,7 +63,7 @@ A committed time group contains:
 - a positive finite default seconds-per-frame value; and
 - zero or more saved scenes.
 
-A chart may belong to multiple time groups. Its temporal role and effective matching configuration are independent in each membership. Only the currently active group affects playback.
+A chart may belong to multiple Chrono Groups. Its temporal role and effective matching configuration are independent in each membership. Only the currently active group affects playback.
 
 The group does not persist a copy of its derived Default Chrono frame ledger or availability analysis.
 
@@ -105,13 +105,13 @@ Derived state is never duplicated into the dashboard bundle as a second source o
 
 ### 3.5 Drafts and atomic commit
 
-Incomplete time groups and scenes may exist as local authoring drafts. Draft changes do not affect View, Present, Audience, exported configuration, or other saved objects. Save validates and commits the complete object atomically. Failure leaves the draft open and the last saved dashboard unchanged.
+Incomplete Chrono Groups and scenes may exist as local authoring drafts. Draft changes do not affect View, Present, Audience, exported configuration, or other saved objects. Save validates and commits the complete object atomically. Failure leaves the draft open and the last saved dashboard unchanged.
 
 ## 4. Frame and matching semantics
 
 ### 4.1 Default Chrono frames
 
-For a time group without a selected scene, the deterministic frame ledger is the sorted unique union of all available observation timestamps across every plotted variable of every member chart within the group period.
+For a Chrono Group without a selected scene, the deterministic frame ledger is the sorted unique union of all available observation timestamps across every plotted variable of every member chart within the group period.
 
 Default Chrono does not fabricate period-boundary frames when no member has an available observation at those boundaries. If the union is empty, playback is unavailable with a visible reason.
 
@@ -149,7 +149,7 @@ When a builder shortens a group period, the UI identifies every affected scene. 
 
 The effective policy resolves in this order:
 
-1. time-group default;
+1. Chrono Group default;
 2. explicit member fallback where the default is unsupported;
 3. scene per-chart override when a scene is active; and
 4. a temporary View Chrono session-wide override when selected.
@@ -181,9 +181,9 @@ For snapping, an observation earlier than the frame has a negative day offset, a
 - When interpolation is present, the compact state is labelled **Interpolated** rather than implying one observation date; detailed disclosure still identifies each variable's result.
 - Concurrent-only values are identified as concurrent and never imply borrowed observations.
 
-## 5. Time Group guided workflow
+## 5. Chrono Group guided workflow
 
-Time Group creation and editing is one guided workflow with four behavioral stages. The exact dialog, overlay, sheet, or workspace geometry is deferred.
+Chrono Group creation and editing is one guided workflow with four behavioral stages. The exact dialog, overlay, sheet, or workspace geometry is deferred.
 
 ### 5.1 Choose period
 
@@ -251,13 +251,13 @@ Require a unique name within the group and summarize:
 - matching overrides and coverage gaps; and
 - inherited or overridden seconds per frame.
 
-Save commits the complete scene atomically. Editing reopens the affected stage. Dirty draft protection matches Time Group authoring.
+Save commits the complete scene atomically. Editing reopens the affected stage. Dirty draft protection matches Chrono Group authoring.
 
 ## 7. Copying, moving, and deletion
 
-### 7.1 Duplicate Time Group
+### 7.1 Duplicate Chrono Group
 
-**Duplicate Time Group** creates an editable deep-copy draft with new group and child-scene IDs. It retains the period, chart references, matching configuration, seconds-per-frame value, and copies every child scene. Charts and data sources remain shared references and are never duplicated.
+**Duplicate Chrono Group** creates an editable deep-copy draft with new group and child-scene IDs. It retains the period, chart references, matching configuration, seconds-per-frame value, and copies every child scene. Charts and data sources remain shared references and are never duplicated.
 
 The proposed name is `Copy of <name>` and must be made unique before save. Nothing is committed until review and explicit save.
 
@@ -283,7 +283,7 @@ Chrono is a subview of View. Its controls are hidden during ordinary View. Enter
 
 ### 8.2 Default Chrono
 
-The viewer selects a time group, then chooses:
+The viewer selects a Chrono Group, then chooses:
 
 - **All page charts:** retain every chart on the current page. Group membership remains identifiable through explicit text or status treatment; the chart-colored outline is reserved for the enabled availability overlay.
 - **Group only:** show only current-page members of the selected group.
@@ -302,7 +302,7 @@ Playback controls hover above the dashboard and retain their viewport position d
 
 The controls include:
 
-- time group or scene selection;
+- Chrono Group or scene selection;
 - Previous, Play/Pause, and Next;
 - direct seek across the active period;
 - current date and frame index/total;
@@ -355,7 +355,7 @@ Loading a scene selects its page, Present subset, order, layout, period, frame l
 
 The moderator may change composition, Present layout, seconds per frame, and Reveal to frame/Full timeline for the current presentation session only. These changes never mutate the saved group or scene.
 
-Loading a time group without a scene retains the manual one-to-four-chart composition workflow. A manually composed chart outside the active group remains static and is clearly identified as static to the moderator.
+Loading a Chrono Group without a scene retains the manual one-to-four-chart composition workflow. A manually composed chart outside the active group remains static and is clearly identified as static to the moderator.
 
 ### 9.2 Playback lifecycle
 
@@ -426,7 +426,7 @@ Step 3A must add fixtures and tasks that prove the following without relying on 
 The accepted Step 2 baseline remains valid. Add one bounded supplement with two tracks:
 
 1. exercise the existing create-new-chart wizard end to end; and
-2. record current time-group inspection, existing playback/Chrono behavior, temporal provenance, and the explicit absence of group/scene creation and matching controls.
+2. record current Chrono Group inspection, existing playback/Chrono behavior, temporal provenance, and the explicit absence of group/scene creation and matching controls.
 
 Reuse accepted scene-layout and basic playback-control evidence. Do not repeat already sufficient 16:9 geometry or control inventories, and do not prototype future behavior in the audit.
 
@@ -439,7 +439,7 @@ Add candidate-neutral `CREATE-*` clauses for chart creation and `TEMP-*` clauses
 Step 4 must separately cover:
 
 - chart creation;
-- Time Group creation and availability exploration;
+- Chrono Group creation and availability exploration;
 - Scene creation;
 - View Chrono;
 - panel editing and dashboard-level Build controls;

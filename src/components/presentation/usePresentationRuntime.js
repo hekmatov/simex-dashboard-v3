@@ -7,7 +7,7 @@ import { openAudienceWindow } from "../../lib/presentationWindow.js";
 export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
   dashboard_name: true,
   page: false,
-  parent_time_group: true,
+  parent_chrono_group: true,
   scene_name: true,
   scene_date: true,
 });

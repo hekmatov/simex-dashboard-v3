@@ -27,7 +27,7 @@ test("Unit Orbit filters compatible capabilities and names no-result separately 
 test("panel draft validates footprint and Collection temporal eligibility", () => {
   const [ordinary, collection] = model.collectChartPlacements(fixture());
   assert.equal(model.validatePanelDraft({ ...ordinary.chart, footprint: { columns: 5, rows: 2 } }).code, "FOOTPRINT_OUT_OF_RANGE");
-  assert.equal(model.validatePanelDraft({ ...collection.chart, timeGroupIds: ["national"] }).code, "COLLECTION_TEMPORAL_INELIGIBLE");
+  assert.equal(model.validatePanelDraft({ ...collection.chart, chronoGroupIds: ["national"] }).code, "COLLECTION_TEMPORAL_INELIGIBLE");
   assert.equal(model.validatePanelDraft({ ...ordinary.chart, footprint: { columns: 2, rows: 1 } }), null);
 });
 

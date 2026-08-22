@@ -155,7 +155,7 @@ Each configured `charts` entry contains:
   "aliases": ["confirmed cases"],
   "keywords": ["cases", "epidemic", "trend"],
   "role_ids": ["measurements", "observation"],
-  "time_sync_group_id": "national_outbreak",
+  "chrono_group_id": "national_outbreak",
   "collection_capability": false,
   "supported_display_modes": ["fullscreen", "multi_fullscreen", "playback"]
 }
@@ -404,7 +404,7 @@ Expected: FAIL because the live shell still imports version-2 modules.
 
 ```jsx
 <PlaybackProvider
-  groups={dashboard.timeSyncGroups}
+  groups={dashboard.chronoGroups}
   loadedData={dashboard.loadedData}
   profiles={dashboard.datasetProfiles}
 >
@@ -539,13 +539,13 @@ test("catalogue v2 contains normalized chart types and instances", async () => {
   assert.equal(snapshot.chart_schema_version, 3);
   assert.equal(snapshot.chart_types.length, listChartSchemas().length);
   assert.ok(snapshot.charts.some(({ type_id }) => type_id === "pie"));
-  assert.ok(snapshot.charts.some(({ time_sync_group_id }) => time_sync_group_id === "municipal_outbreak"));
+  assert.ok(snapshot.charts.some(({ chrono_group_id }) => chrono_group_id === "municipal_outbreak"));
 });
 
 test("time or collection semantic changes invalidate the dashboard digest", async () => {
   const dashboard = await trackedDashboard();
   const changed = structuredClone(dashboard);
-  changed.timeSyncGroups[0].members[0].matching.policy = "lastKnown";
+  changed.chronoGroups[0].members[0].matching.policy = "lastKnown";
   assert.notEqual(
     canonicalDashboardSemanticsBytes(changed),
     canonicalDashboardSemanticsBytes(dashboard),
@@ -698,7 +698,7 @@ def test_loads_catalogue_v2_with_schema_time_and_collection_semantics() -> None:
     assert catalogue.contract_version == "2"
     assert catalogue.chart_schema_version == 3
     assert any(item.type_id == "pie" for item in catalogue.chart_types)
-    assert any(item.time_sync_group_id for item in catalogue.charts)
+    assert any(item.chrono_group_id for item in catalogue.charts)
 
 
 def test_rejects_unknown_capability_role_and_semantic_fields(tmp_path: Path) -> None:
@@ -750,7 +750,7 @@ class ChartDescriptor(StrictModel):
     aliases: tuple[NonEmptyText, ...]
     keywords: tuple[NonEmptyText, ...]
     role_ids: tuple[NonEmptyText, ...]
-    time_sync_group_id: NonEmptyText | None
+    chrono_group_id: NonEmptyText | None
     collection_capability: bool
     supported_display_modes: tuple[NonEmptyText, ...]
 

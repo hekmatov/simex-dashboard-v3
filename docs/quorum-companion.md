@@ -66,7 +66,7 @@ exchange API can preserve the same versioned contract.
 
 The snapshot also contains `dashboard_semantic_digest`, an opaque SHA-256 digest
 of the complete packaged dashboard configuration and aliases. This covers
-source descriptors and packaged payloads, time groups, page and section
+source descriptors and packaged payloads, Chrono Groups, page and section
 semantics, landing and layout settings, and every chart definition without
 publishing those values into the catalogue. The semantic producer accepts only
 the strict version-3 configuration shape; unknown fields and hydrated runtime

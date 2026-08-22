@@ -13,7 +13,7 @@ Refine the SimEx Dashboard into one coherent product that supports three tasks
 without creating three products or three user classes:
 
 1. **Build** — prepare the exercise, information structure, data sources,
-   charts, synchronized time groups, and portable package.
+   charts, Chrono Groups, and portable package.
 2. **View** — explore and interpret the dashboard on a personal computer or
    tablet with minimal authoring noise.
 3. **Present** — let a moderator control a clean, legible audience display on a
@@ -58,7 +58,7 @@ Agile prototype delivery is an explicit product requirement:
 
 At the selected baseline, SimEx is a React 19 and Vite single-page application
 with ECharts visualizations, three configured pages, forty panels, responsive
-preview modes, chart authoring, synchronized-time groups, portable bundles,
+preview modes, chart authoring, Chrono Groups, portable bundles,
 one-to-four-chart fullscreen comparison, and optional Quorum companion support.
 Page selection is application state rather than URL routing.
 
@@ -169,7 +169,7 @@ workspace. The preferred desktop composition is:
 
 ```text
 Global frame and mode switcher
-├── Structure rail: scenario, pages, sections, panels, time groups
+├── Structure rail: scenario, pages, sections, panels, Chrono Groups
 ├── Live dashboard canvas
 └── Context inspector: content, data, chart, interaction, layout
 ```

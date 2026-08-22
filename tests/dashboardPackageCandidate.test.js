@@ -50,7 +50,7 @@ function dashboard() {
         fingerprint: "candidate-cases",
       },
     },
-    timeSyncGroups: [],
+    chronoGroups: [],
     pages: [
       {
         id: "home",

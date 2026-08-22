@@ -55,7 +55,7 @@ const dashboard = {
       })),
     }],
   }],
-  timeSyncGroups: [{
+  chronoGroups: [{
     id: "epidemic-time",
     name: "Winter response 2027",
     matching: { policy: "exact" },
@@ -71,7 +71,7 @@ const twoChartScene = {
   audience_facts: {
     dashboard_name: true,
     page: true,
-    parent_time_group: true,
+    parent_chrono_group: true,
     scene_name: true,
     scene_date: true,
   },
@@ -122,7 +122,7 @@ test("Audience facts hide independently, collapse the shared header, and never r
       audience_facts: {
         dashboard_name: true,
         page: false,
-        parent_time_group: true,
+        parent_chrono_group: true,
         scene_name: true,
         scene_date: true,
       },
@@ -137,7 +137,7 @@ test("Audience facts hide independently, collapse the shared header, and never r
       audience_facts: {
         dashboard_name: false,
         page: false,
-        parent_time_group: false,
+        parent_chrono_group: false,
         scene_name: false,
         scene_date: true,
       },
@@ -164,7 +164,7 @@ test("audience display never renders the page name from legacy audience facts", 
       audience_facts: {
         dashboard_name: false,
         page: true,
-        parent_time_group: false,
+        parent_chrono_group: false,
         scene_name: false,
         scene_date: false,
       },

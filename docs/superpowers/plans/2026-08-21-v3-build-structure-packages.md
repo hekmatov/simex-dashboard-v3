@@ -417,7 +417,7 @@ async function renameBuildSelection(selection, value) {
 }
 ```
 
-`renameChart` must run through `performModeratorOperation("rename-chart", ...)` and `onChartSave` with the complete existing Chart plus the changed title and current Time Groups. Do not create a partial Chart config.
+`renameChart` must run through `performModeratorOperation("rename-chart", ...)` and `onChartSave` with the complete existing Chart plus the changed title and current Chrono Groups. Do not create a partial Chart config.
 
 Remove the canvas-owned click-to-rename state from `BuildSectionHeader`; the canvas title becomes a selected/highlighted display target, while all Page/Section/Chart renaming lives in the Structure tree.
 
@@ -465,7 +465,7 @@ git commit -m "fix(build): coordinate tree navigation and rename"
 - Extend: `tests/e2e/v3-build-structure-packages.spec.js`
 
 **Interfaces:**
-- Produces: `createBuildDirtyState()`, `hasUnsavedAuthoredContent(state)`, and exact boolean keys `chartEditor`, `chartWizard`, `inlineRename`, `pendingContent`, `timeGroup`, `scene`, `dashboardMetadata`.
+- Produces: `createBuildDirtyState()`, `hasUnsavedAuthoredContent(state)`, and exact boolean keys `chartEditor`, `chartWizard`, `inlineRename`, `pendingContent`, `chronoGroup`, `scene`, `dashboardMetadata`.
 - Produces: `parseDashboardPackageCandidate(text) => { config, exportedAt, summary }`.
 - Produces: `summary.pages[].sections[].panels[]` records for review UI.
 - Produces: `onDirtyChange(boolean)` from Chart editor/wizard.
@@ -479,7 +479,7 @@ Create `tests/buildDirtyState.test.js` with literal cases:
 assert.equal(hasUnsavedAuthoredContent(createBuildDirtyState()), false);
 for (const key of [
   "chartEditor", "chartWizard", "inlineRename", "pendingContent",
-  "timeGroup", "scene", "dashboardMetadata",
+  "chronoGroup", "scene", "dashboardMetadata",
 ]) {
   assert.equal(hasUnsavedAuthoredContent({ ...createBuildDirtyState(), [key]: true }), true);
 }
@@ -541,7 +541,7 @@ Expected: FAIL because the dirty classifier, candidate parser, and dirty reporte
 
 Add `hasPending()` to `createDebouncedDashboardEdits`; it returns whether its pending edit map is non-empty and has no side effects.
 
-Export `isChartEditorStateDirty(state)` from `ChartEditorV3.jsx` by structurally comparing `draft/timeSyncGroups` with `savedChart/savedTimeSyncGroups`. Call `onDirtyChange` in an effect and reset it on unmount.
+Export `isChartEditorStateDirty(state)` from `ChartEditorV3.jsx` by structurally comparing `draft/chronoGroups` with `savedChart/savedChronoGroups`. Call `onDirtyChange` in an effect and reset it on unmount.
 
 In `ChartWizardV3.jsx`, report dirty only when the open wizard has changed authored fields or local/manual data. Opening the initial empty wizard reports false; reset/close/unmount reports false.
 
@@ -556,13 +556,13 @@ const authoredDirty = hasUnsavedAuthoredContent({
   chartWizard: chartWizardDirty,
   inlineRename: inlineRenameDirty,
   pendingContent: pendingEdits.hasPending(),
-  timeGroup: externalDirty.timeGroup,
+  chronoGroup: externalDirty.chronoGroup,
   scene: externalDirty.scene,
   dashboardMetadata: externalDirty.dashboardMetadata,
 });
 ```
 
-Initialize `externalDirty` with all three values `false` and expose a narrow `setAuthoredDirtyFlag(key, dirty)` callback for authored editors. The current Time Group controls persist directly and the Scene composer lives in Present, so they remain false unless a changed-but-unpersisted authoring surface explicitly reports otherwise. Do not pass theme projection or look state into this object.
+Initialize `externalDirty` with all three values `false` and expose a narrow `setAuthoredDirtyFlag(key, dirty)` callback for authored editors. The current Chrono Group controls persist directly and the Scene composer lives in Present, so they remain false unless a changed-but-unpersisted authoring surface explicitly reports otherwise. Do not pass theme projection or look state into this object.
 
 Project Import/Export callbacks into `BuildWorkspace`. Import remains clickable while an editor is dirty. If `authoredDirty` is true, show the first `ConfirmDialog` with exact message `Unsaved changes to this dashboard will be lost.` Confirm opens the hidden JSON file input; cancel leaves all state untouched. When false, open the picker directly.
 

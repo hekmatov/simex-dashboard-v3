@@ -7,7 +7,7 @@ import {
 import {
   assertTimeSyncInterpolationAllowed,
   validateEffectiveTimeSyncMatching,
-} from "./timeSyncModel.js";
+} from "./chronoGroupModel.js";
 import { matchTemporalObservation } from "./temporalMatch.js";
 
 const TRACE_TYPES = new Set(["line", "area", "mixed", "timeline", "swimlane"]);

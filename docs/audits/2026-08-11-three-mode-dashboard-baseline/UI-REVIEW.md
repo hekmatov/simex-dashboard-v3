@@ -64,7 +64,7 @@ Present supports the required scene counts and deterministic layout choices, and
 | PR-03 | Medium | Observed | Switching the controller from Present to View leaves the connected Audience showing the active scene. Returning to Present reconnects to that session. `End presentation` closes it and preserves controller selections. | Leaving the Present workspace and ending the presentation are distinct, currently under-explained lifecycle operations. |
 | AU-02 | Medium | Observed | A connected zero-chart scene with title on shows only the title and empty grid; with title off it is completely blank. This differs from the pre-connection waiting state. | The audience cannot distinguish intentional blank output from a fault or incomplete setup. |
 | PR-04 | Medium | Observed | The controller monitor is a 320x180 JPEG rendered at about 308x172 at 1440. It communicates composition but cannot establish chart legibility or faithful detail. | The moderator can verify layout, not what distant viewers can actually read. |
-| CT-01 | Medium | Observed | Scenario, page, section, and chart controls exist, but time-group selection is read-only and no panel span/width/height control was found in the chart inspector. | Dashboard-level and panel-level authoring capability is uneven and does not yet cover the required interaction matrix. |
+| CT-01 | Medium | Observed | Scenario, page, section, and chart controls exist, but Chrono Group selection is read-only and no panel span/width/height control was found in the chart inspector. | Dashboard-level and panel-level authoring capability is uneven and does not yet cover the required interaction matrix. |
 | PR-05 | Medium | Observed + source fact | Most controller actions meet a 44 px minimum, but title/chart checkboxes are 20x20 and `Open/Reopen audience display` was observed at 39 px high. | Frequent and high-consequence controls do not consistently meet the controller's own target-size pattern. |
 | PT-01 | Medium | Prototype observed | The static prototype does not model the runtime faithfully: Build horizontally overflows at 1200, its arrangements differ, Audience is a same-document swap, and most controller controls are inert. | It is useful as historical intent only and must not be used as visual authority. |
 | CL-01 | Low | Source fact | Current source uses View/Build/Present. Legacy editor markup and older test names remain in unreachable or historical paths. | Stale local builds can be mistaken for the branch under audit unless the origin/service worker is controlled. |
@@ -80,7 +80,7 @@ Warnings:
 - A connected Audience with no charts can be entirely blank, so state depends on the controller rather than being self-explanatory.
 - Repeated `Edit chart`, `Start section here`, `Remove chart`, and chart-choice controls rely heavily on surrounding context.
 - `Open audience display`, `Reopen audience display`, leaving Present, and `End presentation` represent distinct lifecycle actions but do not explain their persistence consequences.
-- The time-group inspector looks like a selection destination but provides a summary rather than an editing surface.
+- The Chrono Group inspector looks like a selection destination but provides a summary rather than an editing surface.
 
 ### 2. Visuals - 1/4
 
@@ -112,15 +112,15 @@ The current runtime keeps the same nominal grid track count/order/span at each p
 
 ### 6. Experience design - 1/4
 
-The Build selection model supports scenario, page, section, time group, and chart destinations. It does not preserve a usable relationship between selection and controls across positions or breakpoints. Desktop rails scroll with the long document; the 1024 sheet can hide the whole target; the 390 layout places controls after the entire dashboard. Focus is not moved to a useful first editor control after canvas selection.
+The Build selection model supports scenario, page, section, Chrono Group, and chart destinations. It does not preserve a usable relationship between selection and controls across positions or breakpoints. Desktop rails scroll with the long document; the 1024 sheet can hide the whole target; the 390 layout places controls after the entire dashboard. Focus is not moved to a useful first editor control after canvas selection.
 
-Present supports zero through four selected charts, valid layout choices for each count, title toggling, time-group switching and stepping, blackout/restore, disconnect detection, reopen, reload recovery, and explicit end. No Play/Pause control was observed. Switching global mode does not end the connected Audience. These behaviors require explicit lifecycle and control-hierarchy decisions before design direction work.
+Present supports zero through four selected charts, valid layout choices for each count, title toggling, Chrono Group switching and stepping, blackout/restore, disconnect detection, reopen, reload recovery, and explicit end. No Play/Pause control was observed. Switching global mode does not end the connected Audience. These behaviors require explicit lifecycle and control-hierarchy decisions before design direction work.
 
 ## Required invariants for Steps 3 and 4
 
 1. At the same viewport and dashboard state, View and Build preserve the same dashboard canvas bounds, grid breakpoint, column/gap behavior, panel arrangement, panel dimensions, and chart plot area.
 2. Authoring chrome may become denser; the dashboard canvas and its content must not become denser.
-3. Dashboard-level controls for scenario, pages, sections, layout, and time groups remain available without unintentionally reflowing or covering dashboard content.
+3. Dashboard-level controls for scenario, pages, sections, layout, and Chrono Groups remain available without unintentionally reflowing or covering dashboard content.
 4. A selected object and the controls needed for the current task remain mutually understandable. If a deliberate editor obscures the underlying dashboard, it supplies a faithful live rendering of the selected object.
 5. Opening, closing, cancelling, saving, and escaping an editor have distinct, consistent focus and state semantics at every responsive state.
 6. Visible actions have functioning behavior and visible selection states use the classes/state the runtime actually emits.
@@ -155,7 +155,7 @@ These are hypotheses to evaluate, not approved solutions:
 5. **Reconsider:** 1200 px is a clean transition to persistent Build rails. It is the point of the runtime's largest geometry discontinuity, and the prototype horizontally overflows there.
 6. **Withdraw:** responsive sheets inherently protect the selected object. The 1024 inspector covers the selected panel completely, while the 390 flow layout separates it from controls by almost the entire document.
 7. **Withdraw:** a persistent inspector makes selected controls continuously available. Desktop central/bottom selection can leave the inspector entirely off-screen.
-8. **Reconsider:** one inspector hierarchy is sufficient for scenario, page, section, chart, panel geometry, and time groups. Current capability and disclosure depth differ substantially by object.
+8. **Reconsider:** one inspector hierarchy is sufficient for scenario, page, section, chart, panel geometry, and Chrono Groups. Current capability and disclosure depth differ substantially by object.
 9. **Withdraw:** the controller preview demonstrates Audience fidelity. Its small JPEG proves composition only.
 10. **Withdraw:** dashboard chart typography transfers unchanged to an across-room Audience display. Only the outer scene heading is explicitly scaled.
 11. **Reconsider:** leaving Present should preserve a live Audience by default. The runtime does so, but the lifecycle semantics are not stated.

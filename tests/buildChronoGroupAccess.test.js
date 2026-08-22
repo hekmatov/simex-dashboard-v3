@@ -13,13 +13,16 @@ const vite = await createServer({
 const { default: BuildInspector } = await vite.ssrLoadModule(
   "/src/components/build/BuildInspector.jsx",
 );
+const { default: ChronoGroupContent } = await vite.ssrLoadModule(
+  "/src/components/time/ChronoGroupContent.jsx",
+);
 await vite.close();
 
-test("Time Group authoring exposes editable settings and live Scene composer access", () => {
+test("Build routes Chrono Group editing and Scene creation through read-first group content", () => {
   const dashboard = {
     timezone: "UTC",
     pages: [],
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "exercise",
       name: "Exercise timeline",
       period: { start: "2027-05-01", end: "2027-05-03" },
@@ -30,15 +33,19 @@ test("Time Group authoring exposes editable settings and live Scene composer acc
   };
   const html = renderToStaticMarkup(React.createElement(BuildInspector, {
     dashboard,
-    selection: { kind: "timeGroup", groupId: "exercise" },
-    onTimeGroupChange() {},
-    onOpenSceneComposer() {},
+    selection: { kind: "chronoGroup", chronoGroupId: "exercise" },
   }));
+  assert.doesNotMatch(html, /aria-label="Chrono Group name"/);
+  assert.doesNotMatch(html, />Open live Scene composer</);
 
-  assert.match(html, /aria-label="Time Group name"/);
-  assert.match(html, /aria-label="Time Group start"/);
-  assert.match(html, /aria-label="Time Group end"/);
-  assert.match(html, /aria-label="Time Group matching"/);
-  assert.match(html, /aria-label="Seconds per frame"/);
-  assert.match(html, />Open live Scene composer</);
+  const content = renderToStaticMarkup(React.createElement(ChronoGroupContent, {
+    content: {
+      ...dashboard.chronoGroups[0],
+      status: "ready",
+      pageSections: [],
+    },
+  }));
+  assert.match(content, />Edit</);
+  assert.match(content, />Create Scene</);
+  assert.match(content, />Back to Chrono Studio</);
 });

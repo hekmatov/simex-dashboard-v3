@@ -176,7 +176,7 @@ The measurements do not answer these choices and this audit does not select amon
 - How should authoring controls remain available while preserving the exact View canvas at desktop, tablet, landscape tablet, and phone sizes?
 - When controls cannot coexist beside the selected object, should the system reveal them contextually, progressively, through viewport movement, or in a separate live-rendering editor?
 - If a larger editor obscures the underlying dashboard, what minimum live context must remain visible and how is exact chart-render fidelity demonstrated?
-- How should dashboard-level page, section, layout, and time-group controls remain reachable without reflowing or covering dashboard content?
+- How should dashboard-level page, section, layout, and Chrono Group controls remain reachable without reflowing or covering dashboard content?
 - Should grid breakpoint behavior remain viewport-based, or must the revised contract define another responsive reference while still guaranteeing View–Build equivalence?
 - Where can panel-level actions live so that they do not subtract from chart plot area or alter panel bounds?
 - What scroll-position and selected-object anchoring must be preserved when entering Build, opening controls, cancelling, and returning to View?

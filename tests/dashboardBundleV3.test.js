@@ -9,6 +9,7 @@ import {
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 import {
   parseDashboardBundle,
+  readDashboardStorage,
   serializeDashboardBundle,
   validateDashboardConfig,
 } from "../src/charting/config/dashboardBundleV3.js";
@@ -69,7 +70,7 @@ function version3Dashboard() {
         fingerprint: "manual-fingerprint",
       },
     },
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "outbreak",
       name: "Outbreak playback",
       period: {
@@ -245,7 +246,7 @@ test("saved Scenes round-trip as one validated dashboard-content truth", () => {
     id: "scene-outbreak",
     name: "Outbreak briefing",
     pageId: "overview",
-    groupId: "outbreak",
+    chronoGroupId: "outbreak",
     period: {
       start: "2027-05-01T00:00:00.000Z",
       end: "2027-05-01T00:00:00.000Z",
@@ -270,18 +271,57 @@ test("saved Scenes round-trip as one validated dashboard-content truth", () => {
 
   const invalid = structuredClone(dashboard);
   invalid.scenes[0].members[0].chartId = "missing-chart";
-  assert.throws(() => validateDashboardConfig(invalid), /parent Time Group|does not exist/);
+  assert.throws(() => validateDashboardConfig(invalid), /parent Chrono Group|does not exist/);
+});
+
+test("legacy Vanta settings are stripped at persistence boundaries while canonical configuration rejects them", () => {
+  const legacyBackground = {
+    backgroundColor: "#f7f9fc",
+    networkColor: "#f1a1ad",
+    mouseControls: false,
+    touchControls: false,
+    points: 6,
+    maxDistance: 17,
+    spacing: 18,
+    speed: 0.45,
+  };
+  const legacyConfig = version3Dashboard();
+  legacyConfig.vantaBackground = structuredClone(legacyBackground);
+  legacyConfig.pages[0].sections[0].vantaBackground = structuredClone(legacyBackground);
+
+  assert.throws(
+    () => validateDashboardConfig(structuredClone(legacyConfig)),
+    /Unknown dashboard configuration property "vantaBackground"\./,
+  );
+
+  const bundle = serializeDashboardBundle(version3Dashboard());
+  bundle.config = legacyConfig;
+  const serialized = serializeDashboardBundle(legacyConfig);
+  const fromBundle = parseDashboardBundle(JSON.stringify(bundle));
+  const fromStorage = readDashboardStorage({
+    getItem(storageKey) {
+      return storageKey === "dashboard" ? JSON.stringify(legacyConfig) : null;
+    },
+  }, "dashboard");
+
+  for (const normalized of [serialized.config, fromBundle, fromStorage]) {
+    assert.equal(Object.hasOwn(normalized, "vantaBackground"), false);
+    assert.equal(
+      Object.hasOwn(normalized.pages[0].sections[0], "vantaBackground"),
+      false,
+    );
+  }
 });
 
 test("dashboard persistence migrates legacy temporal authority to the canonical contract", () => {
   const dashboard = version3Dashboard();
   delete dashboard.timezone;
-  const legacyGroup = dashboard.timeSyncGroups[0];
+  const legacyGroup = dashboard.chronoGroups[0];
   legacyGroup.primaryClock = { sourceId: "uploaded-cases", timeField: "reportedAt" };
   delete legacyGroup.period;
   delete legacyGroup.secondsPerFrame;
   const bundle = serializeDashboardBundle(dashboard);
-  const group = bundle.config.timeSyncGroups[0];
+  const group = bundle.config.chronoGroups[0];
 
   assert.equal(bundle.config.timezone, "UTC");
   assert.deepEqual(Object.keys(group).sort(), [
@@ -1014,24 +1054,24 @@ test("time synchronization rejects an empty optional temporal role array", () =>
 test("inline source records use one row representation and enforce each schema manual-data policy", () => {
   const dashboard = version3Dashboard();
   dashboard.pages[0].sections[0].panels = [pieChart()];
-  dashboard.timeSyncGroups = [];
+  dashboard.chronoGroups = [];
   assert.doesNotThrow(() => validateDashboardConfig(dashboard));
 
   const ambiguous = version3Dashboard();
   ambiguous.dataSources["manual-status"].data = [{ label: "Ready", value: 12 }];
   ambiguous.pages[0].sections[0].panels = [pieChart()];
-  ambiguous.timeSyncGroups = [];
+  ambiguous.chronoGroups = [];
   assert.throws(() => validateDashboardConfig(ambiguous), /unknown data source.*property "data"/i);
 
   const disallowed = version3Dashboard();
   disallowed.pages[0].sections[0].panels = [lineChart({ sourceId: "manual-status", interaction: { zoom: { enabled: true }, timeSync: null } })];
-  disallowed.timeSyncGroups = [];
+  disallowed.chronoGroups = [];
   assert.throws(() => validateDashboardConfig(disallowed), /does not support inline source/i);
 
   const oversized = version3Dashboard();
   oversized.dataSources["manual-status"].rows = Array.from({ length: 21 }, (_, value) => ({ label: `Status ${value}`, value }));
   oversized.pages[0].sections[0].panels = [pieChart()];
-  oversized.timeSyncGroups = [];
+  oversized.chronoGroups = [];
   assert.throws(() => validateDashboardConfig(oversized), /exceeds 20 rows/i);
 });
 
@@ -1391,7 +1431,7 @@ test("bundle write boundaries persist every collection layout, overflow, ranking
     },
   ];
   const dashboard = version3Dashboard();
-  dashboard.timeSyncGroups = [];
+  dashboard.chronoGroups = [];
   dashboard.dataSources["collection-status"] = {
     kind: "dataset",
     type: "uploadedCsv",

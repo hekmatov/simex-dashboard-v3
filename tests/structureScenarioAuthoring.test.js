@@ -209,8 +209,8 @@ test("Build workspace binds Structure and Scenario to the Context Shelf lifecycl
   assert.match(html, /data-build-auxiliary-contract="context-shelf"/);
   assert.match(html, />Pages &amp; sections</);
   assert.match(html, />Scenario details</);
-  assert.match(html, />Time Content</);
-  assert.match(html, />Time Group Studio</);
+  assert.doesNotMatch(html, />Time Content</);
+  assert.match(html, />Chrono Studio</);
   assert.match(html, />Scene Studio</);
 });
 
@@ -224,7 +224,7 @@ function structureFixture() {
         { id: "pressure", title: "Pressure", panels: [{ id: "pressure-panel", chart: { id: "admissions" } }] },
       ],
     }],
-    timeSyncGroups: [{ id: "national", members: [{ chartId: "admissions" }] }],
+    chronoGroups: [{ id: "national", members: [{ chartId: "admissions" }] }],
     scenes: [{ id: "briefing", chartIds: ["admissions"] }],
   };
 }

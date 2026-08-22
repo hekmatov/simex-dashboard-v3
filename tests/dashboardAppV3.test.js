@@ -60,8 +60,9 @@ test("source runtime state is excluded from packages and gates only affected pla
     server: { middlewareMode: true },
   });
   const {
+    configurationForEditBaseline,
     configurationForStorage,
-    readyTimeSyncGroups,
+    readyChronoGroups,
   } = await vite.ssrLoadModule("/src/App.jsx");
   await vite.close();
   const dashboard = minimalDashboard();
@@ -70,15 +71,15 @@ test("source runtime state is excluded from packages and gates only affected pla
   dashboard.chartDataStates = {
     "status-share": { status: "partial", unavailableSeries: "Exercise status" },
   };
-  dashboard.timeSyncGroups = [{
+  dashboard.chronoGroups = [{
     id: "status-group",
     members: [{ chartId: "status-share" }],
   }];
 
-  assert.deepEqual(readyTimeSyncGroups(dashboard), []);
+  assert.deepEqual(readyChronoGroups(dashboard), []);
   dashboard.dataSourceStates.status = { status: "ready" };
   assert.deepEqual(
-    readyTimeSyncGroups(dashboard).map(({ id }) => id),
+    readyChronoGroups(dashboard).map(({ id }) => id),
     ["status-group"],
   );
 
@@ -86,6 +87,13 @@ test("source runtime state is excluded from packages and gates only affected pla
   assert.equal(Object.hasOwn(stored, "loadedData"), false);
   assert.equal(Object.hasOwn(stored, "dataSourceStates"), false);
   assert.equal(Object.hasOwn(stored, "chartDataStates"), false);
+
+  const trackedProfile = { fields: { date: { type: "date" } } };
+  dashboard.dataSources = { status: { kind: "csv" } };
+  dashboard.datasetProfiles = { status: trackedProfile };
+  const baseline = configurationForEditBaseline(dashboard, { status: trackedProfile });
+  assert.equal(Object.hasOwn(baseline, "loadedData"), false);
+  assert.equal(Object.hasOwn(baseline, "datasetProfiles"), false);
 });
 
 test("legacy chart-system files are absent after the clean cutover", async () => {
@@ -162,7 +170,7 @@ test("chart creation and saving are immutable whole-dashboard mutations", async 
 
   const saved = integrateSavedChart(created, {
     chart: { ...createdChart, title: "Updated capacity" },
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   assert.equal(created.pages[0].sections[0].panels[1].title, "Current capacity");
   assert.equal(saved.pages[0].sections[0].panels[1].title, "Updated capacity");
@@ -181,7 +189,7 @@ test("saving a wrapped chart preserves its stable panel placement", async () => 
 
   const saved = integrateSavedChart(dashboard, {
     chart: { ...chart, title: "Updated wrapped chart" },
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
 
   assert.equal(saved.pages[0].sections[0].panels[0].id, "status-placement");
@@ -536,7 +544,7 @@ test("debounced edits flush before chart saves and cancellation prevents stale c
     dashboard,
     {
       chart: pieChart({ title: "Edited chart" }),
-      timeSyncGroups: [],
+      chronoGroups: [],
     },
   ));
   await Promise.all([flushed, saved]);
@@ -839,6 +847,54 @@ test("serialized dashboard commits compose rapid mutations and retain the last g
   assert.equal(controller.getCurrent().pages[0].title, "Rapid second save");
 });
 
+test("clean Build navigation waits for the commit queue without creating an identity save", async () => {
+  const {
+    awaitDashboardCommitQueue,
+    createSerializedDashboardCommitController,
+  } = await import("../src/lib/dashboardCommitController.js");
+  let commitCount = 0;
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: minimalDashboard(),
+    commit: async (candidate) => {
+      commitCount += 1;
+      return candidate;
+    },
+  });
+
+  const settled = await awaitDashboardCommitQueue(controller);
+
+  assert.equal(commitCount, 0);
+  assert.equal(settled.configVersion, 3);
+});
+
+test("look-only mutations use their lightweight committer without bypassing serialization", async () => {
+  const {
+    createSerializedDashboardCommitController,
+  } = await import("../src/lib/dashboardCommitController.js");
+  const calls = [];
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: minimalDashboard(),
+    commit: async (candidate) => {
+      calls.push(`full:${candidate.title}`);
+      return candidate;
+    },
+  });
+
+  const full = controller.mutate((candidate) => {
+    candidate.title = "Full save";
+  });
+  const look = controller.mutateWithCommit((candidate) => {
+    candidate.globalStyles = { dashboardStyle: "humanist-standard" };
+  }, async (candidate) => {
+    calls.push(`look:${candidate.globalStyles.dashboardStyle}`);
+    return candidate;
+  });
+  await Promise.all([full, look]);
+
+  assert.deepEqual(calls, ["full:Full save", "look:humanist-standard"]);
+  assert.equal(controller.getCurrent().title, "Full save");
+});
+
 test("the attached empty-chart case produces a canonical renderer-ready time point", async () => {
   const echarts = await import("echarts");
   const { profileDataset } = await import(
@@ -926,7 +982,7 @@ function minimalDashboard() {
         rows: [{ label: "Ready", value: 12 }],
       },
     },
-    timeSyncGroups: [],
+    chronoGroups: [],
     pages: [{
       id: "overview",
       title: "Overview",

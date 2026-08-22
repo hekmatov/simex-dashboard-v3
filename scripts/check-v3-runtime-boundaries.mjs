@@ -30,8 +30,8 @@ const RAW_RENDER_SURFACE_ALLOWLIST = new Map([
   ],
 ]);
 const MODE_ENTRYPOINTS = Object.freeze([
-  ["view", "src/components/view/ViewShell.jsx"],
-  ["build", "src/components/build/BuildWorkspace.jsx"],
+  ["view", "src/components/dashboard/DashboardModeWorkspace.jsx"],
+  ["build", "src/components/dashboard/DashboardModeWorkspace.jsx"],
   ["present", "src/components/presentation/PresentWorkspace.jsx"],
   ["audience", "src/components/presentation/AudienceDisplay.jsx"],
 ]);
@@ -138,7 +138,7 @@ const CONFIGURED_CHART_SCHEMA = schemaObject({
   role_ids: SCHEMA_TEXT_ARRAY,
   section_id: SCHEMA_TEXT,
   supported_display_modes: SCHEMA_TEXT_ARRAY,
-  time_sync_group_id: schemaNullable(SCHEMA_TEXT),
+  chrono_group_id: schemaNullable(SCHEMA_TEXT),
   title: SCHEMA_TEXT,
   type_id: SCHEMA_TEXT,
 });

@@ -19,7 +19,7 @@
 - View must not gain authoring chrome or a second editable content truth.
 - Appearance, colour, layout, mode, page, selection, and drawer changes must not invalidate a data-preparation artifact.
 - Storage unavailable keeps the live chart and artifact usable for the session; quota exhaustion remains distinct.
-- Keep the accepted temporal matching, Scene, Time Group, provenance, and page-bounding rules unchanged.
+- Keep the accepted temporal matching, Scene, Chrono Group, provenance, and page-bounding rules unchanged.
 - Use focused tests first; run the production build and proportionate in-app browser checks only after focused checks pass.
 
 ---

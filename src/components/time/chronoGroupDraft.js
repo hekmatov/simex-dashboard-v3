@@ -6,7 +6,7 @@ import {
 import { deriveGroupPeriodChangeConsequence } from "../../charting/time/temporalNeedsAttention.js";
 import { validateIanaTimeZone } from "../../charting/time/temporalSchema.js";
 
-export const TIME_GROUP_STAGES = Object.freeze(["period", "charts", "defaults", "review"]);
+export const CHRONO_GROUP_STAGES = Object.freeze(["period", "charts", "defaults", "review"]);
 
 const ALLOWED_FALLBACKS = new Set([
   MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
@@ -14,7 +14,7 @@ const ALLOWED_FALLBACKS = new Set([
   MATCHING_POLICY_LABELS.SNAP_TO_CLOSEST,
 ]);
 
-export function createTimeGroupDraft({
+export function createChronoGroupDraft({
   group = {},
   charts = [],
   scenes = [],
@@ -40,7 +40,7 @@ export function createTimeGroupDraft({
   };
 }
 
-export function reduceTimeGroupDraft(state, action) {
+export function reduceChronoGroupDraft(state, action) {
   switch (action?.type) {
     case "SET_PERIOD": {
       const value = { ...state.value, period: clone(action.period) };
@@ -93,20 +93,20 @@ export function reduceTimeGroupDraft(state, action) {
       assertStage(action.stage);
       return { ...state, stage: action.stage, error: null };
     case "NEXT_STAGE": {
-      const validation = validateTimeGroupStage(state, state.stage);
+      const validation = validateChronoGroupStage(state, state.stage);
       if (validation) return withError(state, validation);
-      const index = TIME_GROUP_STAGES.indexOf(state.stage);
+      const index = CHRONO_GROUP_STAGES.indexOf(state.stage);
       return {
         ...state,
-        stage: TIME_GROUP_STAGES[Math.min(index + 1, TIME_GROUP_STAGES.length - 1)],
+        stage: CHRONO_GROUP_STAGES[Math.min(index + 1, CHRONO_GROUP_STAGES.length - 1)],
         error: null,
       };
     }
     case "PREVIOUS_STAGE": {
-      const index = TIME_GROUP_STAGES.indexOf(state.stage);
+      const index = CHRONO_GROUP_STAGES.indexOf(state.stage);
       return {
         ...state,
-        stage: TIME_GROUP_STAGES[Math.max(index - 1, 0)],
+        stage: CHRONO_GROUP_STAGES[Math.max(index - 1, 0)],
         error: null,
       };
     }
@@ -132,13 +132,13 @@ export function reduceTimeGroupDraft(state, action) {
       };
     }
     case "SAVE_REQUEST": {
-      const validation = validateTimeGroupDraft(state);
+      const validation = validateChronoGroupDraft(state);
       return validation
         ? withError(state, validation)
         : { ...state, status: "saving", error: null };
     }
     case "SAVE_SUCCEEDED": {
-      const baseline = normalizeSavedGroup(action.savedValue ?? toSavedTimeGroup(state));
+      const baseline = normalizeSavedGroup(action.savedValue ?? toSavedChronoGroup(state));
       const value = clone(baseline);
       return {
         ...state,
@@ -163,12 +163,6 @@ export function reduceTimeGroupDraft(state, action) {
         availabilityRows: availabilityFor(value, state.charts, state.timeZone),
       };
     }
-    case "STAY":
-      return {
-        ...state,
-        status: draftChanged(state) ? "dirty" : "clean",
-        error: null,
-      };
     case "SUSPEND":
       return {
         ...state,
@@ -184,14 +178,17 @@ export function reduceTimeGroupDraft(state, action) {
         suspendedStatus: null,
       };
     default:
-      throw new Error(`Unknown Time Group draft action: ${String(action?.type)}`);
+      throw new Error(`Unknown Chrono Group draft action: ${String(action?.type)}`);
   }
 }
 
-export function validateTimeGroupStage(state, stage = state?.stage) {
+export function validateChronoGroupStage(state, stage = state?.stage) {
   assertStage(stage);
   const value = state?.value ?? {};
   if (stage === "period") {
+    if (typeof value.name !== "string" || value.name.trim() === "") {
+      return issue("NAME_REQUIRED", "Enter a unique Chrono Group name.", "chrono-group-name");
+    }
     if (!validPeriod(value.period)) {
       return issue("PERIOD_REQUIRED", "Choose a valid inclusive start and end period.", "period-start");
     }
@@ -205,7 +202,7 @@ export function validateTimeGroupStage(state, stage = state?.stage) {
 
   if (stage === "charts") {
     if (!Array.isArray(value.chartIds) || value.chartIds.length === 0) {
-      return issue("CHART_REQUIRED", "Select at least one chart.", "time-group-chart-list");
+      return issue("CHART_REQUIRED", "Select at least one chart.", "chrono-group-chart-list");
     }
     const attention = state.availabilityRows.find(({ selected, needsAttention }) => (
       selected && needsAttention
@@ -214,7 +211,7 @@ export function validateTimeGroupStage(state, stage = state?.stage) {
       return issue(
         "MEMBER_NEEDS_ATTENTION",
         `${attention.label} has no observations in the selected period.`,
-        `time-group-chart-${attention.chartId}`,
+        `chrono-group-chart-${attention.chartId}`,
       );
     }
     return null;
@@ -224,7 +221,7 @@ export function validateTimeGroupStage(state, stage = state?.stage) {
     try {
       resolveMatchingPolicy({ groupDefault: value.defaultMatching });
     } catch (error) {
-      return issue("MATCHING_POLICY_INVALID", error.message, "time-group-default-matching");
+      return issue("MATCHING_POLICY_INVALID", error.message, "chrono-group-default-matching");
     }
     if (value.defaultMatching === MATCHING_POLICY_LABELS.INTERPOLATE) {
       for (const chartId of value.chartIds ?? []) {
@@ -234,7 +231,7 @@ export function validateTimeGroupStage(state, stage = state?.stage) {
           return issue(
             "MEMBER_FALLBACK_REQUIRED",
             `${chart?.label ?? chartId} needs a supported member fallback.`,
-            `time-group-fallback-${chartId}`,
+            `chrono-group-fallback-${chartId}`,
           );
         }
       }
@@ -243,35 +240,32 @@ export function validateTimeGroupStage(state, stage = state?.stage) {
       return issue(
         "CADENCE_INVALID",
         "Seconds per frame must be positive and finite.",
-        "time-group-seconds-per-frame",
+        "chrono-group-seconds-per-frame",
       );
     }
     return null;
   }
 
-  if (typeof value.name !== "string" || value.name.trim() === "") {
-    return issue("NAME_REQUIRED", "Enter a unique Time Group name.", "time-group-name");
-  }
   const unresolved = state.sceneConsequences.find(({ resolution }) => resolution === null);
   if (unresolved) {
     return issue(
       "SCENE_CONSEQUENCE_REQUIRED",
       `Choose Edit or Clamp for Scene "${unresolved.sceneId}".`,
-      `time-group-scene-${unresolved.sceneId}`,
+      `chrono-group-scene-${unresolved.sceneId}`,
     );
   }
   return null;
 }
 
-export function validateTimeGroupDraft(state) {
-  for (const stage of TIME_GROUP_STAGES) {
-    const validation = validateTimeGroupStage(state, stage);
+export function validateChronoGroupDraft(state) {
+  for (const stage of CHRONO_GROUP_STAGES) {
+    const validation = validateChronoGroupStage(state, stage);
     if (validation) return { ...validation, stage };
   }
   return null;
 }
 
-export function toSavedTimeGroup(stateOrValue) {
+export function toSavedChronoGroup(stateOrValue) {
   const value = stateOrValue?.value ?? stateOrValue ?? {};
   return {
     id: value.id,
@@ -322,6 +316,14 @@ export function deriveAvailabilityRows({
 
   rows.sort((left, right) => left.sortIndex - right.sortIndex);
   return rows.map(({ sortIndex, inPeriodCount, ...row }) => row);
+}
+
+export function groupAvailabilityRows(rows = []) {
+  return {
+    selected: rows.filter((row) => row.selected && !row.needsAttention),
+    needsAttention: rows.filter((row) => row.needsAttention),
+    available: rows.filter((row) => !row.selected && !row.needsAttention),
+  };
 }
 
 function changed(state, value, additions = {}) {
@@ -389,8 +391,8 @@ function validPeriod(period) {
 }
 
 function assertStage(stage) {
-  if (!TIME_GROUP_STAGES.includes(stage)) {
-    throw new Error(`Unknown Time Group stage: ${String(stage)}`);
+  if (!CHRONO_GROUP_STAGES.includes(stage)) {
+    throw new Error(`Unknown Chrono Group stage: ${String(stage)}`);
   }
 }
 
@@ -405,8 +407,8 @@ function issue(code, message, focusId = null) {
 
 function normalizeSaveError(error) {
   return {
-    code: error?.code ?? "TIME_GROUP_SAVE_FAILED",
-    message: error?.message ?? "The Time Group could not be saved.",
+    code: error?.code ?? "CHRONO_GROUP_SAVE_FAILED",
+    message: error?.message ?? "The Chrono Group could not be saved.",
     focusId: error?.focusId ?? null,
     retryable: error?.retryable !== false,
   };

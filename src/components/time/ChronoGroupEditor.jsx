@@ -2,36 +2,36 @@ import React from "react";
 
 import { MATCHING_POLICY_LABELS } from "../../charting/time/temporalMatch.js";
 import AvailabilityLedger from "./AvailabilityLedger.jsx";
-import { TIME_GROUP_STAGES } from "./timeGroupDraft.js";
+import { CHRONO_GROUP_STAGES } from "./chronoGroupDraft.js";
 
 const STAGE_LABELS = Object.freeze({
-  period: "Choose period",
+  period: "Name and period",
   charts: "Choose charts",
   defaults: "Set defaults",
-  review: "Name and review",
+  review: "Review",
 });
 
-export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
+export default function ChronoGroupEditor({ draft, disabled = false, onAction }) {
   const value = draft?.value ?? {};
   const stage = draft?.stage ?? "period";
   const busy = disabled || draft?.status === "saving";
   const dirty = new Set(["dirty", "error", "suspended"]).has(draft?.status);
 
   return (
-    <section className="time-group-studio" aria-labelledby="time-group-studio-title">
+    <section className="chrono-group-studio" aria-labelledby="chrono-group-studio-title">
       <header>
         <div>
           <p className="eyebrow">Temporal authoring</p>
-          <h2 id="time-group-studio-title">Time Group Studio</h2>
+          <h2 id="chrono-group-studio-title">Chrono Studio</h2>
         </div>
         <span data-status={draft?.status ?? "clean"}>
-          {draft?.status === "saving" ? "Saving Time Group" : dirty ? "Unsaved Time Group" : "Time Group saved"}
+          {draft?.status === "saving" ? "Saving Chrono Group" : dirty ? "Unsaved Chrono Group" : "Chrono Group saved"}
         </span>
       </header>
 
-      <nav aria-label="Time Group stages">
+      <nav aria-label="Chrono Group stages">
         <ol>
-          {TIME_GROUP_STAGES.map((stageId) => (
+          {CHRONO_GROUP_STAGES.map((stageId) => (
             <li key={stageId}>
               <button
                 aria-current={stage === stageId ? "step" : undefined}
@@ -50,7 +50,16 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
       <div aria-live="polite">
         {stage === "period" && (
           <fieldset>
-            <legend>Choose period</legend>
+            <legend>Name and period</legend>
+            <label>
+              Chrono Group name
+              <input
+                id="chrono-group-name"
+                disabled={busy}
+                value={value.name ?? ""}
+                onChange={(event) => onAction?.({ type: "SET_NAME", name: event.target.value })}
+              />
+            </label>
             <label>
               Start date
               <input
@@ -105,7 +114,7 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
             <label>
               Matching policy
               <select
-                id="time-group-default-matching"
+                id="chrono-group-default-matching"
                 disabled={busy}
                 value={value.defaultMatching}
                 onChange={(event) => onAction?.({
@@ -119,7 +128,7 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
             <label>
               Seconds per frame
               <input
-                id="time-group-seconds-per-frame"
+                id="chrono-group-seconds-per-frame"
                 type="number"
                 min="0"
                 step="any"
@@ -138,7 +147,7 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
                   <label key={chartId}>
                     {draft.charts.find(({ id }) => id === chartId)?.label ?? chartId} fallback
                     <select
-                      id={`time-group-fallback-${chartId}`}
+                      id={`chrono-group-fallback-${chartId}`}
                       disabled={busy}
                       value={value.memberFallbacks?.[chartId] ?? ""}
                       onChange={(event) => onAction?.({
@@ -160,18 +169,12 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
         )}
 
         {stage === "review" && (
-          <section aria-labelledby="time-group-review-title">
-            <h3 id="time-group-review-title">Name and review</h3>
-            <label>
-              Time Group name
-              <input
-                id="time-group-name"
-                disabled={busy}
-                value={value.name ?? ""}
-                onChange={(event) => onAction?.({ type: "SET_NAME", name: event.target.value })}
-              />
-            </label>
+          <section aria-labelledby="chrono-group-review-title">
+            <h3 id="chrono-group-review-title">Review</h3>
             <dl>
+              <div><dt>Name</dt><dd>{value.name}</dd></div>
+              <div><dt>Period</dt><dd>{dateInputValue(value.period?.startEpochMs)} to {dateInputValue(value.period?.endEpochMs)}</dd></div>
+              <div><dt>Timezone</dt><dd>{draft?.timeZone ?? "UTC"}</dd></div>
               <div><dt>Members</dt><dd>{value.chartIds?.length ?? 0}</dd></div>
               <div><dt>Matching</dt><dd>{value.defaultMatching}</dd></div>
               <div><dt>Seconds per frame</dt><dd>{value.secondsPerFrame}</dd></div>
@@ -180,7 +183,7 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
               <fieldset>
                 <legend>Resolve affected Scenes</legend>
                 {draft.sceneConsequences.map(({ sceneId, resolution }) => (
-                  <div key={sceneId} id={`time-group-scene-${sceneId}`}>
+                  <div key={sceneId} id={`chrono-group-scene-${sceneId}`}>
                     <strong>{sceneId}</strong>
                     <label>
                       <input
@@ -221,9 +224,8 @@ export default function TimeGroupStudio({ draft, disabled = false, onAction }) {
       <footer>
         <button type="button" disabled={busy || stage === "period"} onClick={() => onAction?.({ type: "PREVIOUS_STAGE" })}>Back</button>
         <button type="button" disabled={busy || stage === "review"} onClick={() => onAction?.({ type: "NEXT_STAGE" })}>Continue</button>
-        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Time Group</button>
+        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Chrono Group</button>
         <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
-        <button type="button" disabled={busy} onClick={() => onAction?.({ type: "STAY" })}>Stay</button>
       </footer>
     </section>
   );

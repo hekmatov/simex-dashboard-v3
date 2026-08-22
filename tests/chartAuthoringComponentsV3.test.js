@@ -15,7 +15,7 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
-import { validateTimeSyncGroups } from "../src/charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../src/charting/time/chronoGroupModel.js";
 import {
   createWizardState,
   reduceWizardState,
@@ -56,10 +56,10 @@ const {
   "../src/components/chart-authoring/CollectionSettingsField.jsx"
 );
 const {
-  default: TimeSyncSettingsField,
-  proposeTimeSyncGroupMatching,
+  default: ChronoMembershipSettingsField,
+  proposeChronoGroupMatching,
 } = await import(
-  "../src/components/chart-authoring/TimeSyncSettingsField.jsx"
+  "../src/components/chart-authoring/ChronoMembershipSettingsField.jsx"
 );
 const {
   default: DeltaComparisonField,
@@ -403,7 +403,7 @@ test("time synchronization keeps matching group-owned and renders independent me
   const profile = profileDataset(rows, {
     observed: { interpretation: "temporal" },
   });
-  const next = proposeTimeSyncGroupMatching({
+  const next = proposeChronoGroupMatching({
     groups,
     target: {
       groupId: "exercise-clock",
@@ -422,7 +422,7 @@ test("time synchronization keeps matching group-owned and renders independent me
   });
   assert.equal(groups[0].members[0].matching, undefined);
   assert.equal(chart.interaction.timeSync, null);
-  assert.throws(() => proposeTimeSyncGroupMatching({
+  assert.throws(() => proposeChronoGroupMatching({
     groups,
     target: {
       groupId: "exercise-clock",
@@ -435,7 +435,7 @@ test("time synchronization keeps matching group-owned and renders independent me
     profiles: { "exercise-data": profile },
   }), /tolerance/i);
 
-  const html = render(React.createElement(TimeSyncSettingsField, {
+  const html = render(React.createElement(ChronoMembershipSettingsField, {
     field: {
       id: "timeSync",
       label: "Synchronized playback",
@@ -448,7 +448,7 @@ test("time synchronization keeps matching group-owned and renders independent me
     profiles: { "exercise-data": profile },
     onMembershipChange() {},
   }));
-  assert.match(html, /Time Group memberships/);
+  assert.match(html, /Chrono Group memberships/);
   assert.match(html, /type="checkbox"[^>]*checked/);
   assert.match(html, /Exercise clock/);
   assert.doesNotMatch(html, /Member matching/);
@@ -753,7 +753,7 @@ test("renderer preflight blocks target collections that cannot establish stable 
     draft: chart,
     profile: runtime.profile,
     prepared: runtime.prepared,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   const html = render(React.createElement(ChartPreview, {
     chart,
@@ -1008,7 +1008,7 @@ test("editor style clears delete optional leaves and prune an empty series objec
   });
   let state = createChartEditorState({
     chart,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
 
   state = reduceChartEditorState(state, {
@@ -1053,7 +1053,7 @@ test("wizard exposes four directly clickable button tabs in the approved order",
     open: true,
     dataSources: {},
     loadedData: {},
-    timeSyncGroups: [],
+    chronoGroups: [],
     onClose() {},
     onCreate() {},
   }));
@@ -1086,7 +1086,7 @@ test("wizard controller retains detached authoritative existing chart context", 
     loadedData: {
       "exercise-data": [{ period: "May", capacity: 4 }],
     },
-    timeSyncGroups: [],
+    chronoGroups: [],
     existingCharts: [existing],
   });
 
@@ -1100,7 +1100,7 @@ test("every wizard tab remains enabled and explains unmet prerequisites", () => 
     open: true,
     dataSources: {},
     loadedData: {},
-    timeSyncGroups: [],
+    chronoGroups: [],
     onClose() {},
     onCreate() {},
   }));
@@ -1487,7 +1487,7 @@ test("tracked map and choropleth data reach ready wizard style and editor previe
       chart,
       profile: runtime.profile,
       prepared: runtime.prepared,
-      timeSyncGroups: [],
+      chronoGroups: [],
     });
 
     assert.equal(runtime.prepared.status, "ready", chartId);
@@ -1515,7 +1515,7 @@ test("tracked map and choropleth data reach ready wizard style and editor previe
       profile: runtime.profile,
       loadedData: { [chart.sourceId]: rows },
       profiles: { [chart.sourceId]: runtime.profile },
-      timeSyncGroups: [],
+      chronoGroups: [],
     }));
     assert.match(editorHtml, /chart-authoring-preview-ready/, chartId);
     assert.doesNotMatch(editorHtml, /Preview needs attention/, chartId);
@@ -1613,7 +1613,7 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
       draft: selectedChart,
       profile: selected.profile,
       prepared: selected.prepared,
-      timeSyncGroups: [],
+      chronoGroups: [],
       geoSources,
     });
     const readyModel = buildEditorFormModel({
@@ -1642,7 +1642,7 @@ test("fresh geography drafts can select validated GeoJSON before preview readine
       profile: selected.profile,
       loadedData: { [configured.sourceId]: rows },
       profiles: { [configured.sourceId]: selected.profile },
-      timeSyncGroups: [],
+      chronoGroups: [],
     }));
     assert.match(editorHtml, /chart-authoring-preview-ready/, chartId);
     assert.equal(
@@ -2068,7 +2068,7 @@ test("wizard submit callback runs only after normalized chart and whole-group va
   let state = createWizardState({
     loadedData: { "exercise-data": rows },
     profiles: { "exercise-data": profile },
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   state = reduceWizardState(state, {
     type: "selectType",
@@ -2094,7 +2094,7 @@ test("wizard submit callback runs only after normalized chart and whole-group va
 
   assert.equal(calls.length, 1);
   assert.equal(result, calls[0]);
-  assert.deepEqual(Object.keys(result), ["chart", "timeSyncGroups"]);
+  assert.deepEqual(Object.keys(result), ["chart", "chronoGroups"]);
   assert.equal(result.chart.id, "new-trend");
   assert.equal(result.chart.sourceId, "exercise-data");
   assert.equal("temporalMatch" in result.chart.transformations, false);
@@ -2165,7 +2165,7 @@ test("editor keeps title repair reachable before preview readiness", () => {
   const html = render(React.createElement(ChartEditorV3, {
     chart,
     rows: [{ period: "May", capacity: 4 }],
-    timeSyncGroups: [],
+    chronoGroups: [],
     existingCharts: [],
     loadedData: {
       "exercise-data": [{ period: "May", capacity: 4 }],
@@ -2254,7 +2254,7 @@ test("editor state isolates mutation and same-authority rerenders preserve the d
   const saved = validLineChart();
   const state = createChartEditorState({
     chart: saved,
-    timeSyncGroups: [],
+    chronoGroups: [],
     revision: 7,
   });
   const edited = reduceChartEditorState(state, {
@@ -2264,7 +2264,7 @@ test("editor state isolates mutation and same-authority rerenders preserve the d
   });
   const rerendered = rebaseChartEditorState(edited, {
     chart: structuredClone(saved),
-    timeSyncGroups: [],
+    chronoGroups: [],
     revision: 7,
   });
 
@@ -2277,7 +2277,7 @@ test("editor state isolates mutation and same-authority rerenders preserve the d
 test("chart editor dirty projection clears only when the changed draft becomes saved authority", () => {
   const state = createChartEditorState({
     chart: validLineChart(),
-    timeSyncGroups: [],
+    chronoGroups: [],
     revision: 7,
   });
   assert.equal(isChartEditorStateDirty(state), false);
@@ -2291,7 +2291,7 @@ test("chart editor dirty projection clears only when the changed draft becomes s
 
   const savedChart = acceptEditorSave(editedChart, {
     chart: editedChart.draft,
-    timeSyncGroups: editedChart.timeSyncGroups,
+    chronoGroups: editedChart.chronoGroups,
   });
   assert.equal(isChartEditorStateDirty(savedChart), false);
 });
@@ -2300,7 +2300,7 @@ test("chart wizard dirty projection ignores an untouched open wizard and clears 
   const initial = createChartWizardState({
     loadedData: {},
     profiles: {},
-    timeSyncGroups: [],
+    chronoGroups: [],
     existingCharts: [],
   });
   assert.equal(isChartWizardStateDirty({ open: true, wizard: initial }), false);
@@ -2322,7 +2322,7 @@ test("a new saved revision rebases and reset restores that most recent saved sta
   const first = validLineChart({ title: "First saved title" });
   let state = createChartEditorState({
     chart: first,
-    timeSyncGroups: [],
+    chronoGroups: [],
     revision: 1,
   });
   state = reduceChartEditorState(state, {
@@ -2333,7 +2333,7 @@ test("a new saved revision rebases and reset restores that most recent saved sta
   const second = validLineChart({ title: "Second saved title" });
   state = rebaseChartEditorState(state, {
     chart: second,
-    timeSyncGroups: [],
+    chronoGroups: [],
     revision: 2,
   });
   state = reduceChartEditorState(state, {
@@ -2377,7 +2377,7 @@ test("editor discards a stale prepared correlation and recomputes readiness for 
     rows,
     profile: current.profile,
     prepared: stale.prepared,
-    timeSyncGroups: [],
+    chronoGroups: [],
     existingCharts: [],
     loadedData: { "exercise-data": rows },
     onSave() {},
@@ -2411,10 +2411,10 @@ test("editor save normalizes, validates, and accepts the full synchronization gr
   }];
   let state = createChartEditorState({
     chart,
-    timeSyncGroups: groups,
+    chronoGroups: groups,
   });
   state = reduceChartEditorState(state, {
-    type: "updateTimeSyncGroups",
+    type: "updateChronoGroups",
     value: [{
       ...groups[0],
       members: [{
@@ -2437,7 +2437,7 @@ test("editor save normalizes, validates, and accepts the full synchronization gr
   assert.equal(result.chart.interaction.timeSync, null);
   assert.equal("temporalMatch" in result.chart.transformations, false);
   assert.deepEqual(
-    result.timeSyncGroups[0].members[0].matching,
+    result.chronoGroups[0].members[0].matching,
     { policy: "nearest", toleranceMs: 3_600_000 },
   );
   const accepted = acceptEditorSave(state, result);
@@ -2483,7 +2483,7 @@ test("selecting a second synchronization group preserves the existing membership
   });
   const state = createChartEditorState({
     chart,
-    timeSyncGroups: [
+    chronoGroups: [
       group("exercise-clock", chart.id),
       group("secondary-clock", other.id),
     ],
@@ -2500,15 +2500,15 @@ test("selecting a second synchronization group preserves the existing membership
   });
 
   assert.deepEqual(
-    moved.timeSyncGroups.map(({ id }) => id),
+    moved.chronoGroups.map(({ id }) => id),
     ["exercise-clock", "secondary-clock"],
   );
   assert.deepEqual(
-    moved.timeSyncGroups[0].members.map(({ chartId }) => chartId),
+    moved.chronoGroups[0].members.map(({ chartId }) => chartId),
     ["synchronized-line"],
   );
   assert.deepEqual(
-    moved.timeSyncGroups[1].members.map(({ chartId }) => chartId),
+    moved.chronoGroups[1].members.map(({ chartId }) => chartId),
     ["other-line", "synchronized-line"],
   );
   assert.equal(moved.draft.interaction.timeSync, null);
@@ -2548,7 +2548,7 @@ test("guided synchronized conversion remaps only the edited member semantic time
   }];
   let state = createChartEditorState({
     chart,
-    timeSyncGroups: groups,
+    chronoGroups: groups,
   });
   state = reduceChartEditorState(state, {
     type: "requestConversion",
@@ -2613,7 +2613,7 @@ test("guided synchronized conversion remaps only the edited member semantic time
   assert.equal(state.error, "");
   assert.equal(state.draft.typeId, "kpi");
   assert.equal(state.draft.interaction.timeSync, null);
-  assert.deepEqual(state.timeSyncGroups[0].members, [
+  assert.deepEqual(state.chronoGroups[0].members, [
     {
       chartId: chart.id,
       timeRole: "time",
@@ -2625,7 +2625,7 @@ test("guided synchronized conversion remaps only the edited member semantic time
       matching: { policy: "lastKnown" },
     },
   ]);
-  assert.doesNotThrow(() => validateTimeSyncGroups(state.timeSyncGroups, {
+  assert.doesNotThrow(() => validateChronoGroups(state.chronoGroups, {
     charts: [state.draft, other],
     loadedData: { "exercise-data": rows },
     profiles: { "exercise-data": profile },
@@ -2687,7 +2687,7 @@ test("multi-temporal conversion requires an explicit schema-derived playback tim
   const createAmbiguousTimelineConversion = () => {
     let next = createChartEditorState({
       chart,
-      timeSyncGroups: groups,
+      chronoGroups: groups,
     });
     next = reduceChartEditorState(next, {
       type: "requestConversion",
@@ -2762,11 +2762,11 @@ test("multi-temporal conversion requires an explicit schema-derived playback tim
   assert.match(ambiguousHtml, /disabled/);
 
   const beforeChart = state.draft;
-  const beforeGroups = state.timeSyncGroups;
+  const beforeGroups = state.chronoGroups;
   const beforeDialog = state.conversion;
   state = reduceChartEditorState(state, { type: "applyConversion" }, context);
   assert.equal(state.draft, beforeChart);
-  assert.equal(state.timeSyncGroups, beforeGroups);
+  assert.equal(state.chronoGroups, beforeGroups);
   assert.equal(state.conversion, beforeDialog);
   assert.match(state.error, /playback time role/i);
   assert.doesNotMatch(state.error, /required data roles/i);
@@ -2831,12 +2831,12 @@ test("multi-temporal conversion requires an explicit schema-derived playback tim
   assert.equal(state.error, "");
   assert.equal(state.draft.typeId, "timeline");
   assert.deepEqual(Object.keys(state.draft.roles), ["event", "start", "end"]);
-  assert.equal(state.timeSyncGroups[0].members[0].timeRole, "start");
-  assert.deepEqual(state.timeSyncGroups[0].members[0].matching, {
+  assert.equal(state.chronoGroups[0].members[0].timeRole, "start");
+  assert.deepEqual(state.chronoGroups[0].members[0].matching, {
     policy: "nearest",
     toleranceMs: 3_600_000,
   });
-  assert.deepEqual(state.timeSyncGroups[0].members[1], groups[0].members[1]);
+  assert.deepEqual(state.chronoGroups[0].members[1], groups[0].members[1]);
 
   state = createAmbiguousTimelineConversion();
   state = reduceChartEditorState(state, {
@@ -2845,7 +2845,7 @@ test("multi-temporal conversion requires an explicit schema-derived playback tim
   }, context);
   state = reduceChartEditorState(state, { type: "applyConversion" }, context);
   assert.equal(state.error, "");
-  assert.equal(state.timeSyncGroups[0].members[0].timeRole, "end");
+  assert.equal(state.chronoGroups[0].members[0].timeRole, "end");
   assert.deepEqual(Object.keys(state.draft.roles), ["event", "start", "end"]);
 });
 
@@ -2893,7 +2893,7 @@ test("multi-temporal conversion cancel is exact and intentional playback removal
     profile,
   };
   const prepare = () => {
-    let next = createChartEditorState({ chart, timeSyncGroups: groups });
+    let next = createChartEditorState({ chart, chronoGroups: groups });
     next = reduceChartEditorState(next, {
       type: "requestConversion",
       targetTypeId: "timeline",
@@ -2922,10 +2922,10 @@ test("multi-temporal conversion cancel is exact and intentional playback removal
 
   let state = prepare();
   const draftBeforeCancel = state.draft;
-  const groupsBeforeCancel = state.timeSyncGroups;
+  const groupsBeforeCancel = state.chronoGroups;
   state = reduceChartEditorState(state, { type: "cancelConversion" }, context);
   assert.equal(state.draft, draftBeforeCancel);
-  assert.equal(state.timeSyncGroups, groupsBeforeCancel);
+  assert.equal(state.chronoGroups, groupsBeforeCancel);
   assert.equal(state.conversion, null);
 
   state = prepare();
@@ -2955,7 +2955,7 @@ test("multi-temporal conversion cancel is exact and intentional playback removal
   assert.equal(state.draft.typeId, "timeline");
   assert.deepEqual(Object.keys(state.draft.roles), ["event", "start", "end"]);
   assert.equal(state.draft.interaction.timeSync, null);
-  assert.deepEqual(state.timeSyncGroups, [{
+  assert.deepEqual(state.chronoGroups, [{
     ...groups[0],
     members: [groups[0].members[1]],
   }]);
@@ -2969,7 +2969,7 @@ test("conversion application fails closed with an associated bounded dialog erro
   const profile = profileDataset(rows);
   let state = createChartEditorState({
     chart: validLineChart(),
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   state = reduceChartEditorState(state, {
     type: "requestConversion",
@@ -2986,7 +2986,7 @@ test("conversion application fails closed with an associated bounded dialog erro
     value: { field: "period", interpretation: "category" },
   });
   const beforeChart = state.draft;
-  const beforeGroups = state.timeSyncGroups;
+  const beforeGroups = state.chronoGroups;
   const beforeDialog = state.conversion;
   assert.doesNotThrow(() => {
     state = reduceChartEditorState(state, {
@@ -2999,7 +2999,7 @@ test("conversion application fails closed with an associated bounded dialog erro
     });
   });
   assert.equal(state.draft, beforeChart);
-  assert.equal(state.timeSyncGroups, beforeGroups);
+  assert.equal(state.chronoGroups, beforeGroups);
   assert.equal(state.conversion, beforeDialog);
   assert.match(state.error, /required data roles/i);
   assert.ok(state.error.length <= 240);
@@ -3044,7 +3044,7 @@ test("conversion dialog distinguishes compatible and remapped changes and cancel
   });
   let state = createChartEditorState({
     chart: line,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   state = reduceChartEditorState(state, {
     type: "requestConversion",
@@ -3116,7 +3116,7 @@ test("destructive conversion applies only after complete direct role assignments
   }];
   let state = createChartEditorState({
     chart,
-    timeSyncGroups: groups,
+    chronoGroups: groups,
   });
   state = reduceChartEditorState(state, {
     type: "requestConversion",
@@ -3156,7 +3156,7 @@ test("destructive conversion applies only after complete direct role assignments
 
   assert.equal(state.draft.typeId, "pie");
   assert.equal(state.draft.interaction.timeSync, null);
-  assert.deepEqual(state.timeSyncGroups, []);
+  assert.deepEqual(state.chronoGroups, []);
   assert.equal(state.conversion, null);
   assert.equal(state.previewRevision, 1);
 });
@@ -3201,7 +3201,7 @@ test("dashboard editor profiles include unbound sources and reuse supplied profi
     profiles: {
       "clock-data": suppliedClockProfile,
     },
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "exercise-clock",
       name: "Exercise clock",
       period: { start: "2027-05-01", end: "2027-05-02" },
@@ -3231,7 +3231,7 @@ test("dashboard editor profiles include unbound sources and reuse supplied profi
   assert.equal(routed.props.profiles["clock-data"], suppliedClockProfile);
   const state = createChartEditorState({
     chart,
-    timeSyncGroups: dashboard.timeSyncGroups,
+    chronoGroups: dashboard.chronoGroups,
   });
   assert.doesNotThrow(() => saveChartEditorState(state, {
     existingCharts: routed.props.existingCharts,
@@ -3268,7 +3268,7 @@ test("authoritative v3 routing rebases only for a changed saved snapshot and who
 
   let state = createChartEditorState({
     chart: first,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   state = reduceChartEditorState(state, {
     type: "updateChart",
@@ -3277,12 +3277,12 @@ test("authoritative v3 routing rebases only for a changed saved snapshot and who
   });
   const identicalRerender = rebaseChartEditorState(state, {
     chart: same,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   assert.equal(identicalRerender, state);
   const changedSnapshot = rebaseChartEditorState(state, {
     chart: updated,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   assert.notEqual(changedSnapshot, state);
   assert.equal(changedSnapshot.draft.title, "Server-saved update");
@@ -3299,11 +3299,11 @@ test("authoritative v3 routing rebases only for a changed saved snapshot and who
         ],
       }],
     }],
-    timeSyncGroups: [],
+    chronoGroups: [],
   };
   const saved = applyChartEditorSave(dashboard, {
     chart: updated,
-    timeSyncGroups: [],
+    chronoGroups: [],
   });
   assert.notEqual(saved, dashboard);
   assert.equal(saved.title, "Whole dashboard");
@@ -3327,7 +3327,7 @@ test("dashboard editor routing accepts only version-3 charts", () => {
       loadedData: {
         "exercise-data": [{ category: "Ready", value: 6 }],
       },
-      timeSyncGroups: [],
+      chronoGroups: [],
     },
     onSave() {},
     onCancel() {},

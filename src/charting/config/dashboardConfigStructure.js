@@ -16,7 +16,7 @@ function shape(required, optional = []) {
 
 /**
  * The versioned, declarative boundary for dashboard-level configuration.
- * Chart, data-source, and time-group internals have their own strict contracts;
+ * Chart, data-source, and chrono-group internals have their own strict contracts;
  * this contract owns their placement and every dashboard presentation field.
  */
 export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
@@ -36,8 +36,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
         "programLabel",
         "scenarioLabel",
         "scenes",
-        "timeSyncGroups",
-        "vantaBackground",
+        "chronoGroups",
       ],
     ),
     page: shape(
@@ -46,7 +45,7 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
     ),
     section: shape(
       ["id", "panels"],
-      ["description", "layout", "title", "vantaBackground"],
+      ["description", "layout", "title"],
     ),
     panelWrapper: shape(["chart", "id"]),
     landing: shape([
@@ -98,16 +97,6 @@ export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
       "multiSelectHighlightColor",
       "panelBackgroundColor",
       "panelBorderColor",
-    ]),
-    vantaBackground: shape([
-      "backgroundColor",
-      "maxDistance",
-      "mouseControls",
-      "networkColor",
-      "points",
-      "spacing",
-      "speed",
-      "touchControls",
     ]),
   },
 });
@@ -167,8 +156,8 @@ export function validateDashboardStructure(
   if (config.dataSources !== undefined) {
     ordinaryRecord(config.dataSources, "Dashboard dataSources");
   }
-  if (config.timeSyncGroups !== undefined) {
-    denseArray(config.timeSyncGroups, "Dashboard timeSyncGroups");
+  if (config.chronoGroups !== undefined) {
+    denseArray(config.chronoGroups, "Dashboard chronoGroups");
   }
   if (config.scenes !== undefined) {
     denseArray(config.scenes, "Dashboard scenes");
@@ -178,12 +167,6 @@ export function validateDashboardStructure(
   }
   if (config.globalStyles !== undefined) {
     validateGlobalStyles(config.globalStyles);
-  }
-  if (config.vantaBackground !== undefined) {
-    validateVantaBackground(
-      config.vantaBackground,
-      "Dashboard Vanta background",
-    );
   }
 
   if (config.pages === undefined) {
@@ -278,12 +261,6 @@ export function validateDashboardStructure(
         section.layout,
         `Dashboard section "${sectionId}" layout`,
       );
-      if (section.vantaBackground !== undefined) {
-        validateVantaBackground(
-          section.vantaBackground,
-          `Dashboard section "${sectionId}" Vanta background`,
-        );
-      }
 
       const rawPanels = denseArray(
         section.panels,
@@ -595,32 +572,6 @@ function allowedValue(value, options, description) {
     throw new TypeError(
       `${description} must be one of: ${options.join(", ")}.`,
     );
-  }
-}
-
-function validateVantaBackground(value, description) {
-  const vanta = strictShape(
-    value,
-    DASHBOARD_CONFIG_STRUCTURE.shapes.vantaBackground,
-    description,
-  );
-  requiredText(vanta.backgroundColor, `${description} backgroundColor`);
-  requiredText(vanta.networkColor, `${description} networkColor`);
-  for (const key of ["mouseControls", "touchControls"]) {
-    if (typeof vanta[key] !== "boolean") {
-      throw new TypeError(`${description} ${key} must be boolean.`);
-    }
-  }
-  for (const key of ["maxDistance", "points", "spacing", "speed"]) {
-    if (
-      typeof vanta[key] !== "number"
-      || !Number.isFinite(vanta[key])
-      || vanta[key] < 0
-    ) {
-      throw new TypeError(
-        `${description} ${key} must be a non-negative finite number.`,
-      );
-    }
   }
 }
 

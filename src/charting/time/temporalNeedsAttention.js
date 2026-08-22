@@ -6,8 +6,8 @@ import { validateIanaTimeZone } from "./temporalSchema.js";
 
 export function deriveTemporalNeedsAttention(input = {}) {
   const timeZone = input.timeZone ?? input.timezone;
-  const groups = (input.groups ?? input.timeSyncGroups ?? [])
-    .map((group) => normalizeRuntimeGroup(group, timeZone));
+  const groups = (input.groups ?? input.chronoGroups ?? [])
+    .map((group) => normalizeRunchronoGroup(group, timeZone));
   const scenes = (input.scenes ?? [])
     .map((scene) => normalizeRuntimeScene(scene));
   const charts = input.charts ?? [];
@@ -25,7 +25,7 @@ export function deriveTemporalNeedsAttention(input = {}) {
   for (const group of groups) {
     let validPeriod = true;
     try {
-      assertPeriod(group.period, `Time Group "${group.id}"`);
+      assertPeriod(group.period, `Chrono Group "${group.id}"`);
     } catch (error) {
       validPeriod = false;
       findings.push(finding("invalid-period", "group", group.id, "period", error.message));
@@ -39,7 +39,7 @@ export function deriveTemporalNeedsAttention(input = {}) {
           "group",
           group.id,
           "charts",
-          `Time Group "${group.id}" references missing chart "${member.chartId}".`,
+          `Chrono Group "${group.id}" references missing chart "${member.chartId}".`,
         ));
         continue;
       }
@@ -49,7 +49,7 @@ export function deriveTemporalNeedsAttention(input = {}) {
           "group",
           group.id,
           "charts",
-          `Chart "${chart.id}" has no available observations in the Time Group period.`,
+          `Chart "${chart.id}" has no available observations in the Chrono Group period.`,
         ));
       }
       const effectivePolicy = member.matching ?? group.matching;
@@ -66,7 +66,7 @@ export function deriveTemporalNeedsAttention(input = {}) {
   }
 
   for (const scene of scenes) {
-    const group = groupsById.get(scene.groupId);
+    const group = groupsById.get(scene.chronoGroupId);
     let validPeriod = true;
     try {
       assertPeriod(scene.period, `Scene "${scene.id}"`);
@@ -75,7 +75,7 @@ export function deriveTemporalNeedsAttention(input = {}) {
         || scene.period.startEpochMs < group.period.startEpochMs
         || scene.period.endEpochMs > group.period.endEpochMs
       ) {
-        throw new Error(`Scene "${scene.id}" period is outside its parent Time Group.`);
+        throw new Error(`Scene "${scene.id}" period is outside its parent Chrono Group.`);
       }
     } catch (error) {
       validPeriod = false;
@@ -167,11 +167,11 @@ export function deriveTemporalContentItems({
   charts = [],
   schemaRevisions = {},
 } = {}) {
-  const groups = dashboard?.timeSyncGroups ?? [];
+  const groups = dashboard?.chronoGroups ?? [];
   const scenes = dashboard?.scenes ?? [];
   const findings = deriveTemporalNeedsAttention({
     timezone: dashboard?.timezone,
-    timeSyncGroups: groups,
+    chronoGroups: groups,
     scenes,
     charts,
     schemaRevisions,
@@ -181,7 +181,7 @@ export function deriveTemporalContentItems({
   ));
   const sceneCountByGroup = new Map();
   for (const scene of scenes) {
-    sceneCountByGroup.set(scene.groupId, (sceneCountByGroup.get(scene.groupId) ?? 0) + 1);
+    sceneCountByGroup.set(scene.chronoGroupId, (sceneCountByGroup.get(scene.chronoGroupId) ?? 0) + 1);
   }
   const pageById = new Map((dashboard?.pages ?? []).map((page) => [page.id, page]));
   return [
@@ -203,7 +203,7 @@ export function deriveTemporalContentItems({
   ];
 }
 
-function normalizeRuntimeGroup(group, timeZone) {
+function normalizeRunchronoGroup(group, timeZone) {
   return {
     ...group,
     period: normalizeRuntimePeriod(group?.period, timeZone, { inclusiveDateEnd: true }),
@@ -305,10 +305,10 @@ function zonedDateParts(epochMs, timeZone) {
 }
 
 export function deriveGroupPeriodChangeConsequence({ groupId, nextPeriod, scenes = [] } = {}) {
-  assertPeriod(nextPeriod, `Time Group "${groupId}"`);
+  assertPeriod(nextPeriod, `Chrono Group "${groupId}"`);
   const affectedSceneIds = scenes
     .filter((scene) => (
-      scene.groupId === groupId
+      scene.chronoGroupId === groupId
       && (
         scene.period?.startEpochMs < nextPeriod.startEpochMs
         || scene.period?.endEpochMs > nextPeriod.endEpochMs

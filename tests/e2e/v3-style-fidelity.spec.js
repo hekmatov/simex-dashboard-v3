@@ -453,14 +453,14 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       .getByRole("button", { name: "Build", exact: true }).click();
     await page.getByRole("button", { name: "Build panel", exact: true }).click();
     await expect(page.locator(".build-authoring-layer")).toBeVisible();
-    await expect(page.locator(".dashboard-command-pinned-actions .build-time-groups"))
+    await expect(page.locator(".dashboard-command-pinned-actions .build-chrono-groups"))
       .toHaveCSS("background-color", style.panelAltPaint);
     const buildChrome = await readChrome(page, {
       layer: ".build-authoring-layer",
       structure: ".build-authoring-layer .build-structure-sheet",
       inspector: ".build-authoring-layer .build-inspector-sheet",
       look: ".dashboard-command-pinned-actions .dashboard-look-trigger",
-      timeGroups: ".dashboard-command-pinned-actions .build-time-groups",
+      chronoGroups: ".dashboard-command-pinned-actions .build-chrono-groups",
     });
     expect(buildChrome.layer).toMatchObject({
       backgroundColor: style.panelPaint,
@@ -476,7 +476,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
         color: style.textPaint,
       });
     }
-    for (const control of [buildChrome.look, buildChrome.timeGroups]) {
+    for (const control of [buildChrome.look, buildChrome.chronoGroups]) {
       expect(control).toMatchObject({
         backgroundColor: style.panelAltPaint,
         borderRadius: style.controlRadius,

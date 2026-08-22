@@ -379,10 +379,10 @@ function audienceInformationRows({
       unavailableReason: "This dashboard has no name.",
     },
     {
-      key: "parent_time_group",
-      label: "Parent Time Group",
+      key: "parent_chrono_group",
+      label: "Parent Chrono Group",
       value: optionalText(activeGroup?.name),
-      unavailableReason: "Choose a Time Group to make this available.",
+      unavailableReason: "Choose a Chrono Group to make this available.",
     },
     {
       key: "scene_name",
@@ -394,7 +394,7 @@ function audienceInformationRows({
       key: "scene_date",
       label: "Scene date",
       value: canonicalTime(activeEpochMs),
-      unavailableReason: "Choose a Time Group with available frames.",
+      unavailableReason: "Choose a Chrono Group with available frames.",
     },
   ];
 }

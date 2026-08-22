@@ -40,8 +40,8 @@ export function validateChartMapping({ chartTypeId, profile, mapping = {}, prepa
   if (embeddedTemporalPolicy) {
     errors.push(issue(
       "TEMPORAL_POLICY_NOT_OWNED",
-      `Chart creation cannot author "${embeddedTemporalPolicy}". Open the owning Time Group workflow.`,
-      "time-group-memberships",
+      `Chart creation cannot author "${embeddedTemporalPolicy}". Open the owning Chrono Group workflow.`,
+      "chrono-group-memberships",
     ));
   }
   const authorizedRoleIds = new Set(schema.roles.map(({ id }) => id));
@@ -160,7 +160,7 @@ export function validateChartMapping({ chartTypeId, profile, mapping = {}, prepa
   }
 
   const membershipResult = validateMemberships(
-    preparation.timeGroupMemberships ?? [],
+    preparation.chronoGroupMemberships ?? [],
     fieldsById,
   );
   errors.push(...membershipResult.errors);
@@ -184,7 +184,7 @@ export function validateChartMapping({ chartTypeId, profile, mapping = {}, prepa
       preparation: sanitizePreparation(preparation),
       preparationReview,
       defaultLedger,
-      timeGroupMemberships: membershipResult.memberships,
+      chronoGroupMemberships: membershipResult.memberships,
       preparedRows: prepared.rows,
     },
     errors,
@@ -214,9 +214,9 @@ function validateMemberships(memberships, fieldsById) {
   const seen = new Set();
   if (!Array.isArray(memberships)) {
     return { memberships: [], errors: [issue(
-      "TIME_GROUP_MEMBERSHIPS_INVALID",
-      "Time Group memberships must be a list.",
-      "time-group-memberships",
+      "CHRONO_GROUP_MEMBERSHIPS_INVALID",
+      "Chrono Group memberships must be a list.",
+      "chrono-group-memberships",
     )] };
   }
   for (const membership of memberships) {
@@ -224,20 +224,20 @@ function validateMemberships(memberships, fieldsById) {
     if (policyKey) {
       errors.push(issue(
         "TEMPORAL_POLICY_NOT_OWNED",
-        `Chart creation cannot author "${policyKey}". Open the owning Time Group workflow.`,
-        "time-group-memberships",
+        `Chart creation cannot author "${policyKey}". Open the owning Chrono Group workflow.`,
+        "chrono-group-memberships",
       ));
       continue;
     }
     if (typeof membership?.groupId !== "string" || membership.groupId.trim() === "") {
-      errors.push(issue("TIME_GROUP_ID_REQUIRED", "A selected Time Group requires its saved identity.", "time-group-memberships"));
+      errors.push(issue("CHRONO_GROUP_ID_REQUIRED", "A selected Chrono Group requires its saved identity.", "chrono-group-memberships"));
       continue;
     }
     if (seen.has(membership.groupId)) {
       errors.push(issue(
-        "TIME_GROUP_MEMBERSHIP_DUPLICATE",
-        `Time Group "${membership.groupId}" is selected more than once.`,
-        "time-group-memberships",
+        "CHRONO_GROUP_MEMBERSHIP_DUPLICATE",
+        `Chrono Group "${membership.groupId}" is selected more than once.`,
+        "chrono-group-memberships",
       ));
       continue;
     }
@@ -245,9 +245,9 @@ function validateMemberships(memberships, fieldsById) {
     const timeField = fieldsById.get(membership.timeField);
     if (!timeField || timeField.type !== "temporal") {
       errors.push(issue(
-        "TIME_GROUP_TIME_FIELD_INVALID",
-        `Time Group "${membership.groupId}" requires a current temporal chart field.`,
-        "time-group-memberships",
+        "CHRONO_GROUP_TIME_FIELD_INVALID",
+        `Chrono Group "${membership.groupId}" requires a current temporal chart field.`,
+        "chrono-group-memberships",
       ));
       continue;
     }
@@ -297,7 +297,7 @@ function resolveTimeField(schema, roles, preparation) {
 
 function sanitizePreparation(preparation) {
   return Object.fromEntries(Object.entries(structuredClone(preparation ?? {})).filter(([key]) => (
-    key !== "rows" && key !== "timeGroupMemberships" && !TEMPORAL_POLICY_KEYS.has(key)
+    key !== "rows" && key !== "chronoGroupMemberships" && !TEMPORAL_POLICY_KEYS.has(key)
   )));
 }
 

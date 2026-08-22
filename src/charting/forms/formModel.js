@@ -32,7 +32,7 @@ export function buildWizardFormModel({
   draft,
   profile,
   prepared,
-  timeSyncGroups,
+  chronoGroups,
   geoSources = [],
   geoJoinFields = [],
 } = {}) {
@@ -49,7 +49,7 @@ export function buildWizardFormModel({
           chart: draft,
         profile,
         prepared,
-        timeSyncGroups,
+        chronoGroups,
         geoSources,
           geoJoinFields,
           includeCitation: false,
@@ -95,7 +95,7 @@ export function buildEditorFormModel({
   chart,
   profile,
   prepared,
-  timeSyncGroups = [],
+  chronoGroups = [],
   geoSources = [],
   geoJoinFields = [],
   includeCitation = true,
@@ -109,7 +109,7 @@ export function buildEditorFormModel({
     profile,
     prepared,
     schema,
-    timeSyncGroups: Array.isArray(timeSyncGroups) ? timeSyncGroups : [],
+    chronoGroups: Array.isArray(chronoGroups) ? chronoGroups : [],
     geoSources: normalizedGeoSources(geoSources),
     geoJoinFields: normalizedGeoSources(geoJoinFields),
     includeCitation,
@@ -472,7 +472,7 @@ function interactionFields({
   chart,
   profile,
   schema,
-  timeSyncGroups,
+  chronoGroups,
 }) {
   const fields = [];
   if (schema.capabilities.zoom) {
@@ -494,7 +494,7 @@ function interactionFields({
       });
     }
   }
-  const selectedGroupIds = timeSyncGroups
+  const selectedGroupIds = chronoGroups
     .filter(({ members }) => (
       Array.isArray(members)
       && members.some(({ chartId }) => chartId === chart.id)
@@ -507,14 +507,14 @@ function interactionFields({
   ) {
     fields.push({
       id: "timeSync",
-      label: "Time Group memberships",
+      label: "Chrono Group memberships",
       control: "timeSync",
-      groups: timeSyncGroups,
+      groups: chronoGroups,
       selectedGroupIds,
       ineligible: collectionIneligible,
       ...(collectionIneligible
         ? {
-            help: "Collection displays cannot join Time Groups. Remove existing memberships before saving Collection display settings.",
+            help: "Collection displays cannot join Chrono Groups. Remove existing memberships before saving Collection display settings.",
           }
         : {}),
       timeRoles: temporalRoleOptions(schema, chart, profile),

@@ -12,13 +12,13 @@ import {
 } from "../src/charting/forms/linkedChartWorkflow.js";
 import { createWizardState, reduceWizardState } from "../src/charting/forms/wizardDraft.js";
 
-test("new-Time-Group cancel suspends and returns the unchanged chart draft with full restoration", () => {
+test("new-Chrono-Group cancel suspends and returns the unchanged chart draft with full restoration", () => {
   const original = wizardFixture();
   const before = structuredClone(original);
   const suspended = suspendForLinkedWorkflow(original, {
-    kind: "new-time-group",
-    invokerId: "create-new-time-group",
-    focusId: "time-group-membership-list",
+    kind: "new-chrono-group",
+    invokerId: "create-new-chrono-group",
+    focusId: "chrono-group-membership-list",
     scrollTop: 618,
   });
   assert.deepEqual(original, before);
@@ -30,8 +30,8 @@ test("new-Time-Group cancel suspends and returns the unchanged chart draft with 
   const returned = returnFromLinkedWorkflow(suspended, { result: "cancelled" });
   assert.equal(returned.revalidationRequired, true);
   assert.deepEqual(returned.restoration, {
-    invokerId: "create-new-time-group",
-    focusId: "time-group-membership-list",
+    invokerId: "create-new-chrono-group",
+    focusId: "chrono-group-membership-list",
     scrollTop: 618,
   });
   assert.equal(returned.state.draftId, original.draftId);
@@ -41,7 +41,7 @@ test("new-Time-Group cancel suspends and returns the unchanged chart draft with 
 });
 
 test("linked new group and chart fallback completion return exactly one uncommitted chart-owned proposal", () => {
-  for (const kind of ["new-time-group", "chart-fallback"]) {
+  for (const kind of ["new-chrono-group", "chart-fallback"]) {
     const original = wizardFixture();
     const suspended = suspendForLinkedWorkflow(original, {
       kind,
@@ -52,7 +52,7 @@ test("linked new group and chart fallback completion return exactly one uncommit
     const proposal = createCompanionProposal({
       kind,
       proposalId: `${kind}-proposal-1`,
-      value: kind === "new-time-group"
+      value: kind === "new-chrono-group"
         ? { id: "group-new", name: "Prepared response" }
         : { groupId: "winter", chartId: "chart-draft-1", policy: "Snap to Latest" },
       referenced: true,
@@ -92,7 +92,7 @@ test("linked completion restores current issue focus when revalidation supersede
   assert.equal(returned.state.stage, "map-and-prepare-data");
 });
 
-test("shared-source and saved-Time-Group repair remain durable owner transactions, never companions", () => {
+test("shared-source and saved-Chrono-Group repair remain durable owner transactions, never companions", () => {
   for (const fixture of [
     {
       kind: "source-repair",
@@ -105,9 +105,9 @@ test("shared-source and saved-Time-Group repair remain durable owner transaction
       }),
     },
     {
-      kind: "saved-time-group-repair",
+      kind: "saved-chrono-group-repair",
       repair: createDurableRepairResult({
-        ownership: "saved-time-group",
+        ownership: "saved-chrono-group",
         objectId: "winter",
         committedRevision: "group:12",
         transactionId: "tx-group-12",
@@ -146,7 +146,7 @@ test("shared-source and saved-Time-Group repair remain durable owner transaction
 test("cancelled durable repairs change neither draft nor dependency revision", () => {
   const original = wizardFixture();
   const suspended = suspendForLinkedWorkflow(original, {
-    kind: "saved-time-group-repair",
+    kind: "saved-chrono-group-repair",
     invokerId: "repair-group",
     focusId: "group-winter-issue",
     scrollTop: 144,
@@ -154,7 +154,7 @@ test("cancelled durable repairs change neither draft nor dependency revision", (
   const cancelled = returnFromLinkedWorkflow(suspended, {
     result: "cancelled",
     durableRepair: createDurableRepairResult({
-      ownership: "saved-time-group",
+      ownership: "saved-chrono-group",
       objectId: "winter",
       committedRevision: null,
       transactionId: null,
@@ -169,7 +169,7 @@ test("cancelled durable repairs change neither draft nor dependency revision", (
 
 test("meaningful companion removal requires a named consequence while pristine removal is immediate", () => {
   const meaningful = createCompanionProposal({
-    kind: "new-time-group",
+    kind: "new-chrono-group",
     proposalId: "group-proposal",
     value: { id: "new-group", name: "Prepared response" },
     referenced: false,
@@ -208,7 +208,7 @@ function wizardFixture() {
     profileRevision: "observations:7",
     mapping: { measurements: ["cases"], observation: "date" },
     preparation: {
-      timeGroupMemberships: [{ groupId: "winter", timeField: "date" }],
+      chronoGroupMemberships: [{ groupId: "winter", timeField: "date" }],
     },
     companions: [],
   });

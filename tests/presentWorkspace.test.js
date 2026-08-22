@@ -42,7 +42,7 @@ const dashboard = {
       }],
     },
   ],
-  timeSyncGroups: [],
+  chronoGroups: [],
 };
 
 const displayState = {
@@ -66,7 +66,7 @@ function renderPresent(Component, overrides = {}) {
     audienceFacts: {
       dashboard_name: true,
       page: true,
-      parent_time_group: true,
+      parent_chrono_group: true,
       scene_name: true,
       scene_date: true,
     },
@@ -145,7 +145,7 @@ test("Present workspace exposes the moderator scene controls without permission 
   assert.match(html, /Display on audience/);
   for (const label of [
     "Dashboard name",
-    "Parent Time Group",
+    "Parent Chrono Group",
     "Scene name",
     "Scene date",
   ]) {

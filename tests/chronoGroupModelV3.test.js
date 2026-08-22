@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { profileDataset } from "../src/charting/data/profileDataset.js";
-import * as timeSyncModel from "../src/charting/time/timeSyncModel.js";
+import * as chronoGroupModel from "../src/charting/time/chronoGroupModel.js";
 
 import {
   buildPrimaryClock,
-  getTimeSyncGroup,
+  getChronoGroup,
   validateEffectiveTimeSyncMatching,
-  validateTimeSyncGroups,
-} from "../src/charting/time/timeSyncModel.js";
+  validateChronoGroups,
+} from "../src/charting/time/chronoGroupModel.js";
 import {
   initialPlaybackState,
   reducePlaybackState,
@@ -144,7 +144,7 @@ function canonicalValidationContext(overrides = {}) {
   };
 }
 
-test("canonical Time Group validation owns period, speed, and many-to-many membership", () => {
+test("canonical Chrono Group validation owns period, speed, and many-to-many membership", () => {
   const context = canonicalValidationContext();
   const exercise = canonicalSynchronizationGroup();
   const review = canonicalSynchronizationGroup({
@@ -154,18 +154,18 @@ test("canonical Time Group validation owns period, speed, and many-to-many membe
   });
   const groups = [exercise, review];
 
-  assert.equal(validateTimeSyncGroups(groups, context), groups);
-  assert.equal(validateTimeSyncGroups(groups, {
+  assert.equal(validateChronoGroups(groups, context), groups);
+  assert.equal(validateChronoGroups(groups, {
     ...context,
     timezone: undefined,
   }), groups);
   assert.equal(context.charts[0].interaction.timeSync, null);
 });
 
-test("canonical Time Group validation rejects legacy, invalid period, speed, and timezone contracts", () => {
+test("canonical Chrono Group validation rejects legacy, invalid period, speed, and timezone contracts", () => {
   const context = canonicalValidationContext();
   const fixtures = [
-    [canonicalSynchronizationGroup({ primaryClock: { sourceId: "primary-cases", timeField: "reportedAt" } }), /unknown time synchronization group property "primaryClock"/i],
+    [canonicalSynchronizationGroup({ primaryClock: { sourceId: "primary-cases", timeField: "reportedAt" } }), /unknown Chrono Group property "primaryClock"/i],
     [canonicalSynchronizationGroup({ period: null }), /period must be an object/i],
     [canonicalSynchronizationGroup({ period: { start: "05\/01\/2027", end: "2027-05-04" } }), /period start.*YYYY-MM-DD/i],
     [canonicalSynchronizationGroup({ period: { start: "2027-02-30", end: "2027-05-04" } }), /period start.*calendar date/i],
@@ -176,12 +176,12 @@ test("canonical Time Group validation rejects legacy, invalid period, speed, and
 
   for (const [group, message] of fixtures) {
     assert.throws(
-      () => validateTimeSyncGroups([group], context),
+      () => validateChronoGroups([group], context),
       message,
     );
   }
   assert.throws(
-    () => validateTimeSyncGroups([canonicalSynchronizationGroup()], {
+    () => validateChronoGroups([canonicalSynchronizationGroup()], {
       ...context,
       timezone: "Mars/Olympus_Mons",
     }),
@@ -189,8 +189,8 @@ test("canonical Time Group validation rejects legacy, invalid period, speed, and
   );
 });
 
-test("canonical Time Group clock unions filtered valid plotted observations inside its inclusive period", () => {
-  assert.equal(typeof timeSyncModel.buildTimeGroupClock, "function");
+test("canonical Chrono Group clock unions filtered valid plotted observations inside its inclusive period", () => {
+  assert.equal(typeof chronoGroupModel.buildChronoGroupClock, "function");
 
   const lineRows = [
     { reportedAt: "2027-04-30", cases: 1, include: "yes" },
@@ -236,7 +236,7 @@ test("canonical Time Group clock unions filtered valid plotted observations insi
       { chartId: "events", timeRole: "start" },
     ],
   });
-  const clock = timeSyncModel.buildTimeGroupClock(group, {
+  const clock = chronoGroupModel.buildChronoGroupClock(group, {
     charts,
     loadedData: {
       "primary-cases": lineRows,
@@ -258,8 +258,8 @@ test("canonical Time Group clock unions filtered valid plotted observations insi
   assert.equal(Object.isFrozen(clock), true);
 });
 
-test("canonical Time Group clock compares instant observations to period dates in the dashboard timezone", () => {
-  assert.equal(typeof timeSyncModel.buildTimeGroupClock, "function");
+test("canonical Chrono Group clock compares instant observations to period dates in the dashboard timezone", () => {
+  assert.equal(typeof chronoGroupModel.buildChronoGroupClock, "function");
 
   const rows = [
     { at: "2027-05-02T03:59:59.000Z", value: 1 },
@@ -278,7 +278,7 @@ test("canonical Time Group clock compares instant observations to period dates i
     },
     interaction: { timeSync: null },
   });
-  const clock = timeSyncModel.buildTimeGroupClock(
+  const clock = chronoGroupModel.buildChronoGroupClock(
     canonicalSynchronizationGroup({
       period: { start: "2027-05-01", end: "2027-05-01" },
       members: [{ chartId: chart.id, timeRole: "observation" }],
@@ -302,10 +302,10 @@ test("an absent or empty synchronization-group collection has no active clock", 
   const groups = [];
 
   assert.equal(
-    validateTimeSyncGroups(groups, validationContext({ charts: [] })),
+    validateChronoGroups(groups, validationContext({ charts: [] })),
     groups,
   );
-  assert.equal(getTimeSyncGroup(groups, null), null);
+  assert.equal(getChronoGroup(groups, null), null);
   assert.deepEqual(buildPrimaryClock(null, {}, {}), []);
 });
 
@@ -318,7 +318,7 @@ test("top-level, group, period, and member shapes are strict", () => {
     },
     {
       groups: [{ ...synchronizationGroup(), surprise: true }],
-      message: /unknown time synchronization group property "surprise"/i,
+      message: /unknown Chrono Group property "surprise"/i,
     },
     {
       groups: [synchronizationGroup({ name: " " })],
@@ -364,7 +364,7 @@ test("top-level, group, period, and member shapes are strict", () => {
 
   for (const fixture of malformed) {
     assert.throws(
-      () => validateTimeSyncGroups(fixture.groups, context),
+      () => validateChronoGroups(fixture.groups, context),
       fixture.message,
     );
   }
@@ -374,20 +374,20 @@ test("group IDs and member chart IDs are non-empty and unique", () => {
   const context = validationContext();
 
   assert.throws(
-    () => validateTimeSyncGroups([
+    () => validateChronoGroups([
       synchronizationGroup({ id: " " }),
     ], context),
     /group id is required/i,
   );
   assert.throws(
-    () => validateTimeSyncGroups([
+    () => validateChronoGroups([
       synchronizationGroup(),
       synchronizationGroup(),
     ], context),
-    /duplicate time synchronization group id "exercise"/i,
+    /duplicate Chrono Group id "exercise"/i,
   );
   assert.throws(
-    () => validateTimeSyncGroups([
+    () => validateChronoGroups([
       synchronizationGroup({
         members: [
           { chartId: "outbreak-trend", timeRole: "observation" },
@@ -403,7 +403,7 @@ test("members must reference existing eligible charts and bound temporal roles",
   const context = validationContext();
 
   assert.throws(
-    () => validateTimeSyncGroups([
+    () => validateChronoGroups([
       synchronizationGroup({
         members: [{
           chartId: "missing-chart",
@@ -427,7 +427,7 @@ test("members must reference existing eligible charts and bound temporal roles",
     },
   };
   assert.throws(
-    () => validateTimeSyncGroups([
+    () => validateChronoGroups([
       synchronizationGroup({
         members: [{
           chartId: "composition",
@@ -442,7 +442,7 @@ test("members must reference existing eligible charts and bound temporal roles",
   );
 
   assert.throws(
-    () => validateTimeSyncGroups([
+    () => validateChronoGroups([
       synchronizationGroup({
         members: [{
           chartId: "outbreak-trend",
@@ -454,11 +454,11 @@ test("members must reference existing eligible charts and bound temporal roles",
   );
 });
 
-test("Time Group membership ignores obsolete chart backlinks", () => {
+test("Chrono Group membership ignores obsolete chart backlinks", () => {
   const context = validationContext();
   const groups = [synchronizationGroup()];
 
-  assert.equal(validateTimeSyncGroups(groups, {
+  assert.equal(validateChronoGroups(groups, {
     ...context,
     charts: [lineChart({
       interaction: { timeSync: { groupId: "obsolete-group" } },
@@ -477,15 +477,15 @@ test("matching requires an explicit exact, last-known, or bounded nearest policy
   });
 
   assert.equal(
-    validateTimeSyncGroups([exact], context)[0],
+    validateChronoGroups([exact], context)[0],
     exact,
   );
   assert.equal(
-    validateTimeSyncGroups([lastKnown], context)[0],
+    validateChronoGroups([lastKnown], context)[0],
     lastKnown,
   );
   assert.equal(
-    validateTimeSyncGroups([nearest], context)[0],
+    validateChronoGroups([nearest], context)[0],
     nearest,
   );
 });
@@ -501,7 +501,7 @@ test("unknown policies and invalid or misplaced tolerances fail closed", () => {
     [{ policy: "exact", toleranceMs: 0 }, /only nearest.*toleranceMs/i],
   ]) {
     assert.throws(
-      () => validateTimeSyncGroups([
+      () => validateChronoGroups([
         synchronizationGroup({ matching }),
       ], context),
       message,
@@ -568,10 +568,10 @@ test("member matching overrides are validated independently", () => {
     }],
   });
 
-  assert.equal(validateTimeSyncGroups([group], context)[0], group);
+  assert.equal(validateChronoGroups([group], context)[0], group);
   group.members[0].matching = { policy: "nearest" };
   assert.throws(
-    () => validateTimeSyncGroups([group], context),
+    () => validateChronoGroups([group], context),
     /member "outbreak-trend".*nearest.*toleranceMs/i,
   );
 });
@@ -582,7 +582,7 @@ test("interpolation requires explicit measure permission and a non-discrete sche
     matching: { policy: "interpolate" },
   });
   assert.throws(
-    () => validateTimeSyncGroups([continuous], context),
+    () => validateChronoGroups([continuous], context),
     /chart "outbreak-trend".*explicitly permit interpolation/i,
   );
 
@@ -591,7 +591,7 @@ test("interpolation requires explicit measure permission and a non-discrete sche
     .find(({ name }) => name === "cases")
     .interpolationAllowed = true;
   assert.equal(
-    validateTimeSyncGroups([continuous], permittedContext)[0],
+    validateChronoGroups([continuous], permittedContext)[0],
     continuous,
   );
 
@@ -620,7 +620,7 @@ test("interpolation requires explicit measure permission and a non-discrete sche
   });
 
   assert.throws(
-    () => validateTimeSyncGroups([eventGroup], {
+    () => validateChronoGroups([eventGroup], {
       ...context,
       charts: [timeline],
     }),
@@ -636,17 +636,17 @@ test("group lookup returns the original group and reports deterministic diagnost
   });
   const groups = [exercise, logistics];
 
-  assert.equal(getTimeSyncGroup(groups, "logistics"), logistics);
+  assert.equal(getChronoGroup(groups, "logistics"), logistics);
   assert.throws(
-    () => getTimeSyncGroup(groups, "unknown"),
-    /unknown time synchronization group "unknown"/i,
+    () => getChronoGroup(groups, "unknown"),
+    /unknown Chrono Group "unknown"/i,
   );
   assert.throws(
-    () => getTimeSyncGroup([exercise, exercise], "exercise"),
-    /duplicate time synchronization group id "exercise"/i,
+    () => getChronoGroup([exercise, exercise], "exercise"),
+    /duplicate Chrono Group id "exercise"/i,
   );
   assert.throws(
-    () => getTimeSyncGroup(groups, ""),
+    () => getChronoGroup(groups, ""),
     /group id is required/i,
   );
 });

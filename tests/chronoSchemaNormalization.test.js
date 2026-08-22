@@ -6,14 +6,14 @@ import {
 } from "../src/charting/time/temporalSchema.js";
 import {
   migrateDashboardTimezoneToUtc,
-} from "../src/charting/time/migrateTemporalConfig.js";
+} from "../src/charting/time/normalizeTemporalConfig.js";
 
 function temporalBundle(overrides = {}) {
   return {
     dashboard: {
       id: "dashboard-1",
       timeZone: "Europe/Berlin",
-      timeGroups: [{
+      chronoGroups: [{
         id: "group-1",
         period: {
           start: "2027-01-31T11:00:00.000Z",
@@ -52,7 +52,7 @@ test("migration preserves an explicit IANA zone, canonicalizes offset instants, 
   const legacy = temporalBundle({
     timeZone: undefined,
     timezone: "Europe/Berlin",
-    timeGroups: [{
+    chronoGroups: [{
       id: "group-1",
       period: {
         start: "2027-01-31T12:00:00+01:00",
@@ -77,12 +77,12 @@ test("migration preserves an explicit IANA zone, canonicalizes offset instants, 
 
   assert.equal(migrated.dashboard.timeZone, "Europe/Berlin");
   assert.equal(Object.hasOwn(migrated.dashboard, "timezone"), false);
-  assert.deepEqual(migrated.dashboard.timeGroups[0].period, {
+  assert.deepEqual(migrated.dashboard.chronoGroups[0].period, {
     start: "2027-01-31T11:00:00.000Z",
     end: "2027-03-31T10:00:00.000Z",
   });
   assert.deepEqual(
-    migrated.dashboard.timeGroups[0].scenes[0].frameRule.selectedInstants,
+    migrated.dashboard.chronoGroups[0].scenes[0].frameRule.selectedInstants,
     ["2027-02-28T11:00:00.000Z"],
   );
   assert.deepEqual(migrateDashboardTimezoneToUtc(migrated), migrated);
@@ -106,7 +106,7 @@ test("post-migration validation requires exactly one valid dashboard IANA timezo
 
 test("migration rejects ambiguous stored timestamps instead of silently reinterpreting them", () => {
   const legacy = temporalBundle({
-    timeGroups: [{
+    chronoGroups: [{
       id: "group-1",
       period: {
         start: "2027-01-31T12:00:00",
@@ -124,7 +124,7 @@ test("migration rejects ambiguous stored timestamps instead of silently reinterp
 
 test("validation rejects non-UTC persisted temporal instants", () => {
   const invalid = temporalBundle();
-  invalid.dashboard.timeGroups[0].period.start = "2027-01-31T12:00:00+01:00";
+  invalid.dashboard.chronoGroups[0].period.start = "2027-01-31T12:00:00+01:00";
 
   assert.throws(
     () => validateTemporalBundle(invalid),

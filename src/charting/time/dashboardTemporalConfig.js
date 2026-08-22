@@ -1,5 +1,5 @@
 import { parseTemporalValue } from "../data/temporal.js";
-import { migrateDashboardTimezoneToUtc } from "./migrateTemporalConfig.js";
+import { migrateDashboardTimezoneToUtc } from "./normalizeTemporalConfig.js";
 
 const CANONICAL_GROUP_KEYS = Object.freeze([
   "id",
@@ -25,9 +25,9 @@ export function normalizeDashboardTemporalConfig(
 
   const normalized = migrateDashboardTimezoneToUtc(config, { timezoneFallback });
 
-  if (Array.isArray(normalized.timeSyncGroups)) {
-    normalized.timeSyncGroups = normalized.timeSyncGroups.map((group) => (
-      normalizeTimeGroup(group, {
+  if (Array.isArray(normalized.chronoGroups)) {
+    normalized.chronoGroups = normalized.chronoGroups.map((group) => (
+      normalizeChronoGroup(group, {
         config,
         profiles,
         timezone: normalized.timezone,
@@ -46,12 +46,12 @@ export function validateCanonicalDashboardTemporalConfig(config) {
   }
   validateDashboardTimezone(config.timezone);
 
-  const groups = config.timeSyncGroups ?? [];
+  const groups = config.chronoGroups ?? [];
   if (!Array.isArray(groups)) {
-    throw new TypeError("Dashboard timeSyncGroups must be an array.");
+    throw new TypeError("Dashboard chronoGroups must be an array.");
   }
   for (const group of groups) {
-    validateCanonicalTimeGroup(group);
+    validateCanonicalChronoGroup(group);
   }
   return config;
 }
@@ -73,7 +73,7 @@ export function validateDashboardTimezone(timezone) {
   return timezone;
 }
 
-function normalizeTimeGroup(group, { config, profiles, timezone }) {
+function normalizeChronoGroup(group, { config, profiles, timezone }) {
   if (!isRecord(group)) return group;
   const normalized = structuredClone(group);
   if (normalized.secondsPerFrame === undefined) {
@@ -161,33 +161,33 @@ function deriveLegacyPeriod(group, { config, profiles, timezone }) {
   return { start: dates[0], end: dates.at(-1) };
 }
 
-function validateCanonicalTimeGroup(group) {
+function validateCanonicalChronoGroup(group) {
   if (!isRecord(group)) {
-    throw new TypeError("Dashboard timeSyncGroups must contain objects.");
+    throw new TypeError("Dashboard chronoGroups must contain objects.");
   }
   const keys = Object.keys(group);
   const expected = new Set(CANONICAL_GROUP_KEYS);
   for (const key of keys) {
     if (!expected.has(key)) {
       throw new Error(
-        `Unknown time synchronization group property "${key}".`,
+        `Unknown Chrono Group property "${key}".`,
       );
     }
   }
   for (const key of CANONICAL_GROUP_KEYS) {
     if (!Object.hasOwn(group, key)) {
       throw new Error(
-        `Time synchronization group "${group.id ?? "unknown"}" ${key} is required.`,
+        `Chrono Group "${group.id ?? "unknown"}" ${key} is required.`,
       );
     }
   }
   if (Object.hasOwn(group, "primaryClock")) {
-    throw new Error("Canonical time synchronization groups cannot contain primaryClock.");
+    throw new Error("Canonical Chrono Groups cannot contain primaryClock.");
   }
   validatePeriod(group.period, group.id);
   if (!Number.isFinite(group.secondsPerFrame) || group.secondsPerFrame <= 0) {
     throw new Error(
-      `Time synchronization group "${group.id}" secondsPerFrame must be positive and finite.`,
+      `Chrono Group "${group.id}" secondsPerFrame must be positive and finite.`,
     );
   }
 }
@@ -195,7 +195,7 @@ function validateCanonicalTimeGroup(group) {
 function validatePeriod(period, groupId) {
   if (!isRecord(period)) {
     throw new TypeError(
-      `Time synchronization group "${groupId}" period must be an object.`,
+      `Chrono Group "${groupId}" period must be an object.`,
     );
   }
   for (const key of Object.keys(period)) {
@@ -210,13 +210,13 @@ function validatePeriod(period, groupId) {
       : { ok: false };
     if (!parsed.ok || parsed.canonical !== value) {
       throw new Error(
-        `Time synchronization group "${groupId}" period ${key} must be a canonical YYYY-MM-DD date.`,
+        `Chrono Group "${groupId}" period ${key} must be a canonical YYYY-MM-DD date.`,
       );
     }
   }
   if (period.end < period.start) {
     throw new Error(
-      `Time synchronization group "${groupId}" period end must be on or after start.`,
+      `Chrono Group "${groupId}" period end must be on or after start.`,
     );
   }
 }
@@ -250,7 +250,7 @@ function calendarDateInTimezone(instant, timezone) {
 
 function legacyEvidenceError(group, detail) {
   return new Error(
-    `Cannot migrate legacy time synchronization group "${group.id ?? "unknown"}" primaryClock: ${detail}; provide valid temporal profile evidence or author an inclusive period.`,
+    `Cannot migrate legacy Chrono Group "${group.id ?? "unknown"}" primaryClock: ${detail}; provide valid temporal profile evidence or author an inclusive period.`,
   );
 }
 

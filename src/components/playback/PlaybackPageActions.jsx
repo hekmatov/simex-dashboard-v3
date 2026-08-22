@@ -20,11 +20,11 @@ export default function PlaybackPageActions() {
       ? React.createElement(
           "label",
           { className: "chrono-group-select" },
-          React.createElement("span", { className: "visually-hidden" }, "Time Group"),
+          React.createElement("span", { className: "visually-hidden" }, "Chrono Group"),
           React.createElement(
             "select",
             {
-              "aria-label": "Time Group",
+              "aria-label": "Chrono Group",
               value: activeGroupId ?? "",
               onChange: (event) => dispatch({
                 type: "setGroup",

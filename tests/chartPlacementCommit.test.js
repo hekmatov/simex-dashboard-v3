@@ -12,7 +12,7 @@ function dashboard() {
     dataSources: {
       "source-a": { kind: "inline", rows: [{ value: 1 }] },
     },
-    timeSyncGroups: [],
+    chronoGroups: [],
     pages: [{
       id: "page-a",
       title: "Page A",

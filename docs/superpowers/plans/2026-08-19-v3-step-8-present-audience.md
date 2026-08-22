@@ -36,7 +36,7 @@ export const PRESENTATION_PROTOCOL_VERSION = 3;
 // PresentationMessage = { protocol_version:3, session_id, sequence,
 //   type:"ready"|"state"|"heartbeat"|"ended", payload:PresentationState|null }
 // PresentationState = { dashboard_revision,
-//   source:{kind:"scene"|"time-group"|"manual", scene_id:null|string, time_group_id:null|string},
+//   source:{kind:"scene"|"Chrono Group"|"manual", scene_id:null|string, chrono_group_id:null|string},
 //   composition:{active_page_id,displayed_chart_ids,layout},
 //   timeline:{frame_epochs:number[],frame_index:number,period:{start,end},
 //     trace_mode:"reveal"|"full",seconds_per_frame:number},
@@ -44,7 +44,7 @@ export const PRESENTATION_PROTOCOL_VERSION = 3;
 //   output_mode:"holding"|"blank"|"active", blackout:boolean,
 //   audience:{date_position:{x_permille,y_permille,width_permille}}, payload }
 // PresentationAction = { type:"SEEK"|"PREVIOUS"|"NEXT"|"PLAY"|"PAUSE"|
-//   "SELECT_SCENE"|"SELECT_TIME_GROUP"|"SET_TRACE_MODE"|"SET_MATCHING_OVERRIDE"|
+//   "SELECT_SCENE"|"SELECT_CHRONO_GROUP"|"SET_TRACE_MODE"|"SET_MATCHING_OVERRIDE"|
 //   "SET_OUTPUT_MODE"|"SET_COMPOSITION"|"SET_BLACKOUT"|"END", value? }
 export function makePresentationMessage({ sessionId, sequence, type, payload, validChartIds }) {}
 export function parsePresentationMessage(value, { sessionId, validChartIds } = {}) {}
@@ -54,7 +54,7 @@ export function validatePresentationAction(value) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing protocol tests for every field/action, direct seek bounds, Reveal/Full modes, holding/blank/active, Scene/Time Group identity, date-position ranges, monotonic sequence, protocol mismatch, malformed payload, and structured rejection reasons.
+- [ ] **Write the failing test.** Add failing protocol tests for every field/action, direct seek bounds, Reveal/Full modes, holding/blank/active, Scene/Chrono Group identity, date-position ranges, monotonic sequence, protocol mismatch, malformed payload, and structured rejection reasons.
 - [ ] **Write the failing test.** Add failing channel tests for session isolation, ordered delivery, duplicate/out-of-order rejection, validation before publication, and immutable last-valid snapshot retention.
 - [ ] **Run test to verify it fails.** Run `node --test tests/presentationProtocol.test.js tests/presentationChannel.test.js`; expect missing protocol exports and channel validation failures.
 - [ ] **Write minimal implementation.** Implement validation and versioned envelopes. Reject invalid/Needs-attention Scene selection before publication and return `{accepted:false,reason,lastValidSnapshot}` without changing the channel output.
@@ -92,7 +92,7 @@ export function requestAudienceWindowClose(windowRef) {}
 // | {type:"SNAPSHOT_ACCEPTED", message:PresentationMessage}
 // | {type:"SNAPSHOT_REJECTED", reason:string}
 // | {type:"SEEK", frameIndex:number} | {type:"PREVIOUS"|"NEXT"|"PLAY"|"PAUSE"|"TICK"}
-// | {type:"SELECT_SCENE", sceneId:string} | {type:"SELECT_TIME_GROUP", groupId:string}
+// | {type:"SELECT_SCENE", sceneId:string} | {type:"SELECT_CHRONO_GROUP", groupId:string}
 // | {type:"SET_TRACE_MODE", mode:"reveal"|"full"}
 // | {type:"SET_MATCHING_OVERRIDE", policy:null|string}
 // | {type:"SET_OUTPUT_MODE", mode:"holding"|"blank"|"active"}
@@ -151,7 +151,7 @@ export function requestAudienceWindowClose(windowRef) {}
 
 **Interfaces:**
 - Consumes: S8-2 reducer, S8-1 protocol, saved valid groups/scenes, S7-17 matching/playback semantics.
-- Produces: Present UI for Open New Session, Scene/Time Group selection, direct seek, previous/next, Reveal to frame/Full timeline, matching override, cadence, Play/Pause, holding, blank, blackout, and END effect execution with explicit Audience close outcomes.
+- Produces: Present UI for Open New Session, Scene/Chrono Group selection, direct seek, previous/next, Reveal to frame/Full timeline, matching override, cadence, Play/Pause, holding, blank, blackout, and END effect execution with explicit Audience close outcomes.
 
 **Steps:**
 

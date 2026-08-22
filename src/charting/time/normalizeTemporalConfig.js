@@ -29,12 +29,12 @@ export function migrateDashboardTimezoneToUtc(bundle, { timezoneFallback = "UTC"
   validateIanaTimeZone(dashboard.timeZone);
   delete dashboard.timezone;
 
-  if (Array.isArray(dashboard.timeGroups)) {
-    for (const [groupIndex, group] of dashboard.timeGroups.entries()) {
-      normalizePeriod(group?.period, `dashboard.timeGroups[${groupIndex}].period`);
+  if (Array.isArray(dashboard.chronoGroups)) {
+    for (const [groupIndex, group] of dashboard.chronoGroups.entries()) {
+      normalizePeriod(group?.period, `dashboard.chronoGroups[${groupIndex}].period`);
       if (!Array.isArray(group?.scenes)) continue;
       for (const [sceneIndex, scene] of group.scenes.entries()) {
-        const scenePath = `dashboard.timeGroups[${groupIndex}].scenes[${sceneIndex}]`;
+        const scenePath = `dashboard.chronoGroups[${groupIndex}].scenes[${sceneIndex}]`;
         normalizePeriod(scene?.period, `${scenePath}.period`);
         normalizeSelectedInstants(scene?.frameRule, `${scenePath}.frameRule`);
       }
@@ -64,7 +64,7 @@ function isLiveDashboard(value) {
   return !Object.hasOwn(value, "dashboard") && (
     Object.hasOwn(value, "configVersion")
     || Object.hasOwn(value, "pages")
-    || Object.hasOwn(value, "timeSyncGroups")
+    || Object.hasOwn(value, "chronoGroups")
     || Object.hasOwn(value, "scenes")
   );
 }

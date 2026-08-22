@@ -113,15 +113,15 @@ test("retry and repair actions have deterministic labels, owners, and destinatio
   const repair = deriveChartStateModel({
     kind: "needs-attention",
     chartName: "Cases",
-    repairDestination: "time-group:charts",
-    repairOwner: "saved-time-group",
+    repairDestination: "chrono-group:charts",
+    repairOwner: "saved-chrono-group",
     reason: "No observations remain in the period.",
   });
   assert.deepEqual(repair.actions, [{
     id: "repair",
     label: "Repair Cases",
-    owner: "saved-time-group",
-    destination: "time-group:charts",
+    owner: "saved-chrono-group",
+    destination: "chrono-group:charts",
   }]);
 
   const empty = deriveChartStateModel({

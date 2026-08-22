@@ -1,9 +1,9 @@
 import React from "react";
 
 import {
-  buildTimeGroupClock,
-  validateTimeSyncGroups,
-} from "../../charting/time/timeSyncModel.js";
+  buildChronoGroupClock,
+  validateChronoGroups,
+} from "../../charting/time/chronoGroupModel.js";
 import {
   initialPlaybackState,
   reducePlaybackState,
@@ -59,10 +59,10 @@ export function PlaybackProvider({
     if (state.playbackView !== true) return groups;
     const selectedGroup = resolveActiveGroup(
       groups,
-      activeScene?.groupId ?? state.activeGroupId,
+      activeScene?.chronoGroupId ?? state.activeGroupId,
     );
     if (state.source?.kind !== "default" || activeScene) {
-      validateTimeSyncGroups(selectedGroup ? [selectedGroup] : EMPTY_ARRAY, temporalContext);
+      validateChronoGroups(selectedGroup ? [selectedGroup] : EMPTY_ARRAY, temporalContext);
     }
     return groups;
   }, [activeScene, groups, state.activeGroupId, state.playbackView, state.source?.kind, temporalContext]);
@@ -77,7 +77,7 @@ export function PlaybackProvider({
   const selectedGroup = React.useMemo(
     () => resolveActiveGroup(
       validatedGroups,
-      activeScene?.groupId ?? state.activeGroupId,
+      activeScene?.chronoGroupId ?? state.activeGroupId,
     ),
     [activeScene, validatedGroups, state.activeGroupId],
   );
@@ -94,7 +94,7 @@ export function PlaybackProvider({
       ? EMPTY_ARRAY
       : usingDefaultPage
       ? defaultPagePlayback.clock
-      : buildTimeGroupClock(selectedGroup, temporalContext),
+      : buildChronoGroupClock(selectedGroup, temporalContext),
     [defaultPagePlayback, selectedGroup, state.playbackView, temporalContext, usingDefaultPage],
   );
   const clock = React.useMemo(
@@ -346,7 +346,7 @@ export function dispatchPlaybackAction(
   }
   if (action?.type !== "setScene") return;
   const selectedScene = scenes.find(({ id }) => id === action.sceneId);
-  const selectedGroup = groups.find(({ id }) => id === selectedScene?.groupId);
+  const selectedGroup = groups.find(({ id }) => id === selectedScene?.chronoGroupId);
   if (!selectedScene || !selectedGroup) return;
   baseDispatch({
     type: "setSpeed",
@@ -386,7 +386,7 @@ function initializePlaybackState({
     profiles,
     timezone,
   };
-  const selectedGroup = resolveActiveGroup(groups, activeScene?.groupId ?? activeGroupId);
+  const selectedGroup = resolveActiveGroup(groups, activeScene?.chronoGroupId ?? activeGroupId);
   const shouldBuildClock = supplied.playbackView === true;
   const defaultPagePlayback = shouldBuildClock
     ? buildDefaultPagePlayback(pageCharts ?? charts, temporalContext)
@@ -398,7 +398,7 @@ function initializePlaybackState({
     ? EMPTY_ARRAY
     : source.kind === "default" && !activeScene
     ? defaultPagePlayback.clock
-    : buildTimeGroupClock(selectedGroup, temporalContext);
+    : buildChronoGroupClock(selectedGroup, temporalContext);
   const clock = activeScene
     ? buildScenePlaybackClock(activeScene, groupClock, {
         group: selectedGroup,
@@ -545,7 +545,7 @@ function defaultPageGroup(charts) {
 function buildPageChartClock(chart, temporalContext) {
   for (const timeRole of Object.keys(chart?.roles ?? {})) {
     try {
-      return buildTimeGroupClock({
+      return buildChronoGroupClock({
         id: `default-page-${chart.id}`,
         name: "Default page timeline",
         period: { start: "0001-01-01", end: "9999-12-31" },
@@ -563,7 +563,7 @@ function buildPageChartClock(chart, temporalContext) {
 function buildSceneSourceClock(scene, fallbackClock, { group, temporalContext } = {}) {
   const member = group?.members?.find(({ chartId }) => chartId === scene.frames?.chartId);
   if (!member || !temporalContext) return fallbackClock;
-  return buildTimeGroupClock({ ...group, members: [member] }, temporalContext);
+  return buildChronoGroupClock({ ...group, members: [member] }, temporalContext);
 }
 
 function sessionMatchingPolicy(value) {

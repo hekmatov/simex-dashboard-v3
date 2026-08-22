@@ -143,7 +143,7 @@ function Harness() {
       open: wizardOpen,
       dataSources: {},
       loadedData: {},
-      timeSyncGroups: [],
+      chronoGroups: [],
       existingCharts: [],
       onClose: () => setWizardOpen(false),
       onCreate() {},

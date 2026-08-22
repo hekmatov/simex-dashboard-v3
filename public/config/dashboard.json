@@ -24,16 +24,6 @@
       "multiSelectHighlightColor": "#00a676"
     }
   },
-  "vantaBackground": {
-    "backgroundColor": "#f7f9fc",
-    "networkColor": "#f1a1ad",
-    "mouseControls": false,
-    "touchControls": false,
-    "points": 6,
-    "maxDistance": 17,
-    "spacing": 18,
-    "speed": 0.45
-  },
   "dataSources": {
     "bio_admissions": {
       "kind": "csv",
@@ -659,7 +649,7 @@
       }
     }
   },
-  "timeSyncGroups": [
+  "chronoGroups": [
     {
       "id": "municipal_outbreak",
       "name": "Municipal outbreak playback",
@@ -822,16 +812,6 @@
           "title": "Scenario overview",
           "description": "Prepared static dashboard content imported from the original PDPC exercise dashboard.",
           "layout": "two-column",
-          "vantaBackground": {
-            "backgroundColor": "#f7f9fc",
-            "networkColor": "#f1a1ad",
-            "mouseControls": false,
-            "touchControls": false,
-            "points": 6,
-            "maxDistance": 17,
-            "spacing": 18,
-            "speed": 0.45
-          },
           "panels": [
             {
               "configVersion": 3,

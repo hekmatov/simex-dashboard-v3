@@ -16,7 +16,7 @@ test("each approved authored-content category independently protects package imp
     "chartWizard",
     "inlineRename",
     "pendingContent",
-    "timeGroup",
+    "chronoGroup",
     "scene",
     "dashboardMetadata",
   ]) {

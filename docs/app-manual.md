@@ -84,7 +84,7 @@ supports:
 - chart creation, editing, conversion, ordering, sizing, and removal;
 - tracked, uploaded, and concise inline data sources;
 - global and chart-specific surfaces;
-- synchronized time groups;
+- Chrono Groups;
 - portable bundle import and export.
 
 Browser edits are local to that browser until exported. Export a version 3
@@ -212,7 +212,7 @@ Changing type opens a guided conversion dialog:
 - cancelling leaves the exact draft unchanged;
 - applying a conversion is atomic.
 
-Time-group membership is retained only when the target has a valid mapped
+Chrono Group membership is retained only when the target has a valid mapped
 temporal role. Collection settings are retained only when supported by the
 target.
 
@@ -274,7 +274,7 @@ Collection Display.
 
 Time synchronization is owned by the dashboard. The dashboard stores an IANA
 timezone; bundles without one are normalized to UTC before validation. Each
-Time Group contains:
+Chrono Group contains:
 
 - a stable ID and name;
 - an inclusive canonical `YYYY-MM-DD` start/end period;
@@ -283,8 +283,8 @@ Time Group contains:
 - members with a chart ID and declared temporal role, plus an optional
   validated matching override.
 
-`timeSyncGroups[].members` is the sole membership authority. A chart can
-belong to multiple Time Groups, with independent matching in each. Charts do
+`chronoGroups[].members` is the sole membership authority. A chart can
+belong to multiple Chrono Groups, with independent matching in each. Charts do
 not store an authoritative group backlink, and groups do not designate a
 primary clock.
 
@@ -294,7 +294,7 @@ contributes a frame only when its temporal role resolves and at least one
 plotted value is present. Instant observations are assigned to period dates
 using the dashboard timezone; date-only observations remain date-only.
 
-Collection displays cannot join a Time Group. Their paging is independent of
+Collection displays cannot join a Chrono Group. Their paging is independent of
 synchronized playback.
 
 Open the playback view to move all eligible charts across the same exercise
@@ -335,7 +335,7 @@ Collection Display separates a repeated visualization from the way its items
 are arranged. KPI grids, delta lists, bullet collections, and gauge
 collections share one contract.
 
-Collection displays cannot be added to Time Groups. Their paging, ranking,
+Collection displays cannot be added to Chrono Groups. Their paging, ranking,
 and carousel controls remain local to the collection.
 
 ### Fixed grid

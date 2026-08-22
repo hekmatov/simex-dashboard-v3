@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { register } from "node:module";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { createServer } from "vite";
 
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
@@ -12,26 +12,23 @@ import {
   buildFormPreparationKey,
 } from "../src/charting/forms/formModel.js";
 
-register(`data:text/javascript,${encodeURIComponent(`
-export async function load(url, context, nextLoad) {
-  if (url.endsWith(".jsx")) {
-    const loaded = await nextLoad(url, { ...context, format: "module" });
-    return { format: "module", source: loaded.source, shortCircuit: true };
-  }
-  return nextLoad(url, context);
-}
-`)}`, import.meta.url);
-
-const { default: TimeSyncSettingsField } = await import(
-  "../src/components/chart-authoring/TimeSyncSettingsField.jsx"
+const vite = await createServer({
+  root: process.cwd(),
+  appType: "custom",
+  logLevel: "silent",
+  server: { middlewareMode: true },
+});
+const { default: ChronoMembershipSettingsField } = await vite.ssrLoadModule(
+  "/src/components/chart-authoring/ChronoMembershipSettingsField.jsx",
 );
-const { applyWizardMembership } = await import(
-  "../src/components/chart-authoring/ChartWizardV3.jsx"
+const { applyWizardMembership } = await vite.ssrLoadModule(
+  "/src/components/chart-authoring/ChartWizardV3.jsx",
 );
 const {
   createChartEditorState,
   reduceChartEditorState,
-} = await import("../src/components/chart-authoring/ChartEditorV3.jsx");
+} = await vite.ssrLoadModule("/src/components/chart-authoring/ChartEditorV3.jsx");
+await vite.close();
 
 const rows = [
   { observed: "2027-05-01", value: 4 },
@@ -68,7 +65,7 @@ function group(id, members) {
   };
 }
 
-test("chart authoring exposes independent Time Group memberships without chart-owned matching", () => {
+test("chart authoring exposes independent Chrono Group memberships without chart-owned matching", () => {
   const chart = lineChart();
   const groups = [
     group("operations", [{ chartId: chart.id, timeRole: "observation" }]),
@@ -86,7 +83,7 @@ test("chart authoring exposes independent Time Group memberships without chart-o
         formPreparationKey: buildFormPreparationKey({ chart, profile }),
       },
     },
-    timeSyncGroups: groups,
+    chronoGroups: groups,
   });
   const field = model.sections
     .flatMap(({ fields }) => fields)
@@ -97,11 +94,11 @@ test("chart authoring exposes independent Time Group memberships without chart-o
   assert.equal("groupMatching" in field, false);
   assert.equal("groupTarget" in field, false);
 
-  const html = renderToStaticMarkup(React.createElement(TimeSyncSettingsField, {
+  const html = renderToStaticMarkup(React.createElement(ChronoMembershipSettingsField, {
     field,
     chart,
   }));
-  assert.match(html, /Time Group memberships/);
+  assert.match(html, /Chrono Group memberships/);
   assert.match(html, /type="checkbox"/);
   assert.match(html, /Operations/);
   assert.match(html, /Executive watch/);
@@ -152,7 +149,7 @@ test("chart conversion remaps every group-owned membership without a chart backl
     group("operations", [{ chartId: chart.id, timeRole: "observation" }]),
     group("executive", [{ chartId: chart.id, timeRole: "observation" }]),
   ];
-  let state = createChartEditorState({ chart, timeSyncGroups: groups });
+  let state = createChartEditorState({ chart, chronoGroups: groups });
 
   state = reduceChartEditorState(state, {
     type: "requestConversion",
@@ -187,7 +184,7 @@ test("chart conversion remaps every group-owned membership without a chart backl
   assert.equal(state.error, "");
   assert.equal(state.draft.interaction.timeSync, null);
   assert.deepEqual(
-    state.timeSyncGroups.map(({ members }) => members[0].timeRole),
+    state.chronoGroups.map(({ members }) => members[0].timeRole),
     ["time", "time"],
   );
 });

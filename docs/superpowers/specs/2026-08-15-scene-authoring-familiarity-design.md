@@ -5,7 +5,7 @@ Status: Approved for implementation planning
 
 ## Purpose
 
-Rebuild Sketch 006 so Scene authoring begins from the approved Time Group creation language instead of introducing a separate authoring interface. The comparison will test how the familiar membership ledger hands off to Scene View and Present arrangement while keeping Scene semantics, fixture data, and workflow state identical across all three variants.
+Rebuild Sketch 006 so Scene authoring begins from the approved Chrono Group creation language instead of introducing a separate authoring interface. The comparison will test how the familiar membership ledger hands off to Scene View and Present arrangement while keeping Scene semantics, fixture data, and workflow state identical across all three variants.
 
 ## Fixed foundation
 
@@ -17,7 +17,7 @@ All variants reuse the approved Staged Proof Studio and Availability Ledger gram
 - the Scene contract's five stages: Choose scope, Compose scene, Generate frames, Configure temporal behavior, and Name and review;
 - one atomic Scene draft and one final Save Scene transaction.
 
-The Scene workflow is distinguished without a new visual system. A persistent identity band says **Scene draft**, names the draft, and shows its lineage: **Winter response 2026 → Executive surveillance**. Scene-specific verbs, five-stage labels, and parent Time Group context provide redundant non-colour differentiation from Time Group creation.
+The Scene workflow is distinguished without a new visual system. A persistent identity band says **Scene draft**, names the draft, and shows its lineage: **Winter response 2026 → Executive surveillance**. Scene-specific verbs, five-stage labels, and parent Chrono Group context provide redundant non-colour differentiation from Chrono Group creation.
 
 ## Shared direct arrangement behavior
 

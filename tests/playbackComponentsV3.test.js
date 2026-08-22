@@ -155,7 +155,7 @@ test("View Chrono exposes group and Scene sources with viewer-only controls", ()
   assert.match(html, />Full timeline</);
   assert.match(html, /aria-label="Show availability information"/);
   assert.match(html, /aria-label="Move Chrono controls to mast"/);
-  assert.doesNotMatch(html, /Save Scene|Edit Time Group|Build/);
+  assert.doesNotMatch(html, /Save Scene|Edit Chrono Group|Build/);
 });
 
 test("Scene selection constrains the playback clock and participating charts", () => {
@@ -435,7 +435,7 @@ test("a live provider can initialize paused synchronized charts at the latest gr
   assert.equal(html, `<output>2|${MAY_3}|paused</output>`);
 });
 
-test("the provider evaluates the inclusive Time Group period in the dashboard timezone", () => {
+test("the provider evaluates the inclusive Chrono Group period in the dashboard timezone", () => {
   const rows = [
     { observed: "2027-05-02T03:59:59.000Z", cases: 10 },
     { observed: "2027-05-02T04:00:00.000Z", cases: 20 },
@@ -488,7 +488,7 @@ test("the provider evaluates the inclusive Time Group period in the dashboard ti
   assert.equal(html, `<output>${Date.UTC(2027, 4, 2, 3, 59, 59)}</output>`);
 });
 
-test("the provider initializes playback cadence from the active Time Group", () => {
+test("the provider initializes playback cadence from the active Chrono Group", () => {
   function Probe() {
     return React.createElement("output", null, usePlayback().speed);
   }
@@ -505,7 +505,7 @@ test("the provider initializes playback cadence from the active Time Group", () 
   assert.equal(html, "<output>2.5</output>");
 });
 
-test("switching Time Groups dispatches the selected group's saved cadence", () => {
+test("switching Chrono Groups dispatches the selected group's saved cadence", () => {
   assert.equal(
     typeof dispatchPlaybackAction,
     "function",
@@ -530,7 +530,7 @@ test("switching Time Groups dispatches the selected group's saved cadence", () =
   ]);
 });
 
-test("redispatching the active Time Group preserves its user cadence override", () => {
+test("redispatching the active Chrono Group preserves its user cadence override", () => {
   const dispatched = [];
   dispatchPlaybackAction(
     (action) => dispatched.push(action),
@@ -652,7 +652,7 @@ test("closed Chrono does not scan temporal rows until playback opens", () => {
   assert.ok(open.reads() > 0);
 });
 
-test("Default page timeline uses every page chart instead of the active Time Group ledger", () => {
+test("Default page timeline uses every page chart instead of the active Chrono Group ledger", () => {
   const memberRows = [
     { observed: "2027-05-01", cases: 10 },
     { observed: "2027-05-03", cases: 30 },
@@ -888,7 +888,7 @@ test("saved Scene calendar frames generate the live scene.frames interval ledger
   assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;calendar-source&quot;,&quot;calendar-other&quot;]}</output>`);
 });
 
-test("playback view renders Time Group members and explicit missing states", () => {
+test("playback view renders Chrono Group members and explicit missing states", () => {
   const fixture = playbackFixture();
   const missing = lineChart({
     id: "missing-chart",
@@ -1309,7 +1309,7 @@ test("playback view reports no group and empty clocks without claiming participa
   assert.doesNotMatch(noGroup, /playback-member/);
 });
 
-test("ChartView receives active time when the active Time Group lists it as a member", () => {
+test("ChartView receives active time when the active Chrono Group lists it as a member", () => {
   const fixture = playbackFixture();
   const staticChart = lineChart({
     id: "static",
@@ -1900,7 +1900,7 @@ function scenePlaybackFixture({ sourceChart, otherChart, sourceRows, otherRows, 
     scenes: [{
       id: "scene-live-frames",
       name: "Live frame schema",
-      groupId: "scene-group",
+      chronoGroupId: "scene-group",
       period: {
         start: "2027-05-01T00:00:00.000Z",
         end: "2027-05-03T00:00:00.000Z",

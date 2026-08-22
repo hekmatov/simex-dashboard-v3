@@ -14,7 +14,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Build panel", exact: true }).click();
 
-  for (const label of ["Time Content", "Time Group Studio", "Scene Studio", "Pages & sections", "Scenario details"]) {
+  for (const label of ["Chrono Studio", "Scene Studio", "Pages & sections", "Scenario details"]) {
     await page.getByRole("button", { name: label, exact: true }).click();
     const surface = page.locator(".build-authoring-auxiliary");
     await expect(surface).toBeVisible();

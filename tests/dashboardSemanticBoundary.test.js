@@ -31,10 +31,9 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "pages",
     "programLabel",
     "scenarioLabel",
-    "timeSyncGroups",
+    "chronoGroups",
     "timezone",
     "title",
-    "vantaBackground",
   ],
   page: [
     "description",
@@ -51,7 +50,6 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "layout",
     "panels",
     "title",
-    "vantaBackground",
   ],
   landing: [
     "capabilities",
@@ -98,16 +96,6 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "multiSelectHighlightColor",
     "panelBackgroundColor",
     "panelBorderColor",
-  ],
-  vantaBackground: [
-    "backgroundColor",
-    "maxDistance",
-    "mouseControls",
-    "networkColor",
-    "points",
-    "spacing",
-    "speed",
-    "touchControls",
   ],
 });
 
@@ -164,16 +152,6 @@ test("every packaged dashboard structure family participates in the digest and s
     "global panel colors": (value) => {
       value.dashboard.globalStyles.panelColors.panelBackgroundColor = "#123456";
     },
-    "root Vanta colors": (value) => {
-      value.dashboard.vantaBackground.networkColor = "#123456";
-    },
-    "root Vanta number": (value) => {
-      value.dashboard.vantaBackground.speed += 0.1;
-    },
-    "root Vanta boolean": (value) => {
-      value.dashboard.vantaBackground.mouseControls =
-        !value.dashboard.vantaBackground.mouseControls;
-    },
     "page identity": (value) => {
       const page = pageById(value.dashboard, "socio_economic");
       page.id = "socio_economic_alternate";
@@ -210,12 +188,6 @@ test("every packaged dashboard structure family participates in the digest and s
     "section layout": (value) => {
       pageById(value.dashboard, "biomedical").sections[0].layout =
         "single-column";
-    },
-    "section Vanta": (value) => {
-      value.dashboard.pages
-        .flatMap((page) => page.sections)
-        .find((section) => section.vantaBackground)
-        .vantaBackground.points += 1;
     },
     "section order": (value) => {
       const sections = pageById(value.dashboard, "biomedical").sections;
@@ -263,7 +235,7 @@ test("every packaged dashboard structure family participates in the digest and s
         "data/biomedical/cases-revised.csv";
     },
     "time synchronization": (value) => {
-      value.dashboard.timeSyncGroups[0].name += " alternate";
+      value.dashboard.chronoGroups[0].name += " alternate";
     },
     "chart semantics": (value) => {
       configuredChart(value.dashboard, "bio_confirmed_cases").title +=
@@ -339,8 +311,8 @@ test("the producer rejects unknown structural fields, wrong types, cycles, and a
     "unknown panel color field": (value) => {
       value.globalStyles.panelColors.legacyColor = "#000000";
     },
-    "unknown Vanta field": (value) => {
-      value.vantaBackground.legacyVanta = true;
+    "retired Vanta field": (value) => {
+      value.vantaBackground = {};
     },
     "wrong page field type": (value) => {
       value.pages[0].label = 42;
@@ -490,15 +462,15 @@ test("runtime loading rejects broken chart, source, and time references", async 
       },
       error: /Chart "runtime-line" references unknown source "missing-source"\./,
     },
-    "time group period": {
+    "chrono group period": {
       mutate(value) {
-        value.timeSyncGroups[0].period.end = "2027-04-30";
+        value.chronoGroups[0].period.end = "2027-04-30";
       },
-      error: /Time synchronization group "runtime-clock" period end must be on or after start\./,
+      error: /Chrono Group "runtime-clock" period end must be on or after start\./,
     },
     "member chart": {
       mutate(value) {
-        value.timeSyncGroups[0].members[0].chartId = "missing-chart";
+        value.chronoGroups[0].members[0].chartId = "missing-chart";
       },
       error: /Time synchronization member chart "missing-chart" does not exist\./,
     },
@@ -551,12 +523,6 @@ function structureInventory(dashboard) {
     globalStyles: keysOf([dashboard.globalStyles]),
     accessibility: keysOf([dashboard.globalStyles.accessibility]),
     panelColors: keysOf([dashboard.globalStyles.panelColors]),
-    vantaBackground: keysOf([
-      dashboard.vantaBackground,
-      ...sections
-        .filter((section) => section.vantaBackground)
-        .map((section) => section.vantaBackground),
-    ]),
   };
 }
 
@@ -620,7 +586,7 @@ function runtimeDashboard() {
         },
       },
     },
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "runtime-clock",
       name: "Runtime clock",
       period: { start: "2027-05-01", end: "2027-05-02" },

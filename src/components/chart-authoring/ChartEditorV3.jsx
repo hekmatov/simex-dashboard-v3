@@ -30,7 +30,7 @@ import {
   getChartSchema,
   listChartSchemas,
 } from "../../charting/schemas/chartSchemaRegistry.js";
-import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../../charting/time/chronoGroupModel.js";
 import { validateGeoJson } from "../../lib/loadDashboard.js";
 import ChartConversionDialog from "./ChartConversionDialog.jsx";
 import ChartEditorModal from "./ChartEditorModal.jsx";
@@ -48,22 +48,22 @@ const DANGEROUS_PATH_SEGMENTS = new Set([
 
 export function createChartEditorState({
   chart,
-  timeSyncGroups = [],
+  chronoGroups = [],
   revision,
 } = {}) {
   const savedChart = normalizeChartInstance(chart);
-  const savedGroups = cloneGroups(timeSyncGroups);
+  const savedGroups = cloneGroups(chronoGroups);
   return {
     authorityKey: editorAuthorityKey({
       chart: savedChart,
-      timeSyncGroups: savedGroups,
+      chronoGroups: savedGroups,
       revision,
     }),
     revision,
     savedChart,
-    savedTimeSyncGroups: savedGroups,
+    savedChronoGroups: savedGroups,
     draft: structuredClone(savedChart),
-    timeSyncGroups: structuredClone(savedGroups),
+    chronoGroups: structuredClone(savedGroups),
     activeTabId: savedChart.title.trim() ? "data" : "appearance",
     confirmation: null,
     conversion: null,
@@ -97,7 +97,7 @@ export function reduceChartEditorState(state, action, context = {}) {
         draft: setAtPath(state.draft, action.path, action.value),
         error: "",
       };
-    case "updateTimeSyncGroups":
+    case "updateChronoGroups":
       return updateEditorGroups(state, action.value, context);
     case "updateTimeSyncMembership":
       return updateEditorMembership(state, action, context);
@@ -108,7 +108,7 @@ export function reduceChartEditorState(state, action, context = {}) {
         ? {
             ...state,
             draft: structuredClone(state.savedChart),
-            timeSyncGroups: structuredClone(state.savedTimeSyncGroups),
+            chronoGroups: structuredClone(state.savedChronoGroups),
             activeTabId: state.savedChart.title.trim() ? "data" : "appearance",
             confirmation: null,
             conversion: null,
@@ -142,27 +142,27 @@ export function saveChartEditorState(state, context = {}) {
     ),
   });
   const charts = chartsWithDraft(context.existingCharts, chart);
-  validateTimeSyncGroups(state.timeSyncGroups, {
+  validateChronoGroups(state.chronoGroups, {
     charts,
     loadedData: context.loadedData ?? {},
     profiles: context.profiles ?? {},
   });
   return {
     chart: structuredClone(chart),
-    timeSyncGroups: structuredClone(state.timeSyncGroups),
+    chronoGroups: structuredClone(state.chronoGroups),
   };
 }
 
 export function acceptEditorSave(state, payload) {
   assertEditorState(state);
   const savedChart = normalizeChartInstance(payload?.chart);
-  const savedGroups = cloneGroups(payload?.timeSyncGroups ?? []);
+  const savedGroups = cloneGroups(payload?.chronoGroups ?? []);
   return {
     ...state,
     savedChart,
-    savedTimeSyncGroups: savedGroups,
+    savedChronoGroups: savedGroups,
     draft: structuredClone(savedChart),
-    timeSyncGroups: structuredClone(savedGroups),
+    chronoGroups: structuredClone(savedGroups),
     confirmation: null,
     conversion: null,
     error: "",
@@ -173,10 +173,10 @@ export function isChartEditorStateDirty(state) {
   assertEditorState(state);
   return stableSerialize({
     chart: state.draft,
-    timeSyncGroups: state.timeSyncGroups,
+    chronoGroups: state.chronoGroups,
   }) !== stableSerialize({
     chart: state.savedChart,
-    timeSyncGroups: state.savedTimeSyncGroups,
+    chronoGroups: state.savedChronoGroups,
   });
 }
 
@@ -211,7 +211,7 @@ export function buildDashboardEditorProfiles({
 
 export function applyChartEditorSave(dashboard, {
   chart,
-  timeSyncGroups = [],
+  chronoGroups = [],
 } = {}) {
   if (!isRecord(dashboard)) {
     throw new TypeError("A dashboard is required to save a chart.");
@@ -233,13 +233,13 @@ export function applyChartEditorSave(dashboard, {
   if (!replaced) {
     throw new Error(`Chart "${savedChart.id}" does not exist in the dashboard.`);
   }
-  nextDashboard.timeSyncGroups = cloneGroups(timeSyncGroups);
+  nextDashboard.chronoGroups = cloneGroups(chronoGroups);
   return nextDashboard;
 }
 
 export function editorAuthorityKey({
   chart,
-  timeSyncGroups = [],
+  chronoGroups = [],
   revision,
 } = {}) {
   const normalized = normalizeChartInstance(chart);
@@ -248,13 +248,13 @@ export function editorAuthorityKey({
   }
   return `chart-editor:${normalized.id}:snapshot:${stableSerialize({
     chart: normalized,
-    timeSyncGroups: cloneGroups(timeSyncGroups),
+    chronoGroups: cloneGroups(chronoGroups),
   })}`;
 }
 
 export default function ChartEditorV3({
   chart,
-  timeSyncGroups = [],
+  chronoGroups = [],
   savedRevision,
   existingCharts = [],
   rows = [],
@@ -278,12 +278,12 @@ export default function ChartEditorV3({
 } = {}) {
   const incomingKey = editorAuthorityKey({
     chart,
-    timeSyncGroups,
+    chronoGroups,
     revision: savedRevision,
   });
   const [state, setState] = React.useState(() => createChartEditorState({
     chart,
-    timeSyncGroups,
+    chronoGroups,
     revision: savedRevision,
   }));
   const submissionGateRef = React.useRef(null);
@@ -294,7 +294,7 @@ export default function ChartEditorV3({
   React.useEffect(() => {
     setState((current) => rebaseChartEditorState(current, {
       chart,
-      timeSyncGroups,
+      chronoGroups,
       revision: savedRevision,
     }));
   }, [incomingKey]);
@@ -354,7 +354,7 @@ export default function ChartEditorV3({
     chart: state.draft,
     profile,
     prepared,
-    timeSyncGroups: state.timeSyncGroups,
+    chronoGroups: state.chronoGroups,
     geoSources,
     geoJoinFields,
   });
@@ -504,7 +504,7 @@ export default function ChartEditorV3({
               dataSources,
               saved.chart.presentation?.map?.geoSource,
             ),
-            timeSyncGroups: saved.timeSyncGroups ?? state.timeSyncGroups,
+            chronoGroups: saved.chronoGroups ?? state.chronoGroups,
             rows: safeRows,
             timezone,
           }),
@@ -630,7 +630,7 @@ export default function ChartEditorV3({
             onApplyCitationToSourceCharts,
             onMembershipChange: changeMembership,
             onGroupsChange: (value) => dispatch({
-              type: "updateTimeSyncGroups",
+              type: "updateChronoGroups",
               value,
             }),
             onValidationError: (error) => setState((current) => ({
@@ -713,7 +713,7 @@ export function SelectedChartEditor({
   const charts = chartPanels(dashboard);
   return React.createElement(ChartEditorV3, {
     chart: panel,
-    timeSyncGroups: dashboard.timeSyncGroups ?? [],
+    chronoGroups: dashboard.chronoGroups ?? [],
     savedRevision,
     existingCharts: charts,
     rows: Array.isArray(rows) ? rows : [],
@@ -751,7 +751,7 @@ function updateEditorGroups(state, value, context) {
   validateEditorGroups(state.draft, groups, context);
   return {
     ...state,
-    timeSyncGroups: groups,
+    chronoGroups: groups,
     error: "",
   };
 }
@@ -759,13 +759,13 @@ function updateEditorGroups(state, value, context) {
 function updateEditorMembership(state, action, context) {
   const groupId = action.groupId === null ? null : requiredString(
     action.groupId,
-    "Time synchronization group",
+    "Chrono Group",
   );
   const selected = action.selected ?? groupId !== null;
   if (typeof selected !== "boolean") {
     throw new TypeError("Time synchronization membership selection must be boolean.");
   }
-  let nextGroups = structuredClone(state.timeSyncGroups);
+  let nextGroups = structuredClone(state.chronoGroups);
   if (groupId === null) {
     for (const group of nextGroups) {
       const members = Array.isArray(group.members) ? group.members : [];
@@ -774,7 +774,7 @@ function updateEditorMembership(state, action, context) {
   } else {
     const target = nextGroups.find(({ id }) => id === groupId);
     if (!target) {
-      throw new Error(`Unknown time synchronization group "${groupId}".`);
+      throw new Error(`Unknown Chrono Group "${groupId}".`);
     }
     const members = Array.isArray(target.members) ? target.members : [];
     const previousMember = members.find(
@@ -804,7 +804,7 @@ function updateEditorMembership(state, action, context) {
   return {
     ...state,
     draft: chart,
-    timeSyncGroups: nextGroups,
+    chronoGroups: nextGroups,
     error: "",
   };
 }
@@ -817,13 +817,13 @@ function requestEditorConversion(state, targetTypeId, context) {
   const roleAssignments = {};
   const roleFields = conversionRoleFields({
     chart: state.draft,
-    groups: state.timeSyncGroups,
+    groups: state.chronoGroups,
     targetSchema,
     plan,
   });
   const playback = conversionPlaybackState({
     chart: state.draft,
-    groups: state.timeSyncGroups,
+    groups: state.chronoGroups,
     targetSchema,
     plan,
     roleAssignments,
@@ -838,7 +838,7 @@ function requestEditorConversion(state, targetTypeId, context) {
       roleFields,
       timeSyncConsequence: conversionTimeSyncConsequence({
         chart: state.draft,
-        groups: state.timeSyncGroups,
+        groups: state.chronoGroups,
         targetSchema,
         playback,
       }),
@@ -863,7 +863,7 @@ function updateConversionRole(state, action, context) {
   const targetSchema = getChartSchema(state.conversion.targetTypeId);
   const playback = conversionPlaybackState({
     chart: state.draft,
-    groups: state.timeSyncGroups,
+    groups: state.chronoGroups,
     targetSchema,
     plan,
     roleAssignments,
@@ -878,7 +878,7 @@ function updateConversionRole(state, action, context) {
       plan,
       timeSyncConsequence: conversionTimeSyncConsequence({
         chart: state.draft,
-        groups: state.timeSyncGroups,
+        groups: state.chronoGroups,
         targetSchema,
         playback,
       }),
@@ -906,7 +906,7 @@ function updateConversionPlayback(state, action) {
       playback,
       timeSyncConsequence: conversionTimeSyncConsequence({
         chart: state.draft,
-        groups: state.timeSyncGroups,
+        groups: state.chronoGroups,
         targetSchema,
         playback,
       }),
@@ -965,9 +965,9 @@ function applyEditorConversion(state, context) {
       ),
     });
     const groups = consequence?.kind === "remove"
-      ? removeChartFromGroups(state.timeSyncGroups, converted.id)
+      ? removeChartFromGroups(state.chronoGroups, converted.id)
       : remapChartTimeRole(
-          state.timeSyncGroups,
+          state.chronoGroups,
           converted.id,
           consequence?.toRole,
         );
@@ -975,7 +975,7 @@ function applyEditorConversion(state, context) {
     return {
       ...state,
       draft: converted,
-      timeSyncGroups: groups,
+      chronoGroups: groups,
       activeTabId: "data",
       conversion: null,
       error: "",
@@ -1213,7 +1213,7 @@ function remapChartTimeRole(groups, chartId, timeRole) {
 }
 
 function validateEditorGroups(chart, groups, context) {
-  validateTimeSyncGroups(groups, {
+  validateChronoGroups(groups, {
     charts: chartsWithDraft(context.existingCharts, chart),
     loadedData: context.loadedData ?? {},
     profiles: context.profiles ?? {},
@@ -1306,7 +1306,7 @@ function readEntry(collection, key) {
 
 function cloneGroups(groups) {
   if (!Array.isArray(groups)) {
-    throw new TypeError("Time synchronization groups must be an array.");
+    throw new TypeError("Chrono Groups must be an array.");
   }
   return structuredClone(groups);
 }
@@ -1381,8 +1381,8 @@ function assertEditorState(state) {
     || typeof state !== "object"
     || !state.draft
     || !state.savedChart
-    || !Array.isArray(state.timeSyncGroups)
-    || !Array.isArray(state.savedTimeSyncGroups)
+    || !Array.isArray(state.chronoGroups)
+    || !Array.isArray(state.savedChronoGroups)
   ) {
     throw new TypeError("Chart editor state is invalid.");
   }

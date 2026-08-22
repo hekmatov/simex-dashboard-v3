@@ -48,7 +48,7 @@ export function createBuildDraftCoordinatorState() {
 // DraftSlot = { draftId, kind: "layout"|"chart", targetId, status:
 //   "clean"|"dirty"|"saving"|"error"|"suspended",
 //   restoration: { focusId, scrollTop, targetId, suspensionReason }, resolution: null|"save"|"discard"|"stay" }
-// AuxiliarySession = { surface: "structure"|"time-group"|"scene"|"time-content"|"chart-create",
+// AuxiliarySession = { surface: "structure"|"Chrono Group"|"scene"|"time-content"|"chart-create",
 //   draftId, dirty, restoration }
 export function reduceBuildDraftCoordinator(state, action) {}
 ```
@@ -182,29 +182,29 @@ export function deriveTemporalNeedsAttention({ groups, scenes, charts, schemaRev
 - [ ] **Run tests to verify they pass.** Run `node --test tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js`; expect all selected files to pass.
 - [ ] **Commit.** Run `git add src/charting/time/temporalSchema.js src/charting/time/migrateTemporalConfig.js src/charting/time/frameLedger.js src/charting/time/temporalMatch.js src/charting/time/temporalNeedsAttention.js src/charting/config/dashboardBundleV3.js src/charting/config/dashboardConfigStructure.js tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js && git commit -m "feat(time): define temporal schema ledgers and matching"`.
 
-### Task S7-6: Implement Time Group Studio and Availability Ledger
+### Task S7-6: Implement Chrono Studio and Availability Ledger
 
 **Files:**
-- Create: `src/components/time/TimeGroupStudio.jsx`
+- Create: `src/components/time/ChronoGroupStudio.jsx`
 - Create: `src/components/time/AvailabilityLedger.jsx`
-- Create: `src/components/time/timeGroupDraft.js`
+- Create: `src/components/time/chronoGroupDraft.js`
 - Modify: `src/components/build/BuildWorkspace.jsx`
 - Modify: `src/styles.css`
-- Create: `tests/timeGroupStudio.test.js`
+- Create: `tests/chronoGroupStudio.test.js`
 - Create: `tests/e2e/v3-temporal-authoring.spec.js`
 
 **Interfaces:**
 - Consumes: S7-5 validation, ledgers, matching policies, Needs-attention, S7-1 auxiliary lifecycle.
-- Produces: `TimeGroupDraft` with stages `period`, `charts`, `defaults`, `review`; saved group `{id,name,period,chartIds,defaultMatching,memberFallbacks,secondsPerFrame}`.
+- Produces: `ChronoGroupDraft` with stages `period`, `charts`, `defaults`, `review`; saved group `{id,name,period,chartIds,defaultMatching,memberFallbacks,secondsPerFrame}`.
 
 **Steps:**
 
 - [ ] **Write the failing test.** Add failing tests for stage validation, availability rows and non-colour status, zero-observation charts, member fallback, group cadence, shortening consequences, Save/Discard/Stay, failed save, and restored stage/focus/scroll.
-- [ ] **Run test to verify it fails.** Run `node --test tests/timeGroupStudio.test.js`; expect missing-module failure.
+- [ ] **Run test to verify it fails.** Run `node --test tests/chronoGroupStudio.test.js`; expect missing-module failure.
 - [ ] **Write minimal implementation.** Implement the approved staged studio and ledger. Require an explicit edit-or-clamp choice for every affected Scene before group-period commit; derive Needs-attention until resolved.
-- [ ] **Add the E2E test.** Add E2E case `Time Group Studio exposes availability and resolves shortening consequences explicitly`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/timeGroupStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "Time Group Studio exposes availability and resolves shortening consequences explicitly"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/time/TimeGroupStudio.jsx src/components/time/AvailabilityLedger.jsx src/components/time/timeGroupDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/timeGroupStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(time): implement time group studio"`.
+- [ ] **Add the E2E test.** Add E2E case `Chrono Studio exposes availability and resolves shortening consequences explicitly`.
+- [ ] **Run tests to verify they pass.** Run `node --test tests/chronoGroupStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "Chrono Studio exposes availability and resolves shortening consequences explicitly"`; expect pass.
+- [ ] **Commit.** Run `git add src/components/time/ChronoGroupStudio.jsx src/components/time/AvailabilityLedger.jsx src/components/time/chronoGroupDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/chronoGroupStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(time): implement Chrono Group studio"`.
 
 ### Task S7-7: Define the saved Scene contract, including Audience date position
 
@@ -216,7 +216,7 @@ export function deriveTemporalNeedsAttention({ groups, scenes, charts, schemaRev
 - Modify: `tests/dashboardBundleV3.test.js`
 
 **Interfaces:**
-- Consumes: S7-5 temporal types and saved Time Groups.
+- Consumes: S7-5 temporal types and saved Chrono Groups.
 - Produces:
 ```js
 // SavedScene = {
@@ -282,7 +282,7 @@ export function normalizeSceneDefaults(scene) {}
 export function reduceTimeContent(state, action) {}
 export function ownerHandoff(item, intent, reason) {}
 ```
-`ownerHandoff` maps group period/data-period issues to `time-group:period`, membership/no-observation issues to `time-group:charts`, matching/cadence issues to `time-group:defaults`, group review/name to `time-group:review`, Scene scope/frame issues to `scene:select`, and Scene composition/width/presentation issues to `scene:arrange`.
+`ownerHandoff` maps group period/data-period issues to `Chrono Group:period`, membership/no-observation issues to `Chrono Group:charts`, matching/cadence issues to `Chrono Group:defaults`, group review/name to `Chrono Group:review`, Scene scope/frame issues to `scene:select`, and Scene composition/width/presentation issues to `scene:arrange`.
 
 **Steps:**
 
@@ -454,14 +454,14 @@ export function compareSchemaRevision(profileRevision, currentRevision) {}
 - Create: `tests/chartCompanionHandoffs.test.js`
 
 **Interfaces:**
-- Consumes: S7-13 profiles, S7-10 session store/suspension restoration, S7-6 Time Group authoring, and durable source/Time-Group repair commands.
+- Consumes: S7-13 profiles, S7-10 session store/suspension restoration, S7-6 Chrono Group authoring, and durable source/Time-Group repair commands.
 - Produces:
 ```js
 export function validateChartMapping({ chartTypeId, profile, mapping, preparation }) {}
 // => { valid, effectiveOutputCount, value, errors, warnings }
-// CompanionProposal = { ownership:"chart-create", kind:"new-time-group"|"chart-fallback",
+// CompanionProposal = { ownership:"chart-create", kind:"new-Chrono Group"|"chart-fallback",
 //   proposalId, value, referenced:boolean, meaningful:boolean }
-// DurableRepairResult = { ownership:"source"|"saved-time-group", objectId,
+// DurableRepairResult = { ownership:"source"|"saved-Chrono Group", objectId,
 //   committedRevision, transactionId, result:"committed"|"cancelled"|"failed" }
 export function suspendForLinkedWorkflow(state, { kind, invokerId, focusId, scrollTop }) {}
 export function returnFromLinkedWorkflow(state, outcome) {}
@@ -645,7 +645,7 @@ export function reducePlaybackState(state, action) {}
 Run:
 
 ```bash
-node --test tests/buildDraftCoordinator.test.js tests/buildWorkspaceV3.test.js tests/panelEditingV3.test.js tests/structureScenarioAuthoring.test.js tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js tests/timeGroupStudio.test.js tests/sceneSchema.test.js tests/dashboardBundleV3.test.js tests/sceneStudio.test.js tests/timeContentLibrary.test.js tests/chartCreationState.test.js tests/chartDraftSession.test.js tests/chartDestination.test.js tests/chartPlacement.test.js tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js tests/chartConfigurationProof.test.js tests/chartCreateTransaction.test.js tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js tests/chartStateSurface.test.js tests/sourceViewer.test.js
+node --test tests/buildDraftCoordinator.test.js tests/buildWorkspaceV3.test.js tests/panelEditingV3.test.js tests/structureScenarioAuthoring.test.js tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js tests/chronoGroupStudio.test.js tests/sceneSchema.test.js tests/dashboardBundleV3.test.js tests/sceneStudio.test.js tests/timeContentLibrary.test.js tests/chartCreationState.test.js tests/chartDraftSession.test.js tests/chartDestination.test.js tests/chartPlacement.test.js tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js tests/chartConfigurationProof.test.js tests/chartCreateTransaction.test.js tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js tests/chartStateSurface.test.js tests/sourceViewer.test.js
 pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js tests/e2e/v3-temporal-authoring.spec.js tests/e2e/v3-chart-creation.spec.js tests/e2e/v3-view-chrono.spec.js tests/e2e/v3-step7-fidelity.spec.js
 ```
 

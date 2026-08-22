@@ -13,7 +13,7 @@ const JAN_20 = "2027-01-20T00:00:00.000Z";
 
 function context() {
   return {
-    groups: [{
+    chronoGroups: [{
       id: "group-1",
       period: { start: JAN_1, end: JAN_31 },
       chartIds: ["chart-a", "chart-b", "chart-c", "chart-d", "chart-e"],
@@ -35,7 +35,7 @@ function scene(overrides = {}) {
     id: "scene-1",
     name: "Executive surveillance",
     pageId: "page-1",
-    groupId: "group-1",
+    chronoGroupId: "group-1",
     period: { start: JAN_10, end: JAN_20 },
     frames: {
       mode: "source",
@@ -69,7 +69,7 @@ test("validates calendar bounds, period containment, and positive cadence", () =
   }), context()));
   assert.throws(() => validateScene(scene({
     period: { start: JAN_1, end: "2027-02-01T00:00:00.000Z" },
-  }), context()), /parent Time Group/);
+  }), context()), /parent Chrono Group/);
   assert.throws(() => validateScene(scene({
     frames: { mode: "calendar", interval: { value: 0, unit: "day" } },
   }), context()), /positive integer/);

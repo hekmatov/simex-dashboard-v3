@@ -12,18 +12,18 @@ export default function AudienceDisplay({
     return <AudienceWaiting />;
   }
 
-  const timeGroup = presentationState.time
-    ? (dashboard.timeSyncGroups ?? []).find(
+  const chronoGroup = presentationState.time
+    ? (dashboard.chronoGroups ?? []).find(
       ({ id }) => id === presentationState.time.group_id,
     )
     : null;
   const memberTimeContexts = buildMemberTimeContexts(
-    timeGroup,
+    chronoGroup,
     presentationState.time?.active_epoch_ms,
   );
   const facts = presentationState.audience_facts;
   const dashboardName = facts.dashboard_name ? dashboard.title : null;
-  const parentName = facts.parent_time_group ? timeGroup?.name ?? null : null;
+  const parentName = facts.parent_chrono_group ? chronoGroup?.name ?? null : null;
   const sceneName = null;
   const sceneDate = facts.scene_date
     ? canonicalTime(presentationState.time?.active_epoch_ms)

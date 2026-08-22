@@ -1,5 +1,5 @@
 import React from "react";
-import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../../charting/time/chronoGroupModel.js";
 import {
   GroupShell,
   fieldControlId
@@ -10,7 +10,7 @@ const MATCHING_POLICIES = [
   ["nearest", "Nearest within tolerance"],
   ["interpolate", "Interpolate"]
 ];
-function TimeSyncSettingsField({
+function ChronoMembershipSettingsField({
   field,
   chart,
   onMembershipChange = noop,
@@ -27,7 +27,7 @@ function TimeSyncSettingsField({
     /* @__PURE__ */ React.createElement(
       "fieldset",
       { id, className: "chart-authoring-control-grid" },
-      /* @__PURE__ */ React.createElement("legend", null, "Time Group memberships"),
+      /* @__PURE__ */ React.createElement("legend", null, "Chrono Group memberships"),
       groups.flatMap((group) => (
         typeof group?.id === "string" && typeof group?.name === "string"
           ? [/* @__PURE__ */ React.createElement(
@@ -50,7 +50,7 @@ function TimeSyncSettingsField({
     )
   );
 }
-function proposeTimeSyncGroupMatching({
+function proposeChronoGroupMatching({
   groups,
   target,
   matching,
@@ -59,7 +59,7 @@ function proposeTimeSyncGroupMatching({
   profiles
 } = {}) {
   if (!Array.isArray(groups)) {
-    throw new TypeError("Time synchronization groups must be an array.");
+    throw new TypeError("Chrono Groups must be an array.");
   }
   if (!target || typeof target !== "object" || typeof target.groupId !== "string" || typeof target.chartId !== "string" || target.property !== "matching") {
     throw new Error("Time synchronization matching requires a semantic member target.");
@@ -67,14 +67,14 @@ function proposeTimeSyncGroupMatching({
   const proposed = structuredClone(groups);
   const group = proposed.find(({ id }) => id === target.groupId);
   if (!group) {
-    throw new Error(`Unknown time synchronization group "${target.groupId}".`);
+    throw new Error(`Unknown Chrono Group "${target.groupId}".`);
   }
   const member = Array.isArray(group.members) ? group.members.find(({ chartId }) => chartId === target.chartId) : null;
   if (!member) {
-    throw new Error(`Unknown member chart "${target.chartId}" in time synchronization group "${target.groupId}".`);
+    throw new Error(`Unknown member chart "${target.chartId}" in Chrono Group "${target.groupId}".`);
   }
   member.matching = structuredClone(matching);
-  validateTimeSyncGroups(proposed, {
+  validateChronoGroups(proposed, {
     charts,
     loadedData,
     profiles
@@ -106,6 +106,6 @@ function chartCollection(charts, chart) {
 function noop() {
 }
 export {
-  TimeSyncSettingsField as default,
-  proposeTimeSyncGroupMatching
+  ChronoMembershipSettingsField as default,
+  proposeChronoGroupMatching
 };

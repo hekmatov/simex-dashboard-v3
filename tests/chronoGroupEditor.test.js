@@ -6,13 +6,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 import {
-  TIME_GROUP_STAGES,
-  createTimeGroupDraft,
+  CHRONO_GROUP_STAGES,
+  createChronoGroupDraft,
   deriveAvailabilityRows,
-  reduceTimeGroupDraft,
-  toSavedTimeGroup,
-  validateTimeGroupStage,
-} from "../src/components/time/timeGroupDraft.js";
+  reduceChronoGroupDraft,
+  toSavedChronoGroup,
+  validateChronoGroupStage,
+} from "../src/components/time/chronoGroupDraft.js";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
 const JAN_1 = Date.UTC(2027, 0, 1);
@@ -28,28 +28,28 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const ledgerModule = await vite.ssrLoadModule("/src/components/time/AvailabilityLedger.jsx");
-const studioModule = await vite.ssrLoadModule("/src/components/time/TimeGroupStudio.jsx");
+const studioModule = await vite.ssrLoadModule("/src/components/time/ChronoGroupEditor.jsx");
 await vite.close();
 
-test("Time Group draft exposes the approved four stages and validates before advancing", () => {
-  assert.deepEqual(TIME_GROUP_STAGES, ["period", "charts", "defaults", "review"]);
-  let draft = createTimeGroupDraft({
+test("Chrono Group draft exposes the approved four stages and validates before advancing", () => {
+  assert.deepEqual(CHRONO_GROUP_STAGES, ["period", "charts", "defaults", "review"]);
+  let draft = createChronoGroupDraft({
     group: { id: "group-1", name: "Winter response" },
     charts: chartFixtures(),
     scenes: [],
     timeZone: "UTC",
   });
 
-  draft = reduceTimeGroupDraft(draft, { type: "NEXT_STAGE" });
+  draft = reduceChronoGroupDraft(draft, { type: "NEXT_STAGE" });
   assert.equal(draft.stage, "period");
   assert.equal(draft.status, "error");
   assert.equal(draft.error.code, "PERIOD_REQUIRED");
 
-  draft = reduceTimeGroupDraft(draft, {
+  draft = reduceChronoGroupDraft(draft, {
     type: "SET_PERIOD",
     period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
   });
-  draft = reduceTimeGroupDraft(draft, { type: "NEXT_STAGE" });
+  draft = reduceChronoGroupDraft(draft, { type: "NEXT_STAGE" });
   assert.equal(draft.stage, "charts");
   assert.equal(draft.error, null);
 });
@@ -87,7 +87,7 @@ test("availability rows include variable ranges and retain selected zero-observa
 });
 
 test("defaults require member fallback for unsupported Interpolate and positive finite cadence", () => {
-  let draft = createTimeGroupDraft({
+  let draft = createChronoGroupDraft({
     group: {
       id: "group-1",
       name: "Winter response",
@@ -103,26 +103,26 @@ test("defaults require member fallback for unsupported Interpolate and positive 
     initialStage: "defaults",
   });
 
-  assert.equal(validateTimeGroupStage(draft, "defaults").code, "MEMBER_FALLBACK_REQUIRED");
-  draft = reduceTimeGroupDraft(draft, {
+  assert.equal(validateChronoGroupStage(draft, "defaults").code, "MEMBER_FALLBACK_REQUIRED");
+  draft = reduceChronoGroupDraft(draft, {
     type: "SET_MEMBER_FALLBACK",
     chartId: "categorical-chart",
     policy: "Snap to Latest",
   });
-  assert.equal(validateTimeGroupStage(draft, "defaults").code, "CADENCE_INVALID");
-  draft = reduceTimeGroupDraft(draft, { type: "SET_SECONDS_PER_FRAME", secondsPerFrame: 2.5 });
-  assert.equal(validateTimeGroupStage(draft, "defaults"), null);
+  assert.equal(validateChronoGroupStage(draft, "defaults").code, "CADENCE_INVALID");
+  draft = reduceChronoGroupDraft(draft, { type: "SET_SECONDS_PER_FRAME", secondsPerFrame: 2.5 });
+  assert.equal(validateChronoGroupStage(draft, "defaults"), null);
 });
 
 test("shortening a group requires explicit edit-or-clamp resolution for every affected Scene", () => {
-  let draft = createTimeGroupDraft({
+  let draft = createChronoGroupDraft({
     group: groupFixture(),
     charts: chartFixtures(),
     scenes: sceneFixtures(),
     timeZone: "UTC",
     initialStage: "review",
   });
-  draft = reduceTimeGroupDraft(draft, {
+  draft = reduceChronoGroupDraft(draft, {
     type: "SET_PERIOD",
     period: { startEpochMs: JAN_2, endEpochMs: JAN_3 },
   });
@@ -131,53 +131,55 @@ test("shortening a group requires explicit edit-or-clamp resolution for every af
     { sceneId: "scene-before", resolution: null },
     { sceneId: "scene-after", resolution: null },
   ]);
-  draft = reduceTimeGroupDraft(draft, {
+  draft = reduceChronoGroupDraft(draft, {
     type: "RESOLVE_SCENE_CONSEQUENCE",
     sceneId: "scene-before",
     resolution: "edit",
   });
-  draft = reduceTimeGroupDraft(draft, { type: "SAVE_REQUEST" });
+  draft = reduceChronoGroupDraft(draft, { type: "SAVE_REQUEST" });
   assert.equal(draft.status, "error");
   assert.equal(draft.error.code, "SCENE_CONSEQUENCE_REQUIRED");
 
-  draft = reduceTimeGroupDraft(draft, {
+  draft = reduceChronoGroupDraft(draft, {
     type: "RESOLVE_SCENE_CONSEQUENCE",
     sceneId: "scene-after",
     resolution: "clamp",
   });
-  draft = reduceTimeGroupDraft(draft, { type: "SAVE_REQUEST" });
+  draft = reduceChronoGroupDraft(draft, { type: "SAVE_REQUEST" });
   assert.equal(draft.status, "saving");
   assert.deepEqual(draft.scenes, sceneFixtures());
 });
 
-test("Save, failed retry, Discard, and Stay preserve the last saved group", () => {
-  let draft = createTimeGroupDraft({
+test("Save, failed retry, and Discard preserve the last saved group while Stay is unavailable", () => {
+  let draft = createChronoGroupDraft({
     group: groupFixture(),
     charts: chartFixtures(),
     scenes: [],
     timeZone: "UTC",
     initialStage: "review",
   });
-  draft = reduceTimeGroupDraft(draft, { type: "SET_NAME", name: "Updated response" });
-  const stay = reduceTimeGroupDraft(draft, { type: "STAY" });
-  assert.equal(stay.status, "dirty");
+  draft = reduceChronoGroupDraft(draft, { type: "SET_NAME", name: "Updated response" });
+  assert.throws(
+    () => reduceChronoGroupDraft(draft, { type: "STAY" }),
+    /Unknown Chrono Group draft action: STAY/,
+  );
 
-  let saving = reduceTimeGroupDraft(stay, { type: "SAVE_REQUEST" });
+  let saving = reduceChronoGroupDraft(draft, { type: "SAVE_REQUEST" });
   assert.equal(saving.status, "saving");
-  saving = reduceTimeGroupDraft(saving, {
+  saving = reduceChronoGroupDraft(saving, {
     type: "SAVE_FAILED",
     error: { code: "STORAGE_BUSY", message: "Retry save", retryable: true },
   });
   assert.equal(saving.status, "error");
   assert.equal(saving.value.name, "Updated response");
   assert.equal(saving.baseline.name, "Winter response");
-  assert.equal(reduceTimeGroupDraft(saving, { type: "SAVE_REQUEST" }).status, "saving");
+  assert.equal(reduceChronoGroupDraft(saving, { type: "SAVE_REQUEST" }).status, "saving");
 
-  const discarded = reduceTimeGroupDraft(saving, { type: "DISCARD" });
+  const discarded = reduceChronoGroupDraft(saving, { type: "DISCARD" });
   assert.equal(discarded.status, "clean");
   assert.equal(discarded.value.name, "Winter response");
 
-  const saved = toSavedTimeGroup(stay);
+  const saved = toSavedChronoGroup(draft);
   assert.deepEqual(Object.keys(saved), [
     "id",
     "name",
@@ -192,20 +194,20 @@ test("Save, failed retry, Discard, and Stay preserve the last saved group", () =
 test("suspension restores stage, focus, scroll, and invoking target deterministically", () => {
   const restoration = {
     stage: "charts",
-    focusId: "time-group-chart-empty-chart",
+    focusId: "chrono-group-chart-empty-chart",
     scrollTop: 618,
-    targetId: "time-group-group-1",
+    targetId: "chrono-group-group-1",
   };
-  let draft = createTimeGroupDraft({
+  let draft = createChronoGroupDraft({
     group: groupFixture(),
     charts: chartFixtures(),
     scenes: [],
     timeZone: "UTC",
     initialStage: "charts",
   });
-  draft = reduceTimeGroupDraft(draft, { type: "SUSPEND", restoration });
+  draft = reduceChronoGroupDraft(draft, { type: "SUSPEND", restoration });
   assert.equal(draft.status, "suspended");
-  draft = reduceTimeGroupDraft(draft, { type: "RESUME" });
+  draft = reduceChronoGroupDraft(draft, { type: "RESUME" });
   assert.equal(draft.status, "clean");
   assert.equal(draft.stage, "charts");
   assert.deepEqual(draft.restoration, restoration);
@@ -227,8 +229,8 @@ test("Availability Ledger communicates status with text rather than colour alone
   assert.match(html, /data-status="needs-attention"/);
 });
 
-test("Time Group Studio renders all stages, current-step semantics, and Save Discard Stay actions", () => {
-  const draft = createTimeGroupDraft({
+test("Chrono Studio renders all stages and keeps Stay out of ordinary editor actions", () => {
+  const draft = createChronoGroupDraft({
     group: groupFixture(),
     charts: chartFixtures(),
     scenes: [],
@@ -240,21 +242,22 @@ test("Time Group Studio renders all stages, current-step semantics, and Save Dis
     onAction() {},
   }));
 
-  assert.match(html, /Time Group Studio/);
-  assert.match(html, />Choose period</);
+  assert.match(html, /Chrono Studio/);
+  assert.match(html, />Name and period</);
   assert.match(html, />Choose charts</);
   assert.match(html, />Set defaults</);
-  assert.match(html, />Name and review</);
+  assert.match(html, />Review</);
   assert.match(html, /aria-current="step"[^>]*>Choose charts/);
-  assert.match(html, />Save Time Group</);
+  assert.match(html, />Save Chrono Group</);
   assert.match(html, />Discard</);
-  assert.match(html, />Stay/);
+  assert.doesNotMatch(html, />Stay/);
 
   const periodHtml = renderToStaticMarkup(React.createElement(studioModule.default, {
     draft: { ...draft, stage: "period" },
     onAction() {},
   }));
   assert.equal((periodHtml.match(/type="date"/g) ?? []).length, 2);
+  assert.match(periodHtml, /id="chrono-group-name"/);
   assert.doesNotMatch(periodHtml, /readOnly/);
 });
 
@@ -273,15 +276,15 @@ function groupFixture() {
 function sceneFixtures() {
   return [{
     id: "scene-before",
-    groupId: "group-1",
+    chronoGroupId: "group-1",
     period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
   }, {
     id: "scene-after",
-    groupId: "group-1",
+    chronoGroupId: "group-1",
     period: { startEpochMs: JAN_2, endEpochMs: JAN_4 },
   }, {
     id: "scene-safe",
-    groupId: "group-1",
+    chronoGroupId: "group-1",
     period: { startEpochMs: JAN_2, endEpochMs: JAN_3 },
   }];
 }

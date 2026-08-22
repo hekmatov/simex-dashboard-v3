@@ -103,7 +103,7 @@ export function resolveMatchingPolicy({
     if (source === "session" && value === MATCHING_POLICY_LABELS.USE_AUTHORED_SETTINGS) continue;
     resolved = { policy: approvedLabel(value), source };
   }
-  if (!resolved) throw new Error("A time-group default matching policy is required.");
+  if (!resolved) throw new Error("A chrono-group default matching policy is required.");
   return Object.freeze(resolved);
 }
 

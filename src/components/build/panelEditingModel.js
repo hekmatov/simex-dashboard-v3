@@ -59,8 +59,8 @@ export function validatePanelDraft(chart = {}) {
     return issue("FOOTPRINT_OUT_OF_RANGE", "Choose a footprint from 1–4 columns and 1–2 rows.");
   }
   const collection = Boolean(chart.collection) || chart.type === "collection";
-  if (collection && (chart.timeGroupIds?.length || chart.sceneIds?.length)) {
-    return issue("COLLECTION_TEMPORAL_INELIGIBLE", "Collection Display charts cannot join Time Groups or Scenes.");
+  if (collection && (chart.chronoGroupIds?.length || chart.sceneIds?.length)) {
+    return issue("COLLECTION_TEMPORAL_INELIGIBLE", "Collection Display charts cannot join Chrono Groups or Scenes.");
   }
   if (!String(chart.title ?? "").trim()) return issue("CHART_TITLE_REQUIRED", "Enter a chart title.");
   return null;

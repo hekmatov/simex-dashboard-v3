@@ -20,9 +20,9 @@ import {
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import {
-  buildTimeGroupClock,
-  validateTimeSyncGroups,
-} from "../src/charting/time/timeSyncModel.js";
+  buildChronoGroupClock,
+  validateChronoGroups,
+} from "../src/charting/time/chronoGroupModel.js";
 import { parseCsvText } from "../src/lib/loadCsv.js";
 import {
   loadDashboardConfig,
@@ -229,7 +229,7 @@ test("tracked profiles make chart binding and national time synchronization read
   assert.equal(prepared.status, "ready");
   assert.equal(prepared.meta.renderableMarkCount, 177);
   assert.equal(
-    validateTimeSyncGroups([group], {
+    validateChronoGroups([group], {
       charts: [chart],
       loadedData: { [sourceId]: rows },
       profiles,
@@ -237,7 +237,7 @@ test("tracked profiles make chart binding and national time synchronization read
     })[0],
     group,
   );
-  const clock = buildTimeGroupClock(group, {
+  const clock = buildChronoGroupClock(group, {
     charts: [chart],
     loadedData: { [sourceId]: rows },
     profiles,
@@ -281,7 +281,7 @@ test("municipal repeated rows produce one playback clock point per distinct date
     352,
   );
   assert.equal(
-    validateTimeSyncGroups([group], {
+    validateChronoGroups([group], {
       charts: [chart],
       loadedData: { [sourceId]: rows },
       profiles,
@@ -289,7 +289,7 @@ test("municipal repeated rows produce one playback clock point per distinct date
     })[0],
     group,
   );
-  const clock = buildTimeGroupClock(group, {
+  const clock = buildChronoGroupClock(group, {
     charts: [chart],
     loadedData: { [sourceId]: rows },
     profiles,

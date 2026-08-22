@@ -1,5 +1,5 @@
-const COMPANION_KINDS = new Set(["new-time-group", "chart-fallback"]);
-const DURABLE_OWNERS = new Set(["source", "saved-time-group"]);
+const COMPANION_KINDS = new Set(["new-chrono-group", "chart-fallback"]);
+const DURABLE_OWNERS = new Set(["source", "saved-chrono-group"]);
 const DURABLE_RESULTS = new Set(["committed", "cancelled", "failed"]);
 
 export function createCompanionProposal({

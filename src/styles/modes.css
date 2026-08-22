@@ -410,13 +410,13 @@
 .build-region-heading h2,
 .build-inspector h2,
 .build-inspector h3,
-.build-time-groups h3 {
+.build-chrono-groups h3 {
   margin: 0;
 }
 
 .build-structure-list,
 .build-structure-list ul,
-.build-time-group-summary ul {
+.build-chrono-group-summary ul {
   display: grid;
   gap: 6px;
   list-style: none;
@@ -446,7 +446,7 @@
   width: auto !important;
 }
 
-.build-time-groups {
+.build-chrono-groups {
   border-top: 1px solid #d8e2ec;
   display: grid;
   gap: 8px;
@@ -554,24 +554,24 @@
   resize: vertical;
 }
 
-.build-time-group-summary dl {
+.build-chrono-group-summary dl {
   display: grid;
   gap: 8px;
   margin: 0;
 }
 
-.build-time-group-summary dl div {
+.build-chrono-group-summary dl div {
   display: grid;
   gap: 2px;
 }
 
-.build-time-group-summary dt {
+.build-chrono-group-summary dt {
   color: #49627a;
   font-size: 12px;
   font-weight: 800;
 }
 
-.build-time-group-summary dd {
+.build-chrono-group-summary dd {
   margin: 0;
 }
 
@@ -1438,21 +1438,23 @@
   min-height: 44px;
 }
 
-.build-authoring-auxiliary:is([data-authoring-surface="time-content"], [data-authoring-surface="time-group"], [data-authoring-surface="scene"]) {
+.build-authoring-auxiliary:is([data-authoring-surface="chrono-group"], [data-authoring-surface="scene"]) {
   width: min(980px, calc(100vw - 428px));
 }
 
-.time-group-studio,
+.chrono-group-studio,
 .scene-studio,
-.time-content-library {
+.temporal-studio,
+.temporal-content-page {
   display: grid;
   gap: 16px;
   min-width: 0;
   scroll-padding-block: 84px;
 }
 
-.time-group-studio > header,
-.time-content-library__header,
+.chrono-group-studio > header,
+.temporal-studio__header,
+.temporal-content-page__header,
 .scene-identity-band {
   align-items: start;
   display: flex;
@@ -1460,13 +1462,14 @@
   justify-content: space-between;
 }
 
-.time-group-studio > header h2,
-.time-content-library__header h2,
+.chrono-group-studio > header h2,
+.temporal-studio__header h2,
+.temporal-content-page__header h2,
 .scene-identity-band h2 {
   margin: 2px 0 4px;
 }
 
-.time-group-studio > header > span,
+.chrono-group-studio > header > span,
 .build-draft-status {
   background: var(--simex-surface-panel-alt);
   border: 1px solid var(--simex-border-subtle);
@@ -1477,7 +1480,7 @@
   white-space: nowrap;
 }
 
-.time-group-studio nav ol,
+.chrono-group-studio nav ol,
 .scene-stage-navigation {
   display: grid;
   gap: 8px;
@@ -1491,24 +1494,24 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.time-group-studio nav button,
+.chrono-group-studio nav button,
 .scene-stage-navigation button {
   min-height: 52px;
   width: 100%;
 }
 
-.time-group-studio nav button[aria-current="step"],
+.chrono-group-studio nav button[aria-current="step"],
 .scene-stage-navigation button[aria-current="step"] {
   background: var(--simex-accent);
   color: var(--simex-on-accent);
 }
 
-.time-group-studio fieldset,
+.chrono-group-studio fieldset,
 .scene-stage-body > section,
 .scene-shared-settings,
-.time-content-library__browse,
-.time-content-library__conflict,
-.time-content-card {
+.temporal-studio__filters,
+.temporal-content-card,
+.temporal-content-page__sections > section {
   background: var(--simex-surface-panel-alt);
   border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
@@ -1517,20 +1520,20 @@
   padding: 14px;
 }
 
-.time-group-studio label,
+.chrono-group-studio label,
 .scene-studio label,
-.time-content-library__browse {
+.temporal-studio__filters {
   display: grid;
   font-weight: 700;
   gap: 6px;
 }
 
-.time-group-studio input,
-.time-group-studio select,
-.scene-studio input,
+.chrono-group-studio input:not([type="checkbox"]):not([type="radio"]),
+.chrono-group-studio select,
+.scene-studio input:not([type="checkbox"]):not([type="radio"]),
 .scene-studio select,
-.time-content-library input,
-.time-content-library select {
+.temporal-studio input:not([type="checkbox"]):not([type="radio"]),
+.temporal-studio select {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-strong);
   border-radius: 8px;
@@ -1540,25 +1543,24 @@
   width: 100%;
 }
 
-.time-group-studio input:focus-visible,
-.time-group-studio select:focus-visible,
-.scene-studio input:focus-visible,
+.chrono-group-studio input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.chrono-group-studio select:focus-visible,
+.scene-studio input:not([type="checkbox"]):not([type="radio"]):focus-visible,
 .scene-studio select:focus-visible,
-.time-content-library input:focus-visible,
-.time-content-library select:focus-visible {
+.temporal-studio input:focus-visible,
+.temporal-studio select:focus-visible {
   outline: 3px solid var(--simex-focus);
   outline-offset: 2px;
 }
 
-.time-group-studio > footer,
-.time-content-library__create-actions,
-.time-content-card__actions {
+.chrono-group-studio > footer,
+.temporal-content-page__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.time-group-studio > footer {
+.chrono-group-studio > footer {
   background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
   border-top: 1px solid var(--simex-border-subtle);
   bottom: -14px;
@@ -1568,9 +1570,9 @@
   z-index: 2;
 }
 
-.time-availability-ledger > ol,
+.time-availability-ledger ol,
 .time-availability-ledger ul,
-.time-content-library__cards,
+.temporal-studio__cards,
 .scene-arrangement-board ol {
   display: grid;
   gap: 10px;
@@ -1579,7 +1581,7 @@
   padding: 0;
 }
 
-.time-availability-ledger > ol > li,
+.time-availability-ledger__region > ol > li,
 .scene-arrangement-board li {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
@@ -1587,15 +1589,15 @@
   padding: 12px;
 }
 
-.time-availability-ledger > ol > li[data-status="needs-attention"],
-.time-content-card[data-status="needs-attention"] {
+.time-availability-ledger__region > ol > li[data-status="needs-attention"],
+.temporal-content-card[data-status="needs-attention"] {
   border-left: 5px double var(--simex-warning, #9b6a00);
 }
 
-.time-availability-ledger > ol > li > header,
+.time-availability-ledger__region > ol > li > header,
 .scene-arrangement-board > header,
 .scene-arrangement-board li,
-.time-content-card > header {
+.temporal-content-card > header {
   align-items: center;
   display: flex;
   gap: 12px;
@@ -1620,7 +1622,27 @@
   margin-top: 12px;
 }
 
-.scene-membership-ledger label {
+.time-availability-ledger__regions,
+.temporal-content-page__sections {
+  display: grid;
+  gap: 14px;
+}
+
+.time-availability-ledger__region,
+.scene-membership-ledger > section {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.time-availability-ledger__region[data-region="needs-attention"],
+.scene-membership-ledger > section[data-region="needs-attention"] {
+  border-left: 5px double var(--simex-warning, #9b6a00);
+}
+
+.scene-membership-ledger label,
+.choice-control-row {
   align-items: center;
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
@@ -1631,10 +1653,70 @@
   padding: 4px 10px;
 }
 
-.scene-membership-ledger input {
-  height: 22px;
-  min-height: 22px;
-  width: 22px;
+.scene-membership-ledger input[type="checkbox"],
+.choice-control:is([type="checkbox"], [type="radio"]),
+:is(.app-frame, .build-authoring-auxiliary) input:is([type="checkbox"], [type="radio"]) {
+  block-size: 20px;
+  flex: 0 0 20px;
+  inline-size: 20px;
+  min-block-size: 20px;
+  min-height: 20px;
+  min-width: 20px;
+  padding: 0;
+  width: 20px;
+}
+
+.choice-control-row {
+  min-height: 44px;
+}
+
+.choice-control-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.choice-control-row > span small {
+  color: var(--simex-text-muted);
+  display: block;
+}
+
+.temporal-studio__header,
+.temporal-content-page__header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.temporal-studio__filters {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, 220px);
+}
+
+.temporal-studio__cards {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.temporal-content-card {
+  align-items: flex-start;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 132px;
+  text-align: left;
+  width: 100%;
+}
+
+.temporal-content-card__type,
+.temporal-content-card__status,
+.temporal-content-page__status {
+  color: var(--simex-text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .balanced-twin-canvas {
@@ -1690,28 +1772,28 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.time-content-library__browse {
+.temporal-studio__browse {
   align-items: end;
   grid-template-columns: minmax(130px, auto) minmax(180px, 1fr) auto minmax(140px, 200px);
 }
 
-.time-content-library__sections {
+.temporal-studio__sections {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.time-content-library__cards > li {
+.temporal-studio__cards > li {
   min-width: 0;
 }
 
-.time-content-card h4,
-.time-content-card p {
+.temporal-content-card h4,
+.temporal-content-card p {
   margin: 3px 0;
 }
 
-.time-content-card__finding,
-.time-content-library__session-notice {
+.temporal-content-card__finding,
+.temporal-studio__session-notice {
   background: var(--simex-warning-soft, #fff4d6);
   border-left: 4px double var(--simex-warning, #9b6a00);
   margin-block: 10px;
@@ -1843,31 +1925,31 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .build-authoring-auxiliary:is([data-authoring-surface="time-content"], [data-authoring-surface="time-group"], [data-authoring-surface="scene"]) {
+  .build-authoring-auxiliary:is([data-authoring-surface="chrono-group"], [data-authoring-surface="scene"]) {
     width: min(720px, calc(100vw - 32px));
   }
 
   .balanced-twin-canvas,
-  .time-content-library__sections {
+  .temporal-studio__sections {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 639px) {
-  .time-group-studio nav ol,
+  .chrono-group-studio nav ol,
   .scene-stage-navigation,
   .scene-shared-settings,
   .scene-shared-settings fieldset,
-  .time-content-library__browse {
+  .temporal-studio__browse {
     grid-template-columns: 1fr;
   }
 
-  .time-group-studio > header,
-  .time-content-library__header,
+  .chrono-group-studio > header,
+  .temporal-studio__header,
   .scene-identity-band,
-  .time-availability-ledger > ol > li > header,
+  .time-availability-ledger__region > ol > li > header,
   .scene-arrangement-board > header,
-  .time-content-card > header {
+  .temporal-content-card > header {
     align-items: stretch;
     flex-direction: column;
   }

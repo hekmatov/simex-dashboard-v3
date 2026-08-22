@@ -1,6 +1,7 @@
 import { parseTemporalValue } from "../charting/data/temporal.js";
 import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
+import { stripLegacyVantaBackground } from "../charting/config/dashboardPresentationV3.js";
 import {
   normalizeDashboardTemporalConfig,
   validateCanonicalDashboardTemporalConfig,
@@ -8,7 +9,7 @@ import {
 import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
-import { validateTimeSyncGroups } from "../charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../charting/time/chronoGroupModel.js";
 import { createDashboardSourceProviders } from "../data/dashboardSourceProviders.js";
 import { createDataService, createSourceCache } from "../data/dataService.js";
 import { createProviderRegistry } from "../data/providerRegistry.js";
@@ -128,14 +129,15 @@ const GEOJSON_COLLECTION_GEOMETRY_KEYS = new Set([
 ]);
 
 function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
-  const normalized = normalizeDashboardTemporalConfig(dashboard, {
-    profiles: temporalMigrationProfiles(dashboard, suppliedProfiles),
+  const presentationNormalized = stripLegacyVantaBackground(dashboard);
+  const normalized = normalizeDashboardTemporalConfig(presentationNormalized, {
+    profiles: temporalMigrationProfiles(presentationNormalized, suppliedProfiles),
   });
   // Temporal normalization never changes source descriptors. Preserve the
   // established runtime descriptor identity after the inert-data check while
   // still cloning and normalizing temporal dashboard state.
-  if (isRecord(dashboard?.dataSources)) {
-    normalized.dataSources = dashboard.dataSources;
+  if (isRecord(presentationNormalized?.dataSources)) {
+    normalized.dataSources = presentationNormalized.dataSources;
   }
   return normalized;
 }
@@ -145,8 +147,8 @@ function temporalMigrationProfiles(dashboard, suppliedProfiles = {}) {
     ...(isRecord(suppliedProfiles) ? suppliedProfiles : {}),
     ...(isRecord(dashboard?.datasetProfiles) ? dashboard.datasetProfiles : {}),
   };
-  const needsLegacyEvidence = Array.isArray(dashboard?.timeSyncGroups)
-    && dashboard.timeSyncGroups.some((group) => (
+  const needsLegacyEvidence = Array.isArray(dashboard?.chronoGroups)
+    && dashboard.chronoGroups.some((group) => (
       isRecord(group)
       && group.primaryClock !== undefined
       && group.period === undefined
@@ -226,6 +228,7 @@ export async function loadDashboardConfig(
   datasetProfiles,
   portableSources = null,
 ) {
+  dashboard = stripLegacyVantaBackground(dashboard);
   validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
     requireComplete: false,
@@ -273,7 +276,7 @@ export async function loadDashboardConfig(
     profiles: hydratedProfiles,
   } = await dataService.hydrateAll({ purpose: "compatibility" });
 
-  validateTimeSyncGroups(dashboard.timeSyncGroups ?? [], {
+  validateChronoGroups(dashboard.chronoGroups ?? [], {
     charts: chartReferences.map(({ chart }) => chart),
     loadedData,
     profiles: hydratedProfiles,
@@ -294,6 +297,7 @@ export async function loadDashboardConfigProgressively(
   portableSources = null,
   { onUpdate = () => {} } = {},
 ) {
+  dashboard = stripLegacyVantaBackground(dashboard);
   validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
     requireComplete: false,
@@ -369,7 +373,7 @@ export async function loadDashboardConfigProgressively(
   }));
 
   if (sourceIds.every((sourceId) => dataSourceStates[sourceId].status === "ready")) {
-    validateTimeSyncGroups(dashboard.timeSyncGroups ?? [], {
+    validateChronoGroups(dashboard.chronoGroups ?? [], {
       charts: chartReferences.map(({ chart }) => chart),
       loadedData,
       profiles: hydratedProfiles,

@@ -1,13 +1,14 @@
 import React from "react";
 
 import BalancedTwinCanvas from "./BalancedTwinCanvas.jsx";
+import { partitionSceneCharts } from "./sceneDraft.js";
 
 const STAGES = Object.freeze([
   { id: "select", label: "Select charts and frames" },
   { id: "arrange", label: "Arrange and configure" },
 ]);
 
-export default function SceneStudio({ draft, charts = [], disabled = false, onAction }) {
+export default function SceneEditor({ draft, charts = [], chronoGroups = [], pages = [], disabled = false, onAction }) {
   const value = draft?.value ?? {};
   const busy = disabled || draft?.status === "saving";
   const dirty = ["dirty", "error", "suspended"].includes(draft?.status);
@@ -18,7 +19,7 @@ export default function SceneStudio({ draft, charts = [], disabled = false, onAc
         <div>
           <p className="eyebrow">Scene draft</p>
           <h2 id="scene-studio-title">{value.name || "Untitled Scene"}</h2>
-          <p>{value.groupId} → {value.name || "Untitled Scene"}</p>
+          <p>{chronoGroups.find(({ id }) => id === value.chronoGroupId)?.name ?? value.chronoGroupId ?? "Choose Chrono Group"} → {value.name || "Untitled Scene"}</p>
         </div>
         <span className="build-draft-status" data-status={draft?.status ?? "clean"}>
           {draft?.status === "saving" ? "Saving Scene" : dirty ? "Unsaved Scene" : "Scene saved"}
@@ -41,7 +42,7 @@ export default function SceneStudio({ draft, charts = [], disabled = false, onAc
       {draft?.stage === "arrange" ? (
         <ArrangeStage value={value} charts={charts} busy={busy} onAction={onAction} />
       ) : (
-        <SelectStage value={value} charts={charts} selectedIds={selectedIds} busy={busy} onAction={onAction} />
+        <SelectStage value={value} charts={charts} chronoGroups={chronoGroups} pages={pages} selectedIds={selectedIds} busy={busy} onAction={onAction} />
       )}
       <footer className="build-surface-actions">
         <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button>
@@ -51,29 +52,26 @@ export default function SceneStudio({ draft, charts = [], disabled = false, onAc
   );
 }
 
-function SelectStage({ value, charts, selectedIds, busy, onAction }) {
+function SelectStage({ value, charts, chronoGroups, pages, selectedIds, busy, onAction }) {
+  const regions = partitionSceneCharts(charts, value.members ?? []);
   return (
     <div className="scene-stage-body" data-stage="select">
-      <section>
-        <h3>Selected for this Scene</h3>
-        <p>Choose charts from the parent Time Group and one Frame source.</p>
-        <div className="scene-membership-ledger">
-          {charts.map((chart) => (
-            <label key={chart.id}>
-              <input
-                type="checkbox"
-                checked={selectedIds.has(chart.id)}
-                disabled={busy || (selectedIds.has(chart.id) && selectedIds.size === 1)}
-                onChange={() => onAction?.({
-                  type: selectedIds.has(chart.id) ? "REMOVE_MEMBER" : "ADD_MEMBER",
-                  chartId: chart.id,
-                })}
-              />
-              <span>{chart.title ?? chart.label ?? chart.id}</span>
-              <small>{chart.pageLabel ?? value.pageId}</small>
-            </label>
-          ))}
-        </div>
+      <section className="scene-definition-fields" aria-labelledby="scene-define-title">
+        <h3 id="scene-define-title">Select and define</h3>
+        <label>Scene name<input id="scene-name" value={value.name ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_NAME", value: event.target.value })} /></label>
+        <label>Parent Chrono Group<select value={value.chronoGroupId ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_CHRONO_GROUP", chronoGroupId: event.target.value })}>
+          <option value="">Choose Chrono Group</option>
+          {chronoGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+        </select></label>
+        <label>Owning page<select value={value.pageId ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_SCOPE", pageId: event.target.value })}>
+          <option value="">Choose page</option>
+          {pages.map((page) => <option key={page.id} value={page.id}>{page.label ?? page.title ?? page.id}</option>)}
+        </select></label>
+      </section>
+      <section className="scene-membership-ledger" aria-label="Scene membership availability">
+        <SceneLedgerRegion title="Selected for this Scene" charts={regions.selected} selectedIds={selectedIds} busy={busy} onAction={onAction} />
+        <SceneLedgerRegion title="Needs attention" charts={regions.needsAttention} selectedIds={selectedIds} busy={busy} onAction={onAction} needsAttention />
+        <SceneLedgerRegion title="Available from parent Chrono Group" charts={regions.available} selectedIds={selectedIds} busy={busy} onAction={onAction} />
       </section>
       <label>
         Frame source
@@ -95,16 +93,30 @@ function SelectStage({ value, charts, selectedIds, busy, onAction }) {
   );
 }
 
+function SceneLedgerRegion({ title, charts, selectedIds, busy, onAction, needsAttention = false }) {
+  return <section data-region={needsAttention ? "needs-attention" : undefined}>
+    <h3>{title}</h3>
+    {charts.length === 0 ? <p>No charts in this region.</p> : charts.map((chart) => (
+      <label className="choice-control-row" key={chart.id}>
+        <input
+          className="choice-control"
+          type="checkbox"
+          checked={selectedIds.has(chart.id)}
+          disabled={busy || (selectedIds.has(chart.id) && selectedIds.size === 1)}
+          onChange={() => onAction?.({ type: selectedIds.has(chart.id) ? "REMOVE_MEMBER" : "ADD_MEMBER", chartId: chart.id })}
+        />
+        <span><strong>{chart.title ?? chart.label ?? chart.id}</strong><small>{chart.pageLabel ?? chart.pageId}</small></span>
+      </label>
+    ))}
+  </section>;
+}
+
 function ArrangeStage({ value, charts, busy, onAction }) {
   return (
     <div className="scene-stage-body" data-stage="arrange">
       <BalancedTwinCanvas scene={value} charts={charts} disabled={busy} onAction={onAction} />
       <section className="scene-shared-settings">
         <h3>Shared Scene settings</h3>
-        <label>
-          Scene name
-          <input value={value.name ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_NAME", value: event.target.value })} />
-        </label>
         <label>
           Seconds per frame
           <input type="number" min="0.1" step="0.1" value={value.secondsPerFrame ?? ""} placeholder="Inherit group" disabled={busy} onChange={(event) => onAction?.({ type: "SET_SECONDS_PER_FRAME", value: event.target.value })} />

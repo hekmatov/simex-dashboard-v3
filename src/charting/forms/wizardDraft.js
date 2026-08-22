@@ -8,7 +8,7 @@ import {
   resolveEffectiveBinding,
 } from "../data/bindings.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
-import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
+import { validateChronoGroups } from "../time/chronoGroupModel.js";
 
 export const WIZARD_STEPS = Object.freeze([
   "type",
@@ -83,8 +83,8 @@ export function createWizardState(options = {}) {
     source: options.source === undefined
       ? null
       : structuredClone(options.source),
-    timeSyncGroups: structuredClone(options.timeSyncGroups ?? []),
-    timeSyncGroupsProvided: Object.hasOwn(options, "timeSyncGroups"),
+    chronoGroups: structuredClone(options.chronoGroups ?? []),
+    chronoGroupsProvided: Object.hasOwn(options, "chronoGroups"),
     charts: normalizeExistingCharts(options.charts ?? []),
     loadedData: options.loadedData ?? {},
     profiles: options.profiles ?? {},
@@ -259,10 +259,10 @@ export function reduceWizardState(state, action) {
       return updateTimeSyncMembership(state, action);
     case "updateTimeSyncMember":
       return updateTimeSyncMember(state, action);
-    case "updateTimeSyncGroup":
-      return updateTimeSyncGroup(state, action);
-    case "updateTimeSyncGroups":
-      return updateTimeSyncGroups(state, action);
+    case "updateChronoGroup":
+      return updateChronoGroup(state, action);
+    case "updateChronoGroups":
+      return updateChronoGroups(state, action);
     case "requestClearSource":
       return { ...state, confirmation: "clearSource" };
     case "confirmClearSource":
@@ -298,9 +298,9 @@ export function finalizeWizardDraft(state) {
   if (state.source !== null && state.source !== undefined) {
     result.source = structuredClone(state.source);
   }
-  if (state.timeSyncGroupsProvided || state.timeSyncGroups.length > 0) {
-    validateProposedGroups(state, state.timeSyncGroups, chart);
-    result.timeSyncGroups = structuredClone(state.timeSyncGroups);
+  if (state.chronoGroupsProvided || state.chronoGroups.length > 0) {
+    validateProposedGroups(state, state.chronoGroups, chart);
+    result.chronoGroups = structuredClone(state.chronoGroups);
   }
   return result;
 }
@@ -374,8 +374,8 @@ function selectType(state, action) {
   const previousDraftId = state.draft?.id ?? null;
   const draftId = overrides.id ?? previousDraftId;
   const groups = previousDraftId
-    ? removeChartFromGroups(state.timeSyncGroups, previousDraftId)
-    : state.timeSyncGroups;
+    ? removeChartFromGroups(state.chronoGroups, previousDraftId)
+    : state.chronoGroups;
   return withStageStatuses({
     ...state,
     activeStep: "source",
@@ -388,9 +388,9 @@ function selectType(state, action) {
       ...(draftId ? { id: draftId } : {}),
     }),
     source: null,
-    timeSyncGroups: groups,
-    timeSyncGroupsProvided: state.timeSyncGroupsProvided
-      || groups !== state.timeSyncGroups,
+    chronoGroups: groups,
+    chronoGroupsProvided: state.chronoGroupsProvided
+      || groups !== state.chronoGroups,
     confirmation: null,
     pendingSourceChange: null,
     closed: false,
@@ -514,19 +514,19 @@ function updateTimeSyncMember(state, action) {
       `Unsupported time synchronization member property "${target.property}".`,
     );
   }
-  const groupIndex = state.timeSyncGroups
+  const groupIndex = state.chronoGroups
     .findIndex(({ id }) => id === target.groupId);
   if (groupIndex < 0) {
     throw new Error(
-      `Unknown time synchronization group "${target.groupId}".`,
+      `Unknown Chrono Group "${target.groupId}".`,
     );
   }
-  const group = state.timeSyncGroups[groupIndex];
+  const group = state.chronoGroups[groupIndex];
   const memberIndex = group.members
     .findIndex(({ chartId }) => chartId === target.chartId);
   if (memberIndex < 0) {
     throw new Error(
-      `Unknown member chart "${target.chartId}" in time synchronization group "${target.groupId}".`,
+      `Unknown member chart "${target.chartId}" in Chrono Group "${target.groupId}".`,
     );
   }
 
@@ -539,32 +539,32 @@ function updateTimeSyncMember(state, action) {
   const members = group.members.map((value, index) => (
     index === memberIndex ? member : value
   ));
-  const groups = state.timeSyncGroups.map((value, index) => (
+  const groups = state.chronoGroups.map((value, index) => (
     index === groupIndex ? { ...group, members } : value
   ));
   validateProposedGroups(state, groups);
   return {
     ...state,
-    timeSyncGroups: groups,
-    timeSyncGroupsProvided: true,
+    chronoGroups: groups,
+    chronoGroupsProvided: true,
   };
 }
 
-function updateTimeSyncGroup(state, action) {
+function updateChronoGroup(state, action) {
   const target = semanticTarget(action.target, "group");
   if (target.property !== "matching") {
     throw new Error(
-      `Unsupported time synchronization group property "${target.property}".`,
+      `Unsupported Chrono Group property "${target.property}".`,
     );
   }
-  const groupIndex = state.timeSyncGroups
+  const groupIndex = state.chronoGroups
     .findIndex(({ id }) => id === target.groupId);
   if (groupIndex < 0) {
     throw new Error(
-      `Unknown time synchronization group "${target.groupId}".`,
+      `Unknown Chrono Group "${target.groupId}".`,
     );
   }
-  const groups = state.timeSyncGroups.map((group, index) => (
+  const groups = state.chronoGroups.map((group, index) => (
     index === groupIndex
       ? { ...group, [target.property]: structuredClone(action.value) }
       : group
@@ -572,21 +572,21 @@ function updateTimeSyncGroup(state, action) {
   validateProposedGroups(state, groups);
   return {
     ...state,
-    timeSyncGroups: groups,
-    timeSyncGroupsProvided: true,
+    chronoGroups: groups,
+    chronoGroupsProvided: true,
   };
 }
 
-function updateTimeSyncGroups(state, action) {
+function updateChronoGroups(state, action) {
   if (!Array.isArray(action.value)) {
-    throw new TypeError("Time synchronization group updates must be an array.");
+    throw new TypeError("Chrono Group updates must be an array.");
   }
   const groups = structuredClone(action.value);
   validateProposedGroups(state, groups);
   return {
     ...state,
-    timeSyncGroups: groups,
-    timeSyncGroupsProvided: true,
+    chronoGroups: groups,
+    chronoGroupsProvided: true,
   };
 }
 
@@ -607,7 +607,7 @@ function confirmClearSource(state) {
 }
 
 function validateProposedGroups(state, groups, draft = state.draft) {
-  validateTimeSyncGroups(groups, {
+  validateChronoGroups(groups, {
     charts: chartsForValidation(state.charts, draft),
     loadedData: state.loadedData,
     profiles: state.profiles,
@@ -774,7 +774,7 @@ function semanticTarget(target, kind) {
       `Time synchronization ${kind} updates require a semantic target.`,
     );
   }
-  requiredString(target.groupId, "Time synchronization group id");
+  requiredString(target.groupId, "Chrono Group id");
   requiredString(target.property, "Time synchronization target property");
   if (kind === "member") {
     requiredString(target.chartId, "Time synchronization member chart id");
@@ -832,7 +832,7 @@ function requireDraft(state) {
 }
 
 function assertState(state) {
-  if (!isRecord(state) || !Array.isArray(state.timeSyncGroups)) {
+  if (!isRecord(state) || !Array.isArray(state.chronoGroups)) {
     throw new TypeError("Wizard state is invalid.");
   }
 }

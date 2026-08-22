@@ -8,12 +8,12 @@ test("page reorder moves only the requested Page and preserves nested dashboard 
   assert.equal(typeof model?.reorderPage, "function");
   const dashboard = fixture();
   const panels = dashboard.pages[1].sections[0].panels;
-  const groups = dashboard.timeSyncGroups;
+  const groups = dashboard.chronoGroups;
 
   assert.equal(model.reorderPage(dashboard, "operations", 0), true);
   assert.deepEqual(dashboard.pages.map(({ id }) => id), ["operations", "home", "biomedical"]);
   assert.equal(dashboard.pages[0].sections[0].panels, panels);
-  assert.equal(dashboard.timeSyncGroups, groups);
+  assert.equal(dashboard.chronoGroups, groups);
   assert.equal(model.reorderPage(dashboard, "operations", -1), false);
   assert.equal(model.reorderPage(dashboard, "missing", 1), false);
 });
@@ -52,6 +52,6 @@ function fixture() {
         ],
       },
     ],
-    timeSyncGroups: [{ id: "national", members: [{ chartId: "c2" }] }],
+    chronoGroups: [{ id: "national", members: [{ chartId: "c2" }] }],
   };
 }

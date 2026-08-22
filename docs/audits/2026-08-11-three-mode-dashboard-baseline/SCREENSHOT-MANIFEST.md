@@ -64,7 +64,7 @@ The static prototype and the existing UI specification are audit subjects, not v
 | [runtime-controller-1440x900-empty-not-open.png](screenshots/runtime-controller-1440x900-empty-not-open.png) | 1440 × 900 | 1425 × 891 | No Audience session; empty scene | Wide controller geometry, monitor/context hierarchy, long chart list, sticky dock |
 | [runtime-controller-1024x768-empty-not-open.png](screenshots/runtime-controller-1024x768-empty-not-open.png) | 1024 × 768 | 1009 × 757 | No Audience session; empty scene | Narrower two-column geometry, dock wrapping, scroll requirement |
 | [runtime-controller-1440x900-four-chart-connected.png](screenshots/runtime-controller-1440x900-four-chart-connected.png) | 1440 × 900 | 1425 × 891 | Connected, four charts | Realistic dense scene, selection cap, ordering/layout and monitor usefulness |
-| [runtime-controller-1440x900-playback-four-chart.png](screenshots/runtime-controller-1440x900-playback-four-chart.png) | 1440 × 900 | 1425 × 891 | Connected four-chart playback | Time-group selector, range position, Previous/Next endpoint states |
+| [runtime-controller-1440x900-playback-four-chart.png](screenshots/runtime-controller-1440x900-playback-four-chart.png) | 1440 × 900 | 1425 × 891 | Connected four-chart playback | Chrono Group selector, range position, Previous/Next endpoint states |
 | [runtime-controller-1440x900-audience-disconnected.png](screenshots/runtime-controller-1440x900-audience-disconnected.png) | 1440 × 900 | 1425 × 891 | Audience window closed/disconnected | Disconnect status and Reopen path |
 | [runtime-controller-1024x768-four-chart-ended.png](screenshots/runtime-controller-1024x768-four-chart-ended.png) | 1024 × 768 | 1009 × 757 | Four-chart composition after End Presentation | Ended-state semantics, retained selection, Open Audience return |
 
@@ -112,7 +112,7 @@ All files in this group were captured at the required 1920 × 1080 Audience view
 | [step2a-wizard-1440x900-created-placement.png](screenshots/step2a-wizard-1440x900-created-placement.png) | 1440 × 900 | 1425 × 891 | Created Biomedical chart after scrolling to its section end | Successful placement, panel geometry, and separation from the creation viewport |
 | [step2a-wizard-1440x900-discard-confirmation.png](screenshots/step2a-wizard-1440x900-discard-confirmation.png) | 1440 × 900 | 1425 × 891 | Nested discard confirmation over a partial Bar draft | Dirty cancellation copy, retained underlying draft, destructive differentiation, and initial focus |
 | [step2a-wizard-768x1024-preview-ready.png](screenshots/step2a-wizard-768x1024-preview-ready.png) | 768 × 1024 | 753 × 1004 | Valid Line chart at the tablet boundary | Side-by-side preview/settings retention and internal horizontal overflow |
-| [step2a-view-1440x900-playback-group-open.png](screenshots/step2a-view-1440x900-playback-group-open.png) | 1440 × 900 | 1425 × 891 | National time group in open View playback | Group-only surface, transport/seek/time/speed controls, aggregate availability, and trace/snapshot coexistence |
+| [step2a-view-1440x900-playback-group-open.png](screenshots/step2a-view-1440x900-playback-group-open.png) | 1440 × 900 | 1425 × 891 | National Chrono Group in open View playback | Group-only surface, transport/seek/time/speed controls, aggregate availability, and trace/snapshot coexistence |
 
 ## Completeness check
 

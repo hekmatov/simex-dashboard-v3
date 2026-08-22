@@ -4,7 +4,7 @@ import { profileDataset } from "../data/profileDataset.js";
 import { parseTemporalValue } from "../data/temporal.js";
 import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 import { validateScene } from "../time/sceneSchema.js";
-import { validateTimeSyncGroups } from "../time/timeSyncModel.js";
+import { validateChronoGroups } from "../time/chronoGroupModel.js";
 import {
   normalizeDashboardTemporalConfig,
   validateCanonicalDashboardTemporalConfig,
@@ -12,6 +12,7 @@ import {
 import {
   normalizeChartInstance,
 } from "./chartConfigV3.js";
+import { stripLegacyVantaBackground } from "./dashboardPresentationV3.js";
 import { validateDashboardStructure } from "./dashboardConfigStructure.js";
 import {
   validateDashboardChartReferences,
@@ -182,8 +183,8 @@ function temporalMigrationProfiles(config, suppliedProfiles = {}) {
     ...(isRecord(suppliedProfiles) ? suppliedProfiles : {}),
     ...(isRecord(config.datasetProfiles) ? config.datasetProfiles : {}),
   };
-  const needsLegacyEvidence = Array.isArray(config.timeSyncGroups)
-    && config.timeSyncGroups.some((group) => (
+  const needsLegacyEvidence = Array.isArray(config.chronoGroups)
+    && config.chronoGroups.some((group) => (
       isRecord(group)
       && group.primaryClock !== undefined
       && group.period === undefined
@@ -346,8 +347,9 @@ function normalizeDashboardChartInstances(config) {
 
 function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
   const chartNormalized = normalizeDashboardChartInstances(config);
-  return normalizeDashboardTemporalConfig(chartNormalized, {
-    profiles: temporalMigrationProfiles(chartNormalized, profiles),
+  const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
+  return normalizeDashboardTemporalConfig(presentationNormalized, {
+    profiles: temporalMigrationProfiles(presentationNormalized, profiles),
   });
 }
 
@@ -397,7 +399,7 @@ export function validateDashboardConfig(config) {
       );
     }
   }
-  validateTimeSyncGroups(config.timeSyncGroups ?? [], {
+  validateChronoGroups(config.chronoGroups ?? [], {
     charts,
     loadedData,
     profiles: validationProfiles,
@@ -409,7 +411,7 @@ export function validateDashboardConfig(config) {
   }));
   for (const scene of config.scenes ?? []) {
     validateScene(scene, {
-      groups: config.timeSyncGroups ?? [],
+      chronoGroups: config.chronoGroups ?? [],
       pages: config.pages,
       charts: sceneCharts,
       scenes: config.scenes,
@@ -467,8 +469,8 @@ export function integrateCreatedChart(dashboard, payload, target) {
     }
     next.dataSources[sourceId] = structuredClone(payload.source);
   }
-  if (payload.timeSyncGroups !== undefined) {
-    next.timeSyncGroups = structuredClone(payload.timeSyncGroups);
+  if (payload.chronoGroups !== undefined) {
+    next.chronoGroups = structuredClone(payload.chronoGroups);
   }
   const page = next.pages.find(({ id }) => id === target.pageId);
   const section = page?.sections?.find(({ id }) => id === target.sectionId);
@@ -513,7 +515,7 @@ export function integrateSavedChart(dashboard, payload) {
     }
   }
   if (!replaced) throw new Error(`Chart "${chart.id}" does not exist in the dashboard.`);
-  next.timeSyncGroups = structuredClone(payload.timeSyncGroups ?? next.timeSyncGroups ?? []);
+  next.chronoGroups = structuredClone(payload.chronoGroups ?? next.chronoGroups ?? []);
   validateDashboardConfig(next);
   return next;
 }

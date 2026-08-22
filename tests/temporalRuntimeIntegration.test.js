@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { normalizeDashboardTemporalConfig } from "../src/charting/time/dashboardTemporalConfig.js";
-import { migrateDashboardTimezoneToUtc } from "../src/charting/time/migrateTemporalConfig.js";
+import { migrateDashboardTimezoneToUtc } from "../src/charting/time/normalizeTemporalConfig.js";
 import {
   deriveTemporalContentItems,
   deriveTemporalNeedsAttention,
@@ -15,14 +15,14 @@ test("live V3 timezone migration uses canonical runtime keys and preserves saved
   const live = {
     configVersion: 3,
     id: "dashboard-live",
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "group-a",
       period: { start: "2027-01-01", end: "2027-01-03" },
       members: [{ chartId: "chart-a" }],
     }],
     scenes: [{
       id: "scene-a",
-      groupId: "group-a",
+      chronoGroupId: "group-a",
       period: {
         start: "2027-01-01T01:00:00+01:00",
         end: "2027-01-03T01:00:00+01:00",
@@ -40,7 +40,7 @@ test("live V3 timezone migration uses canonical runtime keys and preserves saved
   const migrated = migrateDashboardTimezoneToUtc(live);
   assert.equal(migrated.timezone, "UTC");
   assert.equal(Object.hasOwn(migrated, "timeZone"), false);
-  assert.deepEqual(migrated.timeSyncGroups, live.timeSyncGroups);
+  assert.deepEqual(migrated.chronoGroups, live.chronoGroups);
   assert.deepEqual(migrated.scenes[0].period, {
     start: "2027-01-01T00:00:00.000Z",
     end: "2027-01-03T00:00:00.000Z",
@@ -68,7 +68,7 @@ test("Needs-attention accepts live V3 groups, scenes, frames, and timezone vocab
   }];
   const findings = deriveTemporalNeedsAttention({
     timezone: "UTC",
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "group-a",
       period: { start: "2027-01-01", end: "2027-01-03" },
       matching: { policy: "exact" },
@@ -76,7 +76,7 @@ test("Needs-attention accepts live V3 groups, scenes, frames, and timezone vocab
     }],
     scenes: [{
       id: "scene-a",
-      groupId: "group-a",
+      chronoGroupId: "group-a",
       pageId: "page-a",
       period: {
         start: "2027-01-01T00:00:00.000Z",
@@ -99,11 +99,11 @@ test("Needs-attention accepts live V3 groups, scenes, frames, and timezone vocab
   assert.equal(findings[0].stage, "frames");
 });
 
-test("Time Content items receive derived findings from the live dashboard truth", () => {
+test("Chrono content items receive derived findings from the live dashboard truth", () => {
   const dashboard = {
     timezone: "UTC",
     pages: [{ id: "page-a", title: "Page A" }],
-    timeSyncGroups: [{
+    chronoGroups: [{
       id: "group-a",
       name: "Group A",
       period: { start: "2027-01-01", end: "2027-01-03" },
@@ -113,7 +113,7 @@ test("Time Content items receive derived findings from the live dashboard truth"
     scenes: [{
       id: "scene-a",
       name: "Scene A",
-      groupId: "group-a",
+      chronoGroupId: "group-a",
       pageId: "page-a",
       period: {
         start: "2027-01-01T00:00:00.000Z",

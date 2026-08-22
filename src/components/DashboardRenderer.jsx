@@ -21,7 +21,7 @@ import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
-import ViewShell from "./view/ViewShell.jsx";
+import DashboardModeWorkspace from "./dashboard/DashboardModeWorkspace.jsx";
 import {
   configuredCharts,
   findPanelPlacement,
@@ -64,7 +64,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPageReorder,
   onStructureChange,
   onDashboardChange,
-  onTimeGroupChange,
   onBackgroundPersistenceError,
   onApplyPendingEdits,
   onPanelEditCommit,
@@ -72,7 +71,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onSectionChange,
   onSectionReorder,
   onSectionInsert,
-  onVantaBackgroundChange,
   onChartCreate,
   onChartSave,
   onApplyCitationToSourceCharts,
@@ -101,7 +99,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
   const [externalDirty, setExternalDirty] = React.useState({
-    timeGroup: false,
+    chronoGroup: false,
     scene: false,
     dashboardMetadata: false,
   });
@@ -122,8 +120,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const buildRevealResolversRef = React.useRef(new Map());
   const appliedBuildRevealIdRef = React.useRef(0);
   const importInputRef = React.useRef(null);
-  const [showVantaSettings, setShowVantaSettings] = React.useState(false);
-  const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
   const chartWizardControllerRef = React.useRef(null);
   const chartDraftSessionStoreRef = React.useRef(null);
   if (chartDraftSessionStoreRef.current === null) {
@@ -173,6 +169,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     error: "",
   });
   const [multiSelectNotice, setMultiSelectNotice] = React.useState(null);
+  const buildWorkspaceSelectionRef = React.useRef(null);
+  const requestBuildSelectionRef = React.useRef(null);
 
   const activePage =
     dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
@@ -202,7 +200,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     scenario: localAuthoringDirty,
     inlineRename: inlineRenameDirty,
     pendingContent: pendingEdits.hasPending(),
-    timeGroup: externalDirty.timeGroup,
+    chronoGroup: externalDirty.chronoGroup,
     scene: externalDirty.scene,
     dashboardMetadata: externalDirty.dashboardMetadata,
   });
@@ -226,7 +224,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [dashboard.dataSources, dashboard.loadedData],
   );
   const setAuthoredDirtyFlag = React.useCallback((key, dirty) => {
-    if (!["timeGroup", "scene", "dashboardMetadata"].includes(key)) return false;
+    if (!["chronoGroup", "scene", "dashboardMetadata"].includes(key)) return false;
     setExternalDirty((current) => ({ ...current, [key]: dirty === true }));
     return true;
   }, []);
@@ -275,7 +273,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartDraftSessionRevision((current) => current + 1);
       setLocalAuthoringDrafts({});
       setInlineRenameDirty(false);
-      setExternalDirty({ timeGroup: false, scene: false, dashboardMetadata: false });
+      setExternalDirty({ chronoGroup: false, scene: false, dashboardMetadata: false });
       onInlineRenameDirtyChange?.(false);
       setBuildSelection(null);
       setPendingBuildSelection(null);
@@ -292,11 +290,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       if (!buildMode || chartAuthoringActive) return;
       addPage();
     },
-    requestTimeGroupAuthoring() {
+    requestChronoGroupAuthoring() {
       if (!buildMode || chartAuthoringActive) return;
-      const group = dashboardStateRef.current.timeSyncGroups?.[0];
+      const group = dashboardStateRef.current.chronoGroups?.[0];
       if (!group) return;
-      setBuildSelection({ kind: "timeGroup", groupId: group.id });
+      setBuildSelection({ kind: "chronoGroup", chronoGroupId: group.id });
       setFocusInspectorLabelKey((current) => current + 1);
     },
     async prepareToLeaveBuild(destination = "mode") {
@@ -558,15 +556,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setDragOverPanelId(null);
   }
 
-  function startMultiFullscreenSelection(panelId) {
+  const startMultiFullscreenSelection = React.useCallback((panelId) => {
     const initialPanelIds = panelId ? [panelId] : [];
     setMultiSelectMode(true);
     multiPanelIdsRef.current = initialPanelIds;
     setMultiPanelIds(initialPanelIds);
     setMultiSelectNotice(null);
-  }
+  }, []);
 
-  function toggleMultiPanel(panelId) {
+  const toggleMultiPanel = React.useCallback((panelId) => {
     const current = multiPanelIdsRef.current;
     if (current.includes(panelId)) {
       const next = current.filter((id) => id !== panelId);
@@ -584,7 +582,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const next = [...current, panelId];
     multiPanelIdsRef.current = next;
     setMultiPanelIds(next);
-  }
+  }, []);
 
   function openMultiFullscreen() {
     if (multiPanelIds.length < 2) {
@@ -652,33 +650,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
-  function openBackgroundSettings() {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    setBackgroundDraft(sanitizeVantaSettings(dashboard.vantaBackground));
-    setShowVantaSettings(true);
-  }
-
-  function saveBackgroundSettings() {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    flushPendingEditsInBackground();
-    onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
-    setShowVantaSettings(false);
-  }
-
-  function resetBackgroundSettings() {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    const defaults = sanitizeVantaSettings();
-    setBackgroundDraft(defaults);
-    flushPendingEditsInBackground();
-    onVantaBackgroundChange(defaults);
-    setShowVantaSettings(false);
-  }
-
-  function changeBackgroundDraft(updates) {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    setBackgroundDraft((current) => ({ ...current, ...updates }));
-  }
-
   function saveSelectedChartV3(payload) {
     if (moderatorOperationGateRef.current.isActive()) {
       return Promise.reject(new Error("Wait for the current dashboard operation to finish."));
@@ -725,10 +696,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       pageId,
       updates: nextDraft,
     });
-  }
-
-  function changeSection(section, updates) {
-    changeSectionByIds(activePage.id, section.id, updates);
   }
 
   function changeDashboardText(updates) {
@@ -779,10 +746,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
-  function applyBackgroundSettings() {
-    if (moderatorOperationGateRef.current.isActive()) return;
-    flushPendingEditsInBackground();
-    onVantaBackgroundChange(sanitizeVantaSettings(backgroundDraft));
+  function changeSection(section, updates) {
+    changeSectionByIds(activePage.id, section.id, updates);
   }
 
   function changeGlobalPanelColors(updates) {
@@ -916,7 +881,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditBaseline(null);
       setChartEditorDirty(false);
     }
-    if (nextSelection.kind === "timeGroup") {
+    if (nextSelection.kind === "chronoGroup") {
       setBuildSelection(nextSelection);
       setChartEditorVisible(false);
       setChartEditorPlacementId(null);
@@ -937,6 +902,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
     return result;
   }
+  requestBuildSelectionRef.current = requestBuildSelection;
+  const activateBuildCanvasSelection = React.useCallback((nextSelection) => {
+    const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
+    return activate?.(nextSelection, { intent: "activate" }) ?? Promise.resolve(false);
+  }, []);
+  const navigateBuildCanvasPage = React.useCallback((pageId) => {
+    void activateBuildCanvasSelection({ kind: "page", pageId });
+  }, [activateBuildCanvasSelection]);
 
   function completeBuildReveal(requestId) {
     if (pendingBuildSelection?.requestId !== requestId) return;
@@ -983,7 +956,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const result = await performModeratorOperation("rename-chart", async () => {
       await onChartSave({
         chart: structuredClone({ ...placement.chart, title }),
-        timeSyncGroups: structuredClone(dashboardStateRef.current.timeSyncGroups ?? []),
+        chronoGroups: structuredClone(dashboardStateRef.current.chronoGroups ?? []),
       });
       return true;
     });
@@ -1123,21 +1096,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return nextDashboard;
   }
 
-  if (editMode && showVantaSettings) {
-    return (
-      <main className="app-shell background-editor-shell" style={iconLanguageStyles}>
-        <section className="background-editor-bar">
-          <VantaSettingsPanel settings={backgroundDraft} onChange={changeBackgroundDraft} />
-          <div className="background-editor-actions">
-            <IconControl interactionId="shell.apply-background" className="secondary" onClick={applyBackgroundSettings} />
-            <IconControl interactionId="shell.save-background" onClick={saveBackgroundSettings} />
-            <IconControl interactionId="shell.reset-background" className="secondary" onClick={resetBackgroundSettings} />
-          </div>
-        </section>
-      </main>
-    );
-  }
-
   if (mode === "present") {
     return (
       <PresentWorkspace
@@ -1153,37 +1111,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     );
   }
 
-  if (!editMode) {
-    return (
-      <ViewShell
-        activePage={activePage}
-        pageType={landingActive ? "landing" : "analytical"}
-        dashboard={dashboard}
-        displayState={displayState}
-        companionStatusLabel={companionStatusLabel}
-        iconLanguageStyles={iconLanguageStyles}
-        geoDataSources={geoDataSources}
-        multiSelectMode={multiSelectMode}
-        multiPanelIds={multiPanelIds}
-        multiSelectNotice={multiSelectNotice}
-        onActivePageChange={navigateToPage}
-        onAddPanelToSection={recoverEmptySectionInBuild}
-        onDisplayAction={onDisplayAction}
-        onToggleMultiPanel={toggleMultiPanel}
-        onStartMultiFullscreenSelection={startMultiFullscreenSelection}
-        onOpenMultiFullscreen={openMultiFullscreen}
-        onCancelMultiSelection={cancelMultiSelection}
-      />
-    );
-  }
-
   const buildControlsDisabled = moderatorMutationLocked || chartAuthoringActive;
-  const selectedChartEditor = selectedPanel ? (
+  const selectedChartEditor = editMode && selectedPanel ? (
     <ChartEditorV3
       surface="inspector"
       disabled={moderatorMutationLocked}
       chart={selectedPanel}
-      timeSyncGroups={dashboard.timeSyncGroups ?? []}
+      chronoGroups={dashboard.chronoGroups ?? []}
       existingCharts={configuredCharts(dashboard)}
       rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
       geoData={geoDataSources[selectedPanel.presentation?.map?.geoSource]}
@@ -1201,84 +1135,115 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onRemove={() => removePanel(selectedPlacement.panelId)}
     />
   ) : null;
+  const buildOverlay = editMode ? (
+    <BuildWorkspace
+      key={buildTreeResetGeneration}
+      themeProjection={themeProjection}
+      dashboard={dashboard}
+      activePage={activePage}
+      pageType={landingActive ? "landing" : "analytical"}
+      buildPanelOpen={buildPanelOpen}
+      selection={buildSelection}
+      dashboardDraft={dashboardDraft}
+      pageDrafts={pageDrafts}
+      sectionDrafts={sectionDrafts}
+      chartEditor={selectedChartEditor}
+      chartEditorPlacementId={chartEditorPlacementId}
+      chartEditorOpen={chartEditorVisible}
+      onCloseChartEditor={dismissSelectedPanel}
+      chartDraftOpen={chartAuthoringActive}
+      chartDraftDirty={chartEditorDirty}
+      mutationsDisabled={moderatorMutationLocked}
+      deviceLayout={deviceLayout}
+      focusLabelKey={focusInspectorLabelKey}
+      operationError={operationError || buildSelectionError || moderatorOperation.error}
+      geoDataSources={geoDataSources}
+      appearanceControls={(
+        <>
+          <GlobalPanelColorControls
+            disabled={buildControlsDisabled}
+            colors={globalPanelColors}
+            onChange={changeGlobalPanelColors}
+          />
+          <GlobalIconAccentControl
+            disabled={buildControlsDisabled}
+            value={iconAccentVariants.base}
+            onChange={changeIconAccent}
+          />
+          <label className="accessibility-edit-toggle">
+            <input
+              type="checkbox"
+              disabled={buildControlsDisabled}
+              checked={accessibilityEnabled}
+              onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
+            />
+            <span>Chart accessibility</span>
+          </label>
+        </>
+      )}
+      onActivePageChange={onActivePageChange}
+      onActivate={requestBuildSelection}
+      onRename={renameBuildSelection}
+      onInlineRenameDirtyChange={handleInlineRenameDirtyChange}
+      revealRequest={buildRevealRequest}
+      treeResetGeneration={buildTreeResetGeneration}
+      onRevealComplete={completeBuildReveal}
+      onDashboardChange={changeDashboardText}
+      onStructureCommit={commitStructureDraft}
+      onScenarioCommit={commitScenarioDraft}
+      onPageChange={changePage}
+      onPageRemove={removeActivePage}
+      onSectionChange={changeSection}
+      onPageReorder={reorderBuildPage}
+      onSectionReorder={reorderBuildSection}
+      onAddSection={addSection}
+      onAddChart={openChartWizard}
+      chartDraftAvailable={chartWizardSuspended}
+      onFinish={saveEditMode}
+      onReset={() => setResetEditSessionConfirmation(true)}
+      onImportPackage={requestDashboardPackageImport}
+      onExportPackage={exportDashboardPackage}
+      onLocalDraftsChange={handleLocalDraftsChange}
+      onDeviceLayoutChange={onDeviceLayoutChange}
+      onDisplayAction={onDisplayAction}
+      selectionControllerRef={buildWorkspaceSelectionRef}
+    />
+  ) : null;
   return (
     <>
-      <div className="build-mode-shell" style={iconLanguageStyles}>
-        <BuildWorkspace
-          key={buildTreeResetGeneration}
-          themeProjection={themeProjection}
-          dashboard={dashboard}
-          activePage={activePage}
-          pageType={landingActive ? "landing" : "analytical"}
-          buildPanelOpen={buildPanelOpen}
-          selection={buildSelection}
-          dashboardDraft={dashboardDraft}
-          pageDrafts={pageDrafts}
-          sectionDrafts={sectionDrafts}
-          chartEditor={selectedChartEditor}
-          chartEditorPlacementId={chartEditorPlacementId}
-          chartEditorOpen={chartEditorVisible}
-          onCloseChartEditor={dismissSelectedPanel}
-          chartDraftOpen={chartAuthoringActive}
-          chartDraftDirty={chartEditorDirty}
-          mutationsDisabled={moderatorMutationLocked}
-          deviceLayout={deviceLayout}
-          focusLabelKey={focusInspectorLabelKey}
-          operationError={operationError || buildSelectionError || moderatorOperation.error}
-          geoDataSources={geoDataSources}
-          appearanceControls={(
-            <>
-              <GlobalPanelColorControls
-                disabled={buildControlsDisabled}
-                colors={globalPanelColors}
-                onChange={changeGlobalPanelColors}
-              />
-              <GlobalIconAccentControl
-                disabled={buildControlsDisabled}
-                value={iconAccentVariants.base}
-                onChange={changeIconAccent}
-              />
-              <label className="accessibility-edit-toggle">
-                <input
-                  type="checkbox"
-                  disabled={buildControlsDisabled}
-                  checked={accessibilityEnabled}
-                  onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
-                />
-                <span>Chart accessibility</span>
-              </label>
-            </>
-          )}
-          onActivePageChange={onActivePageChange}
-          onActivate={requestBuildSelection}
-          onRename={renameBuildSelection}
-          onInlineRenameDirtyChange={handleInlineRenameDirtyChange}
-          revealRequest={buildRevealRequest}
-          treeResetGeneration={buildTreeResetGeneration}
-          onRevealComplete={completeBuildReveal}
-          onDashboardChange={changeDashboardText}
-          onStructureCommit={commitStructureDraft}
-          onScenarioCommit={commitScenarioDraft}
-          onPageChange={changePage}
-          onPageRemove={removeActivePage}
-          onSectionChange={changeSection}
-          onTimeGroupChange={onTimeGroupChange}
-          onOpenSceneComposer={() => onModeRequest?.("present")}
-          onPageReorder={reorderBuildPage}
-          onSectionReorder={reorderBuildSection}
-          onAddSection={addSection}
-          onAddChart={openChartWizard}
-          chartDraftAvailable={chartWizardSuspended}
-          onFinish={saveEditMode}
-          onReset={() => setResetEditSessionConfirmation(true)}
-          onImportPackage={requestDashboardPackageImport}
-          onExportPackage={exportDashboardPackage}
-          onOpenBackground={openBackgroundSettings}
-          onLocalDraftsChange={handleLocalDraftsChange}
-          onDeviceLayoutChange={onDeviceLayoutChange}
-          onDisplayAction={onDisplayAction}
-        />
-      </div>
+      <DashboardModeWorkspace
+        mode={editMode ? "build" : "view"}
+        activePage={activePage}
+        pageType={landingActive ? "landing" : "analytical"}
+        dashboard={dashboard}
+        buildPanelOpen={buildPanelOpen}
+        buildState={editMode ? {
+          selection: buildSelection,
+          disabled: moderatorMutationLocked || buildDraftLocked,
+          sectionDrafts,
+          onSelect: activateBuildCanvasSelection,
+          onReorderSection: reorderBuildSection,
+          onAddSection: addSection,
+          onAddChart: openChartWizard,
+        } : null}
+        buildOverlay={buildOverlay}
+        displayState={displayState}
+        iconLanguageStyles={iconLanguageStyles}
+        geoDataSources={geoDataSources}
+        multiSelectMode={multiSelectMode}
+        multiPanelIds={multiPanelIds}
+        multiSelectNotice={multiSelectNotice}
+        onActivePageChange={editMode
+          ? navigateBuildCanvasPage
+          : navigateToPage}
+        onAddPanelToSection={recoverEmptySectionInBuild}
+        onDisplayAction={onDisplayAction}
+        onToggleMultiPanel={toggleMultiPanel}
+        onStartMultiFullscreenSelection={startMultiFullscreenSelection}
+        onOpenMultiFullscreen={openMultiFullscreen}
+        onCancelMultiSelection={cancelMultiSelection}
+      />
+      {editMode && <>
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
@@ -1290,7 +1255,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         loadedData={dashboard.loadedData}
         datasetProfiles={dashboard.datasetProfiles ?? {}}
         geoDataSources={geoDataSources}
-        timeSyncGroups={dashboard.timeSyncGroups ?? []}
+        chronoGroups={dashboard.chronoGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
         onDirtyChange={setChartWizardDirty}
         onDraftStateChange={handleChartDraftStateChange}
@@ -1350,7 +1315,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <ConfirmDialog
         open={pendingRemovalPageId !== null}
         title={`Delete Page ${dashboard.pages.find(({ id }) => id === pendingRemovalPageId)?.label ?? ""}?`}
-        message="This Page, all of its Sections and charts, and those charts’ Time Group memberships will be removed. This cannot be undone after the dashboard change is saved."
+        message="This Page, all of its Sections and charts, and those charts’ Chrono Group memberships will be removed. This cannot be undone after the dashboard change is saved."
         confirmLabel={moderatorOperation.kind === "remove-page" ? "Deleting…" : "Delete page"}
         cancelLabel="Keep page"
         disabled={moderatorOperation.kind === "remove-page"}
@@ -1377,6 +1342,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onDisplayAction={onDisplayAction}
         accessibilityEnabled={accessibilityEnabled}
       />
+      </>}
     </>
   );
 
@@ -1525,7 +1491,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                 <small>Generate screen-reader chart descriptions</small>
               </span>
             </label>
-            <IconControl interactionId="shell.background" className="secondary" disabled={moderatorMutationLocked} onClick={openBackgroundSettings} />
             <input
               ref={importInputRef}
               className="visually-hidden"
@@ -1710,7 +1675,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           <ChartEditorV3
             disabled={moderatorMutationLocked}
             chart={selectedPanel}
-            timeSyncGroups={dashboard.timeSyncGroups ?? []}
+            chronoGroups={dashboard.chronoGroups ?? []}
             existingCharts={configuredCharts(dashboard)}
             rows={dashboard.loadedData?.[selectedPanel.sourceId] ?? []}
             geoData={geoDataSources[selectedPanel.presentation?.map?.geoSource]}
@@ -1740,7 +1705,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         loadedData={dashboard.loadedData}
         datasetProfiles={dashboard.datasetProfiles ?? {}}
         geoDataSources={geoDataSources}
-        timeSyncGroups={dashboard.timeSyncGroups ?? []}
+        chronoGroups={dashboard.chronoGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
         onDraftStateChange={handleChartDraftStateChange}
         onClose={() => {
@@ -1913,7 +1878,7 @@ function GlobalIconAccentControl({ value, onChange, disabled = false }) {
           </span>
         </div>
         <IconControl
-          interactionId="shell.reset-background"
+          interactionId="shell.reset-edits"
           className="secondary"
           ariaLabel="Reset icon accent"
           tooltip="Reset icon accent"
@@ -1931,40 +1896,6 @@ function boundedModeratorMessage(error) {
   return message.length <= 240 ? message : `${message.slice(0, 237)}...`;
 }
 
-function VantaSettingsPanel({ settings = {}, onChange }) {
-  const resolved = sanitizeVantaSettings(settings);
-  return (
-    <div className="vanta-settings-panel">
-      <label>
-        Color scheme
-        <select
-          value={resolved.colorScheme ?? "manual"}
-          onChange={(event) => {
-            const scheme = event.target.value;
-            const colors = backgroundPaletteColors(scheme);
-            onChange({
-              colorScheme: scheme,
-              ...(colors ? { backgroundColor: colors[0], networkColor: colors[1] } : {}),
-            });
-          }}
-        >
-          {BACKGROUND_COLOR_SCHEMES.map((scheme) => <option key={scheme.value} value={scheme.value}>{scheme.label}</option>)}
-        </select>
-      </label>
-      <div className="color-scheme-preview" aria-label="Background color scheme preview">
-        {(backgroundPaletteColors(resolved.colorScheme) ?? [resolved.backgroundColor, resolved.networkColor]).map((color, index) => <span key={`${color}-${index}`} style={{ backgroundColor: color }} />)}
-      </div>
-      <ColorField label="Static background" value={resolved.backgroundColor} fallback="#08224a" onChange={(color) => onChange({ backgroundColor: color, colorScheme: "manual" })} />
-      <ColorField label="Line/dot color" value={resolved.networkColor} fallback="#9bd3ff" onChange={(color) => onChange({ networkColor: color, colorScheme: "manual" })} />
-      <RangeSetting label="Points" value={resolved.points} min={3} max={18} step={1} onChange={(points) => onChange({ points })} />
-      <RangeSetting label="Max distance" value={resolved.maxDistance} min={8} max={32} step={1} onChange={(maxDistance) => onChange({ maxDistance })} />
-      <RangeSetting label="Spacing" value={resolved.spacing} min={10} max={34} step={1} onChange={(spacing) => onChange({ spacing })} />
-      <RangeSetting label="Motion speed" value={resolved.speed} min={0.1} max={2} step={0.05} onChange={(speed) => onChange({ speed })} />
-      <label className="checkbox-row"><input type="checkbox" checked={resolved.mouseControls} onChange={(event) => onChange({ mouseControls: event.target.checked })} />Mouse tracking</label>
-    </div>
-  );
-}
-
 function resolveGlobalPanelColors(dashboard) {
   return {
     panelBackgroundColor: dashboard?.globalStyles?.panelColors?.panelBackgroundColor ?? "#f5f8fb",
@@ -1974,76 +1905,6 @@ function resolveGlobalPanelColors(dashboard) {
     editHighlightColor: dashboard?.globalStyles?.panelColors?.editHighlightColor ?? "#043bcb",
     multiSelectHighlightColor: dashboard?.globalStyles?.panelColors?.multiSelectHighlightColor ?? "#00a676",
   };
-}
-
-function RangeSetting({ label, value, min, max, step, onChange }) {
-  return (
-    <label className="range-setting">
-      <span>{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-      <output>{value}</output>
-    </label>
-  );
-}
-
-function sanitizeVantaSettings(settings) {
-  const merged = {
-    backgroundColor: "#f7f9fc",
-    networkColor: "#f1a1ad",
-    mouseControls: false,
-    touchControls: false,
-    points: 6,
-    maxDistance: 17,
-    spacing: 18,
-    speed: 0.45,
-    ...settings,
-  };
-  return {
-    ...merged,
-    points: clampNumber(merged.points, 3, 18),
-    maxDistance: clampNumber(merged.maxDistance, 8, 32),
-    spacing: clampNumber(merged.spacing, 10, 34),
-    speed: clampNumber(merged.speed, 0.1, 2),
-  };
-}
-
-const BACKGROUND_COLOR_SCHEMES = [
-  { value: "manual", label: "Manual colors" },
-  { value: "pdpc", label: "PDPC mixed" },
-  { value: "redGreen5", label: "Likert red to green" },
-  { value: "likertInfographic5", label: "Likert infographic" },
-  { value: "caseIntensity", label: "Case intensity" },
-  { value: "blueYellow5", label: "Likert blue to yellow" },
-  { value: "cool", label: "Cool blues/teals" },
-  { value: "warm", label: "Warm alert" },
-];
-
-function backgroundPaletteColors(scheme) {
-  const palettes = {
-    pdpc: ["#08224A", "#043BCB", "#36BDEB", "#2BAA7B", "#F1A1AD"],
-    redGreen5: ["#D71920", "#FDAE61", "#FFFFBF", "#A6D96A", "#1A9641"],
-    likertInfographic5: ["#3BA64A", "#A7B734", "#F6A21A", "#F47B20", "#DF1F2D"],
-    caseIntensity: ["#7FDEC1", "#4496D1", "#043BCB", "#08224A", "#8F1D2C"],
-    blueYellow5: ["#2C7BB6", "#ABD9E9", "#FFFFBF", "#FDAE61", "#D7191C"],
-    cool: ["#08224A", "#2456A6", "#4496D1", "#007C89", "#7FDEC1"],
-    warm: ["#8F1D2C", "#C98700", "#F3D37A", "#E16B5A", "#08224A"],
-  };
-  return palettes[scheme];
-}
-
-function clampNumber(value, min, max) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return min;
-  }
-  return Math.min(Math.max(number, min), max);
 }
 
 export function validatedGeoDataSources(dashboard = {}) {
@@ -2119,8 +1980,8 @@ function selectionForPlacement(dashboard, placementId) {
 
 function isValidBuildSelection(dashboard, selection) {
   if (!selection?.kind) return false;
-  if (selection.kind === "timeGroup") {
-    return (dashboard.timeSyncGroups ?? []).some(({ id }) => id === selection.groupId);
+  if (selection.kind === "chronoGroup") {
+    return (dashboard.chronoGroups ?? []).some(({ id }) => id === selection.chronoGroupId);
   }
   const page = (dashboard.pages ?? []).find(({ id }) => id === selection.pageId);
   if (!page) return false;

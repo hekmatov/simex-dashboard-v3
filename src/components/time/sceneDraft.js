@@ -31,6 +31,8 @@ export function reduceSceneDraft(state, action) {
       return { ...state, stage: action.stage, error: null };
     case "SET_NAME":
       return update(state, (value) => { value.name = String(action.value ?? ""); });
+    case "SET_CHRONO_GROUP":
+      return update(state, (value) => { value.chronoGroupId = action.chronoGroupId; });
     case "SET_SCOPE":
       return update(state, (value) => {
         if (action.pageId !== undefined) value.pageId = action.pageId;
@@ -142,6 +144,15 @@ export function reduceSceneDraft(state, action) {
     default:
       throw new Error(`Unknown Scene draft action: ${String(action?.type)}`);
   }
+}
+
+export function partitionSceneCharts(charts = [], members = []) {
+  const selectedIds = new Set(members.map(({ chartId }) => chartId));
+  return {
+    selected: charts.filter((chart) => selectedIds.has(chart.id) && chart.needsAttention !== true),
+    needsAttention: charts.filter((chart) => selectedIds.has(chart.id) && chart.needsAttention === true),
+    available: charts.filter((chart) => !selectedIds.has(chart.id)),
+  };
 }
 
 function requestSave(state) {

@@ -109,7 +109,7 @@ If a chart has no compiled artifact because it predates this contract, the runti
 
 Default page playback is not built while Chrono is closed. Opening Chrono materializes the current page's default clock only if it is needed.
 
-Temporal availability uses a revision-aware cache shared by Default Chrono, saved Time Groups, and Scenes. The key includes source identity, temporal binding, preparation identity, profile/parsing identity, period, and timezone. A source, profile, chart preparation, or temporal-policy revision creates a cache miss; page, mode, theme, colour, layout, selection, and drawer changes do not.
+Temporal availability uses a revision-aware cache shared by Default Chrono, saved Chrono Groups, and Scenes. The key includes source identity, temporal binding, preparation identity, profile/parsing identity, period, and timezone. A source, profile, chart preparation, or temporal-policy revision creates a cache miss; page, mode, theme, colour, layout, selection, and drawer changes do not.
 
 The cache preserves the approved temporal rules. It does not guess matching policy, merge content from other pages, or alter Scene ownership and provenance.
 
@@ -177,6 +177,6 @@ Focused deterministic checks must establish:
 - data-affecting edits compile a new artifact;
 - stale or corrupt artifacts rebuild without mutating saved content;
 - storage-unavailable and quota-exhausted outcomes retain their distinct Step 6 behavior; and
-- static map, tooltip, zoom, accessibility, latest frame, Time Group playback, and Scene playback remain equivalent.
+- static map, tooltip, zoom, accessibility, latest frame, Chrono Group playback, and Scene playback remain equivalent.
 
 After focused tests pass, run the production build and use the in-app browser to compare Biomedical page navigation, Chrono opening, map playback, tooltip, and zoom behavior. Timing evidence is comparative rather than a brittle hard threshold; the decision criterion is removal of repeated invariant scans and a materially faster Biomedical navigation path.

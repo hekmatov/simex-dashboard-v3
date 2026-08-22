@@ -137,7 +137,7 @@ test("canonical object transformations and DD/MM bindings survive a bundle-to-EC
       cases: { interpretation: "numeric" },
     },
   });
-  dashboard.timeSyncGroups = [{
+  dashboard.chronoGroups = [{
     id: "outbreak",
     name: "Outbreak playback",
     period: { start: "2027-05-02", end: "2027-05-03" },

@@ -18,7 +18,7 @@ The Step 7 plan and reconciliation index were amended first to retire exact View
 | Plan slice | Delivered outcome |
 | --- | --- |
 | S7-1–S7-4 | Independent layout and selected-chart drafts; progressive Build commands, Structure, Scenario, panel Unit Orbit, target usability, and close restoration. |
-| S7-5–S7-9 | Temporal schema migration, frame ledger, matching and provenance, Needs-attention derivation, Time Group Studio, Scene schema and Studio, saved Scenes, Time Content library, copies, repair handoffs, and Build integration. |
+| S7-5–S7-9 | Temporal schema migration, frame ledger, matching and provenance, Needs-attention derivation, Chrono Studio, Scene schema and Studio, saved Scenes, Time Content library, copies, repair handoffs, and Build integration. |
 | S7-10–S7-16 | One in-session chart draft and unload guard; destination and identity-based placement; catalogue, source/schema profiling, mapping and preparation; companion ownership; configuration and independent render/placement proofs; exact six-stage Review; serialized atomic create, reconciliation, and committed-only handoff recovery. |
 | S7-17 | View Chrono sources, group/Scene scope, seeking, playback, cadence, availability/provenance, trace behavior, matching overrides, safety pause, mast/deck placement, and touch controls without Build-only chrome. |
 | S7-18–S7-19 | Seven accessible plot states with retained plot bounds and deterministic recovery ownership; source drawer with metadata, CSV action, one-shot focus/scroll restoration; targeted five-viewport fidelity evidence. |
@@ -45,7 +45,7 @@ The authoritative file list is `git diff --name-status 7e58bf8..42e6a14`: `112` 
 - Two amended plan/reconciliation documents.
 - Shared integration changes in `src/App.jsx`, dashboard bundle/config structure, `DashboardRenderer`, `BuildWorkspace`, `ViewShell`, playback, chart rendering, temporal projection, schema registry, and the shared mode/style sheets.
 - New Build engines and surfaces for draft coordination, restoration, panel editing, Structure, and Scenario.
-- New temporal engines and surfaces for migration, schema, frames, matching/Needs-attention, Time Groups, Scenes, availability, and the Time Content library.
+- New temporal engines and surfaces for migration, schema, frames, matching/Needs-attention, Chrono Groups, Scenes, availability, and the Time Content library.
 - New chart-creation engines for catalogue, draft session, unload guard, destination, placement, source/schema profiling, mapping/preparation, companion proposals, proof/review, atomic transaction, controller, and reconciliation.
 - New `ChartStateSurface`, `SourceViewer`, and their dedicated styles; updated `ChartPanel`, panel actions, chart state boundary, and `ChartView` integration.
 - Focused unit tests for every new engine/surface and five Step 7 Playwright specifications, plus the isolated chart-state browser harness.
@@ -68,7 +68,7 @@ The only build diagnostic is Vite's existing large-chunk advisory for the dashbo
 
 - The five-viewport Playwright fidelity case exercised `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`. Each viewport captured a rendered screenshot buffer and verified canonical panel identities, the shared maximum-width token, Build's width bound, and the phone Build notice with the Build workspace still mounted.
 - The Build browser script opened transient authoring chrome, selected `bio_confirmed_cases`, opened its source drawer, verified source metadata and CSV access, closed it with focus return, and proved that saved storage and canonical section/panel identities were unchanged.
-- The temporal browser script entered Time Content, handed off the saved national group to Time Group Studio, saved a renamed group, authored and saved a Scene, and verified both committed identities in storage.
+- The temporal browser script entered Time Content, handed off the saved national group to Chrono Studio, saved a renamed group, authored and saved a Scene, and verified both committed identities in storage.
 - The chart browser script completed the exact six stages, suspended and resumed the in-session draft, created one chart transaction, and verified one committed chart identity.
 - The View browser script exercised group-only scope, closest matching, full trace, availability information, seek/play/safety-pause, mast relocation, and phone touch-target sizing.
 - Final in-app browser checkpoints on the committed live surface exercised View, opened the Biomedical Build workspace with the canonical canvas compressed beside Build commands/Structure, and returned to View Chrono. The final semantic inventory found one Chrono control surface, the labelled availability control, and zero Build workspace or chart-editor chrome in View.
@@ -87,3 +87,24 @@ The completion code review initially identified five Important integration defec
 ## Submission conclusion
 
 The Step 7 implementation range, focused tests, production build, scripted browser flows, responsive screenshots, and live in-app checkpoints are ready for V3 Design master review. No master-acceptance claim is made here.
+
+## Chrono authoring reconciliation amendment
+
+This amendment records the approved 2026-08-22 reconciliation against Sketches 005, 006, and 012. It supplements the evidence above and does not change the master-review boundary.
+
+- The retired Time Group domain was renamed directly to Chrono Group across the runtime schema, authored configuration, Quorum catalogue, tests, scripts, UI, and documentation. No saved-dashboard compatibility alias was retained because the product has no saved dashboards requiring migration.
+- Chrono Studio now owns Create Chrono Group. Scene Studio now owns Create Scene. A Chrono Group content page is the second approved origin for Create Scene.
+- Selecting a Chrono Group or Scene from its Studio opens a read-first content page. Edit opens the corresponding editor with the saved object populated; the Chrono Group content page also exposes Create Scene with its parent group preselected.
+- Both editors collect the object name in their first stage. The ordinary `Stay` action was removed from the Chrono Group editor. The editors retain the approved availability, preview, validation, save, cancel, and recovery semantics.
+- Build Structure routes Chrono Group selection into the same read-first content surface. The duplicate legacy inspector editor and legacy Layout controls were removed.
+- Checkbox and radio inputs now use the shared normal-sized control rule instead of inheriting oversized text-input dimensions.
+- Canonical dashboard state remains the only authored truth. Opening content or editor chrome does not mutate saved groups, Scenes, panels, or layout.
+
+Focused evidence for this amendment:
+
+- Terminology authority test: `1` passed, `0` failed; no retired group names or identifiers remain in source, tests, scripts, packaged configuration, or documentation.
+- Focused Node authoring suite: `77` passed, `0` failed.
+- Vite-backed Build integration suite: `24` passed, `0` failed.
+- In-app browser checkpoint exercised Studio → content → editor for both object types, Chrono Group content → Create Scene, Build Structure → Chrono Group content, canonical date/cadence rendering, and `20px × 20px` checkbox dimensions.
+
+The production-build result and implementation commit for this amendment are recorded in the final handoff accompanying this submission. Master acceptance remains outside this implementation task.

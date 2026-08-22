@@ -5,10 +5,10 @@ import {
 } from "./companionProposal.js";
 
 const WORKFLOW_OWNERS = Object.freeze({
-  "new-time-group": "chart-create",
+  "new-chrono-group": "chart-create",
   "chart-fallback": "chart-create",
   "source-repair": "source",
-  "saved-time-group-repair": "saved-time-group",
+  "saved-chrono-group-repair": "saved-chrono-group",
 });
 
 export function suspendForLinkedWorkflow(state, {

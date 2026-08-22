@@ -6,7 +6,7 @@ authoritative time-sync policy source, the normalized Collection Display
 shape, and Collection Display adoption by repeated Gauge and Bullet charts.
 
 **Architecture:** Keep analytical comparison rules in transformations,
-time-group policy in dashboard synchronization groups, and collection
+Chrono Group policy in dashboard synchronization groups, and collection
 presentation in the shared Collection Display model. Extend chart schemas with
 a validated comparison descriptor so the future form model and Quorum
 catalogue can discover Delta behavior without chart-type condition lists.

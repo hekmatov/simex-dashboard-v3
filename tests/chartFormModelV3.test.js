@@ -767,14 +767,14 @@ test("collection fields author the fully normalized nested contract", () => {
   assert.deepEqual(collection.path, ["presentation", "collection"]);
 });
 
-test("time group memberships derive from group authority without chart-owned edit targets", () => {
+test("chrono group memberships derive from group authority without chart-owned edit targets", () => {
   const chart = lineChart();
   const profile = datasetProfile();
   const model = buildEditorFormModel({
     chart,
     profile,
     prepared: preparedFor(chart, profile),
-    timeSyncGroups: synchronizationGroups(),
+    chronoGroups: synchronizationGroups(),
   });
   const timeSync = allFields(model)
     .find(({ id }) => id === "timeSync");

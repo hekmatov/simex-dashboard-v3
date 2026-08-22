@@ -42,9 +42,9 @@ const CANONICAL_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
  * configured charts, and the chart schema registry. Validation is strict:
  * invalid contracts throw and valid contracts are returned without mutation.
  */
-export function validateTimeSyncGroups(groups, context = {}) {
+export function validateChronoGroups(groups, context = {}) {
   if (!Array.isArray(groups)) {
-    throw new TypeError("Time synchronization groups must be an array.");
+    throw new TypeError("Chrono Groups must be an array.");
   }
   if (!isRecord(context)) {
     throw new TypeError("Time synchronization validation context must be an object.");
@@ -58,13 +58,13 @@ export function validateTimeSyncGroups(groups, context = {}) {
   for (const group of groups) {
     validateGroupShape(group);
     if (groupIds.has(group.id)) {
-      throw new Error(`Duplicate time synchronization group id "${group.id}".`);
+      throw new Error(`Duplicate Chrono Group id "${group.id}".`);
     }
     groupIds.add(group.id);
 
     const groupMatching = validateEffectiveTimeSyncMatching(
       group.matching,
-      `Time synchronization group "${group.id}"`,
+      `Chrono Group "${group.id}"`,
     );
 
     const memberIds = new Set();
@@ -72,7 +72,7 @@ export function validateTimeSyncGroups(groups, context = {}) {
       validateMemberShape(member, group.id);
       if (memberIds.has(member.chartId)) {
         throw new Error(
-          `Duplicate member chart id "${member.chartId}" in time synchronization group "${group.id}".`,
+          `Duplicate member chart id "${member.chartId}" in Chrono Group "${group.id}".`,
         );
       }
       memberIds.add(member.chartId);
@@ -103,7 +103,7 @@ export function validateTimeSyncGroups(groups, context = {}) {
         ));
       }
     }
-    buildTimeGroupClock(group, {
+    buildChronoGroupClock(group, {
       charts,
       loadedData: context.loadedData,
       profiles: context.profiles,
@@ -152,33 +152,33 @@ export function isTimeSyncInterpolationEligible(schema) {
  * the documented no-active-group state; unknown actions and lookups fail
  * deterministically rather than selecting an arbitrary fallback.
  */
-export function getTimeSyncGroup(groups, groupId) {
+export function getChronoGroup(groups, groupId) {
   if (!Array.isArray(groups)) {
-    throw new TypeError("Time synchronization groups must be an array.");
+    throw new TypeError("Chrono Groups must be an array.");
   }
   if (groupId === null) return null;
-  requiredString(groupId, "Time synchronization group id");
+  requiredString(groupId, "Chrono Group id");
 
   let found = null;
   const ids = new Set();
   for (const group of groups) {
     if (!isRecord(group)) {
-      throw new TypeError("Time synchronization groups must contain objects.");
+      throw new TypeError("Chrono Groups must contain objects.");
     }
-    requiredString(group.id, "Time synchronization group id");
+    requiredString(group.id, "Chrono Group id");
     if (ids.has(group.id)) {
-      throw new Error(`Duplicate time synchronization group id "${group.id}".`);
+      throw new Error(`Duplicate Chrono Group id "${group.id}".`);
     }
     ids.add(group.id);
     if (group.id === groupId) found = group;
   }
   if (!found) {
-    throw new Error(`Unknown time synchronization group "${groupId}".`);
+    throw new Error(`Unknown Chrono Group "${groupId}".`);
   }
   return found;
 }
 
-export function buildTimeGroupClock(group, {
+export function buildChronoGroupClock(group, {
   charts = [],
   loadedData = {},
   profiles = {},
@@ -242,7 +242,7 @@ export function buildPrimaryClock(
   charts = [],
   timezone = "UTC",
 ) {
-  return buildTimeGroupClock(group, {
+  return buildChronoGroupClock(group, {
     charts,
     loadedData,
     profiles,
@@ -252,25 +252,25 @@ export function buildPrimaryClock(
 
 function validateGroupShape(group) {
   if (!isRecord(group)) {
-    throw new TypeError("Time synchronization groups must contain objects.");
+    throw new TypeError("Chrono Groups must contain objects.");
   }
-  checkKnownKeys(group, GROUP_KEYS, "time synchronization group");
-  requiredString(group.id, "Time synchronization group id");
-  requiredString(group.name, "Time synchronization group name");
+  checkKnownKeys(group, GROUP_KEYS, "Chrono Group");
+  requiredString(group.id, "Chrono Group id");
+  requiredString(group.name, "Chrono Group name");
   if (group.matching === undefined) {
     throw new Error(
-      `Time synchronization group "${group.id}" matching is required.`,
+      `Chrono Group "${group.id}" matching is required.`,
     );
   }
   validatePeriodShape(group.period, group.id);
   if (!Number.isFinite(group.secondsPerFrame) || group.secondsPerFrame <= 0) {
     throw new RangeError(
-      `Time synchronization group "${group.id}" secondsPerFrame must be a positive finite number.`,
+      `Chrono Group "${group.id}" secondsPerFrame must be a positive finite number.`,
     );
   }
   if (!Array.isArray(group.members) || group.members.length === 0) {
     throw new TypeError(
-      `Time synchronization group "${group.id}" members must be a non-empty array.`,
+      `Chrono Group "${group.id}" members must be a non-empty array.`,
     );
   }
 }
@@ -278,7 +278,7 @@ function validateGroupShape(group) {
 function validatePeriodShape(period, groupId) {
   if (!isRecord(period)) {
     throw new TypeError(
-      `Time synchronization group "${groupId}" period must be an object.`,
+      `Chrono Group "${groupId}" period must be an object.`,
     );
   }
   checkKnownKeys(period, PERIOD_KEYS, "time synchronization period");
@@ -286,7 +286,7 @@ function validatePeriodShape(period, groupId) {
   validateCanonicalPeriodDate(period.end, groupId, "end");
   if (period.end < period.start) {
     throw new RangeError(
-      `Time synchronization group "${groupId}" period end cannot be before its start.`,
+      `Chrono Group "${groupId}" period end cannot be before its start.`,
     );
   }
 }
@@ -294,13 +294,13 @@ function validatePeriodShape(period, groupId) {
 function validateCanonicalPeriodDate(value, groupId, edge) {
   if (typeof value !== "string" || !CANONICAL_DATE_ONLY.test(value)) {
     throw new Error(
-      `Time synchronization group "${groupId}" period ${edge} must use canonical YYYY-MM-DD format.`,
+      `Chrono Group "${groupId}" period ${edge} must use canonical YYYY-MM-DD format.`,
     );
   }
   const [, year, month, day] = CANONICAL_DATE_ONLY.exec(value);
   if (!validDateParts(year, month, day)) {
     throw new Error(
-      `Time synchronization group "${groupId}" period ${edge} must be a valid calendar date.`,
+      `Chrono Group "${groupId}" period ${edge} must be a valid calendar date.`,
     );
   }
 }
@@ -308,7 +308,7 @@ function validateCanonicalPeriodDate(value, groupId, edge) {
 function validateMemberShape(member, groupId) {
   if (!isRecord(member)) {
     throw new TypeError(
-      `Time synchronization group "${groupId}" members must contain objects.`,
+      `Chrono Group "${groupId}" members must contain objects.`,
     );
   }
   checkKnownKeys(member, MEMBER_KEYS, "time synchronization member");
@@ -383,7 +383,7 @@ function validateMemberEligibility({
 }) {
   if (chart.presentation?.collection != null) {
     throw new Error(
-      `Member chart "${chart.id}" is a Collection display. Collection displays cannot join Time Groups.`,
+      `Member chart "${chart.id}" is a Collection display. Collection displays cannot join Chrono Groups.`,
     );
   }
 

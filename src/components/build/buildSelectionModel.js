@@ -7,11 +7,11 @@ export function reconcileBuildSelection(selection, dashboard = {}, activePageId)
   if (!selection || typeof selection !== "object") return fallback;
 
   if (selection.kind === "scenario") return { kind: "scenario" };
-  if (selection.kind === "timeGroup") {
-    const group = (dashboard.timeSyncGroups ?? []).find(
-      ({ id }) => id === selection.groupId,
+  if (selection.kind === "chronoGroup") {
+    const group = (dashboard.chronoGroups ?? []).find(
+      ({ id }) => id === selection.chronoGroupId,
     );
-    return group ? { kind: "timeGroup", groupId: group.id } : fallback;
+    return group ? { kind: "chronoGroup", chronoGroupId: group.id } : fallback;
   }
 
   const page = pages.find(({ id }) => id === selection.pageId);

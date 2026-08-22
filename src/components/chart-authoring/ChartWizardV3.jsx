@@ -26,7 +26,7 @@ import { prepareChartData } from "../../charting/data/prepareChartData.js";
 import { profileDataset } from "../../charting/data/profileDataset.js";
 import { enforceRenderReadiness } from "../../charting/rendering/buildRenderModel.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
-import { validateTimeSyncGroups } from "../../charting/time/timeSyncModel.js";
+import { validateChronoGroups } from "../../charting/time/chronoGroupModel.js";
 import { parseCsvText } from "../../lib/loadCsv.js";
 import ConfirmDialog from "../common/ConfirmDialog.jsx";
 import { IconControl } from "../common/SimExIcon.js";
@@ -111,7 +111,7 @@ export default function ChartWizardV3({
   loadedData,
   datasetProfiles,
   geoDataSources,
-  timeSyncGroups,
+  chronoGroups,
   existingCharts = [],
   destination = null,
   dashboard = null,
@@ -133,14 +133,14 @@ export default function ChartWizardV3({
     safeDataSources,
     safeGeoDataSources,
   );
-  const safeGroups = Array.isArray(timeSyncGroups) ? timeSyncGroups : [];
+  const safeGroups = Array.isArray(chronoGroups) ? chronoGroups : [];
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
     : [];
   const [wizard, setWizard] = React.useState(() => initialDraftState ?? createChartWizardState({
       loadedData: safeLoadedData,
       profiles: safeDatasetProfiles,
-      timeSyncGroups: safeGroups,
+      chronoGroups: safeGroups,
       existingCharts: safeExistingCharts,
       destination,
       dashboardRevision,
@@ -273,7 +273,7 @@ export default function ChartWizardV3({
     draft: wizard.draft,
     profile: runtime.profile,
     prepared: runtime.prepared,
-    timeSyncGroups: wizard.timeSyncGroups,
+    chronoGroups: wizard.chronoGroups,
     geoSources,
     geoJoinFields,
   });
@@ -284,7 +284,7 @@ export default function ChartWizardV3({
         chart: wizard.draft,
         profile: runtime.profile,
         prepared: runtime.prepared,
-        timeSyncGroups: wizard.timeSyncGroups,
+        chronoGroups: wizard.chronoGroups,
         geoSources,
         geoJoinFields,
         includeCitation: false,
@@ -570,12 +570,12 @@ export default function ChartWizardV3({
     try {
       const proposal = applyWizardMembership({
         chart: wizard.draft,
-        groups: wizard.timeSyncGroups,
+        groups: wizard.chronoGroups,
         groupId,
         selected,
         timeRole,
       });
-      validateTimeSyncGroups(proposal.groups, {
+      validateChronoGroups(proposal.groups, {
         charts: chartsWithDraft(wizard.charts, proposal.chart),
         loadedData: runtimeLoadedData,
         profiles,
@@ -583,8 +583,8 @@ export default function ChartWizardV3({
       setWizard((current) => ({
         ...current,
         draft: proposal.chart,
-        timeSyncGroups: proposal.groups,
-        timeSyncGroupsProvided: true,
+        chronoGroups: proposal.groups,
+        chronoGroupsProvided: true,
       }));
       setSubmissionError("");
     } catch (error) {
@@ -606,7 +606,7 @@ export default function ChartWizardV3({
             safeDataSources,
             finalized.chart.presentation?.map?.geoSource,
           ),
-          timeSyncGroups: finalized.timeSyncGroups ?? wizard.timeSyncGroups,
+          chronoGroups: finalized.chronoGroups ?? wizard.chronoGroups,
           rows,
           timezone: dashboard?.timezone ?? "UTC",
         });
@@ -940,7 +940,7 @@ export default function ChartWizardV3({
         wizard.stage === "map-and-prepare-data" && wizard.draft
           ? React.createElement(ChartTimeMemberships, {
               chart: wizard.draft,
-              groups: wizard.timeSyncGroups,
+              groups: wizard.chronoGroups,
               timeRole: timeSyncField?.timeRoles?.find(({ field }) => typeof field === "string")?.value
                 ?? timeSyncField?.timeRoles?.[0]?.value,
               onChange: changeMembership,
@@ -962,7 +962,7 @@ export default function ChartWizardV3({
               onChange: updatePath,
               onMembershipChange: changeMembership,
               onGroupsChange: (nextGroups) => dispatch({
-                type: "updateTimeSyncGroups",
+                type: "updateChronoGroups",
                 value: nextGroups,
               }),
               onValidationError: (error) => setSubmissionError(safeMessage(error)),
@@ -1104,15 +1104,15 @@ function ChartTimeMemberships({ chart, groups = [], timeRole, onChange = noop })
     return React.createElement(
       "section",
       { className: "chart-time-memberships", "aria-labelledby": "chart-time-memberships-title" },
-      React.createElement("h3", { id: "chart-time-memberships-title" }, "Time Group memberships"),
-      React.createElement("p", null, "No saved Time Groups are available. Create or repair groups in Time Group Studio."),
+      React.createElement("h3", { id: "chart-time-memberships-title" }, "Chrono Group memberships"),
+      React.createElement("p", null, "No saved Chrono Groups are available. Create or repair groups in Chrono Studio."),
     );
   }
   return React.createElement(
     "section",
     { className: "chart-time-memberships", "aria-labelledby": "chart-time-memberships-title" },
-    React.createElement("h3", { id: "chart-time-memberships-title" }, "Time Group memberships"),
-    React.createElement("p", null, "Select zero or multiple memberships. Matching and fallback policy remain owned by Time Group Studio."),
+    React.createElement("h3", { id: "chart-time-memberships-title" }, "Chrono Group memberships"),
+    React.createElement("p", null, "Select zero or multiple memberships. Matching and fallback policy remain owned by Chrono Studio."),
     React.createElement(
       "div",
       { className: "chart-time-membership-list" },
@@ -1144,7 +1144,7 @@ function ChartCreationReview({
   canCreate,
   onRepair = noop,
 }) {
-  const memberships = (wizard.timeSyncGroups ?? []).filter((group) => (
+  const memberships = (wizard.chronoGroups ?? []).filter((group) => (
     group.members?.some(({ chartId }) => chartId === wizard.draft?.id)
   ));
   const mappingCount = Object.keys(wizard.draft?.roles ?? {}).length;
@@ -1199,7 +1199,7 @@ function ChartCreationReview({
       reviewEntry("Configuration", wizard.draft?.title?.trim() || "Title needs attention"),
       reviewEntry("Canonical render proof", `${renderProof.status}; ${renderProof.rendererReadyCount} renderer-ready outputs`),
       reviewEntry("Placement proof", placementProof.status),
-      reviewEntry("Time Group memberships", memberships.length > 0
+      reviewEntry("Chrono Group memberships", memberships.length > 0
         ? memberships.map((group) => group.label ?? group.name ?? group.id).join(", ")
         : "None"),
       reviewEntry("Companion proposals", wizard.companions?.length
@@ -1358,12 +1358,12 @@ export function applyWizardMembership({
     throw new TypeError("A chart is required for time synchronization.");
   }
   if (!Array.isArray(groups)) {
-    throw new TypeError("Time synchronization groups must be an array.");
+    throw new TypeError("Chrono Groups must be an array.");
   }
   if (groupId !== null && (
     typeof groupId !== "string" || groupId.trim() === ""
   )) {
-    throw new Error("Time synchronization group id is invalid.");
+    throw new Error("Chrono Group id is invalid.");
   }
   if (groupId !== null && (
     typeof timeRole !== "string" || timeRole.trim() === ""
@@ -1383,7 +1383,7 @@ export function applyWizardMembership({
   } else {
     const target = nextGroups.find(({ id }) => id === groupId);
     if (!target) {
-      throw new Error(`Unknown time synchronization group "${groupId}".`);
+      throw new Error(`Unknown Chrono Group "${groupId}".`);
     }
     const members = Array.isArray(target.members) ? target.members : [];
     const previousMember = members.find(({ chartId }) => chartId === chart.id);
@@ -1467,7 +1467,7 @@ export async function parseUploadedCsvFile(file, existingSources = {}) {
 export function createChartWizardState({
   loadedData,
   profiles = {},
-  timeSyncGroups,
+  chronoGroups,
   existingCharts = [],
   destination = null,
   dashboardRevision = null,
@@ -1475,7 +1475,7 @@ export function createChartWizardState({
   return createWizardState({
     loadedData,
     profiles,
-    timeSyncGroups,
+    chronoGroups,
     charts: existingCharts,
     destination,
     dashboardRevision,

@@ -53,7 +53,7 @@ test("modal containers remain programmatically focusable and confirmations mark 
     open: true,
     dataSources: {},
     loadedData: {},
-    timeSyncGroups: [],
+    chronoGroups: [],
     existingCharts: [],
   }));
 

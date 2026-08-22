@@ -85,7 +85,7 @@ test("Build exposes visible package controls with the approved SimEx icons", () 
       id: "dashboard",
       title: "Dashboard",
       pages: [page],
-      timeSyncGroups: [],
+      chronoGroups: [],
       dataSources: {},
     },
     activePage: page,
