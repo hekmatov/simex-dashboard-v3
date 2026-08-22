@@ -10,6 +10,7 @@ export default function PlaybackView({ accessibilityEnabled = false } = {}) {
     activeGroup,
     charts,
     loadedData,
+    participatingChartIds,
     profiles,
     timeContext,
   } = playback;
@@ -26,8 +27,8 @@ export default function PlaybackView({ accessibilityEnabled = false } = {}) {
   }
 
   const chartsById = indexCharts(charts);
-  const members = activeGroup.members
-    .map((member) => chartsById.get(member.chartId))
+  const members = participatingChartIds
+    .map((chartId) => chartsById.get(chartId))
     .filter(Boolean);
   const resolvedMembers = members.map((chart) => resolveMember({
     chart,

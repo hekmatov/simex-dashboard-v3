@@ -11,6 +11,7 @@ import {
 } from "./components/build/buildStructureModel.js";
 import DashboardLookDrawer from "./components/dashboard-look/index.js";
 import { PlaybackProvider } from "./components/playback/PlaybackProvider.jsx";
+import { chartsForPlaybackPage } from "./charting/time/playbackPageScope.js";
 import AudienceDisplay from "./components/presentation/AudienceDisplay.jsx";
 import { applyCitationToSourceCharts } from "./charting/presentation/chartCitation.js";
 import {
@@ -921,7 +922,7 @@ export default function App() {
     <PlaybackProvider
       groups={playbackGroups}
       scenes={dashboard.scenes ?? []}
-      charts={configuredCharts(dashboard)}
+      charts={chartsForPlaybackPage(dashboard, activePageId)}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}
       timezone={dashboard.timezone}

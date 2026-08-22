@@ -375,7 +375,7 @@ test("transport actions are disabled for absent, empty, and boundary clocks", ()
   );
 
   assert.match(buttonMarkupByAriaLabel(noGroup, "Play synchronized charts"), /disabled=""/);
-  assert.match(noGroup, /No playback group is available/);
+  assert.match(noGroup, /No playback times are available for Default page timeline/);
   assert.match(buttonMarkupByAriaLabel(atStart, "Previous time"), /disabled=""/);
   assert.match(buttonMarkupByAriaLabel(atEnd, "Play synchronized charts"), /disabled=""/);
   assert.match(buttonMarkupByAriaLabel(atEnd, "Next time"), /disabled=""/);
@@ -472,6 +472,10 @@ test("the provider evaluates the inclusive Time Group period in the dashboard ti
           }),
         },
         timezone: "America/New_York",
+        initialState: {
+          activeGroupId: "exercise",
+          source: { kind: "group", id: "exercise" },
+        },
       },
       React.createElement(Probe),
     ),
@@ -488,6 +492,10 @@ test("the provider initializes playback cadence from the active Time Group", () 
   const html = renderPlayback(React.createElement(Probe), {
     ...fixture,
     groups: [{ ...fixture.groups[0], secondsPerFrame: 2.5 }],
+    initialState: {
+      activeGroupId: "exercise",
+      source: { kind: "group", id: "exercise" },
+    },
   });
 
   assert.equal(html, "<output>2.5</output>");
@@ -566,6 +574,143 @@ test("presentation can derive immutable member time contexts without mounting pl
   });
 });
 
+test("Default page timeline uses every page chart instead of the active Time Group ledger", () => {
+  const memberRows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-03", cases: 30 },
+  ];
+  const ordinaryRows = [{ observed: "2027-05-02", cases: 20 }];
+  const member = lineChart({ id: "page-member", sourceId: "member-source" });
+  const ordinary = lineChart({ id: "page-ordinary", sourceId: "ordinary-source" });
+  const html = renderPlaybackProbe({
+    groups: [{
+      id: "exercise",
+      name: "Exercise timeline",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [{ chartId: member.id, timeRole: "observation" }],
+    }],
+    charts: [member, ordinary],
+    loadedData: {
+      "member-source": memberRows,
+      "ordinary-source": ordinaryRows,
+    },
+    profiles: {
+      "member-source": temporalProfile(memberRows),
+      "ordinary-source": temporalProfile(ordinaryRows),
+    },
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "default", id: null },
+      activeGroupId: "exercise",
+      playbackView: true,
+    },
+  });
+
+  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;page-member&quot;,&quot;page-ordinary&quot;]}</output>`);
+});
+
+test("All page charts and Group only project different participating chart sets", () => {
+  const rows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-02", cases: 20 },
+  ];
+  const member = lineChart({ id: "scope-member" });
+  const ordinary = lineChart({ id: "scope-ordinary" });
+  const base = {
+    groups: [{
+      id: "exercise",
+      name: "Exercise timeline",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [{ chartId: member.id, timeRole: "observation" }],
+    }],
+    charts: [member, ordinary],
+    loadedData: { primary: rows },
+    profiles: { primary: temporalProfile(rows) },
+  };
+
+  const allPage = renderPlaybackProbe({
+    ...base,
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "group", id: "exercise" },
+      activeGroupId: "exercise",
+      scope: "all-page",
+      playbackView: true,
+    },
+  });
+  const groupOnly = renderPlaybackProbe({
+    ...base,
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "group", id: "exercise" },
+      activeGroupId: "exercise",
+      scope: "group-only",
+      playbackView: true,
+    },
+  });
+  const allPageView = renderToStaticMarkup(React.createElement(
+    PlaybackProvider,
+    {
+      ...base,
+      initialState: {
+        ...initialPlaybackState,
+        source: { kind: "group", id: "exercise" },
+        activeGroupId: "exercise",
+        scope: "all-page",
+        playbackView: true,
+      },
+    },
+    React.createElement(PlaybackView),
+  ));
+
+  assert.match(allPageView, /data-chart-id="scope-member"/);
+  assert.match(allPageView, /data-chart-id="scope-ordinary"/);
+  assert.match(allPage, /&quot;charts&quot;:\[&quot;scope-member&quot;,&quot;scope-ordinary&quot;\]/);
+  assert.match(groupOnly, /&quot;charts&quot;:\[&quot;scope-member&quot;\]/);
+});
+
+test("saved Scene source frames use only the live scene.frames Frame source", () => {
+  const sourceRows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-03", cases: 30 },
+  ];
+  const otherRows = [{ observed: "2027-05-02", cases: 20 }];
+  const sourceChart = lineChart({ id: "scene-source", sourceId: "scene-source-data" });
+  const otherChart = lineChart({ id: "scene-other", sourceId: "scene-other-data" });
+  const html = renderPlaybackProbe(scenePlaybackFixture({
+    sourceChart,
+    otherChart,
+    sourceRows,
+    otherRows,
+    frames: { mode: "source", chartId: sourceChart.id, selection: "all" },
+  }));
+
+  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_3}],&quot;charts&quot;:[&quot;scene-source&quot;,&quot;scene-other&quot;]}</output>`);
+});
+
+test("saved Scene calendar frames generate the live scene.frames interval ledger", () => {
+  const sourceRows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-03", cases: 30 },
+  ];
+  const otherRows = [{ observed: "2027-05-03", cases: 30 }];
+  const sourceChart = lineChart({ id: "calendar-source", sourceId: "calendar-source-data" });
+  const otherChart = lineChart({ id: "calendar-other", sourceId: "calendar-other-data" });
+  const html = renderPlaybackProbe(scenePlaybackFixture({
+    sourceChart,
+    otherChart,
+    sourceRows,
+    otherRows,
+    frames: { mode: "calendar", interval: { value: 1, unit: "day" } },
+  }));
+
+  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;calendar-source&quot;,&quot;calendar-other&quot;]}</output>`);
+});
+
 test("playback view renders Time Group members and explicit missing states", () => {
   const fixture = playbackFixture();
   const missing = lineChart({
@@ -603,9 +748,11 @@ test("playback view renders Time Group members and explicit missing states", () 
         },
         initialState: {
           activeGroupId: "exercise",
+          source: { kind: "group", id: "exercise" },
           activeIndex: 1,
           playing: false,
           speed: 1,
+          scope: "group-only",
           playbackView: true,
         },
       },
@@ -981,7 +1128,7 @@ test("playback view reports no group and empty clocks without claiming participa
     ),
   );
 
-  assert.match(noGroup, /Choose a playback group/);
+  assert.match(noGroup, /No playback times are available for Default page timeline/);
   assert.doesNotMatch(noGroup, /playback-member/);
 });
 
@@ -1010,9 +1157,11 @@ test("ChartView receives active time when the active Time Group lists it as a me
       charts: [...fixture.charts, staticChart],
       initialState: {
         activeGroupId: "exercise",
+        source: { kind: "group", id: "exercise" },
         activeIndex: 1,
         playing: false,
         speed: 1,
+        scope: "group-only",
         playbackView: true,
       },
     },
@@ -1029,9 +1178,11 @@ test("ChartView receives active time when the active Time Group lists it as a me
       ...fixture,
       initialState: {
         activeGroupId: "exercise",
+        source: { kind: "group", id: "exercise" },
         activeIndex: 1,
         playing: false,
         speed: 1,
+        scope: "group-only",
         playbackView: true,
       },
     },
@@ -1539,6 +1690,68 @@ function renderPlayback(child, overrides = {}) {
       child,
     ),
   );
+}
+
+function renderPlaybackProbe(props) {
+  function Probe() {
+    const playback = usePlayback();
+    return React.createElement("output", null, JSON.stringify({
+      clock: playback.clock,
+      charts: playback.participatingChartIds,
+    }));
+  }
+  return renderToStaticMarkup(React.createElement(
+    PlaybackProvider,
+    { timezone: "UTC", ...props },
+    React.createElement(Probe),
+  ));
+}
+
+function scenePlaybackFixture({ sourceChart, otherChart, sourceRows, otherRows, frames }) {
+  return {
+    groups: [{
+      id: "scene-group",
+      name: "Scene group",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [
+        { chartId: sourceChart.id, timeRole: "observation" },
+        { chartId: otherChart.id, timeRole: "observation" },
+      ],
+    }],
+    scenes: [{
+      id: "scene-live-frames",
+      name: "Live frame schema",
+      groupId: "scene-group",
+      period: {
+        start: "2027-05-01T00:00:00.000Z",
+        end: "2027-05-03T00:00:00.000Z",
+      },
+      frames,
+      members: [
+        { chartId: sourceChart.id, width: 2 },
+        { chartId: otherChart.id, width: 2 },
+      ],
+    }],
+    charts: [sourceChart, otherChart],
+    loadedData: {
+      [sourceChart.sourceId]: sourceRows,
+      [otherChart.sourceId]: otherRows,
+    },
+    profiles: {
+      [sourceChart.sourceId]: temporalProfile(sourceRows),
+      [otherChart.sourceId]: temporalProfile(otherRows),
+    },
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "scene", id: "scene-live-frames" },
+      activeGroupId: "scene-group",
+      activeSceneId: "scene-live-frames",
+      scope: "group-only",
+      playbackView: true,
+    },
+  };
 }
 
 function playbackFixture() {

@@ -8,6 +8,10 @@ import {
   initialPlaybackState,
   reducePlaybackState,
 } from "../../charting/time/playbackReducer.js";
+import {
+  buildDefaultChronoLedger,
+  buildSceneFrameLedger,
+} from "../../charting/time/frameLedger.js";
 
 const PlaybackContext = React.createContext(null);
 const EMPTY_ARRAY = Object.freeze([]);
@@ -60,22 +64,33 @@ export function PlaybackProvider({
     () => resolveActiveScene(scenes, state.activeSceneId),
     [scenes, state.activeSceneId],
   );
-  const activeGroup = React.useMemo(
+  const selectedGroup = React.useMemo(
     () => resolveActiveGroup(
       validatedGroups,
       activeScene?.groupId ?? state.activeGroupId,
     ),
     [activeScene, validatedGroups, state.activeGroupId],
   );
+  const defaultPagePlayback = React.useMemo(
+    () => buildDefaultPagePlayback(charts, temporalContext),
+    [charts, temporalContext],
+  );
+  const usingDefaultPage = state.source?.kind === "default" && !activeScene;
+  const activeGroup = usingDefaultPage ? defaultPagePlayback.group : selectedGroup;
   const groupClock = React.useMemo(
-    () => buildTimeGroupClock(activeGroup, temporalContext),
-    [activeGroup, temporalContext],
+    () => usingDefaultPage
+      ? defaultPagePlayback.clock
+      : buildTimeGroupClock(selectedGroup, temporalContext),
+    [defaultPagePlayback, selectedGroup, temporalContext, usingDefaultPage],
   );
   const clock = React.useMemo(
     () => activeScene
-      ? buildScenePlaybackClock(activeScene, groupClock)
+      ? buildScenePlaybackClock(activeScene, groupClock, {
+          group: selectedGroup,
+          temporalContext,
+        })
       : groupClock,
-    [activeScene, groupClock],
+    [activeScene, groupClock, selectedGroup, temporalContext],
   );
   const activeIndex = clock.length === 0
     ? 0
@@ -88,8 +103,8 @@ export function PlaybackProvider({
   );
   const playing = state.playing === true && canAdvance;
   const participatingMembers = React.useMemo(
-    () => selectParticipatingMembers(activeGroup, activeScene, state.scope),
-    [activeGroup, activeScene, state.scope],
+    () => selectParticipatingMembers(activeGroup, activeScene, state.scope, charts),
+    [activeGroup, activeScene, charts, state.scope],
   );
   const participatingChartIds = React.useMemo(
     () => Object.freeze(participatingMembers.map(({ chartId }) => chartId)),
@@ -113,13 +128,6 @@ export function PlaybackProvider({
       : null,
     [memberTimeContexts, state.playbackView],
   );
-
-  React.useEffect(() => {
-    const groupId = activeGroup?.id ?? null;
-    if (state.activeGroupId !== groupId) {
-      dispatch({ type: "setGroup", groupId });
-    }
-  }, [activeGroup, state.activeGroupId]);
 
   React.useEffect(() => {
     if (state.playing === true && !canAdvance) {
@@ -349,20 +357,40 @@ function initializePlaybackState({
   const activeGroupId = hasSuppliedGroup
     ? supplied.activeGroupId
     : groups[0]?.id ?? null;
-  const activeGroup = resolveActiveGroup(groups, activeGroupId);
   const activeScene = resolveActiveScene(scenes, supplied.activeSceneId);
-  const groupClock = buildTimeGroupClock(activeGroup, {
+  const source = supplied.source ?? (
+    activeScene
+      ? { kind: "scene", id: activeScene.id }
+      : hasSuppliedGroup && activeGroupId !== null
+        ? { kind: "group", id: activeGroupId }
+        : { kind: "default", id: null }
+  );
+  const temporalContext = {
     charts,
     loadedData,
     profiles,
     timezone,
-  });
-  const clock = activeScene ? buildScenePlaybackClock(activeScene, groupClock) : groupClock;
+  };
+  const selectedGroup = resolveActiveGroup(groups, activeScene?.groupId ?? activeGroupId);
+  const defaultPagePlayback = buildDefaultPagePlayback(charts, temporalContext);
+  const activeGroup = source.kind === "default" && !activeScene
+    ? defaultPagePlayback.group
+    : selectedGroup;
+  const groupClock = source.kind === "default" && !activeScene
+    ? defaultPagePlayback.clock
+    : buildTimeGroupClock(selectedGroup, temporalContext);
+  const clock = activeScene
+    ? buildScenePlaybackClock(activeScene, groupClock, {
+        group: selectedGroup,
+        temporalContext,
+      })
+    : groupClock;
   const hasSuppliedIndex = Object.hasOwn(supplied, "activeIndex");
   const hasSuppliedSpeed = Object.hasOwn(supplied, "speed");
   return {
     ...initialPlaybackState,
     ...supplied,
+    source,
     activeGroupId,
     activeSceneId: activeScene?.id ?? null,
     activeIndex: hasSuppliedIndex
@@ -391,29 +419,115 @@ function resolveActiveScene(scenes, sceneId) {
   return scenes.find((scene) => scene?.id === sceneId) ?? null;
 }
 
-export function buildScenePlaybackClock(scene, groupClock) {
+export function buildScenePlaybackClock(scene, groupClock, options = {}) {
   if (!scene || !Array.isArray(groupClock)) return Object.freeze([]);
   const start = Date.parse(scene.period?.start);
   const end = Date.parse(scene.period?.end);
-  const withinPeriod = groupClock.filter((epochMs) => (
+  const withinPeriod = (values) => values.filter((epochMs) => (
     (!Number.isFinite(start) || epochMs >= start)
     && (!Number.isFinite(end) || epochMs <= end)
   ));
-  if (scene.frames?.mode !== "source" || scene.frames.selection !== "selected") {
-    return Object.freeze(withinPeriod);
+  if (scene.frames?.mode === "calendar") {
+    const ledger = buildSceneFrameLedger({
+      scene: {
+        period: { startEpochMs: start, endEpochMs: end },
+        frameRule: {
+          type: "calendar",
+          interval: scene.frames.interval?.value,
+          unit: scene.frames.interval?.unit,
+        },
+      },
+      charts: [],
+      timeZone: options.temporalContext?.timezone ?? "UTC",
+    });
+    return ledger.frames;
   }
-  const available = new Set(withinPeriod);
+  if (scene.frames?.mode !== "source") {
+    return Object.freeze(withinPeriod(groupClock));
+  }
+
+  const sourceClock = buildSceneSourceClock(scene, groupClock, options);
+  const availableFrames = withinPeriod(sourceClock);
+  if (scene.frames.selection !== "selected") {
+    return Object.freeze(availableFrames);
+  }
+  const available = new Set(availableFrames);
   return Object.freeze((scene.frames.selectedEpochs ?? []).filter((epochMs) => available.has(epochMs)));
 }
 
-function selectParticipatingMembers(group, scene, scope) {
+function selectParticipatingMembers(group, scene, scope, charts) {
   if (!group) return EMPTY_ARRAY;
   if (scene) {
     const selected = new Set((scene.members ?? []).map(({ chartId }) => chartId));
     return Object.freeze(group.members.filter(({ chartId }) => selected.has(chartId)));
   }
-  if (scope === "group-only" || scope === "all-page") return group.members;
-  return group.members;
+  if (scope === "group-only") return group.members;
+  const groupMembers = new Map(group.members.map((member) => [member.chartId, member]));
+  return Object.freeze(charts.map((chart) => (
+    groupMembers.get(chart.id) ?? Object.freeze({ chartId: chart.id })
+  )));
+}
+
+function buildDefaultPagePlayback(charts, temporalContext) {
+  const members = Object.freeze(charts.map((chart) => Object.freeze({ chartId: chart.id })));
+  const projectedCharts = [];
+  for (const chart of charts) {
+    const epochs = buildPageChartClock(chart, temporalContext);
+    if (epochs.length === 0) continue;
+    projectedCharts.push({
+      id: chart.id,
+      variables: [{
+        observations: epochs.map((epochMs) => ({ epochMs, value: true })),
+      }],
+    });
+  }
+  const projectedEpochs = projectedCharts.flatMap(({ variables }) => (
+    variables[0].observations.map(({ epochMs }) => epochMs)
+  ));
+  const clock = projectedEpochs.length === 0
+    ? EMPTY_ARRAY
+    : buildDefaultChronoLedger({
+        pageCharts: projectedCharts,
+        period: {
+          startEpochMs: Math.min(...projectedEpochs),
+          endEpochMs: Math.max(...projectedEpochs),
+        },
+        timeZone: temporalContext.timezone,
+      });
+  return Object.freeze({
+    clock,
+    group: Object.freeze({
+      id: "default-page",
+      name: "Default page timeline",
+      matching: Object.freeze({ policy: "exact" }),
+      members,
+      secondsPerFrame: 1,
+    }),
+  });
+}
+
+function buildPageChartClock(chart, temporalContext) {
+  for (const timeRole of Object.keys(chart?.roles ?? {})) {
+    try {
+      return buildTimeGroupClock({
+        id: `default-page-${chart.id}`,
+        name: "Default page timeline",
+        period: { start: "0001-01-01", end: "9999-12-31" },
+        matching: { policy: "exact" },
+        secondsPerFrame: 1,
+        members: [{ chartId: chart.id, timeRole }],
+      }, temporalContext);
+    } catch {
+      // A page chart may be static or the candidate role may be non-temporal.
+    }
+  }
+  return EMPTY_ARRAY;
+}
+
+function buildSceneSourceClock(scene, fallbackClock, { group, temporalContext } = {}) {
+  const member = group?.members?.find(({ chartId }) => chartId === scene.frames?.chartId);
+  if (!member || !temporalContext) return fallbackClock;
+  return buildTimeGroupClock({ ...group, members: [member] }, temporalContext);
 }
 
 function sessionMatchingPolicy(value) {
