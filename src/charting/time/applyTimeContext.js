@@ -123,10 +123,16 @@ export function applyTimeContext({
       matches.set(identity, record);
 
       if (mode === "trace") {
-        appendMeasureRows(measureRows, group.measure, group.rows);
+        const traceRows = timeContext.traceMode === "reveal"
+          ? group.rows.filter((row) => (
+              canonicalEpochMs(readBoundValue(row, timeBinding, profile))
+              <= timeContext.activeEpochMs
+            ))
+          : group.rows;
+        appendMeasureRows(measureRows, group.measure, traceRows);
         appendProjectedSourceRows({
           chart,
-          rows: group.rows,
+          rows: traceRows,
           measure: group.measure,
           measurements,
           projectedRows,

@@ -421,7 +421,7 @@ function sessionMatchingPolicy(value) {
     concurrent: { policy: "exact" },
     interpolate: { policy: "interpolate" },
     latest: { policy: "lastKnown" },
-    closest: { policy: "nearest" },
+    closest: { policy: "nearest", toleranceMs: Number.MAX_SAFE_INTEGER },
   })[value] ?? null;
 }
 

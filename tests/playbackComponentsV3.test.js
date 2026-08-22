@@ -194,6 +194,19 @@ test("Scene selection constrains the playback clock and participating charts", (
   assert.equal(html, `<output>{&quot;activeScene&quot;:&quot;scene-a&quot;,&quot;clock&quot;:[${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;primary-chart&quot;]}</output>`);
 });
 
+test("Snap to Closest session override supplies a bounded renderer tolerance", () => {
+  const contexts = buildMemberTimeContexts({
+    id: "exercise",
+    matching: { policy: "exact" },
+    members: [{ chartId: "primary-chart", timeRole: "observation" }],
+  }, MAY_2, { sessionMatchingOverride: "closest" });
+
+  assert.deepEqual(contexts["primary-chart"].matching, {
+    policy: "nearest",
+    toleranceMs: Number.MAX_SAFE_INTEGER,
+  });
+});
+
 test("playback controls expose semantic transport, time selection, speed, and view actions", () => {
   const html = renderPlayback(
     React.createElement(PlaybackControls),

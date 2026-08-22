@@ -49,12 +49,13 @@ function prepare({
   activeEpochMs = MAY_2,
   groupId = "exercise",
   matching = { policy: "exact" },
+  traceMode,
 }) {
   return prepareChartData({
     chart,
     rows,
     datasetProfile: profiled(rows, metadata, interpolationFields),
-    timeContext: { groupId, activeEpochMs, matching },
+    timeContext: { groupId, activeEpochMs, matching, ...(traceMode ? { traceMode } : {}) },
   });
 }
 
@@ -297,6 +298,24 @@ test("trace charts retain history while exposing observed and missing active ser
   assert.ok(clinicB.every(({ temporalProvenance }) => temporalProvenance.status === "missing"));
   assert.equal(result.meta.activeTime.mode, "trace");
   assert.equal(result.meta.activeTime.status, "mixed");
+});
+
+test("Reveal to frame omits future trace rows while Full timeline preserves them", () => {
+  const rows = [
+    { at: "2027-05-01", value: 10 },
+    { at: "2027-05-02", value: 12 },
+    { at: "2027-05-03", value: 14 },
+  ];
+  const chart = playbackChart("line", {
+    measurements: { field: "value" },
+    observation: { field: "at" },
+  });
+
+  const reveal = prepare({ chart, rows, traceMode: "reveal" });
+  const full = prepare({ chart, rows, traceMode: "full" });
+
+  assert.deepEqual(reveal.marks.map(({ x }) => x), ["2027-05-01", "2027-05-02"]);
+  assert.deepEqual(full.marks.map(({ x }) => x), ["2027-05-01", "2027-05-02", "2027-05-03"]);
 });
 
 test("large duplicate-aggregated traces project rows without argument-stack overflow", () => {
