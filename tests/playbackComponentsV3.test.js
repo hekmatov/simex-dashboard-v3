@@ -427,6 +427,9 @@ test("a live provider can initialize paused synchronized charts at the latest gr
 
   const html = renderPlayback(React.createElement(Probe), {
     initialPosition: "latest",
+    initialState: {
+      playbackView: true,
+    },
   });
 
   assert.equal(html, `<output>2|${MAY_3}|paused</output>`);
@@ -475,6 +478,7 @@ test("the provider evaluates the inclusive Time Group period in the dashboard ti
         initialState: {
           activeGroupId: "exercise",
           source: { kind: "group", id: "exercise" },
+          playbackView: true,
         },
       },
       React.createElement(Probe),
@@ -572,6 +576,80 @@ test("presentation can derive immutable member time contexts without mounting pl
     activeEpochMs: MAY_2,
     matching: { policy: "lastKnown", toleranceMs: 86_400_000 },
   });
+});
+
+test("closed Chrono does not scan temporal rows until playback opens", () => {
+  function countedFixture(playbackView) {
+    let reads = 0;
+    const row = { cases: 10 };
+    Object.defineProperty(row, "observed", {
+      enumerable: true,
+      get() {
+        reads += 1;
+        return "2027-05-01";
+      },
+    });
+    const chart = lineChart();
+    return {
+      props: {
+        groups: [{
+          id: "exercise",
+          name: "Exercise timeline",
+          period: { start: "2027-05-01", end: "2027-05-01" },
+          secondsPerFrame: 1,
+          matching: { policy: "exact" },
+          members: [{ chartId: chart.id, timeRole: "observation" }],
+        }],
+        charts: [chart],
+        pageCharts: [chart],
+        loadedData: { primary: [row] },
+        profiles: {
+          primary: {
+            rowCount: 1,
+            columns: [
+              {
+                name: "observed",
+                type: "temporal",
+                temporal: {
+                  values: ["2027-05-01"],
+                  diagnostics: [],
+                  parsingMetadata: {
+                    interpretation: "temporal",
+                    format: "YYYY-MM-DD",
+                    timezone: "date-only",
+                  },
+                },
+              },
+              { name: "cases", type: "numeric" },
+            ],
+          },
+        },
+        initialState: {
+          ...initialPlaybackState,
+          source: { kind: "default", id: null },
+          activeGroupId: "exercise",
+          playbackView,
+        },
+      },
+      reads: () => reads,
+    };
+  }
+
+  const closed = countedFixture(false);
+  renderToStaticMarkup(React.createElement(
+    PlaybackProvider,
+    closed.props,
+    React.createElement("output", null, "closed"),
+  ));
+  assert.equal(closed.reads(), 0);
+
+  const open = countedFixture(true);
+  renderToStaticMarkup(React.createElement(
+    PlaybackProvider,
+    open.props,
+    React.createElement("output", null, "open"),
+  ));
+  assert.ok(open.reads() > 0);
 });
 
 test("Default page timeline uses every page chart instead of the active Time Group ledger", () => {

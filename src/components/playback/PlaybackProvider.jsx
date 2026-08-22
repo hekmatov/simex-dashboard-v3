@@ -36,14 +36,10 @@ export function PlaybackProvider({
     profiles,
     timezone,
   }), [charts, loadedData, profiles, timezone]);
-  const validatedGroups = React.useMemo(() => {
-    validateTimeSyncGroups(groups, temporalContext);
-    return groups;
-  }, [groups, temporalContext]);
   const [state, baseDispatch] = React.useReducer(
     reducePlaybackState,
     {
-      groups: validatedGroups,
+      groups,
       scenes,
       charts,
       pageCharts: activePageCharts,
@@ -55,6 +51,21 @@ export function PlaybackProvider({
     },
     initializePlaybackState,
   );
+  const activeScene = React.useMemo(
+    () => resolveActiveScene(scenes, state.activeSceneId),
+    [scenes, state.activeSceneId],
+  );
+  const validatedGroups = React.useMemo(() => {
+    if (state.playbackView !== true) return groups;
+    const selectedGroup = resolveActiveGroup(
+      groups,
+      activeScene?.groupId ?? state.activeGroupId,
+    );
+    if (state.source?.kind !== "default" || activeScene) {
+      validateTimeSyncGroups(selectedGroup ? [selectedGroup] : EMPTY_ARRAY, temporalContext);
+    }
+    return groups;
+  }, [activeScene, groups, state.activeGroupId, state.playbackView, state.source?.kind, temporalContext]);
   const dispatch = React.useCallback(
     (action) => dispatchPlaybackAction(baseDispatch, action, {
       groups: validatedGroups,
@@ -63,10 +74,6 @@ export function PlaybackProvider({
     }),
     [baseDispatch, scenes, state.activeGroupId, validatedGroups],
   );
-  const activeScene = React.useMemo(
-    () => resolveActiveScene(scenes, state.activeSceneId),
-    [scenes, state.activeSceneId],
-  );
   const selectedGroup = React.useMemo(
     () => resolveActiveGroup(
       validatedGroups,
@@ -74,17 +81,21 @@ export function PlaybackProvider({
     ),
     [activeScene, validatedGroups, state.activeGroupId],
   );
-  const defaultPagePlayback = React.useMemo(
-    () => buildDefaultPagePlayback(activePageCharts, temporalContext),
-    [activePageCharts, temporalContext],
-  );
   const usingDefaultPage = state.source?.kind === "default" && !activeScene;
+  const defaultPagePlayback = React.useMemo(
+    () => state.playbackView === true && usingDefaultPage
+      ? buildDefaultPagePlayback(activePageCharts, temporalContext)
+      : emptyDefaultPagePlayback(activePageCharts),
+    [activePageCharts, state.playbackView, temporalContext, usingDefaultPage],
+  );
   const activeGroup = usingDefaultPage ? defaultPagePlayback.group : selectedGroup;
   const groupClock = React.useMemo(
-    () => usingDefaultPage
+    () => state.playbackView !== true
+      ? EMPTY_ARRAY
+      : usingDefaultPage
       ? defaultPagePlayback.clock
       : buildTimeGroupClock(selectedGroup, temporalContext),
-    [defaultPagePlayback, selectedGroup, temporalContext, usingDefaultPage],
+    [defaultPagePlayback, selectedGroup, state.playbackView, temporalContext, usingDefaultPage],
   );
   const clock = React.useMemo(
     () => activeScene
@@ -376,11 +387,16 @@ function initializePlaybackState({
     timezone,
   };
   const selectedGroup = resolveActiveGroup(groups, activeScene?.groupId ?? activeGroupId);
-  const defaultPagePlayback = buildDefaultPagePlayback(pageCharts ?? charts, temporalContext);
+  const shouldBuildClock = supplied.playbackView === true;
+  const defaultPagePlayback = shouldBuildClock
+    ? buildDefaultPagePlayback(pageCharts ?? charts, temporalContext)
+    : emptyDefaultPagePlayback(pageCharts ?? charts);
   const activeGroup = source.kind === "default" && !activeScene
     ? defaultPagePlayback.group
     : selectedGroup;
-  const groupClock = source.kind === "default" && !activeScene
+  const groupClock = !shouldBuildClock
+    ? EMPTY_ARRAY
+    : source.kind === "default" && !activeScene
     ? defaultPagePlayback.clock
     : buildTimeGroupClock(selectedGroup, temporalContext);
   const clock = activeScene
@@ -478,7 +494,7 @@ function selectParticipatingMembers(group, scene, scope, charts) {
 }
 
 function buildDefaultPagePlayback(charts, temporalContext) {
-  const members = Object.freeze(charts.map((chart) => Object.freeze({ chartId: chart.id })));
+  const group = defaultPageGroup(charts);
   const projectedCharts = [];
   for (const chart of charts) {
     const epochs = buildPageChartClock(chart, temporalContext);
@@ -505,13 +521,24 @@ function buildDefaultPagePlayback(charts, temporalContext) {
       });
   return Object.freeze({
     clock,
-    group: Object.freeze({
-      id: "default-page",
-      name: "Default page timeline",
-      matching: Object.freeze({ policy: "exact" }),
-      members,
-      secondsPerFrame: 1,
-    }),
+    group,
+  });
+}
+
+function emptyDefaultPagePlayback(charts) {
+  return Object.freeze({
+    clock: EMPTY_ARRAY,
+    group: defaultPageGroup(charts),
+  });
+}
+
+function defaultPageGroup(charts) {
+  return Object.freeze({
+    id: "default-page",
+    name: "Default page timeline",
+    matching: Object.freeze({ policy: "exact" }),
+    members: Object.freeze(charts.map((chart) => Object.freeze({ chartId: chart.id }))),
+    secondsPerFrame: 1,
   });
 }
 
