@@ -105,6 +105,7 @@ Focused evidence for this amendment:
 - Terminology authority test: `1` passed, `0` failed; no retired group names or identifiers remain in source, tests, scripts, packaged configuration, or documentation.
 - Focused Node authoring suite: `77` passed, `0` failed.
 - Vite-backed Build integration suite: `24` passed, `0` failed.
+- Production build at implementation commit `3f5933e`: exit `0`; Vite transformed `822` modules and emitted the production bundle. The only diagnostics were the existing mixed-import and large-chunk advisories.
 - In-app browser checkpoint exercised Studio → content → editor for both object types, Chrono Group content → Create Scene, Build Structure → Chrono Group content, canonical date/cadence rendering, and `20px × 20px` checkbox dimensions.
 
-The production-build result and implementation commit for this amendment are recorded in the final handoff accompanying this submission. Master acceptance remains outside this implementation task.
+Implementation commit: `3f5933e`. Master acceptance remains outside this implementation task.
