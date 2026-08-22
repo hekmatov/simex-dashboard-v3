@@ -57,10 +57,10 @@ test("View and Build share one central canvas maximum and responsive token", asy
     grammar,
     /\.app-frame \.canonical-dashboard-frame\s*\{[\s\S]*?max-width:\s*var\(--simex-canonical-canvas-max-width\);/,
   );
-  assert.match(
+  assert.doesNotMatch(
     modes,
-    /calc\(\(100vw - var\(--simex-canonical-canvas-max-width\)\) \/ 2 - 404px\)/,
-    "Build positioning may consume the shared maximum but must not define a larger one",
+    /margin-left:\s*max\(-[0-9]+px/,
+    "opening Build authoring chrome must not shift the canonical canvas off-screen",
   );
   assert.doesNotMatch(
     modes,

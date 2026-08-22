@@ -162,6 +162,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [resetEditSessionConfirmation, setResetEditSessionConfirmation] =
     React.useState(false);
   const [pendingRemovalPanelId, setPendingRemovalPanelId] = React.useState(null);
+  const [pendingRemovalPageId, setPendingRemovalPageId] = React.useState(null);
   const moderatorOperationGateRef = React.useRef(null);
   if (moderatorOperationGateRef.current === null) {
     moderatorOperationGateRef.current = createSubmissionGate();
@@ -859,16 +860,29 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       return;
     }
     const page = dashboard.pages.find(({ id }) => id === pageId);
-    if (!page || !window.confirm(`Remove the "${page.label}" tab?`)) {
-      return;
-    }
+    if (!page) return;
+    clearModeratorError("remove-page");
+    setPendingRemovalPageId(pageId);
+  }
 
+  function confirmPageRemoval() {
+    const pageId = pendingRemovalPageId;
+    if (pageId === null) return;
     const activeIndex = dashboard.pages.findIndex(({ id }) => id === pageId);
     const fallbackPage = dashboard.pages[activeIndex - 1] ?? dashboard.pages[activeIndex + 1] ?? dashboard.pages[0];
-    flushPendingEditsInBackground();
-    onPageRemove(pageId);
-    onActivePageChange(fallbackPage.id);
-    setBuildSelection({ kind: "page", pageId: fallbackPage.id });
+    void performModeratorOperation("remove-page", async () => {
+      await pendingEdits.flush();
+      await onPageRemove(pageId);
+      onActivePageChange(fallbackPage.id);
+      setBuildSelection({ kind: "page", pageId: fallbackPage.id });
+      setPendingRemovalPageId(null);
+    });
+  }
+
+  function cancelPageRemoval() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    setPendingRemovalPageId(null);
+    clearModeratorError("remove-page");
   }
 
   function openPanelEditor(panelId) {
@@ -1246,6 +1260,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onStructureCommit={commitStructureDraft}
           onScenarioCommit={commitScenarioDraft}
           onPageChange={changePage}
+          onPageRemove={removeActivePage}
           onSectionChange={changeSection}
           onTimeGroupChange={onTimeGroupChange}
           onOpenSceneComposer={() => onModeRequest?.("present")}
@@ -1331,6 +1346,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setResetEditSessionConfirmation(false);
           clearModeratorError("reset-session");
         }}
+      />
+      <ConfirmDialog
+        open={pendingRemovalPageId !== null}
+        title={`Delete Page ${dashboard.pages.find(({ id }) => id === pendingRemovalPageId)?.label ?? ""}?`}
+        message="This Page, all of its Sections and charts, and those charts’ Time Group memberships will be removed. This cannot be undone after the dashboard change is saved."
+        confirmLabel={moderatorOperation.kind === "remove-page" ? "Deleting…" : "Delete page"}
+        cancelLabel="Keep page"
+        disabled={moderatorOperation.kind === "remove-page"}
+        confirmDisabled={moderatorOperation.kind === "remove-page"}
+        error={moderatorOperation.errorKind === "remove-page" ? moderatorOperation.error : ""}
+        onConfirm={confirmPageRemoval}
+        onCancel={cancelPageRemoval}
       />
       <ConfirmDialog
         open={pendingRemovalPanelId !== null}

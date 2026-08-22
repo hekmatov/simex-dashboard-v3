@@ -1346,7 +1346,8 @@
 }
 
 /* Build authoring drawer: closed geometry remains canonical; the open desktop
-   state reserves the drawer width instead of covering the dashboard frame. */
+   state compresses the frame into the remaining viewport so its responsive
+   rules can reflow the chart canvas normally. */
 .build-authoring-layer {
   opacity: 0;
   pointer-events: none;
@@ -1364,15 +1365,19 @@
 
 @media (min-width: 900px) {
   .canonical-dashboard-frame.build-workspace {
-    transition: margin-left 180ms ease, margin-right 180ms ease;
+    transition: margin-left 180ms ease, width 180ms ease;
   }
 
   .canonical-dashboard-frame.build-workspace[data-build-panel-open="true"] {
-    /* Keep the canonical canvas at its closed width. The fixed authoring panel
-       repositions the intact frame instead of forcing a responsive reflow. */
-    margin-left: max(-380px, calc((100vw - var(--simex-canonical-canvas-max-width)) / 2 - 404px));
+    --simex-build-panel-reserved-width: 404px;
+
+    margin-left: max(24px, calc((100vw - var(--simex-build-panel-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
     margin-right: auto;
-    width: calc(100% - 48px);
+    min-width: 0;
+    width: min(
+      var(--simex-canonical-canvas-max-width),
+      calc(100% - var(--simex-build-panel-reserved-width) - 48px)
+    );
   }
 }
 
@@ -1390,6 +1395,19 @@
   flex-wrap: wrap;
   gap: 8px;
   padding-block: 8px;
+}
+
+.build-destructive-actions {
+  border-top: 1px solid var(--simex-border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.build-destructive-actions .danger,
+.structure-inline-actions .danger {
+  min-height: 44px;
 }
 
 .build-authoring-auxiliary,

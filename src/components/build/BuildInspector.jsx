@@ -10,6 +10,7 @@ export default function BuildInspector({
   focusLabelKey = 0,
   onDashboardChange,
   onPageChange,
+  onPageRemove,
   onSectionChange,
   onTimeGroupChange,
   onOpenSceneComposer,
@@ -87,6 +88,18 @@ export default function BuildInspector({
             onChange={(event) => onPageChange?.(page.id, { description: event.target.value })}
           />
         </label>
+        <div className="build-destructive-actions">
+          <button
+            type="button"
+            className="danger"
+            aria-label={`Delete ${draft.label || page.title || "Untitled"} page`}
+            title={(dashboard.pages ?? []).length <= 1 ? "A dashboard must retain at least one Page." : undefined}
+            disabled={disabled || (dashboard.pages ?? []).length <= 1}
+            onClick={() => onPageRemove?.(page.id)}
+          >
+            Delete page…
+          </button>
+        </div>
       </section>
     );
   }

@@ -80,6 +80,7 @@ export default function BuildWorkspace({
   onStructureCommit,
   onScenarioCommit,
   onPageChange,
+  onPageRemove,
   onSectionChange,
   onTimeGroupChange,
   onOpenSceneComposer,
@@ -441,6 +442,7 @@ export default function BuildWorkspace({
       focusLabelKey={inspectorFocusKey}
       onDashboardChange={onDashboardChange}
       onPageChange={onPageChange}
+      onPageRemove={onPageRemove}
       onSectionChange={onSectionChange}
       onTimeGroupChange={onTimeGroupChange}
       onOpenSceneComposer={onOpenSceneComposer}

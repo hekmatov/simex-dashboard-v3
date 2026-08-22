@@ -74,6 +74,27 @@ export function resolveCanonicalCanvasWidths({ viewMax, buildMax }) {
   };
 }
 
+export function resolveBuildPanelCanvasLayout({
+  viewportWidth,
+  panelWidth,
+  gutter,
+  canonicalMax,
+}) {
+  const viewport = finiteWidth(viewportWidth);
+  const panel = finiteWidth(panelWidth);
+  const spacing = finiteWidth(gutter);
+  const maximum = finiteWidth(canonicalMax);
+  const reservedPanelWidth = panel + spacing;
+  const width = Math.min(maximum, Math.max(0, viewport - reservedPanelWidth - (spacing * 2)));
+  const left = Math.max(spacing, (viewport - reservedPanelWidth - width) / 2);
+  return {
+    left,
+    width,
+    right: left + width,
+    reservedPanelWidth,
+  };
+}
+
 export function responsiveProjectionForWidth(effectiveCanvasWidth) {
   const width = finiteWidth(effectiveCanvasWidth);
   if (width < 768) return "phone";

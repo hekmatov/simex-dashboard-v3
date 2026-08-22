@@ -82,6 +82,32 @@ test("Build maximum width is bounded by View and equal effective widths share a 
   assert.notEqual(model.responsiveProjectionForWidth(767), model.responsiveProjectionForWidth(768));
 });
 
+test("open Build panel compresses the canvas inside the remaining viewport instead of shifting it off-screen", () => {
+  assert.equal(typeof model.resolveBuildPanelCanvasLayout, "function");
+  assert.deepEqual(model.resolveBuildPanelCanvasLayout({
+    viewportWidth: 1280,
+    panelWidth: 380,
+    gutter: 24,
+    canonicalMax: 1392,
+  }), {
+    left: 24,
+    width: 828,
+    right: 852,
+    reservedPanelWidth: 404,
+  });
+  assert.deepEqual(model.resolveBuildPanelCanvasLayout({
+    viewportWidth: 1920,
+    panelWidth: 380,
+    gutter: 24,
+    canonicalMax: 1392,
+  }), {
+    left: 62,
+    width: 1392,
+    right: 1454,
+    reservedPanelWidth: 404,
+  });
+});
+
 function fixtureLayout() {
   return {
     pages: [{

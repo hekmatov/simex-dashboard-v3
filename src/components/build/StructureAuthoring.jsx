@@ -1,5 +1,7 @@
 import React from "react";
 
+import ConfirmDialog from "../common/ConfirmDialog.jsx";
+
 const ACTIVE_STATUSES = new Set(["dirty", "error", "suspended"]);
 
 export function createStructureDraft(dashboard = {}) {
@@ -95,6 +97,8 @@ export function reduceStructureDraft(state, action) {
     }
     case "REQUEST_REMOVE_SECTION":
       return requestSectionRemoval(state, action);
+    case "REQUEST_REMOVE_PAGE":
+      return requestPageRemoval(state, action);
     case "REMOVE_SECTION":
       return removeSection(state, action);
     case "REMOVE_PAGE":
@@ -159,6 +163,9 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
   const pages = draft?.value?.pages ?? [];
   const busy = disabled || draft?.status === "saving";
   const dirty = ACTIVE_STATUSES.has(draft?.status);
+  const pageRemoval = draft?.pendingConsequence?.kind === "remove-page"
+    ? draft.pendingConsequence
+    : null;
   return (
     <section className="structure-authoring" aria-labelledby="structure-authoring-title">
       <header className="build-surface-heading">
@@ -179,6 +186,16 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
               <div className="structure-inline-actions" aria-label={`${page.label || page.id} Page actions`}>
                 <button type="button" disabled={busy || pageIndex === 0} onClick={() => onAction?.({ type: "REORDER_PAGE", pageId: page.id, direction: "earlier", input: "keyboard" })}>Move earlier</button>
                 <button type="button" disabled={busy || pageIndex === pages.length - 1} onClick={() => onAction?.({ type: "REORDER_PAGE", pageId: page.id, direction: "later", input: "keyboard" })}>Move later</button>
+                <button
+                  type="button"
+                  className="danger"
+                  aria-label={`Delete ${page.label || page.title || "Untitled"} page`}
+                  title={pages.length <= 1 ? "A dashboard must retain at least one Page." : undefined}
+                  disabled={busy || pages.length <= 1}
+                  onClick={() => onAction?.({ type: "REQUEST_REMOVE_PAGE", pageId: page.id })}
+                >
+                  Delete page…
+                </button>
               </div>
             </header>
             <ol>
@@ -201,6 +218,21 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
         <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Structure</button>
         <button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Structure</button>
       </footer>
+      <ConfirmDialog
+        open={pageRemoval !== null}
+        title={`Delete Page ${pageRemoval?.pageLabel ?? ""}?`}
+        message={pageRemoval ? structurePageRemovalMessage(pageRemoval) : ""}
+        confirmLabel="Delete page"
+        cancelLabel="Keep page"
+        disabled={busy}
+        confirmDisabled={busy}
+        onConfirm={() => onAction?.({
+          type: "REMOVE_PAGE",
+          pageId: pageRemoval?.pageId,
+          disposition: "delete",
+        })}
+        onCancel={() => onAction?.({ type: "CANCEL_CONSEQUENCE" })}
+      />
     </section>
   );
 }
@@ -235,7 +267,28 @@ function requestSectionRemoval(state, action) {
       kind: "remove-section",
       pageId: action.pageId,
       sectionId: action.sectionId,
-      chartIds: (section.panels ?? []).map((panel) => panel.chart?.id ?? panel.chartId).filter(Boolean),
+      chartIds: (section.panels ?? []).map((panel) => panel.chart?.id ?? panel.chartId ?? panel.id).filter(Boolean),
+    },
+  };
+}
+
+function requestPageRemoval(state, action) {
+  if ((state.value.pages?.length ?? 0) <= 1) {
+    return withError(state, issue("FINAL_PAGE_PROTECTED", "The final Page cannot be removed."));
+  }
+  const page = findPage(state.value, action.pageId);
+  if (!page) return withError(state, issue("PAGE_NOT_FOUND", "The Page no longer exists."));
+  return {
+    ...state,
+    error: null,
+    pendingConsequence: {
+      kind: "remove-page",
+      pageId: page.id,
+      pageLabel: page.label || page.title || page.id,
+      sectionCount: page.sections?.length ?? 0,
+      chartIds: (page.sections ?? []).flatMap((section) => (
+        (section.panels ?? []).map((panel) => panel.chart?.id ?? panel.chartId ?? panel.id).filter(Boolean)
+      )),
     },
   };
 }
@@ -273,6 +326,12 @@ function removePage(state, action) {
     value.pages.splice(value.pages.findIndex(({ id }) => id === action.pageId), 1);
     return null;
   });
+}
+
+function structurePageRemovalMessage({ sectionCount, chartIds = [] }) {
+  const sections = `${sectionCount} ${sectionCount === 1 ? "Section" : "Sections"}`;
+  const charts = `${chartIds.length} ${chartIds.length === 1 ? "chart" : "charts"}`;
+  return `${sections} and ${charts} will be removed from the Structure draft. Save Structure to apply this change.`;
 }
 
 function moveSection(state, action) {
