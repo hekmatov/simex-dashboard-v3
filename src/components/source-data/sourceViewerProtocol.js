@@ -1,3 +1,5 @@
+import { captureDashboardThemeProjection } from "../../theme/dashboardThemeRoot.js";
+
 export const SOURCE_VIEWER_READY = "simex-source-viewer-ready";
 export const SOURCE_VIEWER_LOAD = "simex-source-viewer-load";
 export const SOURCE_VIEWER_VERSION = 1;
@@ -15,7 +17,7 @@ export function buildSourceViewerDescriptor(sourceId, source) {
       sourceId: id,
       label,
       mode: "path",
-      path: `${import.meta.env.BASE_URL}${source.path}`,
+      path: `${baseUrl()}${source.path}`,
     };
   }
   if (source.type === "uploadedCsv" && typeof source.csvText === "string") {
@@ -37,12 +39,15 @@ export function openSourceViewer({
   onError = () => {},
 } = {}) {
   const descriptor = buildSourceViewerDescriptor(sourceId, source);
+  const themeProjection = captureDashboardThemeProjection(
+    windowTarget.document?.querySelector?.(".app-frame"),
+  );
   if (!descriptor) {
     onError("This source has no CSV file to display.");
     return null;
   }
   const viewer = windowTarget.open(
-    `${import.meta.env.BASE_URL}source-viewer.html`,
+    `${baseUrl()}source-viewer.html`,
     `simex-source-${descriptor.sourceId}`,
     "popup,width=1180,height=760,resizable=yes,scrollbars=yes",
   );
@@ -62,6 +67,7 @@ export function openSourceViewer({
     viewer.postMessage({
       type: SOURCE_VIEWER_LOAD,
       descriptor,
+      themeProjection,
     }, windowTarget.location.origin);
     windowTarget.removeEventListener("message", handleMessage);
   };
@@ -72,4 +78,8 @@ export function openSourceViewer({
 
 function nonEmpty(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function baseUrl() {
+  return import.meta.env?.BASE_URL ?? "/";
 }

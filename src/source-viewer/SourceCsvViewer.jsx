@@ -10,10 +10,12 @@ import {
   nextSourceSort,
   sortSourceRows,
 } from "./sourceViewerSort.js";
+import { dashboardThemeRootProps } from "../theme/dashboardThemeRoot.js";
 
 const PAGE_SIZE = 100;
 
 export default function SourceCsvViewer() {
+  const [themeProjection, setThemeProjection] = React.useState({});
   const [state, setState] = React.useState({
     status: "waiting",
     descriptor: null,
@@ -44,6 +46,7 @@ export default function SourceCsvViewer() {
       }
       loaded = true;
       const descriptor = event.data.descriptor;
+      setThemeProjection(event.data.themeProjection ?? {});
       setState((current) => ({
         ...current,
         status: "loading",
@@ -110,8 +113,14 @@ export default function SourceCsvViewer() {
   const visibleRows = sortedRows.slice(start, start + PAGE_SIZE);
 
   return React.createElement(
-    "main",
-    { className: "source-viewer-shell" },
+    "div",
+    {
+      className: "source-viewer-theme-root",
+      ...dashboardThemeRootProps(themeProjection),
+    },
+    React.createElement(
+      "main",
+      { className: "source-viewer-shell" },
     React.createElement(
       "header",
       { className: "source-viewer-header" },
@@ -253,6 +262,7 @@ export default function SourceCsvViewer() {
           ),
         )
       : null,
+    ),
   );
 }
 

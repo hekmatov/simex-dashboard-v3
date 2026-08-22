@@ -909,3 +909,574 @@
   position: relative;
   z-index: 1;
 }
+
+.app-frame .build-authoring-layer button.secondary,
+.app-frame .build-authoring-layer .global-color-summary {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer :is(
+  .global-color-grid,
+  .settings-color-field,
+  .settings-color-row
+) {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .build-authoring-layer .global-color-grid {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+}
+
+.app-frame .build-authoring-layer .settings-color-field > label {
+  color: var(--simex-text-strong);
+}
+
+/* Selected-look propagation for Step 7 authoring and exploration chrome.
+   These surfaces were added after the original shell and must not fall back
+   to the retired navy/blue dashboard paint. Portal roots receive the same
+   variables and metadata as AppFrame. */
+:is(.app-frame, .build-authoring-auxiliary, .unit-orbit) {
+  --border-color: var(--simex-border-subtle);
+  --interactive: var(--simex-accent);
+  --surface: var(--simex-surface-panel);
+  --surface-muted: var(--simex-surface-panel-alt);
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-body-font);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) :is(
+  h1, h2, h3, h4,
+  .build-surface-heading,
+  .time-content-library__header
+) {
+  color: var(--simex-text-strong);
+  font-family: var(--simex-style-heading-font);
+  font-weight: var(--simex-style-heading-weight);
+  letter-spacing: var(--simex-style-heading-tracking);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) :is(
+  small,
+  .eyebrow,
+  .build-draft-status,
+  .time-content-library__empty,
+  .chart-authoring-detected,
+  .chart-proof-state
+) {
+  color: var(--simex-text-muted);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) :is(
+  fieldset,
+  .structure-page-card,
+  .scene-stage-body > section,
+  .scene-shared-settings,
+  .scene-arrangement-board,
+  .time-content-library__browse,
+  .time-content-library__conflict,
+  .time-content-card,
+  .time-availability-ledger > ol > li,
+  .chart-authoring-section,
+  .chart-editor-tab-panel
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea
+) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) :is(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) label {
+  color: var(--simex-text-strong);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) button {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-on-accent);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) button:is(
+  .secondary,
+  .chart-editor-tab,
+  .chart-authoring-icon-choice .simex-icon-control,
+  .scene-chart-title
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.build-authoring-auxiliary :is(.time-group-studio nav, .scene-stage-navigation) button {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.build-authoring-auxiliary :is(.time-group-studio nav, .scene-stage-navigation) button[aria-current="step"] {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) button:hover:not(:disabled) {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) :is(button, input, select, textarea):focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+:is(.build-authoring-auxiliary, .unit-orbit) button:disabled {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-muted);
+  opacity: 0.56;
+}
+
+.unit-orbit:focus-within {
+  border-color: var(--simex-focus);
+  box-shadow: var(--simex-style-panel-shadow), 0 0 0 var(--simex-component-focus-width, 3px) var(--simex-focus);
+}
+
+.unit-orbit .chart-editor-v3 {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  color: var(--simex-text-strong);
+}
+
+.unit-orbit :is(.chart-editor-header, .chart-editor-actions) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.unit-orbit :is(
+  .chart-editor-layout,
+  .chart-editor-inspector,
+  .chart-editor-preview,
+  .chart-editor-contextual-tabs,
+  .chart-authoring-role-row
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+/* Chart creation, conversion, and edit surfaces use one semantic ledger. */
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-wizard-backdrop, .chart-editor-backdrop, .confirm-dialog-backdrop) {
+  background: color-mix(in srgb, var(--simex-surface-outer) 72%, transparent);
+}
+
+.app-frame :is(.chart-wizard-header, .chart-wizard-footer, .chart-editor-header) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-wizard-body, .chart-editor-layout, .chart-editor-inspector) {
+  background: var(--simex-surface-panel-alt);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-wizard-step-tabs, .chart-wizard-steps, .chart-editor-tab-list) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+}
+
+.app-frame :is(.chart-wizard-step-button, .chart-editor-tab) {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  color: var(--simex-text-muted);
+}
+
+.app-frame :is(.chart-wizard-step-button[aria-current="step"], .chart-editor-tab[aria-selected="true"]) {
+  border-color: var(--simex-selected);
+  color: var(--simex-selected);
+}
+
+.app-frame .chart-wizard-step-button[data-complete="true"]:not([aria-current="step"]) {
+  color: var(--simex-success);
+}
+
+.app-frame :is(
+  .wizard-choice-card,
+  .wizard-review-card,
+  .wizard-source-profile,
+  .data-profile-summary,
+  .data-profile-columns,
+  .data-profile-column-list > div,
+  .binding-preview-summary,
+  .binding-role-card,
+  .binding-measure-card,
+  .binding-filter-card,
+  .binding-checkbox-list,
+  .binding-filter-values,
+  .chart-destination-ledger,
+  .chart-creation-review,
+  .chart-review-ledger,
+  .chart-time-membership-option,
+  .chart-authoring-section,
+  .chart-authoring-preview,
+  .chart-footprint-control
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chart-panel-icon-button {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chart-panel-icon-button:hover:not(:disabled) {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .canonical-dashboard-frame .panel-actions .simex-icon-control.secondary {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+:is(.app-frame, .unit-orbit) :is(.chart-type-picker, .chart-authoring-preview) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-surface-radius);
+  color: var(--simex-text-strong);
+}
+
+:is(.app-frame, .unit-orbit) :is(.chart-wizard, .chart-editor-v3) :is(label, legend) {
+  color: var(--simex-text-strong);
+}
+
+:is(.app-frame, .unit-orbit) .chart-type-card.simex-icon-control {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+:is(.app-frame, .unit-orbit) .chart-type-card.simex-icon-control span:not(.chart-type-card-label) {
+  color: var(--simex-text-muted);
+}
+
+:is(.app-frame, .unit-orbit) .chart-type-card.simex-icon-control[aria-pressed="true"] {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--simex-selected) 18%, transparent);
+  color: var(--simex-selected);
+}
+
+.app-frame :is(.chart-destination-ledger, .chart-review-ledger) > div {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-destination-ledger, .chart-review-ledger) dt {
+  color: var(--simex-text-muted);
+}
+
+.app-frame :is(
+  .wizard-source-profile-table,
+  .chart-wizard-manual-table
+) :is(th, td) {
+  border-color: var(--simex-border-subtle);
+}
+
+.app-frame :is(
+  .wizard-source-profile-table,
+  .chart-wizard-manual-table
+) thead th {
+  background: var(--simex-surface-panel);
+  color: var(--simex-text-muted);
+}
+
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea
+) {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--simex-selected);
+}
+
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) button:not(
+  .secondary,
+  .chart-wizard-step-button,
+  .chart-editor-tab,
+  .chart-type-card,
+  .wizard-choice-card
+) {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) button:is(
+  .secondary,
+  .chart-type-card,
+  .wizard-choice-card
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) button:hover:not(:disabled) {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog) :is(button, input, select, textarea):focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.app-frame :is(.chart-wizard-prerequisites, .wizard-source-warnings) {
+  background: var(--simex-warning-soft);
+  border-color: var(--simex-warning);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.wizard-error, .wizard-error-list, .chart-editor-error) {
+  color: var(--simex-error);
+}
+
+.app-frame :is(.chart-wizard-footer span, .chart-wizard-step-intro, .chart-proof-state) {
+  color: var(--simex-text-muted);
+}
+
+/* View Chrono, status, popover, and immersive controls retain their accepted
+   geometry while inheriting selected paint. */
+.app-frame :is(
+  .playback-controls,
+  .playback-view,
+  .playback-menu,
+  .chart-detail-popover,
+  .chart-source-popover,
+  .chart-settings-popover,
+  .multi-fullscreen-panel,
+  .multi-fullscreen-cell,
+  .multi-select-dock
+) {
+  background-color: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(
+  .playback-controls,
+  .playback-view,
+  .playback-menu,
+  .chart-detail-popover,
+  .chart-source-popover,
+  .chart-settings-popover,
+  .multi-select-dock
+) :is(button, select, input) {
+  border-radius: var(--simex-style-control-radius);
+}
+
+.app-frame :is(.playback-controls, .playback-view) :is(label, span, p, strong, h2, h3) {
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.playback-controls, .chrono-group-select) select {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .playback-controls input {
+  accent-color: var(--simex-chrono);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .playback-controls button {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+.app-frame .playback-controls button.secondary {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .playback-controls button:hover:not(:disabled) {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .playback-controls button:disabled {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-muted);
+  opacity: 0.58;
+}
+
+.app-frame :is(.chrono-group-select, .playback-select, .chrono-seek) {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chrono-range-boundaries,
+.app-frame :is(.playback-live-status, .playback-view-status) {
+  color: var(--simex-text-muted);
+}
+
+.app-frame .chrono-availability {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chrono-availability li,
+.app-frame .playback-member {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.playback-member--unavailable, .playback-view--empty) {
+  color: var(--simex-text-muted);
+}
+
+.app-frame .chrono-timeline {
+  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chrono-timeline span {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chrono-slider-label strong,
+.app-frame .chrono-map-date-display {
+  background: var(--simex-chrono);
+  border-color: var(--simex-chrono);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-on-accent);
+}
+
+.app-frame :is(
+  .chart-status-empty,
+  .chart-status-loading,
+  .chart-status-error,
+  .chart-status-unavailable,
+  .chart-status-stale
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-muted);
+}
+
+.fullscreen-backdrop--immersive .multi-fullscreen-controls {
+  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+}
+
+/* Present remains geometrically Step 8-owned; this paint-only bridge prevents
+   its current controls from reverting to the retired light dashboard. */
+.app-frame .present-workspace :is(label, legend, strong, h1, h2, h3) {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace :is(.present-field > span, .present-chart-choice > span) {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace :is(fieldset, .present-chart-choice, .present-audience-fact) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace :is(
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea
+) {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .present-workspace :is(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.build-authoring-auxiliary, .unit-orbit),
+  .app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog, .playback-controls) {
+    transition-duration: 0.01ms;
+  }
+}

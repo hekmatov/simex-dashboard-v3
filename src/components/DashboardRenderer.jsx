@@ -1191,6 +1191,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <div className="build-mode-shell" style={iconLanguageStyles}>
         <BuildWorkspace
           key={buildTreeResetGeneration}
+          themeProjection={themeProjection}
           dashboard={dashboard}
           activePage={activePage}
           pageType={landingActive ? "landing" : "analytical"}

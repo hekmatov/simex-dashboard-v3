@@ -45,8 +45,10 @@ import {
   reduceTimeGroupDraft,
   toSavedTimeGroup,
 } from "../time/timeGroupDraft.js";
+import { dashboardThemeRootProps } from "../../theme/dashboardThemeRoot.js";
 
 export default function BuildWorkspace({
+  themeProjection,
   dashboard,
   activePage,
   pageType,
@@ -526,6 +528,7 @@ export default function BuildWorkspace({
           {activeAuxiliary && typeof document !== "undefined" && createPortal((
             <aside
               className="build-authoring-auxiliary"
+              {...dashboardThemeRootProps(themeProjection)}
               data-authoring-surface={activeAuxiliary}
               role="dialog"
               aria-modal="false"
@@ -584,6 +587,7 @@ export default function BuildWorkspace({
           </section>
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
+              themeProjection={themeProjection}
               anchorPlacementId={chartEditorPlacementId}
               chartTitle={selectedChart?.title}
               capabilities={unitOrbitCapabilities}

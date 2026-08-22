@@ -1,5 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import { dashboardThemeRootProps } from "../../theme/dashboardThemeRoot.js";
 
 const DEFAULT_GAP = 12;
 const DEFAULT_MARGIN = 12;
@@ -90,6 +91,7 @@ export function positionUnitOrbit({
 }
 
 export default function UnitOrbit({
+  themeProjection,
   anchorPlacementId,
   chartTitle = "Selected chart",
   capabilities = [],
@@ -226,12 +228,12 @@ export default function UnitOrbit({
       inert={!open ? "" : undefined}
       data-unit-orbit-side={placement?.side}
       data-unit-orbit-capabilities={capabilities.map(({ id }) => id).join(" ")}
-      style={{
+      {...dashboardThemeRootProps(themeProjection, {
         left: placement ? `${placement.left}px` : `${DEFAULT_MARGIN}px`,
         top: placement ? `${placement.top}px` : `${DEFAULT_MARGIN}px`,
         visibility: open && placement ? "visible" : "hidden",
         "--unit-orbit-max-height": `${placement?.maxHeight ?? DEFAULT_MIN_HEIGHT}px`,
-      }}
+      })}
     >
       <div className="unit-orbit-scroll">{children}</div>
     </aside>,
