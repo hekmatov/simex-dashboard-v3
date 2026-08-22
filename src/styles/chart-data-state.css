@@ -11,6 +11,94 @@
   height: 100%;
 }
 
+.chart-state-surface {
+  display: grid;
+  height: 100%;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.chart-state-surface__plot {
+  height: 100%;
+  min-height: 0;
+}
+
+.chart-state-surface__plot > .chart-view-frame {
+  height: 100%;
+}
+
+.chart-state-surface__overlay {
+  align-items: center;
+  align-self: center;
+  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius, 2px);
+  display: grid;
+  gap: 10px;
+  justify-self: center;
+  max-width: min(620px, 88%);
+  padding: 12px 14px;
+  position: absolute;
+  z-index: 6;
+}
+
+.chart-state-surface__status {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.chart-state-surface__status-icon {
+  align-items: center;
+  border: 2px solid currentColor;
+  display: inline-flex;
+  font-family: var(--simex-style-data-font, ui-monospace, monospace);
+  font-weight: 800;
+  justify-content: center;
+  min-height: 32px;
+  min-width: 32px;
+}
+
+.chart-state-surface__overlay p {
+  line-height: 1.4;
+  margin: 0;
+}
+
+.chart-state-surface__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chart-state-surface--loading .chart-state-surface__status-icon {
+  animation: chart-state-pulse 900ms steps(4, end) infinite;
+}
+
+.chart-state-surface--unavailable .chart-state-surface__overlay,
+.chart-state-surface--needs-attention .chart-state-surface__overlay {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 8px,
+    color-mix(in srgb, var(--simex-warning) 8%, transparent) 8px 12px
+  );
+  border-left: 5px solid var(--simex-warning);
+}
+
+.chart-state-surface--error .chart-state-surface__overlay {
+  box-shadow: inset 5px 0 0 var(--simex-error);
+}
+
+.chart-state-surface--stale .chart-state-surface__overlay,
+.chart-state-surface--last-valid .chart-state-surface__overlay {
+  bottom: 12px;
+  left: 12px;
+  max-width: none;
+  right: 104px;
+}
+
 .chart-data-state-boundary[data-has-valid-content="false"] {
   display: grid;
   place-items: center;
@@ -98,6 +186,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chart-data-state-boundary--loading .chart-state-indicator {
+    animation: none;
+  }
+
+  .chart-state-surface--loading .chart-state-surface__status-icon {
     animation: none;
   }
 }

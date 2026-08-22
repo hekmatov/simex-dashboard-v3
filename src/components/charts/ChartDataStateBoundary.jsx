@@ -1,8 +1,10 @@
 import React from "react";
+import ChartStateSurface from "../ChartStateSurface.jsx";
 
-export default function ChartDataStateBoundary({ state, children }) {
+export default function ChartDataStateBoundary({ state, chartName, children }) {
   if (!state) return children;
   const hasValidContent = state.hasValidContent && Boolean(children);
+  const surfaceKind = state.kind === "partial" ? "unavailable" : state.kind;
   return React.createElement(
     "div",
     {
@@ -11,22 +13,10 @@ export default function ChartDataStateBoundary({ state, children }) {
       "data-has-valid-content": hasValidContent ? "true" : "false",
       "aria-busy": state.kind === "loading" ? "true" : undefined,
     },
-    hasValidContent ? children : null,
-    React.createElement(
-      "div",
-      { className: "chart-state-plate", role: "status", "aria-live": "polite" },
-      React.createElement("span", {
-        className: "chart-state-indicator",
-        "aria-hidden": "true",
-      }, indicatorFor(state.kind)),
-      React.createElement("p", null, state.message),
-    ),
+    React.createElement(ChartStateSurface, {
+      state: { kind: surfaceKind, message: state.message },
+      chartName,
+      lastValid: hasValidContent ? children : null,
+    }),
   );
-}
-
-function indicatorFor(kind) {
-  if (kind === "loading") return "••••";
-  if (kind === "partial") return "◩";
-  if (kind === "error") return "!";
-  return "—";
 }

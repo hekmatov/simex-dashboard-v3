@@ -30,7 +30,10 @@ export default function ChartView(props) {
   const content = state && !state.hasValidContent
     ? null
     : renderChartContent(playbackProps, interactionMode);
-  return React.createElement(ChartDataStateBoundary, { state }, content);
+  return React.createElement(ChartDataStateBoundary, {
+    state,
+    chartName: props.chart?.title,
+  }, content);
 }
 
 function renderChartContent(props, interactionMode) {
