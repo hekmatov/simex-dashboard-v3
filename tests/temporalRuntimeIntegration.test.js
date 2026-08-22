@@ -3,7 +3,10 @@ import test from "node:test";
 
 import { normalizeDashboardTemporalConfig } from "../src/charting/time/dashboardTemporalConfig.js";
 import { migrateDashboardTimezoneToUtc } from "../src/charting/time/migrateTemporalConfig.js";
-import { deriveTemporalNeedsAttention } from "../src/charting/time/temporalNeedsAttention.js";
+import {
+  deriveTemporalContentItems,
+  deriveTemporalNeedsAttention,
+} from "../src/charting/time/temporalNeedsAttention.js";
 
 const START = Date.UTC(2027, 0, 1);
 const END = Date.UTC(2027, 0, 3);
@@ -94,4 +97,52 @@ test("Needs-attention accepts live V3 groups, scenes, frames, and timezone vocab
   assert.deepEqual(findings.map(({ code }) => code), ["selected-frame-missing"]);
   assert.equal(findings[0].targetId, "scene-a");
   assert.equal(findings[0].stage, "frames");
+});
+
+test("Time Content items receive derived findings from the live dashboard truth", () => {
+  const dashboard = {
+    timezone: "UTC",
+    pages: [{ id: "page-a", title: "Page A" }],
+    timeSyncGroups: [{
+      id: "group-a",
+      name: "Group A",
+      period: { start: "2027-01-01", end: "2027-01-03" },
+      matching: { policy: "exact" },
+      members: [{ chartId: "chart-a" }, { chartId: "deleted-chart" }],
+    }],
+    scenes: [{
+      id: "scene-a",
+      name: "Scene A",
+      groupId: "group-a",
+      pageId: "page-a",
+      period: {
+        start: "2027-01-01T00:00:00.000Z",
+        end: "2027-01-03T00:00:00.000Z",
+      },
+      members: [{ chartId: "chart-a", width: 2 }],
+      frames: {
+        mode: "source",
+        chartId: "chart-a",
+        selection: "selected",
+        selectedEpochs: [START, END],
+      },
+      present: { chartIds: ["chart-a"], layout: "single" },
+    }],
+  };
+  const items = deriveTemporalContentItems({
+    dashboard,
+    charts: [{
+      id: "chart-a",
+      pageId: "page-a",
+      interpolationAllowed: true,
+      variables: [{ observations: [{ epochMs: START, value: 1 }] }],
+    }],
+  });
+
+  const group = items.find(({ id }) => id === "group-a");
+  const scene = items.find(({ id }) => id === "scene-a");
+  assert.deepEqual(group.needsAttention.map(({ code }) => code), ["missing-chart"]);
+  assert.deepEqual(scene.needsAttention.map(({ code }) => code), ["selected-frame-missing"]);
+  assert.equal(group.sceneCount, 1);
+  assert.equal(scene.pageLabel, "Page A");
 });

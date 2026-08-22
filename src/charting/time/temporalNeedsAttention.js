@@ -162,6 +162,47 @@ export function deriveTemporalNeedsAttention(input = {}) {
   return Object.freeze(findings.map(Object.freeze));
 }
 
+export function deriveTemporalContentItems({
+  dashboard,
+  charts = [],
+  schemaRevisions = {},
+} = {}) {
+  const groups = dashboard?.timeSyncGroups ?? [];
+  const scenes = dashboard?.scenes ?? [];
+  const findings = deriveTemporalNeedsAttention({
+    timezone: dashboard?.timezone,
+    timeSyncGroups: groups,
+    scenes,
+    charts,
+    schemaRevisions,
+  });
+  const findingsFor = (targetType, targetId) => findings.filter((finding) => (
+    finding.targetType === targetType && finding.targetId === targetId
+  ));
+  const sceneCountByGroup = new Map();
+  for (const scene of scenes) {
+    sceneCountByGroup.set(scene.groupId, (sceneCountByGroup.get(scene.groupId) ?? 0) + 1);
+  }
+  const pageById = new Map((dashboard?.pages ?? []).map((page) => [page.id, page]));
+  return [
+    ...groups.map((group) => ({
+      id: group.id,
+      type: "group",
+      name: group.name,
+      sceneCount: sceneCountByGroup.get(group.id) ?? 0,
+      needsAttention: findingsFor("group", group.id),
+    })),
+    ...scenes.map((scene) => ({
+      ...scene,
+      type: "scene",
+      pageLabel: pageById.get(scene.pageId)?.label
+        ?? pageById.get(scene.pageId)?.title
+        ?? scene.pageId,
+      needsAttention: findingsFor("scene", scene.id),
+    })),
+  ];
+}
+
 function normalizeRuntimeGroup(group, timeZone) {
   return {
     ...group,
