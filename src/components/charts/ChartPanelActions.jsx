@@ -72,10 +72,7 @@ export default function ChartPanelActions({
                 {
                   type: "button",
                   className: "secondary chart-source-viewer-button",
-                  onClick: () => {
-                    setInfoOpen(false);
-                    onViewSource();
-                  },
+                  onClick: onViewSource,
                 },
                 "View source",
               )

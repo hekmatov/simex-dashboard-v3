@@ -31,6 +31,7 @@ export default function SourceViewer({
       initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
       onEscape: () => dismiss("escape"),
       className: "source-viewer-backdrop",
+      onPointerDown: (event) => event.stopPropagation(),
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": `${dialogId}-title`,
