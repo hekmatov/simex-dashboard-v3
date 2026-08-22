@@ -101,59 +101,74 @@ export default function ChartStateSurface({
   const hasUnavailableRecovery = model.actions.length > operativeActions.length;
   const plotDimensions = normalizeDimensions(dimensions);
 
-  return (
-    <figure
-      className={`chart-state-surface chart-state-surface--${model.kind}`}
-      data-chart-state={model.kind}
-      data-retains-plot-bounds="true"
-      data-plot-width={plotDimensions.width ?? undefined}
-      data-plot-height={plotDimensions.height ?? undefined}
-      aria-busy={model.busy}
-      style={plotDimensions.style}
-    >
-      <div
-        className="chart-state-surface__plot"
-        data-last-valid-retained={lastValid !== null ? "true" : undefined}
-      >
-        {retainedContent}
-      </div>
-      <figcaption
-        className="chart-state-surface__overlay"
-        data-chart-state-overlay="true"
-        role={model.role}
-        aria-live={model.live}
-        aria-atomic="true"
-      >
-        <div className="chart-state-surface__status">
-          <span className="chart-state-surface__status-icon" aria-hidden="true">
-            {stateIcon(model.kind)}
-          </span>
-          <strong className="chart-state-surface__status-text">{model.statusText}</strong>
-        </div>
-        <p>{displayedMessage}</p>
-        {operativeActions.length > 0 ? (
-          <div className="chart-state-surface__actions" aria-label={`${readableChartName(chartName)} recovery actions`}>
-            {operativeActions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                data-recovery-action={action.id}
-                data-recovery-owner={action.owner}
-                data-recovery-destination={action.destination}
-                onClick={action.id === "retry" ? onRetry : onRepair}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {hasUnavailableRecovery ? (
-          <p className="chart-state-surface__recovery-unavailable">
-            Recovery is unavailable in this context.
-          </p>
-        ) : null}
-      </figcaption>
-    </figure>
+  return React.createElement(
+    "figure",
+    {
+      className: `chart-state-surface chart-state-surface--${model.kind}`,
+      "data-chart-state": model.kind,
+      "data-retains-plot-bounds": "true",
+      "data-plot-width": plotDimensions.width ?? undefined,
+      "data-plot-height": plotDimensions.height ?? undefined,
+      "aria-busy": model.busy,
+      style: plotDimensions.style,
+    },
+    React.createElement(
+      "div",
+      {
+        className: "chart-state-surface__plot",
+        "data-last-valid-retained": lastValid !== null ? "true" : undefined,
+      },
+      retainedContent,
+    ),
+    React.createElement(
+      "figcaption",
+      {
+        className: "chart-state-surface__overlay",
+        "data-chart-state-overlay": "true",
+        role: model.role,
+        "aria-live": model.live,
+        "aria-atomic": "true",
+      },
+      React.createElement(
+        "div",
+        { className: "chart-state-surface__status" },
+        React.createElement(
+          "span",
+          { className: "chart-state-surface__status-icon", "aria-hidden": "true" },
+          stateIcon(model.kind),
+        ),
+        React.createElement("strong", { className: "chart-state-surface__status-text" }, model.statusText),
+      ),
+      React.createElement("p", null, displayedMessage),
+      operativeActions.length > 0
+        ? React.createElement(
+            "div",
+            {
+              className: "chart-state-surface__actions",
+              "aria-label": `${readableChartName(chartName)} recovery actions`,
+            },
+            operativeActions.map((action) => React.createElement(
+              "button",
+              {
+                key: action.id,
+                type: "button",
+                "data-recovery-action": action.id,
+                "data-recovery-owner": action.owner,
+                "data-recovery-destination": action.destination,
+                onClick: action.id === "retry" ? onRetry : onRepair,
+              },
+              action.label,
+            )),
+          )
+        : null,
+      hasUnavailableRecovery
+        ? React.createElement(
+            "p",
+            { className: "chart-state-surface__recovery-unavailable" },
+            "Recovery is unavailable in this context.",
+          )
+        : null,
+    ),
   );
 }
 
