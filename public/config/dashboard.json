@@ -137,11 +137,39 @@
         }
       }
     },
-    "bio_municipal_infections_harmonized_2021": {
+    "bio_municipal_map_timeline": {
       "kind": "csv",
-      "path": "data/biomedical/municipal_infections_2021_harmonized.csv",
+      "path": "data/biomedical/municipal_map_timeline.csv",
       "provenance": {
-        "label": "Simulation exercise biomedical dataset harmonized to 2021 municipality boundaries"
+        "label": "Generated map timeline derived from the authoritative harmonized municipal biomedical dataset"
+      },
+      "parsingMetadata": {
+        "Datum": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_municipal_aggregate_timeseries": {
+      "kind": "csv",
+      "path": "data/biomedical/municipal_aggregate_timeseries.csv",
+      "provenance": {
+        "label": "Generated aggregate timeline derived from the authoritative harmonized municipal biomedical dataset"
+      },
+      "parsingMetadata": {
+        "Datum": {
+          "interpretation": "temporal",
+          "format": "YYYY-MM-DD",
+          "timezone": "date-only"
+        }
+      }
+    },
+    "bio_municipal_latest_bubble": {
+      "kind": "csv",
+      "path": "data/biomedical/municipal_latest_bubble.csv",
+      "provenance": {
+        "label": "Generated latest municipal snapshot derived from the authoritative harmonized municipal biomedical dataset"
       },
       "parsingMetadata": {
         "Datum": {
@@ -1346,7 +1374,7 @@
               "typeId": "chronoChoroplethMap",
               "title": "Municipal infection rate over time",
               "description": "Cumulative infections per 10,000 residents on harmonized 2021 municipality boundaries.",
-              "sourceId": "bio_municipal_infections_harmonized_2021",
+              "sourceId": "bio_municipal_map_timeline",
               "roles": {
                 "geography": {
                   "field": "MunicipalityCode"
@@ -1400,7 +1428,7 @@
               "typeId": "line",
               "title": "Aggregate municipal infections",
               "description": "Sum of cumulative infections represented by the harmonized municipality series.",
-              "sourceId": "bio_municipal_infections_harmonized_2021",
+              "sourceId": "bio_municipal_aggregate_timeseries",
               "roles": {
                 "measurements": [
                   {
@@ -1449,7 +1477,7 @@
               "typeId": "bubble",
               "title": "Population and municipal infection burden",
               "description": "Municipal population, infection rate, and cumulative infections at the latest harmonized observation.",
-              "sourceId": "bio_municipal_infections_harmonized_2021",
+              "sourceId": "bio_municipal_latest_bubble",
               "roles": {
                 "x": {
                   "field": "population"

@@ -1,0 +1,66 @@
+{
+  "format": "simex-biomedical-municipal-derivatives",
+  "compilerVersion": 1,
+  "authoritative": {
+    "path": "public/data/biomedical/municipal_infections_2021_harmonized.csv",
+    "sha256": "c16020b7ef5621b5650194e21681d649520a1f3c1b8ec4fa3ba0d65203d3e15e",
+    "rowCount": 146080,
+    "columns": [
+      "Datum",
+      "MunicipalityCode",
+      "Gemeentecode",
+      "Gemeentenaam",
+      "Provincienaam",
+      "AantalCumulatief",
+      "population",
+      "infectionsPerPopulation",
+      "infectionsPer1000",
+      "infectionsPer10000",
+      "dataMethod",
+      "populationSource",
+      "sourceMunicipalityCodes"
+    ]
+  },
+  "dimensions": {
+    "dates": 415,
+    "municipalities": 352,
+    "latestDate": "2021-04-17"
+  },
+  "derivatives": {
+    "map": {
+      "path": "public/data/biomedical/municipal_map_timeline.csv",
+      "sha256": "61cf62c809690b059f597d022aff72861e389e1d2d46729455ca049e06f3bbe2",
+      "rowCount": 146080,
+      "columns": [
+        "Datum",
+        "MunicipalityCode",
+        "infectionsPer10000"
+      ],
+      "rule": "Exact date, municipality, and infection-rate projection."
+    },
+    "aggregate": {
+      "path": "public/data/biomedical/municipal_aggregate_timeseries.csv",
+      "sha256": "abdfd2f5a2d7ee9bd4962ca951d6caad389b55261c41ff5e90cc3f8d54508619",
+      "rowCount": 415,
+      "columns": [
+        "Datum",
+        "AantalCumulatief"
+      ],
+      "rule": "Sum of cumulative infections by date."
+    },
+    "bubble": {
+      "path": "public/data/biomedical/municipal_latest_bubble.csv",
+      "sha256": "0c0d89b3b0091e525880946ca372e4869a40967c105d00566068e7bbb27e02e6",
+      "rowCount": 352,
+      "columns": [
+        "Datum",
+        "population",
+        "infectionsPer10000",
+        "AantalCumulatief",
+        "Gemeentenaam",
+        "Provincienaam"
+      ],
+      "rule": "Exact latest-date projection for 2021-04-17."
+    }
+  }
+}

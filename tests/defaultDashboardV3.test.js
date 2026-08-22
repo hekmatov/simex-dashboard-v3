@@ -95,10 +95,10 @@ const EXPECTED_CHART_MAPPING = {
   bio_case_deltas: ["deltaList", "bio_province_deltas"],
   bio_municipality_choropleth_animation: [
     "chronoChoroplethMap",
-    "bio_municipal_infections_harmonized_2021",
+    "bio_municipal_map_timeline",
   ],
-  bio_municipality_aggregate: ["line", "bio_municipal_infections_harmonized_2021"],
-  bio_population_infection_bubble: ["bubble", "bio_municipal_infections_harmonized_2021"],
+  bio_municipality_aggregate: ["line", "bio_municipal_aggregate_timeseries"],
+  bio_population_infection_bubble: ["bubble", "bio_municipal_latest_bubble"],
   bio_current_cases_kpi: ["kpi", "bio_cases"],
   bio_icu_capacity_bullet: ["bullet", "bio_icu_occupancy"],
   bio_hospital_capacity_bullet: ["bullet", "bio_hospital_occupancy"],
@@ -246,6 +246,26 @@ test("the curated dashboard is a clean version 3 configuration with exact analyt
   for (const required of REQUIRED_TYPES) {
     assert.ok(typeIds.has(required), `missing curated ${required}`);
   }
+});
+
+test("municipal charts use generated runtime derivatives instead of the authoritative build source", async () => {
+  const { dashboard } = await loadTrackedInputs();
+  const sources = createSourceLoader(dashboard);
+  const chartSources = new Map(configuredCharts(dashboard).map(({ chart }) => [
+    chart.id,
+    chart.sourceId,
+  ]));
+
+  assert.equal(
+    Object.hasOwn(dashboard.dataSources, "bio_municipal_infections_harmonized_2021"),
+    false,
+  );
+  assert.equal(chartSources.get("bio_municipality_choropleth_animation"), "bio_municipal_map_timeline");
+  assert.equal(chartSources.get("bio_municipality_aggregate"), "bio_municipal_aggregate_timeseries");
+  assert.equal(chartSources.get("bio_population_infection_bubble"), "bio_municipal_latest_bubble");
+  assert.equal((await sources.rows("bio_municipal_map_timeline")).length, 146080);
+  assert.equal((await sources.rows("bio_municipal_aggregate_timeseries")).length, 415);
+  assert.equal((await sources.rows("bio_municipal_latest_bubble")).length, 352);
 });
 
 test("every configured role is backed by a compatible profiled field and each chart validates", async () => {
