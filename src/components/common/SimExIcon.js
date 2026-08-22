@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 import { getInteraction } from "../../iconography/iconCatalog.js";
 import { ICON_GLYPHS, getIconGlyph } from "../../iconography/iconGlyphs.js";
@@ -57,30 +58,51 @@ export const IconControl = React.memo(function IconControl({
   const isPressed = pressed ?? selected ?? ariaPressedProp;
   const resolvedLabel = ariaLabelProp ?? ariaLabel ?? interaction.label;
   const resolvedTooltip = tooltip ?? interaction.tooltip ?? resolvedLabel;
+  const tooltipState = useIconTooltip(resolvedTooltip, tooltipPlacement);
+  const {
+    onMouseEnter,
+    onMouseLeave,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    ...restButtonProps
+  } = forwardedButtonProps;
 
   return React.createElement(
-    "button",
-    {
-      ...forwardedButtonProps,
-      type,
-      className: joinClassNames("simex-icon-control", className),
-      disabled: isDisabled,
-      "aria-disabled": isDisabled || undefined,
-      "aria-label": resolvedLabel,
-      "aria-pressed": isPressed,
-      "data-icon-control": interaction.id,
-      "data-icon-tooltip": resolvedTooltip,
-      "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
-      "data-icon-tone": interaction.tone ?? "standard",
-      "data-icon-status": isPlanned ? "planned" : interaction.status,
-      "data-icon-selected": isPressed === true ? "true" : undefined,
-    },
-    React.createElement(SimExIcon, {
-      iconId: interaction.glyphId,
-      size: iconSize,
-      className: iconClassName,
-      decorative: true,
-    }),
+    React.Fragment,
+    null,
+    React.createElement(
+      "button",
+      {
+        ...restButtonProps,
+        ref: tooltipState.anchorRef,
+        type,
+        className: joinClassNames("simex-icon-control", className),
+        disabled: isDisabled,
+        "aria-disabled": isDisabled || undefined,
+        "aria-label": resolvedLabel,
+        "aria-pressed": isPressed,
+        "aria-describedby": tooltipState.open ? tooltipState.id : undefined,
+        "data-icon-control": interaction.id,
+        "data-icon-tooltip": resolvedTooltip,
+        "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
+        "data-icon-tone": interaction.tone ?? "standard",
+        "data-icon-status": isPlanned ? "planned" : interaction.status,
+        "data-icon-selected": isPressed === true ? "true" : undefined,
+        onMouseEnter: chainHandlers(onMouseEnter, tooltipState.show),
+        onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hideUnlessFocused),
+        onFocus: chainHandlers(onFocus, tooltipState.show),
+        onBlur: chainHandlers(onBlur, tooltipState.hide),
+        onKeyDown: chainHandlers(onKeyDown, tooltipState.handleKeyDown),
+      },
+      React.createElement(SimExIcon, {
+        iconId: interaction.glyphId,
+        size: iconSize,
+        className: iconClassName,
+        decorative: true,
+      }),
+    ),
+    tooltipState.layer,
   );
 });
 
@@ -101,27 +123,135 @@ export const IconSummary = React.memo(function IconSummary({
 
   const resolvedLabel = ariaLabel ?? interaction.label;
   const resolvedTooltip = tooltip ?? interaction.tooltip ?? resolvedLabel;
+  const tooltipState = useIconTooltip(resolvedTooltip, tooltipPlacement);
+  const {
+    onMouseEnter,
+    onMouseLeave,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    ...forwardedSummaryProps
+  } = summaryProps;
 
   return React.createElement(
-    "summary",
-    {
-      ...summaryProps,
-      className: joinClassNames("simex-icon-control", className),
-      "aria-label": resolvedLabel,
-      "data-icon-control": interaction.id,
-      "data-icon-tooltip": resolvedTooltip,
-      "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
-      "data-icon-tone": interaction.tone ?? "standard",
-      "data-icon-status": interaction.status,
-    },
-    React.createElement(SimExIcon, {
-      iconId: interaction.glyphId,
-      size: iconSize,
-      className: iconClassName,
-      decorative: true,
-    }),
+    React.Fragment,
+    null,
+    React.createElement(
+      "summary",
+      {
+        ...forwardedSummaryProps,
+        ref: tooltipState.anchorRef,
+        className: joinClassNames("simex-icon-control", className),
+        "aria-label": resolvedLabel,
+        "aria-describedby": tooltipState.open ? tooltipState.id : undefined,
+        "data-icon-control": interaction.id,
+        "data-icon-tooltip": resolvedTooltip,
+        "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
+        "data-icon-tone": interaction.tone ?? "standard",
+        "data-icon-status": interaction.status,
+        onMouseEnter: chainHandlers(onMouseEnter, tooltipState.show),
+        onMouseLeave: chainHandlers(onMouseLeave, tooltipState.hideUnlessFocused),
+        onFocus: chainHandlers(onFocus, tooltipState.show),
+        onBlur: chainHandlers(onBlur, tooltipState.hide),
+        onKeyDown: chainHandlers(onKeyDown, tooltipState.handleKeyDown),
+      },
+      React.createElement(SimExIcon, {
+        iconId: interaction.glyphId,
+        size: iconSize,
+        className: iconClassName,
+        decorative: true,
+      }),
+    ),
+    tooltipState.layer,
   );
 });
+
+function useIconTooltip(label, placement) {
+  const anchorRef = React.useRef(null);
+  const tooltipRef = React.useRef(null);
+  const id = `simex-tooltip-${React.useId().replaceAll(":", "")}`;
+  const [open, setOpen] = React.useState(false);
+  const [geometry, setGeometry] = React.useState(null);
+
+  React.useLayoutEffect(() => {
+    if (!open || !anchorRef.current || !tooltipRef.current) return undefined;
+    const position = () => {
+      const anchor = anchorRef.current;
+      const tooltip = tooltipRef.current;
+      if (!anchor || !tooltip) return;
+      const anchorRect = anchor.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const gap = 8;
+      const inset = 8;
+      const wantsBelow = placement === "below";
+      const preferredTop = wantsBelow
+        ? anchorRect.bottom + gap
+        : anchorRect.top - tooltipRect.height - gap;
+      const alternateTop = wantsBelow
+        ? anchorRect.top - tooltipRect.height - gap
+        : anchorRect.bottom + gap;
+      const top = preferredTop >= inset
+        && preferredTop + tooltipRect.height <= window.innerHeight - inset
+        ? preferredTop
+        : alternateTop;
+      const root = anchor.closest(".app-frame") ?? anchor;
+      const theme = getComputedStyle(root);
+      setGeometry({
+        left: Math.max(
+          inset,
+          Math.min(
+            anchorRect.left + (anchorRect.width - tooltipRect.width) / 2,
+            window.innerWidth - tooltipRect.width - inset,
+          ),
+        ),
+        top: Math.max(inset, Math.min(top, window.innerHeight - tooltipRect.height - inset)),
+        backgroundColor: theme.getPropertyValue("--simex-surface-panel").trim(),
+        color: theme.getPropertyValue("--simex-text-strong").trim(),
+        borderColor: theme.getPropertyValue("--simex-border-strong").trim(),
+        fontFamily: theme.getPropertyValue("--simex-style-body-font").trim(),
+      });
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
+  }, [open, placement]);
+
+  const hide = React.useCallback(() => setOpen(false), []);
+  const show = React.useCallback(() => setOpen(Boolean(label)), [label]);
+  const hideUnlessFocused = React.useCallback(() => {
+    if (document.activeElement !== anchorRef.current) setOpen(false);
+  }, []);
+  const handleKeyDown = React.useCallback((event) => {
+    if (event.key === "Escape") setOpen(false);
+  }, []);
+  const layer = open && typeof document !== "undefined"
+    ? createPortal(React.createElement(
+        "span",
+        {
+          ref: tooltipRef,
+          id,
+          role: "tooltip",
+          "aria-label": label,
+          className: "simex-tooltip-layer",
+          style: geometry ?? { visibility: "hidden" },
+        },
+        label,
+      ), document.body)
+    : null;
+
+  return { anchorRef, id, open, show, hide, hideUnlessFocused, handleKeyDown, layer };
+}
+
+function chainHandlers(first, second) {
+  return (event) => {
+    first?.(event);
+    if (!event.defaultPrevented) second?.(event);
+  };
+}
 
 function joinClassNames(...values) {
   return values.filter(Boolean).join(" ");

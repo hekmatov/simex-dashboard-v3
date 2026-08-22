@@ -41,10 +41,18 @@ import {
   createChartCreateSnapshot,
   executeChartCreate,
 } from "../../charting/forms/chartCreateController.js";
+import { resolveDestination } from "../../charting/forms/chartDestination.js";
+import { planIdentityPlacement } from "../../charting/forms/chartPlacement.js";
+import { deriveChartCreationIssues } from "../../charting/forms/chartCreationIssues.js";
+import {
+  legacySizeForFootprint,
+  resolveChartFootprint,
+} from "../chartPanelLayout.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
 const noop = () => {};
+const ChartFootprintPicker = React.lazy(() => import("./ChartFootprintPicker.jsx"));
 
 const CREATION_STAGE_LABELS = Object.freeze(Object.fromEntries(
   CHART_CREATION_STAGES.map((stage, index) => [stage, CHART_CREATION_STAGE_LABELS[index]]),
@@ -56,6 +64,22 @@ const LEGACY_STEP_FOR_STAGE = Object.freeze({
   "map-and-prepare-data": "roles",
   "configure-chart": "style",
   "review-and-create": "style",
+});
+
+const PLACEMENT_PRESETS = Object.freeze({
+  columns: 4,
+  widths: Object.freeze([1, 2, 3, 4].map((columns) => Object.freeze({
+    id: `width-${columns}`,
+    label: `${columns}-column width`,
+    columns,
+    default: columns === 2,
+  }))),
+  heights: Object.freeze([1, 2].map((rows) => Object.freeze({
+    id: `height-${rows}`,
+    label: `${rows}-row height`,
+    rows,
+    default: rows === 1,
+  }))),
 });
 
 export function createWizardCloseHandlers({
@@ -89,6 +113,7 @@ export default function ChartWizardV3({
   timeSyncGroups,
   existingCharts = [],
   destination = null,
+  dashboard = null,
   dashboardRevision = null,
   initialDraftState = null,
   suspendControllerRef = null,
@@ -285,14 +310,25 @@ export default function ChartWizardV3({
     chart: wizard.draft,
     preparedData: runtime.prepared,
   });
-  const placementProof = {
-    status: wizard.destination?.pageId && wizard.destination?.sectionId
-      ? "valid"
-      : "invalid",
-    orderedText: wizard.destination?.pageId && wizard.destination?.sectionId
-      ? `Page ${wizard.destination.pageId}; section ${wizard.destination.sectionId}; append; standard width; standard height.`
-      : "Choose a page and section before placement can be validated.",
-  };
+  const destinationChoices = editableDestinationChoices(dashboard, wizard.destination);
+  const destinationFootprint = wizard.destination?.footprint
+    ?? resolveChartFootprint(wizard.draft?.layout);
+  const destinationResolution = hasDashboardPages(dashboard)
+    ? resolveDestination(wizard.destination ?? {}, dashboard)
+    : null;
+  const placementProof = destinationResolution
+    ? planIdentityPlacement({
+        destination: destinationResolution,
+        anchorChartId: wizard.destination?.anchorId ?? null,
+        position: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
+        chartId: wizard.draft?.id ?? wizard.draftId ?? "new_chart",
+        presets: {
+          ...PLACEMENT_PRESETS,
+          selectedWidth: `width-${destinationFootprint.columns}`,
+          selectedHeight: `height-${destinationFootprint.rows}`,
+        },
+      }, dashboard)
+    : legacyPlacementProof(wizard.destination, destinationFootprint);
   const creationStageStatuses = deriveVisibleStageStatuses({
     wizard,
     form,
@@ -323,6 +359,30 @@ export default function ChartWizardV3({
     path,
     value,
   });
+  const updateDestination = (patch) => {
+    setWizard((current) => {
+      const nextDestination = { ...(current.destination ?? {}), ...patch };
+      let next = reduceWizardState(current, {
+        type: "setDestination",
+        destination: nextDestination,
+      });
+      if (patch.footprint && next.draft) {
+        const { columns, rows } = patch.footprint;
+        next = reduceWizardState(next, {
+          type: "updateChart",
+          path: ["layout"],
+          value: {
+            ...(next.draft.layout ?? {}),
+            size: legacySizeForFootprint({ columns, rows }),
+            width: columns,
+            height: rows,
+          },
+        });
+      }
+      return next;
+    });
+    setSubmissionError("");
+  };
   const updateAuthoringPath = (path, value) => {
     if (
       path?.length === 3
@@ -616,28 +676,29 @@ export default function ChartWizardV3({
     "div",
     {
       className: "chart-wizard-backdrop",
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-labelledby": "chart-wizard-title",
-      "aria-busy": disabled || submitting ? "true" : undefined,
-      inert: disabled || submitting ? "" : undefined,
-      tabIndex: -1,
-      ref: wizardDialogRef,
     },
     React.createElement(
       "section",
-      { className: "chart-wizard chart-wizard-v3" },
+      {
+        className: "chart-wizard chart-wizard-v3",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-labelledby": "chart-wizard-title",
+        "aria-busy": disabled || submitting ? "true" : undefined,
+        inert: disabled || submitting ? "" : undefined,
+        tabIndex: -1,
+        ref: wizardDialogRef,
+      },
       React.createElement(
         "header",
         { className: "chart-wizard-header" },
         React.createElement(
           "div",
           null,
-          React.createElement("p", { className: "eyebrow" }, "Add new chart"),
           React.createElement(
             "h2",
             { id: "chart-wizard-title" },
-            CREATION_STAGE_LABELS[wizard.stage],
+            "Add new chart",
           ),
         ),
         React.createElement(IconControl, {
@@ -679,14 +740,113 @@ export default function ChartWizardV3({
               React.createElement("h3", { id: "chart-destination-heading" }, "Choose destination and placement"),
               React.createElement("p", null, "Destination stays attached to this chart draft even if you inspect another page."),
               React.createElement(
-                "dl",
-                { className: "chart-destination-ledger" },
-                React.createElement("div", null, React.createElement("dt", null, "Page"), React.createElement("dd", null, wizard.destination?.pageId ?? "Needs attention")),
-                React.createElement("div", null, React.createElement("dt", null, "Section"), React.createElement("dd", null, wizard.destination?.sectionId ?? "Needs attention")),
-                React.createElement("div", null, React.createElement("dt", null, "Insertion"), React.createElement("dd", null, wizard.destination?.position ?? "Append to section")),
-                React.createElement("div", null, React.createElement("dt", null, "Panel preset"), React.createElement("dd", null, "Standard width · Standard height")),
+                "div",
+                { className: "chart-destination-controls" },
+                React.createElement(
+                  "label",
+                  null,
+                  "Destination page",
+                  React.createElement(
+                    "select",
+                    {
+                      value: wizard.destination?.pageId ?? "",
+                      disabled: disabled || submitting,
+                      onChange: (event) => {
+                        const page = destinationChoices.pages.find(({ id }) => id === event.target.value);
+                        const section = page?.sections?.[0] ?? null;
+                        updateDestination({
+                          pageId: page?.id ?? event.target.value,
+                          sectionId: section?.id ?? null,
+                          relation: "append",
+                          position: "append",
+                          anchorId: null,
+                        });
+                      },
+                    },
+                    destinationChoices.pages.map((page) => React.createElement(
+                      "option",
+                      { key: page.id, value: page.id },
+                      page.label,
+                    )),
+                  ),
+                ),
+                React.createElement(
+                  "label",
+                  null,
+                  "Destination section",
+                  React.createElement(
+                    "select",
+                    {
+                      value: wizard.destination?.sectionId ?? "",
+                      disabled: disabled || submitting,
+                      onChange: (event) => updateDestination({
+                        sectionId: event.target.value,
+                        relation: "append",
+                        position: "append",
+                        anchorId: null,
+                      }),
+                    },
+                    destinationChoices.sections.map((section) => React.createElement(
+                      "option",
+                      { key: section.id, value: section.id },
+                      section.label,
+                    )),
+                  ),
+                ),
+                React.createElement(
+                  "label",
+                  null,
+                  "Insertion",
+                  React.createElement(
+                    "select",
+                    {
+                      value: wizard.destination?.relation ?? wizard.destination?.position ?? "append",
+                      disabled: disabled || submitting,
+                      onChange: (event) => updateDestination({
+                        relation: event.target.value,
+                        position: event.target.value,
+                        anchorId: event.target.value === "append"
+                          ? null
+                          : wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? null,
+                      }),
+                    },
+                    React.createElement("option", { value: "append" }, "Append to section"),
+                    React.createElement("option", { value: "before" }, "Before a chart"),
+                    React.createElement("option", { value: "after" }, "After a chart"),
+                  ),
+                ),
+                React.createElement(
+                  "label",
+                  null,
+                  "Placement anchor",
+                  React.createElement(
+                    "select",
+                    {
+                      value: wizard.destination?.anchorId ?? destinationChoices.anchors[0]?.id ?? "",
+                      disabled: disabled || submitting
+                        || (wizard.destination?.relation ?? wizard.destination?.position ?? "append") === "append",
+                      onChange: (event) => updateDestination({ anchorId: event.target.value }),
+                    },
+                    destinationChoices.anchors.length === 0
+                      ? React.createElement("option", { value: "" }, "No charts in this section")
+                      : destinationChoices.anchors.map((anchor) => React.createElement(
+                          "option",
+                          { key: anchor.id, value: anchor.id },
+                          anchor.label,
+                        )),
+                  ),
+                ),
               ),
-              React.createElement("p", { className: "chart-proof-state", role: "status" }, placementProof.orderedText),
+              React.createElement(
+                React.Suspense,
+                { fallback: React.createElement("p", { role: "status" }, "Loading chart size options…") },
+                React.createElement(ChartFootprintPicker, {
+                  value: destinationFootprint,
+                  disabled: disabled || submitting,
+                  onChange: (footprint) => updateDestination({ footprint }),
+                }),
+              ),
+              React.createElement("span", { className: "visually-hidden" }, placementProof.orderedText),
             )
           : null,
         wizard.stage === "chart-type"
@@ -706,6 +866,12 @@ export default function ChartWizardV3({
                       ? {}
                       : { id: newChartId(typeId) }),
                     title: "",
+                    layout: {
+                      ...(wizard.draft?.layout ?? {}),
+                      size: legacySizeForFootprint(destinationFootprint),
+                      width: destinationFootprint.columns,
+                      height: destinationFootprint.rows,
+                    },
                   },
                 });
                 navigateCreationStage("data-source");
@@ -791,9 +957,11 @@ export default function ChartWizardV3({
           ? React.createElement(ChartCreationReview, {
               wizard,
               source,
+              form,
               renderProof,
               placementProof,
               canCreate,
+              onRepair: navigateCreationStage,
             })
           : null,
         submissionError
@@ -867,10 +1035,10 @@ export default function ChartWizardV3({
     }),
     React.createElement(ConfirmDialog, {
       open: wizard.confirmation === "clearSource",
-      title: "Remove data source?",
-      message: "Assigned data roles will also be cleared.",
-      confirmLabel: "Remove source",
-      cancelLabel: "Keep source",
+      title: "Reset data source selection?",
+      message: "This clears the current selection and assigned data roles. It does not delete the CSV from the dashboard.",
+      confirmLabel: "Reset selection",
+      cancelLabel: "Keep selection",
       onConfirm: () => {
         if (operationLocked()) return;
         dispatch({ type: "confirmClearSource" });
@@ -955,9 +1123,11 @@ function ChartTimeMemberships({ chart, groups = [], timeRole, onChange = noop })
 function ChartCreationReview({
   wizard,
   source,
+  form,
   renderProof,
   placementProof,
   canCreate,
+  onRepair = noop,
 }) {
   const memberships = (wizard.timeSyncGroups ?? []).filter((group) => (
     group.members?.some(({ chartId }) => chartId === wizard.draft?.id)
@@ -965,11 +1135,42 @@ function ChartCreationReview({
   const mappingCount = Object.keys(wizard.draft?.roles ?? {}).length;
   const transformCount = (wizard.draft?.transformations?.filters?.length ?? 0)
     + (wizard.draft?.transformations?.grouping?.length ?? 0);
+  const issues = deriveChartCreationIssues({
+    wizard,
+    form,
+    placementProof,
+    renderProof,
+  });
+  const notReady = issues.length > 0
+    || !canCreate
+    || renderProof.status !== "valid"
+    || placementProof.status !== "valid";
+  const issueSummary = notReady
+    ? React.createElement(
+        "section",
+        { className: "chart-creation-issues", role: "alert", "aria-label": "Chart creation issues" },
+        React.createElement("p", null, "Creation is not ready. Resolve the following current issues:"),
+        React.createElement(
+          "ul",
+          null,
+          issues.map((issue) => React.createElement(
+            "li",
+            { key: `${issue.stage}:${issue.message}` },
+            React.createElement("span", null, `${issue.message} `),
+            React.createElement(
+              "button",
+              { type: "button", className: "chart-creation-repair-link", onClick: () => onRepair(issue.stage) },
+              issue.stageLabel,
+            ),
+          )),
+        ),
+      )
+    : null;
   return React.createElement(
     "section",
-    { className: "chart-creation-review", "aria-labelledby": "chart-creation-review-title" },
-    React.createElement("h3", { id: "chart-creation-review-title" }, "Review and create"),
+    { className: "chart-creation-review", "aria-label": "Chart creation review" },
     React.createElement("p", null, "Review every persisted value and both independent validations before creating the chart."),
+    issueSummary,
     React.createElement(
       "dl",
       { className: "chart-review-ledger" },
@@ -990,8 +1191,8 @@ function ChartCreationReview({
         ? `${wizard.companions.length} referenced proposals`
         : "None"),
     ),
-    !canCreate || renderProof.status !== "valid" || placementProof.status !== "valid"
-      ? React.createElement("p", { className: "wizard-error", role: "alert" }, "Creation is not ready. Use the owning stage to repair the current issue.")
+    notReady
+      ? null
       : React.createElement("p", { className: "chart-proof-state", role: "status" }, "All current values and both proofs are ready."),
   );
 }
@@ -1264,6 +1465,66 @@ export function createChartWizardState({
     destination,
     dashboardRevision,
   });
+}
+
+function hasDashboardPages(dashboard) {
+  return Array.isArray(dashboard?.pages);
+}
+
+function editableDestinationChoices(dashboard, current = {}) {
+  const pages = hasDashboardPages(dashboard)
+    ? dashboard.pages.flatMap((page) => {
+        const sections = (page?.sections ?? []).flatMap((section) => (
+          resolveDestination({ pageId: page.id, sectionId: section.id }, dashboard).status === "valid"
+            ? [{
+                id: section.id,
+                label: section.title ?? section.label ?? section.id,
+                anchors: (section.panels ?? []).flatMap((panel) => {
+                  const chart = panel?.chart ?? panel;
+                  return chart?.id
+                    ? [{ id: chart.id, label: chart.title ?? chart.id }]
+                    : [];
+                }),
+              }]
+            : []
+        ));
+        return sections.length > 0
+          ? [{ id: page.id, label: page.label ?? page.title ?? page.id, sections }]
+          : [];
+      })
+    : [];
+
+  if (!pages.some(({ id }) => id === current?.pageId) && current?.pageId) {
+    pages.push({
+      id: current.pageId,
+      label: current.pageId,
+      sections: current.sectionId
+        ? [{ id: current.sectionId, label: current.sectionId, anchors: [] }]
+        : [],
+    });
+  }
+  const selectedPage = pages.find(({ id }) => id === current?.pageId) ?? pages[0] ?? null;
+  const sections = selectedPage?.sections ?? [];
+  if (!sections.some(({ id }) => id === current?.sectionId) && current?.sectionId) {
+    sections.push({ id: current.sectionId, label: current.sectionId, anchors: [] });
+  }
+  const selectedSection = sections.find(({ id }) => id === current?.sectionId) ?? sections[0] ?? null;
+  return { pages, sections, anchors: selectedSection?.anchors ?? [] };
+}
+
+function legacyPlacementProof(destination, footprint) {
+  const valid = Boolean(destination?.pageId && destination?.sectionId);
+  const relation = destination?.relation ?? destination?.position ?? "append";
+  return {
+    status: valid ? "valid" : "invalid",
+    revision: valid
+      ? `legacy:${destination.pageId}:${destination.sectionId}:${relation}:${footprint.columns}x${footprint.rows}`
+      : null,
+    errors: valid ? [] : [{ message: "Choose a page and section before placement can be validated." }],
+    orderedText: valid
+      ? `Page ${destination.pageId}; section ${destination.sectionId}; ${relation}; ${footprint.columns} columns by ${footprint.rows} rows.`
+      : "Choose a page and section before placement can be validated.",
+  };
 }
 
 function assignManualRoles(state, schema, columns) {

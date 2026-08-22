@@ -1266,6 +1266,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
+        dashboard={dashboard}
         initialDraftState={chartDraftSessionStore.get(chartDraftSessionKey)}
         suspendControllerRef={chartWizardControllerRef}
         disabled={moderatorMutationLocked}
@@ -1702,6 +1703,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
+        dashboard={dashboard}
         initialDraftState={chartDraftSessionStore.get(chartDraftSessionKey)}
         suspendControllerRef={chartWizardControllerRef}
         disabled={moderatorMutationLocked}

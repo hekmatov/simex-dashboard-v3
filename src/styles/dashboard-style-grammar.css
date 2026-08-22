@@ -1480,3 +1480,177 @@
     transition-duration: 0.01ms;
   }
 }
+
+/* Viewport tooltips replace the retired pseudo-element bubble. The layer is
+   portalled to body so chart-panel clipping never hides explanatory text. */
+.simex-icon-control[data-icon-tooltip]::after {
+  content: none !important;
+}
+
+.simex-tooltip-layer {
+  border: 1px solid;
+  border-radius: var(--simex-style-control-radius, 6px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  box-sizing: border-box;
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.3;
+  max-width: min(260px, calc(100vw - 16px));
+  overflow-wrap: anywhere;
+  padding: 6px 9px;
+  pointer-events: none;
+  position: fixed;
+  text-align: center;
+  width: max-content;
+  z-index: 5000;
+}
+
+/* New Chart keeps one stable frame while only its body scrolls. */
+.app-frame .chart-wizard.chart-wizard-v3 {
+  height: calc(100dvh - 48px);
+  max-height: calc(100dvh - 48px);
+}
+
+.app-frame .chart-wizard-header {
+  min-height: 58px;
+  padding: 10px 16px;
+}
+
+.app-frame .chart-wizard-header h2 {
+  color: var(--simex-text-strong);
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.app-frame .chart-wizard-step-tabs {
+  gap: 6px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding: 8px 16px;
+}
+
+.app-frame .chart-wizard-step-button {
+  min-height: 48px;
+  padding: 6px 8px;
+}
+
+.app-frame .chart-wizard-body {
+  padding: 12px 16px;
+}
+
+.app-frame .chart-wizard-step,
+.app-frame .chart-creation-review {
+  gap: 10px;
+}
+
+.app-frame .chart-wizard-step > h3,
+.app-frame .chart-wizard-step > p,
+.app-frame .chart-creation-review > p {
+  margin: 0;
+}
+
+.app-frame .chart-destination-controls {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.app-frame .chart-destination-controls label {
+  color: var(--simex-text-muted);
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 700;
+  gap: 4px;
+}
+
+.app-frame .chart-destination-controls select {
+  min-width: 0;
+  width: 100%;
+}
+
+.app-frame .chart-wizard-destination .chart-footprint-control {
+  margin-top: 2px;
+}
+
+.app-frame .wizard-source-profile {
+  padding: 10px 12px;
+}
+
+.app-frame .wizard-source-profile-heading {
+  align-items: center;
+  gap: 10px;
+}
+
+.app-frame .wizard-source-profile-actions {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.app-frame .wizard-source-profile-actions .source-csv-viewer-action {
+  display: block;
+}
+
+.app-frame .chart-review-ledger {
+  margin: 4px 0;
+}
+
+.app-frame .chart-creation-issues {
+  background: var(--simex-error-soft);
+  border: 1px solid color-mix(in srgb, var(--simex-error) 45%, var(--simex-border-subtle));
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+  padding: 10px 12px;
+}
+
+.app-frame .chart-creation-issues :is(p, ul) {
+  margin: 0;
+}
+
+.app-frame .chart-creation-issues ul {
+  margin-top: 6px;
+  padding-left: 20px;
+}
+
+.app-frame .chart-creation-repair-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--simex-selected);
+  cursor: pointer;
+  display: inline;
+  font: inherit;
+  min-height: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.app-frame .chart-creation-repair-link:focus-visible {
+  outline: 2px solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .app-frame .chart-wizard-step-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-frame .chart-destination-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .app-frame .chart-wizard.chart-wizard-v3 {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .app-frame .chart-wizard-step-tabs,
+  .app-frame .chart-destination-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -176,6 +176,8 @@ export default function DataSourceStep({
               }),
               React.createElement(IconControl, {
                 interactionId: "wizard.remove-data-source",
+                ariaLabel: "Reset selection",
+                tooltip: "Reset selection",
                 className: "secondary",
                 onClick: onRequestClear,
               }),
