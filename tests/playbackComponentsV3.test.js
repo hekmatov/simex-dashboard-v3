@@ -673,6 +673,41 @@ test("All page charts and Group only project different participating chart sets"
   assert.match(groupOnly, /&quot;charts&quot;:\[&quot;scope-member&quot;\]/);
 });
 
+test("page projection does not narrow dashboard-wide group validation authority", () => {
+  const rows = [{ observed: "2027-05-01", cases: 10 }];
+  const pageChart = lineChart({ id: "page-chart", sourceId: "page-source" });
+  const otherPageChart = lineChart({ id: "other-page-chart", sourceId: "other-source" });
+  const html = renderPlaybackProbe({
+    groups: [{
+      id: "cross-page-group",
+      name: "Cross page group",
+      period: { start: "2027-05-01", end: "2027-05-01" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [
+        { chartId: pageChart.id, timeRole: "observation" },
+        { chartId: otherPageChart.id, timeRole: "observation" },
+      ],
+    }],
+    charts: [pageChart, otherPageChart],
+    pageCharts: [pageChart],
+    loadedData: { "page-source": rows, "other-source": rows },
+    profiles: {
+      "page-source": temporalProfile(rows),
+      "other-source": temporalProfile(rows),
+    },
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "default", id: null },
+      scope: "all-page",
+      playbackView: true,
+    },
+  });
+
+  assert.match(html, /&quot;charts&quot;:\[&quot;page-chart&quot;\]/);
+  assert.doesNotMatch(html, /other-page-chart/);
+});
+
 test("saved Scene source frames use only the live scene.frames Frame source", () => {
   const sourceRows = [
     { observed: "2027-05-01", cases: 10 },

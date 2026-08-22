@@ -63,6 +63,31 @@ test("browse, search, and type filtering preserve Ready and Needs attention grou
   assert.deepEqual(sections.needsAttention.map(({ id }) => id), ["scene-attention"]);
 });
 
+test("live item refresh preserves the active library context", () => {
+  const state = createTimeContentState({
+    items: [items[0]],
+    query: "exercise",
+    filter: "groups",
+    grouping: "needs-attention",
+    pageId: "page-a",
+    scrollTop: 180,
+    focusId: "group-ready",
+  });
+  const refreshed = reduceTimeContent(state, {
+    type: "REFRESH_ITEMS",
+    items: [items[1], items[2]],
+  });
+
+  assert.deepEqual(refreshed.items, [items[1], items[2]]);
+  assert.equal(refreshed.query, "exercise");
+  assert.equal(refreshed.filter, "groups");
+  assert.equal(refreshed.grouping, "needs-attention");
+  assert.equal(refreshed.pageId, "page-a");
+  assert.equal(refreshed.scrollTop, 180);
+  assert.equal(refreshed.focusId, "group-ready");
+  assert.deepEqual(refreshed.returnContext, state.returnContext);
+});
+
 test("empty library is distinct from a search with no results", () => {
   const empty = createTimeContentState({ items: [] });
   assert.deepEqual(getTimeContentEmptyState(empty, selectTimeContentSections(empty)), {

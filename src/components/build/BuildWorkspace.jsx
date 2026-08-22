@@ -108,8 +108,12 @@ export default function BuildWorkspace({
     initialScene(dashboard, activePage?.id),
     sceneValidationContext(dashboard),
   ));
+  const temporalContentItems = React.useMemo(
+    () => deriveTemporalContentItems({ dashboard, charts: temporalCharts }),
+    [dashboard, temporalCharts],
+  );
   const [timeContentState, setTimeContentState] = React.useState(() => createTimeContentState({
-    items: deriveTemporalContentItems({ dashboard, charts: temporalCharts }),
+    items: temporalContentItems,
     pageId: activePage?.id ?? null,
   }));
   const [tablet, setTablet] = React.useState(false);
@@ -134,6 +138,13 @@ export default function BuildWorkspace({
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
   }, [localAuthoringDrafts, onLocalDraftsChange]);
+
+  React.useEffect(() => {
+    setTimeContentState((current) => reduceTimeContent(current, {
+      type: "REFRESH_ITEMS",
+      items: temporalContentItems,
+    }));
+  }, [temporalContentItems]);
 
   React.useEffect(() => {
     const query = window.matchMedia?.("(min-width: 768px) and (max-width: 1199px)");

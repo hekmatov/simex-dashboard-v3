@@ -80,6 +80,11 @@ export function reduceTimeContent(state, action) {
   }
 
   switch (action?.type) {
+    case "REFRESH_ITEMS":
+      if (!Array.isArray(action.items)) {
+        throw new TypeError("Time Content refresh items must be an array.");
+      }
+      return { ...state, items: clone(action.items) };
     case "SET_QUERY":
       return {
         ...state,

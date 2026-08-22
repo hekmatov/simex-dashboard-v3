@@ -21,6 +21,7 @@ export function PlaybackProvider({
   groups = EMPTY_ARRAY,
   scenes = EMPTY_ARRAY,
   charts = EMPTY_ARRAY,
+  pageCharts = null,
   loadedData = {},
   profiles = {},
   initialState,
@@ -28,6 +29,7 @@ export function PlaybackProvider({
   timezone = "UTC",
   children,
 }) {
+  const activePageCharts = pageCharts ?? charts;
   const temporalContext = React.useMemo(() => ({
     charts,
     loadedData,
@@ -44,6 +46,7 @@ export function PlaybackProvider({
       groups: validatedGroups,
       scenes,
       charts,
+      pageCharts: activePageCharts,
       initialState,
       initialPosition,
       loadedData,
@@ -72,8 +75,8 @@ export function PlaybackProvider({
     [activeScene, validatedGroups, state.activeGroupId],
   );
   const defaultPagePlayback = React.useMemo(
-    () => buildDefaultPagePlayback(charts, temporalContext),
-    [charts, temporalContext],
+    () => buildDefaultPagePlayback(activePageCharts, temporalContext),
+    [activePageCharts, temporalContext],
   );
   const usingDefaultPage = state.source?.kind === "default" && !activeScene;
   const activeGroup = usingDefaultPage ? defaultPagePlayback.group : selectedGroup;
@@ -103,8 +106,8 @@ export function PlaybackProvider({
   );
   const playing = state.playing === true && canAdvance;
   const participatingMembers = React.useMemo(
-    () => selectParticipatingMembers(activeGroup, activeScene, state.scope, charts),
-    [activeGroup, activeScene, charts, state.scope],
+    () => selectParticipatingMembers(activeGroup, activeScene, state.scope, activePageCharts),
+    [activeGroup, activePageCharts, activeScene, state.scope],
   );
   const participatingChartIds = React.useMemo(
     () => Object.freeze(participatingMembers.map(({ chartId }) => chartId)),
@@ -344,6 +347,7 @@ function initializePlaybackState({
   groups,
   scenes,
   charts,
+  pageCharts,
   initialState,
   initialPosition,
   loadedData,
@@ -372,7 +376,7 @@ function initializePlaybackState({
     timezone,
   };
   const selectedGroup = resolveActiveGroup(groups, activeScene?.groupId ?? activeGroupId);
-  const defaultPagePlayback = buildDefaultPagePlayback(charts, temporalContext);
+  const defaultPagePlayback = buildDefaultPagePlayback(pageCharts ?? charts, temporalContext);
   const activeGroup = source.kind === "default" && !activeScene
     ? defaultPagePlayback.group
     : selectedGroup;

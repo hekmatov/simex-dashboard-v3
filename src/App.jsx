@@ -922,7 +922,8 @@ export default function App() {
     <PlaybackProvider
       groups={playbackGroups}
       scenes={dashboard.scenes ?? []}
-      charts={chartsForPlaybackPage(dashboard, activePageId)}
+      charts={configuredCharts(dashboard)}
+      pageCharts={chartsForPlaybackPage(dashboard, activePageId)}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}
       timezone={dashboard.timezone}
