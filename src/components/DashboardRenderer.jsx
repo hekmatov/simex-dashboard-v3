@@ -4,7 +4,9 @@ import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
 import {
+  buildLeaveBlockReason,
   createBuildDirtyState,
+  hasActiveLocalAuthoringDrafts,
   hasUnsavedAuthoredContent,
 } from "./build/buildDirtyState.js";
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
@@ -35,6 +37,11 @@ import {
   ICON_TOKENS,
   deriveIconAccentVariants,
 } from "../iconography/iconCatalog.js";
+import {
+  createChartDraftSessionStore,
+  isMeaningfulChartDraft,
+} from "../charting/forms/chartDraftSession.js";
+import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -89,6 +96,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
   const [chartWizardSuspended, setChartWizardSuspended] = React.useState(false);
   const [chartWizardSuspendedTarget, setChartWizardSuspendedTarget] = React.useState(null);
+  const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
+  const [chartDraftSessionRevision, setChartDraftSessionRevision] = React.useState(0);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
   const [externalDirty, setExternalDirty] = React.useState({
@@ -115,6 +124,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const importInputRef = React.useRef(null);
   const [showVantaSettings, setShowVantaSettings] = React.useState(false);
   const [backgroundDraft, setBackgroundDraft] = React.useState(() => sanitizeVantaSettings(dashboard.vantaBackground));
+  const chartWizardControllerRef = React.useRef(null);
+  const chartDraftSessionStoreRef = React.useRef(null);
+  if (chartDraftSessionStoreRef.current === null) {
+    chartDraftSessionStoreRef.current = createChartDraftSessionStore();
+  }
+  const chartDraftSessionStore = chartDraftSessionStoreRef.current;
+  const chartDraftSessionKey = String(dashboard.id ?? "active-dashboard");
   const [chartWizardTarget, setChartWizardTarget] = React.useState(null);
   const [chartEditBaseline, setChartEditBaseline] = React.useState(null);
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
@@ -172,12 +188,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
   );
-  const buildDraftLocked = Boolean(chartWizardTarget || chartEditorDirty);
+  const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
+  const buildDraftLocked = Boolean(chartEditorDirty || localAuthoringDirty);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const authoredDirty = hasUnsavedAuthoredContent({
     ...createBuildDirtyState(),
     chartEditor: chartEditorDirty,
-    chartWizard: chartWizardDirty,
+    chartWizard: chartWizardDirty || isMeaningfulChartDraft(
+      chartDraftSessionStore.get(chartDraftSessionKey),
+    ),
+    structure: localAuthoringDirty,
+    scenario: localAuthoringDirty,
     inlineRename: inlineRenameDirty,
     pendingContent: pendingEdits.hasPending(),
     timeGroup: externalDirty.timeGroup,
@@ -209,6 +230,22 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return true;
   }, []);
 
+  const handleLocalDraftsChange = React.useCallback((drafts) => {
+    setLocalAuthoringDrafts(drafts ?? {});
+  }, []);
+
+  const handleChartDraftStateChange = React.useCallback((state) => {
+    if (!state || state.discarded === true || state.status === "committed") {
+      chartDraftSessionStore.clear(chartDraftSessionKey);
+    } else if (chartDraftSessionStore.get(chartDraftSessionKey)) {
+      chartDraftSessionStore.replace(chartDraftSessionKey, state);
+    } else {
+      chartDraftSessionStore.start(chartDraftSessionKey, state);
+    }
+    setChartWizardDirty(isMeaningfulChartDraft(state));
+    setChartDraftSessionRevision((current) => current + 1);
+  }, [chartDraftSessionKey, chartDraftSessionStore]);
+
   React.useImperativeHandle(ref, () => ({
     setAuthoredDirtyFlag,
     async prepareForPackageImport() {
@@ -231,6 +268,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorDirty(false);
       setChartWizardTarget(null);
       setChartWizardDirty(false);
+      chartDraftSessionStore.clear(chartDraftSessionKey);
+      setChartWizardSuspended(false);
+      setChartWizardSuspendedTarget(null);
+      setChartDraftSessionRevision((current) => current + 1);
+      setLocalAuthoringDrafts({});
       setInlineRenameDirty(false);
       setExternalDirty({ timeGroup: false, scene: false, dashboardMetadata: false });
       onInlineRenameDirtyChange?.(false);
@@ -261,16 +303,28 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       if (buildDraftLocked) {
         return {
           ok: false,
-          reason: destination === "page"
+          reason: buildLeaveBlockReason(localAuthoringDrafts) || (destination === "page"
             ? "Finish or cancel the open chart editor before changing Page."
-            : "Finish or cancel the open chart editor before leaving Build.",
+            : "Finish or cancel the open chart editor before leaving Build."),
         };
+      }
+      if (chartWizardTarget) {
+        const suspended = chartWizardControllerRef.current?.suspend?.();
+        if (suspended === false) {
+          return {
+            ok: false,
+            reason: "Wait for the current chart operation to finish before leaving Build.",
+          };
+        }
+        if (suspended === undefined && chartWizardControllerRef.current === null) {
+          setChartWizardTarget(null);
+        }
       }
       await pendingEdits.flush();
       await onCommitPendingConfiguration?.();
       return { ok: true };
     },
-  }), [buildMode, buildDraftLocked, chartAuthoringActive, multiSelectMode, onCommitPendingConfiguration, onInlineRenameDirtyChange, pendingEdits, setAuthoredDirtyFlag]);
+  }), [buildMode, buildDraftLocked, chartAuthoringActive, chartDraftSessionKey, chartDraftSessionStore, chartWizardTarget, localAuthoringDrafts, multiSelectMode, onCommitPendingConfiguration, onInlineRenameDirtyChange, pendingEdits, setAuthoredDirtyFlag]);
 
   React.useEffect(() => {
     onComparisonSelectionChange?.(multiSelectMode);
@@ -299,6 +353,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, [onBuildDraftLockChange]);
 
   React.useEffect(() => () => pendingEdits.cancel(), [pendingEdits]);
+  React.useEffect(() => installChartDraftUnloadGuard({
+    getDraft: () => chartDraftSessionStore.get(chartDraftSessionKey),
+    hasOtherMeaningfulDraft: () => localAuthoringDirty,
+    window,
+  }), [chartDraftSessionKey, chartDraftSessionRevision, chartDraftSessionStore, localAuthoringDirty]);
   React.useEffect(() => () => {
     for (const resolve of buildRevealResolversRef.current.values()) resolve(false);
     buildRevealResolversRef.current.clear();
@@ -981,6 +1040,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setPageDrafts({});
         setSectionDrafts({});
         setChartEditBaseline(null);
+        chartDraftSessionStore.clear(chartDraftSessionKey);
+        setChartWizardTarget(null);
+        setChartWizardDirty(false);
+        setChartWizardSuspended(false);
+        setChartWizardSuspendedTarget(null);
+        setChartDraftSessionRevision((current) => current + 1);
+        setLocalAuthoringDrafts({});
+        setBuildTreeResetGeneration((current) => current + 1);
         setResetEditSessionConfirmation(false);
       } catch (error) {
         pendingEdits.restore(cancelled);
@@ -1123,6 +1190,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     <>
       <div className="build-mode-shell" style={iconLanguageStyles}>
         <BuildWorkspace
+          key={buildTreeResetGeneration}
           dashboard={dashboard}
           activePage={activePage}
           pageType={landingActive ? "landing" : "analytical"}
@@ -1189,6 +1257,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onImportPackage={requestDashboardPackageImport}
           onExportPackage={exportDashboardPackage}
           onOpenBackground={openBackgroundSettings}
+          onLocalDraftsChange={handleLocalDraftsChange}
           onDeviceLayoutChange={onDeviceLayoutChange}
           onDisplayAction={onDisplayAction}
         />
@@ -1196,6 +1265,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
+        initialDraftState={chartDraftSessionStore.get(chartDraftSessionKey)}
+        suspendControllerRef={chartWizardControllerRef}
         disabled={moderatorMutationLocked}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
@@ -1204,6 +1275,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
         onDirtyChange={setChartWizardDirty}
+        onDraftStateChange={handleChartDraftStateChange}
         onSuspendedChange={(suspended) => {
           setChartWizardSuspended(suspended);
           setChartWizardSuspendedTarget(suspended ? chartWizardTarget : null);
@@ -1211,12 +1283,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onClose={() => {
           if (!moderatorOperationGateRef.current.isActive()) setChartWizardTarget(null);
         }}
-        onCreate={async (payload) => {
+        onCreate={async (payload, reviewedPlacement) => {
           if (moderatorOperationGateRef.current.isActive()) {
             throw new Error("Wait for the current dashboard operation to finish.");
           }
           await pendingEdits.flush();
-          await onChartCreate(payload, chartWizardTarget);
+          await onChartCreate(payload, reviewedPlacement ?? chartWizardTarget);
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);
@@ -1629,6 +1701,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
+        initialDraftState={chartDraftSessionStore.get(chartDraftSessionKey)}
+        suspendControllerRef={chartWizardControllerRef}
         disabled={moderatorMutationLocked}
         dataSources={dashboard.dataSources}
         loadedData={dashboard.loadedData}
@@ -1636,17 +1710,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         geoDataSources={geoDataSources}
         timeSyncGroups={dashboard.timeSyncGroups ?? []}
         existingCharts={configuredCharts(dashboard)}
+        onDraftStateChange={handleChartDraftStateChange}
         onClose={() => {
           if (moderatorOperationGateRef.current.isActive()) return;
           setChartWizardTarget(null);
         }}
-        onCreate={async (payload) => {
+        onCreate={async (payload, reviewedPlacement) => {
           if (moderatorOperationGateRef.current.isActive()) {
             throw new Error("Wait for the current dashboard operation to finish.");
           }
           const target = chartWizardTarget;
           await pendingEdits.flush();
-          await onChartCreate(payload, target);
+          await onChartCreate(payload, reviewedPlacement ?? target);
           setChartWizardSuspended(false);
           setChartWizardSuspendedTarget(null);
           setChartWizardTarget(null);

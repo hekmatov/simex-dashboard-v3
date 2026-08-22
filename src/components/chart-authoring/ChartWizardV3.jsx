@@ -90,9 +90,12 @@ export default function ChartWizardV3({
   existingCharts = [],
   destination = null,
   dashboardRevision = null,
+  initialDraftState = null,
+  suspendControllerRef = null,
   disabled = false,
   onClose,
   onDirtyChange = noop,
+  onDraftStateChange = noop,
   onSuspendedChange = noop,
   onCreate,
 }) {
@@ -108,14 +111,14 @@ export default function ChartWizardV3({
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
     : [];
-  const [wizard, setWizard] = React.useState(() => createChartWizardState({
-    loadedData: safeLoadedData,
-    profiles: safeDatasetProfiles,
-    timeSyncGroups: safeGroups,
-    existingCharts: safeExistingCharts,
-    destination,
-    dashboardRevision,
-  }));
+  const [wizard, setWizard] = React.useState(() => initialDraftState ?? createChartWizardState({
+      loadedData: safeLoadedData,
+      profiles: safeDatasetProfiles,
+      timeSyncGroups: safeGroups,
+      existingCharts: safeExistingCharts,
+      destination,
+      dashboardRevision,
+    }));
   const [query, setQuery] = React.useState("");
   const [localRows, setLocalRows] = React.useState({});
   const [sourceKind, setSourceKind] = React.useState("");
@@ -143,22 +146,28 @@ export default function ChartWizardV3({
     initialFocusSelector: "[data-modal-initial-focus=\"true\"]",
     onEscape: () => closeHandlers.requestClose(),
   });
+  React.useImperativeHandle(suspendControllerRef, () => ({
+    suspend: requestClose,
+  }));
 
   function requestClose() {
-    if (operationLocked()) return;
-    setWizard((current) => reduceWizardState(current, {
+    if (operationLocked()) return false;
+    const suspended = reduceWizardState(wizard, {
       type: "suspend",
       restoration: {
-        stage: current.stage,
-        focusId: `chart-stage-${current.stage}`,
+        stage: wizard.stage,
+        focusId: `chart-stage-${wizard.stage}`,
         invokerId: "build-add-chart",
         scrollTop: wizardDialogRef.current?.scrollTop ?? 0,
-        targetId: current.draft?.id ?? null,
+        targetId: wizard.draft?.id ?? null,
       },
-    }));
+    });
+    setWizard(suspended);
+    onDraftStateChange(suspended);
     setSubmissionError("");
     onSuspendedChange(true);
     onClose?.();
+    return true;
   }
 
   React.useEffect(() => {
@@ -183,6 +192,9 @@ export default function ChartWizardV3({
   React.useEffect(() => {
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
+  React.useEffect(() => {
+    onDraftStateChange(wizard);
+  }, [onDraftStateChange, wizard]);
   React.useEffect(() => (
     () => onDirtyChange(false)
   ), [onDirtyChange]);
@@ -554,11 +566,11 @@ export default function ChartWizardV3({
           transactionId: transactionIdRef.current,
         }));
         const result = await executeChartCreate(snapshot, {
-          persist: async (payload) => {
+          persist: async (payload, reviewedPlacement) => {
             if (typeof onCreate !== "function") {
               throw new TypeError("Chart creation requires an onCreate callback.");
             }
-            await onCreate(payload);
+            await onCreate(payload, reviewedPlacement);
             return { dashboardRevision: dashboardRevision ?? "session-current" };
           },
         });
@@ -593,6 +605,7 @@ export default function ChartWizardV3({
     if (operationLocked()) return;
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
+    onDraftStateChange(closed);
     if (closed.closed) {
       onSuspendedChange(false);
       if (typeof onClose === "function") onClose();

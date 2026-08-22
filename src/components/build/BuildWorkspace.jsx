@@ -38,6 +38,8 @@ import {
   reduceTimeContent,
 } from "../time/timeContentState.js";
 import TimeGroupStudio from "../time/TimeGroupStudio.jsx";
+import { hasActiveLocalAuthoringDrafts } from "./buildDirtyState.js";
+import { deriveTemporalContentItems } from "../../charting/time/temporalNeedsAttention.js";
 import {
   createTimeGroupDraft,
   reduceTimeGroupDraft,
@@ -89,6 +91,7 @@ export default function BuildWorkspace({
   onImportPackage,
   onExportPackage,
   onOpenBackground,
+  onLocalDraftsChange,
   onDeviceLayoutChange,
   onDisplayAction,
 }) {
@@ -106,12 +109,19 @@ export default function BuildWorkspace({
     sceneValidationContext(dashboard),
   ));
   const [timeContentState, setTimeContentState] = React.useState(() => createTimeContentState({
-    items: timeContentItems(dashboard),
+    items: deriveTemporalContentItems({ dashboard, charts: temporalCharts }),
     pageId: activePage?.id ?? null,
   }));
   const [tablet, setTablet] = React.useState(false);
+  const localAuthoringDrafts = React.useMemo(() => ({
+    structure: structureDraft,
+    scenario: scenarioDraft,
+    timeGroup: timeGroupDraft,
+    scene: sceneDraft,
+  }), [sceneDraft, scenarioDraft, structureDraft, timeGroupDraft]);
+  const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
-  const navigationLocked = mutationsDisabled || chartDraftDirty;
+  const navigationLocked = mutationsDisabled || chartDraftDirty || localAuthoringDirty;
   const selectedChartItem = selection?.kind === "chart"
     ? collectChartPlacements(dashboard).find(({ placementId }) => placementId === selection.placementId)
     : null;
@@ -120,6 +130,10 @@ export default function BuildWorkspace({
   const inspectorFocusKey = tablet
     ? (openSheet === "inspector" ? focusLabelKey : 0)
     : focusLabelKey;
+
+  React.useEffect(() => {
+    onLocalDraftsChange?.(localAuthoringDrafts);
+  }, [localAuthoringDrafts, onLocalDraftsChange]);
 
   React.useEffect(() => {
     const query = window.matchMedia?.("(min-width: 768px) and (max-width: 1199px)");
@@ -728,30 +742,6 @@ function sceneEligibleCharts(dashboard, charts, scene) {
   const group = dashboard.timeSyncGroups?.find(({ id }) => id === scene?.groupId);
   const memberIds = new Set((group?.members ?? []).map(({ chartId }) => chartId));
   return charts.filter((chart) => memberIds.has(chart.id) && chart.pageId === scene?.pageId);
-}
-
-function timeContentItems(dashboard) {
-  const scenesByGroup = new Map();
-  for (const scene of dashboard.scenes ?? []) {
-    const list = scenesByGroup.get(scene.groupId) ?? [];
-    list.push(scene);
-    scenesByGroup.set(scene.groupId, list);
-  }
-  return [
-    ...(dashboard.timeSyncGroups ?? []).map((group) => ({
-      id: group.id,
-      type: "group",
-      name: group.name,
-      sceneCount: scenesByGroup.get(group.id)?.length ?? 0,
-      needsAttention: [],
-    })),
-    ...(dashboard.scenes ?? []).map((scene) => ({
-      ...scene,
-      type: "scene",
-      pageLabel: dashboard.pages?.find(({ id }) => id === scene.pageId)?.label ?? scene.pageId,
-      needsAttention: [],
-    })),
-  ];
 }
 
 function mergeTimeGroup(groups, saved, charts) {
