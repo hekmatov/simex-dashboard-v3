@@ -27,6 +27,12 @@ export default function ViewShell({
   onCancelMultiSelection,
 }) {
   const playback = usePlayback();
+  const scenePageId = sceneNavigationPageId(playback.activeScene, activePage);
+  React.useEffect(() => {
+    if (scenePageId && typeof onActivePageChange === "function") {
+      onActivePageChange(scenePageId);
+    }
+  }, [onActivePageChange, scenePageId]);
   React.useEffect(() => {
     playback.dispatch({ type: "navigate" });
   }, [activePage?.id]);
@@ -108,6 +114,12 @@ export default function ViewShell({
       )}
     />
   );
+}
+
+export function sceneNavigationPageId(scene, activePage) {
+  const scenePageId = scene?.pageId;
+  if (!scenePageId || scenePageId === activePage?.id) return null;
+  return scenePageId;
 }
 
 function pageChartIds(page) {

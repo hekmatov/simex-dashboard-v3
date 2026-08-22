@@ -13,13 +13,25 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const [
-  { default: ViewShell },
+  { default: ViewShell, sceneNavigationPageId },
   { PlaybackProvider, createPlaybackTimer },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/view/ViewShell.jsx"),
   vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx"),
 ]);
 await vite.close();
+
+test("selecting a cross-page Scene requests its owning page exactly once", () => {
+  assert.equal(
+    sceneNavigationPageId({ id: "scene-a", pageId: "biomedical" }, { id: "home" }),
+    "biomedical",
+  );
+  assert.equal(
+    sceneNavigationPageId({ id: "scene-a", pageId: "biomedical" }, { id: "biomedical" }),
+    null,
+  );
+  assert.equal(sceneNavigationPageId(null, { id: "home" }), null);
+});
 
 const rows = [
   { observed: "2027-05-01", cases: 10 },

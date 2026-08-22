@@ -461,11 +461,16 @@ export function buildScenePlaybackClock(scene, groupClock, options = {}) {
 
 function selectParticipatingMembers(group, scene, scope, charts) {
   if (!group) return EMPTY_ARRAY;
+  const activePageChartIds = new Set(charts.map(({ id }) => id));
   if (scene) {
     const selected = new Set((scene.members ?? []).map(({ chartId }) => chartId));
-    return Object.freeze(group.members.filter(({ chartId }) => selected.has(chartId)));
+    return Object.freeze(group.members.filter(
+      ({ chartId }) => selected.has(chartId) && activePageChartIds.has(chartId),
+    ));
   }
-  if (scope === "group-only") return group.members;
+  if (scope === "group-only") {
+    return Object.freeze(group.members.filter(({ chartId }) => activePageChartIds.has(chartId)));
+  }
   const groupMembers = new Map(group.members.map((member) => [member.chartId, member]));
   return Object.freeze(charts.map((chart) => (
     groupMembers.get(chart.id) ?? Object.freeze({ chartId: chart.id })

@@ -708,6 +708,70 @@ test("page projection does not narrow dashboard-wide group validation authority"
   assert.doesNotMatch(html, /other-page-chart/);
 });
 
+test("Group-only and Scene participation stay on the active page", () => {
+  const rows = [{ observed: "2027-05-01", cases: 10 }];
+  const pageChart = lineChart({ id: "page-member", sourceId: "page-source" });
+  const otherPageChart = lineChart({ id: "other-page-member", sourceId: "other-source" });
+  const base = {
+    groups: [{
+      id: "cross-page-group",
+      name: "Cross page group",
+      period: { start: "2027-05-01", end: "2027-05-01" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [
+        { chartId: pageChart.id, timeRole: "observation" },
+        { chartId: otherPageChart.id, timeRole: "observation" },
+      ],
+    }],
+    charts: [pageChart, otherPageChart],
+    pageCharts: [pageChart],
+    loadedData: { "page-source": rows, "other-source": rows },
+    profiles: {
+      "page-source": temporalProfile(rows),
+      "other-source": temporalProfile(rows),
+    },
+  };
+  const groupOnly = renderPlaybackProbe({
+    ...base,
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "group", id: "cross-page-group" },
+      activeGroupId: "cross-page-group",
+      scope: "group-only",
+      playbackView: true,
+    },
+  });
+  const sceneOnly = renderPlaybackProbe({
+    ...base,
+    scenes: [{
+      id: "cross-page-scene",
+      name: "Cross page scene",
+      groupId: "cross-page-group",
+      pageId: "active-page",
+      period: { start: "2027-05-01T00:00:00.000Z", end: "2027-05-01T23:59:59.999Z" },
+      frames: { mode: "source", chartId: pageChart.id, selection: "all" },
+      members: [
+        { chartId: pageChart.id, width: 2 },
+        { chartId: otherPageChart.id, width: 2 },
+      ],
+    }],
+    initialState: {
+      ...initialPlaybackState,
+      source: { kind: "scene", id: "cross-page-scene" },
+      activeGroupId: "cross-page-group",
+      activeSceneId: "cross-page-scene",
+      scope: "group-only",
+      playbackView: true,
+    },
+  });
+
+  assert.match(groupOnly, /&quot;charts&quot;:\[&quot;page-member&quot;\]/);
+  assert.doesNotMatch(groupOnly, /other-page-member/);
+  assert.match(sceneOnly, /&quot;charts&quot;:\[&quot;page-member&quot;\]/);
+  assert.doesNotMatch(sceneOnly, /other-page-member/);
+});
+
 test("saved Scene source frames use only the live scene.frames Frame source", () => {
   const sourceRows = [
     { observed: "2027-05-01", cases: 10 },
