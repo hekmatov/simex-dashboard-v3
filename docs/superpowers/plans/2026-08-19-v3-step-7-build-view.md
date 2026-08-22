@@ -650,3 +650,36 @@ pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js tests/e2e/v3-temp
 ```
 
 Expected: both commands exit `0`; View and Build use the same canonical renderer, saved layout, responsive rules, and maximum-width token; Build never exceeds View's maximum width; equivalent effective widths respond equivalently; authoring chrome leaves saved layout untouched and restores prior Build canvas/selection/focus/scroll state when closed; selected targets remain usable; phone Build stays mounted with drafts intact under the notice; all temporal and chart-creation recovery paths are deterministic; the chart workflow has exactly the six binding stages, in-session suspension resumes from memory, reload starts without a draft, linked companion and durable-repair ownership never cross, and both proof revisions remain independent validations.
+
+## 2026-08-22 performance amendment evidence
+
+The approved build-time derivative amendment is implemented in these atomic commits:
+
+- `2fa9e82` — generated Biomedical map, aggregate, and latest-bubble derivatives from the unchanged authoritative 146,080-row municipal CSV;
+- `cf94988` — cached temporal availability by row identity and data-affecting revision inputs while excluding presentation/layout changes;
+- `2c02f33` — deferred Default Chrono construction and selected-group validation until playback opens;
+- `ed53a04` — added versioned, immutable chart runtime artifacts, memory-first publication, IndexedDB persistence, distinct unavailable/quota outcomes, and compiled temporal projection; and
+- `bdb44cc` — compiled artifacts at successful chart create/edit transaction boundaries and reused them in View rendering.
+
+Generated derivative evidence:
+
+- map timeline: 146,080 rows, 5,206,577 bytes;
+- aggregate time series: 415 rows, 10,473 bytes;
+- latest municipal bubble snapshot: 352 rows, 21,940 bytes; and
+- authoritative source retained unchanged: 146,080 rows, 23,120,465 bytes.
+
+Deterministic verification:
+
+- `node scripts/build-biomedical-derivatives.mjs --check` passed;
+- the focused derivative, default-dashboard, temporal cache, playback, artifact, rendering, and transaction command passed 107/107 tests;
+- the authoring/runtime integration subset additionally passed 92/92 tests; and
+- the production `pnpm build` passed with 819 transformed modules. The existing mixed static/dynamic `ChartFootprintPicker` advisory and large dashboard-chunk advisory remain non-blocking build warnings.
+
+Live in-app browser checkpoint: [http://localhost:5177/](http://localhost:5177/).
+
+- With Chrono closed, Home → Biomedical → Socio-economic → Biomedical transitions measured 395 ms, 390 ms, and 387 ms in the checkpoint session.
+- The municipal choropleth rendered from the generated map derivative; hover exposed municipality `GM0303` and value `606.3775391623669` without a clipped tooltip.
+- Municipal outbreak playback exposed exactly two participating charts and advanced from frame 1 (`2020-02-27`) to frame 3 (`2020-02-29`).
+- The checkpoint reported no browser console warnings or errors and View contained no authoring chrome.
+
+Remaining limitation: IndexedDB artifact preload is opportunistic rather than a blocking dashboard-start step. If durable artifact storage is unavailable or full, the committed chart and its in-memory artifact remain usable for the session and a bounded non-blocking warning is shown. This evidence submits the amendment for V3 Design master review; it does not declare master acceptance.
