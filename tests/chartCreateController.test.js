@@ -26,17 +26,64 @@ test("wizard create adapter revalidates then persists the complete payload exact
   const calls = [];
 
   const result = await executeChartCreate(snapshot, {
-    persist: async (created) => {
-      calls.push(created);
+    persist: async (created, placement) => {
+      calls.push({ created, placement });
       return { dashboardRevision: "dashboard-8" };
     },
   });
 
   assert.equal(result.status, "committed");
   assert.equal(result.chartId, "chart-a");
-  assert.deepEqual(calls, [payload]);
+  assert.deepEqual(calls, [{
+    created: payload,
+    placement: {
+      pageId: "biomedical",
+      sectionId: "outbreak",
+      anchorId: "append",
+      placement: { relation: "append", footprint: "standard" },
+    },
+  }]);
   assert.equal(result.handoff.destinationIdentity.pageId, "biomedical");
   assert.equal(result.handoff.reveal, "full-panel");
+});
+
+test("wizard create adapter carries the reviewed identity placement into persistence", async () => {
+  const payload = {
+    chart: { id: "chart-between", typeId: "line", sourceId: "cases" },
+  };
+  const snapshot = createChartCreateSnapshot({
+    transactionId: "create-chart-between",
+    finalized: payload,
+    destination: {
+      pageId: "biomedical",
+      sectionId: "outbreak",
+      anchorId: "chart-anchor",
+      relation: "before",
+      footprint: "wide",
+    },
+    dashboardRevision: "dashboard-7",
+    permissionRevision: "permission-3",
+    schemaRevision: "line-9",
+    source: { id: "cases", revision: "source-4", profileRevision: "profile-2" },
+    renderProof: { status: "valid", revision: "render-5" },
+    placementProof: { status: "valid", revision: "placement-6" },
+  });
+  let reviewedPlacement = null;
+
+  const result = await executeChartCreate(snapshot, {
+    persist: async (_created, placement) => {
+      reviewedPlacement = placement;
+      return { dashboardRevision: "dashboard-8" };
+    },
+  });
+
+  assert.equal(result.status, "committed");
+  assert.deepEqual(reviewedPlacement, {
+    pageId: "biomedical",
+    sectionId: "outbreak",
+    anchorId: "chart-anchor",
+    placement: { relation: "before", footprint: "wide" },
+  });
 });
 
 test("wizard create adapter fails closed before persistence when a live authority drifts", async () => {

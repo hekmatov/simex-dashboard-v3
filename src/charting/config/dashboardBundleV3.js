@@ -475,7 +475,21 @@ export function integrateCreatedChart(dashboard, payload, target) {
   if (!section) {
     throw new Error("The selected chart destination no longer exists.");
   }
-  section.panels.push(normalizeChartInstance(payload.chart));
+  const chart = normalizeChartInstance(payload.chart);
+  const relation = target.placement?.relation ?? target.relation ?? "append";
+  if (relation === "append") {
+    section.panels.push(chart);
+  } else if (relation === "before" || relation === "after") {
+    const anchorIndex = section.panels.findIndex(
+      (panel) => (panel.chart ?? panel).id === target.anchorId,
+    );
+    if (anchorIndex < 0) {
+      throw new Error("The reviewed chart placement anchor no longer exists.");
+    }
+    section.panels.splice(relation === "before" ? anchorIndex : anchorIndex + 1, 0, chart);
+  } else {
+    throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
+  }
   validateDashboardConfig(next);
   return next;
 }

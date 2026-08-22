@@ -96,7 +96,10 @@ export async function executeChartCreate(snapshot, { persist } = {}) {
   }
   return commitChartCreate(validation.transactionCandidate, {
     persist: async (transaction) => {
-      const persisted = await persist(transaction.chartRecord.creationPayload);
+      const persisted = await persist(
+        transaction.chartRecord.creationPayload,
+        transaction.destinationIdentity,
+      );
       return {
         chartId: transaction.chartRecord.id,
         dashboardRevision: persisted?.dashboardRevision
