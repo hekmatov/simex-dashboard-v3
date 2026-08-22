@@ -10,6 +10,8 @@ import { getChartSchema } from "../schemas/chartSchemaRegistry.js";
 
 const CANONICAL_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const EMPTY_AVAILABILITY = Object.freeze([]);
+const AVAILABILITY_BY_ROWS = new WeakMap();
+const MAX_IDENTITIES_PER_SOURCE = 128;
 
 export function collectTemporalAvailability({
   chart,
@@ -44,6 +46,30 @@ export function collectTemporalAvailability({
     );
   }
 
+  const plottedRoleBindings = plottedRoleIds(chart).map((roleId) => ({
+    roleId,
+    bindings: bindingList(chart.roles?.[roleId]),
+  }));
+  const plottedBindings = plottedRoleBindings.flatMap(({ bindings }) => bindings);
+  if (plottedBindings.length === 0) return EMPTY_AVAILABILITY;
+
+  const cache = availabilityCache(rows);
+  const cacheIdentity = stableStringify({
+    sourceId: chart.sourceId,
+    typeId: chart.typeId,
+    timeRole: member.timeRole,
+    timeBinding,
+    plottedRoleBindings,
+    transformations: chart.transformations ?? null,
+    period,
+    timezone: canonicalTimezone,
+    columns: [timeField, ...plottedBindings.map(bindingField)]
+      .filter((field, index, fields) => fields.indexOf(field) === index)
+      .map((field) => [field, profileColumn(profile, field) ?? null]),
+  });
+  const cached = cache.get(cacheIdentity);
+  if (cached) return cached;
+
   const transformed = applyTransforms(rows, chart.transformations, profile, chart);
   const filterError = transformed.diagnostics.find(
     ({ severity }) => severity === "error",
@@ -53,11 +79,6 @@ export function collectTemporalAvailability({
       `Member chart "${chart.id}" saved filters are invalid: ${filterError.message}`,
     );
   }
-
-  const plottedBindings = plottedRoleIds(chart).flatMap(
-    (roleId) => bindingList(chart.roles?.[roleId]),
-  );
-  if (plottedBindings.length === 0) return EMPTY_AVAILABILITY;
 
   const epochs = new Set();
   for (const row of transformed.rows) {
@@ -72,8 +93,14 @@ export function collectTemporalAvailability({
     if (epochMs !== null) epochs.add(epochMs);
   }
 
-  if (epochs.size === 0) return EMPTY_AVAILABILITY;
-  return Object.freeze([...epochs].sort((left, right) => left - right));
+  const availability = epochs.size === 0
+    ? EMPTY_AVAILABILITY
+    : Object.freeze([...epochs].sort((left, right) => left - right));
+  if (cache.size >= MAX_IDENTITIES_PER_SOURCE) {
+    cache.delete(cache.keys().next().value);
+  }
+  cache.set(cacheIdentity, availability);
+  return availability;
 }
 
 export function plottedRoleIds(chart) {
@@ -151,4 +178,25 @@ function dateInTimezone(epochMs, timezone) {
     parts.filter(({ type }) => type !== "literal").map(({ type, value }) => [type, value]),
   );
   return `${values.year}-${values.month}-${values.day}`;
+}
+
+function availabilityCache(rows) {
+  let cache = AVAILABILITY_BY_ROWS.get(rows);
+  if (!cache) {
+    cache = new Map();
+    AVAILABILITY_BY_ROWS.set(rows, cache);
+  }
+  return cache;
+}
+
+function stableStringify(value) {
+  if (value === undefined) return '"[undefined]"';
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  return `{${Object.keys(value)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+    .join(",")}}`;
 }
