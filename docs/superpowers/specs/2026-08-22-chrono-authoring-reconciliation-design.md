@@ -1,7 +1,7 @@
 # Chrono Authoring Reconciliation Design
 
 Date: 2026-08-22
-Status: Approved design; pending implementation-plan approval
+Status: Revised approved design; pending implementation-plan approval
 
 ## Purpose
 
@@ -42,18 +42,22 @@ No compatibility alias, fallback reader, dual-write behavior, or legacy migratio
 
 The Build command area exposes two temporal entry points:
 
-- **Chrono Studio** opens the shared page-grouped Time Content landing surface in its complete mode. It provides **Create Chrono Group** and **Create Scene** actions.
-- **Scene Studio** opens the same underlying content system in Scene-focused mode, initially showing Scene content while retaining the same ownership and return-context behavior.
+- **Chrono Studio** opens the Chrono Group library and provides **Create Chrono Group**. Selecting a Chrono Group opens its read-first content page rather than its editor.
+- **Scene Studio** opens the page-grouped Scene library and provides **Create Scene**. Selecting a Scene opens its read-first content page rather than its editor.
 
-The standalone **Time Content** Build command is removed because Chrono Studio now owns that landing surface. The top-level Build Chrono Groups command uses the same Chrono Studio entry instead of selecting a legacy inspector record.
+The standalone **Time Content** Build command is removed because the two studios own their respective content. The top-level Build Chrono Groups command uses the same Chrono Studio entry instead of selecting a legacy inspector record.
 
-Opening an editor from either landing surface records the library mode, active page, query/filter state, scroll position, and invoking control. Closing or completing the editor returns to that exact context. The existing independent-draft and Context Shelf behavior remains authoritative.
+Each content page has an explicit **Edit** action that opens the corresponding editor with the selected Chrono Group or Scene fully populated. A Chrono Group content page also provides the second approved **Create Scene** entry point; it opens a new Scene draft with the parent Chrono Group already selected. Create Scene does not appear in the Chrono Studio landing page.
+
+Opening a content page or editor records the studio, active page, query/filter state, scroll position, selected record, and invoking control. Closing or completing the editor returns to that record's content page; returning again restores the originating studio context. The existing independent-draft and Context Shelf behavior remains authoritative.
 
 The legacy Auto/Tablet/Phone Layout fieldset is removed from Build commands. This does not change the canonical renderer or its responsive behavior.
 
 ## Chrono Studio and Create Chrono Group
 
-Chrono Studio is a content-first authoring surface. Its landing view implements Sketch 012 and its Create Chrono Group flow implements Sketch 005.
+Chrono Studio is a content-first authoring surface. Its landing view lists Chrono Groups and supports search, status, and content-page navigation. Its sole landing-page creation action is **Create Chrono Group**, whose editor implements Sketch 005.
+
+The Chrono Group content page is read-first. It summarizes the group's identity, period, matching defaults, cadence, coverage, member charts, affected pages, and child Scenes. Member charts and child Scenes are organized under owning page headings. The page exposes **Edit** and **Create Scene**. Edit opens the existing group in the same four-stage editor with every field populated. Create Scene opens a new Scene draft with this Chrono Group fixed as its initial parent.
 
 Create Chrono Group retains four stages while moving identity to the beginning:
 
@@ -66,11 +70,9 @@ The editor keeps the accepted staged studio structure: persistent identity/statu
 
 The normal footer contains navigation, Save Chrono Group, and Discard actions. It does not contain Stay. **Stay** appears only in a dirty-draft exit conflict and means cancel the requested navigation while preserving the draft.
 
-Chrono Studio's landing surface also exposes **Create Scene**, handing off to the Scene flow while preserving its return context.
-
 ## Scene Studio and Create Scene
 
-Scene Studio is also content-first. Its landing view opens the shared content model in Scene-focused mode, organized by owning page and parent Chrono Group.
+Scene Studio is also content-first. Its landing view lists Scenes by owning page and identifies each parent Chrono Group. Its creation action is **Create Scene**. Selecting a Scene opens a read-first content page summarizing its identity, parent, owning page, period, frames, chart composition, Scene View widths, Present subset/layout, matching behavior, cadence, and status. The content page's **Edit** action opens the existing Scene in the same two-stage editor with every field populated.
 
 Create Scene retains the accepted two-stage interaction model from Sketch 006:
 
@@ -79,19 +81,19 @@ Create Scene retains the accepted two-stage interaction model from Sketch 006:
 
 The Scene identity band always shows the draft name and lineage as parent Chrono Group → Scene. One Scene draft owns both stages and one Save Scene transaction. Canonical dashboard chart order and footprint are never mutated by Scene arrangement.
 
-## Page-grouped Time Content
+## Studio content pages and page grouping
 
-The shared content landing system follows Sketch 012 rather than using Ready and Needs attention as its primary hierarchy.
+The two studios and their content pages follow Sketch 012 rather than using Ready and Needs attention as the primary hierarchy.
 
-- Chrono Groups are the authored parent records.
-- Their Scenes are organized beneath owning page headings.
-- A Scene appears once under its owning page and identifies its parent Chrono Group.
-- Dashboard-wide Chrono Group information is not duplicated as separate mutable records for every participating page.
+- Chrono Studio lists each dashboard-wide Chrono Group once.
+- A Chrono Group content page organizes member charts and child Scenes beneath owning page headings.
+- Scene Studio organizes Scenes beneath owning page headings; a Scene appears once and identifies its parent Chrono Group.
+- Dashboard-wide Chrono Group information is never duplicated as separate mutable records for every participating page.
 - Ready and Needs-attention remain explicit statuses within cards and page sections, not the top-level grouping.
-- Search and type filters preserve page grouping and distinguish an empty library from no matching results.
+- Search and studio-specific filters preserve page grouping where applicable and distinguish an empty library from no matching results.
 - Create, edit, duplicate, remove, repair, failure recovery, and running-session isolation retain their existing transactional semantics.
 
-Chrono Studio starts in complete content mode. Scene Studio starts with the Scene filter applied. Switching filters changes only the library view and does not create a second content truth.
+Chrono Studio, Scene Studio, both record content pages, and both editors consume one shared temporal content truth. Navigation state changes only the current read or edit projection and never duplicates authored content.
 
 ## Checkbox and radio control contract
 
@@ -124,7 +126,7 @@ It does not redesign View Chrono playback, Present/Audience composition, Dashboa
 Implementation proceeds in independently testable slices:
 
 1. domain/schema rename and configuration consumers;
-2. shared content-first studio navigation and page grouping;
+2. content-first studio, record-detail, edit, and return navigation;
 3. Sketch 005 Chrono Group flow;
 4. Sketch 006 Scene flow;
 5. checkbox/radio normalization and Build-control cleanup;
@@ -133,14 +135,18 @@ Implementation proceeds in independently testable slices:
 Focused tests must prove:
 
 - no retired temporal-group terminology or persisted keys remain;
-- Chrono Studio and Scene Studio open their required content landing states;
-- Chrono Studio offers Create Chrono Group and Create Scene;
+- Chrono Studio and Scene Studio open their respective content landing states;
+- Chrono Studio offers Create Chrono Group but not Create Scene;
+- Scene Studio offers Create Scene;
+- selecting a Chrono Group or Scene opens its read-first content page;
+- each content page's Edit action opens a fully populated editor;
+- a Chrono Group content page offers the second Create Scene action with its parent preselected;
 - names are editable in the first stage of both creation flows;
 - normal Chrono editing has no Stay action while exit conflicts retain Stay;
-- Time Content is organized by owning page and status remains visible;
+- Chrono Group contents and the Scene Studio library are organized by owning page while status remains visible;
 - Create Chrono Group and Create Scene expose the accepted ledger regions and stage structures;
 - Build commands contain no legacy device Layout control;
 - every rendered checkbox/radio remains conventionally sized while its label supplies an adequate activation target; and
 - transactional save, retry, discard, restoration, and immutable running-session behavior still pass.
 
-Browser checks exercise Build commands, Chrono Studio, Create Chrono Group, Scene Studio, Create Scene, and a fully configured New Chart membership step at representative desktop and tablet widths. The production build is the final integration check.
+Browser checks exercise Build commands, both studio landing pages, both record content pages, both populated Edit paths, both Create Scene entry points, Create Chrono Group, and a fully configured New Chart membership step at representative desktop and tablet widths. The production build is the final integration check.
