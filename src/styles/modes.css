@@ -363,9 +363,9 @@
 
 .build-command-groups {
   align-items: end;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 12px 16px;
+  grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
 }
 
 .build-command-group {
@@ -374,13 +374,35 @@
   gap: 6px;
 }
 
+.build-command-group[data-build-command-group="content"] {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.build-command-group[data-build-command-group="time"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
 .build-command-group--layout {
-  flex: 1 1 420px;
-  min-width: min(100%, 420px);
+  align-items: center;
+  border-top: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: 8px 12px;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  padding-top: 10px;
+}
+
+.build-command-group--layout .build-command-group__controls {
+  justify-self: end;
 }
 
 .build-command-group--session {
-  margin-inline-start: auto;
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: end;
 }
 
 .build-command-group__label {
@@ -814,6 +836,26 @@
 
 @media (min-width: 768px) and (max-width: 1199px) {
 
+  .build-command-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .build-command-group--layout,
+  .build-command-group--session {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .build-command-group[data-build-command-group="content"],
+  .build-command-group[data-build-command-group="time"] {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .build-command-group--session {
+    justify-self: end;
+  }
+
   .build-live-canvas {
     min-height: 0;
   }
@@ -842,18 +884,29 @@
   .build-header,
   .build-command-groups {
     align-items: stretch;
-    flex-direction: column;
+  }
+
+  .build-command-groups,
+  .build-command-group--layout {
+    grid-template-columns: 1fr;
   }
 
   .build-command-group,
   .build-command-group--layout {
     flex-basis: auto;
+    grid-column: auto;
+    grid-row: auto;
     min-width: 0;
     width: 100%;
   }
 
   .build-command-group--session {
-    margin-inline-start: 0;
+    grid-column: auto;
+    justify-self: stretch;
+  }
+
+  .build-command-group--layout .build-command-group__controls {
+    justify-self: stretch;
   }
 
   .build-command-group__controls {
