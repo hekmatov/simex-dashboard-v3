@@ -5595,6 +5595,22 @@ html[data-simex-eyedropper-active="true"] body * {
   gap: 3px;
 }
 
+.chart-panel-action-rail > .source-csv-viewer-action {
+  display: block;
+}
+
+.chart-panel-action-rail > .source-csv-viewer-action small {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  bottom: 42px;
+  color: var(--simex-text-strong);
+  max-width: min(320px, calc(100vw - 48px));
+  padding: 8px 10px;
+  position: absolute;
+  right: 0;
+  width: max-content;
+}
+
 .source-csv-viewer-action small,
 .chart-authoring-citation-resolved {
   color: #5c7288;

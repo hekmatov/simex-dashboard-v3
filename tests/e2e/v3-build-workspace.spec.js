@@ -23,14 +23,14 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   await expect(target).toHaveClass(/selected/);
   const selectedBefore = await target.getAttribute("data-build-placement-id");
 
-  await target.getByRole("button", { name: "Show chart details" }).click();
-  const sourceButton = target.getByRole("button", { name: "View source", exact: true });
+  const sourceButton = target.getByRole("button", { name: "View source CSV", exact: true });
+  const popupPromise = page.waitForEvent("popup");
   await sourceButton.click();
-  const viewer = page.locator(".source-viewer-backdrop");
-  await expect(viewer).toBeVisible();
-  await expect(viewer).toContainText("Source ID");
-  await viewer.getByRole("button", { name: "Close source viewer" }).click();
-  await expect(viewer).toHaveCount(0);
+  const viewer = await popupPromise;
+  await expect(viewer.getByText("Dataset", { exact: true })).toBeVisible();
+  const closePromise = viewer.waitForEvent("close");
+  await viewer.getByRole("button", { name: "Return to dashboard" }).click();
+  await closePromise;
   await expect(sourceButton).toBeFocused();
   await expect(target).toHaveAttribute("data-build-placement-id", selectedBefore);
 

@@ -9,6 +9,7 @@ import {
 export default function SourceCsvViewerButton({
   sourceId,
   source,
+  context,
   className = "secondary",
   interactionId = "panel.view-source-csv",
 }) {
@@ -21,11 +22,14 @@ export default function SourceCsvViewerButton({
       interactionId,
       className,
       disabled: !available,
-      onClick: () => {
+      onClick: (event) => {
+        const invokingControl = event.currentTarget;
         setError("");
         openSourceViewer({
           sourceId,
           source,
+          context,
+          onReturn: () => invokingControl?.focus?.(),
           onError: setError,
         });
       },

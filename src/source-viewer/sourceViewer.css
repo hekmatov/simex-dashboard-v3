@@ -45,6 +45,36 @@ input {
   margin: 0;
 }
 
+.source-viewer-header {
+  align-items: start;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.source-viewer-return {
+  flex: 0 0 auto;
+}
+
+.source-viewer-provenance {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+  max-width: 100%;
+  row-gap: 6px;
+}
+
+.source-viewer-provenance dt {
+  color: var(--simex-text-muted);
+  font-weight: 700;
+  padding-right: 16px;
+}
+
+.source-viewer-provenance dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .source-viewer-eyebrow {
   color: var(--simex-text-muted, #5a6066);
   font-size: 0.75rem;

@@ -2,9 +2,10 @@ import { captureDashboardThemeProjection } from "../../theme/dashboardThemeRoot.
 
 export const SOURCE_VIEWER_READY = "simex-source-viewer-ready";
 export const SOURCE_VIEWER_LOAD = "simex-source-viewer-load";
-export const SOURCE_VIEWER_VERSION = 1;
+export const SOURCE_VIEWER_RETURN = "simex-source-viewer-return";
+export const SOURCE_VIEWER_VERSION = 2;
 
-export function buildSourceViewerDescriptor(sourceId, source) {
+export function buildSourceViewerDescriptor(sourceId, source, context = {}) {
   if (!source || typeof source !== "object") return null;
   const id = nonEmpty(sourceId);
   if (!id) return null;
@@ -18,6 +19,7 @@ export function buildSourceViewerDescriptor(sourceId, source) {
       label,
       mode: "path",
       path: `${baseUrl()}${source.path}`,
+      invocation: viewerInvocation(context, id, source.path),
     };
   }
   if (source.type === "uploadedCsv" && typeof source.csvText === "string") {
@@ -27,6 +29,7 @@ export function buildSourceViewerDescriptor(sourceId, source) {
       label,
       mode: "text",
       csvText: source.csvText,
+      invocation: viewerInvocation(context, id, nonEmpty(source.fileName) ?? "Uploaded CSV"),
     };
   }
   return null;
@@ -35,10 +38,12 @@ export function buildSourceViewerDescriptor(sourceId, source) {
 export function openSourceViewer({
   sourceId,
   source,
+  context,
   windowTarget = window,
+  onReturn = () => {},
   onError = () => {},
 } = {}) {
-  const descriptor = buildSourceViewerDescriptor(sourceId, source);
+  const descriptor = buildSourceViewerDescriptor(sourceId, source, context);
   const themeProjection = captureDashboardThemeProjection(
     windowTarget.document?.querySelector?.(".app-frame"),
   );
@@ -55,21 +60,29 @@ export function openSourceViewer({
     onError("The source-data window was blocked. Allow popups and try again.");
     return null;
   }
+  let returned = false;
+  const restoreInvoker = () => {
+    if (returned) return;
+    returned = true;
+    windowTarget.removeEventListener("message", handleMessage);
+    onReturn();
+  };
   const handleMessage = (event) => {
     if (
       event.origin !== windowTarget.location.origin
       || event.source !== viewer
-      || event.data?.type !== SOURCE_VIEWER_READY
       || event.data?.version !== SOURCE_VIEWER_VERSION
     ) {
       return;
     }
-    viewer.postMessage({
-      type: SOURCE_VIEWER_LOAD,
-      descriptor,
-      themeProjection,
-    }, windowTarget.location.origin);
-    windowTarget.removeEventListener("message", handleMessage);
+    if (event.data?.type === SOURCE_VIEWER_READY) {
+      viewer.postMessage({
+        type: SOURCE_VIEWER_LOAD,
+        descriptor,
+        themeProjection,
+      }, windowTarget.location.origin);
+    }
+    if (event.data?.type === SOURCE_VIEWER_RETURN) restoreInvoker();
   };
   windowTarget.addEventListener("message", handleMessage);
   viewer.focus();
@@ -78,6 +91,16 @@ export function openSourceViewer({
 
 function nonEmpty(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function viewerInvocation(context, datasetId, csvPath) {
+  return {
+    chartId: nonEmpty(context?.chartId) ?? "Unknown chart",
+    chartTitle: nonEmpty(context?.chartTitle) ?? "Unknown chart",
+    variableId: nonEmpty(context?.variableId) ?? "Not configured",
+    datasetId,
+    csvPath,
+  };
 }
 
 function baseUrl() {

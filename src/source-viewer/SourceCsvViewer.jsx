@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import {
   SOURCE_VIEWER_LOAD,
   SOURCE_VIEWER_READY,
+  SOURCE_VIEWER_RETURN,
   SOURCE_VIEWER_VERSION,
 } from "../components/source-data/sourceViewerProtocol.js";
 import {
@@ -124,16 +125,28 @@ export default function SourceCsvViewer() {
     React.createElement(
       "header",
       { className: "source-viewer-header" },
-      React.createElement("p", { className: "source-viewer-eyebrow" }, "Source data"),
-      React.createElement(
-        "h1",
-        null,
-        state.descriptor?.label ?? "Waiting for source",
-      ),
-      state.descriptor?.sourceId
-        ? React.createElement("p", null, state.descriptor.sourceId)
-        : null,
+      React.createElement("div", null,
+        React.createElement("p", { className: "source-viewer-eyebrow" }, "Source data"),
+        React.createElement("h1", null, state.descriptor?.label ?? "Waiting for source")),
+      React.createElement("button", {
+        type: "button",
+        className: "secondary source-viewer-return",
+        onClick: () => {
+          window.opener?.postMessage({
+            type: SOURCE_VIEWER_RETURN,
+            version: SOURCE_VIEWER_VERSION,
+          }, window.location.origin);
+          window.close();
+        },
+      }, "Return to dashboard"),
     ),
+    state.descriptor?.invocation
+      ? React.createElement("dl", { className: "source-viewer-provenance", "aria-label": "Source provenance" },
+          provenanceItem("Invoking chart", state.descriptor.invocation.chartTitle),
+          provenanceItem("Variable", state.descriptor.invocation.variableId),
+          provenanceItem("Dataset", state.descriptor.invocation.datasetId),
+          provenanceItem("CSV path", state.descriptor.invocation.csvPath))
+      : null,
     state.status === "waiting"
       ? React.createElement("p", { role: "status" }, "Waiting for source data…")
       : null,
@@ -264,6 +277,12 @@ export default function SourceCsvViewer() {
       : null,
     ),
   );
+}
+
+function provenanceItem(label, value) {
+  return React.createElement(React.Fragment, { key: label },
+    React.createElement("dt", null, label),
+    React.createElement("dd", null, value));
 }
 
 async function sourceText(descriptor) {
