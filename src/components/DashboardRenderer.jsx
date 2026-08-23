@@ -1253,29 +1253,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       focusLabelKey={focusInspectorLabelKey}
       operationError={operationError || buildSelectionError || moderatorOperation.error}
       geoDataSources={geoDataSources}
-      appearanceControls={(
-        <>
-          <GlobalPanelColorControls
-            disabled={buildControlsDisabled}
-            colors={globalPanelColors}
-            onChange={changeGlobalPanelColors}
-          />
-          <GlobalIconAccentControl
-            disabled={buildControlsDisabled}
-            value={iconAccentVariants.base}
-            onChange={changeIconAccent}
-          />
-          <label className="accessibility-edit-toggle">
-            <input
-              type="checkbox"
-              disabled={buildControlsDisabled}
-              checked={accessibilityEnabled}
-              onChange={(event) => changeAccessibilityEnabled(event.target.checked)}
-            />
-            <span>Chart accessibility</span>
-          </label>
-        </>
-      )}
       onActivePageChange={onActivePageChange}
       onActivate={requestBuildSelection}
       onRename={renameBuildSelection}

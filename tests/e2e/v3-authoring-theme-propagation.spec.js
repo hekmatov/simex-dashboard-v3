@@ -14,7 +14,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await page.getByRole("button", { name: "Build panel", exact: true }).click();
 
-  for (const label of ["Chrono Studio", "Scene Studio", "Pages & sections", "Scenario details"]) {
+  for (const label of ["Chrono Studio", "Scene Studio", "Pages & sections"]) {
     await page.getByRole("button", { name: label, exact: true }).click();
     const surface = page.locator(".build-authoring-auxiliary");
     await expect(surface).toBeVisible();
@@ -22,6 +22,13 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
     await expectNoRetiredDashboardPaint(surface);
     await surface.getByRole("button", { name: "Close", exact: true }).click();
   }
+
+  await page.locator(".dashboard-scenario-trigger").click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await expect(passport).toBeVisible();
+  await expectSelectedThemeChrome(passport);
+  await expectNoRetiredDashboardPaint(passport);
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.locator(".chart-wizard");
@@ -49,7 +56,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
       header: read(".chart-wizard-header"),
       body: read(".chart-wizard-body"),
       footer: read(".chart-wizard-footer"),
-      ledgerCard: read(".chart-destination-ledger > div"),
+      proofCard: read(".chart-creation-proof"),
     };
   });
   expect(wizardParts.header).toEqual({
@@ -66,7 +73,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
     color: wizardParts.expectedText,
     borderColor: wizardParts.expectedBorder,
   });
-  expect(wizardParts.ledgerCard).toEqual({
+  expect(wizardParts.proofCard).toEqual({
     background: wizardParts.expectedPanelAlt,
     color: wizardParts.expectedText,
     borderColor: wizardParts.expectedBorder,
@@ -117,7 +124,7 @@ test("standalone source viewer receives the selected dashboard style", async ({ 
   await page.getByRole("button", { name: "Edit chart", exact: true }).first().click();
 
   const popupPromise = page.waitForEvent("popup");
-  await page.getByRole("button", { name: "View source CSV", exact: true }).click();
+  await page.getByRole("button", { name: "View source CSV", exact: true }).first().click();
   const viewer = await popupPromise;
   const root = viewer.locator(".source-viewer-theme-root");
   await expect(root).toBeVisible();

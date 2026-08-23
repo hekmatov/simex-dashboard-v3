@@ -78,7 +78,6 @@ export default function BuildWorkspace({
   deviceLayout,
   focusLabelKey,
   operationError = "",
-  appearanceControls,
   geoDataSources,
   onActivePageChange,
   onActivate,
@@ -620,9 +619,6 @@ export default function BuildWorkspace({
             <button type="button" className="secondary" data-context-shelf-entry="structure" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
             <button type="button" className="secondary" data-context-shelf-entry="chrono-group" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("chrono-group")}>Chrono Studio</button>
             <button type="button" className="secondary" data-context-shelf-entry="scene" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("scene")}>Scene Studio</button>
-            <fieldset className="build-appearance-controls" disabled={locked}>
-              {appearanceControls}
-            </fieldset>
           </section>
           {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
           {chronoGroupDraftSuspended && (

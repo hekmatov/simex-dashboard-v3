@@ -1766,3 +1766,100 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Sketch 003 retired-style containment. Loading paint and the Chrono list
+   border are live states, so they must be derived from the selected profile
+   instead of the pre-V3 blue palette in the base stylesheet. */
+.app-frame .chart-deferred-placeholder {
+  background: linear-gradient(
+    110deg,
+    var(--simex-surface-panel-alt) 20%,
+    var(--simex-surface-canvas) 42%,
+    var(--simex-surface-panel-alt) 64%
+  );
+  background-size: 220% 100%;
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-muted);
+}
+
+.app-frame section.build-chrono-groups {
+  border-color: var(--simex-border-subtle);
+}
+
+.app-frame button.secondary {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame button.secondary:hover:not(:disabled) {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .dashboard-footer,
+.app-frame .dashboard-footer strong {
+  color: var(--simex-text-strong);
+}
+
+.app-frame :is(.chart-card-view, .chart-target-collection-view)
+  :is(.collection-carousel-controls, .collection-header-icon-group) .simex-icon-control {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chart-card {
+  background: var(--simex-surface-panel);
+  border-color: var(--simex-border-subtle);
+  border-radius: var(--simex-style-control-radius);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chart-card h4,
+.app-frame .chart-card dd {
+  color: var(--simex-text-strong);
+}
+
+.app-frame .chart-card dt {
+  color: var(--simex-text-muted);
+}
+
+.app-frame :is(
+  .collection-item,
+  .collection-scroll,
+  .collection-pager button,
+  .collection-carousel-controls > button
+):focus-visible {
+  outline-color: var(--simex-focus);
+}
+
+.app-frame .scenario-passport-popover button:not(.secondary, .scenario-passport-value) {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+.app-frame .scenario-passport-popover .scenario-passport-value {
+  background: var(--simex-surface-panel-alt);
+  border-color: var(--simex-border-subtle);
+  color: var(--simex-text-strong);
+}
+
+.app-frame .scenario-passport-popover :is(button, input):focus-visible {
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
+  outline-offset: 2px;
+}
+
+.app-frame .dashboard-empty-section button {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+.app-frame .dashboard-empty-section button:hover:not(:disabled) {
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  color: var(--simex-text-strong);
+}
