@@ -1,0 +1,109 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  createBuildLayoutDraft,
+  mergeBuildLayoutPage,
+  mergeBuildLayoutSection,
+  moveBuildLayoutSection,
+  previewBuildStructureConsequences,
+  removeBuildLayoutPage,
+  removeBuildLayoutSection,
+  renameBuildLayoutPage,
+  renameBuildLayoutSection,
+} from "../src/components/build/buildLayoutDraft.js";
+
+test("cross-Page Section movement preserves chart/group identity and removes only invalid Scene references", () => {
+  const saved = fixture();
+  const proof = previewBuildStructureConsequences(saved, {
+    kind: "move-section",
+    pageId: "biomedical",
+    sectionId: "pressure",
+    targetPageId: "operations",
+  });
+
+  assert.deepEqual(proof.charts, ["Admissions", "Occupancy"]);
+  assert.deepEqual(proof.chronoGroups, ["National outbreak playback"]);
+  assert.deepEqual(proof.scenes, ["National pressure briefing"]);
+  assert.match(proof.summary, /remains attached/);
+  assert.match(proof.summary, /loses Admissions and Occupancy/);
+
+  const moved = moveBuildLayoutSection(
+    createBuildLayoutDraft(saved),
+    "biomedical",
+    "pressure",
+    "operations",
+    { afterSectionId: "briefing" },
+  );
+  assert.deepEqual(saved, fixture());
+  assert.deepEqual(moved.value.pages[2].sections.map(({ id }) => id), ["briefing", "pressure"]);
+  assert.deepEqual(moved.value.chronoGroups[0].members.map(({ chartId }) => chartId), ["admissions", "occupancy"]);
+  assert.deepEqual(moved.value.scenes[0].chartIds, []);
+  assert.equal(moved.status, "dirty");
+});
+
+test("rename, merge, and explicit removal dispositions mutate only the Structure draft", () => {
+  const saved = fixture();
+  let draft = createBuildLayoutDraft(saved);
+  draft = renameBuildLayoutPage(draft, "operations", "Operations briefing");
+  draft = renameBuildLayoutSection(draft, "operations", "briefing", "Briefing highlights");
+  draft = mergeBuildLayoutSection(draft, "biomedical", "pressure", "surveillance");
+
+  assert.equal(draft.value.pages[2].label, "Operations briefing");
+  assert.equal(draft.value.pages[2].sections[0].title, "Briefing highlights");
+  assert.deepEqual(draft.value.pages[1].sections.map(({ id }) => id), ["surveillance"]);
+  assert.deepEqual(draft.value.pages[1].sections[0].panels.map(({ id }) => id), ["admissions-panel", "occupancy-panel", "signals-panel"]);
+  assert.equal(saved.pages[1].sections.length, 2);
+
+  const deleted = removeBuildLayoutSection(
+    createBuildLayoutDraft(saved),
+    "biomedical",
+    "pressure",
+    { disposition: "delete-charts" },
+  );
+  assert.deepEqual(deleted.value.chronoGroups[0].members, []);
+  assert.deepEqual(deleted.value.scenes[0].chartIds, []);
+});
+
+test("Page merge and Page removal require eligible destinations and preserve source ordering", () => {
+  const saved = fixture();
+  const merged = mergeBuildLayoutPage(createBuildLayoutDraft(saved), "operations", "biomedical");
+  assert.deepEqual(merged.value.pages.map(({ id }) => id), ["landing", "biomedical"]);
+  assert.deepEqual(merged.value.pages[1].sections.map(({ id }) => id), ["pressure", "surveillance", "briefing"]);
+
+  const moved = removeBuildLayoutPage(
+    createBuildLayoutDraft(saved),
+    "biomedical",
+    { disposition: "move-sections", targetPageId: "operations" },
+  );
+  assert.deepEqual(moved.value.pages.map(({ id }) => id), ["landing", "operations"]);
+  assert.deepEqual(moved.value.pages[1].sections.map(({ id }) => id), ["briefing", "pressure", "surveillance"]);
+
+  const protectedDraft = removeBuildLayoutPage(createBuildLayoutDraft({ ...saved, pages: [saved.pages[2]] }), "operations", { disposition: "delete-charts" });
+  assert.equal(protectedDraft.status, "error");
+  assert.equal(protectedDraft.error.code, "FINAL_PAGE_PROTECTED");
+});
+
+function fixture() {
+  return {
+    id: "dashboard",
+    pages: [
+      { id: "landing", label: "Dashboard overview", landing: {}, sections: [{ id: "hero", title: "Hero", panels: [] }] },
+      {
+        id: "biomedical",
+        label: "Biomedical",
+        sections: [
+          { id: "pressure", title: "Hospital pressure", panels: [panel("admissions", "Admissions"), panel("occupancy", "Occupancy")] },
+          { id: "surveillance", title: "Surveillance", panels: [panel("signals", "Signals")] },
+        ],
+      },
+      { id: "operations", label: "Operations", sections: [{ id: "briefing", title: "Briefing", panels: [] }] },
+    ],
+    chronoGroups: [{ id: "national", name: "National outbreak playback", members: [{ chartId: "admissions" }, { chartId: "occupancy" }] }],
+    scenes: [{ id: "pressure-scene", name: "National pressure briefing", pageId: "biomedical", chartIds: ["admissions", "occupancy"] }],
+  };
+}
+
+function panel(id, title) {
+  return { id: `${id}-panel`, chart: { id, title, footprint: { columns: 2, rows: 1 } } };
+}
