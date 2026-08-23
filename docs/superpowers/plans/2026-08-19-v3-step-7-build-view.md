@@ -1,6 +1,6 @@
 # V3 Dashboard Step 7: Build and View Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Finish the authoring and viewing vertical slices while preserving the V3 content model, one canonical View/Build renderer and saved layout model, independent layout/chart drafts, and deterministic temporal and chart-creation behavior.
 
@@ -92,12 +92,12 @@ export function reduceBuildDraftCoordinator(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing reducer tests proving layout and selected-chart slots can be dirty simultaneously; Save/Discard/Stay resolves each independently; failed Save keeps only its slot dirty; mode exit waits for both resolutions; read-only auxiliary surfaces may park; mutation-capable auxiliary surfaces request resolution when incompatible; parking never moves either approved slot; resume restores focus, scroll, target, and suspension reason deterministically.
-- [ ] **Run test to verify it fails.** Run `node --test tests/buildDraftCoordinator.test.js`; expect failures because the coordinator module does not exist.
-- [ ] **Write minimal implementation.** Implement the pure reducer, exhaustive unknown-action error, stable FIFO auxiliary parking, and `BuildWorkspace` bindings. Keep both slot editors mounted while compatible; do not overwrite one slot when the other opens.
-- [ ] **Add the E2E test.** Add the E2E case `layout and selected-chart drafts survive independent save discard stay and auxiliary parking`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/buildDraftCoordinator.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "layout and selected-chart drafts survive independent save discard stay and auxiliary parking"`; expect all selected checks to pass.
-- [ ] **Commit.** Run `git add src/components/build/buildDraftCoordinator.js src/components/build/BuildWorkspace.jsx src/App.jsx tests/buildDraftCoordinator.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): coordinate independent layout and chart drafts"`.
+- [x] **Write the failing test.** Add failing reducer tests proving layout and selected-chart slots can be dirty simultaneously; Save/Discard/Stay resolves each independently; failed Save keeps only its slot dirty; mode exit waits for both resolutions; read-only auxiliary surfaces may park; mutation-capable auxiliary surfaces request resolution when incompatible; parking never moves either approved slot; resume restores focus, scroll, target, and suspension reason deterministically.
+- [x] **Run test to verify it fails.** Run `node --test tests/buildDraftCoordinator.test.js`; expect failures because the coordinator module does not exist.
+- [x] **Write minimal implementation.** Implement the pure reducer, exhaustive unknown-action error, stable FIFO auxiliary parking, and `BuildWorkspace` bindings. Keep both slot editors mounted while compatible; do not overwrite one slot when the other opens.
+- [x] **Add the E2E test.** Add the E2E case `layout and selected-chart drafts survive independent save discard stay and auxiliary parking`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/buildDraftCoordinator.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "layout and selected-chart drafts survive independent save discard stay and auxiliary parking"`; expect all selected checks to pass.
+- [x] **Commit.** Run `git add src/components/build/buildDraftCoordinator.js src/components/build/BuildWorkspace.jsx src/App.jsx tests/buildDraftCoordinator.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): coordinate independent layout and chart drafts"`.
 
 ### Task S7-2: Finish immersive View and Build editing chrome
 
@@ -114,12 +114,12 @@ export function reduceBuildDraftCoordinator(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing component assertions that View and Build render the same canonical identities from the same saved layout, share maximum-width and effective-width responsive rules, opening authoring chrome does not mutate saved layout, and the selected panel remains sufficiently visible and usable while its tray is open.
-- [ ] **Run test to verify it fails.** Run `node --test tests/buildWorkspaceV3.test.js`; expect the new canvas-contract and restoration assertions to fail.
-- [ ] **Write minimal implementation.** Implement progressive authoring surfaces, apply approved shared tokens, and keep header, section, footer, panel, chart, and empty-state hierarchy intact while permitting transient canvas compression or repositioning.
-- [ ] **Write minimal implementation.** Add `Build authoring chrome preserves canonical content and restores canvas state` to the Build E2E file, covering selection, focus, scroll, target usability, and saved-layout immutability across open/close.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/buildWorkspaceV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "Build authoring chrome preserves canonical content and restores canvas state"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/buildWorkspaceV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "fix(build): honor canonical canvas authoring contract"`.
+- [x] **Write the failing test.** Add failing component assertions that View and Build render the same canonical identities from the same saved layout, share maximum-width and effective-width responsive rules, opening authoring chrome does not mutate saved layout, and the selected panel remains sufficiently visible and usable while its tray is open.
+- [x] **Run test to verify it fails.** Run `node --test tests/buildWorkspaceV3.test.js`; expect the new canvas-contract and restoration assertions to fail.
+- [x] **Write minimal implementation.** Implement progressive authoring surfaces, apply approved shared tokens, and keep header, section, footer, panel, chart, and empty-state hierarchy intact while permitting transient canvas compression or repositioning.
+- [x] **Write minimal implementation.** Add `Build authoring chrome preserves canonical content and restores canvas state` to the Build E2E file, covering selection, focus, scroll, target usability, and saved-layout immutability across open/close.
+- [x] **Run tests to verify they pass.** Run `node --test tests/buildWorkspaceV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "Build authoring chrome preserves canonical content and restores canvas state"`; expect pass.
+- [x] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/buildWorkspaceV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "fix(build): honor canonical canvas authoring contract"`.
 
 ### Task S7-3: Complete chart collection, Unit Orbit, and panel editing
 
@@ -136,12 +136,12 @@ export function reduceBuildDraftCoordinator(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Write failing tests for selected-card identity, compatible-unit filtering, empty/no-result distinction, validation errors, failed-save retry, and focus restoration.
-- [ ] **Run test to verify it fails.** Run `node --test tests/panelEditingV3.test.js`; expect failure because the contract is incomplete.
-- [ ] **Write minimal implementation.** Implement the collection/orbit/property flow using the chart draft slot and existing chart IDs; never create a second chart model.
-- [ ] **Add the E2E test.** Add E2E case `chart collection orbit and property editing preserve saved layout and restore the canvas`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/panelEditingV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "chart collection orbit and property editing preserve saved layout and restore the canvas"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/panelEditingV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): complete panel editing and unit orbit"`.
+- [x] **Write the failing test.** Write failing tests for selected-card identity, compatible-unit filtering, empty/no-result distinction, validation errors, failed-save retry, and focus restoration.
+- [x] **Run test to verify it fails.** Run `node --test tests/panelEditingV3.test.js`; expect failure because the contract is incomplete.
+- [x] **Write minimal implementation.** Implement the collection/orbit/property flow using the chart draft slot and existing chart IDs; never create a second chart model.
+- [x] **Add the E2E test.** Add E2E case `chart collection orbit and property editing preserve saved layout and restore the canvas`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/panelEditingV3.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "chart collection orbit and property editing preserve saved layout and restore the canvas"`; expect pass.
+- [x] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/panelEditingV3.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): complete panel editing and unit orbit"`.
 
 ### Task S7-4: Complete Structure and Scenario authoring
 
@@ -159,12 +159,12 @@ export function reduceBuildDraftCoordinator(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests for stable IDs, forbidden orphaning, keyboard reorder, Save/Discard/Stay, conflict parking, validation/retry, and restoration.
-- [ ] **Run test to verify it fails.** Run `node --test tests/structureScenarioAuthoring.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement schema-backed commands and overlay surfaces; apply mutations only after validation and an atomic coordinator success action.
-- [ ] **Add the E2E test.** Add E2E case `structure and scenario edits preserve saved layout and recover canvas state after failed save`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/structureScenarioAuthoring.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "structure and scenario edits preserve saved layout and recover canvas state after failed save"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/build/StructureAuthoring.jsx src/components/build/ScenarioAuthoring.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/structureScenarioAuthoring.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): add structure and scenario authoring"`.
+- [x] **Write the failing test.** Add failing tests for stable IDs, forbidden orphaning, keyboard reorder, Save/Discard/Stay, conflict parking, validation/retry, and restoration.
+- [x] **Run test to verify it fails.** Run `node --test tests/structureScenarioAuthoring.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement schema-backed commands and overlay surfaces; apply mutations only after validation and an atomic coordinator success action.
+- [x] **Add the E2E test.** Add E2E case `structure and scenario edits preserve saved layout and recover canvas state after failed save`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/structureScenarioAuthoring.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "structure and scenario edits preserve saved layout and recover canvas state after failed save"`; expect pass.
+- [x] **Commit.** Run `git add src/components/build/StructureAuthoring.jsx src/components/build/ScenarioAuthoring.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/structureScenarioAuthoring.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "feat(build): add structure and scenario authoring"`.
 
 ### Task S7-5: Establish temporal schemas, UTC migration, ledgers, matching, and provenance
 
@@ -199,14 +199,14 @@ export function deriveTemporalNeedsAttention({ groups, scenes, charts, schemaRev
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing schema/migration tests: exactly one valid IANA `dashboard.timeZone`; missing legacy timezone is migrated explicitly to `UTC`; stored observations are UTC instants; post-migration validation rejects missing/invalid timezone; migration is idempotent and does not alter an explicit valid zone.
-- [ ] **Write the failing test.** Add failing ledger tests: Default Chrono is the sorted unique union of plotted-variable observations inside the period with no artificial boundaries; source frames support `all` and `selected`; missing selected frames derive Needs-attention; calendar frames require Scene start/end and a positive integer day/month/year interval, include start, shorten the final interval to end, treat days as 24 hours, use zone-calendar month/year arithmetic, clamp month-end, and handle Feb 29 in leap/non-leap years.
-- [ ] **Write the failing test.** Add failing matching tests for Concurrent only, Interpolate, Snap to Latest, Snap to Closest, closest ties choosing the earlier observation, precedence `group default -> member fallback -> Scene chart override -> View session override`, unsupported-policy reasons, interpolation only with numeric compatible observations on both sides and explicit permission, and prohibition of extrapolation.
-- [ ] **Write the failing test.** Add failing provenance tests for concurrent/interpolated/snapped/missing/unavailable, signed earlier/later offsets, mixed offsets, accessible `Mixed dates`, group cadence, Scene override, session-only View/Present cadence override, and Needs-attention derivation after group-period shortening, Scene clamp/edit consequences, missing charts/frames, or schema drift.
-- [ ] **Run test to verify it fails.** Run `node --test tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js`; expect missing exports and the existing equidistant-nearest rejection assertion to fail.
-- [ ] **Write minimal implementation.** Implement pure functions. Never silently clamp a Scene after its group period shortens: return `{ consequence: "edit-or-clamp", affectedSceneIds }`; persist only a user-confirmed edit/clamp. Keep ledgers, provenance, and Needs-attention derived.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js`; expect all selected files to pass.
-- [ ] **Commit.** Run `git add src/charting/time/temporalSchema.js src/charting/time/migrateTemporalConfig.js src/charting/time/frameLedger.js src/charting/time/temporalMatch.js src/charting/time/temporalNeedsAttention.js src/charting/config/dashboardBundleV3.js src/charting/config/dashboardConfigStructure.js tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js && git commit -m "feat(time): define temporal schema ledgers and matching"`.
+- [x] **Write the failing test.** Add failing schema/migration tests: exactly one valid IANA `dashboard.timeZone`; missing legacy timezone is migrated explicitly to `UTC`; stored observations are UTC instants; post-migration validation rejects missing/invalid timezone; migration is idempotent and does not alter an explicit valid zone.
+- [x] **Write the failing test.** Add failing ledger tests: Default Chrono is the sorted unique union of plotted-variable observations inside the period with no artificial boundaries; source frames support `all` and `selected`; missing selected frames derive Needs-attention; calendar frames require Scene start/end and a positive integer day/month/year interval, include start, shorten the final interval to end, treat days as 24 hours, use zone-calendar month/year arithmetic, clamp month-end, and handle Feb 29 in leap/non-leap years.
+- [x] **Write the failing test.** Add failing matching tests for Concurrent only, Interpolate, Snap to Latest, Snap to Closest, closest ties choosing the earlier observation, precedence `group default -> member fallback -> Scene chart override -> View session override`, unsupported-policy reasons, interpolation only with numeric compatible observations on both sides and explicit permission, and prohibition of extrapolation.
+- [x] **Write the failing test.** Add failing provenance tests for concurrent/interpolated/snapped/missing/unavailable, signed earlier/later offsets, mixed offsets, accessible `Mixed dates`, group cadence, Scene override, session-only View/Present cadence override, and Needs-attention derivation after group-period shortening, Scene clamp/edit consequences, missing charts/frames, or schema drift.
+- [x] **Run test to verify it fails.** Run `node --test tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js`; expect missing exports and the existing equidistant-nearest rejection assertion to fail.
+- [x] **Write minimal implementation.** Implement pure functions. Never silently clamp a Scene after its group period shortens: return `{ consequence: "edit-or-clamp", affectedSceneIds }`; persist only a user-confirmed edit/clamp. Keep ledgers, provenance, and Needs-attention derived.
+- [x] **Run tests to verify they pass.** Run `node --test tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js`; expect all selected files to pass.
+- [x] **Commit.** Run `git add src/charting/time/temporalSchema.js src/charting/time/migrateTemporalConfig.js src/charting/time/frameLedger.js src/charting/time/temporalMatch.js src/charting/time/temporalNeedsAttention.js src/charting/config/dashboardBundleV3.js src/charting/config/dashboardConfigStructure.js tests/temporalSchemaMigration.test.js tests/frameLedger.test.js tests/temporalMatchingV3.test.js tests/temporalNeedsAttention.test.js && git commit -m "feat(time): define temporal schema ledgers and matching"`.
 
 ### Task S7-6: Implement Chrono Studio and Availability Ledger
 
@@ -225,12 +225,12 @@ export function deriveTemporalNeedsAttention({ groups, scenes, charts, schemaRev
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests for stage validation, availability rows and non-colour status, zero-observation charts, member fallback, group cadence, shortening consequences, Save/Discard/Stay, failed save, and restored stage/focus/scroll.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chronoGroupStudio.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement the approved staged studio and ledger. Require an explicit edit-or-clamp choice for every affected Scene before group-period commit; derive Needs-attention until resolved.
-- [ ] **Add the E2E test.** Add E2E case `Chrono Studio exposes availability and resolves shortening consequences explicitly`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chronoGroupStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "Chrono Studio exposes availability and resolves shortening consequences explicitly"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/time/ChronoGroupStudio.jsx src/components/time/AvailabilityLedger.jsx src/components/time/chronoGroupDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/chronoGroupStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(time): implement Chrono Group studio"`.
+- [x] **Write the failing test.** Add failing tests for stage validation, availability rows and non-colour status, zero-observation charts, member fallback, group cadence, shortening consequences, Save/Discard/Stay, failed save, and restored stage/focus/scroll.
+- [x] **Run test to verify it fails.** Run `node --test tests/chronoGroupStudio.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement the approved staged studio and ledger. Require an explicit edit-or-clamp choice for every affected Scene before group-period commit; derive Needs-attention until resolved.
+- [x] **Add the E2E test.** Add E2E case `Chrono Studio exposes availability and resolves shortening consequences explicitly`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chronoGroupStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "Chrono Studio exposes availability and resolves shortening consequences explicitly"`; expect pass.
+- [x] **Commit.** Run `git add src/components/time/ChronoGroupStudio.jsx src/components/time/AvailabilityLedger.jsx src/components/time/chronoGroupDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/chronoGroupStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(time): implement Chrono Group studio"`.
 
 ### Task S7-7: Define the saved Scene contract, including Audience date position
 
@@ -259,11 +259,11 @@ export function normalizeSceneDefaults(scene) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests for all semantic fields, page/group subset rules, mandatory calendar bounds, source-frame validity, width/composition validation, matching/cadence override, exact persistence, dirty comparison, recovery serialization, and required `audience.datePosition` integer permille ranges before any presentation consumer exists.
-- [ ] **Run test to verify it fails.** Run `node --test tests/sceneSchema.test.js tests/dashboardBundleV3.test.js`; expect missing Scene schema/default field failures.
-- [ ] **Write minimal implementation.** Implement the validator/default migration and bundle support. The accepted two-stage Sketch 006 replaces only the five-stage interaction staging: every field, validation, persistence, dirty-state, and recovery requirement in the earlier Scene familiarity contract remains binding.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/sceneSchema.test.js tests/dashboardBundleV3.test.js`; expect pass.
-- [ ] **Commit.** Run `git add src/charting/time/sceneSchema.js src/charting/config/dashboardBundleV3.js src/charting/config/dashboardConfigStructure.js tests/sceneSchema.test.js tests/dashboardBundleV3.test.js && git commit -m "feat(scene): define saved scene and audience date position"`.
+- [x] **Write the failing test.** Add failing tests for all semantic fields, page/group subset rules, mandatory calendar bounds, source-frame validity, width/composition validation, matching/cadence override, exact persistence, dirty comparison, recovery serialization, and required `audience.datePosition` integer permille ranges before any presentation consumer exists.
+- [x] **Run test to verify it fails.** Run `node --test tests/sceneSchema.test.js tests/dashboardBundleV3.test.js`; expect missing Scene schema/default field failures.
+- [x] **Write minimal implementation.** Implement the validator/default migration and bundle support. The accepted two-stage Sketch 006 replaces only the five-stage interaction staging: every field, validation, persistence, dirty-state, and recovery requirement in the earlier Scene familiarity contract remains binding.
+- [x] **Run tests to verify they pass.** Run `node --test tests/sceneSchema.test.js tests/dashboardBundleV3.test.js`; expect pass.
+- [x] **Commit.** Run `git add src/charting/time/sceneSchema.js src/charting/config/dashboardBundleV3.js src/charting/config/dashboardConfigStructure.js tests/sceneSchema.test.js tests/dashboardBundleV3.test.js && git commit -m "feat(scene): define saved scene and audience date position"`.
 
 ### Task S7-8: Implement two-stage Scene Studio and Balanced Twin Canvas
 
@@ -282,12 +282,12 @@ export function normalizeSceneDefaults(scene) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests proving all semantic settings remain editable across two stages, invalid/Needs-attention states block save, twin canvases remain balanced, focus/scroll/stage recover, and Save/Discard/Stay are deterministic.
-- [ ] **Run test to verify it fails.** Run `node --test tests/sceneStudio.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement Select for scope/frame source and Arrange for widths/composition, with shared settings for name, period, matching, cadence, and Audience date position. Preserve one draft across both stages.
-- [ ] **Add the E2E test.** Add E2E case `two-stage Scene Studio persists the complete Scene contract`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/sceneStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "two-stage Scene Studio persists the complete Scene contract"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/time/SceneStudio.jsx src/components/time/BalancedTwinCanvas.jsx src/components/time/sceneDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/sceneStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(scene): implement two-stage scene studio"`.
+- [x] **Write the failing test.** Add failing tests proving all semantic settings remain editable across two stages, invalid/Needs-attention states block save, twin canvases remain balanced, focus/scroll/stage recover, and Save/Discard/Stay are deterministic.
+- [x] **Run test to verify it fails.** Run `node --test tests/sceneStudio.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement Select for scope/frame source and Arrange for widths/composition, with shared settings for name, period, matching, cadence, and Audience date position. Preserve one draft across both stages.
+- [x] **Add the E2E test.** Add E2E case `two-stage Scene Studio persists the complete Scene contract`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/sceneStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "two-stage Scene Studio persists the complete Scene contract"`; expect pass.
+- [x] **Commit.** Run `git add src/components/time/SceneStudio.jsx src/components/time/BalancedTwinCanvas.jsx src/components/time/sceneDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/sceneStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(scene): implement two-stage scene studio"`.
 
 ### Task S7-9: Implement the Time Content library and owner handoffs
 
@@ -312,13 +312,13 @@ export function ownerHandoff(item, intent, reason) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing reducer/component tests for browse, search, type filter, Ready/Needs-attention grouping, create/edit/duplicate/remove/repair, exact handoffs, return Page/scroll/focus/query/filter, empty library versus no results, and failed operation recovery.
-- [ ] **Write the failing test.** Add failing conflict tests: a temporal draft requests independent Save/Discard/Stay before another mutating temporal surface opens; Stay cancels navigation. A running View/Present session uses an immutable snapshot and is never mutated, restarted, or discarded by library edits; save merely exposes `authored content changed` for a future explicit reload.
-- [ ] **Run test to verify it fails.** Run `node --test tests/timeContentLibrary.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement the library and handoffs with accessible status text and approved cards/dialogs.
-- [ ] **Add the E2E test.** Add E2E case `Time Content repairs through its owning stage and restores library context`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/timeContentLibrary.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "Time Content repairs through its owning stage and restores library context"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/time/TimeContentLibrary.jsx src/components/time/timeContentState.js src/components/build/BuildWorkspace.jsx src/styles.css tests/timeContentLibrary.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(time): implement time content library"`.
+- [x] **Write the failing test.** Add failing reducer/component tests for browse, search, type filter, Ready/Needs-attention grouping, create/edit/duplicate/remove/repair, exact handoffs, return Page/scroll/focus/query/filter, empty library versus no results, and failed operation recovery.
+- [x] **Write the failing test.** Add failing conflict tests: a temporal draft requests independent Save/Discard/Stay before another mutating temporal surface opens; Stay cancels navigation. A running View/Present session uses an immutable snapshot and is never mutated, restarted, or discarded by library edits; save merely exposes `authored content changed` for a future explicit reload.
+- [x] **Run test to verify it fails.** Run `node --test tests/timeContentLibrary.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement the library and handoffs with accessible status text and approved cards/dialogs.
+- [x] **Add the E2E test.** Add E2E case `Time Content repairs through its owning stage and restores library context`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/timeContentLibrary.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "Time Content repairs through its owning stage and restores library context"`; expect pass.
+- [x] **Commit.** Run `git add src/components/time/TimeContentLibrary.jsx src/components/time/timeContentState.js src/components/build/BuildWorkspace.jsx src/styles.css tests/timeContentLibrary.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(time): implement time content library"`.
 
 ### Task S7-10: Implement the application-session chart draft and exact six-stage reducer
 
@@ -373,14 +373,14 @@ export function installChartDraftUnloadGuard({ getDraft, window }) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add reducer tests for the exact six stages and labels in the exact order above, non-linear dependency-aware stage access, live stage status, compatible backtracking, meaningful/pristine detection, and non-cancellable `committing` state. Assert there is no `proof` stage.
-- [ ] **Write the failing test.** Add session-store tests proving one draft per dashboard survives Build-surface close, root Escape, and in-app mode/page/section navigation; suspend records `{stage,focusId,invokerId,scrollTop,targetId}`; resume restores the same in-memory object and last valid focus or falls back to the first issue/meaningful control.
-- [ ] **Write the failing test.** Add lifetime tests proving a fresh store after reload, tab restart, application restart, or new application session has no draft. Assert no serialization, hydration, stale-draft migration, `localStorage`, or `sessionStorage` API is exported or called.
-- [ ] **Write the failing test.** Add unload-guard tests proving only a meaningful draft registers `beforeunload`, only where the supplied platform supports it; the warning explains that the draft cannot resume after exit; a pristine, committed, discarded, or unsupported-platform draft does not warn.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartCreationState.test.js tests/chartDraftSession.test.js`; expect failures for the old four-stage reducer and absent session-store/lifetime interfaces.
-- [ ] **Write minimal implementation.** Extend `wizardDraft.js`, keep the store in application process memory only, suspend rather than clear on in-app closure/navigation, restore focus deterministically, and install a capability-checked meaningful-draft exit warning without simulating unsupported browser behavior.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartCreationState.test.js tests/chartDraftSession.test.js`; expect pass with no persistent-storage calls and no seventh stage.
-- [ ] **Commit.** Run `git add src/charting/forms/wizardDraft.js src/charting/forms/chartDraftSession.js src/charting/forms/chartDraftUnloadGuard.js tests/chartCreationState.test.js tests/chartDraftSession.test.js && git commit -m "feat(chart-create): keep exact-stage draft in session memory"`.
+- [x] **Write the failing test.** Add reducer tests for the exact six stages and labels in the exact order above, non-linear dependency-aware stage access, live stage status, compatible backtracking, meaningful/pristine detection, and non-cancellable `committing` state. Assert there is no `proof` stage.
+- [x] **Write the failing test.** Add session-store tests proving one draft per dashboard survives Build-surface close, root Escape, and in-app mode/page/section navigation; suspend records `{stage,focusId,invokerId,scrollTop,targetId}`; resume restores the same in-memory object and last valid focus or falls back to the first issue/meaningful control.
+- [x] **Write the failing test.** Add lifetime tests proving a fresh store after reload, tab restart, application restart, or new application session has no draft. Assert no serialization, hydration, stale-draft migration, `localStorage`, or `sessionStorage` API is exported or called.
+- [x] **Write the failing test.** Add unload-guard tests proving only a meaningful draft registers `beforeunload`, only where the supplied platform supports it; the warning explains that the draft cannot resume after exit; a pristine, committed, discarded, or unsupported-platform draft does not warn.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartCreationState.test.js tests/chartDraftSession.test.js`; expect failures for the old four-stage reducer and absent session-store/lifetime interfaces.
+- [x] **Write minimal implementation.** Extend `wizardDraft.js`, keep the store in application process memory only, suspend rather than clear on in-app closure/navigation, restore focus deterministically, and install a capability-checked meaningful-draft exit warning without simulating unsupported browser behavior.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartCreationState.test.js tests/chartDraftSession.test.js`; expect pass with no persistent-storage calls and no seventh stage.
+- [x] **Commit.** Run `git add src/charting/forms/wizardDraft.js src/charting/forms/chartDraftSession.js src/charting/forms/chartDraftUnloadGuard.js tests/chartCreationState.test.js tests/chartDraftSession.test.js && git commit -m "feat(chart-create): keep exact-stage draft in session memory"`.
 
 ### Task S7-11: Implement Destination and identity-based placement proof
 
@@ -402,12 +402,12 @@ export function planIdentityPlacement({ destination, anchorChartId, position, ch
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add tests for editable destination defaults, minimum valid page/section proposals, missing/deleted/unsupported destinations, append or before/after identity placement, removed/cross-section anchors, concurrent order movement, duplicate chart identity, preset validation, empty destination, non-mutating reflow projection, and ordered nonvisual equivalence.
-- [ ] **Write the failing test.** Prove placement validation creates/updates `placementProofRevision` while leaving `renderProofRevision` unchanged and never writes dashboard geometry.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartDestination.test.js tests/chartPlacement.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Resolve by stable identity, keep Destination continuously named, make append the default, retain invalid choices for Needs-attention explanation, and produce a placement proof rather than a wizard stage.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartDestination.test.js tests/chartPlacement.test.js`; expect pass.
-- [ ] **Commit.** Run `git add src/charting/forms/chartDestination.js src/charting/forms/chartPlacement.js tests/chartDestination.test.js tests/chartPlacement.test.js && git commit -m "feat(chart-create): validate destination and placement proof"`.
+- [x] **Write the failing test.** Add tests for editable destination defaults, minimum valid page/section proposals, missing/deleted/unsupported destinations, append or before/after identity placement, removed/cross-section anchors, concurrent order movement, duplicate chart identity, preset validation, empty destination, non-mutating reflow projection, and ordered nonvisual equivalence.
+- [x] **Write the failing test.** Prove placement validation creates/updates `placementProofRevision` while leaving `renderProofRevision` unchanged and never writes dashboard geometry.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartDestination.test.js tests/chartPlacement.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Resolve by stable identity, keep Destination continuously named, make append the default, retain invalid choices for Needs-attention explanation, and produce a placement proof rather than a wizard stage.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartDestination.test.js tests/chartPlacement.test.js`; expect pass.
+- [x] **Commit.** Run `git add src/charting/forms/chartDestination.js src/charting/forms/chartPlacement.js tests/chartDestination.test.js tests/chartPlacement.test.js && git commit -m "feat(chart-create): validate destination and placement proof"`.
 
 ### Task S7-12: Implement Chart type and the registry-authoritative catalogue
 
@@ -430,12 +430,12 @@ export function applyChartTypeSelection(state, { chartTypeId, schemaRevision }) 
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add catalogue tests for zero/one/many live registry entries, search/filter, current labels/categories/descriptions, unavailable/unsupported entries with reasons, keyboard selection, and no fixed count/order assumptions.
-- [ ] **Write the failing test.** Add selection tests for schema-revision pinning, compatible type changes retaining authored values, prospective named loss confirmation, stale type/schema Needs-attention, and automatic advance only after one unambiguous selection completes Chart type.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js`; expect failures because the catalogue owner and compatibility ledger do not exist.
-- [ ] **Write minimal implementation.** Drive Chart type entirely from the live registry, keep type choice in the session draft, and invalidate only dependent source/mapping/configuration/proof state according to the returned ledger.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js`; expect pass.
-- [ ] **Commit.** Run `git add src/charting/forms/chartCatalogue.js src/charting/schemas/chartSchemaRegistry.js src/components/chart-authoring/ChartTypePicker.jsx tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js && git commit -m "feat(chart-create): own chart type catalogue stage"`.
+- [x] **Write the failing test.** Add catalogue tests for zero/one/many live registry entries, search/filter, current labels/categories/descriptions, unavailable/unsupported entries with reasons, keyboard selection, and no fixed count/order assumptions.
+- [x] **Write the failing test.** Add selection tests for schema-revision pinning, compatible type changes retaining authored values, prospective named loss confirmation, stale type/schema Needs-attention, and automatic advance only after one unambiguous selection completes Chart type.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js`; expect failures because the catalogue owner and compatibility ledger do not exist.
+- [x] **Write minimal implementation.** Drive Chart type entirely from the live registry, keep type choice in the session draft, and invalidate only dependent source/mapping/configuration/proof state according to the returned ledger.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js`; expect pass.
+- [x] **Commit.** Run `git add src/charting/forms/chartCatalogue.js src/charting/schemas/chartSchemaRegistry.js src/components/chart-authoring/ChartTypePicker.jsx tests/chartCatalogueSelection.test.js tests/chartSchemasV3.test.js && git commit -m "feat(chart-create): own chart type catalogue stage"`.
 
 ### Task S7-13: Implement Data source, geography profiling, and schema-drift handling
 
@@ -462,12 +462,12 @@ export function compareSchemaRevision(profileRevision, currentRevision) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add tests for existing/CSV/manual source routes, authentication/availability, field types, units, time coverage, geography compatibility, provenance/limits, empty/partial data, retryable versus terminal errors, and stable revision hashes.
-- [ ] **Write the failing test.** Add source-change and drift tests that retain compatible work, name prospective loss, invalidate only dependent mapping/preparation/render or placement revisions, and never silently switch source.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement deterministic profiles and `{code,message,stage,retryable}` errors; keep shared-source repair routing for S7-14 rather than embedding a durable repair in the draft.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js`; expect pass.
-- [ ] **Commit.** Run `git add src/charting/forms/sourceProfile.js src/charting/forms/geographyProfile.js src/charting/forms/schemaRevision.js tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js && git commit -m "feat(chart-create): profile data sources and schema drift"`.
+- [x] **Write the failing test.** Add tests for existing/CSV/manual source routes, authentication/availability, field types, units, time coverage, geography compatibility, provenance/limits, empty/partial data, retryable versus terminal errors, and stable revision hashes.
+- [x] **Write the failing test.** Add source-change and drift tests that retain compatible work, name prospective loss, invalidate only dependent mapping/preparation/render or placement revisions, and never silently switch source.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement deterministic profiles and `{code,message,stage,retryable}` errors; keep shared-source repair routing for S7-14 rather than embedding a durable repair in the draft.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js`; expect pass.
+- [x] **Commit.** Run `git add src/charting/forms/sourceProfile.js src/charting/forms/geographyProfile.js src/charting/forms/schemaRevision.js tests/chartSourceProfile.test.js tests/chartSchemaRevision.test.js && git commit -m "feat(chart-create): profile data sources and schema drift"`.
 
 ### Task S7-14: Implement Map and prepare data with explicit linked-workflow ownership
 
@@ -496,14 +496,14 @@ export function returnFromLinkedWorkflow(state, outcome) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add mapping/preparation tests for required roles/cardinality, compatible units/types/geography, explainable defaults, missing/duplicate transforms, effective-output blocking, time field, zero/multiple existing-Time-Group membership selection, and absence of chart-owned matching/fallback controls.
-- [ ] **Write the failing test.** Add uncommitted companion tests: new-Time-Group and chart-specific fallback links suspend without cloning/mutating the chart draft; cancel returns it unchanged; completion returns exactly one `ownership:"chart-create"` proposal; invoker/focus/scroll restore; revalidation runs; no saved object exists before atomic chart create.
-- [ ] **Write the failing test.** Add durable repair tests: shared-source or saved-Time-Group repair suspends the chart draft, commits through its own owner/transaction after consequence review, returns `DurableRepairResult`, restores invoker/focus/scroll, and revalidates against `committedRevision`. The repair never enters `companions`, and cancelling/discarding the chart never undoes it.
-- [ ] **Write the failing test.** Add conflict tests proving an uncommitted companion may be removed only with meaningful-work consequence handling, while a durable repair cannot be rolled back by chart actions; both paths retain the same chart draft identity and stage on return unless revalidation directs focus to a current issue.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js`; expect missing-module failures for both ownership paths.
-- [ ] **Write minimal implementation.** Keep new-Time-Group/fallback proposals in the chart session draft for possible S7-16 inclusion; dispatch shared-source/saved-group repair to its existing durable owner, record only the returned dependency revision, and run one deterministic return/restoration/revalidation path.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js`; expect pass with no companion/durable-repair ownership crossover.
-- [ ] **Commit.** Run `git add src/charting/forms/chartMapping.js src/charting/forms/chartPreparation.js src/charting/forms/companionProposal.js src/charting/forms/linkedChartWorkflow.js tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js && git commit -m "feat(chart-create): map data and separate companion ownership"`.
+- [x] **Write the failing test.** Add mapping/preparation tests for required roles/cardinality, compatible units/types/geography, explainable defaults, missing/duplicate transforms, effective-output blocking, time field, zero/multiple existing-Time-Group membership selection, and absence of chart-owned matching/fallback controls.
+- [x] **Write the failing test.** Add uncommitted companion tests: new-Time-Group and chart-specific fallback links suspend without cloning/mutating the chart draft; cancel returns it unchanged; completion returns exactly one `ownership:"chart-create"` proposal; invoker/focus/scroll restore; revalidation runs; no saved object exists before atomic chart create.
+- [x] **Write the failing test.** Add durable repair tests: shared-source or saved-Time-Group repair suspends the chart draft, commits through its own owner/transaction after consequence review, returns `DurableRepairResult`, restores invoker/focus/scroll, and revalidates against `committedRevision`. The repair never enters `companions`, and cancelling/discarding the chart never undoes it.
+- [x] **Write the failing test.** Add conflict tests proving an uncommitted companion may be removed only with meaningful-work consequence handling, while a durable repair cannot be rolled back by chart actions; both paths retain the same chart draft identity and stage on return unless revalidation directs focus to a current issue.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js`; expect missing-module failures for both ownership paths.
+- [x] **Write minimal implementation.** Keep new-Time-Group/fallback proposals in the chart session draft for possible S7-16 inclusion; dispatch shared-source/saved-group repair to its existing durable owner, record only the returned dependency revision, and run one deterministic return/restoration/revalidation path.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js`; expect pass with no companion/durable-repair ownership crossover.
+- [x] **Commit.** Run `git add src/charting/forms/chartMapping.js src/charting/forms/chartPreparation.js src/charting/forms/companionProposal.js src/charting/forms/linkedChartWorkflow.js tests/chartMappingPreparation.test.js tests/chartCompanionHandoffs.test.js && git commit -m "feat(chart-create): map data and separate companion ownership"`.
 
 ### Task S7-15: Implement Configure chart and independent render/placement validation
 
@@ -530,13 +530,13 @@ export function deriveCreateProofState({ renderProofRevision, placementProofRevi
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add Configure chart tests for every schema-authorized current capability, safe defaults versus authored choices, accessibility labels, unsupported combinations, recoverable diagnostics, and dependency-scoped invalidation.
-- [ ] **Write the failing test.** Add proof tests that canonical render and non-mutating placement validations have independent revisions/status/diagnostics; either may fail or become stale without mutating the other; both must be current and passing for create readiness.
-- [ ] **Write the failing test.** Assert proofs are reachable validations inside the six-stage workflow—placement through Destination/context and render through Configure/preview—and that no `proof` stage, seventh stage, or proof-only navigation item exists.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartConfigurationProof.test.js`; expect failures for the old stage shell and absent independent-proof authority.
-- [ ] **Write minimal implementation.** Implement Configure chart and automatic revision-correlated render proof in the existing wizard; consume S7-11 placement proof; preserve last-good render diagnostically but never count it as current.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartConfigurationProof.test.js`; expect pass with six stages and two independent validations.
-- [ ] **Commit.** Run `git add src/charting/forms/chartConfiguration.js src/charting/forms/chartProof.js src/components/chart-authoring/ChartWizardV3.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/chartConfigurationProof.test.js && git commit -m "feat(chart-create): configure chart and validate both proofs"`.
+- [x] **Write the failing test.** Add Configure chart tests for every schema-authorized current capability, safe defaults versus authored choices, accessibility labels, unsupported combinations, recoverable diagnostics, and dependency-scoped invalidation.
+- [x] **Write the failing test.** Add proof tests that canonical render and non-mutating placement validations have independent revisions/status/diagnostics; either may fail or become stale without mutating the other; both must be current and passing for create readiness.
+- [x] **Write the failing test.** Assert proofs are reachable validations inside the six-stage workflow—placement through Destination/context and render through Configure/preview—and that no `proof` stage, seventh stage, or proof-only navigation item exists.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartConfigurationProof.test.js`; expect failures for the old stage shell and absent independent-proof authority.
+- [x] **Write minimal implementation.** Implement Configure chart and automatic revision-correlated render proof in the existing wizard; consume S7-11 placement proof; preserve last-good render diagnostically but never count it as current.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartConfigurationProof.test.js`; expect pass with six stages and two independent validations.
+- [x] **Commit.** Run `git add src/charting/forms/chartConfiguration.js src/charting/forms/chartProof.js src/components/chart-authoring/ChartWizardV3.jsx src/components/build/BuildWorkspace.jsx src/styles.css tests/chartConfigurationProof.test.js && git commit -m "feat(chart-create): configure chart and validate both proofs"`.
 
 ### Task S7-16: Implement Review and create, atomic ownership, reconciliation, and handoff
 
@@ -567,15 +567,15 @@ export async function reconcileChartCreateOutcome(result, { readByTransactionId 
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add Review tests listing exact destination/placement, chart type, source/profile/provenance, mapping/preparation, configuration, render proof, placement proof, memberships, uncommitted companion proposals, durable repairs as already committed dependencies, warnings, acknowledgements, and every repair link to one of the six owning stages.
-- [ ] **Write the failing test.** Add pre-write tests for dashboard/schema/source/destination/anchor/permission drift and both proof revisions. Assert a durable repair contributes only its committed dependency revision; only referenced `ownership:"chart-create"` proposals enter the chart transaction.
-- [ ] **Write the failing test.** Add transaction tests for one serialized non-cancellable atomic write, revision conflict, deterministic retryable/terminal failure, ambiguous outcome, reconcile-before-retry, transaction-ID duplicate prevention, chart plus referenced uncommitted companions atomically, and zero partial/orphan writes.
-- [ ] **Write the failing test.** Add handoff tests for committed chart identity, reviewed placement, full reveal, ordinary-editor focus, reversible prior scroll anchor, and durable-success recovery after reload. Explicitly assert that this post-commit recovery restores committed content/handoff only and never restores the cleared chart draft.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartCreateTransaction.test.js`; expect missing review/transaction/reconciliation interfaces.
-- [ ] **Write minimal implementation.** Keep Review and create as the sixth stage, disable Back/Cancel only after `commitStarted`, terminate the session draft only after discard or reconciled success, query ambiguity by transaction ID before retry, and navigate/focus from the durable committed handoff.
-- [ ] **Add the E2E test.** Add cases `exact six-stage chart workflow keeps proofs as validations`, `linked companion and durable repair return with correct ownership`, `meaningful chart draft warns on exit but is absent after reload`, and `ambiguous chart commit reconciles once and restores committed handoff`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartCreateTransaction.test.js && pnpm exec playwright test tests/e2e/v3-chart-creation.spec.js`; expect pass for all four named journeys.
-- [ ] **Commit.** Run `git add src/charting/forms/chartReview.js src/charting/forms/chartCreateTransaction.js src/charting/forms/chartCreateReconciliation.js src/components/chart-authoring/ChartWizardV3.jsx tests/chartCreateTransaction.test.js tests/e2e/v3-chart-creation.spec.js && git commit -m "feat(chart-create): review and commit chart atomically"`.
+- [x] **Write the failing test.** Add Review tests listing exact destination/placement, chart type, source/profile/provenance, mapping/preparation, configuration, render proof, placement proof, memberships, uncommitted companion proposals, durable repairs as already committed dependencies, warnings, acknowledgements, and every repair link to one of the six owning stages.
+- [x] **Write the failing test.** Add pre-write tests for dashboard/schema/source/destination/anchor/permission drift and both proof revisions. Assert a durable repair contributes only its committed dependency revision; only referenced `ownership:"chart-create"` proposals enter the chart transaction.
+- [x] **Write the failing test.** Add transaction tests for one serialized non-cancellable atomic write, revision conflict, deterministic retryable/terminal failure, ambiguous outcome, reconcile-before-retry, transaction-ID duplicate prevention, chart plus referenced uncommitted companions atomically, and zero partial/orphan writes.
+- [x] **Write the failing test.** Add handoff tests for committed chart identity, reviewed placement, full reveal, ordinary-editor focus, reversible prior scroll anchor, and durable-success recovery after reload. Explicitly assert that this post-commit recovery restores committed content/handoff only and never restores the cleared chart draft.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartCreateTransaction.test.js`; expect missing review/transaction/reconciliation interfaces.
+- [x] **Write minimal implementation.** Keep Review and create as the sixth stage, disable Back/Cancel only after `commitStarted`, terminate the session draft only after discard or reconciled success, query ambiguity by transaction ID before retry, and navigate/focus from the durable committed handoff.
+- [x] **Add the E2E test.** Add cases `exact six-stage chart workflow keeps proofs as validations`, `linked companion and durable repair return with correct ownership`, `meaningful chart draft warns on exit but is absent after reload`, and `ambiguous chart commit reconciles once and restores committed handoff`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartCreateTransaction.test.js && pnpm exec playwright test tests/e2e/v3-chart-creation.spec.js`; expect pass for all four named journeys.
+- [x] **Commit.** Run `git add src/charting/forms/chartReview.js src/charting/forms/chartCreateTransaction.js src/charting/forms/chartCreateReconciliation.js src/components/chart-authoring/ChartWizardV3.jsx tests/chartCreateTransaction.test.js tests/e2e/v3-chart-creation.spec.js && git commit -m "feat(chart-create): review and commit chart atomically"`.
 
 ### Task S7-17: Fully implement View Chrono
 
@@ -613,14 +613,14 @@ export function reducePlaybackState(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing reducer tests for All page charts versus Group only, Default/Group/Scene frame/period context, direct seek, previous/next, **Use authored settings** plus a session matching override without persistence, Reveal to frame default, Full timeline marker, Scene-focused projection, and deck/mast movement preserving the same session and frame.
-- [ ] **Write the failing test.** Add failing playback tests for endpoint stopping and safety pause on seek, previous/next, group/Scene/scope/matching/trace changes, page navigation, document hidden, mode exit, blackout, connection loss, reconnect, and end; reduced motion prevents automatic play.
-- [ ] **Write the failing test.** Add failing component tests for availability overlay, per-chart colour association plus non-colour labels/patterns, signed/mixed provenance, disabled unavailable actions, and focus retention.
-- [ ] **Run test to verify it fails.** Run `node --test tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js`; expect failures for absent scope, trace, availability, movement, and safety-pause state/actions.
-- [ ] **Write minimal implementation.** Implement the reducer/controller. Session matching and cadence overrides stay session-only. Scene focus projects its saved chart subset without replacing the page or mutating its saved canonical layout.
-- [ ] **Add the E2E test.** Add E2E case `View Chrono seeks scopes traces moves and safety-pauses without losing session`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js && pnpm exec playwright test tests/e2e/v3-view-chrono.spec.js --grep "View Chrono seeks scopes traces moves and safety-pauses without losing session"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/playback/ChronoController.jsx src/charting/time/playbackReducer.js src/components/DashboardRenderer.jsx src/styles.css tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js tests/e2e/v3-view-chrono.spec.js && git commit -m "feat(view): implement complete chrono session"`.
+- [x] **Write the failing test.** Add failing reducer tests for All page charts versus Group only, Default/Group/Scene frame/period context, direct seek, previous/next, **Use authored settings** plus a session matching override without persistence, Reveal to frame default, Full timeline marker, Scene-focused projection, and deck/mast movement preserving the same session and frame.
+- [x] **Write the failing test.** Add failing playback tests for endpoint stopping and safety pause on seek, previous/next, group/Scene/scope/matching/trace changes, page navigation, document hidden, mode exit, blackout, connection loss, reconnect, and end; reduced motion prevents automatic play.
+- [x] **Write the failing test.** Add failing component tests for availability overlay, per-chart colour association plus non-colour labels/patterns, signed/mixed provenance, disabled unavailable actions, and focus retention.
+- [x] **Run test to verify it fails.** Run `node --test tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js`; expect failures for absent scope, trace, availability, movement, and safety-pause state/actions.
+- [x] **Write minimal implementation.** Implement the reducer/controller. Session matching and cadence overrides stay session-only. Scene focus projects its saved chart subset without replacing the page or mutating its saved canonical layout.
+- [x] **Add the E2E test.** Add E2E case `View Chrono seeks scopes traces moves and safety-pauses without losing session`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js && pnpm exec playwright test tests/e2e/v3-view-chrono.spec.js --grep "View Chrono seeks scopes traces moves and safety-pauses without losing session"`; expect pass.
+- [x] **Commit.** Run `git add src/components/playback/ChronoController.jsx src/charting/time/playbackReducer.js src/components/DashboardRenderer.jsx src/styles.css tests/viewChronoConvergence.test.js tests/playbackComponentsV3.test.js tests/e2e/v3-view-chrono.spec.js && git commit -m "feat(view): implement complete chrono session"`.
 
 ### Task S7-18: Complete plot states and recovery surfaces
 
@@ -637,12 +637,12 @@ export function reducePlaybackState(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests for every state, accessible status, retained dimensions, last-valid rendering, retry/repair destinations, and no colour-only status.
-- [ ] **Run test to verify it fails.** Run `node --test tests/chartStateSurface.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement state overlays that retain the plot box and never replace the page grid.
-- [ ] **Add the E2E test.** Add E2E case `chart recovery states retain canonical plot geometry`.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/chartStateSurface.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "chart recovery states retain canonical plot geometry"`; expect pass.
-- [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/ChartStateSurface.jsx src/styles.css tests/chartStateSurface.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "fix(charts): complete recovery state surfaces"`.
+- [x] **Write the failing test.** Add failing tests for every state, accessible status, retained dimensions, last-valid rendering, retry/repair destinations, and no colour-only status.
+- [x] **Run test to verify it fails.** Run `node --test tests/chartStateSurface.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement state overlays that retain the plot box and never replace the page grid.
+- [x] **Add the E2E test.** Add E2E case `chart recovery states retain canonical plot geometry`.
+- [x] **Run tests to verify they pass.** Run `node --test tests/chartStateSurface.test.js && pnpm exec playwright test tests/e2e/v3-build-workspace.spec.js --grep "chart recovery states retain canonical plot geometry"`; expect pass.
+- [x] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/ChartStateSurface.jsx src/styles.css tests/chartStateSurface.test.js tests/e2e/v3-build-workspace.spec.js && git commit -m "fix(charts): complete recovery state surfaces"`.
 
 ### Task S7-19: Complete source viewing and Step 7 targeted fidelity
 
@@ -659,12 +659,12 @@ export function reducePlaybackState(state, action) {}
 
 **Steps:**
 
-- [ ] **Write the failing test.** Add failing tests for source metadata, keyboard/focus return, unavailable source, loading/error recovery, saved-layout immutability, and restored Build canvas/selection/scroll state.
-- [ ] **Run test to verify it fails.** Run `node --test tests/sourceViewer.test.js`; expect missing-module failure.
-- [ ] **Write minimal implementation.** Implement the approved source viewer and calibrate Step 7-owned cards, headers, drawers, wizards, editor trays, Chrono, footer, typography, icons, spacing, overflow, and states.
-- [ ] **Write the failing test.** Add viewport cases at `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`; the phone case verifies best-effort mounted Build plus the Step 6 banner, while supported viewports verify shared canonical identities, maximum-width and effective-width responsive rules, selected-target usability, saved-layout immutability, and close restoration. Exact cross-mode rectangles, zero overlap, and automatic horizontal-scroll prohibition are not asserted.
-- [ ] **Run tests to verify they pass.** Run `node --test tests/sourceViewer.test.js && pnpm exec playwright test tests/e2e/v3-step7-fidelity.spec.js`; expect pass with all canvas-contract, screenshot, and interaction assertions passing.
-- [ ] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/SourceViewer.jsx src/styles.css tests/sourceViewer.test.js tests/e2e/v3-step7-fidelity.spec.js && git commit -m "fix(view-build): complete source and visual fidelity"`.
+- [x] **Write the failing test.** Add failing tests for source metadata, keyboard/focus return, unavailable source, loading/error recovery, saved-layout immutability, and restored Build canvas/selection/scroll state.
+- [x] **Run test to verify it fails.** Run `node --test tests/sourceViewer.test.js`; expect missing-module failure.
+- [x] **Write minimal implementation.** Implement the approved source viewer and calibrate Step 7-owned cards, headers, drawers, wizards, editor trays, Chrono, footer, typography, icons, spacing, overflow, and states.
+- [x] **Write the failing test.** Add viewport cases at `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`; the phone case verifies best-effort mounted Build plus the Step 6 banner, while supported viewports verify shared canonical identities, maximum-width and effective-width responsive rules, selected-target usability, saved-layout immutability, and close restoration. Exact cross-mode rectangles, zero overlap, and automatic horizontal-scroll prohibition are not asserted.
+- [x] **Run tests to verify they pass.** Run `node --test tests/sourceViewer.test.js && pnpm exec playwright test tests/e2e/v3-step7-fidelity.spec.js`; expect pass with all canvas-contract, screenshot, and interaction assertions passing.
+- [x] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/SourceViewer.jsx src/styles.css tests/sourceViewer.test.js tests/e2e/v3-step7-fidelity.spec.js && git commit -m "fix(view-build): complete source and visual fidelity"`.
 
 ## Step 7 completion check
 
@@ -709,3 +709,17 @@ Live in-app browser checkpoint: [http://localhost:5177/](http://localhost:5177/)
 - The checkpoint reported no browser console warnings or errors and View contained no authoring chrome.
 
 Remaining limitation: IndexedDB artifact preload is opportunistic rather than a blocking dashboard-start step. If durable artifact storage is unavailable or full, the committed chart and its in-memory artifact remain usable for the session and a bounded non-blocking warning is shown. This evidence submits the amendment for V3 Design master review; it does not declare master acceptance.
+
+## 2026-08-23 Sketch 003 completion evidence
+
+Implementation commit `5c52f9e` closes the final active Step 7 fidelity row.
+
+- The expanded live audit traverses every dashboard Page and all Step 7 authoring/runtime surfaces, including generated content, body-level tooltip portals, SVG paint, active borders/outlines, approved typography, hover, focus, disabled, validation/error, loading, and supported phone View states.
+- Production ECharts configuration remains the deterministic canvas-paint owner; its live imported integration projects selected profile text, axes, grid, tooltip, surface, and data colours and rejects hostile or legacy defaults.
+- Retired loading shimmer, Collection header/card paint, Structure controls, empty-Section recovery, footer text, Scenario Passport actions, and the obsolete Build appearance controls were repaired or removed. The canonical recovery route from an empty View Section to Build remains intact.
+- Geometry tests now encode the binding amendment: transient Build/Look chrome may compress or reposition the canvas, selected content must remain usable, and closing restores the exact prior frame. Exact drawer clearance and equal centered gutters while Look is open are not asserted.
+- Focused semantic/composition checks passed `90/90`. The affected browser suite passed `24/24` across all Pages, three native styles, all 15 Light/Dark profiles, Build studios, New Chart validation, Scenario Passport, Chrono, source viewer, and `390×844` View.
+- The production Vite build passed with `829` transformed modules. The existing mixed-import and large-chunk advisories remain non-failing diagnostics.
+- In-app inspection at [http://127.0.0.1:5197/](http://127.0.0.1:5197/) verified the active-profile tooltip outside chart clipping, viewport containment, and profile-derived loading paint.
+
+All S7-1 through S7-19 checklist items are now recorded complete. This plan submits Step 7 for V3 Design master review; it does not declare master acceptance.

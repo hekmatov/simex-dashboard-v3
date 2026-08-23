@@ -1,9 +1,9 @@
 # V3 Design Step 7 Build/View master-review submission
 
-Date: 2026-08-22 (provisional status amended 2026-08-23)
-Status: **provisional and not ready for V3 Design master acceptance**. The earlier submission evidence remains historical, but the complete Step 4 sketch reconciliation reopened binding Step 7 gaps.
+Date: 2026-08-22 (final Step 7 submission amended 2026-08-23)
+Status: **ready for V3 Design master review**. This submission does not declare master acceptance; that decision remains with the master reviewer.
 
-## 2026-08-23 provisional-review amendment
+## 2026-08-23 provisional-review amendment (superseded by the final readiness amendment below)
 
 The earlier submission overstated fidelity by treating several implemented engines, reduced compositions, and broad browser smokes as if they proved the accepted sketches. The controlling gap ledger and current status now live in `SKETCH-FIDELITY-MATRIX.md`.
 
@@ -135,3 +135,30 @@ This 2026-08-23 amendment makes the accepted Sketch 005, 006, and 012 decisions 
 - Production build after the correction: exit `0`; Vite transformed `823` modules. Existing mixed-import and large-chunk advisories remain non-failing diagnostics.
 
 All matrix rows are Passing. This amendment submits the executable fidelity evidence for master review; it does not declare master acceptance.
+
+## Final Step 7 readiness amendment — 2026-08-23
+
+The provisional gate is closed. The controlling `SKETCH-FIDELITY-MATRIX.md` now reports all `16/16` active Step 7 rows Passing, with no active Missing or Partial row. Sketches 001 and 008 remain explicitly deferred to Step 8; shared/prior-step rows 009 and 010 retain their truthful cross-step status and do not reopen active Step 7 scope.
+
+### Engine implemented
+
+- Independent layout/chart draft coordination, restoration, temporal projection, Availability Ledger, Scene and Chrono transactions, chart creation and placement proofs, runtime artifacts, playback matching/availability/provenance, chart-state recovery, and direct source evidence are imported and exercised by production integration.
+- The Step 6 persistence contract remains intact: live session changes survive storage failure, session-only persistence is stated honestly, quota exhaustion remains distinct, and persistence failure does not block closing Dashboard Look.
+
+### UI implemented
+
+- Build exposes the accepted progressive authoring surfaces, Chrono and Scene Studios/content/editors, Pages/Sections/Scenario containment, Unit Orbit, the exact six-stage New Chart workflow with persistent proof deck, and transactional recovery.
+- View is authoring-free apart from the accepted empty-content recovery route into Build, retains Focus/Comparison/fullscreen/touch exploration, and implements Chrono groups/Scenes, real availability, proportional seek, numeric cadence, playback, provenance, and movable/resizable date overlay.
+- Retired Build appearance controls were removed. Remaining Step 7 paint now derives from the selected style/profile, including loading, Collection controls/cards, Structure recovery, Scenario Passport, footer, tooltips, generated content, and SVG/chart projection.
+
+### Fidelity verified
+
+- Sketch 003 implementation commit: `5c52f9e`.
+- Focused semantic/composition gate: `90` passed, `0` failed.
+- Affected style/wizard browser gate: `24` passed, `0` failed, covering all Pages, all three native styles, every approved Light/Dark profile, Build studios, New Chart validation, Scenario Passport, Chrono, source viewer, and `390×844` View.
+- Final production Vite build: exit `0`, `829` modules transformed. Existing mixed-import and large-chunk advisories are non-failing and unchanged in disposition.
+- Human in-app inspection at `http://127.0.0.1:5197/` verified that the body-level tooltip uses the active Evidence Ledger profile, remains inside the viewport instead of clipping to its chart panel, and that loading paint is profile-derived. The live checkpoint remains available for reviewer inspection.
+
+### Final boundary
+
+Step 7 is submitted for V3 Design master review. Step 8 Present/Audience redesign, Step 9 final cross-mode UAT, and Step 10 documentation/project-skill handoff remain outside this submission. Master acceptance is not claimed here.
