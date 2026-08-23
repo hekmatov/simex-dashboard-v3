@@ -71,6 +71,42 @@ test("layout and selected-chart drafts stay independent through layout discard",
   await expect(target).toBeInViewport();
 });
 
+test("Context Shelf suspends and restores a dirty chart around auxiliary work", async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", {
+    name: "Move Public response and policy signals later",
+    exact: true,
+  }).click();
+
+  const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
+  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await page.getByRole("gridcell", {
+    name: "Set chart size to 3 columns by 1 row",
+    exact: true,
+  }).click();
+  await page.getByRole("button", { name: "Pages & sections", exact: true }).click();
+
+  const structure = page.getByRole("dialog", { name: "Structure authoring" });
+  await expect(structure).toBeVisible();
+  await expect(page.locator(".unit-orbit")).toBeHidden();
+  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+  await structure.getByRole("button", { name: "Close", exact: true }).click();
+
+  await expect(page.getByRole("complementary", {
+    name: "Chart settings for Trust in institutions over time",
+  })).toBeVisible();
+  await expect(target).toBeInViewport();
+  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+});
+
 test("zero Page and zero Section recovery stays inline in the live Build shell", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");

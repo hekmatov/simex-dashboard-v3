@@ -76,6 +76,7 @@ export default function BuildWorkspace({
   chartEditorPlacementId = null,
   chartEditorOpen = true,
   onCloseChartEditor,
+  onResumeChartEditor,
   chartDraftOpen = false,
   chartDraftDirty = false,
   mutationsDisabled = false,
@@ -161,6 +162,7 @@ export default function BuildWorkspace({
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
+  const auxiliaryLocked = mutationsDisabled || (chartDraftOpen && !chartEditorPlacementId);
   const navigationLocked = mutationsDisabled || chartDraftDirty || localAuthoringEditing;
   const chronoGroupDraftSuspended = chronoGroupDraft?.status === "suspended"
     && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft });
@@ -300,7 +302,8 @@ export default function BuildWorkspace({
       effectiveCanvasWidth: document.querySelector(".canonical-dashboard-frame")?.clientWidth ?? window.innerWidth,
     }),
     activeCommand: activeAuxiliary,
-  }), [activeAuxiliary, dashboard, selection]);
+    chartEditorOpen: Boolean(chartEditorPlacementId && chartEditorOpen),
+  }), [activeAuxiliary, chartEditorOpen, chartEditorPlacementId, dashboard, selection]);
 
   const restoreCanvas = React.useCallback((restoration) => {
     if (!restoration) return;
@@ -311,10 +314,11 @@ export default function BuildWorkspace({
       return;
     }
     window.requestAnimationFrame(() => {
+      if (restoration.chartEditorOpen) onResumeChartEditor?.();
       window.scrollTo({ top: commands.scrollTop, left: commands.scrollLeft, behavior: "auto" });
       if (commands.focusId) document.getElementById(commands.focusId)?.focus();
     });
-  }, [dashboard]);
+  }, [dashboard, onResumeChartEditor]);
 
   const initializeAuxiliary = (surface) => {
     if (surface === "structure") {
@@ -360,7 +364,7 @@ export default function BuildWorkspace({
   };
 
   const openAuxiliary = (surface) => {
-    if (locked || activeAuxiliary === surface) return;
+    if (auxiliaryLocked || activeAuxiliary === surface) return;
     initializeAuxiliary(surface);
     const restoration = captureRestoration();
     dispatchDraftCoordinator({
@@ -373,6 +377,7 @@ export default function BuildWorkspace({
         restoration,
       },
     });
+    if (restoration.chartEditorOpen) onCloseChartEditor?.();
     window.requestAnimationFrame(() => {
       const selected = selection?.placementId
         ? document.querySelector(`[data-canonical-placement-id="${CSS.escape(selection.placementId)}"]`)
@@ -644,10 +649,10 @@ export default function BuildWorkspace({
               Discard Layout Changes
             </button>
             <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>{chartDraftAvailable ? "Resume chart draft" : "Add chart"}</button>
-            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
-            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>
-            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("chrono-group")}>Chrono Studio</button>
-            <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scene")}>Scene Studio</button>
+            <button type="button" className="secondary" data-context-shelf-entry="structure" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
+            <button type="button" className="secondary" data-context-shelf-entry="scenario" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>
+            <button type="button" className="secondary" data-context-shelf-entry="chrono-group" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("chrono-group")}>Chrono Studio</button>
+            <button type="button" className="secondary" data-context-shelf-entry="scene" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("scene")}>Scene Studio</button>
             <div className="build-package-actions" aria-label="Dashboard packages">
               <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onMouseDown={(event) => event.preventDefault()} onClick={onImportPackage}>
                 <SimExIcon iconId="import" size={18} />

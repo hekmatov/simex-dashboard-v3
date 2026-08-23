@@ -1202,6 +1202,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       chartEditorPlacementId={chartEditorPlacementId}
       chartEditorOpen={chartEditorVisible}
       onCloseChartEditor={dismissSelectedPanel}
+      onResumeChartEditor={() => setChartEditorVisible(Boolean(chartEditorPlacementId))}
       chartDraftOpen={chartAuthoringActive}
       chartDraftDirty={chartEditorDirty}
       mutationsDisabled={moderatorMutationLocked}

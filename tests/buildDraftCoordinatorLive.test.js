@@ -39,3 +39,31 @@ test("live Build composes independent layout and chart slots through the coordin
   assert.match(html, /Layout changes/);
   assert.match(html, /Chart changes/);
 });
+
+test("dirty primary slots leave Context Shelf entry points available for coordinated suspension", () => {
+  const page = { id: "page-a", label: "Page A", sections: [{ id: "section-a", title: "Section A", panels: [] }] };
+  const html = renderToStaticMarkup(React.createElement(BuildWorkspace, {
+    dashboard: { id: "dashboard", title: "Dashboard", pages: [page], chronoGroups: [], dataSources: {} },
+    activePage: page,
+    pageType: "analytical",
+    buildPanelOpen: true,
+    selection: { kind: "chart", placementId: "panel-a" },
+    dashboardDraft: {},
+    pageDrafts: {},
+    sectionDrafts: {},
+    deviceLayout: "desktop",
+    chartDraftOpen: true,
+    chartDraftDirty: true,
+    chartEditorPlacementId: "panel-a",
+    chartEditorOpen: true,
+    layoutDraft: { draftId: "layout-dashboard", status: "dirty", targetId: "section-a" },
+    chartSlotDraft: { draftId: "chart-panel-a", status: "dirty", targetId: "panel-a" },
+  }));
+
+  for (const surface of ["structure", "scenario", "chrono-group", "scene"]) {
+    const button = html.match(new RegExp(`<button[^>]*data-context-shelf-entry="${surface}"[^>]*>`))?.[0] ?? "";
+    assert.ok(button, `${surface} needs a live Context Shelf entry point`);
+    assert.doesNotMatch(button, /disabled=""/, `${surface} must not be blocked by dirty primary slots`);
+    assert.match(button, /data-unit-orbit-preserve-open="true"/);
+  }
+});
