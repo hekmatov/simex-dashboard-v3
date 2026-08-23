@@ -1424,7 +1424,7 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 820px) {
   .command-crown-mode-row,
   .dashboard-identity-row,
   .mode-context-strip {
@@ -1445,7 +1445,21 @@
 
   .dashboard-command-pinned-actions {
     border-left: 0;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    max-width: 100%;
+    min-width: 0;
     padding-left: 0;
+    width: 100%;
+  }
+
+  .dashboard-command-pinned-actions > .chrono-group-select {
+    flex: 1 1 160px;
+  }
+
+  .dashboard-command-pinned-actions > .chrono-group-select select {
+    max-width: 100%;
+    width: 100%;
   }
 }
 /* View and Build share one in-flow dashboard frame. Mode-owned tools project

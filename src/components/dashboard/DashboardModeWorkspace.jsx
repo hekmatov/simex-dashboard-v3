@@ -48,6 +48,8 @@ export default function DashboardModeWorkspace({
   }, [buildMode]);
 
   const chronoSource = buildMode ? null : playback.activeScene ?? playback.activeGroup;
+  const chronoSuspended = !buildMode && playback.playbackView === true
+    && (displayState?.displayed_chart_ids?.length ?? 0) > 0;
   const chronoSection = !buildMode && playback.playbackView === true && chronoSource
     ? {
         id: chronoSource.id,
@@ -103,6 +105,7 @@ export default function DashboardModeWorkspace({
               accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
               disabled={buildMode}
               viewOwned={!buildMode}
+              suspended={chronoSuspended}
             >
               <DashboardCanvas
                 activePage={activePage}

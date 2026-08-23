@@ -12,6 +12,7 @@ import {
   buildDefaultChronoLedger,
   buildSceneFrameLedger,
 } from "../../charting/time/frameLedger.js";
+import { buildFrameAvailabilityEvidence } from "./playbackAvailability.js";
 
 const PlaybackContext = React.createContext(null);
 const EMPTY_ARRAY = Object.freeze([]);
@@ -142,6 +143,26 @@ export function PlaybackProvider({
       : null,
     [memberTimeContexts, state.playbackView],
   );
+  const frameAvailability = React.useMemo(
+    () => state.playbackView === true && state.availabilityVisible === true
+      ? buildFrameAvailabilityEvidence({
+          activeEpochMs,
+          clock,
+          group: activeGroup,
+          members: participatingMembers,
+          charts: activePageCharts,
+          loadedData,
+          profiles,
+          contexts: memberTimeContexts,
+          timezone,
+        })
+      : EMPTY_ARRAY,
+    [activeEpochMs, activeGroup, activePageCharts, clock, loadedData, memberTimeContexts, participatingMembers, profiles, state.availabilityVisible, state.playbackView, timezone],
+  );
+  const frameAvailabilityByChartId = React.useMemo(
+    () => Object.freeze(Object.fromEntries(frameAvailability.map((entry) => [entry.chartId, entry]))),
+    [frameAvailability],
+  );
 
   React.useEffect(() => {
     if (state.playing === true && !canAdvance) {
@@ -177,6 +198,8 @@ export function PlaybackProvider({
     clock,
     connection: state.connection,
     dispatch,
+    frameAvailability,
+    frameAvailabilityByChartId,
     groups: validatedGroups,
     loadedData,
     matchingOverride: state.matchingOverride,
@@ -204,6 +227,8 @@ export function PlaybackProvider({
     activeIndex,
     charts,
     clock,
+    frameAvailability,
+    frameAvailabilityByChartId,
     loadedData,
     participatingChartIds,
     profiles,
@@ -493,16 +518,20 @@ function selectParticipatingMembers(group, scene, scope, charts) {
   )));
 }
 
-function buildDefaultPagePlayback(charts, temporalContext) {
-  const group = defaultPageGroup(charts);
+export function buildDefaultPagePlayback(charts, temporalContext) {
+  const members = [];
   const projectedCharts = [];
   for (const chart of charts) {
-    const epochs = buildPageChartClock(chart, temporalContext);
-    if (epochs.length === 0) continue;
+    const projection = buildPageChartClock(chart, temporalContext);
+    members.push(Object.freeze({
+      chartId: chart.id,
+      ...(projection.timeRole ? { timeRole: projection.timeRole } : {}),
+    }));
+    if (projection.epochs.length === 0) continue;
     projectedCharts.push({
       id: chart.id,
       variables: [{
-        observations: epochs.map((epochMs) => ({ epochMs, value: true })),
+        observations: projection.epochs.map((epochMs) => ({ epochMs, value: true })),
       }],
     });
   }
@@ -521,7 +550,7 @@ function buildDefaultPagePlayback(charts, temporalContext) {
       });
   return Object.freeze({
     clock,
-    group,
+    group: defaultPageGroup(charts, members),
   });
 }
 
@@ -532,12 +561,12 @@ function emptyDefaultPagePlayback(charts) {
   });
 }
 
-function defaultPageGroup(charts) {
+function defaultPageGroup(charts, members = null) {
   return Object.freeze({
     id: "default-page",
     name: "Default page timeline",
     matching: Object.freeze({ policy: "exact" }),
-    members: Object.freeze(charts.map((chart) => Object.freeze({ chartId: chart.id }))),
+    members: Object.freeze(members ?? charts.map((chart) => Object.freeze({ chartId: chart.id }))),
     secondsPerFrame: 1,
   });
 }
@@ -545,7 +574,7 @@ function defaultPageGroup(charts) {
 function buildPageChartClock(chart, temporalContext) {
   for (const timeRole of Object.keys(chart?.roles ?? {})) {
     try {
-      return buildChronoGroupClock({
+      const epochs = buildChronoGroupClock({
         id: `default-page-${chart.id}`,
         name: "Default page timeline",
         period: { start: "0001-01-01", end: "9999-12-31" },
@@ -553,11 +582,12 @@ function buildPageChartClock(chart, temporalContext) {
         secondsPerFrame: 1,
         members: [{ chartId: chart.id, timeRole }],
       }, temporalContext);
+      return Object.freeze({ epochs, timeRole });
     } catch {
       // A page chart may be static or the candidate role may be non-temporal.
     }
   }
-  return EMPTY_ARRAY;
+  return Object.freeze({ epochs: EMPTY_ARRAY, timeRole: null });
 }
 
 function buildSceneSourceClock(scene, fallbackClock, { group, temporalContext } = {}) {

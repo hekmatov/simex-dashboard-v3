@@ -15,6 +15,7 @@ export default function ChronoController() {
     availabilityVisible,
     clock,
     dispatch,
+    frameAvailability,
     groups,
     matchingOverride,
     placement,
@@ -120,26 +121,31 @@ export default function ChronoController() {
         React.createElement("input", {
           type: "range",
           "aria-label": "Playback frame",
-          min: 0,
-          max: Math.max(0, clock.length - 1),
-          step: 1,
+          min: hasClock ? clock[0] : 0,
+          max: hasClock ? clock[clock.length - 1] : 0,
+          step: "any",
           list: FRAME_TICKS_ID,
-          value: activeIndex,
+          value: activeEpochMs ?? 0,
           disabled: !hasClock,
           onChange: (event) => dispatch({
             type: "seek",
-            index: Number(event.target.value),
+            index: nearestClockIndex(clock, Number(event.target.value)),
             clockLength: clock.length,
           }),
         }),
         React.createElement(
           "datalist",
           { id: FRAME_TICKS_ID },
-          clock.map((_, index) => React.createElement("option", {
-            key: index,
-            value: index,
+          clock.map((epochMs) => React.createElement("option", {
+            key: epochMs,
+            value: epochMs,
           })),
         ),
+        React.createElement("span", { className: "chrono-frame-ticks", "aria-hidden": "true" },
+          clock.map((epochMs) => React.createElement("i", {
+            key: epochMs,
+            style: { "--chrono-frame-position": `${framePosition(epochMs, clock)}%` },
+          }))),
       ),
       React.createElement(
         "div",
@@ -169,22 +175,18 @@ export default function ChronoController() {
       "label",
       { className: "playback-select chrono-cadence" },
       React.createElement("span", null, "Seconds per frame"),
-      React.createElement(
-        "select",
-        {
-          "aria-label": "Seconds per frame",
-          value: String(speed),
-          onChange: (event) => dispatch({
-            type: "setSpeed",
-            speed: Number(event.target.value),
-          }),
+      React.createElement("input", {
+        type: "number",
+        "aria-label": "Seconds per frame",
+        min: "0.001",
+        step: "any",
+        inputMode: "decimal",
+        value: speed,
+        onChange: (event) => {
+          const value = Number(event.target.value);
+          if (Number.isFinite(value) && value > 0) dispatch({ type: "setSpeed", speed: value });
         },
-        [1, 2.5, 5].map((value) => React.createElement(
-          "option",
-          { key: value, value: String(value) },
-          `${value} seconds`,
-        )),
-      ),
+      }),
     ),
     React.createElement(
       "button",
@@ -221,10 +223,17 @@ export default function ChronoController() {
           React.createElement(
             "ul",
             null,
-            React.createElement("li", { "data-availability": "available" }, "Available — concurrent observation"),
-            React.createElement("li", { "data-availability": "missing" }, "Missing — no observation at this frame"),
-            React.createElement("li", { "data-availability": "interpolated" }, "Interpolated — derived between observations"),
-            React.createElement("li", { "data-availability": "snapped" }, "Snapped — source date differs from frame"),
+            frameAvailability.length === 0
+              ? React.createElement("li", { "data-availability": "missing" }, "No participating chart evidence is available at this frame.")
+              : frameAvailability.map((entry) => React.createElement(
+                  "li",
+                  { key: entry.chartId, "data-availability": entry.status, "data-chart-id": entry.chartId },
+                  React.createElement("span", { className: "chrono-availability-identity" },
+                    React.createElement("b", null, entry.seriesId),
+                    React.createElement("strong", null, entry.chartLabel)),
+                  React.createElement("span", null, `${entry.statusLabel} — ${entry.detail}`),
+                  React.createElement("small", null, `${entry.observedFrameCount} observed dates in the selected period`),
+                )),
           ),
         )
       : null,
@@ -239,6 +248,26 @@ export default function ChronoController() {
       status,
     ),
   );
+}
+
+export function nearestClockIndex(clock, epochMs) {
+  if (!Array.isArray(clock) || clock.length === 0 || !Number.isFinite(epochMs)) return 0;
+  let nearest = 0;
+  let distance = Math.abs(clock[0] - epochMs);
+  for (let index = 1; index < clock.length; index += 1) {
+    const nextDistance = Math.abs(clock[index] - epochMs);
+    if (nextDistance < distance) {
+      nearest = index;
+      distance = nextDistance;
+    }
+  }
+  return nearest;
+}
+
+function framePosition(epochMs, clock) {
+  const start = clock[0];
+  const end = clock[clock.length - 1];
+  return end > start ? ((epochMs - start) / (end - start)) * 100 : 0;
 }
 
 function selectControl(ariaLabel, label, value, options, onChange) {

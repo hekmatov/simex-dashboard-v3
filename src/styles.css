@@ -3259,7 +3259,7 @@ button.danger {
 .chrono-availability ul {
   display: grid;
   gap: 6px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
@@ -3271,7 +3271,22 @@ button.danger {
   padding-inline-start: 8px;
 }
 
-.chrono-availability li[data-availability="available"] {
+.chrono-availability-identity {
+  align-items: baseline;
+  display: flex;
+  gap: 7px;
+}
+
+.chrono-availability-identity b {
+  font-variant-numeric: tabular-nums;
+}
+
+.chrono-availability li > span,
+.chrono-availability li > small {
+  display: block;
+}
+
+.chrono-availability li[data-availability="concurrent"] {
   border-inline-start-color: #237b58;
 }
 
@@ -3285,8 +3300,16 @@ button.danger {
   border-inline-start-style: dotted;
 }
 
-.chrono-availability li[data-availability="snapped"] {
+.chrono-availability li:is([data-availability="latest"], [data-availability="closest"]) {
   border-inline-start-color: #966112;
+}
+
+.chrono-availability li[data-availability="static"] {
+  border-inline-start-style: solid;
+}
+
+.chrono-availability li[data-availability="unavailable"] {
+  border-inline-start-style: double;
 }
 
 .playback-controls--bottom {
@@ -3315,6 +3338,26 @@ button.danger {
   width: 100%;
 }
 
+.chrono-seek label {
+  position: relative;
+}
+
+.chrono-frame-ticks {
+  inset: 50% 8px auto;
+  pointer-events: none;
+  position: absolute;
+}
+
+.chrono-frame-ticks i {
+  background: currentColor;
+  height: 7px;
+  left: var(--chrono-frame-position);
+  opacity: 0.58;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 1px;
+}
+
 .chrono-range-boundaries {
   color: var(--simex-text-muted, #506a82);
   display: flex;
@@ -3333,6 +3376,102 @@ button.danger {
 
 .chrono-cadence {
   flex: 0 0 auto;
+}
+
+.chrono-cadence input {
+  max-width: 108px;
+  min-height: 44px;
+}
+
+.chrono-date-overlay {
+  align-items: center;
+  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  border: 2px solid var(--simex-chrono);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text-strong);
+  container-type: inline-size;
+  display: flex;
+  justify-content: center;
+  min-height: 76px;
+  min-width: 190px;
+  overflow: hidden;
+  padding: 10px;
+  position: fixed;
+  z-index: 930;
+}
+
+.chrono-date-overlay[hidden] {
+  display: none;
+}
+
+.chrono-date-value {
+  align-items: center;
+  cursor: move;
+  display: flex;
+  font-family: var(--simex-style-heading-font);
+  font-size: clamp(30px, 15cqi, 92px);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  height: 100%;
+  justify-content: center;
+  line-height: 1;
+  padding: 18px 28px;
+  touch-action: none;
+  user-select: none;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.chrono-date-value:active {
+  cursor: grabbing;
+}
+
+.chrono-date-resize {
+  background: transparent;
+  border: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  touch-action: none;
+  width: 44px;
+}
+
+.chrono-date-resize::after {
+  border-bottom: 3px double var(--simex-chrono);
+  border-right: 3px double var(--simex-chrono);
+  bottom: 7px;
+  content: "";
+  height: 12px;
+  position: absolute;
+  right: 7px;
+  width: 12px;
+}
+
+.chrono-date-value:focus-visible,
+.chrono-date-resize:focus-visible {
+  outline: 3px solid var(--simex-component-focus);
+  outline-offset: -4px;
+}
+
+.chart-panel[data-chrono-availability] {
+  outline: 3px solid var(--simex-chrono);
+  outline-offset: -3px;
+}
+
+.chart-panel[data-chrono-availability="missing"] {
+  outline-style: dashed;
+}
+
+.chart-panel[data-chrono-availability="interpolated"] {
+  outline-style: dotted;
+}
+
+.chart-panel:is([data-chrono-availability="latest"], [data-chrono-availability="closest"]) {
+  outline-style: double;
 }
 
 .chrono-position-button {

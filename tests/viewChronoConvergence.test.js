@@ -123,7 +123,7 @@ test("View Chrono relocates one canonical member instance into a top Page sectio
   );
   assert.match(html, /class="playback-controls playback-controls--floating playback-controls--bottom"/);
   assert.match(html, /aria-label="Seconds per frame"/);
-  assert.match(html, />2\.5 seconds<\/option>/);
+  assert.match(html, /type="number"[^>]*aria-label="Seconds per frame"[^>]*value="2\.5"/);
 });
 
 test("playback cadence is measured in seconds per frame", () => {

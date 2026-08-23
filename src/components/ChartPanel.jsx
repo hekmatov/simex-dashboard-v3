@@ -3,6 +3,7 @@ import React from "react";
 import ChartView from "./charts/ChartView.jsx";
 import ChartPanelActions from "./charts/ChartPanelActions.jsx";
 import { IconControl } from "./common/SimExIcon.js";
+import { useOptionalPlayback } from "./playback/PlaybackProvider.jsx";
 import {
   chartPanelFootprintStyle,
   chartPanelLayoutClass,
@@ -18,9 +19,14 @@ function ChartPanel({
   geoData,
   dataSources = {},
   accessibilityEnabled = false,
+  canonicalPanelId,
+  canonicalPlacementId,
+  canonicalPlotId,
   suspended = false,
   editMode = false,
   placementId,
+  editPageId,
+  editSectionId,
   editDisabled = false,
   editControlDisabled = editDisabled,
   isDragging = false,
@@ -30,9 +36,12 @@ function ChartPanel({
   isMultiSelected = false,
   multiSelectionIndex = 0,
   onEdit,
+  onBuildSelect,
   onRemove,
   onToggleMultiSelect,
+  onToggleMultiPanel,
   onFullScreenHold,
+  onStartMultiFullscreenSelection,
   onDisplayAction,
   onDragStart,
   onDragOver,
@@ -41,12 +50,21 @@ function ChartPanel({
   onStartSection,
 }) {
   const chart = panel?.chart ?? panel;
+  const playback = useOptionalPlayback();
+  const chronoAvailability = playback?.availabilityVisible === true
+    ? playback.frameAvailabilityByChartId?.[chart.id] ?? null
+    : null;
   const footprint = resolveChartFootprint(chart.layout);
   const citation = resolveChartCitation({
     chart,
     dataSources,
     datasetProfile,
   });
+  const renderContext = React.useMemo(() => ({
+    sources: dataSources,
+    mapName: chart.presentation?.map?.geoSource ?? chart.id,
+    accessibilityEnabled,
+  }), [accessibilityEnabled, chart.id, chart.presentation?.map?.geoSource, dataSources]);
   const holdTimer = React.useRef(null);
   const suppressFullscreenClickUntil = React.useRef(0);
   const panelRef = React.useRef(null);
@@ -67,16 +85,18 @@ function ChartPanel({
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null;
       suppressFullscreenClickUntil.current = Date.now() + 1200;
-      onFullScreenHold?.();
+      if (onFullScreenHold) onFullScreenHold();
+      else onStartMultiFullscreenSelection?.(chart.id);
     }, 650);
   };
   const handleFullscreenClick = () => {
-    if (Date.now() < suppressFullscreenClickUntil.current) {
-      suppressFullscreenClickUntil.current = 0;
+    if (multiSelectMode) {
+      if (onToggleMultiSelect) onToggleMultiSelect();
+      else onToggleMultiPanel?.(chart.id);
       return;
     }
-    if (multiSelectMode) {
-      onToggleMultiSelect?.();
+    if (Date.now() < suppressFullscreenClickUntil.current) {
+      suppressFullscreenClickUntil.current = 0;
       return;
     }
     onDisplayAction?.({
@@ -108,6 +128,7 @@ function ChartPanel({
         "chart-panel",
         chartPanelLayoutClass(chart.layout?.size),
         "chart-panel-footprint",
+        chronoAvailability ? "chart-panel-chrono-availability" : "",
         editMode ? "chart-panel-has-actions" : "",
         isSelected ? "selected" : "",
         isMultiSelected ? "chart-panel-multi-selected" : "",
@@ -115,6 +136,10 @@ function ChartPanel({
         isDragTarget ? "drag-target" : "",
       ].filter(Boolean).join(" ")}
       data-panel-id={chart.id}
+      data-chrono-availability={chronoAvailability?.status}
+      data-chrono-series-id={chronoAvailability?.seriesId}
+      data-canonical-panel-id={canonicalPanelId}
+      data-canonical-placement-id={canonicalPlacementId}
       data-build-placement-id={editMode && placementId ? placementId : undefined}
       data-footprint={`${footprint.columns}x${footprint.rows}`}
       style={chartPanelFootprintStyle(chart.layout)}
@@ -135,7 +160,15 @@ function ChartPanel({
               if (!editDisabled) onRemove?.();
             }} />
             <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editControlDisabled} data-build-edit-for={placementId} onClick={() => {
-              if (!editControlDisabled) onEdit?.();
+              if (editControlDisabled) return;
+              if (onEdit) onEdit();
+              else onBuildSelect?.({
+                kind: "chart",
+                pageId: editPageId,
+                sectionId: editSectionId,
+                placementId,
+                chartId: chart.id,
+              });
             }} />
           </>
         )}
@@ -148,11 +181,8 @@ function ChartPanel({
           datasetProfile={datasetProfile}
           geoData={geoData}
           accessibilityEnabled={accessibilityEnabled}
-          renderContext={{
-            sources: dataSources,
-            mapName: chart.presentation?.map?.geoSource ?? chart.id,
-            accessibilityEnabled,
-          }}
+          canonicalPlotId={canonicalPlotId}
+          renderContext={renderContext}
         />
       ) : (
         <div className="chart-deferred-placeholder" aria-hidden="true">
