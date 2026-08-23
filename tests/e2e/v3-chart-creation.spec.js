@@ -29,7 +29,8 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
 
   await wizard.getByRole("button", { name: /^Chart type\./ }).click();
   await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await expect(wizard).toHaveAccessibleName("Data source");
+  await expect(wizard).toHaveAccessibleName("Add new chart");
+  await expect(wizard.locator("#chart-stage-data-source")).toHaveAttribute("aria-current", "step");
   await wizard.getByRole("button", { name: "Close" }).click();
   await expect(wizard).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Resume chart draft" })).toBeVisible();
