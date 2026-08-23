@@ -77,6 +77,7 @@
   animation: chart-state-pulse 900ms steps(4, end) infinite;
 }
 
+.chart-state-surface--partial .chart-state-surface__overlay,
 .chart-state-surface--unavailable .chart-state-surface__overlay,
 .chart-state-surface--needs-attention .chart-state-surface__overlay {
   background-image: repeating-linear-gradient(
@@ -85,6 +86,19 @@
     color-mix(in srgb, var(--simex-warning) 8%, transparent) 8px 12px
   );
   border-left: 5px solid var(--simex-warning);
+}
+
+.chart-data-state-boundary__feedback {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  bottom: 8px;
+  font-size: 0.78rem;
+  left: 8px;
+  margin: 0;
+  padding: 6px 8px;
+  position: absolute;
+  right: 8px;
+  z-index: 7;
 }
 
 .chart-state-surface--error .chart-state-surface__overlay {

@@ -3,6 +3,7 @@ import React from "react";
 export const CHART_STATE_KINDS = Object.freeze([
   "loading",
   "empty",
+  "partial",
   "unavailable",
   "stale",
   "error",
@@ -13,6 +14,7 @@ export const CHART_STATE_KINDS = Object.freeze([
 const STATE_LABELS = Object.freeze({
   loading: "Loading",
   empty: "Empty",
+  partial: "Partial",
   unavailable: "Unavailable",
   stale: "Stale",
   error: "Error",
@@ -20,7 +22,7 @@ const STATE_LABELS = Object.freeze({
   "last-valid": "Last valid",
 });
 
-const ALERT_STATES = new Set(["unavailable", "error", "needs-attention"]);
+const ALERT_STATES = new Set(["partial", "unavailable", "error", "needs-attention"]);
 
 export function deriveChartStateModel({
   kind,
@@ -36,6 +38,14 @@ export function deriveChartStateModel({
   }
   const name = readableChartName(chartName);
   const actions = [];
+  if (kind === "partial") {
+    actions.push({
+      id: "continue",
+      label: "Continue with Available Data",
+      owner: "chart-session",
+      destination: "chart:available-data",
+    });
+  }
   if (retryDestination && kind !== "loading" && kind !== "needs-attention") {
     actions.push({
       id: "retry",
@@ -80,6 +90,7 @@ export default function ChartStateSurface({
   repairOwner = "chart",
   onRetry = null,
   onRepair = null,
+  onContinue = null,
 }) {
   const stateValue = typeof state === "string" ? { kind: state } : state ?? {};
   const model = deriveChartStateModel({
@@ -95,9 +106,11 @@ export default function ChartStateSurface({
     ? stateValue.message.trim()
     : model.message;
   const retainedContent = lastValid ?? children;
-  const operativeActions = model.actions.filter(({ id }) => (
-    id === "retry" ? typeof onRetry === "function" : typeof onRepair === "function"
-  ));
+  const operativeActions = model.actions.filter(({ id }) => ({
+    retry: typeof onRetry === "function",
+    repair: typeof onRepair === "function",
+    continue: typeof onContinue === "function",
+  })[id] === true);
   const hasUnavailableRecovery = model.actions.length > operativeActions.length;
   const plotDimensions = normalizeDimensions(dimensions);
 
@@ -155,7 +168,7 @@ export default function ChartStateSurface({
                 "data-recovery-action": action.id,
                 "data-recovery-owner": action.owner,
                 "data-recovery-destination": action.destination,
-                onClick: action.id === "retry" ? onRetry : onRepair,
+                onClick: ({ retry: onRetry, repair: onRepair, continue: onContinue })[action.id],
               },
               action.label,
             )),
@@ -176,6 +189,7 @@ function stateMessage(kind, name, reason) {
   const messages = {
     loading: `Loading ${name}…`,
     empty: `No data is available for ${name}.`,
+    partial: withReason(`${name} is showing partial data.`, reason),
     unavailable: withReason(`${name} is unavailable.`, reason),
     stale: `${name} may be out of date. The last valid chart remains visible.`,
     error: `Couldn’t load ${name}. The previous valid dashboard state is unchanged.`,
@@ -216,6 +230,7 @@ function stateIcon(kind) {
   return {
     loading: "…",
     empty: "○",
+    partial: "▧",
     unavailable: "×",
     stale: "↻",
     error: "!",

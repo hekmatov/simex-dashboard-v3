@@ -20,10 +20,11 @@ const {
   deriveChartStateModel,
 } = stateModule;
 
-test("all seven recovery states have distinct accessible non-colour status text", () => {
+test("all normative recovery states have distinct accessible non-colour status text", () => {
   assert.deepEqual(CHART_STATE_KINDS, [
     "loading",
     "empty",
+    "partial",
     "unavailable",
     "stale",
     "error",
@@ -33,6 +34,7 @@ test("all seven recovery states have distinct accessible non-colour status text"
   const expected = {
     loading: ["Loading", "Loading Cases…", "status"],
     empty: ["Empty", "No data is available for Cases.", "status"],
+    partial: ["Partial", "Cases is showing partial data. Booster coverage is unavailable.", "alert"],
     unavailable: ["Unavailable", "Cases is unavailable. Source access expired.", "alert"],
     stale: ["Stale", "Cases may be out of date. The last valid chart remains visible.", "status"],
     error: ["Error", "Couldn’t load Cases. The previous valid dashboard state is unchanged.", "alert"],
@@ -44,7 +46,9 @@ test("all seven recovery states have distinct accessible non-colour status text"
     const model = deriveChartStateModel({
       kind,
       chartName: "Cases",
-      reason: kind === "unavailable"
+      reason: kind === "partial"
+        ? "Booster coverage is unavailable."
+        : kind === "unavailable"
         ? "Source access expired."
         : kind === "needs-attention"
           ? "Repair its missing chart membership."
@@ -56,7 +60,7 @@ test("all seven recovery states have distinct accessible non-colour status text"
   }
 });
 
-test("loading, empty, unavailable, stale, error, Needs-attention, and last-valid render named states", () => {
+test("loading, empty, Partial, unavailable, stale, error, Needs-attention, and last-valid render named states", () => {
   for (const kind of CHART_STATE_KINDS) {
     const html = renderToStaticMarkup(React.createElement(ChartStateSurface, {
       state: { kind, reason: kind === "needs-attention" ? "A selected frame is missing." : null },
@@ -68,6 +72,27 @@ test("loading, empty, unavailable, stale, error, Needs-attention, and last-valid
     assert.match(html, /aria-hidden="true"/);
     assert.doesNotMatch(html, /style="[^"]*color:/);
   }
+});
+
+test("Partial owns Continue with Available Data without changing saved chart semantics", () => {
+  const model = deriveChartStateModel({ kind: "partial", chartName: "Cases" });
+  assert.deepEqual(model.actions, [{
+    id: "continue",
+    label: "Continue with Available Data",
+    owner: "chart-session",
+    destination: "chart:available-data",
+  }]);
+
+  const html = renderToStaticMarkup(React.createElement(ChartStateSurface, {
+    state: { kind: "partial", message: "Cases is showing partial data. Booster coverage is unavailable." },
+    chartName: "Cases",
+    lastValid: React.createElement("svg", { "aria-label": "Available cases series" }),
+    onContinue() {},
+  }));
+  assert.match(html, /data-recovery-action="continue"/);
+  assert.match(html, /data-recovery-owner="chart-session"/);
+  assert.match(html, />Continue with Available Data</);
+  assert.match(html, /Available cases series/);
 });
 
 test("the surface retains the canonical plot dimensions instead of replacing page grid geometry", () => {

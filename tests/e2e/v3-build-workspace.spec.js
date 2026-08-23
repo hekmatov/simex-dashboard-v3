@@ -51,6 +51,14 @@ test("chart recovery states retain canonical plot geometry", async ({ page }) =>
   expect(bounds.width).toBeGreaterThan(200);
   expect(bounds.height).toBeGreaterThan(100);
   await expect(state.locator('[data-last-valid-retained="true"]')).toHaveCount(1);
+
+  const partial = page.locator('[data-canonical-panel-id="partial-proof"]');
+  await expect(partial.locator('.chart-state-surface--partial')).toBeVisible();
+  await expect(partial).toContainText("Booster coverage is unavailable");
+  await expect(partial.getByRole("img", { name: "Available vaccination series" })).toBeVisible();
+  await partial.getByRole("button", { name: "Continue with Available Data" }).click();
+  await expect(partial.getByRole("status")).toContainText("saved chart semantics are unchanged");
+  await expect(partial.locator('.chart-state-surface--partial')).toBeVisible();
 });
 
 async function openBiomedicalBuild(page) {

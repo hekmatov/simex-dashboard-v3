@@ -2,9 +2,9 @@ import React from "react";
 import ChartStateSurface from "../ChartStateSurface.jsx";
 
 export default function ChartDataStateBoundary({ state, chartName, children }) {
+  const [continued, setContinued] = React.useState(false);
   if (!state) return children;
   const hasValidContent = state.hasValidContent && Boolean(children);
-  const surfaceKind = state.kind === "partial" ? "unavailable" : state.kind;
   return React.createElement(
     "div",
     {
@@ -14,9 +14,17 @@ export default function ChartDataStateBoundary({ state, chartName, children }) {
       "aria-busy": state.kind === "loading" ? "true" : undefined,
     },
     React.createElement(ChartStateSurface, {
-      state: { kind: surfaceKind, message: state.message },
+      state: { kind: state.kind, message: state.message },
       chartName,
       lastValid: hasValidContent ? children : null,
+      onContinue: state.kind === "partial" ? () => setContinued(true) : null,
     }),
+    continued && state.kind === "partial"
+      ? React.createElement(
+          "p",
+          { className: "chart-data-state-boundary__feedback", role: "status", "aria-live": "polite" },
+          "Continuing with available data. Unavailable series remain identified; saved chart semantics are unchanged.",
+        )
+      : null,
   );
 }
