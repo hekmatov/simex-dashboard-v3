@@ -15,6 +15,7 @@ export default function AppFrame({
   contextNode,
   statusNode,
   pageActions,
+  pageNavigationNode,
   onPageRequest,
   onScenarioRequest,
   scenarioExpanded,
@@ -51,6 +52,7 @@ export default function AppFrame({
         contextNode={contextNode}
         statusNode={statusNode}
         pageActions={pageActions}
+        pageNavigationNode={pageNavigationNode}
         onModeRequest={onModeRequest}
         onPageRequest={onPageRequest}
         onScenarioRequest={onScenarioRequest}

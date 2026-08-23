@@ -6,6 +6,7 @@ import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx"
 import AppFrame from "./components/app-shell/AppFrame.jsx";
 import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
+import BuildPageNavigation from "./components/build/BuildPageNavigation.jsx";
 import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
   reorderPage,
@@ -112,6 +113,7 @@ export default function App() {
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
   const [buildPanelOpen, setBuildPanelOpen] = React.useState(false);
+  const [buildStructureProjection, setBuildStructureProjection] = React.useState(null);
   const [scenarioPassportOpen, setScenarioPassportOpen] = React.useState(false);
   const [scenarioPassportDirty, setScenarioPassportDirty] = React.useState(false);
   const [compareSelectionActive, setCompareSelectionActive] = React.useState(false);
@@ -200,29 +202,35 @@ export default function App() {
   }, [mode]);
 
   const commandCrownProjection = React.useMemo(() => {
-    const pages = Object.freeze((dashboard?.pages ?? []).map((page) => Object.freeze({
+    const projectedDashboard = mode === "build" && buildStructureProjection
+      ? buildStructureProjection
+      : dashboard;
+    const pages = Object.freeze((projectedDashboard?.pages ?? []).map((page) => Object.freeze({
       id: page.id,
       label: page.label ?? page.title ?? page.id,
       title: page.title ?? page.label ?? page.id,
+      landing: page.landing,
     })));
     const activePage = pages.find(({ id }) => id === activePageId) ?? pages[0] ?? null;
     return Object.freeze({
       dashboardIdentity: Object.freeze({
-        title: dashboard?.title ?? dashboard?.programLabel ?? "SimEx Dashboard",
-        programLabel: dashboard?.programLabel ?? "SimEx Dashboard",
-        scenarioLabel: dashboard?.scenarioLabel ?? "Scenario unavailable",
-        lastUpdated: dashboard?.lastUpdated ?? "",
+        title: projectedDashboard?.title ?? projectedDashboard?.programLabel ?? "SimEx Dashboard",
+        programLabel: projectedDashboard?.programLabel ?? "SimEx Dashboard",
+        scenarioLabel: projectedDashboard?.scenarioLabel ?? "Scenario unavailable",
+        lastUpdated: projectedDashboard?.lastUpdated ?? "",
       }),
       activePage,
       pages,
     });
   }, [
     activePageId,
+    buildStructureProjection,
     dashboard?.lastUpdated,
     dashboard?.pages,
     dashboard?.programLabel,
     dashboard?.scenarioLabel,
     dashboard?.title,
+    mode,
   ]);
 
   function toggleBuildPanel() {
@@ -274,14 +282,6 @@ export default function App() {
         onClick={openChronoGroupAuthoring}
       >
         Chrono Groups
-      </button>
-      <button
-        type="button"
-        className="secondary build-add-page"
-        disabled={modeDisabled || buildDraftLocked}
-        onClick={() => dashboardRendererRef.current?.requestAddPage?.()}
-      >
-        Add Page
       </button>
       <button
         type="button"
@@ -809,7 +809,10 @@ export default function App() {
 
   async function requestPage(nextPageId) {
     if (nextPageId === activePageId) return;
-    if (!(dashboard?.pages ?? []).some(({ id }) => id === nextPageId)) return;
+    const navigablePages = mode === "build" && buildStructureProjection
+      ? buildStructureProjection.pages
+      : dashboard?.pages;
+    if (!(navigablePages ?? []).some(({ id }) => id === nextPageId)) return;
     setBlockedReason("");
     if (mode === "build") {
       const result = await prepareToLeaveBuild("page");
@@ -1034,6 +1037,16 @@ export default function App() {
       activePage={commandCrownProjection.activePage}
       pages={commandCrownProjection.pages}
       pageActions={commandCrownPageActions}
+      pageNavigationNode={mode === "build" ? <BuildPageNavigation
+        dashboard={buildStructureProjection ?? dashboard}
+        pages={commandCrownProjection.pages}
+        activePageId={activePageId}
+        disabled={modeDisabled || buildDraftLocked}
+        onSelectPage={requestPage}
+        onPageReorder={(pageId, targetIndex) => dashboardRendererRef.current?.requestBuildPageReorder?.(pageId, targetIndex)}
+        onAddPage={() => dashboardRendererRef.current?.requestAddPage?.()}
+        onPageCommand={(command) => dashboardRendererRef.current?.requestBuildPageCommand?.(command)}
+      /> : null}
       onPageRequest={requestPage}
       onScenarioRequest={mode === "build"
         ? () => setScenarioPassportOpen((current) => !current)
@@ -1069,6 +1082,7 @@ export default function App() {
       onActivePageChange={setActivePageId}
       onModeRequest={requestMode}
       onBuildDraftLockChange={setBuildDraftLocked}
+      onBuildStructureProjectionChange={setBuildStructureProjection}
       onComparisonSelectionChange={setCompareSelectionActive}
       onCommitPendingConfiguration={() => awaitDashboardCommitQueue(
         ensureDashboardCommitController(),

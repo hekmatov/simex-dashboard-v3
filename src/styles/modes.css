@@ -285,6 +285,25 @@
   width: 44px;
 }
 
+.build-page-command-rail {
+  display: grid;
+  flex: 0 0 56px;
+  gap: 2px;
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.dashboard-command-page-scroller .build-page-command-rail button {
+  font-size: 10px;
+  min-height: 0;
+  padding: 2px 5px;
+}
+
+.build-page-add-pinned {
+  flex: 0 0 auto;
+  margin-inline-start: 6px;
+  min-height: 44px;
+}
+
 .build-add-page,
 .build-page-navigation > .dashboard-look-trigger {
   align-items: center;
@@ -302,6 +321,10 @@
   gap: 10px;
   padding: 14px;
   position: fixed;
+  inset-block-start: 124px;
+  inset-inline-start: min(36vw, 430px);
+  max-height: calc(100vh - 148px);
+  overflow: auto;
   width: min(300px, calc(100vw - 24px));
   z-index: 1210;
 }
@@ -343,6 +366,22 @@
 }
 
 .build-command-title p {
+  margin: 0;
+}
+
+.build-page-command-form,
+.structure-named-proof {
+  display: grid;
+  gap: 8px;
+}
+
+.structure-named-proof {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  padding: 10px;
+}
+
+.structure-named-proof p {
   margin: 0;
 }
 
@@ -536,6 +575,82 @@
   min-height: 44px;
   min-width: 44px;
   padding: 6px;
+}
+
+.build-section-title-trigger {
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  min-height: 44px;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.build-section-title-trigger:hover {
+  border-color: var(--simex-border-strong);
+}
+
+.build-section-title-input {
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 800;
+  min-height: 44px;
+  width: min(520px, 62vw);
+}
+
+.section-structure-command-dialog {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text);
+  inset-block-start: 140px;
+  inset-inline-end: 24px;
+  max-height: calc(100vh - 164px);
+  overflow: auto;
+  padding: 16px;
+  position: fixed;
+  width: min(420px, calc(100vw - 32px));
+  z-index: 1210;
+}
+
+.section-structure-command-dialog form,
+.section-structure-command-dialog label {
+  display: grid;
+  gap: 8px;
+}
+
+.section-structure-command-dialog form {
+  gap: 14px;
+}
+
+.section-structure-command-dialog header,
+.section-structure-command-dialog footer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.section-structure-command-dialog :is(h3, p) {
+  margin: 0;
+}
+
+.section-structure-command-dialog footer {
+  justify-content: flex-end;
+}
+
+.structure-confirm-check {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+}
+
+.structure-confirm-check input {
+  block-size: 18px;
+  inline-size: 18px;
+  margin: 0;
 }
 
 .dashboard-section.is-build-selected {

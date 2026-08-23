@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  addBuildLayoutPage,
+  addBuildLayoutSection,
   createBuildLayoutDraft,
   mergeBuildLayoutPage,
   mergeBuildLayoutSection,
@@ -65,6 +67,21 @@ test("rename, merge, and explicit removal dispositions mutate only the Structure
   assert.deepEqual(deleted.value.scenes[0].chartIds, []);
 });
 
+test("Page and Section creation extend the visible collections inside the same layout draft", () => {
+  let draft = addBuildLayoutPage(createBuildLayoutDraft(fixture()), {
+    id: "new-page",
+    label: "New Page",
+    sections: [{ id: "new-page-section", title: "New Section", panels: [] }],
+  });
+  draft = addBuildLayoutSection(draft, "new-page", {
+    id: "second-section",
+    title: "Second Section",
+    panels: [],
+  });
+  assert.deepEqual(draft.value.pages.at(-1).sections.map(({ id }) => id), ["new-page-section", "second-section"]);
+  assert.equal(draft.status, "dirty");
+});
+
 test("Page merge and Page removal require eligible destinations and preserve source ordering", () => {
   const saved = fixture();
   const merged = mergeBuildLayoutPage(createBuildLayoutDraft(saved), "operations", "biomedical");
@@ -78,6 +95,8 @@ test("Page merge and Page removal require eligible destinations and preserve sou
   );
   assert.deepEqual(moved.value.pages.map(({ id }) => id), ["landing", "operations"]);
   assert.deepEqual(moved.value.pages[1].sections.map(({ id }) => id), ["briefing", "pressure", "surveillance"]);
+  assert.match(previewBuildStructureConsequences(saved, { kind: "remove-page", pageId: "biomedical", disposition: "move-sections", targetPageId: "operations" }).summary, /moves to the destination Page without losing chart membership/);
+  assert.match(previewBuildStructureConsequences(saved, { kind: "remove-page", pageId: "biomedical", disposition: "delete-charts" }).summary, /loses membership/);
 
   const protectedDraft = removeBuildLayoutPage(createBuildLayoutDraft({ ...saved, pages: [saved.pages[2]] }), "operations", { disposition: "delete-charts" });
   assert.equal(protectedDraft.status, "error");

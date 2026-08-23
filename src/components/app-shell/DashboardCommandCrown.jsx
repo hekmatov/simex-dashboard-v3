@@ -12,6 +12,7 @@ export default function DashboardCommandCrown({
   contextNode,
   statusNode,
   pageActions,
+  pageNavigationNode,
   onModeRequest,
   onPageRequest,
   onScenarioRequest,
@@ -42,6 +43,7 @@ export default function DashboardCommandCrown({
         scenarioDirty={scenarioDirty}
         scenarioNode={scenarioNode}
         pageActions={pageActions}
+        pageNavigationNode={pageNavigationNode}
       />
       <ModeContextStrip
         mode={mode}

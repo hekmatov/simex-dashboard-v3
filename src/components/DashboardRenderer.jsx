@@ -12,9 +12,18 @@ import {
 } from "./build/buildDirtyState.js";
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
 import {
+  addBuildLayoutPage,
+  addBuildLayoutSection,
   beginBuildLayoutSave,
   createBuildLayoutDraft,
   failBuildLayoutSave,
+  mergeBuildLayoutPage,
+  mergeBuildLayoutSection,
+  moveBuildLayoutSection,
+  removeBuildLayoutPage,
+  removeBuildLayoutSection,
+  renameBuildLayoutPage,
+  renameBuildLayoutSection,
   reorderBuildLayoutPage,
   reorderBuildLayoutPanel,
   reorderBuildLayoutSection,
@@ -59,6 +68,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onActivePageChange,
   onModeRequest,
   onBuildDraftLockChange,
+  onBuildStructureProjectionChange,
   onInlineRenameDirtyChange,
   onComparisonSelectionChange,
   onCommitPendingConfiguration,
@@ -185,6 +195,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const workingDashboard = editMode && buildLayoutDraft?.value
     ? buildLayoutDraft.value
     : dashboard;
+
+  React.useEffect(() => {
+    onBuildStructureProjectionChange?.(editMode ? workingDashboard : null);
+  }, [editMode, onBuildStructureProjectionChange, workingDashboard]);
   const activePage =
     workingDashboard.pages.find((page) => page.id === activePageId) ?? workingDashboard.pages[0];
   const presentationValidChartIds = React.useMemo(
@@ -303,7 +317,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     },
     requestAddPage() {
       if (!buildMode || chartAuthoringActive) return;
-      addPage();
+      addBuildPage();
+    },
+    requestBuildPageReorder(pageId, targetIndex) {
+      if (!buildMode || chartAuthoringActive) return;
+      reorderBuildPage(pageId, targetIndex);
+    },
+    requestBuildPageCommand(command) {
+      if (!buildMode || chartAuthoringActive) return;
+      applyBuildStructureCommand(command);
     },
     requestChronoGroupAuthoring() {
       if (!buildMode || chartAuthoringActive) return;
@@ -635,13 +657,13 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setMultiSelectNotice(null);
   }
 
-  function addPage() {
+  function addBuildPage() {
     if (moderatorOperationGateRef.current.isActive()) return;
     const label = "New page";
-    const pageId = uniquePageId(dashboardStateRef.current, label);
-    void performModeratorOperation("add-page", async () => {
-      await pendingEdits.flush();
-      await onPageAdd({
+    const pageId = uniquePageId(workingDashboard, label);
+    setBuildLayoutDraft((current) => addBuildLayoutPage(
+      current ?? createBuildLayoutDraft(dashboard),
+      {
         id: pageId,
         label,
         title: label,
@@ -654,11 +676,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
             panels: [],
           },
         ],
-      });
-      onActivePageChange(pageId);
-      setBuildSelection({ kind: "page", pageId });
-      setFocusInspectorLabelKey((current) => current + 1);
-    });
+      },
+    ));
+    onActivePageChange(pageId);
+    setBuildSelection({ kind: "page", pageId });
+    setFocusInspectorLabelKey((current) => current + 1);
   }
 
   function reorderBuildPage(pageId, targetIndex) {
@@ -684,6 +706,37 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         ? current
         : { kind: "page", pageId: activePage.id }
     ));
+  }
+
+  function applyBuildStructureCommand(command) {
+    if (!command || moderatorOperationGateRef.current.isActive()) return;
+    setBuildLayoutDraft((current) => {
+      const draft = current ?? createBuildLayoutDraft(dashboard);
+      switch (command.type) {
+        case "rename-page":
+          return renameBuildLayoutPage(draft, command.pageId, command.label);
+        case "merge-page":
+          return mergeBuildLayoutPage(draft, command.pageId, command.targetPageId);
+        case "remove-page":
+          return removeBuildLayoutPage(draft, command.pageId, command);
+        case "rename-section":
+          return renameBuildLayoutSection(draft, command.pageId, command.sectionId, command.title);
+        case "move-section":
+          return moveBuildLayoutSection(draft, command.pageId, command.sectionId, command.targetPageId, command.placement);
+        case "merge-section":
+          return mergeBuildLayoutSection(draft, command.pageId, command.sectionId, command.targetSectionId);
+        case "remove-section":
+          return removeBuildLayoutSection(draft, command.pageId, command.sectionId, command);
+        default:
+          return draft;
+      }
+    });
+    if (["merge-page", "remove-page"].includes(command.type) && command.pageId === activePageId) {
+      const nextPageId = command.targetPageId
+        ?? workingDashboard.pages.find(({ id, landing }) => id !== command.pageId && !landing)?.id
+        ?? workingDashboard.pages.find(({ id }) => id !== command.pageId)?.id;
+      if (nextPageId) onActivePageChange(nextPageId);
+    }
   }
 
   function saveBuildLayoutChanges() {
@@ -838,25 +891,19 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function addSection() {
     if (moderatorOperationGateRef.current.isActive() || !activePage) return;
-    const targetSection = buildSelection?.kind === "section"
-      ? activePage.sections?.find(({ id }) => id === buildSelection.sectionId)
-      : activePage.sections?.at(-1);
-    if (!targetSection) return;
     const sectionId = `${activePage.id}_section_${Date.now()}`;
-    void performModeratorOperation("add-section", async () => {
-      await pendingEdits.flush();
-      await onSectionInsert(activePage.id, targetSection.id, null, {
+    setBuildLayoutDraft((current) => addBuildLayoutSection(
+      current ?? createBuildLayoutDraft(dashboard),
+      activePage.id,
+      {
         id: sectionId,
         title: "New section",
         description: "New dashboard section.",
-      });
-      setBuildSelection({
-        kind: "section",
-        pageId: activePage.id,
-        sectionId,
-      });
-      setFocusInspectorLabelKey((current) => current + 1);
-    });
+        panels: [],
+      },
+    ));
+    setBuildSelection({ kind: "section", pageId: activePage.id, sectionId });
+    setFocusInspectorLabelKey((current) => current + 1);
   }
 
   function removeSectionTitle(section) {
@@ -1287,6 +1334,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           sectionDrafts,
           onSelect: activateBuildCanvasSelection,
           onReorderSection: reorderBuildSection,
+          onStructureCommand: applyBuildStructureCommand,
           onAddSection: addSection,
           onAddChart: openChartWizard,
         } : null}

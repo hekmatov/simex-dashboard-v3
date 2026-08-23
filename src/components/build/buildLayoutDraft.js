@@ -41,6 +41,25 @@ export function renameBuildLayoutPage(draft, pageId, label) {
   return markDirty(next, pageId);
 }
 
+export function addBuildLayoutPage(draft, page) {
+  const next = cloneDraft(draft);
+  if (!page?.id || next.value.pages.some(({ id }) => id === page.id)) {
+    return failCommand(draft, "PAGE_ID_INVALID", "The new Page needs a unique stable ID.");
+  }
+  next.value.pages.push(structuredClone(page));
+  return markDirty(next, page.id);
+}
+
+export function addBuildLayoutSection(draft, pageId, section) {
+  const next = cloneDraft(draft);
+  const page = findPage(next.value, pageId);
+  if (!page || !section?.id || next.value.pages.flatMap(({ sections = [] }) => sections).some(({ id }) => id === section.id)) {
+    return failCommand(draft, "SECTION_ID_INVALID", "The new Section needs a unique stable ID.");
+  }
+  page.sections.push(structuredClone(section));
+  return markDirty(next, section.id);
+}
+
 export function renameBuildLayoutSection(draft, pageId, sectionId, title) {
   const next = cloneDraft(draft);
   const section = findSection(next.value, pageId, sectionId);
@@ -152,8 +171,23 @@ export function previewBuildStructureConsequences(dashboard, operation) {
   const scenes = (dashboard?.scenes ?? [])
     .filter((scene) => scene.pageId === operation.pageId && sceneChartIds(scene).some((id) => ids.includes(id)))
     .map(({ name, id }) => name || id);
-  const groupText = chronoGroups.length ? `${chronoGroups.join(", ")} remains attached.` : "No Chrono Group membership changes.";
-  const sceneText = scenes.length ? `${scenes.join(", ")} loses ${charts.join(" and ")}.` : "No Scene references change.";
+  const deletesCharts = (operation.kind === "remove-page" || operation.kind === "remove-section")
+    && operation.disposition === "delete-charts";
+  const movesPageScope = operation.kind === "merge-page"
+    || (operation.kind === "remove-page" && operation.disposition === "move-sections");
+  const invalidatesPageScopedSceneCharts = operation.kind === "move-section" || deletesCharts;
+  const groupText = chronoGroups.length
+    ? deletesCharts
+      ? `${chronoGroups.join(", ")} loses membership for ${charts.join(" and ")}.`
+      : `${chronoGroups.join(", ")} remains attached.`
+    : "No Chrono Group membership changes.";
+  const sceneText = scenes.length
+    ? movesPageScope
+      ? `${scenes.join(", ")} moves to the destination Page without losing chart membership.`
+      : invalidatesPageScopedSceneCharts
+        ? `${scenes.join(", ")} loses ${charts.join(" and ")}.`
+        : "No Scene references change."
+    : "No Scene references change.";
   return { charts, chronoGroups, scenes, summary: `${groupText} ${sceneText}` };
 }
 
