@@ -397,13 +397,13 @@
 
 .app-frame :is(
   .canonical-dashboard-frame,
-  .build-authoring-layer,
+  .dashboard-map-panel,
   .present-workspace
 ) :is(.eyebrow, .subtitle, .dashboard-meta dt) {
   color: var(--simex-text-muted);
 }
 
-.app-frame .build-authoring-layer {
+.app-frame .dashboard-map-panel {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-subtle);
   border-radius: var(--simex-style-surface-radius);
@@ -411,7 +411,7 @@
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer :is(
+.app-frame .dashboard-map-panel :is(
   .build-page-tabs,
   .build-command-area,
   .build-canvas-toolbar
@@ -422,7 +422,7 @@
   box-shadow: none;
 }
 
-.app-frame .build-authoring-layer .build-side-sheet {
+.app-frame .dashboard-map-panel .build-side-sheet {
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-subtle);
   border-radius: var(--simex-style-panel-radius);
@@ -430,31 +430,31 @@
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer button {
+.app-frame .dashboard-map-panel button {
   background: var(--simex-accent);
   border: 1px solid var(--simex-accent);
   border-radius: var(--simex-style-control-radius);
   color: var(--simex-on-accent);
 }
 
-.app-frame .build-authoring-layer button.secondary {
+.app-frame .dashboard-map-panel button.secondary {
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-subtle);
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer button.active,
-.app-frame .build-authoring-layer button[aria-current="page"] {
+.app-frame .dashboard-map-panel button.active,
+.app-frame .dashboard-map-panel button[aria-current="page"] {
   background: var(--simex-selected-soft);
   border-color: var(--simex-selected);
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer button:disabled {
+.app-frame .dashboard-map-panel button:disabled {
   opacity: 0.55;
 }
 
-.app-frame .build-authoring-layer :is(input, select, textarea) {
+.app-frame .dashboard-map-panel :is(input, select, textarea) {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-subtle);
   color: var(--simex-text-strong);
@@ -659,7 +659,7 @@
   grid-template-columns: 44px 20px minmax(0, 1fr);
 }
 
-.app-frame .build-authoring-layer .build-tree-caret {
+.app-frame .dashboard-map-panel .build-tree-caret {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
@@ -667,7 +667,7 @@
   padding: 0;
 }
 
-.app-frame .build-authoring-layer .build-tree-caret:hover {
+.app-frame .dashboard-map-panel .build-tree-caret:hover {
   background: var(--simex-surface-panel-alt) !important;
   color: var(--simex-text-strong) !important;
 }
@@ -796,7 +796,7 @@
 
 /* Build authoring controls inherit the active dashboard grammar and profile. */
 .app-frame .canonical-dashboard-frame .build-section-move-button,
-.app-frame .build-authoring-layer .accessibility-edit-toggle {
+.app-frame .dashboard-map-panel .accessibility-edit-toggle {
   background: var(--simex-surface-panel-alt) !important;
   border: 1px solid var(--simex-border-subtle) !important;
   border-radius: var(--simex-style-control-radius, var(--simex-component-control-radius)) !important;
@@ -804,13 +804,13 @@
 }
 
 .app-frame .canonical-dashboard-frame .build-section-move-button:hover:not(:disabled),
-.app-frame .build-authoring-layer .accessibility-edit-toggle:hover {
+.app-frame .dashboard-map-panel .accessibility-edit-toggle:hover {
   background: var(--simex-selected-soft) !important;
   border-color: var(--simex-selected) !important;
 }
 
 .app-frame .canonical-dashboard-frame .build-section-move-button:focus-visible,
-.app-frame .build-authoring-layer .accessibility-edit-toggle:focus-within {
+.app-frame .dashboard-map-panel .accessibility-edit-toggle:focus-within {
   outline: var(--simex-component-focus-width, 3px) solid var(--simex-component-focus, var(--simex-focus));
   outline-offset: 2px;
 }
@@ -834,34 +834,34 @@
   transform-origin: center;
 }
 
-.app-frame .build-authoring-layer .accessibility-edit-toggle span {
+.app-frame .dashboard-map-panel .accessibility-edit-toggle span {
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer .accessibility-edit-toggle small {
+.app-frame .dashboard-map-panel .accessibility-edit-toggle small {
   color: var(--simex-text-muted);
 }
 
-.app-frame .build-authoring-layer .accessibility-edit-toggle input {
+.app-frame .dashboard-map-panel .accessibility-edit-toggle input {
   accent-color: var(--simex-selected);
 }
 
 /* Carbon-style branch guides align beneath the parent caret and stop at the
    last direct child's horizontal connector, even when that child is open. */
-.app-frame .build-authoring-layer .build-tree-group {
+.app-frame .dashboard-map-panel .build-tree-group {
   margin-left: 0;
   padding-left: 24px;
 }
 
-.app-frame .build-authoring-layer .build-tree-root > .build-tree-item-wrap {
+.app-frame .dashboard-map-panel .build-tree-root > .build-tree-item-wrap {
   gap: 0;
 }
 
-.app-frame .build-authoring-layer .build-tree-group::before {
+.app-frame .dashboard-map-panel .build-tree-group::before {
   content: none;
 }
 
-.app-frame .build-authoring-layer .build-tree-item-wrap[aria-expanded="true"] > .build-tree-row::before {
+.app-frame .dashboard-map-panel .build-tree-item-wrap[aria-expanded="true"] > .build-tree-row::before {
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   bottom: 0;
   content: "";
@@ -873,7 +873,7 @@
   z-index: 0;
 }
 
-.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap::after {
+.app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap::after {
   border-left: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   content: "";
   height: calc(100% + 6px);
@@ -885,11 +885,11 @@
   z-index: 0;
 }
 
-.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap:last-child::after {
+.app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap:last-child::after {
   height: 22px;
 }
 
-.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap::before {
+.app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap::before {
   border-bottom: var(--build-tree-line-width, 1px) solid var(--build-tree-line, var(--simex-border-subtle));
   border-radius: 0 0 0 var(--build-tree-elbow-radius, 0);
   height: 22px;
@@ -900,23 +900,23 @@
   z-index: 0;
 }
 
-.app-frame .build-authoring-layer .build-tree-group > .build-tree-item-wrap[aria-expanded]::before {
+.app-frame .dashboard-map-panel .build-tree-group > .build-tree-item-wrap[aria-expanded]::before {
   width: 16px;
 }
 
-.app-frame .build-authoring-layer .build-tree-row {
+.app-frame .dashboard-map-panel .build-tree-row {
   position: relative;
   z-index: 1;
 }
 
-.app-frame .build-authoring-layer button.secondary,
-.app-frame .build-authoring-layer .global-color-summary {
+.app-frame .dashboard-map-panel button.secondary,
+.app-frame .dashboard-map-panel .global-color-summary {
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-strong);
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer :is(
+.app-frame .dashboard-map-panel :is(
   .global-color-grid,
   .settings-color-field,
   .settings-color-row
@@ -924,13 +924,13 @@
   color: var(--simex-text-strong);
 }
 
-.app-frame .build-authoring-layer .global-color-grid {
+.app-frame .dashboard-map-panel .global-color-grid {
   background: var(--simex-surface-panel-alt);
   border-color: var(--simex-border-subtle);
   border-radius: var(--simex-style-control-radius);
 }
 
-.app-frame .build-authoring-layer .settings-color-field > label {
+.app-frame .dashboard-map-panel .settings-color-field > label {
   color: var(--simex-text-strong);
 }
 
