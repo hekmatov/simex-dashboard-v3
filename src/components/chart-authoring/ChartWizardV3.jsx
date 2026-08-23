@@ -35,6 +35,7 @@ import ChartTypePicker from "./ChartTypePicker.jsx";
 import DataRolesStep from "./DataRolesStep.jsx";
 import DataSourceStep from "./DataSourceStep.jsx";
 import StyleLayoutStep from "./StyleLayoutStep.jsx";
+import ChartPreview from "./ChartPreview.jsx";
 import { createSubmissionGate } from "../../lib/moderatorTransaction.js";
 import { requestRenderProof } from "../../charting/forms/chartProof.js";
 import {
@@ -747,7 +748,10 @@ export default function ChartWizardV3({
       ),
       React.createElement(
         "div",
-        { className: "chart-wizard-body" },
+        { className: "chart-wizard-workbench" },
+        React.createElement(
+          "div",
+          { className: "chart-wizard-body" },
         wizard.stage === "destination"
           ? React.createElement(
               "section",
@@ -959,6 +963,7 @@ export default function ChartWizardV3({
               charts: chartsWithDraft(wizard.charts, wizard.draft),
               loadedData: runtimeLoadedData,
               profiles,
+              showPreview: false,
               onChange: updatePath,
               onMembershipChange: changeMembership,
               onGroupsChange: (nextGroups) => dispatch({
@@ -986,6 +991,17 @@ export default function ChartWizardV3({
               submissionError,
             )
           : null,
+        ),
+        React.createElement(ChartCreationProofDeck, {
+          dashboard,
+          chart: wizard.draft,
+          rows,
+          geoData,
+          profile: runtime.profile,
+          prepared: runtime.prepared,
+          renderProof,
+          placementProof,
+        }),
       ),
       React.createElement(
         "footer",
@@ -1133,6 +1149,123 @@ function ChartTimeMemberships({ chart, groups = [], timeRole, onChange = noop })
       }),
     ),
   );
+}
+
+export function ChartCreationProofDeck({
+  dashboard = {},
+  chart = null,
+  rows = [],
+  geoData = null,
+  profile = null,
+  prepared = null,
+  renderProof = {},
+  placementProof = {},
+}) {
+  const chartLabels = new Map((dashboard?.pages ?? []).flatMap((page) => (
+    (page.sections ?? []).flatMap((section) => (
+      (section.panels ?? []).map((placement) => {
+        const placedChart = placement.chart ?? placement;
+        return [placedChart.id, placedChart.title ?? placedChart.id];
+      })
+    ))
+  )));
+  if (chart?.id) chartLabels.set(chart.id, chart.title?.trim() || "Untitled chart");
+  const renderReady = renderProof.status === "valid" && chart;
+  const placementEntries = Array.isArray(placementProof.projection)
+    ? placementProof.projection
+    : [];
+
+  return React.createElement(
+    "aside",
+    {
+      className: "chart-creation-proof-deck",
+      "aria-label": "Chart creation proofs",
+      "data-chart-proof-deck": "persistent",
+    },
+    React.createElement(
+      "article",
+      {
+        className: "chart-creation-proof chart-creation-render-proof",
+        "aria-label": "Canonical render proof",
+        "data-proof-status": renderProof.status ?? "awaiting",
+        "data-proof-revision": renderProof.revision ?? "awaiting",
+      },
+      proofHeading("Canonical render", renderProof.status, renderProof.revision),
+      renderReady
+        ? React.createElement(ChartPreview, {
+            chart,
+            rows,
+            geoData,
+            datasetProfile: profile,
+            prepared,
+            diagnosticNamespace: chart.id,
+          })
+        : proofMessages(
+            renderProof.errors,
+            chart ? "Canonical render is awaiting renderer-ready data." : "Choose a chart type to begin the canonical render.",
+          ),
+    ),
+    React.createElement(
+      "article",
+      {
+        className: "chart-creation-proof chart-creation-placement-proof",
+        "aria-label": "Placement proof",
+        "data-proof-status": placementProof.status ?? "awaiting",
+        "data-proof-revision": placementProof.revision ?? "awaiting",
+      },
+      proofHeading("Placement projection", placementProof.status, placementProof.revision),
+      placementEntries.length > 0
+        ? React.createElement(
+            "ol",
+            { className: "chart-placement-proof-order", "aria-label": "Projected chart order" },
+            placementEntries.map((entry, index) => React.createElement(
+              "li",
+              {
+                key: `${entry.chartId}-${index}`,
+                className: entry.draft ? "draft" : undefined,
+                "data-projected-chart-id": entry.chartId,
+              },
+              React.createElement("span", null, chartLabels.get(entry.chartId) ?? entry.chartId),
+              entry.draft ? React.createElement("small", null, "Draft chart") : null,
+            )),
+          )
+        : proofMessages(placementProof.errors, "Choose a valid destination to project placement."),
+      React.createElement("p", { className: "chart-placement-proof-text" }, placementProof.orderedText ?? "Placement is awaiting a destination."),
+    ),
+  );
+}
+
+function proofHeading(label, status = "awaiting", revision = "awaiting") {
+  return React.createElement(
+    "header",
+    null,
+    React.createElement("div", null,
+      React.createElement("p", { className: "eyebrow" }, label),
+      React.createElement("strong", null, proofStatusLabel(status)),
+    ),
+    React.createElement("small", { title: revision ?? "awaiting" }, `Revision ${revision ?? "awaiting"}`),
+  );
+}
+
+function proofMessages(errors, fallback) {
+  const messages = Array.isArray(errors) && errors.length > 0
+    ? errors.map((error) => error?.message).filter(Boolean)
+    : [fallback];
+  return React.createElement(
+    "div",
+    { className: "chart-proof-state", role: "status" },
+    messages.length === 1
+      ? React.createElement("p", null, messages[0])
+      : React.createElement("ul", null, messages.map((message) => React.createElement("li", { key: message }, message))),
+  );
+}
+
+function proofStatusLabel(status) {
+  if (status === "valid") return "Current";
+  if (status === "stale") return "Last good · stale";
+  if (status === "error") return "Failed";
+  if (status === "invalid") return "Needs attention";
+  return "Awaiting input";
 }
 
 function ChartCreationReview({

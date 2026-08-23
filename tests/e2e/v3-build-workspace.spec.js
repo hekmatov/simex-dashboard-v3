@@ -98,6 +98,36 @@ test("zero Page and zero Section recovery stays inline in the live Build shell",
   await expect(structure.getByRole("alert")).toContainText("New Page must retain a Section.");
 });
 
+test("chart creation keeps canonical render and placement proofs reachable through all six stages", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Add chart", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  const deck = wizard.locator('[data-chart-proof-deck="persistent"]');
+
+  for (const stage of [
+    "destination",
+    "chart-type",
+    "data-source",
+    "map-and-prepare-data",
+    "configure-chart",
+    "review-and-create",
+  ]) {
+    await wizard.locator(`#chart-stage-${stage}`).click();
+    await expect(deck.getByRole("article", { name: "Canonical render proof" })).toBeVisible();
+    await expect(deck.getByRole("article", { name: "Placement proof" })).toBeVisible();
+    await expect(deck.locator("[data-proof-revision]")).toHaveCount(2);
+  }
+
+  const bodyBox = await wizard.locator(".chart-wizard-body").boundingBox();
+  const deckBox = await deck.boundingBox();
+  expect(deckBox.x).toBeGreaterThan(bodyBox.x);
+  expect(deckBox.width).toBeGreaterThan(300);
+});
+
 test("chart recovery states retain canonical plot geometry", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("http://127.0.0.1:4175/tests/e2e/chart-state-harness.html");

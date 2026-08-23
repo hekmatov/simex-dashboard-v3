@@ -8,6 +8,7 @@ export default function StyleLayoutStep({
   geoData = null,
   profile = null,
   prepared = null,
+  showPreview = true,
   sections = [],
   prerequisites = [],
   ...context
@@ -45,17 +46,19 @@ export default function StyleLayoutStep({
       ? React.createElement(
           "div",
           { className: "chart-wizard-style-grid" },
-          React.createElement(
-            "div",
-            { className: "chart-wizard-preview-column" },
-            React.createElement(ChartPreview, {
-              chart,
-              rows,
-              geoData,
-              datasetProfile: profile,
-              diagnosticNamespace: chart.id,
-            }),
-          ),
+          showPreview
+            ? React.createElement(
+                "div",
+                { className: "chart-wizard-preview-column" },
+                React.createElement(ChartPreview, {
+                  chart,
+                  rows,
+                  geoData,
+                  datasetProfile: profile,
+                  diagnosticNamespace: chart.id,
+                }),
+              )
+            : null,
           React.createElement(
             "div",
             { className: "chart-wizard-style-controls" },

@@ -1538,6 +1538,98 @@
   padding: 12px 16px;
 }
 
+.app-frame .chart-wizard-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-frame .chart-wizard-workbench > .chart-wizard-body {
+  min-height: 0;
+}
+
+.app-frame .chart-creation-proof-deck {
+  align-content: start;
+  background: var(--simex-surface-panel);
+  border-left: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.app-frame .chart-creation-proof {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-style-panel-radius);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.app-frame .chart-creation-proof > header {
+  align-items: start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.app-frame .chart-creation-proof :is(.eyebrow, .chart-proof-state p, .chart-placement-proof-text) {
+  margin: 0;
+}
+
+.app-frame .chart-creation-proof > header small {
+  color: var(--simex-text-muted);
+  max-width: 17ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-frame .chart-creation-proof[data-proof-status="valid"] {
+  border-left: 4px solid var(--simex-success);
+}
+
+.app-frame .chart-creation-proof:is([data-proof-status="invalid"], [data-proof-status="error"]) {
+  border-left: 4px solid var(--simex-warning);
+}
+
+.app-frame .chart-creation-render-proof .chart-authoring-preview {
+  min-height: 210px;
+}
+
+.app-frame .chart-placement-proof-order {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-frame .chart-placement-proof-order li {
+  align-items: center;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.app-frame .chart-placement-proof-order li.draft {
+  border-color: var(--simex-selected);
+  box-shadow: inset 3px 0 0 var(--simex-selected);
+}
+
+.app-frame .chart-placement-proof-order small,
+.app-frame .chart-placement-proof-text {
+  color: var(--simex-text-muted);
+}
+
 .app-frame .chart-wizard-step,
 .app-frame .chart-creation-review {
   gap: 10px;
@@ -1634,6 +1726,22 @@
 }
 
 @media (max-width: 900px) {
+  .app-frame .chart-wizard-workbench {
+    display: block;
+    overflow: auto;
+  }
+
+  .app-frame .chart-wizard-workbench > .chart-wizard-body,
+  .app-frame .chart-creation-proof-deck {
+    overflow: visible;
+  }
+
+  .app-frame .chart-creation-proof-deck {
+    border-left: 0;
+    border-top: 1px solid var(--simex-border-subtle);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .app-frame .chart-wizard-step-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1652,5 +1760,9 @@
   .app-frame .chart-wizard-step-tabs,
   .app-frame .chart-destination-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-frame .chart-creation-proof-deck {
+    grid-template-columns: 1fr;
   }
 }
