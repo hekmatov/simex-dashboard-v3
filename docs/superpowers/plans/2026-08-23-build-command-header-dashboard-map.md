@@ -1,6 +1,6 @@
 # Build Command Header and Dashboard Map Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Move Build commands into a logically grouped normal-flow header above the canonical chart canvas, convert the former Build panel into Dashboard Map, remove its Chrono Group summary, and repair the Chrono Group content-page action composition.
 
@@ -34,7 +34,7 @@
 - Consumes: existing `buildOverlay: ReactNode` created by `DashboardRenderer`.
 - Produces: `workspaceControls: ReactNode`, rendered after `.canonical-dashboard-header` and before `.canonical-dashboard-content`; `BuildWorkspace` becomes that node in Build mode.
 
-- [ ] **Step 1: Write the failing live composition test**
+- [x] **Step 1: Write the failing live composition test**
 
 Add a focused case to `tests/dashboardSemanticBoundary.test.js` that renders the production `CanonicalDashboardFrame` and asserts the order and mode ownership:
 
@@ -53,13 +53,13 @@ test("Build workspace controls live between the canonical header and canvas cont
 });
 ```
 
-- [ ] **Step 2: Run the focused test and observe RED**
+- [x] **Step 2: Run the focused test and observe RED**
 
 Run: `node --test tests/dashboardSemanticBoundary.test.js`
 
 Expected: FAIL because `CanonicalDashboardFrame` does not render `workspaceControls`.
 
-- [ ] **Step 3: Add the slot and route BuildWorkspace through it**
+- [x] **Step 3: Add the slot and route BuildWorkspace through it**
 
 Implement the frame API:
 
@@ -77,13 +77,13 @@ export default function CanonicalDashboardFrame({
 
 Add `buildWorkspace = null` to `DashboardModeWorkspace`, pass it as `workspaceControls={buildMode ? buildWorkspace : null}`, and keep `overlayLayer` for View-owned overlays. In `DashboardRenderer`, rename the local `buildOverlay` node to `buildWorkspace` and pass `buildWorkspace={buildWorkspace}`.
 
-- [ ] **Step 4: Run the focused semantic tests and observe GREEN**
+- [x] **Step 4: Run the focused semantic tests and observe GREEN**
 
 Run: `node --test tests/dashboardSemanticBoundary.test.js tests/buildWorkspaceV3.test.js`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the slot slice**
+- [x] **Step 5: Commit the slot slice**
 
 ```bash
 git add src/components/dashboard/CanonicalDashboardFrame.jsx src/components/dashboard/DashboardModeWorkspace.jsx src/components/DashboardRenderer.jsx tests/dashboardSemanticBoundary.test.js
@@ -106,7 +106,7 @@ git commit -m "refactor(build): add canonical command header slot"
 - Consumes: `draftCoordinator`, `locked`, `auxiliaryLocked`, suspended-draft flags, parked auxiliaries, and existing Build command callbacks from `BuildWorkspace`.
 - Produces: `BuildCommandHeader(props)` with `data-build-command-group="content|time|layout|session"`; `#dashboard-map-panel` contains only map regions and alone receives `inert={!buildPanelOpen}`.
 
-- [ ] **Step 1: Write failing grouped-command and closed-map tests**
+- [x] **Step 1: Write failing grouped-command and closed-map tests**
 
 Create `tests/buildCommandHeader.test.js` using Vite SSR and static rendering. Assert:
 
@@ -119,13 +119,13 @@ assert.match(html, /data-build-command-group="session"[\s\S]*Reset[\s\S]*Finish 
 
 Extend `tests/buildDraftCoordinatorLive.test.js` to assert that the production `BuildWorkspace` source places `inert` on `id="dashboard-map-panel"`, not on the wrapper containing `BuildCommandHeader`.
 
-- [ ] **Step 2: Run both tests and observe RED**
+- [x] **Step 2: Run both tests and observe RED**
 
 Run: `node --test tests/buildCommandHeader.test.js tests/buildDraftCoordinatorLive.test.js`
 
 Expected: FAIL because `BuildCommandHeader` and `#dashboard-map-panel` do not exist.
 
-- [ ] **Step 3: Implement the presentational command header**
+- [x] **Step 3: Implement the presentational command header**
 
 Create a component with explicit groups:
 
@@ -195,7 +195,7 @@ export default function BuildCommandHeader({
 
 Preserve all existing disabled rules, Context Shelf entry attributes, suspended-draft messages, and `revealUnitOrbitAnchor(chartEditorPlacementId)` after layout discard.
 
-- [ ] **Step 4: Restructure BuildWorkspace without changing draft ownership**
+- [x] **Step 4: Restructure BuildWorkspace without changing draft ownership**
 
 Render:
 
@@ -221,7 +221,7 @@ In this step, `activeAuxiliaryPortal`, `dashboardMapRegions`, and `unitOrbit` ar
 
 Replace Unit Orbit’s `.build-command-area` anchor with `.build-command-header`. Remove `.build-canvas-toolbar` from the outside-pointer exclusion list once Task 3 replaces it with map region controls.
 
-- [ ] **Step 5: Style the header as semantic groups**
+- [x] **Step 5: Style the header as semantic groups**
 
 Add normal-flow styles with these invariants:
 
@@ -235,13 +235,13 @@ Add normal-flow styles with these invariants:
 
 Use existing design tokens rather than literal retired dashboard colors. Convert the fixed `.build-authoring-layer` rules to `.dashboard-map-panel`; the root must remain normal flow.
 
-- [ ] **Step 6: Run focused tests and observe GREEN**
+- [x] **Step 6: Run focused tests and observe GREEN**
 
 Run: `node --test tests/buildCommandHeader.test.js tests/buildDraftCoordinatorLive.test.js tests/buildWorkspaceV3.test.js`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit the command/inertness slice**
+- [x] **Step 7: Commit the command/inertness slice**
 
 ```bash
 git add src/components/build/BuildCommandHeader.jsx src/components/build/BuildWorkspace.jsx src/components/build/UnitOrbit.jsx src/styles/modes.css tests/buildCommandHeader.test.js tests/buildDraftCoordinatorLive.test.js
@@ -267,7 +267,7 @@ git commit -m "feat(build): move commands above the canvas"
 - Consumes: existing `buildPanelOpen` state and toggle callback; existing Structure and Inspector nodes.
 - Produces: user-facing `Dashboard map`, `aria-controls="dashboard-map-panel"`, `data-dashboard-map-open`, and `data-dashboard-map-region="structure|inspector"`.
 
-- [ ] **Step 1: Replace stale tests with accepted behavior and observe RED**
+- [x] **Step 1: Replace stale tests with accepted behavior and observe RED**
 
 Change `tests/buildStructureRail.test.js` to assert the tree still exposes the selected roving item but does not render `Chrono Groups` or the group name. Add application assertions that the Build crown contains `Dashboard map` and omits `Chrono Groups`.
 
@@ -277,7 +277,7 @@ Run: `node --test tests/buildStructureRail.test.js tests/dashboardAppV3.test.js`
 
 Expected: FAIL because the old labels/list still render.
 
-- [ ] **Step 2: Rename the public surface and remove redundant Chrono entry points**
+- [x] **Step 2: Rename the public surface and remove redundant Chrono entry points**
 
 In `App.jsx`, remove the Build-crown `Chrono Groups` button and its now-unused direct-opening handler. Rename the `Build panel` button text and accessible relationships to `Dashboard map` and `dashboard-map-panel`.
 
@@ -285,7 +285,7 @@ In `CanonicalDashboardFrame`, rename the public data attribute to `data-dashboar
 
 Delete the Chrono Group section from `BuildStructureRail`; Chrono Studio remains the temporal-library owner.
 
-- [ ] **Step 3: Add explicit Structure and Inspector region switching**
+- [x] **Step 3: Add explicit Structure and Inspector region switching**
 
 Inside Dashboard Map render:
 
@@ -303,17 +303,17 @@ Inside Dashboard Map render:
 
 Default to Structure when the map first opens. If a chart/section/Page is activated from the canvas, preserve the selection; do not automatically mutate layout or open an auxiliary editor.
 
-- [ ] **Step 4: Update responsive and canvas-reservation selectors**
+- [x] **Step 4: Update responsive and canvas-reservation selectors**
 
 Change fixed-panel and compression selectors from Build panel naming to Dashboard Map naming while retaining the accepted 404px maximum reservation on desktop. The region switch is always reachable; the inactive region is not tabbable. At mobile/touch widths the map uses the existing sheet/drawer behavior and does not exceed the viewport.
 
-- [ ] **Step 5: Run semantic tests and observe GREEN**
+- [x] **Step 5: Run semantic tests and observe GREEN**
 
 Run: `node --test tests/buildStructureRail.test.js tests/dashboardAppV3.test.js tests/dashboardGeometryContract.test.js tests/buildChronoGroupAccess.test.js`
 
 Expected: PASS.
 
-- [ ] **Step 6: Run the focused browser checkpoint**
+- [x] **Step 6: Run the focused browser checkpoint**
 
 Run: `pnpm test:e2e -- tests/e2e/v3-build-workspace.spec.js`
 
@@ -325,7 +325,7 @@ Expected browser facts:
 - the selected chart stays visible/usable;
 - closing the map restores the prior canonical canvas width and does not change saved layout storage.
 
-- [ ] **Step 7: Commit the Dashboard Map slice**
+- [x] **Step 7: Commit the Dashboard Map slice**
 
 ```bash
 git add src/App.jsx src/components/build/BuildWorkspace.jsx src/components/build/BuildStructureRail.jsx src/components/dashboard/CanonicalDashboardFrame.jsx src/components/dashboard/DashboardModeWorkspace.jsx src/styles/modes.css tests/buildStructureRail.test.js tests/dashboardAppV3.test.js tests/e2e/v3-build-workspace.spec.js
@@ -346,7 +346,7 @@ git commit -m "feat(build): replace the build panel with dashboard map"
 - Consumes: existing `onAction` events: `RETURN_TO_STUDIO`, `START_EDIT`, `START_CREATE_SCENE`, `START_DUPLICATE`, `REQUEST_REMOVE`, and conditional `START_REPAIR`.
 - Produces: `data-content-action-group="navigation|primary|management"` with no state-machine changes.
 
-- [ ] **Step 1: Write the failing composition assertions**
+- [x] **Step 1: Write the failing composition assertions**
 
 Extend `tests/buildChronoGroupAccess.test.js`:
 
@@ -359,13 +359,13 @@ assert.match(content, /class="[^"]*danger[^"]*"[^>]*>Remove</);
 
 Add a browser assertion that the primary group and management group each keep their own row/unit at 1200px and that every content action is at least 44px tall.
 
-- [ ] **Step 2: Run the unit test and observe RED**
+- [x] **Step 2: Run the unit test and observe RED**
 
 Run: `node --test tests/buildChronoGroupAccess.test.js`
 
 Expected: FAIL because action groups do not exist.
 
-- [ ] **Step 3: Implement grouped content composition**
+- [x] **Step 3: Implement grouped content composition**
 
 Restructure the header into an identity/navigation row and a separate action bar. Keep the modal `Close` button owned by `BuildWorkspace` and reserve its corner without squeezing the group title.
 
@@ -395,11 +395,11 @@ Restructure the header into an identity/navigation row and a separate action bar
 
 Apply a destructive class to `Remove`; keep repair conditional on `needs-attention`.
 
-- [ ] **Step 4: Add responsive spacing and alignment styles**
+- [x] **Step 4: Add responsive spacing and alignment styles**
 
 Use grid/flex groups with 8px intra-group and 16px inter-group spacing. At narrow widths, stack complete groups. Reset paragraph margins inside the identity block and maintain 44px action heights. Do not restore the undifferentiated `.temporal-content-page__actions` wrap rule.
 
-- [ ] **Step 5: Run focused semantic and browser checks**
+- [x] **Step 5: Run focused semantic and browser checks**
 
 Run: `node --test tests/buildChronoGroupAccess.test.js tests/chronoContentState.test.js`
 
@@ -407,7 +407,7 @@ Then: `pnpm test:e2e -- tests/e2e/v3-temporal-authoring.spec.js`
 
 Expected: PASS; browser geometry shows no clipped action, no lone wrapped navigation button, and no overlap with the auxiliary Close control.
 
-- [ ] **Step 6: Commit the content composition slice**
+- [x] **Step 6: Commit the content composition slice**
 
 ```bash
 git add src/components/time/ChronoGroupContent.jsx src/styles/modes.css tests/buildChronoGroupAccess.test.js tests/e2e/v3-temporal-authoring.spec.js
@@ -427,7 +427,7 @@ git commit -m "fix(chrono): organize group content actions"
 - Consumes: test/browser evidence from Tasks 1–4.
 - Produces: explicit Dashboard Map amendment, real implementation status, and provisional—not accepted—master-review language.
 
-- [ ] **Step 1: Run the affected unit suite**
+- [x] **Step 1: Run the affected unit suite**
 
 Run:
 
@@ -437,17 +437,17 @@ node --test tests/buildCommandHeader.test.js tests/buildDraftCoordinatorLive.tes
 
 Expected: PASS with no warnings.
 
-- [ ] **Step 2: Run the production build**
+- [x] **Step 2: Run the production build**
 
 Run: `pnpm build`
 
 Expected: exit code 0 and a completed Vite production bundle.
 
-- [ ] **Step 3: Exercise the in-app browser checkpoint**
+- [x] **Step 3: Exercise the in-app browser checkpoint**
 
 At 1280 × 720, inspect Build with Dashboard Map closed/open and the Chrono Group content page. Record actual button boxes, group gaps, panel reachability, selected-target visibility, and absence of header overlap. Use interaction/geometry facts, not screenshot existence, as evidence.
 
-- [ ] **Step 4: Amend records with the observed evidence**
+- [x] **Step 4: Amend records with the observed evidence**
 
 Record:
 
@@ -457,7 +457,7 @@ Record:
 - the Chrono Group content actions are grouped by ownership;
 - the master-review submission remains provisional pending the systematic audit and remaining Step 7 closure.
 
-- [ ] **Step 5: Commit the evidence update**
+- [x] **Step 5: Commit the evidence update**
 
 ```bash
 git add docs/superpowers/plans/2026-08-19-v3-step-7-build-view.md docs/audits/2026-08-22-v3-step-7-build-view/SKETCH-FIDELITY-MATRIX.md docs/audits/2026-08-22-v3-step-7-build-view/MASTER-REVIEW-SUBMISSION.md

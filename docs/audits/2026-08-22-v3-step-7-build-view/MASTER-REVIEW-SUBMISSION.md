@@ -170,3 +170,16 @@ Step 7 is submitted for V3 Design master review. Step 8 Present/Audience redesig
 - Focused semantic/timing checks passed `16/16`; the exact `012-temporal-content` production-bundle journey passed `1/1`; the production build passed with `829` transformed modules.
 
 The earlier endpoint-only evidence did not prove the required handoff and was insufficient. The amended browser journey now clicks that route directly. Master acceptance remains outside this correction.
+
+## Interface organization and spacing audit amendment — 2026-08-23
+
+The preceding “Final Step 7 readiness” statement is superseded. Step 7 is provisional again and is not currently submitted for master acceptance.
+
+- Build commands moved from the former side panel to the canonical workspace area above the canvas. They are grouped into a primary Content/Time/Session rail and a separate Layout draft status/action rail.
+- The remaining side panel is now **Dashboard map**, with explicit Structure and Inspector regions. Its obsolete Chrono Group detail/list section was removed.
+- Chrono Group content now separates navigation, primary, and management actions. A live visual check found that the content grid was stretching short rows across the full studio height; `c8ba968` repairs that defect and its browser test asserts a bounded action-row height.
+- The complete spacing/action/field audit is recorded in `docs/audits/2026-08-23-v3-interface-spacing-actions-fields/UI-REVIEW.md`.
+- The audit found five active fidelity rows requiring repair: 003, 004, 007, 011, and 014. The controlling matrix now reports 11/16 active Step 7 rows Passing and 5/16 Partial.
+- Present/Audience arrangement findings remain Step 8-owned and were not implemented here.
+
+Focused browser evidence currently passing: Dashboard map/command composition `1/1`; Chrono/Scene content and authoring journey `1/1`. These passing slices do not override the open P1 findings or make Step 7 review-ready.

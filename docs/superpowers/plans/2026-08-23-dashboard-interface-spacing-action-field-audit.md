@@ -1,6 +1,6 @@
 # Dashboard Interface Spacing, Action, and Field Audit Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Systematically inspect every live dashboard surface for spacing, action-button organization, target sizing, field composition, information alignment, and responsive failures, then produce prioritized implementation-ready recommendations.
 
@@ -31,7 +31,7 @@
 - Consumes: production component tree and CSS selectors.
 - Produces: a complete inventory table keyed by surface, state, viewport, owner, and evidence method.
 
-- [ ] **Step 1: Enumerate production surfaces from live owners**
+- [x] **Step 1: Enumerate production surfaces from live owners**
 
 Use source search to map these owner groups without changing code:
 
@@ -51,7 +51,7 @@ Present and Audience (audit-only Step 8 ownership)
 
 For each group, list the React owner and governing CSS file/selector.
 
-- [ ] **Step 2: Create the audit record with explicit scoring and finding fields**
+- [x] **Step 2: Create the audit record with explicit scoring and finding fields**
 
 Start the document with:
 
@@ -68,7 +68,7 @@ Start the document with:
 Populate every inventory row immediately; do not leave placeholders such as `TBD`.
 Record the structural baseline by running `git rev-parse --short HEAD` after the structural implementation plan and writing the returned commit ID into the audit introduction.
 
-- [ ] **Step 3: Record the pre-review baseline**
+- [x] **Step 3: Record the pre-review baseline**
 
 Document the already observed failures as baseline evidence:
 
@@ -76,7 +76,7 @@ Document the already observed failures as baseline evidence:
 - Chrono Group content action wrapping and title squeeze, now replaced by the structural plan;
 - earlier Chrono editor field-baseline/alignment regression as a mandatory live recheck.
 
-- [ ] **Step 4: Commit the complete inventory**
+- [x] **Step 4: Commit the complete inventory**
 
 ```bash
 git add docs/audits/2026-08-23-v3-interface-spacing-actions-fields/UI-REVIEW.md
@@ -94,7 +94,7 @@ git commit -m "docs(ui): inventory dashboard controls and fields"
 - Consumes: live Build journeys and computed browser geometry.
 - Produces: evidence-backed findings for Build header/Map, Look, chart authoring, structure, Scenario Passport, Chrono, and Scene authoring.
 
-- [ ] **Step 1: Inspect Build shell and transient ownership**
+- [x] **Step 1: Inspect Build shell and transient ownership**
 
 Exercise: enter Build, change Pages, open/close Dashboard Map, select a chart, open Unit Orbit, Pages & Sections, Dashboard Look, Chrono Studio, and Scene Studio.
 
@@ -106,7 +106,7 @@ For each surface record:
 - focus order and return context;
 - whether opening the surface changes saved layout.
 
-- [ ] **Step 2: Inspect all Build form and information patterns**
+- [x] **Step 2: Inspect all Build form and information patterns**
 
 Inspect labels, text inputs, text areas, selects, numeric fields, radio rows, checkboxes, status fields, ledgers, descriptions, validation, and recovery messages. For each field group record computed height, inline padding, label/value baseline relationship, and responsive stacking when visibly relevant.
 
@@ -122,7 +122,7 @@ The Chrono editor regression check must compare the Review-stage text/informatio
 })
 ```
 
-- [ ] **Step 3: Classify each finding**
+- [x] **Step 3: Classify each finding**
 
 Use:
 
@@ -132,7 +132,7 @@ Use:
 
 Each finding includes owner, evidence, recommended arrangement, material viewport/state, and cheapest falsifying check. State `No issue found` for inspected categories without a finding so coverage is auditable.
 
-- [ ] **Step 4: Commit Build/authoring findings**
+- [x] **Step 4: Commit Build/authoring findings**
 
 ```bash
 git add docs/audits/2026-08-23-v3-interface-spacing-actions-fields/UI-REVIEW.md
@@ -150,19 +150,19 @@ git commit -m "docs(ui): audit build and authoring composition"
 - Consumes: live View, Chrono playback, chart interaction, tooltip, fullscreen, and recovery journeys.
 - Produces: evidence-backed View/shared findings with no authoring chrome in View.
 
-- [ ] **Step 1: Inspect ordinary View and chart-panel actions**
+- [x] **Step 1: Inspect ordinary View and chart-panel actions**
 
 Exercise Page switching, chart hover/focus tooltips, Collection controls, exploration, comparison, source evidence, single fullscreen, and multi-panel fullscreen. Record chart-header action ownership, target sizes, tooltip clearance/overflow, and responsive wrapping.
 
-- [ ] **Step 2: Inspect View Chrono information and controls**
+- [x] **Step 2: Inspect View Chrono information and controls**
 
 Exercise group selection, Scene selection, playback, cadence entry, seek rail, progress/availability evidence, reveal state, date overlay, and suspension/resumption. Record label/control alignment, numeric field sizing, action order, tooltip behavior, and touch target spacing.
 
-- [ ] **Step 3: Inspect shared failure and transient states**
+- [x] **Step 3: Inspect shared failure and transient states**
 
 Inspect dialogs, sheets, toasts, warnings, empty states, validation, recovery, and storage/quota messaging. Verify action hierarchy does not present destructive or unrecoverable actions as the default primary choice.
 
-- [ ] **Step 4: Commit View/shared findings**
+- [x] **Step 4: Commit View/shared findings**
 
 ```bash
 git add docs/audits/2026-08-23-v3-interface-spacing-actions-fields/UI-REVIEW.md
@@ -181,13 +181,13 @@ git commit -m "docs(ui): audit view and shared composition"
 - Consumes: Tasks 1–3 findings and material tablet/touch checks.
 - Produces: scored review, prioritized repair order, explicit Step 7/Step 8 ownership, and provisional master-review status.
 
-- [ ] **Step 1: Recheck only viewport-dependent decisions**
+- [x] **Step 1: Recheck only viewport-dependent decisions**
 
 At 768 × 1024 and 390 × 844, recheck surfaces whose layout can change: command crown, Build command header, Dashboard Map, chart/Chrono/Scene authoring, View Chrono, chart headers/tooltips, dialogs, and fullscreen exit controls.
 
 Record whether whole action/field groups stack, targets remain at least 44px where required, adjacent interactive targets retain at least 8px separation, and no fixed/sticky control covers required content.
 
-- [ ] **Step 2: Score the six review pillars**
+- [x] **Step 2: Score the six review pillars**
 
 Score and justify:
 
@@ -202,7 +202,7 @@ Accessibility and State Communication
 
 Scores are summaries of recorded evidence, not substitutes for findings.
 
-- [ ] **Step 3: Produce the dependency-ordered repair backlog**
+- [x] **Step 3: Produce the dependency-ordered repair backlog**
 
 Order recommendations as:
 
@@ -214,11 +214,11 @@ Order recommendations as:
 
 Every recommendation names the production owner, exact change, cheapest test, and whether Step 7 or Step 8 owns implementation.
 
-- [ ] **Step 4: Finalize status and master-review language**
+- [x] **Step 4: Finalize status and master-review language**
 
 Set the audit status to `Complete`. Update the master-review submission to link the audit and remain provisional while any Step 7 P0/P1 finding is open. Distinguish engine implemented, UI implemented, and fidelity verified.
 
-- [ ] **Step 5: Commit the completed review**
+- [x] **Step 5: Commit the completed review**
 
 ```bash
 git add docs/audits/2026-08-23-v3-interface-spacing-actions-fields/UI-REVIEW.md docs/audits/2026-08-22-v3-step-7-build-view/MASTER-REVIEW-SUBMISSION.md

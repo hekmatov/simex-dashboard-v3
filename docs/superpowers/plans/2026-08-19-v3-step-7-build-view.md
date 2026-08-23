@@ -29,6 +29,12 @@ Sketches 001 and 008 remain explicitly deferred to Step 8. Sketch 009 belongs to
 
 The later user-approved behavior supersedes the original cancel-on-Close rule: closing Dashboard Look, clicking outside it, or using root Escape closes immediately and applies the currently selected visual style and colour profile asynchronously. Persistence never blocks closing. A failed persistence attempt leaves the live selection usable and shows a short bottom-right warning identifying the failed colour-profile/style persistence. This amendment changes only the close boundary. It does not approve removal of Signature shortcuts, provenance, saved-versus-preview truth, chart-colour ownership, appearance ownership, or scoped Set actions.
 
+### Build command header, Dashboard map, and interface-audit amendment
+
+The later user-approved Build composition moves all primary Build commands into a grouped workspace header above the canonical canvas. The former Build side panel is renamed **Dashboard map** and owns only Structure and Inspector context; its obsolete Chrono Group detail/list section is removed. This changes authoring containment without changing dashboard content truth, saved layout ownership, or the canonical renderer.
+
+The systematic spacing/action/field review is recorded in `docs/audits/2026-08-23-v3-interface-spacing-actions-fields/UI-REVIEW.md`. Its open P1 findings supersede any earlier Step 7 ready-for-review statement. The controlling matrix currently marks Sketches 003, 004, 007, 011, and 014 Partial; Step 7 remains provisional until those rows pass or receive explicit approved deviations.
+
 ### Repair execution rules
 
 - Each repair is an atomic vertical slice with a RED live-behavior or production-integration check, minimal implementation, focused GREEN evidence, and a runnable in-app browser checkpoint.
