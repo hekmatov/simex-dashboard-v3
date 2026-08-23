@@ -6,6 +6,9 @@ export default function DashboardIdentityRow({
   pages = [],
   onPageRequest,
   onScenarioRequest,
+  scenarioExpanded = false,
+  scenarioDirty = false,
+  scenarioNode,
   pageActions,
 }) {
   const scenarioLabel = dashboardIdentity.scenarioLabel || "Scenario unavailable";
@@ -13,15 +16,24 @@ export default function DashboardIdentityRow({
 
   return (
     <section className="dashboard-identity-row" data-command-crown-layer="location" aria-label="Dashboard location and Page tools">
-      <div className="dashboard-identity-summary">
+      <div className="dashboard-identity-summary dashboard-scenario-anchor">
         <strong>{title}</strong>
         {typeof onScenarioRequest === "function" ? (
-          <button type="button" className="dashboard-scenario-trigger" onClick={onScenarioRequest}>
+          <button
+            type="button"
+            className="dashboard-scenario-trigger"
+            aria-expanded={scenarioExpanded}
+            aria-controls="scenario-passport-popover"
+            data-dirty={scenarioDirty ? "true" : undefined}
+            onClick={onScenarioRequest}
+          >
             {scenarioLabel}
+            {scenarioDirty && <span className="scenario-unsaved-indicator">Unsaved</span>}
           </button>
         ) : (
           <span>{scenarioLabel}</span>
         )}
+        {scenarioNode}
       </div>
       <nav className="dashboard-command-page-scroller" aria-label="Dashboard pages">
         {pages.map((page) => {

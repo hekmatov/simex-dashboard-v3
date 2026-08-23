@@ -4,6 +4,7 @@ import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArt
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
 import AppFrame from "./components/app-shell/AppFrame.jsx";
+import ScenarioPassportPopover from "./components/app-shell/ScenarioPassportPopover.jsx";
 import DashboardPackageReviewDialog from "./components/build/DashboardPackageReviewDialog.jsx";
 import PlaybackPageActions from "./components/playback/PlaybackPageActions.jsx";
 import {
@@ -111,6 +112,8 @@ export default function App() {
   const [modeDisabled, setModeDisabled] = React.useState(false);
   const [buildDraftLocked, setBuildDraftLocked] = React.useState(false);
   const [buildPanelOpen, setBuildPanelOpen] = React.useState(false);
+  const [scenarioPassportOpen, setScenarioPassportOpen] = React.useState(false);
+  const [scenarioPassportDirty, setScenarioPassportDirty] = React.useState(false);
   const [compareSelectionActive, setCompareSelectionActive] = React.useState(false);
   const [blockedReason, setBlockedReason] = React.useState("");
   const [activePageId, setActivePageId] = React.useState(null);
@@ -191,6 +194,10 @@ export default function App() {
     const timerId = window.setTimeout(() => setLookPersistenceFlash(""), 4500);
     return () => window.clearTimeout(timerId);
   }, [lookPersistenceFlash]);
+
+  React.useEffect(() => {
+    if (mode !== "build") setScenarioPassportOpen(false);
+  }, [mode]);
 
   const commandCrownProjection = React.useMemo(() => {
     const pages = Object.freeze((dashboard?.pages ?? []).map((page) => Object.freeze({
@@ -1028,6 +1035,27 @@ export default function App() {
       pages={commandCrownProjection.pages}
       pageActions={commandCrownPageActions}
       onPageRequest={requestPage}
+      onScenarioRequest={mode === "build"
+        ? () => setScenarioPassportOpen((current) => !current)
+        : undefined}
+      scenarioExpanded={scenarioPassportOpen}
+      scenarioDirty={scenarioPassportDirty}
+      scenarioNode={<ScenarioPassportPopover
+        open={mode === "build" && scenarioPassportOpen}
+        dashboard={dashboard}
+        onClose={() => setScenarioPassportOpen(false)}
+        onDirtyChange={setScenarioPassportDirty}
+        onSave={(value) => mutateDashboard((next) => {
+          next.scenarioLabel = value.scenarioLabel;
+          next.programLabel = value.programLabel;
+          next.lastUpdated = value.lastUpdated;
+        })}
+        onImportPackage={() => dashboardRendererRef.current?.requestDashboardPackageImport?.()}
+        onDownloadPackage={() => exportConfig(configurationForPortableUse(
+          dashboardRef.current ?? dashboard,
+        ))}
+        onResetToSource={() => dashboardRendererRef.current?.requestResetDashboardToSource?.()}
+      />}
       density={densityForDashboardMode(mode)}
       persistenceNotice={Object.values(persistenceNotices).join(" ")}
       theme={dashboardTheme}

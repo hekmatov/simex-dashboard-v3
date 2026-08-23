@@ -1,7 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
 
-import { SimExIcon } from "../common/SimExIcon.js";
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
@@ -14,10 +13,6 @@ import {
   collectChartPlacements,
   compatibleUnitOrbitCapabilities,
 } from "./panelEditingModel.js";
-import ScenarioAuthoring, {
-  createScenarioDraft,
-  reduceScenarioDraft,
-} from "./ScenarioAuthoring.jsx";
 import StructureAuthoring, {
   createStructureDraft,
   reduceStructureDraft,
@@ -94,7 +89,6 @@ export default function BuildWorkspace({
   onRevealComplete,
   onDashboardChange,
   onStructureCommit,
-  onScenarioCommit,
   onPageChange,
   onPageRemove,
   onSectionChange,
@@ -109,8 +103,6 @@ export default function BuildWorkspace({
   onDiscardLayout,
   onFinish,
   onReset,
-  onImportPackage,
-  onExportPackage,
   onLocalDraftsChange,
   onDisplayAction,
   selectionControllerRef,
@@ -129,7 +121,6 @@ export default function BuildWorkspace({
   const activeAuxiliary = draftCoordinator.activeAuxiliary?.surface ?? null;
   const parkedAuxiliaries = draftCoordinator.parkedAuxiliaries;
   const [structureDraft, setStructureDraft] = React.useState(null);
-  const [scenarioDraft, setScenarioDraft] = React.useState(null);
   const [chronoGroupDraft, setChronoGroupDraft] = React.useState(null);
   const [sceneDraft, setSceneDraft] = React.useState(null);
   const [chronoContentState, setChronoContentState] = React.useState(null);
@@ -155,10 +146,9 @@ export default function BuildWorkspace({
   const [tablet, setTablet] = React.useState(false);
   const localAuthoringDrafts = React.useMemo(() => ({
     structure: structureDraft,
-    scenario: scenarioDraft,
     chronoGroup: chronoGroupDraft,
     scene: sceneDraft,
-  }), [sceneDraft, scenarioDraft, structureDraft, chronoGroupDraft]);
+  }), [sceneDraft, structureDraft, chronoGroupDraft]);
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
@@ -327,12 +317,6 @@ export default function BuildWorkspace({
         () => createStructureDraft(dashboard),
       ));
     }
-    if (surface === "scenario") {
-      setScenarioDraft((current) => initializeDeferredBuildDraft(
-        current,
-        () => createScenarioDraft({ ...dashboard, ...dashboardDraft }),
-      ));
-    }
     if (surface === "chrono-group") {
       const resumingDraft = chronoGroupDraft?.status === "suspended";
       setChronoGroupDraft((current) => current?.status === "suspended"
@@ -446,22 +430,6 @@ export default function BuildWorkspace({
       return;
     }
     setStructureDraft((current) => reduceStructureDraft(current, normalized));
-  };
-
-  const dispatchScenario = (action) => {
-    if (action.type === "SAVE_REQUEST") {
-      const saving = reduceScenarioDraft(scenarioDraft, action);
-      setScenarioDraft(saving);
-      if (saving.status !== "saving") return;
-      Promise.resolve(onScenarioCommit?.(saving.value))
-        .then(() => setScenarioDraft((current) => reduceScenarioDraft(current, { type: "SAVE_SUCCEEDED" })))
-        .catch((error) => setScenarioDraft((current) => reduceScenarioDraft(current, {
-          type: "SAVE_FAILED",
-          error: storageFacingError(error, "SCENARIO_SAVE_FAILED"),
-        })));
-      return;
-    }
-    setScenarioDraft((current) => reduceScenarioDraft(current, action));
   };
 
   const commitTemporalContent = (updates) => onStructureCommit?.({
@@ -650,19 +618,8 @@ export default function BuildWorkspace({
             </button>
             <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>{chartDraftAvailable ? "Resume chart draft" : "Add chart"}</button>
             <button type="button" className="secondary" data-context-shelf-entry="structure" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
-            <button type="button" className="secondary" data-context-shelf-entry="scenario" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>
             <button type="button" className="secondary" data-context-shelf-entry="chrono-group" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("chrono-group")}>Chrono Studio</button>
             <button type="button" className="secondary" data-context-shelf-entry="scene" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("scene")}>Scene Studio</button>
-            <div className="build-package-actions" aria-label="Dashboard packages">
-              <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onMouseDown={(event) => event.preventDefault()} onClick={onImportPackage}>
-                <SimExIcon iconId="import" size={18} />
-                <span>Import package</span>
-              </button>
-              <button type="button" className="secondary build-package-action" disabled={mutationsDisabled} onClick={onExportPackage}>
-                <SimExIcon iconId="export" size={18} />
-                <span>Export package</span>
-              </button>
-            </div>
             <fieldset className="build-appearance-controls" disabled={locked}>
               {appearanceControls}
             </fieldset>
@@ -700,7 +657,6 @@ export default function BuildWorkspace({
             >
               <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
               {activeAuxiliary === "structure" && structureDraft && <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />}
-              {activeAuxiliary === "scenario" && scenarioDraft && <ScenarioAuthoring draft={scenarioDraft} disabled={locked} onAction={dispatchScenario} />}
               {activeAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
                 <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
               )}
@@ -801,7 +757,6 @@ function storageFacingError(error, fallbackCode) {
 function auxiliaryLabel(surface) {
   return ({
     structure: "Structure",
-    scenario: "Scenario",
     "chrono-group": "Chrono Studio",
     scene: "Scene Studio",
   })[surface] ?? "Build work";

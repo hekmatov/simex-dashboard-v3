@@ -15,6 +15,9 @@ export default function DashboardCommandCrown({
   onModeRequest,
   onPageRequest,
   onScenarioRequest,
+  scenarioExpanded,
+  scenarioDirty,
+  scenarioNode,
   disabled = false,
   disabledReason = "",
 }) {
@@ -35,6 +38,9 @@ export default function DashboardCommandCrown({
         pages={pages}
         onPageRequest={onPageRequest}
         onScenarioRequest={onScenarioRequest}
+        scenarioExpanded={scenarioExpanded}
+        scenarioDirty={scenarioDirty}
+        scenarioNode={scenarioNode}
         pageActions={pageActions}
       />
       <ModeContextStrip

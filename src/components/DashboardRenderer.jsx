@@ -313,6 +313,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
       void activate?.(selection, { intent: "activate" });
     },
+    requestDashboardPackageImport() {
+      requestDashboardPackageImport();
+    },
+    requestResetDashboardToSource() {
+      setResetEditSessionConfirmation(true);
+    },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };
       if (buildDraftLocked) {
@@ -508,8 +514,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     }
     try {
       const snapshot = dashboardWithCurrentDrafts();
-      await pendingEdits.flush();
-      await onCommitPendingConfiguration?.();
+      if (pendingEdits.hasPending()) {
+        await pendingEdits.flush();
+        await onCommitPendingConfiguration?.();
+      }
       onExportConfig(snapshot);
     } catch (error) {
       setBuildSelectionError(boundedModeratorMessage(error));
@@ -762,18 +770,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return runModeratorTransaction({
       flush: () => pendingEdits.flush(),
       commit: () => onStructureChange?.(value),
-    });
-  }
-
-  function commitScenarioDraft(value) {
-    return runModeratorTransaction({
-      flush: () => pendingEdits.flush(),
-      commit: () => onDashboardChange?.({
-        scenarioLabel: value.scenarioLabel,
-        programLabel: value.programLabel,
-        lastUpdated: value.lastUpdated,
-      }),
-      onCommitted: () => setDashboardDraft(dashboardTextDraftFromDashboard(value)),
     });
   }
 
@@ -1242,7 +1238,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onRevealComplete={completeBuildReveal}
       onDashboardChange={changeDashboardText}
       onStructureCommit={commitStructureDraft}
-      onScenarioCommit={commitScenarioDraft}
       onPageChange={changePage}
       onPageRemove={removeActivePage}
       onSectionChange={changeSection}
@@ -1272,8 +1267,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onDiscardLayout={discardBuildLayoutChanges}
       onFinish={saveEditMode}
       onReset={() => setResetEditSessionConfirmation(true)}
-      onImportPackage={requestDashboardPackageImport}
-      onExportPackage={exportDashboardPackage}
       onLocalDraftsChange={handleLocalDraftsChange}
       onDeviceLayoutChange={onDeviceLayoutChange}
       onDisplayAction={onDisplayAction}

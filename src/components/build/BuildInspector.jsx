@@ -96,34 +96,10 @@ export default function BuildInspector({
     );
   }
   return (
-    <section className="build-inspector" aria-labelledby="build-inspector-title">
-      <p className="eyebrow">Scenario</p>
-      <h2 id="build-inspector-title">Scenario details</h2>
-      <label>
-        Program
-        <input
-          ref={labelRef}
-          disabled={disabled}
-          value={dashboardDraft.programLabel ?? ""}
-          onChange={(event) => onDashboardChange?.({ programLabel: event.target.value })}
-        />
-      </label>
-      <label>
-        Scenario
-        <input
-          disabled={disabled}
-          value={dashboardDraft.scenarioLabel ?? ""}
-          onChange={(event) => onDashboardChange?.({ scenarioLabel: event.target.value })}
-        />
-      </label>
-      <label>
-        Updated date
-        <input
-          disabled={disabled}
-          value={dashboardDraft.lastUpdated ?? ""}
-          onChange={(event) => onDashboardChange?.({ lastUpdated: event.target.value })}
-        />
-      </label>
+    <section className="build-inspector build-inspector-empty" aria-labelledby="build-inspector-title">
+      <p className="eyebrow">Inspector</p>
+      <h2 id="build-inspector-title">Choose dashboard content</h2>
+      <p>Select a Page, Section, chart, or Chrono Group to inspect it here. Scenario identity and package controls live in the Scenario Passport above.</p>
     </section>
   );
 }

@@ -117,7 +117,8 @@ test("Build runtime reports local drafts and wires the shared chart session guar
   ]);
 
   assert.match(workspace, /onLocalDraftsChange/);
-  assert.match(workspace, /structure:\s*structureDraft[\s\S]*scenario:\s*scenarioDraft[\s\S]*chronoGroup:\s*chronoGroupDraft[\s\S]*scene:\s*sceneDraft/);
+  assert.match(workspace, /structure:\s*structureDraft[\s\S]*chronoGroup:\s*chronoGroupDraft[\s\S]*scene:\s*sceneDraft/);
+  assert.doesNotMatch(workspace, /scenario:\s*scenarioDraft/);
   assert.match(renderer, /createChartDraftSessionStore/);
   assert.match(renderer, /installChartDraftUnloadGuard/);
   assert.match(renderer, /initialDraftState=\{chartDraftSessionStore\.get\(chartDraftSessionKey\)\}/);

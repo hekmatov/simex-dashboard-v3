@@ -73,7 +73,7 @@ test("failed recovery hydration leaves storage untouched and maps package errors
   );
 });
 
-test("Build exposes visible package controls with the approved SimEx icons", () => {
+test("Build keeps package controls out of the generic command panel", () => {
   const page = {
     id: "home",
     label: "Home",
@@ -94,12 +94,7 @@ test("Build exposes visible package controls with the approved SimEx icons", () 
     pageDrafts: {},
     sectionDrafts: {},
     deviceLayout: "auto",
-    onImportPackage() {},
-    onExportPackage() {},
   }));
 
-  assert.match(html, />Import package<\/span>/);
-  assert.match(html, />Export package<\/span>/);
-  assert.match(html, /data-icon-id="import"/);
-  assert.match(html, /data-icon-id="export"/);
+  assert.doesNotMatch(html, /Import package|Export package|Dashboard packages/);
 });

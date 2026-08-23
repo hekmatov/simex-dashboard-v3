@@ -60,10 +60,11 @@ test("dirty primary slots leave Context Shelf entry points available for coordin
     chartSlotDraft: { draftId: "chart-panel-a", status: "dirty", targetId: "panel-a" },
   }));
 
-  for (const surface of ["structure", "scenario", "chrono-group", "scene"]) {
+  for (const surface of ["structure", "chrono-group", "scene"]) {
     const button = html.match(new RegExp(`<button[^>]*data-context-shelf-entry="${surface}"[^>]*>`))?.[0] ?? "";
     assert.ok(button, `${surface} needs a live Context Shelf entry point`);
     assert.doesNotMatch(button, /disabled=""/, `${surface} must not be blocked by dirty primary slots`);
     assert.match(button, /data-unit-orbit-preserve-open="true"/);
   }
+  assert.doesNotMatch(html, /data-context-shelf-entry="scenario"/);
 });

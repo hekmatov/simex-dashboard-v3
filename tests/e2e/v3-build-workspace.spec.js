@@ -186,6 +186,46 @@ test("chart recovery states retain canonical plot geometry", async ({ page }) =>
   await expect(partial.locator('.chart-state-surface--partial')).toBeVisible();
 });
 
+test("Scenario Passport owns direct identity edits and package operations in Build", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+
+  const scenarioTrigger = page.locator(".dashboard-scenario-trigger");
+  await scenarioTrigger.click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await expect(passport).toBeVisible();
+  await expect(passport.getByRole("button", { name: "Import Dashboard Package", exact: true })).toBeEnabled();
+  await expect(passport.getByRole("button", { name: "Download Dashboard Package", exact: true })).toBeEnabled();
+  await expect(passport.getByRole("button", { name: "Reset Dashboard to Source", exact: true })).toBeEnabled();
+  page.once("dialog", (dialog) => dialog.accept("Scenario-Passport-test"));
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    passport.getByRole("button", { name: "Download Dashboard Package", exact: true }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.json$/);
+
+  await passport.getByRole("button", { name: /^Edit Program:/ }).click();
+  await passport.getByLabel("Program", { exact: true }).fill("Unsaved response program");
+  await expect(passport).toContainText("Unsaved Scenario");
+  await expect(passport.getByRole("button", { name: "Import Dashboard Package", exact: true })).toBeDisabled();
+  await expect(passport).toContainText("Save or discard the Scenario changes");
+
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(passport).toHaveCount(0);
+  await expect(scenarioTrigger).toContainText("Unsaved");
+  await scenarioTrigger.click();
+  await passport.getByRole("button", { name: "Discard Scenario", exact: true }).click();
+  await expect(passport.getByRole("button", { name: "Import Dashboard Package", exact: true })).toBeEnabled();
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "View", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Scenario Passport" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Import Dashboard Package", exact: true })).toHaveCount(0);
+});
+
 async function openBiomedicalBuild(page) {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");

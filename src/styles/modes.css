@@ -1084,6 +1084,152 @@
   text-align: left;
 }
 
+.dashboard-scenario-anchor {
+  position: relative;
+}
+
+.dashboard-scenario-trigger[data-dirty="true"] {
+  color: var(--simex-text-strong);
+}
+
+.scenario-unsaved-indicator {
+  background: var(--simex-accent-soft);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: 999px;
+  color: var(--simex-text-strong);
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  margin-inline-start: 8px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.scenario-passport-popover {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius);
+  box-shadow: var(--simex-style-panel-shadow);
+  color: var(--simex-text);
+  display: grid;
+  gap: 14px;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-start: 0;
+  max-height: min(720px, calc(100vh - 146px));
+  overflow: auto;
+  padding: 16px;
+  position: absolute;
+  width: min(430px, calc(100vw - 40px));
+  z-index: 70;
+}
+
+.scenario-passport-heading,
+.scenario-passport-draft-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.scenario-passport-heading > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scenario-passport-heading :is(p, h2),
+.scenario-passport-package-actions :is(h3, p),
+.scenario-passport-provenance h3 {
+  margin: 0;
+}
+
+.scenario-passport-heading h2 {
+  font-size: 20px;
+}
+
+.scenario-passport-fields,
+.scenario-passport-package-actions,
+.scenario-passport-provenance {
+  display: grid;
+  gap: 8px;
+}
+
+.scenario-passport-field {
+  display: grid;
+  gap: 3px;
+}
+
+.scenario-passport-field > span,
+.scenario-passport-provenance dt {
+  color: var(--simex-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.scenario-passport-field input,
+.scenario-passport-value {
+  min-height: 40px;
+  width: 100%;
+}
+
+.scenario-passport-value {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid transparent;
+  color: var(--simex-text-strong);
+  font: inherit;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.scenario-passport-value:hover {
+  border-color: var(--simex-border-strong);
+}
+
+.scenario-passport-draft-actions {
+  border-bottom: 1px solid var(--simex-border-subtle);
+  border-top: 1px solid var(--simex-border-subtle);
+  flex-wrap: wrap;
+  padding-block: 10px;
+}
+
+.scenario-passport-draft-actions .build-draft-status {
+  margin-inline-end: auto;
+}
+
+.scenario-passport-provenance dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.scenario-passport-provenance dl > div {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.scenario-passport-provenance dd {
+  color: var(--simex-text-strong);
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.scenario-passport-package-actions {
+  border-top: 1px solid var(--simex-border-subtle);
+  padding-top: 12px;
+}
+
+.scenario-package-disabled-reason {
+  color: var(--simex-text-muted);
+  font-size: 12px;
+}
+
+.scenario-package-reset {
+  color: var(--simex-danger, var(--simex-text-strong));
+}
+
 .dashboard-command-page-scroller {
   align-items: center;
   display: flex;
@@ -1400,6 +1546,12 @@
 @media (min-width: 900px) {
   .canonical-dashboard-frame.build-workspace {
     transition: margin-left 180ms ease, width 180ms ease;
+  }
+
+  .scenario-passport-popover {
+    inset-inline-start: 0;
+    max-height: calc(100vh - 170px);
+    width: min(430px, calc(100vw - 24px));
   }
 
   .canonical-dashboard-frame.build-workspace[data-build-panel-open="true"] {

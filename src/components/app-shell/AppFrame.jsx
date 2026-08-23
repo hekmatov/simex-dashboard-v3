@@ -17,6 +17,9 @@ export default function AppFrame({
   pageActions,
   onPageRequest,
   onScenarioRequest,
+  scenarioExpanded,
+  scenarioDirty,
+  scenarioNode,
   density,
   children,
   theme,
@@ -51,6 +54,9 @@ export default function AppFrame({
         onModeRequest={onModeRequest}
         onPageRequest={onPageRequest}
         onScenarioRequest={onScenarioRequest}
+        scenarioExpanded={scenarioExpanded}
+        scenarioDirty={scenarioDirty}
+        scenarioNode={scenarioNode}
         disabled={modeDisabled}
         disabledReason={blockedReason}
       />

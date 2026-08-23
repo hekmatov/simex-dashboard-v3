@@ -220,7 +220,7 @@ test("Structure and Scenario surfaces expose scoped actions without mutating the
   assert.equal(JSON.stringify(dashboard), before);
 });
 
-test("Build workspace binds Structure and Scenario to the Context Shelf lifecycle", () => {
+test("Build workspace binds structural studios to Context Shelf and leaves Scenario to the Crown", () => {
   assert.equal(typeof workspaceModule?.default, "function");
   const dashboard = structureFixture();
   const activePage = dashboard.pages[0];
@@ -242,7 +242,7 @@ test("Build workspace binds Structure and Scenario to the Context Shelf lifecycl
 
   assert.match(html, /data-build-auxiliary-contract="context-shelf"/);
   assert.match(html, />Pages &amp; sections</);
-  assert.match(html, />Scenario details</);
+  assert.doesNotMatch(html, />Scenario details</);
   assert.doesNotMatch(html, />Time Content</);
   assert.match(html, />Chrono Studio</);
   assert.match(html, />Scene Studio</);
