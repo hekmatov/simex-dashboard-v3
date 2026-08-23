@@ -80,3 +80,19 @@ test("selectors derive saved content without duplicating it into navigation stat
   assert.equal(selectSceneContent(state, "scene-a").chronoGroupName, "Municipal outbreak playback");
   assert.notStrictEqual(state.chronoGroups, chronoGroups);
 });
+
+test("reopening the active Scene Studio preserves its current browse context", () => {
+  let state = createChronoContentState({
+    chronoGroups,
+    scenes: [scenes[1]],
+    pages,
+    studio: "scene",
+    pageId: "biomedical",
+  });
+  state = reduceChronoContent(state, { type: "SET_PAGE_FILTER", pageId: "operations" });
+  state = reduceChronoContent(state, { type: "OPEN_CONTENT", itemType: "scene", itemId: "scene-b" });
+  state = reduceChronoContent(state, { type: "SET_STUDIO", studio: "scene" });
+
+  assert.equal(state.pageId, "operations");
+  assert.deepEqual(selectSceneStudioSections(state).map(({ pageId }) => pageId), ["operations"]);
+});

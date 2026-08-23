@@ -907,7 +907,14 @@ function mergeScene(scenes, saved) {
 
 function completeContentOperation(state, updates, itemType, itemId) {
   if (!state) return state;
-  const refreshed = reduceChronoContent(state, { type: "OPERATION_SUCCEEDED", ...updates, returnToContent: true });
+  const createIntent = state.operation?.intent === "create";
+  let refreshed = reduceChronoContent(state, { type: "OPERATION_SUCCEEDED", ...updates, returnToContent: true });
+  if (createIntent && itemType === "scene") {
+    const savedScene = refreshed.scenes?.find(({ id }) => id === itemId);
+    refreshed = reduceChronoContent(refreshed, { type: "SET_QUERY", query: "" });
+    refreshed = reduceChronoContent(refreshed, { type: "SET_STATUS_FILTER", statusFilter: "all" });
+    refreshed = reduceChronoContent(refreshed, { type: "SET_PAGE_FILTER", pageId: savedScene?.pageId ?? null });
+  }
   return reduceChronoContent(refreshed, { type: "OPEN_CONTENT", itemType, itemId });
 }
 

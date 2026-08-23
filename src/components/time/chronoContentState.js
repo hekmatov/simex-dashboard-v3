@@ -57,15 +57,19 @@ export function reduceChronoContent(state, action) {
         pages: clone(action.pages ?? state.pages),
         findings: clone(action.findings ?? state.findings),
       };
-    case "SET_STUDIO":
+    case "SET_STUDIO": {
       assertStudio(action.studio);
+      const currentContext = browseContext(state);
+      const nextContext = action.studio === state.studio
+        ? currentContext
+        : (state.studioContexts?.[action.studio] ?? browseContext({ pageId: state.pageId }));
       return {
         ...state,
-        ...(state.studioContexts?.[action.studio] ?? browseContext({ pageId: state.pageId })),
+        ...nextContext,
         studio: action.studio,
         studioContexts: {
           ...state.studioContexts,
-          [state.studio]: browseContext(state),
+          [state.studio]: currentContext,
         },
         view: "library",
         selectedItemType: null,
@@ -73,6 +77,7 @@ export function reduceChronoContent(state, action) {
         operation: null,
         error: null,
       };
+    }
     case "SET_QUERY":
       return { ...state, query: String(action.query ?? ""), error: null };
     case "SET_STATUS_FILTER":

@@ -73,3 +73,29 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
     };
   }, STORAGE_KEY)).toEqual({ group: true, scene: true });
 });
+
+test("a newly saved Scene remains visible when its owning Page differs from the opening Page", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+
+  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  let auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await expect(auxiliary.getByLabel("Page")).toHaveValue("home");
+  await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
+  await expect(auxiliary.getByLabel("Owning page")).toHaveValue("biomedical");
+
+  const sceneName = "Cross-page response scene";
+  await auxiliary.getByLabel("Scene name").fill(sceneName);
+  await auxiliary.getByRole("button", { name: "Save Scene" }).click();
+  await expect(auxiliary.getByRole("heading", { name: sceneName })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await expect(auxiliary.getByLabel("Page")).toHaveValue("biomedical");
+  await expect(auxiliary.getByRole("button", { name: new RegExp(sceneName) })).toBeVisible();
+  await expect(auxiliary.getByText("Showing 1 of 1", { exact: true })).toBeVisible();
+});
