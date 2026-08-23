@@ -1,7 +1,20 @@
 # V3 Design Step 7 Build/View master-review submission
 
-Date: 2026-08-22
-Status: submitted implementation evidence for V3 Design master review. This document does not accept Step 7.
+Date: 2026-08-22 (provisional status amended 2026-08-23)
+Status: **provisional and not ready for V3 Design master acceptance**. The earlier submission evidence remains historical, but the complete Step 4 sketch reconciliation reopened binding Step 7 gaps.
+
+## 2026-08-23 provisional-review amendment
+
+The earlier submission overstated fidelity by treating several implemented engines, reduced compositions, and broad browser smokes as if they proved the accepted sketches. The controlling gap ledger and current status now live in `SKETCH-FIDELITY-MATRIX.md`.
+
+Active Step 7 repair scope is Sketches 002, 003, 004, 007, 011, and 013–020. Sketches 005, 006, and 012 remain passing regression gates after their dedicated reconciliation. Sketches 001 and 008 are deferred Step 8 work; Sketch 009 is shared-shell evidence owned by Step 6. Sketch 010's later close-and-apply decision is recorded in the Step 7 plan, but that amendment does not waive its other unimplemented accepted controls.
+
+Until every active Step 7 matrix row passes semantic, composition, and real-use checks:
+
+- this submission must not be described as ready for master acceptance;
+- prior test counts and screenshots are historical evidence only, not current completion evidence;
+- Step 8 must not consume the reduced Scene or Audience date-position contracts;
+- the final submission must distinguish engine implemented, UI implemented, and fidelity verified.
 
 ## Review range and baseline
 
@@ -86,7 +99,7 @@ The completion code review initially identified five Important integration defec
 
 ## Submission conclusion
 
-The Step 7 implementation range, focused tests, production build, scripted browser flows, responsive screenshots, and live in-app checkpoints are ready for V3 Design master review. No master-acceptance claim is made here.
+The original implementation range and evidence are retained for traceability, but Step 7 is not currently ready for V3 Design master review. A renewed submission requires every active row in `SKETCH-FIDELITY-MATRIX.md` to pass, the exact representative browser journeys to be exercised and inspected in the application, and the production build plus affected focused tests to pass. Master acceptance remains solely with the master review.
 
 ## Chrono authoring reconciliation amendment
 

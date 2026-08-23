@@ -10,6 +10,32 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-12-three-mode-dashboard-ui-spec.md`; `docs/superpowers/specs/2026-08-12-temporal-authoring-chrono-design.md`; `docs/superpowers/specs/2026-08-12-chart-creation-design.md`; `docs/superpowers/specs/2026-08-15-scene-authoring-familiarity-design.md`; `docs/superpowers/plans/2026-08-19-v3-dashboard-reconciliation-index.md`.
 
+## 2026-08-23 Step 4 fidelity repair amendment
+
+Step 7's previous master-review submission is provisional. A comparison against the complete approved Sketch 001–020 export found live-code and evidence gaps that invalidate a Step 7 completion claim until the active rows below pass all three gates in `docs/audits/2026-08-22-v3-step-7-build-view/SKETCH-FIDELITY-MATRIX.md`.
+
+This amendment is corrective execution of accepted decisions, not a redesign. The accepted sketches remain authoritative subject only to later explicit user-approved amendments. Sketches 005, 006, and 012 were reconciled in the preceding slice and remain regression gates.
+
+| Repair slice | Sketches | Current finding | Exit gate |
+| --- | --- | --- | --- |
+| R7-A — foundational correctness | 002, 015, 017, 019 | The dual-slot coordinator is not wired into the live app; Partial collapses to unavailable; zero-Page/zero-Section recovery cannot be reached. | Live UI exercises independent layout/chart drafts, Partial recovery, and zero-structure recovery. |
+| R7-B — primary Build workflows | 004, 011, 013, 015, plus 005/006/012 regression | The Chart Wizard lacks its persistent proof deck; structural commands and Scenario Passport containment are incomplete; Context Shelf coordination is partial. | Semantic, composition, and browser-task checks pass for every affected sketch row. |
+| R7-C — View runtime | 007, 014, 016, 018 | Chrono availability is hard-coded; cadence and seek position are reduced; the date overlay is absent; Collection and source-evidence journeys use the wrong containment. | Real per-chart evidence, numeric cadence, proportional rail, overlay suspension, header controls, and direct source viewer pass in the live app. |
+| R7-D — visual-state audit | 003 | Existing retired-style checks do not cover hover portals, pseudo-elements, SVG/canvas paint, or complete interaction states. | The expanded deterministic scan and representative hover/focus browser checks find no unapproved retired style in Step 7 surfaces. |
+
+Sketches 001 and 008 remain explicitly deferred to Step 8. Sketch 009 belongs to the accepted Step 6 shared shell and remains an evidence-quality row, not Step 7 production scope. Sketch 010 receives the amendment below; its unrelated Signature/provenance/scoped-action divergence is not silently treated as a Step 7 repair.
+
+### Sketch 010 Dashboard Look deviation record
+
+The later user-approved behavior supersedes the original cancel-on-Close rule: closing Dashboard Look, clicking outside it, or using root Escape closes immediately and applies the currently selected visual style and colour profile asynchronously. Persistence never blocks closing. A failed persistence attempt leaves the live selection usable and shows a short bottom-right warning identifying the failed colour-profile/style persistence. This amendment changes only the close boundary. It does not approve removal of Signature shortcuts, provenance, saved-versus-preview truth, chart-colour ownership, appearance ownership, or scoped Set actions.
+
+### Repair execution rules
+
+- Each repair is an atomic vertical slice with a RED live-behavior or production-integration check, minimal implementation, focused GREEN evidence, and a runnable in-app browser checkpoint.
+- A pure reducer cannot close a composition or live-wiring row. Static markup cannot close a restoration or geometry row. Screenshot capture alone cannot close a visual-fidelity row.
+- A row is Passing only when its semantic, composition, and real-use evidence are all present. Missing or Partial rows keep this Step 7 submission provisional.
+- Step 8 must not build on Scene or Audience date-position assumptions until the active upstream rows pass.
+
 ## Global Constraints
 
 - Execute after Step 6. Consume `DashboardMode`, `PhoneModeNotice`, `WORKSPACE_VIEWPORTS`, the canonical renderer and stable identity selectors, and the shared tokens/components defined there.
