@@ -25,16 +25,29 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
   await expect(auxiliary).toBeVisible();
   await auxiliary.getByRole("button", { name: /National outbreak and health-system playback/ }).click();
   await expect(auxiliary.getByRole("heading", { name: "National outbreak and health-system playback" })).toBeVisible();
+  const contentActionGroups = auxiliary.locator("[data-content-action-group]");
+  await expect(contentActionGroups).toHaveCount(3);
+  const contentActionGeometry = await contentActionGroups.evaluateAll((groups) => groups.map((group) => {
+    const rect = group.getBoundingClientRect();
+    return { name: group.dataset.contentActionGroup, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+  }));
+  const primaryActions = contentActionGeometry.find(({ name }) => name === "primary");
+  const managementActions = contentActionGeometry.find(({ name }) => name === "management");
+  expect(primaryActions.right).toBeLessThanOrEqual(managementActions.left);
+  expect(Math.abs(primaryActions.top - managementActions.top)).toBeLessThanOrEqual(1);
+  for (const button of await auxiliary.locator("[data-content-action-group] button").all()) {
+    expect((await button.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  }
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
   const stages = auxiliary.getByRole("navigation", { name: "Chrono Group stages" });
-  await expect(stages.getByRole("button")).toHaveText([
-    "Name and period",
-    "Choose charts",
-    "Set defaults",
-    "Review",
-  ]);
+  const expectedStageLabels = ["Name and period", "Choose charts", "Set defaults", "Review"];
+  await expect(stages.getByRole("button")).toHaveCount(expectedStageLabels.length);
+  for (const [index, label] of expectedStageLabels.entries()) {
+    await expect(stages.getByRole("button").nth(index)).toContainText(label);
+  }
   const groupName = auxiliary.getByLabel("Chrono Group name");
   await groupName.fill("E2E national playback");
+  await stages.getByRole("button", { name: /Review/ }).click();
   await auxiliary.getByRole("button", { name: "Save Chrono Group" }).click();
   await expect(auxiliary.getByRole("heading", { name: "E2E national playback" })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();

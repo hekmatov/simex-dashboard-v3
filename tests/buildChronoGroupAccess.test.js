@@ -48,4 +48,7 @@ test("Build routes Chrono Group editing and Scene creation through read-first gr
   assert.match(content, />Edit</);
   assert.match(content, />Create Scene</);
   assert.match(content, />Back to Chrono Studio</);
+  assert.match(content, /data-content-action-group="navigation"[\s\S]*>Back to Chrono Studio</);
+  assert.match(content, /data-content-action-group="primary"[\s\S]*>Edit<[\s\S]*>Create Scene</);
+  assert.match(content, /data-content-action-group="management"[\s\S]*>Duplicate<[\s\S]*class="[^"]*danger[^"]*"[\s\S]*>Remove</);
 });
