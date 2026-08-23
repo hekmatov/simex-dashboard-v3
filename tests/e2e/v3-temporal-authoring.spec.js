@@ -35,6 +35,11 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
   const managementActions = contentActionGeometry.find(({ name }) => name === "management");
   expect(primaryActions.right).toBeLessThanOrEqual(managementActions.left);
   expect(Math.abs(primaryActions.top - managementActions.top)).toBeLessThanOrEqual(1);
+  const contentActionsBox = await auxiliary.locator(".temporal-content-page__actions").evaluate((actions) => {
+    const rect = actions.getBoundingClientRect();
+    return { height: rect.height };
+  });
+  expect(contentActionsBox.height).toBeLessThanOrEqual(70);
   for (const button of await auxiliary.locator("[data-content-action-group] button").all()) {
     expect((await button.boundingBox()).height).toBeGreaterThanOrEqual(44);
   }

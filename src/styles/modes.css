@@ -1822,8 +1822,10 @@
 .scene-studio,
 .temporal-studio,
 .temporal-content-page {
+  align-content: start;
   display: grid;
   gap: 16px;
+  grid-auto-rows: max-content;
   min-width: 0;
   scroll-padding-block: 84px;
 }
