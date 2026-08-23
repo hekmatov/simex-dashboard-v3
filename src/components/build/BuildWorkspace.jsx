@@ -334,7 +334,7 @@ export default function BuildWorkspace({
           pages: dashboard.pages ?? [],
           findings: temporalFindings,
           studio: "chrono",
-          pageId: activePage?.id ?? null,
+          pageId: null,
         }));
     }
     if (surface === "scene") {

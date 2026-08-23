@@ -28,7 +28,7 @@ test("005-chrono-group-authoring: staged ledger and review remain usable at desk
   await expect(auxiliary.getByText(/inclusive/).first()).toBeVisible();
   await expect(auxiliary.getByRole("button", { name: "Edit period", exact: true })).toBeVisible();
   await expect(auxiliary.getByRole("heading", { name: "Selected for this Chrono Group" })).toBeVisible();
-  await expect(auxiliary.getByRole("heading", { name: "Needs attention" })).toBeVisible();
+  await expect(auxiliary.getByRole("heading", { name: "Needs attention" })).toHaveCount(0);
   await expect(auxiliary.getByRole("heading", { name: "Available", exact: true })).toBeVisible();
   const firstRecord = auxiliary.locator(".availability-record").first();
   expect(await firstRecord.locator(".availability-record__summary").evaluate((node) => getComputedStyle(node).display)).toBe("grid");
@@ -46,6 +46,16 @@ test("005-chrono-group-authoring: staged ledger and review remain usable at desk
   await stages.getByRole("button", { name: /Review/ }).click();
   for (const label of ["affected pages", "derived Default Chrono frames", "Member evidence", "Availability gaps", "Review is ready"]) await expect(auxiliary.getByText(label, { exact: true })).toBeVisible();
   for (const action of ["Edit period", "Edit chart selection", "Edit matching defaults"]) await expect(auxiliary.getByRole("button", { name: action, exact: true })).toBeVisible();
+  const proofGeometry = await auxiliary.locator(".chrono-review-proof-list > li").evaluateAll((rows) => rows.map((row) => ({
+    display: getComputedStyle(row).display,
+    textX: row.children[1]?.getBoundingClientRect().x,
+    actionRight: row.children[2]?.getBoundingClientRect().right ?? null,
+  })));
+  expect(proofGeometry.map(({ display }) => display)).toEqual(["grid", "grid", "grid", "grid"]);
+  const textStarts = proofGeometry.map(({ textX }) => textX);
+  expect(Math.max(...textStarts) - Math.min(...textStarts)).toBeLessThanOrEqual(1);
+  const actionEdges = proofGeometry.map(({ actionRight }) => actionRight).filter(Number.isFinite);
+  expect(Math.max(...actionEdges) - Math.min(...actionEdges)).toBeLessThanOrEqual(1);
   const body = auxiliary.locator(".chrono-group-studio__body");
   await body.evaluate((node) => { node.scrollTop = node.scrollHeight; });
   const clearance = await auxiliary.evaluate((node) => {
@@ -69,6 +79,15 @@ test("005-chrono-group-authoring: staged ledger and review remain usable at desk
   const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, footerVisible: Boolean(document.querySelector(".chrono-group-studio > footer")?.getBoundingClientRect().height) }));
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
   expect(geometry.footerVisible).toBe(true);
+});
+
+test("012-chrono-studio: direct reopening starts on All pages and does not hide saved groups", async ({ page }) => {
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
+  await expect(auxiliary.getByLabel("Page")).toHaveValue("");
+  const count = auxiliary.locator(".temporal-studio__count");
+  await expect(count).not.toHaveText(/Showing 0 of [1-9]/);
+  await expect(auxiliary.locator("[data-action='open-content']").first()).toBeVisible();
 });
 
 test("005-chrono-group-suspension: closing an unfinished create draft exposes Resume without locking Build pages", async ({ page }) => {

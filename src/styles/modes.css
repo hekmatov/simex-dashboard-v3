@@ -2116,25 +2116,51 @@
 }
 
 .chrono-policy-field {
+  border: 0;
   display: grid;
   font-weight: 700;
   gap: 8px;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.chrono-policy-field > legend {
+  padding: 0;
 }
 
 .chrono-policy-options {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.chrono-policy-options button {
-  align-content: start;
+.chrono-group-studio .chrono-policy-option {
+  align-items: start;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 9px;
+  cursor: pointer;
   display: grid;
-  gap: 4px;
-  grid-template-rows: auto 1fr;
-  justify-items: start;
-  min-height: 76px;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 54px;
   padding: 10px 12px;
-  text-align: left;
-  white-space: normal;
+}
+
+.chrono-policy-option[data-selected="true"] {
+  border-color: var(--simex-border-strong);
+  box-shadow: inset 3px 0 0 var(--simex-selected);
+}
+
+.chrono-policy-option input[type="radio"] {
+  block-size: 18px;
+  inline-size: 18px;
+  margin: 2px 0 0;
+}
+
+.chrono-policy-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
 .chrono-policy-description {
@@ -2145,13 +2171,30 @@
   line-height: 1.35;
 }
 
-.chrono-policy-options button[aria-pressed="true"] {
-  background: var(--simex-accent);
-  color: var(--simex-on-accent);
+.chrono-cadence-field {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 128px;
 }
 
-.chrono-policy-options button[aria-pressed="true"] span {
-  color: inherit;
+.chrono-cadence-field > span {
+  display: grid;
+  gap: 3px;
+}
+
+.chrono-cadence-field label {
+  display: block;
+}
+
+.chrono-cadence-field small {
+  color: var(--simex-text-muted);
+  font-weight: 600;
+}
+
+.chrono-group-studio .chrono-cadence-field input {
+  justify-self: end;
+  width: 128px;
 }
 
 .chrono-fallback-proof {
@@ -2414,13 +2457,6 @@
   justify-content: space-between;
   line-height: 1.35;
   min-height: 44px;
-}
-
-.chrono-group-review li {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
 }
 
 .time-availability-ledger__region > ol > li[data-status="needs-attention"],
@@ -3082,7 +3118,6 @@
   }
 
   .chrono-period-inputs,
-  .chrono-policy-options,
   .chrono-review-metrics,
   .availability-record__summary,
   .chrono-review-proof-list > li {
@@ -3098,6 +3133,16 @@
 
   .chrono-proof-callout {
     grid-template-columns: 1fr;
+  }
+
+  .chrono-cadence-field {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .chrono-group-studio .chrono-cadence-field input {
+    justify-self: stretch;
+    width: 100%;
   }
 }
 .build-tree-root,.build-tree-group{list-style:none;margin:0;padding:0}.build-tree-group{margin-left:16px;position:relative}.build-tree-group::before{background:var(--build-tree-line,var(--simex-border-subtle));content:"";height:calc(100% - 22px);left:-10px;position:absolute;top:0;width:var(--build-tree-line-width,1px)}.build-tree-item-wrap{list-style:none;position:relative}.build-tree-group>.build-tree-item-wrap::before{background:var(--build-tree-line,var(--simex-border-subtle));border-radius:0 0 0 var(--build-tree-elbow-radius,0);content:"";height:22px;left:-10px;position:absolute;top:0;width:10px;border-bottom:var(--build-tree-line-width,1px) solid var(--build-tree-line,var(--simex-border-subtle))}.build-tree-row{align-items:center;display:grid;gap:6px;grid-template-columns:30px 18px minmax(0,1fr);min-height:44px}.build-tree-caret,.build-tree-caret-spacer{align-items:center;background:transparent;border:0;display:inline-flex;height:44px;justify-content:center;padding:0;width:30px}.build-tree-label{background:transparent!important;border:0!important;color:inherit!important;font:inherit;min-height:44px;padding:6px 4px;text-align:left;width:100%}.build-tree-row.is-selected .build-tree-label{box-shadow:inset 3px 0 0 var(--simex-selected);font-weight:700}.build-tree-row:focus-within{outline:3px solid var(--simex-focus);outline-offset:2px}.build-tree-row input{min-height:44px;width:100%}

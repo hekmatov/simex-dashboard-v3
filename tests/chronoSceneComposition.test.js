@@ -151,6 +151,16 @@ test("Sketch 012 studios expose truthful counts and Search, Status, and Page fil
   for (const html of [chronoHtml, sceneHtml]) {
     for (const label of ["Search", "Status", "Page", "Showing 1 of 1"]) assert.match(html, new RegExp(label));
   }
+
+  const filteredChronoHtml = renderToStaticMarkup(React.createElement(ChronoStudio, {
+    state: { ...state, pageId: "biomedical", chronoGroups: [
+      { id: "chrono-a", name: "Outbreak" },
+      { id: "chrono-b", name: "Recovery" },
+    ] },
+    cards: [],
+  }));
+  assert.match(filteredChronoHtml, /No Chrono Groups match the current filters/);
+  assert.doesNotMatch(filteredChronoHtml, /No Chrono Groups have been created yet/);
 });
 
 test("Sketch 012 read-first content names relationships and exposes lifecycle actions", () => {

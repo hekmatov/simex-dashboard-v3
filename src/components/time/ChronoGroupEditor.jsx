@@ -151,13 +151,28 @@ function DefaultsStage({ draft, value, busy, onAction }) {
     <fieldset className="chrono-defaults-stage">
       <legend>Set defaults</legend>
       <p>Choose one group matching default and a positive number of seconds per frame. Unsupported members require an explicit fallback.</p>
-      <div className="chrono-policy-field" role="group" aria-label="Group matching default">
-        <span>Group matching default</span>
+      <fieldset className="chrono-policy-field">
+        <legend>Group matching default</legend>
         <div className="chrono-policy-options">
-          {matchingLabels().map((label) => <button key={label} type="button" aria-pressed={value.defaultMatching === label} disabled={busy} onClick={() => onAction?.({ type: "SET_DEFAULT_MATCHING", policy: label })}><strong>{label}</strong><span className="chrono-policy-description">{POLICY_DESCRIPTIONS[label]}</span></button>)}
+          {matchingLabels().map((label) => (
+            <label className="chrono-policy-option" data-selected={value.defaultMatching === label ? "true" : "false"} key={label}>
+              <input
+                type="radio"
+                name="chrono-group-default-matching"
+                value={label}
+                checked={value.defaultMatching === label}
+                disabled={busy}
+                onChange={() => onAction?.({ type: "SET_DEFAULT_MATCHING", policy: label })}
+              />
+              <span className="chrono-policy-copy"><strong>{label}</strong><span className="chrono-policy-description">{POLICY_DESCRIPTIONS[label]}</span></span>
+            </label>
+          ))}
         </div>
+      </fieldset>
+      <div className="chrono-cadence-field">
+        <span><label htmlFor="chrono-group-seconds-per-frame">Default seconds per frame</label><small id="chrono-group-seconds-per-frame-help">Positive numeric authoring value; not a playback-speed tier.</small></span>
+        <input id="chrono-group-seconds-per-frame" type="number" min="0.001" step="any" aria-describedby="chrono-group-seconds-per-frame-help" disabled={busy} value={value.secondsPerFrame ?? ""} onChange={(event) => onAction?.({ type: "SET_SECONDS_PER_FRAME", secondsPerFrame: Number(event.target.value) })} />
       </div>
-      <label>Default seconds per frame<input id="chrono-group-seconds-per-frame" type="number" min="0.001" step="any" disabled={busy} value={value.secondsPerFrame ?? ""} onChange={(event) => onAction?.({ type: "SET_SECONDS_PER_FRAME", secondsPerFrame: Number(event.target.value) })} /><small>Positive numeric authoring value; not a playback-speed tier.</small></label>
 
       {value.defaultMatching === MATCHING_POLICY_LABELS.INTERPOLATE && unsupported.map((entry) => (
         <section className="chrono-fallback-proof" key={entry.chartId}>

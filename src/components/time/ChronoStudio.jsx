@@ -1,6 +1,10 @@
 import React from "react";
 
 export default function ChronoStudio({ state, cards = [], onAction = () => {} }) {
+  const total = state?.chronoGroups?.length ?? cards.length;
+  const emptyMessage = total > 0
+    ? "No Chrono Groups match the current filters."
+    : "No Chrono Groups have been created yet.";
   return React.createElement("section", { className: "chrono-studio temporal-studio", "aria-labelledby": "chrono-studio-title" },
     React.createElement("header", { className: "temporal-studio__header" },
       React.createElement("div", null,
@@ -11,9 +15,9 @@ export default function ChronoStudio({ state, cards = [], onAction = () => {} })
       React.createElement("button", { type: "button", className: "temporal-studio__primary-action", onClick: () => onAction({ type: "START_CREATE_CHRONO_GROUP" }) }, "Create Chrono Group"),
     ),
     React.createElement(StudioFilters, { state, onAction }),
-    React.createElement("p", { className: "temporal-studio__count", role: "status" }, `Showing ${cards.length} of ${state?.chronoGroups?.length ?? cards.length}`),
+    React.createElement("p", { className: "temporal-studio__count", role: "status" }, `Showing ${cards.length} of ${total}`),
     cards.length === 0
-      ? React.createElement("p", { className: "temporal-studio__empty", role: "status" }, state?.query ? "No Chrono Groups match this view." : "No Chrono Groups have been created yet.")
+      ? React.createElement("p", { className: "temporal-studio__empty", role: "status" }, emptyMessage)
       : React.createElement("ul", { className: "temporal-studio__cards" }, cards.map((card) => React.createElement("li", { key: card.id },
         React.createElement("button", {
           type: "button",

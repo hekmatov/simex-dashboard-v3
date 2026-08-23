@@ -395,6 +395,11 @@ test("defaults explain every policy and expose unsupported variables before Save
     "latest observation at or before",
     "nearest observation",
   ]) assert.match(html, new RegExp(explanation));
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 4);
+  assert.equal((html.match(/name="chrono-group-default-matching"/g) ?? []).length, 4);
+  assert.match(html, /type="radio"[^>]*checked=""[^>]*value="Interpolate"/);
+  assert.match(html, /class="chrono-cadence-field"/);
+  assert.match(html, /aria-describedby="chrono-group-seconds-per-frame-help"/);
   assert.match(html, /Needs attention/);
   assert.match(html, /Categories/);
   assert.match(html, /State/);
