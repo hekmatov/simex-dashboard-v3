@@ -34,6 +34,11 @@ test("005-chrono-group-authoring: staged ledger and review remain usable at desk
   expect(await firstRecord.locator(".availability-record__summary").evaluate((node) => getComputedStyle(node).display)).toBe("grid");
   await expect(firstRecord).toContainText(/Full chart range/);
   await expect(firstRecord).toContainText(/plotted variable/);
+  const firstProofBand = firstRecord.locator(".availability-ticks").first();
+  await firstProofBand.hover({ position: { x: 2, y: 12 } });
+  const proofTooltip = firstRecord.getByRole("tooltip");
+  await expect(proofTooltip).toHaveText(/^\d{4}-\d{2}-\d{2}$/);
+  expect(await proofTooltip.evaluate((node) => getComputedStyle(node).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
   await firstRecord.getByText("Inspect evidence", { exact: true }).click();
   await expect(firstRecord).toContainText(/Other Chrono Groups/);
   await expect(firstRecord.locator(".availability-calendar")).toBeVisible();
@@ -64,6 +69,28 @@ test("005-chrono-group-authoring: staged ledger and review remain usable at desk
   const geometry = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, footerVisible: Boolean(document.querySelector(".chrono-group-studio > footer")?.getBoundingClientRect().height) }));
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
   expect(geometry.footerVisible).toBe(true);
+});
+
+test("005-chrono-group-suspension: closing an unfinished create draft exposes Resume without locking Build pages", async ({ page }) => {
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
+  await auxiliary.getByRole("button", { name: "Create Chrono Group", exact: true }).click();
+  await auxiliary.getByRole("textbox", { name: "Chrono Group name" }).fill("Unfinished response group");
+
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(auxiliary).toBeHidden();
+  const buildPanel = page.locator("#build-authoring-panel");
+  await expect(buildPanel.getByText("Unfinished Chrono Group draft", { exact: true })).toBeVisible();
+
+  const pageNavigation = page.locator(".dashboard-command-page-scroller");
+  const socioEconomic = pageNavigation.getByRole("button", { name: "Socio-economic", exact: true });
+  await expect(socioEconomic).toBeEnabled();
+  await socioEconomic.click();
+  await expect(socioEconomic).toHaveAttribute("aria-current", "page");
+
+  await buildPanel.getByRole("button", { name: "Resume Chrono Group draft", exact: true }).click();
+  await expect(auxiliary).toBeVisible();
+  await expect(auxiliary.getByRole("textbox", { name: "Chrono Group name" })).toHaveValue("Unfinished response group");
 });
 
 test("006-scene-authoring: persistent draft, twin canvases, and Unit Orbit are live", async ({ page }) => {

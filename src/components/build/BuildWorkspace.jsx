@@ -45,7 +45,10 @@ import {
   selectSceneStudioSections,
 } from "../time/chronoContentState.js";
 import ChronoGroupEditor from "../time/ChronoGroupEditor.jsx";
-import { hasActiveLocalAuthoringDrafts } from "./buildDirtyState.js";
+import {
+  hasActiveLocalAuthoringDrafts,
+  hasEditingLocalAuthoringDrafts,
+} from "./buildDirtyState.js";
 import { deriveTemporalContentItems } from "../../charting/time/temporalNeedsAttention.js";
 import {
   createChronoGroupDraft,
@@ -138,8 +141,11 @@ export default function BuildWorkspace({
     scene: sceneDraft,
   }), [sceneDraft, scenarioDraft, structureDraft, chronoGroupDraft]);
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
+  const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
-  const navigationLocked = mutationsDisabled || chartDraftDirty || localAuthoringDirty;
+  const navigationLocked = mutationsDisabled || chartDraftDirty || localAuthoringEditing;
+  const chronoGroupDraftSuspended = chronoGroupDraft?.status === "suspended"
+    && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft });
   const selectedChartItem = selection?.kind === "chart"
     ? collectChartPlacements(dashboard).find(({ placementId }) => placementId === selection.placementId)
     : null;
@@ -298,7 +304,11 @@ export default function BuildWorkspace({
       ));
     }
     if (surface === "chrono-group") {
-      setChronoContentState((current) => current
+      const resumingDraft = chronoGroupDraft?.status === "suspended";
+      setChronoGroupDraft((current) => current?.status === "suspended"
+        ? reduceChronoGroupDraft(current, { type: "RESUME" })
+        : current);
+      if (!resumingDraft) setChronoContentState((current) => current
         ? reduceChronoContent(current, { type: "SET_STUDIO", studio: "chrono" })
         : createChronoContentState({
           chronoGroups: dashboard.chronoGroups ?? [],
@@ -347,10 +357,17 @@ export default function BuildWorkspace({
   };
 
   const closeAuxiliary = () => {
+    const restoration = captureRestoration();
+    if (activeAuxiliary === "chrono-group" && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft })) {
+      setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
+        type: "SUSPEND",
+        restoration: { ...restoration, stage: current.stage },
+      }));
+    }
     const next = parkedAuxiliaries.at(-1) ?? null;
     setParkedAuxiliaries((current) => current.slice(0, -1));
     setActiveAuxiliary(next?.surface ?? null);
-    restoreCanvas(next?.restoration ?? captureRestoration());
+    restoreCanvas(next?.restoration ?? restoration);
   };
 
   const resumeAuxiliary = (surface) => {
@@ -598,6 +615,12 @@ export default function BuildWorkspace({
             </fieldset>
           </section>
           {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
+          {chronoGroupDraftSuspended && (
+            <aside className="build-unfinished-draft" aria-label="Unfinished Chrono Group draft">
+              <span><strong>Unfinished Chrono Group draft</strong><small>Your stage and changes are preserved in this Build session.</small></span>
+              <button type="button" className="secondary" onClick={() => openAuxiliary("chrono-group")}>Resume Chrono Group draft</button>
+            </aside>
+          )}
           {parkedAuxiliaries.length > 0 && (
             <nav className="build-context-shelf" aria-label="Parked Build work">
               {parkedAuxiliaries.map(({ surface }) => (

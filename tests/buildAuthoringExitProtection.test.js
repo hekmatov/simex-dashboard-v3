@@ -6,6 +6,7 @@ import {
   activeLocalAuthoringDrafts,
   buildLeaveBlockReason,
   hasActiveLocalAuthoringDrafts,
+  hasEditingLocalAuthoringDrafts,
 } from "../src/components/build/buildDirtyState.js";
 import { createWizardState } from "../src/charting/forms/wizardDraft.js";
 import { createChartDraftSessionStore } from "../src/charting/forms/chartDraftSession.js";
@@ -38,6 +39,19 @@ test("saved, discarded, and pristine local drafts do not lock Build exit", () =>
     chronoGroup: { baseline: savedValue, value: structuredClone(savedValue), status: "clean" },
     scene: { baseline: savedValue, value: structuredClone(savedValue), status: "suspended", suspendedStatus: "clean" },
   }), false);
+});
+
+test("an unfinished suspended draft remains exit-protected without locking Build navigation", () => {
+  const draft = {
+    baseline: { name: "Saved" },
+    value: { name: "Unfinished" },
+    status: "suspended",
+    suspendedStatus: "dirty",
+  };
+
+  assert.equal(hasActiveLocalAuthoringDrafts({ chronoGroup: draft }), true);
+  assert.equal(hasEditingLocalAuthoringDrafts({ chronoGroup: draft }), false);
+  assert.equal(hasEditingLocalAuthoringDrafts({ chronoGroup: { ...draft, status: "dirty" } }), true);
 });
 
 test("Build leave explains the approved Save, Discard, or Stay boundary", () => {

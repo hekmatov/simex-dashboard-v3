@@ -7,6 +7,7 @@ import {
   buildLeaveBlockReason,
   createBuildDirtyState,
   hasActiveLocalAuthoringDrafts,
+  hasEditingLocalAuthoringDrafts,
   hasUnsavedAuthoredContent,
 } from "./build/buildDirtyState.js";
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
@@ -188,7 +189,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     chartWizardTarget || (editMode && selectedPanel),
   );
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
-  const buildDraftLocked = Boolean(chartEditorDirty || localAuthoringDirty);
+  const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
+  const buildDraftLocked = Boolean(chartEditorDirty || localAuthoringEditing);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const authoredDirty = hasUnsavedAuthoredContent({
     ...createBuildDirtyState(),
@@ -306,6 +308,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           reason: buildLeaveBlockReason(localAuthoringDrafts) || (destination === "page"
             ? "Finish or cancel the open chart editor before changing Page."
             : "Finish or cancel the open chart editor before leaving Build."),
+        };
+      }
+      if (destination === "mode" && localAuthoringDirty) {
+        return {
+          ok: false,
+          reason: buildLeaveBlockReason(localAuthoringDrafts),
         };
       }
       if (chartWizardTarget) {

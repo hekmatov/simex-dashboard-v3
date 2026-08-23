@@ -45,6 +45,11 @@ export function hasActiveLocalAuthoringDrafts(drafts = {}) {
   return activeLocalAuthoringDrafts(drafts).length > 0;
 }
 
+export function hasEditingLocalAuthoringDrafts(drafts = {}) {
+  return activeLocalAuthoringDrafts(drafts)
+    .some(({ draft }) => draft.status !== "suspended");
+}
+
 export function buildLeaveBlockReason(drafts = {}) {
   const active = activeLocalAuthoringDrafts(drafts)[0];
   if (!active) return "";

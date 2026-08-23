@@ -2098,6 +2098,45 @@
   top: 6px;
   transform: translateX(-1px);
   width: 2px;
+  pointer-events: none;
+}
+
+.availability-tick-tooltip {
+  background: var(--simex-text-strong);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: 6px;
+  bottom: calc(100% + 6px);
+  color: var(--simex-surface-panel);
+  font-size: 0.72rem;
+  font-weight: 750;
+  left: var(--availability-position);
+  line-height: 1;
+  padding: 6px 8px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 4;
+}
+
+.build-unfinished-draft {
+  align-items: center;
+  background: color-mix(in srgb, var(--simex-warning) 10%, var(--simex-surface-panel));
+  border: 1px solid color-mix(in srgb, var(--simex-warning) 56%, var(--simex-border-subtle));
+  border-radius: 9px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.build-unfinished-draft > span {
+  display: grid;
+  gap: 2px;
+}
+
+.build-unfinished-draft small {
+  color: var(--simex-text-muted);
 }
 
 .scene-stage-body {

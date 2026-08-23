@@ -81,9 +81,23 @@ function LedgerRecord({ row, disabled, onToggle }) {
 }
 
 function AvailabilityTrack({ ticks, row, label }) {
+  const [activeTick, setActiveTick] = React.useState(null);
+  const handlePointerMove = (event) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width <= 0 || ticks.length === 0) return setActiveTick(null);
+    const pointerX = event.clientX - bounds.left;
+    const nearest = ticks.reduce((best, tick) => {
+      const x = (tickPosition(tick, row) / 100) * bounds.width;
+      const distance = Math.abs(pointerX - x);
+      return best === null || distance < best.distance ? { tick, distance } : best;
+    }, null);
+    setActiveTick(nearest?.distance <= 8 ? nearest.tick : null);
+  };
+
   return (
-    <span className="availability-ticks" role="img" aria-label={label}>
-      {ticks.map((tick) => <i aria-hidden="true" key={tick} title={formatEpoch(tick)} style={{ "--availability-position": `${tickPosition(tick, row)}%` }} />)}
+    <span className="availability-ticks" role="img" aria-label={label} onPointerMove={handlePointerMove} onPointerLeave={() => setActiveTick(null)}>
+      {ticks.map((tick) => <i aria-hidden="true" data-date={formatEpoch(tick)} key={tick} style={{ "--availability-position": `${tickPosition(tick, row)}%` }} />)}
+      {activeTick !== null && <span className="availability-tick-tooltip" role="tooltip" style={{ "--availability-position": `${tickPosition(activeTick, row)}%` }}>{formatEpoch(activeTick)}</span>}
     </span>
   );
 }
