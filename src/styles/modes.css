@@ -370,6 +370,16 @@
   border-left: 4px solid var(--simex-warning);
 }
 
+.structure-recovery-rail {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--simex-warning) 12%, var(--simex-surface-panel));
+  border: 1px solid color-mix(in srgb, var(--simex-warning) 55%, var(--simex-border-subtle));
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  padding: 12px;
+}
+
 .build-appearance-controls {
   margin-left: auto;
 }

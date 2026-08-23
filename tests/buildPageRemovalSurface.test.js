@@ -15,7 +15,7 @@ const inspectorModule = await vite.ssrLoadModule("/src/components/build/BuildIns
 const structureModule = await vite.ssrLoadModule("/src/components/build/StructureAuthoring.jsx").catch(() => null);
 await vite.close();
 
-test("selected Page inspector exposes a deliberate delete control and protects the final Page", () => {
+test("selected Page inspector exposes a deliberate delete control while recovery stays Structure-owned", () => {
   assert.equal(typeof inspectorModule?.default, "function");
   const dashboard = fixtureDashboard();
   const html = renderToStaticMarkup(React.createElement(inspectorModule.default, {
@@ -32,6 +32,7 @@ test("selected Page inspector exposes a deliberate delete control and protects t
     onPageRemove() {},
   }));
   assert.match(finalPageHtml, /<button(?=[^>]*aria-label="Delete Home page")(?=[^>]*disabled)[^>]*>/);
+  assert.match(finalPageHtml, /Open Pages &amp; sections to remove the final Page/);
 });
 
 test("Pages and sections requests Page deletion with named chart consequences before changing its draft", () => {

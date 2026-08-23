@@ -88,6 +88,9 @@ export default function BuildInspector({
           >
             Delete page…
           </button>
+          {(dashboard.pages ?? []).length <= 1 && (
+            <small>Open Pages &amp; sections to remove the final Page and use its inline recovery rail.</small>
+          )}
         </div>
       </section>
     );

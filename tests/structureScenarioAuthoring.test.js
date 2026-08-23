@@ -41,7 +41,7 @@ test("Structure draft preserves stable IDs while keyboard reorder changes only o
   assert.equal(dashboard.pages[0].sections[0].id, "outbreak");
 });
 
-test("Structure draft rejects orphaning and final collection removal before mutation", () => {
+test("Structure draft requires disposition for content but permits reversible zero recovery states", () => {
   const draft = structureModule.createStructureDraft(structureFixture());
   const nonEmpty = structureModule.reduceStructureDraft(draft, {
     type: "REMOVE_SECTION",
@@ -58,9 +58,43 @@ test("Structure draft rejects orphaning and final collection removal before muta
   const finalPage = structureModule.reduceStructureDraft(singlePage, {
     type: "REMOVE_PAGE",
     pageId: "only",
+    disposition: "delete",
   });
-  assert.equal(finalPage.error.code, "FINAL_PAGE_PROTECTED");
-  assert.equal(finalPage.value.pages.length, 1);
+  assert.equal(finalPage.status, "dirty");
+  assert.equal(finalPage.value.pages.length, 0);
+  assert.equal(structureModule.validateStructureDraft(finalPage.value).code, "PAGE_REQUIRED");
+
+  const singleSection = structureModule.createStructureDraft({
+    pages: [{ id: "only", label: "Only", sections: [{ id: "section", panels: [] }] }],
+  });
+  const zeroSection = structureModule.reduceStructureDraft(singleSection, {
+    type: "REMOVE_SECTION",
+    pageId: "only",
+    sectionId: "section",
+    disposition: "delete",
+  });
+  assert.equal(zeroSection.value.pages[0].sections.length, 0);
+  assert.equal(structureModule.validateStructureDraft(zeroSection.value).code, "SECTION_REQUIRED");
+});
+
+test("Structure surface exposes inline repair actions for zero Page and zero Section drafts", () => {
+  const zeroPages = structureModule.createStructureDraft({ pages: [] });
+  const zeroPagesHtml = renderToStaticMarkup(React.createElement(structureModule.default, {
+    draft: zeroPages,
+    onAction() {},
+  }));
+  assert.match(zeroPagesHtml, /No Pages remain in this Structure draft/);
+  assert.match(zeroPagesHtml, /Create replacement Page/);
+
+  const zeroSections = structureModule.createStructureDraft({
+    pages: [{ id: "only", label: "Only", sections: [] }],
+  });
+  const zeroSectionsHtml = renderToStaticMarkup(React.createElement(structureModule.default, {
+    draft: zeroSections,
+    onAction() {},
+  }));
+  assert.match(zeroSectionsHtml, /Only has no Sections/);
+  assert.match(zeroSectionsHtml, /Create replacement Section/);
 });
 
 test("Structure Save, failed retry, Discard, and Stay preserve the last-good dashboard", () => {

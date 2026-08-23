@@ -71,6 +71,33 @@ test("layout and selected-chart drafts stay independent through layout discard",
   await expect(target).toBeInViewport();
 });
 
+test("zero Page and zero Section recovery stays inline in the live Build shell", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto("/");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Pages & sections", exact: true }).click();
+  const structure = page.getByRole("dialog", { name: "Structure authoring" });
+
+  for (const label of ["Home", "Biomedical", "Socio-economic"]) {
+    await structure.getByRole("button", { name: `Delete ${label} page`, exact: true }).click();
+    await page.getByRole("dialog", { name: `Delete Page ${label}?` })
+      .getByRole("button", { name: "Delete page", exact: true }).click();
+  }
+
+  await expect(structure).toContainText("No Pages remain in this Structure draft.");
+  await expect(page.locator("[data-canonical-canvas-id]")).toBeVisible();
+  await structure.getByRole("button", { name: "Create replacement Page", exact: true }).click();
+  await structure.getByRole("button", { name: "Delete section…", exact: true }).click();
+  await page.getByRole("dialog", { name: "Delete Section?" })
+    .getByRole("button", { name: "Delete section", exact: true }).click();
+
+  await expect(structure).toContainText("New Page has no Sections.");
+  await structure.getByRole("button", { name: "Save Structure", exact: true }).click();
+  await expect(structure.getByRole("alert")).toContainText("New Page must retain a Section.");
+});
+
 test("chart recovery states retain canonical plot geometry", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("http://127.0.0.1:4175/tests/e2e/chart-state-harness.html");

@@ -166,6 +166,9 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
   const pageRemoval = draft?.pendingConsequence?.kind === "remove-page"
     ? draft.pendingConsequence
     : null;
+  const sectionRemoval = draft?.pendingConsequence?.kind === "remove-section"
+    ? draft.pendingConsequence
+    : null;
   return (
     <section className="structure-authoring" aria-labelledby="structure-authoring-title">
       <header className="build-surface-heading">
@@ -179,6 +182,13 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
       </header>
       {draft?.error && <p className="build-operation-error" role="alert">{draft.error.message}</p>}
       <div className="structure-page-list">
+        {pages.length === 0 && (
+          <div className="structure-recovery-rail" role="status">
+            <strong>No Pages remain in this Structure draft.</strong>
+            <span>The dashboard shell and last saved layout remain available until a replacement is saved.</span>
+            <button type="button" disabled={busy} onClick={() => onAction?.({ type: "REQUEST_ADD_PAGE" })}>Create replacement Page</button>
+          </div>
+        )}
         {pages.map((page, pageIndex) => (
           <section className="structure-page-card" key={page.id} data-page-id={page.id}>
             <header>
@@ -190,8 +200,7 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
                   type="button"
                   className="danger"
                   aria-label={`Delete ${page.label || page.title || "Untitled"} page`}
-                  title={pages.length <= 1 ? "A dashboard must retain at least one Page." : undefined}
-                  disabled={busy || pages.length <= 1}
+                  disabled={busy}
                   onClick={() => onAction?.({ type: "REQUEST_REMOVE_PAGE", pageId: page.id })}
                 >
                   Delete page…
@@ -199,12 +208,20 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
               </div>
             </header>
             <ol>
+              {(page.sections ?? []).length === 0 && (
+                <li className="structure-recovery-rail" role="status">
+                  <strong>{page.label || page.title || "This Page"} has no Sections.</strong>
+                  <span>Add a replacement before saving Structure.</span>
+                  <button type="button" disabled={busy} onClick={() => onAction?.({ type: "REQUEST_ADD_SECTION", pageId: page.id })}>Create replacement Section</button>
+                </li>
+              )}
               {(page.sections ?? []).map((section, sectionIndex) => (
                 <li key={section.id} data-section-id={section.id}>
                   <span>{section.title || "Untitled Section"}</span>
                   <div className="structure-inline-actions" aria-label={`${section.title || section.id} Section actions`}>
                     <button type="button" disabled={busy || sectionIndex === 0} onClick={() => onAction?.({ type: "REORDER_SECTION", pageId: page.id, sectionId: section.id, direction: "earlier", input: "keyboard" })}>Move earlier</button>
                     <button type="button" disabled={busy || sectionIndex === page.sections.length - 1} onClick={() => onAction?.({ type: "REORDER_SECTION", pageId: page.id, sectionId: section.id, direction: "later", input: "keyboard" })}>Move later</button>
+                    <button type="button" className="danger" onClick={() => onAction?.({ type: "REQUEST_REMOVE_SECTION", pageId: page.id, sectionId: section.id })}>Delete section…</button>
                   </div>
                 </li>
               ))}
@@ -229,6 +246,22 @@ export default function StructureAuthoring({ draft, disabled = false, onAction }
         onConfirm={() => onAction?.({
           type: "REMOVE_PAGE",
           pageId: pageRemoval?.pageId,
+          disposition: "delete",
+        })}
+        onCancel={() => onAction?.({ type: "CANCEL_CONSEQUENCE" })}
+      />
+      <ConfirmDialog
+        open={sectionRemoval !== null}
+        title="Delete Section?"
+        message={sectionRemoval ? structureSectionRemovalMessage(sectionRemoval) : ""}
+        confirmLabel="Delete section"
+        cancelLabel="Keep section"
+        disabled={busy}
+        confirmDisabled={busy}
+        onConfirm={() => onAction?.({
+          type: "REMOVE_SECTION",
+          pageId: sectionRemoval?.pageId,
+          sectionId: sectionRemoval?.sectionId,
           disposition: "delete",
         })}
         onCancel={() => onAction?.({ type: "CANCEL_CONSEQUENCE" })}
@@ -273,9 +306,6 @@ function requestSectionRemoval(state, action) {
 }
 
 function requestPageRemoval(state, action) {
-  if ((state.value.pages?.length ?? 0) <= 1) {
-    return withError(state, issue("FINAL_PAGE_PROTECTED", "The final Page cannot be removed."));
-  }
   const page = findPage(state.value, action.pageId);
   if (!page) return withError(state, issue("PAGE_NOT_FOUND", "The Page no longer exists."));
   return {
@@ -297,7 +327,6 @@ function removeSection(state, action) {
   const page = findPage(state.value, action.pageId);
   const index = page?.sections?.findIndex(({ id }) => id === action.sectionId) ?? -1;
   if (!page || index < 0) return withError(state, issue("SECTION_NOT_FOUND", "The Section no longer exists."));
-  if (page.sections.length === 1) return withError(state, issue("FINAL_SECTION_PROTECTED", "A Page must retain at least one Section."));
   const section = page.sections[index];
   if ((section.panels?.length ?? 0) > 0 && !action.disposition) {
     return withError(state, issue("SECTION_DISPOSITION_REQUIRED", "Choose what happens to the charts in this Section."));
@@ -313,9 +342,6 @@ function removeSection(state, action) {
 }
 
 function removePage(state, action) {
-  if ((state.value.pages?.length ?? 0) === 1) {
-    return withError(state, issue("FINAL_PAGE_PROTECTED", "The final Page cannot be removed."));
-  }
   const page = findPage(state.value, action.pageId);
   if (!page) return withError(state, issue("PAGE_NOT_FOUND", "The Page no longer exists."));
   const containsPanels = page.sections?.some((section) => (section.panels?.length ?? 0) > 0);
@@ -332,6 +358,11 @@ function structurePageRemovalMessage({ sectionCount, chartIds = [] }) {
   const sections = `${sectionCount} ${sectionCount === 1 ? "Section" : "Sections"}`;
   const charts = `${chartIds.length} ${chartIds.length === 1 ? "chart" : "charts"}`;
   return `${sections} and ${charts} will be removed from the Structure draft. Save Structure to apply this change.`;
+}
+
+function structureSectionRemovalMessage({ chartIds = [] }) {
+  const charts = `${chartIds.length} ${chartIds.length === 1 ? "chart" : "charts"}`;
+  return `${charts} will be removed from the Structure draft. Save Structure to apply this change.`;
 }
 
 function moveSection(state, action) {
