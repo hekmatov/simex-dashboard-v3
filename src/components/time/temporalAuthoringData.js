@@ -19,6 +19,25 @@ export function buildTemporalChartVariables(rows = [], timeField, valueFields = 
   }));
 }
 
+export function describeTemporalInterpolationSupport(variables = []) {
+  const unsupportedVariables = variables
+    .filter((variable) => {
+      const values = (variable?.observations ?? [])
+        .map(({ value }) => value)
+        .filter((value) => value !== null && value !== undefined);
+      return values.length === 0 || values.some((value) => typeof value !== "number" || !Number.isFinite(value));
+    })
+    .map((variable) => variable?.label ?? variable?.id ?? "Unknown variable");
+  const allowed = variables.length > 0 && unsupportedVariables.length === 0;
+  return {
+    allowed,
+    unsupportedVariables,
+    reason: unsupportedVariables.length > 0
+      ? `${unsupportedVariables.join(", ")} ${unsupportedVariables.length === 1 ? "is" : "are"} categorical or discrete.`
+      : null,
+  };
+}
+
 function parseEpoch(value) {
   if (Number.isFinite(value)) return value;
   const parsed = Date.parse(value);

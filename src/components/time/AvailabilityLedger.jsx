@@ -1,6 +1,12 @@
 import React from "react";
 import { groupAvailabilityRows } from "./chronoGroupDraft.js";
 
+const REGION_COPY = Object.freeze({
+  selected: "Members with at least one observation in the current period.",
+  attention: "Still selected, but unavailable after the period changed. Remove it or restore availability explicitly.",
+  available: "Eligible dashboard charts not currently selected.",
+});
+
 export default function AvailabilityLedger({ rows = [], disabled = false, onToggle }) {
   const regions = groupAvailabilityRows(rows);
   return (
@@ -9,57 +15,85 @@ export default function AvailabilityLedger({ rows = [], disabled = false, onTogg
         <p role="status">No charts have observations in this period.</p>
       ) : (
         <div className="time-availability-ledger__regions">
-          <LedgerRegion title="Selected for this Chrono Group" rows={regions.selected} empty="No ready charts selected." disabled={disabled} onToggle={onToggle} />
-          <LedgerRegion title="Needs attention" rows={regions.needsAttention} empty="No selected charts need attention." disabled={disabled} onToggle={onToggle} needsAttention />
-          <LedgerRegion title="Available" rows={regions.available} empty="No additional charts are available in this period." disabled={disabled} onToggle={onToggle} />
+          <LedgerRegion title="Selected for this Chrono Group" description={REGION_COPY.selected} rows={regions.selected} empty="No ready charts selected." disabled={disabled} onToggle={onToggle} />
+          <LedgerRegion title="Needs attention" description={REGION_COPY.attention} rows={regions.needsAttention} empty="No selected charts need attention." disabled={disabled} onToggle={onToggle} needsAttention />
+          <div className="time-availability-ledger__separator" role="separator" aria-label="Selected charts above; available charts below" />
+          <LedgerRegion title="Available" description={REGION_COPY.available} rows={regions.available} empty="No additional charts are available in this period." disabled={disabled} onToggle={onToggle} />
         </div>
       )}
     </section>
   );
 }
 
-function LedgerRegion({ title, rows, empty, disabled, onToggle, needsAttention = false }) {
+function LedgerRegion({ title, description, rows, empty, disabled, onToggle, needsAttention = false }) {
   const id = `chrono-ledger-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <section className="time-availability-ledger__region" data-region={needsAttention ? "needs-attention" : undefined} aria-labelledby={id}>
-      <h3 id={id}>{title}</h3>
-      {rows.length === 0 ? <p>{empty}</p> : <ol>{rows.map((row) => <LedgerRecord key={row.chartId} row={row} disabled={disabled} onToggle={onToggle} />)}</ol>}
+      <header className="time-availability-ledger__region-heading">
+        <div><h3 id={id}>{title}</h3><p>{description}</p></div>
+        <span>{rows.length} {rows.length === 1 ? "chart" : "charts"}</span>
+      </header>
+      {rows.length === 0 ? <p className="time-availability-ledger__empty">{empty}</p> : <ol>{rows.map((row) => <LedgerRecord key={row.chartId} row={row} disabled={disabled} onToggle={onToggle} />)}</ol>}
     </section>
   );
 }
 
 function LedgerRecord({ row, disabled, onToggle }) {
+  const chartDateCount = uniqueTicks(row.variables).length;
   return (
-    <li data-chart-id={row.chartId} data-status={row.needsAttention ? "needs-attention" : "available"}>
-      <details open={row.selected || row.needsAttention}>
-        <summary>
-          <span><strong>{row.label}</strong><small>{row.pageLabel} · {row.sectionLabel}</small></span>
-          <span>{row.statusText}</span>
-        </summary>
-      <div className="availability-record__body">
-        <label className="choice-control-row">
-          <input className="choice-control" type="checkbox" checked={row.selected} disabled={disabled} onChange={(event) => onToggle?.(row.chartId, event.target.checked)} />
-          <strong>{row.selected ? "Included in this Chrono Group" : "Include in this Chrono Group"}</strong>
-        </label>
-        <p><strong>Other Chrono Groups:</strong> {row.otherGroupNames?.join(", ") || "None"}</p>
-      <ul className="availability-calendar" aria-label={`${row.label} variable availability`}>
-        {row.variables.map((variable) => <li key={variable.variableId}>
-          <span>{variable.label}</span>
-          <span>{variable.inPeriodCount} in period</span>
-          <span>{formatEpoch(variable.earliestEpochMs)} to {formatEpoch(variable.latestEpochMs)}</span>
-          <span className="availability-ticks" aria-label={`${variable.inPeriodCount} observation ticks`}>{variable.ticks?.map((tick) => <i key={tick} title={formatEpoch(tick)} style={{ "--availability-position": `${tickPosition(tick, row)}%` }} />)}</span>
-        </li>)}
-      </ul>
-      </div>
-      </details>
+    <li data-chart-id={row.chartId} data-status={row.needsAttention ? "needs-attention" : row.selected ? "selected" : "available"}>
+      <article className="availability-record">
+        <header className="availability-record__header">
+          <div className="availability-record__identity">
+            <h4>{row.label}</h4>
+            <p>{row.pageLabel} · {row.sectionLabel}</p>
+            <p>Full chart range {formatEpoch(row.fullRangeStartEpochMs)}–{formatEpoch(row.fullRangeEndEpochMs)}</p>
+            {(row.otherGroupNames?.length ?? 0) > 0 && <p className="availability-record__membership">Also in {row.otherGroupNames.join(", ")}</p>}
+            {row.needsAttention && <p className="availability-record__attention">{row.statusText}</p>}
+          </div>
+          <button type="button" className={row.selected ? "secondary danger" : "secondary"} disabled={disabled} onClick={() => onToggle?.(row.chartId, !row.selected)}>
+            {row.selected ? "Remove" : "Add to group"}
+          </button>
+        </header>
+
+        <div className="availability-record__summary">
+          <div><strong>{row.variableCount} plotted {row.variableCount === 1 ? "variable" : "variables"}</strong><small>{row.note}</small></div>
+          <AvailabilityTrack ticks={uniqueTicks(row.variables)} row={row} label={`${row.label}: ${chartDateCount} chart dates`} />
+          <strong>{chartDateCount} chart {chartDateCount === 1 ? "date" : "dates"}</strong>
+        </div>
+
+        <details className="availability-record__disclosure" open={row.needsAttention || undefined}>
+          <summary>{row.needsAttention ? "Inspect and repair evidence" : "Inspect evidence"}</summary>
+          <div className="availability-record__body">
+            <p><strong>Other Chrono Groups:</strong> {row.otherGroupNames?.join(", ") || "None"}</p>
+            <ul className="availability-calendar" aria-label={`${row.label} variable availability`}>
+              {row.variables.map((variable) => <li key={variable.variableId}>
+                <span><strong>{variable.label}</strong><small>Full data {formatEpoch(variable.earliestEpochMs)}–{formatEpoch(variable.latestEpochMs)}</small></span>
+                <AvailabilityTrack ticks={variable.ticks ?? []} row={row} label={`${variable.label}: ${variable.inPeriodCount} dates represented`} />
+                <strong>{variable.inPeriodCount} {variable.inPeriodCount === 1 ? "date" : "dates"}</strong>
+              </li>)}
+            </ul>
+          </div>
+        </details>
+      </article>
     </li>
   );
 }
 
+function AvailabilityTrack({ ticks, row, label }) {
+  return (
+    <span className="availability-ticks" role="img" aria-label={label}>
+      {ticks.map((tick) => <i aria-hidden="true" key={tick} title={formatEpoch(tick)} style={{ "--availability-position": `${tickPosition(tick, row)}%` }} />)}
+    </span>
+  );
+}
+
+function uniqueTicks(variables = []) {
+  return [...new Set(variables.flatMap(({ ticks = [] }) => ticks))].sort((left, right) => left - right);
+}
+
 function formatEpoch(epochMs) {
-  return Number.isFinite(epochMs)
-    ? new Date(epochMs).toISOString().slice(0, 10)
-    : "No observations";
+  return Number.isFinite(epochMs) ? new Date(epochMs).toISOString().slice(0, 10) : "No observations";
 }
 
 function tickPosition(epochMs, row) {

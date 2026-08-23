@@ -8,6 +8,25 @@ import { validateIanaTimeZone } from "../../charting/time/temporalSchema.js";
 
 export const CHRONO_GROUP_STAGES = Object.freeze(["period", "charts", "defaults", "review"]);
 
+export function deriveChronoGroupStageStates(state) {
+  const result = {};
+  let waiting = false;
+  for (const stage of CHRONO_GROUP_STAGES) {
+    if (waiting) {
+      result[stage] = "waiting";
+      continue;
+    }
+    const validation = validateChronoGroupStage(state, stage);
+    if (!validation) {
+      result[stage] = "complete";
+      continue;
+    }
+    result[stage] = validation.code === "CHART_REQUIRED" ? "in-progress" : "needs-attention";
+    waiting = true;
+  }
+  return result;
+}
+
 const ALLOWED_FALLBACKS = new Set([
   MATCHING_POLICY_LABELS.CONCURRENT_ONLY,
   MATCHING_POLICY_LABELS.SNAP_TO_LATEST,
@@ -344,6 +363,10 @@ export function deriveAvailabilityRows({
         ? "Needs attention — no observations in period"
         : `${inPeriodCount} ${inPeriodCount === 1 ? "observation" : "observations"} in period`,
       variables,
+      variableCount: variables.length,
+      fullRangeStartEpochMs: firstFinite(variables.map(({ earliestEpochMs }) => earliestEpochMs)),
+      fullRangeEndEpochMs: lastFinite(variables.map(({ latestEpochMs }) => latestEpochMs)),
+      note: chart.note ?? "Saved transformations and filters applied",
       sortIndex: selected ? selectedOrder.get(chart.id) : selectedChartIds.length + chartIndex,
       inPeriodCount,
     };
@@ -351,6 +374,16 @@ export function deriveAvailabilityRows({
 
   rows.sort((left, right) => left.sortIndex - right.sortIndex);
   return rows.map(({ sortIndex, inPeriodCount, ...row }) => row);
+}
+
+function firstFinite(values) {
+  const finite = values.filter(Number.isFinite);
+  return finite.length > 0 ? Math.min(...finite) : null;
+}
+
+function lastFinite(values) {
+  const finite = values.filter(Number.isFinite);
+  return finite.length > 0 ? Math.max(...finite) : null;
 }
 
 export function groupAvailabilityRows(rows = []) {

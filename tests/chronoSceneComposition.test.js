@@ -60,8 +60,8 @@ test("Sketch 005 composition renders disclosure records and complete review evid
 
   await t.test("review names pages, derived frames, members, gaps, and repair routes", () => {
     const html = renderToStaticMarkup(React.createElement(ChronoGroupEditor, { draft: { ...base, stage: "review" } }));
-    for (const fact of ["Affected pages", "Derived frames", "Member evidence", "Availability gaps", "Repair chart selection"]) {
-      assert.match(html, new RegExp(fact));
+    for (const fact of ["affected pages", "derived Default Chrono frames", "Member evidence", "Availability gaps", "Repair chart selection"]) {
+      assert.match(html, new RegExp(fact, "i"));
     }
   });
 });

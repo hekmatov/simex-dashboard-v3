@@ -8,6 +8,7 @@ import { createServer } from "vite";
 import {
   CHRONO_GROUP_STAGES,
   createChronoGroupDraft,
+  deriveChronoGroupStageStates,
   deriveAvailabilityRows,
   reduceChronoGroupDraft,
   toSavedChronoGroup,
@@ -54,6 +55,28 @@ test("Chrono Group draft exposes the approved four stages and validates before a
   assert.equal(draft.error, null);
 });
 
+test("stage proof states identify the owning stage before Save is attempted", () => {
+  const draft = createChronoGroupDraft({
+    group: {
+      ...groupFixture(),
+      chartIds: ["categorical-chart"],
+      defaultMatching: "Interpolate",
+      memberFallbacks: {},
+    },
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "defaults",
+  });
+
+  assert.deepEqual(deriveChronoGroupStageStates(draft), {
+    period: "complete",
+    charts: "complete",
+    defaults: "needs-attention",
+    review: "waiting",
+  });
+});
+
 test("availability rows include variable ranges and retain selected zero-observation members in Needs attention", () => {
   const rows = deriveAvailabilityRows({
     charts: chartFixtures(),
@@ -77,6 +100,10 @@ test("availability rows include variable ranges and retain selected zero-observa
     selected: true,
     needsAttention: true,
     statusText: "Needs attention — no observations in period",
+    variableCount: 1,
+    fullRangeStartEpochMs: JAN_4,
+    fullRangeEndEpochMs: JAN_4,
+    note: "Saved transformations and filters applied",
     variables: [{
       variableId: "beds",
       label: "Beds",
@@ -228,9 +255,16 @@ test("Availability Ledger communicates status with text rather than colour alone
 
   assert.match(html, /aria-label="Chart availability"/);
   assert.match(html, /Needs attention — no observations in period/);
-  assert.match(html, /2 observations in period/);
+  assert.match(html, /2 chart dates/);
   assert.match(html, /Biomedical · Pressure/);
   assert.match(html, /data-status="needs-attention"/);
+  assert.match(html, /Selected for this Chrono Group/);
+  assert.match(html, /Members with at least one observation/);
+  assert.match(html, /Selected charts above; available charts below/);
+  assert.match(html, /Full chart range/);
+  assert.match(html, /1 plotted variable/);
+  assert.match(html, /Inspect evidence/);
+  assert.match(html, />Remove</);
 });
 
 test("Chrono Studio renders all stages and keeps Stay out of ordinary editor actions", () => {
@@ -251,8 +285,14 @@ test("Chrono Studio renders all stages and keeps Stay out of ordinary editor act
   assert.match(html, />Choose charts</);
   assert.match(html, />Set defaults</);
   assert.match(html, />Review</);
-  assert.match(html, /aria-current="step"[^>]*>Choose charts/);
-  assert.match(html, />Save Chrono Group</);
+  assert.match(html, /aria-current="step"[^>]*>[\s\S]*chrono-stage-label">Choose charts/);
+  assert.match(html, /Stage 2 of 4/);
+  assert.match(html, /2<\/span><span[^>]*>Choose charts/);
+  assert.match(html, /Complete/);
+  assert.match(html, /Dashboard-wide authored object/);
+  assert.match(html, /2027-01-01 through 2027-01-04/);
+  assert.match(html, /Edit period/);
+  assert.doesNotMatch(html, />Save Chrono Group</);
   assert.match(html, />Discard</);
   assert.doesNotMatch(html, />Stay/);
 
@@ -263,6 +303,67 @@ test("Chrono Studio renders all stages and keeps Stay out of ordinary editor act
   assert.equal((periodHtml.match(/type="date"/g) ?? []).length, 2);
   assert.match(periodHtml, /id="chrono-group-name"/);
   assert.doesNotMatch(periodHtml, /readOnly/);
+
+  const reviewHtml = renderToStaticMarkup(React.createElement(studioModule.default, {
+    draft: { ...draft, stage: "review" },
+    onAction() {},
+  }));
+  assert.match(reviewHtml, />Save Chrono Group</);
+});
+
+test("defaults explain every policy and expose unsupported variables before Save", () => {
+  const draft = createChronoGroupDraft({
+    group: {
+      ...groupFixture(),
+      chartIds: ["categorical-chart"],
+      defaultMatching: "Interpolate",
+      memberFallbacks: {},
+    },
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "defaults",
+  });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft, onAction() {} }));
+
+  for (const explanation of [
+    "occur on the frame date",
+    "between surrounding observations",
+    "latest observation at or before",
+    "nearest observation",
+  ]) assert.match(html, new RegExp(explanation));
+  assert.match(html, /Needs attention/);
+  assert.match(html, /Categories/);
+  assert.match(html, /State/);
+  assert.match(html, /categorical or discrete/);
+  assert.match(html, /min="0.001"/);
+});
+
+test("review presents readiness proof and repair routes for every owning stage", () => {
+  const draft = createChronoGroupDraft({
+    group: groupFixture(),
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "review",
+  });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft, onAction() {} }));
+
+  for (const fact of [
+    "derived Default Chrono frames",
+    "member charts",
+    "affected pages",
+    "seconds per frame",
+    "Period and timezone",
+    "Members and coverage",
+    "Matching and cadence",
+    "Derived ledger and gaps",
+    "Edit period",
+    "Edit chart selection",
+    "Edit matching defaults",
+    "recomputed, not persisted",
+    "Review is ready",
+  ]) assert.match(html, new RegExp(fact));
 });
 
 function groupFixture() {

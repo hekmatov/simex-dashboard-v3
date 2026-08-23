@@ -24,7 +24,10 @@ import StructureAuthoring, {
 } from "./StructureAuthoring.jsx";
 import UnitOrbit from "./UnitOrbit.jsx";
 import SceneEditor from "../time/SceneEditor.jsx";
-import { buildTemporalChartVariables } from "../time/temporalAuthoringData.js";
+import {
+  buildTemporalChartVariables,
+  describeTemporalInterpolationSupport,
+} from "../time/temporalAuthoringData.js";
 import {
   createSceneDraft,
   reduceSceneDraft,
@@ -788,6 +791,8 @@ function temporalAuthoringCharts(dashboard) {
     const variables = variableCache.get(cacheKey)
       ?? buildTemporalChartVariables(rows, timeField, valueFields, parseEpoch);
     variableCache.set(cacheKey, variables);
+    const interpolationSupport = describeTemporalInterpolationSupport(variables);
+    const configuredInterpolation = chart.interaction?.timeSync?.interpolationAllowed;
     return {
       id: chart.id,
       title: chart.title,
@@ -799,7 +804,11 @@ function temporalAuthoringCharts(dashboard) {
       sectionId: placement.sectionId,
       sectionLabel: dashboard.pages?.find(({ id }) => id === placement.pageId)
         ?.sections?.find(({ id }) => id === placement.sectionId)?.title ?? placement.sectionId,
-      interpolationAllowed: chart.interaction?.timeSync?.interpolationAllowed === true,
+      interpolationAllowed: typeof configuredInterpolation === "boolean"
+        ? configuredInterpolation
+        : interpolationSupport.allowed,
+      interpolationUnsupportedVariables: interpolationSupport.unsupportedVariables,
+      interpolationReason: interpolationSupport.reason,
       chronoGroupMemberships: membershipLists.get(chart.id) ?? [],
       variables,
       sourceChart: chart,
