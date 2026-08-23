@@ -2,7 +2,7 @@ import React from "react";
 
 import { MATCHING_POLICY_LABELS } from "../../charting/time/temporalMatch.js";
 import AvailabilityLedger from "./AvailabilityLedger.jsx";
-import { CHRONO_GROUP_STAGES } from "./chronoGroupDraft.js";
+import { buildChronoGroupReview, CHRONO_GROUP_STAGES } from "./chronoGroupDraft.js";
 
 const STAGE_LABELS = Object.freeze({
   period: "Name and period",
@@ -47,7 +47,7 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
       </nav>
 
       {draft?.error && <p role="alert">{draft.error.message}</p>}
-      <div aria-live="polite">
+      <div className="chrono-group-studio__body" aria-live="polite">
         {stage === "period" && (
           <fieldset>
             <legend>Name and period</legend>
@@ -169,16 +169,48 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
         )}
 
         {stage === "review" && (
-          <section aria-labelledby="chrono-group-review-title">
+          <ChronoGroupReview draft={draft} busy={busy} onAction={onAction} />
+        )}
+      </div>
+
+      <footer>
+        <button type="button" disabled={busy || stage === "period"} onClick={() => onAction?.({ type: "PREVIOUS_STAGE" })}>Back</button>
+        <button type="button" disabled={busy || stage === "review"} onClick={() => onAction?.({ type: "NEXT_STAGE" })}>Continue</button>
+        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Chrono Group</button>
+        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
+      </footer>
+    </section>
+  );
+}
+
+function ChronoGroupReview({ draft, busy, onAction }) {
+  const value = draft?.value ?? {};
+  const review = buildChronoGroupReview(draft);
+  return (
+          <section className="chrono-group-review" aria-labelledby="chrono-group-review-title">
             <h3 id="chrono-group-review-title">Review</h3>
             <dl>
               <div><dt>Name</dt><dd>{value.name}</dd></div>
               <div><dt>Period</dt><dd>{dateInputValue(value.period?.startEpochMs)} to {dateInputValue(value.period?.endEpochMs)}</dd></div>
               <div><dt>Timezone</dt><dd>{draft?.timeZone ?? "UTC"}</dd></div>
-              <div><dt>Members</dt><dd>{value.chartIds?.length ?? 0}</dd></div>
+              <div><dt>Affected pages</dt><dd>{review.affectedPages.join(", ") || "None"}</dd></div>
+              <div><dt>Derived frames</dt><dd>{review.frameCount}</dd></div>
               <div><dt>Matching</dt><dd>{value.defaultMatching}</dd></div>
               <div><dt>Seconds per frame</dt><dd>{value.secondsPerFrame}</dd></div>
             </dl>
+            <section aria-labelledby="chrono-review-members">
+              <h4 id="chrono-review-members">Member evidence</h4>
+              {review.members.length === 0 ? <p>No charts selected.</p> : <ul>{review.members.map((member) => (
+                <li key={member.chartId}>
+                  <span><strong>{member.label}</strong> · {member.observationCount} observations</span>
+                  <button type="button" disabled={busy} onClick={() => onAction?.({ type: "GO_TO_STAGE", stage: member.repairStage })}>Repair chart selection</button>
+                </li>
+              ))}</ul>}
+            </section>
+            <section aria-labelledby="chrono-review-gaps">
+              <h4 id="chrono-review-gaps">Availability gaps</h4>
+              {review.gaps.length === 0 ? <p>No availability gaps detected.</p> : <ul>{review.gaps.map((gap) => <li key={gap.chartId}>{gap.label}</li>)}</ul>}
+            </section>
             {(draft?.sceneConsequences?.length ?? 0) > 0 && (
               <fieldset>
                 <legend>Resolve affected Scenes</legend>
@@ -218,16 +250,6 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
               </fieldset>
             )}
           </section>
-        )}
-      </div>
-
-      <footer>
-        <button type="button" disabled={busy || stage === "period"} onClick={() => onAction?.({ type: "PREVIOUS_STAGE" })}>Back</button>
-        <button type="button" disabled={busy || stage === "review"} onClick={() => onAction?.({ type: "NEXT_STAGE" })}>Continue</button>
-        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Chrono Group</button>
-        <button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard</button>
-      </footer>
-    </section>
   );
 }
 

@@ -47,7 +47,7 @@ function scene(overrides = {}) {
       { chartId: "chart-a", width: 2 },
       { chartId: "chart-b", width: 2, matching: "nearest" },
     ],
-    present: { chartIds: ["chart-a", "chart-b"], layout: "split" },
+    present: { chartIds: ["chart-a", "chart-b"], layout: "vertical-divider" },
     secondsPerFrame: 2.5,
     audience: {
       datePosition: { xPermille: 700, yPermille: 40, widthPermille: 260 },
@@ -101,17 +101,20 @@ test("enforces page and group subsets, unique members, and supported widths", ()
   }), context()), /width/);
 });
 
-test("requires count-valid Present composition and all members when four or fewer", () => {
-  assert.throws(() => validateScene(scene({
+test("accepts a one-to-four chart Present subset and only count-valid divider shapes", () => {
+  assert.doesNotThrow(() => validateScene(scene({
     present: { chartIds: ["chart-a"], layout: "single" },
-  }), context()), /all Scene members/);
+  }), context()));
   assert.throws(() => validateScene(scene({
-    present: { chartIds: ["chart-a", "chart-b"], layout: "quad" },
+    present: { chartIds: ["chart-a", "chart-b"], layout: "grid-2x2" },
   }), context()), /layout/);
+  assert.doesNotThrow(() => validateScene(scene({
+    present: { chartIds: ["chart-a", "chart-b"], layout: "horizontal-divider" },
+  }), context()));
 
   const five = scene({
     members: ["chart-a", "chart-b", "chart-c", "chart-d", "chart-e"].map((chartId) => ({ chartId, width: 1 })),
-    present: { chartIds: ["chart-a", "chart-c", "chart-e"], layout: "trio" },
+    present: { chartIds: ["chart-a", "chart-c", "chart-e"], layout: "large-left" },
   });
   assert.doesNotThrow(() => validateScene(five, context()));
 });
@@ -136,7 +139,7 @@ test("normalization supplies deterministic Audience and small-Scene Present defa
 
   assert.notStrictEqual(normalized, input);
   assert.equal(Object.hasOwn(normalized, "secondsPerFrame"), false);
-  assert.deepEqual(normalized.present, { chartIds: ["chart-a", "chart-b"], layout: "split" });
+  assert.deepEqual(normalized.present, { chartIds: ["chart-a", "chart-b"], layout: "vertical-divider" });
   assert.deepEqual(normalized.audience, {
     datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 },
   });

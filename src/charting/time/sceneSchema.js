@@ -12,10 +12,10 @@ const MATCHING_POLICIES = new Set([
   "Interpolate",
 ]);
 const PRESENT_LAYOUTS = Object.freeze({
-  1: "single",
-  2: "split",
-  3: "trio",
-  4: "quad",
+  1: ["single"],
+  2: ["vertical-divider", "horizontal-divider"],
+  3: ["large-left", "large-top"],
+  4: ["grid-2x2"],
 });
 const DEFAULT_DATE_POSITION = Object.freeze({
   xPermille: 680,
@@ -34,7 +34,7 @@ export function normalizeSceneDefaults(scene) {
   if (normalized.present === undefined && chartIds.length > 0 && chartIds.length <= 4) {
     normalized.present = {
       chartIds,
-      layout: PRESENT_LAYOUTS[chartIds.length],
+      layout: PRESENT_LAYOUTS[chartIds.length][0],
     };
   }
 
@@ -120,6 +120,9 @@ export function validateScene(scene, context = {}) {
   ) {
     throw new Error("Scene secondsPerFrame must be a positive finite number when overridden.");
   }
+  if (scene.defaultMatching !== undefined && !MATCHING_POLICIES.has(scene.defaultMatching)) {
+    throw new Error("Scene default matching policy is unsupported.");
+  }
   validateDatePosition(scene.audience?.datePosition);
   return scene;
 }
@@ -179,14 +182,9 @@ function validatePresent(present, memberIds) {
   if (present.chartIds.some((chartId) => !memberIds.includes(chartId))) {
     throw new Error("Scene Present charts must be a subset of Scene members.");
   }
-  if (memberIds.length <= 4 && (
-    present.chartIds.length !== memberIds.length
-    || present.chartIds.some((chartId) => !memberIds.includes(chartId))
-  )) {
-    throw new Error("Scenes with four or fewer charts must include all Scene members in their authored Present order.");
-  }
-  if (present.layout !== PRESENT_LAYOUTS[present.chartIds.length]) {
-    throw new Error(`Scene Present layout must be "${PRESENT_LAYOUTS[present.chartIds.length]}" for this chart count.`);
+  const allowedLayouts = PRESENT_LAYOUTS[present.chartIds.length] ?? [];
+  if (!allowedLayouts.includes(present.layout)) {
+    throw new Error(`Scene Present layout must be one of ${allowedLayouts.map((layout) => `"${layout}"`).join(", ")} for this chart count.`);
   }
 }
 

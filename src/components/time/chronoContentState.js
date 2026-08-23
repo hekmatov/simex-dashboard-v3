@@ -38,6 +38,10 @@ export function createChronoContentState({
     error: null,
     runningSession,
     authoredContentChanged: false,
+    studioContexts: {
+      chrono: browseContext({ query: studio === "chrono" ? query : "", statusFilter: "all", pageId, scrollTop: 0, focusId: null }),
+      scene: browseContext({ query: studio === "scene" ? query : "", statusFilter: "all", pageId, scrollTop: 0, focusId: null }),
+    },
     returnContext: captureContext({ studio, view: "library", selectedItemId: null, pageId, scrollTop, focusId, query, statusFilter }),
   };
 }
@@ -55,12 +59,27 @@ export function reduceChronoContent(state, action) {
       };
     case "SET_STUDIO":
       assertStudio(action.studio);
-      return { ...state, studio: action.studio, view: "library", selectedItemType: null, selectedItemId: null, operation: null, error: null };
+      return {
+        ...state,
+        ...(state.studioContexts?.[action.studio] ?? browseContext({ pageId: state.pageId })),
+        studio: action.studio,
+        studioContexts: {
+          ...state.studioContexts,
+          [state.studio]: browseContext(state),
+        },
+        view: "library",
+        selectedItemType: null,
+        selectedItemId: null,
+        operation: null,
+        error: null,
+      };
     case "SET_QUERY":
       return { ...state, query: String(action.query ?? ""), error: null };
     case "SET_STATUS_FILTER":
       assertStatusFilter(action.statusFilter);
       return { ...state, statusFilter: action.statusFilter, error: null };
+    case "SET_PAGE_FILTER":
+      return { ...state, pageId: action.pageId ?? null, error: null };
     case "CAPTURE_RETURN_CONTEXT": {
       const returnContext = captureContext({ ...state, ...action.context });
       return { ...state, ...returnContext, returnContext };
@@ -170,7 +189,9 @@ export function selectChronoStudioCards(state) {
     ...clone(group),
     type: "chronoGroup",
     status: statusFor(state, "chronoGroup", group.id),
+    statusReasons: reasonsFor(state, "chronoGroup", group.id),
     sceneCount: (state?.scenes ?? []).filter((scene) => scene.chronoGroupId === group.id).length,
+    pageIds: groupPageIds(state, group),
   })), state);
 }
 
@@ -179,6 +200,7 @@ export function selectSceneStudioSections(state) {
     ...clone(scene),
     type: "scene",
     status: statusFor(state, "scene", scene.id),
+    statusReasons: reasonsFor(state, "scene", scene.id),
     chronoGroupName: (state?.chronoGroups ?? []).find(({ id }) => id === scene.chronoGroupId)?.name ?? scene.chronoGroupId,
   })), state);
   const byPage = new Map(cards.map((scene) => [scene.pageId, []]));
@@ -205,7 +227,7 @@ export function selectChronoGroupContent(state, id) {
     const sceneIds = childScenes.filter(({ pageId }) => pageId === page.id).map(({ id: sceneId }) => sceneId);
     if (sceneIds.length && !pageSections.some(({ pageId }) => pageId === page.id)) pageSections.push({ pageId: page.id, pageLabel: page.label ?? page.title ?? page.id, charts: [], sceneIds });
   }
-  return { ...clone(group), status: statusFor(state, "chronoGroup", id), childScenes: clone(childScenes), pageSections };
+  return { ...clone(group), status: statusFor(state, "chronoGroup", id), statusReasons: reasonsFor(state, "chronoGroup", id), childScenes: clone(childScenes), pageSections };
 }
 
 export function selectSceneContent(state, id) {
@@ -216,6 +238,7 @@ export function selectSceneContent(state, id) {
   return {
     ...clone(scene),
     status: statusFor(state, "scene", id),
+    statusReasons: reasonsFor(state, "scene", id),
     chronoGroupName: group?.name ?? scene.chronoGroupId,
     memberCharts: (scene.members ?? []).map((member) => ({
       ...clone(member),
@@ -252,6 +275,7 @@ function filterByQueryAndStatus(items, state) {
   const query = String(state?.query ?? "").trim().toLocaleLowerCase();
   return items.filter((item) => {
     if ((state?.statusFilter ?? "all") !== "all" && item.status !== state.statusFilter) return false;
+    if (state?.pageId && item.pageId !== state.pageId && !item.pageIds?.includes(state.pageId)) return false;
     return !query || [item.name, item.pageLabel, item.chronoGroupName].filter(Boolean).join(" ").toLocaleLowerCase().includes(query);
   });
 }
@@ -259,6 +283,17 @@ function filterByQueryAndStatus(items, state) {
 function statusFor(state, itemType, itemId) {
   const findings = (state?.findings ?? []).filter((finding) => (finding.itemType ?? finding.type) === itemType && (finding.itemId ?? finding.id) === itemId);
   return findings.length ? "needs-attention" : "ready";
+}
+
+function reasonsFor(state, itemType, itemId) {
+  return (state?.findings ?? []).filter((finding) => (finding.itemType ?? finding.type) === itemType && (finding.itemId ?? finding.id) === itemId).map((finding) => finding.message ?? finding.reason ?? finding.code ?? "Needs repair");
+}
+
+function groupPageIds(state, group) {
+  const chartIds = new Set(group.chartIds ?? group.members?.map(({ chartId }) => chartId) ?? []);
+  const chartPages = chartLocations(state?.pages ?? []).filter(({ chart }) => chartIds.has(chart.id)).map(({ pageId }) => pageId);
+  const scenePages = (state?.scenes ?? []).filter((scene) => scene.chronoGroupId === group.id).map(({ pageId }) => pageId);
+  return [...new Set([...chartPages, ...scenePages])];
 }
 
 function chartLocations(pages) {
@@ -281,6 +316,16 @@ function captureContext(source) {
     focusId: source?.focusId ?? null,
     query: String(source?.query ?? ""),
     statusFilter: source?.statusFilter ?? "all",
+  };
+}
+
+function browseContext(source) {
+  return {
+    query: String(source?.query ?? ""),
+    statusFilter: source?.statusFilter ?? "all",
+    pageId: source?.pageId ?? null,
+    scrollTop: finiteScroll(source?.scrollTop),
+    focusId: source?.focusId ?? null,
   };
 }
 

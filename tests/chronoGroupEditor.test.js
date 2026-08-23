@@ -68,8 +68,12 @@ test("availability rows include variable ranges and retain selected zero-observa
   assert.deepEqual(rows[0], {
     chartId: "empty-chart",
     label: "No current observations",
+    pageId: null,
     pageLabel: "Biomedical",
     sectionLabel: "Pressure",
+    otherGroupNames: [],
+    periodStartEpochMs: JAN_1,
+    periodEndEpochMs: JAN_3,
     selected: true,
     needsAttention: true,
     statusText: "Needs attention — no observations in period",

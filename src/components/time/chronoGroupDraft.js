@@ -278,6 +278,37 @@ export function toSavedChronoGroup(stateOrValue) {
   };
 }
 
+export function buildChronoGroupReview(state) {
+  const selectedIds = new Set(state?.value?.chartIds ?? []);
+  const selectedCharts = (state?.charts ?? []).filter(({ id }) => selectedIds.has(id));
+  const rowsById = new Map((state?.availabilityRows ?? []).map((row) => [row.chartId, row]));
+  const affectedPages = [...new Set(selectedCharts.map((chart) => (
+    chart.pageLabel ?? chart.pageId ?? "Unknown page"
+  )))];
+  const frameCount = validPeriod(state?.value?.period)
+    ? buildDefaultChronoLedger({
+      pageCharts: selectedCharts,
+      period: state.value.period,
+      timeZone: state.timeZone,
+    }).length
+    : 0;
+  const members = selectedCharts.map((chart) => ({
+    chartId: chart.id,
+    label: chart.label ?? chart.title ?? chart.id,
+    observationCount: rowsById.get(chart.id)?.variables?.reduce((sum, variable) => (
+      sum + variable.inPeriodCount
+    ), 0) ?? 0,
+    repairStage: "charts",
+  }));
+  return {
+    affectedPages,
+    frameCount,
+    members,
+    gaps: members.filter(({ observationCount }) => observationCount === 0),
+    sceneConsequences: clone(state?.sceneConsequences ?? []),
+  };
+}
+
 export function deriveAvailabilityRows({
   charts = [],
   period,
@@ -301,8 +332,12 @@ export function deriveAvailabilityRows({
     return {
       chartId: chart.id,
       label: chart.label ?? chart.title ?? chart.id,
+      pageId: chart.pageId ?? null,
       pageLabel: chart.pageLabel ?? chart.pageId ?? "Unknown page",
       sectionLabel: chart.sectionLabel ?? chart.sectionId ?? "Unknown section",
+      otherGroupNames: clone(chart.otherGroupNames ?? []),
+      periodStartEpochMs: period.startEpochMs,
+      periodEndEpochMs: period.endEpochMs,
       selected,
       needsAttention,
       statusText: needsAttention

@@ -5,7 +5,7 @@ import {
 
 export const SCENE_STAGES = Object.freeze(["select", "arrange"]);
 
-const PRESENT_LAYOUTS = Object.freeze({ 1: "single", 2: "split", 3: "trio", 4: "quad" });
+const PRESENT_LAYOUTS = Object.freeze({ 1: "single", 2: "vertical-divider", 3: "large-left", 4: "grid-2x2" });
 
 export function createSceneDraft(scene, validationContext = {}) {
   const baseline = clone(scene);
@@ -21,6 +21,10 @@ export function createSceneDraft(scene, validationContext = {}) {
     activeBoard: "scene",
     restoration: null,
     suspendedStatus: null,
+    frameChoices: {
+      calendar: baseline?.frames?.mode === "calendar" ? clone(baseline.frames) : { mode: "calendar", interval: { value: 1, unit: "day" } },
+      source: baseline?.frames?.mode === "source" ? clone(baseline.frames) : null,
+    },
   };
 }
 
@@ -31,19 +35,53 @@ export function reduceSceneDraft(state, action) {
       return { ...state, stage: action.stage, error: null };
     case "SET_NAME":
       return update(state, (value) => { value.name = String(action.value ?? ""); });
+    case "SET_PAGE":
+      return setScenePage(state, action.pageId);
     case "SET_CHRONO_GROUP":
-      return update(state, (value) => { value.chronoGroupId = action.chronoGroupId; });
+      return setSceneChronoGroup(state, action.chronoGroupId);
     case "SET_SCOPE":
       return update(state, (value) => {
         if (action.pageId !== undefined) value.pageId = action.pageId;
         if (action.period !== undefined) value.period = clone(action.period);
       });
+    case "SET_PERIOD":
+      return setScenePeriod(state, action.start, action.end);
     case "SET_FRAMES":
       return update(state, (value) => { value.frames = clone(action.value); });
+    case "SET_FRAME_MODE":
+      return setFrameMode(state, action.mode);
+    case "SET_CALENDAR_INTERVAL":
+      return updateFrames(state, (frames) => {
+        frames.mode = "calendar";
+        delete frames.chartId;
+        delete frames.selection;
+        delete frames.selectedEpochs;
+        frames.interval = {
+          value: Number(action.value),
+          unit: action.unit ?? frames.interval?.unit ?? "day",
+        };
+      });
+    case "SET_FRAME_SOURCE":
+      return updateFrames(state, (frames) => {
+        frames.mode = "source";
+        frames.chartId = action.chartId;
+        frames.selection ??= "all";
+      });
+    case "SET_FRAME_SELECTION":
+      return updateFrames(state, (frames) => {
+        frames.selection = action.selection;
+        if (action.selection === "selected") frames.selectedEpochs = clone(action.selectedEpochs ?? frames.selectedEpochs ?? []);
+        else delete frames.selectedEpochs;
+      });
     case "SET_SECONDS_PER_FRAME":
       return update(state, (value) => {
         if (action.value === undefined || action.value === "") delete value.secondsPerFrame;
         else value.secondsPerFrame = Number(action.value);
+      });
+    case "SET_DEFAULT_MATCHING":
+      return update(state, (value) => {
+        if (action.matching === undefined || action.matching === "authored") delete value.defaultMatching;
+        else value.defaultMatching = action.matching;
       });
     case "SET_DATE_POSITION":
       return update(state, (value) => {
@@ -186,9 +224,12 @@ function moveChart(state, action) {
     ? state.value.present.chartIds
     : state.value.members.map(({ chartId }) => chartId);
   const from = ids.indexOf(action.chartId);
-  const offset = action.direction === "earlier" ? -1 : action.direction === "later" ? 1 : 0;
-  const to = from + offset;
-  if (from < 0 || !offset || to < 0 || to >= ids.length) return state;
+  let to = Number.isInteger(action.targetIndex) ? action.targetIndex : from;
+  if (action.direction === "earlier") to = from - 1;
+  if (action.direction === "later") to = from + 1;
+  if (action.direction === "first") to = 0;
+  if (action.direction === "last") to = ids.length - 1;
+  if (from < 0 || to === from || to < 0 || to >= ids.length) return state;
   return update(state, (value) => {
     if (action.board === "present") {
       const [moved] = value.present.chartIds.splice(from, 1);
@@ -198,6 +239,115 @@ function moveChart(state, action) {
     const [moved] = value.members.splice(from, 1);
     value.members.splice(to, 0, moved);
   });
+}
+
+function setScenePage(state, pageId) {
+  const currentGroup = findGroup(state, state.value.chronoGroupId);
+  const currentGroupSupportsPage = currentGroup && eligibleGroupCharts(state, currentGroup, pageId).length > 0;
+  if (currentGroupSupportsPage) {
+    const pageState = update(state, (value) => { value.pageId = pageId; });
+    return setSceneChronoGroup(pageState, currentGroup.id);
+  }
+  return update(state, (value) => {
+    value.pageId = pageId;
+    value.chronoGroupId = null;
+    value.members = [];
+    value.present = { chartIds: [], layout: PRESENT_LAYOUTS[0] };
+    value.frames = { mode: "calendar", interval: { value: 1, unit: "day" } };
+  });
+}
+
+function setSceneChronoGroup(state, chronoGroupId) {
+  const group = findGroup(state, chronoGroupId);
+  if (!group) return update(state, (value) => { value.chronoGroupId = chronoGroupId; });
+  const eligible = eligibleGroupCharts(state, group, state.value.pageId);
+  const currentWidths = new Map((state.value.members ?? []).map(({ chartId, width }) => [chartId, width]));
+  const members = eligible.map(({ id }) => ({ chartId: id, width: currentWidths.get(id) ?? 1 }));
+  return update(state, (value) => {
+    value.chronoGroupId = chronoGroupId;
+    value.period = scenePeriodFromGroup(group.period);
+    value.members = members;
+    value.present = {
+      chartIds: members.slice(0, 4).map(({ chartId }) => chartId),
+      layout: PRESENT_LAYOUTS[Math.min(members.length, 4)],
+    };
+    const sourceStillExists = members.some(({ chartId }) => chartId === value.frames?.chartId);
+    if (value.frames?.mode === "source" && !sourceStillExists) {
+      value.frames = members[0]
+        ? { mode: "source", chartId: members[0].chartId, selection: "all" }
+        : { mode: "calendar", interval: { value: 1, unit: "day" } };
+    }
+  });
+}
+
+function setScenePeriod(state, start, end) {
+  const group = findGroup(state, state.value.chronoGroupId);
+  const maximum = comparablePeriod(group?.period);
+  const startEpochMs = Date.parse(`${start}T00:00:00.000Z`);
+  const endEpochMs = Date.parse(`${end}T23:59:59.999Z`);
+  if (!Number.isFinite(startEpochMs) || !Number.isFinite(endEpochMs) || endEpochMs < startEpochMs) {
+    return withError(state, "SCENE_PERIOD_INVALID", "Choose a valid inclusive Scene period.");
+  }
+  if (maximum && (startEpochMs < maximum.start || endEpochMs > maximum.end)) {
+    return withError(state, "SCENE_PERIOD_OUTSIDE_GROUP", "Scene period must remain inside the parent Chrono Group period.");
+  }
+  return update(state, (value) => {
+    value.period = {
+      start: `${start}T00:00:00.000Z`,
+      end: `${end}T23:59:59.999Z`,
+    };
+  });
+}
+
+function setFrameMode(state, mode) {
+  if (mode !== "calendar" && mode !== "source") throw new Error(`Unknown Scene frame mode: ${String(mode)}`);
+  const frameChoices = { ...state.frameChoices, [state.value.frames?.mode ?? "calendar"]: clone(state.value.frames) };
+  const fallbackSource = state.value.members?.[0]?.chartId
+    ? { mode: "source", chartId: state.value.members[0].chartId, selection: "all" }
+    : { mode: "source", chartId: null, selection: "all" };
+  const nextFrames = clone(frameChoices[mode] ?? (mode === "calendar" ? { mode: "calendar", interval: { value: 1, unit: "day" } } : fallbackSource));
+  frameChoices[mode] = clone(nextFrames);
+  return { ...update(state, (value) => { value.frames = nextFrames; }), frameChoices };
+}
+
+function updateFrames(state, updater) {
+  const next = update(state, (value) => {
+    value.frames ??= { mode: "calendar", interval: { value: 1, unit: "day" } };
+    updater(value.frames);
+  });
+  return {
+    ...next,
+    frameChoices: { ...state.frameChoices, [next.value.frames.mode]: clone(next.value.frames) },
+  };
+}
+
+function findGroup(state, id) {
+  return state.validationContext?.chronoGroups?.find((group) => group.id === id) ?? null;
+}
+
+function eligibleGroupCharts(state, group, pageId) {
+  const groupIds = new Set(group.chartIds ?? group.members?.map(({ chartId }) => chartId) ?? []);
+  return (state.validationContext?.charts ?? []).filter((chart) => (
+    groupIds.has(chart.id) && (chart.pageId ?? chart.page?.id) === pageId
+  ));
+}
+
+function scenePeriodFromGroup(period) {
+  if (typeof period?.start === "string" && typeof period?.end === "string" && /^\d{4}-\d{2}-\d{2}$/.test(period.start) && /^\d{4}-\d{2}-\d{2}$/.test(period.end)) {
+    return { start: `${period.start}T00:00:00.000Z`, end: `${period.end}T23:59:59.999Z` };
+  }
+  return clone(period);
+}
+
+function comparablePeriod(period) {
+  if (!period) return null;
+  const start = Number.isFinite(period.startEpochMs)
+    ? period.startEpochMs
+    : Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(period.start ?? "") ? `${period.start}T00:00:00.000Z` : period.start);
+  const end = Number.isFinite(period.endEpochMs)
+    ? period.endEpochMs
+    : Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(period.end ?? "") ? `${period.end}T23:59:59.999Z` : period.end);
+  return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null;
 }
 
 function updateMember(state, chartId, updater) {

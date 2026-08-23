@@ -24,6 +24,7 @@ import StructureAuthoring, {
 } from "./StructureAuthoring.jsx";
 import UnitOrbit from "./UnitOrbit.jsx";
 import SceneEditor from "../time/SceneEditor.jsx";
+import { buildTemporalChartVariables } from "../time/temporalAuthoringData.js";
 import {
   createSceneDraft,
   reduceSceneDraft,
@@ -427,10 +428,22 @@ export default function BuildWorkspace({
       if (saving.status !== "saving") return;
       const savedGroup = toSavedChronoGroup(saving);
       const chronoGroups = mergeChronoGroup(dashboard.chronoGroups ?? [], savedGroup, temporalCharts);
-      Promise.resolve(commitTemporalContent({ chronoGroups }))
+      const duplicateSourceId = chronoContentState?.operation?.intent === "duplicate"
+        ? chronoContentState.operation.itemId
+        : null;
+      const duplicatedScenes = duplicateSourceId
+        ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId === duplicateSourceId).map((scene) => ({
+          ...structuredClone(scene),
+          id: stableDraftId("scene"),
+          name: `Copy of ${scene.name}`,
+          chronoGroupId: savedGroup.id,
+        }))
+        : [];
+      const scenes = [...(dashboard.scenes ?? []), ...duplicatedScenes];
+      Promise.resolve(commitTemporalContent({ chronoGroups, scenes }))
         .then(() => {
           setChronoGroupDraft((current) => reduceChronoGroupDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedGroup }));
-          setChronoContentState((current) => completeContentOperation(current, { chronoGroups }, "chronoGroup", savedGroup.id));
+          setChronoContentState((current) => completeContentOperation(current, { chronoGroups, scenes }, "chronoGroup", savedGroup.id));
         })
         .catch((error) => setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
           type: "SAVE_FAILED",
@@ -472,6 +485,24 @@ export default function BuildWorkspace({
   };
 
   const dispatchChronoContent = (action) => {
+    if (action.type === "REQUEST_REMOVE") {
+      const itemType = action.itemType ?? chronoContentState.selectedItemType;
+      const itemId = action.itemId ?? chronoContentState.selectedItemId;
+      const groupScenes = itemType === "chronoGroup" ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId === itemId) : [];
+      const message = itemType === "chronoGroup"
+        ? `Remove this Chrono Group and ${groupScenes.length} child ${groupScenes.length === 1 ? "Scene" : "Scenes"}?`
+        : "Remove this Scene?";
+      if (!window.confirm(message)) return;
+      const chronoGroups = itemType === "chronoGroup" ? (dashboard.chronoGroups ?? []).filter(({ id }) => id !== itemId) : (dashboard.chronoGroups ?? []);
+      const scenes = itemType === "chronoGroup"
+        ? (dashboard.scenes ?? []).filter(({ chronoGroupId }) => chronoGroupId !== itemId)
+        : (dashboard.scenes ?? []).filter(({ id }) => id !== itemId);
+      setChronoContentState((current) => ({ ...current, operation: { intent: "remove", itemType, itemId, status: "saving" }, error: null }));
+      Promise.resolve(commitTemporalContent({ chronoGroups, scenes }))
+        .then(() => setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_SUCCEEDED", chronoGroups, scenes, returnToContent: false })))
+        .catch((error) => setChronoContentState((current) => reduceChronoContent(current, { type: "OPERATION_FAILED", error: storageFacingError(error, "TEMPORAL_REMOVE_FAILED") })));
+      return;
+    }
     const next = reduceChronoContent(chronoContentState, action);
     setChronoContentState(next);
     if (next.conflict || next.view !== "editor" || !next.operation) return;
@@ -490,12 +521,13 @@ export default function BuildWorkspace({
       const existing = dashboard.scenes?.find(({ id }) => id === itemId);
       const source = intent === "create" ? initialScene(dashboard, activePage?.id) : existing;
       const value = structuredClone(source ?? initialScene(dashboard, activePage?.id));
-      if (parentChronoGroupId) value.chronoGroupId = parentChronoGroupId;
       if (intent === "duplicate") {
         value.id = stableDraftId("scene");
         value.name = `Copy of ${value.name}`;
       }
-      setSceneDraft(createSceneDraft(value, sceneValidationContext(dashboard)));
+      let nextDraft = createSceneDraft(value, sceneValidationContext(dashboard));
+      if (parentChronoGroupId) nextDraft = reduceSceneDraft(nextDraft, { type: "SET_CHRONO_GROUP", chronoGroupId: parentChronoGroupId });
+      setSceneDraft(nextDraft);
     }
   };
 
@@ -713,7 +745,12 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
       memberFallbacks,
       secondsPerFrame: group?.secondsPerFrame ?? 1,
     },
-    charts,
+    charts: charts.map((chart) => ({
+      ...chart,
+      otherGroupNames: (chart.chronoGroupMemberships ?? [])
+        .filter(({ groupId }) => groupId !== group?.id)
+        .map(({ groupName }) => groupName),
+    })),
     scenes: (dashboard.scenes ?? []).map((scene) => ({
       ...scene,
       period: {
@@ -727,9 +764,16 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
 
 function temporalAuthoringCharts(dashboard) {
   const memberships = new Map();
+  const membershipLists = new Map();
   for (const group of dashboard.chronoGroups ?? []) {
-    for (const member of group.members ?? []) memberships.set(member.chartId, member);
+    for (const member of group.members ?? []) {
+      memberships.set(member.chartId, member);
+      const entries = membershipLists.get(member.chartId) ?? [];
+      entries.push({ groupId: group.id, groupName: group.name ?? group.id });
+      membershipLists.set(member.chartId, entries);
+    }
   }
+  const variableCache = new Map();
   return collectChartPlacements(dashboard).map((placement) => {
     const chart = placement.chart;
     const member = memberships.get(chart.id);
@@ -740,14 +784,10 @@ function temporalAuthoringCharts(dashboard) {
       .filter(([role]) => role !== member?.timeRole)
       .flatMap(([, binding]) => bindingFields(binding))
       .filter((field) => field && field !== timeField);
-    const variables = valueFields.map((field) => ({
-      id: field,
-      label: field,
-      observations: rows.map((row) => ({
-        epochMs: parseEpoch(row?.[timeField]),
-        value: row?.[field],
-      })).filter(({ epochMs }) => Number.isFinite(epochMs)),
-    }));
+    const cacheKey = JSON.stringify([chart.sourceId, timeField, valueFields]);
+    const variables = variableCache.get(cacheKey)
+      ?? buildTemporalChartVariables(rows, timeField, valueFields, parseEpoch);
+    variableCache.set(cacheKey, variables);
     return {
       id: chart.id,
       title: chart.title,
@@ -760,6 +800,7 @@ function temporalAuthoringCharts(dashboard) {
       sectionLabel: dashboard.pages?.find(({ id }) => id === placement.pageId)
         ?.sections?.find(({ id }) => id === placement.sectionId)?.title ?? placement.sectionId,
       interpolationAllowed: chart.interaction?.timeSync?.interpolationAllowed === true,
+      chronoGroupMemberships: membershipLists.get(chart.id) ?? [],
       variables,
       sourceChart: chart,
       timeRole: member?.timeRole ?? temporalRoleName(chart.roles),
@@ -768,10 +809,9 @@ function temporalAuthoringCharts(dashboard) {
 }
 
 function initialScene(dashboard, preferredPageId) {
-  if (dashboard.scenes?.[0]) return structuredClone(dashboard.scenes[0]);
   const group = dashboard.chronoGroups?.[0];
   const placements = collectChartPlacements(dashboard);
-  const memberIds = new Set((group?.members ?? []).map(({ chartId }) => chartId));
+  const memberIds = new Set(group?.chartIds ?? (group?.members ?? []).map(({ chartId }) => chartId));
   const eligible = placements.filter(({ chart, pageId }) => (
     memberIds.has(chart.id) && (!preferredPageId || pageId === preferredPageId)
   ));
@@ -797,7 +837,7 @@ function initialScene(dashboard, preferredPageId) {
     members: chartIds.map((chartId) => ({ chartId, width: 2 })),
     present: {
       chartIds,
-      layout: ({ 1: "single", 2: "split", 3: "trio", 4: "quad" })[chartIds.length] ?? "single",
+      layout: ({ 1: "single", 2: "vertical-divider", 3: "large-left", 4: "grid-2x2" })[chartIds.length] ?? "single",
     },
     audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
   };
@@ -814,7 +854,7 @@ function sceneValidationContext(dashboard) {
 
 function sceneEligibleCharts(dashboard, charts, scene) {
   const group = dashboard.chronoGroups?.find(({ id }) => id === scene?.chronoGroupId);
-  const memberIds = new Set((group?.members ?? []).map(({ chartId }) => chartId));
+  const memberIds = new Set(group?.chartIds ?? (group?.members ?? []).map(({ chartId }) => chartId));
   return charts.filter((chart) => memberIds.has(chart.id) && chart.pageId === scene?.pageId);
 }
 

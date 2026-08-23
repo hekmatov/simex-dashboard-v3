@@ -31,22 +31,27 @@ function LedgerRegion({ title, rows, empty, disabled, onToggle, needsAttention =
 function LedgerRecord({ row, disabled, onToggle }) {
   return (
     <li data-chart-id={row.chartId} data-status={row.needsAttention ? "needs-attention" : "available"}>
-      <header>
+      <details open={row.selected || row.needsAttention}>
+        <summary>
+          <span><strong>{row.label}</strong><small>{row.pageLabel} · {row.sectionLabel}</small></span>
+          <span>{row.statusText}</span>
+        </summary>
+      <div className="availability-record__body">
         <label className="choice-control-row">
           <input className="choice-control" type="checkbox" checked={row.selected} disabled={disabled} onChange={(event) => onToggle?.(row.chartId, event.target.checked)} />
-          <strong>{row.label}</strong>
+          <strong>{row.selected ? "Included in this Chrono Group" : "Include in this Chrono Group"}</strong>
         </label>
-        <span>{row.pageLabel} · {row.sectionLabel}</span>
-      </header>
-      <p role="status">{row.statusText}</p>
-      <ul aria-label={`${row.label} variable availability`}>
+        <p><strong>Other Chrono Groups:</strong> {row.otherGroupNames?.join(", ") || "None"}</p>
+      <ul className="availability-calendar" aria-label={`${row.label} variable availability`}>
         {row.variables.map((variable) => <li key={variable.variableId}>
           <span>{variable.label}</span>
           <span>{variable.inPeriodCount} in period</span>
           <span>{formatEpoch(variable.earliestEpochMs)} to {formatEpoch(variable.latestEpochMs)}</span>
-          <span className="availability-ticks" aria-label={`${variable.inPeriodCount} observation ticks`}>{variable.ticks?.map((tick) => <i key={tick} title={formatEpoch(tick)} />)}</span>
+          <span className="availability-ticks" aria-label={`${variable.inPeriodCount} observation ticks`}>{variable.ticks?.map((tick) => <i key={tick} title={formatEpoch(tick)} style={{ "--availability-position": `${tickPosition(tick, row)}%` }} />)}</span>
         </li>)}
       </ul>
+      </div>
+      </details>
     </li>
   );
 }
@@ -55,4 +60,10 @@ function formatEpoch(epochMs) {
   return Number.isFinite(epochMs)
     ? new Date(epochMs).toISOString().slice(0, 10)
     : "No observations";
+}
+
+function tickPosition(epochMs, row) {
+  const span = row.periodEndEpochMs - row.periodStartEpochMs;
+  if (!Number.isFinite(span) || span <= 0) return 0;
+  return Math.max(0, Math.min(100, ((epochMs - row.periodStartEpochMs) / span) * 100));
 }
