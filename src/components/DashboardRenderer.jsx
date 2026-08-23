@@ -1229,7 +1229,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onRemove={() => removePanel(selectedPlacement.panelId)}
     />
   ) : null;
-  const buildOverlay = editMode ? (
+  const buildWorkspace = editMode ? (
     <BuildWorkspace
       key={buildTreeResetGeneration}
       themeProjection={themeProjection}
@@ -1315,7 +1315,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onAddSection: addSection,
           onAddChart: openChartWizard,
         } : null}
-        buildOverlay={buildOverlay}
+        buildWorkspace={buildWorkspace}
         displayState={displayState}
         iconLanguageStyles={iconLanguageStyles}
         geoDataSources={geoDataSources}

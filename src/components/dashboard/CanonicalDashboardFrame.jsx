@@ -6,6 +6,7 @@ export default function CanonicalDashboardFrame({
   pageId,
   buildPanelOpen = false,
   dashboardHeader,
+  workspaceControls = null,
   pageContent,
   overlayLayer,
   footer,
@@ -19,6 +20,9 @@ export default function CanonicalDashboardFrame({
       data-build-panel-open={mode === "build" ? String(buildPanelOpen) : undefined}
     >
       <div className="canonical-dashboard-header">{dashboardHeader}</div>
+      {workspaceControls ? (
+        <div className="canonical-dashboard-workspace-controls">{workspaceControls}</div>
+      ) : null}
       <div className="canonical-dashboard-content">{pageContent}</div>
       {footer}
       {overlayLayer && <div className="canonical-dashboard-overlay">{overlayLayer}</div>}

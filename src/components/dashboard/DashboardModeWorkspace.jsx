@@ -15,7 +15,7 @@ export default function DashboardModeWorkspace({
   dashboard,
   buildPanelOpen = false,
   buildState = null,
-  buildOverlay = null,
+  buildWorkspace = null,
   displayState,
   iconLanguageStyles,
   geoDataSources,
@@ -99,6 +99,7 @@ export default function DashboardModeWorkspace({
         buildPanelOpen={buildPanelOpen}
         pageId={activePage?.id}
         dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
+        workspaceControls={buildMode ? buildWorkspace : null}
         pageContent={(
           <div className={buildMode ? "canonical-build-content" : "canonical-view-content"}>
             <PlaybackSurface
@@ -127,7 +128,7 @@ export default function DashboardModeWorkspace({
           </div>
         )}
         footer={<CanonicalDashboardFooter dashboard={dashboard} />}
-        overlayLayer={buildMode ? buildOverlay : viewOverlay}
+        overlayLayer={buildMode ? null : viewOverlay}
       />
     </div>
   );
