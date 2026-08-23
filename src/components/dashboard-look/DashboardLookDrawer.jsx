@@ -14,6 +14,38 @@ const APPEARANCE_OPTIONS = Object.freeze([
   Object.freeze({ value: "light", label: "Light", iconId: "appearanceLight" }),
   Object.freeze({ value: "dark", label: "Dark", iconId: "appearanceDark" }),
 ]);
+const PROFILE_SAMPLE_CACHE = new Map();
+
+export function dashboardLookProfileSamples(appearancePreference = "system") {
+  const key = appearancePreference;
+  if (PROFILE_SAMPLE_CACHE.has(key)) return PROFILE_SAMPLE_CACHE.get(key);
+  const samples = Object.freeze(DASHBOARD_COLOR_PROFILES.map((profile) => Object.freeze({
+    profile,
+    sample: resolveDashboardTheme({
+      globalStyles: {
+        dashboardColorProfile: profile.id,
+        chartColorMode: "profile",
+      },
+      appearancePreference,
+    }),
+  })));
+  PROFILE_SAMPLE_CACHE.set(key, samples);
+  return samples;
+}
+
+export function DashboardLookPersistenceFlash({ message = "" }) {
+  if (!message) return null;
+  return (
+    <div
+      className="dashboard-look-persistence-flash"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {message}
+    </div>
+  );
+}
 
 function AppearanceIcon({ iconId }) {
   if (iconId === "auto") return <SimExIcon iconId="auto" size={20} />;
@@ -52,6 +84,7 @@ export default function DashboardLookDrawer({
   if (!open || !saved || !preview) return null;
   const busy = savingScope !== "";
   const surface = resolveDashboardLookSurfaceAttributes(preview);
+  const profileSamples = dashboardLookProfileSamples(preview.appearancePreference);
   const update = (field, value) => onPreviewChange?.({ ...preview, [field]: value });
 
   return (
@@ -88,7 +121,7 @@ export default function DashboardLookDrawer({
         </header>
 
         <div className="look-drawer-scroll">
-          <fieldset className="look-control-section look-appearance-section" disabled={busy}>
+          <fieldset className="look-control-section look-appearance-section">
             <legend>Appearance</legend>
             <div className="look-appearance-options">
               {APPEARANCE_OPTIONS.map(({ value, label, iconId }) => (
@@ -107,7 +140,7 @@ export default function DashboardLookDrawer({
             </div>
           </fieldset>
 
-          <fieldset className="look-control-section" disabled={busy}>
+          <fieldset className="look-control-section">
             <legend>Visual style</legend>
             <div className="look-choice-list">
               {DASHBOARD_STYLES.map((style) => (
@@ -125,17 +158,10 @@ export default function DashboardLookDrawer({
             </div>
           </fieldset>
 
-          <fieldset className="look-control-section" disabled={busy}>
+          <fieldset className="look-control-section">
             <legend>Colour profile</legend>
             <div className="look-profile-grid">
-              {DASHBOARD_COLOR_PROFILES.map((profile) => {
-                const sample = resolveDashboardTheme({
-                  globalStyles: {
-                    dashboardColorProfile: profile.id,
-                    chartColorMode: "profile",
-                  },
-                  appearancePreference: preview.appearancePreference,
-                });
+              {profileSamples.map(({ profile, sample }) => {
                 return (
                   <label className="look-profile-option" data-profile-option={profile.id} key={profile.id}>
                     <input
@@ -159,7 +185,7 @@ export default function DashboardLookDrawer({
             </div>
           </fieldset>
 
-          <fieldset className="look-control-section" disabled={busy}>
+          <fieldset className="look-control-section">
             <legend>Chart colors</legend>
             <div className="look-segmented-options look-chart-color-options">
               {[

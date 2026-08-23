@@ -278,6 +278,22 @@
   color: var(--simex-error);
 }
 
+.dashboard-look-persistence-flash {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-left: 5px solid var(--simex-warning);
+  bottom: max(18px, env(safe-area-inset-bottom));
+  box-shadow: var(--simex-shadow-elevated);
+  color: var(--simex-text-strong);
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 420;
+}
+
 .look-drawer-footer button:last-child {
   grid-column: 1 / -1;
 }

@@ -1,3 +1,6 @@
 import "../../styles/dashboard-look.css";
 
-export { default } from "./DashboardLookDrawer.jsx";
+export {
+  DashboardLookPersistenceFlash,
+  default,
+} from "./DashboardLookDrawer.jsx";

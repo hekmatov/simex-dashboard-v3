@@ -18,25 +18,42 @@ export function createSerializedDashboardCommitController({
     return result;
   };
 
+  const mutateWithCommit = (mutator, commitOperation) => {
+    if (typeof mutator !== "function") {
+      return Promise.reject(new TypeError("Dashboard mutation must be a function."));
+    }
+    if (typeof commitOperation !== "function") {
+      return Promise.reject(new TypeError("A dashboard commit function is required."));
+    }
+    return enqueue(async () => {
+      const candidate = cloneDashboard(current);
+      const returned = await mutator(candidate);
+      const next = returned === undefined ? candidate : returned;
+      const committed = await commitOperation(cloneDashboard(next));
+      current = cloneDashboard(committed);
+      return cloneDashboard(current);
+    });
+  };
+
   return Object.freeze({
     mutate(mutator) {
-      if (typeof mutator !== "function") {
-        return Promise.reject(new TypeError("Dashboard mutation must be a function."));
-      }
-      return enqueue(async () => {
-        const candidate = cloneDashboard(current);
-        const returned = await mutator(candidate);
-        const next = returned === undefined ? candidate : returned;
-        const committed = await commit(cloneDashboard(next));
-        current = cloneDashboard(committed);
-        return cloneDashboard(current);
-      });
+      return mutateWithCommit(mutator, commit);
+    },
+    mutateWithCommit(mutator, commitOperation) {
+      return mutateWithCommit(mutator, commitOperation);
     },
     replace(dashboard) {
       const replacement = cloneDashboard(dashboard);
       return enqueue(async () => {
         const committed = await commit(replacement);
         current = cloneDashboard(committed);
+        return cloneDashboard(current);
+      });
+    },
+    adopt(dashboard) {
+      const replacement = cloneDashboard(dashboard);
+      return enqueue(() => {
+        current = cloneDashboard(replacement);
         return cloneDashboard(current);
       });
     },
@@ -54,6 +71,13 @@ export function createSerializedDashboardCommitController({
       disposed = true;
     },
   });
+}
+
+export function awaitDashboardCommitQueue(controller) {
+  if (typeof controller?.whenIdle !== "function") {
+    return Promise.reject(new TypeError("A dashboard commit controller is required."));
+  }
+  return controller.whenIdle();
 }
 
 export function createDebouncedDashboardEdits({

@@ -567,9 +567,6 @@ export default function App() {
         },
       });
       persistDashboardStorage(JSON.stringify(stored, null, 2));
-      const loaded = applyDashboardLookConfiguration(nextConfig, dashboardRef.current);
-      dashboardRef.current = loaded;
-      setDashboard(loaded);
       setError(null);
       setOperationError("");
       return nextConfig;
@@ -704,6 +701,13 @@ export default function App() {
         }, current);
         dashboardRef.current = next;
         setDashboard(next);
+        return next;
+      },
+      onCanonicalize: (next) => {
+        if (!next) return;
+        void ensureDashboardCommitController(next).adopt(
+          configurationForPortableUse(next),
+        );
       },
       onClose: () => {
         setLookDrawerOpen(false);

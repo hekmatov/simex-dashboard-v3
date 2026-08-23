@@ -11,12 +11,14 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 let Drawer;
+let drawerModule = {};
 let lookModel = {};
 try {
-  [{ default: Drawer }, lookModel] = await Promise.all([
+  [drawerModule, lookModel] = await Promise.all([
     vite.ssrLoadModule("/src/components/dashboard-look/DashboardLookDrawer.jsx"),
     vite.ssrLoadModule("/src/theme/dashboardLookDraft.js"),
   ]);
+  Drawer = drawerModule.default;
 } catch (error) {
   if (error?.code !== "ERR_LOAD_URL" && error?.code !== "ENOENT") throw error;
 }
@@ -131,4 +133,169 @@ test("system appearance keeps the already-resolved dashboard appearance", () => 
     colorProfile: "evidence-ledger/brighter-vellum",
     resolvedAppearance: "dark",
   });
+});
+
+test("rapid dashboard look previews coalesce into one latest-value commit", async () => {
+  assert.equal(typeof lookModel.createDashboardLookCommitScheduler, "function");
+  if (typeof lookModel.createDashboardLookCommitScheduler !== "function") return;
+  let nextTimerId = 0;
+  const timers = new Map();
+  const timerTarget = {
+    setTimeout(callback, delay) {
+      nextTimerId += 1;
+      timers.set(nextTimerId, { callback, delay });
+      return nextTimerId;
+    },
+    clearTimeout(timerId) {
+      timers.delete(timerId);
+    },
+  };
+  const committed = [];
+  const scheduler = lookModel.createDashboardLookCommitScheduler({
+    delay: 150,
+    timerTarget,
+    onCommit: async (value) => committed.push(value),
+  });
+
+  scheduler.schedule({ ...saved, dashboardStyle: "signal-instrument" });
+  scheduler.schedule(preview);
+
+  assert.equal(committed.length, 0);
+  assert.equal(timers.size, 1);
+  const [{ callback, delay }] = timers.values();
+  assert.equal(delay, 150);
+  await callback();
+  assert.deepEqual(committed, [preview]);
+});
+
+test("closing Dashboard Look dismisses immediately while the latest selection flushes in background", async () => {
+  assert.equal(typeof lookModel.closeDashboardLookInBackground, "function");
+  if (typeof lookModel.closeDashboardLookInBackground !== "function") return;
+  let releaseCommit;
+  const committed = [];
+  const scheduler = lookModel.createDashboardLookCommitScheduler({
+    delay: 150,
+    onCommit: (value) => new Promise((resolve) => {
+      committed.push(value);
+      releaseCommit = resolve;
+    }),
+  });
+  const latest = {
+    ...preview,
+    dashboardStyle: "humanist-standard",
+    dashboardColorProfile: "humanist-standard/common-ground",
+  };
+  let closed = false;
+  let applied = false;
+  let canonicalLook = null;
+  scheduler.schedule(latest);
+
+  const closeResult = lookModel.closeDashboardLookInBackground({
+    scheduler,
+    onApply: () => {
+      applied = true;
+      return latest;
+    },
+    onCanonicalize: (value) => {
+      assert.equal(closed, false);
+      canonicalLook = value;
+    },
+    onClose: () => {
+      assert.equal(applied, true);
+      assert.strictEqual(canonicalLook, latest);
+      closed = true;
+    },
+  });
+
+  assert.equal(closeResult, undefined);
+  assert.equal(applied, true);
+  assert.strictEqual(canonicalLook, latest);
+  assert.equal(closed, true);
+  await Promise.resolve();
+  assert.deepEqual(committed, [latest]);
+  releaseCommit();
+  await scheduler.flush();
+});
+
+test("a failed background appearance save renders a non-blocking session-only flash", () => {
+  assert.equal(typeof drawerModule.DashboardLookPersistenceFlash, "function");
+  if (typeof drawerModule.DashboardLookPersistenceFlash !== "function") return;
+  const html = renderToStaticMarkup(React.createElement(
+    drawerModule.DashboardLookPersistenceFlash,
+    { message: "Couldn’t save dashboard appearance. Your selection remains active for this session." },
+  ));
+
+  assert.match(html, /role="status"/);
+  assert.match(html, /dashboard-look-persistence-flash/);
+  assert.match(html, /selection remains active for this session/i);
+  assert.doesNotMatch(html, /<button/);
+});
+
+test("look-only commits retain the loaded dashboard runtime and canonical content identities", () => {
+  assert.equal(typeof lookModel.applyDashboardLookConfiguration, "function");
+  if (typeof lookModel.applyDashboardLookConfiguration !== "function") return;
+  const pages = [{ id: "overview", sections: [] }];
+  const datasetProfiles = { cases: { fields: { date: { type: "date" } } } };
+  const loadedData = { cases: [{ date: "2026-08-22", value: 4 }] };
+  const dataSourceStates = { cases: { status: "ready" } };
+  const chartDataStates = { trend: { status: "ready" } };
+  const liveDashboard = {
+    configVersion: 3,
+    pages,
+    datasetProfiles,
+    loadedData,
+    dataSourceStates,
+    chartDataStates,
+    globalStyles: { dashboardStyle: "evidence-ledger" },
+  };
+  const committedConfiguration = {
+    ...structuredClone(liveDashboard),
+    globalStyles: {
+      dashboardStyle: "humanist-standard",
+      dashboardColorProfile: "humanist-standard/common-ground",
+    },
+  };
+  delete committedConfiguration.loadedData;
+  delete committedConfiguration.dataSourceStates;
+  delete committedConfiguration.chartDataStates;
+
+  const next = lookModel.applyDashboardLookConfiguration(
+    committedConfiguration,
+    liveDashboard,
+  );
+
+  assert.strictEqual(next.pages, pages);
+  assert.strictEqual(next.datasetProfiles, datasetProfiles);
+  assert.strictEqual(next.loadedData, loadedData);
+  assert.strictEqual(next.dataSourceStates, dataSourceStates);
+  assert.strictEqual(next.chartDataStates, chartDataStates);
+  assert.deepEqual(next.globalStyles, committedConfiguration.globalStyles);
+  assert.deepEqual(liveDashboard.globalStyles, { dashboardStyle: "evidence-ledger" });
+});
+
+test("background look persistence reports busy state without locking profile and style choices", () => {
+  const html = renderToStaticMarkup(React.createElement(Drawer, {
+    open: true,
+    saved,
+    preview,
+    savingScope: "auto",
+    onCancel: () => {},
+    onPreviewChange: () => {},
+  }));
+
+  assert.match(html, /aria-busy="true"/);
+  assert.doesNotMatch(html, /<fieldset[^>]*disabled/);
+});
+
+test("colour-profile swatch projections are reused while appearance is unchanged", () => {
+  assert.equal(typeof drawerModule.dashboardLookProfileSamples, "function");
+  if (typeof drawerModule.dashboardLookProfileSamples !== "function") return;
+
+  const first = drawerModule.dashboardLookProfileSamples("light");
+  const second = drawerModule.dashboardLookProfileSamples("light");
+  const dark = drawerModule.dashboardLookProfileSamples("dark");
+
+  assert.strictEqual(second, first);
+  assert.notStrictEqual(dark, first);
+  assert.equal(first.length, 15);
 });
