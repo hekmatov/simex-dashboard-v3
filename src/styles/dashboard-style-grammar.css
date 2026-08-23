@@ -789,7 +789,7 @@
   color: var(--simex-text-muted);
 }
 
-.app-frame .chart-target-collection-view .collection-carousel-controls .simex-icon-control {
+.app-frame .chart-target-collection-view :is(.collection-carousel-controls, .collection-header-icon-group) .simex-icon-control {
   background: var(--simex-surface-panel);
   border-color: var(--simex-border-subtle);
   color: var(--simex-text-strong);

@@ -12,9 +12,11 @@ export default function TargetCollectionChartView({
   chart = {},
   provenance,
   accessibilityEnabled = false,
+  interactionMode = "active",
 }) {
   const titleId = React.useId();
   const descriptionId = React.useId();
+  const controlsPortalId = `collection-controls-${React.useId()}`;
   const title = chart.title || "Target status";
   const description = chart.description || "Target status by entity.";
   const items = Array.isArray(model.items) ? model.items : [];
@@ -29,10 +31,9 @@ export default function TargetCollectionChartView({
       : {}),
     ...titleContainerProps(chart),
   },
-  React.createElement("h3", {
-    id: titleId,
-    className: "chart-view-title",
-  }, title),
+  React.createElement("header", { className: "collection-display-header" },
+    React.createElement("h3", { id: titleId, className: "chart-view-title" }, title),
+    React.createElement("div", { id: controlsPortalId, className: "collection-header-transport-host" })),
   chartDescriptionVisible(chart)
     ? React.createElement("p", {
         id: descriptionId,
@@ -49,6 +50,8 @@ export default function TargetCollectionChartView({
   }, React.createElement(CollectionDisplay, {
     items,
     settings: model.presentation?.collection ?? {},
+    controlsPortalId,
+    interactive: interactionMode !== "passive",
     renderItem: (item) => React.createElement(TargetCollectionItem, {
       item,
       accessibilityEnabled,

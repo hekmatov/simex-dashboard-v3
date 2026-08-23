@@ -1,10 +1,10 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 import CollectionGrid, {
   clampCollectionPage,
   resolveCollectionPage,
 } from "./CollectionGrid.jsx";
-import CollectionPager from "./CollectionPager.jsx";
 import { IconControl } from "../common/SimExIcon.js";
 
 const STATIC_ENVIRONMENT = Object.freeze({
@@ -98,6 +98,8 @@ export default function CollectionCarousel({
   items,
   settings,
   renderItem,
+  controlsPortalId,
+  interactive = true,
 }) {
   const pageSize = settings.rows * settings.columns;
   const pageCount = settings.overflow === "limit"
@@ -138,7 +140,8 @@ export default function CollectionCarousel({
   }, [currentPage, page]);
 
   React.useEffect(() => createCollectionTimer({
-    enabled: pageCount > 1
+    enabled: interactive
+      && pageCount > 1
       && settings.overflow === "autoRotate"
       && !paused
       && !stoppedAtEnd,
@@ -150,6 +153,7 @@ export default function CollectionCarousel({
       settings.carousel.loop,
     )),
   }), [
+    interactive,
     pageCount,
     paused,
     settings.carousel.intervalMs,
@@ -166,6 +170,21 @@ export default function CollectionCarousel({
     ? items.slice(0, pageSize)
     : items.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const canResume = manualPaused || stoppedAtEnd;
+  const previousDisabled = settings.carousel.loop !== true && currentPage <= 0;
+  const nextDisabled = settings.carousel.loop !== true && currentPage >= pageCount - 1;
+  const transport = interactive && pageCount > 1 ? React.createElement(CollectionHeaderTransport, {
+    page: currentPage,
+    pageCount,
+    paused: canResume,
+    previousDisabled,
+    nextDisabled,
+    onPrevious: () => setPage((activePage) => nextCarouselPage(activePage, pageCount, -1, settings.carousel.loop)),
+    onTogglePaused: () => {
+      if (stoppedAtEnd) setPage(0);
+      setManualPaused(!canResume);
+    },
+    onNext: () => setPage((activePage) => nextCarouselPage(activePage, pageCount, 1, settings.carousel.loop)),
+  }) : null;
   return React.createElement("section", {
     className: [
       "collection-display",
@@ -180,12 +199,12 @@ export default function CollectionCarousel({
     "data-collection-loop": settings.carousel.loop,
     "data-collection-pause-on-hover": settings.carousel.pauseOnHover,
     "data-collection-rotation-paused": paused,
-    onMouseEnter: () => setHovered(true),
-    onMouseLeave: () => setHovered(false),
-    onFocusCapture: () => setFocused(true),
-    onBlurCapture: (event) => {
+    onMouseEnter: interactive ? () => setHovered(true) : undefined,
+    onMouseLeave: interactive ? () => setHovered(false) : undefined,
+    onFocusCapture: interactive ? () => setFocused(true) : undefined,
+    onBlurCapture: interactive ? (event) => {
       if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
-    },
+    } : undefined,
   },
   React.createElement(CollectionGrid, {
     items: visibleItems,
@@ -197,33 +216,24 @@ export default function CollectionCarousel({
       if (focusedEntityId === entityId) setFocusedEntityId(null);
     },
   }),
-  pageCount > 1
-    ? React.createElement("div", {
-        className: "collection-carousel-controls",
-      },
-      React.createElement(IconControl, {
-        interactionId: canResume
-          ? "collection.resume-carousel"
-          : "collection.pause-carousel",
-        "aria-label": canResume
-          ? "Resume collection rotation"
-          : "Pause collection rotation",
-        onClick: () => {
-          if (stoppedAtEnd) setPage(0);
-          setManualPaused(!canResume);
-        },
-      }),
-      React.createElement(CollectionPager, {
-        page: currentPage,
-        pageCount,
-        onPageChange: (nextPage) => setPage(clampCollectionPage(
-          nextPage,
-          pageCount,
-        )),
-        className: "collection-carousel-pager",
-        loop: settings.carousel.loop,
-      }))
-    : null);
+  transport ? React.createElement(EmbeddedCollectionTransport, { portalId: controlsPortalId }, transport) : null);
+}
+
+export function CollectionHeaderTransport({ page, pageCount, paused, previousDisabled, nextDisabled, onPrevious, onTogglePaused, onNext, showPlayback = true }) {
+  if (pageCount <= 1) return null;
+  return React.createElement("div", { className: "collection-header-transport", "data-collection-header-transport": true },
+    React.createElement("span", { className: "collection-header-page-dots", role: "status", "aria-live": "polite", "aria-atomic": true, "aria-label": `Collection page ${page + 1} of ${pageCount}` },
+      Array.from({ length: pageCount }, (_, index) => React.createElement("span", { key: index, className: "collection-header-page-dot", "data-collection-page-dot": true, "aria-current": index === page ? "step" : undefined, "aria-hidden": true }))),
+    React.createElement("span", { className: "collection-header-icon-group" },
+      React.createElement(IconControl, { interactionId: "collection.previous-page", "aria-label": "Previous collection page", disabled: previousDisabled, onClick: onPrevious }),
+      showPlayback ? React.createElement(IconControl, { interactionId: paused ? "collection.resume-carousel" : "collection.pause-carousel", "aria-label": paused ? "Resume collection rotation" : "Pause collection rotation", onClick: onTogglePaused }) : null,
+      React.createElement(IconControl, { interactionId: "collection.next-page", "aria-label": "Next collection page", disabled: nextDisabled, onClick: onNext })));
+}
+
+export function EmbeddedCollectionTransport({ portalId, children }) {
+  const [target, setTarget] = React.useState(null);
+  React.useEffect(() => setTarget(portalId && typeof document !== "undefined" ? document.getElementById(portalId) : null), [portalId]);
+  return target ? createPortal(children, target) : children;
 }
 
 function CollectionEmpty() {

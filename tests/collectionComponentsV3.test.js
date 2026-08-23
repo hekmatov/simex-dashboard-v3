@@ -122,7 +122,8 @@ test("carousel SSR is static, accessible, manually operable, and does not alloca
       /\sdisabled=""/,
     );
     assert.match(html, /aria-label="Next collection page"/);
-    assert.match(html, /Page 1 of 2/);
+    assert.match(html, /aria-label="Collection page 1 of 2"/);
+    assert.doesNotMatch(html, />Page 1 of 2</);
     assert.match(html, /aria-live="polite"/);
   } finally {
     globalThis.setInterval = originalSetInterval;
@@ -666,7 +667,8 @@ test("CardChartView delegates repeated cards and preserves card semantics and pr
   assert.match(html, /Facility capacity/);
   assert.match(html, /Current capacity by facility/);
   assert.match(html, /data-collection-layout="fixed"/);
-  assert.match(html, /Page 1 of 2/);
+  assert.match(html, /aria-label="Collection page 1 of 2"/);
+  assert.doesNotMatch(html, />Page 1 of 2</);
   assertTextOrder(html, ["Clinic B", "Clinic C"], "card priority");
   assert.doesNotMatch(html, /Clinic A/);
   assert.match(html, /role="listitem"/);
@@ -690,7 +692,7 @@ test("CardChartView preserves the static single-item card path", () => {
 
   assert.match(html, /class="chart-card-collection"/);
   assert.match(html, /class="chart-card" role="listitem"/);
-  assert.doesNotMatch(html, /collection-display|collection-carousel-controls/);
+  assert.doesNotMatch(html, /data-collection-header-transport|collection-header-page-dot|collection-carousel-controls/);
 });
 
 test("cards distinguish playback time from carried measurement provenance", () => {

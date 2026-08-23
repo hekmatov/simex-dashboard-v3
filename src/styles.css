@@ -2919,6 +2919,84 @@ button.danger {
   font-variant-numeric: tabular-nums;
 }
 
+.collection-display-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.collection-display-header .chart-view-title {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-header-transport-host {
+  flex: 0 1 min(280px, 60%);
+  min-width: 0;
+  width: min(280px, 60%);
+}
+
+.collection-header-transport {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.collection-header-page-dots {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 5px;
+  justify-content: center;
+  min-width: 24px;
+  overflow: hidden;
+}
+
+.collection-header-page-dot {
+  background: var(--simex-border-strong);
+  border-radius: 50%;
+  block-size: 6px;
+  flex: 0 0 6px;
+  inline-size: 6px;
+  opacity: 0.45;
+}
+
+.collection-header-page-dot[aria-current="step"] {
+  background: var(--simex-text-strong);
+  opacity: 1;
+}
+
+.collection-header-icon-group {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.collection-header-icon-group .simex-icon-control {
+  block-size: 44px;
+  inline-size: 44px;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+}
+
+.chart-panel-has-actions .collection-display-header {
+  padding-inline-end: 142px;
+}
+
+@media (max-width: 520px) {
+  .collection-display-header,
+  .collection-header-transport {
+    gap: 4px;
+  }
+}
+
 .collection-empty {
   background: #eaf1f6;
   border-radius: 10px;

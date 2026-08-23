@@ -13,6 +13,8 @@ export default function CollectionDisplay({
   items = [],
   settings = {},
   renderItem,
+  controlsPortalId,
+  interactive = true,
 }) {
   if (typeof renderItem !== "function") {
     throw new Error("Collection renderItem must be a function.");
@@ -68,6 +70,8 @@ export default function CollectionDisplay({
         items: ordered,
         settings: normalized,
         renderItem,
+        controlsPortalId,
+        interactive,
       }));
   }
 
@@ -112,12 +116,14 @@ export default function CollectionDisplay({
       if (focusedEntityId === entityId) setFocusedEntityId(null);
     },
   }),
-  React.createElement(CollectionPager, {
+  interactive ? React.createElement(CollectionPager, {
     page: currentPage,
     pageCount,
     onPageChange: (nextPage) => setPage(clampCollectionPage(
       nextPage,
       pageCount,
     )),
-  }));
+    embedded: Boolean(controlsPortalId),
+    controlsPortalId,
+  }) : null);
 }

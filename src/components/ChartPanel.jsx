@@ -130,14 +130,14 @@ function ChartPanel({
       {editMode && <div className="panel-actions" aria-label={`${chart.title} actions`}>
         {editMode && (
           <>
-            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editControlDisabled} data-build-edit-for={placementId} onClick={() => {
-              if (!editControlDisabled) onEdit?.();
-            }} />
             <IconControl interactionId="shell.start-section" className="secondary" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onStartSection?.();
             }} ariaLabel="Start section here" tooltip="Start section here" />
             <IconControl interactionId="chart.remove" tooltipPlacement="below" disabled={editDisabled} onClick={() => {
               if (!editDisabled) onRemove?.();
+            }} />
+            <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editControlDisabled} data-build-edit-for={placementId} onClick={() => {
+              if (!editControlDisabled) onEdit?.();
             }} />
           </>
         )}

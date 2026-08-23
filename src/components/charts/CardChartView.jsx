@@ -9,7 +9,8 @@ const NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-export default function CardChartView({ model, chart = {}, provenance }) {
+export default function CardChartView({ model, chart = {}, provenance, interactionMode = "active" }) {
+  const controlsPortalId = `collection-controls-${React.useId()}`;
   const title = chart.title || "Chart summary";
   const description = chart.description || "Summary values for this chart.";
   const items = Array.isArray(model.items) ? model.items : [];
@@ -18,7 +19,9 @@ export default function CardChartView({ model, chart = {}, provenance }) {
     "aria-label": title,
     ...titleContainerProps(chart),
   },
-    React.createElement("h3", { className: "chart-view-title" }, title),
+    React.createElement("header", { className: "collection-display-header" },
+      React.createElement("h3", { className: "chart-view-title" }, title),
+      React.createElement("div", { id: controlsPortalId, className: "collection-header-transport-host" })),
     chartDescriptionVisible(chart)
       ? React.createElement("p", { className: "chart-view-description" }, description)
       : null,
@@ -32,6 +35,8 @@ export default function CardChartView({ model, chart = {}, provenance }) {
         : React.createElement(CollectionDisplay, {
             items: collectionItems(items),
             settings: model.presentation?.collection ?? {},
+            controlsPortalId,
+            interactive: interactionMode !== "passive",
             renderItem: (item) => React.createElement(CardItem, {
               item,
               chart,

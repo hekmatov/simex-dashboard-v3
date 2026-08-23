@@ -1,5 +1,6 @@
 import React from "react";
 import { IconControl } from "../common/SimExIcon.js";
+import { CollectionHeaderTransport, EmbeddedCollectionTransport } from "./CollectionCarousel.jsx";
 
 export function nextManualCollectionPage(
   page,
@@ -24,10 +25,25 @@ export default function CollectionPager({
   onPageChange,
   className = "",
   loop = false,
+  embedded = false,
+  controlsPortalId,
 }) {
   if (pageCount <= 1) return null;
   const previousDisabled = loop !== true && page <= 0;
   const nextDisabled = loop !== true && page >= pageCount - 1;
+  if (embedded) {
+    return React.createElement(EmbeddedCollectionTransport, { portalId: controlsPortalId },
+      React.createElement(CollectionHeaderTransport, {
+        page,
+        pageCount,
+        paused: true,
+        previousDisabled,
+        nextDisabled,
+        showPlayback: false,
+        onPrevious: () => onPageChange(nextManualCollectionPage(page, pageCount, -1, loop)),
+        onNext: () => onPageChange(nextManualCollectionPage(page, pageCount, 1, loop)),
+      }));
+  }
   return React.createElement("nav", {
     className: `collection-pager${className ? ` ${className}` : ""}`,
     "aria-label": "Collection pages",
