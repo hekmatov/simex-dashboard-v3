@@ -11,7 +11,7 @@ const PROTECTED_SELECTORS = [
   ".dashboard-command-crown",
   ".build-header",
   ".build-page-tabs",
-  ".build-command-area",
+  ".build-command-header",
   ".build-canvas-toolbar",
 ];
 

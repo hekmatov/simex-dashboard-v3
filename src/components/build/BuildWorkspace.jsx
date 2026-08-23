@@ -2,6 +2,7 @@ import React from "react";
 import { createPortal } from "react-dom";
 
 import ModalFocusScope from "../common/ModalFocusScope.jsx";
+import BuildCommandHeader from "./BuildCommandHeader.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
 import {
@@ -591,72 +592,32 @@ export default function BuildWorkspace({
 
   return (
     <div
-      id="build-authoring-panel"
-      className="build-authoring-layer"
+      className="build-workspace-authoring-root"
       data-build-draft-coordinator="live"
-          data-build-auxiliary-contract="context-shelf"
-          data-device-layout={deviceLayout}
-          data-open={buildPanelOpen ? "true" : "false"}
-          aria-hidden={buildPanelOpen ? undefined : "true"}
-          inert={!buildPanelOpen}
-        >
-          <section className="build-command-area" aria-label="Build commands">
-            <div className="build-command-title">
-              <p className="eyebrow">Workspace</p>
-              <strong>Build commands</strong>
-            </div>
-            <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
-            <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
-            <div className="build-draft-slots" aria-label="Build draft status">
-              <span data-draft-slot="layout" data-draft-status={draftCoordinator.slots.layout?.status ?? "clean"}>
-                <strong>Layout changes</strong>
-                <small>{draftCoordinator.slots.layout?.status ?? "clean"}</small>
-              </span>
-              <span data-draft-slot="chart" data-draft-status={draftCoordinator.slots.chart?.status ?? "clean"}>
-                <strong>Chart changes</strong>
-                <small>{draftCoordinator.slots.chart?.status ?? "clean"}</small>
-              </span>
-            </div>
-            <button type="button" className="secondary" data-unit-orbit-preserve-open disabled={!draftCoordinator.slots.layout || draftCoordinator.slots.layout.status === "clean" || draftCoordinator.slots.layout.status === "saving"} onClick={onSaveLayout}>Save Layout Changes</button>
-            <button
-              type="button"
-              className="secondary"
-              data-unit-orbit-preserve-open
-              disabled={!draftCoordinator.slots.layout || draftCoordinator.slots.layout.status === "clean" || draftCoordinator.slots.layout.status === "saving"}
-              onClick={() => {
-                onDiscardLayout?.();
-                revealUnitOrbitAnchor(chartEditorPlacementId);
-              }}
-            >
-              Discard Layout Changes
-            </button>
-            <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>{chartDraftAvailable ? "Resume chart draft" : "Add chart"}</button>
-            <button type="button" className="secondary" data-context-shelf-entry="structure" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
-            <button type="button" className="secondary" data-context-shelf-entry="chrono-group" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("chrono-group")}>Chrono Studio</button>
-            <button type="button" className="secondary" data-context-shelf-entry="scene" data-unit-orbit-preserve-open disabled={auxiliaryLocked} onClick={() => openAuxiliary("scene")}>Scene Studio</button>
-          </section>
-          {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}
-          {chronoGroupDraftSuspended && (
-            <aside className="build-unfinished-draft" aria-label="Unfinished Chrono Group draft">
-              <span><strong>Unfinished Chrono Group draft</strong><small>Your stage and changes are preserved in this Build session.</small></span>
-              <button type="button" className="secondary" onClick={() => openAuxiliary("chrono-group")}>Resume Chrono Group draft</button>
-            </aside>
-          )}
-          {sceneDraftSuspended && (
-            <aside className="build-unfinished-draft" aria-label="Unfinished Scene draft">
-              <span><strong>Unfinished Scene draft</strong><small>Your stage and changes are preserved in this Build session.</small></span>
-              <button type="button" className="secondary" onClick={() => openAuxiliary("scene")}>Resume Scene draft</button>
-            </aside>
-          )}
-          {parkedAuxiliaries.length > 0 && (
-            <nav className="build-context-shelf" aria-label="Parked Build work">
-              {parkedAuxiliaries.map(({ surface }) => (
-                <button key={surface} type="button" className="secondary" onClick={() => resumeAuxiliary(surface)}>
-                  Resume {auxiliaryLabel(surface)}
-                </button>
-              ))}
-            </nav>
-          )}
+      data-build-auxiliary-contract="context-shelf"
+      data-device-layout={deviceLayout}
+    >
+          <BuildCommandHeader
+            draftCoordinator={draftCoordinator}
+            locked={locked}
+            auxiliaryLocked={auxiliaryLocked}
+            chartDraftAvailable={chartDraftAvailable}
+            operationError={operationError}
+            chronoGroupDraftSuspended={chronoGroupDraftSuspended}
+            sceneDraftSuspended={sceneDraftSuspended}
+            parkedAuxiliaries={parkedAuxiliaries}
+            onFinish={onFinish}
+            onReset={onReset}
+            onSaveLayout={onSaveLayout}
+            onDiscardLayout={() => {
+              onDiscardLayout?.();
+              revealUnitOrbitAnchor(chartEditorPlacementId);
+            }}
+            onAddChart={() => onAddChart?.()}
+            onOpenAuxiliary={openAuxiliary}
+            onResumeAuxiliary={resumeAuxiliary}
+            getAuxiliaryLabel={auxiliaryLabel}
+          />
           {activeAuxiliary && typeof document !== "undefined" && createPortal((
             <aside
               className="build-authoring-auxiliary"
@@ -701,11 +662,19 @@ export default function BuildWorkspace({
               )}
             </aside>
           ), document.body)}
-          <section className="build-canvas-toolbar" aria-label="Build regions">
-            <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
-            <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>
-          </section>
-          <section className="build-region-grid">
+          <aside
+            id="dashboard-map-panel"
+            className="dashboard-map-panel"
+            aria-label="Dashboard map"
+            data-open={buildPanelOpen ? "true" : "false"}
+            aria-hidden={buildPanelOpen ? undefined : "true"}
+            inert={!buildPanelOpen}
+          >
+            <section className="build-canvas-toolbar" aria-label="Build regions">
+              <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
+              <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>
+            </section>
+            <section className="build-region-grid">
             <ModalFocusScope
               as="section"
               open={tablet && openSheet === "structure"}
@@ -730,7 +699,8 @@ export default function BuildWorkspace({
               {tablet && openSheet === "inspector" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
               {inspector}
             </ModalFocusScope>
-          </section>
+            </section>
+          </aside>
           {chartEditorPlacementId && chartEditor && (
             <UnitOrbit
               themeProjection={themeProjection}

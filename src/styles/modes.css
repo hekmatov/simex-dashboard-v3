@@ -184,11 +184,11 @@
 }
 
 .build-header,
-.build-command-area,
+.build-command-header,
 .build-page-tabs,
 .build-canvas-toolbar {
-  background: rgb(255 255 255 / 94%);
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
 }
 
@@ -217,7 +217,6 @@
 }
 
 .build-page-tabs,
-.build-command-area,
 .build-canvas-toolbar,
 .build-structure-actions,
 .build-structure-row,
@@ -229,9 +228,9 @@
 }
 
 .build-page-tabs,
-.build-command-area {
+.build-command-header {
   min-height: 52px;
-  padding: 4px 8px;
+  padding: 10px 12px;
 }
 
 .build-page-navigation {
@@ -352,21 +351,62 @@
   justify-content: flex-end;
 }
 
-.build-command-area {
-  gap: 10px;
+.build-workspace-authoring-root,
+.build-command-header {
+  min-width: 0;
 }
 
-.build-command-title {
-  margin-right: 4px;
+.build-command-header {
+  display: grid;
+  gap: 8px;
 }
 
-.build-command-title p,
-.build-command-title strong {
-  display: block;
+.build-command-groups {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
 }
 
-.build-command-title p {
-  margin: 0;
+.build-command-group {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.build-command-group--layout {
+  flex: 1 1 420px;
+  min-width: min(100%, 420px);
+}
+
+.build-command-group--session {
+  margin-inline-start: auto;
+}
+
+.build-command-group__label {
+  color: var(--simex-text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.build-command-group__controls,
+.build-command-status-rail {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.build-command-group button,
+.build-command-status-rail button {
+  min-height: 44px;
+}
+
+.build-command-status-rail {
+  border-top: 1px solid var(--simex-border-subtle);
+  flex-wrap: wrap;
+  padding-top: 8px;
 }
 
 .build-page-command-form,
@@ -423,7 +463,7 @@
   margin-left: auto;
 }
 
-.build-command-area .device-layout-control {
+.build-command-header .device-layout-control {
   margin: 0;
 }
 
@@ -843,9 +883,24 @@
   }
 
   .build-header,
-  .build-command-area {
+  .build-command-groups {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .build-command-group,
+  .build-command-group--layout {
+    flex-basis: auto;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .build-command-group--session {
+    margin-inline-start: 0;
+  }
+
+  .build-command-group__controls {
+    flex-wrap: wrap;
   }
 
   .build-appearance-controls {
@@ -1564,7 +1619,7 @@
 }
 
 .view-page-actions,
-.build-authoring-layer,
+.dashboard-map-panel,
 .canonical-dashboard-overlay :is(button, input, select, textarea, a, [tabindex]) {
   pointer-events: auto;
 }
@@ -1579,7 +1634,7 @@
   z-index: 40;
 }
 
-.build-authoring-layer {
+.dashboard-map-panel {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
   box-shadow: 0 14px 40px rgb(8 34 74 / 22%);
@@ -1596,12 +1651,12 @@
   z-index: 40;
 }
 
-.build-authoring-layer .build-region-grid {
+.dashboard-map-panel .build-region-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
 }
 
-.build-authoring-layer .build-side-sheet {
+.dashboard-map-panel .build-side-sheet {
   display: block;
   max-height: none;
 }
@@ -1657,7 +1712,7 @@
 /* Build authoring drawer: closed geometry remains canonical; the open desktop
    state compresses the frame into the remaining viewport so its responsive
    rules can reflow the chart canvas normally. */
-.build-authoring-layer {
+.dashboard-map-panel {
   opacity: 0;
   pointer-events: none;
   transform: translateX(calc(100% + 24px));
@@ -1665,7 +1720,7 @@
   visibility: hidden;
 }
 
-.build-authoring-layer[data-open="true"] {
+.dashboard-map-panel[data-open="true"] {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(0);
@@ -1697,7 +1752,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .build-authoring-layer,
+  .dashboard-map-panel,
   .canonical-dashboard-frame.build-workspace {
     transition: none;
   }
