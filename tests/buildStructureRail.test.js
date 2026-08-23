@@ -1,1 +1,32 @@
-import assert from "node:assert/strict"; import test from "node:test"; import React from "react"; import { renderToStaticMarkup } from "react-dom/server"; import { createServer } from "vite"; const vite=await createServer({root:process.cwd(),appType:"custom",logLevel:"silent",server:{middlewareMode:true}}); const module=await vite.ssrLoadModule("/src/components/build/BuildStructureRail.jsx"); await vite.close(); test("Structure tree exposes selected roving item and separate Chrono Groups",()=>{const html=renderToStaticMarkup(React.createElement(module.default,{dashboard:{pages:[{id:"one",label:"One",sections:[{id:"overview",title:"Overview",panels:[]}]}],chronoGroups:[{id:"period",name:"Period"}]},selection:{kind:"page",pageId:"one"}}));assert.match(html,/build-tree-row is-selected/);assert.match(html,/role="treeitem"[\s\S]*tabindex="0"/);assert.match(html,/>Chrono Groups</);assert.match(html,/>Period</);assert.match(html,/build-tree-group/);});
+import assert from "node:assert/strict";
+import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createServer } from "vite";
+
+const vite = await createServer({
+  root: process.cwd(),
+  appType: "custom",
+  logLevel: "silent",
+  server: { middlewareMode: true },
+});
+const { default: BuildStructureRail } = await vite.ssrLoadModule(
+  "/src/components/build/BuildStructureRail.jsx",
+);
+await vite.close();
+
+test("Structure tree exposes the selected roving item without temporal library content", () => {
+  const html = renderToStaticMarkup(React.createElement(BuildStructureRail, {
+    dashboard: {
+      pages: [{ id: "one", label: "One", sections: [{ id: "overview", title: "Overview", panels: [] }] }],
+      chronoGroups: [{ id: "period", name: "Period" }],
+    },
+    selection: { kind: "page", pageId: "one" },
+  }));
+
+  assert.match(html, /build-tree-row is-selected/);
+  assert.match(html, /role="treeitem"[\s\S]*tabindex="0"/);
+  assert.match(html, /build-tree-group/);
+  assert.doesNotMatch(html, />Chrono Groups</);
+  assert.doesNotMatch(html, />Period</);
+});

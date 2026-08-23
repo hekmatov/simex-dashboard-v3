@@ -12,7 +12,7 @@ async function openBuildStructure(page) {
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await expect(page.getByRole("tree")).toBeVisible();
 }
 

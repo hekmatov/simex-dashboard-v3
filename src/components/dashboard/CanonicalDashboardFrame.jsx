@@ -17,7 +17,7 @@ export default function CanonicalDashboardFrame({
       data-canonical-page-id={pageId}
       data-canonical-mode={mode}
       data-page-type={pageType}
-      data-build-panel-open={mode === "build" ? String(buildPanelOpen) : undefined}
+      data-dashboard-map-open={mode === "build" ? String(buildPanelOpen) : undefined}
     >
       <div className="canonical-dashboard-header">{dashboardHeader}</div>
       {workspaceControls ? (

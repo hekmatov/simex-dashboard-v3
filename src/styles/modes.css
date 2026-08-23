@@ -522,8 +522,7 @@
 
 .build-region-heading h2,
 .build-inspector h2,
-.build-inspector h3,
-.build-chrono-groups h3 {
+.build-inspector h3 {
   margin: 0;
 }
 
@@ -557,13 +556,6 @@
 
 .build-structure-remove {
   width: auto !important;
-}
-
-.build-chrono-groups {
-  border-top: 1px solid #d8e2ec;
-  display: grid;
-  gap: 8px;
-  padding-top: 14px;
 }
 
 .build-section-header {
@@ -816,45 +808,14 @@
   box-shadow: 0 18px 52px rgb(8 34 74 / 24%), 0 0 0 3px rgb(242 181 65 / 35%);
 }
 
-.build-canvas-toolbar,
 .build-sheet-close {
   display: none;
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  .build-region-grid {
-    display: block;
-  }
-
-  .build-canvas-toolbar {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px;
-    position: sticky;
-    top: 64px;
-    z-index: 20;
-  }
 
   .build-live-canvas {
     min-height: 0;
-  }
-
-  .build-side-sheet {
-    display: none;
-  }
-
-  .build-side-sheet.build-sheet-open {
-    background: #fff;
-    border-radius: 20px 20px 0 0;
-    bottom: 0;
-    display: block;
-    left: 0;
-    max-height: min(70vh, 760px);
-    overflow: auto;
-    padding: 20px;
-    position: fixed;
-    right: 0;
-    z-index: 100;
   }
 
   .build-page-navigation {
@@ -871,10 +832,6 @@
     flex-direction: column;
   }
 
-  .build-sheet-close {
-    display: inline-flex;
-    margin-bottom: 12px;
-  }
 }
 
 @media (max-width: 767px) {
@@ -1661,6 +1618,33 @@
   max-height: none;
 }
 
+.dashboard-map-header {
+  align-items: start;
+  border-bottom: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.dashboard-map-header :is(h2, p) {
+  margin: 0;
+}
+
+.dashboard-map-region-switch {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-map-region-switch button {
+  min-height: 44px;
+}
+
+.dashboard-map-region-switch button[aria-pressed="true"] {
+  background: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
 .canonical-dashboard-frame .build-section-header {
   position: relative;
 }
@@ -1738,15 +1722,15 @@
     width: min(430px, calc(100vw - 24px));
   }
 
-  .canonical-dashboard-frame.build-workspace[data-build-panel-open="true"] {
-    --simex-build-panel-reserved-width: 404px;
+  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"] {
+    --simex-dashboard-map-reserved-width: 404px;
 
-    margin-left: max(24px, calc((100vw - var(--simex-build-panel-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
+    margin-left: max(24px, calc((100vw - var(--simex-dashboard-map-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
     margin-right: auto;
     min-width: 0;
     width: min(
       var(--simex-canonical-canvas-max-width),
-      calc(100% - var(--simex-build-panel-reserved-width) - 48px)
+      calc(100% - var(--simex-dashboard-map-reserved-width) - 48px)
     );
   }
 }

@@ -9,14 +9,14 @@ test.beforeEach(async ({ request, page }) => {
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 });
 
 test("005-chrono-group-authoring: staged ledger and review remain usable at desktop and tablet", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Build panel", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: "Dashboard map", exact: true })).toHaveAttribute("aria-expanded", "true");
   const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
 
@@ -98,7 +98,7 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
   await expect(auxiliary).toBeHidden();
-  const buildPanel = page.locator("#build-authoring-panel");
+  const buildPanel = page.locator("#dashboard-map-panel");
   await expect(buildPanel.getByText("Unfinished Chrono Group draft", { exact: true })).toBeVisible();
 
   const pageNavigation = page.locator(".dashboard-command-page-scroller");

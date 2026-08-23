@@ -22,7 +22,7 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   await expect(chrono).toBeVisible();
   await expect(dateOverlay).toBeVisible();
   await expect(chrono.getByLabel("Chrono source")).toContainText("National outbreak and health-system playback");
-  await expect(page.getByRole("button", { name: "Build panel", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dashboard map", exact: true })).toHaveCount(0);
 
   await chrono.getByLabel("Chrono chart scope").selectOption("group-only");
   await chrono.getByLabel("Chrono matching policy").selectOption("closest");

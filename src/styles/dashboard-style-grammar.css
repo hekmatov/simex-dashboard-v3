@@ -371,14 +371,13 @@
 
 .app-frame .dashboard-command-pinned-actions > :is(
   .dashboard-look-trigger,
-  .build-chrono-groups,
   .build-add-page,
-  .build-panel-toggle
+  .dashboard-map-toggle
 ) {
   background: var(--simex-surface-panel-alt);
 }
 
-.app-frame .dashboard-command-pinned-actions > .build-panel-toggle[aria-pressed="true"] {
+.app-frame .dashboard-command-pinned-actions > .dashboard-map-toggle[aria-pressed="true"] {
   background: var(--simex-selected-soft);
   border-color: var(--simex-selected);
 }
@@ -1780,10 +1779,6 @@
   background-size: 220% 100%;
   border-radius: var(--simex-style-control-radius);
   color: var(--simex-text-muted);
-}
-
-.app-frame section.build-chrono-groups {
-  border-color: var(--simex-border-subtle);
 }
 
 .app-frame button.secondary {

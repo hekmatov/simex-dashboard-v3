@@ -12,7 +12,7 @@ test("selected dashboard style reaches every Build authoring surface", async ({ 
   await page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   for (const label of ["Chrono Studio", "Scene Studio", "Pages & sections"]) {
     await page.getByRole("button", { name: label, exact: true }).click();

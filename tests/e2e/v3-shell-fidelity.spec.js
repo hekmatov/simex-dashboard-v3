@@ -65,7 +65,7 @@ test("wide View and Build use the shared canonical canvas maximum", async ({ pag
   expect(build.frame.width).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
 });
 
-test("Build panel preserves saved layout, reveals the chart, and restores the closed canvas", async ({ page }) => {
+test("Dashboard map preserves saved layout, reveals the chart, and restores the closed canvas", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -81,9 +81,9 @@ test("Build panel preserves saved layout, reveals the chart, and restores the cl
   const savedLayout = await page.evaluate(() => (
     localStorage.getItem("simex-dashboard-config-v3-three-mode-v1")
   ));
-  const panelToggle = page.getByRole("button", { name: "Build panel", exact: true });
+  const panelToggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await panelToggle.click();
-  const drawer = page.locator("#build-authoring-panel");
+  const drawer = page.locator("#dashboard-map-panel");
   await expect(drawer).toHaveAttribute("data-open", "true");
   const open = await readCanvasState(page);
   expect(open.panels).toEqual(closed.panels);
@@ -99,7 +99,7 @@ test("Build panel preserves saved layout, reveals the chart, and restores the cl
 
   const clearance = await page.evaluate(() => {
     const chart = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]').getBoundingClientRect();
-    const panel = document.querySelector("#build-authoring-panel").getBoundingClientRect();
+    const panel = document.querySelector("#dashboard-map-panel").getBoundingClientRect();
     return {
       chartWidth: chart.width,
       visibleWidth: Math.max(0, Math.min(chart.right, panel.left, window.innerWidth) - Math.max(chart.left, 0)),
@@ -131,7 +131,7 @@ test("Build Structure double click navigates, highlights, and focuses section re
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const section = structure.getByRole("treeitem", { name: "Outbreak dynamics", exact: true });
   await section.locator(":scope > .build-tree-row .build-tree-label").dblclick();
@@ -203,7 +203,7 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button", { name: "Build panel", exact: true }))
+  await expect(pinned.getByRole("button", { name: "Dashboard map", exact: true }))
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Chrono Groups", exact: true }))
     .toHaveCount(1);
@@ -278,7 +278,7 @@ test("live Build Structure tree exposes a 44px caret and visible 3px focus", asy
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const home = structure.getByRole("treeitem", { name: "Home", exact: true });
   const caret = home.getByRole("button", { name: "Collapse Home", exact: true });
@@ -458,7 +458,7 @@ test("denied dashboard and device-layout writes remain usable with session-only 
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const home = structure.getByRole("treeitem", { name: "Home", exact: true });
   await home.locator(":scope > .build-tree-row .build-tree-label").dblclick();
@@ -496,7 +496,7 @@ test("device-layout quota keeps the live choice and reports storage-full without
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   const layout = page.getByRole("group", { name: "Choose a layout for this device" });
   const tablet = layout.getByRole("button", { name: "Tablet", exact: true });
@@ -541,7 +541,7 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     .click();
 
   const layoutDraftValue = "Phone-preserved Biomedical layout";
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   const structure = page.getByRole("navigation", { name: "Dashboard structure" });
   const biomedical = structure.getByRole("treeitem", { name: "Biomedical", exact: true });
   await biomedical.locator(":scope > .build-tree-row .build-tree-label").dblclick();

@@ -1,7 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
 
-import ModalFocusScope from "../common/ModalFocusScope.jsx";
 import BuildCommandHeader from "./BuildCommandHeader.jsx";
 import BuildInspector from "./BuildInspector.jsx";
 import BuildStructureRail from "./BuildStructureRail.jsx";
@@ -107,7 +106,7 @@ export default function BuildWorkspace({
   onDisplayAction,
   selectionControllerRef,
 }) {
-  const [openSheet, setOpenSheet] = React.useState(null);
+  const [mapRegion, setMapRegion] = React.useState("structure");
   const [draftCoordinator, dispatchDraftCoordinator] = React.useReducer(
     reduceBuildDraftCoordinator,
     { layoutDraft, chartSlotDraft },
@@ -146,7 +145,6 @@ export default function BuildWorkspace({
     itemType: item.type === "scene" ? "scene" : "chronoGroup",
     itemId: item.id,
   }))), [temporalContentItems]);
-  const [tablet, setTablet] = React.useState(false);
   const localAuthoringDrafts = React.useMemo(() => ({
     structure: structureDraft,
     chronoGroup: chronoGroupDraft,
@@ -166,9 +164,7 @@ export default function BuildWorkspace({
     : null;
   const selectedChart = selectedChartItem?.chart ?? null;
   const unitOrbitCapabilities = compatibleUnitOrbitCapabilities(selectedChartItem);
-  const inspectorFocusKey = tablet
-    ? (openSheet === "inspector" ? focusLabelKey : 0)
-    : focusLabelKey;
+  const inspectorFocusKey = mapRegion === "inspector" ? focusLabelKey : 0;
 
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
@@ -194,23 +190,9 @@ export default function BuildWorkspace({
   }, [dashboard.chronoGroups, dashboard.pages, dashboard.scenes, temporalFindings, temporalSurfaceActive]);
 
   React.useEffect(() => {
-    const query = window.matchMedia?.("(min-width: 768px) and (max-width: 1199px)");
-    if (!query) return undefined;
-    const update = () => setTablet(query.matches);
-    update();
-    query.addEventListener?.("change", update);
-    return () => query.removeEventListener?.("change", update);
-  }, []);
-
-  React.useEffect(() => {
-    if (tablet || openSheet === null) return;
-    setOpenSheet(null);
-  }, [tablet, openSheet]);
-
-  React.useEffect(() => {
-    if (!tablet || focusLabelKey <= 0) return;
-    setOpenSheet(selection?.kind === "chart" ? null : "inspector");
-  }, [focusLabelKey, selection?.kind, tablet]);
+    if (focusLabelKey <= 0 || selection?.kind === "chart") return;
+    setMapRegion("inspector");
+  }, [focusLabelKey, selection?.kind]);
 
   const chooseSelection = (next, options) => {
     if (
@@ -232,7 +214,7 @@ export default function BuildWorkspace({
         itemId: next.chronoGroupId,
       }));
     }
-    if (tablet) setOpenSheet(next.kind === "chart" || next.kind === "chronoGroup" ? null : "inspector");
+    if (next.kind !== "chart" && next.kind !== "chronoGroup") setMapRegion("inspector");
     return onActivate?.(next, options) ?? Promise.resolve(false);
   };
   if (selectionControllerRef) selectionControllerRef.current = chooseSelection;
@@ -282,11 +264,6 @@ export default function BuildWorkspace({
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, [onRevealComplete, revealRequest]);
-  const open = (name) => {
-    if (!locked) setOpenSheet(name);
-  };
-  const close = () => setOpenSheet(null);
-
   const captureRestoration = React.useCallback(() => ({
     ...captureBuildCanvasState({
       layout: dashboard,
@@ -665,40 +642,48 @@ export default function BuildWorkspace({
           <aside
             id="dashboard-map-panel"
             className="dashboard-map-panel"
+            role="complementary"
             aria-label="Dashboard map"
             data-open={buildPanelOpen ? "true" : "false"}
             aria-hidden={buildPanelOpen ? undefined : "true"}
             inert={!buildPanelOpen}
           >
-            <section className="build-canvas-toolbar" aria-label="Build regions">
-              <button type="button" disabled={locked} onClick={() => open("structure")}>Structure</button>
-              <button type="button" disabled={locked} onClick={() => open("inspector")}>Inspector</button>
-            </section>
+            <header className="dashboard-map-header">
+              <div>
+                <p className="eyebrow">Build</p>
+                <h2>Dashboard map</h2>
+              </div>
+              <div className="dashboard-map-region-switch" role="group" aria-label="Dashboard map regions">
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-pressed={mapRegion === "structure"}
+                  disabled={locked}
+                  onClick={() => setMapRegion("structure")}
+                >
+                  Structure
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-pressed={mapRegion === "inspector"}
+                  disabled={locked}
+                  onClick={() => setMapRegion("inspector")}
+                >
+                  Inspector
+                </button>
+              </div>
+            </header>
             <section className="build-region-grid">
-            <ModalFocusScope
-              as="section"
-              open={tablet && openSheet === "structure"}
-              className={"build-side-sheet build-structure-sheet" + (openSheet === "structure" ? " build-sheet-open" : "")}
-              role={tablet && openSheet === "structure" ? "dialog" : undefined}
-              aria-modal={tablet && openSheet === "structure" ? "true" : undefined}
-              aria-label="Dashboard structure"
-              onEscape={close}
-            >
-              {tablet && openSheet === "structure" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
-              {structure}
-            </ModalFocusScope>
-            <ModalFocusScope
-              as="section"
-              open={tablet && openSheet === "inspector"}
-              className={"build-side-sheet build-inspector-sheet" + (openSheet === "inspector" ? " build-sheet-open" : "")}
-              role={tablet && openSheet === "inspector" ? "dialog" : undefined}
-              aria-modal={tablet && openSheet === "inspector" ? "true" : undefined}
-              aria-label="Context inspector"
-              onEscape={close}
-            >
-              {tablet && openSheet === "inspector" && <button type="button" className="build-sheet-close" onClick={close}>Close</button>}
-              {inspector}
-            </ModalFocusScope>
+              {mapRegion === "structure" ? (
+                <section className="build-side-sheet build-structure-sheet" data-dashboard-map-region="structure">
+                  {structure}
+                </section>
+              ) : (
+                <section className="build-side-sheet build-inspector-sheet" data-dashboard-map-region="inspector" role="region" aria-label="Context inspector">
+                  {inspector}
+                </section>
+              )}
             </section>
           </aside>
           {chartEditorPlacementId && chartEditor && (

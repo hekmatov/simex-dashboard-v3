@@ -117,7 +117,7 @@ async function openWizard(page) {
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.getByRole("dialog");
   await expect(wizard).toBeVisible();

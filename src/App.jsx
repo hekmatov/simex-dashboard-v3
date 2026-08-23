@@ -249,14 +249,6 @@ export default function App() {
     }
   }
 
-  function openChronoGroupAuthoring() {
-    if (!buildPanelOpen) {
-      buildPanelScrollRef.current = { left: window.scrollX, top: window.scrollY };
-      setBuildPanelOpen(true);
-    }
-    dashboardRendererRef.current?.requestChronoGroupAuthoring?.();
-  }
-
   const commandCrownPageActions = mode === "view" ? (
     <>
       <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
@@ -277,14 +269,6 @@ export default function App() {
     <>
       <button
         type="button"
-        className="secondary build-chrono-groups"
-        disabled={modeDisabled || buildDraftLocked || (dashboard?.chronoGroups?.length ?? 0) === 0}
-        onClick={openChronoGroupAuthoring}
-      >
-        Chrono Groups
-      </button>
-      <button
-        type="button"
         className="secondary dashboard-look-trigger"
         disabled={modeDisabled || buildDraftLocked}
         onClick={openDashboardLook}
@@ -293,14 +277,14 @@ export default function App() {
       </button>
       <button
         type="button"
-        className="secondary build-panel-toggle"
-        aria-controls="build-authoring-panel"
+        className="secondary dashboard-map-toggle"
+        aria-controls="dashboard-map-panel"
         aria-expanded={buildPanelOpen}
         aria-pressed={buildPanelOpen}
         disabled={modeDisabled}
         onClick={toggleBuildPanel}
       >
-        Build panel
+        Dashboard map
       </button>
     </>
   ) : null;

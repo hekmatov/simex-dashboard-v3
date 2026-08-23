@@ -14,7 +14,7 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   await openBiomedicalBuild(page);
   const baseline = await canvasIdentity(page);
   const saved = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
-  const toggle = page.getByRole("button", { name: "Build panel", exact: true });
+  const toggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   await toggle.click();
 
   const target = page.locator('[data-build-placement-id="bio_confirmed_cases"]');
@@ -46,7 +46,7 @@ test("layout and selected-chart drafts stay independent through layout discard",
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   await page.getByRole("button", {
     name: "Move Public response and policy signals later",
@@ -78,7 +78,7 @@ test("Context Shelf suspends and restores a dirty chart around auxiliary work", 
     .getByRole("button", { name: "Socio-economic", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", {
     name: "Move Public response and policy signals later",
     exact: true,
@@ -112,7 +112,7 @@ test("zero Page and zero Section recovery stays inline in the live Build shell",
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Pages & sections", exact: true }).click();
   const structure = page.getByRole("dialog", { name: "Structure authoring" });
 
@@ -139,7 +139,7 @@ test("chart creation keeps canonical render and placement proofs reachable throu
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
   const deck = wizard.locator('[data-chart-proof-deck="persistent"]');

@@ -53,7 +53,7 @@ test("Build studios, wizard validation, and Chrono interaction states use select
   await page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   for (const name of ["Chrono Studio", "Scene Studio", "Pages & sections"]) {
     await page.getByRole("button", { name, exact: true }).click();

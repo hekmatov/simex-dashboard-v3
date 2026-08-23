@@ -326,7 +326,7 @@ test("Present gives the audience monitor half the workspace without duplicate Pa
   await expect(page.getByLabel("Display Page")).toHaveCount(0);
 });
 
-test("Build panel keeps the canvas usable and closing restores its exact frame", async ({ page }) => {
+test("Dashboard map keeps the canvas usable and closing restores its exact frame", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
@@ -334,12 +334,12 @@ test("Build panel keeps the canvas usable and closing restores its exact frame",
 
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
   const look = pinned.getByRole("button", { name: "Dashboard look", exact: true });
-  const toggle = pinned.getByRole("button", { name: "Build panel", exact: true });
+  const toggle = pinned.getByRole("button", { name: "Dashboard map", exact: true });
   const drawer = page.locator(".build-authoring-layer");
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await expect(look.evaluate((node) => node.nextElementSibling?.textContent?.trim())).resolves.toBe("Build panel");
+  await expect(look.evaluate((node) => node.nextElementSibling?.textContent?.trim())).resolves.toBe("Dashboard map");
   await expect(drawer).toBeHidden();
   const closed = await frame.boundingBox();
 
@@ -369,7 +369,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
 
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  const toggle = page.getByRole("button", { name: "Build panel", exact: true });
+  const toggle = page.getByRole("button", { name: "Dashboard map", exact: true });
   if (await toggle.count()) await toggle.click();
   await expect(toggle).toHaveCSS("background-color", "rgb(240, 226, 220)");
 
@@ -379,7 +379,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
     structureEyebrow: getComputedStyle(document.querySelector(".build-region-heading .eyebrow")).color,
     structureButton: getComputedStyle(document.querySelector(".build-canvas-toolbar button")).backgroundColor,
     railButton: getComputedStyle(document.querySelector(".build-structure-list button.secondary")).backgroundColor,
-    panelToggle: getComputedStyle(document.querySelector(".build-panel-toggle")).backgroundColor,
+    panelToggle: getComputedStyle(document.querySelector(".dashboard-map-toggle")).backgroundColor,
   }));
   expect(buildPaint).toEqual({
     headerEyebrow: "rgb(85, 90, 85)",
@@ -456,7 +456,7 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
-    await page.getByRole("button", { name: "Build panel", exact: true }).click();
+    await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
     await expect(page.locator(".build-authoring-layer")).toBeVisible();
     await expect(page.locator(".dashboard-command-pinned-actions .build-chrono-groups"))
       .toHaveCSS("background-color", style.panelAltPaint);

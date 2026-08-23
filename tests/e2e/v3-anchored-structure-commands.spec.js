@@ -35,7 +35,7 @@ test("anchored Page and Section commands preview and discard through the live la
   await navigation.getByRole("button", { name: "Socio-economic", exact: true }).click();
   await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await expect(page.getByLabel("Build draft status")).toContainText("Layout changesdirty");
   await page.getByRole("button", { name: "Discard Layout Changes" }).click();
   await expect(page.getByRole("button", { name: "Edit Section title: Outbreak dynamics" })).toHaveCount(0);

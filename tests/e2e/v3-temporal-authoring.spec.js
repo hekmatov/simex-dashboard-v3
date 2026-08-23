@@ -18,7 +18,7 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
     .getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true }).click();
-  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
 
   await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   let auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
