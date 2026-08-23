@@ -39,6 +39,38 @@ test("Build chrome and source viewing preserve the saved layout and restoration 
   expect(await canvasIdentity(page)).toEqual(baseline);
 });
 
+test("layout and selected-chart drafts stay independent through layout discard", async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 900 });
+  await page.goto("/");
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+
+  await page.getByRole("button", {
+    name: "Move Public response and policy signals later",
+    exact: true,
+  }).click();
+  const target = page.locator('[data-build-placement-id="socio_trust_trend"]');
+  await target.getByRole("button", { name: "Edit chart", exact: true }).click();
+  await page.getByRole("gridcell", {
+    name: "Set chart size to 3 columns by 1 row",
+    exact: true,
+  }).click();
+
+  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+  await page.getByRole("button", { name: "Discard Layout Changes", exact: true }).click();
+
+  await expect(page.locator('[data-draft-slot="layout"]')).toHaveAttribute("data-draft-status", "clean");
+  await expect(page.locator('[data-draft-slot="chart"]')).toHaveAttribute("data-draft-status", "dirty");
+  await expect(page.getByRole("complementary", {
+    name: "Chart settings for Trust in institutions over time",
+  })).toBeVisible();
+  await expect(target).toBeInViewport();
+});
+
 test("chart recovery states retain canonical plot geometry", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("http://127.0.0.1:4175/tests/e2e/chart-state-harness.html");

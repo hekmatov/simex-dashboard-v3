@@ -22,7 +22,7 @@ import StructureAuthoring, {
   createStructureDraft,
   reduceStructureDraft,
 } from "./StructureAuthoring.jsx";
-import UnitOrbit from "./UnitOrbit.jsx";
+import UnitOrbit, { revealUnitOrbitAnchor } from "./UnitOrbit.jsx";
 import SceneEditor from "../time/SceneEditor.jsx";
 import {
   buildTemporalChartVariables,
@@ -57,6 +57,10 @@ import {
 } from "../time/chronoGroupDraft.js";
 import { dashboardThemeRootProps } from "../../theme/dashboardThemeRoot.js";
 import { initializeDeferredBuildDraft } from "./deferredBuildAuthoring.js";
+import {
+  createBuildDraftCoordinatorState,
+  reduceBuildDraftCoordinator,
+} from "./buildDraftCoordinator.js";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -98,6 +102,10 @@ export default function BuildWorkspace({
   onAddSection,
   onAddChart,
   chartDraftAvailable = false,
+  layoutDraft = null,
+  chartSlotDraft = null,
+  onSaveLayout,
+  onDiscardLayout,
   onFinish,
   onReset,
   onImportPackage,
@@ -107,8 +115,18 @@ export default function BuildWorkspace({
   selectionControllerRef,
 }) {
   const [openSheet, setOpenSheet] = React.useState(null);
-  const [activeAuxiliary, setActiveAuxiliary] = React.useState(null);
-  const [parkedAuxiliaries, setParkedAuxiliaries] = React.useState([]);
+  const [draftCoordinator, dispatchDraftCoordinator] = React.useReducer(
+    reduceBuildDraftCoordinator,
+    { layoutDraft, chartSlotDraft },
+    ({ layoutDraft: initialLayout, chartSlotDraft: initialChart }) => {
+      let state = createBuildDraftCoordinatorState();
+      if (initialLayout) state = reduceBuildDraftCoordinator(state, { type: "OPEN_SLOT", slot: "layout", draft: initialLayout });
+      if (initialChart) state = reduceBuildDraftCoordinator(state, { type: "OPEN_SLOT", slot: "chart", draft: initialChart });
+      return state;
+    },
+  );
+  const activeAuxiliary = draftCoordinator.activeAuxiliary?.surface ?? null;
+  const parkedAuxiliaries = draftCoordinator.parkedAuxiliaries;
   const [structureDraft, setStructureDraft] = React.useState(null);
   const [scenarioDraft, setScenarioDraft] = React.useState(null);
   const [chronoGroupDraft, setChronoGroupDraft] = React.useState(null);
@@ -158,6 +176,14 @@ export default function BuildWorkspace({
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
   }, [localAuthoringDrafts, onLocalDraftsChange]);
+
+  React.useEffect(() => {
+    dispatchDraftCoordinator({ type: "SYNC_SLOT", slot: "layout", draft: layoutDraft });
+  }, [layoutDraft]);
+
+  React.useEffect(() => {
+    dispatchDraftCoordinator({ type: "SYNC_SLOT", slot: "chart", draft: chartSlotDraft });
+  }, [chartSlotDraft]);
 
   React.useEffect(() => {
     if (!temporalSurfaceActive) return;
@@ -337,13 +363,16 @@ export default function BuildWorkspace({
     if (locked || activeAuxiliary === surface) return;
     initializeAuxiliary(surface);
     const restoration = captureRestoration();
-    if (activeAuxiliary) {
-      setParkedAuxiliaries((current) => [
-        ...current.filter((entry) => entry.surface !== activeAuxiliary),
-        { surface: activeAuxiliary, restoration },
-      ]);
-    }
-    setActiveAuxiliary(surface);
+    dispatchDraftCoordinator({
+      type: "OPEN_AUXILIARY",
+      session: {
+        surface,
+        draftId: `auxiliary-${surface}`,
+        dirty: false,
+        mutationCapable: false,
+        restoration,
+      },
+    });
     window.requestAnimationFrame(() => {
       const selected = selection?.placementId
         ? document.querySelector(`[data-canonical-placement-id="${CSS.escape(selection.placementId)}"]`)
@@ -364,10 +393,13 @@ export default function BuildWorkspace({
         restoration: { ...restoration, stage: current.stage },
       }));
     }
-    const next = parkedAuxiliaries.at(-1) ?? null;
-    setParkedAuxiliaries((current) => current.slice(0, -1));
-    setActiveAuxiliary(next?.surface ?? null);
-    restoreCanvas(next?.restoration ?? restoration);
+    const currentSession = draftCoordinator.activeAuxiliary;
+    if (currentSession) dispatchDraftCoordinator({
+      type: "CLOSE_AUXILIARY",
+      draftId: currentSession.draftId,
+      choice: "discard",
+    });
+    restoreCanvas(currentSession?.restoration ?? restoration);
   };
 
   const resumeAuxiliary = (surface) => {
@@ -375,15 +407,7 @@ export default function BuildWorkspace({
     const parked = parkedAuxiliaries.find((entry) => entry.surface === surface);
     if (!parked) return;
     initializeAuxiliary(surface);
-    if (activeAuxiliary) {
-      setParkedAuxiliaries((current) => [
-        ...current.filter((entry) => entry.surface !== surface && entry.surface !== activeAuxiliary),
-        { surface: activeAuxiliary, restoration: captureRestoration() },
-      ]);
-    } else {
-      setParkedAuxiliaries((current) => current.filter((entry) => entry.surface !== surface));
-    }
-    setActiveAuxiliary(surface);
+    dispatchDraftCoordinator({ type: "RESUME_AUXILIARY", session: parked });
     restoreCanvas(parked.restoration);
   };
 
@@ -580,8 +604,9 @@ export default function BuildWorkspace({
 
   return (
     <div
-          id="build-authoring-panel"
-          className="build-authoring-layer"
+      id="build-authoring-panel"
+      className="build-authoring-layer"
+      data-build-draft-coordinator="live"
           data-build-auxiliary-contract="context-shelf"
           data-device-layout={deviceLayout}
           data-open={buildPanelOpen ? "true" : "false"}
@@ -595,6 +620,29 @@ export default function BuildWorkspace({
             </div>
             <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
             <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
+            <div className="build-draft-slots" aria-label="Build draft status">
+              <span data-draft-slot="layout" data-draft-status={draftCoordinator.slots.layout?.status ?? "clean"}>
+                <strong>Layout changes</strong>
+                <small>{draftCoordinator.slots.layout?.status ?? "clean"}</small>
+              </span>
+              <span data-draft-slot="chart" data-draft-status={draftCoordinator.slots.chart?.status ?? "clean"}>
+                <strong>Chart changes</strong>
+                <small>{draftCoordinator.slots.chart?.status ?? "clean"}</small>
+              </span>
+            </div>
+            <button type="button" className="secondary" data-unit-orbit-preserve-open disabled={!draftCoordinator.slots.layout || draftCoordinator.slots.layout.status === "clean" || draftCoordinator.slots.layout.status === "saving"} onClick={onSaveLayout}>Save Layout Changes</button>
+            <button
+              type="button"
+              className="secondary"
+              data-unit-orbit-preserve-open
+              disabled={!draftCoordinator.slots.layout || draftCoordinator.slots.layout.status === "clean" || draftCoordinator.slots.layout.status === "saving"}
+              onClick={() => {
+                onDiscardLayout?.();
+                revealUnitOrbitAnchor(chartEditorPlacementId);
+              }}
+            >
+              Discard Layout Changes
+            </button>
             <button type="button" className="secondary" disabled={locked} onClick={() => onAddChart?.()}>{chartDraftAvailable ? "Resume chart draft" : "Add chart"}</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("structure")}>Pages &amp; sections</button>
             <button type="button" className="secondary" disabled={locked} onClick={() => openAuxiliary("scenario")}>Scenario details</button>

@@ -129,6 +129,47 @@ test("Unit Orbit dismisses only pointer activity outside its surface", () => {
   assert.equal(orbitModule.isUnitOrbitOutsidePointer(null, outside), false);
 });
 
+test("Unit Orbit stays open for coordinated draft controls outside its surface", () => {
+  const draftControl = {
+    closest(selector) {
+      return selector === "[data-unit-orbit-preserve-open]" ? {} : null;
+    },
+  };
+  const orbit = { contains: () => false };
+
+  assert.equal(
+    orbitModule.isUnitOrbitOutsidePointer(orbit, draftControl),
+    false,
+    "saving or discarding the independent layout slot must not dismiss the chart slot",
+  );
+});
+
+test("layout restoration reveals the attached chart without changing editor focus", () => {
+  assert.equal(typeof orbitModule?.revealUnitOrbitAnchor, "function");
+  const calls = [];
+  const anchor = {
+    scrollIntoView(options) {
+      calls.push(options);
+    },
+  };
+  const documentRef = {
+    querySelectorAll(selector) {
+      assert.equal(selector, "[data-build-placement-id]");
+      return [{ dataset: { buildPlacementId: "panel-a" } }, anchor];
+    },
+  };
+  anchor.dataset = { buildPlacementId: "panel-b" };
+
+  orbitModule.revealUnitOrbitAnchor("panel-b", {
+    documentRef,
+    schedule(callback) {
+      callback();
+    },
+  });
+
+  assert.deepEqual(calls, [{ block: "center", inline: "nearest", behavior: "auto" }]);
+});
+
 test("a dirty Build workspace allows only the current chart to reopen", () => {
   const current = { kind: "chart", placementId: "confirmed-cases" };
   assert.equal(

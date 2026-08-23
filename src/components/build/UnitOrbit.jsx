@@ -16,7 +16,27 @@ const PROTECTED_SELECTORS = [
 ];
 
 export function isUnitOrbitOutsidePointer(orbit, target) {
-  return Boolean(orbit && target && !orbit.contains(target));
+  if (!orbit || !target || orbit.contains(target)) return false;
+  if (typeof target.closest === "function" && target.closest("[data-unit-orbit-preserve-open]")) {
+    return false;
+  }
+  return true;
+}
+
+export function revealUnitOrbitAnchor(
+  placementId,
+  {
+    documentRef = typeof document === "undefined" ? null : document,
+    schedule = typeof window === "undefined" ? null : window.requestAnimationFrame.bind(window),
+  } = {},
+) {
+  if (!placementId || !documentRef || !schedule) return false;
+  schedule(() => {
+    const anchor = [...documentRef.querySelectorAll("[data-build-placement-id]")]
+      .find((element) => element.dataset.buildPlacementId === placementId);
+    anchor?.scrollIntoView?.({ block: "center", inline: "nearest", behavior: "auto" });
+  });
+  return true;
 }
 
 export function resolveUnitOrbitSize(orbit, viewportWidth) {

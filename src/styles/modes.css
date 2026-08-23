@@ -346,6 +346,30 @@
   margin: 0;
 }
 
+.build-draft-slots {
+  display: flex;
+  gap: 6px;
+}
+
+.build-draft-slots > span {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: 1px;
+  min-width: 92px;
+  padding: 5px 8px;
+}
+
+.build-draft-slots small {
+  color: var(--simex-text-muted);
+  text-transform: capitalize;
+}
+
+.build-draft-slots [data-draft-status="dirty"],
+.build-draft-slots [data-draft-status="error"] {
+  border-left: 4px solid var(--simex-warning);
+}
+
 .build-appearance-controls {
   margin-left: auto;
 }

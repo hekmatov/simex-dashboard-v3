@@ -23,6 +23,22 @@ export function reduceBuildDraftCoordinator(state, action) {
       };
     }
 
+    case "SYNC_SLOT": {
+      assertSlot(action.slot);
+      return {
+        ...state,
+        slots: { ...state.slots, [action.slot]: action.draft ?? null },
+      };
+    }
+
+    case "CLOSE_SLOT": {
+      assertSlot(action.slot);
+      return finishResolution({
+        ...state,
+        slots: { ...state.slots, [action.slot]: null },
+      }, action.slot);
+    }
+
     case "MARK_DIRTY":
       return updateSlot(state, action.slot, (slot) => ({
         ...slot,

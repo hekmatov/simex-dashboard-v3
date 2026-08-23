@@ -11,6 +11,14 @@ import {
   hasUnsavedAuthoredContent,
 } from "./build/buildDirtyState.js";
 import { reconcileBuildSelection } from "./build/buildSelectionModel.js";
+import {
+  beginBuildLayoutSave,
+  createBuildLayoutDraft,
+  failBuildLayoutSave,
+  reorderBuildLayoutPage,
+  reorderBuildLayoutPanel,
+  reorderBuildLayoutSection,
+} from "./build/buildLayoutDraft.js";
 import ColorField from "./ColorField.jsx";
 import ConfirmDialog from "./common/ConfirmDialog.jsx";
 import { IconControl, IconSummary, SimExIcon } from "./common/SimExIcon.js";
@@ -133,6 +141,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [dashboardDraft, setDashboardDraft] = React.useState(() => dashboardTextDraftFromDashboard(dashboard));
   const [pageDrafts, setPageDrafts] = React.useState({});
   const [sectionDrafts, setSectionDrafts] = React.useState({});
+  const [buildLayoutDraft, setBuildLayoutDraft] = React.useState(null);
   const pendingEditCallbacksRef = React.useRef(null);
   pendingEditCallbacksRef.current = {
     onApplyPendingEdits,
@@ -173,8 +182,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const buildWorkspaceSelectionRef = React.useRef(null);
   const requestBuildSelectionRef = React.useRef(null);
 
+  const workingDashboard = editMode && buildLayoutDraft?.value
+    ? buildLayoutDraft.value
+    : dashboard;
   const activePage =
-    dashboard.pages.find((page) => page.id === activePageId) ?? dashboard.pages[0];
+    workingDashboard.pages.find((page) => page.id === activePageId) ?? workingDashboard.pages[0];
   const presentationValidChartIds = React.useMemo(
     () => configuredCharts(dashboard)
       .map((chart) => chart?.id)
@@ -183,7 +195,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   );
   const presentationRuntime = usePresentationRuntime(presentationValidChartIds);
   const landingActive = hasLandingPresentation(activePage);
-  const selectedPlacement = findPanelPlacement(dashboard, chartEditorPlacementId);
+  const selectedPlacement = findPanelPlacement(workingDashboard, chartEditorPlacementId);
   const selectedPanel = selectedPlacement?.chart ?? null;
   const chartAuthoringActive = Boolean(
     chartWizardTarget || (editMode && selectedPanel),
@@ -192,13 +204,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const buildDraftLocked = Boolean(chartEditorDirty || localAuthoringEditing);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
+  const layoutDraftDirty = ["dirty", "saving", "error", "suspended"].includes(buildLayoutDraft?.status);
   const authoredDirty = hasUnsavedAuthoredContent({
     ...createBuildDirtyState(),
     chartEditor: chartEditorDirty,
     chartWizard: chartWizardDirty || isMeaningfulChartDraft(
       chartDraftSessionStore.get(chartDraftSessionKey),
     ),
-    structure: localAuthoringDirty,
+    structure: localAuthoringDirty || layoutDraftDirty,
     scenario: localAuthoringDirty,
     inlineRename: inlineRenameDirty,
     pendingContent: pendingEdits.hasPending(),
@@ -554,8 +567,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     event.preventDefault();
     if (moderatorOperationGateRef.current.isActive()) return;
     const sourcePanelId = event.dataTransfer.getData("text/plain") || draggingPanelId;
-    flushPendingEditsInBackground();
-    onPanelReorder(sourcePanelId, targetPanelId);
+    setBuildLayoutDraft((current) => reorderBuildLayoutPanel(
+      current ?? createBuildLayoutDraft(dashboard),
+      sourcePanelId,
+      targetPanelId,
+    ));
     setDraggingPanelId(null);
     setDragOverPanelId(null);
   }
@@ -639,24 +655,49 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   function reorderBuildPage(pageId, targetIndex) {
     if (moderatorOperationGateRef.current.isActive()) return;
-    void performModeratorOperation("reorder-page", async () => {
-      await pendingEdits.flush();
-      await onPageReorder?.(pageId, targetIndex);
-      setBuildSelection({ kind: "page", pageId });
-    });
+    setBuildLayoutDraft((current) => reorderBuildLayoutPage(
+      current ?? createBuildLayoutDraft(dashboard),
+      pageId,
+      targetIndex,
+    ));
+    setBuildSelection({ kind: "page", pageId });
   }
 
   function reorderBuildSection(sectionId, targetIndex) {
     if (moderatorOperationGateRef.current.isActive() || !activePage) return;
-    void performModeratorOperation("reorder-section", async () => {
-      await pendingEdits.flush();
-      await onSectionReorder?.(activePage.id, sectionId, targetIndex);
-      setBuildSelection((current) => (
-        current?.kind === "section" && current.sectionId === sectionId
-          ? current
-          : { kind: "page", pageId: activePage.id }
-      ));
-    });
+    setBuildLayoutDraft((current) => reorderBuildLayoutSection(
+      current ?? createBuildLayoutDraft(dashboard),
+      activePage.id,
+      sectionId,
+      targetIndex,
+    ));
+    setBuildSelection((current) => (
+      current?.kind === "section" && current.sectionId === sectionId
+        ? current
+        : { kind: "page", pageId: activePage.id }
+    ));
+  }
+
+  function saveBuildLayoutChanges() {
+    if (!buildLayoutDraft || !layoutDraftDirty || buildLayoutDraft.status === "saving") return;
+    const saving = beginBuildLayoutSave(buildLayoutDraft);
+    setBuildLayoutDraft(saving);
+    Promise.resolve(onStructureChange?.({
+      pages: saving.value.pages,
+      chronoGroups: saving.value.chronoGroups ?? dashboard.chronoGroups ?? [],
+      scenes: saving.value.scenes ?? dashboard.scenes ?? [],
+    }))
+      .then(() => setBuildLayoutDraft(null))
+      .catch((error) => setBuildLayoutDraft((current) => failBuildLayoutSave(current ?? saving, {
+        code: error?.name === "QuotaExceededError" ? "QUOTA_EXHAUSTED" : "LAYOUT_SAVE_FAILED",
+        message: error?.message ?? "Layout changes could not be saved.",
+        retryable: true,
+      })));
+  }
+
+  function discardBuildLayoutChanges() {
+    if (buildLayoutDraft?.status === "saving") return;
+    setBuildLayoutDraft(null);
   }
 
   function saveSelectedChartV3(payload) {
@@ -1035,6 +1076,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         setDashboardDraft(dashboardTextDraftFromDashboard(resetDashboard ?? dashboard));
         setPageDrafts({});
         setSectionDrafts({});
+        setBuildLayoutDraft(null);
         setChartEditBaseline(null);
         chartDraftSessionStore.clear(chartDraftSessionKey);
         setChartWizardTarget(null);
@@ -1148,7 +1190,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     <BuildWorkspace
       key={buildTreeResetGeneration}
       themeProjection={themeProjection}
-      dashboard={dashboard}
+      dashboard={workingDashboard}
       activePage={activePage}
       pageType={landingActive ? "landing" : "analytical"}
       buildPanelOpen={buildPanelOpen}
@@ -1208,6 +1250,25 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onAddSection={addSection}
       onAddChart={openChartWizard}
       chartDraftAvailable={chartWizardSuspended}
+      layoutDraft={buildLayoutDraft ? {
+        draftId: buildLayoutDraft.draftId,
+        kind: "layout",
+        targetId: buildLayoutDraft.targetId,
+        status: buildLayoutDraft.status,
+        error: buildLayoutDraft.error,
+        restoration: null,
+        resolution: null,
+      } : null}
+      chartSlotDraft={chartEditorPlacementId ? {
+        draftId: `chart-${chartEditorPlacementId}`,
+        kind: "chart",
+        targetId: chartEditorPlacementId,
+        status: chartEditorDirty ? "dirty" : "clean",
+        restoration: null,
+        resolution: null,
+      } : null}
+      onSaveLayout={saveBuildLayoutChanges}
+      onDiscardLayout={discardBuildLayoutChanges}
       onFinish={saveEditMode}
       onReset={() => setResetEditSessionConfirmation(true)}
       onImportPackage={requestDashboardPackageImport}
@@ -1224,7 +1285,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         mode={editMode ? "build" : "view"}
         activePage={activePage}
         pageType={landingActive ? "landing" : "analytical"}
-        dashboard={dashboard}
+        dashboard={workingDashboard}
         buildPanelOpen={buildPanelOpen}
         buildState={editMode ? {
           selection: buildSelection,
