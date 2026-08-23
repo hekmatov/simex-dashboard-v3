@@ -74,12 +74,17 @@ The normal footer contains navigation, Save Chrono Group, and Discard actions. I
 
 Scene Studio is also content-first. Its landing view lists Scenes by owning page and identifies each parent Chrono Group. Its creation action is **Create Scene**. Selecting a Scene opens a read-first content page summarizing its identity, parent, owning page, period, frames, chart composition, Scene View widths, Present subset/layout, matching behavior, cadence, and status. The content page's **Edit** action opens the existing Scene in the same two-stage editor with every field populated.
 
-Create Scene retains the accepted two-stage interaction model from Sketch 006:
+### 2026-08-24 Scene editor width and staging amendment
 
-1. **Select and define** — places Scene name first, then parent Chrono Group, owning page, contained period, membership ledger, and frame-source/calendar configuration. The membership ledger uses **Selected for this Scene**, **Needs attention**, and **Available from parent Chrono Group** regions.
-2. **Arrange and configure** — presents the accepted Balanced Twin Canvas for Scene View and Present, with separate order, Scene width, Present inclusion/layout, matching overrides, cadence, and Audience date-position settings.
+The user-approved 2026-08-24 amendment replaces Sketch 006's persistent right panel and two-stage interaction shell with three full-width stages. The Scene data, validation, atomic transaction, ledger, and Balanced Twin Canvas contracts remain unchanged:
 
-The Scene identity band always shows the draft name and lineage as parent Chrono Group → Scene. One Scene draft owns both stages and one Save Scene transaction. Canonical dashboard chart order and footprint are never mutated by Scene arrangement.
+1. **Scene details** — owns Scene name, owning page, parent Chrono Group, contained period, time mode, frame-source/calendar configuration, default matching, and cadence.
+2. **Select charts and frames** — retains the accepted ledger with **Selected for this Scene**, **Needs attention**, and **Available from parent Chrono Group** regions plus observation selection.
+3. **Arrange and configure** — retains the accepted Balanced Twin Canvas for Scene View and Present, with separate order, Scene width, Present inclusion/layout, matching overrides, and Audience date-position settings.
+
+Stages 2 and 3 consume the full available editor width and never reserve a hidden sidebar column. Save readiness and the atomic Save/Discard actions remain available in a compact full-width transaction footer without compressing the active stage. Validation navigates to the stage that owns the failing field.
+
+The Scene identity band always shows the draft name and lineage as parent Chrono Group → Scene. One Scene draft owns all three stages and one Save Scene transaction. Canonical dashboard chart order and footprint are never mutated by Scene arrangement.
 
 ## Studio content pages and page grouping
 

@@ -271,7 +271,9 @@ export function normalizeSceneDefaults(scene) {}
 - [x] **Run tests to verify they pass.** Run `node --test tests/sceneSchema.test.js tests/dashboardBundleV3.test.js`; expect pass.
 - [x] **Commit.** Run `git add src/charting/time/sceneSchema.js src/charting/config/dashboardBundleV3.js src/charting/config/dashboardConfigStructure.js tests/sceneSchema.test.js tests/dashboardBundleV3.test.js && git commit -m "feat(scene): define saved scene and audience date position"`.
 
-### Task S7-8: Implement two-stage Scene Studio and Balanced Twin Canvas
+### Task S7-8: Implement Scene Studio and Balanced Twin Canvas
+
+**2026-08-24 approved amendment:** The persistent Scene Draft side panel becomes **Scene details** Stage 1. The former Select and Arrange stages become Stages 2 and 3. The active stage uses the full available editor width; Save readiness and Save/Discard remain in a non-width-reserving transaction footer. Validation routes to the owning stage. This supersedes only the two-stage/persistent-panel composition language below; the single Scene draft, ledger, Balanced Twin Canvas, restoration, and atomic-save requirements remain binding.
 
 **Files:**
 - Create: `src/components/time/SceneStudio.jsx`
@@ -284,15 +286,15 @@ export function normalizeSceneDefaults(scene) {}
 
 **Interfaces:**
 - Consumes: S7-7 `SavedScene`, S7-5 ledgers, S7-1 auxiliary lifecycle, Sketch 006.
-- Produces: `SceneDraft` with interaction stages `select` and `arrange`; validated save result `SavedScene`.
+- Produces: `SceneDraft` with interaction stages `details`, `select`, and `arrange`; validated save result `SavedScene`.
 
 **Steps:**
 
-- [x] **Write the failing test.** Add failing tests proving all semantic settings remain editable across two stages, invalid/Needs-attention states block save, twin canvases remain balanced, focus/scroll/stage recover, and Save/Discard/Stay are deterministic.
+- [x] **Write the failing test.** Add failing tests proving all semantic settings remain editable across Scene details, Select, and Arrange; invalid/Needs-attention states route to their owning stage and block save; Stages 2–3 receive the full editor width; twin canvases remain balanced; focus/scroll/stage recover; and Save/Discard/Stay are deterministic.
 - [x] **Run test to verify it fails.** Run `node --test tests/sceneStudio.test.js`; expect missing-module failure.
-- [x] **Write minimal implementation.** Implement Select for scope/frame source and Arrange for widths/composition, with shared settings for name, period, matching, cadence, and Audience date position. Preserve one draft across both stages.
-- [x] **Add the E2E test.** Add E2E case `two-stage Scene Studio persists the complete Scene contract`.
-- [x] **Run tests to verify they pass.** Run `node --test tests/sceneStudio.test.js && pnpm exec playwright test tests/e2e/v3-temporal-authoring.spec.js --grep "two-stage Scene Studio persists the complete Scene contract"`; expect pass.
+- [x] **Write minimal implementation.** Implement full-width Scene details for scope and shared settings, Select for membership/frame evidence, and Arrange for widths/composition. Preserve one draft and a non-width-reserving transaction footer across all three stages.
+- [x] **Add the E2E test.** Add E2E case `006-scene-authoring amendment: three full-width stages and Unit Orbit are live`.
+- [x] **Run tests to verify they pass.** Run focused Scene semantic/composition tests and the named production-bundle browser journey; expect pass and exact full-width stage geometry.
 - [x] **Commit.** Run `git add src/components/time/SceneStudio.jsx src/components/time/BalancedTwinCanvas.jsx src/components/time/sceneDraft.js src/components/build/BuildWorkspace.jsx src/styles.css tests/sceneStudio.test.js tests/e2e/v3-temporal-authoring.spec.js && git commit -m "feat(scene): implement two-stage scene studio"`.
 
 ### Task S7-9: Implement the Time Content library and owner handoffs

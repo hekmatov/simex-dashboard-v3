@@ -3,7 +3,7 @@ import {
   validateScene,
 } from "../../charting/time/sceneSchema.js";
 
-export const SCENE_STAGES = Object.freeze(["select", "arrange"]);
+export const SCENE_STAGES = Object.freeze(["details", "select", "arrange"]);
 
 const PRESENT_LAYOUTS = Object.freeze({ 1: "single", 2: "vertical-divider", 3: "large-left", 4: "grid-2x2" });
 
@@ -13,7 +13,7 @@ export function createSceneDraft(scene, validationContext = {}) {
     baseline,
     value: clone(baseline),
     validationContext,
-    stage: "select",
+    stage: "details",
     status: "clean",
     error: null,
     findings: [],
@@ -198,7 +198,7 @@ function requestSave(state) {
     const first = state.findings[0];
     return {
       ...state,
-      stage: first.stage === "arrange" ? "arrange" : "select",
+      stage: first.stage === "arrange" ? "arrange" : first.stage === "details" ? "details" : "select",
       status: "error",
       error: { code: "SCENE_NEEDS_ATTENTION", message: first.message ?? "Repair the Scene before saving.", retryable: false },
     };
@@ -207,9 +207,11 @@ function requestSave(state) {
     validateScene(normalizeSceneDefaults(state.value), state.validationContext);
     return { ...state, status: "saving", error: null };
   } catch (error) {
-    const stage = /member|Present|width|layout|Audience|secondsPerFrame|matching/i.test(error.message)
+    const stage = /Present|width|layout|Audience/i.test(error.message)
       ? "arrange"
-      : "select";
+      : /member|frame source|observation/i.test(error.message)
+        ? "select"
+        : "details";
     return {
       ...state,
       stage,

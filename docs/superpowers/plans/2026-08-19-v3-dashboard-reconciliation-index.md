@@ -37,7 +37,7 @@
 
 Precedence resolutions:
 
-- Sketch 006 replaces only the earlier five-stage Scene interaction staging with **Select charts and frames** and **Arrange and configure**. All semantic fields, validation, persistence, dirty-state, recovery, duplication, and atomic-save requirements remain binding.
+- Sketch 006 originally replaced the earlier five-stage Scene flow with a persistent draft panel plus two stages. The user-approved 2026-08-24 amendment makes that panel **Scene details** Stage 1, renumbers **Select charts and frames** and **Arrange and configure** to Stages 2 and 3, and gives each active stage the full available editor width. All semantic fields, validation, persistence, dirty-state, recovery, duplication, and atomic-save requirements remain binding.
 - Sketch 002 and `INTEGRATION-DEFAULTS.md` permit one active layout draft and one active selected-chart property draft simultaneously. Other incompatible mutation surfaces use Context Shelf parking/resolution.
 - The MANIFEST makes phone Build/Present best-effort, not unavailable. The persistent notice does not gate the DOM or behavior.
 - Sketch 003 owns three styles, 15 profiles, independent Profile/Standard chart colours, and Light/Dark/System; `themes/default.css` is the baseline inherited by every component/state.
@@ -103,7 +103,7 @@ The replacement boundary is narrow: replace the permanent Build triptych composi
 | 003 | Three styles, 15 profiles, Profile/Standard, Light/Dark/System | Value resolver exists; propagation uneven | Retain S6-1; correct S6-4, S7-19, S8-7 |
 | 004 | Exact six-stage chart-creation workflow | Current four-tab shell contradicts contract | Replace shell, retain engines: S7-10–S7-16 |
 | 005 | Four-stage Chrono Studio and Availability Ledger | Saved runtime only | Complete S7-5, S7-6 |
-| 006 | Two-stage Scene flow and Balanced Twin Canvas | Saved Scene/studio absent | Complete S7-7, S7-8 |
+| 006 | Three-stage Scene flow and Balanced Twin Canvas, per 2026-08-24 amendment | Saved Scene/studio absent | Complete S7-7, S7-8 |
 | 007 | Chrono deck default, mast alternative, same session | Runtime exists; full controller incomplete | Adjust S7-17 |
 | 008 | Present monitor plus Live Sidecar | Catalogue-first page contradicts winner | Replace composition S8-3, S8-7 |
 | 009 | Layered crown and phone notice boundary | Crown exists; phone and geometry wrong | Adjust S6-2, S6-3, S6-5 |

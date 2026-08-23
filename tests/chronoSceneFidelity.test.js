@@ -6,6 +6,7 @@ import {
   createChronoGroupDraft,
 } from "../src/components/time/chronoGroupDraft.js";
 import {
+  SCENE_STAGES,
   createSceneDraft,
   reduceSceneDraft,
 } from "../src/components/time/sceneDraft.js";
@@ -90,6 +91,25 @@ const validationContext = {
   charts,
   pages: [{ id: "biomedical" }, { id: "operations" }],
 };
+
+test("Sketch 006 amendment makes Scene details the first of three live stages", () => {
+  let state = createSceneDraft(sceneFixture(), validationContext);
+  assert.deepEqual(SCENE_STAGES, ["details", "select", "arrange"]);
+  assert.equal(state.stage, "details");
+
+  state = reduceSceneDraft(state, { type: "SET_STAGE", stage: "select" });
+  assert.equal(state.stage, "select");
+  state = reduceSceneDraft(state, { type: "SET_STAGE", stage: "arrange" });
+  assert.equal(state.stage, "arrange");
+});
+
+test("Scene validation returns identity problems to details", () => {
+  let state = createSceneDraft({ ...sceneFixture(), name: "" }, validationContext);
+  state = reduceSceneDraft(state, { type: "SET_STAGE", stage: "arrange" });
+  state = reduceSceneDraft(state, { type: "SAVE_REQUEST" });
+  assert.equal(state.stage, "details");
+  assert.equal(state.status, "error");
+});
 
 test("Sketch 006 page and parent changes recompute dependent Scene fields", () => {
   let state = createSceneDraft(sceneFixture(), validationContext);

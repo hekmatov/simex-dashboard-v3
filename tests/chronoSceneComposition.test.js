@@ -93,15 +93,35 @@ const sceneProps = {
   pages: [{ id: "biomedical", label: "Biomedical" }],
 };
 
-test("Sketch 006 composition keeps the Scene Draft panel present in both stages", () => {
+test("Sketch 006 amendment exposes three stages and gives each active task the full editor width", () => {
+  const detailsHtml = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft("details") }));
+  for (const stage of ["Scene details", "Select charts and frames", "Arrange and configure"]) {
+    assert.match(detailsHtml, new RegExp(stage));
+  }
+  assert.match(detailsHtml, /data-layout="full-width"/);
+  assert.match(detailsHtml, /scene-details-stage/);
+  assert.doesNotMatch(detailsHtml, /scene-draft-panel/);
+  for (const field of ["Scene name", "Owning page", "Parent Chrono Group", "Period", "Time mode", "Default matching", "Seconds per frame"]) {
+    assert.match(detailsHtml, new RegExp(field));
+  }
+  assert.match(detailsHtml, /Start date/);
+  assert.match(detailsHtml, /End date/);
+
   for (const stage of ["select", "arrange"]) {
     const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft(stage) }));
-    assert.match(html, /scene-draft-panel/);
-    for (const field of ["Scene name", "Owning page", "Parent Chrono Group", "Period", "Time mode", "Default matching", "Seconds per frame", "Save readiness"]) {
-      assert.match(html, new RegExp(field));
-    }
-    assert.match(html, /Start date/);
-    assert.match(html, /End date/);
+    assert.match(html, /data-layout="full-width"/);
+    assert.doesNotMatch(html, /scene-draft-panel/);
+    assert.doesNotMatch(html, /Scene name<input/);
+  }
+});
+
+test("Scene save readiness and transactional actions remain available without reserving a sidebar", () => {
+  for (const stage of ["details", "select", "arrange"]) {
+    const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft(stage) }));
+    assert.match(html, /scene-transaction-footer/);
+    assert.match(html, /Save readiness/);
+    assert.match(html, />Save Scene</);
+    assert.match(html, />Discard Scene</);
   }
 });
 
@@ -113,7 +133,7 @@ test("Sketch 006 Scene ledger renders variable evidence on the shared period sca
 });
 
 test("Sketch 006 Calendar mode renders positive interval and unit controls", () => {
-  const draft = sceneDraft("select");
+  const draft = sceneDraft("details");
   draft.value.frames = { mode: "calendar", interval: { value: 2, unit: "month" } };
   const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft }));
   assert.match(html, /Calendar interval value/);

@@ -5,6 +5,7 @@ import BalancedTwinCanvas from "./BalancedTwinCanvas.jsx";
 import { partitionSceneCharts } from "./sceneDraft.js";
 
 const STAGES = Object.freeze([
+  { id: "details", label: "Scene details" },
   { id: "select", label: "Select charts and frames" },
   { id: "arrange", label: "Arrange and configure" },
 ]);
@@ -14,6 +15,7 @@ export default function SceneEditor({ draft, charts = [], chronoGroups = [], pag
   const busy = disabled || draft?.status === "saving";
   const dirty = ["dirty", "error", "suspended"].includes(draft?.status);
   const selectedIds = new Set((value.members ?? []).map(({ chartId }) => chartId));
+  const readiness = draft?.error?.message ?? (value.name?.trim() && value.pageId && value.chronoGroupId && value.members?.length ? "Ready to save" : "Complete the required fields and select a chart");
   return (
     <section className="scene-studio" aria-labelledby="scene-studio-title">
       <header className="build-surface-heading scene-identity-band">
@@ -24,52 +26,57 @@ export default function SceneEditor({ draft, charts = [], chronoGroups = [], pag
         </div>
         <span className="build-draft-status" data-status={draft?.status ?? "clean"}>{draft?.status === "saving" ? "Saving Scene" : dirty ? "Unsaved Scene" : "Scene saved"}</span>
       </header>
-      <div className="scene-studio__workspace">
+      <div className="scene-studio__workspace" data-layout="full-width">
         <main className="scene-studio__main">
           <nav className="scene-stage-navigation" aria-label="Scene authoring stages">
             {STAGES.map((stage, index) => <button type="button" key={stage.id} aria-current={draft?.stage === stage.id ? "step" : undefined} disabled={busy} onClick={() => onAction?.({ type: "SET_STAGE", stage: stage.id })}><span>{index + 1}</span> {stage.label}</button>)}
           </nav>
           {draft?.error && <p className="build-operation-error" role="alert">{draft.error.message}</p>}
-          {draft?.stage === "arrange"
-            ? <ArrangeStage draft={draft} charts={charts} busy={busy} onAction={onAction} />
-            : <SelectStage value={value} charts={charts} selectedIds={selectedIds} busy={busy} onAction={onAction} />}
+          {draft?.stage === "details"
+            ? <SceneDetailsStage draft={draft} charts={charts} chronoGroups={chronoGroups} pages={pages} busy={busy} onAction={onAction} />
+            : draft?.stage === "arrange"
+              ? <ArrangeStage draft={draft} charts={charts} busy={busy} onAction={onAction} />
+              : <SelectStage value={value} charts={charts} selectedIds={selectedIds} busy={busy} onAction={onAction} />}
         </main>
-        <SceneDraftPanel draft={draft} charts={charts} chronoGroups={chronoGroups} pages={pages} busy={busy} dirty={dirty} onAction={onAction} />
+        <SceneTransactionFooter readiness={readiness} draft={draft} busy={busy} dirty={dirty} onAction={onAction} />
       </div>
     </section>
   );
 }
 
-function SceneDraftPanel({ draft, charts, chronoGroups, pages, busy, dirty, onAction }) {
+function SceneDetailsStage({ draft, charts, chronoGroups, pages, busy, onAction }) {
   const value = draft?.value ?? {};
   const eligibleGroups = chronoGroups.filter((group) => {
     const groupIds = new Set(group.chartIds ?? group.members?.map(({ chartId }) => chartId) ?? []);
     return charts.some((chart) => groupIds.has(chart.id) && chart.pageId === value.pageId);
   });
-  const readiness = draft?.error?.message ?? (value.name?.trim() && value.pageId && value.chronoGroupId && value.members?.length ? "Ready to save" : "Complete the required fields and select a chart");
   const periodDates = toDateInputs(value.period);
   const parentPeriod = eligibleGroups.find(({ id }) => id === value.chronoGroupId)?.period;
   const maximumDates = toDateInputs(parentPeriod);
   const setPeriod = (next) => onAction?.({ type: "SET_PERIOD", start: next.start, end: next.end });
   return (
-    <aside className="scene-draft-panel" aria-labelledby="scene-draft-panel-title">
-      <header><div><p className="eyebrow">Persistent draft</p><h3 id="scene-draft-panel-title">Scene Draft</h3></div><span data-status={draft?.status ?? "clean"}>{dirty ? "Unsaved" : "Saved"}</span></header>
-      <label>Scene name<input id="scene-name" value={value.name ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_NAME", value: event.target.value })} /></label>
-      <label>Owning page<select value={value.pageId ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_PAGE", pageId: event.target.value })}><option value="">Choose page</option>{pages.map((page) => <option key={page.id} value={page.id}>{page.label ?? page.title ?? page.id}</option>)}</select></label>
-      <label>Parent Chrono Group<select value={value.chronoGroupId ?? ""} disabled={busy || !value.pageId} onChange={(event) => onAction?.({ type: "SET_CHRONO_GROUP", chronoGroupId: event.target.value || null })}><option value="">Choose Chrono Group</option>{eligibleGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      <fieldset className="scene-draft-panel__period"><legend>Period</legend><div className="scene-draft-panel__period-inputs"><label>Start date<input type="date" min={maximumDates.start || undefined} max={periodDates.end || maximumDates.end || undefined} value={periodDates.start} disabled={busy || !value.chronoGroupId} onChange={(event) => setPeriod({ ...periodDates, start: event.target.value })} /></label><label>End date<input type="date" min={periodDates.start || maximumDates.start || undefined} max={maximumDates.end || undefined} value={periodDates.end} disabled={busy || !value.chronoGroupId} onChange={(event) => setPeriod({ ...periodDates, end: event.target.value })} /></label></div><small>Maximum: {formatPeriod(parentPeriod)}</small></fieldset>
-      <fieldset><legend>Time mode</legend>
-        <label className="choice-control-row"><input className="choice-control" type="radio" name="scene-time-mode" checked={value.frames?.mode !== "source"} disabled={busy} onChange={() => onAction?.({ type: "SET_FRAME_MODE", mode: "calendar" })} />Calendar interval</label>
-        <label className="choice-control-row"><input className="choice-control" type="radio" name="scene-time-mode" checked={value.frames?.mode === "source"} disabled={busy || !value.members?.length} onChange={() => onAction?.({ type: "SET_FRAME_MODE", mode: "source" })} />Chart observations</label>
-      </fieldset>
-      {value.frames?.mode !== "source" && <div className="scene-calendar-interval"><label>Calendar interval value<input type="number" min="1" step="1" value={value.frames?.interval?.value ?? 1} disabled={busy} onChange={(event) => onAction?.({ type: "SET_CALENDAR_INTERVAL", value: event.target.value, unit: value.frames?.interval?.unit ?? "day" })} /></label><label>Calendar interval unit<select value={value.frames?.interval?.unit ?? "day"} disabled={busy} onChange={(event) => onAction?.({ type: "SET_CALENDAR_INTERVAL", value: value.frames?.interval?.value ?? 1, unit: event.target.value })}><option value="day">Days</option><option value="month">Months</option><option value="year">Years</option></select></label></div>}
-      {value.frames?.mode === "source" && <label>Frame source<select value={value.frames.chartId ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_FRAME_SOURCE", chartId: event.target.value })}>{(value.members ?? []).map(({ chartId }) => <option key={chartId} value={chartId}>{chartLabel(charts, chartId)}</option>)}</select></label>}
-      <label>Default matching<select value={value.defaultMatching ?? "authored"} disabled={busy} onChange={(event) => onAction?.({ type: "SET_DEFAULT_MATCHING", matching: event.target.value })}><option value="authored">Inherit Chrono Group</option>{Object.values(MATCHING_POLICY_LABELS).map((label) => <option key={label} value={label}>{label}</option>)}</select></label>
-      <label>Seconds per frame<input type="number" min="0.1" step="0.1" value={value.secondsPerFrame ?? ""} placeholder="Inherit group" disabled={busy} onChange={(event) => onAction?.({ type: "SET_SECONDS_PER_FRAME", value: event.target.value })} /></label>
-      <section className="scene-save-readiness" aria-labelledby="scene-save-readiness-title"><h4 id="scene-save-readiness-title">Save readiness</h4><p role="status">{readiness}</p></section>
-      <footer className="build-surface-actions"><button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button><button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scene</button></footer>
-    </aside>
+    <section className="scene-details-stage scene-stage-body" data-stage="details" aria-labelledby="scene-details-stage-title">
+      <header><h3 id="scene-details-stage-title">Scene details</h3><p>Define the Scene scope and shared playback behavior before selecting and arranging charts.</p></header>
+      <div className="scene-details-stage__fields">
+        <label className="scene-details-stage__wide">Scene name<input id="scene-name" value={value.name ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_NAME", value: event.target.value })} /></label>
+        <label>Owning page<select value={value.pageId ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_PAGE", pageId: event.target.value })}><option value="">Choose page</option>{pages.map((page) => <option key={page.id} value={page.id}>{page.label ?? page.title ?? page.id}</option>)}</select></label>
+        <label>Parent Chrono Group<select value={value.chronoGroupId ?? ""} disabled={busy || !value.pageId} onChange={(event) => onAction?.({ type: "SET_CHRONO_GROUP", chronoGroupId: event.target.value || null })}><option value="">Choose Chrono Group</option>{eligibleGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+        <fieldset className="scene-details-stage__period scene-details-stage__wide"><legend>Period</legend><div className="scene-details-stage__period-inputs"><label>Start date<input type="date" min={maximumDates.start || undefined} max={periodDates.end || maximumDates.end || undefined} value={periodDates.start} disabled={busy || !value.chronoGroupId} onChange={(event) => setPeriod({ ...periodDates, start: event.target.value })} /></label><label>End date<input type="date" min={periodDates.start || maximumDates.start || undefined} max={maximumDates.end || undefined} value={periodDates.end} disabled={busy || !value.chronoGroupId} onChange={(event) => setPeriod({ ...periodDates, end: event.target.value })} /></label></div><small>Maximum: {formatPeriod(parentPeriod)}</small></fieldset>
+        <fieldset><legend>Time mode</legend>
+          <label className="choice-control-row"><input className="choice-control" type="radio" name="scene-time-mode" checked={value.frames?.mode !== "source"} disabled={busy} onChange={() => onAction?.({ type: "SET_FRAME_MODE", mode: "calendar" })} />Calendar interval</label>
+          <label className="choice-control-row"><input className="choice-control" type="radio" name="scene-time-mode" checked={value.frames?.mode === "source"} disabled={busy || !value.members?.length} onChange={() => onAction?.({ type: "SET_FRAME_MODE", mode: "source" })} />Chart observations</label>
+        </fieldset>
+        {value.frames?.mode !== "source" && <div className="scene-calendar-interval"><label>Calendar interval value<input type="number" min="1" step="1" value={value.frames?.interval?.value ?? 1} disabled={busy} onChange={(event) => onAction?.({ type: "SET_CALENDAR_INTERVAL", value: event.target.value, unit: value.frames?.interval?.unit ?? "day" })} /></label><label>Calendar interval unit<select value={value.frames?.interval?.unit ?? "day"} disabled={busy} onChange={(event) => onAction?.({ type: "SET_CALENDAR_INTERVAL", value: value.frames?.interval?.value ?? 1, unit: event.target.value })}><option value="day">Days</option><option value="month">Months</option><option value="year">Years</option></select></label></div>}
+        {value.frames?.mode === "source" && <label>Frame source<select value={value.frames.chartId ?? ""} disabled={busy} onChange={(event) => onAction?.({ type: "SET_FRAME_SOURCE", chartId: event.target.value })}>{(value.members ?? []).map(({ chartId }) => <option key={chartId} value={chartId}>{chartLabel(charts, chartId)}</option>)}</select></label>}
+        <label>Default matching<select value={value.defaultMatching ?? "authored"} disabled={busy} onChange={(event) => onAction?.({ type: "SET_DEFAULT_MATCHING", matching: event.target.value })}><option value="authored">Inherit Chrono Group</option>{Object.values(MATCHING_POLICY_LABELS).map((label) => <option key={label} value={label}>{label}</option>)}</select></label>
+        <label>Seconds per frame<input type="number" min="0.1" step="0.1" value={value.secondsPerFrame ?? ""} placeholder="Inherit group" disabled={busy} onChange={(event) => onAction?.({ type: "SET_SECONDS_PER_FRAME", value: event.target.value })} /></label>
+      </div>
+    </section>
   );
+}
+
+function SceneTransactionFooter({ readiness, draft, busy, dirty, onAction }) {
+  return <footer className="scene-transaction-footer"><section className="scene-save-readiness" aria-labelledby="scene-save-readiness-title"><h4 id="scene-save-readiness-title">Save readiness</h4><p role="status">{readiness}</p></section><div className="build-surface-actions"><button type="button" disabled={busy || !dirty} onClick={() => onAction?.({ type: "SAVE_REQUEST" })}>Save Scene</button><button type="button" className="secondary" disabled={busy || !dirty} onClick={() => onAction?.({ type: "DISCARD" })}>Discard Scene</button></div></footer>;
 }
 
 function SelectStage({ value, charts, selectedIds, busy, onAction }) {

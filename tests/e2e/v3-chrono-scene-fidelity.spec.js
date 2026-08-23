@@ -112,30 +112,41 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
   await expect(auxiliary.getByRole("textbox", { name: "Chrono Group name" })).toHaveValue("Unfinished response group");
 });
 
-test("006-scene-authoring: persistent draft, twin canvases, and Unit Orbit are live", async ({ page }) => {
+test("006-scene-authoring amendment: three full-width stages and Unit Orbit are live", async ({ page }) => {
   test.setTimeout(120_000);
   await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
   const auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
 
-  const panel = auxiliary.locator(".scene-draft-panel");
-  await expect(panel).toBeVisible();
-  await expect(panel.getByRole("textbox", { name: "Scene name" })).toBeVisible();
-  for (const label of ["Owning page", "Parent Chrono Group", "Default matching"]) await expect(panel.getByRole("combobox", { name: label })).toBeVisible();
-  await expect(panel.getByRole("spinbutton", { name: "Seconds per frame" })).toBeVisible();
-  await expect(panel.getByLabel("Start date")).toBeVisible();
-  await expect(panel.getByLabel("End date")).toBeVisible();
-  if (await panel.getByRole("radio", { name: "Calendar interval" }).isChecked()) {
-    await expect(panel.getByRole("spinbutton", { name: "Calendar interval value" })).toBeVisible();
-    await expect(panel.getByRole("combobox", { name: "Calendar interval unit" })).toBeVisible();
+  const details = auxiliary.locator(".scene-details-stage");
+  await expect(details).toBeVisible();
+  await expect(auxiliary.getByRole("button", { name: /Scene details/ })).toHaveAttribute("aria-current", "step");
+  await expect(details.getByRole("textbox", { name: "Scene name" })).toBeVisible();
+  for (const label of ["Owning page", "Parent Chrono Group", "Default matching"]) await expect(details.getByRole("combobox", { name: label })).toBeVisible();
+  await expect(details.getByRole("spinbutton", { name: "Seconds per frame" })).toBeVisible();
+  await expect(details.getByLabel("Start date")).toBeVisible();
+  await expect(details.getByLabel("End date")).toBeVisible();
+  if (await details.getByRole("radio", { name: "Calendar interval" }).isChecked()) {
+    await expect(details.getByRole("spinbutton", { name: "Calendar interval value" })).toBeVisible();
+    await expect(details.getByRole("combobox", { name: "Calendar interval unit" })).toBeVisible();
   }
-  for (const label of ["Period", "Time mode", "Save readiness"]) await expect(panel.getByText(label, { exact: true })).toBeVisible();
-  const orderedTops = await panel.evaluate((node) => ["Scene name", "Owning page", "Parent Chrono Group", "Period", "Time mode"].map((label) => [...node.querySelectorAll("label, legend")].find((entry) => entry.textContent.trim().startsWith(label))?.getBoundingClientRect().top));
-  expect(orderedTops.every((top, index) => index === 0 || top > orderedTops[index - 1])).toBe(true);
+  for (const label of ["Period", "Time mode"]) await expect(details.getByText(label, { exact: true })).toBeVisible();
+  await expect(auxiliary.locator(".scene-transaction-footer").getByText("Save readiness", { exact: true })).toBeVisible();
+
+  await auxiliary.getByRole("button", { name: /Select charts and frames/ }).click();
+  await expect(auxiliary.getByRole("button", { name: /Select charts and frames/ })).toHaveAttribute("aria-current", "step");
   await expect(auxiliary.locator(".scene-variable-evidence").first()).toContainText("Full data");
   await expect(auxiliary.locator(".scene-availability-calendar").first()).toBeVisible();
+  const selectWidth = await auxiliary.locator(".scene-stage-body[data-stage='select']").evaluate((node) => ({
+    stage: node.getBoundingClientRect().width,
+    workspace: node.closest(".scene-studio__workspace").getBoundingClientRect().width,
+    hasSidebar: Boolean(node.closest(".scene-studio")?.querySelector(".scene-draft-panel")),
+  }));
+  expect(selectWidth.stage / selectWidth.workspace).toBeGreaterThan(0.95);
+  expect(selectWidth.hasSidebar).toBe(false);
 
   await auxiliary.getByRole("button", { name: /Arrange and configure/ }).click();
+  await expect(auxiliary.getByRole("button", { name: /Arrange and configure/ })).toHaveAttribute("aria-current", "step");
   const boards = auxiliary.locator(".scene-arrangement-board");
   await expect(boards).toHaveCount(2);
   const widths = await boards.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
@@ -147,17 +158,22 @@ test("006-scene-authoring: persistent draft, twin canvases, and Unit Orbit are l
   await expect(orbit).toContainText("Unit Orbit");
   await expect(orbit.getByText("Include in Present", { exact: true })).toBeVisible();
   await expect(orbit.getByRole("button", { name: "Move first" })).toBeVisible();
-  await expect(panel).toBeVisible();
+  await expect(auxiliary.locator(".scene-draft-panel")).toHaveCount(0);
+  const arrangeWidth = await auxiliary.locator(".scene-stage-body[data-stage='arrange']").evaluate((node) => ({
+    stage: node.getBoundingClientRect().width,
+    workspace: node.closest(".scene-studio__workspace").getBoundingClientRect().width,
+  }));
+  expect(arrangeWidth.stage / arrangeWidth.workspace).toBeGreaterThan(0.95);
 
   await page.setViewportSize({ width: 768, height: 1024 });
   const tabletGeometry = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
     clientWidth: document.documentElement.clientWidth,
-    panelVisible: Boolean(document.querySelector(".scene-draft-panel")?.getBoundingClientRect().height),
+    transactionFooterVisible: Boolean(document.querySelector(".scene-transaction-footer")?.getBoundingClientRect().height),
     boardsVisible: document.querySelectorAll(".scene-arrangement-board").length === 2,
   }));
   expect(tabletGeometry.scrollWidth).toBeLessThanOrEqual(tabletGeometry.clientWidth);
-  expect(tabletGeometry.panelVisible).toBe(true);
+  expect(tabletGeometry.transactionFooterVisible).toBe(true);
   expect(tabletGeometry.boardsVisible).toBe(true);
 });
 
