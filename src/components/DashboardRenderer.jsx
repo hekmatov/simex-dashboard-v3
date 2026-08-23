@@ -294,8 +294,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       if (!buildMode || chartAuthoringActive) return;
       const group = dashboardStateRef.current.chronoGroups?.[0];
       if (!group) return;
-      setBuildSelection({ kind: "chronoGroup", chronoGroupId: group.id });
-      setFocusInspectorLabelKey((current) => current + 1);
+      const selection = { kind: "chronoGroup", chronoGroupId: group.id };
+      const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
+      void activate?.(selection, { intent: "activate" });
     },
     async prepareToLeaveBuild(destination = "mode") {
       if (!buildMode) return { ok: true };

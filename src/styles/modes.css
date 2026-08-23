@@ -1442,6 +1442,23 @@
   width: min(980px, calc(100vw - 428px));
 }
 
+.build-authoring-auxiliary[data-authoring-surface="chrono-group"] {
+  grid-template-rows: minmax(0, 1fr);
+  height: calc(100dvh - 198px);
+  overflow: hidden;
+}
+
+.build-authoring-auxiliary[data-authoring-surface="chrono-group"] > .build-auxiliary-close {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 1;
+}
+
+.build-authoring-auxiliary[data-authoring-surface="chrono-group"] .chrono-group-studio > header {
+  padding-right: 76px;
+}
+
 .chrono-group-studio,
 .scene-studio,
 .temporal-studio,
@@ -1454,14 +1471,16 @@
 
 .chrono-group-studio {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-  height: min(820px, calc(100dvh - 64px));
-  max-height: calc(100dvh - 64px);
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .chrono-group-studio__body {
   min-height: 0;
   overflow: auto;
-  padding-inline: 2px;
+  overscroll-behavior: contain;
+  padding: 2px 4px 16px 2px;
 }
 
 .scene-studio__workspace {
@@ -1555,6 +1574,11 @@
   margin: 2px 0 4px;
 }
 
+.chrono-group-studio > header p:not(.eyebrow) {
+  color: var(--simex-text-muted);
+  margin: 0;
+}
+
 .chrono-group-studio > header > span,
 .build-draft-status {
   background: var(--simex-surface-panel-alt);
@@ -1586,10 +1610,53 @@
   width: 100%;
 }
 
+.chrono-group-studio nav button {
+  align-content: center;
+  display: grid;
+  gap: 2px 8px;
+  grid-template-areas: "number label" "number status";
+  grid-template-columns: 30px minmax(0, 1fr);
+  justify-content: stretch;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.chrono-stage-number {
+  align-items: center;
+  align-self: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  display: inline-flex;
+  grid-area: number;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.chrono-stage-label {
+  grid-area: label;
+  line-height: 1.2;
+}
+
+.chrono-stage-status {
+  font-size: 0.72rem;
+  font-weight: 650;
+  grid-area: status;
+  line-height: 1.2;
+}
+
 .chrono-group-studio nav button[aria-current="step"],
 .scene-stage-navigation button[aria-current="step"] {
   background: var(--simex-accent);
   color: var(--simex-on-accent);
+}
+
+.chrono-group-studio nav button[data-proof-state="needs-attention"]:not([aria-current="step"]) {
+  box-shadow: inset 4px 0 0 var(--simex-warning);
+}
+
+.chrono-group-studio nav button[data-proof-state="waiting"]:not([aria-current="step"]) {
+  color: var(--simex-text-muted);
 }
 
 .chrono-group-studio fieldset,
@@ -1647,13 +1714,140 @@
 }
 
 .chrono-group-studio > footer {
-  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  align-items: center;
+  background: var(--simex-surface-panel);
   border-top: 1px solid var(--simex-border-subtle);
-  bottom: -14px;
-  margin: 0 -14px -14px;
-  padding: 12px 14px;
-  position: sticky;
+  margin: 0 -2px;
+  padding: 12px 2px 0;
+  position: relative;
   z-index: 2;
+}
+
+.chrono-stage-progress {
+  color: var(--simex-text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-right: auto;
+}
+
+.chrono-period-stage,
+.chrono-defaults-stage,
+.chrono-chart-selection,
+.chrono-group-review {
+  display: grid;
+  gap: 14px;
+}
+
+.chrono-period-stage > p,
+.chrono-defaults-stage > p,
+.chrono-chart-selection > header p,
+.chrono-group-review > header p {
+  color: var(--simex-text-muted);
+  margin: 0;
+}
+
+.chrono-period-inputs,
+.chrono-policy-options,
+.chrono-review-metrics {
+  display: grid;
+  gap: 10px;
+}
+
+.chrono-period-inputs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chrono-timezone-proof,
+.chrono-period-proof,
+.chrono-fallback-proof,
+.chrono-effective-hierarchy,
+.chrono-proof-callout {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 9px;
+  padding: 12px;
+}
+
+.chrono-timezone-proof,
+.chrono-period-proof > div {
+  display: grid;
+  gap: 4px;
+}
+
+.chrono-timezone-proof p,
+.chrono-period-proof span,
+.chrono-fallback-proof p,
+.chrono-effective-hierarchy p {
+  color: var(--simex-text-muted);
+  margin: 0;
+}
+
+.chrono-period-proof {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.chrono-policy-field {
+  display: grid;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.chrono-policy-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chrono-policy-options button {
+  align-content: start;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  min-height: 76px;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: normal;
+}
+
+.chrono-policy-options button span {
+  color: var(--simex-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chrono-policy-options button[aria-pressed="true"] {
+  background: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
+.chrono-policy-options button[aria-pressed="true"] span {
+  color: inherit;
+}
+
+.chrono-fallback-proof {
+  display: grid;
+  gap: 10px;
+}
+
+.chrono-fallback-proof > div {
+  border-left: 4px solid var(--simex-warning);
+  padding-left: 10px;
+}
+
+.chrono-proof-callout {
+  align-items: center;
+  display: grid;
+  gap: 4px 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.chrono-proof-callout[data-tone="error"] {
+  border-left: 5px double var(--simex-warning);
+}
+
+.chrono-proof-callout[data-tone="success"] {
+  border-left: 5px solid var(--simex-accent);
 }
 
 .time-availability-ledger ol,
@@ -1672,7 +1866,8 @@
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
   border-radius: 9px;
-  padding: 12px;
+  overflow: hidden;
+  padding: 0;
 }
 
 .time-availability-ledger details > summary,
@@ -1683,6 +1878,64 @@
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto;
   min-height: 44px;
+}
+
+.availability-record {
+  min-width: 0;
+}
+
+.availability-record__header {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.availability-record__identity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.availability-record__identity h4,
+.availability-record__identity p {
+  margin: 0;
+}
+
+.availability-record__identity p {
+  color: var(--simex-text-muted);
+  font-size: 0.8rem;
+}
+
+.availability-record__membership,
+.availability-record__attention {
+  font-weight: 750;
+}
+
+.availability-record__summary {
+  align-items: center;
+  border-block: 1px solid var(--simex-border-subtle);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(170px, 0.75fr) minmax(140px, 1fr) auto;
+  padding: 10px 12px;
+}
+
+.availability-record__summary > div,
+.availability-calendar li > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.availability-record__summary small,
+.availability-calendar small {
+  color: var(--simex-text-muted);
+  font-weight: 600;
+}
+
+.availability-record__disclosure > summary {
+  padding-inline: 12px;
 }
 
 .time-availability-ledger details > summary > span:first-child,
@@ -1697,11 +1950,9 @@
 }
 
 .availability-record__body {
-  border-top: 1px solid var(--simex-border-subtle);
   display: grid;
   gap: 10px;
-  margin-top: 8px;
-  padding-top: 10px;
+  padding: 0 12px 12px;
 }
 
 .availability-calendar li {
@@ -1713,6 +1964,61 @@
 .chrono-group-review {
   display: grid;
   gap: 14px;
+}
+
+.chrono-review-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.chrono-review-metrics > div {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 9px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.chrono-review-metrics strong {
+  font-size: 1.3rem;
+}
+
+.chrono-review-metrics span {
+  color: var(--simex-text-muted);
+  font-size: 0.78rem;
+}
+
+.chrono-review-proof-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chrono-review-proof-list > li {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: 9px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  padding: 10px 12px;
+}
+
+.chrono-review-proof-list > li > span {
+  align-items: center;
+  border: 1px solid var(--simex-border-strong);
+  border-radius: 999px;
+  display: inline-flex;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.chrono-review-proof-list p {
+  color: var(--simex-text-muted);
+  margin: 3px 0 0;
 }
 
 .chrono-group-review dl,
@@ -1755,6 +2061,10 @@
   border-left: 5px double var(--simex-warning, #9b6a00);
 }
 
+.time-availability-ledger__region > ol > li[data-status="selected"] {
+  box-shadow: inset 4px 0 0 var(--simex-accent);
+}
+
 .time-availability-ledger__region > ol > li > header,
 .scene-arrangement-board > header,
 .scene-arrangement-board li,
@@ -1769,7 +2079,7 @@
   display: grid;
   font-size: 0.82rem;
   gap: 8px;
-  grid-template-columns: minmax(110px, 1fr) auto minmax(150px, auto) minmax(140px, 1fr);
+  grid-template-columns: minmax(170px, 0.75fr) minmax(140px, 1fr) auto;
 }
 
 .availability-ticks {
@@ -1881,6 +2191,38 @@
   border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   padding: 12px;
+}
+
+.time-availability-ledger__region-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.time-availability-ledger__region-heading h3,
+.time-availability-ledger__region-heading p,
+.time-availability-ledger__empty {
+  margin: 0;
+}
+
+.time-availability-ledger__region-heading p,
+.time-availability-ledger__empty {
+  color: var(--simex-text-muted);
+  font-size: 0.82rem;
+}
+
+.time-availability-ledger__region-heading > span {
+  color: var(--simex-text-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.time-availability-ledger__separator {
+  border-top: 1px dashed var(--simex-border-strong);
+  min-height: 1px;
 }
 
 .time-availability-ledger__region[data-region="needs-attention"],
@@ -2307,6 +2649,25 @@
   }
 
   .time-availability-ledger ul li {
+    grid-template-columns: 1fr;
+  }
+
+  .chrono-period-inputs,
+  .chrono-policy-options,
+  .chrono-review-metrics,
+  .availability-record__summary,
+  .chrono-review-proof-list > li {
+    grid-template-columns: 1fr;
+  }
+
+  .availability-record__header,
+  .chrono-period-proof,
+  .time-availability-ledger__region-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chrono-proof-callout {
     grid-template-columns: 1fr;
   }
 }

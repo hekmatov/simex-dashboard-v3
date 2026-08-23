@@ -234,6 +234,14 @@ export default function App() {
     }
   }
 
+  function openChronoGroupAuthoring() {
+    if (!buildPanelOpen) {
+      buildPanelScrollRef.current = { left: window.scrollX, top: window.scrollY };
+      setBuildPanelOpen(true);
+    }
+    dashboardRendererRef.current?.requestChronoGroupAuthoring?.();
+  }
+
   const commandCrownPageActions = mode === "view" ? (
     <>
       <button type="button" className="secondary dashboard-look-trigger" onClick={openDashboardLook}>
@@ -256,7 +264,7 @@ export default function App() {
         type="button"
         className="secondary build-chrono-groups"
         disabled={modeDisabled || buildDraftLocked || (dashboard?.chronoGroups?.length ?? 0) === 0}
-        onClick={() => dashboardRendererRef.current?.requestChronoGroupAuthoring?.()}
+        onClick={openChronoGroupAuthoring}
       >
         Chrono Groups
       </button>

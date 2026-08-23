@@ -14,22 +14,50 @@ test.beforeEach(async ({ request, page }) => {
 
 test("005-chrono-group-authoring: staged ledger and review remain usable at desktop and tablet", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  await page.getByRole("button", { name: "Build panel", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Build panel", exact: true })).toHaveAttribute("aria-expanded", "true");
   const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
-  await auxiliary.locator("[data-action='open-content']").first().click();
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
 
   const stages = auxiliary.getByRole("navigation", { name: "Chrono Group stages" });
-  await expect(stages.getByRole("button")).toHaveText(["Name and period", "Choose charts", "Set defaults", "Review"]);
-  await stages.getByRole("button", { name: "Choose charts" }).click();
+  await expect(stages.getByRole("button")).toContainText(["Name and period", "Choose charts", "Set defaults", "Review"]);
+  await expect(stages.getByRole("button")).toContainText(["Complete", "Complete", "Complete", "Complete"]);
+  expect(await stages.getByRole("button").first().evaluate((node) => getComputedStyle(node).display)).toBe("grid");
+  await stages.getByRole("button", { name: /Choose charts/ }).click();
+  await expect(auxiliary.getByText(/inclusive/).first()).toBeVisible();
+  await expect(auxiliary.getByRole("button", { name: "Edit period", exact: true })).toBeVisible();
   await expect(auxiliary.getByRole("heading", { name: "Selected for this Chrono Group" })).toBeVisible();
   await expect(auxiliary.getByRole("heading", { name: "Needs attention" })).toBeVisible();
   await expect(auxiliary.getByRole("heading", { name: "Available", exact: true })).toBeVisible();
-  await expect(auxiliary.locator("details").first()).toContainText(/Other Chrono Groups/);
-  await expect(auxiliary.locator(".availability-calendar").first()).toBeVisible();
+  const firstRecord = auxiliary.locator(".availability-record").first();
+  expect(await firstRecord.locator(".availability-record__summary").evaluate((node) => getComputedStyle(node).display)).toBe("grid");
+  await expect(firstRecord).toContainText(/Full chart range/);
+  await expect(firstRecord).toContainText(/plotted variable/);
+  await firstRecord.getByText("Inspect evidence", { exact: true }).click();
+  await expect(firstRecord).toContainText(/Other Chrono Groups/);
+  await expect(firstRecord.locator(".availability-calendar")).toBeVisible();
 
-  await stages.getByRole("button", { name: "Review" }).click();
-  for (const label of ["Affected pages", "Derived frames", "Member evidence", "Availability gaps"]) await expect(auxiliary.getByText(label, { exact: true })).toBeVisible();
+  await stages.getByRole("button", { name: /Review/ }).click();
+  for (const label of ["affected pages", "derived Default Chrono frames", "Member evidence", "Availability gaps", "Review is ready"]) await expect(auxiliary.getByText(label, { exact: true })).toBeVisible();
+  for (const action of ["Edit period", "Edit chart selection", "Edit matching defaults"]) await expect(auxiliary.getByRole("button", { name: action, exact: true })).toBeVisible();
+  const body = auxiliary.locator(".chrono-group-studio__body");
+  await body.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+  const clearance = await auxiliary.evaluate((node) => {
+    const bodyNode = node.querySelector(".chrono-group-studio__body");
+    const footer = node.querySelector(".chrono-group-studio > footer");
+    return footer.getBoundingClientRect().top - bodyNode.getBoundingClientRect().bottom;
+  });
+  expect(clearance).toBeGreaterThanOrEqual(-1);
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const compactClearance = await auxiliary.evaluate((node) => {
+    const bodyNode = node.querySelector(".chrono-group-studio__body");
+    const footer = node.querySelector(".chrono-group-studio > footer");
+    return footer.getBoundingClientRect().top - bodyNode.getBoundingClientRect().bottom;
+  });
+  expect(compactClearance).toBeGreaterThanOrEqual(-1);
+  await expect.poll(() => body.evaluate((node) => node.clientHeight)).toBeGreaterThanOrEqual(250);
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(auxiliary).toBeVisible();
