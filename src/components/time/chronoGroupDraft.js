@@ -35,6 +35,7 @@ const ALLOWED_FALLBACKS = new Set([
 
 export function createChronoGroupDraft({
   group = {},
+  chronoGroups = [],
   charts = [],
   scenes = [],
   timeZone = "UTC",
@@ -46,6 +47,7 @@ export function createChronoGroupDraft({
   return {
     baseline,
     value,
+    chronoGroups: clone(chronoGroups),
     charts: clone(charts),
     scenes: clone(scenes),
     timeZone,
@@ -63,6 +65,11 @@ export function reduceChronoGroupDraft(state, action) {
   switch (action?.type) {
     case "SET_PERIOD": {
       const value = { ...state.value, period: clone(action.period) };
+      if (!validPeriod(value.period)) {
+        return changed(state, value, {
+          sceneConsequences: state.sceneConsequences,
+        });
+      }
       const consequence = deriveGroupPeriodChangeConsequence({
         groupId: value.id,
         nextPeriod: value.period,
@@ -108,9 +115,18 @@ export function reduceChronoGroupDraft(state, action) {
       return changed(state, { ...state.value, secondsPerFrame: action.secondsPerFrame });
     case "SET_NAME":
       return changed(state, { ...state.value, name: action.name });
-    case "GO_TO_STAGE":
+    case "GO_TO_STAGE": {
       assertStage(action.stage);
+      const currentIndex = CHRONO_GROUP_STAGES.indexOf(state.stage);
+      const targetIndex = CHRONO_GROUP_STAGES.indexOf(action.stage);
+      if (targetIndex > currentIndex) {
+        for (let index = 0; index < targetIndex; index += 1) {
+          const validation = validateChronoGroupStage(state, CHRONO_GROUP_STAGES[index]);
+          if (validation) return withError({ ...state, stage: CHRONO_GROUP_STAGES[index] }, validation);
+        }
+      }
       return { ...state, stage: action.stage, error: null };
+    }
     case "NEXT_STAGE": {
       const validation = validateChronoGroupStage(state, state.stage);
       if (validation) return withError(state, validation);
@@ -207,6 +223,13 @@ export function validateChronoGroupStage(state, stage = state?.stage) {
   if (stage === "period") {
     if (typeof value.name !== "string" || value.name.trim() === "") {
       return issue("NAME_REQUIRED", "Enter a unique Chrono Group name.", "chrono-group-name");
+    }
+    const normalizedName = value.name.trim().toLocaleLowerCase();
+    if ((state.chronoGroups ?? []).some((group) => (
+      group.id !== value.id
+      && String(group.name ?? "").trim().toLocaleLowerCase() === normalizedName
+    ))) {
+      return issue("NAME_NOT_UNIQUE", "Enter a unique Chrono Group name.", "chrono-group-name");
     }
     if (!validPeriod(value.period)) {
       return issue("PERIOD_REQUIRED", "Choose a valid inclusive start and end period.", "period-start");
@@ -311,14 +334,17 @@ export function buildChronoGroupReview(state) {
       timeZone: state.timeZone,
     }).length
     : 0;
-  const members = selectedCharts.map((chart) => ({
-    chartId: chart.id,
-    label: chart.label ?? chart.title ?? chart.id,
-    observationCount: rowsById.get(chart.id)?.variables?.reduce((sum, variable) => (
+  const members = selectedCharts.map((chart) => {
+    const observationCount = rowsById.get(chart.id)?.variables?.reduce((sum, variable) => (
       sum + variable.inPeriodCount
-    ), 0) ?? 0,
-    repairStage: "charts",
-  }));
+    ), 0) ?? 0;
+    return {
+      chartId: chart.id,
+      label: chart.label ?? chart.title ?? chart.id,
+      observationCount,
+      repairStage: observationCount === 0 ? "charts" : null,
+    };
+  });
   return {
     affectedPages,
     frameCount,

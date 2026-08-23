@@ -8,7 +8,7 @@ export default function ChronoStudio({ state, cards = [], onAction = () => {} })
         React.createElement("h2", { id: "chrono-studio-title" }, "Chrono Studio"),
         React.createElement("p", null, "Browse saved Chrono Groups, inspect their content, or begin a new group."),
       ),
-      React.createElement("button", { type: "button", onClick: () => onAction({ type: "START_CREATE_CHRONO_GROUP" }) }, "Create Chrono Group"),
+      React.createElement("button", { type: "button", className: "temporal-studio__primary-action", onClick: () => onAction({ type: "START_CREATE_CHRONO_GROUP" }) }, "Create Chrono Group"),
     ),
     React.createElement(StudioFilters, { state, onAction }),
     React.createElement("p", { className: "temporal-studio__count", role: "status" }, `Showing ${cards.length} of ${state?.chronoGroups?.length ?? cards.length}`),

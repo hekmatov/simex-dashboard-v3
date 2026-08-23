@@ -1749,6 +1749,7 @@
 }
 
 .build-auxiliary-close {
+  block-size: 44px;
   justify-self: end;
   min-height: 44px;
 }
@@ -1774,6 +1775,10 @@
   padding-right: 76px;
 }
 
+.build-authoring-auxiliary[data-authoring-surface="chrono-group"] .temporal-studio__header {
+  padding-right: 76px;
+}
+
 .chrono-group-studio,
 .scene-studio,
 .temporal-studio,
@@ -1782,6 +1787,11 @@
   gap: 16px;
   min-width: 0;
   scroll-padding-block: 84px;
+}
+
+.temporal-studio {
+  align-content: start;
+  gap: 12px;
 }
 
 .chrono-group-studio {
@@ -2006,6 +2016,7 @@
   border: 1px solid var(--simex-border-strong);
   border-radius: 8px;
   color: inherit;
+  line-height: 1.25;
   min-height: 44px;
   padding: 8px 10px;
   width: 100%;
@@ -2118,6 +2129,7 @@
   align-content: start;
   display: grid;
   gap: 4px;
+  grid-template-rows: auto 1fr;
   justify-items: start;
   min-height: 76px;
   padding: 10px 12px;
@@ -2125,10 +2137,12 @@
   white-space: normal;
 }
 
-.chrono-policy-options button span {
+.chrono-policy-description {
   color: var(--simex-text-muted);
+  display: block;
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .chrono-policy-options button[aria-pressed="true"] {
@@ -2205,6 +2219,16 @@
   gap: 12px;
   justify-content: space-between;
   padding: 12px;
+}
+
+.availability-record__toggle {
+  align-self: start;
+  background: var(--simex-accent);
+  border: 1px solid var(--simex-accent);
+  color: var(--simex-on-accent);
+  font-weight: 800;
+  min-height: 44px;
+  padding-inline: 14px;
 }
 
 .availability-record__identity {
@@ -2286,12 +2310,15 @@
 }
 
 .chrono-review-metrics > div {
+  align-content: start;
   background: var(--simex-surface-panel-alt);
   border: 1px solid var(--simex-border-subtle);
   border-radius: 9px;
   display: grid;
   gap: 4px;
+  min-height: 78px;
   padding: 12px;
+  text-align: left;
 }
 
 .chrono-review-metrics strong {
@@ -2312,6 +2339,7 @@
 }
 
 .chrono-review-proof-list > li {
+  align-items: center;
   background: var(--simex-surface-panel-alt);
   border: 1px solid var(--simex-border-subtle);
   border-radius: 9px;
@@ -2319,6 +2347,12 @@
   gap: 10px;
   grid-template-columns: 28px minmax(0, 1fr) auto;
   padding: 10px 12px;
+}
+
+.chrono-review-proof-list > li > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
 .chrono-review-proof-list > li > span {
@@ -2362,6 +2396,24 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.chrono-group-review section > h4,
+.chrono-group-review section > p {
+  margin: 0;
+}
+
+.chrono-group-review section > h4 {
+  margin-bottom: 8px;
+}
+
+.chrono-group-review section > ul > li {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  line-height: 1.35;
+  min-height: 44px;
 }
 
 .chrono-group-review li {
@@ -2632,13 +2684,36 @@
   justify-content: space-between;
 }
 
+.temporal-studio__header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.temporal-studio__header p,
+.temporal-studio__count,
+.temporal-studio__empty {
+  margin: 0;
+}
+
+.temporal-studio__header > div > p:not(.eyebrow) {
+  color: var(--simex-text-muted);
+}
+
+.temporal-studio__primary-action {
+  block-size: 44px;
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
 .temporal-studio__filters {
   display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(220px, 1fr) minmax(150px, 220px);
+  gap: 10px;
+  grid-template-columns: minmax(240px, 1fr) repeat(2, minmax(150px, 210px));
+  padding: 12px;
 }
 
 .temporal-studio__cards {
+  gap: 10px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
@@ -2647,7 +2722,7 @@
   display: grid;
   gap: 6px;
   justify-items: start;
-  min-height: 132px;
+  min-height: 118px;
   text-align: left;
   width: 100%;
 }

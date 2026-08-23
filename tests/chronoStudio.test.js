@@ -22,7 +22,7 @@ const content = { ...card, period: { start: "2027-05-01", end: "2027-05-03" }, s
 
 test("Chrono Studio owns only Create Chrono Group and presents read-first cards", () => {
   const html = renderToStaticMarkup(React.createElement(ChronoStudio, { state: { query: "", statusFilter: "all" }, cards: [card] }));
-  assert.match(html, />Create Chrono Group</);
+  assert.match(html, /class="temporal-studio__primary-action"[^>]*>Create Chrono Group</);
   assert.doesNotMatch(html, />Create Scene</);
   assert.match(html, /Municipal outbreak playback/);
   assert.match(html, /data-action="open-content"/);

@@ -55,6 +55,56 @@ test("Chrono Group draft exposes the approved four stages and validates before a
   assert.equal(draft.error, null);
 });
 
+test("an incomplete date edit stays in the draft and validates without crashing authoring", () => {
+  let draft = createChronoGroupDraft({
+    group: groupFixture(),
+    charts: chartFixtures(),
+    scenes: sceneFixtures(),
+    timeZone: "UTC",
+  });
+
+  assert.doesNotThrow(() => {
+    draft = reduceChronoGroupDraft(draft, {
+      type: "SET_PERIOD",
+      period: { startEpochMs: JAN_1, endEpochMs: Number.NaN },
+    });
+  });
+  assert.equal(Number.isNaN(draft.value.period.endEpochMs), true);
+  assert.deepEqual(draft.sceneConsequences, []);
+  assert.equal(validateChronoGroupStage(draft, "period").code, "PERIOD_REQUIRED");
+});
+
+test("missing or duplicate names stay quiet until a forward navigation attempt", () => {
+  let draft = createChronoGroupDraft({
+    group: { id: "group-new", name: "" },
+    chronoGroups: [{ id: "group-existing", name: "Winter response" }],
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+  });
+
+  const initialHtml = renderToStaticMarkup(React.createElement(studioModule.default, {
+    draft,
+    onAction() {},
+  }));
+  assert.doesNotMatch(initialHtml, /role="alert"/);
+
+  draft = reduceChronoGroupDraft(draft, { type: "GO_TO_STAGE", stage: "charts" });
+  assert.equal(draft.stage, "period");
+  assert.equal(draft.error.code, "NAME_REQUIRED");
+  const attemptedHtml = renderToStaticMarkup(React.createElement(studioModule.default, {
+    draft,
+    onAction() {},
+  }));
+  assert.match(attemptedHtml, /role="alert"/);
+  assert.match(attemptedHtml, /Enter a unique Chrono Group name/);
+
+  draft = reduceChronoGroupDraft(draft, { type: "SET_NAME", name: " winter RESPONSE " });
+  draft = reduceChronoGroupDraft(draft, { type: "NEXT_STAGE" });
+  assert.equal(draft.stage, "period");
+  assert.equal(draft.error.code, "NAME_NOT_UNIQUE");
+});
+
 test("stage proof states identify the owning stage before Save is attempted", () => {
   const draft = createChronoGroupDraft({
     group: {
@@ -267,6 +317,19 @@ test("Availability Ledger communicates status with text rather than colour alone
   assert.match(html, />Remove</);
 });
 
+test("Availability Ledger omits an empty attention region and keeps Add to group visibly actionable", () => {
+  const html = renderToStaticMarkup(React.createElement(ledgerModule.default, {
+    rows: deriveAvailabilityRows({
+      charts: chartFixtures(),
+      period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+      selectedChartIds: ["ready-chart"],
+    }),
+  }));
+
+  assert.doesNotMatch(html, /data-region="needs-attention"/);
+  assert.match(html, /class="availability-record__toggle"[^>]*>Add to group</);
+});
+
 test("Chrono Studio renders all stages and keeps Stay out of ordinary editor actions", () => {
   const draft = createChronoGroupDraft({
     group: groupFixture(),
@@ -339,7 +402,7 @@ test("defaults explain every policy and expose unsupported variables before Save
   assert.match(html, /min="0.001"/);
 });
 
-test("review presents readiness proof and repair routes for every owning stage", () => {
+test("review presents readiness proof without offering repair for healthy members", () => {
   const draft = createChronoGroupDraft({
     group: groupFixture(),
     charts: chartFixtures(),
@@ -364,6 +427,25 @@ test("review presents readiness proof and repair routes for every owning stage",
     "recomputed, not persisted",
     "Review is ready",
   ]) assert.match(html, new RegExp(fact));
+  assert.doesNotMatch(html, />Repair chart selection</);
+});
+
+test("review offers chart repair only for members with a real availability gap", () => {
+  const draft = createChronoGroupDraft({
+    group: {
+      ...groupFixture(),
+      period: { startEpochMs: JAN_1, endEpochMs: JAN_3 },
+      chartIds: ["empty-chart"],
+    },
+    charts: chartFixtures(),
+    scenes: [],
+    timeZone: "UTC",
+    initialStage: "review",
+  });
+  const html = renderToStaticMarkup(React.createElement(studioModule.default, { draft, onAction() {} }));
+
+  assert.match(html, /No current observations/);
+  assert.match(html, />Repair chart selection</);
 });
 
 function groupFixture() {

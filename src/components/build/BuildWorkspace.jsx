@@ -796,6 +796,7 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
       memberFallbacks,
       secondsPerFrame: group?.secondsPerFrame ?? 1,
     },
+    chronoGroups: dashboard.chronoGroups ?? [],
     charts: charts.map((chart) => ({
       ...chart,
       otherGroupNames: (chart.chronoGroupMemberships ?? [])

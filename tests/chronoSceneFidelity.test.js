@@ -43,7 +43,7 @@ const charts = [
   },
 ];
 
-test("Sketch 005 review derives affected pages, frames, member evidence, and repair targets", () => {
+test("Sketch 005 review derives affected pages, frames, member evidence, and only genuine repair targets", () => {
   const draft = createChronoGroupDraft({
     group: {
       id: "chrono-a",
@@ -60,8 +60,8 @@ test("Sketch 005 review derives affected pages, frames, member evidence, and rep
     affectedPages: ["Biomedical"],
     frameCount: 3,
     members: [
-      { chartId: "chart-a", label: "Admissions", observationCount: 2, repairStage: "charts" },
-      { chartId: "chart-b", label: "Capacity", observationCount: 1, repairStage: "charts" },
+      { chartId: "chart-a", label: "Admissions", observationCount: 2, repairStage: null },
+      { chartId: "chart-b", label: "Capacity", observationCount: 1, repairStage: null },
     ],
     gaps: [],
     sceneConsequences: [],

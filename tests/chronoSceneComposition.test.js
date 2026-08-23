@@ -58,11 +58,12 @@ test("Sketch 005 composition renders disclosure records and complete review evid
     assert.match(html, /availability-calendar/);
   });
 
-  await t.test("review names pages, derived frames, members, gaps, and repair routes", () => {
+  await t.test("review names pages, derived frames, members, and gaps without false repair routes", () => {
     const html = renderToStaticMarkup(React.createElement(ChronoGroupEditor, { draft: { ...base, stage: "review" } }));
-    for (const fact of ["affected pages", "derived Default Chrono frames", "Member evidence", "Availability gaps", "Repair chart selection"]) {
+    for (const fact of ["affected pages", "derived Default Chrono frames", "Member evidence", "Availability gaps"]) {
       assert.match(html, new RegExp(fact, "i"));
     }
+    assert.doesNotMatch(html, /Repair chart selection/i);
   });
 });
 

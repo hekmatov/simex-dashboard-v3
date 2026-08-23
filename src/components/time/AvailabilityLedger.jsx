@@ -16,7 +16,7 @@ export default function AvailabilityLedger({ rows = [], disabled = false, onTogg
       ) : (
         <div className="time-availability-ledger__regions">
           <LedgerRegion title="Selected for this Chrono Group" description={REGION_COPY.selected} rows={regions.selected} empty="No ready charts selected." disabled={disabled} onToggle={onToggle} />
-          <LedgerRegion title="Needs attention" description={REGION_COPY.attention} rows={regions.needsAttention} empty="No selected charts need attention." disabled={disabled} onToggle={onToggle} needsAttention />
+          {regions.needsAttention.length > 0 && <LedgerRegion title="Needs attention" description={REGION_COPY.attention} rows={regions.needsAttention} empty="No selected charts need attention." disabled={disabled} onToggle={onToggle} needsAttention />}
           <div className="time-availability-ledger__separator" role="separator" aria-label="Selected charts above; available charts below" />
           <LedgerRegion title="Available" description={REGION_COPY.available} rows={regions.available} empty="No additional charts are available in this period." disabled={disabled} onToggle={onToggle} />
         </div>
@@ -51,7 +51,7 @@ function LedgerRecord({ row, disabled, onToggle }) {
             {(row.otherGroupNames?.length ?? 0) > 0 && <p className="availability-record__membership">Also in {row.otherGroupNames.join(", ")}</p>}
             {row.needsAttention && <p className="availability-record__attention">{row.statusText}</p>}
           </div>
-          <button type="button" className={row.selected ? "secondary danger" : "secondary"} disabled={disabled} onClick={() => onToggle?.(row.chartId, !row.selected)}>
+          <button type="button" className={row.selected ? "availability-record__toggle secondary danger" : "availability-record__toggle"} disabled={disabled} onClick={() => onToggle?.(row.chartId, !row.selected)}>
             {row.selected ? "Remove" : "Add to group"}
           </button>
         </header>

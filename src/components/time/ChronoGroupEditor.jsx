@@ -8,7 +8,6 @@ import {
   CHRONO_GROUP_STAGES,
   deriveChronoGroupStageStates,
   validateChronoGroupDraft,
-  validateChronoGroupStage,
 } from "./chronoGroupDraft.js";
 
 const STAGE_LABELS = Object.freeze({
@@ -39,9 +38,6 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
   const dirty = new Set(["dirty", "error", "suspended"]).has(draft?.status);
   const stageStates = deriveChronoGroupStageStates(draft);
   const stageIndex = CHRONO_GROUP_STAGES.indexOf(stage);
-  const proactiveIssue = stage === "review"
-    ? validateChronoGroupDraft(draft)
-    : validateChronoGroupStage(draft, stage);
   const draftIssue = validateChronoGroupDraft(draft);
 
   return (
@@ -82,7 +78,6 @@ export default function ChronoGroupEditor({ draft, disabled = false, onAction })
 
       <div className="chrono-group-studio__body" aria-live="polite">
         {draft?.error && <StageCallout issue={draft.error} />}
-        {!draft?.error && proactiveIssue && <StageCallout issue={proactiveIssue} />}
 
         {stage === "period" && <PeriodStage value={value} timeZone={draft?.timeZone} busy={busy} onAction={onAction} />}
 
@@ -159,7 +154,7 @@ function DefaultsStage({ draft, value, busy, onAction }) {
       <div className="chrono-policy-field" role="group" aria-label="Group matching default">
         <span>Group matching default</span>
         <div className="chrono-policy-options">
-          {matchingLabels().map((label) => <button key={label} type="button" aria-pressed={value.defaultMatching === label} disabled={busy} onClick={() => onAction?.({ type: "SET_DEFAULT_MATCHING", policy: label })}><strong>{label}</strong><span>{POLICY_DESCRIPTIONS[label]}</span></button>)}
+          {matchingLabels().map((label) => <button key={label} type="button" aria-pressed={value.defaultMatching === label} disabled={busy} onClick={() => onAction?.({ type: "SET_DEFAULT_MATCHING", policy: label })}><strong>{label}</strong><span className="chrono-policy-description">{POLICY_DESCRIPTIONS[label]}</span></button>)}
         </div>
       </div>
       <label>Default seconds per frame<input id="chrono-group-seconds-per-frame" type="number" min="0.001" step="any" disabled={busy} value={value.secondsPerFrame ?? ""} onChange={(event) => onAction?.({ type: "SET_SECONDS_PER_FRAME", secondsPerFrame: Number(event.target.value) })} /><small>Positive numeric authoring value; not a playback-speed tier.</small></label>
@@ -194,7 +189,7 @@ function ChronoGroupReview({ draft, issue, busy, onAction }) {
         <ReviewProof number="3" title="Matching and cadence" text={`${value.defaultMatching}${fallbackSummary ? ` · ${fallbackSummary}` : ""} · ${value.secondsPerFrame} ${Number(value.secondsPerFrame) === 1 ? "second" : "seconds"}/frame`} action="Edit matching defaults" stage="defaults" busy={busy} onAction={onAction} />
         <ReviewProof number="4" title="Derived ledger and gaps" text={`${review.frameCount} union frames · ${review.gaps.length === 0 ? "No unresolved gaps" : `${review.gaps.length} gaps`} · ledger is recomputed, not persisted`} />
       </ol>
-      <section aria-labelledby="chrono-review-members"><h4 id="chrono-review-members">Member evidence</h4>{review.members.length === 0 ? <p>No charts selected.</p> : <ul>{review.members.map((member) => <li key={member.chartId}><span><strong>{member.label}</strong> · {member.observationCount} observations</span><button type="button" disabled={busy} onClick={() => onAction?.({ type: "GO_TO_STAGE", stage: member.repairStage })}>Repair chart selection</button></li>)}</ul>}</section>
+      <section aria-labelledby="chrono-review-members"><h4 id="chrono-review-members">Member evidence</h4>{review.members.length === 0 ? <p>No charts selected.</p> : <ul>{review.members.map((member) => <li key={member.chartId}><span><strong>{member.label}</strong> · {member.observationCount} observations</span>{member.repairStage && <button type="button" disabled={busy} onClick={() => onAction?.({ type: "GO_TO_STAGE", stage: member.repairStage })}>Repair chart selection</button>}</li>)}</ul>}</section>
       <section aria-labelledby="chrono-review-gaps"><h4 id="chrono-review-gaps">Availability gaps</h4>{review.gaps.length === 0 ? <p>No availability gaps detected.</p> : <ul>{review.gaps.map((gap) => <li key={gap.chartId}>{gap.label}</li>)}</ul>}</section>
       {issue ? <div className="chrono-proof-callout" data-tone="error" role="alert"><strong>Save is blocked</strong><span>{issue.message}</span><button type="button" disabled={busy} onClick={() => onAction?.({ type: "GO_TO_STAGE", stage: issue.stage ?? "review" })}>Repair in {STAGE_LABELS[issue.stage] ?? "Review"}</button></div> : <div className="chrono-proof-callout" data-tone="success"><strong>Review is ready</strong><span>{review.members.length} members use {value.defaultMatching}{fallbackSummary ? ` with ${fallbackSummary}` : ""}, {value.secondsPerFrame} {Number(value.secondsPerFrame) === 1 ? "second" : "seconds"}/frame, and a current {review.frameCount}-frame derived ledger.</span></div>}
       {(draft?.sceneConsequences?.length ?? 0) > 0 && <fieldset><legend>Resolve affected Scenes</legend>{draft.sceneConsequences.map(({ sceneId, resolution }) => <div key={sceneId} id={`chrono-group-scene-${sceneId}`}><strong>{sceneId}</strong><label><input type="radio" name={`scene-${sceneId}`} checked={resolution === "edit"} disabled={busy} onChange={() => onAction?.({ type: "RESOLVE_SCENE_CONSEQUENCE", sceneId, resolution: "edit" })} />Edit Scene</label><label><input type="radio" name={`scene-${sceneId}`} checked={resolution === "clamp"} disabled={busy} onChange={() => onAction?.({ type: "RESOLVE_SCENE_CONSEQUENCE", sceneId, resolution: "clamp" })} />Clamp Scene</label></div>)}</fieldset>}
