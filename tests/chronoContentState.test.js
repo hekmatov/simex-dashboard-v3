@@ -66,6 +66,12 @@ test("creation ownership and return navigation preserve read context", () => {
   state = reduceChronoContent(state, { type: "OPEN_CONTENT", itemType: "chronoGroup", itemId: "chrono-a" });
   state = reduceChronoContent(state, { type: "START_CREATE_SCENE" });
   assert.deepEqual(state.operation, { intent: "create", itemType: "scene", itemId: null, parentChronoGroupId: "chrono-a" });
+  assert.equal(state.studio, "scene");
+
+  state = reduceChronoContent(state, { type: "RETURN_TO_CONTENT" });
+  assert.equal(state.studio, "chrono");
+  assert.equal(state.view, "content");
+  assert.equal(state.selectedItemId, "chrono-a");
 });
 
 test("selectors derive saved content without duplicating it into navigation state", () => {

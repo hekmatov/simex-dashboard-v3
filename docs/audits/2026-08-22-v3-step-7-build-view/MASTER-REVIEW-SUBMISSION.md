@@ -162,3 +162,11 @@ The provisional gate is closed. The controlling `SKETCH-FIDELITY-MATRIX.md` now 
 ### Final boundary
 
 Step 7 is submitted for V3 Design master review. Step 8 Present/Audience redesign, Step 9 final cross-mode UAT, and Step 10 documentation/project-skill handoff remain outside this submission. Master acceptance is not claimed here.
+
+## Dashboard Look timing and required Scene-route correction — 2026-08-23
+
+- Dashboard Look closes immediately as previously approved. Its selected Look is now adopted in serialized queue order before later dashboard mutations, while the 150 ms debounce and actual storage completion remain background work. Look persistence no longer republishes an older completion into the live dashboard.
+- The previously disconnected Chrono Group content → Create Scene route now changes the production auxiliary owner to Scene Studio, carries the parent Chrono Group into the Scene draft, and exposes the required two-stage editor and Balanced Twin Canvas. Closing a dirty Scene now suspends it without locking navigation, advertises the unfinished draft, and resumes the same stage and canvases.
+- Focused semantic/timing checks passed `16/16`; the exact `012-temporal-content` production-bundle journey passed `1/1`; the production build passed with `829` transformed modules.
+
+The earlier endpoint-only evidence did not prove the required handoff and was insufficient. The amended browser journey now clicks that route directly. Master acceptance remains outside this correction.

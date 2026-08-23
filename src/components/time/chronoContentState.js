@@ -102,12 +102,15 @@ export function reduceChronoContent(state, action) {
     case "START_CREATE_CHRONO_GROUP":
       return requestOperation(state, { intent: "create", itemType: "chronoGroup", itemId: null, parentChronoGroupId: null });
     case "START_CREATE_SCENE":
-      return requestOperation(state, {
+      return {
+        ...requestOperation(state, {
         intent: "create",
         itemType: "scene",
         itemId: null,
         parentChronoGroupId: action.parentChronoGroupId ?? (state.selectedItemType === "chronoGroup" ? state.selectedItemId : null),
-      });
+        }),
+        studio: "scene",
+      };
     case "START_EDIT":
       return requestOperation(state, {
         intent: "edit",
@@ -133,7 +136,7 @@ export function reduceChronoContent(state, action) {
     case "RETURN_TO_CONTENT":
       return {
         ...state,
-        view: state.selectedItemId ? "content" : "library",
+        ...(state.returnContext ?? captureContext(state)),
         operation: null,
         conflict: null,
         error: null,

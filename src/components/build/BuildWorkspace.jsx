@@ -125,6 +125,9 @@ export default function BuildWorkspace({
   const [chronoContentState, setChronoContentState] = React.useState(null);
   const temporalSurfaceActive = activeAuxiliary === "chrono-group"
     || activeAuxiliary === "scene";
+  const renderedAuxiliary = temporalSurfaceActive
+    ? (chronoContentState?.studio === "scene" ? "scene" : "chrono-group")
+    : activeAuxiliary;
   const temporalCharts = React.useMemo(
     () => temporalSurfaceActive ? temporalAuthoringCharts(dashboard) : [],
     [dashboard, temporalSurfaceActive],
@@ -155,6 +158,8 @@ export default function BuildWorkspace({
   const navigationLocked = mutationsDisabled || chartDraftDirty || localAuthoringEditing;
   const chronoGroupDraftSuspended = chronoGroupDraft?.status === "suspended"
     && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft });
+  const sceneDraftSuspended = sceneDraft?.status === "suspended"
+    && hasActiveLocalAuthoringDrafts({ scene: sceneDraft });
   const selectedChartItem = selection?.kind === "chart"
     ? collectChartPlacements(dashboard).find(({ placementId }) => placementId === selection.placementId)
     : null;
@@ -333,7 +338,11 @@ export default function BuildWorkspace({
         }));
     }
     if (surface === "scene") {
-      setChronoContentState((current) => current
+      const resumingDraft = sceneDraft?.status === "suspended";
+      setSceneDraft((current) => current?.status === "suspended"
+        ? reduceSceneDraft(current, { type: "RESUME" })
+        : current);
+      if (!resumingDraft) setChronoContentState((current) => current
         ? reduceChronoContent(current, { type: "SET_STUDIO", studio: "scene" })
         : createChronoContentState({
           chronoGroups: dashboard.chronoGroups ?? [],
@@ -375,8 +384,14 @@ export default function BuildWorkspace({
 
   const closeAuxiliary = () => {
     const restoration = captureRestoration();
-    if (activeAuxiliary === "chrono-group" && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft })) {
+    if (renderedAuxiliary === "chrono-group" && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft })) {
       setChronoGroupDraft((current) => reduceChronoGroupDraft(current, {
+        type: "SUSPEND",
+        restoration: { ...restoration, stage: current.stage },
+      }));
+    }
+    if (renderedAuxiliary === "scene" && hasActiveLocalAuthoringDrafts({ scene: sceneDraft })) {
+      setSceneDraft((current) => reduceSceneDraft(current, {
         type: "SUSPEND",
         restoration: { ...restoration, stage: current.stage },
       }));
@@ -627,6 +642,12 @@ export default function BuildWorkspace({
               <button type="button" className="secondary" onClick={() => openAuxiliary("chrono-group")}>Resume Chrono Group draft</button>
             </aside>
           )}
+          {sceneDraftSuspended && (
+            <aside className="build-unfinished-draft" aria-label="Unfinished Scene draft">
+              <span><strong>Unfinished Scene draft</strong><small>Your stage and changes are preserved in this Build session.</small></span>
+              <button type="button" className="secondary" onClick={() => openAuxiliary("scene")}>Resume Scene draft</button>
+            </aside>
+          )}
           {parkedAuxiliaries.length > 0 && (
             <nav className="build-context-shelf" aria-label="Parked Build work">
               {parkedAuxiliaries.map(({ surface }) => (
@@ -640,10 +661,10 @@ export default function BuildWorkspace({
             <aside
               className="build-authoring-auxiliary"
               {...dashboardThemeRootProps(themeProjection)}
-              data-authoring-surface={activeAuxiliary}
+              data-authoring-surface={renderedAuxiliary}
               role="dialog"
               aria-modal="false"
-              aria-label={`${auxiliaryLabel(activeAuxiliary)} authoring`}
+              aria-label={`${auxiliaryLabel(renderedAuxiliary)} authoring`}
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;
                 event.preventDefault();
@@ -652,23 +673,23 @@ export default function BuildWorkspace({
               }}
             >
               <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
-              {activeAuxiliary === "structure" && structureDraft && <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />}
-              {activeAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
+              {renderedAuxiliary === "structure" && structureDraft && <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />}
+              {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
                 <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
               )}
-              {activeAuxiliary === "chrono-group" && chronoContentState?.view === "content" && (
+              {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "content" && (
                 <ChronoGroupContent content={selectChronoGroupContent(chronoContentState, chronoContentState.selectedItemId)} onAction={dispatchChronoContent} />
               )}
-              {activeAuxiliary === "chrono-group" && chronoContentState?.view === "editor" && chronoGroupDraft && (
+              {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "editor" && chronoGroupDraft && (
                 <ChronoGroupEditor draft={chronoGroupDraft} disabled={locked} onAction={dispatchChronoGroup} />
               )}
-              {activeAuxiliary === "scene" && chronoContentState?.view === "library" && (
+              {renderedAuxiliary === "scene" && chronoContentState?.view === "library" && (
                 <SceneLibrary state={chronoContentState} sections={selectSceneStudioSections(chronoContentState)} onAction={dispatchChronoContent} />
               )}
-              {activeAuxiliary === "scene" && chronoContentState?.view === "content" && (
+              {renderedAuxiliary === "scene" && chronoContentState?.view === "content" && (
                 <SceneContent content={selectSceneContent(chronoContentState, chronoContentState.selectedItemId)} onAction={dispatchChronoContent} />
               )}
-              {activeAuxiliary === "scene" && chronoContentState?.view === "editor" && sceneDraft && (
+              {renderedAuxiliary === "scene" && chronoContentState?.view === "editor" && sceneDraft && (
                 <SceneEditor
                   draft={sceneDraft}
                   charts={sceneEligibleCharts(dashboard, temporalCharts, sceneDraft.value)}

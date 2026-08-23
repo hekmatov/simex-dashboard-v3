@@ -723,3 +723,18 @@ Implementation commit `5c52f9e` closes the final active Step 7 fidelity row.
 - In-app inspection at [http://127.0.0.1:5197/](http://127.0.0.1:5197/) verified the active-profile tooltip outside chart clipping, viewport containment, and profile-derived loading paint.
 
 All S7-1 through S7-19 checklist items are now recorded complete. This plan submits Step 7 for V3 Design master review; it does not declare master acceptance.
+
+## 2026-08-23 Dashboard Look timing and required Scene-route correction
+
+Later live use exposed two integration gaps behind previously passing isolated endpoints:
+
+- Dashboard Look used a 150 ms debounce, but completion time also included any older serialized save. A stale completion could republish its older Look into the live dashboard after the drawer had already closed. Closing now applies the selected Look immediately, queues that Look as the canonical base for all later dashboard mutations, and lets persistence finish without writing stale Look state back into the live runtime. Storage failure remains non-blocking and retains the existing bottom-right session-only warning.
+- The accepted Chrono Group content → Create Scene origin changed temporal navigation state without changing the production auxiliary owner, so the click could remain in the Chrono shell. The live auxiliary now follows the canonical temporal studio state. Closing a dirty Scene suspends it, unlocks dashboard navigation, and exposes an Unfinished Scene draft action; resume restores the prior stage and both canvases. Returning from the editor restores the prior Chrono Group content context.
+
+Executable correction evidence:
+
+- Focused close/queue/state suite: `16` passed, `0` failed. It includes an older unresolved save followed by Look adoption and a Chrono mutation, proving both changes survive in queue order.
+- Exact production-bundle browser journey `012-temporal-content`: `1` passed, `0` failed. It clicks Create Scene from Chrono Group content, verifies Scene Studio replaces Chrono Studio, verifies the parent Chrono Group is populated, enters Arrange, asserts both Balanced Twin Canvas boards, closes without locking navigation, and resumes the visible unfinished draft at the same stage.
+- Production Vite build: exit `0`, `829` modules transformed; only the existing mixed-import and large-chunk advisories remain.
+
+This is a corrective amendment to S7-8/S7-9 and Sketches 010/012. It does not claim master acceptance.

@@ -184,4 +184,19 @@ test("012-temporal-content: libraries filter, open read-first pages, and restore
   await expect(auxiliary.getByRole("button", { name: "Create Scene", exact: true })).toBeVisible();
   await expect(auxiliary.getByRole("button", { name: "Duplicate", exact: true })).toBeVisible();
   await expect(auxiliary.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+
+  await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
+  const sceneAuxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await expect(sceneAuxiliary).toBeVisible();
+  await expect(auxiliary).toBeHidden();
+  await expect(sceneAuxiliary.getByRole("combobox", { name: "Parent Chrono Group" })).not.toHaveValue("");
+  await sceneAuxiliary.getByRole("button", { name: /Arrange and configure/ }).click();
+  await expect(sceneAuxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
+  await sceneAuxiliary.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Dashboard look", exact: true })).toBeEnabled();
+  const unfinishedScene = page.getByLabel("Unfinished Scene draft");
+  await expect(unfinishedScene).toBeVisible();
+  await unfinishedScene.getByRole("button", { name: "Resume Scene draft" }).click();
+  await expect(sceneAuxiliary).toBeVisible();
+  await expect(sceneAuxiliary.locator(".scene-arrangement-board")).toHaveCount(2);
 });
