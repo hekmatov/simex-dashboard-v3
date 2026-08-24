@@ -26,7 +26,6 @@ import {
   integrateSavedChart,
   parseDashboardBundle,
   serializeDashboardBundle,
-  validateDashboardConfig,
 } from "./charting/config/dashboardBundleV3.js";
 import {
   hydrateConfigurationBeforeStorageWrite,
@@ -38,6 +37,7 @@ import {
   createDashboardAssetPersistence,
   readDashboardStorageWithAssets,
 } from "./lib/dashboardAssetPersistence.js";
+import { validateConfigurationForPersistence } from "./lib/dashboardPersistenceValidation.js";
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
@@ -88,6 +88,7 @@ import {
 import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.jsx";
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
+export { validateConfigurationForPersistence };
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
 const SESSION_ONLY_MESSAGES = Object.freeze({
   dashboard: "Dashboard changes are applied for this session but cannot be retained after reload.",
@@ -517,13 +518,7 @@ export default function App() {
         stored.dataSources,
         trackedProfiles,
       );
-      validateDashboardConfig({
-        ...stored,
-        datasetProfiles: {
-          ...configuredFallbackProfiles,
-          ...(stored.datasetProfiles ?? {}),
-        },
-      }, { allowBrowserAssetIds: true });
+      validateConfigurationForPersistence(stored, configuredFallbackProfiles);
       let prepared;
       try {
         prepared = await dashboardAssetPersistence.prepare(stored);
@@ -532,6 +527,8 @@ export default function App() {
         const sessionDashboard = await loadDashboardConfig(
           stored,
           configuredFallbackProfiles,
+          null,
+          { allowTypedStaticSources: true },
         );
         lastDashboardPersistenceRef.current = false;
         reportPersistence(
@@ -552,6 +549,8 @@ export default function App() {
         loaded = await loadDashboardConfig(
           prepared.runtimeConfig,
           configuredFallbackProfiles,
+          null,
+          { allowTypedStaticSources: true },
         );
       } catch (loadError) {
         await prepared.rollback();
@@ -592,13 +591,7 @@ export default function App() {
         stored.dataSources,
         trackedProfiles,
       );
-      validateDashboardConfig({
-        ...stored,
-        datasetProfiles: {
-          ...configuredFallbackProfiles,
-          ...(stored.datasetProfiles ?? {}),
-        },
-      }, { allowBrowserAssetIds: true });
+      validateConfigurationForPersistence(stored, configuredFallbackProfiles);
       const prepared = await dashboardAssetPersistence.prepare(stored);
       persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
       setError(null);

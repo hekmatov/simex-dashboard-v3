@@ -4,6 +4,11 @@ import test from "node:test";
 import { validateDashboardChartReferences } from "../src/charting/config/dashboardSemanticReferences.js";
 import { createSerializedDashboardCommitController } from "../src/lib/dashboardCommitController.js";
 import {
+  createStaticContentDraft,
+  finalizeStaticContentDraft,
+  reduceStaticContentDraft,
+} from "../src/static-content/forms/staticContentDraft.js";
+import {
   commitStaticPanelTransaction,
   nextStaticSourceRevision,
   prepareStaticPanelTransaction,
@@ -15,6 +20,23 @@ test("source revision begins at one and increments only when saved source conten
   assert.equal(nextStaticSourceRevision(source, { ...source }), 3);
   assert.equal(nextStaticSourceRevision(source, { ...source, qmd: "New situation" }), 4);
   assert.equal(nextStaticSourceRevision(source, { ...source, sourceVersion: 2 }), 4);
+});
+
+test("semantically identical static source keys do not advance the saved revision", () => {
+  const previous = imageSource(7);
+  const reordered = {
+    rotation: 0,
+    crop: { height: 1000, width: 1000, y: 0, x: 0 },
+    fit: "contain",
+    decorative: false,
+    alt: "Response map",
+    origin: { assetId: "asset-map", kind: "asset" },
+    revision: 1,
+    sourceVersion: 1,
+    kind: "staticImage",
+  };
+
+  assert.equal(nextStaticSourceRevision(previous, reordered), 7);
 });
 
 test("a prepared transaction contains one complete panel-source-manifest dashboard candidate", () => {
@@ -122,6 +144,25 @@ test("prepared commits compare and persist portable dashboard state without runt
   assert.equal(Object.hasOwn(result.dashboard, "dataSourceStates"), false);
 });
 
+test("prepared transaction snapshots reject post-validation nested mutation", () => {
+  const prepared = prepareStaticPanelTransaction({
+    dashboard: fixtureDashboard(),
+    operation: "update",
+    panelId: "text-panel",
+    panel: panel("text-panel", "freeText", "text-source", "Situation"),
+    source: textSource("Validated situation"),
+  });
+
+  assert.throws(() => {
+    prepared.baseDashboard.dataSources["text-source"].qmd = "mutated base";
+  }, TypeError);
+  assert.throws(() => {
+    prepared.candidateDashboard.dataSources["text-source"].qmd = "mutated candidate";
+  }, TypeError);
+  assert.equal(prepared.baseDashboard.dataSources["text-source"].qmd, "Old situation");
+  assert.equal(prepared.candidateDashboard.dataSources["text-source"].qmd, "Validated situation");
+});
+
 test("semantic reference validation dispatches typed static sources without CSV column preparation", () => {
   const dashboard = fixtureDashboard();
   const structure = {
@@ -147,6 +188,62 @@ test("semantic reference validation dispatches typed static sources without CSV 
   assert.equal(columnLookups, 0);
 });
 
+test("two same-type draft sessions create distinct panel-source pairs and retain identity across type changes", () => {
+  let firstDraft = createStaticContentDraft({
+    destination: { pageId: "page-a", sectionId: "section-a" },
+  });
+  firstDraft = reduceStaticContentDraft(firstDraft, {
+    type: "setContentType",
+    contentTypeId: "freeText",
+  });
+  const firstIdentity = {
+    panelId: firstDraft.panel.id,
+    sourceId: firstDraft.panel.sourceId,
+  };
+  firstDraft = reduceStaticContentDraft(firstDraft, {
+    type: "setContentType",
+    contentTypeId: "image",
+  });
+  firstDraft = reduceStaticContentDraft(firstDraft, {
+    type: "setContentType",
+    contentTypeId: "freeText",
+  });
+  assert.deepEqual(
+    { panelId: firstDraft.panel.id, sourceId: firstDraft.panel.sourceId },
+    firstIdentity,
+  );
+
+  let secondDraft = createStaticContentDraft({
+    destination: { pageId: "page-a", sectionId: "section-a" },
+  });
+  secondDraft = reduceStaticContentDraft(secondDraft, {
+    type: "setContentType",
+    contentTypeId: "freeText",
+  });
+  assert.notEqual(secondDraft.panel.id, firstDraft.panel.id);
+  assert.notEqual(secondDraft.panel.sourceId, firstDraft.panel.sourceId);
+
+  const first = finishTextDraft(firstDraft, "First note", "First content");
+  const second = finishTextDraft(secondDraft, "Second note", "Second content");
+  const firstPrepared = prepareStaticPanelTransaction({
+    dashboard: fixtureDashboard(),
+    operation: "create",
+    destination: first.destination,
+    panel: first.panel,
+    source: first.source,
+  });
+  const secondPrepared = prepareStaticPanelTransaction({
+    dashboard: firstPrepared.candidateDashboard,
+    operation: "create",
+    destination: second.destination,
+    panel: second.panel,
+    source: second.source,
+  });
+
+  assert.equal(secondPrepared.candidateDashboard.pages[0].sections[0].panels.length, 3);
+  assert.equal(Object.keys(secondPrepared.candidateDashboard.dataSources).length, 3);
+});
+
 function fixtureDashboard() {
   return {
     dataSources: {
@@ -164,6 +261,14 @@ function fixtureDashboard() {
       }],
     }],
   };
+}
+
+function finishTextDraft(draft, title, qmd) {
+  let next = reduceStaticContentDraft(draft, { type: "setStage", stage: "content" });
+  next = reduceStaticContentDraft(next, { type: "updateSource", updates: { qmd } });
+  next = reduceStaticContentDraft(next, { type: "setPanel", updates: { title } });
+  next = reduceStaticContentDraft(next, { type: "setStage", stage: "preview-and-add" });
+  return finalizeStaticContentDraft(next);
 }
 
 function textSource(qmd, revision = 1) {

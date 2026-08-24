@@ -4,6 +4,8 @@ import {
 } from "../staticSourceSchema.js";
 import { createChartDraft } from "../../charting/config/chartConfigV3.js";
 
+let fallbackIdentitySequence = 0;
+
 export const STATIC_CONTENT_STAGES = Object.freeze([
   "destination",
   "content-type",
@@ -21,7 +23,8 @@ export const STATIC_CONTENT_STAGE_LABELS = Object.freeze([
 export function createStaticContentDraft(options = {}) {
   const mode = options.mode === "edit" ? "edit" : "create";
   const contentTypeId = normalizeTypeId(options.contentTypeId ?? options.panel?.typeId ?? null);
-  const panel = normalizePanel(options.panel, contentTypeId);
+  const draftIdentity = createDraftIdentity(options.panel);
+  const panel = normalizePanel(options.panel, contentTypeId, draftIdentity);
   const source = normalizeSource(options.source, contentTypeId);
   const destination = clone(options.destination);
   const baselineStage = mode === "edit" ? "content" : "destination";
@@ -40,6 +43,7 @@ export function createStaticContentDraft(options = {}) {
     status: "editing",
     destination,
     contentTypeId,
+    draftIdentity,
     panel,
     source,
     assets: clone(options.assets ?? {}),
@@ -80,7 +84,11 @@ export function reduceStaticContentDraft(state, action = {}) {
       if (state.stage === "preview-and-add") throw new Error("Content type changes belong to the Content type stage.");
       const contentTypeId = normalizeTypeId(action.contentTypeId);
       if (!contentTypeId) throw new Error("Static content type is required.");
-      const panel = normalizePanel({ ...state.panel, typeId: contentTypeId }, contentTypeId);
+      const panel = normalizePanel(
+        { ...state.panel, typeId: contentTypeId },
+        contentTypeId,
+        state.draftIdentity,
+      );
       const source = state.contentTypeId === contentTypeId
         ? state.source
         : normalizeSource(null, contentTypeId);
@@ -89,7 +97,11 @@ export function reduceStaticContentDraft(state, action = {}) {
     case "setPanel":
       requireContentStage(state);
       return authored(state, {
-        panel: normalizePanel({ ...state.panel, ...(action.updates ?? {}) }, state.contentTypeId),
+        panel: normalizePanel(
+          { ...state.panel, ...(action.updates ?? {}) },
+          state.contentTypeId,
+          state.draftIdentity,
+        ),
         status: "editing",
       });
     case "updateSource":
@@ -155,7 +167,7 @@ export function finalizeStaticContentDraft(state) {
   validateDestinationValue(state.destination);
   if (!state.contentTypeId) throw new Error("Static content type is required.");
   const source = validateStaticSource(state.source, { assets: state.assets });
-  const panel = normalizePanel(state.panel, state.contentTypeId);
+  const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
   requiredText(panel.title, "Static panel title");
   requiredText(panel.sourceId, "Static panel source id");
   return {
@@ -190,16 +202,17 @@ function authored(state, updates) {
   };
 }
 
-function normalizePanel(panel, contentTypeId) {
+function normalizePanel(panel, contentTypeId, draftIdentity) {
   if (!panel && !contentTypeId) return null;
   const value = panel ?? {};
-  const id = value.id ?? `static-${contentTypeId}`;
+  const id = value.id ?? draftIdentity.panelId;
+  const sourceId = value.sourceId ?? draftIdentity.sourceId;
   const defaults = createChartDraft({
     typeId: contentTypeId,
     id,
     title: value.title ?? "",
     description: value.description ?? "",
-    sourceId: value.sourceId ?? `${id}-source`,
+    sourceId,
   });
   return {
     ...defaults,
@@ -208,8 +221,18 @@ function normalizePanel(panel, contentTypeId) {
     typeId: contentTypeId,
     title: value.title ?? "",
     description: value.description ?? "",
-    sourceId: value.sourceId ?? `${id}-source`,
+    sourceId,
   };
+}
+
+function createDraftIdentity(panel) {
+  const token = globalThis.crypto?.randomUUID?.()
+    ?? `${Date.now().toString(36)}-${(fallbackIdentitySequence += 1).toString(36)}`;
+  const panelId = panel?.id ?? `static-${token}`;
+  return Object.freeze({
+    panelId,
+    sourceId: panel?.sourceId ?? `${panelId}-source`,
+  });
 }
 
 function normalizeSource(source, contentTypeId) {

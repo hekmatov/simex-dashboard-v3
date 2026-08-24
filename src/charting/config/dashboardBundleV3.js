@@ -23,6 +23,7 @@ import {
   validateGeoJson,
   validateDatasetProfiles,
 } from "../../lib/loadDashboard.js";
+import { validateStaticSource } from "../../static-content/staticSourceSchema.js";
 
 export const DASHBOARD_CONFIG_VERSION = 3;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
@@ -256,7 +257,11 @@ function sourceColumnTypes(sourceId, source, profiles) {
   return map;
 }
 
-function validateSource(sourceId, source, { allowBrowserAssetIds = false } = {}) {
+function validateSource(
+  sourceId,
+  source,
+  { allowBrowserAssetIds = false, allowTypedStaticSources = false } = {},
+) {
   validateSourceId(sourceId);
   const entries = plainDataEntries(source, `Data source "${sourceId}"`);
   const kind = entryValue(entries, "kind");
@@ -283,6 +288,11 @@ function validateSource(sourceId, source, { allowBrowserAssetIds = false } = {})
   } else if (kind === "inline") {
     rejectUnknownEntries(entries, INLINE_SOURCE_KEYS, `data source "${sourceId}"`);
     validateRows(entryValue(entries, "rows"), `Inline data source "${sourceId}" rows`);
+  } else if (allowTypedStaticSources && isTypedStaticSource(source)) {
+    validateStaticSource(source);
+    if (kind === "staticImage" && source.origin.kind === "asset") {
+      throw new Error("Authored static image assets require the dashboard version 4 persistence boundary.");
+    }
   } else {
     throw new Error(`Data source "${sourceId}" kind and type are not supported by chart system v3.`);
   }
@@ -411,7 +421,10 @@ function validCanonicalInstant(now) {
 }
 
 /** Validates all configured charts, source records, and page/section placement in a v3 dashboard. */
-export function validateDashboardConfig(config, { allowBrowserAssetIds = false } = {}) {
+export function validateDashboardConfig(
+  config,
+  { allowBrowserAssetIds = false, allowTypedStaticSources = false } = {},
+) {
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
@@ -423,10 +436,13 @@ export function validateDashboardConfig(config, { allowBrowserAssetIds = false }
   plainDataEntries(profiles, "Dashboard datasetProfiles");
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) {
-    validateSource(sourceId, source, { allowBrowserAssetIds });
+    validateSource(sourceId, source, { allowBrowserAssetIds, allowTypedStaticSources });
     sources.set(sourceId, source);
   }
-  validateDatasetProfiles(config.dataSources, profiles);
+  const tabularDataSources = Object.fromEntries(
+    sourceEntries.filter(([, source]) => !isTypedStaticSource(source)),
+  );
+  validateDatasetProfiles(tabularDataSources, profiles);
   const chartReferences = validateDashboardChartReferences(
     structure,
     config.dataSources,
@@ -443,6 +459,7 @@ export function validateDashboardConfig(config, { allowBrowserAssetIds = false }
   const loadedData = {};
   const validationProfiles = structuredClone(profiles);
   for (const [sourceId, source] of sources) {
+    if (isTypedStaticSource(source)) continue;
     const rows = source.browserAssetId && profiles[sourceId]
       ? null
       : sourceRows(sourceId, source);
@@ -474,6 +491,10 @@ export function validateDashboardConfig(config, { allowBrowserAssetIds = false }
     });
   }
   return config;
+}
+
+function isTypedStaticSource(source) {
+  return source?.kind === "staticText" || source?.kind === "staticImage";
 }
 
 /** Reads only the explicitly supplied v3 storage key and validates before use. */

@@ -83,7 +83,7 @@ export function prepareStaticPanelTransaction({
     { assets: candidateDashboard.assets },
   );
 
-  return Object.freeze({
+  return deepFreeze({
     kind: "static-panel-transaction",
     operation,
     panelId: panel.id,
@@ -121,7 +121,21 @@ function sameSavedSource(previous, next) {
     delete clone.revision;
     return clone;
   };
-  return JSON.stringify(comparable(previous)) === JSON.stringify(comparable(next));
+  return stableSerialize(comparable(previous)) === stableSerialize(comparable(next));
+}
+
+function stableSerialize(value) {
+  return JSON.stringify(canonicalize(value));
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalize(value[key])]),
+  );
 }
 
 function findPanel(dashboard, panelId) {
@@ -166,4 +180,11 @@ function cloneRecord(value, description) {
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepFreeze(value, seen = new WeakSet()) {
+  if (value === null || typeof value !== "object" || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) deepFreeze(child, seen);
+  return Object.freeze(value);
 }

@@ -14,6 +14,7 @@ import { createDashboardSourceProviders } from "../data/dashboardSourceProviders
 import { createDataService, createSourceCache } from "../data/dataService.js";
 import { createProviderRegistry } from "../data/providerRegistry.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
+import { validateStaticSource } from "../static-content/staticSourceSchema.js";
 
 const dashboardSourceCache = createSourceCache();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
@@ -239,13 +240,14 @@ export async function loadDashboardConfig(
   dashboard,
   datasetProfiles,
   portableSources = null,
+  { allowTypedStaticSources = false } = {},
 ) {
   dashboard = stripLegacyVantaBackground(dashboard);
   validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
     requireComplete: false,
   });
-  validateDashboardSourceDescriptors(dashboard);
+  validateDashboardSourceDescriptors(dashboard, { allowTypedStaticSources });
   dashboard = normalizeDashboardSource(dashboard, datasetProfiles);
   const structure = validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
@@ -253,11 +255,15 @@ export async function loadDashboardConfig(
   validateCanonicalDashboardTemporalConfig(dashboard);
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
+  const tabularDataSources = Object.fromEntries(
+    plainDataEntries(dataSources, "Dashboard dataSources")
+      .filter(([, source]) => !isTypedStaticSource(source)),
+  );
   const reusableProfiles = mergeDatasetProfiles(
-    profilesForConfiguredCsvSources(dataSources, datasetProfiles),
+    profilesForConfiguredCsvSources(tabularDataSources, datasetProfiles),
     entryValue(dashboardEntries, "datasetProfiles"),
   );
-  validateDatasetProfiles(dataSources, reusableProfiles);
+  validateDatasetProfiles(tabularDataSources, reusableProfiles);
   const chartReferences = validateDashboardChartReferences(
     structure,
     dataSources,
@@ -271,13 +277,13 @@ export async function loadDashboardConfig(
     validateGeoJson,
   }));
   const dataService = createDataService({
-    dataSources,
+    dataSources: tabularDataSources,
     profiles: reusableProfiles,
     portableSources,
     providers,
     cache: dashboardSourceCache,
   });
-  for (const sourceId of Object.keys(dataSources)) {
+  for (const sourceId of Object.keys(tabularDataSources)) {
     const request = { sourceId, purpose: "compatibility" };
     if (dataService.getSnapshot(request).status === "error") {
       dataService.evict(request);
@@ -412,7 +418,10 @@ export async function loadDashboardConfigProgressively(
   }
 }
 
-function validateDashboardSourceDescriptors(dashboard) {
+function validateDashboardSourceDescriptors(
+  dashboard,
+  { allowTypedStaticSources = false } = {},
+) {
   const dashboardEntries = plainDataEntries(
     dashboard,
     "Dashboard config",
@@ -422,8 +431,20 @@ function validateDashboardSourceDescriptors(dashboard) {
     dataSources,
     "Dashboard dataSources",
   )) {
+    if (allowTypedStaticSources && isTypedStaticSource(source)) {
+      validateSourceId(sourceId);
+      validateStaticSource(source);
+      if (source.kind === "staticImage" && source.origin.kind === "asset") {
+        throw new Error("Authored static image assets require the dashboard version 4 persistence boundary.");
+      }
+      continue;
+    }
     validateDataSourceDescriptor(sourceId, source);
   }
+}
+
+function isTypedStaticSource(source) {
+  return source?.kind === "staticText" || source?.kind === "staticImage";
 }
 
 export function profilesForConfiguredCsvSources(
