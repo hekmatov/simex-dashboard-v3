@@ -384,6 +384,11 @@
   grid-row: 1;
 }
 
+.build-command-group[data-build-command-group="package"] {
+  grid-column: 3;
+  grid-row: 1;
+}
+
 .build-command-group--layout {
   align-items: center;
   border-top: 1px solid var(--simex-border-subtle);
@@ -847,9 +852,14 @@
   }
 
   .build-command-group[data-build-command-group="content"],
-  .build-command-group[data-build-command-group="time"] {
+  .build-command-group[data-build-command-group="time"],
+  .build-command-group[data-build-command-group="package"] {
     grid-column: auto;
     grid-row: auto;
+  }
+
+  .build-command-group[data-build-command-group="package"] {
+    grid-column: 1 / -1;
   }
 
   .build-command-group--session {

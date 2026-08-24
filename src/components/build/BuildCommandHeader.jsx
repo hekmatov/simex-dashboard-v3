@@ -14,6 +14,8 @@ export default function BuildCommandHeader({
   onSaveLayout,
   onDiscardLayout,
   onAddChart,
+  onUploadPackage,
+  onDownloadPackage,
   onOpenAuxiliary,
   onResumeAuxiliary,
   getAuxiliaryLabel = (surface) => surface,
@@ -68,6 +70,18 @@ export default function BuildCommandHeader({
               onClick={() => onOpenAuxiliary?.("scene")}
             >
               Scene Studio
+            </button>
+          </div>
+        </section>
+
+        <section className="build-command-group" data-build-command-group="package" aria-label="Dashboard package commands">
+          <strong className="build-command-group__label">Dashboard package</strong>
+          <div className="build-command-group__controls">
+            <button type="button" className="secondary" disabled={locked} onClick={onUploadPackage}>
+              Upload Dashboard Package
+            </button>
+            <button type="button" className="secondary" disabled={locked} onClick={onDownloadPackage}>
+              Download Dashboard Package
             </button>
           </div>
         </section>

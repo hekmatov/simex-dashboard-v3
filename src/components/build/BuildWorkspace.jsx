@@ -100,6 +100,8 @@ export default function BuildWorkspace({
   chartSlotDraft = null,
   onSaveLayout,
   onDiscardLayout,
+  onUploadPackage,
+  onDownloadPackage,
   onFinish,
   onReset,
   onLocalDraftsChange,
@@ -618,6 +620,8 @@ export default function BuildWorkspace({
               revealUnitOrbitAnchor(chartEditorPlacementId);
             }}
             onAddChart={() => onAddChart?.()}
+            onUploadPackage={onUploadPackage}
+            onDownloadPackage={onDownloadPackage}
             onOpenAuxiliary={openAuxiliary}
             onResumeAuxiliary={resumeAuxiliary}
             getAuxiliaryLabel={auxiliaryLabel}

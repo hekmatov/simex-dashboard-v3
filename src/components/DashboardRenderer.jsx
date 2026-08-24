@@ -1302,6 +1302,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       } : null}
       onSaveLayout={saveBuildLayoutChanges}
       onDiscardLayout={discardBuildLayoutChanges}
+      onUploadPackage={requestDashboardPackageImport}
+      onDownloadPackage={exportDashboardPackage}
       onFinish={saveEditMode}
       onReset={() => setResetEditSessionConfirmation(true)}
       onLocalDraftsChange={handleLocalDraftsChange}
