@@ -21,6 +21,7 @@ export function renderPortableQmd(ast, options = {}) {
     hostHeadingLevel,
     headingCounts,
     footnoteNumbers,
+    footnoteReferenceCounts: new Map(),
     calloutSequence: 0,
   };
   configureRules(renderer, environment);
@@ -69,7 +70,7 @@ function configureRules(md, environment) {
   rules.th_open = () => '<th scope="col">';
   rules.fence = (tokens, index) => {
     const token = tokens[index];
-    const language = String(token.info ?? "").trim().split(/\s+/)[0].replace(/[^a-z0-9_+-]/gi, "");
+    const language = String(token.info ?? "").trim();
     const label = language ? `${language} code block` : "Code block";
     return `<div class="portable-qmd-code-scroll" role="region" aria-label="${attribute(`${label}; horizontal scrolling`)}" tabindex="0"><pre><code${language ? ` data-language="${attribute(language)}"` : ""}>${escapeHtml(token.content.replace(/\n$/, ""))}</code></pre></div>\n`;
   };
@@ -85,9 +86,11 @@ function configureRules(md, environment) {
   rules.footnote_ref = (tokens, index) => {
     const id = tokens[index].meta.id;
     const number = environment.footnoteNumbers.get(id) ?? "?";
-    const referenceId = `${environment.panelPrefix}-footnote-ref-${slugify(id)}`;
+    const occurrence = (environment.footnoteReferenceCounts.get(id) ?? 0) + 1;
+    environment.footnoteReferenceCounts.set(id, occurrence);
+    const referenceId = footnoteReferenceId(environment.panelPrefix, id, occurrence);
     const noteId = `${environment.panelPrefix}-footnote-${slugify(id)}`;
-    return `<sup class="portable-qmd-footnote-ref"><a id="${attribute(referenceId)}" href="#${attribute(noteId)}" aria-label="Footnote ${number}">${number}</a></sup>`;
+    return `<sup class="portable-qmd-footnote-ref"><a id="${attribute(referenceId)}" href="#${attribute(noteId)}" aria-label="Footnote ${number}, reference ${occurrence}">${number}</a></sup>`;
   };
   rules.text = (tokens, index) => {
     const content = tokens[index].content;
@@ -100,13 +103,22 @@ function configureRules(md, environment) {
 
 function renderFootnotes(footnotes, environment) {
   if (footnotes.length === 0) return "";
+  const contents = footnotes.map((footnote) => renderer.renderer.render(footnote.tokens, renderer.options, environment));
   const items = footnotes.map((footnote, index) => {
     const noteId = `${environment.panelPrefix}-footnote-${slugify(footnote.id)}`;
-    const referenceId = `${environment.panelPrefix}-footnote-ref-${slugify(footnote.id)}`;
-    const content = renderer.renderer.render(footnote.tokens, renderer.options, environment);
-    return `<li id="${attribute(noteId)}">${content}<a class="portable-qmd-footnote-backlink" href="#${attribute(referenceId)}" aria-label="Back to footnote ${index + 1} reference">↩</a></li>`;
+    const referenceCount = environment.footnoteReferenceCounts.get(footnote.id) ?? 0;
+    const backlinks = Array.from({ length: referenceCount }, (_, occurrenceIndex) => {
+      const occurrence = occurrenceIndex + 1;
+      const referenceId = footnoteReferenceId(environment.panelPrefix, footnote.id, occurrence);
+      return `<a class="portable-qmd-footnote-backlink" href="#${attribute(referenceId)}" aria-label="Back to footnote ${index + 1}, reference ${occurrence}">↩</a>`;
+    }).join("");
+    return `<li id="${attribute(noteId)}">${contents[index]}${backlinks}</li>`;
   }).join("");
   return `<section class="portable-qmd-footnotes" aria-label="Footnotes"><hr><ol>${items}</ol></section>`;
+}
+
+function footnoteReferenceId(panelPrefix, id, occurrence) {
+  return `${panelPrefix}-footnote-ref-${slugify(id)}-${occurrence}`;
 }
 
 function renderMath(content, displayMode) {
@@ -115,7 +127,7 @@ function renderMath(content, displayMode) {
     displayMode,
   });
   const label = content.replace(/\s+/g, " ").trim();
-  return `<span class="portable-qmd-math${displayMode ? " portable-qmd-math--display" : ""}" role="math" aria-label="${attribute(label)}">${html}</span>`;
+  return `<span class="portable-qmd-math${displayMode ? " portable-qmd-math--display" : ""}" data-portable-qmd-generated="math" role="math" aria-label="${attribute(label)}">${html}</span>`;
 }
 
 function tableHeaderText(tokens, tableIndex) {

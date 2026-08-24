@@ -82,7 +82,6 @@ function portableFootnotePlugin(md) {
     if (!silent) {
       const token = state.push("footnote_ref", "", 0);
       token.meta = { id };
-      token.map = [state.env?.lineOffset ?? 0, state.env?.lineOffset ?? 0];
     }
     state.pos = end + 1;
     return true;

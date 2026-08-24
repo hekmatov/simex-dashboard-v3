@@ -1,7 +1,7 @@
 import React from "react";
 
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
-import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
+import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 
 const NARROW_EDITOR_QUERY = "(max-width: 860px)";
 
@@ -13,13 +13,16 @@ export function FreeTextSourceEditor({
   onChange,
   onValidationChange,
 } = {}) {
-  const initial = React.useMemo(() => analyze(value), []);
+  const initial = React.useMemo(() => analyze(value, panelId), []);
   const [analysis, setAnalysis] = React.useState(initial);
   const [lastValidSource, setLastValidSource] = React.useState(initial.ok ? value : null);
   const [pending, setPending] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("source");
   const [narrow, setNarrow] = React.useState(false);
   const evaluatedSource = React.useRef(value);
+  const observedSource = React.useRef(value);
+  const pendingChange = React.useRef(null);
+  const analysisCache = React.useRef(new Map([[value, initial]]));
   const revision = React.useRef(0);
   const lastValidRevision = React.useRef(initial.ok ? 0 : null);
   const sourcePaneRef = React.useRef(null);
@@ -27,17 +30,52 @@ export function FreeTextSourceEditor({
   const lastFocused = React.useRef({ source: null, preview: null });
 
   React.useEffect(() => {
-    onValidationChange?.({ ...initial, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
+    onValidationChange?.({
+      ...initial,
+      pending: false,
+      source: value,
+      sourceRevision: 0,
+      previewRevision: lastValidRevision.current,
+    });
   }, []);
 
   React.useEffect(() => {
-    if (value === evaluatedSource.current) return undefined;
-    revision.current += 1;
-    const sourceRevision = revision.current;
-    setPending(true);
-    const timer = setTimeout(() => {
-      const next = analyze(value);
+    const authoredChange = pendingChange.current?.source === value
+      ? pendingChange.current
+      : null;
+    if (value === observedSource.current && !authoredChange) return undefined;
+    observedSource.current = value;
+    const sourceRevision = authoredChange?.revision ?? revision.current + 1;
+    revision.current = sourceRevision;
+    if (authoredChange) pendingChange.current = null;
+
+    const cached = analysisCache.current.get(value);
+    if (cached) {
       evaluatedSource.current = value;
+      setAnalysis(cached);
+      setPending(false);
+      if (cached.ok) {
+        setLastValidSource(value);
+        lastValidRevision.current = sourceRevision;
+      }
+      onValidationChange?.({
+        ...cached,
+        pending: false,
+        source: value,
+        sourceRevision,
+        previewRevision: cached.ok ? sourceRevision : lastValidRevision.current,
+      });
+      return undefined;
+    }
+
+    setPending(true);
+    if (!authoredChange) {
+      onValidationChange?.(pendingValidation(value, sourceRevision, lastValidRevision.current));
+    }
+    const timer = setTimeout(() => {
+      const next = analyze(value, panelId);
+      evaluatedSource.current = value;
+      analysisCache.current.set(value, next);
       setAnalysis(next);
       setPending(false);
       if (next.ok) {
@@ -46,6 +84,7 @@ export function FreeTextSourceEditor({
       }
       onValidationChange?.({
         ...next,
+        pending: false,
         source: value,
         sourceRevision,
         previewRevision: next.ok ? sourceRevision : lastValidRevision.current,
@@ -103,6 +142,14 @@ export function FreeTextSourceEditor({
     setActiveTab(next);
     window.requestAnimationFrame(() => document.getElementById(`${id}-${next}-tab`)?.focus());
   };
+  const changeSource = (nextSource) => {
+    const sourceRevision = revision.current + 1;
+    revision.current = sourceRevision;
+    pendingChange.current = { source: nextSource, revision: sourceRevision };
+    setPending(true);
+    onValidationChange?.(pendingValidation(nextSource, sourceRevision, lastValidRevision.current));
+    onChange?.(nextSource);
+  };
 
   return (
     <section
@@ -150,7 +197,7 @@ export function FreeTextSourceEditor({
             disabled={disabled}
             aria-describedby={`${id}-help ${id}-status`}
             aria-invalid={!pending && !analysis.ok ? "true" : undefined}
-            onChange={(event) => onChange?.(event.target.value)}
+            onChange={(event) => changeSource(event.target.value)}
           />
           <small id={`${id}-help`}>Portable QMD v1 renders locally. Code is display-only and never executes.</small>
           {!pending && analysis.errors.length > 0 && (
@@ -209,9 +256,21 @@ export function FreeTextSourceEditor({
   );
 }
 
-function analyze(source) {
+function pendingValidation(source, sourceRevision, previewRevision) {
+  return {
+    ok: false,
+    pending: true,
+    errors: [],
+    warnings: [],
+    source,
+    sourceRevision,
+    previewRevision,
+  };
+}
+
+function analyze(source, panelId) {
   try {
-    const result = parsePortableQmd(source);
+    const result = compilePortableQmd(source, { panelId, hostHeadingLevel: 2 });
     return { ok: result.ok, errors: result.errors, warnings: result.warnings };
   } catch (error) {
     return {

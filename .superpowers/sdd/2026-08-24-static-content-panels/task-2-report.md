@@ -20,14 +20,15 @@ The smallest local dependency set is exact-pinned in `package.json` and `pnpm-lo
 
 | Package | Exact version | License | Decision |
 |---|---:|---|---|
-| `markdown-it` | 15.0.0 | MIT | Inert Markdown token AST with HTML and linkification disabled. The current 15.x line is beyond the `>=13.0.0 <14.1.1` smartquotes ReDoS advisory range. |
+| `markdown-it` | 15.0.0 | MIT | Inert Markdown token AST with HTML/linkification disabled and `typographer: false`. The exact pin is beyond both the `>=13.0.0 <14.1.1` linkify ReDoS range and the separate `<=14.1.1` smartquotes quadratic-DoS range. |
 | `dompurify` | 3.4.14 | MPL-2.0 OR Apache-2.0 | Browser DOM sanitizer. Every call creates a fresh instance and applies explicit tag/attribute/URI hooks; string input and `IN_PLACE: false` avoid the in-place hook-removal class fixed in 3.4.13. |
-| `katex` | 0.18.4 | MIT | Bundled local restricted math. Options are `output: "html"`, `trust: false`, `strict: "error"`, no macros, `maxExpand: 100`, and `maxSize: 20`; the sanitizer excludes MathML, SVG, styles, resources, and foreign content. |
+| `katex` | 0.18.4 | MIT | Bundled local restricted math. Options are `output: "html"`, `trust: false`, `strict: "error"`, no macros, `maxExpand: 100`, and `maxSize: 20`; the sanitizer excludes authored styles, MathML, SVG, resources, and foreign content while retaining renderer-marked structural classes and numeric-em geometry. |
 
 Review sources:
 
 - Markdown-it changelog: <https://github.com/markdown-it/markdown-it/blob/master/CHANGELOG.md>
 - Markdown-it advisory: <https://github.com/advisories/GHSA-38c4-r59v-3vqw>
+- Markdown-it smartquotes advisory: <https://github.com/advisories/GHSA-6v5v-wf23-fmfq>
 - DOMPurify advisories: <https://github.com/cure53/DOMPurify/security/advisories>
 - DOMPurify threat model: <https://github.com/cure53/DOMPurify/wiki/Security-Goals-%26-Threat-Model>
 - DOMPurify 3.4.14 build/release evidence: <https://github.com/cure53/DOMPurify/actions/workflows/build-and-test.yml>
@@ -42,10 +43,10 @@ Review sources:
 
 - Added the explicit accepted/denied feature, protocol, and resource table for `portable-qmd-v1`.
 - Added an inert `markdown-it` parser with source-located hard-deny scanning, token allow-list validation, footnotes, five callout types, display-only fenced code, restricted math, and exact failure guidance.
-- Enforced 100 KiB source, 5,000 rendered-node, six-level nesting, 100-row, and 20-column limits without truncating accepted boundary content.
+- Enforced 100 KiB source, 5,000 sanitized-fragment-DOM-descendant, six-level nesting, 100-row, and 20-column limits without truncating accepted boundary content.
 - Decoded case, percent, numeric-entity, whitespace, and control-character protocol bypasses before allowing only absolute HTTP(S) and same-panel fragments, including tokenized reference-style links.
 - Added semantic rendering with host-aware headings, panel-scoped IDs, canonicalized fragments, safe external-link target/rel, labelled focusable table/code scrollers, callouts, passive task markers, restricted HTML-only KaTeX, and footnotes/backlinks.
-- Added one DOMPurify fragment boundary with explicit generated-class, panel-ID, URI, target, rel, tabindex, and scope policies. The only mount path is `replaceChildren(fragment)` in `FreeTextChartView`; there is no post-sanitize rewrite.
+- Added one DOMPurify fragment boundary with explicit generated-class/geometry, panel-ID, URI, target, rel, tabindex, and scope policies. The only mount path clones the already sanitized fragment into `replaceChildren` in `FreeTextChartView`; there is no post-sanitize rewrite or reparse.
 
 ### Authoring and responsive UI
 
@@ -280,3 +281,138 @@ FT-11 reload/import completion remains with Slice 4 because the App currently ha
 - Two accepted-baseline impacted-test anomalies remain unchanged: raw-JSX loading under the Node test runner and `Compare charts` visibility.
 - Production build size/non-module-script warnings remain pre-existing and are not caused by a failing Slice 2 check.
 - No reload/import fidelity, bundle-v4 portability, or Audience protocol rejection is claimed by this commit.
+
+---
+
+## Fix round 1/5 — review findings
+
+Date: 2026-08-25
+
+Status: all six Important findings are addressed without changing the Slice 4 FT-11 reload/import boundary. No dependency was added or loosened in this round.
+
+### Dependency and security disposition
+
+- Corrected the dependency record: `GHSA-38c4-r59v-3vqw` is the markdown-it linkify ReDoS advisory (`>=13.0.0 <14.1.1`), while `GHSA-6v5v-wf23-fmfq` is the separate smartquotes quadratic-DoS advisory (`<=14.1.1`). The existing exact `markdown-it@15.0.0` pin is beyond both; production also keeps `linkify: false` and `typographer: false`.
+- Kept the approved HTML-only sanitizer boundary. Authored HTML/styles, resources, MathML, SVG, and foreign content remain denied. Renderer-owned KaTeX is marked before sanitization; only an explicit generated-class grammar and numeric-em geometry properties survive inside that generated subtree. Attempts to spoof the marker with unsafe CSS are stripped.
+- The sanitizer, not the Markdown token counter, now enforces 5,000 actual descendants on the final sanitized `DocumentFragment`. The same `compilePortableQmd` path is used by editor validation, final save, and the canonical renderer before mount.
+
+### RED → GREEN evidence
+
+#### Closed allow-list and exact parser boundaries
+
+```text
+node --test tests/portableQmdPolicy.test.js
+```
+
+RED: 32 tests, 28 passed, 4 failed. HTML comments, HTML declarations, thematic breaks, and fence options were unexpectedly accepted.
+
+GREEN after the explicit policy/token/source checks: 32/32. A second test-first expansion covered incomplete inert raw-HTML forms:
+
+```text
+node --test --test-name-pattern="HTML|CDATA" tests/portableQmdPolicy.test.js
+```
+
+RED: 6 tests, 4 passed, 2 failed for an unclosed comment and CDATA declaration. GREEN after the source scanner recognized every inert raw-HTML token form: 6/6.
+
+The final policy suite independently fixes each resource fixture at its literal boundary: 102,400/102,401 UTF-8 bytes, nesting 6/7, 100/101 total table rows including the header, and 20/21 columns. It no longer imports the policy constants to manufacture those expectations.
+
+#### Repeated footnotes and source locations
+
+```text
+node --test --test-name-pattern="footnote" tests/portableQmdPolicy.test.js
+```
+
+RED: 4 tests, 2 passed, 2 failed. Repeated references duplicated the same reference ID/backlink, and a later-line missing definition was reported on line 1.
+
+GREEN: 4/4. Each reference occurrence now has a unique scoped ID, each definition emits one backlink per occurrence, and inline references inherit their containing source line.
+
+#### Actual sanitized-DOM budget and usable HTML-only math
+
+```text
+node --test --test-concurrency=1 tests/portableQmdSanitization.test.js
+```
+
+RED: 5 tests, 2 passed, 3 failed. A 5,001-node sanitized fragment was not rejected; one math token could expand beyond the limit; and sanitization flattened required KaTeX classes/geometry.
+
+GREEN is included in the final 62-test run below: exact 5,000 descendants are preserved, 5,001 are rejected, and a single parsed math token cannot exceed the actual fragment budget. The browser fixture asserts four accessible `role="math"` labels, superscript/fraction/root/sum structures, non-zero geometry with generated vertical positioning, required fraction/root details, generated safe style retention, and zero MathML/SVG/style elements or resource URLs.
+
+#### Canonical renderer/editor rejection before mount
+
+```text
+node --test --test-concurrency=1 --test-name-pattern="one-token math expansion" tests/freeTextChartView.test.js
+```
+
+RED: the mounted route timed out waiting for an isolated error because the previous renderer attempted progression through a token-count-valid expansion.
+
+GREEN: 1/1. Active/passive canonical routes show the isolated Free-text error before mounting any partial content, while the editor preserves its last-valid preview and reports the actual DOM-node limit.
+
+#### Debounced validation races
+
+```text
+node --test --test-concurrency=1 --test-name-pattern="routed forward controls|rapid revert" tests/freeTextChartView.test.js
+```
+
+RED: 2/2 failed. Continue remained enabled immediately after invalid input, and the parent remained non-pending during the debounce window.
+
+GREEN: 2/2. The mounted real wizard receives pending/source/revision immediately, disables Continue and Preview & add before the 200 ms analysis can finish, and cannot advance invalid content. A change followed by a rapid revert restores the cached valid analysis with equal source/preview revisions and clears pending safely.
+
+### Final focused and impacted GREEN
+
+```text
+node --test --test-concurrency=1 tests/portableQmdPolicy.test.js tests/portableQmdSanitization.test.js tests/freeTextChartView.test.js tests/staticContentDraft.test.js tests/presentWorkspace.test.js
+```
+
+```text
+tests 62
+pass 62
+fail 0
+duration_ms 13166.6844
+```
+
+The directly impacted wizard/Present subset also passed 14/14. This round did not repeat disposed baseline comparisons because no decision depended on them.
+
+### Production build and retained browser journey
+
+```text
+pnpm.cmd build
+```
+
+Passed: icon references current; biomedical derivatives regenerated; 34 dataset profiles, 38 portable sources, and Quorum catalogue with 27 chart types / 2 static types / 40 configured charts; Vite transformed 881 modules and built in 15.87 seconds. Only the already recorded non-module vendor scripts, mixed ChartFootprintPicker import, and chunk-size warnings remain.
+
+```text
+pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium
+```
+
+```text
+3 passed
+1 skipped
+duration 49.3s
+```
+
+At 1440×900, 1024×768, and 768×900 the production journey inspected the exact saved source/revision, canonical Build/View/fullscreen routes, callout/table/footnote semantics, accessible superscript/fraction/root/sum structure and computed geometry, generated-style scoping, zero forbidden foreign/style/resource output, bounded overflow, invalid-source forward gates, dirty isolation, Keep/Discard, revision-2 save, and Present absence. Wide split and narrow responsive tabs remain viewport-specific checkpoints. The one skip remains the exact create → reload continuation annotated `blocked-by-slice-4`; no reload/import fidelity is claimed.
+
+### Files changed in fix round 1
+
+- Engine/security: `src/static-content/qmd/compilePortableQmd.js`, `portableQmdPolicy.js`, `parsePortableQmd.js`, `renderPortableQmd.js`, `sanitizePortableHtml.js`.
+- UI/composition: `FreeTextSourceEditor.jsx`, `StaticContentWizard.jsx`, `FreeTextChartView.jsx`, and removal of the residual duplicate Image selectors from `src/styles.css` (the existing singular owner remains `src/styles/static-content.css`).
+- Tests/fixtures: `portableQmdPolicy.test.js`, `portableQmdSanitization.test.js`, `freeTextChartView.test.js`, `static-free-text.spec.js`, `free-text-harness.jsx`, and `portable-qmd-browser.html`.
+- Records: fidelity matrix, security/portability decisions, Slice 2 evidence/status, SDD progress, and this report.
+
+### Documentation/status corrections
+
+- FT-06 now records actual sanitized-fragment descendants, exact/one-over boundaries, and enforcement before progression, final save, and mount.
+- FT-07/FT-08 record immediate pending/revision gates and safe cached rapid-revert recovery.
+- FT-10 records unique repeated-footnote occurrences, inherited source locations, and structurally/visually intact accessible HTML-only math.
+- SP-03/SP-04/SP-07 distinguish denied authored styles/foreign content from the renderer-marked, numeric-only KaTeX geometry required by the approved math renderer.
+- CSS ownership is singular: no `.chart-image-*` or `.chart-status-*` selector remains in `src/styles.css`; static/Image selectors are owned by `src/styles/static-content.css`.
+- FT-11 reload/import completion remains pending Slice 4 and FT-12 protocol-injection completion remains pending Slice 6.
+
+### Self-review and concerns
+
+- `git diff --cached --check` passed with all 20 fix-round files staged and no unstaged task delta.
+- Confirmed the canonical sink mounts only a clone of the sanitized fragment and never rewrites or reparses it.
+- Confirmed the actual-node failure is isolated before mount, and final Add/Save synchronously recompiles the exact current QMD even if a UI timer were stale.
+- Confirmed safe KaTeX style values are restricted to the approved property set plus numeric `em` grammar (`position` may only be `relative`); authored color, fixed positioning, URLs, and marker spoof payloads are stripped.
+- Confirmed each allow-list addition has a concrete parser fixture and each race uses a real mounted editor/wizard rather than labels, mocks, or source inspection.
+- Confirmed the residual `.chart-image-*` fullscreen/reduced-motion selectors were removed from `src/styles.css` without altering their existing owner in `static-content.css`.
+- Remaining concerns are unchanged: the pre-existing moderate ECharts advisory and existing Vite warnings are outside this slice; reload/import and separate-Audience protocol evidence remain owned by Slices 4 and 6 respectively.

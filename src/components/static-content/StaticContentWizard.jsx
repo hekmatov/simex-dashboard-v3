@@ -14,6 +14,7 @@ import { listStaticContentTypeOptions } from "../../static-content/staticPanelCa
 import StaticContentStateBoundary from "./StaticContentStateBoundary.jsx";
 import FreeTextSourceEditor from "./FreeTextSourceEditor.jsx";
 import ChartView from "../charts/ChartView.jsx";
+import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 
 export function StaticContentWizard({
   open = false,
@@ -37,9 +38,12 @@ export function StaticContentWizard({
   const [submitError, setSubmitError] = React.useState("");
   const [freeTextValidation, setFreeTextValidation] = React.useState(null);
   const dirty = isStaticContentDraftDirty(draft);
-  const freeTextInvalid = draft.contentTypeId === "freeText"
-    && freeTextValidation?.ok !== true;
-  const freeTextBlocked = draft.stage === "content" && freeTextInvalid;
+  const freeTextRequiresValidation = draft.contentTypeId === "freeText"
+    && (draft.stage === "content" || draft.stage === "preview-and-add");
+  const freeTextInvalid = freeTextRequiresValidation && !isCurrentFreeTextValidation(
+      freeTextValidation,
+      draft.source?.qmd ?? "",
+    );
   React.useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   if (!open) return null;
@@ -57,9 +61,11 @@ export function StaticContentWizard({
     setSubmitError("");
     try {
       if (draft.stage !== "preview-and-add") {
+        if (freeTextInvalid) throw new Error("Wait for the Free-text preview to finish validating before continuing.");
         dispatch({ type: "next" });
         return;
       }
+      validateCompiledFreeText(draft);
       const result = finalizeStaticContentDraft(draft);
       await onCreate?.(result);
       dispatch({ type: "committed" });
@@ -119,7 +125,7 @@ export function StaticContentWizard({
         <footer>
           <button type="button" className="secondary" onClick={requestClose}>Cancel</button>
           {stageIndex > (editor ? 2 : 0) && <button type="button" className="secondary" onClick={() => dispatch({ type: "previous" })}>Back</button>}
-          <button type="submit" disabled={disabled || freeTextBlocked}>
+          <button type="submit" disabled={disabled || freeTextInvalid}>
             {draft.stage === "preview-and-add" ? (editor ? "Save" : "Add") : "Continue"}
           </button>
         </footer>
@@ -307,6 +313,24 @@ function focusRestoration(stage) {
     focusId: active?.id || null,
     invokerId: active?.id || null,
   };
+}
+
+function isCurrentFreeTextValidation(validation, source) {
+  return validation?.ok === true
+    && validation.pending !== true
+    && validation.source === source
+    && validation.sourceRevision === validation.previewRevision;
+}
+
+function validateCompiledFreeText(draft) {
+  if (draft.source?.kind !== "staticText") return;
+  const compiled = compilePortableQmd(draft.source.qmd, {
+    panelId: draft.panel?.id ?? "static-text-preview",
+    hostHeadingLevel: 2,
+  });
+  if (compiled.ok) return;
+  const first = compiled.errors[0];
+  throw new Error(`${first.message} Line ${first.location.line}, column ${first.location.column}. ${first.guidance}`);
 }
 
 export default StaticContentWizard;

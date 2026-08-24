@@ -3868,8 +3868,7 @@ button.danger {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chart-zoom-hint,
-  .chart-image-view--zoom-enabled img {
+  .chart-zoom-hint {
     transition: none;
   }
 
@@ -4218,8 +4217,7 @@ button.danger {
 .multi-fullscreen-cell > .chart-echarts-view,
 .multi-fullscreen-cell > .chart-card-view,
 .multi-fullscreen-cell > .chart-target-collection-view,
-.multi-fullscreen-cell > .chart-table-view,
-.multi-fullscreen-cell > .chart-image-view {
+.multi-fullscreen-cell > .chart-table-view {
   height: 100%;
   min-height: 0;
 }

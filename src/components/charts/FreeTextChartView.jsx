@@ -1,29 +1,26 @@
 import React from "react";
 
-import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
-import { renderPortableQmd } from "../../static-content/qmd/renderPortableQmd.js";
-import { sanitizePortableHtml } from "../../static-content/qmd/sanitizePortableHtml.js";
+import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 
 export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
   const panelId = normalizePanelId(chart?.id ?? model?.sourceId);
   const titleId = `${panelId}-title`;
   const contentRef = React.useRef(null);
-  const prepared = React.useMemo(() => prepareFreeText(model?.qmd ?? "", {
+  const prepared = React.useMemo(() => compilePortableQmd(model?.qmd ?? "", {
     panelId,
     hostHeadingLevel,
   }), [hostHeadingLevel, model?.qmd, panelId]);
 
   React.useLayoutEffect(() => {
     if (!prepared.ok || !contentRef.current) return;
-    const fragment = sanitizePortableHtml(prepared.html, { panelId });
-    contentRef.current.replaceChildren(fragment);
-  }, [panelId, prepared]);
+    contentRef.current.replaceChildren(prepared.fragment.cloneNode(true));
+  }, [prepared]);
 
   if (!prepared.ok) {
     return (
       <section className="static-content-state static-content-state--error" role="status" data-static-failure="invalid-free-text">
         <strong>Free text unavailable</strong>
-        <p>{prepared.message}</p>
+        <p>{formatFirstError(prepared)}</p>
       </section>
     );
   }
@@ -48,20 +45,11 @@ export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
   );
 }
 
-function prepareFreeText(qmd, options) {
-  try {
-    const parsed = parsePortableQmd(qmd);
-    if (!parsed.ok) {
-      const first = parsed.errors[0];
-      return {
-        ok: false,
-        message: `${first.message} (line ${first.location.line}).`,
-      };
-    }
-    return { ok: true, html: renderPortableQmd(parsed.ast, options) };
-  } catch {
-    return { ok: false, message: "This saved Free text could not be rendered safely." };
-  }
+function formatFirstError(prepared) {
+  const first = prepared.errors?.[0];
+  return first
+    ? `${first.message} (line ${first.location.line}).`
+    : "This saved Free text could not be rendered safely.";
 }
 
 function normalizePanelId(value) {

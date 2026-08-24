@@ -18,6 +18,7 @@ export const PORTABLE_QMD_POLICY = Object.freeze({
     embeddedMedia: "deny",
     rawHtml: "deny",
     activeContent: "deny",
+    thematicBreaks: "deny",
     iframes: "deny",
     executableCells: "deny",
     extensions: "deny",
@@ -102,6 +103,14 @@ export function validatePortableQmdAst(ast) {
         ));
       }
     }
+    if (token.type === "hr") {
+      errors.push(issue(
+        "thematic-break",
+        "Thematic breaks are not part of portable-qmd-v1.",
+        "Use a heading or paragraph transition instead of a horizontal rule.",
+        line,
+      ));
+    }
     if (token.type === "fence") {
       const info = String(token.info ?? "").trim();
       if (/^\{|^(?:=|exec|run)|\b(?:eval|execute)\b/i.test(info)) {
@@ -109,6 +118,13 @@ export function validatePortableQmdAst(ast) {
           "executable-cells",
           "Executable cell syntax is not available in portable QMD.",
           "Use a plain language label such as `js` on a display-only code fence.",
+          line,
+        ));
+      } else if (info && !/^[a-z][a-z0-9_+-]{0,31}$/i.test(info)) {
+        errors.push(issue(
+          "fence-info",
+          "Code fence information must be one plain language label.",
+          "Use no label or one label such as `js`, `python`, `text`, or `c++` without options or attributes.",
           line,
         ));
       }
@@ -139,14 +155,6 @@ export function validatePortableQmdAst(ast) {
     }
   }
 
-  if (stats.renderedNodes > PORTABLE_QMD_POLICY.limits.renderedNodes) {
-    errors.push(issue(
-      "rendered-nodes",
-      `Portable QMD would render ${stats.renderedNodes} nodes; the limit is ${PORTABLE_QMD_POLICY.limits.renderedNodes}.`,
-      "Split the content across panels or simplify repeated list and table content.",
-      stats.nodeLimitLine,
-    ));
-  }
   if (stats.nestingDepth > PORTABLE_QMD_POLICY.limits.nestingDepth) {
     errors.push(issue(
       "nesting-depth",
@@ -232,7 +240,7 @@ function scanUnsupportedSource(source) {
     if (match) errors.push(issueAtIndex(rule, message, guidance, source, match.index));
   }
 
-  const htmlPattern = /<\/?[a-z][^>]*>/i;
+  const htmlPattern = /<(?:!--|!\[cdata\[|![a-z]|\?|\/?[a-z])/i;
   const html = htmlPattern.exec(proseSource);
   if (html) {
     errors.push(issueAtIndex(
@@ -311,8 +319,7 @@ function maskDisplayCode(source) {
 }
 
 function accountComplexity(tokens, footnotes) {
-  let renderedNodes = 0;
-  let nodeLimitLine = 1;
+  let parsedTokens = 0;
   let nestingDepth = 0;
   let depthLimitLine = 1;
   let depth = 0;
@@ -321,10 +328,7 @@ function accountComplexity(tokens, footnotes) {
   let inRow = false;
   let rowColumns = 0;
   for (const token of flattenTokens(tokens, footnotes)) {
-    if (!token.type.endsWith("_close")) renderedNodes += 1;
-    if (renderedNodes === PORTABLE_QMD_POLICY.limits.renderedNodes + 1) {
-      nodeLimitLine = (token.map?.[0] ?? 0) + 1;
-    }
+    parsedTokens += 1;
     if (CONTAINER_OPEN_TYPES.has(token.type)) {
       depth += 1;
       if (depth > nestingDepth) {
@@ -350,7 +354,7 @@ function accountComplexity(tokens, footnotes) {
       table = null;
     }
   }
-  return { renderedNodes, nodeLimitLine, nestingDepth, depthLimitLine, tables };
+  return { parsedTokens, nestingDepth, depthLimitLine, tables };
 }
 
 function* flattenTokens(tokens, footnotes) {

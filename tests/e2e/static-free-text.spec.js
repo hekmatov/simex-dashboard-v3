@@ -23,7 +23,7 @@ const INITIAL_QMD = [
   "| --- | --- |",
   "| North | Yes |",
   "",
-  "Display-only math $x^2$ and code `prepared_rows`.[^review]",
+  "Display-only math $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, and $\\sum_{i=1}^{n} i$ with code `prepared_rows`.[^review]",
   "",
   "[^review]: Reviewed locally.",
   "",
@@ -72,6 +72,7 @@ for (const viewport of VIEWPORTS) {
     await expect(panel).toContainText("Operational priorities");
     await expect(panel.locator(".portable-qmd-callout")).toContainText("Confirm the cold chain");
     await expect(panel.locator("table")).toContainText("North");
+    await expectProductionMathGeometry(panel);
     const overflow = await panel.locator(".free-text-chart-view").evaluate((node) => ({
       internal: node.scrollHeight > node.clientHeight,
       overflowY: getComputedStyle(node).overflowY,
@@ -232,4 +233,38 @@ async function openFreeTextEditor(panel, page, title) {
   await panel.getByLabel(`${title} actions`)
     .getByRole("button", { name: "Edit chart" }).click();
   await expect(page.getByRole("dialog", { name: "Edit static content" })).toBeVisible();
+}
+
+async function expectProductionMathGeometry(panel) {
+  const math = panel.locator(".portable-qmd-math");
+  await expect(math).toHaveCount(4);
+  const result = await math.evaluateAll((nodes) => {
+    const negativeTop = (node) => [...node.querySelectorAll('[style*="top:"]')]
+      .some((element) => Number.parseFloat(getComputedStyle(element).top) < 0);
+    return {
+      labels: nodes.map((node) => [node.getAttribute("role"), node.getAttribute("aria-label")]),
+      structures: [
+        nodes[0].querySelector(".msupsub") !== null,
+        nodes[1].querySelector(".mfrac .frac-line") !== null,
+        nodes[2].querySelector(".sqrt .hide-tail") !== null,
+        nodes[3].querySelector(".mop.op-symbol") !== null,
+      ],
+      visual: nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        return { width: rect.width, height: rect.height, negativeTop: negativeTop(node) };
+      }),
+      generatedStyleCount: nodes.reduce((count, node) => count + node.querySelectorAll("[style]").length, 0),
+      foreign: nodes.reduce((count, node) => count + node.querySelectorAll("math,svg,style,img,link").length, 0),
+    };
+  });
+  expect(result.labels).toEqual([
+    ["math", "x^2"],
+    ["math", "\\frac{a}{b}"],
+    ["math", "\\sqrt{x}"],
+    ["math", "\\sum_{i=1}^{n} i"],
+  ]);
+  expect(result.structures).toEqual([true, true, true, true]);
+  expect(result.visual.every(({ width, height, negativeTop }) => width > 0 && height > 0 && negativeTop)).toBe(true);
+  expect(result.generatedStyleCount).toBeGreaterThan(0);
+  expect(result.foreign).toBe(0);
 }
