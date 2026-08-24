@@ -88,6 +88,27 @@ export function reduceDisplayState(state, action, validChartIds = null) {
       });
       return withDisplayedCharts(state, chartIds);
     }
+    case "scene_applied": {
+      const chartIds = validatedChartIds(action.chart_ids, {
+        minimum: 1,
+        validIds,
+      });
+      const allowedLayouts = LAYOUTS_BY_COUNT[chartIds.length];
+      if (!allowedLayouts.includes(action.layout)) {
+        throw new DisplayStateError("invalid_layout");
+      }
+      if (
+        sameItems(chartIds, state.displayed_chart_ids)
+        && state.layout === action.layout
+      ) {
+        return state;
+      }
+      return freezeState({
+        display_revision: state.display_revision + 1,
+        displayed_chart_ids: chartIds,
+        layout: action.layout,
+      });
+    }
     case "layout_changed": {
       const allowedLayouts = LAYOUTS_BY_COUNT[state.displayed_chart_ids.length];
       if (!allowedLayouts.includes(action.layout)) {

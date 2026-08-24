@@ -185,6 +185,62 @@ test("layout is local presentation state and does not advance display revision",
   );
 });
 
+test("scene_applied atomically replaces chart order and layout", () => {
+  assert.ok(displayModule, "display controller must be implemented");
+  const start = displayModule.initialDisplayState();
+  const next = displayModule.reduceDisplayState(
+    start,
+    {
+      type: "scene_applied",
+      chart_ids: ["chart-c", "chart-a"],
+      layout: "overUnder",
+    },
+    new Set(["chart-a", "chart-b", "chart-c"]),
+  );
+
+  assert.deepEqual(next.displayed_chart_ids, ["chart-c", "chart-a"]);
+  assert.equal(next.layout, "overUnder");
+  assert.equal(next.display_revision, 1);
+  assert.ok(Object.isFrozen(next));
+  assert.ok(Object.isFrozen(next.displayed_chart_ids));
+  assert.equal(
+    displayModule.reduceDisplayState(next, {
+      type: "scene_applied",
+      chart_ids: ["chart-c", "chart-a"],
+      layout: "overUnder",
+    }),
+    next,
+  );
+});
+
+test("scene_applied validates its complete composition before changing state", () => {
+  assert.ok(displayModule, "display controller must be implemented");
+  const start = displayModule.initialDisplayState();
+
+  assert.throws(
+    () => displayModule.reduceDisplayState(start, {
+      type: "scene_applied",
+      chart_ids: ["chart-a", "chart-b"],
+      layout: "grid2x2",
+    }),
+    /invalid_layout/,
+  );
+  assert.throws(
+    () => displayModule.reduceDisplayState(
+      start,
+      {
+        type: "scene_applied",
+        chart_ids: ["chart-a", "missing"],
+        layout: "sideBySide",
+      },
+      new Set(["chart-a"]),
+    ),
+    /invalid_chart/,
+  );
+  assert.equal(start.display_revision, 0);
+  assert.deepEqual(start.displayed_chart_ids, []);
+});
+
 test("close-all and reconciliation are centralized display transitions", () => {
   assert.ok(displayModule, "display controller must be implemented");
   let state = displayModule.initialDisplayState();
