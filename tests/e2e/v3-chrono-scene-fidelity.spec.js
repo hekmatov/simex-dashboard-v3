@@ -15,9 +15,11 @@ test.beforeEach(async ({ request, page }) => {
 test("005-chrono-group-authoring: staged ledger and review remain usable at desktop and tablet", async ({ page }) => {
   test.setTimeout(120_000);
   await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-  await page.getByRole("button", { name: "Chrono Groups", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Dashboard map", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
   const auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
+  await expect(auxiliary.getByRole("heading", { name: "Chrono Studio", exact: true })).toBeVisible();
+  await auxiliary.locator("[data-action='open-content']").first().click();
+  await expect(auxiliary.getByRole("button", { name: "Back to Chrono Studio", exact: true })).toBeVisible();
   await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
 
   const stages = auxiliary.getByRole("navigation", { name: "Chrono Group stages" });

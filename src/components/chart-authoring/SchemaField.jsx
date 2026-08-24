@@ -10,7 +10,7 @@ import StandardField, {
   fieldControlId,
   fieldDescribedBy
 } from "./StandardField.jsx";
-import TimeSyncSettingsField from "./TimeSyncSettingsField.jsx";
+import ChronoMembershipSettingsField from "./ChronoMembershipSettingsField.jsx";
 function SchemaField({
   field,
   value = field?.value,
@@ -92,7 +92,7 @@ function SchemaField({
   }
   if (field.control === "timeSync") {
     return /* @__PURE__ */ React.createElement(
-      TimeSyncSettingsField,
+      ChronoMembershipSettingsField,
       {
         field,
         chart,

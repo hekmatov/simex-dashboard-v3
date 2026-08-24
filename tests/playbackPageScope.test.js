@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { chartsForPlaybackPage } from "../src/charting/time/playbackPageScope.js";
+import {
+  chartsForPlaybackPage,
+  createPlaybackChartCollectionSelector,
+} from "../src/charting/time/playbackPageScope.js";
 
 const dashboard = {
   pages: [{
@@ -37,4 +40,17 @@ test("initial playback scope falls back to the first page without mutating the d
     ["chart-a", "chart-b"],
   );
   assert.deepEqual(dashboard, before);
+});
+
+test("playback chart collections retain identity across unrelated dashboard renders", () => {
+  const select = createPlaybackChartCollectionSelector();
+  const first = select(dashboard, "page-a");
+  const unrelatedRender = select({ ...dashboard, globalStyles: { density: "compact" } }, "page-a");
+  const nextPage = select(dashboard, "page-c");
+
+  assert.strictEqual(unrelatedRender.charts, first.charts);
+  assert.strictEqual(unrelatedRender.pageCharts, first.pageCharts);
+  assert.strictEqual(nextPage.charts, first.charts);
+  assert.notStrictEqual(nextPage.pageCharts, first.pageCharts);
+  assert.deepEqual(nextPage.pageCharts.map(({ id }) => id), ["chart-c"]);
 });

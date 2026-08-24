@@ -3,7 +3,7 @@ import { matchTemporalObservation } from "../time/temporalMatch.js";
 import {
   assertTimeSyncInterpolationAllowed,
   validateEffectiveTimeSyncMatching,
-} from "../time/timeSyncModel.js";
+} from "../time/chronoGroupModel.js";
 
 const PREVIOUS_COMPARISON_KEYS = new Set(["mode"]);
 const FIXED_COMPARISON_KEYS = new Set(["mode", "at", "matching"]);
@@ -87,6 +87,18 @@ function resolveFixed({
   const candidates = observations.filter(
     ({ epochMs }) => epochMs <= displayed.epochMs,
   );
+  if (
+    matching.policy === "nearest"
+    && hasEquidistantNearestBaseline(
+      candidates,
+      activeEpochMs,
+      matching.toleranceMs,
+    )
+  ) {
+    return invalid(
+      "The fixed Delta comparison is ambiguous because two observations are equidistant.",
+    );
+  }
   const temporalMatch = matchTemporalObservation({
     observations: candidates,
     activeEpochMs,
@@ -117,6 +129,27 @@ function resolveFixed({
     observation,
     matchProvenance(temporalMatch, parsed.canonical, candidates),
   );
+}
+
+function hasEquidistantNearestBaseline(
+  observations,
+  activeEpochMs,
+  toleranceMs,
+) {
+  let lower = null;
+  let upper = null;
+  for (const observation of observations) {
+    if (observation.epochMs < activeEpochMs) {
+      lower = observation;
+      continue;
+    }
+    if (observation.epochMs > activeEpochMs) upper = observation;
+    break;
+  }
+  if (!lower || !upper) return false;
+  const lowerDistance = activeEpochMs - lower.epochMs;
+  const upperDistance = upper.epochMs - activeEpochMs;
+  return lowerDistance === upperDistance && lowerDistance <= toleranceMs;
 }
 
 function validateComparison(comparison) {
