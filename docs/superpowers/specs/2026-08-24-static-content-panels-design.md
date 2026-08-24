@@ -330,3 +330,5 @@ They are disposable design evidence, not production components. Detailed accepta
 ## Approval gate
 
 This specification becomes **Approved** only when the V3 Design master task accepts the separate static workflow, the Free-text Audience exclusion, the non-temporal Image Present model, and the proposed sketch winners. Any accepted deviation must update this specification, the sketch record, fidelity matrix, and implementation plan together before production work begins.
+
+Even after design approval, production execution remains blocked until Step 7 is accepted and the implementation plan’s hard ownership-resolution gate commits an exact inventory from that final Step 7 commit. Every provisional/generic production owner in the fidelity matrix and ledger must be replaced by exact source/function/CSS/test ownership before implementation begins.

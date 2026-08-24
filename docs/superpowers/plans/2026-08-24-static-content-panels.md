@@ -15,8 +15,26 @@
 3. Create a fresh implementation worktree/branch from that exact final commit; do not rebase this discovery branch into production.
 4. Re-run a narrow baseline check on the final Step 7 commit. Record pre-existing failures; do not inherit `e541914` baseline assumptions blindly.
 5. Apply the accepted version trace exactly: dashboard schema v4, export bundle v4, and chart config v3 unless an implementation-proven chart-shape change receives a separate accepted deviation. Cross-reference spec Versions, security SP-15/SP-21, and fidelity PS-02/PS-03 in the same commit.
+6. Complete and commit the mandatory post-Step-7 ownership-resolution inventory below. No implementation task, dependency change, test creation, or production edit may start before this gate passes.
 
 Every implementation slice closes its own traceability loop in the same commit: update the slice’s fidelity rows, security decisions, evidence/status, and any deviation record. A passing engine check leaves UI/composition and fidelity status pending until its routed browser task passes.
+
+## Hard gate — post-Step-7 production ownership resolution
+
+Final ownership cannot be known reliably until Step 7 is accepted. The implementation branch must therefore begin with a read-only ownership pass and commit `docs/audits/<implementation-date>-static-content-panels/POST-STEP-7-OWNERSHIP-INVENTORY.md` before any production work.
+
+The inventory must identify the final accepted Step 7 commit and replace every generic, conditional, or proposed owner in this plan with exact existing-or-new paths and named functions/boundaries for:
+
+- static wizard/editor route and dashboard mutation entry;
+- registry, catalogue filter, typed source resolver, and validation boundaries;
+- production stylesheet entry point and every static-content/Build/View/fullscreen/Audience CSS owner;
+- dashboard schema migration and invalid Chrono/Scene membership isolation;
+- canonical Build/View renderer ownership, including whether `DashboardModeWorkspace.jsx`, `DashboardRenderer.jsx`, or another final Step 7 file owns resolution;
+- static creation/edit destination validation and runtime time-filter exclusion;
+- Present protocol/channel/runtime and Audience asset-readiness ownership;
+- exact unit, integration, and browser test files for all affected fidelity IDs, especially PS-08.
+
+The same inventory commit must update every affected Fidelity Matrix **Production owner** cell and every execution-ledger **Owning slice/deterministic test** entry. It must remove all “if required,” “if final owner,” generic service names, and unresolved “new” placeholders. A deterministic scan must fail the gate if any remain. Do not guess these paths on the discovery branch.
 
 ## Vertical slice 1 — shared static-content contract
 
@@ -72,7 +90,7 @@ Every implementation slice closes its own traceability loop in the same commit: 
 
 - **Modify `package.json` and the lockfile** — add only approved local Markdown/sanitizer/math dependencies after a dependency/security review; pin versions through the project package manager.
 - **Create `src/styles/static-content.css`** — production-owned semantic prose, callout, table, code, math, focus, overflow, and responsive rules. Do not copy sketch CSS wholesale.
-- **Modify the production stylesheet entry point** — import the new isolated stylesheet after Step 7 ownership is settled; do not append rules to unrelated shared CSS opportunistically.
+- **Resolve at the post-Step-7 ownership gate, then modify the exact production stylesheet entry path recorded in the inventory** — import the new isolated stylesheet; do not append rules to unrelated shared CSS opportunistically.
 
 ### Checks and real journey
 
@@ -122,7 +140,7 @@ Every implementation slice closes its own traceability loop in the same commit: 
 
 - **Modify `src/charting/config/dashboardConfigStructure.js`** — schema v4 typed sources and asset manifest.
 - **Create `src/charting/config/migrateDashboardV3ToV4.js`** — deterministic/idempotent legacy Image migration including URL/path/blob, fit, crop/rotation defaults, and alt warning.
-- **Modify import/migration membership validation** — reject or isolate any static panel carrying Chrono Group or Scene membership; never fabricate temporal metadata.
+- **Resolve at the post-Step-7 ownership gate, then modify the exact import/migration membership validator paths/functions recorded in the inventory** — reject or isolate any static panel carrying Chrono Group or Scene membership; never fabricate temporal metadata.
 - **Modify `src/charting/config/dashboardBundleV3.js` or replace with version-neutral `dashboardBundle.js`** — bundle v4 envelope, base64 local payloads, hashes, linked dependency report, strict validation.
 - **Modify `src/lib/dashboardPackageCandidate.js`** — preflight assets/network dependencies and refuse missing/corrupt local bytes.
 - **Modify `src/lib/dashboardPackageImportTransaction.js`** — validate/stage all assets before the single dashboard mutation; roll back on any invalid/quota condition.
@@ -149,9 +167,8 @@ Every implementation slice closes its own traceability loop in the same commit: 
 - **Modify `src/components/dashboard/DashboardCanvas.jsx`** — place static panels in the same grid and provide Build-only authoring actions.
 - **Modify `src/components/ChartPanel.jsx`** — stable panel framing, scoped error recovery, correct overflow owner.
 - **Modify `src/components/display/DisplayedChartGrid.jsx`** — canonical fullscreen rendering with active Image viewer and Free-text scrolling.
-- **Modify `src/components/dashboard/DashboardModeWorkspace.jsx` if required by final Step 7** — ensure Build/View route the same saved render model rather than parallel approximations.
-- **Modify `src/components/DashboardRenderer.jsx` if it is the final canonical owner** — resolve typed static sources/assets once at the shared boundary.
-- **Create/modify focused CSS only in the final Step 7-owned surface files** — preserve grid geometry and action overlay contracts.
+- **Resolve the canonical Build/View owner at the post-Step-7 gate, then modify the exact path/function recorded in the inventory** — ensure Build/View route the same saved render model rather than parallel approximations; do not assume `DashboardModeWorkspace.jsx` or `DashboardRenderer.jsx` until inspected.
+- **Resolve CSS ownership at the post-Step-7 gate, then create/modify only the exact paths recorded in the inventory** — preserve grid geometry and action-overlay contracts.
 - **Create `tests/staticPanelComposition.test.js`** — Build/View saved composition equality, overflow owners, surface capability mapping.
 - **Extend `tests/e2e/static-free-text.spec.js` and `tests/e2e/static-image.spec.js`** — material 1440×900, 1024×768, 768×900 states and fullscreen.
 
@@ -164,17 +181,17 @@ Every implementation slice closes its own traceability loop in the same commit: 
 - **Modify `src/lib/presentationProtocol.js`** — allow validated Image identity/revision only; reject Free text, object URLs, and any Scene/group/frame/time fields on Image; keep protocol version/migration explicit.
 - **Modify `src/lib/presentationChannel.js`** — send identity/revision only and preserve snapshot/reconnect behavior.
 - **Modify `src/components/presentation/AudienceDisplay.jsx`** — resolve Image assets in the separate window and keep failure cell-scoped.
-- **Modify `src/components/presentation/AudienceSnapshotMonitor.jsx` if required** — report asset revision readiness without treating Image as temporal.
+- **Resolve Audience asset-readiness ownership at the post-Step-7 gate, then modify the exact path/function recorded in the inventory** — report asset revision readiness without treating Image as temporal; do not assume `AudienceSnapshotMonitor.jsx` until inspected.
 - **Modify `src/components/display/DisplayedChartGrid.jsx`** — passive mode hides Image viewer controls and applies saved transform only.
 - **Modify `src/styles/presentation.css`** — bounded passive Image cell, loading/error states, 16:9 fit; no Free-text Audience styles.
 - **Do not weaken `src/charting/time/sceneSchema.js`** — add a regression test rather than changing Scene membership invariants.
-- **Modify the static creation/edit destination validators and runtime time-filter boundary** — reject Chrono/Scene destinations and prove neither static resolver is called with a time filter.
+- **Resolve at the post-Step-7 gate, then modify the exact static creation/edit destination validators and runtime time-filter boundary recorded in the inventory** — reject Chrono/Scene destinations and prove neither static resolver is called with a time filter.
 
 ### Checks and live journey
 
 - **Modify `tests/presentationProtocol.test.js` and `tests/presentationChannel.test.js`** — accept Image identity/revision, reject Free text/blob URL, reconnect snapshot.
 - **Modify `tests/audienceDisplay.test.js`** — passive transform, no controls, separate-window resolver, isolated failure.
-- **Modify `tests/sceneSchema.test.js` and add static destination/import/runtime boundary cases** — creation/edit/import/migration reject or isolate membership; static resolvers receive no time filters.
+- **Resolve the exact PS-08 unit/integration/browser test paths at the post-Step-7 gate; then modify/create those recorded files** — creation/edit/import/migration reject or isolate membership; static resolvers receive no time filters.
 - **Create `tests/e2e/static-image-audience.spec.js`** — live production Image + temporal chart selection, separate 16:9 Audience, chart time change with unchanged Image, forced image failure with continuing chart.
 
 **Layer gate:** IM-15, IM-16, FT-12, and PS-08 pass. This is the required Present/Audience production integration proof; an unwired Audience component does not count.
@@ -219,13 +236,13 @@ This ledger is binding with the fidelity matrix. “Retained browser task” mea
 | IM-10 | Image/Build-View | Zoom/pan bounds, reset, names, surface capability | Tab to View controls; exercise; fullscreen and repeat | Small cell; fullscreen; keyboard; fit modes | Focus + interaction + geometry | Held / not started | Held / not started | Proposed |
 | IM-11 | Image | Replace/undo/cancel/save reducer revisions | Replace landscape→portrait; undo; replace/save/reload | Edit; dirty cancel; failure | Revision + transform/alt reading | Held / not started | Held / not started | Proposed |
 | IM-12 | Image | Exact Reset image state; unchanged hash/reference | Transform/reset/cancel; repeat/save | Create/edit; alt/decorative | State/hash + preview | Held / not started | Held / not started | Proposed |
-| IM-13 | Image/Build-View/Audience | Exact surface→failure actions plus sibling survival | Force failure in Build, View, fullscreen, Audience | Small cell; fullscreen; 16:9; offline | Action inventory + sibling render | Held / not started | Held / not started | Proposed |
-| IM-14 | Image/Build-View | Persist revisions; stage ownership; dirty Keep/Discard | Content transforms → passive preview → Keep/Discard → add/reload/edit/save/View/fullscreen | 1440×900, 768×900; stages 3/4; portrait/landscape | Saved revision + screenshots/interactions | Held / not started | Held / not started | Proposed |
+| IM-13 | Image/Build-View/Audience | Exact surface→failure actions plus sibling survival | Force failure in Build, ordinary View, fullscreen, Audience; inspect inventories; Retry fullscreen | Small cell; fullscreen; 16:9; offline | Exact actions + fullscreen retry + sibling render | Held / not started | Held / not started | Proposed |
+| IM-14 | Image/Build-View | Persist revisions; stage ownership; complete-pair dirty Keep/Discard | Change source/replacement, alt/decorative, fit/focus, crop/rotation → Keep all → Discard/restore all/stage/render/focus → add/reload/edit/save/View/fullscreen | 1440×900, 768×900; stages 3/4; portrait/landscape | Field/state/focus readings + saved revision + screenshots | Held / not started | Held / not started | Proposed |
 | IM-15 | Present/Audience | Protocol accepts identity/revision without temporal fields; second-window asset resolve | Select Image+chart; open Audience; change chart time | 1920×1080, 1366×768; separate window | Protocol reading + before/after render | Held / not started | Held / not started | Proposed |
 | IM-16 | Present/Audience | Forced Image failure leaves sibling time/render live | Break asset; advance chart time | 16:9; 1/2/4-cell layouts | Sibling DOM/time + failure screenshot | Held / not started | Held / not started | Proposed |
 | PS-01 | Shared/Persistence | Failure at each transaction step preserves old revision/references; reload has no unsaved authoring fields | Fail save; retry/cancel in-session; reload only the unchanged saved panel | Create/edit/replace; quota/storage; reload | Revision/reference/staging evidence + no unsaved draft in storage | Held / not started | Held / not started | Proposed |
-| PS-02 | Persistence | v3→dashboard-v4 migration idempotence; chart config remains v3 | Import/open every legacy Image origin/fit/alt/membership case | Legacy valid/malformed; invalid temporal membership | Version/migration/recovery reading | Held / not started | Held / not started | Proposed |
-| PS-03 | Persistence | Bundle v4 schema/hash/reference round trip; missing byte abort | Export mixed dashboard; clear state; import; inspect surfaces | Online/offline; quota/corrupt | Version/hash + rendered output | Held / not started | Held / not started | Proposed |
+| PS-02 | Persistence | Dashboard v3→v4 migration idempotence; contained chart config remains v3 | Import/open every legacy Image origin/fit/alt/membership case and inspect exact dashboard/chart versions | Legacy valid/malformed; invalid temporal membership | Dashboard v4 + chart-config-v3 + migration/recovery reading | Held / not started | Held / not started | Proposed |
+| PS-03 | Persistence | Export bundle v4 schema/hash/reference round trip with chart config v3; missing byte abort | Export mixed dashboard; clear state; import; inspect exact versions and surfaces | Online/offline; quota/corrupt | Bundle-v4/chart-v3/hash + rendered output | Held / not started | Held / not started | Proposed |
 | PS-04 | Persistence/package | Package safe paths/MIME; no external requests for local assets | Serve package offline; open main and Audience | Windows portable server; 16:9 | Package listing + network/render evidence | Held / not started | Held / not started | Proposed |
 | PS-05 | Persistence | Reference graph/grace cleanup decisions | Replace/delete/cancel/import-fail; reload; inspect inventory | Normal; quota warning; interrupted | Asset inventory/reference reading | Held / not started | Held / not started | Proposed |
 | PS-06 | Build-View | No saved-layout write on open; exact prior Build UI state restores on close | Save; toggle modes; open/close editor; verify placement/selection/focus/scroll | 1440×900, 1024×768; dense; open/closed | Config + geometry/focus/scroll reading | Held / not started | Held / not started | Proposed |

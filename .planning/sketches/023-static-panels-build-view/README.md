@@ -29,7 +29,7 @@ Open `.planning/sketches/023-static-panels-build-view/index.html` in a browser.
 - Build may transiently compress or reposition its canvas while authoring chrome is open. Opening never mutates saved layout; closing restores the prior Build canvas, selection, focus, and scroll. Exact View/Build rectangles and zero overlap are not required.
 - Free text supports internal vertical overflow where necessary, never document-level horizontal overflow.
 - Image viewer zoom, pan, and Reset view are keyboard-discoverable transient controls in View and fullscreen. Build preview and passive contexts start at saved fit/crop.
-- Image failure actions are capability-specific: Build offers Retry/Replace/Edit; View/fullscreen offer Retry plus a non-authoring explanation; Audience remains passive.
+- Image failure actions are capability-specific: Build offers Retry/Replace/Edit; ordinary View and fullscreen each offer Retry plus a non-authoring explanation; Audience remains passive. The fullscreen sketch exposes its own Asset failure → Retry journey.
 - Free text has no source/CSV/time/Scene/Present/Audience actions. Image has no CSV/time/Scene actions but is eligible for Present/Audience.
 
 ## Rejection record

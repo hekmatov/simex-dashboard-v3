@@ -15,8 +15,8 @@
 ## Interactive states exercised
 
 - 021: authored headings, table, blockquote, callout, and fenced code; a blocked script retains the last-valid preview with a stale marker and disables progress; narrow Variant A exposes Source/Preview tabs; dirty Cancel has Keep editing/Discard.
-- 022: stage 3 contains source/accessibility/crop/rotation/fit and dirty Cancel; 90° rotation plus keyboard crop nudge updates permille geometry; stage 4 removes all authoring tools and shows a passive final result/summary/Add.
-- 023: Build mode exposes authoring actions and reversible transient canvas compression; View/fullscreen expose keyboard-focusable zoom/pan/reset; failures show surface-specific actions.
+- 022: stage 3 contains source/accessibility/crop/rotation/fit and dirty Cancel; Keep preserves the whole draft, while Discard restores every source/asset/accessibility/transform/fit/focus field, stage, render, and authoring focus from the saved pair; stage 4 remains passive.
+- 023: Build mode exposes authoring actions and reversible transient canvas compression; View/fullscreen expose keyboard-focusable zoom/pan/reset; Build, ordinary View, and fullscreen failures show their exact surface-specific action inventories, including fullscreen Retry.
 - 024: advancing the chart clock changes the temporal frame while Image revision 7 remains unchanged; forced asset failure replaces only the image cell and preserves the sibling chart/passive 16:9 composition.
 
 ## UI/UX comparative input
@@ -43,3 +43,13 @@ Production implementation may use these sketches as behavioral evidence only aft
 The first master review at commit `64c0143` rejected approval while accepting the architectural direction. Binding findings were: invalid Free-text source replaced last-valid preview and could still advance; narrow Variant A stacked rather than tabbed; dirty Cancel was missing; Image authoring controls were mislabeled as stage 4; saved-panel sketches lacked keyboard/fullscreen/failure capability proof; the plan lacked a 36-row execution ledger and sufficient Chrono/Scene/animation/version traceability; and reload-persistent draft recovery had not been presented as a product decision.
 
 The corrected sketches and records retain that rejection as provenance. They remain Proposed until renewed master review. The user subsequently selected application-session-only unsaved drafts; reload-persistent authoring recovery is rejected from Step 7S.
+
+The second master review at commit `1d6413a` accepted the earlier major corrections but withheld approval for incomplete Image Discard restoration, missing fullscreen failure/Retry, unresolved post-Step-7 production ownership, and incomplete exact version trace in this record and the fidelity matrix. This bounded pass addresses those four findings without reopening the accepted architecture or draft lifetime.
+
+## Exact version decision
+
+- Dashboard schema: **v4**.
+- Export bundle: **v4**.
+- Chart config: **v3**, unless a separately approved implementation deviation demonstrates an unavoidable chart-shape change.
+
+This decision is binding with the design spec Versions section, security SP-15/SP-21, fidelity PS-02/PS-03, implementation-plan preconditions, and post-Step-7 ownership inventory.

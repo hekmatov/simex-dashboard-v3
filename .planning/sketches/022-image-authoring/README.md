@@ -36,7 +36,7 @@ Open `.planning/sketches/022-image-authoring/index.html` in a browser.
 - SVG is unsupported in v1; PNG, JPEG, and WebP must decode as a single frame under the specified limits.
 - Image is the only static-content type eligible for Present selection and passive Audience output. Free text is excluded.
 - Replace, reset transforms, restore last saved, remove panel, and asset failure have different consequences.
-- Dirty Cancel offers Keep editing and Discard; Discard restores the last saved panel/source pair.
+- Dirty Cancel offers Keep editing and Discard. Keep editing preserves the complete source/asset/accessibility/transform draft and prior focus. Discard restores source kind, staged/replacement asset state, alt/decorative, crop, rotation, fit, focus anchor, stage 3, rendered result, and an appropriate authoring focus from the last saved panel/source pair.
 
 ## Rejection record
 

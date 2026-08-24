@@ -4,7 +4,7 @@
 
 Review the corrected Step 7S static-content design and either approve, approve with recorded deviations, or reject it. Do not authorize production implementation until Step 7 is accepted and an implementation branch is created from its final accepted commit.
 
-The first review rejected approval at `64c0143` while accepting the architectural direction. The rejection record and bounded corrections are preserved in `SKETCH-DECISION-RECORD.md`. Renewed review must exercise the corrected interactions rather than relying on the earlier screenshots.
+The first review rejected approval at `64c0143` while accepting the architectural direction. The second review at `1d6413a` accepted the major corrections but found four bounded gaps: complete Image Discard restoration, fullscreen failure/Retry, deterministic post-Step-7 ownership resolution, and the exact version trace in the matrix/decision record. Both rejection rounds and their corrections are preserved in `SKETCH-DECISION-RECORD.md`. Renewed review must exercise the corrected interactions rather than rely on earlier screenshots.
 
 ## Baseline and isolation
 
@@ -25,6 +25,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 7. Accept the exact version trace: dashboard schema v4 and bundle v4; chart config remains v3 unless implementation proves a chart-shape change and an accepted deviation records it.
 8. Accept proposed sketch Variant A for 021–024, or record exact deviations.
 9. Accept the user-selected application-session-only unsaved-draft lifetime recorded below.
+10. Accept the hard post-Step-7 ownership-resolution gate: implementation cannot begin until exact source/function/CSS/test ownership is inspected from the final accepted Step 7 commit, committed in an inventory, and synchronized into the fidelity matrix and 36-row ledger.
 
 ## Artifacts
 
@@ -45,6 +46,8 @@ The first review rejected approval at `64c0143` while accepting the architectura
 - Fullscreen and Audience already share the canonical ChartView path. Audience uses passive interaction, making Image-only support a narrow extension.
 - Current Scene validation requires Chrono parent/group membership and frame/time bounds. Static Scene membership would require a separate Scene-model redesign.
 - Browser walkthroughs exercised accepted content, blocked script validation, rotation/crop keyboard state, Build/View action suppression, passive 16:9 composition, and image-failure isolation.
+- The final Image Discard walkthrough changed source kind, staged replacement state, alt, fit, focus anchor, crop, and rotation; Keep preserved every change, while Discard restored every saved value, stage 3, rendered geometry, and focus to Source.
+- The final fullscreen walkthrough opened Image fullscreen, forced failure, observed only “Image unavailable,” the non-authoring explanation, and Retry, confirmed Replace/Edit were absent, and successfully retried to the active fullscreen viewer.
 
 ## Draft-lifetime decision
 
@@ -52,7 +55,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 
 ## Fidelity status
 
-The matrix contains 36 proposed binding rows across semantic, composition, and real-use layers, with a matching 36-row executable plan ledger. It intentionally does not label any row Implemented or Approved. The later implementation must pass live creation/editing/View/fullscreen journeys for both types, Free-text Present exclusion, Image Present/Audience, and Audience failure isolation.
+The matrix contains 36 proposed binding rows across semantic, composition, and real-use layers, with a matching 36-row executable plan ledger. PS-02/PS-03 now state dashboard schema v4, export bundle v4, and chart config v3 explicitly. It intentionally does not label any row Implemented or Approved. The later implementation must pass live creation/editing/View/fullscreen journeys for both types, Free-text Present exclusion, Image Present/Audience, and Audience failure isolation.
 
 ## Exit from this discovery task
 
