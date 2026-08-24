@@ -71,75 +71,75 @@
   line-height: 32px;
 }
 
-.displayed-chart-grid[data-display-surface="audience"] {
+.displayed-chart-grid[data-layout-system="presentation"] {
   display: grid;
   gap: 24px;
   height: 100%;
   min-height: 0;
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-1 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-1 {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-2 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-2.layout-sideBySide {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-2.layout-sideBySide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-2.layout-overUnder {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-2.layout-overUnder {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3 {
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3 .displayed-cell-1 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3 .displayed-cell-1 {
   grid-row: 1 / span 2;
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-topFocus {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-topFocus {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-topFocus .displayed-cell-1 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-topFocus .displayed-cell-1 {
   grid-column: 1 / span 2;
   grid-row: auto;
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-bottomFocus {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus .displayed-cell-1 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-bottomFocus .displayed-cell-1 {
   grid-row: auto;
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus .displayed-cell-3 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-bottomFocus .displayed-cell-3 {
   grid-column: 1 / span 2;
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-leftFocus {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-leftFocus {
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-rightFocus {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-rightFocus {
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-rightFocus .displayed-cell-1 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-rightFocus .displayed-cell-1 {
   grid-column: 2;
   grid-row: 1 / span 2;
 }
 
-.displayed-chart-grid[data-display-surface="audience"].displayed-count-4 {
+.displayed-chart-grid[data-layout-system="presentation"].displayed-count-4 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
@@ -537,21 +537,21 @@
     line-height: 28px;
   }
 
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-2,
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3,
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-4 {
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-2,
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-3,
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-4 {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
     overflow: auto;
   }
 
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3 .displayed-cell-1 {
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-3 .displayed-cell-1 {
     grid-row: auto;
   }
 
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-topFocus .displayed-cell-1,
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-bottomFocus .displayed-cell-3,
-  .displayed-chart-grid[data-display-surface="audience"].displayed-count-3.layout-rightFocus .displayed-cell-1 {
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-topFocus .displayed-cell-1,
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-bottomFocus .displayed-cell-3,
+  .displayed-chart-grid[data-layout-system="presentation"].displayed-count-3.layout-rightFocus .displayed-cell-1 {
     grid-column: auto;
     grid-row: auto;
   }

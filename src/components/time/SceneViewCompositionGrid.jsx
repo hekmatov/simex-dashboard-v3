@@ -9,6 +9,7 @@ export default function SceneViewCompositionGrid({
   dashboard,
   scene,
   timeContextForChart = () => null,
+  timeContextAuthority,
   surface = "view-scene",
   renderCellChrome,
 }) {
@@ -76,6 +77,7 @@ export default function SceneViewCompositionGrid({
                 accessibilityEnabled,
               }}
               timeContext={timeContextForChart(chart.id)}
+              timeContextAuthority={timeContextAuthority}
               interactionMode="active"
             />
           </section>

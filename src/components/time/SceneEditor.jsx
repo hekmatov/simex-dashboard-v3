@@ -10,7 +10,7 @@ const STAGES = Object.freeze([
   { id: "arrange", label: "Arrange and configure" },
 ]);
 
-export default function SceneEditor({ draft, charts = [], chronoGroups = [], pages = [], disabled = false, onAction }) {
+export default function SceneEditor({ dashboard, draft, charts = [], chronoGroups = [], pages = [], disabled = false, onAction }) {
   const value = draft?.value ?? {};
   const busy = disabled || draft?.status === "saving";
   const dirty = ["dirty", "error", "suspended"].includes(draft?.status);
@@ -35,7 +35,7 @@ export default function SceneEditor({ draft, charts = [], chronoGroups = [], pag
           {draft?.stage === "details"
             ? <SceneDetailsStage draft={draft} charts={charts} chronoGroups={chronoGroups} pages={pages} busy={busy} onAction={onAction} />
             : draft?.stage === "arrange"
-              ? <ArrangeStage draft={draft} charts={charts} busy={busy} onAction={onAction} />
+              ? <ArrangeStage dashboard={dashboard} draft={draft} charts={charts} busy={busy} onAction={onAction} />
               : <SelectStage value={value} charts={charts} selectedIds={selectedIds} busy={busy} onAction={onAction} />}
         </main>
         <SceneTransactionFooter readiness={readiness} draft={draft} busy={busy} dirty={dirty} onAction={onAction} />
@@ -116,7 +116,7 @@ function ObservationChecklist({ chart, selectedEpochs, onAction, onClose }) {
   return <div className="scene-observation-dialog" role="dialog" aria-modal="true" aria-labelledby="scene-observation-title"><div><header><h3 id="scene-observation-title">{chart.label ?? chart.title ?? chart.id} observations</h3><button type="button" onClick={onClose}>Close</button></header>{epochs.length === 0 ? <p>No observations available.</p> : <ol>{epochs.map((epochMs) => <li key={epochMs}><label className="choice-control-row"><input className="choice-control" type="checkbox" checked={selectedEpochs.includes(epochMs)} onChange={(event) => onAction?.({ type: "SET_FRAME_SELECTION", selection: "selected", selectedEpochs: event.target.checked ? [...selectedEpochs, epochMs].sort() : selectedEpochs.filter((value) => value !== epochMs) })} />{new Date(epochMs).toISOString()}</label></li>)}</ol>}</div></div>;
 }
 
-function ArrangeStage({ draft, charts, busy, onAction }) { return <div className="scene-stage-body" data-stage="arrange"><BalancedTwinCanvas scene={draft.value} charts={charts} selectedChartId={draft.selectedChartId} activeBoard={draft.activeBoard} disabled={busy} onAction={onAction} /></div>; }
+function ArrangeStage({ dashboard, draft, charts, busy, onAction }) { return <div className="scene-stage-body" data-stage="arrange"><BalancedTwinCanvas dashboard={dashboard} scene={draft.value} charts={charts} selectedChartId={draft.selectedChartId} activeBoard={draft.activeBoard} disabled={busy} onAction={onAction} /></div>; }
 function chartLabel(charts, chartId) { return charts.find(({ id }) => id === chartId)?.label ?? charts.find(({ id }) => id === chartId)?.title ?? chartId; }
 function formatPeriod(period) { if (Number.isFinite(period?.startEpochMs) && Number.isFinite(period?.endEpochMs)) return `${new Date(period.startEpochMs).toISOString().slice(0, 10)} to ${new Date(period.endEpochMs).toISOString().slice(0, 10)}`; if (period?.start && period?.end) return `${String(period.start).slice(0, 10)} to ${String(period.end).slice(0, 10)}`; return "Inherited after choosing a parent"; }
 function toDateInputs(period) { return { start: Number.isFinite(period?.startEpochMs) ? new Date(period.startEpochMs).toISOString().slice(0, 10) : String(period?.start ?? "").slice(0, 10), end: Number.isFinite(period?.endEpochMs) ? new Date(period.endEpochMs).toISOString().slice(0, 10) : String(period?.end ?? "").slice(0, 10) }; }

@@ -5,6 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import reactPlugin from "@vitejs/plugin-react";
 
+import { profileDataset } from "../src/charting/data/profileDataset.js";
+
 const vite = await createServer({
   root: process.cwd(),
   configFile: false,
@@ -142,16 +144,76 @@ test("Sketch 006 Calendar mode renders positive interval and unit controls", () 
 });
 
 test("Sketch 006 arrange composition renders twin canvases, insertion targets, and Unit Orbit", () => {
-  const html = renderToStaticMarkup(React.createElement(SceneEditor, { ...sceneProps, draft: sceneDraft("arrange") }));
+  const html = renderToStaticMarkup(React.createElement(SceneEditor, {
+    ...sceneProps,
+    dashboard: runtimeDashboard(),
+    draft: sceneDraft("arrange"),
+  }));
   assert.match(html, />Scene View</);
   assert.match(html, />Present</);
+  assert.match(html, /data-scene-composition-surface="scene-preview"/);
+  assert.match(html, /data-layout-system="presentation"/);
+  assert.equal((html.match(/class="chart-view-frame"/g) ?? []).length, 2);
+  assert.match(html, /Scene preview frame/);
+  assert.match(html, /2027-05-01/);
   assert.match(html, /Drop here/);
   assert.match(html, /Unit Orbit/);
   assert.match(html, /Move first/);
   assert.match(html, /Move last/);
   assert.match(html, /Include in Present/);
   assert.match(html, /Remove from Present/);
+  assert.doesNotMatch(html, /<li[^>]*data-chart-id=/);
+  assert.doesNotMatch(html, />Included<\/span>/);
 });
+
+function runtimeDashboard() {
+  const rows = [{ observed: "2027-05-01", count: 2 }];
+  const sourceChart = {
+    id: "chart-a",
+    typeId: "line",
+    title: "Admissions",
+    sourceId: "admissions",
+    roles: {
+      measurements: { field: "count" },
+      observation: {
+        field: "observed",
+        interpretation: "temporal",
+        format: "YYYY-MM-DD",
+      },
+    },
+    layout: { width: 2, height: 1 },
+    presentation: { collection: null, labels: null, accessibility: null },
+    interaction: { zoom: { enabled: false }, timeSync: null },
+  };
+  return {
+    timezone: "UTC",
+    dataSources: {},
+    globalStyles: { accessibility: { enabled: false } },
+    chronoGroups: [{
+      id: "chrono-a",
+      name: "Outbreak",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [{ chartId: "chart-a", timeRole: "observation" }],
+    }],
+    loadedData: { admissions: rows },
+    datasetProfiles: {
+      admissions: profileDataset(rows, {
+        observed: { interpretation: "temporal", format: "YYYY-MM-DD" },
+      }),
+    },
+    pages: [{
+      id: "biomedical",
+      label: "Biomedical",
+      sections: [{
+        id: "signals",
+        title: "Signals",
+        panels: [{ id: "placement-chart-a", chart: sourceChart }],
+      }],
+    }],
+  };
+}
 
 test("Sketch 012 studios expose truthful counts and Search, Status, and Page filters", () => {
   const state = {

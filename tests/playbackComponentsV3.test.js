@@ -1371,6 +1371,42 @@ test("ChartView receives active time when the active Chrono Group lists it as a 
   assert.doesNotMatch(synchronized, /value at 2027-05-03: 30/);
 });
 
+test("an explicit Scene preview time is not overwritten by provider playback time", () => {
+  const fixture = playbackFixture();
+  const chart = fixture.charts[0];
+  const html = renderPlayback(
+    React.createElement(ChartView, {
+      chart,
+      rows: fixture.loadedData.primary,
+      datasetProfile: fixture.profiles.primary,
+      accessibilityEnabled: true,
+      renderContext: { accessibilityEnabled: true },
+      timeContextAuthority: "explicit",
+      timeContext: {
+        groupId: "exercise",
+        activeEpochMs: MAY_3,
+        matching: { policy: "exact" },
+        sceneId: "scene-preview",
+      },
+    }),
+    {
+      ...fixture,
+      initialState: {
+        activeGroupId: "exercise",
+        source: { kind: "group", id: "exercise" },
+        activeIndex: 1,
+        playing: false,
+        speed: 1,
+        scope: "group-only",
+        playbackView: true,
+      },
+    },
+  );
+
+  assert.match(html, /value at 2027-05-03: 30/);
+  assert.doesNotMatch(html, /value at 2027-05-02: 20/);
+});
+
 test("closing playback removes chart time context and restores static line and latest choropleth rendering", () => {
   const fixture = playbackFixture();
   const chart = fixture.charts[0];

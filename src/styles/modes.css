@@ -3022,7 +3022,114 @@
 }
 
 .scene-present-layout {
+  display: grid;
+  gap: 5px;
   margin-block: 10px;
+}
+
+.scene-preview-time {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-component-control-radius, 8px);
+  color: var(--simex-text-muted);
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.scene-preview-time strong {
+  color: var(--simex-text-strong);
+}
+
+.scene-composition-board {
+  display: flex;
+  flex-direction: column;
+}
+
+.scene-composition-board__viewport {
+  max-height: 680px;
+  min-height: 520px;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.scene-composition-board__viewport > :is(
+  .scene-view-composition-grid,
+  .displayed-chart-grid
+) {
+  min-height: 520px;
+}
+
+[data-scene-composition-surface="scene-preview"] .scene-view-composition-cell,
+.displayed-chart-grid[data-display-surface="scene-preview-present"] .displayed-chart-cell {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-component-surface-radius, 10px);
+  display: grid;
+  gap: 8px;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 320px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+[data-scene-composition-surface="scene-preview"] .scene-view-composition-cell > .chart-view-frame,
+.displayed-chart-grid[data-display-surface="scene-preview-present"] .displayed-chart-cell > .chart-view-frame {
+  height: 100%;
+  min-height: 260px;
+}
+
+.scene-chart-authoring-overlay {
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-component-control-radius, 8px);
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  position: relative;
+  z-index: 2;
+}
+
+.scene-chart-authoring-overlay[data-selected="true"] {
+  border-color: var(--simex-selected);
+  box-shadow: inset 3px 0 0 var(--simex-selected);
+  outline: 2px solid var(--simex-text-strong);
+  outline-offset: 2px;
+}
+
+.scene-chart-authoring-overlay__boundaries,
+.scene-chart-authoring-overlay__title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scene-chart-authoring-overlay__title-row .scene-chart-title {
+  flex: 1 1 150px;
+  justify-content: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+.scene-chart-authoring-overlay .scene-insertion-target {
+  background: color-mix(in srgb, var(--simex-accent) 9%, var(--simex-surface-panel));
+  border: 1px dashed var(--simex-border-strong);
+  color: var(--simex-text-muted);
+  min-height: 44px;
+  padding: 6px 10px;
+}
+
+.scene-chart-authoring-overlay .scene-insertion-target:not(:disabled) {
+  color: var(--simex-text-strong);
+}
+
+.scene-present-preview-error {
+  align-content: center;
+  color: var(--simex-text-muted);
+  display: grid;
+  min-height: 320px;
+  padding: 20px;
 }
 
 .scene-unit-orbit {

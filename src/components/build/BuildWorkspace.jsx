@@ -629,6 +629,7 @@ export default function BuildWorkspace({
               )}
               {renderedAuxiliary === "scene" && chronoContentState?.view === "editor" && sceneDraft && (
                 <SceneEditor
+                  dashboard={dashboard}
                   draft={sceneDraft}
                   charts={sceneEligibleCharts(dashboard, temporalCharts, sceneDraft.value)}
                   chronoGroups={dashboard.chronoGroups ?? []}

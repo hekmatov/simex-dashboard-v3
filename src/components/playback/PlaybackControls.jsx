@@ -2,6 +2,7 @@ import React from "react";
 
 import { IconControl } from "../common/SimExIcon.js";
 import { usePlayback } from "./PlaybackProvider.jsx";
+import { canonicalPlaybackTime } from "./playbackTimeLabel.js";
 
 const ENTRY_BLOCKED_REASON_ID = "playback-entry-blocked-reason";
 
@@ -103,7 +104,7 @@ export default function PlaybackControls({
       }),
       options: clock.map((epochMs, index) => ({
         value: String(index),
-        label: canonicalTime(epochMs),
+        label: canonicalPlaybackTime(epochMs),
       })),
       emptyLabel: "No time available",
     })),
@@ -113,7 +114,7 @@ export default function PlaybackControls({
       ? "Unavailable"
       : React.createElement("time", {
           dateTime: new Date(activeEpochMs).toISOString(),
-        }, canonicalTime(activeEpochMs))),
+        }, canonicalPlaybackTime(activeEpochMs))),
   React.createElement(LabeledSelect, {
     label: "Seconds per frame",
     labelClassName: "visually-hidden",
@@ -178,11 +179,6 @@ function LabeledSelect({
           key: option.value,
           value: option.value,
         }, option.label))));
-}
-
-function canonicalTime(epochMs) {
-  const iso = new Date(epochMs).toISOString();
-  return iso.endsWith("T00:00:00.000Z") ? iso.slice(0, 10) : iso;
 }
 
 function boundedReason(reason) {

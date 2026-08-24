@@ -9,7 +9,9 @@ export default function DisplayedChartGrid({
   chartIds = [],
   layout = "solo",
   timeContextForChart = () => null,
+  timeContextAuthority,
   surface = "fullscreen",
+  layoutSystem,
   getCellProps,
   renderCellControls,
 }) {
@@ -26,7 +28,11 @@ export default function DisplayedChartGrid({
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={className} data-display-surface={surface}>
+    <div
+      className={className}
+      data-display-surface={surface}
+      data-layout-system={layoutSystem ?? (surface === "audience" ? "presentation" : undefined)}
+    >
       {charts.map((chart, index) => {
         const cellProps = getCellProps?.(chart, index, charts) ?? {};
         const suppliedClassName = cellProps.className;
@@ -59,6 +65,7 @@ export default function DisplayedChartGrid({
                 accessibilityEnabled: dashboard.globalStyles?.accessibility?.enabled === true,
               }}
               timeContext={timeContextForChart(chart.id)}
+              timeContextAuthority={timeContextAuthority}
               interactionMode={surface === "audience" ? "passive" : "active"}
             />
           </section>

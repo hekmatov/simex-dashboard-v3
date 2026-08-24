@@ -20,7 +20,9 @@ const MAX_STATUS_LENGTH = 240;
 
 export default function ChartView(props) {
   const playback = useOptionalPlayback();
-  const playbackProps = withPlaybackTimeContext(props, playback);
+  const playbackProps = props.timeContextAuthority === "explicit"
+    ? props
+    : withPlaybackTimeContext(props, playback);
   const interactionMode = props.interactionMode === "passive" ? "passive" : "active";
   const state = resolveChartDataState({
     chartTitle: props.chart?.title,
