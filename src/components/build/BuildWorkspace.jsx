@@ -268,7 +268,7 @@ export default function BuildWorkspace({
       }
       if (attempts === 0) {
         target.scrollIntoView({
-          block: selection.kind === "section" ? "start" : "center",
+          block: selection.kind === "chart" ? "center" : "start",
           inline: "nearest",
           behavior: revealRequest.behavior,
         });
