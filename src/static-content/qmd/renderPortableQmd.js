@@ -1,133 +1,331 @@
 import katex from "katex";
-import MarkdownIt from "markdown-it";
 
 import {
+  isPortableQmdMathAllowed,
   PORTABLE_QMD_MATH_OPTIONS,
   validatePortableHref,
 } from "./portableQmdPolicy.js";
 
-const renderer = new MarkdownIt({ html: false, linkify: false, typographer: false });
+const SIMPLE_BLOCKS = Object.freeze({
+  blockquote_open: "blockquote",
+  bullet_list_open: "ul",
+  ordered_list_open: "ol",
+  list_item_open: "li",
+  paragraph_open: "p",
+  thead_open: "thead",
+  tbody_open: "tbody",
+  tr_open: "tr",
+  th_open: "th",
+  td_open: "td",
+});
+
+const SIMPLE_CLOSES = new Set([
+  "blockquote_close",
+  "bullet_list_close",
+  "ordered_list_close",
+  "list_item_close",
+  "paragraph_close",
+  "thead_close",
+  "tbody_close",
+  "tr_close",
+  "th_close",
+  "td_close",
+]);
 
 export function renderPortableQmd(ast, options = {}) {
   if (!ast || ast.type !== "root" || !Array.isArray(ast.tokens)) {
     throw new TypeError("A validated portable QMD AST is required.");
   }
-  const panelPrefix = normalizePanelId(options.panelId);
-  const hostHeadingLevel = normalizeHostHeadingLevel(options.hostHeadingLevel);
-  const headingCounts = new Map();
-  const footnoteNumbers = new Map((ast.footnotes ?? []).map((footnote, index) => [footnote.id, index + 1]));
+  const document = resolveDocument(options);
   const environment = {
-    panelPrefix,
-    hostHeadingLevel,
-    headingCounts,
-    footnoteNumbers,
+    document,
+    panelPrefix: normalizePanelId(options.panelId),
+    hostHeadingLevel: normalizeHostHeadingLevel(options.hostHeadingLevel),
+    headingCounts: new Map(),
+    footnoteNumbers: new Map((ast.footnotes ?? []).map((footnote, index) => [footnote.id, index + 1])),
     footnoteReferenceCounts: new Map(),
     calloutSequence: 0,
   };
-  configureRules(renderer, environment);
-  const body = renderer.renderer.render(ast.tokens, renderer.options, environment);
-  const footnotes = renderFootnotes(ast.footnotes ?? [], environment);
-  return `${body}${footnotes}`;
+  const fragment = document.createDocumentFragment();
+  renderTokens(ast.tokens, fragment, environment);
+  renderFootnotes(ast.footnotes ?? [], fragment, environment);
+  return fragment;
 }
 
-function configureRules(md, environment) {
-  const rules = md.renderer.rules;
-  rules.heading_open = (tokens, index) => {
-    const sourceLevel = Number.parseInt(tokens[index].tag.slice(1), 10);
-    const level = Math.min(6, environment.hostHeadingLevel + sourceLevel);
-    const inline = tokens[index + 1];
-    const base = slugify(inline?.content) || `heading-${index + 1}`;
-    const count = (environment.headingCounts.get(base) ?? 0) + 1;
-    environment.headingCounts.set(base, count);
-    const slug = count === 1 ? base : `${base}-${count}`;
-    return `<h${level} id="${attribute(`${environment.panelPrefix}-${slug}`)}">`;
+function renderTokens(tokens, root, environment) {
+  const parents = [root];
+  const current = () => parents[parents.length - 1];
+  const open = (node) => {
+    current().append(node);
+    parents.push(node);
   };
-  rules.heading_close = (tokens, index) => {
-    const sourceLevel = Number.parseInt(tokens[index].tag.slice(1), 10);
-    const level = Math.min(6, environment.hostHeadingLevel + sourceLevel);
-    return `</h${level}>\n`;
+  const close = () => {
+    if (parents.length > 1) parents.pop();
   };
-  rules.link_open = (tokens, index) => {
-    const href = validatePortableHref(tokens[index].attrGet("href"));
-    if (!href) return "<span>";
-    if (href.startsWith("#")) {
-      return `<a href="#${attribute(environment.panelPrefix)}-${attribute(slugify(href.slice(1)))}">`;
-    }
-    return `<a href="${attribute(href)}" target="_blank" rel="noopener noreferrer">`;
-  };
-  rules.link_close = (tokens, index) => {
-    const open = findOpeningLink(tokens, index);
-    const href = open ? validatePortableHref(open.attrGet("href")) : null;
-    return href?.startsWith("#")
-      ? "</a>"
-      : '<span class="portable-qmd-external-indicator" aria-hidden="true"> ↗</span><span class="portable-qmd-visually-hidden"> (opens in a new tab)</span></a>';
-  };
-  rules.table_open = (tokens, index) => {
-    const header = tableHeaderText(tokens, index);
-    return `<div class="portable-qmd-table-scroll" role="region" aria-label="${attribute(`Table: ${header || "formatted content"}; horizontal scrolling`)}" tabindex="0"><table>`;
-  };
-  rules.table_close = () => "</table></div>\n";
-  rules.th_open = () => '<th scope="col">';
-  rules.fence = (tokens, index) => {
+
+  for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
-    const language = String(token.info ?? "").trim();
-    const label = language ? `${language} code block` : "Code block";
-    return `<div class="portable-qmd-code-scroll" role="region" aria-label="${attribute(`${label}; horizontal scrolling`)}" tabindex="0"><pre><code${language ? ` data-language="${attribute(language)}"` : ""}>${escapeHtml(token.content.replace(/\n$/, ""))}</code></pre></div>\n`;
-  };
-  rules.callout_open = (tokens, index) => {
-    const kind = tokens[index].meta.kind;
-    environment.calloutSequence += 1;
-    const labelId = `${environment.panelPrefix}-callout-${environment.calloutSequence}`;
-    return `<aside class="portable-qmd-callout portable-qmd-callout--${attribute(kind)}" data-callout-type="${attribute(kind)}" role="note" aria-labelledby="${attribute(labelId)}"><p class="portable-qmd-callout-label" id="${attribute(labelId)}"><strong>${escapeHtml(capitalize(kind))}</strong></p>`;
-  };
-  rules.callout_close = () => "</aside>\n";
-  rules.math_inline = (tokens, index) => renderMath(tokens[index].content, false);
-  rules.math_block = (tokens, index) => `${renderMath(tokens[index].content, true)}\n`;
-  rules.footnote_ref = (tokens, index) => {
-    const id = tokens[index].meta.id;
-    const number = environment.footnoteNumbers.get(id) ?? "?";
-    const occurrence = (environment.footnoteReferenceCounts.get(id) ?? 0) + 1;
-    environment.footnoteReferenceCounts.set(id, occurrence);
-    const referenceId = footnoteReferenceId(environment.panelPrefix, id, occurrence);
-    const noteId = `${environment.panelPrefix}-footnote-${slugify(id)}`;
-    return `<sup class="portable-qmd-footnote-ref"><a id="${attribute(referenceId)}" href="#${attribute(noteId)}" aria-label="Footnote ${number}, reference ${occurrence}">${number}</a></sup>`;
-  };
-  rules.text = (tokens, index) => {
-    const content = tokens[index].content;
-    const task = /^\[([ xX])\]\s+/.exec(content);
-    if (!task) return escapeHtml(content);
-    const completed = task[1].toLowerCase() === "x";
-    return `<span class="portable-qmd-task-marker" aria-hidden="true">${completed ? "☒" : "☐"}</span><span class="portable-qmd-visually-hidden">${completed ? "Completed task: " : "Task: "}</span>${escapeHtml(content.slice(task[0].length))}`;
-  };
+    if (SIMPLE_BLOCKS[token.type]) {
+      const node = createElement(environment.document, SIMPLE_BLOCKS[token.type]);
+      if (token.type === "ordered_list_open") {
+        const start = Number.parseInt(token.attrGet?.("start"), 10);
+        if (Number.isInteger(start) && start > 1) node.start = start;
+      }
+      if (token.type === "th_open") node.scope = "col";
+      open(node);
+      continue;
+    }
+    if (SIMPLE_CLOSES.has(token.type)) {
+      close();
+      continue;
+    }
+    if (token.type === "heading_open") {
+      const sourceLevel = Number.parseInt(token.tag?.slice(1), 10);
+      const level = Math.min(6, environment.hostHeadingLevel + (Number.isInteger(sourceLevel) ? sourceLevel : 1));
+      const inline = tokens[index + 1];
+      const base = slugify(inline?.content) || `heading-${index + 1}`;
+      const count = (environment.headingCounts.get(base) ?? 0) + 1;
+      environment.headingCounts.set(base, count);
+      const slug = count === 1 ? base : `${base}-${count}`;
+      const heading = createElement(environment.document, `h${level}`);
+      heading.id = `${environment.panelPrefix}-${slug}`;
+      open(heading);
+      continue;
+    }
+    if (token.type === "heading_close") {
+      close();
+      continue;
+    }
+    if (token.type === "inline") {
+      renderInlineTokens(token.children ?? [], current(), environment);
+      continue;
+    }
+    if (token.type === "table_open") {
+      const wrapper = createElement(environment.document, "div", "portable-qmd-table-scroll");
+      wrapper.setAttribute("role", "region");
+      wrapper.setAttribute("aria-label", `Table: ${tableHeaderText(tokens, index) || "formatted content"}; horizontal scrolling`);
+      wrapper.tabIndex = 0;
+      open(wrapper);
+      open(createElement(environment.document, "table"));
+      continue;
+    }
+    if (token.type === "table_close") {
+      close();
+      close();
+      continue;
+    }
+    if (token.type === "fence" || token.type === "code_block") {
+      current().append(renderCodeBlock(token, environment));
+      continue;
+    }
+    if (token.type === "callout_open") {
+      const kind = token.meta?.kind ?? "note";
+      environment.calloutSequence += 1;
+      const labelId = `${environment.panelPrefix}-callout-${environment.calloutSequence}`;
+      const aside = createElement(environment.document, "aside", `portable-qmd-callout portable-qmd-callout--${kind}`);
+      aside.dataset.calloutType = kind;
+      aside.setAttribute("role", "note");
+      aside.setAttribute("aria-labelledby", labelId);
+      const label = createElement(environment.document, "p", "portable-qmd-callout-label");
+      label.id = labelId;
+      const strong = createElement(environment.document, "strong");
+      strong.textContent = capitalize(kind);
+      label.append(strong);
+      aside.append(label);
+      open(aside);
+      continue;
+    }
+    if (token.type === "callout_close") {
+      close();
+      continue;
+    }
+    if (token.type === "math_block") {
+      current().append(renderMath(token.content, true, environment));
+      continue;
+    }
+    if (token.type === "hr") {
+      current().append(createElement(environment.document, "hr"));
+      continue;
+    }
+    if (token.content || token.markup) {
+      current().append(environment.document.createTextNode(token.content || token.markup));
+    }
+  }
 }
 
-function renderFootnotes(footnotes, environment) {
-  if (footnotes.length === 0) return "";
-  const contents = footnotes.map((footnote) => renderer.renderer.render(footnote.tokens, renderer.options, environment));
-  const items = footnotes.map((footnote, index) => {
-    const noteId = `${environment.panelPrefix}-footnote-${slugify(footnote.id)}`;
-    const referenceCount = environment.footnoteReferenceCounts.get(footnote.id) ?? 0;
-    const backlinks = Array.from({ length: referenceCount }, (_, occurrenceIndex) => {
-      const occurrence = occurrenceIndex + 1;
-      const referenceId = footnoteReferenceId(environment.panelPrefix, footnote.id, occurrence);
-      return `<a class="portable-qmd-footnote-backlink" href="#${attribute(referenceId)}" aria-label="Back to footnote ${index + 1}, reference ${occurrence}">↩</a>`;
-    }).join("");
-    return `<li id="${attribute(noteId)}">${contents[index]}${backlinks}</li>`;
-  }).join("");
-  return `<section class="portable-qmd-footnotes" aria-label="Footnotes"><hr><ol>${items}</ol></section>`;
+function renderInlineTokens(tokens, root, environment) {
+  const parents = [root];
+  const linkFrames = [];
+  const current = () => parents[parents.length - 1];
+  const open = (node) => {
+    current().append(node);
+    parents.push(node);
+  };
+  const close = () => {
+    if (parents.length > 1) parents.pop();
+  };
+
+  for (const token of tokens) {
+    if (token.type === "text") {
+      appendTextToken(token.content, current(), environment);
+    } else if (token.type === "softbreak") {
+      current().append(environment.document.createTextNode("\n"));
+    } else if (token.type === "hardbreak") {
+      current().append(createElement(environment.document, "br"));
+    } else if (token.type === "code_inline") {
+      const code = createElement(environment.document, "code");
+      code.textContent = token.content;
+      current().append(code);
+    } else if (token.type === "strong_open" || token.type === "em_open" || token.type === "s_open") {
+      open(createElement(environment.document, token.type.replace("_open", "").replace("strong", "strong")));
+    } else if (token.type === "strong_close" || token.type === "em_close" || token.type === "s_close") {
+      close();
+    } else if (token.type === "link_open") {
+      const rawHref = String(token.attrGet?.("href") ?? "");
+      const href = validatePortableHref(rawHref);
+      const link = href
+        ? createElement(environment.document, "a")
+        : createElement(environment.document, "span", "portable-qmd-inert-link");
+      if (href?.startsWith("#")) {
+        link.href = `#${environment.panelPrefix}-${slugify(href.slice(1))}`;
+      } else if (href) {
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      }
+      open(link);
+      linkFrames.push({ href, rawHref });
+    } else if (token.type === "link_close") {
+      const frame = linkFrames.pop() ?? {};
+      if (frame.href && !frame.href.startsWith("#")) appendExternalIndicator(current(), environment);
+      if (!frame.href && frame.rawHref) current().append(environment.document.createTextNode(` (${frame.rawHref})`));
+      close();
+    } else if (token.type === "image") {
+      const source = String(token.attrGet?.("src") ?? "");
+      const title = token.attrGet?.("title");
+      const suffix = title ? ` "${title}"` : "";
+      const inert = createElement(environment.document, "span", "portable-qmd-inert-embed");
+      inert.textContent = `![${token.content ?? ""}](${source}${suffix})`;
+      current().append(inert);
+    } else if (token.type === "math_inline") {
+      current().append(renderMath(token.content, false, environment));
+    } else if (token.type === "footnote_ref") {
+      current().append(renderFootnoteReference(token.meta?.id, environment));
+    } else if (token.type === "html_inline") {
+      current().append(environment.document.createTextNode(token.content));
+    } else if (token.content || token.markup) {
+      current().append(environment.document.createTextNode(token.content || token.markup));
+    }
+  }
 }
 
-function footnoteReferenceId(panelPrefix, id, occurrence) {
-  return `${panelPrefix}-footnote-ref-${slugify(id)}-${occurrence}`;
+function renderCodeBlock(token, environment) {
+  const info = String(token.info ?? "").trim();
+  const language = /^[a-z][a-z0-9_+-]{0,31}$/i.test(info) ? info : "";
+  const region = createElement(environment.document, "div", "portable-qmd-code-scroll");
+  region.setAttribute("role", "region");
+  region.setAttribute("aria-label", `${language ? `${language} code block` : "Code block"}; horizontal scrolling`);
+  region.tabIndex = 0;
+  if (info && !language) {
+    const label = createElement(environment.document, "p", "portable-qmd-fence-info");
+    const strong = createElement(environment.document, "strong");
+    strong.textContent = "Fence info: ";
+    label.append(strong, environment.document.createTextNode(info));
+    region.append(label);
+  }
+  const pre = createElement(environment.document, "pre");
+  const code = createElement(environment.document, "code");
+  if (language) code.dataset.language = language;
+  code.textContent = String(token.content ?? "").replace(/\n$/, "");
+  pre.append(code);
+  region.append(pre);
+  return region;
 }
 
-function renderMath(content, displayMode) {
-  const html = katex.renderToString(content, {
-    ...PORTABLE_QMD_MATH_OPTIONS,
-    displayMode,
+function renderMath(content, displayMode, environment) {
+  if (!isPortableQmdMathAllowed(content)) {
+    const fallback = createElement(environment.document, displayMode ? "pre" : "code", "portable-qmd-math-fallback");
+    fallback.textContent = displayMode ? `$$\n${content}\n$$` : `$${content}$`;
+    return fallback;
+  }
+  const wrapper = createElement(
+    environment.document,
+    displayMode ? "div" : "span",
+    `portable-qmd-math${displayMode ? " portable-qmd-math--display" : ""}`,
+  );
+  wrapper.dataset.portableQmdGenerated = "math";
+  wrapper.setAttribute("role", "math");
+  wrapper.setAttribute("aria-label", content.replace(/\s+/g, " ").trim());
+  katex.render(content, wrapper, { ...PORTABLE_QMD_MATH_OPTIONS, displayMode });
+  return wrapper;
+}
+
+function renderFootnoteReference(id, environment) {
+  const number = environment.footnoteNumbers.get(id);
+  if (!number) return environment.document.createTextNode(`[^${String(id ?? "")}]`);
+  const occurrence = (environment.footnoteReferenceCounts.get(id) ?? 0) + 1;
+  environment.footnoteReferenceCounts.set(id, occurrence);
+  const sup = createElement(environment.document, "sup", "portable-qmd-footnote-ref");
+  const link = createElement(environment.document, "a");
+  link.id = footnoteReferenceId(environment.panelPrefix, id, occurrence);
+  link.href = `#${environment.panelPrefix}-footnote-${slugify(id)}`;
+  link.setAttribute("aria-label", `Footnote ${number}, reference ${occurrence}`);
+  link.textContent = String(number);
+  sup.append(link);
+  return sup;
+}
+
+function renderFootnotes(footnotes, root, environment) {
+  if (footnotes.length === 0) return;
+  const contents = footnotes.map((footnote) => {
+    const fragment = environment.document.createDocumentFragment();
+    renderTokens(footnote.tokens ?? [], fragment, environment);
+    return fragment;
   });
-  const label = content.replace(/\s+/g, " ").trim();
-  return `<span class="portable-qmd-math${displayMode ? " portable-qmd-math--display" : ""}" data-portable-qmd-generated="math" role="math" aria-label="${attribute(label)}">${html}</span>`;
+  const section = createElement(environment.document, "section", "portable-qmd-footnotes");
+  section.setAttribute("aria-label", "Footnotes");
+  section.append(createElement(environment.document, "hr"));
+  const list = createElement(environment.document, "ol");
+  footnotes.forEach((footnote, index) => {
+    const item = createElement(environment.document, "li");
+    item.id = `${environment.panelPrefix}-footnote-${slugify(footnote.id)}`;
+    item.append(contents[index]);
+    const referenceCount = environment.footnoteReferenceCounts.get(footnote.id) ?? 0;
+    for (let occurrence = 1; occurrence <= referenceCount; occurrence += 1) {
+      const backlink = createElement(environment.document, "a", "portable-qmd-footnote-backlink");
+      backlink.href = `#${footnoteReferenceId(environment.panelPrefix, footnote.id, occurrence)}`;
+      backlink.setAttribute("aria-label", `Back to footnote ${index + 1}, reference ${occurrence}`);
+      backlink.textContent = "↩";
+      item.append(backlink);
+    }
+    list.append(item);
+  });
+  section.append(list);
+  root.append(section);
+}
+
+function appendTextToken(content, parent, environment) {
+  const task = /^\[([ xX])\]\s+/.exec(content);
+  if (!task) {
+    parent.append(environment.document.createTextNode(content));
+    return;
+  }
+  const completed = task[1].toLowerCase() === "x";
+  const marker = createElement(environment.document, "span", "portable-qmd-task-marker");
+  marker.setAttribute("aria-hidden", "true");
+  marker.textContent = completed ? "☒" : "☐";
+  const label = createElement(environment.document, "span", "portable-qmd-visually-hidden");
+  label.textContent = completed ? "Completed task: " : "Task: ";
+  parent.append(marker, label, environment.document.createTextNode(content.slice(task[0].length)));
+}
+
+function appendExternalIndicator(link, environment) {
+  const indicator = createElement(environment.document, "span", "portable-qmd-external-indicator");
+  indicator.setAttribute("aria-hidden", "true");
+  indicator.textContent = " ↗";
+  const label = createElement(environment.document, "span", "portable-qmd-visually-hidden");
+  label.textContent = " (opens in a new tab)";
+  link.append(indicator, label);
 }
 
 function tableHeaderText(tokens, tableIndex) {
@@ -139,16 +337,22 @@ function tableHeaderText(tokens, tableIndex) {
   return values.join(", ").slice(0, 120);
 }
 
-function findOpeningLink(tokens, closeIndex) {
-  let depth = 0;
-  for (let index = closeIndex - 1; index >= 0; index -= 1) {
-    if (tokens[index].type === "link_close") depth += 1;
-    if (tokens[index].type === "link_open") {
-      if (depth === 0) return tokens[index];
-      depth -= 1;
-    }
+function footnoteReferenceId(panelPrefix, id, occurrence) {
+  return `${panelPrefix}-footnote-ref-${slugify(id)}-${occurrence}`;
+}
+
+function resolveDocument(options) {
+  const document = options.document ?? options.window?.document ?? globalThis.document;
+  if (!document?.createDocumentFragment || !document?.createElement || !document?.createTextNode) {
+    throw new TypeError("A browser Document is required to render portable QMD safely.");
   }
-  return null;
+  return document;
+}
+
+function createElement(document, tagName, className = "") {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  return element;
 }
 
 function normalizeHostHeadingLevel(value) {
@@ -170,14 +374,6 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function escapeHtml(value) {
-  return renderer.utils.escapeHtml(String(value ?? ""));
-}
-
-function attribute(value) {
-  return escapeHtml(value).replaceAll('"', "&quot;");
-}
-
 function capitalize(value) {
-  return `${value[0].toUpperCase()}${value.slice(1)}`;
+  return `${value[0]?.toUpperCase() ?? ""}${value.slice(1)}`;
 }

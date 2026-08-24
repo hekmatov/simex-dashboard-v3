@@ -26,7 +26,6 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "dompurify": "3.4.14",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "html2canvas": "1.4.1",

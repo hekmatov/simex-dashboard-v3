@@ -1,10 +1,19 @@
 import { parsePortableQmd } from "./parsePortableQmd.js";
+import { PORTABLE_QMD_POLICY } from "./portableQmdPolicy.js";
 import { renderPortableQmd } from "./renderPortableQmd.js";
-import {
-  countPortableQmdFragmentNodes,
-  PortableQmdRenderedNodeLimitError,
-  sanitizePortableHtml,
-} from "./sanitizePortableHtml.js";
+
+export class PortableQmdRenderedNodeLimitError extends Error {
+  constructor(actual) {
+    const limit = PORTABLE_QMD_POLICY.limits.renderedNodes;
+    super(`Portable QMD renders ${actual} DOM nodes; the limit is ${limit}.`);
+    this.name = "PortableQmdRenderedNodeLimitError";
+    this.rule = "rendered-nodes";
+    this.actual = actual;
+    this.limit = limit;
+    this.guidance = "Split the content across panels or simplify generated math, lists, and tables.";
+    this.location = Object.freeze({ line: 1, column: 1 });
+  }
+}
 
 export function compilePortableQmd(source, options = {}) {
   const parsed = parsePortableQmd(source);
@@ -19,20 +28,17 @@ export function compilePortableQmd(source, options = {}) {
   }
 
   try {
-    const html = renderPortableQmd(parsed.ast, options);
-    const fragment = sanitizePortableHtml(html, {
-      panelId: options.panelId,
-      window: options.window,
-    });
+    const fragment = renderPortableQmd(parsed.ast, options);
+    const renderedNodes = countPortableQmdFragmentNodes(fragment, options);
+    if (renderedNodes > PORTABLE_QMD_POLICY.limits.renderedNodes) {
+      throw new PortableQmdRenderedNodeLimitError(renderedNodes);
+    }
     return Object.freeze({
       ok: true,
       fragment,
       errors: Object.freeze([]),
       warnings: parsed.warnings,
-      stats: Object.freeze({
-        ...parsed.stats,
-        renderedNodes: countPortableQmdFragmentNodes(fragment, { window: options.window }),
-      }),
+      stats: Object.freeze({ ...parsed.stats, renderedNodes }),
     });
   } catch (error) {
     if (!(error instanceof PortableQmdRenderedNodeLimitError)) throw error;
@@ -49,4 +55,16 @@ export function compilePortableQmd(source, options = {}) {
       stats: Object.freeze({ ...parsed.stats, renderedNodes: error.actual }),
     });
   }
+}
+
+export function countPortableQmdFragmentNodes(fragment, options = {}) {
+  const document = options.document ?? options.window?.document ?? fragment?.ownerDocument ?? globalThis.document;
+  const NodeFilter = options.window?.NodeFilter ?? document?.defaultView?.NodeFilter ?? globalThis.NodeFilter;
+  if (!fragment || !document?.createTreeWalker || !NodeFilter) {
+    throw new TypeError("A browser DOM fragment is required.");
+  }
+  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_ALL);
+  let count = 0;
+  while (walker.nextNode()) count += 1;
+  return count;
 }

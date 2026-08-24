@@ -8,6 +8,8 @@ Starting point: `7a1271987b9a1ab62713c7c84a10bc77d082befb`
 
 Atomic implementation commit: this report is part of the single slice commit; the resulting hash is reported to the controller after commit.
 
+> **Current controlling result:** the 2026-08-25 user override section appended at the end of this report supersedes the earlier DOMPurify/deny-list implementation and Fix Round 1 history below. DOMPurify is no longer a production dependency, arbitrary source is accepted as inert text/code, and the canonical sink now uses direct safe-DOM construction. Earlier sections remain only as exact historical RED/GREEN provenance.
+
 ## Status
 
 Complete for the Slice 2 ruling and independently testable layer gate. The `portable-qmd-v1` engine, mounted authoring experience, canonical Build/View/fullscreen renderer, Present exclusion, and application-session create/edit lifecycle are implemented and verified. The retained production journey passes at 1440×900, 1024×768, and 768×900.
@@ -416,3 +418,209 @@ At 1440×900, 1024×768, and 768×900 the production journey inspected the exact
 - Confirmed each allow-list addition has a concrete parser fixture and each race uses a real mounted editor/wizard rather than labels, mocks, or source inspection.
 - Confirmed the residual `.chart-image-*` fullscreen/reduced-motion selectors were removed from `src/styles.css` without altering their existing owner in `static-content.css`.
 - Remaining concerns are unchanged: the pre-existing moderate ECharts advisory and existing Vite warnings are outside this slice; reload/import and separate-Audience protocol evidence remain owned by Slices 4 and 6 respectively.
+
+## User override — permissive inert-text design (2026-08-25)
+
+### Controlling status and design decision
+
+The user superseded Fix Round 2 and the original sanitizer/deny-list contract with: “Abort use of sanitizer. Allow all kinds of text by default.” The implemented safe interpretation is complete for Slice 2:
+
+- all Free-text source categories are accepted by default;
+- supported Markdown retains semantic rendering;
+- raw HTML/scripts/iframes/media/citations/extensions/shortcodes/widgets/executable-cell options/unknown forms remain visible inert text or display code;
+- authored content never becomes HTML through `innerHTML`, `dangerouslySetInnerHTML`, `DOMParser`, template parsing, or another unsanitized authored-string sink;
+- safe HTTP(S)/panel-fragment links remain anchors, while unsafe destinations remain visible non-navigating text;
+- exact-pinned bundled KaTeX alone may construct trusted renderer-marked HTML/internal-SVG geometry under `trust: false`, strict restrictions, no user macros, and no resource URLs; authored HTML/SVG/style never reaches KaTeX or becomes DOM;
+- source, actual generated DOM, nesting, table-row, and table-column limits remain blocking without truncation.
+
+The design spec, fidelity matrix, security/portability record, Slice 2 evidence status, sketch deviation history, implementation plan, ownership inventory, SDD progress, and this report are synchronized to that explicit user-approved deviation. FT-11 reload/import fidelity remains pending Slice 4 and is not promoted.
+
+### Dependency removal and audit
+
+Production dependencies now contain only the two exact-pinned Slice 2 packages:
+
+| Package | Exact version | License | Current decision |
+|---|---:|---|---|
+| `markdown-it` | 15.0.0 | MIT | Local inert AST/tokenization with authored HTML parsing, linkification, and typographer behavior disabled. |
+| `katex` | 0.18.4 | MIT | Local restricted math; trusted renderer output only, with `trust: false`, strict errors, no user macros/resources, `maxExpand: 100`, and `maxSize: 20`. |
+
+`pnpm.cmd remove dompurify` removed two resolved packages and updated `package.json`/`pnpm-lock.yaml`. `src/static-content/qmd/sanitizePortableHtml.js` and `tests/portableQmdSanitization.test.js` were deleted; the behavioral successor is `tests/portableQmdDomSafety.test.js`, not a sanitizer facade. Live `package.json`, lockfile, `src`, and `tests` contain no `dompurify`, `DOMPurify`, `sanitizePortableHtml`, or `sanitized-fragment` reference.
+
+```text
+pnpm.cmd audit --prod --audit-level high
+1 vulnerabilities found
+Severity: 1 moderate
+exit 0 at the high threshold
+```
+
+```text
+pnpm.cmd audit --prod --json
+high: 0
+critical: 0
+moderate: 1
+GHSA-fgmj-fm8m-jvvx — pre-existing echarts@5.6.0
+```
+
+Neither exact-pinned Slice 2 package is implicated.
+
+### RED → GREEN evidence
+
+#### Arbitrary source acceptance
+
+RED was captured after adding the arbitrary corpus expectation and before removing the deny-list:
+
+```text
+node --test --test-name-pattern="accepts arbitrary authored syntax" tests/portableQmdPolicy.test.js
+tests 1
+pass 0
+fail 1
+```
+
+The parser returned active-content, iframe, embedded-media, citation, executable-cell, extension/widget/raw-HTML, unsupported-image, and unsafe-math errors. After replacing syntax-category denial with inert acceptance:
+
+```text
+node --test --test-name-pattern="accepts arbitrary authored syntax" tests/portableQmdPolicy.test.js
+tests 1
+pass 1
+fail 0
+```
+
+The complete policy suite is GREEN at 36/36. It accepts all semantic/arbitrary fixtures, including plain `x<y`, comments/declarations/CDATA/processing instructions, arbitrary fence options, missing footnotes, unsafe math, and unsafe-link source; it independently retains exact/one-over source bytes, nesting, table rows, and table columns.
+
+#### Safe authored DOM and actual generated-node enforcement
+
+RED was captured before the direct-DOM renderer accepted the arbitrary corpus:
+
+```text
+node --test --test-concurrency=1 --test-name-pattern="arbitrary authored markup" tests/portableQmdDomSafety.test.js
+tests 1
+pass 0
+fail 1
+```
+
+After direct node construction through `createElement`, `createTextNode`, and `textContent`, the complete real-browser safe-DOM suite is GREEN:
+
+```text
+node --test --test-concurrency=1 tests/portableQmdDomSafety.test.js
+tests 6
+pass 6
+fail 0
+duration_ms 2207.641
+```
+
+The six tests prove arbitrary markup is visible but inert with zero active/resource output; semantic Markdown survives without authored HTML parsing; repeated footnote occurrences have unique IDs/backlinks while missing definitions remain visible; exactly 5,000 actual descendants pass and 5,001 fail; one math token cannot expand beyond the actual DOM budget; and trusted superscript/fraction/root/sum output retains accessible labels and computed geometry. KaTeX internal SVG is accepted only under `[data-portable-qmd-generated="math"]` and has zero `href`/`src`/`xlink:href` resource attributes.
+
+#### Explicit safe-DOM sink and user guidance
+
+```text
+node --test --test-concurrency=1 --test-name-pattern="canonical ChartView" tests/freeTextChartView.test.js
+RED: expected data-portable-qmd-sink="safe-dom"; received "sanitized-fragment"
+GREEN: tests 1, pass 1, fail 0
+```
+
+```text
+node --test --test-concurrency=1 --test-name-pattern="routed controls" tests/freeTextChartView.test.js
+RED: help text did not explain that unknown syntax is shown as text
+GREEN: mounted editor states “Unknown syntax is shown as text; code never executes.”
+```
+
+The mounted routed test also proves pending source revisions disable both forward rails immediately; script/iframe source becomes valid after the 200 ms analysis and creates no active element/execution; a seven-level nesting breach remains blocking; and no page error occurs. The separate rapid-revert test proves cached validation restores matching source/preview revisions without leaving pending state.
+
+### Final focused and impacted verification
+
+```text
+node --test --test-concurrency=1 tests/portableQmdPolicy.test.js tests/portableQmdDomSafety.test.js tests/freeTextChartView.test.js tests/staticContentDraft.test.js tests/presentWorkspace.test.js
+tests 63
+pass 63
+fail 0
+duration_ms 14962.2905
+```
+
+This is behavioral evidence from the real parser, direct-DOM renderer, KaTeX, mounted React editor/wizard, canonical route, draft finalization, and Present composition. It is not label/source-grep or mock-renderer evidence.
+
+The one required directly impacted run produced the previously disposed baseline result, unchanged:
+
+```text
+node --test --test-concurrency=1 tests/chartViewV3.test.js tests/v3RuntimeBoundaries.test.js tests/fullscreenDisplay.test.js tests/buildCommandHeader.test.js tests/staticPanelTransaction.test.js tests/staticContentRegistry.test.js
+tests 32
+pass 30
+fail 2
+```
+
+The two failures are the already-recorded raw-JSX Node-loader limitation and stale `Compare charts` visibility expectation. The override did not touch either behavior, and no additional baseline comparison was performed.
+
+### Production build and retained browser checkpoints
+
+```text
+pnpm.cmd build
+```
+
+Passed: lockfile policy; icon reference; biomedical derivatives; 34 dataset profiles; 38 portable sources; Quorum catalogue with 27 chart types, 2 static types, and 40 configured charts; Vite transformed 879 modules and completed in 9.73 seconds. Existing non-module Three/Vanta, mixed `ChartFootprintPicker` import, and chunk-size warnings remain.
+
+The first browser run reached every viewport but failed one newly widened assertion because it searched the entire host chart panel and counted four legitimate host-chrome buttons/attributes outside authored output. The authored source remained literal and no `example.test` request fired. The assertion was correctly narrowed to the explicit canonical `[data-portable-qmd-sink="safe-dom"]`, then the retained production journey passed:
+
+```text
+pnpm.cmd exec playwright test tests/e2e/static-free-text.spec.js --project=chromium
+3 passed
+1 skipped
+duration 41.0s
+```
+
+Material checkpoints inspected at 1440×900, 1024×768, and 768×900:
+
+- exact `staticText` save contract and source revisions 1→2;
+- wide split at 1440/1024 and narrow Source/Preview tabs plus focus continuity at 768;
+- literal saved script, iframe, remote-image syntax, widget/shortcode, and executable-cell options in preview, canonical Build, View, and fullscreen;
+- zero authored `script`/`iframe`/`img`/media/form/button elements, event/style attributes, resource attributes, code execution, or `example.test` network requests inside the safe-DOM sink;
+- semantic callout/table/footnote content and accessible superscript/fraction/root/sum geometry;
+- dirty saved-state isolation, Keep editing, Discard, save, bounded overflow, and Present exclusion.
+
+The sole skip is still the exact FT-11 reload continuation annotated `blocked-by-slice-4`; Slice 2 does not claim dashboard/bundle-v4 reload/import fidelity.
+
+### Current files
+
+Engine/dependencies:
+
+- `package.json`
+- `pnpm-lock.yaml`
+- `src/static-content/qmd/portableQmdPolicy.js`
+- `src/static-content/qmd/compilePortableQmd.js`
+- `src/static-content/qmd/renderPortableQmd.js`
+- deleted `src/static-content/qmd/sanitizePortableHtml.js`
+
+UI/composition:
+
+- `src/components/charts/FreeTextChartView.jsx`
+- `src/components/static-content/FreeTextSourceEditor.jsx`
+- `src/styles/static-content.css`
+
+Behavioral tests:
+
+- `tests/portableQmdPolicy.test.js`
+- `tests/portableQmdDomSafety.test.js`
+- deleted `tests/portableQmdSanitization.test.js`
+- `tests/freeTextChartView.test.js`
+- `tests/staticContentDraft.test.js`
+- `tests/e2e/static-free-text.spec.js`
+
+Synchronized records:
+
+- `docs/superpowers/specs/2026-08-24-static-content-panels-design.md`
+- `docs/superpowers/plans/2026-08-24-static-content-panels.md`
+- `docs/audits/2026-08-24-v3-static-content-panels/FIDELITY-MATRIX.md`
+- `docs/audits/2026-08-24-v3-static-content-panels/SECURITY-PORTABILITY-DECISIONS.md`
+- `docs/audits/2026-08-24-v3-static-content-panels/SLICE-2-EVIDENCE-STATUS.md`
+- `docs/audits/2026-08-24-v3-static-content-panels/SKETCH-DECISION-RECORD.md`
+- `docs/audits/2026-08-24-v3-static-content-panels/POST-STEP-7-OWNERSHIP-INVENTORY.md`
+- `.superpowers/sdd/2026-08-24-static-content-panels/progress.md`
+- this report.
+
+### Self-review and remaining concerns
+
+- Authored source reaches output only through DOM creation APIs/text nodes; the deleted sanitizer was not replaced with a no-op facade.
+- The canonical component mounts only a clone of the generated fragment through `replaceChildren`; the safe-DOM sink is named and exercised across every surface.
+- Unsupported/unsafe math falls back to visible source; raw authored HTML never reaches KaTeX. Trusted KaTeX output is renderer-marked and resource-free.
+- Actual descendant counting occurs after semantic/text/KaTeX generation and before progression/mount; independent exact and one-over fixtures cover every resource boundary.
+- Arbitrary syntax cannot create authored styles, foreign elements, event handlers, executable code, unsafe navigation, or subresource requests.
+- `git diff --cached --check` passed for the complete 24-file atomic override delta; no unstaged task delta remained before commit.
+- The only open feature concern remains FT-11 reload/import fidelity pending Slice 4. The pre-existing moderate ECharts advisory and Vite warnings remain outside this slice. No active-content decision or additional context is required.

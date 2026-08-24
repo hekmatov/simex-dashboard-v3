@@ -1,25 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { validatePortableQmdAst } from "../src/static-content/qmd/portableQmdPolicy.js";
+import {
+  isPortableQmdMathAllowed,
+  validatePortableHref,
+  validatePortableQmdAst,
+} from "../src/static-content/qmd/portableQmdPolicy.js";
 import { parsePortableQmd } from "../src/static-content/qmd/parsePortableQmd.js";
-import { renderPortableQmd } from "../src/static-content/qmd/renderPortableQmd.js";
 
-const acceptedFeatures = [
-  ["headings", "# Situation\n\n#### Detail"],
+const semanticFeatures = [
+  ["headings", "# Situation\n\n###### Detail"],
   ["emphasis", "**bold** *italic* ~~removed~~"],
   ["lists", "- item\n- [x] completed\n\n1. first"],
-  ["links", "[safe](https://example.test/path) [local](#detail)"],
+  ["safe links", "[safe](https://example.test/path) [local](#detail)"],
   ["tables", "| Facility | Ready |\n| --- | --- |\n| North | Yes |"],
   ["blockquotes", "> Preparedness depends on access."],
-  ["inline-code", "Use `prepared_rows` only."],
-  ["fenced-code", "```js\nconst inert = true;\n```"],
+  ["inline code", "Use `prepared_rows` only."],
+  ["fenced code", "```js\nconst inert = true;\n```"],
   ["math", "Inline $x^2$ and display:\n\n$$\nx + y = z\n$$"],
   ["footnotes", "A supported note.[^readiness]\n\n[^readiness]: Local evidence."],
   ["callouts", "::: {.callout-warning}\nCheck the cold chain.\n:::"],
+  ["thematic breaks", "Before\n\n---\n\nAfter"],
 ];
 
-for (const [feature, source] of acceptedFeatures) {
+for (const [feature, source] of semanticFeatures) {
   test(`portable-qmd-v1 accepts ${feature} as inert structured content`, () => {
     const parsed = parsePortableQmd(source);
     assert.equal(parsed.ok, true, JSON.stringify(parsed.errors));
@@ -27,38 +31,37 @@ for (const [feature, source] of acceptedFeatures) {
   });
 }
 
-const rejectedFeatures = [
-  ["citations", "Read the evidence [@source2026].", "citations"],
-  ["embedded media", "![Remote image](https://example.test/map.png)", "embedded-media"],
-  ["unsafe math commands", "Unsafe $\\htmlClass{bad}{x}$.", "math-command"],
-  ["invalid math syntax", "Invalid $\\frac{1}{$.", "math-command"],
-  ["raw HTML", "<div>Authored HTML</div>", "raw-html"],
-  ["HTML comments", "<!-- inert comment -->", "raw-html"],
-  ["unclosed HTML comments", "<!-- inert comment", "raw-html"],
-  ["HTML declarations", "<!doctype html>", "raw-html"],
-  ["CDATA declarations", "<![CDATA[inert text]]>", "raw-html"],
-  ["scripts and event handlers", "<button onclick=\"alert(1)\">Run</button>", "active-content"],
-  ["iframes", "<iframe src=\"https://example.test\"></iframe>", "iframes"],
-  ["executable cells", "```{python}\nprint('run')\n```", "executable-cells"],
-  ["extensions, filters, and shortcodes", "{{< include external.qmd >}}", "extensions"],
-  ["widgets and HTML dependencies", "::: {.widget}\nremote widget\n:::", "widgets"],
-  ["thematic breaks", "---", "thematic-break"],
-  ["fence options", "```js linenums=true\nconst inert = true;\n```", "fence-info"],
+const arbitraryTextFeatures = [
+  ["plain less-than prose", "Plain comparison x<y remains text."],
+  ["citations", "Read the evidence [@source2026]."],
+  ["embedded media", "![Remote image](https://example.test/map.png)"],
+  ["unsafe math commands", "Unsafe $\\htmlClass{bad}{x}$ remains readable."],
+  ["invalid math syntax", "Invalid $\\frac{1}{$ remains readable."],
+  ["raw HTML", "<div>Authored HTML</div>"],
+  ["HTML comments", "<!-- inert comment -->"],
+  ["unclosed HTML comments", "<!-- inert comment"],
+  ["HTML declarations", "<!doctype html>"],
+  ["CDATA declarations", "<![CDATA[inert text]]>"],
+  ["processing instructions", "<?portable test?>"],
+  ["scripts and event handlers", '<button onclick="alert(1)">Run</button><script>alert(2)</script>'],
+  ["iframes", '<iframe src="https://example.test"></iframe>'],
+  ["executable cells", "```{python} eval=true\nprint('run')\n```"],
+  ["extensions, filters, and shortcodes", "{{< include external.qmd >}}"],
+  ["widgets and HTML dependencies", "::: {.widget}\nremote widget\n:::"],
+  ["fence options", "```js linenums=true\nconst inert = true;\n```"],
+  ["missing footnotes", "Missing note.[^absent]"],
 ];
 
-for (const [feature, source, rule] of rejectedFeatures) {
-  test(`portable-qmd-v1 rejects ${feature} with a source-located recovery error`, () => {
+for (const [feature, source] of arbitraryTextFeatures) {
+  test(`portable-qmd-v1 accepts ${feature} for inert rendering`, () => {
     const parsed = parsePortableQmd(source);
-    assert.equal(parsed.ok, false);
-    const issue = parsed.errors.find((error) => error.rule === rule);
-    assert.ok(issue, JSON.stringify(parsed.errors));
-    assert.equal(issue.location.line, 1);
-    assert.ok(issue.location.column >= 1);
-    assert.ok(issue.guidance.length > 10);
+    assert.equal(parsed.ok, true, JSON.stringify(parsed.errors));
+    assert.equal(parsed.ast.source, source);
+    assert.equal(parsed.errors.length, 0);
   });
 }
 
-test("link policy rejects protocol, encoding, whitespace, and control-character bypasses", () => {
+test("link policy classifies unsafe destinations without blocking their source text", () => {
   const blocked = [
     "javascript:alert(1)",
     "JaVaScRiPt:alert(1)",
@@ -71,96 +74,20 @@ test("link policy rejects protocol, encoding, whitespace, and control-character 
     "//example.test/protocol-relative",
   ];
   for (const href of blocked) {
-    const parsed = parsePortableQmd(`[unsafe](${href})`);
-    assert.equal(parsed.ok, false, href);
-    assert.ok(parsed.errors.some(({ rule }) => rule === "link-protocol"), href);
+    assert.equal(validatePortableHref(href), null, href);
+    assert.equal(parsePortableQmd(`[unsafe](${href})`).ok, true, href);
   }
 
-  for (const href of ["https://example.test/path", "http://example.test/path", "#local-heading"]) {
-    assert.equal(parsePortableQmd(`[safe](${href})`).ok, true, href);
-  }
-
-  for (const source of [
-    "[unsafe][target]\n\n[target]: javascript:alert(1)",
-    "[unsafe][target]\n\n[target]: data:text/html,boom",
-  ]) {
-    const parsed = parsePortableQmd(source);
-    assert.equal(parsed.ok, false, source);
-    assert.ok(parsed.errors.some(({ rule }) => rule === "link-protocol"), source);
-  }
+  assert.equal(validatePortableHref("https://example.test/path"), "https://example.test/path");
+  assert.equal(validatePortableHref("http://example.test/path"), "http://example.test/path");
+  assert.equal(validatePortableHref("#local-heading"), "#local-heading");
 });
 
-test("renderer emits host-aware semantic headings, scoped IDs, safe links, tables, callouts, code, math, and footnotes", () => {
-  const source = [
-    "# Situation",
-    "",
-    "## Detail",
-    "",
-    "[External](https://example.test) and [detail](#detail).",
-    "",
-    "| Facility | Ready |",
-    "| --- | --- |",
-    "| North | Yes |",
-    "",
-    "::: {.callout-note}",
-    "A note with `inline code`.",
-    ":::",
-    "",
-    "```js",
-    "const inert = true;",
-    "```",
-    "",
-    "Math $x^2$.[^proof]",
-    "",
-    "[^proof]: Reviewed locally.",
-  ].join("\n");
-  const parsed = parsePortableQmd(source);
-  assert.equal(parsed.ok, true, JSON.stringify(parsed.errors));
-  const html = renderPortableQmd(parsed.ast, {
-    panelId: "situation-panel",
-    hostHeadingLevel: 2,
-  });
-
-  assert.match(html, /<h3 id="situation-panel-situation">Situation<\/h3>/);
-  assert.match(html, /<h4 id="situation-panel-detail">Detail<\/h4>/);
-  assert.match(html, /href="https:\/\/example\.test"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
-  assert.match(html, /href="#situation-panel-detail"/);
-  assert.match(html, /role="region"[^>]*aria-label="Table:/);
-  assert.match(html, /<th scope="col">Facility<\/th>/);
-  assert.match(html, /<aside[^>]*data-callout-type="note"/);
-  assert.match(html, /<pre><code[^>]*>const inert = true;/);
-  assert.match(html, /role="math"/);
-  assert.match(html, /aria-label="Footnotes"/);
-  assert.match(html, /id="situation-panel-footnote-proof"/);
-  assert.match(html, /href="#situation-panel-footnote-ref-proof-1"/);
-});
-
-test("same-panel fragments canonicalize to the scoped heading slug", () => {
-  const parsed = parsePortableQmd("# Readiness Detail\n\n[Jump to detail](#Readiness_Detail)");
-  assert.equal(parsed.ok, true, JSON.stringify(parsed.errors));
-  const html = renderPortableQmd(parsed.ast, { panelId: "field-guide", hostHeadingLevel: 2 });
-
-  assert.match(html, /id="field-guide-readiness-detail"/);
-  assert.match(html, /href="#field-guide-readiness-detail"/);
-});
-
-test("repeated footnote references have unique IDs and one matching backlink per occurrence", () => {
-  const parsed = parsePortableQmd("First proof.[^proof]\n\nSecond proof.[^proof]\n\n[^proof]: Reviewed twice.");
-  assert.equal(parsed.ok, true, JSON.stringify(parsed.errors));
-  const html = renderPortableQmd(parsed.ast, { panelId: "field-guide", hostHeadingLevel: 2 });
-
-  assert.match(html, /id="field-guide-footnote-ref-proof-1"/);
-  assert.match(html, /id="field-guide-footnote-ref-proof-2"/);
-  assert.match(html, /href="#field-guide-footnote-ref-proof-1"/);
-  assert.match(html, /href="#field-guide-footnote-ref-proof-2"/);
-  assert.equal((html.match(/id="field-guide-footnote-proof"/g) ?? []).length, 1);
-});
-
-test("a missing footnote reference inherits the containing inline source line", () => {
-  const parsed = parsePortableQmd("# Situation\n\nSupported text.\n\nMissing note.[^absent]");
-  assert.equal(parsed.ok, false);
-  const issue = parsed.errors.find(({ rule }) => rule === "footnotes");
-  assert.equal(issue?.location.line, 5, JSON.stringify(parsed.errors));
+test("restricted math classification renders approved TeX and leaves other math inert", () => {
+  assert.equal(isPortableQmdMathAllowed("x^2 + \\frac{a}{b}"), true);
+  assert.equal(isPortableQmdMathAllowed("\\htmlClass{bad}{x}"), false);
+  assert.equal(isPortableQmdMathAllowed("\\frac{1}{"), false);
+  assert.equal(parsePortableQmd("Unsafe $\\htmlClass{bad}{x}$.").ok, true);
 });
 
 test("source byte limit accepts exactly 102400 bytes and rejects 102401", () => {

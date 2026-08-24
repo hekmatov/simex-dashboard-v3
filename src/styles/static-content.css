@@ -273,6 +273,27 @@
   white-space: pre;
 }
 
+.portable-qmd-fence-info {
+  color: var(--simex-text-muted, #506a82);
+  font: 0.8125rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  margin: 0 0 0.4rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.portable-qmd-inert-embed,
+.portable-qmd-inert-link,
+.portable-qmd-math-fallback {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+pre.portable-qmd-math-fallback {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .portable-qmd-math--display {
   display: block;
   margin-block: 0.8rem;

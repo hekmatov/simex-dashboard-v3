@@ -64,13 +64,14 @@ test("canonical ChartView routes typed Free text without rows or playback projec
   assert.equal(await active.locator("a").first().getAttribute("target"), "_blank");
   assert.equal(await active.locator(".portable-qmd-table-scroll").getAttribute("tabindex"), "0");
   assert.equal(await active.locator(".portable-qmd-code-scroll").getAttribute("tabindex"), "0");
+  assert.equal(await active.locator(".free-text-chart-view__content").getAttribute("data-portable-qmd-sink"), "safe-dom");
   assert.equal(await active.locator("[data-chart-state]").count(), 0);
   assert.equal(await active.locator('[data-chart-interaction-mode="active"]').count(), 1);
   assert.equal(await passive.locator('[data-chart-interaction-mode="passive"]').count(), 1);
   assert.equal(await active.locator(".free-text-chart-view__content").innerHTML(), await passive.locator(".free-text-chart-view__content").innerHTML());
 });
 
-test("editor debounces parsing, keeps the last valid preview stale on error, and recovers without losing source", async () => {
+test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {
   const initial = "# Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);
   const editor = page.getByLabel("QMD-style source");
@@ -78,7 +79,7 @@ test("editor debounces parsing, keeps the last valid preview stale on error, and
   await preview.getByText("Initial valid preview.").waitFor();
   assert.equal(await page.locator('[data-validation-ok="true"]').textContent(), "0 blocking errors");
 
-  const blocked = "# Situation\n\n<iframe src=\"https://example.test\"></iframe>";
+  const blocked = `${"> ".repeat(7)}too deeply nested`;
   await editor.fill(blocked);
   assert.match(await page.locator("#harness-qmd-status").textContent(), /Updating preview/i);
   await page.waitForTimeout(240);
@@ -87,7 +88,7 @@ test("editor debounces parsing, keeps the last valid preview stale on error, and
   assert.equal(await preview.getByText("Initial valid preview.").count(), 1);
   assert.equal(await editor.inputValue(), blocked);
   const errorLink = page.locator(".free-text-validation-errors a").first();
-  assert.match(await errorLink.textContent(), /line 3/i);
+  assert.match(await errorLink.textContent(), /line 1/i);
   await errorLink.click();
   assert.equal(await page.evaluate(() => document.activeElement?.id), "harness-qmd");
 
@@ -98,7 +99,7 @@ test("editor debounces parsing, keeps the last valid preview stale on error, and
   assert.equal(await page.locator('[data-validation-ok="true"]').textContent(), "0 blocking errors");
 });
 
-test("routed forward controls disable immediately for pending source and cannot advance invalid content", async () => {
+test("routed controls wait for analysis, accept arbitrary inert text, and still block a complexity breach", async () => {
   const initial = "# Situation\n\nInitial valid preview.";
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -108,11 +109,28 @@ test("routed forward controls disable immediately for pending source and cannot 
   const continueButton = wizard.getByRole("button", { name: "Continue" });
   const previewRail = wizard.getByRole("button", { name: "Preview & add", exact: true });
   await expect(continueButton).toBeEnabled();
+  assert.match(await wizard.locator("#static-qmd-source-help").textContent(), /unknown syntax is shown as text/i);
 
-  await source.fill("# Situation\n\n<iframe src=\"https://example.test\"></iframe>");
+  const arbitrary = [
+    "# Situation",
+    "",
+    "<script>window.authoredCodeRan = true</script>",
+    "<iframe src=\"https://example.test/embedded\"></iframe>",
+  ].join("\n");
+  await source.fill(arbitrary);
   assert.equal(await continueButton.isDisabled(), true);
   assert.equal(await previewRail.isDisabled(), true);
   assert.match(await wizard.getByRole("status").textContent(), /Updating preview/i);
+  await page.waitForFunction(() => /Preview is up to date/i.test(document.querySelector("#static-qmd-source-status")?.textContent ?? ""));
+  assert.equal(await continueButton.isDisabled(), false);
+  assert.equal(await previewRail.isDisabled(), false);
+  assert.equal(await wizard.locator('[data-free-text-pane="preview"] script, [data-free-text-pane="preview"] iframe').count(), 0);
+  assert.equal(await wizard.locator('[data-free-text-pane="preview"]').getByText(/<script>window\.authoredCodeRan/).count(), 1);
+  assert.equal(await page.evaluate(() => window.authoredCodeRan), undefined);
+
+  await source.fill(`${"> ".repeat(7)}too deeply nested`);
+  assert.equal(await continueButton.isDisabled(), true);
+  assert.equal(await previewRail.isDisabled(), true);
   await page.waitForFunction(() => /blocking error/i.test(document.querySelector("#static-qmd-source-status")?.textContent ?? ""));
   assert.equal(await continueButton.isDisabled(), true);
   assert.equal(await previewRail.isDisabled(), true);

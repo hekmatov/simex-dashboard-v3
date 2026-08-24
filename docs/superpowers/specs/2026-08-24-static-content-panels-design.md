@@ -34,7 +34,7 @@ This boundary removes data-source and time exceptions from chart creation, keeps
 ### Non-goals
 
 - Running Quarto, Pandoc, Jupyter, R, Python, JavaScript, Lua, or shell cells.
-- Supporting arbitrary Quarto extensions, widgets, shortcodes, filters, themes, or document formats.
+- Executing or semantically interpreting arbitrary Quarto extensions, widgets, shortcodes, filters, themes, or document formats. Their source remains accepted and visibly inert.
 - Turning static panels into temporal Scene members.
 - Presenting Free text in the Audience window.
 - Editing original image bytes. Crop and rotation are metadata only.
@@ -102,44 +102,44 @@ The runtime resolver turns a typed source into a render model. That model is ren
 
 ### Meaning of “QMD-style”
 
-QMD-style means a documented portable authoring syntax inspired by Quarto/Pandoc Markdown. It does not mean a Quarto runtime. Quarto itself supports much more—including raw HTML, executable computations, extensions, and external bibliography workflows—than an offline dashboard should accept. The dashboard therefore parses an explicit allow-listed profile named `portable-qmd-v1`.
+QMD-style means a documented portable authoring surface inspired by Quarto/Pandoc Markdown. It does not mean a Quarto runtime. `portable-qmd-v1` gives a semantic rendering to its supported Markdown subset and accepts every other source form as inert visible text or display code. Acceptance never grants execution, HTML parsing, extension discovery, media loading, or network access.
 
 ### QMD feature table
 
 | Feature | `portable-qmd-v1` decision | Authoring and rendering rule |
 |---|---|---|
-| Headings | Supported | Source levels 1–4. Relative hierarchy is preserved and shifted to fit the host panel so the page keeps one logical top-level heading. |
+| Headings | Supported | Source levels 1–6. Relative hierarchy is shifted and clamped to fit the host panel so the page keeps one logical top-level heading. |
 | Emphasis | Supported | Bold, italic, and strikethrough. No inline style attributes. |
 | Lists | Supported | Ordered, unordered, and task-like visual markers; maximum six levels of nesting. Task markers are passive, not editable controls. |
-| Links | Supported with restrictions | `https:`, `http:`, and same-panel `#fragment` only. External links show an external indicator, open separately, and use `noopener noreferrer`. All other protocols are rejected. |
-| Tables | Supported | Pipe tables only, with an identifiable header row. Maximum 100 rows × 20 columns. A labelled internal horizontal scroller contains overflow. Raw HTML tables are rejected. |
+| Links | Supported with restrictions | `https:`, `http:`, and same-panel `#fragment` only. External links show an external indicator, open separately, and use `noopener noreferrer`. All other destinations remain inert visible text and cannot navigate or load. |
+| Tables | Supported | Pipe tables only, with an identifiable header row. Maximum 100 rows × 20 columns. A labelled internal horizontal scroller contains overflow. Raw HTML table source remains visible text. |
 | Blockquotes | Supported | Semantic `blockquote`; nesting follows the global depth limit. |
 | Inline code | Supported | Escaped text in semantic `code`; never interpreted. |
-| Fenced code | Supported as display only | Escaped, non-executable `pre > code`; optional language label only. Cell options and execution markers are validation errors. |
-| Math | Supported with a restricted local renderer | Inline and display TeX through a bundled renderer. No remote assets, user macros, HTML commands, URL commands, or executable extensions. Accessible MathML/text is required. |
+| Fenced code | Supported as display only | Escaped, non-executable `pre > code`; a simple language label is semantic. Arbitrary fence info and cell options are displayed as inert source metadata. |
+| Math | Supported with a restricted local renderer | Inline and display TeX through bundled KaTeX with `trust: false`, strict restrictions, no user macros, and accessible labels. Unsafe or unknown math remains visible source. Trusted KaTeX may create resource-free internal HTML/SVG geometry; authored SVG/HTML never becomes DOM. |
 | Footnotes | Supported | Panel-local numbered notes with unique IDs, forward links, and backlinks. |
 | Callouts | Supported | Fixed `note`, `tip`, `important`, `warning`, and `caution` types. Static and non-collapsible; no Bootstrap or extension dependency. |
-| Citations | Not supported in v1 | `[@key]`, bibliography metadata, CSL, and cite processing produce a clear validation error. Authors may write a human-readable reference or safe link. |
-| Embedded media | Not supported | QMD images, audio, video, object, embed, and iframe are rejected. Use the Image static panel for images. |
-| Raw HTML | Rejected | Reported before save; never passed through as trusted markup. |
-| Scripts and event handlers | Rejected | `script`, inline handlers, scriptable URLs, and template syntax are hard errors. |
-| Iframes | Rejected | No exceptions or sandbox variants. |
-| Executable cells | Rejected | Code fences are display-only; cell execution syntax and options are errors. |
-| Extensions, filters, shortcodes | Rejected | No discovery, download, execution, or passthrough. |
-| Widgets and HTML dependencies | Rejected | No custom elements, widget payloads, remote JavaScript, CSS, or dependency manifests. |
+| Citations | Inert in v1 | Citation and bibliography syntax is accepted as visible text; no bibliography or cite processor runs. |
+| Embedded media | Inert | Image/audio/video/object/embed syntax is accepted and reconstructed as visible text. It creates no element or resource request; use the Image static panel for rendered images. |
+| Raw HTML | Inert | Accepted and displayed literally through text nodes; never parsed as authored markup. |
+| Scripts and event handlers | Inert | Accepted and displayed literally; no authored tag, attribute, URL, or script reaches an executable DOM sink. |
+| Iframes | Inert | Accepted and displayed literally; no frame element or request is created. |
+| Executable cells | Display only | Cell syntax and options remain visible with escaped code; no kernel/runtime exists. |
+| Extensions, filters, shortcodes | Inert | Accepted as visible text with no discovery, download, execution, or expansion. |
+| Widgets and HTML dependencies | Inert | Accepted as visible text with no custom elements, widget payload execution, remote JavaScript/CSS, or dependency loading. |
 
-### Parsing and sanitization
+### Parsing and safe DOM construction
 
 The same versioned pipeline runs in live preview and saved production rendering:
 
 1. Enforce UTF-8 source and resource limits: 100 KiB source, 5,000 rendered nodes, six nesting levels, and the table limits above.
-2. Tokenize into an inert Markdown AST with raw HTML and executable constructs disabled.
-3. Validate the AST against `portable-qmd-v1`; unsupported constructs are errors, not silently active fallbacks.
-4. Render only allow-listed semantic HTML. Math is rendered by a bundled local dependency with unsafe commands disabled.
-5. Apply a second DOM allow-list sanitizer configured for HTML-only output. Forbid `style`, `class` from source, `id` outside generated panel-scoped IDs, all event attributes, resource-loading elements, SVG, MathML input, custom elements, and unknown attributes.
-6. Validate `href` protocols in both the AST and sanitizer hook. Insert a sanitized DOM fragment directly and perform no string or framework-template post-processing afterward.
+2. Tokenize into an inert Markdown AST with authored HTML parsing and executable constructs disabled.
+3. Apply only resource and complexity validation. Unknown syntax is accepted as source data and remains visibly inert.
+4. Construct the output `DocumentFragment` exclusively with DOM creation APIs and `textContent`; authored output never enters `innerHTML`, `DOMParser`, a framework HTML escape hatch, or another HTML-string parser.
+5. Render permitted math only through exact-pinned bundled KaTeX using `trust: false`, strict restrictions, no user macros, and no resource URLs. Unsafe math falls back to visible source. Authored raw HTML never reaches KaTeX.
+6. Convert only approved links to anchors; unsafe destinations remain text. Count actual generated DOM descendants, including KaTeX output, before progression/save/mount, then mount a clone with `replaceChildren` and no later authored-content rewriting.
 
-Sanitization is a safety backstop, not the feature parser. Validation remains visible so an author knows why content was refused.
+There is intentionally no production sanitizer and no authored HTML parsing boundary. Safety comes from preserving authored input as text and constructing every semantic node directly. Only resource/complexity errors or a genuine renderer failure block progression; the editor explains that unknown syntax is shown as text.
 
 ### Layout, responsiveness, and accessibility
 
@@ -155,7 +155,7 @@ Sanitization is a safety backstop, not the feature parser. Validation remains vi
 ### Source editing and recovery
 
 - Content stage uses a labelled source editor and live canonical preview. At wide widths they are side-by-side; at narrow widths they become mutually exclusive Source/Preview tabs while preserving the draft, validation state, selected tab, and logical focus context.
-- Parsing is debounced by 200 ms. The last valid preview remains visible with a clearly stale badge while the current source has an error.
+- Parsing is debounced by 200 ms. The last valid preview remains visible with a clearly stale badge while the current source has a resource/complexity or renderer error.
 - Errors include source location, rule, and recovery guidance. Warnings do not block save; errors do.
 - Save revalidates the exact draft, then atomically commits panel and `staticText` source.
 - Cancel with no changes closes immediately. Dirty Cancel offers **Keep editing** and **Discard**. Keep editing preserves the complete draft and returns focus to the author’s prior context. Discard restores the last saved panel/source pair.
@@ -311,7 +311,7 @@ Runtime time filtering treats both static types as out of domain: no static reso
 
 Implementation uses three verification layers:
 
-1. **Semantic correctness** — parser policy, sanitizer policy, source/asset schema, crop math, migration, validation, and atomic transactions.
+1. **Semantic correctness** — parser policy, safe-DOM construction, inert-source behavior, source/asset schema, crop math, migration, validation, and atomic transactions.
 2. **Composition correctness** — real routed UI owns the intended dimensions, controls, scrolling, transforms, passive behavior, and responsive states.
 3. **Real-use correctness** — live production journeys prove creation, existing-panel editing, ordinary View, fullscreen, and Image Present/Audience. Free text must be proven absent from Present/Audience.
 
@@ -330,6 +330,6 @@ They are disposable design evidence, not production components. Detailed accepta
 
 ## Approval gate
 
-The V3 Design master approved this specification without deviations at `e159db11593f784459e50f7707d93987fa996527`. During the subsequent interactive sketch review, the user selected 021=A, 022=B, 023=A with hidden-at-rest Image actions, and 024=A. Those amendments supersede only the affected sketch presentation and interaction details; all other master-approved invariants remain binding design requirements. This does not report implementation. Production remains blocked until Step 7 acceptance and the post-Step-7 ownership gate pass.
+The V3 Design master approved the original specification at `e159db11593f784459e50f7707d93987fa996527`. During the subsequent interactive sketch review, the user selected 021=A, 022=B, 023=A with hidden-at-rest Image actions, and 024=A. On 2026-08-25 the user explicitly superseded the original Free-text sanitizer/deny-list contract: all authored source is accepted by default, unsupported forms render inertly, and authored content may never execute or load resources. This is an accepted security/design deviation; it changes only the Free-text source-policy and safe-rendering sections above, not resource limits, canonical composition, lifecycle, Present exclusion, or later Slice 4 persistence ownership.
 
 Even after design approval, production execution remains blocked until Step 7 is accepted and the implementation plan’s hard ownership-resolution gate commits an exact inventory from that final Step 7 commit. Every provisional/generic production owner in the fidelity matrix and ledger must be replaced by exact source/function/CSS/test ownership before implementation begins.

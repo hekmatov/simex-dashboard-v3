@@ -127,7 +127,7 @@ test("static draft revision advances only for authored changes", () => {
   assert.equal(authored.draftRevision, initial.draftRevision + 1);
 });
 
-test("Free-text finalization revalidates the exact QMD draft and blocks unsupported content", () => {
+test("Free-text finalization accepts arbitrary inert source and still blocks resource limits", () => {
   let draft = createStaticContentDraft({
     destination: { pageId: "page-a", sectionId: "section-a" },
     contentTypeId: "freeText",
@@ -137,13 +137,19 @@ test("Free-text finalization revalidates the exact QMD draft and blocks unsuppor
   draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
   assert.equal(finalizeStaticContentDraft(draft).source.qmd, "# Situation\n\nSafe content.");
 
+  const arbitrary = {
+    ...draft,
+    source: { ...draft.source, qmd: '<iframe src="https://example.test"></iframe>\n<script>alert(1)</script>' },
+  };
+  assert.equal(finalizeStaticContentDraft(arbitrary).source.qmd, arbitrary.source.qmd);
+
   const blocked = {
     ...draft,
-    source: { ...draft.source, qmd: '<iframe src="https://example.test"></iframe>' },
+    source: { ...draft.source, qmd: `${"> ".repeat(7)}too deeply nested` },
   };
   assert.throws(
     () => finalizeStaticContentDraft(blocked),
-    /line 1.*iframe|iframe.*line 1/i,
+    /line 1.*nest|nest.*line 1/i,
   );
 });
 

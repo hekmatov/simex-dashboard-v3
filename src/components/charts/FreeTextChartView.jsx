@@ -39,7 +39,7 @@ export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
       <div
         ref={contentRef}
         className="free-text-chart-view__content"
-        data-portable-qmd-sink="sanitized-fragment"
+        data-portable-qmd-sink="safe-dom"
       />
     </section>
   );

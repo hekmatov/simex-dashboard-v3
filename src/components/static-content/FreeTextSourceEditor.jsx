@@ -199,7 +199,7 @@ export function FreeTextSourceEditor({
             aria-invalid={!pending && !analysis.ok ? "true" : undefined}
             onChange={(event) => changeSource(event.target.value)}
           />
-          <small id={`${id}-help`}>Portable QMD v1 renders locally. Code is display-only and never executes.</small>
+          <small id={`${id}-help`}>Portable QMD v1 renders locally. Unknown syntax is shown as text; code never executes.</small>
           {!pending && analysis.errors.length > 0 && (
             <div className="free-text-validation-errors" aria-labelledby={`${id}-errors-title`}>
               <h3 id={`${id}-errors-title`}>Fix before continuing</h3>

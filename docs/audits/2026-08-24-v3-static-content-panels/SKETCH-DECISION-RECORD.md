@@ -1,6 +1,6 @@
 # Static Content Sketch Decision and Rejection Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with user-directed sketch deviations recorded 2026-08-24 (design only; not implemented)
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with user-directed sketch deviations recorded 2026-08-24 and the implemented permissive inert-text deviation recorded 2026-08-25
 **Sketches:** `.planning/sketches/021-*` through `024-*`
 
 ## Comparative decision
@@ -14,7 +14,7 @@
 
 ## Interactive states exercised
 
-- 021: authored headings, table, blockquote, callout, and fenced code; a blocked script retains the last-valid preview with a stale marker and disables progress; narrow Variant A exposes Source/Preview tabs; dirty Cancel has Keep editing/Discard.
+- 021: authored headings, table, blockquote, callout, and fenced code; the original blocked-script state is superseded—arbitrary script/iframe/media/cell/widget source now previews and saves as inert visible text, while only a resource/complexity error retains the last-valid stale preview and disables progress; narrow Variant A exposes Source/Preview tabs; dirty Cancel has Keep editing/Discard.
 - 022: selected Variant B presents source/accessibility/crop/rotation/fit as guided stage-3 sections and retains dirty Cancel; Keep preserves the whole draft, while Discard restores every source/asset/accessibility/transform/fit/focus field, stage, render, and authoring focus from the saved pair; stage 4 remains passive.
 - 023: Build mode exposes authoring actions and reversible transient canvas compression; Image actions are absent at rest and reveal on pointer hover, keyboard focus within, or touch/tap; Build, ordinary View, and fullscreen failures show their exact surface-specific action inventories, including fullscreen Retry.
 - 024: advancing the chart clock changes the temporal frame while Image revision 7 remains unchanged; forced asset failure replaces only the image cell and preserves the sibling chart/passive 16:9 composition.
@@ -41,6 +41,10 @@ Production implementation may use these sketches as behavioral evidence only aft
 ## Post-approval user sketch review
 
 The user completed the interactive 021–024 review on 2026-08-24 and selected **021=A, 022=B, 023=A, 024=A**. Sketch 023 A carries the explicit requirement that Image actions are hidden at rest and revealed on pointer hover. Keyboard focus-within and touch/tap reveal are binding equivalent paths so the visual simplification does not remove actions for non-hover input. These are accepted design deviations from the original no-deviation master verdict; affected fidelity rows and retained browser tasks are updated in lockstep.
+
+## Post-approval Free-text security override
+
+On 2026-08-25 the user explicitly directed: “Abort use of sanitizer. Allow all kinds of text by default.” The binding safe implementation accepts arbitrary Free-text source but gives no authored text active-content authority. Raw HTML, scripts, iframes, embedded-media syntax, executable-cell options, citations, extensions, shortcodes, widgets, unknown constructs, and unsafe links are visible inert text/display code; they never become authored DOM elements, event/style attributes, navigation, execution, or resource requests. The production renderer constructs nodes through DOM APIs/`textContent`, removes DOMPurify, and retains every source/actual-node/nesting/table boundary. Exact-pinned bundled KaTeX is trusted only behind `trust: false`, strict restrictions, no user macros/resources, and a renderer-owned marker; its resource-free internal SVG geometry is not permission for authored SVG. This supersedes only the original 021 blocked-script/sanitizer interaction and is synchronized with the design spec, security record, fidelity matrix, Slice 2 evidence, and retained production journey.
 
 ## Master review rejection history
 

@@ -30,6 +30,21 @@ const INITIAL_QMD = [
   ...Array.from({ length: 28 }, (_, index) => `- Bounded note ${index + 1}`),
 ].join("\n");
 
+const INERT_QMD = [
+  "# Cancelled copy",
+  "",
+  "Plain comparison x<y stays text.",
+  "",
+  "<script>window.authoredCodeRan = true</script>",
+  "<iframe src=\"https://example.test/cancelled-frame\"></iframe>",
+  "![remote media](https://example.test/cancelled-image.png)",
+  "{{< widget unsafe=true >}}",
+  "",
+  "```{python echo=true}",
+  "print('display only')",
+  "```",
+].join("\n");
+
 const SAVED_QMD = [
   "# Updated priorities",
   "",
@@ -38,6 +53,15 @@ const SAVED_QMD = [
   "| Facility | State |",
   "| --- | --- |",
   "| North | Confirmed |",
+  "",
+  "<script data-authored=\"true\">window.authoredCodeRan = true</script>",
+  "<iframe src=\"https://example.test/saved-frame\"></iframe>",
+  "![remote media](https://example.test/saved-image.png)",
+  "{{< custom-widget source='authored' >}}",
+  "",
+  "```{python echo=true}",
+  "print('saved, never executed')",
+  "```",
 ].join("\n");
 
 test.beforeEach(async ({ request }) => {
@@ -50,6 +74,10 @@ test.beforeEach(async ({ request }) => {
 for (const viewport of VIEWPORTS) {
   test(`Free text completes its in-session production journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     test.setTimeout(180_000);
+    const authoredResourceRequests = [];
+    page.on("request", (request) => {
+      if (request.url().startsWith("https://example.test/")) authoredResourceRequests.push(request.url());
+    });
     await page.setViewportSize(viewport);
     await openBiomedicalBuild(page);
 
@@ -86,10 +114,13 @@ for (const viewport of VIEWPORTS) {
     await openFreeTextEditor(panel, page, title);
     let editor = page.getByRole("dialog", { name: "Edit static content" });
     const editorSource = editor.getByLabel("QMD-style source");
-    await editorSource.fill("# Cancelled copy\n\n<iframe src=\"https://example.test\"></iframe>");
-    await expect(editor.getByRole("status")).toContainText("blocking error");
-    await expect(editor.getByRole("button", { name: "Continue" })).toBeDisabled();
-    await expect(editor.getByRole("button", { name: "Preview & add", exact: true })).toBeDisabled();
+    await editorSource.fill(INERT_QMD);
+    await expect(editor.getByRole("status")).toContainText("Preview is up to date");
+    await expect(editor.getByRole("button", { name: "Continue" })).toBeEnabled();
+    await expect(editor.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
+    await expectInertAuthoredSurface(editor.locator('[data-free-text-pane="preview"]'), "Cancelled copy");
+    expect(await page.evaluate(() => window.authoredCodeRan)).toBeUndefined();
+    expect(authoredResourceRequests).toEqual([]);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
     let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
@@ -120,16 +151,22 @@ for (const viewport of VIEWPORTS) {
     await panel.scrollIntoViewIfNeeded();
     await expect(panel).toContainText("Updated priorities");
     await expect(panel).not.toContainText("Cancelled copy");
+    await expectInertAuthoredSurface(panel, "Updated priorities");
+    expect(await page.evaluate(() => window.authoredCodeRan)).toBeUndefined();
+    expect(authoredResourceRequests).toEqual([]);
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "View", exact: true }).click();
     panel = canonicalPanel(page, saved.panel.id);
     await panel.scrollIntoViewIfNeeded();
     await expect(panel).toContainText("Updated priorities");
+    await expectInertAuthoredSurface(panel, "Updated priorities");
     await panel.getByRole("button", { name: "Focus chart" }).click();
     const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
     await expect(fullscreen).toContainText(title);
     await expect(fullscreen).toContainText("Updated priorities");
+    await expectInertAuthoredSurface(fullscreen, "Updated priorities");
+    expect(authoredResourceRequests).toEqual([]);
     await fullscreen.getByRole("button", { name: "Exit focus" }).click();
 
     await page.getByLabel("Dashboard mode")
@@ -254,7 +291,12 @@ async function expectProductionMathGeometry(panel) {
         return { width: rect.width, height: rect.height, negativeTop: negativeTop(node) };
       }),
       generatedStyleCount: nodes.reduce((count, node) => count + node.querySelectorAll("[style]").length, 0),
-      foreign: nodes.reduce((count, node) => count + node.querySelectorAll("math,svg,style,img,link").length, 0),
+      forbiddenForeign: nodes.reduce((count, node) => count + node.querySelectorAll("math,style,img,link").length, 0),
+      trustedVectors: nodes.flatMap((node) => [...node.querySelectorAll("svg")]).map((node) => ({
+        generated: node.closest('[data-portable-qmd-generated="math"]') !== null,
+        resourceAttributes: node.querySelectorAll("[href],[src],[xlink\\:href]").length
+          + (node.matches("[href],[src],[xlink\\:href]") ? 1 : 0),
+      })),
     };
   });
   expect(result.labels).toEqual([
@@ -266,5 +308,20 @@ async function expectProductionMathGeometry(panel) {
   expect(result.structures).toEqual([true, true, true, true]);
   expect(result.visual.every(({ width, height, negativeTop }) => width > 0 && height > 0 && negativeTop)).toBe(true);
   expect(result.generatedStyleCount).toBeGreaterThan(0);
-  expect(result.foreign).toBe(0);
+  expect(result.forbiddenForeign).toBe(0);
+  expect(result.trustedVectors.length).toBeGreaterThan(0);
+  expect(result.trustedVectors.every(({ generated, resourceAttributes }) => generated && resourceAttributes === 0)).toBe(true);
+}
+
+async function expectInertAuthoredSurface(surface, heading) {
+  const authored = surface.locator('[data-portable-qmd-sink="safe-dom"]');
+  await expect(authored).toHaveCount(1);
+  await expect(authored).toContainText(heading);
+  await expect(authored).toContainText(/<script[^>]*>window\.authoredCodeRan = true<\/script>/);
+  await expect(authored).toContainText(/<iframe src="https:\/\/example\.test\//);
+  await expect(authored).toContainText(/!\[remote media\]\(https:\/\/example\.test\//);
+  await expect(authored).toContainText(/custom-widget|widget unsafe/);
+  await expect(authored).toContainText(/python echo=true/);
+  await expect(authored.locator("script,iframe,img,video,audio,object,embed,form,button,[src],[srcset],[poster]")).toHaveCount(0);
+  await expect(authored.locator("[onclick],[onerror],[onload],[onmouseover],[style]")).toHaveCount(0);
 }

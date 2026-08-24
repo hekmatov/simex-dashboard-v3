@@ -86,7 +86,7 @@ These paths and exported symbols are fixed before implementation:
 | `src/static-content/qmd/portableQmdPolicy.js` | `PORTABLE_QMD_POLICY`, `validatePortableQmdAst` |
 | `src/static-content/qmd/parsePortableQmd.js` | `parsePortableQmd` |
 | `src/static-content/qmd/renderPortableQmd.js` | `renderPortableQmd` |
-| `src/static-content/qmd/sanitizePortableHtml.js` | `sanitizePortableHtml` |
+| `src/static-content/qmd/compilePortableQmd.js` | `compilePortableQmd`, `countPortableQmdFragmentNodes`, `PortableQmdRenderedNodeLimitError` |
 | `src/static-content/image/imageAssetValidation.js` | `validateImageAsset`, `inspectImageAnimation`, `validateImageOrigin` |
 | `src/static-content/image/imageTransform.js` | `normalizeImageTransform`, `rotateImageCrop`, `nudgeImageCrop`, `resetImageTransform` |
 | `src/static-content/assets/browserAuthoredAssetStore.js` | `createBrowserAuthoredAssetStore`, `stageAuthoredAsset`, `commitAuthoredAsset`, `readAuthoredAsset`, `createObjectUrlLease` |
