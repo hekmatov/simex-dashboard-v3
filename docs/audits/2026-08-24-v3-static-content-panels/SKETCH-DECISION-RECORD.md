@@ -7,17 +7,17 @@
 
 | Sketch | Recommended winner | Accepted design invariant | Rejected alternatives |
 |---|---|---|---|
-| 021 Free-text authoring | Variant A — split source/live preview in a separate four-stage Add static content flow | Keep Add chart at six stages; type-specific text authoring lives at stage 3; preview uses the production pipeline; blocking validation is visible without destroying the last valid preview. | B, modal-only editing: too little room for QMD source, validation, and preview. C, reuse Add chart: forces irrelevant CSV/mapping/time exceptions and makes stage semantics inconsistent. |
-| 022 Image authoring | Variant A — guided source, accessibility, crop/rotation, and canonical preview | Existing `image` identity; saved transform tools are distinct from viewer tools; keyboard alternatives accompany direct manipulation; Present eligibility is explicit. | B, quick-upload card: cannot express crop, rotation, replacement, quota, or alt recovery. C, canvas-first editor: visually powerful but hides source/alt/portability state and creates an unnecessary bespoke editing shell. |
-| 023 Saved Build/View panels | Variant A — one canonical panel renderer with Build-only authoring chrome | Build adds Edit/Move actions without changing saved content composition; View removes authoring controls; Free text has no CSV/time/Scene/Present controls; Image retains view zoom. | B, editor embedded permanently in panel: collapses authoring and consumption states and reduces dashboard density. C, separate static dashboard region: breaks the existing grid and fullscreen composition model. |
+| 021 Free-text authoring | Variant A — split source/live preview when wide, Source/Preview tabs when narrow | Keep Add chart at six stages; text authoring lives at stage 3; invalid source retains a visibly stale last-valid preview and cannot progress; dirty Keep/Discard preserves or restores the exact pair/focus. | B, preview-first: too little room for QMD source and diagnostics. C, focus tabs at all widths: hides the continuous wide comparison; tabs are accepted only at the narrow breakpoint. |
+| 022 Image authoring | Variant A — stage-3 canvas + inspector followed by passive stage-4 review | Existing `image` identity; stage 3 owns source/accessibility/transforms; stage 4 contains only canonical passive result, validation/portability summary, and atomic Add; dirty Keep/Discard is explicit. | B, guided stacked sections: separates crop consequence from controls. C, focused crop dialog: creates nested focus/recovery and suggests independent saves. |
+| 023 Saved Build/View panels | Variant A — canonical saved panels with Build-only authoring and active View/fullscreen Image tools | Build chrome may transiently compress/reposition but never mutate saved layout; close restores Build UI state. Image tools are keyboard-discoverable in View/fullscreen; failure actions are surface-specific. | B, strong nested framing: reduces useful area. C, dense bulletin: changes reading hierarchy and makes static content secondary. |
 | 024 Passive 16:9 Audience | Variant A — Image and temporal chart share the composition; Free text is absent | Image is a non-temporal selected Present item; Audience applies saved transforms passively; image failure remains cell-scoped; chart time context continues independently. | B, send Free text too: explicitly outside the accepted requirement and adds text-responsive complexity to Audience. C, force Image into a Scene: violates current Scene parent/group/frame invariants and makes a static asset temporal by fiction. |
 
 ## Interactive states exercised
 
-- 021: authored headings, table, blockquote, callout, and fenced code; a script insertion changed validation to a blocking state; the preview contained semantic table/blockquote/callout output after the sketch parser correction.
-- 022: 90° rotation and keyboard crop nudge updated normalized permille geometry while leaving the mock original intact.
-- 023: Build mode exposed only static Edit controls; View removed them while keeping the same saved compositions.
-- 024: forced asset failure replaced only the image cell; the sibling chart and passive 16:9 composition remained intact.
+- 021: authored headings, table, blockquote, callout, and fenced code; a blocked script retains the last-valid preview with a stale marker and disables progress; narrow Variant A exposes Source/Preview tabs; dirty Cancel has Keep editing/Discard.
+- 022: stage 3 contains source/accessibility/crop/rotation/fit and dirty Cancel; 90° rotation plus keyboard crop nudge updates permille geometry; stage 4 removes all authoring tools and shows a passive final result/summary/Add.
+- 023: Build mode exposes authoring actions and reversible transient canvas compression; View/fullscreen expose keyboard-focusable zoom/pan/reset; failures show surface-specific actions.
+- 024: advancing the chart clock changes the temporal frame while Image revision 7 remains unchanged; forced asset failure replaces only the image cell and preserves the sibling chart/passive 16:9 composition.
 
 ## UI/UX comparative input
 
@@ -37,3 +37,9 @@ The sketch README files and manifest intentionally say **Proposed**, not Approve
 - **Rejected** — retain the sketch and rationale as discovery evidence; do not delete it.
 
 Production implementation may use these sketches as behavioral evidence only after master approval and Step 7 acceptance.
+
+## Master review rejection history
+
+The first master review at commit `64c0143` rejected approval while accepting the architectural direction. Binding findings were: invalid Free-text source replaced last-valid preview and could still advance; narrow Variant A stacked rather than tabbed; dirty Cancel was missing; Image authoring controls were mislabeled as stage 4; saved-panel sketches lacked keyboard/fullscreen/failure capability proof; the plan lacked a 36-row execution ledger and sufficient Chrono/Scene/animation/version traceability; and reload-persistent draft recovery had not been presented as a product decision.
+
+The corrected sketches and records retain that rejection as provenance. They remain Proposed until renewed master review. The user subsequently selected application-session-only unsaved drafts; reload-persistent authoring recovery is rejected from Step 7S.

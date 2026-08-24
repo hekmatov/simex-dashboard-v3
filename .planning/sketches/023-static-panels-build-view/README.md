@@ -25,10 +25,11 @@ Open `.planning/sketches/023-static-panels-build-view/index.html` in a browser.
 
 ## Fixed contract
 
-- Build, View, and fullscreen use the same content renderer and saved layout/transform state.
-- Build may add selection and edit chrome without changing saved geometry or content composition.
+- Build, View, and fullscreen use the same canonical renderer, saved layout model, responsive rules, and maximum-width ownership.
+- Build may transiently compress or reposition its canvas while authoring chrome is open. Opening never mutates saved layout; closing restores the prior Build canvas, selection, focus, and scroll. Exact View/Build rectangles and zero overlap are not required.
 - Free text supports internal vertical overflow where necessary, never document-level horizontal overflow.
-- Image viewer zoom and pan are transient, active-surface state. Build preview and passive contexts start at saved fit/crop.
+- Image viewer zoom, pan, and Reset view are keyboard-discoverable transient controls in View and fullscreen. Build preview and passive contexts start at saved fit/crop.
+- Image failure actions are capability-specific: Build offers Retry/Replace/Edit; View/fullscreen offer Retry plus a non-authoring explanation; Audience remains passive.
 - Free text has no source/CSV/time/Scene/Present/Audience actions. Image has no CSV/time/Scene actions but is eligible for Present/Audience.
 
 ## Rejection record

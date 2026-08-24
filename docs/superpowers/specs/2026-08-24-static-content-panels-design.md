@@ -61,6 +61,8 @@ The static command has four stages:
 
 No seventh chart stage is introduced. CSV, role mapping, transformations, time, Chrono, and Scene controls never appear in the static workflow. Registry metadata routes `freeText` and the existing `image` type to `authoringWorkflow: "static"`; the Add chart catalogue filters them out without changing its six-stage state machine.
 
+For Image, stage ownership is strict: stage 3 owns origin/upload state, alternative/decorative state, crop, rotation, fit, replacement, and Reset image. Stage 4 contains only the passive canonical saved-result preview, validation and portability summaries, and final atomic Add. It exposes no source, accessibility, crop, rotation, replacement, or reset authoring controls. Ordinary editing may reuse the stage-3 Content editor body but is never labelled stage 4.
+
 ### Ordinary editing
 
 Build-mode panel actions open the matching static editor in the ordinary editing surface. The editor uses the same Content and Preview concepts as creation, without replaying Destination and Content type. Save is one atomic panel-plus-source transaction. Cancel restores the last saved panel and source. View mode has no authoring controls.
@@ -152,13 +154,13 @@ Sanitization is a safety backstop, not the feature parser. Validation remains vi
 
 ### Source editing and recovery
 
-- Content stage uses a labelled source editor and live canonical preview. At wide widths they are side-by-side; at narrow widths they become Source/Preview tabs while preserving the draft.
+- Content stage uses a labelled source editor and live canonical preview. At wide widths they are side-by-side; at narrow widths they become mutually exclusive Source/Preview tabs while preserving the draft, validation state, selected tab, and logical focus context.
 - Parsing is debounced by 200 ms. The last valid preview remains visible with a clearly stale badge while the current source has an error.
 - Errors include source location, rule, and recovery guidance. Warnings do not block save; errors do.
 - Save revalidates the exact draft, then atomically commits panel and `staticText` source.
-- Cancel with no changes closes immediately. Dirty cancel requires discard confirmation. A discarded edit restores the last saved pair.
-- Creation/edit drafts use the existing draft-coordinator recovery concept, but store only text and source metadata. Browser reload offers Resume or Discard.
-- A failed save leaves the draft and preview intact. A successful save clears the recovery draft only after the dashboard transaction completes.
+- Cancel with no changes closes immediately. Dirty Cancel offers **Keep editing** and **Discard**. Keep editing preserves the complete draft and returns focus to the author’s prior context. Discard restores the last saved panel/source pair.
+- **User-approved draft lifetime: application-session-only.** Unsaved Free-text/Image source, alt, crop, rotation, and fit drafts do not survive reload, matching chart creation. Reload restores only the last saved panel/source pair. The Image asset staging journal may persist solely for transaction rollback and orphan cleanup and cannot reconstruct unsaved authoring fields.
+- A failed save leaves the in-session draft and preview intact. A successful save clears transaction staging only after the dashboard transaction completes.
 
 ## Image
 
@@ -179,7 +181,8 @@ Existing safe relative-path images migrate without copying if their package asse
 ### File rules and quotas
 
 - Local formats: PNG, JPEG, and WebP. Detect by file signature and verify the decoded type; do not trust extension or declared MIME alone.
-- User-uploaded SVG, GIF, AVIF, BMP, ICO, TIFF, PDF, and animated images are unsupported in v1. SVG is excluded because it is an active document format; animated formats are excluded for deterministic/passive presentation.
+- Every accepted raster must decode as exactly one frame. PNG, JPEG, and WebP are accepted only after signature, decoded format, dimensions, and animation metadata are verified. APNG and animated WebP are explicitly rejected even when their base format is otherwise accepted.
+- User-uploaded SVG, GIF, AVIF, BMP, ICO, TIFF, PDF, APNG, animated WebP, and other animated images are unsupported in v1. SVG is unsupported because it is an active document format; animation is excluded for deterministic/passive presentation.
 - Maximum encoded file size: 12 MiB.
 - Maximum decoded dimensions: 16,384 px on either side and 50 megapixels total.
 - Dashboard authored-asset budget: 200 MiB, with a warning at 80%. Browser quota errors remain a separate, explicitly reported condition.
@@ -231,10 +234,12 @@ The two reset actions are named distinctly: **Reset view** for transient zoom/pa
 
 ### Versions
 
-- Keep existing chart `configVersion` unless implementation evidence shows a chart-shape change is required.
-- Bump the dashboard schema and strict validator for typed static sources plus the `assets` manifest.
-- Bump the dashboard export bundle from v3 to v4 because it gains an asset payload envelope.
+- **Chart config remains v3** unless implementation evidence proves an actual chart-shape change is required and a new master decision records it.
+- **Dashboard schema becomes v4** for typed static sources plus the `assets` manifest.
+- **Export bundle becomes v4** because it gains an asset payload envelope.
 - Increment registry/catalogue revision for `freeText` and the `authoringWorkflow` capability. Generated registry/catalogue artifacts wait for Step 7 acceptance.
+
+These three version decisions are binding across the implementation plan, fidelity rows PS-02/PS-03, and security decisions SP-15/SP-21; a slice may not change one without updating all cross-references and obtaining an accepted deviation.
 
 ### Migration
 
@@ -247,7 +252,7 @@ Migration is deterministic and idempotent:
 5. Missing alt is not fabricated. The panel remains viewable with a migration warning, but must be corrected before a later authoring save.
 6. Default crop is full frame, rotation `0`.
 
-The importer validates references after migration and isolates invalid static panels rather than rejecting unrelated valid dashboard content.
+The importer validates references after migration and isolates invalid static panels rather than rejecting unrelated valid dashboard content. Any static panel carrying Chrono Group or Scene membership is rejected from that membership during creation/editing and rejected or isolated during import/migration; migration never fabricates temporal fields for static content.
 
 ### Browser storage and atomicity
 
@@ -297,7 +302,9 @@ Static panels do not participate in Scenes. Current Scenes require a parent Chro
 - Dashboard validation verifies panel→source, image source→asset, manifest→bytes (at runtime/import), crop bounds, rotation enum, fit enum, alt/decorative exclusivity, and allowed URL/path protocols.
 - One broken static source produces a panel-scoped recovery state; it does not blank the whole dashboard or Audience composition.
 - Unknown future rendering policies/source versions are preserved for round-trip where safe but rendered as unsupported until migrated.
-- Draft recovery records schema/version, panel ID, source draft, staged asset transaction ID, and last saved revision to detect stale recovery.
+- Transaction recovery records only the staged asset transaction ID, source/panel target, and last saved revision needed for rollback/orphan cleanup. It contains no recoverable unsaved source, alt, crop, rotation, or fit draft. Reload restores the last saved pair.
+
+Runtime time filtering treats both static types as out of domain: no static resolver receives a time filter or mutates time context. Image Present messages contain only panel/source identity and revision plus composition placement; they contain no Chrono Group, Scene, frame, or time fields. Advancing a sibling chart clock must leave the Image render revision unchanged.
 
 ## Acceptance and implementation evidence
 
@@ -313,9 +320,9 @@ A parser, transform utility, schema record, catalogue entry, isolated component,
 
 The proposed interactive sketches are:
 
-- `021-free-text-authoring` — Variant A, separate four-stage authoring with canonical live preview.
-- `022-image-authoring` — Variant A, guided source + nondestructive transform editor.
-- `023-static-panels-build-view` — Variant A, canonical saved panels with Build-only authoring actions.
+- `021-free-text-authoring` — Variant A, wide source/live preview with narrow tabs, last-valid stale-preview handling, and dirty Keep/Discard.
+- `022-image-authoring` — Variant A, stage-3 source/accessibility/nondestructive transforms followed by passive stage-4 Preview & add.
+- `023-static-panels-build-view` — Variant A, canonical saved panels, reversible Build compression, active keyboard Image controls in View/fullscreen, and surface-specific failures.
 - `024-image-audience-rendering` — Variant A, passive Image plus temporal chart in 16:9 Audience; Free text absent.
 
 They are disposable design evidence, not production components. Detailed acceptance and rejection records are in the Step 7S audit directory.
