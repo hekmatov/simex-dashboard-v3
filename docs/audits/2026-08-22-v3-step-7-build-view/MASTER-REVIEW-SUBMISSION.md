@@ -79,7 +79,7 @@ The only build diagnostic is Vite's existing large-chunk advisory for the dashbo
 
 ## Browser and visual evidence
 
-- The five-viewport Playwright fidelity case exercised `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`. Each viewport captured a rendered screenshot buffer and verified canonical panel identities, the shared maximum-width token, Build's width bound, and the phone Build notice with the Build workspace still mounted.
+- The five-viewport Playwright fidelity case exercised `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`. At phone width it verifies the Build workspace and canonical canvas remain mounted with canonical identity but are hidden behind the visible recovery notice, then resizes the same session to `768x1024` and proves the same canvas/content identity becomes visible with the supported maximum-width/frame-width contract restored. The remaining supported viewports retain their visible-canvas geometry assertions and screenshot evidence.
 - The Build browser script opened transient authoring chrome, selected `bio_confirmed_cases`, opened its source drawer, verified source metadata and CSV access, closed it with focus return, and proved that saved storage and canonical section/panel identities were unchanged.
 - The temporal browser script entered Time Content, handed off the saved national group to Chrono Studio, saved a renamed group, authored and saved a Scene, and verified both committed identities in storage.
 - The chart browser script completed the exact six stages, suspended and resumed the in-session draft, created one chart transaction, and verified one committed chart identity.
@@ -275,3 +275,9 @@ The exact 005 path is now Build → Chrono Studio → saved Chrono Group content
 The clean build retains non-failing diagnostics for the two committed non-module vendor scripts, the mixed static/dynamic `ChartFootprintPicker` import, and the large dashboard chunk. The worktree remains intentionally dirty only outside the staged correction boundary; those files are preserved and are not evidence for this submission.
 
 Step 7 is resubmitted for V3 Design master review. Please **approve**, **approve with deviations**, or **reject**. This record does not declare master acceptance.
+
+## Phone fidelity evidence correction — 2026-08-24
+
+The renewed review at `801a37a` identified one stale assertion in the general Step 7 fidelity journey, not a production regression. The corrected `390×844` branch now treats the approved phone recovery state as authoritative: Build workspace/canvas remain mounted but hidden, the notice is visible, and canonical canvas/panel identity is retained. Resizing the same session to `768×1024` proves the notice clears and the same Build canvas/content becomes visible under the existing supported-viewport geometry contract.
+
+The exact `tests/e2e/v3-step7-fidelity.spec.js` journey passes from a clean archive of the committed correction. Production behavior, Step 7S, and Steps 8–10 are unchanged. Step 7 is resubmitted for V3 Design master review without claiming acceptance.

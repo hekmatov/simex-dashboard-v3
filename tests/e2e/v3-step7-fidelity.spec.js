@@ -26,19 +26,39 @@ test("Step 7 canonical content and responsive canvas contract hold at approved v
     const view = await readCanvasContract(page);
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
-    const build = await readCanvasContract(page);
-
-    expect(build.ids).toEqual(view.ids);
-    expect(build.maxWidth).toBe(view.maxWidth);
-    expect(build.frameWidth).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
     if (viewport.width === 390) {
-      await expect(page.locator('[data-phone-mode-notice="build"]')).toBeVisible();
-      await expect(page.locator(".build-workspace")).toHaveCount(1);
+      const phoneBuild = await readMountedCanvasContract(page);
+      const notice = page.locator('[data-phone-mode-notice="build"]');
+      const workspace = page.locator(".build-workspace");
+      await expect(notice).toBeVisible();
+      await expect(workspace).toHaveCount(1);
+      await expect(workspace).toBeHidden();
+      await expect(page.locator("[data-canonical-canvas-id]")).toBeHidden();
+      expect(phoneBuild.canvasId).toBe(view.canvasId);
+      expect(phoneBuild.ids).toEqual(view.ids);
+
+      const screenshot = await page.screenshot({ animations: "disabled" });
+      expect(screenshot.byteLength).toBeGreaterThan(1_000);
+
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await expect(notice).toBeHidden();
+      await expect(workspace).toBeVisible();
+      const restoredBuild = await readCanvasContract(page);
+      expect(restoredBuild.canvasId).toBe(phoneBuild.canvasId);
+      expect(restoredBuild.ids).toEqual(phoneBuild.ids);
+      expect(restoredBuild.maxWidth).toBe(view.maxWidth);
+      expect(restoredBuild.frameWidth)
+        .toBeLessThanOrEqual(Number.parseFloat(restoredBuild.maxWidth));
     } else {
+      const build = await readCanvasContract(page);
+      expect(build.canvasId).toBe(view.canvasId);
+      expect(build.ids).toEqual(view.ids);
+      expect(build.maxWidth).toBe(view.maxWidth);
+      expect(build.frameWidth).toBeLessThanOrEqual(Number.parseFloat(build.maxWidth));
       await expect(page.locator('[data-phone-mode-notice="build"]')).toBeHidden();
+      const screenshot = await page.screenshot({ animations: "disabled" });
+      expect(screenshot.byteLength).toBeGreaterThan(10_000);
     }
-    const screenshot = await page.screenshot({ animations: "disabled" });
-    expect(screenshot.byteLength).toBeGreaterThan(10_000);
   }
 
   const footer = page.locator(".dashboard-footer");
@@ -49,11 +69,19 @@ test("Step 7 canonical content and responsive canvas contract hold at approved v
 async function readCanvasContract(page) {
   const canvas = page.locator("[data-canonical-canvas-id]");
   await expect(canvas).toBeVisible();
+  return readMountedCanvasContract(page);
+}
+
+async function readMountedCanvasContract(page) {
+  const canvas = page.locator("[data-canonical-canvas-id]");
+  await expect(canvas).toHaveCount(1);
   return page.evaluate(() => {
+    const canvasNode = document.querySelector("[data-canonical-canvas-id]");
     const frame = document.querySelector(".canonical-dashboard-frame");
     const ids = [...document.querySelectorAll("[data-canonical-panel-id]")]
       .map((node) => node.getAttribute("data-canonical-panel-id"));
     return {
+      canvasId: canvasNode.getAttribute("data-canonical-canvas-id"),
       ids,
       frameWidth: frame.getBoundingClientRect().width,
       maxWidth: getComputedStyle(document.documentElement)

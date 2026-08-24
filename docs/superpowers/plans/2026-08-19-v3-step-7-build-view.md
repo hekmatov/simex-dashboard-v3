@@ -670,7 +670,7 @@ export function reducePlaybackState(state, action) {}
 - [x] **Write the failing test.** Add failing tests for source metadata, keyboard/focus return, unavailable source, loading/error recovery, saved-layout immutability, and restored Build canvas/selection/scroll state.
 - [x] **Run test to verify it fails.** Run `node --test tests/sourceViewer.test.js`; expect missing-module failure.
 - [x] **Write minimal implementation.** Implement the approved source viewer and calibrate Step 7-owned cards, headers, drawers, wizards, editor trays, Chrono, footer, typography, icons, spacing, overflow, and states.
-- [x] **Write the failing test.** Add viewport cases at `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`; the phone case verifies best-effort mounted Build plus the Step 6 banner, while supported viewports verify shared canonical identities, maximum-width and effective-width responsive rules, selected-target usability, saved-layout immutability, and close restoration. Exact cross-mode rectangles, zero overlap, and automatic horizontal-scroll prohibition are not asserted.
+- [x] **Write the failing test.** Add viewport cases at `390x844`, `768x1024`, `1024x768`, `1200x900`, and `1440x900`; the phone case verifies that Build workspace/canvas identity remains mounted but hidden behind the visible Step 6 notice, then resizes in place to `768x1024` and proves that the same Build canvas/panel identities and supported-viewport geometry become visible again. Other supported viewports verify shared canonical identities, maximum-width and effective-width responsive rules, selected-target usability, saved-layout immutability, and close restoration. Exact cross-mode rectangles, zero overlap, and automatic horizontal-scroll prohibition are not asserted.
 - [x] **Run tests to verify they pass.** Run `node --test tests/sourceViewer.test.js && pnpm exec playwright test tests/e2e/v3-step7-fidelity.spec.js`; expect pass with all canvas-contract, screenshot, and interaction assertions passing.
 - [x] **Commit.** Run `git add src/components/DashboardRenderer.jsx src/components/SourceViewer.jsx src/styles.css tests/sourceViewer.test.js tests/e2e/v3-step7-fidelity.spec.js && git commit -m "fix(view-build): complete source and visual fidelity"`.
 
@@ -804,3 +804,14 @@ Master review blocked submitted HEAD `7ee8f84d9d4f5d792f563e4c0e7bda6260498e80`.
 - [x] Rebuild and exercise focused tests plus the exact 005/006/012 journeys from a clean committed archive; inspect Chrono Studio/content/Edit, Scene actual-chart canvases/Unit Orbit, and View Chrono in the in-app browser.
 
 Correction commits: `5e9952b` and `fd52c72`. This correction does not implement Step 7S or Steps 8–10 and does not claim master acceptance.
+
+## 2026-08-24 phone fidelity evidence correction
+
+Master review of `801a37a` found stale executable evidence in `v3-step7-fidelity.spec.js`: the `390×844` branch required the intentionally hidden Build canvas to be visible before checking the approved phone notice. Production behavior was already correct and is unchanged.
+
+- [x] At `390×844`, assert that the Build workspace and canonical canvas remain mounted with the same canvas/panel identities as View but are hidden behind the visible phone recovery notice.
+- [x] Resize that same session to `768×1024` and assert the notice hides, Build workspace/canvas become visible, identity is unchanged, and the supported maximum-width/frame-width contract holds.
+- [x] Preserve the existing visible-canvas geometry assertions at every supported viewport.
+- [x] Run the exact `tests/e2e/v3-step7-fidelity.spec.js` journey from a clean archive of the committed correction.
+
+This is an evidence-only correction. No production file, Step 7S implementation, or Step 8–10 scope is changed.
