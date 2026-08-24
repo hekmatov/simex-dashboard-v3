@@ -165,6 +165,7 @@ async function expectOverlayClearOfControls(page, overlay) {
     const selectors = [
       '.dashboard-command-crown button',
       '.dashboard-command-crown select',
+      '.canonical-dashboard-frame .dashboard-header',
       '[data-chrono-controller-layer="true"] button',
       '[data-chrono-controller-layer="true"] select',
       '[data-chrono-controller-layer="true"] input',

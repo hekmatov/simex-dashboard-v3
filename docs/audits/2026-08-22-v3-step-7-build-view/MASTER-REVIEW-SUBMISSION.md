@@ -1,6 +1,6 @@
 # V3 Design Step 7 Build/View master-review submission
 
-Date: 2026-08-22 (final Step 7 submission amended 2026-08-23)
+Date: 2026-08-22 (final Step 7 submission amended 2026-08-24)
 Status: **ready for V3 Design master review**. This submission does not declare master acceptance; that decision remains with the master reviewer.
 
 ## 2026-08-23 provisional-review amendment (superseded by the final readiness amendment below)
@@ -19,10 +19,10 @@ Until every active Step 7 matrix row passes semantic, composition, and real-use 
 ## Review range and baseline
 
 - Accepted Step 6 baseline: `7e58bf8`
-- Implementation head before this submission record: `42e6a14`
+- Implementation head before the final record update: `e441e66`
 - Branch: `codex/three-mode-dashboard-integration`
 - Managed worktree: `C:\Users\hekma\Documents\Projects\SimEx\.worktrees\simex-dashboard-v2\three-mode-dashboard-design`
-- Exact implementation range: `git diff 7e58bf8..42e6a14`
+- Exact implementation range: `git diff 7e58bf8..e441e66`
 
 The Step 7 plan and reconciliation index were amended first to retire exact View/Build rectangle equality. The implemented contract keeps one canonical renderer, saved layout, responsive system, and maximum-width token; permits transient Build compression; bounds Build maximum width by View; preserves the selected target; restores Build selection, focus, scroll, and canvas context when chrome closes; and forbids authoring chrome from mutating saved layout merely by opening.
 
@@ -206,3 +206,42 @@ Focused browser evidence currently passing: Dashboard map/command composition `1
 - In-app inspection at 1280×720: Stage 3 used two equal 396.5 px canvases with two actual chart roots each; View showed the same two chart IDs/widths, map, axes, legend, and plots with zero authoring overlays/comparison dialogs; Present showed the authored two IDs and mapped layout with zero authoring overlays.
 
 The Scene composition correction is ready for review. Step 7 as a whole remains provisional under the later interface-organization audit and is not submitted for master acceptance by this amendment.
+
+## Final interface-fidelity closure — 2026-08-24
+
+This amendment supersedes the provisional interface-organization conclusion above. The controlling `SKETCH-FIDELITY-MATRIX.md` now reports all 16 active Step 7 rows Passing and zero active Missing/Partial rows. Sketches 001 and 008 remain explicitly deferred to Step 8; shared/prior-step rows 009 and 010 retain truthful cross-step status and are not reported as completed by Step 7.
+
+### Engine implemented
+
+- The existing independent layout/chart draft coordinator, chart proof/transaction engines, temporal ledgers, Scene/Chrono state, runtime artifacts, View Chrono availability/matching/provenance, chart recovery, source evidence, package round trip, asset persistence, and blank-dashboard transaction remain production-wired.
+- `e441e66` adds bounded Dashboard Map positioning relative to the currently visible Build header, collision-aware Chrono overlay geometry, and desktop↔phone restoration state without mutating saved dashboard layout or content.
+- Step 6 storage behavior remains intact: live changes remain usable when storage fails, session-only persistence is reported honestly, quota exhaustion remains distinct, and asynchronous Dashboard Look persistence never blocks drawer closure.
+
+### UI implemented
+
+- Page management is one full-size trigger with a named full-size action group; Build command families are grouped above the canonical canvas; Dashboard Map retains only Structure and Inspector.
+- Buttons, selects, text fields, wizard controls, chart actions, and Chrono transport use the shared 44px interaction contract while checkbox/radio glyphs remain normal-sized inside full clickable rows.
+- Dashboard Map Structure/Inspector, Build/Chrono chrome, tooltips, generated surfaces, and the primary Finish Build action derive paint from selected style/profile tokens.
+- Unsupported phone Build/Present keeps application state mounted but hides workspace and body-portaled authoring chrome. The visible recovery notice owns Switch to View and any blocked-state explanation; desktop restoration returns the prior draft, selection, scroll, and focus.
+- View Chrono keeps participating charts in the authored top section, ordinary non-members in normal View under All page charts, and its movable/resizable date overlay clear of crown, dashboard-header, and controller safe zones at material tablet/phone states.
+
+### Fidelity verified
+
+- Interface repair commit: `e441e66`.
+- Focused semantic/composition gate: 21 passed, 0 failed.
+- Affected browser gate: 24 passed, 0 failed across Page/Section commands, Dashboard Map, Wizard, shell/draft restoration, phone boundary, and exact View Chrono.
+- Style/profile gate: 13 unaffected cases passed in the full run; all four initially failing cases then passed after repair, covering all native styles and approved Light/Dark profiles.
+- Explicit phone focus-restoration journey: 1 passed, 0 failed after adding the previously missing body-portal focus owner.
+- Production Vite build: exit 0, 842 modules transformed. The existing mixed static/dynamic `ChartFootprintPicker` and large-chunk advisories remain non-failing diagnostics.
+- Human in-app Build inspection at `http://127.0.0.1:5176/?checkpoint=step7-interface-repair` verified logical command grouping, full-size actions, selected-region affordance, readable Structure hierarchy, Map clearance below the visible Build header, and the Map rising to a 12px viewport inset after the header scrolls away.
+- Human in-app View Chrono inspection verified the authored Municipal outbreak group, real map/chart rendering, the date overlay clear of the playback controller, and zero Build authoring chrome in View.
+
+### Final range and boundary
+
+- Accepted baseline: `7e58bf8`.
+- Final implementation head before this record commit: `e441e66`.
+- Branch: `codex/three-mode-dashboard-integration`.
+- Committed range: 130 commits; 337 files changed, 184,612 insertions, and 3,038 deletions relative to the accepted baseline. Pre-existing uncommitted user files remain preserved and excluded.
+- Step 8 Present/Audience redesign, Step 9 final cross-mode UAT, and Step 10 documentation/project-skill handoff remain outside this submission.
+
+Step 7 is submitted for V3 Design master review. This implementation record does not declare master acceptance.

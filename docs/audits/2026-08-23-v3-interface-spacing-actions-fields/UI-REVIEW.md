@@ -2,8 +2,8 @@
 
 Date: 2026-08-23  
 Scope: all current dashboard modes and Step 7 authoring/view surfaces; Present/Audience is inspected but remains Step 8-owned.  
-Audit status: **Complete**  
-Review status: **Step 7 master-review submission remains provisional.**
+Audit status: **Complete; remediation verified 2026-08-24**
+Review status: **Closed for Step 7. Present/Audience UI-10 remains explicitly deferred to Step 8.**
 
 Structural baseline: `b3dad79` (grouped Build command rails); Dashboard map implementation begins at `1fd1510`.
 
@@ -11,14 +11,14 @@ Structural baseline: `b3dad79` (grouped Build command rails); Dashboard map impl
 
 The requested Build structural change is implemented: Build commands now live above the canonical canvas, the former Build panel is the **Dashboard map**, the map switches explicitly between Structure and Inspector, and the obsolete Chrono Group summary/list is removed. A live visual check then found and repaired two composition defects: Build commands are now arranged as a primary authoring/session rail plus a separate layout-draft rail, and Chrono Group content no longer stretches its header/action/status rows to fill the studio height.
 
-The systematic scan found four open Step 7 priority themes:
+The systematic scan initially found four Step 7 priority themes:
 
 1. Several component-specific rules bypass the accepted 44px control token.
 2. Active Page commands remain a 20px-high three-button micro-rail and are especially poor at narrow widths.
 3. Dashboard map Structure has an inherited foreground/background contrast mismatch in the selected Look.
 4. View Chrono's movable date overlay collides with mast controls at tablet and phone widths.
 
-These findings should be repaired as shared rule slices rather than by individually padding each instance.
+Commit `e441e66` repairs those themes as shared rule slices. The original findings and scorecard below are retained as the pre-remediation audit record; the closure ledger at the end of this document is controlling.
 
 ## Method and evidence
 
@@ -48,29 +48,29 @@ These findings should be repaired as shared rule slices rather than by individua
 
 | Surface | Actions and arrangement | Fields and information | Spacing/responsive result | Status |
 |---|---|---|---|---|
-| App crown and mode switcher | Mode buttons are distinct and usable. | Dashboard/scenario identity remains readable. | Page micro-rail is the main failure; see UI-01. | Partial |
+| App crown and mode switcher | Mode buttons are distinct and usable. | Dashboard/scenario identity remains readable. | Active Page management now uses one full-size trigger and anchored group. | Passing |
 | Build command header | Content, Time, and Session now share one aligned rail; Layout draft has its own status/action rail. | Draft states are paired with their actions. | 1280×720 header is below 170px and no longer has the earlier scattered vertical placement. | Passing |
-| Dashboard map — Structure | Structure/Inspector ownership is explicit; no Chrono summary remains. | Tree carries the full Page/Section/chart hierarchy. | Structure tree contrast is broken in the inspected Look; see UI-04. | Partial |
-| Dashboard map — Inspector | Destructive Page action is contained in Page context. | Labels are visible, but the title field is only 32px and uses a hard-coded legacy label color. | Compact, but control grammar is inconsistent; see UI-06. | Partial |
-| Pages and Sections | Page and Section commands are grouped by owned item; destructive labels are explicit. | Empty/recovery states remain available in production logic. | Primary/footer buttons resolve to 39px; see UI-07. | Partial |
-| New Chart wizard | Six stages fit one line at desktop; canonical render and placement proof stay persistent; destination/size controls are present. | Labels and proof information are clear. | Several 32–39px controls and 36px navigation icons; see UI-03. Maximum-height composition itself is correct. | Partial |
-| Chart edit / Unit Orbit | Context remains tied to the selected chart and canonical canvas. | Existing schema labels/validation were source-scanned. | Shared 36px authoring icons remain; see UI-02. | Partial |
+| Dashboard map — Structure | Structure/Inspector ownership is explicit; no Chrono summary remains. | Tree carries the full Page/Section/chart hierarchy. | Selected-Look surface/text pairs and selected-region affordance are tokenized and readable. | Passing |
+| Dashboard map — Inspector | Destructive Page action is contained in Page context. | Labels and fields use semantic tokens and the shared 44px field grammar. | Compact and aligned with the temporal editors. | Passing |
+| Pages and Sections | Page and Section commands are grouped by owned item; destructive labels are explicit. | Empty/recovery states remain available in production logic. | Shared controls resolve to at least 44px. | Passing |
+| New Chart wizard | Six stages fit one line at desktop; canonical render and placement proof stay persistent; destination/size controls are present. | Labels and proof information are clear. | Navigation, fields, and selects use the 44px contract; maximum-height composition remains correct. | Passing |
+| Chart edit / Unit Orbit | Context remains tied to the selected chart and canonical canvas. | Existing schema labels/validation were source-scanned. | Shared icon targets are 44px while glyphs remain compact. | Passing |
 | Chrono Studio | Create/Close are clearly separated; saved cards open content before edit. | Search/status/Page fields are 44px and aligned. | Compact composition; no excess track stretching. | Passing |
 | Chrono Group content | Navigation, primary, and management actions are distinct; Remove is destructive. | Status and Page-grouped membership remain visible. | Fixed during this review: content tracks now size to content; action groups remain on one row at desktop and stack whole on phone. | Passing |
-| Chrono Group editor | Four-stage navigation is complete; footer owns Back/Continue/Discard. | Stage 1 fields are 44px and aligned; Stage 3 radio rows pair names and explanations; cadence is a 128×44 numeric field. | Composition matches the corrected staged format. Footer buttons still inherit 39px; see UI-07. | Partial |
-| Availability Ledger | Availability and matching evidence remain structured by member/region. | Information hierarchy and ledger rows were source-scanned. | No new composition defect found; shared 38–40px legacy rules should be normalized only where interactive. | Passing with shared-token follow-up |
-| Scene Studio | Create is studio-owned; saved content remains separate from editing. | Search/status/Page fields follow the studio pattern. | Empty state is compact. Create button is 37px; see UI-07. | Partial |
-| Create/Edit Scene | Persistent draft panel, Stage 1 ledger, and balanced canvas ownership are present. | Text/select/date/numeric fields are 44px; check/radio glyphs are a normal 20px inside labelled rows. | Inspector-style actions at 39px need shared normalization; otherwise hierarchy is coherent. | Partial |
-| Scene content | Read-first route and edit transition remain distinct. | Scene identity/provenance is present. | Source scan found no unique spacing defect beyond shared tokens. | Passing with shared-token follow-up |
+| Chrono Group editor | Four-stage navigation is complete; footer owns Back/Continue/Discard. | Stage 1 fields are 44px and aligned; Stage 3 radio rows pair names and explanations; cadence is a 128×44 numeric field. | Composition and footer controls meet the shared 44px contract. | Passing |
+| Availability Ledger | Availability and matching evidence remain structured by member/region. | Information hierarchy and ledger rows were source-scanned. | Interactive rows now inherit the shared contract. | Passing |
+| Scene Studio | Create is studio-owned; saved content remains separate from editing. | Search/status/Page fields follow the studio pattern. | Empty state is compact and Create is a full-size action. | Passing |
+| Create/Edit Scene | Persistent draft panel, Stage 1 ledger, and balanced canvas ownership are present. | Text/select/date/numeric fields are 44px; check/radio glyphs are a normal 20px inside labelled rows. | Inspector-style actions now share the 44px grammar. | Passing |
+| Scene content | Read-first route and edit transition remain distinct. | Scene identity/provenance is present. | Shared action and field tokens are applied. | Passing |
 | Dashboard Look | Style/profile/system controls use normal 20px radio glyphs with full labelled rows; Close is not blocked by async persistence. | Current selection and persistence state are communicated. | No new spacing defect found. | Passing |
-| View chart canvas | View has no authoring chrome; chart evidence/details/focus actions are grouped per chart. | Chart status and provenance remain available. | Desktop chart actions are 44px; Build/phone overrides shrink them to 32–36px; see UI-02. | Partial |
-| View comparison/fullscreen | Comparison entry remains in the View crown and chart selection remains contextual. | No field defect found in sampled state. | Shared chart target issue applies on phone. | Partial |
-| View Chrono | Source/scope/matching/trace form a coherent session group; transport, cadence, availability, and position controls are present. | Selects are 44px; cadence is 44px; range is intentionally shorter but has a broad horizontal target. | Date overlay collision is a blocking responsive defect; see UI-05. Transport buttons are 40px; see UI-07. | Partial |
+| View chart canvas | View has no authoring chrome; chart evidence/details/focus actions are grouped per chart. | Chart status and provenance remain available. | Visible shared chart actions resolve to 44px at desktop and phone View. | Passing |
+| View comparison/fullscreen | Comparison entry remains in the View crown and chart selection remains contextual. | No field defect found in sampled state. | Shared chart targets meet the phone contract. | Passing |
+| View Chrono | Source/scope/matching/trace form a coherent session group; transport, cadence, availability, and position controls are present. | Selects and cadence remain 44px; range keeps its broad horizontal target. | Crown/controller/header collision checks pass at tablet and phone; transport controls are 44px. | Passing |
 | Tooltips and source evidence | Chart evidence buttons are named; prior tooltip clipping repair remains represented in code. | Dedicated source-viewer route remains the intended evidence journey. | No new spacing-specific defect was reproduced in this pass. | Passing for this audit dimension |
 | Recovery, confirmation, toast | Actions are named and recovery state is bounded. | Error/recovery copy remains local to its surface. | Source scan shows 44px recovery actions. No new issue found. | Passing |
 | Present/Audience | Audited only. | Checkbox glyphs are normal-sized. | Step 8 owns arrangement changes. | Intentionally deferred |
 
-## Six-pillar scorecard
+## Initial six-pillar scorecard (pre-remediation)
 
 | Pillar | Score | Evidence summary |
 |---|---:|---|
@@ -83,7 +83,7 @@ These findings should be repaired as shared rule slices rather than by individua
 
 Scores summarize the recorded findings; they do not convert a Partial surface into Passing.
 
-## Shared repair sequence
+## Completed shared repair sequence
 
 1. Fix the shared interactive-size grammar and remove component overrides that shrink controls below 44px. This resolves UI-02, UI-03, and most of UI-07 without repeated per-surface patches.
 2. Replace the active Page micro-rail with one coherent Page-management control (UI-01).
@@ -99,4 +99,31 @@ Scores summarize the recorded findings; they do not convert a Partial surface in
 - `tests/buildChronoGroupAccess.test.js`: read-first route plus navigation/primary/management grouping — passing.
 - Production Vite bundle — passing. The existing large-chunk warning remains and is not a spacing/action defect.
 
-The audit distinguishes implemented structure from open visual debt. Step 7 should not be submitted for master acceptance until the open P1 rows above are repaired or explicitly approved as later-step deviations.
+The initial audit distinguished implemented structure from open visual debt. The following remediation ledger supersedes that provisional conclusion.
+
+## Remediation closure — 2026-08-24
+
+| Finding | Status | Production evidence |
+|---|---|---|
+| UI-01 | Passing | One 44px active-Page trigger opens a named full-size Edit/Move action group; the live Page/Section journey passes. |
+| UI-02 | Passing | Shared icon-control targets are 44px in View and Build; the phone boundary hides unsupported Build authoring chrome including body-portaled Unit Orbit/auxiliary surfaces. |
+| UI-03 | Passing | Wizard buttons, navigation, inputs, selects, and schema controls meet the 44px interaction contract across the six stages. |
+| UI-04 | Passing | Dashboard Map Structure surface/text and selected-region states are selected-Look tokens; expanded style scans report no retired chrome paint. |
+| UI-05 | Passing | `ChronoDateOverlay` constrains geometry against crown and floating-controller safe zones and remains clear of the dashboard header at tablet/phone; focus/comparison suspension and restoration remain intact. |
+| UI-06 | Passing | Inspector single-line fields, labels, borders, and text use the shared 44px semantic field grammar. |
+| UI-07 | Passing | The shared application interaction grammar supplies a 44px minimum target to ordinary buttons/selects without enlarging checkbox/radio glyphs. |
+| UI-08 | Passing | Step 7 chrome colors edited in this slice use semantic profile tokens; chart-series/data colors remain intentionally untouched. |
+| UI-09 | Passing | At 390×844, Build/Present workspaces stay mounted but hidden; only the bounded phone notice and Switch to View recovery action are interactive. Draft, selection, scroll, and focus restore after resizing back. A blocked switch reports its reason inside the visible notice. |
+| UI-10 | Intentionally deferred | Present/Audience arrangement remains Step 8-owned. Normal checkbox glyphs were not enlarged. |
+
+Verification:
+
+- focused semantic/composition checks: 21 passed, 0 failed;
+- affected Step 7 browser gate: 24 passed, 0 failed;
+- style/profile gate: 13 unaffected cases passed, then all four initially failing cases passed after repair;
+- exact View Chrono journey with crown/controller/dashboard-header collision checks: 1 passed, 0 failed;
+- production Vite build: exit 0, 842 modules transformed; only the existing mixed-import and large-chunk advisories remain;
+- inspected in-app Build checkpoint: at page top the Map cleared the expanded header; after scrolling 650px it rose to a 12px viewport inset and used the available height;
+- inspected in-app View Chrono checkpoint: authored Municipal group selected, overlay y=142–254, controller y=532–700, no intersection, and no Build authoring chrome.
+
+Step 7 audit findings UI-01 through UI-09 are closed. Step 7 may proceed to V3 Design master review; master acceptance is not claimed here.

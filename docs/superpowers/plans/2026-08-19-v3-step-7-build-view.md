@@ -773,3 +773,19 @@ Verification:
 - in-app inspection at [http://127.0.0.1:5176/](http://127.0.0.1:5176/) showed Municipal outbreak playback selected on first open, exactly two participating charts, 21 ordinary panels below, and `bio_confirmed_cases` rendered with its normal plot and no empty/error state.
 
 This is a corrective amendment to S7-17 and Sketches 007/014. Step 7 remains provisional and master acceptance is not claimed.
+
+## 2026-08-24 interface-fidelity closure and master-review gate
+
+Commit `e441e66` closes the remaining active Step 7 interface rows identified by the strict review gate. The live application now restores Build focus and scroll across phone fallback, exposes the phone-blocked reason, gives application controls a 44 px interaction contract, consolidates Page actions without removing their ownership, keeps Dashboard Map below visible Build command chrome while allowing it to rise as the Page header scrolls away, and keeps the View Chrono date overlay clear of the crown, dashboard header, and playback controller at the material tablet and phone states. Step 7 chrome now uses semantic dashboard tokens, including Finish Build and selected Dashboard Map regions.
+
+Verification evidence:
+
+- focused semantic and composition tests passed `21/21`;
+- the affected browser gate passed `24/24`;
+- all `17/17` relevant style/profile browser cases have passing evidence (`13/17` in the initial full run plus the corrected `4/4` cases);
+- the exact View Chrono header-clearance journey passed `1/1`;
+- the exact phone restoration journey passed `1/1`;
+- the direct production build passed with `842` modules transformed; and
+- in-app inspection confirmed the Build command header and Dashboard Map remain non-overlapping at the Page top, the Map rises to a 12 px viewport inset after scrolling, the full Map hierarchy and disclosure affordances remain usable, and the View Chrono overlay does not intersect its floating controller.
+
+The active Step 7 fidelity matrix is now `16/16` Passing with no Missing or Partial row. This closes the provisional implementation gate and submits Step 7 for V3 Design master review. It does not claim master acceptance. Step 8 Present/Audience redesign, Step 9 final cross-mode UAT, and Step 10 documentation/project-skill handoff remain outside this submission.
