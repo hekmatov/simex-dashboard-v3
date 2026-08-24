@@ -59,6 +59,10 @@ The adapter is the only translation point. Schema validation continues to store 
 
 Both Stage 3 canvases render actual chart visuals rather than thumbnails or facsimiles. Chart data comes from `dashboard.loadedData`, dataset profiles, generated derivatives, and map sources through the same chart rendering inputs used at runtime.
 
+### Full-width Scene composition amendment — 2026-08-24
+
+Scene editing uses the browser width with 16 px viewport gutters instead of reserving the Dashboard Map column. In Stage 3, Scene View and Present occupy separate full-width rows. Each board is capped by `--simex-canonical-canvas-max-width`; therefore Scene View can receive the same effective width as the canonical View canvas and exercise the same responsive chart behavior. This supersedes the earlier equal-width desktop side-by-side arrangement. Tablet retains the same stacked order without horizontal overflow.
+
 Stage 3 uses the latest valid authored Scene frame as its deterministic preview frame. It displays the preview date in the Stage 3 heading. The frame is derived without starting or mutating a live playback session. Per-chart matching and reveal behavior are calculated with the same temporal engines as runtime playback.
 
 If the Scene has no valid frame, charts render their real non-temporal or recovery state and Stage 3 names the missing frame condition. It never invents sample data or silently selects a timestamp outside the authored period.

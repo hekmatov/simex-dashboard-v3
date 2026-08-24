@@ -171,6 +171,35 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await orbit.getByRole("button", { name: "Move first" }).click();
   await boards.nth(1).locator("select").selectOption("horizontal-divider");
   await expect(auxiliary.locator(".scene-draft-panel")).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1600, height: 900 });
+  const fullWidthGeometry = await auxiliary.evaluate((node) => {
+    const dialog = node.getBoundingClientRect();
+    const sceneBoard = node.querySelector('.scene-arrangement-board[data-board="scene"]').getBoundingClientRect();
+    const presentBoard = node.querySelector('.scene-arrangement-board[data-board="present"]').getBoundingClientRect();
+    const canonicalCanvasMax = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue("--simex-canonical-canvas-max-width"),
+    );
+    return {
+      viewportWidth: window.innerWidth,
+      dialogLeft: dialog.left,
+      dialogRight: dialog.right,
+      dialogWidth: dialog.width,
+      sceneWidth: sceneBoard.width,
+      sceneBottom: sceneBoard.bottom,
+      presentWidth: presentBoard.width,
+      presentTop: presentBoard.top,
+      canonicalCanvasMax,
+    };
+  });
+  expect(fullWidthGeometry.dialogLeft).toBeLessThanOrEqual(17);
+  expect(fullWidthGeometry.viewportWidth - fullWidthGeometry.dialogRight).toBeLessThanOrEqual(17);
+  expect(fullWidthGeometry.dialogWidth).toBeGreaterThanOrEqual(fullWidthGeometry.viewportWidth - 34);
+  expect(fullWidthGeometry.sceneWidth).toBeGreaterThanOrEqual(fullWidthGeometry.canonicalCanvasMax - 2);
+  expect(fullWidthGeometry.sceneWidth).toBeLessThanOrEqual(fullWidthGeometry.canonicalCanvasMax + 2);
+  expect(Math.abs(fullWidthGeometry.sceneWidth - fullWidthGeometry.presentWidth)).toBeLessThanOrEqual(2);
+  expect(fullWidthGeometry.presentTop).toBeGreaterThanOrEqual(fullWidthGeometry.sceneBottom + 13);
+
   const arrangeWidth = await auxiliary.locator(".scene-stage-body[data-stage='arrange']").evaluate((node) => ({
     stage: node.getBoundingClientRect().width,
     workspace: node.closest(".scene-studio__workspace").getBoundingClientRect().width,

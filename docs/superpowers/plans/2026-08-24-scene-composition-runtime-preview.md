@@ -458,7 +458,7 @@ Add `dashboard` to `SceneEditor` and `BalancedTwinCanvas` props. In `BuildWorksp
 
 - [x] **Step 8: Add responsive actual-preview CSS**
 
-Give each board a bounded preview viewport, minimum chart plot height, and internal scrolling when necessary. Keep equal board widths on desktop and stack the two boards at the existing tablet breakpoint. Authoring chrome uses dashboard tokens and maintains 44 px activation targets.
+Give each board a bounded preview viewport, minimum chart plot height, and internal scrolling when necessary. Per the approved later width amendment, Scene Studio uses 16 px viewport gutters and the boards stack as separate full-width rows at every supported authoring viewport. Each row is capped by the canonical canvas-width token so Scene View can reproduce View at the same effective width. Authoring chrome uses dashboard tokens and maintains 44 px activation targets.
 
 - [x] **Step 9: Run focused tests and commit**
 
@@ -659,6 +659,6 @@ git commit -m "test(scene): verify truthful runtime composition previews"
 - Focused semantic/composition gate: 107 passed, 0 failed.
 - Exact production-bundle browser journey: `006-scene-authoring amendment` passed 1/1 in 39.7 seconds.
 - Production build: Vite completed with 836 modules transformed; only the existing mixed-import and large-chunk advisories remain.
-- Visual inspection: at 1280×720, Stage 3 occupied 807 px and contained two equal 396.5 px canvases with two actual chart roots each. Active-Scene View reproduced the two authored IDs and widths and showed the map, axes, legend, and plots with zero authoring overlays or comparison dialogs. Present exposed the same authored IDs and mapped layout with zero authoring overlays.
+- Visual inspection after the width amendment: at 1280×720, Scene Studio began at x=16 and used the layout viewport through its opposite 16 px gutter. Scene View and Present occupied separate 1188 px rows with a 14 px gap and two actual chart roots each. At 1600×900 the automated reading proved Scene View reached the 1392 px canonical canvas maximum. Active-Scene View reproduced the authored IDs and widths with zero authoring overlays or comparison dialogs; Present exposed the same authored IDs and mapped layout with zero authoring overlays.
 - Diagnosed deviation: the first implementation dispatched the correct Scene action to the app-level View display controller. The live journey proved Present remained empty because Present/Audience use a separate presentation runtime. `d6fa7be` moves the one-shot transition to that production owner and gates it to Present, preventing Scene selection from opening View's comparison dialog.
 - Review boundary: this Scene amendment passes its own completion gate. Step 7 remains provisional under the separately recorded interface-audit Partial rows; master acceptance is not claimed.
