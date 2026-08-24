@@ -183,7 +183,15 @@ export default function BuildWorkspace({
       if (!panel) return;
       const crownBottom = document.querySelector(".dashboard-command-crown")
         ?.getBoundingClientRect().bottom ?? 0;
-      panel.style.setProperty("--dashboard-map-top", `${Math.max(12, crownBottom + 12)}px`);
+      const commandHeaderBottom = document.querySelector(".build-command-header")
+        ?.getBoundingClientRect().bottom ?? crownBottom;
+      const visibleHeaderBottom = commandHeaderBottom > crownBottom
+        ? commandHeaderBottom
+        : crownBottom;
+      panel.style.setProperty(
+        "--dashboard-map-top",
+        `${Math.max(12, visibleHeaderBottom + 12)}px`,
+      );
     };
     const scheduleUpdate = () => {
       if (!frame) frame = window.requestAnimationFrame(updateDashboardMapTop);
@@ -191,12 +199,21 @@ export default function BuildWorkspace({
     updateDashboardMapTop();
     window.addEventListener("scroll", scheduleUpdate, { passive: true });
     window.addEventListener("resize", scheduleUpdate);
+    const observedSurfaces = [
+      document.querySelector(".dashboard-command-crown"),
+      document.querySelector(".build-command-header"),
+    ].filter(Boolean);
+    const observer = typeof ResizeObserver === "function"
+      ? new ResizeObserver(scheduleUpdate)
+      : null;
+    observedSurfaces.forEach((surface) => observer?.observe(surface));
     return () => {
       window.removeEventListener("scroll", scheduleUpdate);
       window.removeEventListener("resize", scheduleUpdate);
+      observer?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [buildPanelOpen]);
 
   React.useEffect(() => {
     dispatchDraftCoordinator({ type: "SYNC_SLOT", slot: "layout", draft: layoutDraft });

@@ -190,10 +190,10 @@ body::before {
 }
 
 .companion-status {
-  background: rgb(248 251 255 / 92%);
-  border: 1px solid rgb(8 34 74 / 14%);
+  background: color-mix(in srgb, var(--simex-surface-panel-alt) 92%, transparent);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 999px;
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 12px;
   font-weight: 800;
   padding: 8px 12px;
@@ -746,10 +746,10 @@ textarea {
 
 .chart-panel,
 .status-panel {
-  background: #f5f8fb;
-  border: 1px solid rgb(8 34 74 / 11%);
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 20px;
-  box-shadow: 0 16px 42px rgb(8 34 74 / 10%);
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   min-height: 360px;
   min-width: 0;
@@ -1032,10 +1032,10 @@ th {
 }
 
 .settings-panel {
-  background: white;
-  border: 1px solid rgb(8 34 74 / 14%);
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 18px;
-  box-shadow: 0 18px 44px rgb(8 34 74 / 16%);
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 8px;
   max-height: calc(100vh - 48px);
@@ -1172,10 +1172,10 @@ th {
 }
 
 .settings-color-popover {
-  background: #ffffff;
-  border: 1px solid #cbd9e7;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 12px;
-  box-shadow: 0 14px 32px rgb(8 34 74 / 14%);
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 10px;
   padding: 10px;
@@ -2879,7 +2879,7 @@ button.danger {
 .collection-scroll:focus-visible,
 .collection-pager button:focus-visible,
 .collection-carousel-controls > button:focus-visible {
-  outline: 3px solid #ffd984;
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
   outline-offset: 3px;
 }
 
@@ -3171,10 +3171,10 @@ button.danger {
 
 .playback-controls,
 .playback-view {
-  background: #f5f8fb;
-  border: 1px solid rgb(8 34 74 / 14%);
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 16px;
-  color: #18334e;
+  color: var(--simex-text-strong);
   padding: 16px;
 }
 
@@ -3214,7 +3214,7 @@ button.danger {
 .playback-controls button:focus-visible,
 .playback-controls select:focus-visible,
 .playback-controls input:focus-visible {
-  outline: 3px solid #ffd984;
+  outline: var(--simex-component-focus-width, 3px) solid var(--simex-focus);
   outline-offset: 3px;
 }
 
@@ -3223,7 +3223,7 @@ button.danger {
   background: var(--simex-surface-panel, #f5f8fb);
   border-color: var(--simex-border-strong, rgb(8 34 74 / 28%));
   border-radius: 4px;
-  box-shadow: 0 12px 34px rgb(8 34 74 / 24%);
+  box-shadow: var(--simex-style-panel-shadow);
   flex-wrap: wrap;
   left: 50%;
   max-width: min(var(--dashboard-canvas-max-width, 1180px), calc(100vw - 32px));
@@ -3249,8 +3249,8 @@ button.danger {
 }
 
 .chrono-availability {
-  background: #fffdf7;
-  border: 1px solid rgb(140 101 20 / 28%);
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 4px;
   flex: 1 0 100%;
   padding: 10px 12px;
@@ -3266,7 +3266,7 @@ button.danger {
 }
 
 .chrono-availability li {
-  border-inline-start: 8px double #60758b;
+  border-inline-start: 8px double var(--simex-text-muted);
   font-size: 0.78rem;
   padding-inline-start: 8px;
 }
@@ -3287,21 +3287,21 @@ button.danger {
 }
 
 .chrono-availability li[data-availability="concurrent"] {
-  border-inline-start-color: #237b58;
+  border-inline-start-color: var(--simex-success);
 }
 
 .chrono-availability li[data-availability="missing"] {
-  border-inline-start-color: #a0443e;
+  border-inline-start-color: var(--simex-error);
   border-inline-start-style: dashed;
 }
 
 .chrono-availability li[data-availability="interpolated"] {
-  border-inline-start-color: #7256a8;
+  border-inline-start-color: var(--simex-selected);
   border-inline-start-style: dotted;
 }
 
 .chrono-availability li:is([data-availability="latest"], [data-availability="closest"]) {
-  border-inline-start-color: #966112;
+  border-inline-start-color: var(--simex-warning);
 }
 
 .chrono-availability li[data-availability="static"] {
@@ -3959,10 +3959,10 @@ button.danger {
 }
 
 .section-edit-field input {
-  background: rgb(255 255 255 / 82%);
-  border: 1px solid rgb(8 34 74 / 14%);
+  background: color-mix(in srgb, var(--simex-surface-panel) 82%, transparent);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   font: inherit;
   padding: 8px 10px;
 }
@@ -4101,10 +4101,10 @@ button.danger {
 
 .global-color-controls summary {
   align-items: center;
-  background: rgb(255 255 255 / 82%);
-  border: 1px solid rgb(8 34 74 / 14%);
+  background: color-mix(in srgb, var(--simex-surface-panel) 82%, transparent);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 999px;
-  color: #08224a;
+  color: var(--simex-text-strong);
   cursor: pointer;
   display: inline-flex;
   font-size: 13px;
@@ -4510,8 +4510,8 @@ button.danger {
 
 .binding-checkbox-list,
 .binding-filter-values {
-  background: #f5f8fb;
-  border: 1px solid #e1e9f0;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   display: grid;
   gap: 4px;
@@ -4594,11 +4594,11 @@ button.danger {
 }
 
 .chart-wizard {
-  background: #f5f8fb;
-  border: 1px solid #d8e2ec;
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 18px;
   box-sizing: border-box;
-  box-shadow: 0 28px 80px rgb(4 24 48 / 34%);
+  box-shadow: var(--simex-style-shell-shadow);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   max-height: calc(100vh - 48px);
@@ -4893,7 +4893,7 @@ button.danger {
 
 .global-icon-accent-preview span {
   align-items: center;
-  border: 1px solid rgb(8 34 74 / 14%);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   display: flex;
   font-size: 11px;
@@ -4975,8 +4975,8 @@ button.danger {
 
 .simex-icon-control {
   align-items: center;
-  background: #f5f9fd;
-  border: 1px solid #cbd9e7;
+  background: var(--simex-surface-panel-alt);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 999px;
   color: var(--simex-icon-base);
   display: inline-flex;
@@ -4995,15 +4995,15 @@ button.danger {
 }
 
 .simex-icon-control:hover:not(:disabled) {
-  border-color: #83a3c3;
-  box-shadow: 0 7px 16px rgb(12 46 83 / 15%);
+  border-color: var(--simex-border-strong);
+  box-shadow: var(--simex-style-panel-shadow);
   transform: translateY(-1px);
 }
 
 .simex-icon-control:active:not(:disabled) {
-  background: var(--simex-icon-base);
-  border-color: var(--simex-icon-base);
-  color: #fff;
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
   transform: translateY(0);
 }
 
@@ -5024,15 +5024,15 @@ button.danger {
 
 .simex-icon-control[aria-pressed="true"],
 .simex-icon-control[data-icon-selected="true"] {
-  background: #e8f8f1;
-  border-color: #72cca7;
-  box-shadow: 0 0 0 3px rgb(42 168 118 / 13%);
-  color: #0b6445;
+  background: var(--simex-selected-soft);
+  border-color: var(--simex-selected);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--simex-selected) 18%, transparent);
+  color: var(--simex-selected);
 }
 
 .simex-icon-control[data-icon-tone="danger"] {
-  background: #fff1f3;
-  border-color: #f2a8b2;
+  background: var(--simex-error-soft);
+  border-color: var(--simex-error);
   color: var(--simex-icon-danger);
 }
 

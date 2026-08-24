@@ -5,7 +5,7 @@ const MODE_LABELS = {
   present: "Present",
 };
 
-export default function PhoneModeNotice({ mode, onSwitchToView }) {
+export default function PhoneModeNotice({ mode, blockedReason = "", onSwitchToView }) {
   const label = MODE_LABELS[mode];
   if (!label) return null;
 
@@ -17,6 +17,7 @@ export default function PhoneModeNotice({ mode, onSwitchToView }) {
       aria-label={`${label} phone support notice`}
     >
       <span>{label} is not supported at phone size. View remains available.</span>
+      {blockedReason && <span role="alert">{blockedReason}</span>}
       <button type="button" onClick={onSwitchToView}>Switch to View</button>
     </section>
   );

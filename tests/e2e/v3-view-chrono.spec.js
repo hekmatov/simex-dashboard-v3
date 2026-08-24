@@ -127,6 +127,7 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(chrono).toBeVisible();
   await expect(dateOverlay).toBeVisible();
+  await expectOverlayClearOfControls(page, dateOverlay);
   const tabletOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(tabletOverflow).toBeLessThanOrEqual(0);
 
@@ -135,6 +136,7 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   const phoneOverlay = await dateOverlay.boundingBox();
   expect(phoneOverlay.x).toBeGreaterThanOrEqual(8);
   expect(phoneOverlay.x + phoneOverlay.width).toBeLessThanOrEqual(382);
+  await expectOverlayClearOfControls(page, dateOverlay);
   const overflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
@@ -154,5 +156,28 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   const minimumTouchTarget = await chrono.locator("button, select").evaluateAll((controls) => (
     Math.min(...controls.map((control) => control.getBoundingClientRect().height))
   ));
-  expect(minimumTouchTarget).toBeGreaterThanOrEqual(40);
+  expect(minimumTouchTarget).toBeGreaterThanOrEqual(44);
 });
+
+async function expectOverlayClearOfControls(page, overlay) {
+  const collisions = await page.evaluate(() => {
+    const overlayRect = document.querySelector('[data-chrono-date-overlay="true"]').getBoundingClientRect();
+    const selectors = [
+      '.dashboard-command-crown button',
+      '.dashboard-command-crown select',
+      '[data-chrono-controller-layer="true"] button',
+      '[data-chrono-controller-layer="true"] select',
+      '[data-chrono-controller-layer="true"] input',
+    ];
+    const intersects = (left, right) => left.left < right.right
+      && left.right > right.left
+      && left.top < right.bottom
+      && left.bottom > right.top;
+    return [...document.querySelectorAll(selectors.join(','))]
+      .filter((control) => control.getClientRects().length > 0)
+      .filter((control) => intersects(overlayRect, control.getBoundingClientRect()))
+      .map((control) => control.getAttribute('aria-label') || control.textContent?.trim() || control.tagName);
+  });
+  expect(collisions, JSON.stringify(collisions)).toEqual([]);
+  await expect(overlay).toBeVisible();
+}

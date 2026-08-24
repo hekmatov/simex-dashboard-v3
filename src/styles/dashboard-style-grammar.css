@@ -446,6 +446,12 @@
   color: var(--simex-text-strong);
 }
 
+.app-frame .dashboard-map-panel .dashboard-map-region-switch button[aria-pressed="true"] {
+  background: var(--simex-accent);
+  border-color: var(--simex-accent);
+  color: var(--simex-on-accent);
+}
+
 .app-frame .dashboard-map-panel button.active,
 .app-frame .dashboard-map-panel button[aria-current="page"] {
   background: var(--simex-selected-soft);
@@ -455,6 +461,12 @@
 
 .app-frame .dashboard-map-panel button:disabled {
   opacity: 0.55;
+}
+
+.app-frame .build-command-header button:not(.secondary):not(.danger) {
+  background: var(--simex-accent);
+  border: 1px solid var(--simex-accent);
+  color: var(--simex-on-accent);
 }
 
 .app-frame .dashboard-map-panel :is(input, select, textarea) {
@@ -1480,6 +1492,38 @@
   :is(.build-authoring-auxiliary, .unit-orbit),
   .app-frame :is(.chart-wizard, .chart-editor-v3, .confirm-dialog, .playback-controls) {
     transition-duration: 0.01ms;
+  }
+}
+
+/* Step 7 interaction contract: visual glyphs may stay compact, but every
+   authoring and View action keeps a full keyboard/touch target. */
+.app-frame :is(
+  button,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"])
+) {
+  min-block-size: var(--simex-control-min, 44px);
+}
+
+.app-frame .simex-icon-control {
+  block-size: var(--simex-control-min, 44px);
+  inline-size: var(--simex-control-min, 44px);
+  min-block-size: var(--simex-control-min, 44px);
+  min-inline-size: var(--simex-control-min, 44px);
+}
+
+@media (max-width: 767px) {
+  .app-frame:is([data-dashboard-mode="build"], [data-dashboard-mode="present"]) > :not(.phone-mode-banner) {
+    display: none !important;
+  }
+
+  body:has(.app-frame:is([data-dashboard-mode="build"], [data-dashboard-mode="present"])) > :is(
+    .unit-orbit,
+    .build-authoring-auxiliary,
+    .simex-tooltip-layer,
+    .audience-snapshot-source
+  ) {
+    display: none !important;
   }
 }
 

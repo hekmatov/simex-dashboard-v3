@@ -326,7 +326,7 @@ test("Present gives the audience monitor half the workspace without duplicate Pa
   await expect(page.getByLabel("Display Page")).toHaveCount(0);
 });
 
-test("Dashboard map keeps the canvas usable and closing restores its exact frame", async ({ page }) => {
+test("Dashboard map clears visible Build controls and closing restores its frame", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.getByLabel("Dashboard mode")
@@ -335,7 +335,8 @@ test("Dashboard map keeps the canvas usable and closing restores its exact frame
   const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
   const look = pinned.getByRole("button", { name: "Dashboard look", exact: true });
   const toggle = pinned.getByRole("button", { name: "Dashboard map", exact: true });
-  const drawer = page.locator(".build-authoring-layer");
+  const drawer = page.locator(".dashboard-map-panel");
+  const commandHeader = page.locator(".build-command-header");
   const frame = page.locator(".canonical-dashboard-frame.build-workspace");
 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -346,11 +347,18 @@ test("Dashboard map keeps the canvas usable and closing restores its exact frame
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(drawer).toBeVisible();
+  await expect.poll(() => page.evaluate(() => {
+    const map = document.querySelector(".dashboard-map-panel")?.getBoundingClientRect();
+    const header = document.querySelector(".build-command-header")?.getBoundingClientRect();
+    return map && header ? map.top - header.bottom : Number.NEGATIVE_INFINITY;
+  })).toBeGreaterThanOrEqual(0);
   const openFrame = await frame.boundingBox();
   const openDrawer = await drawer.boundingBox();
+  const openHeader = await commandHeader.boundingBox();
   expect(openFrame.width).toBeGreaterThanOrEqual(closed.width * 0.65);
   expect(openFrame.x).toBeGreaterThanOrEqual(0);
   expect(openDrawer.x).toBeLessThan(1440);
+  expect(openDrawer.y).toBeGreaterThanOrEqual(openHeader.y + openHeader.height);
 
   await toggle.click();
   await expect(drawer).toBeHidden();
@@ -375,10 +383,10 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
 
   const buildPaint = await page.evaluate(() => ({
     headerEyebrow: getComputedStyle(document.querySelector(".canonical-dashboard-frame .dashboard-header .eyebrow")).color,
-    workspaceEyebrow: getComputedStyle(document.querySelector(".build-command-title .eyebrow")).color,
-    structureEyebrow: getComputedStyle(document.querySelector(".build-region-heading .eyebrow")).color,
-    structureButton: getComputedStyle(document.querySelector(".build-canvas-toolbar button")).backgroundColor,
-    railButton: getComputedStyle(document.querySelector(".build-structure-list button.secondary")).backgroundColor,
+    workspaceEyebrow: getComputedStyle(document.querySelector(".build-command-group__label")).color,
+    structureEyebrow: getComputedStyle(document.querySelector(".dashboard-map-panel .build-region-heading .eyebrow")).color,
+    structureButton: getComputedStyle(document.querySelector('.dashboard-map-region-switch button[aria-pressed="true"]')).backgroundColor,
+    railButton: getComputedStyle(document.querySelector(".build-structure-list .build-tree-caret")).backgroundColor,
     panelToggle: getComputedStyle(document.querySelector(".dashboard-map-toggle")).backgroundColor,
   }));
   expect(buildPaint).toEqual({
@@ -386,7 +394,7 @@ test("Build and Present headings and nested controls shed V2 blue-green paint", 
     workspaceEyebrow: "rgb(85, 90, 85)",
     structureEyebrow: "rgb(85, 90, 85)",
     structureButton: "rgb(44, 56, 61)",
-    railButton: "rgb(250, 246, 236)",
+    railButton: "rgba(0, 0, 0, 0)",
     panelToggle: "rgb(240, 226, 220)",
   });
 
@@ -457,15 +465,15 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Build", exact: true }).click();
     await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-    await expect(page.locator(".build-authoring-layer")).toBeVisible();
-    await expect(page.locator(".dashboard-command-pinned-actions .build-chrono-groups"))
+    const dashboardMap = page.locator(".dashboard-map-panel");
+    await expect(dashboardMap).toBeVisible();
+    await expect(page.locator('[data-context-shelf-entry="chrono-group"]'))
       .toHaveCSS("background-color", style.panelAltPaint);
     const buildChrome = await readChrome(page, {
-      layer: ".build-authoring-layer",
-      structure: ".build-authoring-layer .build-structure-sheet",
-      inspector: ".build-authoring-layer .build-inspector-sheet",
+      layer: ".dashboard-map-panel",
+      structure: ".dashboard-map-panel .build-structure-sheet",
       look: ".dashboard-command-pinned-actions .dashboard-look-trigger",
-      chronoGroups: ".dashboard-command-pinned-actions .build-chrono-groups",
+      chronoGroups: '[data-context-shelf-entry="chrono-group"]',
     });
     expect(buildChrome.layer).toMatchObject({
       backgroundColor: style.panelPaint,
@@ -473,14 +481,22 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
       borderTopColor: style.borderPaint,
       color: style.textPaint,
     });
-    for (const surface of [buildChrome.structure, buildChrome.inspector]) {
-      expect(surface).toMatchObject({
-        backgroundColor: style.panelAltPaint,
-        borderRadius: style.panelRadius,
-        borderTopColor: style.borderPaint,
-        color: style.textPaint,
-      });
-    }
+    expect(buildChrome.structure).toMatchObject({
+      backgroundColor: style.panelAltPaint,
+      borderRadius: style.panelRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
+    await dashboardMap.getByRole("button", { name: "Inspector", exact: true }).click();
+    const inspectorChrome = await readChrome(page, {
+      inspector: ".dashboard-map-panel .build-inspector-sheet",
+    });
+    expect(inspectorChrome.inspector).toMatchObject({
+      backgroundColor: style.panelAltPaint,
+      borderRadius: style.panelRadius,
+      borderTopColor: style.borderPaint,
+      color: style.textPaint,
+    });
     for (const control of [buildChrome.look, buildChrome.chronoGroups]) {
       expect(control).toMatchObject({
         backgroundColor: style.panelAltPaint,

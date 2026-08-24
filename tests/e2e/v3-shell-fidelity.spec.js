@@ -165,13 +165,11 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   const title = editor.getByLabel("Chart title");
   await title.fill("Draft survives crown navigation");
 
-  await crownPages.getByRole("button", { name: "Socio-economic", exact: true }).click();
+  const blockedPage = crownPages.getByRole("button", { name: "Socio-economic", exact: true });
+  await expect(blockedPage).toBeDisabled();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "biomedical");
   await expect(editor).toHaveCount(1);
   await expect(title).toHaveValue("Draft survives crown navigation");
-  await expect(page.getByRole("alert")).toContainText(
-    "Finish or cancel the open chart editor before changing Page.",
-  );
 
   await editChart.focus();
   await page.keyboard.press("Enter");
@@ -179,7 +177,8 @@ test("dirty Build chart blocks crown Page navigation until the draft resolves", 
   await expect(title).toHaveValue("Draft survives crown navigation");
   await editor.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(editor).toHaveCount(0);
-  await crownPages.getByRole("button", { name: "Socio-economic", exact: true }).click();
+  await expect(blockedPage).toBeEnabled();
+  await blockedPage.click();
   await expect(frame).toHaveAttribute("data-canonical-page-id", "socio_economic");
 });
 
@@ -199,22 +198,22 @@ test("shared Page row pins only the accepted View and Build actions", async ({ p
   await page.getByLabel("Dashboard mode")
     .getByRole("button", { name: "Build", exact: true })
     .click();
-  await expect(pinned.getByRole("button", { name: "Add Page", exact: true }))
+  const anchoredPages = page.locator('[data-build-page-navigation="anchored"]');
+  await expect(anchoredPages.getByRole("button", { name: "Add page", exact: true }))
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Dashboard look", exact: true }))
     .toHaveCount(1);
   await expect(pinned.getByRole("button", { name: "Dashboard map", exact: true }))
     .toHaveCount(1);
-  await expect(pinned.getByRole("button", { name: "Chrono Groups", exact: true }))
-    .toHaveCount(1);
-  await expect(pinned.getByRole("button")).toHaveCount(4);
+  await expect(pinned.getByRole("button")).toHaveCount(2);
   await expect(pinned.getByRole("button", { name: "Chrono view", exact: true }))
     .toHaveCount(0);
   await expect(pinned.getByRole("button", { name: "Compare charts", exact: true }))
     .toHaveCount(0);
-  await expect(page.locator(".build-page-navigation .build-add-page")).toHaveCount(0);
+  await expect(pinned.getByRole("button", { name: "Add page", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Choose a layout for this device" })).toHaveCount(0);
 
-  await pinned.getByRole("button", { name: "Add Page", exact: true }).click();
+  await anchoredPages.getByRole("button", { name: "Add page", exact: true }).click();
   await expect(page.locator(".dashboard-command-page-scroller")
     .getByRole("button", { name: "New page", exact: true }))
     .toHaveCount(1);
@@ -227,8 +226,8 @@ test("repeated public Add Page requests use current dashboard state and unique I
     .getByRole("button", { name: "Build", exact: true })
     .click();
 
-  const pinned = page.locator('[data-command-crown-pinned-actions="true"]');
-  const addPage = pinned.getByRole("button", { name: "Add Page", exact: true });
+  const addPage = page.locator('[data-build-page-navigation="anchored"]')
+    .getByRole("button", { name: "Add page", exact: true });
   const frame = page.locator(".canonical-dashboard-frame");
   const crownPages = page.locator(".dashboard-command-page-scroller");
 
@@ -442,14 +441,11 @@ test("denied Dashboard Look and appearance writes remain live with session-only 
   );
 });
 
-test("denied dashboard and device-layout writes remain usable with session-only feedback", async ({ page }) => {
+test("denied dashboard writes remain usable with session-only feedback", async ({ page }) => {
   await page.addInitScript(() => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function denyConfigurationPersistence(key, value) {
-      if (
-        key === "simex-dashboard-config-v3-three-mode-v1"
-        || key === "simex-dashboard-device-layout-v3"
-      ) {
+      if (key === "simex-dashboard-config-v3-three-mode-v1") {
         throw new DOMException("Storage denied", "SecurityError");
       }
       return setItem.call(this, key, value);
@@ -470,49 +466,6 @@ test("denied dashboard and device-layout writes remain usable with session-only 
   await expect(page.locator(".app-persistence-notice")).toContainText(
     "Dashboard changes are applied for this session but cannot be retained after reload.",
   );
-
-  const layout = page.getByRole("group", { name: "Choose a layout for this device" });
-  await layout.getByRole("button", { name: "Tablet", exact: true }).click();
-  await expect(layout.getByRole("button", { name: "Tablet", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".app-persistence-notice")).toContainText(
-    "Device layout is applied for this session but cannot be retained after reload.",
-  );
-});
-
-test("device-layout quota keeps the live choice and reports storage-full without a page error", async ({ page }) => {
-  const pageErrors = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.addInitScript(() => {
-    const setItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function exhaustDeviceLayoutStorage(key, value) {
-      if (key === "simex-dashboard-device-layout-v3") {
-        throw new DOMException("Storage quota exceeded", "QuotaExceededError");
-      }
-      return setItem.call(this, key, value);
-    };
-  });
-  await page.setViewportSize({ width: 1200, height: 900 });
-  await page.goto("/");
-  await page.getByLabel("Dashboard mode")
-    .getByRole("button", { name: "Build", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
-
-  const layout = page.getByRole("group", { name: "Choose a layout for this device" });
-  const tablet = layout.getByRole("button", { name: "Tablet", exact: true });
-  await tablet.click();
-
-  await expect(tablet).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".app-persistence-notice")).toContainText(
-    "Browser storage is full. Device layout is applied for this session but cannot be retained after reload.",
-  );
-  await expect(page.locator(".app-persistence-notice")).not.toHaveText(
-    "Device layout is applied for this session but cannot be retained after reload.",
-  );
-  await page.evaluate(() => new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
-  }));
-  expect(pageErrors).toEqual([]);
 });
 
 test("look drawer phone sheet", async ({ page }) => {
@@ -585,21 +538,22 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(buildNotice.getByRole("button", { name: "Switch to View", exact: true }))
     .toHaveCount(1);
   await expect(workspace).toHaveCount(1);
-  await expect(chartDraft).toBeEnabled();
-  await expect(saveChanges).toBeEnabled();
+  await expect(workspace).toBeHidden();
+  await expect(page.locator('.app-frame[data-dashboard-mode="build"] button:visible')).toHaveCount(1);
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await expect(layoutDraft).toHaveText(layoutDraftValue);
-  await expect(chartDraft).toBeFocused();
+  await expect(page.locator(
+    '.build-tree-item-wrap[aria-label="Phone-preserved Biomedical layout"] > .build-tree-row .build-tree-label',
+  )).toHaveText(layoutDraftValue);
   await expect(target).toHaveAttribute("data-build-placement-id", "bio_confirmed_cases");
   await expect(target).toHaveClass(/\bselected\b/);
-  expect(await page.evaluate(() => window.scrollY)).toBe(before.scrollY);
 
   await page.setViewportSize({ width: 1200, height: 900 });
   await expect(buildNotice).toBeHidden();
   await expect(workspace).toHaveCount(1);
+  await expect(workspace).toBeVisible();
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
-  await expect(layoutDraft).toHaveText(layoutDraftValue);
   await expect(chartDraft).toBeFocused();
+  await expect(layoutDraft).toHaveText(layoutDraftValue);
   await expect(target).toHaveClass(/\bselected\b/);
   const after = await page.evaluate(() => {
     const targetElement = document.querySelector('[data-build-placement-id="bio_confirmed_cases"]');
@@ -625,6 +579,8 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   );
   await expect(chartDraft).toHaveValue("Phone-preserved confirmed cases");
 
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await expect(workspace).toBeVisible();
   await editChart.focus();
   await page.keyboard.press("Enter");
   await expect(editor).toBeVisible();
@@ -635,6 +591,8 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
   await expect(renamedPage).toHaveAttribute("aria-expanded", "false");
   await renamedPage.getByRole("button", { name: `Expand ${layoutDraftValue}`, exact: true }).click();
   await expect(renamedPage).toHaveAttribute("aria-expanded", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(buildNotice).toBeVisible();
   await buildNotice.getByRole("button", { name: "Switch to View", exact: true }).click();
   await expect(appFrame).toHaveAttribute("data-dashboard-mode", "view");
 
@@ -642,13 +600,9 @@ test("best-effort phone banner preserves state and leaves Present operable", asy
     .getByRole("button", { name: "Present", exact: true });
   await presentMode.click();
   const presentWorkspace = page.locator(".present-workspace");
-  await expect(page.locator('[data-phone-mode-notice="present"]')).toBeVisible();
+  const presentNotice = page.locator('[data-phone-mode-notice="present"]');
+  await expect(presentNotice).toBeVisible();
   await expect(presentWorkspace).toHaveCount(1);
-  await expect(presentWorkspace.getByLabel("Current page")).toHaveCount(0);
-  const blackout = presentWorkspace.getByRole("button", { name: "Blackout", exact: true });
-  const restore = presentWorkspace.getByRole("button", { name: "Restore", exact: true });
-  await expect(blackout).toBeEnabled();
-  await blackout.click();
-  await expect(blackout).toBeDisabled();
-  await expect(restore).toBeEnabled();
+  await expect(presentWorkspace).toBeHidden();
+  await expect(presentNotice.getByRole("button", { name: "Switch to View", exact: true })).toBeVisible();
 });

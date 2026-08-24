@@ -211,7 +211,7 @@
 }
 
 .build-header > span {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -284,17 +284,29 @@
   width: 44px;
 }
 
-.build-page-command-rail {
-  display: grid;
-  flex: 0 0 56px;
-  gap: 2px;
-  grid-template-rows: repeat(3, 1fr);
+.build-page-action-trigger {
+  flex: 0 0 auto;
+  min-height: var(--simex-control-min, 44px);
 }
 
-.dashboard-command-page-scroller .build-page-command-rail button {
-  font-size: 10px;
-  min-height: 0;
-  padding: 2px 5px;
+.build-page-action-menu {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-surface-radius, 10px);
+  box-shadow: var(--simex-style-panel-shadow);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  position: fixed;
+  width: 220px;
+  z-index: 1210;
+}
+
+.build-page-action-menu button {
+  justify-content: flex-start;
+  min-height: var(--simex-control-min, 44px);
+  text-align: left;
+  width: 100%;
 }
 
 .build-page-add-pinned {
@@ -315,7 +327,7 @@
   background: var(--simex-surface-panel, #fff);
   border: 1px solid var(--simex-border-strong, #9aa9b5);
   border-radius: 8px;
-  box-shadow: 0 14px 40px rgb(8 34 74 / 22%);
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -365,7 +377,11 @@
   align-items: stretch;
   display: grid;
   gap: 12px 16px;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  grid-template-columns:
+    minmax(210px, 0.9fr)
+    minmax(210px, 0.9fr)
+    minmax(300px, 1.15fr)
+    minmax(330px, 1.25fr);
 }
 
 .build-command-group {
@@ -411,8 +427,7 @@
 }
 
 .build-command-group--session .build-delete-dashboard-content {
-  flex: 1 0 100%;
-  margin-top: 2px;
+  flex: 1 1 auto;
 }
 
 .build-command-group__label {
@@ -455,13 +470,21 @@
 }
 
 .build-command-group[data-build-command-group="package"] button {
-  flex: 1 1 190px;
+  flex: 1 1 116px;
   min-width: 0;
+}
+
+.build-command-group--session .build-command-group__controls {
+  flex-wrap: nowrap;
 }
 
 .build-command-group button,
 .build-command-status-rail button {
+  font-size: 0.875rem;
+  line-height: 1.2;
   min-height: 44px;
+  padding: 8px 10px;
+  white-space: nowrap;
 }
 
 .build-command-status-rail {
@@ -536,10 +559,10 @@
 }
 
 .build-operation-error {
-  background: #fff4f4;
-  border: 1px solid #d37777;
+  background: var(--simex-error-soft);
+  border: 1px solid var(--simex-error);
   border-radius: 8px;
-  color: #8f1d2c;
+  color: var(--simex-error);
   margin: 0;
   padding: 10px 12px;
 }
@@ -562,8 +585,8 @@
 
 .build-side-sheet,
 .build-live-canvas {
-  background: rgb(255 255 255 / 94%);
-  border: 1px solid #d8e2ec;
+  background: color-mix(in srgb, var(--simex-surface-panel) 94%, transparent);
+  border: 1px solid var(--simex-border-subtle);
   border-radius: 10px;
   min-width: 0;
 }
@@ -779,7 +802,7 @@
 }
 
 .build-inspector label {
-  color: #49627a;
+  color: var(--simex-text-muted);
   display: grid;
   font-size: 13px;
   font-weight: 700;
@@ -788,6 +811,11 @@
 
 .build-inspector input,
 .build-inspector textarea {
+  background: var(--simex-surface-panel);
+  border: 1px solid var(--simex-border-strong);
+  border-radius: var(--simex-style-control-radius, 6px);
+  color: var(--simex-text-strong);
+  min-height: var(--simex-control-min, 44px);
   width: 100%;
 }
 
@@ -808,7 +836,7 @@
 }
 
 .build-chrono-group-summary dt {
-  color: #49627a;
+  color: var(--simex-text-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -1691,7 +1719,7 @@
 .dashboard-map-panel {
   background: var(--simex-surface-panel);
   border: 1px solid var(--simex-border-subtle);
-  box-shadow: 0 14px 40px rgb(8 34 74 / 22%);
+  box-shadow: var(--simex-style-panel-shadow);
   display: grid;
   gap: 10px;
   /* Follow the command crown until it scrolls away, then use the full viewport. */

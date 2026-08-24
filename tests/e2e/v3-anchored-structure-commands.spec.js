@@ -17,7 +17,8 @@ test.beforeEach(async ({ page, request }) => {
 
 test("anchored Page and Section commands preview and discard through the live layout draft", async ({ page }) => {
   const navigation = page.locator('[data-build-page-navigation="anchored"]');
-  await expect(navigation.locator('[aria-label="Biomedical Page commands"]')).toBeVisible();
+  await navigation.getByRole("button", { name: "Page actions for Biomedical", exact: true }).click();
+  await expect(navigation.getByRole("group", { name: "Biomedical Page actions", exact: true })).toBeVisible();
   await navigation.getByRole("button", { name: "Edit Page Biomedical" }).click();
   const orbit = page.getByLabel("Page Orbit for Biomedical");
   await expect(orbit.getByRole("button")).toHaveText(["Rename Page", "Merge Page", "Remove Page", "Close"]);

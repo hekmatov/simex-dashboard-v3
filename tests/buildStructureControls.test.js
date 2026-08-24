@@ -9,7 +9,7 @@ const pageNavigationModule = await vite.ssrLoadModule("/src/components/build/Bui
 const structureRailModule = await vite.ssrLoadModule("/src/components/build/BuildStructureRail.jsx").catch(() => null);
 await vite.close();
 
-test("Build Page navigation keeps draggable tabs and exposes the accepted active-Page command rail", () => {
+test("Build Page navigation keeps draggable tabs and exposes one active-Page actions trigger", () => {
   assert.equal(typeof pageNavigationModule?.default, "function");
   const html = renderToStaticMarkup(React.createElement(pageNavigationModule.default, {
     pages: [{ id: "home", label: "Home" }, { id: "biomedical", label: "Biomedical" }],
@@ -19,7 +19,8 @@ test("Build Page navigation keeps draggable tabs and exposes the accepted active
   }));
   assert.match(html, /class="build-page-tab-scroller"[\s\S]*Home[\s\S]*Biomedical/);
   assert.match(html, /draggable="true"/);
-  assert.match(html, /Biomedical Page commands[\s\S]*Edit Page Biomedical[\s\S]*Move Biomedical earlier[\s\S]*Move Biomedical later/);
+  assert.match(html, /Page actions for Biomedical/);
+  assert.doesNotMatch(html, /Biomedical Page commands/);
   assert.match(html, /build-page-add-pinned/);
 });
 

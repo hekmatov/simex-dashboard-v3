@@ -80,11 +80,11 @@ export default function BuildCommandHeader({
         <section className="build-command-group" data-build-command-group="package" aria-label="Dashboard package commands">
           <strong className="build-command-group__label">Dashboard package</strong>
           <div className="build-command-group__controls">
-            <button type="button" className="secondary" disabled={locked} onClick={onUploadPackage}>
-              Upload Dashboard Package
+            <button type="button" className="secondary" aria-label="Upload Dashboard Package" disabled={locked} onClick={onUploadPackage}>
+              Upload package
             </button>
-            <button type="button" className="secondary" disabled={packageDownloadDisabled} onClick={onDownloadPackage}>
-              Download Dashboard Package
+            <button type="button" className="secondary" aria-label="Download Dashboard Package" disabled={packageDownloadDisabled} onClick={onDownloadPackage}>
+              Download package
             </button>
           </div>
         </section>
@@ -97,10 +97,11 @@ export default function BuildCommandHeader({
             <button
               type="button"
               className="danger build-delete-dashboard-content"
+              aria-label="Delete dashboard content"
               disabled={deleteDashboardContentDisabled}
               onClick={onDeleteDashboardContent}
             >
-              Delete dashboard content
+              Clear dashboard…
             </button>
           </div>
         </section>
