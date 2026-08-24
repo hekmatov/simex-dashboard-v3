@@ -1,6 +1,6 @@
 # V3 Step 7S — Static Content Panels Design Specification
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527` (design only; not implemented)
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with user sketch-review amendments recorded 2026-08-24 (design only; not implemented)
 **Design baseline:** committed Step 7 HEAD `e5419142e8b56b6c2dc56570a961048960a31027`
 **Design branch:** `codex/static-content-panels-design`
 **Scope:** discovery, specification, and disposable prototypes only
@@ -219,6 +219,7 @@ Viewer zoom/pan is not persisted in the image source and does not change crop:
 - button, keyboard, Ctrl+wheel, and accessible reset controls;
 - pan is available only above 1× and is clamped so the saved image cannot be lost completely off-canvas;
 - each ordinary panel/fullscreen viewer owns its transient state and resets when that surface closes or the saved source changes;
+- Image actions are hidden at rest in Build, View, and fullscreen, then reveal without layout shift on pointer hover, keyboard focus within the Image surface, or an explicit touch/tap reveal; Audience never reveals controls;
 - passive Audience disables viewer zoom, pan, and all controls.
 
 The two reset actions are named distinctly: **Reset view** for transient zoom/pan and **Reset image** for the authoring transform draft.
@@ -283,10 +284,10 @@ If steps 1–4 fail, the old saved state remains authoritative and staged bytes 
 | Surface | Free text | Image |
 |---|---|---|
 | Add flow | Add static content | Add static content, existing type ID |
-| Build panel | Canonical render + Edit | Canonical render + Edit; viewer controls may be active |
+| Build panel | Canonical render + Edit | Canonical render; Image authoring actions reveal on hover, focus within, or touch |
 | Build preview | Same production renderer | Same production renderer including saved crop/rotation/fit |
-| View | Canonical render, internal scrolling | Canonical render, transient viewer zoom/pan |
-| Fullscreen | Canonical render, larger viewport | Canonical render, transient viewer zoom/pan |
+| View | Canonical render, internal scrolling | Canonical render; transient viewer zoom/pan actions reveal on hover, focus within, or touch |
+| Fullscreen | Canonical render, larger viewport | Canonical render; transient viewer zoom/pan actions reveal on hover, focus within, or touch |
 | Present composer | Not listed/selectable | Listed as a non-temporal static item |
 | 16:9 Audience | Never sent or rendered | Passive saved image; no controls; isolated failure state |
 
@@ -318,17 +319,17 @@ A parser, transform utility, schema record, catalogue entry, isolated component,
 
 ## Sketch decisions
 
-The proposed interactive sketches are:
+The accepted interactive sketches are:
 
 - `021-free-text-authoring` — Variant A, wide source/live preview with narrow tabs, last-valid stale-preview handling, and dirty Keep/Discard.
-- `022-image-authoring` — Variant A, stage-3 source/accessibility/nondestructive transforms followed by passive stage-4 Preview & add.
-- `023-static-panels-build-view` — Variant A, canonical saved panels, reversible Build compression, active keyboard Image controls in View/fullscreen, and surface-specific failures.
+- `022-image-authoring` — user-selected Variant B, guided stage-3 source/accessibility/nondestructive-transform sections followed by passive stage-4 Preview & add.
+- `023-static-panels-build-view` — Variant A, canonical saved panels, reversible Build compression, Image actions hidden at rest and revealed on hover/focus/touch in active surfaces, and surface-specific failures.
 - `024-image-audience-rendering` — Variant A, passive Image plus temporal chart in 16:9 Audience; Free text absent.
 
 They are disposable design evidence, not production components. Detailed acceptance and rejection records are in the Step 7S audit directory.
 
 ## Approval gate
 
-The V3 Design master approved this specification without deviations at `e159db11593f784459e50f7707d93987fa996527`. That approval binds the separate static workflow, Free-text Audience exclusion, non-temporal Image Present model, sketch winners, and all fidelity requirements as design requirements only. It does not report implementation. Production remains blocked until Step 7 acceptance and the post-Step-7 ownership gate pass.
+The V3 Design master approved this specification without deviations at `e159db11593f784459e50f7707d93987fa996527`. During the subsequent interactive sketch review, the user selected 021=A, 022=B, 023=A with hidden-at-rest Image actions, and 024=A. Those amendments supersede only the affected sketch presentation and interaction details; all other master-approved invariants remain binding design requirements. This does not report implementation. Production remains blocked until Step 7 acceptance and the post-Step-7 ownership gate pass.
 
 Even after design approval, production execution remains blocked until Step 7 is accepted and the implementation plan’s hard ownership-resolution gate commits an exact inventory from that final Step 7 commit. Every provisional/generic production owner in the fidelity matrix and ledger must be replaced by exact source/function/CSS/test ownership before implementation begins.

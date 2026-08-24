@@ -1,6 +1,6 @@
 # Static Content Sketch Decision and Rejection Record
 
-**Status:** Approved without deviations by V3 Design master at `e159db11593f784459e50f7707d93987fa996527` (design only; not implemented)
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with user-directed sketch deviations recorded 2026-08-24 (design only; not implemented)
 **Sketches:** `.planning/sketches/021-*` through `024-*`
 
 ## Comparative decision
@@ -8,15 +8,15 @@
 | Sketch | Recommended winner | Accepted design invariant | Rejected alternatives |
 |---|---|---|---|
 | 021 Free-text authoring | Variant A — split source/live preview when wide, Source/Preview tabs when narrow | Keep Add chart at six stages; text authoring lives at stage 3; invalid source retains a visibly stale last-valid preview and cannot progress; dirty Keep/Discard preserves or restores the exact pair/focus. | B, preview-first: too little room for QMD source and diagnostics. C, focus tabs at all widths: hides the continuous wide comparison; tabs are accepted only at the narrow breakpoint. |
-| 022 Image authoring | Variant A — stage-3 canvas + inspector followed by passive stage-4 review | Existing `image` identity; stage 3 owns source/accessibility/transforms; stage 4 contains only canonical passive result, validation/portability summary, and atomic Add; dirty Keep/Discard is explicit. | B, guided stacked sections: separates crop consequence from controls. C, focused crop dialog: creates nested focus/recovery and suggests independent saves. |
-| 023 Saved Build/View panels | Variant A — canonical saved panels with Build-only authoring and active View/fullscreen Image tools | Build chrome may transiently compress/reposition but never mutate saved layout; close restores Build UI state. Image tools are keyboard-discoverable in View/fullscreen; failure actions are surface-specific. | B, strong nested framing: reduces useful area. C, dense bulletin: changes reading hierarchy and makes static content secondary. |
+| 022 Image authoring | Variant B — guided stage-3 tool sections followed by passive stage-4 review | Existing `image` identity; stage 3 owns source/accessibility/transforms in guided sections with the crop preview immediately above; stage 4 contains only canonical passive result, validation/portability summary, and atomic Add; dirty Keep/Discard is explicit. | A, canvas + inspector: originally approved, then superseded by the user’s preference for clearer guided progression. C, focused crop dialog: creates nested focus/recovery and suggests independent saves. |
+| 023 Saved Build/View panels | Variant A — canonical saved panels with intent-revealed Image actions | Build chrome may transiently compress/reposition but never mutate saved layout; close restores Build UI state. Image actions are hidden at rest and reveal without layout shift on hover, focus within, or touch/tap; failure actions are surface-specific and Audience remains passive. | B, strong nested framing: reduces useful area. C, dense bulletin: changes reading hierarchy and makes static content secondary; its changes are density parameters rather than a materially separate composition. |
 | 024 Passive 16:9 Audience | Variant A — Image and temporal chart share the composition; Free text is absent | Image is a non-temporal selected Present item; Audience applies saved transforms passively; image failure remains cell-scoped; chart time context continues independently. | B, send Free text too: explicitly outside the accepted requirement and adds text-responsive complexity to Audience. C, force Image into a Scene: violates current Scene parent/group/frame invariants and makes a static asset temporal by fiction. |
 
 ## Interactive states exercised
 
 - 021: authored headings, table, blockquote, callout, and fenced code; a blocked script retains the last-valid preview with a stale marker and disables progress; narrow Variant A exposes Source/Preview tabs; dirty Cancel has Keep editing/Discard.
-- 022: stage 3 contains source/accessibility/crop/rotation/fit and dirty Cancel; Keep preserves the whole draft, while Discard restores every source/asset/accessibility/transform/fit/focus field, stage, render, and authoring focus from the saved pair; stage 4 remains passive.
-- 023: Build mode exposes authoring actions and reversible transient canvas compression; View/fullscreen expose keyboard-focusable zoom/pan/reset; Build, ordinary View, and fullscreen failures show their exact surface-specific action inventories, including fullscreen Retry.
+- 022: selected Variant B presents source/accessibility/crop/rotation/fit as guided stage-3 sections and retains dirty Cancel; Keep preserves the whole draft, while Discard restores every source/asset/accessibility/transform/fit/focus field, stage, render, and authoring focus from the saved pair; stage 4 remains passive.
+- 023: Build mode exposes authoring actions and reversible transient canvas compression; Image actions are absent at rest and reveal on pointer hover, keyboard focus within, or touch/tap; Build, ordinary View, and fullscreen failures show their exact surface-specific action inventories, including fullscreen Retry.
 - 024: advancing the chart clock changes the temporal frame while Image revision 7 remains unchanged; forced asset failure replaces only the image cell and preserves the sibling chart/passive 16:9 composition.
 
 ## UI/UX comparative input
@@ -37,6 +37,10 @@ The V3 Design master selected **Accepted as proposed** at `e159db11593f784459e50
 - **Rejected** — retain the sketch and rationale as discovery evidence; do not delete it.
 
 Production implementation may use these sketches as behavioral evidence only after master approval and Step 7 acceptance.
+
+## Post-approval user sketch review
+
+The user completed the interactive 021–024 review on 2026-08-24 and selected **021=A, 022=B, 023=A, 024=A**. Sketch 023 A carries the explicit requirement that Image actions are hidden at rest and revealed on pointer hover. Keyboard focus-within and touch/tap reveal are binding equivalent paths so the visual simplification does not remove actions for non-hover input. These are accepted design deviations from the original no-deviation master verdict; affected fidelity rows and retained browser tasks are updated in lockstep.
 
 ## Master review rejection history
 

@@ -2,8 +2,8 @@
 sketch: 022
 name: image-authoring
 question: "How should Image creation and editing separate saved nondestructive transforms from transient viewer zoom while preserving asset recovery and accessibility?"
-status: Approved by V3 Design master; disposable design evidence only
-winner: "A — Canvas + Transform Inspector (recommended)"
+status: Approved by V3 Design master, amended by user sketch review; disposable design evidence only
+winner: "B — Guided Tool Sections (selected)"
 tags: [static-content, image, crop, rotation, alt-text, assets, build]
 ---
 
@@ -19,8 +19,8 @@ Open `.planning/sketches/022-image-authoring/index.html` in a browser.
 
 ## Variants
 
-- **A: Canvas + Transform Inspector — recommended.** Stage 3 Content owns a large crop canvas plus source, accessibility, and saved-transform controls. Stage 4 is a passive canonical final preview and atomic Add summary.
-- **B: Guided Tool Sections — rejected.** Source, accessibility, transform, and fit are stacked sequentially; simpler but the crop consequence is less continuously visible.
+- **A: Canvas + Transform Inspector — superseded.** Stage 3 Content owns a large crop canvas plus source, accessibility, and saved-transform controls. Stage 4 is a passive canonical final preview and atomic Add summary.
+- **B: Guided Tool Sections — selected.** Source, accessibility, transform, and fit are presented as guided sections in stage 3, with the crop preview kept immediately above them; stage 4 remains the passive canonical final preview and atomic Add summary.
 - **C: Focused Crop Dialog — rejected.** Crop becomes a nested task; clearer at small sizes but adds focus/recovery complexity and hides alt/fit consequences.
 
 ## Fixed contract
@@ -40,7 +40,7 @@ Open `.planning/sketches/022-image-authoring/index.html` in a browser.
 
 ## Rejection record
 
-- **B** is rejected because the crop result and transform controls separate vertically at realistic editor density.
+- **A** was the original master-approved direction but was superseded during the user’s interactive sketch review in favor of B’s clearer guided progression.
 - **C** is rejected because a nested modal complicates draft recovery and makes image replacement, alt text, crop, and fit feel like independent saves when they must commit atomically.
 
-Variant A was accepted without deviations by the V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; this sketch is not production implementation.
+Variant A was accepted without deviations by the V3 Design master at `e159db11593f784459e50f7707d93987fa996527`. The user subsequently selected Variant B during the interactive sketch review on 2026-08-24. The fixed atomicity, stage ownership, accessibility, and recovery contract is unchanged; this sketch is not production implementation.

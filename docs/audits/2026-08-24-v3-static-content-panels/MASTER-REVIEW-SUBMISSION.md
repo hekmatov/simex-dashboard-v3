@@ -4,6 +4,10 @@
 
 **Approved without design deviations** at discovery commit `e159db11593f784459e50f7707d93987fa996527`. All ten requested decisions and all 36 fidelity rows are binding accepted design requirements. They are not implemented functionality. Production work remains blocked until Step 7 is accepted and the post-Step-7 ownership inventory is committed and synchronized; that gate prohibits production code, configuration, dependencies, and tests before it passes.
 
+### Subsequent user sketch-review amendments
+
+On 2026-08-24 the user interactively reviewed all four sketches and selected **021=A, 022=B, 023=A, 024=A**. For 023 A, Image actions must be hidden at rest and reveal on pointer hover, keyboard focus within, or explicit touch/tap; Audience remains control-free. These accepted amendments supersede only the affected sketch winner/presentation details and are synchronized into the specification, decision record, fidelity matrix, implementation ledger, manifest, and disposable prototypes. They do not authorize implementation.
+
 ## Review request — resolved
 
 The corrected Step 7S static-content design was submitted for approval, approval with recorded deviations, or rejection. The final verdict is recorded above. It does not authorize production implementation until Step 7 is accepted and an implementation branch is created from its final accepted commit.
@@ -27,7 +31,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 5. Accept Free text in Build/View/fullscreen only, with no Present/Audience selection or protocol support.
 6. Accept Image as a direct non-temporal Present composition item and passive Audience cell.
 7. Accept the exact version trace: dashboard schema v4 and bundle v4; chart config remains v3 unless implementation proves a chart-shape change and an accepted deviation records it.
-8. Accept sketch Variant A for 021–024 without deviations.
+8. Accept the final reviewed sketch set: 021=A, 022=B, 023=A with intent-revealed Image actions, and 024=A; preserve the original master verdict and subsequent user deviations as provenance.
 9. Accept the user-selected application-session-only unsaved-draft lifetime recorded below.
 10. Accept the hard post-Step-7 ownership-resolution gate: implementation cannot begin until exact source/function/CSS/test ownership is inspected from the final accepted Step 7 commit, committed in an inventory, and synchronized into the fidelity matrix and 36-row ledger.
 
