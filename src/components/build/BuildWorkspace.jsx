@@ -244,7 +244,11 @@ export default function BuildWorkspace({
         return;
       }
       if (attempts === 0) {
-        target.scrollIntoView({ block: "center", inline: "nearest", behavior: revealRequest.behavior });
+        target.scrollIntoView({
+          block: selection.kind === "section" ? "start" : "center",
+          inline: "nearest",
+          behavior: revealRequest.behavior,
+        });
       }
       attempts += 1;
       const rect = target.getBoundingClientRect();
