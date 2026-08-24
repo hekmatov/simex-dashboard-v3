@@ -1650,13 +1650,13 @@
   box-shadow: 0 14px 40px rgb(8 34 74 / 22%);
   display: grid;
   gap: 10px;
-  /* Clear the 52px mode, 58px Page, and 52px context header rows. */
-  max-height: calc(100vh - 186px);
+  /* Follow the command crown until it scrolls away, then use the full viewport. */
+  max-height: calc(100vh - var(--dashboard-map-top, 174px) - 12px);
   overflow: auto;
   padding: 10px;
   position: fixed;
   right: 12px;
-  top: 174px;
+  top: var(--dashboard-map-top, 174px);
   width: min(380px, calc(100vw - 24px));
   z-index: 40;
 }
