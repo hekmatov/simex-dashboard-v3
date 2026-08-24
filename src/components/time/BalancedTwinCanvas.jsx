@@ -187,6 +187,11 @@ function sceneOrbitAnchorId(board, chartId) {
 function layoutOptions(count) {
   if (count <= 1) return [{ value: "single", label: "Single focus" }];
   if (count === 2) return [{ value: "vertical-divider", label: "Vertical divider" }, { value: "horizontal-divider", label: "Horizontal divider" }];
-  if (count === 3) return [{ value: "large-left", label: "Large left" }, { value: "large-top", label: "Large top" }];
+  if (count === 3) return [
+    { value: "large-top", label: "Large top" },
+    { value: "large-bottom", label: "Large bottom" },
+    { value: "large-left", label: "Large left" },
+    { value: "large-right", label: "Large right" },
+  ];
   return [{ value: "grid-2x2", label: "2 × 2" }];
 }

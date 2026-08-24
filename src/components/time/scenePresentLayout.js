@@ -3,7 +3,9 @@ const DISPLAY_LAYOUT_BY_SCENE_LAYOUT = Object.freeze({
   "vertical-divider": Object.freeze({ count: 2, layout: "sideBySide" }),
   "horizontal-divider": Object.freeze({ count: 2, layout: "overUnder" }),
   "large-left": Object.freeze({ count: 3, layout: "leftFocus" }),
+  "large-right": Object.freeze({ count: 3, layout: "rightFocus" }),
   "large-top": Object.freeze({ count: 3, layout: "topFocus" }),
+  "large-bottom": Object.freeze({ count: 3, layout: "bottomFocus" }),
   "grid-2x2": Object.freeze({ count: 4, layout: "grid2x2" }),
 });
 

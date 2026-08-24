@@ -14,7 +14,7 @@ const MATCHING_POLICIES = new Set([
 const PRESENT_LAYOUTS = Object.freeze({
   1: ["single"],
   2: ["vertical-divider", "horizontal-divider"],
-  3: ["large-left", "large-top"],
+  3: ["large-top", "large-bottom", "large-left", "large-right"],
   4: ["grid-2x2"],
 });
 const DEFAULT_DATE_POSITION = Object.freeze({
