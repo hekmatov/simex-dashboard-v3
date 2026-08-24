@@ -689,7 +689,7 @@ test("Default page timeline uses every page chart instead of the active Chrono G
   assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;page-member&quot;,&quot;page-ordinary&quot;]}</output>`);
 });
 
-test("All page charts and Group only project different participating chart sets", () => {
+test("visibility scope never turns ordinary Page charts into Chrono participants", () => {
   const rows = [
     { observed: "2027-05-01", cases: 10 },
     { observed: "2027-05-02", cases: 20 },
@@ -746,8 +746,8 @@ test("All page charts and Group only project different participating chart sets"
   ));
 
   assert.match(allPageView, /data-chart-id="scope-member"/);
-  assert.match(allPageView, /data-chart-id="scope-ordinary"/);
-  assert.match(allPage, /&quot;charts&quot;:\[&quot;scope-member&quot;,&quot;scope-ordinary&quot;\]/);
+  assert.doesNotMatch(allPageView, /data-chart-id="scope-ordinary"/);
+  assert.match(allPage, /&quot;charts&quot;:\[&quot;scope-member&quot;\]/);
   assert.match(groupOnly, /&quot;charts&quot;:\[&quot;scope-member&quot;\]/);
 });
 

@@ -1,5 +1,6 @@
 import React from "react";
 
+import { buildChronoCanvasProjection } from "../../charting/time/chronoCanvasProjection.js";
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
@@ -50,13 +51,19 @@ export default function DashboardModeWorkspace({
   const chronoSource = buildMode ? null : playback.activeScene ?? playback.activeGroup;
   const chronoSuspended = !buildMode && playback.playbackView === true
     && (displayState?.displayed_chart_ids?.length ?? 0) > 0;
+  const chronoProjection = !buildMode && playback.playbackView === true && chronoSource
+    ? buildChronoCanvasProjection({
+        activePage,
+        activeGroup: playback.activeGroup,
+        activeScene: playback.activeScene,
+        scope: playback.scope,
+      })
+    : null;
   const chronoSection = !buildMode && playback.playbackView === true && chronoSource
     ? {
         id: chronoSource.id,
         title: chronoSource.name,
-        chartIds: playback.activeScene || playback.scope === "group-only"
-          ? playback.participatingChartIds
-          : pageChartIds(activePage),
+        chartIds: chronoProjection.focusedChartIds,
         scene: playback.activeScene,
         timeContextForChart: playback.timeContextForChart,
       }
@@ -118,6 +125,7 @@ export default function DashboardModeWorkspace({
                 displayState={displayState}
                 multiSelectMode={!buildMode && multiSelectMode}
                 multiPanelIds={buildMode ? [] : multiPanelIds}
+                excludedChartIds={chronoProjection?.hiddenChartIds}
                 chronoSection={chronoSection}
                 geoDataSources={geoDataSources}
                 onNavigate={onActivePageChange}
@@ -134,10 +142,4 @@ export default function DashboardModeWorkspace({
       />
     </div>
   );
-}
-
-function pageChartIds(page) {
-  return (page?.sections ?? []).flatMap((section) => (
-    section.panels ?? []
-  ).map((placement) => (placement.chart ?? placement).id));
 }

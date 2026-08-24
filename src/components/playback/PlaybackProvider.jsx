@@ -118,8 +118,8 @@ export function PlaybackProvider({
   );
   const playing = state.playing === true && canAdvance;
   const participatingMembers = React.useMemo(
-    () => selectParticipatingMembers(activeGroup, activeScene, state.scope, activePageCharts),
-    [activeGroup, activePageCharts, activeScene, state.scope],
+    () => selectParticipatingMembers(activeGroup, activeScene, activePageCharts),
+    [activeGroup, activePageCharts, activeScene],
   );
   const participatingChartIds = React.useMemo(
     () => Object.freeze(participatingMembers.map(({ chartId }) => chartId)),
@@ -500,7 +500,7 @@ export function buildScenePlaybackClock(scene, groupClock, options = {}) {
   return Object.freeze((scene.frames.selectedEpochs ?? []).filter((epochMs) => available.has(epochMs)));
 }
 
-function selectParticipatingMembers(group, scene, scope, charts) {
+function selectParticipatingMembers(group, scene, charts) {
   if (!group) return EMPTY_ARRAY;
   const activePageChartIds = new Set(charts.map(({ id }) => id));
   if (scene) {
@@ -509,13 +509,7 @@ function selectParticipatingMembers(group, scene, scope, charts) {
       ({ chartId }) => selected.has(chartId) && activePageChartIds.has(chartId),
     ));
   }
-  if (scope === "group-only") {
-    return Object.freeze(group.members.filter(({ chartId }) => activePageChartIds.has(chartId)));
-  }
-  const groupMembers = new Map(group.members.map((member) => [member.chartId, member]));
-  return Object.freeze(charts.map((chart) => (
-    groupMembers.get(chart.id) ?? Object.freeze({ chartId: chart.id })
-  )));
+  return Object.freeze(group.members.filter(({ chartId }) => activePageChartIds.has(chartId)));
 }
 
 export function buildDefaultPagePlayback(charts, temporalContext) {

@@ -1,5 +1,6 @@
 import React from "react";
 
+import { buildChronoCanvasProjection } from "../../charting/time/chronoCanvasProjection.js";
 import FullscreenDisplay from "../FullscreenDisplay.jsx";
 import PlaybackSurface from "../playback/PlaybackSurface.jsx";
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
@@ -40,13 +41,19 @@ export default function ViewShell({
     playback.dispatch({ type: "modeExit" });
   }, []);
   const chronoSource = playback.activeScene ?? playback.activeGroup;
+  const chronoProjection = playback.playbackView === true && chronoSource
+    ? buildChronoCanvasProjection({
+        activePage,
+        activeGroup: playback.activeGroup,
+        activeScene: playback.activeScene,
+        scope: playback.scope,
+      })
+    : null;
   const chronoSection = playback.playbackView === true && chronoSource
     ? {
         id: chronoSource.id,
         title: chronoSource.name,
-        chartIds: playback.activeScene || playback.scope === "group-only"
-          ? playback.participatingChartIds
-          : pageChartIds(activePage),
+        chartIds: chronoProjection.focusedChartIds,
       }
     : null;
 
@@ -70,6 +77,7 @@ export default function ViewShell({
               displayState={displayState}
               multiSelectMode={multiSelectMode}
               multiPanelIds={multiPanelIds}
+              excludedChartIds={chronoProjection?.hiddenChartIds}
               chronoSection={chronoSection}
               geoDataSources={geoDataSources}
               onNavigate={onActivePageChange}
@@ -120,10 +128,4 @@ export function sceneNavigationPageId(scene, activePage) {
   const scenePageId = scene?.pageId;
   if (!scenePageId || scenePageId === activePage?.id) return null;
   return scenePageId;
-}
-
-function pageChartIds(page) {
-  return (page?.sections ?? []).flatMap((section) => (
-    section.panels ?? []
-  ).map((placement) => (placement.chart ?? placement).id));
 }

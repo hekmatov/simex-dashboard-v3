@@ -79,7 +79,7 @@ const dashboard = {
   pages: [page],
 };
 
-test("View Chrono relocates one canonical member instance into a top Page section", () => {
+test("All page charts elevates only Chrono members and keeps ordinary charts rendered below", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
     React.createElement(
       PlaybackProvider,
@@ -93,6 +93,7 @@ test("View Chrono relocates one canonical member instance into a top Page sectio
           activeGroupId: "exercise",
           activeIndex: 1,
           playing: false,
+          scope: "all-page",
           speed: 2.5,
           playbackView: true,
         },
@@ -117,13 +118,56 @@ test("View Chrono relocates one canonical member instance into a top Page sectio
   assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
   assert.match(html, /data-dashboard-surface="view"/);
   assert.match(html, /data-panel-id="ordinary-chart"/);
-  assert.ok(
-    html.indexOf("data-chrono-section=\"exercise\"") < html.indexOf("data-panel-id=\"ordinary-chart\""),
-    "Chrono members should be elevated before the ordinary Page canvas",
-  );
+  const chronoSectionIndex = html.indexOf('data-chrono-section="exercise"');
+  const memberIndex = html.indexOf('data-panel-id="member-chart"');
+  const canonicalSectionIndex = html.indexOf('data-canonical-section-id="outbreak"');
+  const ordinaryIndex = html.indexOf('data-panel-id="ordinary-chart"');
+  assert.ok(chronoSectionIndex < memberIndex && memberIndex < canonicalSectionIndex);
+  assert.ok(canonicalSectionIndex < ordinaryIndex);
+  const ordinaryPanel = html.slice(ordinaryIndex, html.indexOf("</article>", ordinaryIndex));
+  assert.match(ordinaryPanel, /data-canonical-plot-id="ordinary-chart"/);
+  assert.doesNotMatch(ordinaryPanel, /chart-status-(?:empty|error)|chart-deferred-placeholder/);
   assert.match(html, /class="playback-controls playback-controls--floating playback-controls--bottom"/);
   assert.match(html, /aria-label="Seconds per frame"/);
   assert.match(html, /type="number"[^>]*aria-label="Seconds per frame"[^>]*value="2\.5"/);
+});
+
+test("Group only omits ordinary Page charts without duplicating Chrono members", () => {
+  const html = withBrowserGlobals(() => renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups,
+        charts: [memberChart, ordinaryChart],
+        loadedData: dashboard.loadedData,
+        profiles: dashboard.datasetProfiles,
+        timezone: dashboard.timezone,
+        initialState: {
+          activeGroupId: "exercise",
+          activeIndex: 1,
+          playing: false,
+          scope: "group-only",
+          speed: 2.5,
+          playbackView: true,
+        },
+      },
+      React.createElement(ViewShell, {
+        activePage: page,
+        dashboard,
+        displayState: { displayed_chart_ids: [], layout: "solo" },
+        companionStatusLabel: "Companion unavailable",
+        iconLanguageStyles: {},
+        geoDataSources: {},
+        onActivePageChange: () => {},
+        onCompareCharts: () => {},
+        onDisplayAction: () => {},
+        onOpenDashboardLook: () => {},
+      }),
+    ),
+  ));
+
+  assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-panel-id="ordinary-chart"/);
 });
 
 test("playback cadence is measured in seconds per frame", () => {
