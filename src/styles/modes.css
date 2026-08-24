@@ -2047,6 +2047,45 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.scene-view-composition-grid {
+  container-name: scene-composition;
+  container-type: inline-size;
+  display: grid;
+  gap: 16px;
+  grid-auto-flow: dense;
+  grid-auto-rows: var(--scene-canonical-row-height, 418px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.scene-view-composition-cell {
+  grid-column: span var(--scene-chart-width);
+  grid-row: span var(--scene-chart-height);
+  min-width: 0;
+  position: relative;
+}
+
+.scene-view-composition-cell > .chart-view-frame {
+  height: 100%;
+  min-height: 0;
+}
+
+.scene-view-composition-cell--missing {
+  align-items: center;
+  background: var(--simex-surface-panel-alt);
+  border: 1px dashed var(--simex-border-strong);
+  color: var(--simex-text-muted);
+  display: flex;
+  justify-content: center;
+  padding: 18px;
+}
+
+@container scene-composition (max-width: 680px) {
+  .scene-view-composition-cell {
+    grid-column: 1 / -1;
+  }
+}
+
 .chrono-group-studio nav button,
 .scene-stage-navigation button {
   min-height: 52px;

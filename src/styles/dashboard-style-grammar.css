@@ -268,7 +268,10 @@
   border-top: 1px solid var(--simex-border-strong);
 }
 
-.app-frame .canonical-dashboard-frame .dashboard-section > .layout-grid {
+.app-frame .canonical-dashboard-frame .dashboard-section > :is(
+  .layout-grid,
+  .scene-view-composition-grid
+) {
   gap: 16px;
   padding: 16px 18px 18px;
 }

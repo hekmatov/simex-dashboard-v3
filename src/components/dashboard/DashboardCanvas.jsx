@@ -6,6 +6,7 @@ import LandingPage, { hasLandingPresentation } from "../LandingPage.jsx";
 import LayoutGrid from "../LayoutGrid.jsx";
 import { SimExIcon } from "../common/SimExIcon.js";
 import SectionStructureCommandDialog from "../build/SectionStructureCommandDialog.jsx";
+import SceneViewCompositionGrid from "../time/SceneViewCompositionGrid.jsx";
 
 export default function DashboardCanvas({
   activePage,
@@ -36,6 +37,9 @@ export default function DashboardCanvas({
           .map((placement) => ({ placement, section }))
       ))
     : [];
+  const chronoMemberCount = chronoSection?.scene
+    ? (chronoSection.scene.members ?? []).length
+    : chronoPlacements.length;
 
   if (!activePage) return null;
   const landingActive = hasLandingPresentation(activePage);
@@ -53,7 +57,7 @@ export default function DashboardCanvas({
           <LandingPage page={activePage} pages={dashboard.pages} onNavigate={onNavigate} />
         ) : (
           <>
-            {chronoPlacements.length > 0 && (
+            {chronoMemberCount > 0 && (
               <section
                 className="dashboard-section chrono-dashboard-section"
                 data-chrono-section={chronoSection.id}
@@ -61,35 +65,44 @@ export default function DashboardCanvas({
                 <div className="section-header">
                   <div className="section-title-block">
                     <h2>{chronoSection.title}</h2>
-                    <p>{chronoPlacements.length} participating chart{chronoPlacements.length === 1 ? "" : "s"}</p>
+                    <p>{chronoMemberCount} participating chart{chronoMemberCount === 1 ? "" : "s"}</p>
                   </div>
                 </div>
-                <LayoutGrid>
-                  {chronoPlacements.map(({ placement }) => {
-                    const chart = placement.chart ?? placement;
-                    return (
-                      <ChartPanel
-                        key={placement.id}
-                        panel={chart}
-                        canonicalPanelId={chart.id}
-                        canonicalPlacementId={placement.id ?? chart.id}
-                        canonicalPlotId={chart.id}
-                        rows={dashboard.loadedData?.[chart.sourceId]}
-                        sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
-                        datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
-                        geoData={geoDataSources[chart.presentation?.map?.geoSource]}
-                        dataSources={dashboard.dataSources}
-                        accessibilityEnabled={accessibilityEnabled}
-                        onDisplayAction={onDisplayAction}
-                        multiSelectMode={multiSelectMode}
-                        isMultiSelected={multiPanelIds.includes(chart.id)}
-                        multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
-                        onToggleMultiPanel={onToggleMultiPanel}
-                        onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
-                      />
-                    );
-                  })}
-                </LayoutGrid>
+                {chronoSection.scene ? (
+                  <SceneViewCompositionGrid
+                    dashboard={dashboard}
+                    scene={chronoSection.scene}
+                    timeContextForChart={chronoSection.timeContextForChart}
+                    surface="view-scene"
+                  />
+                ) : (
+                  <LayoutGrid>
+                    {chronoPlacements.map(({ placement }) => {
+                      const chart = placement.chart ?? placement;
+                      return (
+                        <ChartPanel
+                          key={placement.id}
+                          panel={chart}
+                          canonicalPanelId={chart.id}
+                          canonicalPlacementId={placement.id ?? chart.id}
+                          canonicalPlotId={chart.id}
+                          rows={dashboard.loadedData?.[chart.sourceId]}
+                          sourceState={sourceStateForDashboard(dashboard, chart.sourceId, chart.id)}
+                          datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
+                          geoData={geoDataSources[chart.presentation?.map?.geoSource]}
+                          dataSources={dashboard.dataSources}
+                          accessibilityEnabled={accessibilityEnabled}
+                          onDisplayAction={onDisplayAction}
+                          multiSelectMode={multiSelectMode}
+                          isMultiSelected={multiPanelIds.includes(chart.id)}
+                          multiSelectionIndex={multiPanelIds.indexOf(chart.id) + 1}
+                          onToggleMultiPanel={onToggleMultiPanel}
+                          onStartMultiFullscreenSelection={onStartMultiFullscreenSelection}
+                        />
+                      );
+                    })}
+                  </LayoutGrid>
+                )}
               </section>
             )}
             {(activePage.sections ?? []).map((section, sectionIndex) => {

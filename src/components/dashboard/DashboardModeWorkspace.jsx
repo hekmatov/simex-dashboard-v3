@@ -57,6 +57,8 @@ export default function DashboardModeWorkspace({
         chartIds: playback.activeScene || playback.scope === "group-only"
           ? playback.participatingChartIds
           : pageChartIds(activePage),
+        scene: playback.activeScene,
+        timeContextForChart: playback.timeContextForChart,
       }
     : null;
 
