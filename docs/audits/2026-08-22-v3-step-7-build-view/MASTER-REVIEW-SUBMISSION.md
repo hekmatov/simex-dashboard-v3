@@ -183,3 +183,26 @@ The preceding “Final Step 7 readiness” statement is superseded. Step 7 is pr
 - Present/Audience arrangement findings remain Step 8-owned and were not implemented here.
 
 Focused browser evidence currently passing: Dashboard map/command composition `1/1`; Chrono/Scene content and authoring journey `1/1`. These passing slices do not override the open P1 findings or make Step 7 review-ready.
+
+## Truthful Scene composition correction — 2026-08-24
+
+### Engine implemented
+
+- One validated adapter maps every accepted Scene Present layout to the existing runtime display vocabulary.
+- One deterministic preview projection derives the latest valid authored Scene frame and member time contexts from the existing temporal engines.
+- One transition coordinator applies the saved composition once to the presentation runtime that Present/Audience actually consume. View Focus/Comparison remains independent.
+
+### UI implemented
+
+- Stage 3's Scene View and Present boards render actual configured charts and prepared dashboard data rather than title-only placeholders.
+- Active-Scene View shares the Stage 3 Scene composition renderer and reproduces `scene.members` order and width.
+- Present receives `scene.present.chartIds` and its mapped layout. Stage 3-only selection, insertion, movement, membership, and Unit Orbit chrome is absent from View and Present.
+
+### Fidelity verified
+
+- Focused semantic/composition suite: 107 passed, 0 failed.
+- Exact production-bundle `006-scene-authoring amendment` journey: 1 passed in 39.7 seconds. It authorizes unequal widths and independent order/layout, saves, compares View and Present, preserves a manual Present edit through a mode round trip, and restores saved composition after Scene reselection.
+- Production build: exit 0, 836 modules transformed; existing mixed-import and large-chunk advisories remain non-failing.
+- In-app inspection at 1280×720: Stage 3 used two equal 396.5 px canvases with two actual chart roots each; View showed the same two chart IDs/widths, map, axes, legend, and plots with zero authoring overlays/comparison dialogs; Present showed the authored two IDs and mapped layout with zero authoring overlays.
+
+The Scene composition correction is ready for review. Step 7 as a whole remains provisional under the later interface-organization audit and is not submitted for master acceptance by this amendment.

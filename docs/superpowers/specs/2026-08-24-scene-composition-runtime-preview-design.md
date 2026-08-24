@@ -87,6 +87,8 @@ When only a Chrono Group or default page timeline is active, View retains the cu
 
 Selecting a saved Scene atomically seeds the presentation session from `scene.present.chartIds` and the mapped Scene layout. This establishes the arrangement authored in Stage 3.
 
+Implementation amendment (2026-08-24): Scene selection in View does not write into View's independent Focus/Comparison display state, because doing so would open the comparison dialog. The selected Scene remains the canonical temporal source; on first entry to Present, the saved composition is applied once to the presentation runtime that actually owns Present/Audience display state. This preserves the same user-visible contract without coupling View exploration to presentation state.
+
 After the Scene is applied, moderator changes in Present remain session-only. They do not write back to the saved Scene and do not mutate the Stage 3 draft. Selecting the Scene again restores its saved Present composition.
 
 Audience continues to consume the presentation session snapshot and therefore renders the same selected chart order and mapped layout as Present.

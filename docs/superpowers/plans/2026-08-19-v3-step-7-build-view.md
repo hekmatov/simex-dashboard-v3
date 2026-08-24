@@ -746,3 +746,15 @@ Executable correction evidence:
 - Production Vite build: exit `0`, `829` modules transformed; only the existing mixed-import and large-chunk advisories remain.
 
 This is a corrective amendment to S7-8/S7-9 and Sketches 010/012. It does not claim master acceptance.
+
+## 2026-08-24 truthful Scene composition amendment
+
+- Scene Studio Stage 3 now renders actual configured charts in both the Scene View and Present canvases. The left canvas and active-Scene View share `SceneViewCompositionGrid`; the right canvas uses the production presentation-layout grammar through `DisplayedChartGrid`.
+- Scene View order and four-column widths come from `scene.members` without mutating canonical Page/Section layout. The Present subset/order/layout comes from `scene.present` through one count-valid layout adapter.
+- The latest valid authored Scene frame supplies deterministic preview time and per-chart matching contexts without starting playback or rebuilding invariant source data.
+- Authoring overlays remain Stage 3-only. View and Present contain no Scene authoring controls.
+- The selected Scene seeds Present's independent presentation runtime on first Present entry. It deliberately does not write into View's independent Focus/Comparison display state. Manual Present layout changes survive ordinary mode round trips; leaving and reselecting the Scene restores its saved composition.
+
+Verification: the focused semantic/composition gate passed 107/107; the exact production-bundle `006-scene-authoring amendment` journey passed 1/1 in 39.7 seconds; the direct Vite production build passed with 836 modules transformed. In-app inspection at 1280×720 measured two equal 396.5 px Stage 3 canvases containing two actual chart roots each, confirmed the same chart IDs/widths in active-Scene View with no authoring overlay or comparison dialog, and confirmed the authored IDs/layout in Present.
+
+This closes the truthful Scene composition amendment only. The broader Step 7 submission remains provisional because the separately recorded interface-audit Partial rows are still open. Master acceptance is not claimed.

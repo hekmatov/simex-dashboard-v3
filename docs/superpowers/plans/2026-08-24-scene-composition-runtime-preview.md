@@ -1,6 +1,6 @@
 # Scene Composition Runtime Preview Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make Scene Studio Stage 3 render actual charts in the exact Scene View and Present arrangements that saved Scenes produce at runtime.
 
@@ -51,7 +51,7 @@
 - Produces: display action `{ type: "scene_applied", chart_ids: string[], layout: string }`.
 - Consumes: existing `reduceDisplayState(state, action, validChartIds)` validation and frozen-state contract.
 
-- [ ] **Step 1: Write failing layout-adapter tests**
+- [x] **Step 1: Write failing layout-adapter tests**
 
 ```js
 import assert from "node:assert/strict";
@@ -81,13 +81,13 @@ test("layout mapping rejects a layout that is invalid for the chart count", () =
 });
 ```
 
-- [ ] **Step 2: Run the adapter test and confirm the missing-module failure**
+- [x] **Step 2: Run the adapter test and confirm the missing-module failure**
 
 Run: `node --test tests/scenePresentLayout.test.js`
 
 Expected: FAIL because `scenePresentLayout.js` does not exist.
 
-- [ ] **Step 3: Implement the pure validated adapter**
+- [x] **Step 3: Implement the pure validated adapter**
 
 ```js
 const DISPLAY_LAYOUT_BY_SCENE_LAYOUT = Object.freeze({
@@ -108,7 +108,7 @@ export function scenePresentLayoutToDisplayLayout(sceneLayout, chartCount) {
 }
 ```
 
-- [ ] **Step 4: Write the failing atomic display-action test**
+- [x] **Step 4: Write the failing atomic display-action test**
 
 Add to `tests/displayController.test.js`:
 
@@ -127,13 +127,13 @@ test("scene_applied atomically replaces chart order and layout", () => {
 });
 ```
 
-- [ ] **Step 5: Run the display reducer test and confirm the invalid-action failure**
+- [x] **Step 5: Run the display reducer test and confirm the invalid-action failure**
 
 Run: `node --test tests/displayController.test.js --test-name-pattern="scene_applied"`
 
 Expected: FAIL with `invalid_action`.
 
-- [ ] **Step 6: Implement `scene_applied` as one validated revision**
+- [x] **Step 6: Implement `scene_applied` as one validated revision**
 
 Add a reducer case that validates one-to-four known unique chart IDs, validates `action.layout` against `LAYOUTS_BY_COUNT[chartIds.length]`, returns the existing state when order and layout are already identical, and otherwise returns one frozen state with `display_revision + 1`.
 
@@ -151,7 +151,7 @@ case "scene_applied": {
 }
 ```
 
-- [ ] **Step 7: Run focused tests and commit**
+- [x] **Step 7: Run focused tests and commit**
 
 Run: `node --test tests/scenePresentLayout.test.js tests/displayController.test.js`
 
@@ -181,7 +181,7 @@ git commit -m "feat(scene): map saved scenes to presentation layouts"
 - Produces: chart cells with `data-scene-chart-id`, `data-scene-width`, `data-scene-row-height`, and CSS variables `--scene-chart-width`, `--scene-chart-height`.
 - Consumes later: Task 3 authoring overlay through `renderCellChrome({ chart, member, index })`.
 
-- [ ] **Step 1: Write a failing production-renderer composition test**
+- [x] **Step 1: Write a failing production-renderer composition test**
 
 Create a server-rendered test that supplies three canonical charts with member order `chart-c`, `chart-a`, `chart-b`, widths `4`, `1`, `3`, and canonical heights `1`, `2`, `1`.
 
@@ -210,13 +210,13 @@ test("Scene View composition renders actual chart roots in authored order and wi
 });
 ```
 
-- [ ] **Step 2: Run the test and confirm the missing-component failure**
+- [x] **Step 2: Run the test and confirm the missing-component failure**
 
 Run: `node --test tests/sceneViewComposition.test.js`
 
 Expected: FAIL because `SceneViewCompositionGrid.jsx` does not exist.
 
-- [ ] **Step 3: Implement the shared Scene grid with real `ChartView` inputs**
+- [x] **Step 3: Implement the shared Scene grid with real `ChartView` inputs**
 
 Resolve each chart from canonical dashboard pages and sections. Render actual `ChartView` instances with the same data, source state, profile, map data, accessibility, render context, and time context inputs used by production panels.
 
@@ -254,7 +254,7 @@ export default function SceneViewCompositionGrid({
 }
 ```
 
-- [ ] **Step 4: Add four-column grid CSS and runtime style inheritance**
+- [x] **Step 4: Add four-column grid CSS and runtime style inheritance**
 
 ```css
 .scene-view-composition-grid {
@@ -275,11 +275,11 @@ export default function SceneViewCompositionGrid({
 Use the established dashboard surface, panel, plot, radius, border, and shadow tokens. Do not introduce hard-coded preview colours.
 Keep the canonical 418 px dashboard row height in View and expose the same value through the shared component's CSS custom property. Stage 3 may scale the whole preview composition to fit its bounded canvas, but it must not independently change chart aspect ratios or member spans. Use a container query on the shared component so equal effective widths receive equal stacking behavior in Stage 3 and View.
 
-- [ ] **Step 5: Write the failing live View integration test**
+- [x] **Step 5: Write the failing live View integration test**
 
 Extend `tests/playbackComponentsV3.test.js` so an active Scene with noncanonical order and widths renders `DashboardCanvas` through `DashboardModeWorkspace` and asserts `scene-view-composition-grid` plus the authored cell sequence. Also assert the ordinary `LayoutGrid` remains for a Chrono Group without an active Scene.
 
-- [ ] **Step 6: Wire active Scene into `DashboardModeWorkspace` and `DashboardCanvas`**
+- [x] **Step 6: Wire active Scene into `DashboardModeWorkspace` and `DashboardCanvas`**
 
 Extend `chronoSection` with `scene: playback.activeScene` and `timeContextForChart: playback.timeContextForChart`. In `DashboardCanvas`, use `SceneViewCompositionGrid` only when `chronoSection.scene` exists; retain the current canonical placement grid for group/default playback.
 
@@ -296,7 +296,7 @@ Extend `chronoSection` with `scene: playback.activeScene` and `timeContextForCha
 )}
 ```
 
-- [ ] **Step 7: Run focused tests and commit**
+- [x] **Step 7: Run focused tests and commit**
 
 Run: `node --test tests/sceneViewComposition.test.js tests/playbackComponentsV3.test.js`
 
@@ -330,7 +330,7 @@ git commit -m "feat(scene): render saved scene composition in view"
 - Produces: `buildScenePreviewProjection({ dashboard, scene }) -> { activeEpochMs, label, timeContexts, error }`.
 - Produces: `DisplayedChartGrid` prop `layoutSystem="presentation"` so Audience and authoring preview share layout CSS without sharing surface semantics.
 
-- [ ] **Step 1: Write failing preview-time tests**
+- [x] **Step 1: Write failing preview-time tests**
 
 Cover source-frame and calendar Scenes. Use a Chrono Group with known observations and assert the latest valid Scene frame, formatted label, and member-specific matching contexts.
 
@@ -350,13 +350,13 @@ test("preview projection reports a Scene with no valid frame", () => {
 });
 ```
 
-- [ ] **Step 2: Run preview-time tests and confirm the missing-module failure**
+- [x] **Step 2: Run preview-time tests and confirm the missing-module failure**
 
 Run: `node --test tests/scenePreviewTime.test.js`
 
 Expected: FAIL because `scenePreviewTime.js` does not exist.
 
-- [ ] **Step 3: Implement preview projection from existing temporal engines**
+- [x] **Step 3: Implement preview projection from existing temporal engines**
 
 Use `buildChronoGroupClock`, `buildScenePlaybackClock`, and `buildMemberTimeContexts`. Select `sceneClock.at(-1) ?? null`; never dispatch playback actions.
 
@@ -392,7 +392,7 @@ export function buildScenePreviewProjection({ dashboard, scene }) {
 
 Reuse the runtime's existing timezone-aware date formatter for `canonicalPreviewDate`; do not add a second date-label convention.
 
-- [ ] **Step 4: Write failing Stage 3 composition assertions**
+- [x] **Step 4: Write failing Stage 3 composition assertions**
 
 Update `tests/chronoSceneComposition.test.js` to assert:
 
@@ -407,7 +407,7 @@ assert.doesNotMatch(html, />Included<\/span>/);
 
 Retain assertions for insertion targets, title drag handles, Present membership actions, layout selection, selected outline, and Unit Orbit.
 
-- [ ] **Step 5: Extend `DisplayedChartGrid` with shared presentation-layout semantics**
+- [x] **Step 5: Extend `DisplayedChartGrid` with shared presentation-layout semantics**
 
 Add `layoutSystem` while retaining `surface` interaction semantics:
 
@@ -421,7 +421,7 @@ Add `layoutSystem` while retaining `surface` interaction semantics:
 
 Move only the grid-template and cell-fill selectors from `[data-display-surface="audience"]` to `[data-layout-system="presentation"]`. Keep Audience-only colour, passive interaction, and display-shell styling scoped to Audience.
 
-- [ ] **Step 6: Implement the authoring overlay and real twin canvases**
+- [x] **Step 6: Implement the authoring overlay and real twin canvases**
 
 `SceneCompositionAuthoringOverlay` renders the chart title handle, selected state, corner Present action, and discrete before/after insertion controls for one cell. `BalancedTwinCanvas` renders:
 
@@ -452,15 +452,15 @@ Move only the grid-template and cell-fill selectors from `[data-display-surface=
 
 Place board-level insertion boundaries outside the plot content so they remain visible and do not compress or cover chart labels. Preserve keyboard movement and Unit Orbit action types.
 
-- [ ] **Step 7: Pass the canonical dashboard into Stage 3**
+- [x] **Step 7: Pass the canonical dashboard into Stage 3**
 
 Add `dashboard` to `SceneEditor` and `BalancedTwinCanvas` props. In `BuildWorkspace`, pass the existing `dashboard` object without copying loaded data.
 
-- [ ] **Step 8: Add responsive actual-preview CSS**
+- [x] **Step 8: Add responsive actual-preview CSS**
 
 Give each board a bounded preview viewport, minimum chart plot height, and internal scrolling when necessary. Keep equal board widths on desktop and stack the two boards at the existing tablet breakpoint. Authoring chrome uses dashboard tokens and maintains 44 px activation targets.
 
-- [ ] **Step 9: Run focused tests and commit**
+- [x] **Step 9: Run focused tests and commit**
 
 Run: `node --test tests/scenePreviewTime.test.js tests/chronoSceneComposition.test.js tests/chronoSceneFidelity.test.js tests/sceneViewComposition.test.js`
 
@@ -484,9 +484,9 @@ git commit -m "feat(scene): render actual charts in composition studio"
 **Interfaces:**
 - Consumes: Task 1 `scenePresentLayoutToDisplayLayout` and `scene_applied`.
 - Consumes: `usePlayback().activeScene` from the existing provider.
-- Produces: one display action per active-Scene transition; no action for manual Present edits or ordinary mode changes.
+- Produces: one presentation-runtime display action when an active Scene first enters Present; no action against View Focus/Comparison state, manual Present edits, or ordinary mode round trips.
 
-- [ ] **Step 1: Write the failing Scene transition integration test**
+- [x] **Step 1: Write the failing Scene transition integration test**
 
 Render a test bridge inside `PlaybackProvider` that mounts `DashboardRenderer`, selects `scene-a`, captures `onDisplayAction`, then simulates a manual layout change and a View/Present mode round trip.
 
@@ -501,15 +501,15 @@ assert.equal(actions.filter(({ type }) => type === "scene_applied").length, 1);
 
 Then select a group and reselect `scene-a`; assert a second `scene_applied` action restores the saved composition.
 
-- [ ] **Step 2: Run the integration test and confirm no Scene action is dispatched**
+- [x] **Step 2: Run the integration test and confirm no Scene action is dispatched**
 
 Run: `node --test tests/playbackComponentsV3.test.js --test-name-pattern="saved Scene Present composition"`
 
 Expected: FAIL because Scene transitions do not seed display state.
 
-- [ ] **Step 3: Add one transition-scoped effect in `DashboardRenderer`**
+- [x] **Step 3: Add one transition-scoped effect in `DashboardRenderer`**
 
-Read `activeScene` from `usePlayback`. Track the last applied active Scene ID and Present-composition signature in a ref. Clear the ref when no Scene is active, but do not clear or overwrite the current presentation session.
+Read `activeScene` from `usePlayback`. Track the last applied active Scene ID and Present-composition signature in a ref. Clear the ref when no Scene is active, but do not clear or overwrite the current presentation session. Dispatch only while `mode === "present"`, and dispatch through `usePresentationRuntime().onDisplayAction`, the state owner consumed by Present/Audience. The app-level `onDisplayAction` belongs to View Focus/Comparison and must not receive the saved Scene composition.
 
 ```js
 const playback = usePlayback();
@@ -530,13 +530,13 @@ React.useEffect(() => {
 }, [onDisplayAction, playback.activeScene]);
 ```
 
-Do not include `displayState` or `mode` in the dependency or signature: manual Present changes and mode transitions must not reapply the saved Scene.
+Do not include `displayState` in the dependency or signature. `mode` is a dependency only so a Scene chosen in View can seed the presentation runtime on first Present entry. The retained signature prevents an ordinary mode round trip from reapplying over manual Present changes; leaving and reselecting the Scene clears and reapplies the saved composition.
 
-- [ ] **Step 4: Prove Present/Audience consume the mapped state unchanged**
+- [x] **Step 4: Prove Present/Audience consume the mapped state unchanged**
 
 Extend `tests/presentWorkspace.test.js` to render the applied state and assert chart order plus `layout-overUnder`. Retain existing Audience tests as the protocol-level proof that the same state reaches `DisplayedChartGrid`.
 
-- [ ] **Step 5: Run focused integration tests and commit**
+- [x] **Step 5: Run focused integration tests and commit**
 
 Run: `node --test tests/displayController.test.js tests/playbackComponentsV3.test.js tests/presentWorkspace.test.js tests/audienceDisplay.test.js`
 
@@ -563,7 +563,7 @@ git commit -m "feat(scene): seed present from saved scene composition"
 - Consumes: Tasks 1–4 production behavior.
 - Produces: named browser evidence and updated provisional Step 7 fidelity records.
 
-- [ ] **Step 1: Extend the failing Sketch 006 browser journey**
+- [x] **Step 1: Extend the failing Sketch 006 browser journey**
 
 In the existing `006-scene-authoring amendment` case:
 
@@ -589,7 +589,7 @@ await expect(page.locator(".displayed-chart-grid[data-layout-system='presentatio
 await expect(page.locator(".scene-chart-authoring-overlay")).toHaveCount(0);
 ```
 
-- [ ] **Step 2: Build the production bundle and run the named journey**
+- [x] **Step 2: Build the production bundle and run the named journey**
 
 Run:
 
@@ -600,7 +600,7 @@ pnpm exec playwright test tests/e2e/v3-chrono-scene-fidelity.spec.js --grep "006
 
 Expected: production build passes; the named journey passes at desktop and the existing supported tablet checkpoint without document-level horizontal overflow.
 
-- [ ] **Step 3: Perform one in-app visual inspection**
+- [x] **Step 3: Perform one in-app visual inspection**
 
 At `http://127.0.0.1:5176/`, inspect Stage 3, active-Scene View, and Present at 1200×900. Confirm:
 
@@ -612,7 +612,7 @@ At `http://127.0.0.1:5176/`, inspect Stage 3, active-Scene View, and Present at 
 
 Record measured chart IDs, grid spans, representative rectangles, and any browser limitation in the fidelity matrix. Do not mark a row Passing based only on screenshot capture.
 
-- [ ] **Step 4: Run the focused regression set**
+- [x] **Step 4: Run the focused regression set**
 
 Run:
 
@@ -622,7 +622,7 @@ node --test tests/scenePresentLayout.test.js tests/scenePreviewTime.test.js test
 
 Expected: PASS.
 
-- [ ] **Step 5: Update controlling records with actual evidence**
+- [x] **Step 5: Update controlling records with actual evidence**
 
 Amend Sketch 006 rows to distinguish:
 
@@ -632,7 +632,7 @@ Amend Sketch 006 rows to distinguish:
 
 Keep the Step 7 master-review submission provisional and do not declare master acceptance.
 
-- [ ] **Step 6: Commit evidence and documentation**
+- [x] **Step 6: Commit evidence and documentation**
 
 ```bash
 git add tests/e2e/v3-chrono-scene-fidelity.spec.js docs/audits/2026-08-22-v3-step-7-build-view/CHRONO-SCENE-FIDELITY-MATRIX.md docs/audits/2026-08-22-v3-step-7-build-view/SKETCH-FIDELITY-MATRIX.md docs/audits/2026-08-22-v3-step-7-build-view/MASTER-REVIEW-SUBMISSION.md docs/superpowers/plans/2026-08-19-v3-step-7-build-view.md docs/superpowers/specs/2026-08-22-chrono-authoring-reconciliation-design.md
@@ -652,3 +652,13 @@ git commit -m "test(scene): verify truthful runtime composition previews"
 - Production build passes.
 - In-app visual inspection confirms meaningful chart and grid geometry.
 - Step 7 evidence names any remaining limitation and remains provisional pending master review.
+
+## Execution evidence — 2026-08-24
+
+- Atomic implementation commits: `3a303e3`, `898d6b9`, `3e393b9`, `688a8a0`, and corrective integration commit `d6fa7be`.
+- Focused semantic/composition gate: 107 passed, 0 failed.
+- Exact production-bundle browser journey: `006-scene-authoring amendment` passed 1/1 in 39.7 seconds.
+- Production build: Vite completed with 836 modules transformed; only the existing mixed-import and large-chunk advisories remain.
+- Visual inspection: at 1280×720, Stage 3 occupied 807 px and contained two equal 396.5 px canvases with two actual chart roots each. Active-Scene View reproduced the two authored IDs and widths and showed the map, axes, legend, and plots with zero authoring overlays or comparison dialogs. Present exposed the same authored IDs and mapped layout with zero authoring overlays.
+- Diagnosed deviation: the first implementation dispatched the correct Scene action to the app-level View display controller. The live journey proved Present remained empty because Present/Audience use a separate presentation runtime. `d6fa7be` moves the one-shot transition to that production owner and gates it to Present, preventing Scene selection from opening View's comparison dialog.
+- Review boundary: this Scene amendment passes its own completion gate. Step 7 remains provisional under the separately recorded interface-audit Partial rows; master acceptance is not claimed.
