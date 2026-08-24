@@ -63,6 +63,10 @@ export function normalizeSourceRequest(
   const providerKind = providerKindForDescriptor(descriptor);
   const fingerprint = descriptor.sourceFingerprint
     ?? descriptor.fingerprint
+    ?? descriptor.browserAssetId
+    ?? (descriptor.browserImageAssetIds
+      ? `images:${stableStringify(descriptor.browserImageAssetIds)}`
+      : null)
     ?? profile?.fingerprint
     ?? null;
   const parsingIdentity = stableStringify(descriptor.parsingMetadata ?? {});

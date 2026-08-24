@@ -23,7 +23,6 @@ import {
   integrateCreatedChart,
   integrateSavedChart,
   parseDashboardBundle,
-  readDashboardStorage,
   serializeDashboardBundle,
   validateDashboardConfig,
 } from "./charting/config/dashboardBundleV3.js";
@@ -33,6 +32,10 @@ import {
   recoveryPackageSummary,
 } from "./lib/applicationRecovery.js";
 import { browserStorage } from "./lib/browserStorage.js";
+import {
+  createDashboardAssetPersistence,
+  readDashboardStorageWithAssets,
+} from "./lib/dashboardAssetPersistence.js";
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
@@ -85,12 +88,16 @@ export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
 const SESSION_ONLY_MESSAGES = Object.freeze({
   dashboard: "Dashboard changes are applied for this session but cannot be retained after reload.",
+  dashboardAssetStorage: "Uploaded dashboard sources are available for this session but browser asset storage is unavailable.",
+  dashboardAssetStorageFull: "Browser asset storage is full. Dashboard changes and uploaded sources remain available for this session only.",
+  dashboardStorageFull: "Browser storage is full. Dashboard changes remain available for this session only.",
   dashboardLook: "Dashboard look applied for this session but cannot be retained after reload.",
   appearance: "Appearance applied for this session but cannot be retained after reload.",
   deviceLayout: "Device layout is applied for this session but cannot be retained after reload.",
   deviceLayoutStorageFull: "Browser storage is full. Device layout is applied for this session but cannot be retained after reload.",
 });
 const DASHBOARD_LOOK_PERSISTENCE_WARNING = "Couldn’t save dashboard appearance. Your selection remains active for this session.";
+const dashboardAssetPersistence = createDashboardAssetPersistence();
 export default function App() {
   const [dashboardEntry] = React.useState(() => parseDashboardEntry(
     typeof window === "undefined" ? "" : window.location.search,
@@ -309,10 +316,13 @@ export default function App() {
           datasetProfiles: trackedProfiles,
         };
         trackedDatasetProfilesRef.current = trackedProfiles;
-        const stored = readDashboardStorage(
+        const stored = await readDashboardStorageWithAssets(
           browserStorage,
           DASHBOARD_STORAGE_KEY,
-          { profiles: trackedProfiles },
+          {
+            profiles: trackedProfiles,
+            assets: dashboardAssetPersistence,
+          },
         );
         const selected = stored ?? configurationForStorage(
           tracked,
@@ -510,16 +520,51 @@ export default function App() {
           ...configuredFallbackProfiles,
           ...(stored.datasetProfiles ?? {}),
         },
-      });
-      const loaded = await loadDashboardConfig(
-        stored,
-        configuredFallbackProfiles,
-      );
-      persistDashboardStorage(JSON.stringify(
-        configurationForStorage(loaded, trackedProfiles),
-        null,
-        2,
-      ));
+      }, { allowBrowserAssetIds: true });
+      let prepared;
+      try {
+        prepared = await dashboardAssetPersistence.prepare(stored);
+      } catch (assetError) {
+        if (!isDashboardAssetStorageError(assetError)) throw assetError;
+        const sessionDashboard = await loadDashboardConfig(
+          stored,
+          configuredFallbackProfiles,
+        );
+        lastDashboardPersistenceRef.current = false;
+        reportPersistence(
+          "dashboard",
+          false,
+          assetError.code === "DASHBOARD_ASSET_QUOTA_EXHAUSTED"
+            ? SESSION_ONLY_MESSAGES.dashboardAssetStorageFull
+            : SESSION_ONLY_MESSAGES.dashboardAssetStorage,
+        );
+        dashboardRef.current = sessionDashboard;
+        setDashboard(sessionDashboard);
+        setError(null);
+        setOperationError("");
+        return configurationForPortableUse(sessionDashboard);
+      }
+      let loaded;
+      try {
+        loaded = await loadDashboardConfig(
+          prepared.runtimeConfig,
+          configuredFallbackProfiles,
+        );
+      } catch (loadError) {
+        await prepared.rollback();
+        throw loadError;
+      }
+      try {
+        persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+      } catch (storageError) {
+        if (!isStorageQuotaError(storageError)) throw storageError;
+        lastDashboardPersistenceRef.current = false;
+        reportPersistence(
+          "dashboard",
+          false,
+          SESSION_ONLY_MESSAGES.dashboardStorageFull,
+        );
+      }
       dashboardRef.current = loaded;
       setDashboard(loaded);
       setError(null);
@@ -550,8 +595,9 @@ export default function App() {
           ...configuredFallbackProfiles,
           ...(stored.datasetProfiles ?? {}),
         },
-      });
-      persistDashboardStorage(JSON.stringify(stored, null, 2));
+      }, { allowBrowserAssetIds: true });
+      const prepared = await dashboardAssetPersistence.prepare(stored);
+      persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
       setError(null);
       setOperationError("");
       return nextConfig;
@@ -1240,7 +1286,9 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
   const config = structuredClone(portableDashboard);
   const retainedProfiles = Object.fromEntries(
     Object.entries(config.datasetProfiles ?? {}).filter(([sourceId, profile]) => {
-      if (config.dataSources?.[sourceId]?.kind !== "csv") return false;
+      const source = config.dataSources?.[sourceId];
+      if (source?.type === "uploadedCsv") return true;
+      if (source?.kind !== "csv") return false;
       return JSON.stringify(profile) !== JSON.stringify(fallbackProfiles[sourceId]);
     }),
   );
@@ -1388,6 +1436,11 @@ function downloadBundle(bundle, fileName) {
   link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function isDashboardAssetStorageError(error) {
+  return error?.code === "DASHBOARD_ASSET_STORAGE_UNAVAILABLE"
+    || error?.code === "DASHBOARD_ASSET_QUOTA_EXHAUSTED";
 }
 
 async function readPackageAsset(path, format) {

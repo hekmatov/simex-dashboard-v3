@@ -19,6 +19,7 @@ const dashboardSourceCache = createSourceCache();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
 const SOURCE_KEYS = new Set(["kind", "path", "provenance", "parsingMetadata"]);
 const INLINE_SOURCE_KEYS = new Set([
+  "browserImageAssetIds",
   "fingerprint",
   "kind",
   "parsingMetadata",
@@ -27,6 +28,7 @@ const INLINE_SOURCE_KEYS = new Set([
   "sourceFingerprint",
 ]);
 const UPLOADED_SOURCE_KEYS = new Set([
+  "browserAssetId",
   "csvText",
   "fileName",
   "fingerprint",
@@ -37,6 +39,7 @@ const UPLOADED_SOURCE_KEYS = new Set([
   "type",
 ]);
 const UPLOADED_GEOJSON_SOURCE_KEYS = new Set([
+  "browserAssetId",
   "fileName",
   "fingerprint",
   "geoJson",

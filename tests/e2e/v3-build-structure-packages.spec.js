@@ -339,6 +339,16 @@ test("package export resolves drafts and round-trips a self-contained source", a
   await expect(roundtripReview).toContainText("Panel: Imported Panel");
   await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
   await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+  const persistedSource = await page.evaluate((sourceId) => {
+    const config = JSON.parse(localStorage.getItem(
+      "simex-dashboard-config-v3-three-mode-v1",
+    ));
+    return config.dataSources[sourceId];
+  }, fixtureChart.sourceId);
+  expect(persistedSource.browserAssetId).toMatch(/^sha256-[a-f0-9]{64}$/);
+  expect(persistedSource).not.toHaveProperty("csvText");
+  await page.reload();
+  await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
 });
 
 test("cancelling the authored-content import warning preserves inline rename state", async ({ page }) => {

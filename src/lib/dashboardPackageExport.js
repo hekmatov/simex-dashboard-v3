@@ -32,6 +32,10 @@ export async function prepareDashboardPackageExport(dashboard, {
 
   const sources = config.dataSources ?? {};
   for (const [sourceId, source] of Object.entries(sources)) {
+    if (source && typeof source === "object") {
+      delete source.browserAssetId;
+      delete source.browserImageAssetIds;
+    }
     if (source?.kind === "csv") {
       const csvText = await readText(source.path, { sourceId, source });
       if (typeof csvText !== "string") {
@@ -67,6 +71,7 @@ export async function prepareDashboardPackageExport(dashboard, {
     const source = sources[sourceId];
     if (source?.kind !== "inline" || !Array.isArray(source.rows)) continue;
     for (const row of source.rows) {
+      if (row && typeof row === "object") delete row.browserAssetId;
       if (!row || typeof row.src !== "string" || isEmbeddedImage(row.src)) continue;
       const dataUrl = await readImageDataUrl(row.src, { sourceId, source });
       if (!isEmbeddedImage(dataUrl)) {

@@ -109,6 +109,48 @@ test("a self-contained package round-trips every embedded source", async () => {
   assert.equal(imported.dataSources.image.rows[0].src, "data:image/png;base64,aW1hZ2U=");
 });
 
+test("package preparation strips browser-only asset references", async () => {
+  const dashboard = packageDashboard();
+  dashboard.dataSources.uploaded.browserAssetId = `sha256-${"a".repeat(64)}`;
+  dashboard.dataSources.image.browserImageAssetIds = { 0: `sha256-${"b".repeat(64)}` };
+
+  const prepared = await prepareDashboardPackageExport(dashboard, {
+    readText: async () => "date,value\n2026-08-21,1\n",
+    readJson: async () => ({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        properties: {},
+        geometry: { type: "Point", coordinates: [4.9, 52.3] },
+      }],
+    }),
+    readImageDataUrl: async () => "data:image/png;base64,aW1hZ2U=",
+  });
+
+  assert.equal(
+    Object.hasOwn(prepared.config.dataSources.uploaded, "browserAssetId"),
+    false,
+  );
+  assert.equal(
+    Object.hasOwn(prepared.config.dataSources.image, "browserImageAssetIds"),
+    false,
+  );
+});
+
+test("portable packages reject browser-only asset references", () => {
+  const dashboard = packageDashboard();
+  delete dashboard.dataSources.cases;
+  delete dashboard.dataSources.generated;
+  delete dashboard.dataSources.boundaries;
+  const bundle = serializeDashboardBundle(dashboard, { now: null });
+  bundle.config.dataSources.uploaded.browserAssetId = `sha256-${"a".repeat(64)}`;
+
+  assert.throws(
+    () => parseDashboardBundle(JSON.stringify(bundle)),
+    /browser-only asset reference/i,
+  );
+});
+
 test("an imported self-contained package hydrates without tracked source requests", async () => {
   const geoJson = {
     type: "FeatureCollection",

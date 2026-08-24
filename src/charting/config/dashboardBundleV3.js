@@ -35,9 +35,9 @@ const RUNTIME_CONFIGURATION_KEYS = new Set([
   "runtimeRows",
 ]);
 const TRACKED_SOURCE_KEYS = new Set(["kind", "path", "parsingMetadata", "provenance"]);
-const UPLOADED_CSV_SOURCE_KEYS = new Set(["csvText", "fileName", "fingerprint", "kind", "parsingMetadata", "provenance", "sourceFingerprint", "type"]);
-const UPLOADED_GEOJSON_SOURCE_KEYS = new Set(["fileName", "fingerprint", "geoJson", "kind", "provenance", "sourceFingerprint", "type"]);
-const INLINE_SOURCE_KEYS = new Set(["fingerprint", "kind", "parsingMetadata", "provenance", "rows", "sourceFingerprint"]);
+const UPLOADED_CSV_SOURCE_KEYS = new Set(["browserAssetId", "csvText", "fileName", "fingerprint", "kind", "parsingMetadata", "provenance", "sourceFingerprint", "type"]);
+const UPLOADED_GEOJSON_SOURCE_KEYS = new Set(["browserAssetId", "fileName", "fingerprint", "geoJson", "kind", "provenance", "sourceFingerprint", "type"]);
+const INLINE_SOURCE_KEYS = new Set(["browserImageAssetIds", "fingerprint", "kind", "parsingMetadata", "provenance", "rows", "sourceFingerprint"]);
 const BUNDLE_KEYS = new Set(["bundleType", "config", "metadata", "version"]);
 const BUNDLE_METADATA_KEYS = new Set(["exportedAt", "sourceFingerprints"]);
 const PROVENANCE_KEYS = new Set(["label"]);
@@ -201,6 +201,7 @@ function temporalMigrationProfiles(config, suppliedProfiles = {}) {
 
   for (const [sourceId, source] of Object.entries(config.dataSources)) {
     if (!isRecord(source)) continue;
+    if (source.browserAssetId && profiles[sourceId]) continue;
     const rows = sourceRows(sourceId, source);
     if (rows !== null) {
       profiles[sourceId] = profileDataset(
@@ -213,9 +214,14 @@ function temporalMigrationProfiles(config, suppliedProfiles = {}) {
 }
 
 function profileColumns(sourceId, source, profiles = {}) {
+  const profile = profiles[sourceId];
+  if (source.browserAssetId && profile) {
+    ensureObject(profile, `Data source "${sourceId}" profile`);
+    if (!Array.isArray(profile.columns)) throw new Error(`Data source "${sourceId}" profile columns must be an array.`);
+    return profile.columns;
+  }
   const rows = sourceRows(sourceId, source);
   if (rows !== null) return profileDataset(rows, source.parsingMetadata ?? {}).columns;
-  const profile = profiles[sourceId];
   if (!profile) return Object.entries(source.parsingMetadata ?? {}).map(([name, metadata]) => ({ name, type: metadata.interpretation }));
   ensureObject(profile, `Data source "${sourceId}" profile`);
   if (!Array.isArray(profile.columns)) throw new Error(`Data source "${sourceId}" profile columns must be an array.`);
@@ -224,7 +230,9 @@ function profileColumns(sourceId, source, profiles = {}) {
 
 function sourceColumnTypes(sourceId, source, profiles) {
   const columns = profileColumns(sourceId, source, profiles);
-  const rows = sourceRows(sourceId, source);
+  const rows = source.browserAssetId && profiles[sourceId]
+    ? null
+    : sourceRows(sourceId, source);
   const map = new Map();
   for (const column of columns) {
     ensureObject(column, `Data source "${sourceId}" profile column`);
@@ -241,7 +249,7 @@ function sourceColumnTypes(sourceId, source, profiles) {
   return map;
 }
 
-function validateSource(sourceId, source) {
+function validateSource(sourceId, source, { allowBrowserAssetIds = false } = {}) {
   validateSourceId(sourceId);
   const entries = plainDataEntries(source, `Data source "${sourceId}"`);
   const kind = entryValue(entries, "kind");
@@ -257,7 +265,9 @@ function validateSource(sourceId, source) {
     if (typeof entryValue(entries, "csvText") !== "string") throw new Error(`Uploaded CSV source "${sourceId}" csvText must be a string.`);
     const fileName = entryValue(entries, "fileName");
     if (fileName !== undefined) requiredString(fileName, `Uploaded CSV source "${sourceId}" fileName`);
-    validateRows(sourceRows(sourceId, source), `Uploaded CSV source "${sourceId}" rows`);
+    if (entryValue(entries, "browserAssetId") === undefined) {
+      validateRows(sourceRows(sourceId, source), `Uploaded CSV source "${sourceId}" rows`);
+    }
   } else if (kind === "dataset" && type === "uploadedGeoJson") {
     rejectUnknownEntries(entries, UPLOADED_GEOJSON_SOURCE_KEYS, `data source "${sourceId}"`);
     const fileName = entryValue(entries, "fileName");
@@ -275,6 +285,26 @@ function validateSource(sourceId, source) {
   if (parsingMetadata !== undefined) validateParsingMetadata(sourceId, parsingMetadata);
   validateFingerprint(entryValue(entries, "fingerprint"), `Data source "${sourceId}" fingerprint`);
   validateFingerprint(entryValue(entries, "sourceFingerprint"), `Data source "${sourceId}" sourceFingerprint`);
+  const browserAssetId = entryValue(entries, "browserAssetId");
+  if (browserAssetId !== undefined && !allowBrowserAssetIds) {
+    throw new Error(`Data source "${sourceId}" contains a browser-only asset reference.`);
+  }
+  validateFingerprint(browserAssetId, `Data source "${sourceId}" browserAssetId`);
+  const browserImageAssetIds = entryValue(entries, "browserImageAssetIds");
+  if (browserImageAssetIds !== undefined) {
+    if (!allowBrowserAssetIds || kind !== "inline") {
+      throw new Error(`Data source "${sourceId}" contains browser-only image asset references.`);
+    }
+    for (const [rowIndex, assetId] of plainDataEntries(
+      browserImageAssetIds,
+      `Data source "${sourceId}" browserImageAssetIds`,
+    )) {
+      if (!/^\d+$/.test(rowIndex)) {
+        throw new Error(`Data source "${sourceId}" browser image row index is invalid.`);
+      }
+      validateFingerprint(assetId, `Data source "${sourceId}" browser image asset id`);
+    }
+  }
 }
 
 function validateManualData(chart, source) {
@@ -373,7 +403,7 @@ function validCanonicalInstant(now) {
 }
 
 /** Validates all configured charts, source records, and page/section placement in a v3 dashboard. */
-export function validateDashboardConfig(config) {
+export function validateDashboardConfig(config, { allowBrowserAssetIds = false } = {}) {
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
@@ -384,7 +414,10 @@ export function validateDashboardConfig(config) {
   const profiles = config.datasetProfiles ?? {};
   plainDataEntries(profiles, "Dashboard datasetProfiles");
   const sources = new Map();
-  for (const [sourceId, source] of sourceEntries) { validateSource(sourceId, source); sources.set(sourceId, source); }
+  for (const [sourceId, source] of sourceEntries) {
+    validateSource(sourceId, source, { allowBrowserAssetIds });
+    sources.set(sourceId, source);
+  }
   validateDatasetProfiles(config.dataSources, profiles);
   const chartReferences = validateDashboardChartReferences(
     structure,
@@ -402,7 +435,9 @@ export function validateDashboardConfig(config) {
   const loadedData = {};
   const validationProfiles = structuredClone(profiles);
   for (const [sourceId, source] of sources) {
-    const rows = sourceRows(sourceId, source);
+    const rows = source.browserAssetId && profiles[sourceId]
+      ? null
+      : sourceRows(sourceId, source);
     loadedData[sourceId] = rows ?? [];
     if (validationProfiles[sourceId] === undefined) {
       validationProfiles[sourceId] = (
@@ -447,6 +482,11 @@ export function readDashboardStorage(storage, storageKey, { profiles } = {}) {
   } catch {
     throw new Error("Saved dashboard configuration must be valid JSON.");
   }
+  return normalizeStoredDashboardConfig(config, { profiles });
+}
+
+/** Normalizes and validates a parsed dashboard from the browser storage boundary. */
+export function normalizeStoredDashboardConfig(config, { profiles } = {}) {
   const candidate = profiles === undefined
     ? config
     : {
@@ -462,7 +502,7 @@ export function readDashboardStorage(storage, storageKey, { profiles } = {}) {
   const normalized = normalizeDashboardBoundary(candidate, {
     profiles: profiles ?? {},
   });
-  validateDashboardConfig(normalized);
+  validateDashboardConfig(normalized, { allowBrowserAssetIds: true });
   return structuredClone(normalized);
 }
 
@@ -505,7 +545,7 @@ export function integrateCreatedChart(dashboard, payload, target) {
   } else {
     throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
   }
-  validateDashboardConfig(next);
+  validateDashboardConfig(next, { allowBrowserAssetIds: true });
   return next;
 }
 
@@ -529,7 +569,7 @@ export function integrateSavedChart(dashboard, payload) {
   }
   if (!replaced) throw new Error(`Chart "${chart.id}" does not exist in the dashboard.`);
   next.chronoGroups = structuredClone(payload.chronoGroups ?? next.chronoGroups ?? []);
-  validateDashboardConfig(next);
+  validateDashboardConfig(next, { allowBrowserAssetIds: true });
   return next;
 }
 
