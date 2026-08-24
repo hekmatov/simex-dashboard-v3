@@ -143,7 +143,7 @@ test("Sketch 006 Calendar mode renders positive interval and unit controls", () 
   assert.match(html, /option value="month" selected/);
 });
 
-test("Sketch 006 arrange composition renders twin canvases, insertion targets, and Unit Orbit", () => {
+test("Sketch 006 arrange composition renders twin canvases and chart-local Unit Orbit anchors", () => {
   const html = renderToStaticMarkup(React.createElement(SceneEditor, {
     ...sceneProps,
     dashboard: runtimeDashboard(),
@@ -157,10 +157,8 @@ test("Sketch 006 arrange composition renders twin canvases, insertion targets, a
   assert.match(html, /Scene preview frame/);
   assert.match(html, /2027-05-01/);
   assert.match(html, /Drop here/);
-  assert.match(html, /Unit Orbit/);
-  assert.match(html, /Move first/);
-  assert.match(html, /Move last/);
-  assert.match(html, /Include in Present/);
+  assert.match(html, /data-build-placement-id="scene-orbit-scene-chart-a"/);
+  assert.match(html, /data-build-placement-id="scene-orbit-present-chart-a"/);
   assert.match(html, /Remove from Present/);
   assert.doesNotMatch(html, /<li[^>]*data-chart-id=/);
   assert.doesNotMatch(html, />Included<\/span>/);

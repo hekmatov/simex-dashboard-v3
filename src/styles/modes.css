@@ -3141,11 +3141,13 @@
 }
 
 .scene-unit-orbit {
-  background: var(--simex-surface-panel-alt);
-  border: 2px solid var(--simex-accent);
-  border-radius: 12px;
+  align-content: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   display: grid;
   gap: 12px;
+  min-height: 100%;
   padding: 14px;
 }
 

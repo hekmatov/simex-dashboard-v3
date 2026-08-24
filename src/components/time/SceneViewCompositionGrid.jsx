@@ -11,6 +11,7 @@ export default function SceneViewCompositionGrid({
   timeContextForChart = () => null,
   timeContextAuthority,
   surface = "view-scene",
+  getCellProps,
   renderCellChrome,
 }) {
   const chartsById = new Map(
@@ -25,9 +26,11 @@ export default function SceneViewCompositionGrid({
     >
       {(scene?.members ?? []).map((member, index) => {
         const chart = chartsById.get(member.chartId);
+        const cellProps = getCellProps?.({ chart, member, index, missing: !chart }) ?? {};
         if (!chart) {
           return (
             <section
+              {...cellProps}
               className="scene-view-composition-cell scene-view-composition-cell--missing"
               data-scene-chart-id={member.chartId}
               data-scene-chart-missing="true"
@@ -48,6 +51,7 @@ export default function SceneViewCompositionGrid({
         const height = resolveChartFootprint(chart.layout).rows;
         return (
           <section
+            {...cellProps}
             className="scene-view-composition-cell"
             data-scene-chart-id={chart.id}
             data-scene-width={member.width}

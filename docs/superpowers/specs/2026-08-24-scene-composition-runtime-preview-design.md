@@ -77,6 +77,10 @@ Selection, drag handles, insertion targets, Present membership actions, and Unit
 - Authoring controls suppress conflicting chart gestures only while the corresponding authoring gesture is active.
 - View and Present render no Stage 3 authoring chrome.
 
+### Chart-local Unit Orbit correction — 2026-08-24
+
+Scene Stage 3 uses the shared floating `UnitOrbit` anchored by the active board and chart identity. The orbit must remain inside the viewport and must not overlap the selected chart; the selected chart and its controls remain simultaneously visible. It follows the anchor while the authoring surface scrolls or resizes, recenters the anchor only when no clear placement fits, and restores focus when closed. A detached controls section after the Scene and Present canvases does not satisfy this contract.
+
 Chart rendering remains interactive enough to expose realistic layout and labels, but Scene movement controls own pointer drags initiated from the authoring title handle.
 
 ## Runtime behavior

@@ -159,8 +159,43 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(auxiliary.getByRole("button", { name: /Drop (before|after)/ }).first()).toBeAttached();
   await expect(auxiliary.locator(".scene-present-corner-action").first()).toBeVisible();
   await auxiliary.locator(".scene-arrangement-board[data-board='scene'] .scene-chart-title").first().click();
-  const orbit = auxiliary.locator(".scene-unit-orbit");
+  const orbitShell = page.locator(".unit-orbit:has(.scene-unit-orbit)");
+  const orbit = orbitShell.locator(".scene-unit-orbit");
+  await expect(orbitShell).toBeVisible();
   await expect(orbit).toContainText("Unit Orbit");
+  const orbitRelationship = await page.evaluate(() => {
+    const selectedChart = document.querySelector(
+      ".scene-arrangement-board[data-board='scene'] .scene-view-composition-cell:has(.scene-chart-authoring-overlay[data-selected='true'])",
+    );
+    const orbitNode = [...document.querySelectorAll(".unit-orbit")]
+      .find((node) => node.querySelector(".scene-unit-orbit"));
+    const chartRect = selectedChart?.getBoundingClientRect();
+    const orbitRect = orbitNode?.getBoundingClientRect();
+    const visibleChartHeight = chartRect
+      ? Math.max(0, Math.min(chartRect.bottom, window.innerHeight) - Math.max(chartRect.top, 0))
+      : 0;
+    return {
+      visibleChartHeight,
+      orbitInsideViewport: Boolean(
+        orbitRect
+        && orbitRect.top >= 0
+        && orbitRect.left >= 0
+        && orbitRect.right <= window.innerWidth
+        && orbitRect.bottom <= window.innerHeight,
+      ),
+      overlap: Boolean(
+        chartRect
+        && orbitRect
+        && orbitRect.left < chartRect.right
+        && orbitRect.right > chartRect.left
+        && orbitRect.top < chartRect.bottom
+        && orbitRect.bottom > chartRect.top,
+      ),
+    };
+  });
+  expect(orbitRelationship.visibleChartHeight).toBeGreaterThanOrEqual(240);
+  expect(orbitRelationship.orbitInsideViewport).toBe(true);
+  expect(orbitRelationship.overlap).toBe(false);
   await expect(orbit.getByText("Include in Present", { exact: true })).toBeVisible();
   await expect(orbit.getByRole("button", { name: "Move first" })).toBeVisible();
   await orbit.getByRole("radio", { name: "1", exact: true }).check();
