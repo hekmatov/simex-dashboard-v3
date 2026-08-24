@@ -245,3 +245,33 @@ This amendment supersedes the provisional interface-organization conclusion abov
 - Step 8 Present/Audience redesign, Step 9 final cross-mode UAT, and Step 10 documentation/project-skill handoff remain outside this submission.
 
 Step 7 is submitted for V3 Design master review. This implementation record does not declare master acceptance.
+
+## Renewed submission after blocked committed-tree review — 2026-08-24
+
+The preceding submission at `7ee8f84d9d4f5d792f563e4c0e7bda6260498e80` is rejected and superseded. Master review correctly found that three required production dependencies existed only in the preserved dirty overlay and that the claimed Sketch 005 route still clicked the retired `Chrono Groups` command. Step 7 was therefore not self-contained at that HEAD.
+
+### Correction boundary
+
+- `5e9952b` commits the Chrono comparison-model import, Chrono membership editor import, page-scoped playback selector/export, Delta-specific ambiguous-nearest guard, and the accepted Chrono Studio → saved content → Edit browser route.
+- `fd52c72` keeps the Scene transaction footer reachable while Unit Orbit is open, adds its focused geometry regression, and updates the unfinished-Scene journey to the live `Paused Build work` navigation.
+- No Step 7S work and no Step 8–10 implementation is included.
+- The submission-record commit that contains this amendment is the renewed final HEAD reported in the review handoff.
+
+### Engine implemented
+
+The clean committed tree imports `resolveDeltaComparison` from `chronoGroupModel.js`, renders `ChronoMembershipSettingsField`, and exports the playback chart-collection selector used by `App.jsx`. Delta comparison rejects an equidistant nearest baseline without changing the accepted general Chrono rule that an equidistant tie selects the earlier observation. Unit Orbit placement clips candidates before protected lower chrome, including the Scene transaction footer.
+
+### UI implemented
+
+The exact 005 path is now Build → Chrono Studio → saved Chrono Group content → Edit. Scene Stage 3 retains its actual-chart Scene View and Present rows, and Save remains usable with Unit Orbit open. Closing a dirty Scene advertises a resumable draft in `Paused Build work`; 012 resumes the same Arrange stage and both canvases.
+
+### Fidelity verified
+
+- Clean-archive focused deterministic gate: `70/70` passed (`deltaComparisonV3`, `playbackPageScope`, `temporalMatchingV3`, and `unitOrbit`).
+- Clean-archive production build: exit `0`, `842` modules transformed.
+- Exact clean-archive 005/006/012 Playwright journeys: pass; the 006/012 correction run completed `2/2` in 49.1 seconds before the final combined rerun.
+- In-app inspection of the committed clean server exercised Chrono Studio → content → Edit, Scene Stage 3 with actual map/line renders and the adjacent Unit Orbit, and View Chrono with exactly two participating charts elevated above ordinary non-members.
+
+The clean build retains non-failing diagnostics for the two committed non-module vendor scripts, the mixed static/dynamic `ChartFootprintPicker` import, and the large dashboard chunk. The worktree remains intentionally dirty only outside the staged correction boundary; those files are preserved and are not evidence for this submission.
+
+Step 7 is resubmitted for V3 Design master review. Please **approve**, **approve with deviations**, or **reject**. This record does not declare master acceptance.

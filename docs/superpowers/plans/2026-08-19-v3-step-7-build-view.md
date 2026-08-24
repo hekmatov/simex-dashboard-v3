@@ -789,3 +789,18 @@ Verification evidence:
 - in-app inspection confirmed the Build command header and Dashboard Map remain non-overlapping at the Page top, the Map rises to a 12 px viewport inset after scrolling, the full Map hierarchy and disclosure affordances remain usable, and the View Chrono overlay does not intersect its floating controller.
 
 The active Step 7 fidelity matrix is now `16/16` Passing with no Missing or Partial row. This closes the provisional implementation gate and submits Step 7 for V3 Design master review. It does not claim master acceptance. Step 8 Present/Audience redesign, Step 9 final cross-mode UAT, and Step 10 documentation/project-skill handoff remain outside this submission.
+
+## 2026-08-24 bounded master-review correction
+
+Master review blocked submitted HEAD `7ee8f84d9d4f5d792f563e4c0e7bda6260498e80`. The submitted tree was not self-contained even though equivalent repairs existed in the preserved dirty overlay, and the exact Sketch 005 browser task still used a retired entry label.
+
+- [x] Commit `resolveDeltaComparison.js` against the production `chronoGroupModel.js` owner and retain Delta-only equidistant-nearest invalidation without changing the general Chrono tie policy.
+- [x] Commit `SchemaField.jsx` against `ChronoMembershipSettingsField.jsx`.
+- [x] Export and exercise `createPlaybackChartCollectionSelector` from `playbackPageScope.js`.
+- [x] Replace the stale 005 `Chrono Groups` route with Build → `Chrono Studio` → saved Group content → `Edit`.
+- [x] Correct the live 006 usability defect exposed by the clean journey: Unit Orbit now clips above the protected Scene transaction footer, so Save remains reachable while the chart-local editor is open.
+- [x] Target the live `Paused Build work` navigation for 012 unfinished-Scene restoration.
+- [x] Audit overlapping dirty Step 7 paths and stage only the exact required hunks. All other dirty and untracked work remains outside the submission.
+- [x] Rebuild and exercise focused tests plus the exact 005/006/012 journeys from a clean committed archive; inspect Chrono Studio/content/Edit, Scene actual-chart canvases/Unit Orbit, and View Chrono in the in-app browser.
+
+Correction commits: `5e9952b` and `fd52c72`. This correction does not implement Step 7S or Steps 8–10 and does not claim master acceptance.
