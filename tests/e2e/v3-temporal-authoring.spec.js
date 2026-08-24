@@ -74,7 +74,7 @@ test("Chrono Studio and Scene Studio navigate through content before editing and
   }, STORAGE_KEY)).toEqual({ group: true, scene: true });
 });
 
-test("a newly saved Scene remains visible when its owning Page differs from the opening Page", async ({ page }) => {
+test("Studios open unfiltered from Home and a newly saved Scene remains visible", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto("/");
@@ -83,7 +83,17 @@ test("a newly saved Scene remains visible when its owning Page differs from the 
 
   await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
   let auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
-  await expect(auxiliary.getByLabel("Page")).toHaveValue("home");
+  await expect(auxiliary.getByLabel("Page")).toHaveValue("");
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  const chronoAuxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
+  await expect(chronoAuxiliary.getByLabel("Page")).toHaveValue("");
+  await expect(chronoAuxiliary.locator("[data-action='open-content']").first()).toBeVisible();
+  await chronoAuxiliary.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
   await expect(auxiliary.getByLabel("Owning page")).toHaveValue("biomedical");
 

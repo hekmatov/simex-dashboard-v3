@@ -1,6 +1,10 @@
 import React from "react";
 
 export default function SceneLibrary({ state, sections = [], onAction = () => {} }) {
+  const total = state?.scenes?.length ?? sections.reduce((sum, section) => sum + section.scenes.length, 0);
+  const emptyMessage = total > 0
+    ? "No Scenes match the current filters."
+    : "No Scenes have been created yet.";
   return React.createElement("section", { className: "scene-library temporal-studio", "aria-labelledby": "scene-library-title" },
     React.createElement("header", { className: "temporal-studio__header" },
       React.createElement("div", null,
@@ -20,8 +24,8 @@ export default function SceneLibrary({ state, sections = [], onAction = () => {}
         ...(state?.pages ?? []).map((page) => React.createElement("option", { key: page.id, value: page.id }, page.label ?? page.title ?? page.id)),
       )),
     ),
-    React.createElement("p", { className: "temporal-studio__count", role: "status" }, `Showing ${sections.reduce((sum, section) => sum + section.scenes.length, 0)} of ${state?.scenes?.length ?? sections.reduce((sum, section) => sum + section.scenes.length, 0)}`),
-    sections.length === 0 ? React.createElement("p", { className: "temporal-studio__empty", role: "status" }, state?.query ? "No Scenes match this view." : "No Scenes have been created yet.") : null,
+    React.createElement("p", { className: "temporal-studio__count", role: "status" }, `Showing ${sections.reduce((sum, section) => sum + section.scenes.length, 0)} of ${total}`),
+    sections.length === 0 ? React.createElement("p", { className: "temporal-studio__empty", role: "status" }, emptyMessage) : null,
     ...sections.map((section) => React.createElement("section", { className: "scene-library__page", key: section.pageId },
       React.createElement("h3", null, section.pageLabel),
       React.createElement("ul", { className: "temporal-studio__cards" }, section.scenes.map((scene) => React.createElement("li", { key: scene.id }, React.createElement("button", {

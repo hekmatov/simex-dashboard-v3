@@ -39,8 +39,8 @@ export function createChronoContentState({
     runningSession,
     authoredContentChanged: false,
     studioContexts: {
-      chrono: browseContext({ query: studio === "chrono" ? query : "", statusFilter: "all", pageId, scrollTop: 0, focusId: null }),
-      scene: browseContext({ query: studio === "scene" ? query : "", statusFilter: "all", pageId, scrollTop: 0, focusId: null }),
+      chrono: browseContext({ query: studio === "chrono" ? query : "", statusFilter: "all", pageId: studio === "chrono" ? pageId : null, scrollTop: 0, focusId: null }),
+      scene: browseContext({ query: studio === "scene" ? query : "", statusFilter: "all", pageId: studio === "scene" ? pageId : null, scrollTop: 0, focusId: null }),
     },
     returnContext: captureContext({ studio, view: "library", selectedItemId: null, pageId, scrollTop, focusId, query, statusFilter }),
   };

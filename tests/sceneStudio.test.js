@@ -27,6 +27,23 @@ test("Scene Studio owns Create Scene and groups read-first cards by page", () =>
   assert.match(html, /data-action="open-content"/);
 });
 
+test("Scene Studio reports filtered saved Scenes as filtered, not missing", () => {
+  const html = renderToStaticMarkup(React.createElement(SceneLibrary, {
+    state: {
+      query: "",
+      statusFilter: "all",
+      pageId: "home",
+      pages: [{ id: "home", label: "Home" }, { id: "biomedical", label: "Biomedical" }],
+      scenes: [scene],
+    },
+    sections: [],
+  }));
+
+  assert.match(html, /Showing 0 of 1/);
+  assert.match(html, /No Scenes match the current filters\./);
+  assert.doesNotMatch(html, /No Scenes have been created yet\./);
+});
+
 test("Scene content is read-first and Edit is its only creation-adjacent action", () => {
   const html = renderToStaticMarkup(React.createElement(SceneContent, { content: { ...scene, memberCharts: [{ chartId: "chart-a", chart: { title: "Admissions" }, pageLabel: "Biomedical" }] } }));
   assert.match(html, />Edit</);

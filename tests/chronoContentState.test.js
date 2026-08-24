@@ -96,3 +96,18 @@ test("reopening the active Scene Studio preserves its current browse context", (
   assert.equal(state.pageId, "operations");
   assert.deepEqual(selectSceneStudioSections(state).map(({ pageId }) => pageId), ["operations"]);
 });
+
+test("initial Page context belongs only to the Studio that received it", () => {
+  let state = createChronoContentState({
+    chronoGroups,
+    scenes,
+    pages,
+    studio: "scene",
+    pageId: "biomedical",
+  });
+
+  state = reduceChronoContent(state, { type: "SET_STUDIO", studio: "chrono" });
+
+  assert.equal(state.pageId, null);
+  assert.deepEqual(selectChronoStudioCards(state).map(({ id }) => id), ["chrono-a"]);
+});
