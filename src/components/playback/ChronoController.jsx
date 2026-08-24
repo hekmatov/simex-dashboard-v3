@@ -49,12 +49,9 @@ export default function ChronoController() {
             "aria-label": "Chrono source",
             value: activeScene
               ? `scene:${activeScene.id}`
-              : playback.source?.kind === "default"
-                ? "default"
-                : `group:${activeGroup?.id ?? ""}`,
+              : `group:${activeGroup?.id ?? ""}`,
             onChange: (event) => selectSource(event.target.value, { dispatch, groups, scenes }),
           },
-          React.createElement("option", { value: "default" }, "Default page timeline"),
           groups.map((group) => React.createElement(
             "option",
             { key: `group:${group.id}`, value: `group:${group.id}` },
@@ -292,10 +289,6 @@ function selectControl(ariaLabel, label, value, options, onChange) {
 }
 
 function selectSource(value, { dispatch, groups, scenes }) {
-  if (value === "default") {
-    dispatch({ type: "setGroup", groupId: null });
-    return;
-  }
   const [kind, id] = value.split(":");
   if (kind === "scene") {
     const scene = scenes.find((candidate) => candidate.id === id);

@@ -130,15 +130,11 @@ test("View Chrono exposes group and Scene sources with viewer-only controls", ()
       members: [{ chartId: "primary-chart", width: 4 }],
       frames: { mode: "source", chartId: "primary-chart", selection: "all" },
     }],
-    initialState: {
-      ...initialPlaybackState,
-      activeGroupId: "exercise",
-      playbackView: true,
-    },
+    initialState: { activeGroupId: "exercise", playbackView: true },
   });
 
   assert.match(html, /aria-label="Chrono source"/);
-  assert.match(html, />Default page timeline</);
+  assert.doesNotMatch(html, />Default page timeline</);
   assert.match(html, />Exercise timeline</);
   assert.match(html, />First operational picture</);
   assert.match(html, /aria-label="Chrono chart scope"/);
@@ -652,7 +648,7 @@ test("closed Chrono does not scan temporal rows until playback opens", () => {
   assert.ok(open.reads() > 0);
 });
 
-test("Default page timeline uses every page chart instead of the active Chrono Group ledger", () => {
+test("opening Chrono uses the first saved group and excludes non-members from playback", () => {
   const memberRows = [
     { observed: "2027-05-01", cases: 10 },
     { observed: "2027-05-03", cases: 30 },
@@ -678,15 +674,39 @@ test("Default page timeline uses every page chart instead of the active Chrono G
       "member-source": temporalProfile(memberRows),
       "ordinary-source": temporalProfile(ordinaryRows),
     },
+    initialState: { playbackView: true },
+  });
+
+  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_3}],&quot;charts&quot;:[&quot;page-member&quot;]}</output>`);
+});
+
+test("a stale default source adopts a ready saved group instead of the whole Page", () => {
+  const rows = [
+    { observed: "2027-05-01", cases: 10 },
+    { observed: "2027-05-03", cases: 30 },
+  ];
+  const member = lineChart({ id: "ready-member" });
+  const ordinary = lineChart({ id: "ready-ordinary" });
+  const html = renderPlaybackProbe({
+    groups: [{
+      id: "ready-group",
+      name: "Ready group",
+      period: { start: "2027-05-01", end: "2027-05-03" },
+      secondsPerFrame: 1,
+      matching: { policy: "exact" },
+      members: [{ chartId: member.id, timeRole: "observation" }],
+    }],
+    charts: [member, ordinary],
+    loadedData: { primary: rows },
+    profiles: { primary: temporalProfile(rows) },
     initialState: {
       ...initialPlaybackState,
       source: { kind: "default", id: null },
-      activeGroupId: "exercise",
       playbackView: true,
     },
   });
 
-  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_2},${MAY_3}],&quot;charts&quot;:[&quot;page-member&quot;,&quot;page-ordinary&quot;]}</output>`);
+  assert.equal(html, `<output>{&quot;clock&quot;:[${MAY_1},${MAY_3}],&quot;charts&quot;:[&quot;ready-member&quot;]}</output>`);
 });
 
 test("visibility scope never turns ordinary Page charts into Chrono participants", () => {

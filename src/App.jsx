@@ -1013,6 +1013,7 @@ export default function App() {
       pageCharts={playbackChartCollections.pageCharts}
       loadedData={dashboard.loadedData ?? {}}
       profiles={dashboard.datasetProfiles ?? {}}
+      preferredGroupId={dashboard.chronoGroups?.[0]?.id ?? null}
       timezone={dashboard.timezone}
       initialPosition="latest"
     >

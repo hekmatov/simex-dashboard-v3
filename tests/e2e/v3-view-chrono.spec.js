@@ -21,7 +21,16 @@ test("View Chrono seeks scopes traces moves and safety-pauses without losing ses
   const dateOverlay = page.getByRole("status", { name: "Chrono date overlay" });
   await expect(chrono).toBeVisible();
   await expect(dateOverlay).toBeVisible();
-  await expect(chrono.getByLabel("Chrono source")).toContainText("National outbreak and health-system playback");
+  const chronoSource = chrono.getByLabel("Chrono source");
+  await expect(chronoSource).toHaveValue("group:municipal_outbreak");
+  await expect(chronoSource.getByRole("option", { name: "Default page timeline" })).toHaveCount(0);
+  await expect(chronoSource).toContainText("National outbreak and health-system playback");
+  const chronoSection = page.locator('[data-chrono-section="municipal_outbreak"]');
+  await expect(chronoSection.locator("[data-panel-id]")).toHaveCount(2);
+  const ordinaryPanel = page.locator('[data-canonical-section-id="outbreak_dynamics"] [data-panel-id="bio_confirmed_cases"]');
+  await ordinaryPanel.scrollIntoViewIfNeeded();
+  await expect(ordinaryPanel.locator('[data-canonical-plot-id="bio_confirmed_cases"]')).toBeVisible();
+  await expect(ordinaryPanel.locator('[class*="chart-status-"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Dashboard map", exact: true })).toHaveCount(0);
 
   await chrono.getByLabel("Chrono chart scope").selectOption("group-only");

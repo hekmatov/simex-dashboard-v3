@@ -132,6 +132,42 @@ test("All page charts elevates only Chrono members and keeps ordinary charts ren
   assert.match(html, /type="number"[^>]*aria-label="Seconds per frame"[^>]*value="2\.5"/);
 });
 
+test("first-open Chrono uses the saved group and keeps non-members in their ordinary Page section", () => {
+  const html = withBrowserGlobals(() => renderToStaticMarkup(
+    React.createElement(
+      PlaybackProvider,
+      {
+        groups,
+        charts: [memberChart, ordinaryChart],
+        loadedData: dashboard.loadedData,
+        profiles: dashboard.datasetProfiles,
+        timezone: dashboard.timezone,
+        initialState: { playbackView: true, scope: "all-page" },
+      },
+      React.createElement(ViewShell, {
+        activePage: page,
+        dashboard,
+        displayState: { displayed_chart_ids: [], layout: "solo" },
+        companionStatusLabel: "Companion unavailable",
+        iconLanguageStyles: {},
+        geoDataSources: {},
+        onActivePageChange: () => {},
+        onCompareCharts: () => {},
+        onDisplayAction: () => {},
+        onOpenDashboardLook: () => {},
+      }),
+    ),
+  ));
+
+  assert.match(html, /data-chrono-section="exercise"/);
+  assert.equal((html.match(/data-panel-id="member-chart"/g) ?? []).length, 1);
+  const ordinaryIndex = html.indexOf('data-panel-id="ordinary-chart"');
+  assert.ok(ordinaryIndex > html.indexOf('data-canonical-section-id="outbreak"'));
+  const ordinaryPanel = html.slice(ordinaryIndex, html.indexOf("</article>", ordinaryIndex));
+  assert.match(ordinaryPanel, /data-canonical-plot-id="ordinary-chart"/);
+  assert.doesNotMatch(ordinaryPanel, /chart-status-(?:empty|error)|chart-deferred-placeholder/);
+});
+
 test("Group only omits ordinary Page charts without duplicating Chrono members", () => {
   const html = withBrowserGlobals(() => renderToStaticMarkup(
     React.createElement(

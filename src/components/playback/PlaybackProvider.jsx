@@ -25,6 +25,7 @@ export function PlaybackProvider({
   pageCharts = null,
   loadedData = {},
   profiles = {},
+  preferredGroupId = null,
   initialState,
   initialPosition = "earliest",
   timezone = "UTC",
@@ -48,6 +49,7 @@ export function PlaybackProvider({
       initialPosition,
       loadedData,
       profiles,
+      preferredGroupId,
       timezone,
     },
     initializePlaybackState,
@@ -62,7 +64,7 @@ export function PlaybackProvider({
       groups,
       activeScene?.chronoGroupId ?? state.activeGroupId,
     );
-    if (state.source?.kind !== "default" || activeScene) {
+    if (state.source?.kind !== "default" || activeScene || selectedGroup) {
       validateChronoGroups(selectedGroup ? [selectedGroup] : EMPTY_ARRAY, temporalContext);
     }
     return groups;
@@ -75,6 +77,19 @@ export function PlaybackProvider({
     }),
     [baseDispatch, scenes, state.activeGroupId, validatedGroups],
   );
+  React.useEffect(() => {
+    if (activeScene || groups.length === 0) return;
+    if (groups.some(({ id }) => id === state.activeGroupId)) return;
+    const firstGroup = preferredGroupId
+      ? groups.find(({ id }) => id === preferredGroupId)
+      : groups[0];
+    if (!firstGroup) return;
+    dispatch({
+      type: "setGroup",
+      groupId: firstGroup.id,
+      period: firstGroup.period,
+    });
+  }, [activeScene, dispatch, groups, preferredGroupId, state.activeGroupId]);
   const selectedGroup = React.useMemo(
     () => resolveActiveGroup(
       validatedGroups,
@@ -82,7 +97,11 @@ export function PlaybackProvider({
     ),
     [activeScene, validatedGroups, state.activeGroupId],
   );
-  const usingDefaultPage = state.source?.kind === "default" && !activeScene;
+  const usingDefaultPage = (
+    state.source?.kind === "default"
+    && !activeScene
+    && !selectedGroup
+  );
   const defaultPagePlayback = React.useMemo(
     () => state.playbackView === true && usingDefaultPage
       ? buildDefaultPagePlayback(activePageCharts, temporalContext)
@@ -388,20 +407,24 @@ function initializePlaybackState({
   initialPosition,
   loadedData,
   profiles,
+  preferredGroupId,
   timezone,
 }) {
   const supplied = initialState && typeof initialState === "object"
     ? initialState
     : {};
   const hasSuppliedGroup = Object.hasOwn(supplied, "activeGroupId");
+  const preferredGroup = preferredGroupId
+    ? groups.find(({ id }) => id === preferredGroupId)
+    : null;
   const activeGroupId = hasSuppliedGroup
     ? supplied.activeGroupId
-    : groups[0]?.id ?? null;
+    : preferredGroup?.id ?? (preferredGroupId ? null : groups[0]?.id ?? null);
   const activeScene = resolveActiveScene(scenes, supplied.activeSceneId);
   const source = supplied.source ?? (
     activeScene
       ? { kind: "scene", id: activeScene.id }
-      : hasSuppliedGroup && activeGroupId !== null
+      : activeGroupId !== null
         ? { kind: "group", id: activeGroupId }
         : { kind: "default", id: null }
   );

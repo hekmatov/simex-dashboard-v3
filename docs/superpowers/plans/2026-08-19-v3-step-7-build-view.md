@@ -758,3 +758,18 @@ This is a corrective amendment to S7-8/S7-9 and Sketches 010/012. It does not cl
 Verification: the focused semantic/composition gate passed 107/107; the exact production-bundle `006-scene-authoring amendment` journey passed 1/1 in 39.7 seconds; the direct Vite production build passed with 836 modules transformed. In-app inspection at 1280×720 measured two equal 396.5 px Stage 3 canvases containing two actual chart roots each, confirmed the same chart IDs/widths in active-Scene View with no authoring overlay or comparison dialog, and confirmed the authored IDs/layout in Present.
 
 This closes the truthful Scene composition amendment only. The broader Step 7 submission remains provisional because the separately recorded interface-audit Partial rows are still open. Master acceptance is not claimed.
+
+## 2026-08-24 deterministic View Chrono source amendment
+
+The accepted Sketch 007 source selector contains saved Chrono Groups and Scenes. The implementation had added a synthetic `Default page timeline` and could retain it when ready Groups arrived after the playback provider mounted. That source assigned playback contexts to every Page chart, moved them all into the top Chrono section, and rendered non-members as missing instead of preserving ordinary View.
+
+The live provider now receives the first authored Chrono Group identity independently of readiness, waits for that exact Group, and adopts it when it becomes available. It does not choose whichever Group happens to load first. The controller no longer exposes the synthetic Page-wide source. All page charts remains a visibility choice: selected-Group members occupy the Chrono section while non-members retain their canonical Page sections and ordinary rendering.
+
+Verification:
+
+- focused playback and View composition checks passed `56/56`;
+- the exact production-bundle View Chrono journey passed `1/1`;
+- the direct Vite production build passed with `837` modules transformed; and
+- in-app inspection at [http://127.0.0.1:5176/](http://127.0.0.1:5176/) showed Municipal outbreak playback selected on first open, exactly two participating charts, 21 ordinary panels below, and `bio_confirmed_cases` rendered with its normal plot and no empty/error state.
+
+This is a corrective amendment to S7-17 and Sketches 007/014. Step 7 remains provisional and master acceptance is not claimed.
