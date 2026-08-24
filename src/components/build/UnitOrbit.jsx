@@ -13,6 +13,7 @@ const PROTECTED_SELECTORS = [
   ".build-page-tabs",
   ".build-command-header",
   ".build-canvas-toolbar",
+  ".scene-transaction-footer",
 ];
 
 export function isUnitOrbitOutsidePointer(orbit, target) {
@@ -95,11 +96,13 @@ export function positionUnitOrbit({
     candidates.push(candidate("above", horizontalLeft, anchorRect.top - gap - aboveHeight, width, aboveHeight));
   }
 
-  const selected = candidates.find((entry) => (
-    entry.maxHeight >= minHeight
-    && !intersects(entry.rect, anchorRect)
-    && !protectedRects.some((protectedRect) => intersects(entry.rect, protectedRect))
-  ));
+  const selected = candidates
+    .map((entry) => clipCandidateBeforeProtectedRects(entry, protectedRects, gap))
+    .find((entry) => (
+      entry.maxHeight >= minHeight
+      && !intersects(entry.rect, anchorRect)
+      && !protectedRects.some((protectedRect) => intersects(entry.rect, protectedRect))
+    ));
 
   if (!selected) return { needsRecenter: true };
   return {
@@ -274,6 +277,18 @@ function candidate(side, left, top, width, maxHeight) {
       bottom: top + maxHeight,
     },
   };
+}
+
+function clipCandidateBeforeProtectedRects(entry, protectedRects, gap) {
+  const width = entry.rect.right - entry.rect.left;
+  const maxHeight = protectedRects.reduce((availableHeight, protectedRect) => {
+    const horizontallyOverlaps = entry.left < protectedRect.right
+      && entry.left + width > protectedRect.left;
+    const startsBelowCandidate = protectedRect.top > entry.top;
+    if (!horizontallyOverlaps || !startsBelowCandidate) return availableHeight;
+    return Math.min(availableHeight, protectedRect.top - gap - entry.top);
+  }, entry.maxHeight);
+  return candidate(entry.side, entry.left, entry.top, width, maxHeight);
 }
 
 export function constrainedUnitOrbitPlacement({

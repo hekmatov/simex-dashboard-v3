@@ -83,6 +83,21 @@ test("Unit Orbit uses below placement when horizontal candidates cannot fit", ()
   assert.equal(intersects(rightRect(result, 400), anchor), false);
 });
 
+test("Unit Orbit clips beside-chart placement above a protected transaction footer", () => {
+  const footer = rect(0, 700, 1200, 900);
+  const result = orbitModule.positionUnitOrbit({
+    anchorRect: rect(100, 100, 500, 420),
+    orbitSize: { width: 400, height: 760 },
+    viewport: { width: 1200, height: 900 },
+    protectedRects: [footer],
+  });
+
+  assert.equal(result.side, "right");
+  assert.equal(result.top, 100);
+  assert.equal(result.maxHeight, 588);
+  assert.equal(intersects(rightRect(result, 400), footer), false);
+});
+
 test("Unit Orbit requests one recenter when no nonintersecting candidate has usable height", () => {
   const result = orbitModule.positionUnitOrbit({
     anchorRect: rect(0, 170, 768, 560),
