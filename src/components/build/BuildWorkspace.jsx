@@ -107,6 +107,7 @@ export default function BuildWorkspace({
   onLocalDraftsChange,
   onDisplayAction,
   selectionControllerRef,
+  exportResolutionControllerRef,
 }) {
   const dashboardMapRef = React.useRef(null);
   const [mapRegion, setMapRegion] = React.useState("structure");
@@ -421,6 +422,32 @@ export default function BuildWorkspace({
     restoreCanvas(parked.restoration);
   };
 
+  const exportResolutionController = {
+    resolve(issueId) {
+      const surface = ({
+        structure: "structure",
+        "chrono-group": "chrono-group",
+        scene: "scene",
+      })[issueId];
+      if (!surface) return false;
+      if (activeAuxiliary === surface) return true;
+      if (parkedAuxiliaries.some((entry) => entry.surface === surface)) {
+        resumeAuxiliary(surface);
+      } else {
+        openAuxiliary(surface);
+      }
+      return true;
+    },
+  };
+  if (exportResolutionControllerRef) {
+    exportResolutionControllerRef.current = exportResolutionController;
+  }
+  React.useEffect(() => () => {
+    if (exportResolutionControllerRef?.current === exportResolutionController) {
+      exportResolutionControllerRef.current = null;
+    }
+  }, [exportResolutionController, exportResolutionControllerRef]);
+
   const dispatchStructure = (action) => {
     let normalized = action;
     if (action.type === "REQUEST_ADD_PAGE") {
@@ -622,6 +649,7 @@ export default function BuildWorkspace({
             onAddChart={() => onAddChart?.()}
             onUploadPackage={onUploadPackage}
             onDownloadPackage={onDownloadPackage}
+            packageDownloadDisabled={mutationsDisabled}
             onOpenAuxiliary={openAuxiliary}
             onResumeAuxiliary={resumeAuxiliary}
             getAuxiliaryLabel={auxiliaryLabel}

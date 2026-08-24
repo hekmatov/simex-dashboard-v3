@@ -35,6 +35,7 @@ import {
 import { browserStorage } from "./lib/browserStorage.js";
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
+import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -931,24 +932,35 @@ export default function App() {
     }
   }
 
-  function exportConfig(configOverride) {
+  async function exportConfig(configOverride) {
+    setOperationError("");
     try {
-      const bundle = serializeDashboardBundle(
-        configOverride ?? dashboard,
-        { now: new Date().toISOString() },
-      );
       const defaultName = `SimEx-dashboard-bundle-${dateStamp()}`;
       const chosenName = window.prompt(
         "Name this exported dashboard bundle",
         defaultName,
       );
-      if (!chosenName) return;
+      if (!chosenName) return false;
+      const prepared = await prepareDashboardPackageExport(
+        configOverride ?? dashboard,
+        {
+          readText: (path) => readPackageAsset(path, "text"),
+          readJson: (path) => readPackageAsset(path, "json"),
+          readImageDataUrl: readPackageImageDataUrl,
+        },
+      );
+      const bundle = serializeDashboardBundle(
+        prepared.config,
+        { now: new Date().toISOString() },
+      );
       downloadBundle(
         bundle,
         chosenName.endsWith(".json") ? chosenName : `${chosenName}.json`,
       );
+      return true;
     } catch (exportError) {
       setOperationError(exportError.message || "Could not export dashboard bundle.");
+      throw exportError;
     }
   }
 
@@ -1046,16 +1058,17 @@ export default function App() {
         open={mode === "build" && scenarioPassportOpen}
         dashboard={dashboard}
         onClose={() => setScenarioPassportOpen(false)}
-        onDirtyChange={setScenarioPassportDirty}
+        onDirtyChange={(dirty) => {
+          setScenarioPassportDirty(dirty);
+          dashboardRendererRef.current?.setAuthoredDirtyFlag?.("scenario", dirty);
+        }}
         onSave={(value) => mutateDashboard((next) => {
           next.scenarioLabel = value.scenarioLabel;
           next.programLabel = value.programLabel;
           next.lastUpdated = value.lastUpdated;
         })}
         onImportPackage={() => dashboardRendererRef.current?.requestDashboardPackageImport?.()}
-        onDownloadPackage={() => exportConfig(configurationForPortableUse(
-          dashboardRef.current ?? dashboard,
-        ))}
+        onDownloadPackage={() => dashboardRendererRef.current?.requestDashboardPackageExport?.()}
         onResetToSource={() => dashboardRendererRef.current?.requestResetDashboardToSource?.()}
       />}
       density={densityForDashboardMode(mode)}
@@ -1181,6 +1194,8 @@ export default function App() {
       )}
       onImportConfig={inspectImportPackage}
       onExportConfig={exportConfig}
+      onOpenBuildPanel={() => setBuildPanelOpen(true)}
+      onResolveScenarioDraft={() => setScenarioPassportOpen(true)}
       onResetEditSession={resetEditSession}
       onOpenDashboardLook={openDashboardLook}
       buildPanelOpen={buildPanelOpen}
@@ -1373,6 +1388,45 @@ function downloadBundle(bundle, fileName) {
   link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+async function readPackageAsset(path, format) {
+  const response = await fetch(resolvePackageAssetUrl(path));
+  if (!response.ok) {
+    throw new Error(`Source material "${path}" could not be included in the dashboard package.`);
+  }
+  return format === "json" ? response.json() : response.text();
+}
+
+async function readPackageImageDataUrl(source) {
+  if (typeof source === "string" && /^data:image\/[a-z0-9.+-]+;base64,/i.test(source)) {
+    return source;
+  }
+  const response = await fetch(resolvePackageAssetUrl(source));
+  if (!response.ok) {
+    throw new Error(`Image source "${source}" could not be included in the dashboard package.`);
+  }
+  return blobAsDataUrl(await response.blob());
+}
+
+function resolvePackageAssetUrl(path) {
+  if (typeof path !== "string" || path.trim() === "") {
+    throw new Error("Dashboard source material has no readable path.");
+  }
+  if (/^(?:data:|blob:|https?:)/i.test(path)) return path;
+  const base = new URL(import.meta.env.BASE_URL ?? "/", window.location.origin);
+  return new URL(path.replace(/^\/+/, ""), base).href;
+}
+
+function blobAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(
+      reader.error ?? new Error("Image source could not be read for dashboard package export."),
+    ));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function dateStamp() {

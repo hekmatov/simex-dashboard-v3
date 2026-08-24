@@ -240,6 +240,22 @@ test("version 3 bundles round-trip uploaded and inline sources", () => {
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
+test("bundle serialization removes runtime source and chart availability state", () => {
+  const dashboard = version3Dashboard();
+  dashboard.dataSourceStates = {
+    "uploaded-cases": { status: "ready" },
+  };
+  dashboard.chartDataStates = {
+    "outbreak-trend": { status: "partial", unavailableSeries: ["Deaths"] },
+  };
+
+  const bundle = serializeDashboardBundle(dashboard, { now: null });
+
+  assert.equal(Object.hasOwn(bundle.config, "dataSourceStates"), false);
+  assert.equal(Object.hasOwn(bundle.config, "chartDataStates"), false);
+  assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
+});
+
 test("saved Scenes round-trip as one validated dashboard-content truth", () => {
   const dashboard = version3Dashboard();
   dashboard.scenes = [{

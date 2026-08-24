@@ -1,4 +1,5 @@
 import React from "react";
+import { isGeoJsonDescriptor } from "../../data/sourceRequest.js";
 
 import {
   normalizeChartInstance,
@@ -734,7 +735,7 @@ export function SelectedChartEditor({
 function validatedEditorGeoDataSources(dataSources, loadedData) {
   const result = Object.create(null);
   for (const [sourceId, source] of collectionEntries(dataSources)) {
-    if (source?.kind !== "geojson") continue;
+    if (!isGeoJsonDescriptor(source)) continue;
     const candidate = readEntry(loadedData, sourceId);
     try {
       validateGeoJson(candidate, `Data source "${sourceId}" GeoJSON`);

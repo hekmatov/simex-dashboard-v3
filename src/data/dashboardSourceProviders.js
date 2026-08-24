@@ -49,6 +49,16 @@ export function createDashboardSourceProviders({
       },
     },
     {
+      kind: "uploadedGeoJson",
+      async load({ sourceId, descriptor }) {
+        validateGeoJson(
+          descriptor.geoJson,
+          `Uploaded GeoJSON source "${sourceId}"`,
+        );
+        return { data: structuredClone(descriptor.geoJson) };
+      },
+    },
+    {
       kind: "geojson",
       async load(request) {
         const { sourceId, descriptor, portableSource } = request;

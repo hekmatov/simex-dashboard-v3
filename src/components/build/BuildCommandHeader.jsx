@@ -16,6 +16,7 @@ export default function BuildCommandHeader({
   onAddChart,
   onUploadPackage,
   onDownloadPackage,
+  packageDownloadDisabled = locked,
   onOpenAuxiliary,
   onResumeAuxiliary,
   getAuxiliaryLabel = (surface) => surface,
@@ -80,9 +81,17 @@ export default function BuildCommandHeader({
             <button type="button" className="secondary" disabled={locked} onClick={onUploadPackage}>
               Upload Dashboard Package
             </button>
-            <button type="button" className="secondary" disabled={locked} onClick={onDownloadPackage}>
+            <button type="button" className="secondary" disabled={packageDownloadDisabled} onClick={onDownloadPackage}>
               Download Dashboard Package
             </button>
+          </div>
+        </section>
+
+        <section className="build-command-group build-command-group--session" data-build-command-group="session" aria-label="Build session commands">
+          <strong className="build-command-group__label">Session</strong>
+          <div className="build-command-group__controls">
+            <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
+            <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
           </div>
         </section>
 
@@ -120,13 +129,6 @@ export default function BuildCommandHeader({
           </div>
         </section>
 
-        <section className="build-command-group build-command-group--session" data-build-command-group="session" aria-label="Build session commands">
-          <strong className="build-command-group__label">Session</strong>
-          <div className="build-command-group__controls">
-            <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
-            <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
-          </div>
-        </section>
       </div>
 
       {operationError && <p className="build-operation-error" role="alert">{operationError}</p>}

@@ -3,7 +3,9 @@
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
+import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
 import {
+  activeLocalAuthoringDrafts,
   buildLeaveBlockReason,
   createBuildDirtyState,
   hasActiveLocalAuthoringDrafts,
@@ -48,6 +50,7 @@ import {
 } from "../lib/dashboardSelectors.js";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { createImportedRendererDraftState } from "../lib/dashboardPackageImportTransaction.js";
+import { collectDashboardPackageExportIssues } from "../lib/dashboardPackageExport.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
 import {
   createSubmissionGate,
@@ -62,6 +65,7 @@ import {
   isMeaningfulChartDraft,
 } from "../charting/forms/chartDraftSession.js";
 import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
+import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -99,6 +103,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onPanelReorder,
   onImportConfig,
   onExportConfig,
+  onOpenBuildPanel,
+  onResolveScenarioDraft,
   onResetEditSession,
   onOpenDashboardLook,
   buildPanelOpen = false,
@@ -120,9 +126,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [chartDraftSessionRevision, setChartDraftSessionRevision] = React.useState(0);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
+  const [packageExportIssues, setPackageExportIssues] = React.useState([]);
   const [externalDirty, setExternalDirty] = React.useState({
     chronoGroup: false,
     scene: false,
+    scenario: false,
     dashboardMetadata: false,
   });
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
@@ -193,6 +201,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   });
   const [multiSelectNotice, setMultiSelectNotice] = React.useState(null);
   const buildWorkspaceSelectionRef = React.useRef(null);
+  const buildWorkspaceExportResolutionRef = React.useRef(null);
   const requestBuildSelectionRef = React.useRef(null);
   const appliedScenePresentSignatureRef = React.useRef(null);
 
@@ -266,7 +275,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [dashboard.dataSources, dashboard.loadedData],
   );
   const setAuthoredDirtyFlag = React.useCallback((key, dirty) => {
-    if (!["chronoGroup", "scene", "dashboardMetadata"].includes(key)) return false;
+    if (!["chronoGroup", "scene", "scenario", "dashboardMetadata"].includes(key)) return false;
     setExternalDirty((current) => ({ ...current, [key]: dirty === true }));
     return true;
   }, []);
@@ -315,7 +324,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartDraftSessionRevision((current) => current + 1);
       setLocalAuthoringDrafts({});
       setInlineRenameDirty(false);
-      setExternalDirty({ chronoGroup: false, scene: false, dashboardMetadata: false });
+      setExternalDirty({ chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false });
       onInlineRenameDirtyChange?.(false);
       setBuildSelection(null);
       setPendingBuildSelection(null);
@@ -350,6 +359,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     },
     requestDashboardPackageImport() {
       requestDashboardPackageImport();
+    },
+    requestDashboardPackageExport() {
+      void exportDashboardPackage();
     },
     requestResetDashboardToSource() {
       setResetEditSessionConfirmation(true);
@@ -386,7 +398,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       await onCommitPendingConfiguration?.();
       return { ok: true };
     },
-  }), [buildMode, buildDraftLocked, chartAuthoringActive, chartDraftSessionKey, chartDraftSessionStore, chartWizardTarget, localAuthoringDrafts, multiSelectMode, onCommitPendingConfiguration, onInlineRenameDirtyChange, pendingEdits, setAuthoredDirtyFlag]);
+  }), [buildMode, buildDraftLocked, chartAuthoringActive, chartDraftSessionKey,
+    chartDraftSessionStore, chartEditorDirty, chartWizardDirty, chartWizardTarget,
+    externalDirty, inlineRenameDirty, layoutDraftDirty, localAuthoringDrafts,
+    moderatorOperation.kind, multiSelectMode, onCommitPendingConfiguration,
+    onExportConfig, onInlineRenameDirtyChange, pendingEdits, setAuthoredDirtyFlag]);
 
   React.useEffect(() => {
     onComparisonSelectionChange?.(multiSelectMode);
@@ -543,19 +559,76 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 
   async function exportDashboardPackage() {
     setBuildSelectionError("");
-    if (chartEditorDirty || chartWizardDirty) {
-      setBuildSelectionError("Save or cancel the changed chart before exporting a dashboard package.");
+    const issues = collectCurrentPackageExportIssues();
+    if (issues.length > 0) {
+      setPackageExportIssues(issues);
       return;
     }
     try {
-      const snapshot = dashboardWithCurrentDrafts();
       if (pendingEdits.hasPending()) {
         await pendingEdits.flush();
         await onCommitPendingConfiguration?.();
       }
-      onExportConfig(snapshot);
+      const snapshot = dashboardWithCurrentDrafts();
+      await onExportConfig(snapshot);
     } catch (error) {
       setBuildSelectionError(boundedModeratorMessage(error));
+    }
+  }
+
+  function collectCurrentPackageExportIssues() {
+    const localDraftKeys = new Set(
+      activeLocalAuthoringDrafts(localAuthoringDrafts).map(({ key }) => key),
+    );
+    return collectDashboardPackageExportIssues({
+      chartEditor: chartEditorDirty,
+      chartWizard: chartWizardDirty || isMeaningfulChartDraft(
+        chartDraftSessionStore.get(chartDraftSessionKey),
+      ),
+      layout: layoutDraftDirty,
+      structure: localDraftKeys.has("structure"),
+      scenario: localDraftKeys.has("scenario") || externalDirty.scenario,
+      chronoGroup: localDraftKeys.has("chronoGroup") || externalDirty.chronoGroup,
+      scene: localDraftKeys.has("scene") || externalDirty.scene,
+      inlineRename: inlineRenameDirty,
+      operation: moderatorOperation.kind !== null,
+    });
+  }
+
+  function resolvePackageExportIssue(issueId) {
+    setPackageExportIssues([]);
+    if (issueId === "chart-editor") {
+      setChartEditorVisible(Boolean(chartEditorPlacementId));
+      return;
+    }
+    if (issueId === "chart-wizard") {
+      if (!chartWizardTarget && chartWizardSuspendedTarget) {
+        setChartWizardTarget(chartWizardSuspendedTarget);
+        setChartWizardSuspended(false);
+      }
+      return;
+    }
+    if (["structure", "chrono-group", "scene"].includes(issueId)) {
+      buildWorkspaceExportResolutionRef.current?.resolve?.(issueId);
+      return;
+    }
+    if (issueId === "scenario") {
+      onResolveScenarioDraft?.();
+      return;
+    }
+    if (issueId === "layout") {
+      document.querySelector('[data-build-command-group="layout"]')?.scrollIntoView({
+        block: "nearest",
+        behavior: "auto",
+      });
+      document.querySelector('[data-build-command-group="layout"] button:not(:disabled)')?.focus();
+      return;
+    }
+    if (issueId === "inline-rename") {
+      onOpenBuildPanel?.();
+      window.requestAnimationFrame(() => {
+        document.querySelector('#dashboard-map-panel input[type="text"]')?.focus();
+      });
     }
   }
 
@@ -1310,6 +1383,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onDeviceLayoutChange={onDeviceLayoutChange}
       onDisplayAction={onDisplayAction}
       selectionControllerRef={buildWorkspaceSelectionRef}
+      exportResolutionControllerRef={buildWorkspaceExportResolutionRef}
     />
   ) : null;
   return (
@@ -1427,6 +1501,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         error={moderatorOperation.errorKind === "remove-page" ? moderatorOperation.error : ""}
         onConfirm={confirmPageRemoval}
         onCancel={cancelPageRemoval}
+      />
+      <DashboardPackageExportDialog
+        open={packageExportIssues.length > 0}
+        issues={packageExportIssues}
+        onResolve={resolvePackageExportIssue}
+        onCancel={() => setPackageExportIssues([])}
       />
       <ConfirmDialog
         open={pendingRemovalPanelId !== null}
@@ -1576,7 +1656,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
               <IconControl interactionId="shell.remove-tab" className="secondary" disabled={moderatorMutationLocked || (dashboard.pages ?? []).length <= 1} onClick={removeActivePage} />
             </div>
             <IconControl interactionId="shell.import" disabled={moderatorMutationLocked} onClick={() => importInputRef.current?.click()} />
-            <IconControl interactionId="shell.export" disabled={moderatorMutationLocked} onClick={() => onExportConfig(dashboardWithCurrentDrafts())} />
+            <IconControl interactionId="shell.export" disabled={moderatorMutationLocked} onClick={exportDashboardPackage} />
             <GlobalPanelColorControls disabled={moderatorMutationLocked} colors={globalPanelColors} onChange={changeGlobalPanelColors} />
             <GlobalIconAccentControl
               disabled={moderatorMutationLocked}
@@ -2014,7 +2094,7 @@ function resolveGlobalPanelColors(dashboard) {
 export function validatedGeoDataSources(dashboard = {}) {
   const result = Object.create(null);
   for (const [sourceId, source] of Object.entries(dashboard.dataSources ?? {})) {
-    if (source?.kind !== "geojson") continue;
+    if (!isGeoJsonDescriptor(source)) continue;
     const candidate = dashboard.loadedData?.[sourceId];
     try {
       validateGeoJson(candidate, `Data source "${sourceId}" GeoJSON`);

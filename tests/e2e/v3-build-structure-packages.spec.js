@@ -250,6 +250,97 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   await expect(importedTab).toBeVisible();
 });
 
+test("package export resolves drafts and round-trips a self-contained source", async ({ page }) => {
+  test.setTimeout(90_000);
+  await openBuildStructure(page);
+  const fixture = await packageFixture();
+  const fixtureConfig = fixture.config;
+  const fixtureChart = fixtureConfig.pages[0].sections[0].panels[0].chart
+    ?? fixtureConfig.pages[0].sections[0].panels[0];
+  fixtureConfig.dataSources = {
+    [fixtureChart.sourceId]: fixtureConfig.dataSources[fixtureChart.sourceId],
+  };
+  fixtureConfig.datasetProfiles = fixtureConfig.datasetProfiles?.[fixtureChart.sourceId]
+    ? { [fixtureChart.sourceId]: fixtureConfig.datasetProfiles[fixtureChart.sourceId] }
+    : {};
+  const compactFixture = serializeDashboardBundle(fixtureConfig, {
+    now: "2026-08-21T09:10:11.000Z",
+  });
+
+  const commandGeometry = await page.locator(".build-command-groups").evaluate((root) => {
+    const rect = (selector) => {
+      const box = root.querySelector(selector)?.getBoundingClientRect();
+      return box ? { left: box.left, right: box.right, top: box.top, bottom: box.bottom } : null;
+    };
+    const rootBox = root.getBoundingClientRect();
+    return {
+      viewportWidth: window.innerWidth,
+      template: getComputedStyle(root).gridTemplateColumns,
+      root: { left: rootBox.left, right: rootBox.right, top: rootBox.top, bottom: rootBox.bottom },
+      package: rect('[data-build-command-group="package"]'),
+      session: rect('[data-build-command-group="session"]'),
+      upload: rect('[data-build-command-group="package"] button'),
+      reset: rect('[data-build-command-group="session"] button'),
+    };
+  });
+  const controlsOverlap = commandGeometry.upload.right > commandGeometry.reset.left
+    && commandGeometry.upload.left < commandGeometry.reset.right
+    && commandGeometry.upload.bottom > commandGeometry.reset.top
+    && commandGeometry.upload.top < commandGeometry.reset.bottom;
+  expect(controlsOverlap, JSON.stringify(commandGeometry)).toBe(false);
+
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: "compact-dashboard.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(compactFixture)),
+  });
+  const importReview = page.getByRole("dialog", { name: "Review package contents" });
+  await importReview.getByRole("button", { name: "Load package", exact: true }).click();
+
+  const scenarioTrigger = page.getByRole("button", { name: "HeV-A26 Day 2 Simulation", exact: true });
+  await scenarioTrigger.click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await passport.getByRole("button", { name: /^Edit Program:/ }).click();
+  await passport.getByLabel("Program", { exact: true }).fill("Unfinished export program");
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Download Dashboard Package", exact: true }).click();
+
+  const readiness = page.getByRole("dialog", { name: "Finish unfinished work before download" });
+  await expect(readiness).toContainText("Scenario Passport draft");
+  await readiness.getByRole("button", { name: "Open Scenario Passport", exact: true }).click();
+  await expect(passport).toBeVisible();
+  await passport.getByRole("button", { name: /^Edit Program:/ }).click();
+  await expect(passport.getByLabel("Program", { exact: true })).toHaveValue("Unfinished export program");
+  await passport.getByRole("button", { name: "Discard Scenario", exact: true }).click();
+  await passport.getByRole("button", { name: "Close", exact: true }).click();
+
+  page.once("dialog", (dialog) => dialog.accept("self-contained-roundtrip"));
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download Dashboard Package", exact: true }).click(),
+  ]);
+  const downloadedPath = await download.path();
+  const exported = JSON.parse(await readFile(downloadedPath, "utf8"));
+  const exportedSource = exported.config.dataSources[fixtureChart.sourceId];
+  expect(exportedSource.kind).toBe("dataset");
+  expect(exportedSource.type).toBe("uploadedCsv");
+  expect(exportedSource.csvText).toContain("national_total_cases");
+  expect(exported.config).not.toHaveProperty("dataSourceStates");
+  expect(exported.config).not.toHaveProperty("chartDataStates");
+
+  const roundtripChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  const roundtripChooser = await roundtripChooserPromise;
+  await roundtripChooser.setFiles(downloadedPath);
+  const roundtripReview = page.getByRole("dialog", { name: "Review package contents" });
+  await expect(roundtripReview).toContainText("Panel: Imported Panel");
+  await roundtripReview.getByRole("button", { name: "Load package", exact: true }).click();
+  await expect(page.locator('[data-canonical-placement-id="bio_confirmed_cases"]')).toBeVisible();
+});
+
 test("cancelling the authored-content import warning preserves inline rename state", async ({ page }) => {
   await openBuildStructure(page);
   const tree = page.getByRole("tree");

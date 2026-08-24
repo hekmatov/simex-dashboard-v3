@@ -36,6 +36,15 @@ const UPLOADED_SOURCE_KEYS = new Set([
   "sourceFingerprint",
   "type",
 ]);
+const UPLOADED_GEOJSON_SOURCE_KEYS = new Set([
+  "fileName",
+  "fingerprint",
+  "geoJson",
+  "kind",
+  "provenance",
+  "sourceFingerprint",
+  "type",
+]);
 const PROVENANCE_KEYS = new Set(["label"]);
 const PARSING_KEYS = new Set(["interpretation", "format", "timezone"]);
 const PARSING_INTERPRETATIONS = new Set([
@@ -496,6 +505,26 @@ export function validateDataSourceDescriptor(sourceId, source) {
     }
     validateOptionalSourceMetadata(sourceId, entries);
     return "uploadedCsv";
+  }
+  if (kind === "dataset" && entryValue(entries, "type") === "uploadedGeoJson") {
+    rejectUnknownEntries(
+      entries,
+      UPLOADED_GEOJSON_SOURCE_KEYS,
+      `data source "${sourceId}" descriptor`,
+    );
+    const fileName = entryValue(entries, "fileName");
+    if (
+      fileName !== undefined
+      && (typeof fileName !== "string" || fileName.trim() === "")
+    ) {
+      throw new Error(`Uploaded GeoJSON source "${sourceId}" fileName is invalid.`);
+    }
+    validateGeoJson(
+      entryValue(entries, "geoJson"),
+      `Uploaded GeoJSON source "${sourceId}"`,
+    );
+    validateOptionalSourceMetadata(sourceId, entries);
+    return "uploadedGeoJson";
   }
   if (kind === "dataset") {
     throw new Error(

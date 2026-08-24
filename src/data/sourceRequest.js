@@ -15,10 +15,23 @@ export function providerKindForDescriptor(descriptor) {
   ) {
     return "uploadedCsv";
   }
+  if (
+    descriptor?.kind === "dataset"
+    && descriptor?.type === "uploadedGeoJson"
+  ) {
+    return "uploadedGeoJson";
+  }
   if (descriptor?.kind === "csv" || descriptor?.kind === "geojson") {
     return descriptor.kind;
   }
   throw new Error("Unsupported source descriptor for the data service.");
+}
+
+export function isGeoJsonDescriptor(descriptor) {
+  return descriptor?.kind === "geojson" || (
+    descriptor?.kind === "dataset"
+    && descriptor?.type === "uploadedGeoJson"
+  );
 }
 
 export function normalizeSourceRequest(

@@ -80,6 +80,8 @@ export function nextImageZoomScale(currentScale, event) {
 function safeImageSource(value) {
   if (typeof value !== "string" || !value.trim()) return null;
   const src = value.trim();
-  return /^(?:https?:|blob:|\/|\.\/|\.\.\/)/i.test(src) ? src : null;
+  return /^(?:https?:|blob:|\/|\.\/|\.\.\/|data:image\/[a-z0-9.+-]+;base64,)/i.test(src)
+    ? src
+    : null;
 }
 function safeFit(value) { return ["contain", "cover", "fill"].includes(value) ? value : "contain"; }

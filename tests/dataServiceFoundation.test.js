@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  isGeoJsonDescriptor,
   normalizeSourceRequest,
   providerKindForDescriptor,
 } from "../src/data/sourceRequest.js";
+
 import { createProviderRegistry } from "../src/data/providerRegistry.js";
 import {
   createDataService,
@@ -12,6 +14,16 @@ import {
 } from "../src/data/dataService.js";
 import { createDashboardSourceProviders } from "../src/data/dashboardSourceProviders.js";
 import { validateGeoJson } from "../src/lib/loadDashboard.js";
+
+test("tracked and packaged geography descriptors share the live geography boundary", () => {
+  assert.equal(isGeoJsonDescriptor({ kind: "geojson", path: "areas.geojson" }), true);
+  assert.equal(isGeoJsonDescriptor({
+    kind: "dataset",
+    type: "uploadedGeoJson",
+    geoJson: { type: "FeatureCollection", features: [] },
+  }), true);
+  assert.equal(isGeoJsonDescriptor({ kind: "dataset", type: "uploadedCsv" }), false);
+});
 
 function deferred() {
   let resolve;

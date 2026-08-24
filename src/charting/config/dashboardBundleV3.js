@@ -20,15 +20,23 @@ import {
 import {
   profilesForConfiguredCsvSources,
   safePublicPath,
+  validateGeoJson,
   validateDatasetProfiles,
 } from "../../lib/loadDashboard.js";
 
 export const DASHBOARD_CONFIG_VERSION = 3;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 
-const RUNTIME_CONFIGURATION_KEYS = new Set(["loadedData", "loadedRows", "runtimeRows"]);
+const RUNTIME_CONFIGURATION_KEYS = new Set([
+  "chartDataStates",
+  "dataSourceStates",
+  "loadedData",
+  "loadedRows",
+  "runtimeRows",
+]);
 const TRACKED_SOURCE_KEYS = new Set(["kind", "path", "parsingMetadata", "provenance"]);
 const UPLOADED_CSV_SOURCE_KEYS = new Set(["csvText", "fileName", "fingerprint", "kind", "parsingMetadata", "provenance", "sourceFingerprint", "type"]);
+const UPLOADED_GEOJSON_SOURCE_KEYS = new Set(["fileName", "fingerprint", "geoJson", "kind", "provenance", "sourceFingerprint", "type"]);
 const INLINE_SOURCE_KEYS = new Set(["fingerprint", "kind", "parsingMetadata", "provenance", "rows", "sourceFingerprint"]);
 const BUNDLE_KEYS = new Set(["bundleType", "config", "metadata", "version"]);
 const BUNDLE_METADATA_KEYS = new Set(["exportedAt", "sourceFingerprints"]);
@@ -250,6 +258,11 @@ function validateSource(sourceId, source) {
     const fileName = entryValue(entries, "fileName");
     if (fileName !== undefined) requiredString(fileName, `Uploaded CSV source "${sourceId}" fileName`);
     validateRows(sourceRows(sourceId, source), `Uploaded CSV source "${sourceId}" rows`);
+  } else if (kind === "dataset" && type === "uploadedGeoJson") {
+    rejectUnknownEntries(entries, UPLOADED_GEOJSON_SOURCE_KEYS, `data source "${sourceId}"`);
+    const fileName = entryValue(entries, "fileName");
+    if (fileName !== undefined) requiredString(fileName, `Uploaded GeoJSON source "${sourceId}" fileName`);
+    validateGeoJson(entryValue(entries, "geoJson"), `Uploaded GeoJSON source "${sourceId}"`);
   } else if (kind === "inline") {
     rejectUnknownEntries(entries, INLINE_SOURCE_KEYS, `data source "${sourceId}"`);
     validateRows(entryValue(entries, "rows"), `Inline data source "${sourceId}" rows`);
