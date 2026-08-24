@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "629750df889430c42739593008e686c759f2ab310f76aeec72b091730e8869b0";
+  "c4fadfeba88e7863b7cbf3fd8d9aa7ecb4f85bc08e6b5a8b58f2e0160e2e6e37";
 const PROTOCOL_PATH = "src/lib/quorumCompanionProtocol.js";
 const CATALOGUE_PATH = "public/integration/quorum-chart-catalogue.json";
 const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";

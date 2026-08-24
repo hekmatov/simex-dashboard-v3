@@ -8,7 +8,7 @@ const boundaryModule = await import(
 ).catch(() => null);
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "629750df889430c42739593008e686c759f2ab310f76aeec72b091730e8869b0";
+  "c4fadfeba88e7863b7cbf3fd8d9aa7ecb4f85bc08e6b5a8b58f2e0160e2e6e37";
 
 test("runtime boundary inspector is available", () => {
   assert.equal(
@@ -27,8 +27,8 @@ test("V3 runtime has no remote dependency and preserves Quorum and canonical ren
   assert.deepEqual(inventory.remoteRuntimeDependencies, []);
   assert.equal(inventory.quorumContractHash, EXPECTED_QUORUM_CONTRACT_HASH);
   assert.deepEqual(inventory.canonicalRendererEntrypoints, [
-    canonicalEntrypoint("view", "src/components/view/ViewShell.jsx"),
-    canonicalEntrypoint("build", "src/components/build/BuildWorkspace.jsx"),
+    canonicalEntrypoint("view", "src/components/dashboard/DashboardModeWorkspace.jsx"),
+    canonicalEntrypoint("build", "src/components/dashboard/DashboardModeWorkspace.jsx"),
     canonicalEntrypoint(
       "present",
       "src/components/presentation/PresentWorkspace.jsx",

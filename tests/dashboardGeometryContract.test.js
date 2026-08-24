@@ -6,6 +6,7 @@ const sources = Object.freeze({
   renderer: "src/components/DashboardRenderer.jsx",
   view: "src/components/view/ViewShell.jsx",
   build: "src/components/build/BuildWorkspace.jsx",
+  modeWorkspace: "src/components/dashboard/DashboardModeWorkspace.jsx",
   canvas: "src/components/dashboard/DashboardCanvas.jsx",
   tokens: "src/styles/tokens.css",
   grammar: "src/styles/dashboard-style-grammar.css",
@@ -16,27 +17,19 @@ async function source(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("View and Build route the same saved Page through the canonical renderer", async () => {
-  const [renderer, view, build, canvas] = await Promise.all([
+test("View and Build route the same saved Page through one persistent canonical renderer", async () => {
+  const [renderer, modeWorkspace, canvas] = await Promise.all([
     source(sources.renderer),
-    source(sources.view),
-    source(sources.build),
+    source(sources.modeWorkspace),
     source(sources.canvas),
   ]);
 
-  for (const [mode, shell] of [["View", view], ["Build", build]]) {
-    assert.match(shell, /CanonicalDashboardFrame/,
-      `${mode} must use the shared canonical Page frame`);
-    assert.match(shell, /DashboardCanvas/,
-      `${mode} must use the shared canonical dashboard canvas`);
-    assert.match(shell, /activePage=\{activePage\}/,
-      `${mode} must project the same saved Page`);
-    assert.match(shell, /dashboard=\{dashboard\}/,
-      `${mode} must project the same saved dashboard`);
-  }
-
-  assert.match(renderer, /<ViewShell[\s\S]*?activePage=\{activePage\}[\s\S]*?dashboard=\{dashboard\}/);
-  assert.match(renderer, /<BuildWorkspace[\s\S]*?dashboard=\{dashboard\}[\s\S]*?activePage=\{activePage\}/);
+  assert.match(renderer, /<DashboardModeWorkspace[\s\S]*?activePage=\{activePage\}[\s\S]*?dashboard=\{dashboard\}/);
+  assert.match(modeWorkspace, /<CanonicalDashboardFrame/);
+  assert.match(modeWorkspace, /<DashboardCanvas/);
+  assert.match(modeWorkspace, /mode=\{mode\}/);
+  assert.match(modeWorkspace, /activePage=\{activePage\}/);
+  assert.match(modeWorkspace, /dashboard=\{dashboard\}/);
   assert.match(canvas, /\(activePage\.sections \?\? \[\]\)\.map/,
     "the canonical canvas must preserve saved section order");
   assert.match(canvas, /visiblePlacements\.map/,
