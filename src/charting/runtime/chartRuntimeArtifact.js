@@ -90,11 +90,18 @@ function buildTemporalIndex(marks) {
     entries.push({
       markIndex,
       epochMs,
-      seriesKey: String(mark.series ?? mark.name ?? mark.measure ?? "value"),
+      seriesKey: temporalSeriesKey(mark),
     });
   });
   entries.sort((left, right) => left.epochMs - right.epochMs || left.markIndex - right.markIndex);
   return entries;
+}
+
+function temporalSeriesKey(mark) {
+  if (mark?.geography !== null && mark?.geography !== undefined) {
+    return `geography:${String(mark.geography)}`;
+  }
+  return String(mark?.series ?? mark?.name ?? mark?.measure ?? "value");
 }
 
 function markEpoch(mark) {

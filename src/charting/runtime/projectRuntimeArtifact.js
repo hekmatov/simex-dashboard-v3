@@ -7,9 +7,13 @@ export function projectRuntimeArtifact({ artifact, chart, timeContext } = {}) {
   if (entries.length === 0) return null;
   const groups = new Map();
   for (const entry of entries) {
-    const group = groups.get(entry.seriesKey) ?? [];
+    const seriesKey = runtimeSeriesKey(
+      artifact.prepared.marks[entry.markIndex],
+      entry.seriesKey,
+    );
+    const group = groups.get(seriesKey) ?? [];
     group.push(entry);
-    groups.set(entry.seriesKey, group);
+    groups.set(seriesKey, group);
   }
   const activeMarks = [];
   for (const seriesEntries of groups.values()) {
@@ -34,6 +38,13 @@ export function projectRuntimeArtifact({ artifact, chart, timeContext } = {}) {
       },
     },
   });
+}
+
+function runtimeSeriesKey(mark, storedSeriesKey) {
+  if (mark?.geography !== null && mark?.geography !== undefined) {
+    return `geography:${String(mark.geography)}`;
+  }
+  return storedSeriesKey;
 }
 
 function matchEntry(entries, activeEpochMs, matching = {}) {
