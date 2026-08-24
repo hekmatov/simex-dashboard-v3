@@ -21,6 +21,40 @@ function treeItemLabel(tree, name) {
     .locator(":scope > .build-tree-row .build-tree-label");
 }
 
+test("deleting dashboard content requires explicit acknowledgement and persists a recoverable blank canvas", async ({ page }) => {
+  await openBuildStructure(page);
+
+  await page.getByRole("button", { name: "Delete dashboard content", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete all dashboard content?" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Delete all dashboard content", exact: true }))
+    .toBeDisabled();
+  await expect(dialog.getByText(/Pages$/)).toBeVisible();
+  await expect(dialog.getByText(/data sources$/)).toBeVisible();
+
+  await dialog.getByLabel(/I understand that all Pages/).check();
+  await dialog.getByRole("button", { name: "Delete all dashboard content", exact: true }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "This dashboard has no content" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create first Page", exact: true })).toBeVisible();
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem(
+    "simex-dashboard-config-v3-three-mode-v1",
+  )));
+  expect(stored.pages).toEqual([]);
+  expect(stored.dataSources).toEqual({});
+  expect(stored.datasetProfiles).toBeUndefined();
+  expect(stored.chronoGroups).toEqual([]);
+  expect(stored.scenes).toEqual([]);
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "This dashboard has no content" })).toBeVisible();
+  await page.getByRole("button", { name: "Create first Page", exact: true }).click();
+  await expect(page.locator('[data-canonical-page-id="new_page"]')).toBeVisible();
+  await page.getByRole("button", { name: "Save Layout Changes", exact: true }).click();
+  await expect(page.getByRole("button", { name: "New page", exact: true })).toBeVisible();
+});
+
 async function packageFixture({ preserveSocioEconomicIds = false } = {}) {
   const config = JSON.parse(await readFile(
     new URL("../../public/config/dashboard.json", import.meta.url),
@@ -208,7 +242,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   await look.getByRole("button", { name: "Close", exact: true }).click();
 
   const chooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const chooser = await chooserPromise;
   await expect(page.getByText(
     "Unsaved changes to this dashboard will be lost.", { exact: true },
@@ -235,7 +269,7 @@ test("package import skips cosmetic warnings and reviews the manifest before ato
   await expect(importedTab).toHaveCount(0);
 
   const secondChooserPromise = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const secondChooser = await secondChooserPromise;
   await secondChooser.setFiles({
     name: "imported-dashboard.json",
@@ -358,7 +392,7 @@ test("cancelling the authored-content import warning preserves inline rename sta
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Pending package-safe rename");
 
-  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
   await expect(warning.getByText(
     "Unsaved changes to this dashboard will be lost.", { exact: true },
@@ -389,7 +423,7 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Stale local Page name");
 
-  await page.getByRole("button", { name: "Import package", exact: true }).click();
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
   const chooserPromise = page.waitForEvent("filechooser");
   await warning.getByRole("button", { name: "Choose package", exact: true }).click();

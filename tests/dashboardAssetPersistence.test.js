@@ -72,6 +72,28 @@ test("known content-addressed assets are reused without hashing or rewriting lar
   assert.deepEqual(second.storageConfig, first.storageConfig);
 });
 
+test("removing dashboard assets deletes only payloads no longer referenced by the replacement dashboard", async () => {
+  const memory = createMemoryAssetStore();
+  const persistence = createDashboardAssetPersistence({ store: memory.store });
+  const previous = await persistence.prepare(dashboardWithEmbeddedAssets());
+  const retained = structuredClone(previous.runtimeConfig);
+  delete retained.dataSources.boundaries;
+  delete retained.dataSources.briefing;
+
+  const result = await persistence.removeDashboardAssets(previous.runtimeConfig, {
+    retainedDashboard: retained,
+  });
+
+  assert.equal(result.removed, 2);
+  assert.equal(result.retained, 1);
+  assert.equal(memory.records.has(previous.runtimeConfig.dataSources.cases.browserAssetId), true);
+  assert.equal(memory.records.has(previous.runtimeConfig.dataSources.boundaries.browserAssetId), false);
+  assert.equal(
+    memory.records.has(previous.runtimeConfig.dataSources.briefing.browserImageAssetIds[0]),
+    false,
+  );
+});
+
 test("a failed asset stage removes only records created by that stage", async () => {
   const records = new Map();
   const removed = [];

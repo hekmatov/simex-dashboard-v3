@@ -41,7 +41,29 @@ export default function DashboardCanvas({
     ? (chronoSection.scene.members ?? []).length
     : chronoPlacements.length;
 
-  if (!activePage) return null;
+  if (!activePage) {
+    if (!buildState) return null;
+    return (
+      <section
+        className="dashboard-workspace dashboard-blank-canvas"
+        data-dashboard-surface={surface}
+        aria-labelledby="blank-dashboard-title"
+      >
+        <div className="dashboard-blank-canvas__content">
+          <p className="eyebrow">Blank canvas</p>
+          <h2 id="blank-dashboard-title">This dashboard has no content</h2>
+          <p>Create the first Page to begin building this dashboard.</p>
+          <button
+            type="button"
+            disabled={Boolean(buildState.disabled)}
+            onClick={buildState.onAddPage}
+          >
+            Create first Page
+          </button>
+        </div>
+      </section>
+    );
+  }
   const landingActive = hasLandingPresentation(activePage);
   const accessibilityEnabled = dashboard.globalStyles?.accessibility?.enabled === true;
 

@@ -139,6 +139,23 @@ export function createDashboardAssetPersistence({
         throw normalizeDashboardAssetStorageError(error);
       }
     },
+
+    async removeDashboardAssets(dashboard, { retainedDashboard = null } = {}) {
+      const assetIds = dashboardAssetIds(dashboard);
+      const retainedIds = dashboardAssetIds(retainedDashboard);
+      let removed = 0;
+      let retained = 0;
+      for (const assetId of assetIds) {
+        if (retainedIds.has(assetId)) {
+          retained += 1;
+          continue;
+        }
+        await store.remove(assetId);
+        knownAssetIds.delete(assetId);
+        removed += 1;
+      }
+      return { removed, retained };
+    },
   });
 
   async function stagePayload({
@@ -196,6 +213,23 @@ export function createDashboardAssetPersistence({
       }
     }
   }
+}
+
+function dashboardAssetIds(dashboard) {
+  const ids = new Set();
+  for (const source of Object.values(dashboard?.dataSources ?? {})) {
+    if (typeof source?.browserAssetId === "string" && source.browserAssetId) {
+      ids.add(source.browserAssetId);
+    }
+    for (const assetId of Object.values(source?.browserImageAssetIds ?? {})) {
+      if (typeof assetId === "string" && assetId) ids.add(assetId);
+    }
+    for (const row of source?.rows ?? []) {
+      const assetId = referencedAssetId(row?.src);
+      if (assetId) ids.add(assetId);
+    }
+  }
+  return ids;
 }
 
 export async function readDashboardStorageWithAssets(

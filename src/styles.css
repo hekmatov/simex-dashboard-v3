@@ -5268,6 +5268,35 @@ button.danger {
   border-color: #a21729;
 }
 
+.delete-dashboard-content-summary {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding-left: 22px;
+}
+
+.delete-dashboard-content-acknowledgement {
+  align-items: start;
+  background: var(--simex-surface-subtle, #f4f7fa);
+  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  padding: 12px;
+}
+
+.delete-dashboard-content-acknowledgement input {
+  margin: 2px 0 0;
+}
+
+@media (max-width: 520px) {
+  .delete-dashboard-content-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 .wizard-choice-card h3,
 .wizard-review-card h3 {
   margin: 0;

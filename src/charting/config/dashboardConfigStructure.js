@@ -182,7 +182,11 @@ export function validateDashboardStructure(
 
   const rawPages = denseArray(config.pages, "Dashboard pages");
   if (rawPages.length === 0) {
-    throw new Error("Dashboard pages must be a non-empty array.");
+    return {
+      pages: [],
+      panels: [],
+      pageIds: new Set(),
+    };
   }
   const pageIds = new Set();
   const panelIds = new Set();

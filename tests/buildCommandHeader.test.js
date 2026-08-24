@@ -46,6 +46,7 @@ function renderWorkspace(buildPanelOpen = false) {
     onSectionChange: () => {},
     onFinish: () => {},
     onReset: () => {},
+    onDeleteDashboardContent: () => {},
   }));
 }
 
@@ -56,7 +57,7 @@ test("Build commands are grouped by task above an independently inert Dashboard 
   assert.match(html, /data-build-command-group="content"[\s\S]*Add chart[\s\S]*Pages &amp; sections/);
   assert.match(html, /data-build-command-group="time"[\s\S]*Chrono Studio[\s\S]*Scene Studio/);
   assert.match(html, /data-build-command-group="layout"[\s\S]*Layout changes[\s\S]*Save Layout Changes[\s\S]*Discard Layout Changes/);
-  assert.match(html, /data-build-command-group="session"[\s\S]*Reset[\s\S]*Finish Build/);
+  assert.match(html, /data-build-command-group="session"[\s\S]*Reset[\s\S]*Finish Build[\s\S]*Delete dashboard content/);
   assert.match(html, /id="dashboard-map-panel"[^>]*aria-label="Dashboard map"[^>]*inert/);
   assert.doesNotMatch(html, /aria-label="Build commands"[^>]*inert/);
   assert.match(html, /<h2>Dashboard map<\/h2>/);

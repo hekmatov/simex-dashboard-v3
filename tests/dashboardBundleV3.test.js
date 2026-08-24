@@ -256,6 +256,22 @@ test("bundle serialization removes runtime source and chart availability state",
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
+test("dashboard validation accepts the recoverable zero-Page Build state", () => {
+  const dashboard = {
+    configVersion: 3,
+    id: "blank-dashboard",
+    title: "Blank dashboard",
+    timezone: "UTC",
+    dataSources: {},
+    datasetProfiles: {},
+    chronoGroups: [],
+    scenes: [],
+    pages: [],
+  };
+
+  assert.strictEqual(validateDashboardConfig(dashboard), dashboard);
+});
+
 test("saved Scenes round-trip as one validated dashboard-content truth", () => {
   const dashboard = version3Dashboard();
   dashboard.scenes = [{

@@ -104,6 +104,7 @@ export default function BuildWorkspace({
   onDownloadPackage,
   onFinish,
   onReset,
+  onDeleteDashboardContent,
   onLocalDraftsChange,
   onDisplayAction,
   selectionControllerRef,
@@ -641,6 +642,8 @@ export default function BuildWorkspace({
             parkedAuxiliaries={parkedAuxiliaries}
             onFinish={onFinish}
             onReset={onReset}
+            onDeleteDashboardContent={onDeleteDashboardContent}
+            deleteDashboardContentDisabled={mutationsDisabled}
             onSaveLayout={onSaveLayout}
             onDiscardLayout={() => {
               onDiscardLayout?.();

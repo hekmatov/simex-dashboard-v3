@@ -4,6 +4,7 @@ import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
 import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
+import DeleteDashboardContentDialog from "./build/DeleteDashboardContentDialog.jsx";
 import {
   activeLocalAuthoringDrafts,
   buildLeaveBlockReason,
@@ -51,6 +52,7 @@ import {
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { createImportedRendererDraftState } from "../lib/dashboardPackageImportTransaction.js";
 import { collectDashboardPackageExportIssues } from "../lib/dashboardPackageExport.js";
+import { summarizeDashboardContent } from "../lib/dashboardContentReset.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
 import {
   createSubmissionGate,
@@ -106,6 +108,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onOpenBuildPanel,
   onResolveScenarioDraft,
   onResetEditSession,
+  onDeleteDashboardContent,
   onOpenDashboardLook,
   buildPanelOpen = false,
   operationError = "",
@@ -127,6 +130,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
   const [packageExportIssues, setPackageExportIssues] = React.useState([]);
+  const [deleteContentConfirmation, setDeleteContentConfirmation] = React.useState(false);
   const [externalDirty, setExternalDirty] = React.useState({
     chronoGroup: false,
     scene: false,
@@ -1224,6 +1228,57 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     });
   }
 
+  function confirmDeleteDashboardContent() {
+    if (moderatorOperationGateRef.current.isActive()) return;
+    const cancelled = pendingEdits.takePending();
+    void performModeratorOperation("delete-dashboard-content", async () => {
+      try {
+        if (typeof onDeleteDashboardContent !== "function") {
+          throw new Error("Dashboard content deletion is unavailable.");
+        }
+        const blankDashboard = await onDeleteDashboardContent();
+        pendingEdits.cancel();
+        for (const resolve of buildRevealResolversRef.current.values()) resolve(false);
+        buildRevealResolversRef.current.clear();
+        buildRevealRequestIdRef.current += 1;
+        appliedBuildRevealIdRef.current = 0;
+        setDashboardDraft(dashboardTextDraftFromDashboard(blankDashboard));
+        setPageDrafts({});
+        setSectionDrafts({});
+        setBuildLayoutDraft(null);
+        setSelectedPanelId(null);
+        setChartEditorPlacementId(null);
+        setChartEditorVisible(false);
+        setChartEditBaseline(null);
+        setChartEditorDirty(false);
+        setChartWizardTarget(null);
+        setChartWizardDirty(false);
+        chartDraftSessionStore.clear(chartDraftSessionKey);
+        setChartWizardSuspended(false);
+        setChartWizardSuspendedTarget(null);
+        setChartDraftSessionRevision((current) => current + 1);
+        setLocalAuthoringDrafts({});
+        setInlineRenameDirty(false);
+        setExternalDirty({ chronoGroup: false, scene: false, scenario: false, dashboardMetadata: false });
+        onInlineRenameDirtyChange?.(false);
+        setBuildSelection(null);
+        setPendingBuildSelection(null);
+        setBuildRevealRequest(null);
+        setBuildSelectionError("");
+        setPendingRemovalPanelId(null);
+        setPendingRemovalPageId(null);
+        setPackageExportIssues([]);
+        setMultiSelectMode(false);
+        setMultiPanelIds([]);
+        setDeleteContentConfirmation(false);
+        setBuildTreeResetGeneration((current) => current + 1);
+      } catch (error) {
+        pendingEdits.restore(cancelled);
+        throw error;
+      }
+    });
+  }
+
   function scheduleRendererDrafts(drafts) {
     pendingEdits.schedule("dashboard", {
       type: "dashboard",
@@ -1379,6 +1434,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onDownloadPackage={exportDashboardPackage}
       onFinish={saveEditMode}
       onReset={() => setResetEditSessionConfirmation(true)}
+      onDeleteDashboardContent={() => {
+        clearModeratorError("delete-dashboard-content");
+        setDeleteContentConfirmation(true);
+      }}
       onLocalDraftsChange={handleLocalDraftsChange}
       onDeviceLayoutChange={onDeviceLayoutChange}
       onDisplayAction={onDisplayAction}
@@ -1401,6 +1460,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onSelect: activateBuildCanvasSelection,
           onReorderSection: reorderBuildSection,
           onStructureCommand: applyBuildStructureCommand,
+          onAddPage: addBuildPage,
           onAddSection: addSection,
           onAddChart: openChartWizard,
         } : null}
@@ -1488,6 +1548,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           if (moderatorOperationGateRef.current.isActive()) return;
           setResetEditSessionConfirmation(false);
           clearModeratorError("reset-session");
+        }}
+      />
+      <DeleteDashboardContentDialog
+        open={deleteContentConfirmation}
+        summary={summarizeDashboardContent(dashboard)}
+        busy={moderatorOperation.kind === "delete-dashboard-content"}
+        error={moderatorOperation.errorKind === "delete-dashboard-content" ? moderatorOperation.error : ""}
+        onConfirm={confirmDeleteDashboardContent}
+        onCancel={() => {
+          if (moderatorOperationGateRef.current.isActive()) return;
+          setDeleteContentConfirmation(false);
+          clearModeratorError("delete-dashboard-content");
         }}
       />
       <ConfirmDialog

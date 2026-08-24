@@ -11,6 +11,8 @@ export default function BuildCommandHeader({
   parkedAuxiliaries = [],
   onFinish,
   onReset,
+  onDeleteDashboardContent,
+  deleteDashboardContentDisabled = locked,
   onSaveLayout,
   onDiscardLayout,
   onAddChart,
@@ -92,6 +94,14 @@ export default function BuildCommandHeader({
           <div className="build-command-group__controls">
             <button type="button" className="secondary" disabled={locked} onClick={onReset}>Reset</button>
             <button type="button" disabled={locked} onClick={onFinish}>Finish Build</button>
+            <button
+              type="button"
+              className="danger build-delete-dashboard-content"
+              disabled={deleteDashboardContentDisabled}
+              onClick={onDeleteDashboardContent}
+            >
+              Delete dashboard content
+            </button>
           </div>
         </section>
 

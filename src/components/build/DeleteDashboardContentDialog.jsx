@@ -1,0 +1,87 @@
+import React from "react";
+
+import ModalFocusScope from "../common/ModalFocusScope.jsx";
+
+export default function DeleteDashboardContentDialog({
+  open = false,
+  summary = {},
+  busy = false,
+  error = "",
+  onConfirm,
+  onCancel,
+}) {
+  const [acknowledged, setAcknowledged] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) setAcknowledged(false);
+  }, [open]);
+
+  if (!open) return null;
+  const dismiss = busy ? undefined : onCancel;
+  const consequences = [
+    countLabel(summary.pages, "Page"),
+    countLabel(summary.charts, "chart"),
+    countLabel(summary.sources, "data source"),
+    countLabel(summary.chronoGroups, "Chrono Group"),
+    countLabel(summary.scenes, "Scene"),
+  ];
+
+  return (
+    <ModalFocusScope
+      as="div"
+      open
+      initialFocusSelector='[data-modal-initial-focus="true"]'
+      onEscape={dismiss}
+      className="confirm-dialog-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-dashboard-content-title"
+      aria-describedby="delete-dashboard-content-description delete-dashboard-content-acknowledgement"
+      tabIndex={-1}
+    >
+      <section className="confirm-dialog delete-dashboard-content-dialog">
+        <h2 id="delete-dashboard-content-title">Delete all dashboard content?</h2>
+        <p id="delete-dashboard-content-description">
+          This permanently clears the dashboard’s authored content and source material. Dashboard Look and identity settings are preserved.
+        </p>
+        <ul className="delete-dashboard-content-summary" aria-label="Content to delete">
+          {consequences.map((label) => <li key={label}>{label}</li>)}
+        </ul>
+        <label className="delete-dashboard-content-acknowledgement" id="delete-dashboard-content-acknowledgement">
+          <input
+            type="checkbox"
+            checked={acknowledged}
+            disabled={busy}
+            onChange={(event) => setAcknowledged(event.target.checked)}
+          />
+          <span>I understand that all Pages, charts, Chrono Groups, Scenes, and dashboard data sources will be permanently deleted.</span>
+        </label>
+        {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+        <div className="confirm-dialog-actions">
+          <button
+            type="button"
+            className="secondary"
+            data-modal-initial-focus="true"
+            disabled={busy}
+            onClick={dismiss}
+          >
+            Keep dashboard
+          </button>
+          <button
+            type="button"
+            className="danger"
+            disabled={busy || !acknowledged}
+            onClick={onConfirm}
+          >
+            {busy ? "Deleting dashboard content…" : "Delete all dashboard content"}
+          </button>
+        </div>
+      </section>
+    </ModalFocusScope>
+  );
+}
+
+function countLabel(value, singular) {
+  const count = Number.isFinite(value) ? value : 0;
+  return `${count} ${singular}${count === 1 ? "" : "s"}`;
+}

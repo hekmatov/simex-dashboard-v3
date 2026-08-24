@@ -39,6 +39,7 @@ import {
 import { parseDashboardPackageCandidate } from "./lib/dashboardPackageCandidate.js";
 import { commitDashboardPackageImport } from "./lib/dashboardPackageImportTransaction.js";
 import { prepareDashboardPackageExport } from "./lib/dashboardPackageExport.js";
+import { createBlankDashboardContent } from "./lib/dashboardContentReset.js";
 import {
   initialDisplayState,
   reduceDisplayState,
@@ -781,6 +782,35 @@ export default function App() {
     }
   }
 
+  async function deleteDashboardContent() {
+    const previousDashboard = dashboardRef.current;
+    const committed = await commitConfiguration(
+      createBlankDashboardContent(previousDashboard),
+    );
+    setOperationError("");
+    await cleanupReplacedDashboardAssets(previousDashboard, committed, {
+      failureMessage: "Dashboard content was deleted, but unused browser source files could not be removed.",
+    });
+    return committed;
+  }
+
+  async function cleanupReplacedDashboardAssets(
+    previousDashboard,
+    replacementDashboard,
+    { failureMessage } = {},
+  ) {
+    if (!lastDashboardPersistenceRef.current) return;
+    try {
+      await dashboardAssetPersistence.removeDashboardAssets(previousDashboard, {
+        retainedDashboard: replacementDashboard,
+      });
+    } catch {
+      setOperationError(
+        failureMessage ?? "Unused browser source files could not be removed.",
+      );
+    }
+  }
+
   async function commitDashboardLookPreview(nextPreview) {
     setLookSavingScope("auto");
     setLookError("");
@@ -955,6 +985,7 @@ export default function App() {
     setPackageImportBusy(true);
     setPackageImportError("");
     try {
+      const previousDashboard = dashboardRef.current;
       const committed = await commitDashboardPackageImport({
         candidate: packageImportCandidate,
         prepare: async () => {
@@ -967,6 +998,9 @@ export default function App() {
       });
       setPackageImportCandidate(null);
       setOperationError("");
+      await cleanupReplacedDashboardAssets(previousDashboard, committed, {
+        failureMessage: "The package was loaded, but source files from the previous dashboard could not be removed from browser storage.",
+      });
       return committed;
     } catch (importError) {
       setPackageImportError(
@@ -1243,6 +1277,7 @@ export default function App() {
       onOpenBuildPanel={() => setBuildPanelOpen(true)}
       onResolveScenarioDraft={() => setScenarioPassportOpen(true)}
       onResetEditSession={resetEditSession}
+      onDeleteDashboardContent={deleteDashboardContent}
       onOpenDashboardLook={openDashboardLook}
       buildPanelOpen={buildPanelOpen}
       themeProjection={dashboardThemeProjection}

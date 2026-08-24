@@ -410,6 +410,11 @@
   justify-self: stretch;
 }
 
+.build-command-group--session .build-delete-dashboard-content {
+  flex: 1 0 100%;
+  margin-top: 2px;
+}
+
 .build-command-group__label {
   color: var(--simex-text-muted);
   font-size: 0.72rem;
@@ -423,6 +428,30 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.dashboard-blank-canvas {
+  align-items: center;
+  display: grid;
+  min-height: clamp(360px, 58vh, 680px);
+  padding: clamp(24px, 6vw, 72px);
+}
+
+.dashboard-blank-canvas__content {
+  background: var(--simex-surface-raised, #fff);
+  border: 1px solid var(--simex-border-subtle);
+  border-radius: var(--simex-radius-panel, 12px);
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-inline: auto;
+  max-width: 560px;
+  padding: clamp(24px, 5vw, 44px);
+  width: 100%;
+}
+
+.dashboard-blank-canvas__content :is(h2, p) {
+  margin: 0;
 }
 
 .build-command-group[data-build-command-group="package"] button {
