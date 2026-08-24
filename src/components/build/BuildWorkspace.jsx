@@ -238,7 +238,6 @@ export default function BuildWorkspace({
         itemId: next.chronoGroupId,
       }));
     }
-    if (next.kind !== "chart" && next.kind !== "chronoGroup") setMapRegion("inspector");
     return onActivate?.(next, options) ?? Promise.resolve(false);
   };
   if (selectionControllerRef) selectionControllerRef.current = chooseSelection;
