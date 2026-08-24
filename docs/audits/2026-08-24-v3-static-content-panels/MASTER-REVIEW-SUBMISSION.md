@@ -1,8 +1,12 @@
-# V3 Design Master Review Submission — Step 7S
+# V3 Design Master Approval Record — Step 7S
 
-## Request
+## Verdict
 
-Review the corrected Step 7S static-content design and either approve, approve with recorded deviations, or reject it. Do not authorize production implementation until Step 7 is accepted and an implementation branch is created from its final accepted commit.
+**Approved without design deviations** at discovery commit `e159db11593f784459e50f7707d93987fa996527`. All ten requested decisions and all 36 fidelity rows are binding accepted design requirements. They are not implemented functionality. Production work remains blocked until Step 7 is accepted and the post-Step-7 ownership inventory is committed and synchronized; that gate prohibits production code, configuration, dependencies, and tests before it passes.
+
+## Review request — resolved
+
+The corrected Step 7S static-content design was submitted for approval, approval with recorded deviations, or rejection. The final verdict is recorded above. It does not authorize production implementation until Step 7 is accepted and an implementation branch is created from its final accepted commit.
 
 The first review rejected approval at `64c0143` while accepting the architectural direction. The second review at `1d6413a` accepted the major corrections but found four bounded gaps: complete Image Discard restoration, fullscreen failure/Retry, deterministic post-Step-7 ownership resolution, and the exact version trace in the matrix/decision record. Both rejection rounds and their corrections are preserved in `SKETCH-DECISION-RECORD.md`. Renewed review must exercise the corrected interactions rather than rely on earlier screenshots.
 
@@ -14,7 +18,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 - Production boundary check: no `src`, production test, script, manifest, lockfile, generated catalogue, or shared production CSS change.
 - Baseline note: the full test suite at the starting commit was already red from Windows sandbox/esbuild traversal and existing temporal/catalogue contract mismatches. Step 7S did not repair or reclassify those failures.
 
-## Approval decisions requested
+## Accepted approval decisions
 
 1. Accept a separate four-stage **Add static content** workflow and keep the six-stage **Add chart** workflow unchanged.
 2. Accept `portable-qmd-v1`, including support/defer/reject decisions in the explicit feature table.
@@ -23,7 +27,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 5. Accept Free text in Build/View/fullscreen only, with no Present/Audience selection or protocol support.
 6. Accept Image as a direct non-temporal Present composition item and passive Audience cell.
 7. Accept the exact version trace: dashboard schema v4 and bundle v4; chart config remains v3 unless implementation proves a chart-shape change and an accepted deviation records it.
-8. Accept proposed sketch Variant A for 021–024, or record exact deviations.
+8. Accept sketch Variant A for 021–024 without deviations.
 9. Accept the user-selected application-session-only unsaved-draft lifetime recorded below.
 10. Accept the hard post-Step-7 ownership-resolution gate: implementation cannot begin until exact source/function/CSS/test ownership is inspected from the final accepted Step 7 commit, committed in an inventory, and synchronized into the fidelity matrix and 36-row ledger.
 
@@ -55,8 +59,8 @@ The first review rejected approval at `64c0143` while accepting the architectura
 
 ## Fidelity status
 
-The matrix contains 36 proposed binding rows across semantic, composition, and real-use layers, with a matching 36-row executable plan ledger. PS-02/PS-03 now state dashboard schema v4, export bundle v4, and chart config v3 explicitly. It intentionally does not label any row Implemented or Approved. The later implementation must pass live creation/editing/View/fullscreen journeys for both types, Free-text Present exclusion, Image Present/Audience, and Audience failure isolation.
+The matrix contains 36 accepted design rows across semantic, composition, and real-use layers, with a matching 36-row executable plan ledger. PS-02/PS-03 state dashboard schema v4, export bundle v4, and chart config v3 explicitly. No row is labeled Implemented or Passing. The later implementation must pass live creation/editing/View/fullscreen journeys for both types, Free-text Present exclusion, Image Present/Audience, and Audience failure isolation.
 
 ## Exit from this discovery task
 
-After master review, record the verdict/deviations in all affected artifacts. If approved, retain this branch as design provenance. Start implementation later from the final accepted Step 7 commit, not by continuing from or merging production changes into this worktree.
+The verdict is synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger. Retain this branch as design provenance. Start implementation later from the final accepted Step 7 commit, not by continuing from or merging production changes into this worktree.

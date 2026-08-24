@@ -2,7 +2,7 @@
 sketch: 022
 name: image-authoring
 question: "How should Image creation and editing separate saved nondestructive transforms from transient viewer zoom while preserving asset recovery and accessibility?"
-status: Proposed for V3 Design approval
+status: Approved by V3 Design master; disposable design evidence only
 winner: "A — Canvas + Transform Inspector (recommended)"
 tags: [static-content, image, crop, rotation, alt-text, assets, build]
 ---
@@ -43,4 +43,4 @@ Open `.planning/sketches/022-image-authoring/index.html` in a browser.
 - **B** is rejected because the crop result and transform controls separate vertically at realistic editor density.
 - **C** is rejected because a nested modal complicates draft recovery and makes image replacement, alt text, crop, and fit feel like independent saves when they must commit atomically.
 
-Final acceptance belongs to the V3 Design master task.
+Variant A was accepted without deviations by the V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; this sketch is not production implementation.

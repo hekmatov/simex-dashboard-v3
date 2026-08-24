@@ -2,7 +2,7 @@
 sketch: 021
 name: free-text-authoring
 question: "How should a separate Add static content workflow balance Free-text QMD source, validation, and production-equivalent live preview without entering the chart wizard?"
-status: Proposed for V3 Design approval
+status: Approved by V3 Design master; disposable design evidence only
 winner: "A — Split Source + Production Preview (recommended)"
 tags: [static-content, free-text, qmd, live-preview, build, accessibility]
 ---
@@ -47,4 +47,4 @@ Open `.planning/sketches/021-free-text-authoring/index.html` in a browser.
 - **B** is rejected because the narrow source column weakens the primary authoring action and makes line-oriented diagnostics harder to repair.
 - **C** is rejected because hiding either source or preview makes equivalence checking slower and increases the chance of saving without seeing the rendered consequence.
 
-Both remain interactive comparison evidence. Final acceptance belongs to the V3 Design master task.
+Both remain interactive comparison evidence. Variant A was accepted without deviations by the V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; this sketch is not production implementation.

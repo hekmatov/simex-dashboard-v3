@@ -2,7 +2,7 @@
 sketch: 024
 name: image-audience-rendering
 question: "How should Image panels join passive 16:9 Audience output while Free text remains excluded from Present?"
-status: Proposed for V3 Design approval
+status: Approved by V3 Design master; disposable design evidence only
 winner: "A — Quiet canonical composition (recommended)"
 tags: [static-content, image, present, audience, 16-9, passive]
 ---
@@ -36,4 +36,4 @@ Open `.planning/sketches/024-image-audience-rendering/index.html` in a browser.
 - **B** is rejected because redundant chrome reduces legibility and useful content area at the 16:9 distance fixture.
 - **C** is rejected because automatic image dominance would override the presenter's authored composition intent.
 
-Final acceptance belongs to the V3 Design master task.
+Variant A was accepted without deviations by the V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; this sketch is not production implementation.

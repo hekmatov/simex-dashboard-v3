@@ -2,7 +2,7 @@
 sketch: 023
 name: static-panels-build-view
 question: "How should saved Free-text and Image panels preserve one canonical composition across Build, View, and fullscreen while exposing editing only in Build?"
-status: Proposed for V3 Design approval
+status: Approved by V3 Design master; disposable design evidence only
 winner: "A — Content-led canonical panels (recommended)"
 tags: [static-content, build, view, fullscreen, responsive, canonical-renderer]
 ---
@@ -37,4 +37,4 @@ Open `.planning/sketches/023-static-panels-build-view/index.html` in a browser.
 - **B** is rejected because nested framing spends too much area on decoration and weakens equivalence with ordinary chart panels.
 - **C** is rejected because the compression changes the reading hierarchy and makes static content feel like metadata rather than first-class dashboard content.
 
-Final acceptance belongs to the V3 Design master task.
+Variant A was accepted without deviations by the V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; this sketch is not production implementation.

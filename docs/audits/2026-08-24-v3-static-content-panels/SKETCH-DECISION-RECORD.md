@@ -1,6 +1,6 @@
 # Static Content Sketch Decision and Rejection Record
 
-**Status:** Proposed for V3 Design master approval
+**Status:** Approved without deviations by V3 Design master at `e159db11593f784459e50f7707d93987fa996527` (design only; not implemented)
 **Sketches:** `.planning/sketches/021-*` through `024-*`
 
 ## Comparative decision
@@ -30,7 +30,7 @@ UI/UX Pro Max guidance changed the recommended variants in four concrete ways:
 
 ## Approval handling
 
-The sketch README files and manifest intentionally say **Proposed**, not Approved. Master-task acceptance must record one of:
+The V3 Design master selected **Accepted as proposed** at `e159db11593f784459e50f7707d93987fa996527`; no design deviations were recorded. The possible verdicts were:
 
 - **Accepted as proposed** — promote the winner and set the matching fidelity rows to Accepted.
 - **Accepted with deviation** — describe the deviation, affected invariant, production owner, and changed deterministic/browser check.
@@ -42,7 +42,7 @@ Production implementation may use these sketches as behavioral evidence only aft
 
 The first master review at commit `64c0143` rejected approval while accepting the architectural direction. Binding findings were: invalid Free-text source replaced last-valid preview and could still advance; narrow Variant A stacked rather than tabbed; dirty Cancel was missing; Image authoring controls were mislabeled as stage 4; saved-panel sketches lacked keyboard/fullscreen/failure capability proof; the plan lacked a 36-row execution ledger and sufficient Chrono/Scene/animation/version traceability; and reload-persistent draft recovery had not been presented as a product decision.
 
-The corrected sketches and records retain that rejection as provenance. They remain Proposed until renewed master review. The user subsequently selected application-session-only unsaved drafts; reload-persistent authoring recovery is rejected from Step 7S.
+The corrected sketches and records retain that rejection as provenance. They remained Proposed until the final master approval at `e159db11593f784459e50f7707d93987fa996527`. The user subsequently selected application-session-only unsaved drafts; reload-persistent authoring recovery is rejected from Step 7S.
 
 The second master review at commit `1d6413a` accepted the earlier major corrections but withheld approval for incomplete Image Discard restoration, missing fullscreen failure/Retry, unresolved post-Step-7 production ownership, and incomplete exact version trace in this record and the fidelity matrix. This bounded pass addresses those four findings without reopening the accepted architecture or draft lifetime.
 

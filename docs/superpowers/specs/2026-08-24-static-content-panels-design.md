@@ -1,6 +1,6 @@
 # V3 Step 7S — Static Content Panels Design Specification
 
-**Status:** Proposed for V3 Design master approval
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527` (design only; not implemented)
 **Design baseline:** committed Step 7 HEAD `e5419142e8b56b6c2dc56570a961048960a31027`
 **Design branch:** `codex/static-content-panels-design`
 **Scope:** discovery, specification, and disposable prototypes only
@@ -329,6 +329,6 @@ They are disposable design evidence, not production components. Detailed accepta
 
 ## Approval gate
 
-This specification becomes **Approved** only when the V3 Design master task accepts the separate static workflow, the Free-text Audience exclusion, the non-temporal Image Present model, and the proposed sketch winners. Any accepted deviation must update this specification, the sketch record, fidelity matrix, and implementation plan together before production work begins.
+The V3 Design master approved this specification without deviations at `e159db11593f784459e50f7707d93987fa996527`. That approval binds the separate static workflow, Free-text Audience exclusion, non-temporal Image Present model, sketch winners, and all fidelity requirements as design requirements only. It does not report implementation. Production remains blocked until Step 7 acceptance and the post-Step-7 ownership gate pass.
 
 Even after design approval, production execution remains blocked until Step 7 is accepted and the implementation plan’s hard ownership-resolution gate commits an exact inventory from that final Step 7 commit. Every provisional/generic production owner in the fidelity matrix and ledger must be replaced by exact source/function/CSS/test ownership before implementation begins.

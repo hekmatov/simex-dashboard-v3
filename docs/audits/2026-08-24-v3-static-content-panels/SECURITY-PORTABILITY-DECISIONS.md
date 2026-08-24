@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Proposed
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527` (design only; not implemented)
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Decision table
