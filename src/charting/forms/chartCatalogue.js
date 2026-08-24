@@ -14,6 +14,7 @@ export function listChartTypeOptions({
   category = "",
   sourceProfile = null,
   selected = null,
+  authoringWorkflow = "chart",
 } = {}) {
   const schemas = registry?.list?.() ?? [];
   const groupLabels = new Map(
@@ -22,6 +23,7 @@ export function listChartTypeOptions({
   const search = String(query).trim().toLocaleLowerCase();
   const categoryId = String(category).trim();
   const options = schemas.flatMap((schema) => {
+    if (schema.authoringWorkflow !== authoringWorkflow) return [];
     const purpose = schema.semantics?.purpose ?? groupLabels.get(schema.group) ?? schema.group;
     const haystack = `${schema.label} ${purpose} ${schema.description}`.toLocaleLowerCase();
     if (categoryId && schema.group !== categoryId) return [];
@@ -155,5 +157,10 @@ function retainObjectPaths(value, allowedKeys, prefix, retainedPaths, removedPat
 }
 
 function schemaRevision(schema) {
-  return `${schema.version ?? CHART_SCHEMA_VERSION}:${schema.typeId}`;
+  return [
+    schema.version ?? CHART_SCHEMA_VERSION,
+    schema.typeId,
+    schema.authoringWorkflow,
+    ...(schema.capabilities?.surfaces ?? []),
+  ].join(":");
 }

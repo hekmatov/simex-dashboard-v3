@@ -1,5 +1,7 @@
 import React from "react";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
+import { commitStaticPanelTransaction } from "./static-content/staticPanelTransaction.js";
+import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
 import ApplicationRecovery from "./components/app-shell/ApplicationRecovery.jsx";
@@ -797,7 +799,7 @@ export default function App() {
   async function cleanupReplacedDashboardAssets(
     previousDashboard,
     replacementDashboard,
-    { failureMessage } = {},
+    { failureMessage, transactionKind = "dashboard-replacement" } = {},
   ) {
     if (!lastDashboardPersistenceRef.current) return;
     try {
@@ -806,7 +808,11 @@ export default function App() {
       });
     } catch {
       setOperationError(
-        failureMessage ?? "Unused browser source files could not be removed.",
+        failureMessage ?? (
+          transactionKind === "panel-removal"
+            ? "The panel was removed, but its unused browser source files could not be removed."
+            : "Unused browser source files could not be removed."
+        ),
       );
     }
   }
@@ -910,6 +916,7 @@ export default function App() {
   }
 
   async function createChart(payload, target) {
+    requireChartAuthoringPayload(payload);
     const committed = await ensureDashboardCommitController().mutate((current) => (
       integrateCreatedChart(current, payload, target)
     ));
@@ -918,11 +925,25 @@ export default function App() {
   }
 
   async function saveChart(payload) {
+    requireChartAuthoringPayload(payload);
     const committed = await ensureDashboardCommitController().mutate((current) => (
       integrateSavedChart(current, payload)
     ));
     publishCommittedChartArtifact(payload?.runtimeArtifact);
     return committed;
+  }
+
+  async function commitStaticPanel(prepared) {
+    const controller = ensureDashboardCommitController();
+    const previousDashboard = controller.getCurrent();
+    const result = await commitStaticPanelTransaction(prepared, {
+      controller,
+    });
+    await cleanupReplacedDashboardAssets(previousDashboard, result.dashboard, {
+      transactionKind: "static-content",
+      failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
+    });
+    return result;
   }
 
   function publishCommittedChartArtifact(artifact) {
@@ -943,8 +964,10 @@ export default function App() {
     });
   }
 
-  function removeChart(panelId) {
-    return ensureDashboardCommitController().mutate((next) => {
+  async function removeChart(panelId) {
+    const controller = ensureDashboardCommitController();
+    const previousDashboard = controller.getCurrent();
+    const committed = await controller.mutate((next) => {
       let removedChartId = null;
       for (const page of next.pages ?? []) {
         for (const section of page.sections ?? []) {
@@ -963,6 +986,10 @@ export default function App() {
         return members.length > 0 ? [{ ...group, members }] : [];
       });
     });
+    await cleanupReplacedDashboardAssets(previousDashboard, committed, {
+      transactionKind: "panel-removal",
+    });
+    return committed;
   }
 
   async function inspectImportPackage(file) {
@@ -1194,6 +1221,7 @@ export default function App() {
       }}
       onChartCreate={createChart}
       onChartSave={saveChart}
+      onStaticPanelCommit={commitStaticPanel}
       onApplyCitationToSourceCharts={(updates) => mutateDashboard((next) => {
         const result = applyCitationToSourceCharts(next, updates);
         Object.assign(next, result.dashboard);
@@ -1358,6 +1386,14 @@ function configurationForPortableUse(dashboard) {
     ...portableDashboard
   } = dashboard;
   return structuredClone(portableDashboard);
+}
+
+function requireChartAuthoringPayload(payload) {
+  const typeId = payload?.chart?.typeId;
+  if (typeof typeId !== "string") return;
+  if (getChartSchema(typeId).authoringWorkflow !== "chart") {
+    throw new Error(`Static content type "${typeId}" must use the static content transaction.`);
+  }
 }
 
 export function readyChronoGroups(dashboard) {

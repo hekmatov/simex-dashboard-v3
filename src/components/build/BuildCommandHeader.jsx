@@ -5,6 +5,7 @@ export default function BuildCommandHeader({
   locked = false,
   auxiliaryLocked = false,
   chartDraftAvailable = false,
+  staticDraftAvailable = false,
   operationError = "",
   chronoGroupDraftSuspended = false,
   sceneDraftSuspended = false,
@@ -16,6 +17,7 @@ export default function BuildCommandHeader({
   onSaveLayout,
   onDiscardLayout,
   onAddChart,
+  onAddStaticContent,
   onUploadPackage,
   onDownloadPackage,
   packageDownloadDisabled = locked,
@@ -37,6 +39,9 @@ export default function BuildCommandHeader({
           <div className="build-command-group__controls">
             <button type="button" className="secondary" disabled={locked} onClick={onAddChart}>
               {chartDraftAvailable ? "Resume chart draft" : "Add chart"}
+            </button>
+            <button type="button" className="secondary" disabled={locked} onClick={onAddStaticContent}>
+              {staticDraftAvailable ? "Resume static content draft" : "Add static content"}
             </button>
             <button
               type="button"

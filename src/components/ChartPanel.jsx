@@ -10,6 +10,7 @@ import {
   resolveChartFootprint,
 } from "./chartPanelLayout.js";
 import { resolveChartCitation } from "../charting/presentation/chartCitation.js";
+import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
 
 function ChartPanel({
   panel,
@@ -200,6 +201,7 @@ function ChartPanel({
         sourceId: chart.sourceId,
         source: dataSources?.[chart.sourceId],
         citation,
+        staticContent: getChartSchema(chart.typeId).authoringWorkflow === "static",
         selectionMode: multiSelectMode,
         fullscreenSelected: isMultiSelected,
         fullscreenSelectionIndex: multiSelectionIndex,

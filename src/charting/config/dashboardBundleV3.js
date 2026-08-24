@@ -48,6 +48,13 @@ const TIMEZONES = new Set(["date-only"]);
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
 const CANONICAL_ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const LEGACY_STATIC_INLINE_DATA = Object.freeze({
+  image: Object.freeze({
+    minRows: 1,
+    maxRows: 1,
+    fields: Object.freeze(["src", "alt", "fit"]),
+  }),
+});
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function requiredString(value, description) { if (typeof value !== "string" || value.trim() === "") throw new Error(`${description} is required.`); }
@@ -311,13 +318,14 @@ function validateManualData(chart, source) {
   if (source.kind !== "inline") return;
   const schema = getChartSchema(chart.typeId);
   if (!schema.sources.includes("inline")) throw new Error(`Chart "${chart.id}" does not support inline source "${chart.sourceId}".`);
-  if (!schema.manualData) throw new Error(`Chart "${chart.id}" does not allow manual data.`);
+  const manualData = schema.manualData ?? LEGACY_STATIC_INLINE_DATA[chart.typeId];
+  if (!manualData) throw new Error(`Chart "${chart.id}" does not allow manual data.`);
   const rows = source.rows;
-  if (schema.manualData.minRows === 1 && schema.manualData.maxRows === 1 && rows.length !== 1) throw new Error(`Chart "${chart.id}" manual data must contain exactly one row.`);
-  if (schema.manualData.minRows !== undefined && rows.length < schema.manualData.minRows) throw new Error(`Chart "${chart.id}" manual data requires exactly ${schema.manualData.minRows} row.`);
-  if (schema.manualData.maxRows !== undefined && rows.length > schema.manualData.maxRows) throw new Error(`Chart "${chart.id}" manual data exceeds ${schema.manualData.maxRows} rows.`);
-  if (schema.manualData.fields) {
-    const allowed = new Set(schema.manualData.fields);
+  if (manualData.minRows === 1 && manualData.maxRows === 1 && rows.length !== 1) throw new Error(`Chart "${chart.id}" manual data must contain exactly one row.`);
+  if (manualData.minRows !== undefined && rows.length < manualData.minRows) throw new Error(`Chart "${chart.id}" manual data requires exactly ${manualData.minRows} row.`);
+  if (manualData.maxRows !== undefined && rows.length > manualData.maxRows) throw new Error(`Chart "${chart.id}" manual data exceeds ${manualData.maxRows} rows.`);
+  if (manualData.fields) {
+    const allowed = new Set(manualData.fields);
     for (const row of rows) for (const field of Object.keys(row)) if (!allowed.has(field)) throw new Error(`Chart "${chart.id}" manual data field "${field}" is not allowed.`);
   }
 }

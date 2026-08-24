@@ -8,7 +8,7 @@ const boundaryModule = await import(
 ).catch(() => null);
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "c4fadfeba88e7863b7cbf3fd8d9aa7ecb4f85bc08e6b5a8b58f2e0160e2e6e37";
+  "a876d0b83c9f40ea5179723b9c4304f8873b393142e4a790711af80ed363662c";
 
 test("runtime boundary inspector is available", () => {
   assert.equal(

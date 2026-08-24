@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const EXPECTED_QUORUM_CONTRACT_HASH =
-  "c4fadfeba88e7863b7cbf3fd8d9aa7ecb4f85bc08e6b5a8b58f2e0160e2e6e37";
+  "a876d0b83c9f40ea5179723b9c4304f8873b393142e4a790711af80ed363662c";
 const PROTOCOL_PATH = "src/lib/quorumCompanionProtocol.js";
 const CATALOGUE_PATH = "public/integration/quorum-chart-catalogue.json";
 const CHART_VIEW_PATH = "src/components/charts/ChartView.jsx";
@@ -93,8 +93,12 @@ const TEMPORAL_SCHEMA = schemaNullable(schemaObject({
   time_role_ids: SCHEMA_TEXT_ARRAY,
 }));
 const CHART_TYPE_SCHEMA = schemaObject({
+  authoring_workflow: SCHEMA_TEXT,
   capabilities: schemaObject({
     collection: SCHEMA_BOOLEAN,
+    source_csv: SCHEMA_BOOLEAN,
+    surfaces: SCHEMA_TEXT_ARRAY,
+    time_context: SCHEMA_BOOLEAN,
     time_sync: SCHEMA_BOOLEAN,
     zoom: SCHEMA_BOOLEAN,
   }),

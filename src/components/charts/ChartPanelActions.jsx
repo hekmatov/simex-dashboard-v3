@@ -11,6 +11,7 @@ export default function ChartPanelActions({
   sourceId,
   source,
   citation,
+  staticContent = false,
   showFullscreen = true,
   selectionMode = false,
   fullscreenSelected = false,
@@ -72,7 +73,7 @@ export default function ChartPanelActions({
           React.createElement("span", null, citation || "Unavailable"),
         )
       : null,
-    !selectionMode
+    !selectionMode && !staticContent
       ? React.createElement(SourceCsvViewerButton, {
           sourceId,
           source,
@@ -81,7 +82,7 @@ export default function ChartPanelActions({
           interactionId: "panel.view-source-csv",
         })
       : null,
-    !selectionMode
+    !selectionMode && !staticContent
       ? React.createElement(IconControl, {
           interactionId: "panel.view-source-information",
           className: "chart-panel-icon-button",

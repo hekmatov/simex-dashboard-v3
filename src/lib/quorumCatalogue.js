@@ -5,9 +5,7 @@ import {
   COLLECTION_RANKING_MODES,
 } from "../charting/collection/collectionModel.js";
 import {
-  CHART_CONFIG_VERSION,
-} from "../charting/config/chartConfigV3.js";
-import {
+  DASHBOARD_CONFIG_STRUCTURE,
   validateDashboardStructure,
 } from "../charting/config/dashboardConfigStructure.js";
 import {
@@ -32,6 +30,7 @@ import {
   validateEffectiveTimeSyncMatching,
 } from "../charting/time/chronoGroupModel.js";
 import { validateDataSourceDescriptor } from "./loadDashboard.js";
+import { validateStaticSource } from "../static-content/staticSourceSchema.js";
 
 const CONTRACT_VERSION = "2";
 const CATALOGUE_ID = "simex-dashboard";
@@ -257,6 +256,7 @@ function semanticChartType(schema) {
 
   return {
     type_id: schema.typeId,
+    authoring_workflow: schema.authoringWorkflow,
     label: schema.label,
     description: schema.description,
     group_id: schema.group,
@@ -279,6 +279,9 @@ function semanticChartType(schema) {
       collection: schema.capabilities.collection,
       time_sync: schema.capabilities.timeSync,
       zoom: schema.capabilities.zoom,
+      source_csv: schema.capabilities.sourceCsv,
+      time_context: schema.capabilities.timeContext,
+      surfaces: [...schema.capabilities.surfaces],
     },
     temporal: schema.capabilities.timeSync
       ? {
@@ -306,8 +309,8 @@ function semanticChartType(schema) {
 function buildDashboardContext(dashboard) {
   const root = requiredRecord(dashboard, "dashboard");
   const structure = validateDashboardStructure(root);
-  if (root.configVersion !== CHART_CONFIG_VERSION) {
-    throw new Error(`dashboard configuration version ${CHART_CONFIG_VERSION} is required`);
+  if (root.configVersion !== DASHBOARD_CONFIG_STRUCTURE.version) {
+    throw new Error(`dashboard configuration version ${DASHBOARD_CONFIG_STRUCTURE.version} is required`);
   }
   const catalogueRevision = requiredText(
     root.lastUpdated,
@@ -315,7 +318,12 @@ function buildDashboardContext(dashboard) {
   );
   const dataSources = requiredRecord(root.dataSources, "dashboard dataSources");
   for (const sourceId of Object.keys(dataSources)) {
-    validateDataSourceDescriptor(sourceId, dataSources[sourceId]);
+    const source = dataSources[sourceId];
+    if (source?.kind === "staticText" || source?.kind === "staticImage") {
+      validateStaticSource(source, { assets: root.assets });
+    } else {
+      validateDataSourceDescriptor(sourceId, source);
+    }
   }
 
   const charts = [];
@@ -329,7 +337,7 @@ function buildDashboardContext(dashboard) {
       schema,
       section,
       sectionId,
-    } of validateDashboardChartReferences(structure, dataSources)
+    } of validateDashboardChartReferences(structure, dataSources, { assets: root.assets })
   ) {
     const entry = {
       chart,

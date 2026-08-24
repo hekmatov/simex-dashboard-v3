@@ -54,12 +54,11 @@ test("manual entry is granted by concise inline schema metadata, not chart type 
   for (const typeId of ["pie", "donut", "kpi", "gauge", "bullet", "deltaCard"]) {
     assert.equal(manualDataAllowed(getChartSchema(typeId)), true, typeId);
   }
-  for (const typeId of ["deltaList", "line", "heatmap", "timeline"]) {
+  for (const typeId of ["deltaList", "line", "heatmap", "timeline", "image", "freeText"]) {
     assert.equal(manualDataAllowed(getChartSchema(typeId)), false, typeId);
   }
 
   assert.equal(manualDataAllowed(futureConciseSchema()), true);
-  assert.equal(manualDataAllowed(getChartSchema("image")), true);
   assert.equal(manualDataAllowed({
     ...futureConciseSchema(),
     manualData: { maxRows: 100_000 },

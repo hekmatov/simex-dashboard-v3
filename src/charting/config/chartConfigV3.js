@@ -237,6 +237,19 @@ function validateTransformations(chart, schema, columnTypes) {
     ? chart.transformations.aggregation
     : null;
   if (!Array.isArray(filters)) throw new Error("Chart transformations filters must be an array.");
+  if (schema.authoringWorkflow === "static") {
+    if (
+      filters.length > 0
+      || grouping !== null
+      || aggregation !== null
+      || duplicates !== null
+      || missingValues !== "gap"
+      || Object.hasOwn(chart.transformations, "comparison")
+    ) {
+      throw new Error(`Static content type "${schema.typeId}" cannot use chart data transformations.`);
+    }
+    return;
+  }
   if (filters.length > 0 && !schema.transforms.includes("filter")) throw new Error(`Chart type "${schema.typeId}" does not support filters.`);
   filters.forEach((filter) => validateFilter(filter, columnTypes, chart));
   if (grouping !== null && (!Array.isArray(grouping) || grouping.some((field) => typeof field !== "string" || field.trim() === ""))) throw new Error("Chart transformations grouping must be null or an array of fields.");

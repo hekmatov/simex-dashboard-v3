@@ -1,4 +1,4 @@
-/** @typedef {"dataset" | "inline"} ChartSourceKind */
+/** @typedef {"dataset" | "inline" | "staticText" | "staticImage"} ChartSourceKind */
 /** @typedef {"number" | "text" | "category" | "temporal" | "geographic" | "boolean" | "url" | "any"} ChartColumnType */
 
 export const CHART_SCHEMA_VERSION = 3;
@@ -14,7 +14,9 @@ export const CHART_SCHEMA_GROUPS = Object.freeze([
   Object.freeze({ id: "operational", label: "Operational content" }),
 ]);
 export const CHART_COLUMN_TYPES = Object.freeze(["number", "text", "category", "temporal", "geographic", "boolean", "url", "any"]);
-export const CHART_SOURCE_KINDS = Object.freeze(["dataset", "inline"]);
+export const CHART_SOURCE_KINDS = Object.freeze(["dataset", "inline", "staticText", "staticImage"]);
+export const CHART_AUTHORING_WORKFLOWS = Object.freeze(["chart", "static"]);
+export const CHART_SURFACES = Object.freeze(["build", "view", "fullscreen", "present", "audience"]);
 export const CHART_TRANSFORMS = Object.freeze(["filter", "group", "aggregate", "duplicates", "missing", "comparison"]);
 export const CHART_COMPARISON_MODES = Object.freeze(["previousObservation", "fixedTime"]);
 export const CHART_COMPARISON_MATCHING_POLICIES = Object.freeze(["exact", "lastKnown", "nearest", "interpolate"]);
@@ -94,15 +96,28 @@ export function role(id, label, accepts, min, max = 1) { return { id, label, acc
 export function chartSchema(definition) {
   const groupable = !["target", "operational"].includes(definition.dataFamily);
   const transforms = ["filter", ...(groupable ? ["group"] : []), "aggregate", "duplicates", "missing"];
+  const authoringWorkflow = definition.authoringWorkflow ?? "chart";
+  const capabilities = {
+    sourceCsv: authoringWorkflow === "chart",
+    timeContext: authoringWorkflow === "chart",
+    surfaces: ["build", "view", "fullscreen", "present", "audience"],
+    ...(definition.capabilities ?? {}),
+  };
   const schema = {
     version: CHART_SCHEMA_VERSION,
+    authoringWorkflow,
     sources: ["dataset"],
     transforms,
     manualData: null,
     ...definition,
+    capabilities,
   };
   return {
     ...schema,
+    capabilities: {
+      ...schema.capabilities,
+      surfaces: [...schema.capabilities.surfaces],
+    },
     form: schema.form
       ? {
           ...schema.form,

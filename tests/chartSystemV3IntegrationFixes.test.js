@@ -1003,7 +1003,7 @@ test("custom and ECharts views honor left, center, and right title alignment wit
   }
 });
 
-test("all 26 validated chart types remain reachable through bundle, profile, prepare, render, and SSR", () => {
+test("the pre-existing 26 chart render paths remain reachable while static renderer slices are pending", () => {
   const axis = {
     rows: [{ category: "May", value: 4 }],
     roles: {

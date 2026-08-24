@@ -1,7 +1,14 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527` (design only; not implemented)
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; Slice 1 contract implementation recorded below, later security/portability slices pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
+
+## Slice 1 implementation status
+
+- SP-18 is partial: the registry surface policy and identity/revision-only presentable index are implemented; Present protocol and separate Audience enforcement remain pending Slice 6.
+- SP-21 is unchanged and pending: Slice 1 keeps contained chart configuration v3 and teaches Quorum to read the dashboard structure version authority; dashboard/bundle v4 migration remains owned by Slice 4.
+- SP-22 engine policy is implemented: static drafts declare `application-session-only`, expose no storage key, and are held only in React/application-session state. Reload/storage inspection remains a later browser/persistence check.
+- No security or portability decision is marked fully verified by this slice; browser-dependent evidence remains pending.
 
 ## Decision table
 

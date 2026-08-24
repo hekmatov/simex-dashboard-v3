@@ -4,6 +4,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { CHART_CREATION_STAGES } from "../src/charting/forms/wizardDraft.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -23,6 +24,12 @@ const STAGES = [
   "configure-chart",
   "review-and-create",
 ];
+
+test("the persistent proof deck remains validation inside the six chart stages", () => {
+  assert.deepEqual(CHART_CREATION_STAGES, STAGES);
+  assert.equal(STAGES.includes("content"), false);
+  assert.equal(STAGES.includes("preview-and-add"), false);
+});
 
 test("every chart-creation stage retains both independent proof surfaces", () => {
   assert.equal(typeof wizardModule?.default, "function");

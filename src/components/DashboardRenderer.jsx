@@ -2,6 +2,8 @@
 
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
+import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
+import StaticContentWizard from "./static-content/StaticContentWizard.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
 import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
 import DeleteDashboardContentDialog from "./build/DeleteDashboardContentDialog.jsx";
@@ -68,6 +70,8 @@ import {
 } from "../charting/forms/chartDraftSession.js";
 import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnloadGuard.js";
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
+import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
+import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -100,6 +104,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   onSectionInsert,
   onChartCreate,
   onChartSave,
+  onStaticPanelCommit,
   onApplyCitationToSourceCharts,
   onPanelRemove,
   onPanelReorder,
@@ -125,6 +130,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [chartWizardDirty, setChartWizardDirty] = React.useState(false);
   const [chartWizardSuspended, setChartWizardSuspended] = React.useState(false);
   const [chartWizardSuspendedTarget, setChartWizardSuspendedTarget] = React.useState(null);
+  const [staticWizardTarget, setStaticWizardTarget] = React.useState(null);
+  const [staticContentDraft, setStaticContentDraft] = React.useState(null);
+  const [staticContentDirty, setStaticContentDirty] = React.useState(false);
   const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
   const [chartDraftSessionRevision, setChartDraftSessionRevision] = React.useState(0);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
@@ -237,12 +245,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const landingActive = hasLandingPresentation(activePage);
   const selectedPlacement = findPanelPlacement(workingDashboard, chartEditorPlacementId);
   const selectedPanel = selectedPlacement?.chart ?? null;
+  const selectedPanelIsStatic = selectedPanel
+    ? getChartSchema(selectedPanel.typeId).authoringWorkflow === "static"
+    : false;
   const chartAuthoringActive = Boolean(
-    chartWizardTarget || (editMode && selectedPanel),
+    chartWizardTarget || staticWizardTarget || (editMode && selectedPanel),
   );
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
-  const buildDraftLocked = Boolean(chartEditorDirty || localAuthoringEditing);
+  const buildDraftLocked = Boolean(chartEditorDirty || staticContentDirty || localAuthoringEditing);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const layoutDraftDirty = ["dirty", "saving", "error", "suspended"].includes(buildLayoutDraft?.status);
   const authoredDirty = hasUnsavedAuthoredContent({
@@ -251,6 +262,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     chartWizard: chartWizardDirty || isMeaningfulChartDraft(
       chartDraftSessionStore.get(chartDraftSessionKey),
     ),
+    staticContent: staticContentDirty,
     structure: localAuthoringDirty || layoutDraftDirty,
     scenario: localAuthoringDirty,
     inlineRename: inlineRenameDirty,
@@ -325,6 +337,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       chartDraftSessionStore.clear(chartDraftSessionKey);
       setChartWizardSuspended(false);
       setChartWizardSuspendedTarget(null);
+      setStaticWizardTarget(null);
+      setStaticContentDraft(null);
+      setStaticContentDirty(false);
       setChartDraftSessionRevision((current) => current + 1);
       setLocalAuthoringDrafts({});
       setInlineRenameDirty(false);
@@ -870,13 +885,14 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function cancelSelectedPanel() {
     if (moderatorOperationGateRef.current.isActive()) return;
     pendingEdits.cancel();
-    if (chartEditBaseline) {
+    if (chartEditBaseline && !selectedPanelIsStatic) {
       onPanelEditCancel(chartEditBaseline);
     }
     setChartEditBaseline(null);
     setChartEditorVisible(false);
     setChartEditorPlacementId(null);
     setChartEditorDirty(false);
+    setStaticContentDirty(false);
   }
 
   function dismissSelectedPanel() {
@@ -1163,6 +1179,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartWizardSuspended(false);
   }
 
+  function openStaticContentWizard(sectionId) {
+    if (moderatorOperationGateRef.current.isActive() || chartAuthoringActive) return;
+    const section = sectionId
+      ? activePage?.sections?.find(({ id }) => id === sectionId)
+      : buildSelection?.kind === "section"
+      ? activePage?.sections?.find(({ id }) => id === buildSelection.sectionId)
+      : activePage?.sections?.[0];
+    if (!activePage || !section) return;
+    setStaticWizardTarget({ pageId: activePage.id, sectionId: section.id });
+  }
+
   function recoverEmptySectionInBuild(sectionId) {
     if (moderatorOperationGateRef.current.isActive() || !activePage) return;
     const section = activePage.sections?.find(({ id }) => id === sectionId);
@@ -1347,7 +1374,33 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }
 
   const buildControlsDisabled = moderatorMutationLocked || chartAuthoringActive;
-  const selectedChartEditor = editMode && selectedPanel ? (
+  const selectedChartEditor = editMode && selectedPanel ? (selectedPanelIsStatic ? (
+    <StaticContentEditor
+      dashboard={workingDashboard}
+      destination={staticDestinationForPlacement(workingDashboard, selectedPlacement.panelId)}
+      panel={selectedPanel}
+      source={workingDashboard.dataSources?.[selectedPanel.sourceId]}
+      assets={workingDashboard.assets ?? {}}
+      disabled={moderatorMutationLocked}
+      onDirtyChange={setStaticContentDirty}
+      onSave={async ({ panel, source, assets }) => {
+        await pendingEdits.flush();
+        const prepared = prepareStaticPanelTransaction({
+          dashboard: dashboardStateRef.current,
+          operation: "update",
+          panelId: selectedPlacement.panelId,
+          panel,
+          source,
+          assets,
+        });
+        await onStaticPanelCommit(prepared);
+        setChartEditorVisible(false);
+        setChartEditorPlacementId(null);
+        setStaticContentDirty(false);
+      }}
+      onCancel={cancelSelectedPanel}
+    />
+  ) : (
     <ChartEditorV3
       surface="inspector"
       disabled={moderatorMutationLocked}
@@ -1369,7 +1422,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onDirtyChange={setChartEditorDirty}
       onRemove={() => removePanel(selectedPlacement.panelId)}
     />
-  ) : null;
+  )) : null;
   const buildWorkspace = editMode ? (
     <BuildWorkspace
       key={buildTreeResetGeneration}
@@ -1410,7 +1463,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onSectionReorder={reorderBuildSection}
       onAddSection={addSection}
       onAddChart={openChartWizard}
+      onAddStaticContent={openStaticContentWizard}
       chartDraftAvailable={chartWizardSuspended}
+      staticDraftAvailable={Boolean(staticContentDraft)}
       layoutDraft={buildLayoutDraft ? {
         draftId: buildLayoutDraft.draftId,
         kind: "layout",
@@ -1463,6 +1518,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onAddPage: addBuildPage,
           onAddSection: addSection,
           onAddChart: openChartWizard,
+          onAddStaticContent: openStaticContentWizard,
         } : null}
         buildWorkspace={buildWorkspace}
         displayState={displayState}
@@ -1515,6 +1571,35 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setChartWizardTarget(null);
         }}
       />
+      {staticWizardTarget && <StaticContentWizard
+        open
+        dashboard={workingDashboard}
+        destination={staticWizardTarget}
+        initialDraft={staticContentDraft}
+        disabled={moderatorMutationLocked}
+        onDraftChange={setStaticContentDraft}
+        onDirtyChange={setStaticContentDirty}
+        onClose={() => {
+          setStaticWizardTarget(null);
+          setStaticContentDraft(null);
+          setStaticContentDirty(false);
+        }}
+        onCreate={async ({ destination, panel, source, assets }) => {
+          await pendingEdits.flush();
+          const prepared = prepareStaticPanelTransaction({
+            dashboard: dashboardStateRef.current,
+            operation: "create",
+            destination,
+            panel,
+            source,
+            assets,
+          });
+          await onStaticPanelCommit(prepared);
+          setStaticWizardTarget(null);
+          setStaticContentDraft(null);
+          setStaticContentDirty(false);
+        }}
+      />}
       <input
         ref={importInputRef}
         className="visually-hidden"
@@ -2232,6 +2317,11 @@ function selectionForPlacement(dashboard, placementId) {
     }
   }
   return null;
+}
+
+function staticDestinationForPlacement(dashboard, placementId) {
+  const selection = selectionForPlacement(dashboard, placementId);
+  return selection && { pageId: selection.pageId, sectionId: selection.sectionId };
 }
 
 function isValidBuildSelection(dashboard, selection) {

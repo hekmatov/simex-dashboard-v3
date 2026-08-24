@@ -23,7 +23,7 @@ export function createChartSchemaRegistry(rawSchemas) {
   const listedSchemas = deepFreeze([...byType.values()]);
   const groups = deepFreeze(CHART_SCHEMA_GROUPS.map((group) => ({ ...group, charts: listedSchemas.filter(({ group: id }) => id === group.id) })).filter(({ charts }) => charts.length > 0));
   return deepFreeze({
-    revision: `${CHART_SCHEMA_VERSION}:${listedSchemas.map(({ typeId }) => typeId).join(",")}`,
+    revision: `2:${CHART_SCHEMA_VERSION}:${listedSchemas.map(({ typeId }) => typeId).join(",")}`,
     list: () => listedSchemas,
     get(typeId) { const schema = byType.get(typeId); if (!schema) throw new Error(`Unknown chart type "${typeId}".`); return schema; },
     groups: () => groups,

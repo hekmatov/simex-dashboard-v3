@@ -50,6 +50,21 @@ export function createSerializedDashboardCommitController({
         return cloneDashboard(current);
       });
     },
+    commitPrepared(prepared) {
+      if (prepared?.kind !== "static-panel-transaction") {
+        return Promise.reject(new TypeError("A prepared static panel transaction is required."));
+      }
+      const base = portablePreparedDashboard(prepared.baseDashboard);
+      const candidate = portablePreparedDashboard(prepared.candidateDashboard);
+      return enqueue(async () => {
+        if (JSON.stringify(current) !== JSON.stringify(base)) {
+          throw new Error("Static panel transaction is stale; prepare it again from the current dashboard.");
+        }
+        const committed = await commit(candidate);
+        current = cloneDashboard(committed);
+        return cloneDashboard(current);
+      });
+    },
     adopt(dashboard) {
       const replacement = cloneDashboard(dashboard);
       return enqueue(() => {
@@ -291,6 +306,14 @@ export function applyDashboardEdits(dashboard, edits = []) {
 function cloneDashboard(value) {
   if (!isRecord(value)) throw new TypeError("A dashboard object is required.");
   return structuredClone(value);
+}
+
+function portablePreparedDashboard(value) {
+  const dashboard = cloneDashboard(value);
+  delete dashboard.chartDataStates;
+  delete dashboard.dataSourceStates;
+  delete dashboard.loadedData;
+  return dashboard;
 }
 
 function isRecord(value) {

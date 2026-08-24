@@ -19,6 +19,7 @@ import {
 const catalogueModule = await import("../src/lib/quorumCatalogue.js");
 
 const TYPE_KEYS = [
+  "authoring_workflow",
   "capabilities",
   "collection",
   "conversion",
@@ -86,7 +87,7 @@ test("catalogue v2 covers every registered type and configured chart", async () 
     catalogue.charts.map(({ chart_id }) => chart_id),
     configured.map(({ chart }) => chart.id).toSorted(),
   );
-  assert.equal(catalogue.chart_types.length, 26);
+  assert.equal(catalogue.chart_types.length, 27);
   assert.equal(catalogue.charts.length, 40);
   assert.ok(catalogue.charts.some(({ type_id }) => type_id === "pie"));
   assert.ok(
@@ -114,6 +115,7 @@ test("chart type descriptors mirror schema roles, constraints, and capabilities"
     assert.equal(descriptor.mark, schema.semantics.mark);
     assert.equal(descriptor.data_family, schema.dataFamily);
     assert.equal(descriptor.renderer, schema.renderer);
+    assert.equal(descriptor.authoring_workflow, schema.authoringWorkflow);
     assert.deepEqual(
       descriptor.role_ids,
       schema.roles.map(({ id }) => id),
@@ -142,6 +144,9 @@ test("chart type descriptors mirror schema roles, constraints, and capabilities"
       collection: schema.capabilities.collection,
       time_sync: schema.capabilities.timeSync,
       zoom: schema.capabilities.zoom,
+      source_csv: schema.capabilities.sourceCsv,
+      time_context: schema.capabilities.timeContext,
+      surfaces: schema.capabilities.surfaces,
     });
     assert.deepEqual(
       descriptor.presentation_section_ids,
@@ -224,6 +229,10 @@ test("time, collection, geography, and source contracts are explicit but bounded
   });
   assert.deepEqual(byType.get("image").data_constraints.source_kinds, [
     "inline",
+    "staticImage",
+  ]);
+  assert.deepEqual(byType.get("freeText").data_constraints.source_kinds, [
+    "staticText",
   ]);
 });
 

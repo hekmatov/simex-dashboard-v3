@@ -26,5 +26,7 @@ await writeFile(
 
 console.log(
   `Wrote Quorum catalogue v${output.contract_version} with `
-  + `${output.chart_types.length} chart type(s) and ${output.charts.length} configured chart(s).`,
+  + `${output.chart_types.length} chart type(s), `
+  + `${output.chart_types.filter(({ authoring_workflow: workflow }) => workflow === "static").length} static content type(s), `
+  + `and ${output.charts.length} configured chart(s).`,
 );

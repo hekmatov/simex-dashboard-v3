@@ -95,7 +95,9 @@ export default function BuildWorkspace({
   onSectionReorder,
   onAddSection,
   onAddChart,
+  onAddStaticContent,
   chartDraftAvailable = false,
+  staticDraftAvailable = false,
   layoutDraft = null,
   chartSlotDraft = null,
   onSaveLayout,
@@ -653,6 +655,7 @@ export default function BuildWorkspace({
             locked={locked}
             auxiliaryLocked={auxiliaryLocked}
             chartDraftAvailable={chartDraftAvailable}
+            staticDraftAvailable={staticDraftAvailable}
             operationError={operationError}
             chronoGroupDraftSuspended={chronoGroupDraftSuspended}
             sceneDraftSuspended={sceneDraftSuspended}
@@ -667,6 +670,7 @@ export default function BuildWorkspace({
               revealUnitOrbitAnchor(chartEditorPlacementId);
             }}
             onAddChart={() => onAddChart?.()}
+            onAddStaticContent={() => onAddStaticContent?.()}
             onUploadPackage={onUploadPackage}
             onDownloadPackage={onDownloadPackage}
             packageDownloadDisabled={mutationsDisabled}

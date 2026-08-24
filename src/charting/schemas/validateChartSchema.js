@@ -5,6 +5,7 @@ import {
   validateSeriesRendererMark,
 } from "../presentation/seriesStyleContract.js";
 import {
+  CHART_AUTHORING_WORKFLOWS,
   CHART_COLUMN_TYPES,
   CHART_COMPARISON_MATCHING_POLICIES,
   CHART_COMPARISON_MODES,
@@ -14,6 +15,7 @@ import {
   CHART_SCHEMA_GROUPS,
   CHART_SCHEMA_VERSION,
   CHART_SOURCE_KINDS,
+  CHART_SURFACES,
   CHART_TRANSFORMS,
 } from "./schemaTypes.js";
 
@@ -68,6 +70,7 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   if (!schema || typeof schema !== "object") throw new Error("Chart schema must be an object.");
   if (schema.version !== CHART_SCHEMA_VERSION) throw new Error(`Chart schema version ${CHART_SCHEMA_VERSION} is required.`);
   requiredString(schema.typeId, "typeId"); requiredString(schema.label, "label"); requiredString(schema.description, "description");
+  known(schema.authoringWorkflow, CHART_AUTHORING_WORKFLOWS, "authoring workflow");
   if (!groupIds.has(schema.group)) throw new Error(`Unknown chart group "${schema.group}".`);
   if (!Array.isArray(schema.sources) || schema.sources.length === 0) throw new Error("Chart schema sources must list at least one source kind.");
   for (const source of schema.sources) known(source, CHART_SOURCE_KINDS, "source kind");
@@ -81,9 +84,24 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
   known(schema.dataFamily, CHART_DATA_FAMILIES, "data family"); known(schema.renderer, Object.keys(CHART_RENDERERS), "renderer");
   if (CHART_RENDERERS[schema.renderer] !== schema.dataFamily) throw new Error(`Renderer "${schema.renderer}" is incompatible with data family "${schema.dataFamily}".`);
   if (!schema.capabilities || typeof schema.capabilities !== "object") throw new Error("Chart schema capabilities are required.");
-  for (const capability of ["timeSync", "collection", "zoom"]) if (typeof schema.capabilities[capability] !== "boolean") throw new Error(`Chart schema capability "${capability}" must be boolean.`);
+  for (const capability of ["timeSync", "collection", "zoom", "sourceCsv", "timeContext"]) if (typeof schema.capabilities[capability] !== "boolean") throw new Error(`Chart schema capability "${capability}" must be boolean.`);
+  const surfaces = validateKnownUniqueList(
+    schema.capabilities.surfaces,
+    CHART_SURFACES,
+    "surface",
+    "Chart schema capability surfaces",
+  );
   if (schema.capabilities.collection && !form.sections.includes("collection")) throw new Error("Collection-capable chart schemas require a collection form section.");
   if (schema.capabilities.timeSync && !schema.roles.some(({ accepts }) => accepts.includes("temporal"))) throw new Error("Time-synchronized chart schemas require a role that accepts temporal data.");
+  if (schema.authoringWorkflow === "static") {
+    const typedStaticSources = schema.sources.filter((source) => source === "staticText" || source === "staticImage");
+    if (typedStaticSources.length !== 1) throw new Error("Static chart schemas require exactly one typed static source kind.");
+    if (schema.roles.length > 0 || schema.transforms.length > 0) throw new Error("Static chart schemas cannot declare data roles or transforms.");
+    if (schema.capabilities.timeSync || schema.capabilities.timeContext) throw new Error("Static chart schemas cannot receive temporal affordances.");
+    if (schema.capabilities.sourceCsv) throw new Error("Static chart schemas cannot expose CSV affordances.");
+    if (schema.capabilities.collection) throw new Error("Static chart schemas cannot expose collection affordances.");
+    if (schema.manualData !== null) throw new Error("Static chart schemas cannot use manual row authoring.");
+  }
   if (!Array.isArray(schema.conversions)) throw new Error("Chart schema conversions must be an array.");
   for (const target of schema.conversions) {
     requiredString(target, "conversion target");
@@ -97,7 +115,7 @@ export function validateChartSchema(schema, { conversionTargetIds } = {}) {
     schema.semantics.mark,
     schema.renderer,
   );
-  const validated = { ...schema, form };
+  const validated = { ...schema, form, capabilities: { ...schema.capabilities, surfaces } };
   return comparison === undefined
     ? validated
     : { ...validated, comparison };

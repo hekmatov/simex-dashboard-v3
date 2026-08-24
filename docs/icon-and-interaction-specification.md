@@ -44,7 +44,7 @@ The generated files contain no timestamps, machine paths, random identifiers, or
 | Unique interaction records | 127 |
 | Surface interaction references | 138 |
 | Surfaces | 13 |
-| Chart pictograms | 26 |
+| Chart pictograms | 27 |
 | Visual states | 7 |
 
 Repeated interaction concepts may appear on more than one surface. The surface-reference count intentionally preserves those appearances, while the unique-record count describes the current metadata keys.
@@ -349,7 +349,8 @@ Chart labels and descriptions remain owned by the chart schema registry. The ico
 | chronoChoroplethMap | Chronological choropleth | chartMapTime | geography | Show how geographic values change over time. |
 | mapScatter | Map scatter | chartMapScatter | geography | Show measured points or values at geographic locations. |
 | table | Table | chartTable | operational | Show detailed operational records in rows and columns. |
-| image | Image | chartImage | operational | Display an annotated operational image with accessible alternative text. |
+| image | Image | chartImage | operational | Display a saved image with accessible alternative text and nondestructive presentation transforms. |
+| freeText | Free text | description | operational | Display portable QMD-style formatted text as static dashboard content. |
 
 ## Validation and change workflow
 

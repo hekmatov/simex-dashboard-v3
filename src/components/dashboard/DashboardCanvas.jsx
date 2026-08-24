@@ -197,15 +197,20 @@ export default function DashboardCanvas({
                   ) : (
                     <section className="dashboard-empty-section build-empty-section" aria-label={`${sectionDraft.title || "Untitled section"} empty state`}>
                       <p>This section has no panels.</p>
-                      <button
-                        type="button"
-                        disabled={Boolean(buildState?.disabled)}
-                        onClick={() => (buildState
-                          ? buildState.onAddChart?.(section.id)
-                          : onAddPanelToSection?.(section.id))}
-                      >
-                        Add Panel to Section
-                      </button>
+                      {buildState ? (
+                        <div className="build-empty-section__actions">
+                          <button type="button" disabled={Boolean(buildState.disabled)} onClick={() => buildState.onAddChart?.(section.id)}>
+                            Add chart
+                          </button>
+                          <button type="button" disabled={Boolean(buildState.disabled)} onClick={() => buildState.onAddStaticContent?.(section.id)}>
+                            Add static content
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => onAddPanelToSection?.(section.id)}>
+                          Add Panel to Section
+                        </button>
+                      )}
                     </section>
                   )}
                 </section>

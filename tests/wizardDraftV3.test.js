@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  CHART_CREATION_STAGE_LABELS,
+  CHART_CREATION_STAGES,
   createWizardState,
   finalizeWizardDraft,
   reduceWizardState,
@@ -43,6 +45,25 @@ const loadedRows = [
   { reportedAt: "2027-05-01", value: 10 },
   { reportedAt: "2027-05-02", value: 12 },
 ];
+
+test("Add chart retains its exact six-stage contract", () => {
+  assert.deepEqual(CHART_CREATION_STAGES, [
+    "destination",
+    "chart-type",
+    "data-source",
+    "map-and-prepare-data",
+    "configure-chart",
+    "review-and-create",
+  ]);
+  assert.deepEqual(CHART_CREATION_STAGE_LABELS, [
+    "Destination",
+    "Chart type",
+    "Data source",
+    "Map and prepare data",
+    "Configure chart",
+    "Review and create",
+  ]);
+});
 
 function synchronizedState() {
   let state = createWizardState({

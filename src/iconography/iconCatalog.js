@@ -239,6 +239,9 @@ export const ATLAS_SURFACES = Object.freeze(inventory.map(({ entries, ...surface
   Object.freeze({
     ...surface,
     id: CANONICAL_SURFACE_IDS[surface.id] ?? surface.id,
+    ...(surface.id === "chart-types" ? {
+      chartTypeIds: Object.freeze([...surface.chartTypeIds, "freeText"]),
+    } : {}),
     ...(entries ? {
       interactionIds: Object.freeze([
         ...entries.map(({ id }) => canonicalInteractionId(id)),
@@ -275,6 +278,7 @@ export const CHART_TYPE_GLYPHS = Object.freeze({
   mapScatter: "chartMapScatter",
   table: "chartTable",
   image: "chartImage",
+  freeText: "description",
 });
 
 export const getInteraction = (id) => INTERACTIONS[canonicalInteractionId(id)];

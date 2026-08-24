@@ -58,7 +58,7 @@ test("the icon catalogue resolves every approved interaction and surface referen
         + (surface.chartTypeIds?.length ?? 0),
       0,
     ),
-    164,
+    165,
   );
   for (const duplicateId of [
     "shell.open-editable-tab.1",

@@ -15,7 +15,7 @@ const typeIdsInPurposeOrder = [
   "horizontalStackedBar", "line", "area", "mixed", "pie", "donut",
   "kpi", "gauge", "bullet", "deltaCard", "deltaList", "scatter",
   "bubble", "heatmap", "readinessMatrix", "timeline", "swimlane",
-  "choroplethMap", "chronoChoroplethMap", "mapScatter", "table", "image",
+  "choroplethMap", "chronoChoroplethMap", "mapScatter", "table", "image", "freeText",
 ];
 
 test("version 3 exposes every approved chart type in purpose order", () => {
@@ -38,7 +38,7 @@ test("schemas are grouped by their communication purpose", () => {
       ["readiness", ["heatmap", "readinessMatrix"]],
       ["timeline", ["timeline", "swimlane"]],
       ["geography", ["choroplethMap", "chronoChoroplethMap", "mapScatter"]],
-      ["operational", ["table", "image"]],
+      ["operational", ["table", "image", "freeText"]],
     ],
   );
 });
