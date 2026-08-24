@@ -1,8 +1,20 @@
 import { scenePresentLayoutToDisplayLayout } from "./scenePresentLayout.js";
 
-export function resolveScenePresentTransition(previousSignature, scene) {
+export function resolveScenePresentTransition(
+  previousSignature,
+  scene,
+  { enabled = true } = {},
+) {
   if (!scene) {
     return Object.freeze({ signature: null, action: null, error: null });
+  }
+
+  if (!enabled) {
+    return Object.freeze({
+      signature: previousSignature,
+      action: null,
+      error: null,
+    });
   }
 
   const chartIds = Array.isArray(scene.present?.chartIds)

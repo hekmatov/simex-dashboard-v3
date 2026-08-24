@@ -110,6 +110,7 @@ export default function PresentWorkspace({
     <main
       className="present-workspace"
       data-accessibility-enabled={accessibilityEnabled === true ? "true" : "false"}
+      data-active-scene-id={playback.activeSceneId ?? ""}
     >
       <section className="present-status-strip" aria-label="Audience display connection">
         <div>
@@ -163,7 +164,11 @@ export default function PresentWorkspace({
               {selectedCharts.length === 0 ? (
                 <p className="present-holding-scene">Holding scene — no charts selected.</p>
               ) : selectedCharts.map((chart, index) => (
-                <article className="present-selected-chart" key={chart.id}>
+                <article
+                  className="present-selected-chart"
+                  data-displayed-chart-id={chart.id}
+                  key={chart.id}
+                >
                   <span className="present-chart-order">{index + 1}</span>
                   <strong>{chart.title ?? chart.id}</strong>
                   <div className="present-chart-actions">

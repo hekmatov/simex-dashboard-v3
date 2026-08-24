@@ -114,6 +114,7 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 
 test("006-scene-authoring amendment: three full-width stages and Unit Orbit are live", async ({ page }) => {
   test.setTimeout(120_000);
+  const sceneName = "Runtime composition fidelity scene";
   await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
   const auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
   await auxiliary.getByRole("button", { name: "Create Scene", exact: true }).click();
@@ -122,6 +123,7 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(details).toBeVisible();
   await expect(auxiliary.getByRole("button", { name: /Scene details/ })).toHaveAttribute("aria-current", "step");
   await expect(details.getByRole("textbox", { name: "Scene name" })).toBeVisible();
+  await details.getByRole("textbox", { name: "Scene name" }).fill(sceneName);
   for (const label of ["Owning page", "Parent Chrono Group", "Default matching"]) await expect(details.getByRole("combobox", { name: label })).toBeVisible();
   await expect(details.getByRole("spinbutton", { name: "Seconds per frame" })).toBeVisible();
   await expect(details.getByLabel("Start date")).toBeVisible();
@@ -149,15 +151,25 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await expect(auxiliary.getByRole("button", { name: /Arrange and configure/ })).toHaveAttribute("aria-current", "step");
   const boards = auxiliary.locator(".scene-arrangement-board");
   await expect(boards).toHaveCount(2);
+  await expect(boards.nth(0).locator(".chart-view-frame")).toHaveCount(2);
+  await expect(boards.nth(1).locator(".chart-view-frame")).toHaveCount(2);
+  await expect(auxiliary.getByText("Scene preview frame", { exact: false })).toBeVisible();
   const widths = await boards.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
   expect(Math.abs(widths[0] - widths[1])).toBeLessThanOrEqual(2);
-  await expect(auxiliary.getByRole("button", { name: /Drop here/ }).first()).toBeAttached();
+  await expect(auxiliary.getByRole("button", { name: /Drop (before|after)/ }).first()).toBeAttached();
   await expect(auxiliary.locator(".scene-present-corner-action").first()).toBeVisible();
   await auxiliary.locator(".scene-arrangement-board[data-board='scene'] .scene-chart-title").first().click();
   const orbit = auxiliary.locator(".scene-unit-orbit");
   await expect(orbit).toContainText("Unit Orbit");
   await expect(orbit.getByText("Include in Present", { exact: true })).toBeVisible();
   await expect(orbit.getByRole("button", { name: "Move first" })).toBeVisible();
+  await orbit.getByRole("radio", { name: "1", exact: true }).check();
+  await boards.nth(0).locator(".scene-chart-title").last().click();
+  await orbit.getByRole("radio", { name: "3", exact: true }).check();
+  await orbit.getByRole("button", { name: "Move first" }).click();
+  await boards.nth(1).locator(".scene-chart-title").last().click();
+  await orbit.getByRole("button", { name: "Move first" }).click();
+  await boards.nth(1).locator("select").selectOption("horizontal-divider");
   await expect(auxiliary.locator(".scene-draft-panel")).toHaveCount(0);
   const arrangeWidth = await auxiliary.locator(".scene-stage-body[data-stage='arrange']").evaluate((node) => ({
     stage: node.getBoundingClientRect().width,
@@ -175,6 +187,53 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   expect(tabletGeometry.scrollWidth).toBeLessThanOrEqual(tabletGeometry.clientWidth);
   expect(tabletGeometry.transactionFooterVisible).toBe(true);
   expect(tabletGeometry.boardsVisible).toBe(true);
+
+  await page.setViewportSize({ width: 1200, height: 900 });
+  const authoringSceneGeometry = await boards.nth(0).locator("[data-scene-chart-id]").evaluateAll((cells) => cells.map((cell) => {
+    const rect = cell.getBoundingClientRect();
+    return {
+      id: cell.getAttribute("data-scene-chart-id"),
+      width: cell.getAttribute("data-scene-width"),
+      left: Math.round(rect.left),
+      top: Math.round(rect.top),
+    };
+  }));
+  const authoringPresentIds = await boards.nth(1).locator("[data-displayed-chart-id]").evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-displayed-chart-id")));
+  await auxiliary.getByRole("button", { name: "Save Scene", exact: true }).click();
+  await expect(auxiliary.getByRole("heading", { name: sceneName, exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const chrono = page.getByRole("region", { name: "Chrono playback controls" });
+  await chrono.getByLabel("Chrono source").selectOption({ label: sceneName });
+  const viewComposition = page.locator('[data-scene-composition-surface="view-scene"]');
+  await expect(viewComposition.locator(".chart-view-frame")).toHaveCount(2);
+  const viewSceneGeometry = await viewComposition.locator("[data-scene-chart-id]").evaluateAll((cells) => cells.map((cell) => ({
+    id: cell.getAttribute("data-scene-chart-id"),
+    width: cell.getAttribute("data-scene-width"),
+  })));
+  expect(viewSceneGeometry).toEqual(authoringSceneGeometry.map(({ id, width }) => ({ id, width })));
+  await expect(page.locator(".scene-chart-authoring-overlay")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Chart comparison" })).toHaveCount(0);
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.locator(".present-workspace")).not.toHaveAttribute("data-active-scene-id", "");
+  await expect(page.locator(".present-selected-chart")).toHaveCount(2);
+  const presentIds = await page.locator(".present-selected-chart").evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-displayed-chart-id")));
+  expect(presentIds).toEqual(authoringPresentIds);
+  await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
+  await page.getByLabel("Scene layout").selectOption("sideBySide");
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.getByLabel("Scene layout")).toHaveValue("sideBySide");
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await chrono.getByLabel("Chrono source").selectOption({ label: "Municipal outbreak playback" });
+  await chrono.getByLabel("Chrono source").selectOption({ label: sceneName });
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.getByLabel("Scene layout")).toHaveValue("overUnder");
+  await expect(page.locator(".scene-chart-authoring-overlay")).toHaveCount(0);
 });
 
 test("012-temporal-content: libraries filter, open read-first pages, and restore context", async ({ page }) => {

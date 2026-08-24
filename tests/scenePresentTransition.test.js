@@ -37,6 +37,23 @@ test("the same active Scene does not overwrite later manual Present edits", () =
   assert.equal(repeated.signature, first.signature);
 });
 
+test("an active Scene waits for Present instead of opening View comparison", () => {
+  const inView = transitionModule.resolveScenePresentTransition(
+    null,
+    scene,
+    { enabled: false },
+  );
+  assert.equal(inView.action, null);
+  assert.equal(inView.signature, null);
+
+  const inPresent = transitionModule.resolveScenePresentTransition(
+    inView.signature,
+    scene,
+    { enabled: true },
+  );
+  assert.equal(inPresent.action?.type, "scene_applied");
+});
+
 test("leaving and re-entering a Scene applies its saved composition again", () => {
   const first = transitionModule.resolveScenePresentTransition(null, scene);
   const cleared = transitionModule.resolveScenePresentTransition(

@@ -196,15 +196,6 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const requestBuildSelectionRef = React.useRef(null);
   const appliedScenePresentSignatureRef = React.useRef(null);
 
-  React.useEffect(() => {
-    const transition = resolveScenePresentTransition(
-      appliedScenePresentSignatureRef.current,
-      playback.activeScene,
-    );
-    appliedScenePresentSignatureRef.current = transition.signature;
-    if (transition.action) onDisplayAction?.(transition.action);
-  }, [onDisplayAction, playback.activeScene]);
-
   const workingDashboard = editMode && buildLayoutDraft?.value
     ? buildLayoutDraft.value
     : dashboard;
@@ -221,6 +212,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [dashboard],
   );
   const presentationRuntime = usePresentationRuntime(presentationValidChartIds);
+  React.useEffect(() => {
+    const transition = resolveScenePresentTransition(
+      appliedScenePresentSignatureRef.current,
+      playback.activeScene,
+      { enabled: mode === "present" },
+    );
+    appliedScenePresentSignatureRef.current = transition.signature;
+    if (transition.action) presentationRuntime.onDisplayAction(transition.action);
+  }, [mode, playback.activeScene, presentationRuntime.onDisplayAction]);
   const landingActive = hasLandingPresentation(activePage);
   const selectedPlacement = findPanelPlacement(workingDashboard, chartEditorPlacementId);
   const selectedPanel = selectedPlacement?.chart ?? null;
