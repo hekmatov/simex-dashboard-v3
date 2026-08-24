@@ -127,6 +127,26 @@ test("static draft revision advances only for authored changes", () => {
   assert.equal(authored.draftRevision, initial.draftRevision + 1);
 });
 
+test("Free-text finalization revalidates the exact QMD draft and blocks unsupported content", () => {
+  let draft = createStaticContentDraft({
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    contentTypeId: "freeText",
+    panel: { id: "text-panel", typeId: "freeText", title: "Situation", sourceId: "text-source" },
+    source: { kind: "staticText", qmd: "# Situation\n\nSafe content." },
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
+  assert.equal(finalizeStaticContentDraft(draft).source.qmd, "# Situation\n\nSafe content.");
+
+  const blocked = {
+    ...draft,
+    source: { ...draft.source, qmd: '<iframe src="https://example.test"></iframe>' },
+  };
+  assert.throws(
+    () => finalizeStaticContentDraft(blocked),
+    /line 1.*iframe|iframe.*line 1/i,
+  );
+});
+
 const vite = await createServer({
   root: process.cwd(),
   appType: "custom",

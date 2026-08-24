@@ -26,9 +26,12 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "dompurify": "3.4.14",
     "echarts": "^5.6.0",
     "echarts-for-react": "^3.0.2",
     "html2canvas": "1.4.1",
+    "katex": "0.18.4",
+    "markdown-it": "15.0.0",
     "papaparse": "^5.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

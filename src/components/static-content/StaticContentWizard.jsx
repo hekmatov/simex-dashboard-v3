@@ -12,6 +12,8 @@ import {
 } from "../../static-content/forms/staticContentDraft.js";
 import { listStaticContentTypeOptions } from "../../static-content/staticPanelCapabilities.js";
 import StaticContentStateBoundary from "./StaticContentStateBoundary.jsx";
+import FreeTextSourceEditor from "./FreeTextSourceEditor.jsx";
+import ChartView from "../charts/ChartView.jsx";
 
 export function StaticContentWizard({
   open = false,
@@ -33,7 +35,11 @@ export function StaticContentWizard({
       : createStaticContentDraft({ destination, mode: editor ? "edit" : "create" }),
   );
   const [submitError, setSubmitError] = React.useState("");
+  const [freeTextValidation, setFreeTextValidation] = React.useState(null);
   const dirty = isStaticContentDraftDirty(draft);
+  const freeTextInvalid = draft.contentTypeId === "freeText"
+    && freeTextValidation?.ok !== true;
+  const freeTextBlocked = draft.stage === "content" && freeTextInvalid;
   React.useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   if (!open) return null;
@@ -91,7 +97,9 @@ export function StaticContentWizard({
                 type="button"
                 className="secondary"
                 aria-current={draft.stage === stage ? "step" : undefined}
-                disabled={disabled || (!editor && index > stageIndex + 1)}
+                disabled={disabled
+                  || (!editor && index > stageIndex + 1)
+                  || (stage === "preview-and-add" && freeTextInvalid)}
                 onClick={() => dispatch({ type: "setStage", stage })}
               >
                 {STATIC_CONTENT_STAGE_LABELS[index]}
@@ -103,7 +111,7 @@ export function StaticContentWizard({
         <section className="static-content-dialog__body" data-static-content-stage={draft.stage}>
           {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} />}
           {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} />}
-          {draft.stage === "content" && <StaticContentFields draft={draft} dispatch={dispatch} />}
+          {draft.stage === "content" && <StaticContentFields draft={draft} dispatch={dispatch} onFreeTextValidation={setFreeTextValidation} />}
           {draft.stage === "preview-and-add" && <StaticPreview draft={draft} />}
         </section>
 
@@ -111,7 +119,7 @@ export function StaticContentWizard({
         <footer>
           <button type="button" className="secondary" onClick={requestClose}>Cancel</button>
           {stageIndex > (editor ? 2 : 0) && <button type="button" className="secondary" onClick={() => dispatch({ type: "previous" })}>Back</button>}
-          <button type="submit" disabled={disabled}>
+          <button type="submit" disabled={disabled || freeTextBlocked}>
             {draft.stage === "preview-and-add" ? (editor ? "Save" : "Add") : "Continue"}
           </button>
         </footer>
@@ -185,7 +193,7 @@ function ContentTypeFields({ draft, dispatch }) {
   );
 }
 
-export function StaticContentFields({ draft, dispatch }) {
+export function StaticContentFields({ draft, dispatch, onFreeTextValidation }) {
   return (
     <div>
       <label htmlFor="static-panel-title">Panel title</label>
@@ -196,19 +204,21 @@ export function StaticContentFields({ draft, dispatch }) {
         onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
       />
       {draft.contentTypeId === "freeText"
-        ? <FreeTextFields draft={draft} dispatch={dispatch} />
+        ? <FreeTextFields draft={draft} dispatch={dispatch} onValidationChange={onFreeTextValidation} />
         : <ImageFields draft={draft} dispatch={dispatch} />}
     </div>
   );
 }
 
-function FreeTextFields({ draft, dispatch }) {
+function FreeTextFields({ draft, dispatch, onValidationChange }) {
   return (
-    <>
-      <label htmlFor="static-qmd-source">QMD-style source</label>
-      <textarea id="static-qmd-source" value={draft.source?.qmd ?? ""} onChange={(event) => dispatch({ type: "updateSource", updates: { qmd: event.target.value } })} />
-      <small>Portable QMD v1 is rendered locally and never executes code.</small>
-    </>
+    <FreeTextSourceEditor
+      id="static-qmd-source"
+      value={draft.source?.qmd ?? ""}
+      panelId={draft.panel?.id ?? "static-text-preview"}
+      onChange={(qmd) => dispatch({ type: "updateSource", updates: { qmd } })}
+      onValidationChange={onValidationChange}
+    />
   );
 }
 
@@ -249,16 +259,25 @@ function ImageFields({ draft, dispatch }) {
 }
 
 function StaticPreview({ draft }) {
+  const sourceId = draft.panel?.sourceId;
   return (
     <section aria-label="Canonical static content preview">
       <h3>Preview &amp; add</h3>
       <StaticContentStateBoundary state={{ status: "ready" }} surface="build">
-        <article data-static-preview-type={draft.contentTypeId}>
-          <h4>{draft.panel?.title}</h4>
-          {draft.contentTypeId === "freeText"
-            ? <pre>{draft.source?.qmd}</pre>
-            : <p>Image preview uses the saved {draft.source?.fit} fit at {draft.source?.rotation}°.</p>}
-        </article>
+        {draft.contentTypeId === "freeText" ? (
+          <div data-static-preview-type="freeText">
+            <ChartView
+              chart={draft.panel}
+              renderContext={{ sources: { [sourceId]: draft.source } }}
+              interactionMode="active"
+            />
+          </div>
+        ) : (
+          <article data-static-preview-type="image">
+            <h4>{draft.panel?.title}</h4>
+            <p>Image preview uses the saved {draft.source?.fit} fit at {draft.source?.rotation}°.</p>
+          </article>
+        )}
       </StaticContentStateBoundary>
       <p>Static content has no CSV, Chrono Group, Scene, or time controls.</p>
     </section>

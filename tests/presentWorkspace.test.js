@@ -237,6 +237,48 @@ test("an empty Present catalogue routes recovery to Build without adding an Audi
   assert.doesNotMatch(html, /Choose up to 4 charts/);
 });
 
+test("Free-text panels are absent from the Present catalogue", () => {
+  const dashboardWithFreeText = {
+    ...dashboard,
+    dataSources: {
+      "field-guide-source": {
+        kind: "staticText",
+        sourceVersion: 1,
+        revision: 1,
+        renderingPolicy: "portable-qmd-v1",
+        qmd: "## Stabilisation notes",
+      },
+    },
+    pages: [{
+      ...dashboard.pages[0],
+      sections: [{
+        ...dashboard.pages[0].sections[0],
+        panels: [
+          dashboard.pages[0].sections[0].panels[0],
+          {
+            id: "field-guide",
+            title: "Field guide",
+            typeId: "freeText",
+            sourceId: "field-guide-source",
+          },
+        ],
+      }],
+    }],
+  };
+  const html = renderPresent(presentModule.default, {
+    dashboard: dashboardWithFreeText,
+    displayState: {
+      display_revision: 5,
+      displayed_chart_ids: [],
+      layout: "solo",
+    },
+  });
+
+  assert.match(html, />Cases</);
+  assert.doesNotMatch(html, />Field guide</);
+  assert.doesNotMatch(html, /field-guide/);
+});
+
 function elementMarkupByAriaLabel(html, tagName, label) {
   const marker = `aria-label="${label}"`;
   const markerIndex = html.indexOf(marker);

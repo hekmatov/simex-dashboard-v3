@@ -2,6 +2,8 @@ import React from "react";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS } from "../../lib/displayController.js";
+import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
+import { getStaticPanelCapabilities } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
 
 export default function PresentWorkspace({
@@ -419,7 +421,8 @@ function configuredChartGroups(dashboard) {
     (page.sections ?? []).map((section) => {
       const charts = (section.panels ?? [])
         .map((panel) => panel.chart ?? panel)
-        .filter((chart) => typeof chart?.id === "string" && chart.id.length > 0);
+        .filter((chart) => typeof chart?.id === "string" && chart.id.length > 0)
+        .filter(isPresentableChart);
       return {
         id: `${page.id}-${section.id}`,
         label: `${page.label ?? page.title ?? page.id} / ${section.title ?? section.id}`,
@@ -427,6 +430,13 @@ function configuredChartGroups(dashboard) {
       };
     }).filter((group) => group.charts.length > 0)
   ));
+}
+
+function isPresentableChart(chart) {
+  if (typeof chart?.typeId !== "string" || chart.typeId.length === 0) return true;
+  const schema = getChartSchema(chart.typeId);
+  if (schema.authoringWorkflow !== "static") return true;
+  return getStaticPanelCapabilities(schema).surfaces.present;
 }
 
 function layoutChoices(count) {

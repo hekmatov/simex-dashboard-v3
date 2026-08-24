@@ -6,6 +6,7 @@ import { chartPreparationIdentity } from "../runtime/chartPreparationIdentity.js
 import { compileChartRuntimeArtifact } from "../runtime/chartRuntimeArtifact.js";
 import { chartRuntimeArtifactRegistry } from "../runtime/chartRuntimeArtifactRegistry.js";
 import { projectRuntimeArtifact } from "../runtime/projectRuntimeArtifact.js";
+import { resolveStaticTextSource } from "../../static-content/staticSourceResolver.js";
 
 const MAX_MESSAGE_LENGTH = 240;
 const STATIC_RENDERING_CACHE = new WeakMap();
@@ -14,6 +15,8 @@ export function resolveChartRendering(input = {}) {
   try {
     if (!isRenderingInput(input)) return invalidRenderingResolution();
     const renderingInput = captureRenderingInput(input);
+    const staticResolution = resolveTypedStaticRendering(renderingInput);
+    if (staticResolution) return staticResolution;
     const cached = readStaticRenderingCache(renderingInput);
     if (cached) return cached;
     const artifactResolution = resolveRuntimeArtifactRendering(renderingInput);
@@ -28,6 +31,36 @@ export function resolveChartRendering(input = {}) {
   } catch {
     return invalidRenderingResolution();
   }
+}
+
+function resolveTypedStaticRendering(renderingInput) {
+  const chart = renderingInput.chart;
+  if (chart?.typeId !== "freeText") return null;
+  const schema = getChartSchema(chart.typeId);
+  const source = renderingSource(renderingInput, chart.sourceId);
+  const resolved = resolveStaticTextSource(source, { sourceId: chart.sourceId });
+  if (resolved.status !== "ready") {
+    return renderingResolution({
+      status: "unavailable",
+      schema,
+      prepared: null,
+      model: { kind: "error", message: resolved.failure?.message },
+      inputKey: renderingInput,
+    });
+  }
+  return renderingResolution({
+    status: "available",
+    schema,
+    prepared: null,
+    model: {
+      kind: "freeText",
+      sourceId: resolved.sourceId,
+      revision: resolved.revision,
+      renderingPolicy: resolved.renderingPolicy,
+      qmd: resolved.qmd,
+    },
+    inputKey: renderingInput,
+  });
 }
 
 function resolveRuntimeArtifactRendering(renderingInput) {

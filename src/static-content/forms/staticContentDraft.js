@@ -3,6 +3,7 @@ import {
   validateStaticSource,
 } from "../staticSourceSchema.js";
 import { createChartDraft } from "../../charting/config/chartConfigV3.js";
+import { parsePortableQmd } from "../qmd/parsePortableQmd.js";
 
 let fallbackIdentitySequence = 0;
 
@@ -167,6 +168,7 @@ export function finalizeStaticContentDraft(state) {
   validateDestinationValue(state.destination);
   if (!state.contentTypeId) throw new Error("Static content type is required.");
   const source = validateStaticSource(state.source, { assets: state.assets });
+  validateFreeTextContent(source);
   const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
   requiredText(panel.title, "Static panel title");
   requiredText(panel.sourceId, "Static panel source id");
@@ -259,8 +261,17 @@ function validateStageEntry(state, stage) {
   if (STATIC_CONTENT_STAGES.indexOf(stage) >= 2 && !state.contentTypeId) throw new Error("Choose a static content type before continuing.");
   if (stage === "preview-and-add") {
     validateStaticSource(state.source, { assets: state.assets });
+    validateFreeTextContent(state.source);
     requiredText(state.panel?.title, "Static panel title");
   }
+}
+
+function validateFreeTextContent(source) {
+  if (source?.kind !== "staticText") return;
+  const parsed = parsePortableQmd(source.qmd);
+  if (parsed.ok) return;
+  const first = parsed.errors[0];
+  throw new Error(`${first.message} Line ${first.location.line}, column ${first.location.column}. ${first.guidance}`);
 }
 
 function validateDestinationValue(destination) {

@@ -1,0 +1,239 @@
+import React from "react";
+
+import FreeTextChartView from "../charts/FreeTextChartView.jsx";
+import { parsePortableQmd } from "../../static-content/qmd/parsePortableQmd.js";
+
+const NARROW_EDITOR_QUERY = "(max-width: 860px)";
+
+export function FreeTextSourceEditor({
+  id = "static-qmd-source",
+  value = "",
+  panelId = "static-text-preview",
+  disabled = false,
+  onChange,
+  onValidationChange,
+} = {}) {
+  const initial = React.useMemo(() => analyze(value), []);
+  const [analysis, setAnalysis] = React.useState(initial);
+  const [lastValidSource, setLastValidSource] = React.useState(initial.ok ? value : null);
+  const [pending, setPending] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("source");
+  const [narrow, setNarrow] = React.useState(false);
+  const evaluatedSource = React.useRef(value);
+  const revision = React.useRef(0);
+  const lastValidRevision = React.useRef(initial.ok ? 0 : null);
+  const sourcePaneRef = React.useRef(null);
+  const previewPaneRef = React.useRef(null);
+  const lastFocused = React.useRef({ source: null, preview: null });
+
+  React.useEffect(() => {
+    onValidationChange?.({ ...initial, source: value, sourceRevision: 0, previewRevision: lastValidRevision.current });
+  }, []);
+
+  React.useEffect(() => {
+    if (value === evaluatedSource.current) return undefined;
+    revision.current += 1;
+    const sourceRevision = revision.current;
+    setPending(true);
+    const timer = setTimeout(() => {
+      const next = analyze(value);
+      evaluatedSource.current = value;
+      setAnalysis(next);
+      setPending(false);
+      if (next.ok) {
+        setLastValidSource(value);
+        lastValidRevision.current = sourceRevision;
+      }
+      onValidationChange?.({
+        ...next,
+        source: value,
+        sourceRevision,
+        previewRevision: next.ok ? sourceRevision : lastValidRevision.current,
+      });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [onValidationChange, value]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
+    const media = window.matchMedia(NARROW_EDITOR_QUERY);
+    const apply = (matches) => {
+      const activeElement = document.activeElement;
+      let focusOwner = null;
+      if (sourcePaneRef.current?.contains(activeElement)) focusOwner = "source";
+      else if (previewPaneRef.current?.contains(activeElement)) focusOwner = "preview";
+      const owner = focusOwner ?? activeTab;
+      setNarrow(matches);
+      if (matches) setActiveTab(owner);
+      if (focusOwner) {
+        const target = lastFocused.current[focusOwner];
+        window.requestAnimationFrame(() => target?.isConnected && target.focus({ preventScroll: true }));
+      }
+    };
+    apply(media.matches);
+    const listener = (event) => apply(event.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [activeTab]);
+
+  const stale = !pending && !analysis.ok && lastValidSource !== null;
+  const status = pending
+    ? "Updating preview…"
+    : analysis.ok
+      ? "Preview is up to date."
+      : `${analysis.errors.length} blocking ${analysis.errors.length === 1 ? "error" : "errors"}. The last valid preview is unchanged.`;
+
+  const recordFocus = (owner) => (event) => {
+    lastFocused.current[owner] = event.target;
+  };
+  const selectTabFromKeyboard = (tab, event) => {
+    const order = ["source", "preview"];
+    const currentIndex = order.indexOf(tab);
+    const next = event.key === "Home"
+      ? order[0]
+      : event.key === "End"
+        ? order[order.length - 1]
+        : event.key === "ArrowRight"
+          ? order[(currentIndex + 1) % order.length]
+          : event.key === "ArrowLeft"
+            ? order[(currentIndex - 1 + order.length) % order.length]
+            : null;
+    if (!next) return;
+    event.preventDefault();
+    setActiveTab(next);
+    window.requestAnimationFrame(() => document.getElementById(`${id}-${next}-tab`)?.focus());
+  };
+
+  return (
+    <section
+      className="free-text-source-editor"
+      data-layout={narrow ? "tabs" : "split"}
+      data-active-tab={activeTab}
+      data-source-revision={revision.current}
+      data-preview-revision={lastValidRevision.current ?? "none"}
+    >
+      <div className="free-text-source-editor__tabs" role="tablist" aria-label="Free text editor panes">
+        {[
+          ["source", "Source"],
+          ["preview", "Preview"],
+        ].map(([tab, label]) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            id={`${id}-${tab}-tab`}
+            aria-controls={`${id}-${tab}-pane`}
+            aria-selected={activeTab === tab}
+            tabIndex={activeTab === tab ? 0 : -1}
+            onClick={() => setActiveTab(tab)}
+            onKeyDown={(event) => selectTabFromKeyboard(tab, event)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="free-text-source-editor__panes">
+        <section
+          ref={sourcePaneRef}
+          id={`${id}-source-pane`}
+          className="free-text-source-editor__pane free-text-source-editor__source"
+          data-free-text-pane="source"
+          role="tabpanel"
+          aria-labelledby={`${id}-source-tab`}
+          hidden={narrow && activeTab !== "source"}
+          onFocusCapture={recordFocus("source")}
+        >
+          <label htmlFor={id}>QMD-style source</label>
+          <textarea
+            id={id}
+            value={value}
+            disabled={disabled}
+            aria-describedby={`${id}-help ${id}-status`}
+            aria-invalid={!pending && !analysis.ok ? "true" : undefined}
+            onChange={(event) => onChange?.(event.target.value)}
+          />
+          <small id={`${id}-help`}>Portable QMD v1 renders locally. Code is display-only and never executes.</small>
+          {!pending && analysis.errors.length > 0 && (
+            <div className="free-text-validation-errors" aria-labelledby={`${id}-errors-title`}>
+              <h3 id={`${id}-errors-title`}>Fix before continuing</h3>
+              <ol>
+                {analysis.errors.map((error, index) => (
+                  <li key={`${error.rule}-${error.location.line}-${error.location.column}-${index}`}>
+                    <a
+                      href={`#${id}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        const editor = document.getElementById(id);
+                        editor?.focus({ preventScroll: false });
+                        const offset = sourceOffset(value, error.location);
+                        editor?.setSelectionRange(offset, offset);
+                      }}
+                    >
+                      Line {error.location.line}, column {error.location.column}: {error.message}
+                    </a>
+                    <span>{error.guidance}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </section>
+        <section
+          ref={previewPaneRef}
+          id={`${id}-preview-pane`}
+          className="free-text-source-editor__pane free-text-source-editor__preview"
+          data-free-text-pane="preview"
+          role="tabpanel"
+          aria-labelledby={`${id}-preview-tab`}
+          hidden={narrow && activeTab !== "preview"}
+          onFocusCapture={recordFocus("preview")}
+        >
+          <header className="free-text-source-editor__preview-header">
+            <h3>Canonical preview</h3>
+            {stale && <span className="free-text-preview-stale">Preview is stale</span>}
+          </header>
+          {lastValidSource !== null ? (
+            <FreeTextChartView
+              model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }}
+              chart={{ id: panelId, title: "Preview" }}
+            />
+          ) : (
+            <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>
+          )}
+        </section>
+      </div>
+      <p id={`${id}-status`} className="free-text-source-editor__status" role="status" aria-live="polite" aria-atomic="true">
+        {status}
+      </p>
+    </section>
+  );
+}
+
+function analyze(source) {
+  try {
+    const result = parsePortableQmd(source);
+    return { ok: result.ok, errors: result.errors, warnings: result.warnings };
+  } catch (error) {
+    return {
+      ok: false,
+      errors: [{
+        rule: "parse-failure",
+        message: error?.message ?? "This source could not be parsed.",
+        guidance: "Review the source and try again.",
+        location: { line: 1, column: 1 },
+      }],
+      warnings: [],
+    };
+  }
+}
+
+function sourceOffset(source, location) {
+  const lines = source.split("\n");
+  let offset = 0;
+  for (let index = 0; index < Math.max(0, location.line - 1); index += 1) {
+    offset += (lines[index]?.length ?? 0) + 1;
+  }
+  return Math.min(source.length, offset + Math.max(0, location.column - 1));
+}
+
+export default FreeTextSourceEditor;

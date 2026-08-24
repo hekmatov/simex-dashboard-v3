@@ -2665,8 +2665,7 @@ button.danger {
 .chart-echarts-view,
 .chart-card-view,
 .chart-target-collection-view,
-.chart-table-view,
-.chart-image-view {
+.chart-table-view {
   height: 100%;
   margin: 0;
   min-height: 0;
@@ -3115,58 +3114,6 @@ button.danger {
 
 .chart-table-view th {
   color: #18334e;
-}
-
-.chart-image-view img {
-  display: block;
-  height: auto;
-  max-height: 560px;
-  max-width: 100%;
-  width: 100%;
-}
-
-.chart-image-view--zoom-enabled img {
-  transition: transform 140ms ease;
-}
-
-.chart-image-viewport {
-  overflow: clip;
-}
-
-.chart-image-zoom-controls {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.chart-image-zoom-status {
-  color: #506a82;
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.chart-image-view figcaption {
-  color: #506a82;
-  font-size: 0.875rem;
-  margin-top: 6px;
-}
-
-.chart-status-error,
-.chart-status-empty {
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.chart-status-error {
-  background: #fcedef;
-  color: #a21729;
-}
-
-.chart-status-empty {
-  background: #eaf1f6;
-  color: #506a82;
 }
 
 .playback-controls,

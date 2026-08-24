@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; Slice 1 contract implementation recorded below, later security/portability slices pending
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`; Slice 1 contract and Slice 2 Free-text implementation status recorded below, later persistence/Image/Audience slices pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Slice 1 implementation status
@@ -9,6 +9,17 @@
 - SP-21 is unchanged and pending: Slice 1 keeps contained chart configuration v3 and teaches Quorum to read the dashboard structure version authority; dashboard/bundle v4 migration remains owned by Slice 4.
 - SP-22 engine policy is implemented: static drafts declare `application-session-only`, expose no storage key, and are held only in React/application-session state. Reload/storage inspection remains a later browser/persistence check.
 - No security or portability decision is marked fully verified by this slice; browser-dependent evidence remains pending.
+
+## Slice 2 Free-text implementation status
+
+- SP-01 through SP-07 have passing engine evidence from the explicit policy/parser/renderer corpus and real-browser final-DOM tests. The production renderer uses bundled local `markdown-it@15.0.0`, `dompurify@3.4.14`, and `katex@0.18.4`; exact pins and licenses are recorded in `SLICE-2-EVIDENCE-STATUS.md`.
+- SP-02 and SP-03 are enforced both before save and at the final DOM boundary. Raw HTML, active content, iframe/media/widget/cell/extension syntax cannot finalize, and the browser sanitizer test mounts no forbidden tag, attribute, foreign namespace, or resource URL.
+- SP-04 is implemented by `FreeTextChartView`: it obtains a sanitized `DocumentFragment` and mounts it once with `replaceChildren(fragment)`. There is no post-sanitize string/template rewriting path.
+- SP-05 is passing at the engine/DOM layer for `https:`, `http:`, scoped fragments, protocol case/encoding/entity/whitespace/control bypasses, and external `target="_blank"` plus `rel="noopener noreferrer"`. The retained production journey does not claim exhaustive keyboard/pointer link activation.
+- SP-07 renders restricted local math as HTML-only KaTeX with an accessible math label; MathML/SVG are outside the sanitizer allow-list. Citations and unsafe commands remain hard errors.
+- SP-18 is now passing for the Free-text capability, trusted presentable index, Present catalogue, and production Present absence. Protocol injection and separate-Audience enforcement remain pending Slice 6, so SP-18 is still partial overall.
+- SP-22 is verified in-session: the production journey inspects the stored saved QMD while an unsaved edit is dirty, after Discard, and after Save. Reload restoration remains pending Slice 4's dashboard/bundle v4 bridge, so reload-dependent SP-22 fidelity is not claimed.
+- The production audit has no high or critical findings. It reports one pre-existing moderate ECharts advisory (`GHSA-fgmj-fm8m-jvvx`); none of the three Slice 2 dependencies is implicated.
 
 ## Decision table
 

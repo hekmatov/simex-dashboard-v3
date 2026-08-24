@@ -11,6 +11,7 @@ import { useOptionalPlayback } from "../playback/PlaybackProvider.jsx";
 import ChartDataStateBoundary from "./ChartDataStateBoundary.jsx";
 import CardChartView from "./CardChartView.jsx";
 import EChartsChartView from "./EChartsChartView.jsx";
+import FreeTextChartView from "./FreeTextChartView.jsx";
 import ImageChartView from "./ImageChartView.jsx";
 import TableChartView from "./TableChartView.jsx";
 import TargetCollectionChartView from "./TargetCollectionChartView.jsx";
@@ -20,11 +21,14 @@ const MAX_STATUS_LENGTH = 240;
 
 export default function ChartView(props) {
   const playback = useOptionalPlayback();
-  const playbackProps = props.timeContextAuthority === "explicit"
+  const staticContent = isStaticContentChart(props.chart);
+  const playbackProps = staticContent
+    ? { ...props, timeContext: undefined }
+    : props.timeContextAuthority === "explicit"
     ? props
     : withPlaybackTimeContext(props, playback);
   const interactionMode = props.interactionMode === "passive" ? "passive" : "active";
-  const state = resolveChartDataState({
+  const state = staticContent ? null : resolveChartDataState({
     chartTitle: props.chart?.title,
     rows: props.rows,
     sourceState: props.sourceState,
@@ -38,7 +42,7 @@ export default function ChartView(props) {
   }, content);
 }
 
-function renderChartContent(props, interactionMode) {
+export function renderChartContent(props, interactionMode) {
   try {
     const resolved = canReuseChartRendering(
       props.resolvedRendering,
@@ -73,6 +77,10 @@ function renderChartContent(props, interactionMode) {
       provenance,
       zoomEnabled,
     });
+    else if (model.kind === "freeText") view = React.createElement(FreeTextChartView, {
+      model,
+      chart: props.chart,
+    });
     else return React.createElement(ChartStatus, {
       message: resolved.message ?? model.message,
       empty: prepared?.status === "empty",
@@ -86,6 +94,14 @@ function renderChartContent(props, interactionMode) {
       : framedView;
   } catch {
     return React.createElement(ChartStatus, { message: "This chart cannot be displayed." });
+  }
+}
+
+function isStaticContentChart(chart) {
+  try {
+    return getChartSchema(chart?.typeId).authoringWorkflow === "static";
+  } catch {
+    return false;
   }
 }
 
