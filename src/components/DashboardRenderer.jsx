@@ -37,8 +37,10 @@ import ChartPanel from "./ChartPanel.jsx";
 import LayoutGrid from "./LayoutGrid.jsx";
 import LandingPage, { hasLandingPresentation } from "./LandingPage.jsx";
 import PlaybackSurface from "./playback/PlaybackSurface.jsx";
+import { usePlayback } from "./playback/PlaybackProvider.jsx";
 import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
+import { resolveScenePresentTransition } from "./time/scenePresentTransition.js";
 import DashboardModeWorkspace from "./dashboard/DashboardModeWorkspace.jsx";
 import {
   configuredCharts,
@@ -103,6 +105,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   operationError = "",
   themeProjection,
 }, ref) {
+  const playback = usePlayback();
   const buildMode = mode === "build";
   const editMode = buildMode;
   const [selectedPanelId, setSelectedPanelId] = React.useState(null);
@@ -191,6 +194,16 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [multiSelectNotice, setMultiSelectNotice] = React.useState(null);
   const buildWorkspaceSelectionRef = React.useRef(null);
   const requestBuildSelectionRef = React.useRef(null);
+  const appliedScenePresentSignatureRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const transition = resolveScenePresentTransition(
+      appliedScenePresentSignatureRef.current,
+      playback.activeScene,
+    );
+    appliedScenePresentSignatureRef.current = transition.signature;
+    if (transition.action) onDisplayAction?.(transition.action);
+  }, [onDisplayAction, playback.activeScene]);
 
   const workingDashboard = editMode && buildLayoutDraft?.value
     ? buildLayoutDraft.value
