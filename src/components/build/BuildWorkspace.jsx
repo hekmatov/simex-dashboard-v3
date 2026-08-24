@@ -106,7 +106,6 @@ export default function BuildWorkspace({
   onDisplayAction,
   selectionControllerRef,
 }) {
-  const dashboardMapRef = React.useRef(null);
   const [mapRegion, setMapRegion] = React.useState("structure");
   const [draftCoordinator, dispatchDraftCoordinator] = React.useReducer(
     reduceBuildDraftCoordinator,
@@ -170,29 +169,6 @@ export default function BuildWorkspace({
   React.useEffect(() => {
     onLocalDraftsChange?.(localAuthoringDrafts);
   }, [localAuthoringDrafts, onLocalDraftsChange]);
-
-  React.useEffect(() => {
-    let frame = 0;
-    const updateDashboardMapTop = () => {
-      frame = 0;
-      const panel = dashboardMapRef.current;
-      if (!panel) return;
-      const crownBottom = document.querySelector(".dashboard-command-crown")
-        ?.getBoundingClientRect().bottom ?? 0;
-      panel.style.setProperty("--dashboard-map-top", `${Math.max(12, crownBottom + 12)}px`);
-    };
-    const scheduleUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(updateDashboardMapTop);
-    };
-    updateDashboardMapTop();
-    window.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.addEventListener("resize", scheduleUpdate);
-    return () => {
-      window.removeEventListener("scroll", scheduleUpdate);
-      window.removeEventListener("resize", scheduleUpdate);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
 
   React.useEffect(() => {
     dispatchDraftCoordinator({ type: "SYNC_SLOT", slot: "layout", draft: layoutDraft });
@@ -670,7 +646,6 @@ export default function BuildWorkspace({
             </aside>
           ), document.body)}
           <aside
-            ref={dashboardMapRef}
             id="dashboard-map-panel"
             className="dashboard-map-panel"
             role="complementary"
