@@ -42,12 +42,16 @@ function resolveTypedStaticRendering(renderingInput) {
   if (chart?.typeId === "image" && source?.kind === "staticImage") {
     const schema = getChartSchema(chart.typeId);
     const suppliedResolution = renderingInput.renderContext?.staticSourceResolution;
+    const mediaItem = renderingInput.renderContext?.mediaItems?.[source.mediaId];
     const suppliedIdentityMatches = suppliedResolution?.sourceId === chart.sourceId
-      && suppliedResolution?.revision === source.revision;
+      && suppliedResolution?.mediaId === source.mediaId
+      && suppliedResolution?.revision === mediaItem?.revision;
     const resolved = suppliedIdentityMatches ? suppliedResolution : resolveStaticImageSource(source, {
       sourceId: chart.sourceId,
+      mediaItems: renderingInput.renderContext?.mediaItems ?? {},
       assets: renderingInput.renderContext?.assets ?? {},
-      resolveAsset: renderingInput.renderContext?.resolveStaticAsset,
+      resolveAsset: renderingInput.renderContext?.resolveAsset
+        ?? renderingInput.renderContext?.resolveStaticAsset,
     });
     if (resolved && typeof resolved.then === "function") {
       const pending = Promise.resolve(resolved)
@@ -69,7 +73,8 @@ function resolveTypedStaticRendering(renderingInput) {
           status: "loading",
           staticSource: true,
           sourceId: chart.sourceId,
-          revision: source.revision,
+          mediaId: source.mediaId,
+          revision: mediaItem?.revision ?? null,
         },
         inputKey: renderingInput,
         pending,
@@ -161,9 +166,13 @@ function renderingArtifactIdentity(renderingInput) {
   try {
     const chart = renderingInput.chart;
     const geoSourceId = chart?.presentation?.map?.geoSource;
+    const source = renderingSource(renderingInput, chart?.sourceId);
+    const mediaItem = source?.kind === "staticImage"
+      ? renderingInput.renderContext?.mediaItems?.[source.mediaId]
+      : null;
     return chartPreparationIdentity({
       chart,
-      source: renderingSource(renderingInput, chart?.sourceId),
+      source: mediaItem ? { ...source, revision: mediaItem.revision } : source,
       profile: renderingInput.datasetProfile,
       geoSource: renderingSource(renderingInput, geoSourceId),
     });

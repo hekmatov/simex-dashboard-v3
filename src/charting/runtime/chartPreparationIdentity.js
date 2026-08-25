@@ -34,6 +34,19 @@ export function stableSerialize(value) {
 
 function sourceAuthority(source) {
   if (!source || typeof source !== "object") return null;
+  if (source.kind === "staticImage") {
+    return {
+      id: source.id ?? source.sourceId ?? null,
+      mediaId: source.mediaId ?? null,
+      revision: source.revision ?? null,
+      sourceVersion: source.sourceVersion ?? null,
+      alt: source.alt ?? null,
+      decorative: source.decorative === true,
+      fit: source.fit ?? null,
+      crop: source.crop ?? null,
+      rotation: source.rotation ?? null,
+    };
+  }
   return {
     id: source.id ?? source.sourceId ?? null,
     fingerprint: source.fingerprint

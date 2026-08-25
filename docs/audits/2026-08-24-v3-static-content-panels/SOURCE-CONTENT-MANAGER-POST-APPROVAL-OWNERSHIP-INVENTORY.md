@@ -1,7 +1,7 @@
 # Source Content Manager and QMD Reusable Media — Post-Approval Ownership Inventory
 
 **Date:** 2026-08-25
-**Status:** Post-approval ownership prerequisite complete. The written amendment is approved; production remains unimplemented and not verified.
+**Status:** Post-approval ownership prerequisite complete. Task 1 owners now implement the DashboardV5/Static Image engine and live consumer wiring; later manager/QMD/source-manager owners remain unimplemented and amendment fidelity is not verified.
 **Approved amendment:** `81531b4b939e89b529d0ddee36241e517c33956d`
 **Accepted prerequisites:** historical calibration evidence `c28b59d`; exact ownership reconciliation `dc06f8c`. The user-directed four-gate amendment supersedes the calibration's former ten-metric admission interpretation.
 **Implementation branch:** `codex/static-content-panels-implementation`
@@ -169,6 +169,6 @@ Material states remain Build 1440×900 and 1024×768, with QMD View 390×844 and
 - GeoJSON calibration: `c28b59d` remains master-accepted historical evidence. Its ten-metric admission interpretation is superseded; the user-directed four-gate policy now governs encoded bytes, Feature count, total coordinate positions, and renderable fragments.
 - Exact owner reconciliation: master-accepted at `dc06f8c`; this corrected inventory adds the complete Static Image V5 consumer/commit path, QMD portal bridge, durable rename owners, shared Build map budget, and exact temporal-review owners without changing product scope.
 - Generic, conditional, or unresolved production owner: none retained.
-- Amendment implementation state: engine unimplemented; UI unimplemented; fidelity not verified.
+- Amendment implementation state: Task 1 DashboardV5/Static Image engine and live Build/View/fullscreen/Present/Audience wiring implemented; later manager/QMD/source-manager engine/UI unimplemented; amendment fidelity not verified.
 - Plan review history: first plan `ebdc52b` and second correction `fed576e` were rejected for the recorded execution blockers. Correction `69deabc` was not accepted because the existing-image edit wrapper and distinct QMD AST/result contracts remained unresolved; the user then superseded its admission policy. Correction `4b52fda` passed lean-policy and Image-owner review but retained incorrect QMD leaf types and no production owner for the four-key list. The current plan closes those two mechanical contracts without changing product scope.
-- Next authorized decision after this commit: master review may accept the corrected final implementation plan. Production remains unimplemented and unverified until a later execution handoff.
+- Next authorized decision after this commit: continue the accepted sequential plan from Task 2. Task 1 does not promote any complete amendment row to Passing.

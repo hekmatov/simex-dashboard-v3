@@ -167,11 +167,12 @@ test("PS-04 copied Windows flash package launches offline main and separate Audi
 
 async function installPromotedImageFixture(rootDir) {
   const configPath = path.join(rootDir, "public", "config", "dashboard.json");
-  const config = JSON.parse(await readFile(configPath, "utf8"));
+  let config = JSON.parse(await readFile(configPath, "utf8"));
   config.datasetProfiles = JSON.parse(await readFile(
     path.join(rootDir, "public", "config", "dataset-profiles.json"),
     "utf8",
   ));
+  config = serializeDashboardBundle(config, { now: null }).config;
   const sha256 = sha256HexSync(PNG);
   const assetId = `asset-${sha256}`;
   config.assets = {
@@ -187,14 +188,25 @@ async function installPromotedImageFixture(rootDir) {
   };
   config.dataSources.ps04_image_source = {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 1,
-    origin: { kind: "asset", assetId },
+    sourceVersion: 2,
+    mediaId: "media-ps04-image",
     alt: IMAGE_ALT,
     decorative: false,
     fit: "contain",
     crop: { x: 0, y: 0, width: 1000, height: 1000 },
     rotation: 0,
+  };
+  config.contentLibrary.mediaItems["media-ps04-image"] = {
+    mediaId: "media-ps04-image",
+    revision: 1,
+    current: { kind: "asset", assetId },
+    displayName: IMAGE_TITLE,
+    defaultDescription: IMAGE_ALT,
+    origin: "uploaded",
+    health: "ready",
+    dimensions: { width: 2, height: 3 },
+    byteLength: PNG.byteLength,
+    mediaType: "image/png",
   };
   const biomedical = config.pages.find(({ id }) => id === "biomedical");
   biomedical.sections[0].panels.push({
@@ -230,7 +242,7 @@ async function installPromotedImageFixture(rootDir) {
     await mkdir(path.dirname(outputPath), { recursive: true });
     await writeFile(outputPath, file.contents);
   }
-  return promoted.config.dataSources.ps04_image_source.origin.path;
+  return promoted.config.contentLibrary.mediaItems["media-ps04-image"].current.path;
 }
 
 function launchPortableServer(cwd) {

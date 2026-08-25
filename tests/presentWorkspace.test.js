@@ -285,16 +285,28 @@ test("recovery-only Images are absent from the Present catalogue", () => {
     dataSources: {
       "recovery-source": {
         kind: "staticImage",
-        sourceVersion: 1,
-        revision: 2,
-        origin: { kind: "replacementRequired", reason: "Legacy blob source" },
+        sourceVersion: 2,
+        mediaId: "media-recovery-source",
         alt: "Unavailable map",
         decorative: false,
         fit: "contain",
         crop: { x: 0, y: 0, width: 1000, height: 1000 },
         rotation: 0,
-        migrationWarnings: ["replacement-required"],
       },
+    },
+    contentLibrary: {
+      mediaItems: {
+        "media-recovery-source": {
+          mediaId: "media-recovery-source",
+          revision: 2,
+          current: { kind: "asset", assetId: "missing-recovery-source" },
+          displayName: "Recovery image",
+          defaultDescription: "Unavailable map",
+          origin: "legacy-import",
+          health: "needs-relink",
+        },
+      },
+      sourceEntries: {},
     },
     pages: [{
       ...dashboard.pages[0],
@@ -333,7 +345,7 @@ test("Present projects ordered chart and exact saved Image descriptors without t
     ["image-a", { descriptor: {
       kind: "image",
       panel_id: "image-a",
-      source_id: "image-source",
+      media_id: "media-image-source",
       revision: 9,
     } }],
   ]);
@@ -343,7 +355,7 @@ test("Present projects ordered chart and exact saved Image descriptors without t
     index,
   );
   assert.deepEqual(descriptors, [
-    { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 9 },
+    { kind: "image", panel_id: "image-a", media_id: "media-image-source", revision: 9 },
     { kind: "chart", chart_id: "chart-a" },
   ]);
   assert.equal(Object.hasOwn(descriptors[0], "time"), false);

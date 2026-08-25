@@ -63,7 +63,7 @@ export function buildPresentableItemIndex(dashboard = {}) {
         if (!PRESENTATION_IDENTIFIER.test(panel?.id ?? "")) continue;
         if (panel.typeId === "freeText") continue;
         const descriptor = panel.typeId === "image"
-          ? imagePresentationDescriptor(panel, dashboard?.dataSources, dashboard?.assets)
+          ? imagePresentationDescriptor(panel, dashboard?.dataSources, dashboard?.contentLibrary, dashboard?.assets)
           : { kind: "chart", chart_id: panel.id };
         if (!descriptor) continue;
         index.set(panel.id, {
@@ -80,7 +80,7 @@ export function buildPresentableItemIndex(dashboard = {}) {
   return index;
 }
 
-function imagePresentationDescriptor(panel, sources = {}, assets = {}) {
+function imagePresentationDescriptor(panel, sources = {}, contentLibrary = {}, assets = {}) {
   if (!PRESENTATION_IDENTIFIER.test(panel.sourceId ?? "")) return null;
   const source = sources?.[panel.sourceId];
   try {
@@ -88,18 +88,18 @@ function imagePresentationDescriptor(panel, sources = {}, assets = {}) {
   } catch {
     return null;
   }
-  if (source.origin.kind === "replacementRequired") return null;
+  const mediaItem = contentLibrary?.mediaItems?.[source.mediaId];
+  if (!mediaItem || mediaItem.mediaId !== source.mediaId || mediaItem.health === "needs-relink") return null;
   if (!source.decorative && source.alt.trim() === "") return null;
-  if (source.migrationWarnings?.includes("replacement-required")) return null;
   if (
-    source.origin.kind === "asset"
-    && assets[source.origin.assetId]?.storageState !== "durable"
+    mediaItem.current.kind === "asset"
+    && assets[mediaItem.current.assetId]?.storageState !== "durable"
   ) return null;
   return {
     kind: "image",
     panel_id: panel.id,
-    source_id: panel.sourceId,
-    revision: source.revision,
+    media_id: mediaItem.mediaId,
+    revision: mediaItem.revision,
   };
 }
 

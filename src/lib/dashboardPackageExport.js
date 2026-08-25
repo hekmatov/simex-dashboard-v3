@@ -84,23 +84,23 @@ export async function prepareDashboardPackageExport(dashboard, {
   }
 
   const assetPayloads = {};
-  const authoredSourceByAsset = new Map();
-  for (const [sourceId, source] of Object.entries(sources)) {
-    if (source?.kind === "staticImage" && source.origin?.kind === "asset") {
-      authoredSourceByAsset.set(source.origin.assetId, sourceId);
+  const authoredMediaByAsset = new Map();
+  for (const [mediaId, item] of Object.entries(config.contentLibrary?.mediaItems ?? {})) {
+    if (item?.current?.kind === "asset") {
+      authoredMediaByAsset.set(item.current.assetId, mediaId);
     }
   }
-  for (const [assetId, sourceId] of [...authoredSourceByAsset].sort()) {
+  for (const [assetId, mediaId] of [...authoredMediaByAsset].sort()) {
     const manifestEntry = config.assets?.[assetId];
     if (!manifestEntry || manifestEntry.storageState !== "durable") {
-      throw new Error(`Local Image source "${sourceId}" is missing durable authored bytes.`);
+      throw new Error(`Local media item "${mediaId}" is missing durable authored bytes.`);
     }
     let asset;
     try {
-      asset = await readAuthoredAsset(assetId, { sourceId, source: sources[sourceId] });
+      asset = await readAuthoredAsset(assetId, { mediaId, mediaItem: config.contentLibrary.mediaItems[mediaId] });
     } catch (cause) {
       const state = cause?.code === "AUTHORED_ASSET_CORRUPT" ? "corrupt" : "missing";
-      throw new Error(`Local Image source "${sourceId}" has ${state} authored bytes.`, { cause });
+      throw new Error(`Local media item "${mediaId}" has ${state} authored bytes.`, { cause });
     }
     const bytes = asset?.bytes instanceof Uint8Array
       ? asset.bytes
@@ -119,7 +119,7 @@ export async function prepareDashboardPackageExport(dashboard, {
       || sha256HexSync(bytes) !== manifestEntry.sha256
     );
     if (corrupt) {
-      throw new Error(`Local Image source "${sourceId}" has corrupt authored bytes.`);
+      throw new Error(`Local media item "${mediaId}" has corrupt authored bytes.`);
     }
     assetPayloads[assetId] = {
       base64: encodeAssetBase64(bytes),
@@ -129,9 +129,9 @@ export async function prepareDashboardPackageExport(dashboard, {
     };
   }
 
-  const networkDependencies = [...new Set(Object.values(sources).flatMap((source) => (
-    source?.kind === "staticImage" && source.origin?.kind === "url"
-      ? [source.origin.url]
+  const networkDependencies = [...new Set(Object.values(config.contentLibrary?.mediaItems ?? {}).flatMap((item) => (
+    item?.current?.kind === "url"
+      ? [item.current.url]
       : []
   )))].sort();
 

@@ -33,7 +33,7 @@ const AUDIENCE_FACT_FIELDS = [
 ];
 const TIME_FIELDS = ["group_id", "active_epoch_ms"];
 const CHART_ITEM_FIELDS = ["kind", "chart_id"];
-const IMAGE_ITEM_FIELDS = ["kind", "panel_id", "source_id", "revision"];
+const IMAGE_ITEM_FIELDS = ["kind", "panel_id", "media_id", "revision"];
 
 export function presentationChannelName(sessionId) {
   assertIdentifier(sessionId, "session ID");
@@ -181,7 +181,7 @@ function validatePresentationItem(item) {
   if (item.kind === "image") {
     assertExactFields(item, IMAGE_ITEM_FIELDS, "presentation item");
     assertIdentifier(item.panel_id, "Image panel ID");
-    assertIdentifier(item.source_id, "Image source ID");
+    assertIdentifier(item.media_id, "Image media ID");
     if (!Number.isSafeInteger(item.revision) || item.revision < 1) {
       throw new Error("Image revision must be a positive integer");
     }

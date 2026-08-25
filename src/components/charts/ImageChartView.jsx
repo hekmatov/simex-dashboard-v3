@@ -18,6 +18,7 @@ export default function ImageChartView({
   onRetry,
   onReplace,
   onEdit,
+  contentRenderContext,
 }) {
   const src = safeImageSource(model?.src ?? model?.url, model?.containedPackagePath === true);
   const active = interactionMode === "active" && zoomEnabled === true;
@@ -130,6 +131,9 @@ export default function ImageChartView({
       data-static-image="true"
       data-static-source-id={model?.sourceId}
       data-static-source-revision={model?.revision}
+      data-image-media-id={model?.mediaId}
+      data-image-media-revision={model?.revision}
+      data-content-media-count={Object.keys(contentRenderContext?.mediaItems ?? {}).length}
       data-image-zoom-scale={active ? scale : undefined}
       data-image-pan-x={active ? pan.x : undefined}
       data-image-pan-y={active ? pan.y : undefined}

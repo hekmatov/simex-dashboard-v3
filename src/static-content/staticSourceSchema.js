@@ -1,13 +1,11 @@
-import { validateImageOrigin as validateImageOriginContract } from "./image/imageAssetValidation.js";
-
 const STATIC_SOURCE_VERSION = 1;
+const STATIC_IMAGE_SOURCE_VERSION = 2;
 const PORTABLE_QMD_POLICY = "portable-qmd-v1";
 const IMAGE_FITS = new Set(["contain", "cover"]);
 const IMAGE_ROTATIONS = new Set([0, 90, 180, 270]);
 const IMAGE_MEDIA_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const ASSET_STORAGE_STATES = new Set(["staged", "durable", "missing"]);
 const SHA256 = /^[0-9a-f]{64}$/i;
-const MIGRATION_WARNINGS = new Set(["legacy-fit-fill", "missing-alt", "replacement-required"]);
 
 export function normalizeStaticSource(source) {
   const value = record(source, "Static source");
@@ -24,17 +22,13 @@ export function normalizeStaticSource(source) {
     const decorative = value.decorative === true;
     return {
       kind: "staticImage",
-      sourceVersion: value.sourceVersion ?? STATIC_SOURCE_VERSION,
-      revision: value.revision ?? 1,
-      origin: clone(value.origin),
+      sourceVersion: value.sourceVersion ?? STATIC_IMAGE_SOURCE_VERSION,
+      mediaId: value.mediaId,
       alt: decorative ? "" : value.alt ?? "",
       decorative,
       fit: value.fit ?? "contain",
       crop: clone(value.crop ?? { x: 0, y: 0, width: 1000, height: 1000 }),
       rotation: value.rotation ?? 0,
-      ...(Array.isArray(value.migrationWarnings)
-        ? { migrationWarnings: [...value.migrationWarnings] }
-        : {}),
     };
   }
   throw new Error(`Unknown static source kind "${String(value.kind)}".`);
@@ -57,36 +51,27 @@ export function validateStaticTextSource(source) {
   return source;
 }
 
-export function validateStaticImageSource(source, { assets } = {}) {
+export function validateStaticImageSource(source) {
   const value = record(source, "Static image source");
   rejectUnknownKeys(value, [
-    "kind", "sourceVersion", "revision", "origin", "alt", "decorative",
-    "fit", "crop", "rotation", "migrationWarnings",
+    "kind", "sourceVersion", "mediaId", "alt", "decorative",
+    "fit", "crop", "rotation",
   ], "Static image source");
-  validateBase(value, "Static image source");
-  validateImageOriginContract(value.origin);
+  if (value.sourceVersion !== STATIC_IMAGE_SOURCE_VERSION) {
+    throw new Error(`Static image source version ${STATIC_IMAGE_SOURCE_VERSION} is required.`);
+  }
+  requiredText(value.mediaId, "Static image media id");
   if (typeof value.decorative !== "boolean") throw new TypeError("Static image decorative must be boolean.");
   if (typeof value.alt !== "string") throw new TypeError("Static image alternative text must be a string.");
   if (value.decorative && value.alt !== "") {
     throw new Error("A decorative image must store empty alt text.");
   }
-  validateMigrationWarnings(value.migrationWarnings);
-  if (
-    !value.decorative
-    && value.alt.trim() === ""
-    && !value.migrationWarnings?.includes("missing-alt")
-  ) {
+  if (!value.decorative && value.alt.trim() === "") {
     throw new Error("A non-decorative image requires alternative text.");
   }
   if (!IMAGE_FITS.has(value.fit)) throw new Error("Static image fit must be contain or cover.");
   if (!IMAGE_ROTATIONS.has(value.rotation)) throw new Error("Static image rotation must be 0, 90, 180, or 270 degrees.");
   validateCrop(value.crop);
-  if (assets !== undefined) {
-    validateAuthoredAssetManifest(assets);
-    if (value.origin.kind === "asset" && !Object.hasOwn(assets, value.origin.assetId)) {
-      throw new Error(`Static image references unknown asset "${value.origin.assetId}".`);
-    }
-  }
   return source;
 }
 
@@ -113,13 +98,6 @@ export function validateAuthoredAssetManifest(assets) {
     }
   }
   return assets;
-}
-
-function validateMigrationWarnings(value) {
-  if (value === undefined) return;
-  if (!Array.isArray(value) || value.some((entry) => !MIGRATION_WARNINGS.has(entry))) {
-    throw new Error("Static image migration warnings are invalid.");
-  }
 }
 
 function validateBase(source, description) {

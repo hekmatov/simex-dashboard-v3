@@ -4,42 +4,33 @@ import test from "node:test";
 import { resolveChartRendering } from "../src/charting/rendering/resolveChartRendering.js";
 import { resolveStaticImageSource } from "../src/static-content/staticSourceResolver.js";
 
-const imageSource = {
-  kind: "staticImage",
-  sourceVersion: 1,
-  revision: 4,
-  origin: { kind: "url", url: "https://example.test/briefing.png" },
-  alt: "Briefing map",
-  decorative: false,
-  fit: "contain",
-  crop: { x: 0, y: 0, width: 1000, height: 1000 },
-  rotation: 0,
-};
+const placement = { kind: "staticImage", sourceVersion: 2, mediaId: "media-briefing", alt: "Briefing map", decorative: false, fit: "contain", crop: { x: 0, y: 0, width: 1000, height: 1000 }, rotation: 0 };
+const mediaItem = { mediaId: "media-briefing", revision: 8, current: { kind: "url", url: "https://example.test/current.png" }, displayName: "Briefing", defaultDescription: "", origin: "external", health: "external" };
 
-test("static Image resolution is identity-based and ignores playback options", () => {
-  const withoutTime = resolveStaticImageSource(imageSource, { sourceId: "briefing" });
-  const withTime = resolveStaticImageSource(imageSource, {
-    sourceId: "briefing",
-    timeContext: { activeEpochMs: Date.UTC(2027, 4, 1) },
-    frameId: "injected-frame",
-  });
-
+test("V5 Image resolution obtains current origin and revision from its MediaItem", () => {
+  const withoutTime = resolveStaticImageSource(placement, { sourceId: "briefing", mediaItems: { "media-briefing": mediaItem } });
+  const withTime = resolveStaticImageSource(placement, { sourceId: "briefing", mediaItems: { "media-briefing": mediaItem }, timeContext: { activeEpochMs: Date.UTC(2027, 4, 1) }, frameId: "ignored" });
   assert.deepEqual(withTime, withoutTime);
-  assert.equal(withTime.sourceId, "briefing");
-  assert.equal(withTime.revision, 4);
+  assert.equal(withTime.mediaId, "media-briefing");
+  assert.equal(withTime.revision, 8);
+  assert.equal(withTime.src, "https://example.test/current.png");
+  assert.equal(withTime.alt, "Briefing map");
 });
 
-test("typed static rendering strips time and bypasses chart data preparation", () => {
-  const resolution = resolveChartRendering({
-    chart: { id: "image-a", typeId: "image", sourceId: "briefing", title: "Briefing" },
-    rows: [{ observation: "must not be prepared" }],
-    datasetProfile: { columns: [{ name: "observation", type: "temporal" }] },
-    timeContext: { activeEpochMs: Date.UTC(2027, 4, 1), mode: "trace" },
-    renderContext: { sources: { briefing: imageSource }, assets: {} },
-  });
+test("resolver fails closed for missing identity and a stale expected revision", () => {
+  assert.equal(resolveStaticImageSource(placement, { mediaItems: {} }).failure.code, "missing-media");
+  assert.equal(resolveStaticImageSource(placement, { expectedRevision: 7, mediaItems: { "media-briefing": mediaItem } }).failure.code, "stale-media-revision");
+});
 
+test("chart rendering transports media identity and strips time before Image resolution", () => {
+  const resolution = resolveChartRendering({
+    chart: { id: "image-panel", typeId: "image", sourceId: "briefing", roles: {} },
+    rows: [{ malicious: "ignored" }],
+    timeContext: { activeEpochMs: Date.UTC(2027, 4, 1) },
+    renderContext: { sources: { briefing: placement }, mediaItems: { "media-briefing": mediaItem }, assets: {} },
+  });
   assert.equal(resolution.status, "available");
-  assert.equal(resolution.prepared, null);
-  assert.equal(resolution.inputKey.timeContext, undefined);
-  assert.equal(resolution.model.revision, 4);
+  assert.equal(resolution.model.mediaId, "media-briefing");
+  assert.equal(resolution.model.revision, 8);
+  assert.equal(resolution.model.staticSource, true);
 });

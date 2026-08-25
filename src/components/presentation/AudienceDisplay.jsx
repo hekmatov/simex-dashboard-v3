@@ -11,6 +11,7 @@ export default function AudienceDisplay({
   connectionStatus,
   presentationState,
   presentableItemIndex: suppliedPresentableItemIndex,
+  contentRenderContext,
 }) {
   const presentableItemIndex = React.useMemo(
     () => suppliedPresentableItemIndex ?? buildPresentableItemIndex(dashboard),
@@ -27,6 +28,7 @@ export default function AudienceDisplay({
   const staticAssetReadiness = useAudienceStaticAssetReadiness({
     dashboard,
     items: trustedState?.items ?? [],
+    resolveAsset: contentRenderContext?.resolveAsset,
   });
 
   if (!dashboard || !trustedState) {
@@ -76,6 +78,10 @@ export default function AudienceDisplay({
         items={trustedState.items}
         layout={trustedState.layout}
         staticAssetReadiness={staticAssetReadiness}
+        contentRenderContext={contentRenderContext ?? {
+          mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
+          assets: dashboard.assets ?? {},
+        }}
         timeContextForChart={(chartId) => memberTimeContexts[chartId] ?? null}
         surface="audience"
       />

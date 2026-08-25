@@ -16,6 +16,7 @@ export default function DisplayedChartGrid({
   getCellProps,
   renderCellControls,
   staticAssetReadiness = new Map(),
+  contentRenderContext = {},
 }) {
   const presentationItems = items ?? chartIds.map(
     (chartId) => ({ kind: "chart", chart_id: chartId }),
@@ -61,7 +62,7 @@ export default function DisplayedChartGrid({
             key={chart.id}
             data-displayed-chart-id={chart.id}
             data-presentation-item-kind={item.kind}
-            data-image-source-id={item.kind === "image" ? item.source_id : undefined}
+            data-image-media-id={item.kind === "image" ? item.media_id : undefined}
             data-image-revision={item.kind === "image" ? item.revision : undefined}
           >
             {renderCellControls?.(chart, index, charts)}
@@ -73,6 +74,7 @@ export default function DisplayedChartGrid({
               geoData={dashboard.loadedData?.[chart.presentation?.map?.geoSource]}
               accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
               renderContext={{
+                ...contentRenderContext,
                 sources: dashboard.dataSources ?? {},
                 assets: dashboard.assets ?? {},
                 mapName: chart.presentation?.map?.geoSource ?? chart.id,

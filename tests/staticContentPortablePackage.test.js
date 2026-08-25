@@ -30,7 +30,7 @@ test("bundle promotion materializes authored Images under hashed contained packa
 
   const promoted = preparePromotedDashboard(JSON.stringify(bundle));
   const expectedPath = `data/authored/${sha256}.png`;
-  assert.deepEqual(promoted.config.dataSources.local.origin, {
+  assert.deepEqual(promoted.config.contentLibrary.mediaItems["media-local"].current, {
     kind: "package",
     path: expectedPath,
   });
@@ -62,7 +62,7 @@ test("portable data generation preserves packaged static paths without treating 
     await mkdir(path.join(publicDir, "config"), { recursive: true });
     const config = portableDashboard({ assetId: "unused", sha256: "a".repeat(64) });
     delete config.assets;
-    config.dataSources.local.origin = {
+    config.contentLibrary.mediaItems["media-local"].current = {
       kind: "package",
       path: `data/authored/${"a".repeat(64)}.png`,
     };
@@ -70,7 +70,7 @@ test("portable data generation preserves packaged static paths without treating 
     await writeFile(path.join(publicDir, "config", "dataset-profiles.json"), "{}");
     const { payload } = await buildPortableData({ rootDir });
 
-    assert.equal(payload.config.dataSources.local.origin.kind, "package");
+    assert.equal(payload.config.contentLibrary.mediaItems["media-local"].current.kind, "package");
     assert.deepEqual(payload.sources, {});
   } finally {
     await rm(rootDir, { recursive: true, force: true });
@@ -86,13 +86,33 @@ test("the flash-drive server serves every accepted raster type behind a separato
 
 function portableDashboard({ assetId, sha256 }) {
   return {
-    configVersion: 4,
+    configVersion: 5,
     id: "portable-static",
     title: "Portable static",
     timezone: "UTC",
     dataSources: {
-      local: imageSource({ kind: "asset", assetId }),
-      linked: imageSource({ kind: "url", url: "https://example.test/linked.webp" }),
+      local: imageSource("media-local"),
+      linked: imageSource("media-linked"),
+    },
+    contentLibrary: {
+      mediaItems: {
+        "media-local": mediaItem({
+          mediaId: "media-local",
+          current: { kind: "asset", assetId },
+          origin: "uploaded",
+          health: "ready",
+          dimensions: { width: 8, height: 6 },
+          byteLength: 4,
+          mediaType: "image/png",
+        }),
+        "media-linked": mediaItem({
+          mediaId: "media-linked",
+          current: { kind: "url", url: "https://example.test/linked.webp" },
+          origin: "external",
+          health: "external",
+        }),
+      },
+      sourceEntries: {},
     },
     datasetProfiles: {},
     assets: {
@@ -118,17 +138,29 @@ function portableDashboard({ assetId, sha256 }) {
   };
 }
 
-function imageSource(origin) {
+function imageSource(mediaId) {
   return {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 1,
-    origin,
+    sourceVersion: 2,
+    mediaId,
     alt: "Briefing",
     decorative: false,
     fit: "contain",
     crop: { x: 0, y: 0, width: 1000, height: 1000 },
     rotation: 0,
+  };
+}
+
+function mediaItem(overrides) {
+  return {
+    mediaId: "media-image",
+    revision: 1,
+    current: { kind: "url", url: "https://example.test/image.png" },
+    displayName: "Briefing",
+    defaultDescription: "Briefing",
+    origin: "external",
+    health: "external",
+    ...overrides,
   };
 }
 

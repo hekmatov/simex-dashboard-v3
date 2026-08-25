@@ -33,6 +33,10 @@ test("Build and View route one saved Image model through equal content and footp
   assert.equal(attribute(buildImage, "data-static-source-id"), "image-source");
   assert.equal(attribute(buildImage, "data-static-source-id"), attribute(viewImage, "data-static-source-id"));
   assert.equal(attribute(buildImage, "data-static-source-revision"), attribute(viewImage, "data-static-source-revision"));
+  assert.equal(attribute(buildImage, "data-image-media-id"), "media-image-source");
+  assert.equal(attribute(buildImage, "data-image-media-revision"), "7");
+  assert.equal(attribute(buildImage, "data-content-media-count"), "1");
+  assert.equal(attribute(buildImage, "data-image-media-id"), attribute(viewImage, "data-image-media-id"));
   assert.equal(attribute(buildImage, "src"), attribute(viewImage, "src"));
   assert.equal(attribute(buildImage, "alt"), attribute(viewImage, "alt"));
 
@@ -44,6 +48,7 @@ test("Build and View route one saved Image model through equal content and footp
 test("fullscreen reuses DisplayedChartGrid and the saved Image model with an active viewer", () => {
   const html = renderWithPlayback(React.createElement(FullscreenDisplay, {
     dashboard: ssrDashboard(),
+    contentRenderContext: contentContext(ssrDashboard()),
     displayState: {
       display_revision: 1,
       displayed_chart_ids: ["image-panel"],
@@ -55,6 +60,8 @@ test("fullscreen reuses DisplayedChartGrid and the saved Image model with an act
   assert.match(html, /data-display-surface="fullscreen"/);
   assert.equal((html.match(/data-displayed-chart-id=/g) ?? []).length, 1);
   assert.match(html, /data-static-source-revision="7"/);
+  assert.match(html, /data-image-media-id="media-image-source"/);
+  assert.match(html, /data-image-media-revision="7"/);
   assert.match(html, /src="https:\/\/example\.test\/saved-map\.png"/);
   assert.match(html, /alt="Saved response map"/);
   assert.match(html, /aria-label="Image viewer actions"/);
@@ -63,13 +70,15 @@ test("fullscreen reuses DisplayedChartGrid and the saved Image model with an act
 
 test("a fullscreen static failure stays in its cell while a saved sibling still renders", () => {
   const failedDashboard = ssrDashboard();
-  failedDashboard.dataSources["image-source"].origin = {
+  failedDashboard.contentLibrary.mediaItems["media-image-source"].current = {
     kind: "asset",
     assetId: "asset-missing",
   };
+  failedDashboard.contentLibrary.mediaItems["media-image-source"].health = "missing";
   failedDashboard.assets = {};
   const html = renderWithPlayback(React.createElement(FullscreenDisplay, {
     dashboard: failedDashboard,
+    contentRenderContext: contentContext(failedDashboard),
     displayState: {
       display_revision: 1,
       displayed_chart_ids: ["image-panel", "status-panel"],
@@ -93,6 +102,7 @@ function renderWorkspace(mode, { buildStaticAuthoringOpen = false } = {}) {
     activePage: renderedDashboard.pages[0],
     pageType: "analytical",
     dashboard: renderedDashboard,
+    contentRenderContext: contentContext(renderedDashboard),
     buildStaticAuthoringOpen,
     buildState: mode === "build" ? {
       selection: { kind: "chart", placementId: "image-placement" },
@@ -160,9 +170,8 @@ function staticDashboard() {
       },
       "image-source": {
         kind: "staticImage",
-        sourceVersion: 1,
-        revision: 7,
-        origin: { kind: "url", url: "https://example.test/saved-map.png" },
+        sourceVersion: 2,
+        mediaId: "media-image-source",
         alt: "Saved response map",
         decorative: false,
         fit: "cover",
@@ -176,6 +185,20 @@ function staticDashboard() {
         renderingPolicy: "portable-qmd-v1",
         qmd: "# Situation\n\nSaved operational note.",
       },
+    },
+    contentLibrary: {
+      mediaItems: {
+        "media-image-source": {
+          mediaId: "media-image-source",
+          revision: 7,
+          current: { kind: "url", url: "https://example.test/saved-map.png" },
+          displayName: "Saved response map",
+          defaultDescription: "Saved response map",
+          origin: "external",
+          health: "external",
+        },
+      },
+      sourceEntries: {},
     },
     assets: {},
     loadedData: { status: [{ entity: "North", value: 12 }] },
@@ -229,5 +252,12 @@ function staticDashboard() {
     globalStyles: { accessibility: { enabled: false } },
     chronoGroups: [],
     scenes: [],
+  };
+}
+
+function contentContext(value) {
+  return {
+    mediaItems: value.contentLibrary.mediaItems,
+    assets: value.assets,
   };
 }

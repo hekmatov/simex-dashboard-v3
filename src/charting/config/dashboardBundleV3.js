@@ -18,6 +18,8 @@ import {
   validateDashboardStructure,
 } from "./dashboardConfigStructure.js";
 import { migrateDashboardV3ToV4 } from "./migrateDashboardV3ToV4.js";
+import { migrateDashboardV4ToV5 } from "../../content-library/migrateDashboardV4ToV5.js";
+import { validateContentLibrary } from "../../content-library/contentLibrarySchema.js";
 import {
   validateDashboardChartReferences,
 } from "./dashboardSemanticReferences.js";
@@ -37,7 +39,7 @@ import {
 } from "../../static-content/assets/assetPayloadEnvelope.js";
 
 export const DASHBOARD_SCHEMA_VERSION = DASHBOARD_CONFIG_STRUCTURE.version;
-export const DASHBOARD_BUNDLE_VERSION = 4;
+export const DASHBOARD_BUNDLE_VERSION = 5;
 export const DASHBOARD_CONFIG_VERSION = DASHBOARD_SCHEMA_VERSION;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 
@@ -423,7 +425,8 @@ function normalizeDashboardChartInstances(config) {
 }
 
 export function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
-  const migrated = migrateDashboardV3ToV4(config);
+  const v4 = config?.configVersion === 5 ? structuredClone(config) : migrateDashboardV3ToV4(config);
+  const migrated = migrateDashboardV4ToV5(v4);
   const chartNormalized = normalizeDashboardChartInstances(migrated);
   const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
   return normalizeDashboardTemporalConfig(presentationNormalized, {
@@ -448,17 +451,22 @@ export function validateDashboardConfig(
 ) {
   const input = config;
   assertStructuralData(config);
-  config = migrateDashboardV3ToV4(config);
+  const v4 = config?.configVersion === 5 ? structuredClone(config) : migrateDashboardV3ToV4(config);
+  config = migrateDashboardV4ToV5(v4);
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
   validateCanonicalDashboardTemporalConfig(config);
-  if (config.configVersion !== DASHBOARD_SCHEMA_VERSION) throw new Error("Dashboard configuration version 4 is required.");
+  if (config.configVersion !== DASHBOARD_SCHEMA_VERSION) throw new Error("Dashboard configuration version 5 is required.");
   requiredString(config.id, "Dashboard id"); requiredString(config.title, "Dashboard title");
   const sourceEntries = plainDataEntries(config.dataSources, "Dashboard dataSources");
   const profiles = config.datasetProfiles ?? {};
   plainDataEntries(profiles, "Dashboard datasetProfiles");
   validateAuthoredAssetManifest(config.assets ?? {});
+  validateContentLibrary(config.contentLibrary, {
+    assets: config.assets ?? {},
+    dataSources: config.dataSources,
+  });
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) {
     validateSource(sourceId, source, {
@@ -633,7 +641,7 @@ export function integrateSavedChart(dashboard, payload) {
   return next;
 }
 
-/** Validates the complete dashboard-v4 session candidate, including assets. */
+/** Validates the complete DashboardV5 session candidate, including assets. */
 export function validateDashboardSessionCandidate(candidate) {
   validateDashboardConfig(candidate, {
     allowBrowserAssetIds: true,
@@ -665,7 +673,7 @@ export function serializeDashboardBundle(config, { now = null, assetPayloads = {
 export function parseDashboardBundle(text, { includeEnvelope = false } = {}) {
   let bundle;
   try { bundle = JSON.parse(text); } catch { throw new Error("Dashboard bundle must be valid JSON."); }
-  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || bundle.version !== DASHBOARD_BUNDLE_VERSION) throw new Error("This dashboard supports version 4 bundles only.");
+  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || ![4, DASHBOARD_BUNDLE_VERSION].includes(bundle.version)) throw new Error("This dashboard supports version 4 or version 5 bundles only.");
   if (!isRecord(bundle.config)) throw new Error("Bundle config must be a dashboard configuration object.");
   const bundleEntries = plainDataEntries(bundle, "Dashboard bundle");
   rejectUnknownEntries(bundleEntries, BUNDLE_KEYS, "dashboard bundle");
@@ -710,19 +718,19 @@ function validateAssetPayloadEnvelope(config, value) {
     }
     payloads[assetId] = { base64: entryValue(entries, "base64"), byteLength, mediaType, sha256 };
   }
-  for (const source of Object.values(config.dataSources ?? {})) {
-    if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") continue;
-    if (!Object.hasOwn(payloads, source.origin.assetId)) {
-      throw new Error(`Dashboard bundle is missing authored asset payload "${source.origin.assetId}".`);
+  for (const mediaItem of Object.values(config.contentLibrary?.mediaItems ?? {})) {
+    if (mediaItem?.current?.kind !== "asset" || mediaItem.health !== "ready") continue;
+    if (!Object.hasOwn(payloads, mediaItem.current.assetId)) {
+      throw new Error(`Dashboard bundle is missing authored asset payload "${mediaItem.current.assetId}".`);
     }
   }
   return payloads;
 }
 
 function linkedImageDependencies(config) {
-  return [...new Set(Object.values(config.dataSources ?? {}).flatMap((source) => (
-    source?.kind === "staticImage" && source.origin?.kind === "url"
-      ? [source.origin.url]
+  return [...new Set(Object.values(config.contentLibrary?.mediaItems ?? {}).flatMap((item) => (
+    item?.current?.kind === "url"
+      ? [item.current.url]
       : []
   )))].sort();
 }

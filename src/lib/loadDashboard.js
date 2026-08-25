@@ -2,6 +2,7 @@ import { parseTemporalValue } from "../charting/data/temporal.js";
 import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
+import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import { stripLegacyVantaBackground } from "../charting/config/dashboardPresentationV3.js";
 import {
   normalizeDashboardTemporalConfig,
@@ -143,7 +144,10 @@ const GEOJSON_COLLECTION_GEOMETRY_KEYS = new Set([
 ]);
 
 export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
-  const migrated = migrateDashboardV3ToV4(dashboard);
+  const v4 = dashboard?.configVersion === 5
+    ? structuredClone(dashboard)
+    : migrateDashboardV3ToV4(dashboard);
+  const migrated = migrateDashboardV4ToV5(v4);
   const presentationNormalized = stripLegacyVantaBackground(migrated);
   const normalized = normalizeDashboardTemporalConfig(presentationNormalized, {
     profiles: temporalMigrationProfiles(presentationNormalized, suppliedProfiles),
@@ -293,6 +297,7 @@ export async function loadDashboardConfig(
   const staticSourceStates = await resolveStaticSourceStates(
     dataSources,
     dashboard.assets ?? {},
+    dashboard.contentLibrary?.mediaItems ?? {},
     { readAuthoredAsset },
   );
   const dataSourceStates = {
@@ -366,6 +371,7 @@ export async function loadDashboardConfigProgressively(
   const dataSourceStates = await resolveStaticSourceStates(
     dataSources,
     dashboard.assets ?? {},
+    dashboard.contentLibrary?.mediaItems ?? {},
     { readAuthoredAsset },
   );
 
@@ -456,6 +462,7 @@ function isTypedStaticSource(source) {
 async function resolveStaticSourceStates(
   dataSources,
   assets,
+  mediaItems,
   { readAuthoredAsset } = {},
 ) {
   const states = {};
@@ -464,13 +471,20 @@ async function resolveStaticSourceStates(
     "Dashboard dataSources",
   )) {
     if (!isTypedStaticSource(source)) continue;
-    if (source.kind === "staticText" || source.origin.kind !== "asset") {
-      states[sourceId] = source.origin?.kind === "replacementRequired"
-        ? { status: "error", code: "replacement-required" }
-        : { status: "ready" };
+    if (source.kind === "staticText") {
+      states[sourceId] = { status: "ready" };
       continue;
     }
-    const asset = assets[source.origin.assetId];
+    const mediaItem = mediaItems[source.mediaId];
+    if (!mediaItem || mediaItem.health === "needs-relink") {
+      states[sourceId] = { status: "error", code: "replacement-required" };
+      continue;
+    }
+    if (mediaItem.current.kind !== "asset") {
+      states[sourceId] = { status: "ready" };
+      continue;
+    }
+    const asset = assets[mediaItem.current.assetId];
     if (!asset || asset.storageState !== "durable") {
       states[sourceId] = { status: "error", code: "authored-asset-missing" };
       continue;
@@ -480,7 +494,7 @@ async function resolveStaticSourceStates(
       continue;
     }
     try {
-      await readAuthoredAsset(source.origin.assetId);
+      await readAuthoredAsset(mediaItem.current.assetId);
       states[sourceId] = { status: "ready" };
     } catch (error) {
       states[sourceId] = {

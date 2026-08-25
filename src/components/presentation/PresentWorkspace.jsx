@@ -14,6 +14,7 @@ export default function PresentWorkspace({
   presentableItemIndex: suppliedPresentableItemIndex,
   accessibilityEnabled,
   themeProjection,
+  contentRenderContext,
 }) {
   const playback = usePlayback();
   const playbackDispatchRef = React.useRef(playback.dispatch);
@@ -153,6 +154,7 @@ export default function PresentWorkspace({
               presentationState={presentationState}
               playing={playback.playing}
               themeProjection={themeProjection}
+              contentRenderContext={contentRenderContext}
             />
           </div>
           <section className="present-displayed-panel" aria-labelledby="displayed-charts-heading">

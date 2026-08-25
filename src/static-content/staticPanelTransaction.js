@@ -1,4 +1,6 @@
 import { validateChartInstance } from "../charting/config/chartConfigV3.js";
+import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
+import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import { validateDashboardChartReferences } from "../charting/config/dashboardSemanticReferences.js";
 import { validateStaticDestination } from "./staticPanelCapabilities.js";
 import {
@@ -10,12 +12,20 @@ import {
   IMAGE_ASSET_LIMITS,
   authoredAssetManifestBytes,
 } from "./image/imageAssetValidation.js";
+import { normalizeContentLibrary, validateContentLibrary } from "../content-library/contentLibrarySchema.js";
+import { validateMediaItem } from "../content-library/mediaItems.js";
 
 export function nextStaticSourceRevision(previousSource, nextSource) {
   const next = normalizeStaticSource(nextSource);
+  if (next.kind !== "staticText") {
+    throw new Error("Image revisions are owned by MediaItems.");
+  }
   if (previousSource === null || previousSource === undefined) return 1;
 
   const previous = normalizeStaticSource(previousSource);
+  if (previous.kind !== "staticText") {
+    throw new Error("Image revisions are owned by MediaItems.");
+  }
   const previousRevision = previous.revision;
   return sameSavedSource(previous, next) ? previousRevision : previousRevision + 1;
 }
@@ -26,14 +36,21 @@ export function prepareStaticPanelTransaction({
   destination,
   panelId,
   panel,
-  source,
+  placement,
+  mediaItem = null,
   assets = {},
+  stagedAssetIds = [],
 } = {}) {
-  const baseDashboard = cloneRecord(dashboard, "Static panel transaction dashboard");
+  const suppliedDashboard = cloneRecord(dashboard, "Static panel transaction dashboard");
+  const previousDashboard = migrateDashboardV4ToV5(
+    suppliedDashboard.configVersion === 5
+      ? suppliedDashboard
+      : migrateDashboardV3ToV4(suppliedDashboard),
+  );
   if (!isRecord(panel)) throw new TypeError("Static panel transaction panel is required.");
   validateChartInstance(panel);
 
-  const candidateDashboard = structuredClone(baseDashboard);
+  const candidateDashboard = structuredClone(previousDashboard);
   const previousPlacement = operation === "update"
     ? findPanel(candidateDashboard, panelId ?? panel.id)
     : null;
@@ -44,27 +61,34 @@ export function prepareStaticPanelTransaction({
     throw new Error(`Static panel "${String(panelId ?? panel.id)}" does not exist.`);
   }
 
-  const existingSource = previousPlacement
+  const existingPlacement = previousPlacement
     ? candidateDashboard.dataSources?.[previousPlacement.panel.sourceId]
     : undefined;
   const previousSourceId = previousPlacement?.panel?.sourceId ?? null;
-  const previousAssetId = assetIdForSource(existingSource);
-  const committedRevision = nextStaticSourceRevision(existingSource, source);
-  const committedSource = {
-    ...normalizeStaticSource(source),
-    revision: committedRevision,
-  };
-  const transactionAssets = assetsForCommittedSource(committedSource, assets);
+  const committedPlacement = normalizeStaticSource(placement);
+  const isImage = committedPlacement.kind === "staticImage";
+  if (isImage) {
+    validateMediaItem(mediaItem, { assets });
+    if (mediaItem.mediaId !== committedPlacement.mediaId) {
+      throw new Error("Image placement mediaId must match its MediaItem.");
+    }
+  } else if (mediaItem !== null) {
+    throw new Error("Free-text placement cannot include a MediaItem.");
+  }
   candidateDashboard.dataSources = {
     ...(candidateDashboard.dataSources ?? {}),
-    [panel.sourceId]: committedSource,
+    [panel.sourceId]: committedPlacement,
   };
   const mergedAssets = {
     ...(candidateDashboard.assets ?? {}),
-    ...transactionAssets,
+    ...structuredClone(assets),
   };
-  if (Object.hasOwn(candidateDashboard, "assets") || Object.keys(transactionAssets).length > 0) {
+  if (Object.hasOwn(candidateDashboard, "assets") || Object.keys(assets).length > 0) {
     candidateDashboard.assets = mergedAssets;
+  }
+  candidateDashboard.contentLibrary = normalizeContentLibrary(candidateDashboard.contentLibrary);
+  if (isImage) {
+    candidateDashboard.contentLibrary.mediaItems[mediaItem.mediaId] = structuredClone(mediaItem);
   }
 
   if (operation === "create") {
@@ -81,7 +105,6 @@ export function prepareStaticPanelTransaction({
     previousPlacement.wrapper.chart = structuredClone(panel);
     pruneStaticOwnership(candidateDashboard, {
       sourceIds: [previousSourceId],
-      assetIds: [previousAssetId],
     });
   }
 
@@ -90,7 +113,11 @@ export function prepareStaticPanelTransaction({
   if (authoredAssetManifestBytes(finalAssets) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
     throw new Error("The Image transaction exceeds the dashboard's 200 MiB authored-asset budget.");
   }
-  validateStaticSource(committedSource, { assets: finalAssets });
+  validateStaticSource(committedPlacement, { assets: finalAssets });
+  validateContentLibrary(candidateDashboard.contentLibrary, {
+    assets: finalAssets,
+    dataSources: candidateDashboard.dataSources,
+  });
 
   validateDashboardChartReferences(
     collectPanelPlacements(candidateDashboard),
@@ -102,19 +129,17 @@ export function prepareStaticPanelTransaction({
     kind: "static-panel-transaction",
     operation,
     panelId: panel.id,
+    mediaId: isImage ? mediaItem.mediaId : null,
+    mediaItem: isImage ? structuredClone(mediaItem) : null,
+    stagedAssetIds: [...new Set(stagedAssetIds)].sort(),
     sourceId: panel.sourceId,
-    committedRevision,
-    baseDashboard,
+    expectedMediaRevision: isImage
+      ? previousDashboard.contentLibrary?.mediaItems?.[mediaItem.mediaId]?.revision ?? mediaItem.revision
+      : null,
+    baseDashboard: previousDashboard,
+    previousDashboard,
     candidateDashboard,
   });
-}
-
-function assetsForCommittedSource(source, assets) {
-  if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") return {};
-  const assetId = source.origin.assetId;
-  return Object.hasOwn(assets ?? {}, assetId)
-    ? { [assetId]: structuredClone(assets[assetId]) }
-    : {};
 }
 
 export function removeDashboardPanel(dashboard, panelId) {
@@ -138,8 +163,7 @@ export function removeDashboardPanel(dashboard, panelId) {
     return members.length > 0 ? [{ ...group, members }] : [];
   });
   const sourceIds = [...new Set(removed.map(({ sourceId }) => sourceId).filter(Boolean))];
-  const assetIds = sourceIds.map((sourceId) => assetIdForSource(dashboard.dataSources?.[sourceId]));
-  pruneStaticOwnership(dashboard, { sourceIds, assetIds });
+  pruneStaticOwnership(dashboard, { sourceIds });
   return {
     removedChartId: removed[0].chartId ?? null,
     removedSourceIds: sourceIds,
@@ -161,8 +185,8 @@ export function pruneStaticOwnership(dashboard, {
     }
   }
   const referencedAssetIds = new Set(
-    Object.values(dashboard.dataSources ?? {})
-      .map(assetIdForSource)
+    Object.values(dashboard.contentLibrary?.mediaItems ?? {})
+      .map((item) => item?.current?.kind === "asset" ? item.current.assetId : null)
       .filter(Boolean),
   );
   for (const assetId of new Set(assetIds.filter(Boolean))) {
@@ -188,7 +212,7 @@ export async function commitStaticPanelTransaction(
       : await requireCommit(commit)(structuredClone(prepared.candidateDashboard));
     return {
       dashboard: structuredClone(dashboard),
-      committedRevision: prepared.committedRevision,
+      committedRevision: prepared.mediaItem?.revision ?? null,
     };
   } catch (error) {
     if (typeof rollback === "function") await rollback(prepared, error);
@@ -251,12 +275,6 @@ function panelSourceIds(dashboard) {
   return new Set(collectPanelPlacements(dashboard).panels
     .map(({ chart }) => chart?.sourceId)
     .filter(Boolean));
-}
-
-function assetIdForSource(source) {
-  return source?.kind === "staticImage" && source.origin?.kind === "asset"
-    ? source.origin.assetId
-    : null;
 }
 
 function requireCommit(commit) {

@@ -11,6 +11,7 @@ import SceneViewCompositionGrid from "../time/SceneViewCompositionGrid.jsx";
 export default function DashboardCanvas({
   activePage,
   dashboard,
+  contentRenderContext,
   surface,
   buildState,
   displayState,
@@ -114,6 +115,7 @@ export default function DashboardCanvas({
                           geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                           dataSources={dashboard.dataSources}
                           assets={dashboard.assets ?? {}}
+                          contentRenderContext={contentRenderContext}
                           accessibilityEnabled={accessibilityEnabled}
                           onDisplayAction={onDisplayAction}
                           multiSelectMode={multiSelectMode}
@@ -177,6 +179,7 @@ export default function DashboardCanvas({
                             geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                             dataSources={dashboard.dataSources}
                             assets={dashboard.assets ?? {}}
+                            contentRenderContext={contentRenderContext}
                             accessibilityEnabled={accessibilityEnabled}
                             editMode={Boolean(buildState)}
                             placementId={placement.id}

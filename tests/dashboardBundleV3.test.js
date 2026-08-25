@@ -230,32 +230,32 @@ function deltaListChart(overrides = {}) {
   };
 }
 
-test("bundle v4 migrates and round-trips uploaded and inline sources", () => {
+test("bundle v5 migrates and round-trips uploaded and inline sources", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, {
     now: "2026-07-26T12:00:00.000Z",
   });
 
   assert.equal(bundle.bundleType, "simex-dashboard-bundle");
-  assert.equal(bundle.version, 4);
-  assert.equal(bundle.config.configVersion, 4);
+  assert.equal(bundle.version, 5);
+  assert.equal(bundle.config.configVersion, 5);
   assert.equal(bundle.metadata.exportedAt, "2026-07-26T12:00:00.000Z");
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
 
-test("the canonical boundary emits dashboard v4 and bundle v4 while contained charts remain v3", () => {
+test("the canonical boundary emits dashboard v5 and bundle v5 while contained charts remain v3", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, { now: null });
 
-  assert.equal(DASHBOARD_SCHEMA_VERSION, 4);
-  assert.equal(DASHBOARD_BUNDLE_VERSION, 4);
-  assert.equal(bundle.version, 4);
-  assert.equal(bundle.config.configVersion, 4);
+  assert.equal(DASHBOARD_SCHEMA_VERSION, 5);
+  assert.equal(DASHBOARD_BUNDLE_VERSION, 5);
+  assert.equal(bundle.version, 5);
+  assert.equal(bundle.config.configVersion, 5);
   assert.equal(bundle.config.pages[0].sections[0].panels[0].configVersion, 3);
-  assert.equal(parseDashboardBundle(JSON.stringify(bundle)).configVersion, 4);
+  assert.equal(parseDashboardBundle(JSON.stringify(bundle)).configVersion, 5);
 });
 
-test("bundle v4 verifies local authored payloads and declares linked image dependencies", () => {
+test("bundle v5 verifies migrated local authored payloads and declares linked image dependencies", () => {
   const sha256 = "039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81";
   const assetId = `asset-${sha256}`;
   const dashboard = version3Dashboard();
@@ -292,7 +292,7 @@ test("bundle v4 verifies local authored payloads and declares linked image depen
   assert.deepEqual(bundle.metadata.networkDependencies, ["https://example.test/linked.webp"]);
   const parsed = parseDashboardBundle(JSON.stringify(bundle), { includeEnvelope: true });
   assert.deepEqual(parsed.assetPayloads, bundle.assetPayloads);
-  assert.equal(parsed.config.configVersion, 4);
+  assert.equal(parsed.config.configVersion, 5);
 
   const missing = structuredClone(bundle);
   delete missing.assetPayloads[assetId];

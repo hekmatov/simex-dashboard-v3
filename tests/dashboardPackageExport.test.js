@@ -113,7 +113,11 @@ test("a self-contained package round-trips tabular sources and isolates legacy e
   assert.equal(imported.dataSources.generated.csvText, "date,total\n2026-08-21,4\n");
   assert.deepEqual(imported.dataSources.boundaries.geoJson, geoJson);
   assert.equal(imported.dataSources.image.kind, "staticImage");
-  assert.equal(imported.dataSources.image.origin.kind, "replacementRequired");
+  assert.equal(imported.dataSources.image.sourceVersion, 2);
+  assert.equal(
+    imported.contentLibrary.mediaItems[imported.dataSources.image.mediaId].health,
+    "needs-relink",
+  );
 });
 
 test("package preparation strips browser-only asset references", async () => {
@@ -248,7 +252,7 @@ test("package preparation preflights local authored bytes and discloses linked n
     now: null,
     assetPayloads: prepared.assetPayloads,
   });
-  assert.equal(bundle.version, 4);
+  assert.equal(bundle.version, 5);
 });
 
 test("package preparation rejects missing or corrupt local authored bytes before export", async () => {
@@ -283,13 +287,33 @@ test("package preparation rejects missing or corrupt local authored bytes before
 
 function authoredImageDashboard({ assetId, sha256 }) {
   return {
-    configVersion: 4,
+    configVersion: 5,
     id: "authored-package-dashboard",
     title: "Authored package dashboard",
     timezone: "UTC",
     dataSources: {
-      "local-image": staticImageSource({ kind: "asset", assetId }),
-      "linked-image": staticImageSource({ kind: "url", url: "https://example.test/map.png" }),
+      "local-image": staticImagePlacement("media-local-image"),
+      "linked-image": staticImagePlacement("media-linked-image"),
+    },
+    contentLibrary: {
+      mediaItems: {
+        "media-local-image": mediaItem({
+          mediaId: "media-local-image",
+          current: { kind: "asset", assetId },
+          origin: "uploaded",
+          health: "ready",
+          dimensions: { width: 8, height: 6 },
+          byteLength: 4,
+          mediaType: "image/png",
+        }),
+        "media-linked-image": mediaItem({
+          mediaId: "media-linked-image",
+          current: { kind: "url", url: "https://example.test/map.png" },
+          origin: "external",
+          health: "external",
+        }),
+      },
+      sourceEntries: {},
     },
     datasetProfiles: {},
     assets: {
@@ -318,17 +342,29 @@ function authoredImageDashboard({ assetId, sha256 }) {
   };
 }
 
-function staticImageSource(origin) {
+function staticImagePlacement(mediaId) {
   return {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 1,
-    origin,
+    sourceVersion: 2,
+    mediaId,
     alt: "Operational image",
     decorative: false,
     fit: "contain",
     crop: { x: 0, y: 0, width: 1000, height: 1000 },
     rotation: 0,
+  };
+}
+
+function mediaItem(overrides) {
+  return {
+    mediaId: "media-image",
+    revision: 1,
+    current: { kind: "url", url: "https://example.test/image.png" },
+    displayName: "Operational image",
+    defaultDescription: "Operational image",
+    origin: "external",
+    health: "external",
+    ...overrides,
   };
 }
 

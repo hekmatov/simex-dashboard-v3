@@ -14,6 +14,7 @@ export default function DashboardModeWorkspace({
   activePage,
   pageType,
   dashboard,
+  contentRenderContext,
   buildPanelOpen = false,
   buildStaticAuthoringOpen = false,
   buildState = null,
@@ -93,6 +94,7 @@ export default function DashboardModeWorkspace({
       )}
       <FullscreenDisplay
         dashboard={dashboard}
+        contentRenderContext={contentRenderContext}
         displayState={displayState}
         onDisplayAction={onDisplayAction}
         timeContextForChart={playback.timeContextForChart}
@@ -122,6 +124,7 @@ export default function DashboardModeWorkspace({
               <DashboardCanvas
                 activePage={activePage}
                 dashboard={dashboard}
+                contentRenderContext={contentRenderContext}
                 surface={buildMode ? "build" : "view"}
                 buildState={buildMode ? buildState : null}
                 displayState={displayState}

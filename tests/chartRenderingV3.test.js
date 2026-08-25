@@ -974,7 +974,13 @@ test("table and image return semantic renderer-neutral models", () => {
     { key: "table:clinic-a", time: "2027-05-02" },
     { key: "table:hospital-b", time: null },
   ]);
-  assert.deepEqual(image, { kind: "image", src: "/map.png", alt: "Response map", fit: "contain" });
+  assert.deepEqual(image, {
+    kind: "image",
+    src: "/map.png",
+    alt: "Response map",
+    fit: "contain",
+    legacyInline: true,
+  });
 });
 
 test("table row keys are canonical for equal structured values and remain unique for duplicates", () => {

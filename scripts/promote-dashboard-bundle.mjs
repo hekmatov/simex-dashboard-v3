@@ -54,18 +54,23 @@ export function preparePromotedDashboard(bundleText) {
     };
   }
 
-  for (const source of Object.values(promoted.dataSources ?? {})) {
-    if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") continue;
-    const assetId = source.origin.assetId;
+  for (const mediaItem of Object.values(promoted.contentLibrary?.mediaItems ?? {})) {
+    if (mediaItem?.current?.kind !== "asset") continue;
+    const assetId = mediaItem.current.assetId;
     const manifest = promoted.assets?.[assetId];
     const payload = assetPayloads[assetId];
+    if (!manifest || !payload) {
+      throw new Error(`Authored media asset "${assetId}" has no verified package payload.`);
+    }
     const extension = authoredAssetExtension(manifest?.mediaType);
     const relativePath = `data/authored/${manifest.sha256}.${extension}`;
     files.push({
       relativePath,
       contents: decodeBase64(payload.base64),
     });
-    source.origin = { kind: "package", path: relativePath };
+    mediaItem.current = { kind: "package", path: relativePath };
+    mediaItem.origin = "packaged";
+    mediaItem.health = "ready";
   }
   if (promoted.assets !== undefined) delete promoted.assets;
 
@@ -74,9 +79,9 @@ export function preparePromotedDashboard(bundleText) {
   return {
     config: promoted,
     files,
-    networkDependencies: [...new Set(Object.values(promoted.dataSources ?? {}).flatMap((source) => (
-      source?.kind === "staticImage" && source.origin?.kind === "url"
-        ? [source.origin.url]
+    networkDependencies: [...new Set(Object.values(promoted.contentLibrary?.mediaItems ?? {}).flatMap((item) => (
+      item?.current?.kind === "url"
+        ? [item.current.url]
         : []
     )))].sort(),
   };

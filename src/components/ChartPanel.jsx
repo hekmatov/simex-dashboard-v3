@@ -20,6 +20,7 @@ function ChartPanel({
   geoData,
   dataSources = {},
   assets = {},
+  contentRenderContext = {},
   accessibilityEnabled = false,
   canonicalPanelId,
   canonicalPlacementId,
@@ -63,11 +64,12 @@ function ChartPanel({
     datasetProfile,
   });
   const renderContext = React.useMemo(() => ({
+    ...contentRenderContext,
     sources: dataSources,
     assets,
     mapName: chart.presentation?.map?.geoSource ?? chart.id,
     accessibilityEnabled,
-  }), [accessibilityEnabled, assets, chart.id, chart.presentation?.map?.geoSource, dataSources]);
+  }), [accessibilityEnabled, assets, chart.id, chart.presentation?.map?.geoSource, contentRenderContext, dataSources]);
   const holdTimer = React.useRef(null);
   const suppressFullscreenClickUntil = React.useRef(0);
   const panelRef = React.useRef(null);

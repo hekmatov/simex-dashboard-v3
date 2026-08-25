@@ -70,7 +70,7 @@ function dashboard() {
   };
 }
 
-test("a V4 bundle candidate retains its creation time and complete nested manifest", () => {
+test("a V5 bundle candidate retains its creation time and complete nested manifest", () => {
   const bundle = serializeDashboardBundle(dashboard(), {
     now: "2026-08-21T09:10:11.000Z",
   });
@@ -103,7 +103,7 @@ test("a V4 bundle candidate retains its creation time and complete nested manife
 test("a raw valid V3 configuration is reviewable without a creation timestamp", () => {
   const candidate = parseDashboardPackageCandidate(JSON.stringify(dashboard()));
   assert.equal(candidate.exportedAt, null);
-  assert.equal(candidate.config.configVersion, 4);
+  assert.equal(candidate.config.configVersion, 5);
   assert.equal(candidate.summary.pages[0].name, "Home");
 });
 
@@ -115,7 +115,7 @@ test("an invalid package preserves the authoritative V3 validation error", () =>
       metadata: { exportedAt: null },
       config: dashboard(),
     })),
-    /version 4 bundles only/i,
+    /version 4 or version 5 bundles only/i,
   );
 });
 

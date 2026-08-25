@@ -8,6 +8,7 @@ import {
   normalizeImageTransform,
   resetImageTransform,
 } from "../image/imageTransform.js";
+import { validateMediaItem } from "../../content-library/mediaItems.js";
 
 let fallbackIdentitySequence = 0;
 
@@ -30,15 +31,17 @@ export function createStaticContentDraft(options = {}) {
   const contentTypeId = normalizeTypeId(options.contentTypeId ?? options.panel?.typeId ?? null);
   const draftIdentity = createDraftIdentity(options.panel);
   const panel = normalizePanel(options.panel, contentTypeId, draftIdentity);
-  const source = normalizeSource(options.source, contentTypeId);
-  const imageEditing = createImageEditing(source);
+  const placement = normalizeSource(options.placement ?? options.source, contentTypeId, draftIdentity);
+  const mediaItem = normalizeDraftMediaItem(options.mediaItem, placement, panel, options.assets);
+  const imageEditing = createImageEditing(placement);
   const destination = clone(options.destination);
   const baselineStage = mode === "edit" ? "content" : "destination";
   const baseline = {
     destination: clone(destination),
     contentTypeId,
     panel: clone(panel),
-    source: clone(source),
+    placement: clone(placement),
+    mediaItem: clone(mediaItem),
     assets: clone(options.assets ?? {}),
   };
   const restoration = normalizeRestoration(options.restoration, baselineStage);
@@ -51,7 +54,9 @@ export function createStaticContentDraft(options = {}) {
     contentTypeId,
     draftIdentity,
     panel,
-    source,
+    source: placement,
+    placement,
+    mediaItem,
     imageEditing,
     assets: clone(options.assets ?? {}),
     draftRevision: Number.isInteger(options.draftRevision) && options.draftRevision >= 0
@@ -97,12 +102,15 @@ export function reduceStaticContentDraft(state, action = {}) {
         state.draftIdentity,
       );
       const source = state.contentTypeId === contentTypeId
-        ? state.source
-        : normalizeSource(null, contentTypeId);
+        ? state.placement
+        : normalizeSource(null, contentTypeId, state.draftIdentity);
+      const mediaItem = normalizeDraftMediaItem(null, source, panel, state.assets);
       return authored(state, {
         contentTypeId,
         panel,
         source,
+        placement: source,
+        mediaItem,
         imageEditing: createImageEditing(source),
         status: "editing",
       });
@@ -123,6 +131,7 @@ export function reduceStaticContentDraft(state, action = {}) {
         const source = normalizeStaticSource({ ...state.source, ...(action.updates ?? {}) });
         return authored(state, {
           source,
+          placement: source,
           imageEditing: source.kind === "staticImage" && !source.decorative && source.alt.trim()
             ? { ...state.imageEditing, preservedAlt: source.alt }
             : state.imageEditing,
@@ -134,6 +143,9 @@ export function reduceStaticContentDraft(state, action = {}) {
       const alt = String(action.alt ?? "");
       return authored(state, {
         source: state.source.decorative
+          ? state.source
+          : normalizeStaticSource({ ...state.source, alt }),
+        placement: state.source.decorative
           ? state.source
           : normalizeStaticSource({ ...state.source, alt }),
         imageEditing: { ...state.imageEditing, preservedAlt: alt, altReviewRequired: false },
@@ -152,6 +164,7 @@ export function reduceStaticContentDraft(state, action = {}) {
           decorative,
           alt: decorative ? "" : preservedAlt,
         }),
+        placement: normalizeStaticSource({ ...state.source, decorative, alt: decorative ? "" : preservedAlt }),
         imageEditing: { ...state.imageEditing, preservedAlt },
         status: "editing",
       });
@@ -161,23 +174,37 @@ export function reduceStaticContentDraft(state, action = {}) {
       const assets = action.manifestEntry
         ? { ...state.assets, [action.origin?.assetId]: clone(action.manifestEntry) }
         : state.assets;
-      return authored(state, {
-        source: normalizeStaticSource({
+      {
+        const placement = normalizeStaticSource({
           ...state.source,
           ...resetImageTransform(),
-          origin: clone(action.origin),
-        }),
+        });
+        const current = clone(action.current ?? action.origin);
+        const mediaItem = mediaItemForCurrent(
+          state.mediaItem,
+          placement,
+          state.panel,
+          current,
+          action.manifestEntry,
+          draftMediaRevision(state),
+        );
+        return authored(state, {
+        source: placement,
+        placement,
+        mediaItem,
         assets,
         imageEditing: {
           ...state.imageEditing,
           altReviewRequired: true,
           replacementUndo: {
             source: clone(state.source),
+            mediaItem: clone(state.mediaItem),
             assets: clone(state.assets),
           },
         },
         status: "editing",
       });
+      }
     }
     case "undoImageReplacement": {
       requireImageContentStage(state);
@@ -185,6 +212,8 @@ export function reduceStaticContentDraft(state, action = {}) {
       if (!undo) return state;
       return authored(state, {
         source: clone(undo.source),
+        placement: clone(undo.source),
+        mediaItem: clone(undo.mediaItem),
         assets: clone(undo.assets),
         imageEditing: {
           ...createImageEditing(undo.source),
@@ -196,24 +225,43 @@ export function reduceStaticContentDraft(state, action = {}) {
     }
     case "setImageTransform": {
       requireImageContentStage(state);
-      return authored(state, {
-        source: normalizeStaticSource({
+      {
+        const placement = normalizeStaticSource({
           ...state.source,
           ...normalizeImageTransform({
             crop: action.crop ?? state.source.crop,
             rotation: action.rotation ?? state.source.rotation,
             fit: action.fit ?? state.source.fit,
           }),
-        }),
+        });
+        return authored(state, { source: placement, placement,
         status: "editing",
       });
+      }
     }
     case "resetImage":
       requireImageContentStage(state);
-      return authored(state, {
-        source: normalizeStaticSource({ ...state.source, ...resetImageTransform() }),
+      {
+        const placement = normalizeStaticSource({ ...state.source, ...resetImageTransform() });
+        return authored(state, {
+        source: placement,
+        placement,
         status: "editing",
       });
+      }
+    case "setMediaCurrent": {
+      requireImageContentStage(state);
+      const current = clone(action.current);
+      const mediaItem = mediaItemForCurrent(
+        state.mediaItem,
+        state.placement,
+        state.panel,
+        current,
+        undefined,
+        draftMediaRevision(state),
+      );
+      return authored(state, { mediaItem, status: "editing" });
+    }
     case "setAssets":
       requireContentStage(state);
       return authored(state, { assets: clone(action.assets ?? {}), status: "editing" });
@@ -239,8 +287,10 @@ export function reduceStaticContentDraft(state, action = {}) {
         destination: clone(state.baseline.destination),
         contentTypeId: state.baseline.contentTypeId,
         panel: clone(state.baseline.panel),
-        source: clone(state.baseline.source),
-        imageEditing: createImageEditing(state.baseline.source),
+        source: clone(state.baseline.placement),
+        placement: clone(state.baseline.placement),
+        mediaItem: clone(state.baseline.mediaItem),
+        imageEditing: createImageEditing(state.baseline.placement),
         assets: clone(state.baseline.assets),
         stage: state.mode === "edit" ? "content" : "destination",
         status: "discarded",
@@ -271,24 +321,31 @@ export function finalizeStaticContentDraft(state) {
   if (state.stage !== "preview-and-add") throw new Error("Static content must reach Preview & add before finalization.");
   validateDestinationValue(state.destination);
   if (!state.contentTypeId) throw new Error("Static content type is required.");
-  const source = sourceForAuthoringSave(state.source, { assets: state.assets });
-  validateFreeTextContent(source);
+  const placement = sourceForAuthoringSave(state.placement, { assets: state.assets });
+  if (placement.kind === "staticImage") validateMediaItem(state.mediaItem, { assets: state.assets });
+  validateFreeTextContent(placement);
   const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
   requiredText(panel.title, "Static panel title");
   requiredText(panel.sourceId, "Static panel source id");
   return {
     destination: clone(state.destination),
     panel: clone(panel),
-    source: clone(source),
-    assets: finalizedAssetsForSource(source, state.assets),
-    draftRevision: state.draftRevision,
+    placement: clone(placement),
+    mediaItem: clone(state.mediaItem),
+    assets: finalizedAssetsForSource(placement, state.mediaItem, state.assets),
+    stagedAssetIds: stagedAssetIdsForSource(state.mediaItem, state.assets),
   };
 }
 
-function finalizedAssetsForSource(source, assets = {}) {
-  if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") return {};
-  const entry = assets[source.origin.assetId];
-  return entry ? { [source.origin.assetId]: clone(entry) } : {};
+function finalizedAssetsForSource(source, mediaItem, assets = {}) {
+  if (source?.kind !== "staticImage" || mediaItem?.current?.kind !== "asset") return {};
+  const entry = assets[mediaItem.current.assetId];
+  return entry ? { [mediaItem.current.assetId]: clone(entry) } : {};
+}
+
+function stagedAssetIdsForSource(mediaItem, assets = {}) {
+  const assetId = mediaItem?.current?.kind === "asset" ? mediaItem.current.assetId : null;
+  return assetId && assets[assetId]?.storageState === "staged" ? [assetId] : [];
 }
 
 export function isStaticContentDraftDirty(state) {
@@ -297,7 +354,8 @@ export function isStaticContentDraftDirty(state) {
     destination: state.destination,
     contentTypeId: state.contentTypeId,
     panel: state.panel,
-    source: state.source,
+    placement: state.placement,
+    mediaItem: state.mediaItem,
     assets: state.assets,
   };
   return JSON.stringify(current) !== JSON.stringify(state.baseline);
@@ -347,13 +405,13 @@ function createDraftIdentity(panel) {
   });
 }
 
-function normalizeSource(source, contentTypeId) {
+function normalizeSource(source, contentTypeId, draftIdentity) {
   if (source) return normalizeStaticSource(source);
   if (contentTypeId === "freeText") return normalizeStaticSource({ kind: "staticText", qmd: "" });
   if (contentTypeId === "image") {
     return normalizeStaticSource({
       kind: "staticImage",
-      origin: { kind: "replacementRequired", reason: "Choose an image." },
+      mediaId: `media-${draftIdentity.panelId}`,
       alt: "",
     });
   }
@@ -371,6 +429,7 @@ function validateStageEntry(state, stage) {
   if (STATIC_CONTENT_STAGES.indexOf(stage) >= 2 && !state.contentTypeId) throw new Error("Choose a static content type before continuing.");
   if (stage === "preview-and-add") {
     sourceForAuthoringSave(state.source, { assets: state.assets });
+    if (state.source?.kind === "staticImage") validateMediaItem(state.mediaItem, { assets: state.assets });
     validateFreeTextContent(state.source);
     requiredText(state.panel?.title, "Static panel title");
   }
@@ -386,9 +445,50 @@ function sourceForAuthoringSave(source, { assets } = {}) {
   ) {
     throw new Error("A non-decorative image requires alternative text before save.");
   }
-  if (normalized.kind === "staticImage") delete normalized.migrationWarnings;
   validateStaticSource(normalized, { assets });
   return normalized;
+}
+
+function normalizeDraftMediaItem(value, placement, panel, assets = {}) {
+  if (placement?.kind !== "staticImage") return null;
+  if (value) {
+    validateMediaItem(value, { assets: assets ?? {} });
+    if (value.mediaId !== placement.mediaId) throw new Error("Image placement mediaId must match its MediaItem.");
+    return clone(value);
+  }
+  return {
+    mediaId: placement.mediaId,
+    revision: 1,
+    current: { kind: "asset", assetId: `missing-${placement.mediaId}` },
+    displayName: panel?.title || placement.mediaId,
+    defaultDescription: placement.decorative ? "" : placement.alt ?? "",
+    origin: "legacy-import",
+    health: "needs-relink",
+  };
+}
+
+function mediaItemForCurrent(previous, placement, panel, current, manifestEntry, revision) {
+  return {
+    mediaId: placement.mediaId,
+    revision,
+    current,
+    displayName: previous?.displayName ?? panel?.title ?? placement.mediaId,
+    defaultDescription: previous?.defaultDescription ?? (placement.decorative ? "" : placement.alt ?? ""),
+    origin: current.kind === "asset" ? "uploaded" : current.kind === "package" ? "packaged" : "external",
+    health: current.kind === "url" ? "external" : "ready",
+    ...(manifestEntry ? {
+      dimensions: { width: manifestEntry.width, height: manifestEntry.height },
+      byteLength: manifestEntry.byteLength,
+      mediaType: manifestEntry.mediaType,
+    } : {}),
+  };
+}
+
+function draftMediaRevision(state) {
+  const baseline = state.baseline?.mediaItem;
+  if (state.mode === "create" && baseline === null) return 1;
+  if (state.mode === "create" && baseline?.health === "needs-relink") return 1;
+  return (baseline?.revision ?? state.mediaItem?.revision ?? 0) + 1;
 }
 
 function validateFreeTextContent(source) {

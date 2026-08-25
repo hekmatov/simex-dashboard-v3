@@ -73,6 +73,7 @@ import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnload
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
+import { resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -893,6 +894,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     setChartEditorVisible(false);
     setChartEditorPlacementId(null);
     setChartEditorDirty(false);
+    setStaticContentDraft(null);
     setStaticContentDirty(false);
   }
 
@@ -1373,10 +1375,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return nextDashboard;
   }
 
+  const contentRenderContext = {
+    mediaItems: workingDashboard.contentLibrary?.mediaItems ?? {},
+    assets: workingDashboard.assets ?? {},
+    resolveAsset: resolveBrowserAuthoredAsset,
+    requestRepair: ({ panelId }) => panelId && openPanelEditor(panelId),
+  };
+
   if (mode === "present") {
     return (
       <PresentWorkspace
         dashboard={dashboard}
+        contentRenderContext={contentRenderContext}
         activePageId={activePage?.id}
         onActivePageChange={onActivePageChange}
         onModeRequest={onModeRequest}
@@ -1395,21 +1405,26 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       dashboard={workingDashboard}
       destination={staticDestinationForPlacement(workingDashboard, selectedPlacement.panelId)}
       panel={selectedPanel}
-      source={workingDashboard.dataSources?.[selectedPanel.sourceId]}
+      placement={workingDashboard.dataSources?.[selectedPanel.sourceId]}
+      mediaItem={workingDashboard.contentLibrary?.mediaItems?.[
+        workingDashboard.dataSources?.[selectedPanel.sourceId]?.mediaId
+      ]}
       assets={workingDashboard.assets ?? {}}
       initialDraft={staticContentDraft}
       disabled={moderatorMutationLocked}
       onDraftChange={setStaticContentDraft}
       onDirtyChange={setStaticContentDirty}
-      onSave={async ({ panel, source, assets }) => {
+      onSave={async ({ panel, placement, mediaItem, assets, stagedAssetIds }) => {
         await pendingEdits.flush();
         const prepared = prepareStaticPanelTransaction({
           dashboard: dashboardStateRef.current,
           operation: "update",
           panelId: selectedPlacement.panelId,
           panel,
-          source,
+          placement,
+          mediaItem,
           assets,
+          stagedAssetIds,
         });
         await onStaticPanelCommit(prepared);
         setChartEditorVisible(false);
@@ -1526,6 +1541,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         activePage={activePage}
         pageType={landingActive ? "landing" : "analytical"}
         dashboard={workingDashboard}
+        contentRenderContext={contentRenderContext}
         buildPanelOpen={buildPanelOpen}
         buildStaticAuthoringOpen={Boolean(editMode && selectedPanelIsStatic && chartEditorVisible)}
         buildState={editMode ? {
@@ -1605,15 +1621,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setStaticContentDraft(null);
           setStaticContentDirty(false);
         }}
-        onCreate={async ({ destination, panel, source, assets }) => {
+        onCreate={async ({ destination, panel, placement, mediaItem, assets, stagedAssetIds }) => {
           await pendingEdits.flush();
           const prepared = prepareStaticPanelTransaction({
             dashboard: dashboardStateRef.current,
             operation: "create",
             destination,
             panel,
-            source,
+            placement,
+            mediaItem,
             assets,
+            stagedAssetIds,
           });
           await onStaticPanelCommit(prepared);
           setStaticWizardTarget(null);

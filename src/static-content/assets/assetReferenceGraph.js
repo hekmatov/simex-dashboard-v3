@@ -10,9 +10,9 @@ export function buildAssetReferenceGraph({
   for (const assetId of Object.keys(dashboard?.assets ?? {})) {
     addReference(references, assetId, { kind: "saved-manifest" });
   }
-  for (const [sourceId, source] of Object.entries(dashboard?.dataSources ?? {})) {
-    if (source?.kind === "staticImage" && source.origin?.kind === "asset") {
-      addReference(references, source.origin.assetId, { kind: "saved-source", sourceId });
+  for (const [mediaId, item] of Object.entries(dashboard?.contentLibrary?.mediaItems ?? {})) {
+    if (item?.current?.kind === "asset") {
+      addReference(references, item.current.assetId, { kind: "saved-media", mediaId });
     }
   }
   addReferences(references, draftAssetIds, "session-draft");

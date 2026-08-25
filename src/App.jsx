@@ -31,7 +31,7 @@ import {
   parseDashboardBundle,
   serializeDashboardBundle,
 } from "./charting/config/dashboardBundleV3.js";
-import { browserAuthoredAssetStore } from "./static-content/assets/browserAuthoredAssetRuntime.js";
+import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "./static-content/assets/browserAuthoredAssetRuntime.js";
 import { buildPresentableItemIndex } from "./static-content/staticPanelCapabilities.js";
 import { commitDurableStaticPanelTransaction } from "./static-content/assets/durableStaticPanelCommit.js";
 import { reconcileAuthoredAssets } from "./static-content/assets/reconcileAuthoredAssets.js";
@@ -1180,6 +1180,12 @@ export default function App() {
       >
         <AudienceDisplay
           dashboard={dashboard}
+          contentRenderContext={{
+            mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
+            assets: dashboard.assets ?? {},
+            resolveAsset: resolveBrowserAuthoredAsset,
+            requestRepair() {},
+          }}
           connectionStatus={audienceConnectionStatus}
           presentationState={audiencePresentationState}
           presentableItemIndex={presentableItemIndex}
@@ -1486,8 +1492,9 @@ function configurationForPortableUse(dashboard) {
 }
 
 function hasStagedStaticImageAsset(prepared) {
-  return Object.values(prepared?.candidateDashboard?.assets ?? {})
-    .some((entry) => entry?.storageState === "staged");
+  return (prepared?.stagedAssetIds ?? []).some(
+    (assetId) => prepared?.candidateDashboard?.assets?.[assetId]?.storageState === "staged",
+  );
 }
 
 function requireChartAuthoringPayload(payload) {

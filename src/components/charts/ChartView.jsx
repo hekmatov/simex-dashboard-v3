@@ -88,6 +88,7 @@ export function renderChartContent(props, interactionMode) {
       onRetry: props.onImageRetry,
       onReplace: props.onImageReplace,
       onEdit: props.onImageEdit,
+      contentRenderContext: props.renderContext,
     });
     else if (model.kind === "freeText") view = React.createElement(FreeTextChartView, {
       model,
@@ -193,14 +194,16 @@ function requiresEffectOwnedResolution(props) {
   if (chart?.typeId !== "image" || !chart.sourceId) return false;
   if (Object.hasOwn(props.renderContext ?? {}, "staticSourceResolution")) return false;
   const source = valueForId(props.renderContext?.sources, chart.sourceId);
+  const mediaItem = valueForId(props.renderContext?.mediaItems, source?.mediaId);
   return typeof document !== "undefined"
     && source?.kind === "staticImage"
-    && source.origin?.kind === "asset";
+    && mediaItem?.current?.kind === "asset";
 }
 
 function pendingStaticImageResolution(props) {
   const sourceId = props.chart?.sourceId;
   const source = valueForId(props.renderContext?.sources, sourceId);
+  const mediaItem = valueForId(props.renderContext?.mediaItems, source?.mediaId);
   return {
     status: "pending",
     schema: getChartSchema("image"),
@@ -210,7 +213,8 @@ function pendingStaticImageResolution(props) {
       status: "loading",
       staticSource: true,
       sourceId,
-      revision: source?.revision ?? null,
+      mediaId: source?.mediaId ?? null,
+      revision: mediaItem?.revision ?? null,
     },
     message: null,
     inputKey: {

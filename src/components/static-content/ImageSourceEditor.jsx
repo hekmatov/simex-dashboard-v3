@@ -29,9 +29,12 @@ export function ImageSourceEditor({
   React.useEffect(() => {
     setSelectedOriginKind(["url", "package"].includes(origin.kind) ? origin.kind : "asset");
   }, [origin.kind]);
-  React.useEffect(() => () => {
-    mountedRef.current = false;
-    intakeRevisionRef.current += 1;
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      intakeRevisionRef.current += 1;
+    };
   }, []);
 
   const setOriginKind = (kind) => {

@@ -88,9 +88,8 @@ test("typed static Image routes canonically without rows and applies saved metad
   });
   const source = {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 3,
-    origin: { kind: "asset", assetId: staged.assetId },
+    sourceVersion: 2,
+    mediaId: "media-image-source",
     alt: "Clinic readiness map",
     decorative: false,
     fit: "cover",
@@ -101,6 +100,20 @@ test("typed static Image routes canonically without rows and applies saved metad
     chart: { id: "image-panel", typeId: "image", title: "Readiness", sourceId: "image-source" },
     renderContext: {
       sources: { "image-source": source },
+      mediaItems: {
+        "media-image-source": {
+          mediaId: "media-image-source",
+          revision: 3,
+          current: { kind: "asset", assetId: staged.assetId },
+          displayName: "Clinic readiness map",
+          defaultDescription: "Clinic readiness map",
+          origin: "uploaded",
+          health: "ready",
+          dimensions: { width: 2, height: 3 },
+          byteLength: staged.manifestEntry.byteLength,
+          mediaType: "image/png",
+        },
+      },
       assets: { [staged.assetId]: staged.manifestEntry },
       resolveStaticAsset: () => resolveSessionImageAsset(staged.assetId),
     },
@@ -255,9 +268,8 @@ test("active viewer exposes bounded semantic controls with Reset view distinct f
 test("typed failures stay panel-scoped and expose the exact active-surface recovery inventory", () => {
   const source = {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 1,
-    origin: { kind: "asset", assetId: "missing" },
+    sourceVersion: 2,
+    mediaId: "media-missing-source",
     alt: "Missing response map",
     decorative: false,
     fit: "contain",
@@ -266,7 +278,21 @@ test("typed failures stay panel-scoped and expose the exact active-surface recov
   };
   const html = renderToStaticMarkup(React.createElement(ChartView, {
     chart: { id: "missing-image", typeId: "image", title: "Missing image", sourceId: "missing-source" },
-    renderContext: { sources: { "missing-source": source }, assets: {} },
+    renderContext: {
+      sources: { "missing-source": source },
+      mediaItems: {
+        "media-missing-source": {
+          mediaId: "media-missing-source",
+          revision: 1,
+          current: { kind: "asset", assetId: "missing" },
+          displayName: "Missing response map",
+          defaultDescription: "Missing response map",
+          origin: "uploaded",
+          health: "missing",
+        },
+      },
+      assets: {},
+    },
     interactionMode: "active",
     surface: "build",
   }));

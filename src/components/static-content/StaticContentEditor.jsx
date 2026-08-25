@@ -8,7 +8,8 @@ export function StaticContentEditor({
   dashboard,
   destination,
   panel,
-  source,
+  placement,
+  mediaItem,
   assets,
   initialDraft,
   disabled,
@@ -21,9 +22,12 @@ export function StaticContentEditor({
     mode: "edit",
     destination,
     panel,
-    source,
-    assets,
-  }), [assets, destination, initialDraft, panel, source]);
+    placement: placement ?? dashboard?.dataSources?.[panel?.sourceId],
+    mediaItem: mediaItem ?? dashboard?.contentLibrary?.mediaItems?.[
+      (placement ?? dashboard?.dataSources?.[panel?.sourceId])?.mediaId
+    ],
+    assets: assets ?? dashboard?.assets ?? {},
+  }), [assets, dashboard, destination, initialDraft, mediaItem, panel, placement]);
   return (
     <StaticContentWizard
       open={open}

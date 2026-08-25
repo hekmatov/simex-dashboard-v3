@@ -19,6 +19,7 @@ const NO_TIME_CONTEXT = () => null;
 
 export default function FullscreenDisplay({
   dashboard,
+  contentRenderContext,
   displayState,
   onDisplayAction,
   timeContextForChart,
@@ -170,6 +171,7 @@ export default function FullscreenDisplay({
         </div>
         <DisplayedChartGrid
           dashboard={dashboard}
+          contentRenderContext={contentRenderContext}
           chartIds={panelIds}
           layout={resolvedLayout}
           surface="fullscreen"

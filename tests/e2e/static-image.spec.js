@@ -38,6 +38,7 @@ for (const viewport of VIEWPORTS) {
     const panelId = await createImage(page, title);
     const storageInspection = await inspectStagedImageStorage(page, title);
     expect(storageInspection.persistedPanel?.id).toBe(panelId);
+    expect(storageInspection.persistedSource?.crop.x).toBe(200);
     const [originalAssetId] = Object.keys(storageInspection.persistedAssets ?? {});
     expect(originalAssetId).toMatch(/^asset-[0-9a-f]{64}$/);
     expect(storageInspection.persistedAssets[originalAssetId]).toMatchObject({
@@ -46,7 +47,7 @@ for (const viewport of VIEWPORTS) {
     });
     expect(storageInspection.persistedAssets[originalAssetId]).not.toHaveProperty("bytes");
     expect(storageInspection.sessionAssets).toHaveLength(0);
-    await createAndEditOrdinaryChart(page, `Post-image chart ${viewport.width}`);
+    await createAndEditOrdinaryChart(page, `Post-image chart ${viewport.width}`, title);
     await expect.poll(() => sessionAssetIds(page)).toEqual([]);
 
     let panel = canonicalPanel(page, panelId);
@@ -82,6 +83,7 @@ for (const viewport of VIEWPORTS) {
     await openImageEditor(panel, page, title);
     editor = page.getByRole("dialog", { name: "Edit static content" });
     await expectStaticEditorCompression(page, viewport, beforeSave);
+    await expect(editor.getByLabel("Crop x")).toHaveValue("200");
     await editor.locator("#static-image-file").setInputFiles({
       name: "replacement.png",
       mimeType: "image/png",
@@ -463,7 +465,7 @@ test("IM-02 live intake classifies every rejection and accepts real PNG JPEG Web
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
   const accepted = await readSavedImage(page, "Intake boundary corpus");
-  expect(accepted.source.revision).toBe(1);
+  expect(accepted.mediaItem.revision).toBe(1);
   expect(accepted.asset.mediaType).toBe("image/webp");
 });
 
@@ -507,7 +509,7 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   await openImageEditor(canonicalPanel(page, saved.panel.id), page, "Intake budget corpus");
   wizard = page.getByRole("dialog", { name: "Edit static content" });
   await setStorageQuotaMode(page, "insufficient");
-  await wizard.locator("#static-image-file").setInputFiles(upload("quota.png", "image/png", PNG));
+  await wizard.locator("#static-image-file").setInputFiles(upload("quota.webp", "image/webp", WEBP));
   await expect(wizard.locator('[data-validation-code="browser-quota"]'))
     .toHaveText("Browser storage quota is insufficient for this image.");
   await setStorageQuotaMode(page, "available");
@@ -519,7 +521,7 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   await wizard.getByRole("button", { name: "Save" }).click();
   await expect(wizard).toHaveCount(0);
   saved = await readSavedImage(page, "Intake budget corpus");
-  expect(saved.source.revision).toBe(2);
+  expect(saved.mediaItem.revision).toBe(2);
   expect(saved.asset.mediaType).toBe("image/jpeg");
   await expect(canonicalPanel(page, saved.panel.id)
     .locator('img[alt="Recovered validated intake corpus"]')).toBeVisible();
@@ -544,7 +546,7 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   await expect(editor.getByText(/dirty-local-replacement\.png is ready/)).toBeVisible();
   const stagedInventory = await sessionAssetInventory(page);
   expect(stagedInventory).toHaveLength(1);
-  expect(stagedInventory[0].id).not.toBe(savedBefore.source.origin.assetId);
+  expect(stagedInventory[0].id).not.toBe(savedBefore.mediaItem.current.assetId);
   expect(stagedInventory[0].url).toMatch(/^(?:blob:|data:image\/png)/);
   await editor.getByLabel("Alternative text").fill("Complete retained draft");
   await editor.getByLabel("Crop x").fill("120");
@@ -621,11 +623,14 @@ test("packaged Image source appears in the real guided crop preview", async ({ p
       .flatMap((section) => section.panels)
       .find((entry) => (entry.chart ?? entry).title === title);
     const panel = placement.chart ?? placement;
-    const previous = dashboard.dataSources[panel.sourceId];
-    dashboard.dataSources[panel.sourceId] = {
-      ...previous,
-      revision: previous.revision + 1,
-      origin: { kind: "package", path },
+    const source = dashboard.dataSources[panel.sourceId];
+    const mediaItem = dashboard.contentLibrary.mediaItems[source.mediaId];
+    dashboard.contentLibrary.mediaItems[source.mediaId] = {
+      ...mediaItem,
+      revision: mediaItem.revision + 1,
+      current: { kind: "package", path },
+      origin: "packaged",
+      health: "ready",
     };
     localStorage.setItem(key, JSON.stringify(dashboard));
   }, { key: STORAGE_KEY, title: "Packaged crop preview", path: packagedPath });
@@ -767,7 +772,7 @@ async function createImage(page, title) {
   return panel.getAttribute("data-panel-id");
 }
 
-async function createAndEditOrdinaryChart(page, title) {
+async function createAndEditOrdinaryChart(page, title, imageTitle) {
   await page.getByRole("button", { name: "Add chart", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add new chart" });
   const stageLabels = await wizard.getByRole("navigation", { name: "Chart creation steps" })
@@ -794,6 +799,7 @@ async function createAndEditOrdinaryChart(page, title) {
   await wizard.getByRole("button", { name: /^Review and create\./ }).click();
   await wizard.getByRole("button", { name: "Create chart" }).click();
   await expect(wizard).toHaveCount(0);
+  expect((await readSavedImage(page, imageTitle)).source.crop.x).toBe(200);
 
   await expect.poll(() => findPersistedChartId(page, title)).not.toBeNull();
   const chartId = await findPersistedChartId(page, title);
@@ -810,6 +816,7 @@ async function createAndEditOrdinaryChart(page, title) {
   await editor.getByLabel("Chart title").fill(`${title} updated`);
   await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toHaveCount(0);
+  expect((await readSavedImage(page, imageTitle)).source.crop.x).toBe(200);
   await expect.poll(() => findPersistedChartId(page, `${title} updated`)).toBe(chartId);
   const durableShape = await page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
@@ -818,9 +825,10 @@ async function createAndEditOrdinaryChart(page, title) {
       hasAssets: Object.hasOwn(dashboard, "assets"),
       staticImages: Object.values(dashboard.dataSources)
         .filter(({ kind }) => kind === "staticImage").length,
+      mediaItems: Object.keys(dashboard.contentLibrary.mediaItems).length,
     };
   }, STORAGE_KEY);
-  expect(durableShape).toEqual({ configVersion: 4, hasAssets: true, staticImages: 1 });
+  expect(durableShape).toEqual({ configVersion: 5, hasAssets: true, staticImages: 1, mediaItems: 1 });
 }
 
 async function findPersistedChartId(page, title) {
@@ -850,6 +858,7 @@ async function inspectStagedImageStorage(page, title) {
     const sessionMap = sessionKey ? globalThis[sessionKey] : new Map();
     return {
       persistedPanel,
+      persistedSource: persistedPanel ? persisted?.dataSources?.[persistedPanel.sourceId] : null,
       persistedAssets: persisted?.assets,
       sessionAssets: [...sessionMap.entries()].map(([id, entry]) => ({ id, entry: { ...entry } })),
     };
@@ -899,11 +908,13 @@ async function readSavedImage(page, title) {
           const panel = placement.chart ?? placement;
           if (panel.title !== expectedTitle) continue;
           const source = dashboard.dataSources[panel.sourceId];
+          const mediaItem = dashboard.contentLibrary.mediaItems[source.mediaId];
           return {
             panel,
             source,
+            mediaItem,
             sourceId: panel.sourceId,
-            asset: source.origin.kind === "asset" ? dashboard.assets[source.origin.assetId] : null,
+            asset: mediaItem.current.kind === "asset" ? dashboard.assets[mediaItem.current.assetId] : null,
           };
         }
       }
@@ -1032,7 +1043,8 @@ async function removeDurableImageAsset(page, title) {
       .map((placement) => placement.chart ?? placement)
       .find((candidate) => candidate.title === expectedTitle);
     const source = dashboard.dataSources[panel.sourceId];
-    const assetId = source.origin.assetId;
+    const mediaItem = dashboard.contentLibrary.mediaItems[source.mediaId];
+    const assetId = mediaItem.current.assetId;
     const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
     const asset = await store.read(assetId);
     globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__ = asset;

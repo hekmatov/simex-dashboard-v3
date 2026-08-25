@@ -26,9 +26,8 @@ const dashboard = {
     status: { kind: "inline", rows: [{ entity: "A", value: 1 }] },
     "image-source": {
       kind: "staticImage",
-      sourceVersion: 1,
-      revision: 3,
-      origin: { kind: "url", url: "https://example.test/response-map.png" },
+      sourceVersion: 2,
+      mediaId: "media-image-source",
       alt: "Response map",
       decorative: false,
       fit: "contain",
@@ -42,6 +41,20 @@ const dashboard = {
       renderingPolicy: "portable-qmd-v1",
       qmd: "## Moderator only",
     },
+  },
+  contentLibrary: {
+    mediaItems: {
+      "media-image-source": {
+        mediaId: "media-image-source",
+        revision: 3,
+        current: { kind: "url", url: "https://example.test/response-map.png" },
+        displayName: "Response map",
+        defaultDescription: "Response map",
+        origin: "external",
+        health: "external",
+      },
+    },
+    sourceEntries: {},
   },
   datasetProfiles: {
     status: {
@@ -243,7 +256,7 @@ test("Audience accepts a trusted Image descriptor passively and rejects Free tex
     ...twoChartScene,
     items: [
       { kind: "chart", chart_id: "chart-a" },
-      { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 3 },
+      { kind: "image", panel_id: "image-a", media_id: "media-image-source", revision: 3 },
     ],
   };
   const imageHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
@@ -256,7 +269,7 @@ test("Audience accepts a trusted Image descriptor passively and rejects Free tex
     connectionStatus: "connected",
     presentationState: {
       ...imageScene,
-      items: [{ kind: "image", panel_id: "image-a", source_id: "image-source", revision: 2 }],
+      items: [{ kind: "image", panel_id: "image-a", media_id: "media-image-source", revision: 2 }],
       layout: "solo",
     },
   }));
@@ -271,8 +284,9 @@ test("Audience accepts a trusted Image descriptor passively and rejects Free tex
   }));
 
   assert.match(imageHtml, /data-presentation-item-kind="image"/);
+  assert.match(imageHtml, /data-image-media-id="media-image-source"/);
   assert.match(imageHtml, /data-image-revision="3"/);
-  assert.match(imageHtml, /Loading saved image/);
+  assert.match(imageHtml, /alt="Response map"/);
   assert.doesNotMatch(imageHtml, /<button|Image viewer actions|Moderator only/);
   assert.match(staleHtml, /Audience display ready/);
   assert.match(freeTextHtml, /Audience display ready/);
@@ -286,8 +300,22 @@ test("Audience rejects an injected recovery-only Image descriptor", () => {
       ...dashboard.dataSources,
       "recovery-source": {
         ...dashboard.dataSources["image-source"],
-        origin: { kind: "replacementRequired", reason: "Legacy blob source" },
-        migrationWarnings: ["replacement-required"],
+        mediaId: "media-recovery-source",
+      },
+    },
+    contentLibrary: {
+      ...dashboard.contentLibrary,
+      mediaItems: {
+        ...dashboard.contentLibrary.mediaItems,
+        "media-recovery-source": {
+          mediaId: "media-recovery-source",
+          revision: 3,
+          current: { kind: "asset", assetId: "missing-recovery-source" },
+          displayName: "Recovery image",
+          defaultDescription: "Recovery image",
+          origin: "legacy-import",
+          health: "needs-relink",
+        },
       },
     },
     pages: [{
@@ -314,7 +342,7 @@ test("Audience rejects an injected recovery-only Image descriptor", () => {
       items: [{
         kind: "image",
         panel_id: "recovery-image",
-        source_id: "recovery-source",
+        media_id: "media-recovery-source",
         revision: 3,
       }],
       layout: "solo",
@@ -326,9 +354,10 @@ test("Audience rejects an injected recovery-only Image descriptor", () => {
 });
 
 test("Audience Image fit/transform is passive and one failed cell leaves chart siblings rendered", () => {
-  const imageItem = { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 3 };
+  const imageItem = { kind: "image", panel_id: "image-a", media_id: "media-image-source", revision: 3 };
   const ready = renderToStaticMarkup(React.createElement(gridModule.default, {
     dashboard,
+    contentRenderContext: { mediaItems: dashboard.contentLibrary.mediaItems },
     items: [imageItem],
     layout: "solo",
     surface: "audience",
@@ -336,6 +365,7 @@ test("Audience Image fit/transform is passive and one failed cell leaves chart s
       status: "ready",
       kind: "staticImage",
       sourceId: "image-source",
+      mediaId: "media-image-source",
       revision: 3,
       src: "https://example.test/response-map.png",
       url: "https://example.test/response-map.png",
@@ -350,6 +380,7 @@ test("Audience Image fit/transform is passive and one failed cell leaves chart s
   }));
   const failed = renderToStaticMarkup(React.createElement(gridModule.default, {
     dashboard,
+    contentRenderContext: { mediaItems: dashboard.contentLibrary.mediaItems },
     items: [
       { kind: "chart", chart_id: "chart-a" },
       imageItem,
@@ -362,6 +393,7 @@ test("Audience Image fit/transform is passive and one failed cell leaves chart s
       status: "error",
       kind: "staticImage",
       sourceId: "image-source",
+      mediaId: "media-image-source",
       revision: 3,
       failure: { code: "asset-read-failed", message: "Forced failure", retryable: true },
     }]]),

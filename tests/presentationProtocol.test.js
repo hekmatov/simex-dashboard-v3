@@ -19,7 +19,7 @@ const presentableItemIndex = new Map([
     descriptor: {
       kind: "image",
       panel_id: "image-a",
-      source_id: "image-source-a",
+      media_id: "media-image-source-a",
       revision: 7,
     },
   }],
@@ -29,7 +29,7 @@ const scene = {
   active_page_id: "biomedical",
   items: [
     { kind: "chart", chart_id: "chart-a" },
-    { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 7 },
+    { kind: "image", panel_id: "image-a", media_id: "media-image-source-a", revision: 7 },
   ],
   layout: "sideBySide",
   time: { group_id: "epidemic-time", active_epoch_ms: 1_801_440_000_000 },
@@ -115,15 +115,15 @@ test("presentation protocol accepts only trusted ordered chart and exact Image i
     protocolModule.validatePresentationState(scene, { presentableItemIndex }).items,
     [
       { kind: "chart", chart_id: "chart-a" },
-      { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 7 },
+      { kind: "image", panel_id: "image-a", media_id: "media-image-source-a", revision: 7 },
     ],
   );
 
   for (const descriptor of [
     { kind: "freeText", panel_id: "field-guide" },
     { kind: "chart", chart_id: "unknown-chart" },
-    { kind: "image", panel_id: "image-a", source_id: "stale-source", revision: 7 },
-    { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 6 },
+    { kind: "image", panel_id: "image-a", media_id: "stale-media", revision: 7 },
+    { kind: "image", panel_id: "image-a", media_id: "media-image-source-a", revision: 6 },
   ]) {
     assert.throws(
       () => protocolModule.validatePresentationState({

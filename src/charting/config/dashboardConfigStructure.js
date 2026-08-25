@@ -20,14 +20,14 @@ function shape(required, optional = []) {
  * this contract owns their placement and every dashboard presentation field.
  */
 export const DASHBOARD_CONFIG_STRUCTURE = deepFreeze({
-  version: 4,
+  version: 5,
   runtimeNonSemanticFields: RUNTIME_NON_SEMANTIC_FIELDS,
   pageTypes: PAGE_TYPES,
   domainRouteTones: DOMAIN_ROUTE_TONES,
   deliveryStates: DELIVERY_STATES,
   shapes: {
     dashboard: shape(
-      ["configVersion", "dataSources", "id", "pages", "timezone", "title"],
+      ["configVersion", "contentLibrary", "dataSources", "id", "pages", "timezone", "title"],
       [
         "description",
         "globalStyles",
@@ -169,6 +169,7 @@ export function validateDashboardStructure(
   if (config.assets !== undefined) {
     ordinaryRecord(config.assets, "Dashboard assets");
   }
+  ordinaryRecord(config.contentLibrary, "Dashboard contentLibrary");
   if (config.globalStyles !== undefined) {
     validateGlobalStyles(config.globalStyles);
   }

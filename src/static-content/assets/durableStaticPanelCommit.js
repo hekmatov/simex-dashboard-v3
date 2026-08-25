@@ -20,11 +20,12 @@ export async function commitDurableStaticPanelTransaction({
 
   const durablePrepared = structuredClone(prepared);
   const stagedAssetIds = [];
+  const declaredStagedAssetIds = new Set(durablePrepared.stagedAssetIds ?? []);
   try {
     for (const [assetId, manifest] of Object.entries(
       durablePrepared.candidateDashboard.assets ?? {},
     ).sort()) {
-      if (manifest.storageState !== "staged") continue;
+      if (manifest.storageState !== "staged" || !declaredStagedAssetIds.has(assetId)) continue;
       const sessionAsset = readSessionAsset?.(assetId);
       assertSessionAsset(sessionAsset, assetId, manifest);
       const staged = await store.stage({
@@ -43,9 +44,6 @@ export async function commitDurableStaticPanelTransaction({
         ...manifest,
         storageState: "durable",
       };
-    }
-    if (stagedAssetIds.length > 0) {
-      durablePrepared.candidateDashboard.configVersion = 4;
     }
     for (const assetId of stagedAssetIds) {
       await store.verify?.(assetId);

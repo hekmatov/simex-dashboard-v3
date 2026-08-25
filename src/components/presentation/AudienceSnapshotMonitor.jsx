@@ -20,6 +20,7 @@ export default function AudienceSnapshotMonitor({
   presentationState,
   playing,
   themeProjection = EMPTY_THEME_PROJECTION,
+  contentRenderContext,
 }) {
   const [imageUrl, setImageUrl] = React.useState("");
   const [captureSource, setCaptureSource] = React.useState(null);
@@ -157,6 +158,7 @@ export default function AudienceSnapshotMonitor({
             dashboard={captureSource.dashboard}
             connectionStatus="connected"
             presentationState={captureSource.presentationState}
+            contentRenderContext={contentRenderContext}
           />
         </div>,
         document.body,

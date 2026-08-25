@@ -37,7 +37,7 @@ function createDashboard() {
   };
 }
 
-test("App persistence validation accepts a provisional v3 typed static transaction", () => {
+test("App persistence validation accepts a canonical V5 typed static transaction", () => {
   const draft = createStaticContentDraft({
     stage: "preview-and-add",
     contentTypeId: "freeText",
@@ -56,11 +56,13 @@ test("App persistence validation accepts a provisional v3 typed static transacti
     operation: "create",
     destination: finalized.destination,
     panel: finalized.panel,
-    source: finalized.source,
+    placement: finalized.placement,
+    mediaItem: finalized.mediaItem,
     assets: finalized.assets,
+    stagedAssetIds: finalized.stagedAssetIds,
   });
 
-  assert.equal(prepared.candidateDashboard.configVersion, 3);
+  assert.equal(prepared.candidateDashboard.configVersion, 5);
   assert.equal(Object.hasOwn(prepared.candidateDashboard, "assets"), false);
   assert.strictEqual(
     validateDashboardConfig(prepared.candidateDashboard, {
@@ -71,7 +73,7 @@ test("App persistence validation accepts a provisional v3 typed static transacti
   );
 });
 
-test("the App-owned persistence boundary admits canonical v4 typed static validation", async () => {
+test("the App-owned persistence boundary admits canonical V5 typed static validation", async () => {
   const vite = await createServer({
     root: process.cwd(),
     appType: "custom",
@@ -102,7 +104,8 @@ test("the App-owned persistence boundary admits canonical v4 typed static valida
     operation: "create",
     destination: finalized.destination,
     panel: finalized.panel,
-    source: finalized.source,
+    placement: finalized.placement,
+    mediaItem: finalized.mediaItem,
   }).candidateDashboard;
 
   assert.equal(typeof validateConfigurationForPersistence, "function");
@@ -110,14 +113,14 @@ test("the App-owned persistence boundary admits canonical v4 typed static valida
     validateConfigurationForPersistence(candidate, {}),
     candidate,
   );
-  const canonical = { ...candidate, configVersion: 4, assets: {} };
+  const canonical = { ...candidate, assets: {} };
   assert.strictEqual(
     validateConfigurationForPersistence(canonical, {}),
     canonical,
   );
 });
 
-test("dashboard v4 hydration excludes typed static sources from tabular loading without an opt-in flag", async () => {
+test("dashboard V5 hydration excludes typed static sources from tabular loading without an opt-in flag", async () => {
   const draft = createStaticContentDraft({
     stage: "preview-and-add",
     contentTypeId: "freeText",
@@ -141,12 +144,13 @@ test("dashboard v4 hydration excludes typed static sources from tabular loading 
     operation: "create",
     destination: finalized.destination,
     panel: finalized.panel,
-    source: finalized.source,
+    placement: finalized.placement,
+    mediaItem: finalized.mediaItem,
   }).candidateDashboard;
 
   const hydrated = await loadDashboardConfig(candidate, {}, null);
 
-  assert.equal(hydrated.configVersion, 4);
+  assert.equal(hydrated.configVersion, 5);
   assert.equal(hydrated.dataSources[finalized.panel.sourceId].kind, "staticText");
   assert.equal(Object.hasOwn(hydrated.loadedData, finalized.panel.sourceId), false);
   assert.equal(Object.hasOwn(hydrated.datasetProfiles, finalized.panel.sourceId), false);
@@ -156,7 +160,8 @@ test("dashboard v4 hydration excludes typed static sources from tabular loading 
 
 test("dashboard loading exposes missing and corrupt local Image bytes as source-scoped state", async () => {
   const dashboard = createDashboard();
-  dashboard.configVersion = 4;
+  dashboard.configVersion = 5;
+  dashboard.contentLibrary = { mediaItems: {}, sourceEntries: {} };
   const sha256 = "a".repeat(64);
   const assetId = "asset-local";
   dashboard.assets = {
@@ -171,14 +176,25 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
   };
   dashboard.dataSources.briefing = {
     kind: "staticImage",
-    sourceVersion: 1,
-    revision: 1,
-    origin: { kind: "asset", assetId },
+    sourceVersion: 2,
+    mediaId: "media-briefing",
     alt: "Briefing",
     decorative: false,
     fit: "contain",
     crop: { x: 0, y: 0, width: 1000, height: 1000 },
     rotation: 0,
+  };
+  dashboard.contentLibrary.mediaItems["media-briefing"] = {
+    mediaId: "media-briefing",
+    revision: 1,
+    current: { kind: "asset", assetId },
+    displayName: "Briefing",
+    defaultDescription: "Briefing",
+    origin: "uploaded",
+    health: "ready",
+    dimensions: { width: 2, height: 3 },
+    byteLength: 80,
+    mediaType: "image/png",
   };
   dashboard.pages[0].sections[0].panels.push(createChartDraft({
     typeId: "image",
@@ -205,7 +221,7 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
   });
 });
 
-test("ordinary chart create and edit commits survive a staged Image through durable v4 persistence", async () => {
+test("ordinary chart create and edit commits survive a staged Image through durable V5 persistence", async () => {
   const dashboard = createDashboard();
   dashboard.dataSources.status = {
     kind: "inline",
@@ -224,27 +240,7 @@ test("ordinary chart create and edit commits survive a staged Image through dura
       sourceId: "readiness-image-source",
       title: "Readiness image",
     }),
-    source: {
-      kind: "staticImage",
-      sourceVersion: 1,
-      revision: 1,
-      origin: { kind: "asset", assetId },
-      alt: "Readiness by district",
-      decorative: false,
-      fit: "contain",
-      crop: { x: 0, y: 0, width: 1000, height: 1000 },
-      rotation: 0,
-    },
-    assets: {
-      [assetId]: {
-        mediaType: "image/png",
-        byteLength: bytes.byteLength,
-        width: 2,
-        height: 3,
-        sha256,
-        storageState: "staged",
-      },
-    },
+    ...imageCommitInput({ assetId, sha256, byteLength: bytes.byteLength, mediaId: "media-readiness-image" }),
   });
   const persisted = [];
   const durableRecords = new Map();
@@ -265,7 +261,7 @@ test("ordinary chart create and edit commits survive a staged Image through dura
     persisted.push(structuredClone(candidate));
     return structuredClone(candidate);
   };
-  const controller = createSerializedDashboardCommitController({ initialDashboard: dashboard, commit });
+  const controller = createSerializedDashboardCommitController({ initialDashboard: staged.baseDashboard, commit });
   await commitDurableStaticPanelTransaction({
     prepared: staged,
     store,
@@ -299,7 +295,7 @@ test("ordinary chart create and edit commits survive a staged Image through dura
   assert.equal(durableRecords.get(assetId).status, "durable");
   assert.equal(persisted.length, 3);
   for (const candidate of persisted) {
-    assert.equal(candidate.configVersion, 4);
+    assert.equal(candidate.configVersion, 5);
     assert.equal(candidate.assets[assetId].storageState, "durable");
     assert.equal(candidate.dataSources["readiness-image-source"].kind, "staticImage");
   }
@@ -321,27 +317,7 @@ test("post-replacement durable commit failure leaves the new referenced bytes st
       sourceId: "recoverable-image-source",
       title: "Recoverable image",
     }),
-    source: {
-      kind: "staticImage",
-      sourceVersion: 1,
-      revision: 1,
-      origin: { kind: "asset", assetId },
-      alt: "Recoverable",
-      decorative: false,
-      fit: "contain",
-      crop: { x: 0, y: 0, width: 1000, height: 1000 },
-      rotation: 0,
-    },
-    assets: {
-      [assetId]: {
-        mediaType: "image/png",
-        byteLength: bytes.byteLength,
-        width: 2,
-        height: 3,
-        sha256,
-        storageState: "staged",
-      },
-    },
+    ...imageCommitInput({ assetId, sha256, byteLength: bytes.byteLength, mediaId: "media-recoverable-image", alt: "Recoverable" }),
   });
   const records = new Map();
   const events = [];
@@ -415,18 +391,15 @@ test("durable Image save stages only the finalized replacement, never superseded
       sourceId: "replacement-source",
       title: "Replacement",
     }),
-    source: {
-      kind: "staticImage",
-      sourceVersion: 1,
-      revision: 1,
-      origin: { kind: "asset", assetId: idB },
+    ...imageCommitInput({
+      assetId: idB,
+      sha256: sha256HexSync(bytesB),
+      byteLength: bytesB.byteLength,
+      mediaId: "media-replacement",
       alt: "Replacement B",
-      decorative: false,
-      fit: "contain",
-      crop: { x: 0, y: 0, width: 1000, height: 1000 },
-      rotation: 0,
-    },
-    assets: { [idA]: manifest(bytesA), [idB]: manifest(bytesB) },
+      assets: { [idB]: manifest(bytesB) },
+      stagedAssetIds: [idB],
+    }),
   });
   assert.deepEqual(Object.keys(prepared.candidateDashboard.assets), [idB]);
   const staged = [];
@@ -452,6 +425,52 @@ test("durable Image save stages only the finalized replacement, never superseded
   });
   assert.deepEqual(staged, [idB]);
 });
+
+function imageCommitInput({
+  assetId,
+  sha256,
+  byteLength,
+  mediaId,
+  alt = "Readiness by district",
+  assets,
+  stagedAssetIds = [assetId],
+}) {
+  return {
+    placement: {
+      kind: "staticImage",
+      sourceVersion: 2,
+      mediaId,
+      alt,
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    mediaItem: {
+      mediaId,
+      revision: 1,
+      current: { kind: "asset", assetId },
+      displayName: alt,
+      defaultDescription: alt,
+      origin: "uploaded",
+      health: "ready",
+      dimensions: { width: 2, height: 3 },
+      byteLength,
+      mediaType: "image/png",
+    },
+    assets: assets ?? {
+      [assetId]: {
+        mediaType: "image/png",
+        byteLength,
+        width: 2,
+        height: 3,
+        sha256,
+        storageState: "staged",
+      },
+    },
+    stagedAssetIds,
+  };
+}
 
 function readinessChart() {
   return {

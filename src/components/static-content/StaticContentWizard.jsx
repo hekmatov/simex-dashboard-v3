@@ -242,13 +242,15 @@ function FreeTextFields({ draft, dispatch, onValidationChange }) {
 
 function ImageFields({ draft, dispatch }) {
   const source = draft.source ?? {};
+  const mediaItem = draft.mediaItem;
+  const editorSource = { ...source, origin: mediaItem?.current };
   const sourceControls = (
     <ImageSourceEditor
-      source={source}
+      source={editorSource}
       assets={draft.assets}
       imageEditing={draft.imageEditing}
-      onOriginChange={(origin) => dispatch({ type: "updateSource", updates: { origin } })}
-      onReplace={({ origin, manifestEntry }) => dispatch({ type: "replaceImage", origin, manifestEntry })}
+      onOriginChange={(current) => dispatch({ type: "setMediaCurrent", current })}
+      onReplace={({ origin, manifestEntry }) => dispatch({ type: "replaceImage", current: origin, origin, manifestEntry })}
       onUndoReplacement={() => {
         const retained = Object.keys(draft.imageEditing?.replacementUndo?.assets ?? {});
         discardUnreferencedSessionImageAssets(Object.keys(draft.assets ?? {}), retained);
@@ -259,14 +261,16 @@ function ImageFields({ draft, dispatch }) {
     />
   );
   return (
+    <div data-image-media-id={source.mediaId} data-image-media-revision={mediaItem?.revision}>
     <ImageTransformEditor
       source={source}
-      sourceUrl={resolveImageDraftUrl(source)}
-      containedPackagePath={source.origin?.kind === "package"}
+      sourceUrl={resolveImageDraftUrl(mediaItem)}
+      containedPackagePath={mediaItem?.current?.kind === "package"}
       sourceControls={sourceControls}
       onTransformChange={({ crop, rotation, fit }) => dispatch({ type: "setImageTransform", crop, rotation, fit })}
       onReset={() => dispatch({ type: "resetImage" })}
     />
+    </div>
   );
 }
 
@@ -288,7 +292,11 @@ function StaticPreview({ draft }) {
           <div data-static-preview-type="image">
             <ChartView
               chart={draft.panel}
-              renderContext={{ sources: { [sourceId]: draft.source }, assets: draft.assets }}
+              renderContext={{
+                sources: { [sourceId]: draft.source },
+                mediaItems: draft.mediaItem ? { [draft.mediaItem.mediaId]: draft.mediaItem } : {},
+                assets: draft.assets,
+              }}
               interactionMode="passive"
               surface="build"
             />
@@ -300,25 +308,26 @@ function StaticPreview({ draft }) {
   );
 }
 
-function resolveImageDraftUrl(source) {
-  if (source?.origin?.kind === "asset") return resolveSessionImageAsset(source.origin.assetId)?.url ?? "";
-  if (source?.origin?.kind === "url") return source.origin.url;
-  if (source?.origin?.kind === "package") return source.origin.path;
+function resolveImageDraftUrl(mediaItem) {
+  const current = mediaItem?.current;
+  if (current?.kind === "asset") return resolveSessionImageAsset(current.assetId)?.url ?? "";
+  if (current?.kind === "url") return current.url;
+  if (current?.kind === "package") return current.path;
   return "";
 }
 
 export function cleanupImageDraftAssets(draft, dashboard, committed = null) {
   if (draft?.contentTypeId !== "image") return;
   const retained = new Set();
-  const replacementSourceId = committed?.panel?.sourceId;
-  for (const [sourceId, source] of Object.entries(dashboard?.dataSources ?? {})) {
-    const effectiveSource = sourceId === replacementSourceId ? committed.source : source;
-    if (effectiveSource?.kind === "staticImage" && effectiveSource.origin?.kind === "asset") {
-      retained.add(effectiveSource.origin.assetId);
+  const replacementMediaId = committed?.mediaItem?.mediaId;
+  for (const [mediaId, item] of Object.entries(dashboard?.contentLibrary?.mediaItems ?? {})) {
+    const effectiveItem = mediaId === replacementMediaId ? committed.mediaItem : item;
+    if (effectiveItem?.current?.kind === "asset") {
+      retained.add(effectiveItem.current.assetId);
     }
   }
-  if (committed?.source?.kind === "staticImage" && committed.source.origin?.kind === "asset") {
-    retained.add(committed.source.origin.assetId);
+  if (committed?.mediaItem?.current?.kind === "asset") {
+    retained.add(committed.mediaItem.current.assetId);
   }
   discardUnreferencedSessionImageAssets(Object.keys(draft.assets ?? {}), retained);
 }

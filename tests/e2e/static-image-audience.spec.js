@@ -53,12 +53,12 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
     {
       kind: "image",
       panel_id: imagePanelId,
-      source_id: authored.imageSourceId,
+      media_id: authored.imageMediaId,
       revision: authored.imageRevision,
     },
   ]);
   expect(Object.keys(firstProtocol.items[1]).sort()).toEqual([
-    "kind", "panel_id", "revision", "source_id",
+    "kind", "media_id", "panel_id", "revision",
   ]);
 
   await injectRejectedFreeTextEnvelope(page, firstProtocol);
@@ -231,6 +231,7 @@ async function presentationFixtureIdentity(page, imagePanelId) {
       .map((placement) => placement.chart ?? placement);
     const image = panels.find(({ id }) => id === requestedImagePanelId);
     const source = dashboard.dataSources[image.sourceId];
+    const mediaItem = dashboard.contentLibrary.mediaItems[source.mediaId];
     const panelIds = new Set(panels
       .filter(({ typeId }) => !["image", "freeText"].includes(typeId))
       .map(({ id }) => id));
@@ -244,8 +245,9 @@ async function presentationFixtureIdentity(page, imagePanelId) {
     const [temporalChartId, ...additionalChartIds] = temporalChartIds;
     return {
       imageSourceId: image.sourceId,
-      imageRevision: source.revision,
-      assetId: source.origin.assetId,
+      imageMediaId: source.mediaId,
+      imageRevision: mediaItem.revision,
+      assetId: mediaItem.current.assetId,
       freeTextPanelId: panels.find(({ title }) => title === freeTextTitle).id,
       chronoGroupId: chronoGroup.id,
       temporalChartId,
@@ -305,7 +307,7 @@ async function injectRejectedFreeTextEnvelope(page, acceptedState) {
         items: [{
           kind: "freeText",
           panel_id: "injected-free-text",
-          source_id: "injected-source",
+          media_id: "injected-media",
           revision: 1,
           source: "Injected protocol Free text",
         }],
@@ -416,7 +418,8 @@ async function removeDurableImageAsset(page, panelId) {
       .flatMap(({ panels }) => panels)
       .map((placement) => placement.chart ?? placement)
       .find(({ id }) => id === requestedPanelId);
-    const assetId = dashboard.dataSources[panel.sourceId].origin.assetId;
+    const placement = dashboard.dataSources[panel.sourceId];
+    const assetId = dashboard.contentLibrary.mediaItems[placement.mediaId].current.assetId;
     const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
     globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__ = await store.read(assetId);
     await store.remove(assetId);

@@ -29,7 +29,7 @@ export default function useAudienceStaticAssetReadiness({
         });
       },
     });
-  }, [dashboard?.assets, dashboard?.dataSources, identityKey, resolveAsset]);
+  }, [dashboard?.assets, dashboard?.contentLibrary, dashboard?.dataSources, identityKey, resolveAsset]);
 
   return new Map(imageItems.map((item) => {
     const record = records.get(item.panel_id);
@@ -61,16 +61,24 @@ export function startAudienceStaticAssetReadiness({
   };
 
   for (const item of items.filter(({ kind }) => kind === "image")) {
-    const source = dashboard?.dataSources?.[item.source_id];
-    if (source?.kind !== "staticImage" || source.revision !== item.revision) {
+    const panel = findPanel(dashboard, item.panel_id);
+    const source = dashboard?.dataSources?.[panel?.sourceId];
+    const mediaItem = dashboard?.contentLibrary?.mediaItems?.[item.media_id];
+    if (
+      source?.kind !== "staticImage"
+      || source.mediaId !== item.media_id
+      || mediaItem?.revision !== item.revision
+    ) {
       publish(item, failedImageModel(item, "The saved image identity is no longer available."));
       continue;
     }
     try {
       const attempt = resolveStaticImageSource(source, {
-        sourceId: item.source_id,
+        sourceId: panel.sourceId,
+        mediaItems: dashboard?.contentLibrary?.mediaItems ?? {},
         assets: dashboard?.assets ?? {},
         resolveAsset,
+        expectedRevision: item.revision,
       });
       if (attempt && typeof attempt.then === "function") {
         Promise.resolve(attempt).then(
@@ -93,7 +101,7 @@ export function startAudienceStaticAssetReadiness({
 }
 
 export function imageReadinessKey(item) {
-  return `${item.panel_id}:${item.source_id}:${item.revision}`;
+  return `${item.panel_id}:${item.media_id}:${item.revision}`;
 }
 
 function readinessRecord(item, model) {
@@ -104,7 +112,7 @@ function loadingImageModel(item) {
   return {
     status: "loading",
     kind: "staticImage",
-    sourceId: item.source_id,
+    mediaId: item.media_id,
     revision: item.revision,
   };
 }
@@ -113,7 +121,7 @@ function failedImageModel(item, message) {
   return {
     status: "error",
     kind: "staticImage",
-    sourceId: item.source_id,
+    mediaId: item.media_id,
     revision: item.revision,
     failure: {
       code: "asset-read-failed",
@@ -121,4 +129,16 @@ function failedImageModel(item, message) {
       retryable: true,
     },
   };
+}
+
+function findPanel(dashboard, panelId) {
+  for (const page of dashboard?.pages ?? []) {
+    for (const section of page.sections ?? []) {
+      for (const placement of section.panels ?? []) {
+        const panel = placement?.chart ?? placement;
+        if (panel?.id === panelId) return panel;
+      }
+    }
+  }
+  return null;
 }
