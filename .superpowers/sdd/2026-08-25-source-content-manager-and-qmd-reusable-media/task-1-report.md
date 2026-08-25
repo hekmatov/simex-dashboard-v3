@@ -187,3 +187,28 @@ No implementation or focused source behavior is currently failing.
 - Focused: content-library schema 3/3; media items 5/5; static transaction 10/10; portable promotion 5/5.
 - Bounded combined correction selection (the four focused files plus V4 migration, V5/V3 bundle, App persistence, and package export): **102/102 passed**, 0 failed, 4.30 s outside the restrictive filesystem sandbox required by the existing Vite App-boundary check.
 - No full build, full unit suite, Playwright suite, or PS-04 rerun was performed.
+
+## Fix Round 2 — V5 Image Publication Ownership Gaps
+
+**Status:** DONE. This section records only the two open Task-1 re-review findings T1-02 and T1-03; it does not claim the broader review is clean. The retained PS-04 stale-`dist` residual and Task-17 authorized-build condition above are unchanged.
+
+### Changed files
+
+- `src/static-content/staticPanelTransaction.js`
+- `tests/staticPanelTransaction.test.js`
+- `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/task-1-report.md`
+
+### RED evidence
+
+- `node --test tests/staticPanelTransaction.test.js` — **10/12 passed, 2 failed**. The exact staged declaration test failed because an unrelated staged asset was accepted, and the asset-to-URL test failed because the unreferenced previous asset remained in the candidate. The asset-to-URL shared-reference retention guard already passed.
+
+### Minimal GREEN implementation
+
+- `stagedAssetIds` is now validated as an exact, unique declaration of the selected staged Image asset. Omitted selection, unrelated IDs, unknown or non-staged candidates, duplicates, and malformed IDs reject without mutating transaction inputs. Legitimate exact-selected and no-staged transactions remain valid.
+- Same-MediaItem replacement now invokes the existing reference-aware pruning owner whenever a previous current asset is no longer current, including asset-to-URL or asset-to-package replacement. Pruning still precedes final budget validation and preserves assets referenced by another logical MediaItem.
+
+### GREEN evidence
+
+- Focused: `node --test tests/staticPanelTransaction.test.js` — **12/12 passed**, 0 failed.
+- Bounded combined correction selection: the sandboxed attempt reached **103/104** with only the existing filesystem denial during the App-boundary esbuild/Vite import; the fresh identical command outside that restriction passed **104/104**, 0 failed, 3.54 s.
+- No full build, full unit suite, Playwright suite, or PS-04 rerun was performed.

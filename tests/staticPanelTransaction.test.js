@@ -88,6 +88,57 @@ test("a selected staged Image asset must be declared without mutating transactio
   assert.deepEqual(payload, payloadBefore);
 });
 
+test("a staged Image declaration rejects every non-exact asset set without mutating inputs", () => {
+  const cases = [
+    {
+      label: "unrelated staged asset",
+      prepare(payload) {
+        payload.assets["asset-other"] = {
+          mediaType: "image/png", byteLength: 10, width: 2, height: 2,
+          sha256: "c".repeat(64), storageState: "staged",
+        };
+        payload.stagedAssetIds = ["asset-map", "asset-other"];
+      },
+    },
+    {
+      label: "unknown asset",
+      prepare(payload) { payload.stagedAssetIds = ["asset-map", "asset-unknown"]; },
+    },
+    {
+      label: "non-staged asset",
+      prepare(payload) {
+        payload.assets["asset-durable"] = {
+          mediaType: "image/png", byteLength: 10, width: 2, height: 2,
+          sha256: "d".repeat(64), storageState: "durable",
+        };
+        payload.stagedAssetIds = ["asset-map", "asset-durable"];
+      },
+    },
+    {
+      label: "duplicate asset",
+      prepare(payload) { payload.stagedAssetIds = ["asset-map", "asset-map"]; },
+    },
+    {
+      label: "malformed asset id",
+      prepare(payload) { payload.stagedAssetIds = ["asset-map", " "]; },
+    },
+  ];
+
+  for (const { label, prepare } of cases) {
+    const dashboard = emptyDashboard();
+    const payload = imagePayload();
+    prepare(payload);
+    const dashboardBefore = structuredClone(dashboard);
+    const payloadBefore = structuredClone(payload);
+
+    assert.throws(() => prepareStaticPanelTransaction({
+      dashboard, operation: "create", ...payload,
+    }), /stagedAssetIds|staged candidate|selected staged Image asset/i, label);
+    assert.deepEqual(dashboard, dashboardBefore, label);
+    assert.deepEqual(payload, payloadBefore, label);
+  }
+});
+
 test("same-MediaItem replacement prunes the previous asset before exact budget validation", () => {
   const dashboard = makeDashboardV5();
   dashboard.assets["asset-map"].byteLength = 10 * 1024 * 1024;
@@ -119,10 +170,26 @@ test("same-MediaItem replacement prunes the previous asset before exact budget v
   assert.equal(prepared.candidateDashboard.assets["asset-next"].byteLength, nextBytes);
 });
 
+test("same-MediaItem asset-to-URL replacement prunes its unreferenced previous asset", () => {
+  const dashboard = makeDashboardV5();
+
+  const prepared = prepareStaticPanelTransaction({
+    dashboard,
+    operation: "update",
+    ...urlReplacementPayload(dashboard),
+  });
+
+  assert.equal(Object.hasOwn(prepared.candidateDashboard.assets, "asset-map"), false);
+  assert.deepEqual(prepared.candidateDashboard.contentLibrary.mediaItems["media-image-source"].current, {
+    kind: "url",
+    url: "https://example.test/response-map.png",
+  });
+});
+
 test("same-MediaItem replacement preserves a previous asset shared by another logical media item", () => {
   const dashboard = makeDashboardV5();
   dashboard.contentLibrary.mediaItems["media-shared"] = makeMediaItem({ mediaId: "media-shared" });
-  const payload = replacementPayload(dashboard, { assetId: "asset-next", byteLength: 40 });
+  const payload = urlReplacementPayload(dashboard);
 
   const prepared = prepareStaticPanelTransaction({ dashboard, operation: "update", ...payload });
 
@@ -182,5 +249,22 @@ function replacementPayload(dashboard, { assetId, byteLength }) {
       },
     },
     stagedAssetIds: [assetId],
+  };
+}
+
+function urlReplacementPayload(dashboard) {
+  return {
+    panelId: "image-panel",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: dashboard.pages[0].sections[0].panels[0].chart,
+    placement: dashboard.dataSources["image-source"],
+    mediaItem: makeMediaItem({
+      revision: 4,
+      current: { kind: "url", url: "https://example.test/response-map.png" },
+      origin: "external",
+      health: "external",
+    }),
+    assets: {},
+    stagedAssetIds: [],
   };
 }

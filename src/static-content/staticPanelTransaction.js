@@ -94,8 +94,10 @@ export function prepareStaticPanelTransaction({
     candidateDashboard.contentLibrary.mediaItems[mediaItem.mediaId] = structuredClone(mediaItem);
     const previousAssetId = operation === "update"
       && previousMediaItem?.current?.kind === "asset"
-      && mediaItem.current.kind === "asset"
-      && previousMediaItem.current.assetId !== mediaItem.current.assetId
+      && (
+        mediaItem.current.kind !== "asset"
+        || previousMediaItem.current.assetId !== mediaItem.current.assetId
+      )
       ? previousMediaItem.current.assetId
       : null;
     if (previousAssetId) {
@@ -121,17 +123,13 @@ export function prepareStaticPanelTransaction({
   }
 
   const finalAssets = candidateDashboard.assets ?? {};
-  const declaredStagedAssetIds = new Set(stagedAssetIds);
   const selectedAssetId = isImage && mediaItem.current.kind === "asset"
     ? mediaItem.current.assetId
     : null;
-  if (
-    selectedAssetId
-    && finalAssets[selectedAssetId]?.storageState === "staged"
-    && !declaredStagedAssetIds.has(selectedAssetId)
-  ) {
-    throw new Error(`The selected staged Image asset "${selectedAssetId}" must be declared in stagedAssetIds.`);
-  }
+  const validatedStagedAssetIds = validateStagedAssetDeclaration(
+    stagedAssetIds,
+    { assets: finalAssets, selectedAssetId },
+  );
   validateAuthoredAssetManifest(finalAssets);
   if (authoredAssetManifestBytes(finalAssets) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
     throw new Error("The Image transaction exceeds the dashboard's 200 MiB authored-asset budget.");
@@ -154,7 +152,7 @@ export function prepareStaticPanelTransaction({
     panelId: panel.id,
     mediaId: isImage ? mediaItem.mediaId : null,
     mediaItem: isImage ? structuredClone(mediaItem) : null,
-    stagedAssetIds: [...new Set(stagedAssetIds)].sort(),
+    stagedAssetIds: validatedStagedAssetIds,
     sourceId: panel.sourceId,
     expectedMediaRevision: isImage
       ? previousDashboard.contentLibrary?.mediaItems?.[mediaItem.mediaId]?.revision ?? mediaItem.revision
@@ -163,6 +161,36 @@ export function prepareStaticPanelTransaction({
     previousDashboard,
     candidateDashboard,
   });
+}
+
+function validateStagedAssetDeclaration(stagedAssetIds, { assets, selectedAssetId }) {
+  if (!Array.isArray(stagedAssetIds)) {
+    throw new TypeError("stagedAssetIds must be an array.");
+  }
+  const declared = new Set();
+  for (const assetId of stagedAssetIds) {
+    if (typeof assetId !== "string" || assetId.length === 0 || assetId.trim() !== assetId) {
+      throw new TypeError("stagedAssetIds must contain non-empty asset ids without surrounding whitespace.");
+    }
+    if (declared.has(assetId)) {
+      throw new Error(`stagedAssetIds contains duplicate asset id "${assetId}".`);
+    }
+    if (!Object.hasOwn(assets, assetId) || assets[assetId]?.storageState !== "staged") {
+      throw new Error(`stagedAssetIds references non-staged candidate asset "${assetId}".`);
+    }
+    declared.add(assetId);
+  }
+
+  const expectedAssetId = selectedAssetId && assets[selectedAssetId]?.storageState === "staged"
+    ? selectedAssetId
+    : null;
+  if (expectedAssetId && !declared.has(expectedAssetId)) {
+    throw new Error(`The selected staged Image asset "${expectedAssetId}" must be declared in stagedAssetIds.`);
+  }
+  if (declared.size !== (expectedAssetId ? 1 : 0)) {
+    throw new Error("stagedAssetIds must declare exactly the selected staged Image asset.");
+  }
+  return [...declared].sort();
 }
 
 export function removeDashboardPanel(dashboard, panelId) {
