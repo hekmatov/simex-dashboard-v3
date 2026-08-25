@@ -174,7 +174,7 @@ Media, CSV, and GeoJSON replacement, rollback, staged cleanup, dashboard persist
 
 ## GeoJSON limit-calibration gate
 
-The user is not expected to select numeric GeoJSON limits. The approved bounded disposable calibration ran after written amendment approval and published `.planning/spikes/001-geojson-limit-calibration/README.md` plus `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`. The spike is planning evidence, not production implementation, and did not modify production source, production tests, manifests, dependencies, or generated catalogues.
+The user is not expected to select numeric GeoJSON limits. The approved bounded disposable calibration ran after written amendment approval and published `.planning/spikes/001-geojson-limit-calibration/README.md` plus `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`. The master accepted `c28b59d` as historical calibration evidence. The user subsequently superseded its ten-independent-metric policy interpretation with the four-gate policy below. The spike remains planning evidence, not production implementation.
 
 The current four legitimate project GeoJSON files—`gemeente_2020.geojson`, `gemeente_2021.geojson`, `gemeente_2026.geojson`, and `netherlands-provinces.geojson`—provide this verified baseline:
 
@@ -187,7 +187,7 @@ The current four legitimate project GeoJSON files—`gemeente_2020.geojson`, `ge
 
 The corpus contains shallow Polygon/MultiPolygon geometry with flat properties. It is sufficient to protect current legitimate fixtures but insufficient by itself to set warning or hard caps.
 
-Disposable fixture ladders must vary these dimensions independently so one dimension does not conceal another:
+The completed historical disposable fixture ladders varied these dimensions independently so one dimension did not conceal another; inclusion in this evidence list does not make a dimension a current admission gate:
 
 - encoded bytes;
 - feature count;
@@ -204,22 +204,24 @@ The spike exercised actual Chromium paths for upload/read, parse/validation/summ
 
 For each phase and fixture step, record median and p95 latency, main-thread long tasks, time to first usable preview/map, interaction responsiveness, memory and serialized footprint, and rollback behavior. Select separate warning and hard-cap thresholds from observed performance or memory knees, with margin above every legitimate project fixture. Encoded bytes alone are never sufficient.
 
-Master review did not accept the initial calibration commit `526003d` because its byte/property and part/ring hard caps preceded observed knees, it omitted an exact node budget, and it conflated per-feature property keys with a source-wide union. Renewed review of correction `3f97ff9` accepted the distributed part/ring, exact node-budget, and exact per-feature-key contracts, but required greater byte/property margin below the observed 48 MB failure. One bounded 36 MB probe resolves that remaining finding while retaining every unaffected measurement:
+The governing implementation has exactly four independent resource-admission checks:
 
-- encoded source bytes and total encoded property-value bytes are normal below 32,000,000, warning from 32,000,000 through 35,999,999, and hard-rejected at 36,000,000 or above; the 36 MB rung reached the 2,000 ms hard knee and the rejected boundary retains a 12 MB/25% margin below the 48 MB resource failure;
-- geometry parts and polygon rings are each normal below 2,000, warning from 2,000 through 3,999, and hard-rejected at 4,000 or above;
-- maximum own property keys means the maximum `Object.keys(feature.properties).length` on any one feature, never the union of names across the source; it warns at 512 and hard-rejects at 1,000;
-- a whole-document structural node is every non-null object or array container reachable from the parsed root, including feature, properties, geometry, coordinate nesting/position arrays, and nested property containers; scalars do not add nodes. It warns at 30,000 and hard-rejects at 50,000, with depth still warning at 16 and hard-rejected at 32.
+- encoded UTF-8 bytes: normal below 32,000,000, warn/allow from 32,000,000 through 35,999,999, reject at 36,000,000 or above;
+- Feature count: normal below 2,000, warn/allow from 2,000 through 7,999, reject at 8,000 or above;
+- total coordinate positions: normal below 20,000, warn/allow from 20,000 through 49,999, reject at 50,000 or above;
+- renderable geometry paths/fragments: normal below 2,000, warn/allow from 2,000 through 3,999, reject at 4,000 or above.
 
-The exact counting and stop-before-expansion rules remain canonical in `GEOJSON-LIMITS-DECISION.md`; production consumes those constants from one authority rather than duplicating them.
+`renderableFragments` counts LineString = 1; MultiLineString = number of LineString members; Polygon = number of exterior/interior rings; MultiPolygon = total exterior/interior rings across polygon members; Point, MultiPoint, and null geometry = 0. It never separately counts a polygon part, so a one-ring MultiPolygon with N members has N fragments, not 2N. The 2,000/4,000 threshold is directly supported by distributed one-ring MultiPolygon evidence and is a conservative inference for other line/ring subpaths; it does not apply to points.
 
-Join compatibility and identifier coverage remain replacement outcomes, not resource-size limits. The limit checker must itself be bounded against adversarial nesting and coordinate complexity so determining whether input is safe cannot become the denial-of-service path.
+Historical per-feature-position concentration may produce a non-blocking manager warning. Property-key volume is handled by searchable virtualization/pagination; encoded property-value bytes are redundant under the source-byte gate; supported geometry nesting is schema validation; nested property data is iterative/lazy without a numeric cap; structural-node count is informational only and never rejects. The historical 50,000-container probe's 2,180 ms long task specifically prohibits eager recursive property expansion. Concurrent maps remain shared runtime scheduling only.
+
+Ordinary hard schema/compatibility validation stays separate: valid FeatureCollection/Feature shape, the six supported coordinate geometry types, finite coordinates, required arity/nesting, line/ring minima and closure, and current-runtime rejection of GeometryCollection. Selected join-field absence and zero usable join coverage are direct-map compatibility blocks, not admission metrics. Production consumes one four-key authority and returns distinct typed schema, admission, and compatibility results.
 
 The calibrated limits, proposed single authority, rationale, corpus facts, fixture generators, environment, measurements, knees, margins, and rollback evidence are published in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`:
 
 - below the warning threshold: accept normally;
 - from warning through the safe pre-cap range: warn and allow only where the measured path remains safe;
-- above a hard resource or nesting cap: reject before commit.
+- at any of the four hard resource caps, or on a separate schema/compatibility failure: reject before commit.
 
 The master reviews this technical guardrail. The calibration result returns to the user only if it would exclude a legitimate intended dataset or creates a material UX tradeoff; otherwise the user is not asked to choose the numbers. The approved limits decision is a prerequisite to the final implementation plan. No GeoJSON production task or test may be written with guessed values.
 
@@ -265,7 +267,7 @@ An External / Network required HTTPS image item shows **Import as local media** 
 
 CSV detail includes searchable table preview, dataset profile/column summary, origin, provenance, health, update status, direct uses, and downstream temporal impact contexts where relevant.
 
-GeoJSON detail does not claim `datasetProfiles` or a CSV table preview. It provides feature count, geometry-type distribution, bounding box, property keys, origin, provenance, health, update status, direct map uses, and a bounded map preview with an accessible textual fallback.
+GeoJSON detail does not claim `datasetProfiles` or a CSV table preview. It provides feature count, geometry-type distribution, bounding box, sorted property keys, encoded bytes, total coordinate positions, renderable fragments, optional non-blocking per-feature concentration, origin, provenance, health, update status, direct map uses, and a bounded map preview with an accessible textual fallback. Property-key lists are searchable and virtualized/paginated; arbitrary nested property values are expanded lazily and never recursively traversed for initial upload/summary rendering.
 
 Data-source management supports CSV and GeoJSON upload, type-appropriate validation/summary/preview, search, rename label, replace/relink, select, and download where permitted. It does not provide cell/feature editing or derivative mutation.
 
@@ -384,4 +386,4 @@ Completion submission must separately report engine implemented, UI implemented,
 
 The V3 Design master and user approved the final written amendment at `81531b4b939e89b529d0ddee36241e517c33956d`. This approves the design, not production implementation or any fidelity promotion.
 
-The bounded GeoJSON calibration prerequisite is complete and found no legitimate-dataset exclusion or material user-level UX tradeoff. Its technical guardrail is submitted to the master in `GEOJSON-LIMITS-DECISION.md`; SCM-S15 remains proposed, unimplemented, and not verified. The exact post-approval ownership reconciliation is also complete in `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md`. The final implementation plan may begin only after the master accepts both prerequisite results. No GeoJSON production task or test may encode guessed or alternate limits.
+The bounded GeoJSON calibration evidence at `c28b59d` and exact ownership reconciliation at `dc06f8c` are master-accepted. The ten-metric admission interpretation is superseded; the four-gate policy above governs the corrected final plan. SCM-S15 remains proposed, unimplemented, and not verified. Production implementation may begin only after the master accepts that final plan; no task or test may encode guessed, alternate, or removed admission limits.

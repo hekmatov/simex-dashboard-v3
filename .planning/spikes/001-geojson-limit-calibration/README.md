@@ -10,6 +10,8 @@ tags: [geojson, chromium, limits, performance, security]
 
 # Spike 001: GeoJSON Limit Calibration
 
+> **Current-policy supersession (2026-08-25):** The V3 Design master accepted `c28b59d` as calibration evidence, but the user later superseded its ten-independent-metric admission interpretation. The governing policy now has exactly four resource gates: encoded bytes, Feature count, total coordinate positions, and renderable geometry fragments. All other measured ladders below are retained unchanged as historical diagnostics, schema evidence, implementation guidance, or runtime-scheduling evidence; they are not independent admission caps. See `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`.
+
 ## What This Validates
 
 The spike establishes implementation-ready GeoJSON resource and nesting guardrails before the final Source Content Manager implementation plan. It uses all four shipped project files, independently generated bounded ladders, current production validation/package/map code, and actual Chromium at the accepted Build viewports plus one constrained profile.
@@ -94,7 +96,7 @@ The harness records per sample:
 
 ## Results
 
-**Verdict: VALIDATED; second corrected result submitted, master acceptance pending.** The calibrated limits in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` exclude none of the four legitimate project fixtures and introduce no material user-level UX tradeoff. The guardrail can proceed to renewed master technical review without asking the user to choose numbers.
+**Evidence verdict: VALIDATED and master-accepted at `c28b59d`; historical policy superseded.** The retained measurements exclude none of the four legitimate project fixtures and support the current four-gate decision. The rows below preserve raw historical findings and do not themselves define current admission.
 
 Key knees in the constrained 1024×768, 4× CPU, 512 MiB V8 old-space profile:
 
@@ -108,4 +110,4 @@ Key knees in the constrained 1024×768, 4× CPU, 512 MiB V8 old-space profile:
 | Distributed parts/rings | 2,000 across 500 features: 453.9 ms package import/1,588 ms max long task | 4,000: 794.9 ms/2,097 ms; 8,000: 1,752 ms/4,605 ms |
 | Whole-document structural nodes | 40,000: 648.8 ms package import/1,459 ms max long task | 50,000: 860 ms/2,180 ms |
 
-The future checker must be iterative and budgeted. Its structural-node metric counts every object and array container reachable from the parsed root, including FeatureCollection/features, Feature/properties/geometry, coordinate nesting/position arrays, and nested property containers; scalar values are governed by encoded byte budgets and do not add nodes. The property-key metric is the maximum `Object.keys(feature.properties).length` for any one feature, not a source-wide name union. The checker must reject at the first hard cap, byte-gate before parse, exclude join coverage from resource decisions, and classify GeometryCollection as structurally unsupported for the current map runtime rather than pretending it is a slow-but-supported case.
+The future checker byte-gates before parse and iteratively validates supported geometry. It rejects at one of the four resource caps or on a separately typed schema/compatibility failure. Historical structural-node/property-key results require lazy, virtualized, or paginated manager handling and avoidance of eager arbitrary-property traversal; they do not authorize numeric rejection. Join coverage stays outside admission, GeometryCollection remains structurally unsupported by the current map runtime, and concurrent-map measurements govern only shared runtime scheduling.
