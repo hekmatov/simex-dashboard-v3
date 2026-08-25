@@ -76,6 +76,7 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
     .toBe(authored.chronoGroupId);
   await audience.waitForTimeout(600);
   const beforeChart = await audienceChartSnapshot(audience, authored.temporalChartId);
+  expectRenderedTemporalChart(beforeChart);
   const beforeChartTime = await observedAudienceState(page);
   const firstTarget = await moveRangeToOtherBoundary(slider);
   await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
@@ -88,7 +89,8 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   const afterTime = await audienceImageSnapshot(audience, imagePanelId);
   expect(afterTimeProtocol.items[1]).toEqual(firstProtocol.items[1]);
   expect(afterTimeProtocol.time.active_epoch_ms).not.toBe(beforeChartTime.time.active_epoch_ms);
-  expect(afterChart).not.toEqual(beforeChart);
+  expect(afterChart.activeDate).not.toBe(beforeChart.activeDate);
+  expect(afterChart.pixelHash).not.toBe(beforeChart.pixelHash);
   expect(afterTime).toEqual(beforeTime);
 
   await presentChoice(page, authored.temporalChartId).getByRole("checkbox").uncheck();
@@ -114,14 +116,35 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   const failedProtocol = await observedAudienceState(page);
   expect(failedProtocol.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
   await audience.waitForTimeout(600);
-  const failedChartBefore = await audienceChartSnapshot(audience, authored.temporalChartId);
+  const temporalSiblingIds = [authored.temporalChartId, ...authored.additionalChartIds];
+  const failedChartsBefore = new Map(await Promise.all(temporalSiblingIds.map(async (chartId) => {
+    const snapshot = await audienceChartSnapshot(audience, chartId);
+    expectRenderedTemporalChart(snapshot);
+    return [chartId, snapshot];
+  })));
   const failedImageBefore = await audienceImageSnapshot(audience, imagePanelId);
   await moveRangeToOppositeBoundary(slider, firstTarget);
   await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
     .not.toBe(failedProtocol.time?.active_epoch_ms);
-  await expect.poll(() => audienceChartSnapshot(audience, authored.temporalChartId), {
+  await expect.poll(async () => {
+    const after = await Promise.all(temporalSiblingIds.map((chartId) => audienceChartSnapshot(audience, chartId)));
+    return after.every((snapshot, index) => (
+      snapshot.activeDate !== failedChartsBefore.get(temporalSiblingIds[index]).activeDate
+      && snapshot.pixelHash !== failedChartsBefore.get(temporalSiblingIds[index]).pixelHash
+    ));
+  }, {
     timeout: 15_000,
-  }).not.toEqual(failedChartBefore);
+  }).toBe(true);
+  const failedChartsAfter = new Map(await Promise.all(temporalSiblingIds.map(async (chartId) => (
+    [chartId, await audienceChartSnapshot(audience, chartId)]
+  ))));
+  for (const chartId of temporalSiblingIds) {
+    const before = failedChartsBefore.get(chartId);
+    const after = failedChartsAfter.get(chartId);
+    expectRenderedTemporalChart(after);
+    expect(after.activeDate).not.toBe(before.activeDate);
+    expect(after.pixelHash).not.toBe(before.pixelHash);
+  }
   const failedAfterTime = await observedAudienceState(page);
   expect(failedAfterTime.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
   expect(await audienceImageSnapshot(audience, imagePanelId)).toEqual(failedImageBefore);
@@ -208,18 +231,17 @@ async function presentationFixtureIdentity(page, imagePanelId) {
       .map((placement) => placement.chart ?? placement);
     const image = panels.find(({ id }) => id === requestedImagePanelId);
     const source = dashboard.dataSources[image.sourceId];
+    const panelIds = new Set(panels
+      .filter(({ typeId }) => !["image", "freeText"].includes(typeId))
+      .map(({ id }) => id));
     const chronoGroup = dashboard.chronoGroups.find((group) => (
-      (group.members ?? []).some(({ chartId }) => panels.some((panel) => (
-        panel.id === chartId && !["image", "freeText"].includes(panel.typeId)
-      )))
+      (group.members ?? []).filter(({ chartId }) => panelIds.has(chartId)).length >= 3
     ));
-    const temporalChartId = chronoGroup.members.find(({ chartId }) => panels.some((panel) => (
-      panel.id === chartId && !["image", "freeText"].includes(panel.typeId)
-    ))).chartId;
-    const additionalChartIds = panels
-      .filter(({ id, typeId }) => id !== temporalChartId && !["image", "freeText"].includes(typeId))
-      .slice(0, 2)
-      .map(({ id }) => id);
+    const temporalChartIds = chronoGroup.members
+      .map(({ chartId }) => chartId)
+      .filter((chartId) => panelIds.has(chartId))
+      .slice(0, 3);
+    const [temporalChartId, ...additionalChartIds] = temporalChartIds;
     return {
       imageSourceId: image.sourceId,
       imageRevision: source.revision,
@@ -332,6 +354,7 @@ async function audienceChartSnapshot(audience, chartId) {
     }
     return {
       kind: cell.getAttribute("data-presentation-item-kind"),
+      activeDate: cell.querySelector("[data-chart-active-date]")?.getAttribute("data-chart-active-date") ?? "",
       text: cell.textContent.replace(/\s+/g, " ").trim(),
       pixelHash: pixelHash >>> 0,
       canvasWidth: canvas?.width ?? 0,
@@ -340,6 +363,14 @@ async function audienceChartSnapshot(audience, chartId) {
       temporalStatus: cell.querySelector("[data-temporal-status]")?.getAttribute("data-temporal-status") ?? "",
     };
   });
+}
+
+function expectRenderedTemporalChart(snapshot) {
+  expect(snapshot.kind).toBe("chart");
+  expect(snapshot.activeDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(snapshot.canvasWidth).toBeGreaterThan(0);
+  expect(snapshot.canvasHeight).toBeGreaterThan(0);
+  expect(snapshot.pixelHash).not.toBe(2166136261);
 }
 
 async function moveRangeToOtherBoundary(slider) {

@@ -1,6 +1,6 @@
 # Step 7S Static Content Fidelity Matrix
 
-**Status:** Slice 6 fix round 1/5 addressed — all five Important findings closed by new retained engine, mounted, and intended-use evidence; implementation complete, review pending
+**Status:** Slice 6 fix round 2/5 addressed — both Important evidence groups closed against the unchanged binding journeys; implementation complete, review pending
 **Layer rule:** S = semantic correctness, C = composition correctness, R = real-use correctness
 
 Every accepted invariant identifies its eventual production owner and a falsifiable check. Sketch evidence demonstrates the design only; it is never implementation evidence.
@@ -15,8 +15,8 @@ This is the binding final ledger. It supersedes every earlier per-slice `pending
 | FT-02 | Passing | Passing | Passing | Slice 1 catalogue plus retained Free-text journeys |
 | FT-03 | Passing | Passing | Passing | Slice 2 arbitrary-source inert compiler/DOM/browser evidence |
 | FT-04 | Passing | Passing | Passing | Canonical renderer plus exact source/revision Build/View/fullscreen evidence |
-| FT-05 | Passing | Passing | Passing | `static-free-text.spec.js` FT-05 activates safe links by View pointer and fullscreen keyboard against a bounded local target; unsafe schemes stay inert and request/navigation-free |
-| FT-06 | Passing | Passing | Passing | `static-free-text.spec.js` FT-06 traverses source bytes, nesting, table columns/rows, generated nodes, and math expansion with exact typed errors, blocked progression, retained session source, recovery, and no persisted draft |
+| FT-05 | Passing | Passing | Passing | Live View/fullscreen online and browser-offline activation covers safe external and scoped fragment by keyboard/pointer; offline external reaches Chromium's bounded error page, unsafe schemes/raw markup remain inert, and no unauthorized resource/navigation occurs |
+| FT-06 | Passing | Passing | Passing | Every source/nesting/table/node/math boundary passes in both create and saved-panel edit, with exact typed error, blocked progression, current-session source/preview survival, Keep/Discard recovery, and unchanged persisted source |
 | FT-07 | Passing | Passing | Passing | Wide/narrow source/preview authoring journey |
 | FT-08 | Passing | Passing | Passing | Blocking resource/complexity and last-valid preview evidence |
 | FT-09 | Passing | Passing | Passing | Canonical saved-panel responsive overflow journey |
@@ -30,15 +30,15 @@ This is the binding final ledger. It supersedes every earlier per-slice `pending
 | IM-05 | Passing | Passing | Passing | Explicit alt/decorative validation and canonical rendering evidence |
 | IM-06 | Passing | Passing | Passing | Nondestructive transform plus reload equality evidence |
 | IM-07 | Passing | Passing | Passing | Local/linked/package source and offline behavior evidence |
-| IM-08 | Passing | Passing | Passing | `static-image.spec.js` IM-08 uses Chromium page-scale 2.0 and exercises keyboard and pointer crop movement/resize with visible focus, changed geometry, and no horizontal overflow |
+| IM-08 | Passing | Passing | Passing | Chromium page-scale 2.0 crop journey passes independently at 1440×900 and 1024×768 with keyboard/pointer geometry changes, visible focus/controls, and no document/dialog horizontal overflow |
 | IM-09 | Passing | Passing | Passing | Active viewer reveal/zoom/reset without saved mutation |
 | IM-10 | Passing | Passing | Passing | Rotation/crop/fit geometry at retained viewports |
 | IM-11 | Passing | Passing | Passing | Passive review and atomic Add evidence |
 | IM-12 | Passing | Passing | Passing | Complete-pair dirty Keep/Discard recovery evidence |
 | IM-13 | Passing | Passing | Passing | Cell/fullscreen failure isolation and durable Retry evidence |
 | IM-14 | Passing | Passing | Passing | Exact edit/cancel/save/reload restoration evidence |
-| IM-15 | Passing | Passing | Passing | Derived and publish-boundary reconciliation synchronously normalize stale selection/layout; real 1920×1080 Audience chart pixels/date change while Image descriptor/revision/src/transform remain exact |
-| IM-16 | Passing | Passing | Passing | Strict index/readiness plus real failed Image cell; three chart siblings remain live and change again with time, then exact bytes/revision restore and replay at 1366×768 |
+| IM-15 | Passing | Passing | Passing | The representative canonical ChartView exposes its active date; retained Audience independently asserts date and canvas pixel-hash change while Image descriptor/revision/src/transform remain exact |
+| IM-16 | Passing | Passing | Passing | During passive Image failure all three Chrono-group siblings prove nonzero live canvases and each independently changes active date plus pixel hash; exact Image revision then restores/replays |
 | PS-01 | Passing | Passing | Passing | Application-session-only draft and leave/export guards |
 | PS-02 | Passing | Passing | Passing | Dashboard schema v4 migration/validation and retained load evidence |
 | PS-03 | Passing | Passing | Passing | Bundle v4 exact round-trip and contained chart-v3 evidence |

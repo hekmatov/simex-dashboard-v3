@@ -1,12 +1,34 @@
 # Task 6 report — Present/Audience compatibility
 
-**Status:** Fix round 1/5 addressed; five Important findings closed, implementation complete, review pending
+**Status:** Fix round 2/5 addressed; two Important evidence groups closed, implementation complete, review pending
 
 The initial implementation evidence below remains provenance. This fix round adds the missing trusted-index, synchronous layout, playback-owner, and retained intended-use evidence without weakening permissive-inert Free text or strict Image validation.
 
 **Branch:** `codex/static-content-panels-implementation`
 
 **Starting HEAD:** `098c173eb04d026a266adba284778304ec803e08`
+
+## Fix round 2/5 closure
+
+Both Important evidence groups are addressed without changing the binding journey wording:
+
+- `ChartView` now places the normalized active `YYYY-MM-DD` on its canonical rendered frame when, and only when, a finite temporal context reaches the chart. The separate-Audience journey independently asserts that the representative chart's active date and canvas pixel hash both change. Image descriptor, source ID, revision, rendered source, and transform remain exact.
+- The four-cell failure composition now selects three charts from the same Chrono Group. Before and after the failed-Image time change, every sibling must be a chart, expose a valid active date, and own a nonzero rendered canvas. Each of all three independently changes both active date and canvas hash. The failed Image stays passive/control-free and exact revision replay remains unchanged.
+- FT-05 runs the same saved panel in View and fullscreen while online and after `context.setOffline(true)`. Safe external and scoped-fragment links are activated by both keyboard and pointer across the two surfaces; offline external attempts reach Chromium's bounded network-error page, scoped fragments remain local, and unsafe schemes/raw markup create no unauthorized request, resource, script, or navigation.
+- FT-06 traverses all six named source/nesting/table/node/math limit cases first in create and again through the saved-panel edit route. Every exact error blocks progression, error focus and current-session source survive, the last valid preview remains, correction recovers, Keep/Discard retain the invalid edit in-session then restore the saved source, and localStorage never contains a boundary draft.
+- IM-08 runs independent actual page-scale 2.0 cases at both binding viewports, 1440×900 and 1024×768. Keyboard move, pointer move/resize, visible focus/control geometry, and document/dialog horizontal containment all pass.
+
+Verification:
+
+- Initial RED: Audience failed because the canonical frame exposed no chart date (`Received string: ""`); FT-05 reached `chrome-error://chromewebdata/` under genuine offline mode rather than the prior online URL expectation. FT-06's new complete create/edit case and both new IM-08 viewport cases were already green.
+- Focused canonical regressions: **51/51 passed** in 3.59 seconds.
+- Runtime boundary: **passed**, with no remote runtime dependency and canonical ChartView ownership in all four modes.
+- Production build: **passed**, **891 modules** in **9.47 seconds**; only the existing informational warnings remain.
+- Strengthened Image/Audience journey: **1/1 passed in 29.7 seconds** at 1920×1080 and 1366×768.
+- Strengthened FT-05/FT-06: **2/2 passed in 1.2 minutes**.
+- Dual-viewport IM-08: **2/2 passed in 8.9 seconds**.
+
+No sanitizer, deny-list, DOMPurify, executable/resource authority, static time context, Scene/Chrono membership, protocol field, object URL, asset byte, transform, or retry/authoring Audience control was added.
 
 ## Fix round 1/5 closure
 

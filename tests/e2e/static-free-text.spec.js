@@ -260,8 +260,26 @@ test(
 test("FT-05 View and fullscreen activate only safe links by pointer and keyboard", async ({ page, context }) => {
   test.setTimeout(120_000);
   const controlledRequests = [];
+  const failedControlledRequests = [];
+  const unexpectedExternalRequests = [];
+  let browserOffline = false;
+  context.on("request", (request) => {
+    const url = new URL(request.url());
+    if (!["127.0.0.1", "safe.example.test"].includes(url.hostname)) {
+      unexpectedExternalRequests.push(request.url());
+    }
+  });
+  context.on("requestfailed", (request) => {
+    if (request.url() === "https://safe.example.test/bounded") {
+      failedControlledRequests.push(request.url());
+    }
+  });
   await context.route("https://safe.example.test/**", async (route) => {
     controlledRequests.push(route.request().url());
+    if (browserOffline) {
+      await route.continue();
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "text/html",
@@ -284,32 +302,35 @@ test("FT-05 View and fullscreen activate only safe links by pointer and keyboard
   await expectPortableLinkCorpus(panel, saved.panel.id);
   expect(controlledRequests).toEqual([]);
 
-  const viewPopupPromise = context.waitForEvent("page");
-  await panel.getByRole("link", { name: /Safe offline destination/ }).click();
-  const viewPopup = await viewPopupPromise;
-  await viewPopup.waitForLoadState("domcontentloaded");
-  expect(viewPopup.url()).toBe("https://safe.example.test/bounded");
-  expect(await viewPopup.evaluate(() => window.opener)).toBeNull();
-  await viewPopup.close();
-  expect(controlledRequests).toEqual(["https://safe.example.test/bounded"]);
+  await activateSafeExternal({ context, surface: panel, method: "pointer", offline: false });
+  await activateScopedFragment({ page, surface: panel, method: "keyboard", panelId: saved.panel.id });
 
   await panel.getByRole("button", { name: "Focus chart" }).click();
   const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
   await expectPortableLinkCorpus(fullscreen, saved.panel.id);
-  const fullscreenLink = fullscreen.getByRole("link", { name: /Safe offline destination/ });
-  await fullscreenLink.focus();
-  await expect(fullscreenLink).toBeFocused();
-  const fullscreenPopupPromise = context.waitForEvent("page");
-  await fullscreenLink.press("Enter");
-  const fullscreenPopup = await fullscreenPopupPromise;
-  await fullscreenPopup.waitForLoadState("domcontentloaded");
-  expect(fullscreenPopup.url()).toBe("https://safe.example.test/bounded");
-  expect(await fullscreenPopup.evaluate(() => window.opener)).toBeNull();
-  await fullscreenPopup.close();
-  expect(controlledRequests).toEqual([
+  await activateSafeExternal({ context, surface: fullscreen, method: "keyboard", offline: false });
+  await activateScopedFragment({ page, surface: fullscreen, method: "pointer", panelId: saved.panel.id });
+  await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+  await expect(fullscreen).toHaveCount(0);
+
+  browserOffline = true;
+  await context.setOffline(true);
+  expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+  await expectPortableLinkCorpus(panel, saved.panel.id);
+  await activateSafeExternal({ context, surface: panel, method: "keyboard", offline: true });
+  await activateScopedFragment({ page, surface: panel, method: "pointer", panelId: saved.panel.id });
+  await panel.getByRole("button", { name: "Focus chart" }).click();
+  const offlineFullscreen = page.getByRole("dialog", { name: "Focused chart" });
+  await expectPortableLinkCorpus(offlineFullscreen, saved.panel.id);
+  await activateSafeExternal({ context, surface: offlineFullscreen, method: "pointer", offline: true });
+  await activateScopedFragment({ page, surface: offlineFullscreen, method: "keyboard", panelId: saved.panel.id });
+
+  expect(controlledRequests.filter((url) => url === "https://safe.example.test/bounded")).toHaveLength(4);
+  expect(failedControlledRequests).toEqual([
     "https://safe.example.test/bounded",
     "https://safe.example.test/bounded",
   ]);
+  expect(unexpectedExternalRequests).toEqual([]);
   expect(await page.evaluate(() => ({
     unsafeNavigation: window.__unsafeNavigation,
     unsafeMarkup: window.__unsafeMarkup,
@@ -317,7 +338,7 @@ test("FT-05 View and fullscreen activate only safe links by pointer and keyboard
 });
 
 test("FT-06 live authoring blocks every resource boundary and preserves recoverable session source", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openBiomedicalBuild(page);
   await page.getByRole("button", { name: "Add static content", exact: true }).click();
@@ -325,7 +346,7 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Free text").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Panel title").fill("Unsaved boundary traversal");
+  await wizard.getByLabel("Panel title").fill("Boundary traversal");
   const source = wizard.getByLabel("QMD-style source");
   await source.fill(SAFE_RECOVERY_QMD);
   await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
@@ -370,32 +391,51 @@ test("FT-06 live authoring blocks every resource boundary and preserves recovera
     },
   ];
 
-  for (const boundary of cases) {
-    await source.fill(boundary.value);
-    const error = wizard.locator(`[data-validation-rule="${boundary.rule}"]`);
-    await expect(error).toBeVisible();
-    await expect(error.locator("a")).toContainText(boundary.message);
-    await expect(source).toHaveValue(boundary.value);
-    await expect(source).toHaveAttribute("aria-invalid", "true");
-    await expect(wizard.getByRole("button", { name: "Continue" })).toBeDisabled();
-    await expect(wizard.getByRole("button", { name: "Preview & add", exact: true })).toBeDisabled();
-    await expect(wizard.getByRole("tabpanel", { name: "Preview" }))
-      .toContainText("Current-session source recovered");
-    await error.locator("a").click();
-    await expect(source).toBeFocused();
-    await expect(source).toHaveValue(boundary.value);
-    await source.fill(SAFE_RECOVERY_QMD);
-    await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
-    await expect(wizard.getByRole("button", { name: "Continue" })).toBeEnabled();
-    await expect(wizard.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
-  }
-
-  expect(await readSavedFreeText(page, "Unsaved boundary traversal")).toBeNull();
-  await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
-  const confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
-  await confirmation.getByRole("button", { name: "Discard" }).click();
+  await exerciseFreeTextBoundaries({
+    page,
+    surface: wizard,
+    source,
+    cases,
+    async assertNoDraftPersisted(boundary) {
+      expect(await readSavedFreeText(page, "Boundary traversal")).toBeNull();
+      await expectBoundaryAbsentFromStorage(page, boundary.value);
+    },
+  });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
-  expect(await readSavedFreeText(page, "Unsaved boundary traversal")).toBeNull();
+  const saved = await readSavedFreeText(page, "Boundary traversal");
+  expect(saved.source.qmd).toBe(SAFE_RECOVERY_QMD);
+
+  const panel = canonicalPanel(page, saved.panel.id);
+  await panel.scrollIntoViewIfNeeded();
+  await prepareFreeTextEditorTrigger(panel, "Boundary traversal");
+  await openFreeTextEditor(panel, page, "Boundary traversal");
+  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const editorSource = editor.getByLabel("QMD-style source");
+  await exerciseFreeTextBoundaries({
+    page,
+    surface: editor,
+    source: editorSource,
+    cases,
+    async assertNoDraftPersisted(boundary) {
+      expect((await readSavedFreeText(page, "Boundary traversal")).source.qmd).toBe(SAFE_RECOVERY_QMD);
+      await expectBoundaryAbsentFromStorage(page, boundary.value);
+    },
+  });
+
+  await editorSource.fill(cases[0].value);
+  await expect(editor.locator('[data-validation-rule="source-size"]')).toBeVisible();
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  await confirmation.getByRole("button", { name: "Keep editing" }).click();
+  await expect(editorSource).toHaveValue(cases[0].value);
+  await expectBoundaryAbsentFromStorage(page, cases[0].value);
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  await confirmation.getByRole("button", { name: "Discard" }).click();
+  await expect(editor).toHaveCount(0);
+  expect((await readSavedFreeText(page, "Boundary traversal")).source.qmd).toBe(SAFE_RECOVERY_QMD);
 });
 
 async function openBiomedicalBuild(page) {
@@ -468,6 +508,77 @@ async function expectPortableLinkCorpus(surface, panelId) {
   await expect(sink).toContainText('<a href="javascript:window.__unsafeMarkup=true">Raw unsafe markup</a>');
   await expect(sink.locator("script,iframe,img,video,audio,object,embed,form,button,[src],[srcset],[poster]")).toHaveCount(0);
   await expect(sink.locator("[onclick],[onerror],[onload],[onmouseover],[style]")).toHaveCount(0);
+}
+
+async function activateSafeExternal({ context, surface, method, offline }) {
+  const link = surface.getByRole("link", { name: /Safe offline destination/ });
+  const popupPromise = context.waitForEvent("page");
+  if (method === "keyboard") {
+    await link.focus();
+    await expect(link).toBeFocused();
+    await link.press("Enter");
+  } else {
+    await link.click();
+  }
+  const popup = await popupPromise;
+  if (offline) {
+    await expect.poll(() => popup.url(), { timeout: 10_000 })
+      .toBe("chrome-error://chromewebdata/");
+  } else {
+    await popup.waitForLoadState("domcontentloaded");
+    expect(popup.url()).toBe("https://safe.example.test/bounded");
+    expect(await popup.evaluate(() => document.body.textContent)).toContain("Controlled local response");
+  }
+  expect(await popup.evaluate(() => window.opener)).toBeNull();
+  await popup.close();
+}
+
+async function activateScopedFragment({ page, surface, method, panelId }) {
+  await page.evaluate(() => history.replaceState(null, "", `${location.pathname}${location.search}`));
+  const link = surface.getByRole("link", { name: "Safe local detail" });
+  if (method === "keyboard") {
+    await link.focus();
+    await expect(link).toBeFocused();
+    await link.press("Enter");
+  } else {
+    await link.click();
+  }
+  await expect.poll(() => page.evaluate(() => location.hash))
+    .toBe(`#${panelId}-local-detail`);
+}
+
+async function exerciseFreeTextBoundaries({
+  surface,
+  source,
+  cases,
+  assertNoDraftPersisted,
+}) {
+  for (const boundary of cases) {
+    await source.fill(boundary.value);
+    const error = surface.locator(`[data-validation-rule="${boundary.rule}"]`);
+    await expect(error).toBeVisible();
+    await expect(error.locator("a")).toContainText(boundary.message);
+    await expect(source).toHaveValue(boundary.value);
+    await expect(source).toHaveAttribute("aria-invalid", "true");
+    await expect(surface.getByRole("button", { name: "Continue" })).toBeDisabled();
+    await expect(surface.getByRole("button", { name: "Preview & add", exact: true })).toBeDisabled();
+    await expect(surface.getByRole("tabpanel", { name: "Preview" }))
+      .toContainText("Current-session source recovered");
+    await assertNoDraftPersisted(boundary);
+    await error.locator("a").click();
+    await expect(source).toBeFocused();
+    await expect(source).toHaveValue(boundary.value);
+    await source.fill(SAFE_RECOVERY_QMD);
+    await expect(surface.getByRole("status")).toContainText("Preview is up to date");
+    await expect(surface.getByRole("button", { name: "Continue" })).toBeEnabled();
+    await expect(surface.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
+  }
+}
+
+async function expectBoundaryAbsentFromStorage(page, boundaryValue) {
+  expect(await page.evaluate(({ key, value }) => (
+    localStorage.getItem(key)?.includes(value) ?? false
+  ), { key: STORAGE_KEY, value: boundaryValue })).toBe(false);
 }
 
 function tableWithColumns(count) {

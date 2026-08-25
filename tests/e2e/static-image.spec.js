@@ -8,6 +8,10 @@ const VIEWPORTS = [
   { width: 1024, height: 768 },
   { width: 768, height: 900 },
 ];
+const IM08_VIEWPORTS = [
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+];
 const PNG = Buffer.from(imageFixtureBytes("image/png"));
 const JPEG = Buffer.from(imageFixtureBytes("image/jpeg"));
 const WEBP = Buffer.from(imageFixtureBytes("image/webp"));
@@ -515,16 +519,17 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
     .locator('img[alt="Recovered validated intake corpus"]')).toBeVisible();
 });
 
-test("IM-08 guided crop remains operable with keyboard and pointer at actual 200 percent page zoom", async ({ page, context }) => {
-  test.setTimeout(120_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+for (const viewport of IM08_VIEWPORTS) {
+test(`IM-08 guided crop remains operable with keyboard and pointer at actual 200 percent page zoom at ${viewport.width}x${viewport.height}`, async ({ page, context }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize(viewport);
   await openBiomedicalBuild(page);
   await page.getByRole("button", { name: "Add static content", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add static content" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Image").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Panel title").fill("Zoomed crop proof");
+  await wizard.getByLabel("Panel title").fill(`Zoomed crop proof ${viewport.width}`);
   await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles(
     upload("zoom-crop.png", "image/png", PNG),
   );
@@ -595,6 +600,7 @@ test("IM-08 guided crop remains operable with keyboard and pointer at actual 200
   expect(zoomGeometry.cropBounds.height).toBeGreaterThan(0);
   await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
 });
+}
 
 async function openBiomedicalBuild(page) {
   await page.goto("/");

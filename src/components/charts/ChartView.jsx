@@ -97,8 +97,10 @@ export function renderChartContent(props, interactionMode) {
       message: resolved.message ?? model.message,
       empty: prepared?.status === "empty",
     });
+    const activeDate = chartActiveDate(props.timeContext?.activeEpochMs);
     const framedView = React.createElement("div", {
       ...presentationFrameProps(props.chart),
+      ...(activeDate ? { "data-chart-active-date": activeDate } : {}),
       "data-chart-interaction-mode": interactionMode,
     }, view);
     return chartZoom && !typedStaticImage
@@ -261,6 +263,12 @@ export function presentationFrameProps(chart) {
       ...(backgroundColor ? { backgroundColor } : {}),
     },
   };
+}
+
+export function chartActiveDate(activeEpochMs) {
+  if (!Number.isFinite(activeEpochMs)) return null;
+  const date = new Date(activeEpochMs);
+  return Number.isFinite(date.valueOf()) ? date.toISOString().slice(0, 10) : null;
 }
 
 export function withPlaybackTimeContext(props, playback) {
