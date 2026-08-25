@@ -6,7 +6,10 @@ import { chartPreparationIdentity } from "../runtime/chartPreparationIdentity.js
 import { compileChartRuntimeArtifact } from "../runtime/chartRuntimeArtifact.js";
 import { chartRuntimeArtifactRegistry } from "../runtime/chartRuntimeArtifactRegistry.js";
 import { projectRuntimeArtifact } from "../runtime/projectRuntimeArtifact.js";
-import { resolveStaticTextSource } from "../../static-content/staticSourceResolver.js";
+import {
+  resolveStaticImageSource,
+  resolveStaticTextSource,
+} from "../../static-content/staticSourceResolver.js";
 
 const MAX_MESSAGE_LENGTH = 240;
 const STATIC_RENDERING_CACHE = new WeakMap();
@@ -35,9 +38,28 @@ export function resolveChartRendering(input = {}) {
 
 function resolveTypedStaticRendering(renderingInput) {
   const chart = renderingInput.chart;
+  const source = renderingSource(renderingInput, chart?.sourceId);
+  if (chart?.typeId === "image" && source?.kind === "staticImage") {
+    const schema = getChartSchema(chart.typeId);
+    const resolved = resolveStaticImageSource(source, {
+      sourceId: chart.sourceId,
+      assets: renderingInput.renderContext?.assets ?? {},
+      resolveAsset: renderingInput.renderContext?.resolveStaticAsset,
+    });
+    return renderingResolution({
+      status: resolved.status === "ready" ? "available" : "unavailable",
+      schema,
+      prepared: null,
+      model: {
+        ...resolved,
+        kind: "image",
+        staticSource: true,
+      },
+      inputKey: renderingInput,
+    });
+  }
   if (chart?.typeId !== "freeText") return null;
   const schema = getChartSchema(chart.typeId);
-  const source = renderingSource(renderingInput, chart.sourceId);
   const resolved = resolveStaticTextSource(source, { sourceId: chart.sourceId });
   if (resolved.status !== "ready") {
     return renderingResolution({

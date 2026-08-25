@@ -1,28 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { register } from "node:module";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { createServer } from "vite";
 
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 
-register(`data:text/javascript,${encodeURIComponent(`
-export async function load(url, context, nextLoad) {
-  if (url.endsWith(".jsx")) {
-    const loaded = await nextLoad(url, { ...context, format: "module" });
-    return { format: "module", source: loaded.source, shortCircuit: true };
-  }
-  return nextLoad(url, context);
-}
-`)}`, import.meta.url);
-
-const { default: ChartView } = await import("../src/components/charts/ChartView.jsx");
-const { default: CardChartView } = await import("../src/components/charts/CardChartView.jsx");
-const { default: EChartsChartView, createEChartsLifecycle } = await import("../src/components/charts/EChartsChartView.jsx");
-const { default: ImageChartView } = await import("../src/components/charts/ImageChartView.jsx");
-const { default: TableChartView } = await import("../src/components/charts/TableChartView.jsx");
+const vite = await createServer({
+  root: process.cwd(),
+  appType: "custom",
+  logLevel: "silent",
+  server: { middlewareMode: true },
+});
+const { default: ChartView } = await vite.ssrLoadModule("/src/components/charts/ChartView.jsx");
+const { default: CardChartView } = await vite.ssrLoadModule("/src/components/charts/CardChartView.jsx");
+const { default: EChartsChartView, createEChartsLifecycle } = await vite.ssrLoadModule("/src/components/charts/EChartsChartView.jsx");
+const { default: ImageChartView } = await vite.ssrLoadModule("/src/components/charts/ImageChartView.jsx");
+const { default: TableChartView } = await vite.ssrLoadModule("/src/components/charts/TableChartView.jsx");
+await vite.close();
 
 const deltaRows = [
   { capacity: 8, observed: "2027-05-01" },
@@ -309,7 +306,7 @@ test("image render models use safe sources, alternative text, and fit", () => {
   assert.match(image, /src="\/maps\/readiness.png"/);
   assert.match(image, /alt="Readiness map"/);
   assert.match(image, /object-fit:cover/);
-  assert.doesNotMatch(image, /Zoom 100%|Reset image zoom|data-image-zoom-scale|chart-image-zoom/);
+  assert.doesNotMatch(image, /Reset view|data-image-zoom-scale|chart-image-actions/);
   assert.doesNotMatch(image, /chart-zoom-guard|Hold Ctrl while scrolling to zoom/);
   assert.match(unsafe, /chart-status-error/);
 });
@@ -339,12 +336,12 @@ test("image zoom affordances consume ChartView's authoritative schema and intera
   }));
 
   assert.match(enabled, /class="chart-zoom-guard"/);
-  assert.match(enabled, /chart-image-view--zoom-enabled/);
+  assert.match(enabled, /chart-image-view--active/);
   assert.match(enabled, /data-image-zoom-scale="1"/);
-  assert.match(enabled, /Zoom 100%/);
-  assert.match(enabled, /Reset image zoom/);
-  assert.doesNotMatch(authoritativeDisabled, /chart-image-view--zoom-enabled|data-image-zoom-scale|chart-image-zoom/);
-  assert.doesNotMatch(authoritativeDisabled, /Zoom 100%|Reset image zoom/);
+  assert.match(enabled, />100%<|100%<\/output>/);
+  assert.match(enabled, /Reset view/);
+  assert.doesNotMatch(authoritativeDisabled, /chart-image-view--active|data-image-zoom-scale|chart-image-actions/);
+  assert.doesNotMatch(authoritativeDisabled, /Reset view/);
 });
 
 test("ECharts render models remain SSR-safe and describe their content", () => {

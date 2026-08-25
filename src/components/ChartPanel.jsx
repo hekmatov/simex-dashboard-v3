@@ -19,6 +19,7 @@ function ChartPanel({
   datasetProfile,
   geoData,
   dataSources = {},
+  assets = {},
   accessibilityEnabled = false,
   canonicalPanelId,
   canonicalPlacementId,
@@ -63,9 +64,10 @@ function ChartPanel({
   });
   const renderContext = React.useMemo(() => ({
     sources: dataSources,
+    assets,
     mapName: chart.presentation?.map?.geoSource ?? chart.id,
     accessibilityEnabled,
-  }), [accessibilityEnabled, chart.id, chart.presentation?.map?.geoSource, dataSources]);
+  }), [accessibilityEnabled, assets, chart.id, chart.presentation?.map?.geoSource, dataSources]);
   const holdTimer = React.useRef(null);
   const suppressFullscreenClickUntil = React.useRef(0);
   const panelRef = React.useRef(null);
@@ -184,6 +186,10 @@ function ChartPanel({
           accessibilityEnabled={accessibilityEnabled}
           canonicalPlotId={canonicalPlotId}
           renderContext={renderContext}
+          interactionMode="active"
+          surface={editMode ? "build" : "view"}
+          onImageReplace={onEdit}
+          onImageEdit={onEdit}
         />
       ) : (
         <div className="chart-deferred-placeholder" aria-hidden="true">

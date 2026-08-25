@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; later persistence/Image/Audience slices pending
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slice 3 in-session Image validation/composition is implemented, while Slice 4 durability/portability and Slice 6 Audience work remain pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Slice 1 implementation status
@@ -20,6 +20,18 @@
 - SP-18 is now passing for the Free-text capability, trusted presentable index, Present catalogue, and production Present absence. Protocol injection and separate-Audience enforcement remain pending Slice 6, so SP-18 is still partial overall.
 - SP-22 is verified in-session: the production journey inspects the stored saved QMD while an unsaved edit is dirty, after Discard, and after Save. Reload restoration remains pending Slice 4's dashboard/bundle v4 bridge, so reload-dependent SP-22 fidelity is not claimed.
 - The production audit has no high or critical findings. It reports one pre-existing moderate ECharts advisory (`GHSA-fgmj-fm8m-jvvx`); neither package in the exact-pinned two-package Slice 2 set (`markdown-it`, `katex`) is implicated.
+
+## Slice 3 Image implementation status
+
+- SP-08 is passing at the engine boundary. The validator checks declared MIME against PNG/JPEG/WebP signatures, parses structural dimensions, requires decoded format/dimensions to agree, rejects corrupt input, APNG, and animated WebP, and enforces 12 MiB, 16,384 px/side, and 50 MP limits before session staging. Product-budget and browser-quota failures keep distinct stable codes. The production journey exercised an accepted PNG; exhaustive per-format browser sampling is not claimed.
+- SP-09 is deliberately partial. Slice 3 copies accepted bytes into a content-addressed, application-session staging registry, retains no OS path, exposes a byte-free manifest, and preserves the original byte hash through metadata edits. It does not create a durable store. Authored IndexedDB storage, reference graphs, reload, and durable object-URL leases remain exclusively Slice 4.
+- SP-10 and SP-11 are passing for source validation: only HTTPS remote sources and traversal-safe dashboard-owned package paths are accepted. A forced HTTPS failure was panel-scoped in production. Export dependency disclosure and packaged/offline round trips remain Slice 4.
+- SP-12 and SP-14 are passing for the implemented engine/UI boundary. Integer-permille crop, quarter-turn rotation, fit/reset, replacement undo, required nondecorative alt, and explicit decorative semantics share the typed source/draft pipeline and canonical renderer.
+- SP-13 is passing in-session: source transactions own saved crop/rotation/fit while `ImageChartView` owns transient zoom/pan/reset. The browser journey changed and reset viewer zoom without changing the saved crop. Reload comparison remains Slice 4, so durable fidelity is not claimed.
+- SP-18 is partial for Image. Typed Image routes before dataset/time preparation and no Image authoring control exposes dataset, time, Chrono Group, or Scene membership. The shared capability marks Image presentable/passive, but separate Present/Audience protocol evidence remains Slice 6.
+- SP-20 is passing for ordinary Build/View cell isolation: a forced remote failure retained its stable cell, exposed the exact surface recovery actions, hid raw URL/source/asset identifiers, and left a sibling canonical panel attached at all three viewports. Forced fullscreen and Audience failure continuation remain unclaimed.
+- SP-22 is verified only for the current application session. The journey inspected the v3 configuration and confirmed no staged local Image panel/assets or unsaved image fields were persisted there; complete-pair Keep/Discard restored the saved source, alt, and transform. The exact reload assertion is retained as `fixme` with a `blocked-by-slice-4` reason and is not reported as Passing.
+- SP-15–SP-17, SP-19, and SP-21 remain untouched and pending Slice 4/Slice 6. No bundle v4, schema v4, import/export, orphan cleanup, offline package, separate-window asset lease, or durable reload claim is made by Slice 3.
 
 ## Decision table
 

@@ -3,6 +3,7 @@ import {
   validateStaticImageSource,
   validateStaticTextSource,
 } from "./staticSourceSchema.js";
+import { resolveSessionImageAsset } from "./image/imageAssetValidation.js";
 
 export function resolveStaticSource(source, options = {}) {
   if (source?.kind === "staticText") return resolveStaticTextSource(source, options);
@@ -40,10 +41,10 @@ export function resolveStaticTextSource(source, { sourceId = null } = {}) {
   }
 }
 
-export async function resolveStaticImageSource(source, {
+export function resolveStaticImageSource(source, {
   sourceId = null,
   assets = {},
-  resolveAsset,
+  resolveAsset = resolveSessionImageAsset,
 } = {}) {
   try {
     validateStaticImageSource(source);
@@ -94,18 +95,17 @@ export async function resolveStaticImageSource(source, {
       });
     }
     try {
-      const resolved = await resolveAsset(source.origin.assetId, entry);
+      const resolved = resolveAsset(source.origin.assetId, entry);
+      if (resolved && typeof resolved.then === "function") {
+        return resolved.then(
+          (asset) => resolvedImageAssetModel(source, sourceId, asset),
+          () => imageAssetReadFailure(source, sourceId),
+        );
+      }
       url = resolved?.url;
       if (typeof url !== "string" || url === "") throw new Error("Asset URL is unavailable.");
     } catch {
-      return failureModel({
-        kind: "staticImage",
-        sourceId,
-        revision: source.revision,
-        code: "asset-read-failed",
-        message: "The saved image asset could not be read.",
-        retryable: true,
-      });
+      return imageAssetReadFailure(source, sourceId);
     }
   } else if (source.origin.kind === "url") {
     url = source.origin.url;
@@ -122,12 +122,23 @@ export async function resolveStaticImageSource(source, {
     });
   }
 
+  return readyImageModel(source, sourceId, url);
+}
+
+function resolvedImageAssetModel(source, sourceId, asset) {
+  return typeof asset?.url === "string" && asset.url
+    ? readyImageModel(source, sourceId, asset.url)
+    : imageAssetReadFailure(source, sourceId);
+}
+
+function readyImageModel(source, sourceId, url) {
   return {
     status: "ready",
     kind: "staticImage",
     sourceId,
     revision: source.revision,
     url,
+    src: url,
     alt: source.decorative ? "" : source.alt,
     decorative: source.decorative,
     fit: source.fit,
@@ -135,6 +146,17 @@ export async function resolveStaticImageSource(source, {
     rotation: source.rotation,
     networkDependent: source.origin.kind === "url",
   };
+}
+
+function imageAssetReadFailure(source, sourceId) {
+  return failureModel({
+    kind: "staticImage",
+    sourceId,
+    revision: source.revision,
+    code: "asset-read-failed",
+    message: "The saved image asset could not be read.",
+    retryable: true,
+  });
 }
 
 function failureModel({ kind, sourceId, revision, code, message, retryable }) {

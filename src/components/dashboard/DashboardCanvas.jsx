@@ -113,6 +113,7 @@ export default function DashboardCanvas({
                           datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
                           geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                           dataSources={dashboard.dataSources}
+                          assets={dashboard.assets ?? {}}
                           accessibilityEnabled={accessibilityEnabled}
                           onDisplayAction={onDisplayAction}
                           multiSelectMode={multiSelectMode}
@@ -175,6 +176,7 @@ export default function DashboardCanvas({
                             datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
                             geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                             dataSources={dashboard.dataSources}
+                            assets={dashboard.assets ?? {}}
                             accessibilityEnabled={accessibilityEnabled}
                             editMode={Boolean(buildState)}
                             placementId={placement.id}

@@ -1984,6 +1984,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
                       datasetProfile={dashboard.datasetProfiles?.[chart.sourceId]}
                       geoData={geoDataSources[chart.presentation?.map?.geoSource]}
                       dataSources={dashboard.dataSources}
+                      assets={dashboard.assets ?? {}}
                       accessibilityEnabled={accessibilityEnabled}
                       editMode={editMode}
                       editDisabled={moderatorMutationLocked}

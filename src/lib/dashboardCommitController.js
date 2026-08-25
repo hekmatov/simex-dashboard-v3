@@ -35,6 +35,25 @@ export function createSerializedDashboardCommitController({
     });
   };
 
+  const commitPreparedWith = (prepared, commitOperation) => {
+    if (prepared?.kind !== "static-panel-transaction") {
+      return Promise.reject(new TypeError("A prepared static panel transaction is required."));
+    }
+    if (typeof commitOperation !== "function") {
+      return Promise.reject(new TypeError("A dashboard commit function is required."));
+    }
+    const base = portablePreparedDashboard(prepared.baseDashboard);
+    const candidate = portablePreparedDashboard(prepared.candidateDashboard);
+    return enqueue(async () => {
+      if (JSON.stringify(current) !== JSON.stringify(base)) {
+        throw new Error("Static panel transaction is stale; prepare it again from the current dashboard.");
+      }
+      const committed = await commitOperation(candidate);
+      current = cloneDashboard(committed);
+      return cloneDashboard(current);
+    });
+  };
+
   return Object.freeze({
     mutate(mutator) {
       return mutateWithCommit(mutator, commit);
@@ -51,19 +70,10 @@ export function createSerializedDashboardCommitController({
       });
     },
     commitPrepared(prepared) {
-      if (prepared?.kind !== "static-panel-transaction") {
-        return Promise.reject(new TypeError("A prepared static panel transaction is required."));
-      }
-      const base = portablePreparedDashboard(prepared.baseDashboard);
-      const candidate = portablePreparedDashboard(prepared.candidateDashboard);
-      return enqueue(async () => {
-        if (JSON.stringify(current) !== JSON.stringify(base)) {
-          throw new Error("Static panel transaction is stale; prepare it again from the current dashboard.");
-        }
-        const committed = await commit(candidate);
-        current = cloneDashboard(committed);
-        return cloneDashboard(current);
-      });
+      return commitPreparedWith(prepared, commit);
+    },
+    commitPreparedWith(prepared, commitOperation) {
+      return commitPreparedWith(prepared, commitOperation);
     },
     adopt(dashboard) {
       const replacement = cloneDashboard(dashboard);

@@ -61,12 +61,14 @@ export default function DisplayedChartGrid({
               accessibilityEnabled={dashboard.globalStyles?.accessibility?.enabled === true}
               renderContext={{
                 sources: dashboard.dataSources ?? {},
+                assets: dashboard.assets ?? {},
                 mapName: chart.presentation?.map?.geoSource ?? chart.id,
                 accessibilityEnabled: dashboard.globalStyles?.accessibility?.enabled === true,
               }}
               timeContext={timeContextForChart(chart.id)}
               timeContextAuthority={timeContextAuthority}
               interactionMode={surface === "audience" ? "passive" : "active"}
+              surface={surface}
             />
           </section>
         );

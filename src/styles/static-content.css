@@ -63,9 +63,15 @@
 }
 
 .static-content-dialog :is(button, input, select, textarea, a):focus-visible,
-.free-text-chart-view :is(a, [tabindex="0"]):focus-visible {
+.free-text-chart-view :is(a, [tabindex="0"]):focus-visible,
+.chart-image-view :is(button, [tabindex="0"]):focus-visible,
+.image-transform-editor :is(button, input, select, [tabindex="0"]):focus-visible {
   outline: 3px solid var(--simex-accent, #043bcb);
   outline-offset: 3px;
+}
+
+.static-content-dialog :is(button, input, select, textarea, [tabindex="0"]) {
+  scroll-margin-block: 16px 96px;
 }
 
 .free-text-source-editor {
@@ -340,48 +346,270 @@ pre.portable-qmd-math-fallback {
   color: #506a82;
 }
 
+.image-transform-editor {
+  display: grid;
+  gap: 18px;
+  margin-top: 16px;
+  min-width: 0;
+}
+
+.image-crop-preview {
+  aspect-ratio: 16 / 9;
+  background:
+    linear-gradient(45deg, #e5ebf1 25%, transparent 25%),
+    linear-gradient(-45deg, #e5ebf1 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5ebf1 75%),
+    linear-gradient(-45deg, transparent 75%, #e5ebf1 75%),
+    var(--simex-surface-muted, #f7f9fb);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+  border: 1px solid var(--simex-border-strong, #8ca0b3);
+  border-radius: 14px;
+  max-height: 440px;
+  min-height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+
+.image-crop-preview > img {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  transform: rotate(var(--image-saved-rotation));
+  width: 100%;
+}
+
+.image-crop-preview > p {
+  align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  margin: 0;
+  padding: 24px;
+  position: absolute;
+}
+
+.image-crop-selection {
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px #043bcb, 0 2px 12px rgb(15 35 54 / 34%);
+  cursor: move;
+  height: var(--image-crop-height);
+  left: var(--image-crop-x);
+  position: absolute;
+  top: var(--image-crop-y);
+  width: var(--image-crop-width);
+}
+
+.image-crop-handle {
+  background: transparent;
+  border: 0;
+  bottom: -22px;
+  cursor: nwse-resize;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+  position: absolute;
+  right: -22px;
+}
+
+.image-crop-handle::after {
+  background: #043bcb;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  content: "";
+  height: 14px;
+  left: 15px;
+  position: absolute;
+  top: 15px;
+  width: 14px;
+}
+
+.image-guided-sections {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.image-guided-section {
+  background: var(--simex-surface-muted, #f7f9fb);
+  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 32px minmax(0, 1fr);
+  min-width: 0;
+  padding: 14px;
+}
+
+.image-guided-section__step {
+  align-items: center;
+  background: var(--simex-accent, #043bcb);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  margin: 0;
+  width: 30px;
+}
+
+.image-guided-section h3 {
+  font-size: 1rem;
+  margin: 4px 0 8px;
+}
+
+.image-guided-section label,
+.image-guided-section input:not([type="checkbox"]),
+.image-guided-section select {
+  display: block;
+  width: 100%;
+}
+
+.image-guided-section input[type="file"] {
+  box-sizing: border-box;
+  margin-block: 6px;
+}
+
+.image-guided-section small {
+  color: var(--simex-text-muted, #506a82);
+  display: block;
+  margin-block: 4px 10px;
+}
+
+.image-crop-nudges,
+.image-rotation-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 8px 12px;
+}
+
+.image-crop-nudges button,
+.image-rotation-controls button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.image-crop-numeric {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.static-image-validation {
+  background: #fff4f5;
+  border: 1px solid #d85667;
+  border-radius: 10px;
+  color: #861426;
+  margin-block: 10px;
+  padding: 10px;
+}
+
 .chart-image-view {
   height: 100%;
   margin: 0;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  position: relative;
+}
+
+.chart-image-viewport {
+  background: var(--simex-surface-muted, #f7f9fb);
+  border-radius: 10px;
+  height: calc(100% - 24px);
+  min-height: 180px;
+  overflow: clip;
+  position: relative;
+}
+
+.chart-image-saved-window {
+  clip-path: inset(
+    var(--image-crop-y)
+    calc(100% - var(--image-crop-x) - var(--image-crop-width))
+    calc(100% - var(--image-crop-y) - var(--image-crop-height))
+    var(--image-crop-x)
+  );
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+}
+
+.chart-image-transient {
+  height: 100%;
+  transform-origin: center;
+  transition: transform 140ms ease;
+  width: 100%;
 }
 
 .chart-image-view img {
   display: block;
-  height: auto;
-  max-height: 560px;
+  height: 100%;
+  max-height: 100%;
   max-width: 100%;
+  transform: rotate(var(--image-saved-rotation));
   width: 100%;
 }
 
-.chart-image-view--zoom-enabled img {
-  transition: transform 140ms ease;
+.chart-image-loading {
+  animation: static-image-shimmer 1.2s linear infinite;
+  background: linear-gradient(90deg, #e5ebf1 20%, #f8fafc 45%, #e5ebf1 70%);
+  background-size: 220% 100%;
+  inset: 0;
+  position: absolute;
+  z-index: 2;
 }
 
-.chart-image-viewport {
-  overflow: clip;
-}
-
-.chart-image-zoom-controls {
+.chart-image-actions {
   align-items: center;
+  background: var(--simex-surface-panel, #fff);
+  border: 1px solid var(--simex-border-subtle, #d8e2ec);
+  border-radius: 12px;
+  bottom: 32px;
+  box-shadow: 0 4px 18px rgb(15 35 54 / 18%);
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 8px;
+  gap: 6px;
+  opacity: 0;
+  padding: 6px;
+  pointer-events: none;
+  position: absolute;
+  right: 8px;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 3;
+}
+
+.chart-image-view--active:hover .chart-image-actions,
+.chart-image-view--active:focus-within .chart-image-actions,
+.chart-image-view--touch-actions .chart-image-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.chart-image-actions button {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .chart-image-zoom-status {
-  color: #506a82;
+  color: var(--simex-text-muted, #506a82);
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
+  min-width: 4ch;
 }
 
 .chart-image-view figcaption {
-  color: #506a82;
+  color: var(--simex-text-muted, #506a82);
   font-size: 0.875rem;
   margin-top: 6px;
+}
+
+@keyframes static-image-shimmer {
+  to { background-position: -220% 0; }
 }
 
 @media (max-width: 860px) {
@@ -407,10 +635,21 @@ pre.portable-qmd-math-fallback {
   .free-text-source-editor__pane {
     min-height: 320px;
   }
+
+  .image-guided-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .image-crop-preview {
+    min-height: 180px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chart-image-view--zoom-enabled img {
+  .chart-image-transient,
+  .chart-image-actions {
     transition: none;
   }
+
+  .chart-image-loading { animation: none; }
 }

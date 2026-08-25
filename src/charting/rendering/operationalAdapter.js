@@ -1,11 +1,18 @@
 export function buildOperationalRenderModel({ chart, prepared }) {
   if (chart.typeId === "image") {
+    if (prepared.meta?.adapter === "typed-static-image") {
+      return {
+        kind: "error",
+        message: "Typed static Image must resolve before the legacy inline-row adapter.",
+      };
+    }
     const mark = prepared.marks[0];
     return {
       kind: "image",
       src: mark.src,
       alt: mark.alt ?? "",
       fit: mark.fit ?? "contain",
+      legacyInline: true,
     };
   }
 

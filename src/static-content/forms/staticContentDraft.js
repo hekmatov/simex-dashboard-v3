@@ -4,6 +4,10 @@ import {
 } from "../staticSourceSchema.js";
 import { createChartDraft } from "../../charting/config/chartConfigV3.js";
 import { parsePortableQmd } from "../qmd/parsePortableQmd.js";
+import {
+  normalizeImageTransform,
+  resetImageTransform,
+} from "../image/imageTransform.js";
 
 let fallbackIdentitySequence = 0;
 
@@ -27,6 +31,7 @@ export function createStaticContentDraft(options = {}) {
   const draftIdentity = createDraftIdentity(options.panel);
   const panel = normalizePanel(options.panel, contentTypeId, draftIdentity);
   const source = normalizeSource(options.source, contentTypeId);
+  const imageEditing = createImageEditing(source);
   const destination = clone(options.destination);
   const baselineStage = mode === "edit" ? "content" : "destination";
   const baseline = {
@@ -47,6 +52,7 @@ export function createStaticContentDraft(options = {}) {
     draftIdentity,
     panel,
     source,
+    imageEditing,
     assets: clone(options.assets ?? {}),
     draftRevision: Number.isInteger(options.draftRevision) && options.draftRevision >= 0
       ? options.draftRevision
@@ -93,7 +99,13 @@ export function reduceStaticContentDraft(state, action = {}) {
       const source = state.contentTypeId === contentTypeId
         ? state.source
         : normalizeSource(null, contentTypeId);
-      return authored(state, { contentTypeId, panel, source, status: "editing" });
+      return authored(state, {
+        contentTypeId,
+        panel,
+        source,
+        imageEditing: createImageEditing(source),
+        status: "editing",
+      });
     }
     case "setPanel":
       requireContentStage(state);
@@ -107,8 +119,99 @@ export function reduceStaticContentDraft(state, action = {}) {
       });
     case "updateSource":
       requireContentStage(state);
+      {
+        const source = normalizeStaticSource({ ...state.source, ...(action.updates ?? {}) });
+        return authored(state, {
+          source,
+          imageEditing: source.kind === "staticImage" && !source.decorative && source.alt.trim()
+            ? { ...state.imageEditing, preservedAlt: source.alt }
+            : state.imageEditing,
+          status: "editing",
+        });
+      }
+    case "setImageAlt": {
+      requireImageContentStage(state);
+      const alt = String(action.alt ?? "");
       return authored(state, {
-        source: normalizeStaticSource({ ...state.source, ...(action.updates ?? {}) }),
+        source: state.source.decorative
+          ? state.source
+          : normalizeStaticSource({ ...state.source, alt }),
+        imageEditing: { ...state.imageEditing, preservedAlt: alt, altReviewRequired: false },
+        status: "editing",
+      });
+    }
+    case "setImageDecorative": {
+      requireImageContentStage(state);
+      const decorative = action.decorative === true;
+      const preservedAlt = decorative
+        ? state.source.alt || state.imageEditing?.preservedAlt || ""
+        : state.imageEditing?.preservedAlt || "";
+      return authored(state, {
+        source: normalizeStaticSource({
+          ...state.source,
+          decorative,
+          alt: decorative ? "" : preservedAlt,
+        }),
+        imageEditing: { ...state.imageEditing, preservedAlt },
+        status: "editing",
+      });
+    }
+    case "replaceImage": {
+      requireImageContentStage(state);
+      const assets = action.manifestEntry
+        ? { ...state.assets, [action.origin?.assetId]: clone(action.manifestEntry) }
+        : state.assets;
+      return authored(state, {
+        source: normalizeStaticSource({
+          ...state.source,
+          ...resetImageTransform(),
+          origin: clone(action.origin),
+        }),
+        assets,
+        imageEditing: {
+          ...state.imageEditing,
+          altReviewRequired: true,
+          replacementUndo: {
+            source: clone(state.source),
+            assets: clone(state.assets),
+          },
+        },
+        status: "editing",
+      });
+    }
+    case "undoImageReplacement": {
+      requireImageContentStage(state);
+      const undo = state.imageEditing?.replacementUndo;
+      if (!undo) return state;
+      return authored(state, {
+        source: clone(undo.source),
+        assets: clone(undo.assets),
+        imageEditing: {
+          ...createImageEditing(undo.source),
+          replacementUndo: null,
+          altReviewRequired: false,
+        },
+        status: "editing",
+      });
+    }
+    case "setImageTransform": {
+      requireImageContentStage(state);
+      return authored(state, {
+        source: normalizeStaticSource({
+          ...state.source,
+          ...normalizeImageTransform({
+            crop: action.crop ?? state.source.crop,
+            rotation: action.rotation ?? state.source.rotation,
+            fit: action.fit ?? state.source.fit,
+          }),
+        }),
+        status: "editing",
+      });
+    }
+    case "resetImage":
+      requireImageContentStage(state);
+      return authored(state, {
+        source: normalizeStaticSource({ ...state.source, ...resetImageTransform() }),
         status: "editing",
       });
     case "setAssets":
@@ -137,6 +240,7 @@ export function reduceStaticContentDraft(state, action = {}) {
         contentTypeId: state.baseline.contentTypeId,
         panel: clone(state.baseline.panel),
         source: clone(state.baseline.source),
+        imageEditing: createImageEditing(state.baseline.source),
         assets: clone(state.baseline.assets),
         stage: state.mode === "edit" ? "content" : "destination",
         status: "discarded",
@@ -297,6 +401,20 @@ function requireStage(stage) {
 
 function requireContentStage(state) {
   if (state.stage !== "content") throw new Error("Static source and panel controls belong to the Content stage.");
+}
+
+function requireImageContentStage(state) {
+  requireContentStage(state);
+  if (state.source?.kind !== "staticImage") throw new Error("Image authoring requires a static Image source.");
+}
+
+function createImageEditing(source) {
+  if (source?.kind !== "staticImage") return null;
+  return {
+    preservedAlt: source.decorative ? "" : source.alt ?? "",
+    altReviewRequired: false,
+    replacementUndo: null,
+  };
 }
 
 function requiredText(value, description) {

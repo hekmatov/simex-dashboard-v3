@@ -144,6 +144,53 @@ test("prepared commits compare and persist portable dashboard state without runt
   assert.equal(Object.hasOwn(result.dashboard, "dataSourceStates"), false);
 });
 
+test("a staged Image transaction can commit atomically to session state without invoking durable persistence", async () => {
+  const dashboard = fixtureDashboard();
+  let durableCommits = 0;
+  let sessionCommits = 0;
+  const controller = createSerializedDashboardCommitController({
+    initialDashboard: dashboard,
+    commit: async () => {
+      durableCommits += 1;
+      throw new Error("staged Image must not enter the v3 persistence boundary");
+    },
+  });
+  const prepared = prepareStaticPanelTransaction({
+    dashboard,
+    operation: "create",
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    panel: panel("image-panel", "image", "image-source", "Response map"),
+    source: imageSource(1),
+    assets: {
+      "asset-map": {
+        mediaType: "image/png",
+        byteLength: 20,
+        width: 4,
+        height: 5,
+        sha256: "c".repeat(64),
+        storageState: "staged",
+      },
+    },
+  });
+
+  const result = await commitStaticPanelTransaction(prepared, {
+    controller,
+    commitPrepared: (transaction) => controller.commitPreparedWith(
+      transaction,
+      async (candidate) => {
+        sessionCommits += 1;
+        return candidate;
+      },
+    ),
+  });
+
+  assert.equal(result.dashboard.dataSources["image-source"].kind, "staticImage");
+  assert.equal(result.dashboard.assets["asset-map"].storageState, "staged");
+  assert.equal(controller.getCurrent().dataSources["image-source"].revision, 1);
+  assert.equal(sessionCommits, 1);
+  assert.equal(durableCommits, 0);
+});
+
 test("prepared transaction snapshots reject post-validation nested mutation", () => {
   const prepared = prepareStaticPanelTransaction({
     dashboard: fixtureDashboard(),

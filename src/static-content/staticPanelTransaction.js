@@ -96,13 +96,15 @@ export function prepareStaticPanelTransaction({
 
 export async function commitStaticPanelTransaction(
   prepared,
-  { controller, commit, rollback } = {},
+  { controller, commit, commitPrepared, rollback } = {},
 ) {
   if (prepared?.kind !== "static-panel-transaction") {
     throw new TypeError("A prepared static panel transaction is required.");
   }
   try {
-    const dashboard = typeof controller?.commitPrepared === "function"
+    const dashboard = typeof commitPrepared === "function"
+      ? await commitPrepared(prepared)
+      : typeof controller?.commitPrepared === "function"
       ? await controller.commitPrepared(prepared)
       : await requireCommit(commit)(structuredClone(prepared.candidateDashboard));
     return {

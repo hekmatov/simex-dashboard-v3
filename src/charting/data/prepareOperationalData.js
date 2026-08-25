@@ -6,8 +6,20 @@ import {
   roleBindings,
 } from "./transforms.js";
 
-export function prepareOperationalData({ schema, chart, rows, datasetProfile }) {
+export function prepareOperationalData({ schema, chart, rows, datasetProfile, renderContext }) {
   if (schema.typeId === "image") {
+    if (imageSourceKind(renderContext?.sources, chart?.sourceId) === "staticImage") {
+      return {
+        marks: [],
+        diagnostics: [error(
+          "typed-static-image-legacy-adapter",
+          "Typed static Image must resolve before the legacy inline-row adapter.",
+          { sourceId: chart?.sourceId ?? null },
+        )],
+        duplicateGroupCount: 0,
+        meta: { adapter: "typed-static-image" },
+      };
+    }
     if (rows.length !== 1) {
       return {
         marks: [],
@@ -17,6 +29,7 @@ export function prepareOperationalData({ schema, chart, rows, datasetProfile }) 
           { rowCount: rows.length },
         )],
         duplicateGroupCount: 0,
+        meta: { adapter: "legacy-inline-image" },
       };
     }
     return {
@@ -25,6 +38,7 @@ export function prepareOperationalData({ schema, chart, rows, datasetProfile }) 
         .map((row) => ({ src: row.src, alt: row.alt ?? "", fit: row.fit ?? "contain" })),
       diagnostics: [],
       duplicateGroupCount: 0,
+      meta: { adapter: "legacy-inline-image" },
     };
   }
   const columns = roleBindings(chart, "columns");
@@ -39,4 +53,13 @@ export function prepareOperationalData({ schema, chart, rows, datasetProfile }) 
     diagnostics: [],
     duplicateGroupCount: 0,
   };
+}
+
+function imageSourceKind(sources, sourceId) {
+  if (!sources || !sourceId) return null;
+  if (sources instanceof Map) return sources.get(sourceId)?.kind ?? null;
+  if (Array.isArray(sources)) {
+    return sources.find((source) => source?.id === sourceId)?.kind ?? null;
+  }
+  return sources[sourceId]?.kind ?? null;
 }

@@ -1,3 +1,5 @@
+import { validateImageOrigin as validateImageOriginContract } from "./image/imageAssetValidation.js";
+
 const STATIC_SOURCE_VERSION = 1;
 const PORTABLE_QMD_POLICY = "portable-qmd-v1";
 const IMAGE_FITS = new Set(["contain", "cover"]);
@@ -53,7 +55,7 @@ export function validateStaticTextSource(source) {
 export function validateStaticImageSource(source, { assets } = {}) {
   const value = record(source, "Static image source");
   validateBase(value, "Static image source");
-  validateImageOrigin(value.origin);
+  validateImageOriginContract(value.origin);
   if (typeof value.decorative !== "boolean") throw new TypeError("Static image decorative must be boolean.");
   if (typeof value.alt !== "string") throw new TypeError("Static image alternative text must be a string.");
   if (value.decorative && value.alt !== "") {
@@ -100,43 +102,6 @@ function validateBase(source, description) {
     throw new Error(`${description} source version ${STATIC_SOURCE_VERSION} is required.`);
   }
   positiveInteger(source.revision, `${description} revision`);
-}
-
-function validateImageOrigin(origin) {
-  const value = record(origin, "Static image origin");
-  if (value.kind === "asset") {
-    requiredText(value.assetId, "Static image asset id");
-    return;
-  }
-  if (value.kind === "url") {
-    requiredText(value.url, "Static image URL");
-    let parsed;
-    try {
-      parsed = new URL(value.url);
-    } catch {
-      throw new Error("Static image URL must be a valid https URL.");
-    }
-    if (parsed.protocol !== "https:") throw new Error("Static image URL must use https.");
-    return;
-  }
-  if (value.kind === "package") {
-    requiredText(value.path, "Static image package path");
-    const normalized = value.path.replaceAll("\\", "/");
-    if (
-      normalized.startsWith("/")
-      || /^[a-z]:/i.test(normalized)
-      || normalized.split("/").some((segment) => segment === ".." || segment === "")
-      || /%2e|%2f|%5c/i.test(normalized)
-    ) {
-      throw new Error("Static image package path must be a safe dashboard-owned relative path.");
-    }
-    return;
-  }
-  if (value.kind === "replacementRequired") {
-    requiredText(value.reason, "Static image replacement reason");
-    return;
-  }
-  throw new Error(`Unknown static image origin "${String(value.kind)}".`);
 }
 
 function validateCrop(crop) {

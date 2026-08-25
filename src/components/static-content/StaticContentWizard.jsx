@@ -13,8 +13,11 @@ import {
 import { listStaticContentTypeOptions } from "../../static-content/staticPanelCapabilities.js";
 import StaticContentStateBoundary from "./StaticContentStateBoundary.jsx";
 import FreeTextSourceEditor from "./FreeTextSourceEditor.jsx";
+import ImageSourceEditor from "./ImageSourceEditor.jsx";
+import ImageTransformEditor from "./ImageTransformEditor.jsx";
 import ChartView from "../charts/ChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
+import { resolveSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
 
 export function StaticContentWizard({
   open = false,
@@ -230,37 +233,26 @@ function FreeTextFields({ draft, dispatch, onValidationChange }) {
 
 function ImageFields({ draft, dispatch }) {
   const source = draft.source ?? {};
-  const origin = source.origin ?? { kind: "url", url: "" };
-  const update = (updates) => dispatch({ type: "updateSource", updates });
-  const updateCrop = (key, value) => update({ crop: { ...source.crop, [key]: Number(value) } });
+  const sourceControls = (
+    <ImageSourceEditor
+      source={source}
+      assets={draft.assets}
+      imageEditing={draft.imageEditing}
+      onOriginChange={(origin) => dispatch({ type: "updateSource", updates: { origin } })}
+      onReplace={({ origin, manifestEntry }) => dispatch({ type: "replaceImage", origin, manifestEntry })}
+      onUndoReplacement={() => dispatch({ type: "undoImageReplacement" })}
+      onAltChange={(alt) => dispatch({ type: "setImageAlt", alt })}
+      onDecorativeChange={(decorative) => dispatch({ type: "setImageDecorative", decorative })}
+    />
+  );
   return (
-    <>
-      <fieldset>
-        <legend>Source</legend>
-        <label htmlFor="static-image-origin-kind">Image origin</label>
-        <select id="static-image-origin-kind" value={origin.kind} onChange={(event) => update({ origin: originForKind(event.target.value) })}>
-          <option value="url">Linked HTTPS URL</option>
-          <option value="asset">Local authored asset</option>
-          <option value="package">Packaged asset</option>
-        </select>
-        <label htmlFor="static-image-origin-value">Source value</label>
-        <input id="static-image-origin-value" value={originValue(origin)} onChange={(event) => update({ origin: withOriginValue(origin, event.target.value) })} />
-      </fieldset>
-      <fieldset>
-        <legend>Accessibility</legend>
-        <label><input type="checkbox" checked={source.decorative === true} onChange={(event) => update({ decorative: event.target.checked, alt: event.target.checked ? "" : source.alt })} /> Decorative image</label>
-        {!source.decorative && <><label htmlFor="static-image-alt">Alternative text</label><input id="static-image-alt" value={source.alt ?? ""} onChange={(event) => update({ alt: event.target.value })} /></>}
-      </fieldset>
-      <fieldset>
-        <legend>Image transform</legend>
-        <label htmlFor="static-image-fit">Fit</label>
-        <select id="static-image-fit" value={source.fit ?? "contain"} onChange={(event) => update({ fit: event.target.value })}><option value="contain">Contain</option><option value="cover">Cover</option></select>
-        <label htmlFor="static-image-rotation">Rotation</label>
-        <select id="static-image-rotation" value={source.rotation ?? 0} onChange={(event) => update({ rotation: Number(event.target.value) })}>{[0, 90, 180, 270].map((value) => <option key={value} value={value}>{value}°</option>)}</select>
-        {[["x", "Crop x"], ["y", "Crop y"], ["width", "Crop width"], ["height", "Crop height"]].map(([key, label]) => <React.Fragment key={key}><label htmlFor={`static-image-crop-${key}`}>{label}</label><input id={`static-image-crop-${key}`} type="number" min={key === "width" || key === "height" ? 1 : 0} max="1000" value={source.crop?.[key] ?? (key === "width" || key === "height" ? 1000 : 0)} onChange={(event) => updateCrop(key, event.target.value)} /></React.Fragment>)}
-        <button type="button" className="secondary" onClick={() => update({ fit: "contain", rotation: 0, crop: { x: 0, y: 0, width: 1000, height: 1000 } })}>Reset image</button>
-      </fieldset>
-    </>
+    <ImageTransformEditor
+      source={source}
+      sourceUrl={resolveImageDraftUrl(source)}
+      sourceControls={sourceControls}
+      onTransformChange={({ crop, rotation, fit }) => dispatch({ type: "setImageTransform", crop, rotation, fit })}
+      onReset={() => dispatch({ type: "resetImage" })}
+    />
   );
 }
 
@@ -279,10 +271,14 @@ function StaticPreview({ draft }) {
             />
           </div>
         ) : (
-          <article data-static-preview-type="image">
-            <h4>{draft.panel?.title}</h4>
-            <p>Image preview uses the saved {draft.source?.fit} fit at {draft.source?.rotation}°.</p>
-          </article>
+          <div data-static-preview-type="image">
+            <ChartView
+              chart={draft.panel}
+              renderContext={{ sources: { [sourceId]: draft.source }, assets: draft.assets }}
+              interactionMode="passive"
+              surface="build"
+            />
+          </div>
         )}
       </StaticContentStateBoundary>
       <p>Static content has no CSV, Chrono Group, Scene, or time controls.</p>
@@ -290,20 +286,11 @@ function StaticPreview({ draft }) {
   );
 }
 
-function originForKind(kind) {
-  if (kind === "asset") return { kind, assetId: "" };
-  if (kind === "package") return { kind, path: "" };
-  return { kind: "url", url: "" };
-}
-
-function originValue(origin) {
-  return origin.kind === "asset" ? origin.assetId ?? "" : origin.kind === "package" ? origin.path ?? "" : origin.url ?? "";
-}
-
-function withOriginValue(origin, value) {
-  if (origin.kind === "asset") return { kind: "asset", assetId: value };
-  if (origin.kind === "package") return { kind: "package", path: value };
-  return { kind: "url", url: value };
+function resolveImageDraftUrl(source) {
+  if (source?.origin?.kind === "asset") return resolveSessionImageAsset(source.origin.assetId)?.url ?? "";
+  if (source?.origin?.kind === "url") return source.origin.url;
+  if (source?.origin?.kind === "package") return source.origin.path;
+  return "";
 }
 
 function focusRestoration(stage) {

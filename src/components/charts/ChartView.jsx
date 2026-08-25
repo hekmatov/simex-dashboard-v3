@@ -53,8 +53,12 @@ export function renderChartContent(props, interactionMode) {
     const { model, prepared, schema } = resolved;
     const provenance = resolveProvenance(props);
     let view;
-    const zoomEnabled = interactionMode === "active"
+    const chartZoom = interactionMode === "active"
       && chartZoomEnabled(props.chart, schema);
+    const typedStaticImage = model.kind === "image" && model.staticSource === true;
+    const zoomEnabled = typedStaticImage
+      ? interactionMode === "active"
+      : chartZoom;
     if (model.kind === "echarts") view = React.createElement(EChartsChartView, {
       model,
       chart: props.chart,
@@ -76,6 +80,11 @@ export function renderChartContent(props, interactionMode) {
       chart: props.chart,
       provenance,
       zoomEnabled,
+      interactionMode,
+      surface: props.surface,
+      onRetry: props.onImageRetry,
+      onReplace: props.onImageReplace,
+      onEdit: props.onImageEdit,
     });
     else if (model.kind === "freeText") view = React.createElement(FreeTextChartView, {
       model,
@@ -89,7 +98,7 @@ export function renderChartContent(props, interactionMode) {
       ...presentationFrameProps(props.chart),
       "data-chart-interaction-mode": interactionMode,
     }, view);
-    return zoomEnabled
+    return chartZoom && !typedStaticImage
       ? React.createElement(ZoomGuard, null, framedView)
       : framedView;
   } catch {

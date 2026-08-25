@@ -929,6 +929,26 @@ export default function App() {
   async function commitStaticPanel(prepared) {
     const controller = ensureDashboardCommitController();
     const previousDashboard = controller.getCurrent();
+    if (hasStagedStaticImageAsset(prepared)) {
+      const result = await commitStaticPanelTransaction(prepared, {
+        controller,
+        commitPrepared: (transaction) => controller.commitPreparedWith(
+          transaction,
+          async (candidate) => candidate,
+        ),
+      });
+      const sessionDashboard = withRuntimeDashboardProjection(
+        result.dashboard,
+        dashboardRef.current,
+      );
+      lastDashboardPersistenceRef.current = false;
+      reportPersistence("dashboard", false, SESSION_ONLY_MESSAGES.dashboard);
+      dashboardRef.current = sessionDashboard;
+      setDashboard(sessionDashboard);
+      setError(null);
+      setOperationError("");
+      return { ...result, dashboard: sessionDashboard };
+    }
     const result = await commitStaticPanelTransaction(prepared, {
       controller,
     });
@@ -1379,6 +1399,21 @@ function configurationForPortableUse(dashboard) {
     ...portableDashboard
   } = dashboard;
   return structuredClone(portableDashboard);
+}
+
+function hasStagedStaticImageAsset(prepared) {
+  return Object.values(prepared?.candidateDashboard?.assets ?? {})
+    .some((entry) => entry?.storageState === "staged");
+}
+
+function withRuntimeDashboardProjection(portableDashboard, currentDashboard) {
+  const projected = structuredClone(portableDashboard);
+  for (const key of ["loadedData", "dataSourceStates", "chartDataStates"]) {
+    if (currentDashboard && Object.hasOwn(currentDashboard, key)) {
+      projected[key] = structuredClone(currentDashboard[key]);
+    }
+  }
+  return projected;
 }
 
 function requireChartAuthoringPayload(payload) {

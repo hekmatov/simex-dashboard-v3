@@ -114,6 +114,89 @@ test("dirty cancel Keep preserves the complete draft and Discard restores pair, 
   assert.equal(isStaticContentDraftDirty(discarded), false);
 });
 
+test("Image replacement resets geometry, retains alt for review, and remains undoable until Save", () => {
+  const savedSource = {
+    kind: "staticImage",
+    sourceVersion: 1,
+    revision: 4,
+    origin: { kind: "url", url: "https://example.test/old.png" },
+    alt: "Old response map",
+    decorative: false,
+    fit: "cover",
+    crop: { x: 100, y: 100, width: 700, height: 700 },
+    rotation: 90,
+  };
+  let draft = createStaticContentDraft({
+    mode: "edit",
+    panel: { id: "image-panel", typeId: "image", title: "Response map", sourceId: "image-source" },
+    source: savedSource,
+    destination: { pageId: "page-a", sectionId: "section-a" },
+  });
+  draft = reduceStaticContentDraft(draft, {
+    type: "replaceImage",
+    origin: { kind: "asset", assetId: "asset-new" },
+    manifestEntry: {
+      mediaType: "image/png",
+      byteLength: 48,
+      width: 8,
+      height: 6,
+      sha256: "a".repeat(64),
+      storageState: "staged",
+    },
+  });
+  assert.deepEqual(draft.source.crop, { x: 0, y: 0, width: 1000, height: 1000 });
+  assert.equal(draft.source.rotation, 0);
+  assert.equal(draft.source.fit, "contain");
+  assert.equal(draft.source.alt, "Old response map");
+  assert.equal(draft.imageEditing.altReviewRequired, true);
+  assert.equal(draft.assets["asset-new"].storageState, "staged");
+
+  const undone = reduceStaticContentDraft(draft, { type: "undoImageReplacement" });
+  assert.deepEqual(undone.source, savedSource);
+  assert.deepEqual(undone.assets, {});
+  assert.equal(undone.imageEditing.altReviewRequired, false);
+});
+
+test("decorative Image authoring preserves hidden authored alt for undo while runtime alt stays empty", () => {
+  let draft = createStaticContentDraft({
+    contentTypeId: "image",
+    panel: { id: "image-panel", typeId: "image", title: "Response map", sourceId: "image-source" },
+    source: { kind: "staticImage", origin: { kind: "url", url: "https://example.test/map.png" }, alt: "Response map" },
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    stage: "content",
+  });
+  draft = reduceStaticContentDraft(draft, { type: "setImageDecorative", decorative: true });
+  assert.equal(draft.source.decorative, true);
+  assert.equal(draft.source.alt, "");
+  assert.equal(draft.imageEditing.preservedAlt, "Response map");
+  draft = reduceStaticContentDraft(draft, { type: "setImageDecorative", decorative: false });
+  assert.equal(draft.source.decorative, false);
+  assert.equal(draft.source.alt, "Response map");
+});
+
+test("Reset image changes only saved transform metadata in the draft", () => {
+  let draft = createStaticContentDraft({
+    contentTypeId: "image",
+    panel: { id: "image-panel", typeId: "image", title: "Response map", sourceId: "image-source" },
+    source: {
+      kind: "staticImage",
+      origin: { kind: "url", url: "https://example.test/map.png" },
+      alt: "Response map",
+      fit: "cover",
+      crop: { x: 100, y: 200, width: 600, height: 500 },
+      rotation: 270,
+    },
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    stage: "content",
+  });
+  draft = reduceStaticContentDraft(draft, { type: "resetImage" });
+  assert.deepEqual(draft.source.origin, { kind: "url", url: "https://example.test/map.png" });
+  assert.equal(draft.source.alt, "Response map");
+  assert.deepEqual(draft.source.crop, { x: 0, y: 0, width: 1000, height: 1000 });
+  assert.equal(draft.source.rotation, 0);
+  assert.equal(draft.source.fit, "contain");
+});
+
 test("static draft revision advances only for authored changes", () => {
   const initial = createStaticContentDraft({
     destination: { pageId: "page-a", sectionId: "section-a" },
@@ -191,9 +274,13 @@ test("the routed wizard uses a real form and keeps Preview & add free of Image a
   }));
   assert.match(contentHtml, /<form/);
   assert.match(contentHtml, /Alternative text/);
-  assert.match(contentHtml, /Rotation/);
+  assert.match(contentHtml, /Rotate left/);
+  assert.match(contentHtml, /Rotate right/);
   assert.match(contentHtml, /Fit/);
   assert.match(contentHtml, /Crop x/);
+  assert.match(contentHtml, /type="file"/);
+  assert.match(contentHtml, /data-image-crop-preview/);
+  assert.ok(contentHtml.indexOf("data-image-crop-preview") < contentHtml.indexOf("data-image-guided-sections"));
 
   const previewHtml = renderToStaticMarkup(React.createElement(wizardModule.StaticContentWizard, {
     open: true,

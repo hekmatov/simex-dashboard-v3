@@ -77,12 +77,14 @@ export default function SceneViewCompositionGrid({
               canonicalPlotId={chart.id}
               renderContext={{
                 sources: dashboard.dataSources ?? {},
+                assets: dashboard.assets ?? {},
                 mapName: chart.presentation?.map?.geoSource ?? chart.id,
                 accessibilityEnabled,
               }}
               timeContext={timeContextForChart(chart.id)}
               timeContextAuthority={timeContextAuthority}
               interactionMode="active"
+              surface="view"
             />
           </section>
         );
