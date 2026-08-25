@@ -28,10 +28,10 @@ export function providerKindForDescriptor(descriptor) {
 }
 
 export function isGeoJsonDescriptor(descriptor) {
-  return descriptor?.kind === "geojson" || (
+  return Boolean(descriptor?.kind === "geojson" || (
     descriptor?.kind === "dataset"
     && descriptor?.type === "uploadedGeoJson"
-  );
+  ));
 }
 
 export function normalizeSourceRequest(

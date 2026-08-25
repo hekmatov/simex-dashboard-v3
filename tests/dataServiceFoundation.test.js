@@ -542,6 +542,6 @@ test("portable GeoJSON is validated with its legacy label before cloning", async
       descriptor: { kind: "geojson", path: "data/regions.geojson" },
       portableSource: { kind: "geojson", data: malformedPayload },
     }),
-    /Portable data source "regions" GeoJSON feature 0 geometry coordinates must be a position of finite numbers/,
+    /Portable data source "regions" GeoJSON Position must contain at least two finite numbers/,
   );
 });

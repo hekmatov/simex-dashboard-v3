@@ -17,6 +17,7 @@ import { createDataService, createSourceCache } from "../data/dataService.js";
 import { createProviderRegistry } from "../data/providerRegistry.js";
 import { loadCsv, parseCsvText } from "./loadCsv.js";
 import { validateStaticSource } from "../static-content/staticSourceSchema.js";
+import { validateGeoJson as validateBoundedGeoJson } from "./geoJsonValidation.js";
 
 const dashboardSourceCache = createSourceCache();
 const SOURCE_KINDS = new Set(["csv", "geojson"]);
@@ -116,32 +117,6 @@ const GEOGRAPHIC_HINTS = new Set([
 ]);
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
-const GEOJSON_GEOMETRY_TYPES = new Set([
-  "Point",
-  "MultiPoint",
-  "LineString",
-  "MultiLineString",
-  "Polygon",
-  "MultiPolygon",
-]);
-const GEOJSON_FEATURE_COLLECTION_KEYS = new Set(["bbox", "features", "type"]);
-const GEOJSON_FEATURE_KEYS = new Set([
-  "bbox",
-  "geometry",
-  "id",
-  "properties",
-  "type",
-]);
-const GEOJSON_COORDINATE_GEOMETRY_KEYS = new Set([
-  "bbox",
-  "coordinates",
-  "type",
-]);
-const GEOJSON_COLLECTION_GEOMETRY_KEYS = new Set([
-  "bbox",
-  "geometries",
-  "type",
-]);
 
 export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
   const v4 = dashboard?.configVersion === 5
@@ -275,7 +250,7 @@ export async function loadDashboardConfig(
     profileDataset,
     fetchJson,
     sourceUrl,
-    validateGeoJson,
+    validateGeoJson: validateBoundedGeoJson,
   }));
   const dataService = createDataService({
     dataSources: tabularDataSources,
@@ -356,7 +331,7 @@ export async function loadDashboardConfigProgressively(
     profileDataset,
     fetchJson,
     sourceUrl,
-    validateGeoJson,
+    validateGeoJson: validateBoundedGeoJson,
   }));
   const dataService = createDataService({
     dataSources: tabularDataSources,
@@ -723,25 +698,14 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
 }
 
 export function validateGeoJson(value, description = "GeoJSON source") {
-  const entries = plainDataEntries(value, description);
-  rejectUnknownEntries(
-    entries,
-    GEOJSON_FEATURE_COLLECTION_KEYS,
-    `${description} FeatureCollection`,
-  );
-  if (entryValue(entries, "type") !== "FeatureCollection") {
-    throw new Error(`${description} must be a GeoJSON FeatureCollection.`);
+  const result = validateBoundedGeoJson(value);
+  if (!result.schema.ok) {
+    throw new Error(`${description} ${result.schema.errors[0].message}`);
   }
-  validateGeoJsonBbox(entryValue(entries, "bbox"), `${description} bbox`);
-  const features = denseDataArray(
-    entryValue(entries, "features"),
-    `${description} features`,
-  );
-  if (features.length === 0) {
-    throw new Error(`${description} features cannot be empty.`);
-  }
-  for (const [index, feature] of features.entries()) {
-    validateGeoJsonFeature(feature, `${description} feature ${index}`);
+  if (result.admission?.status === "rejected") {
+    throw new Error(
+      `${description} exceeds GeoJSON admission limits: ${result.admission.violations.join(", ")}.`,
+    );
   }
   return value;
 }
@@ -996,188 +960,6 @@ function validateColumnName(value, description) {
   ) {
     throw new Error(`${description} is invalid.`);
   }
-}
-
-function validateGeoJsonFeature(feature, description) {
-  const entries = plainDataEntries(feature, description);
-  rejectUnknownEntries(entries, GEOJSON_FEATURE_KEYS, `${description} Feature`);
-  if (entryValue(entries, "type") !== "Feature") {
-    throw new Error(`${description} must have GeoJSON type "Feature".`);
-  }
-  validateGeoJsonBbox(entryValue(entries, "bbox"), `${description} bbox`);
-  const id = entryValue(entries, "id");
-  if (
-    id !== undefined
-    && typeof id !== "string"
-    && !(typeof id === "number" && Number.isFinite(id))
-  ) {
-    throw new Error(`${description} id must be a string or finite number.`);
-  }
-  const properties = entryValue(entries, "properties");
-  if (properties !== null) {
-    validateJsonObject(properties, `${description} properties`);
-  }
-  const geometry = entryValue(entries, "geometry");
-  if (geometry !== null) validateGeoJsonGeometry(geometry, `${description} geometry`);
-}
-
-function validateGeoJsonGeometry(geometry, description) {
-  const entries = plainDataEntries(geometry, description);
-  const type = entryValue(entries, "type");
-  if (type === "GeometryCollection") {
-    rejectUnknownEntries(
-      entries,
-      GEOJSON_COLLECTION_GEOMETRY_KEYS,
-      `${description} GeometryCollection`,
-    );
-    validateGeoJsonBbox(entryValue(entries, "bbox"), `${description} bbox`);
-    const geometries = denseDataArray(
-      entryValue(entries, "geometries"),
-      `${description} geometries`,
-    );
-    if (geometries.length === 0) {
-      throw new Error(`${description} geometries cannot be empty.`);
-    }
-    geometries.forEach((entry, index) => (
-      validateGeoJsonGeometry(entry, `${description} geometry ${index}`)
-    ));
-    return;
-  }
-  if (!GEOJSON_GEOMETRY_TYPES.has(type)) {
-    throw new Error(`${description} has an unsupported GeoJSON geometry type.`);
-  }
-  rejectUnknownEntries(
-    entries,
-    GEOJSON_COORDINATE_GEOMETRY_KEYS,
-    `${description} ${type}`,
-  );
-  validateGeoJsonBbox(entryValue(entries, "bbox"), `${description} bbox`);
-  const coordinates = entryValue(entries, "coordinates");
-  switch (type) {
-    case "Point":
-      validatePosition(coordinates, `${description} coordinates`);
-      break;
-    case "MultiPoint":
-      validatePositions(coordinates, `${description} coordinates`, 1);
-      break;
-    case "LineString":
-      validateLineString(coordinates, `${description} coordinates`);
-      break;
-    case "MultiLineString":
-      validateMultiLineString(coordinates, `${description} coordinates`);
-      break;
-    case "Polygon":
-      validatePolygon(coordinates, `${description} coordinates`);
-      break;
-    case "MultiPolygon":
-      validateMultiPolygon(coordinates, `${description} coordinates`);
-      break;
-    default:
-      throw new Error(`${description} has an unsupported GeoJSON geometry type.`);
-  }
-}
-
-function validateGeoJsonBbox(value, description) {
-  if (value === undefined) return;
-  const coordinates = denseDataArray(value, description);
-  if (
-    coordinates.length < 4
-    || coordinates.length % 2 !== 0
-    || coordinates.some((entry) => (
-      typeof entry !== "number" || !Number.isFinite(entry)
-    ))
-  ) {
-    throw new Error(`${description} must contain finite coordinate bounds.`);
-  }
-}
-
-function validatePosition(value, description) {
-  const position = denseDataArray(value, description);
-  if (
-    position.length < 2
-    || position.some((entry) => (
-      typeof entry !== "number" || !Number.isFinite(entry)
-    ))
-  ) {
-    throw new Error(`${description} must be a position of finite numbers.`);
-  }
-  return position;
-}
-
-function validatePositions(value, description, minimum) {
-  const positions = denseDataArray(value, description);
-  if (positions.length < minimum) {
-    throw new Error(`${description} must contain at least ${minimum} positions.`);
-  }
-  return positions.map((entry, index) => (
-    validatePosition(entry, `${description} position ${index}`)
-  ));
-}
-
-function validateLineString(value, description) {
-  validatePositions(value, description, 2);
-}
-
-function validateMultiLineString(value, description) {
-  const lines = denseDataArray(value, description);
-  if (lines.length === 0) {
-    throw new Error(`${description} must contain at least one line string.`);
-  }
-  lines.forEach((line, index) => (
-    validateLineString(line, `${description} line string ${index}`)
-  ));
-}
-
-function validateLinearRing(value, description) {
-  const positions = validatePositions(value, description, 4);
-  const first = positions[0];
-  const last = positions[positions.length - 1];
-  if (
-    first.length !== last.length
-    || first.some((coordinate, index) => coordinate !== last[index])
-  ) {
-    throw new Error(`${description} must be closed across every dimension.`);
-  }
-}
-
-function validatePolygon(value, description) {
-  const rings = denseDataArray(value, description);
-  if (rings.length === 0) {
-    throw new Error(`${description} must contain at least one linear ring.`);
-  }
-  rings.forEach((ring, index) => (
-    validateLinearRing(ring, `${description} linear ring ${index}`)
-  ));
-}
-
-function validateMultiPolygon(value, description) {
-  const polygons = denseDataArray(value, description);
-  if (polygons.length === 0) {
-    throw new Error(`${description} must contain at least one polygon.`);
-  }
-  polygons.forEach((polygon, index) => (
-    validatePolygon(polygon, `${description} polygon ${index}`)
-  ));
-}
-
-function validateJsonObject(value, description) {
-  for (const [key, entry] of plainDataEntries(value, description)) {
-    if (DANGEROUS_KEYS.has(key)) {
-      throw new Error(`${description} contains unsafe property "${key}".`);
-    }
-    validateJsonValue(entry, `${description}.${key}`);
-  }
-}
-
-function validateJsonValue(value, description) {
-  if (isJsonScalar(value)) return;
-  if (Array.isArray(value)) {
-    denseDataArray(value, description).forEach((entry, index) => (
-      validateJsonValue(entry, `${description} ${index}`)
-    ));
-    return;
-  }
-  validateJsonObject(value, description);
 }
 
 function validateOptionalSourceMetadata(sourceId, entries) {

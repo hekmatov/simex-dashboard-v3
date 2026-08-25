@@ -2,12 +2,12 @@
 
 **Date:** 2026-08-25
 **Decision status:** The calibration evidence at prerequisite HEAD `c28b59d` remains accepted. Its former ten-independent-metric admission interpretation is superseded by the user-directed lean amendment below. The four-gate policy in this record is the current governing design direction.
-**Implementation status:** Planning evidence only. The limits authority, UI, transactions, and SCM-S15 remain proposed, unimplemented, and not verified.
+**Implementation status:** Task 2 implements and deterministically verifies the bounded authority, canonical summary projection, and current loader/provider delegation. Manager composition, replacement/publication transactions, mounted preview/runtime evidence, and SCM-S15 real-use remain proposed and not verified.
 **Spike:** `.planning/spikes/001-geojson-limit-calibration/README.md`
 
 ## Decision
 
-The final implementation plan must centralize exactly four resource-admission checks in proposed `src/lib/geoJsonValidation.js`. That module owns the ordered frozen `GEOJSON_LIMITS` table and the sole importable derived key list, `SOURCE_GEOJSON_LIMIT_KEYS=Object.freeze(Object.keys(GEOJSON_LIMITS))`; test fixtures import it and never define a duplicate authority. Current `src/lib/loadDashboard.js::validateGeoJson` becomes a consumer rather than retaining a second table. Schema validity, direct-map compatibility, diagnostic information, and runtime scheduling remain separately typed outcomes.
+The implementation centralizes exactly four resource-admission checks in `src/lib/geoJsonValidation.js`. That module owns the ordered frozen `GEOJSON_LIMITS` table and the sole importable derived key list, `SOURCE_GEOJSON_LIMIT_KEYS=Object.freeze(Object.keys(GEOJSON_LIMITS))`; test fixtures import it and never define a duplicate authority. Current `src/lib/loadDashboard.js::validateGeoJson` is a consumer rather than retaining a second table. Schema validity, direct-map compatibility, diagnostic information, and runtime scheduling remain separately typed outcomes.
 
 For per-source limits, **normal** means every dimension is below its warning threshold; **warn** means at least one dimension reaches its warning threshold while none reaches a hard cap; **reject** means any dimension reaches a hard cap. Rejection occurs before durable commit and leaves the previous source/package/dashboard unchanged.
 
@@ -144,4 +144,4 @@ The raw evidence preserves historical `parts`, `rings`, source-union `propertyKe
 
 ## Planning consequence
 
-The V3 Design master accepted `c28b59d` as historical calibration evidence; the user subsequently superseded its ten-metric policy interpretation with this lean four-gate amendment. No production task or test may restore an obsolete independent gate or substitute different four-gate constants without a recorded decision amendment. This design correction does not promote SCM-S15 or any other amendment row: production remains proposed, unimplemented, and not verified.
+The V3 Design master accepted `c28b59d` as historical calibration evidence; the user subsequently superseded its ten-metric policy interpretation with this lean four-gate amendment. No production task or test may restore an obsolete independent gate or substitute different four-gate constants without a recorded decision amendment. Task 2 now implements the engine authority and current delegation without promoting manager composition, transactions, mounted real-use, or the complete SCM-S15 row.

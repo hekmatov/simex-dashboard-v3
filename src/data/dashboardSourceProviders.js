@@ -51,7 +51,8 @@ export function createDashboardSourceProviders({
     {
       kind: "uploadedGeoJson",
       async load({ sourceId, descriptor }) {
-        validateGeoJson(
+        requireValidGeoJson(
+          validateGeoJson,
           descriptor.geoJson,
           `Uploaded GeoJSON source "${sourceId}"`,
         );
@@ -75,7 +76,11 @@ export function createDashboardSourceProviders({
           sourceUrl(descriptor.path),
           `data file: ${descriptor.path}`,
         );
-        validateGeoJson(data, `Data source "${sourceId}" GeoJSON`);
+        requireValidGeoJson(
+          validateGeoJson,
+          data,
+          `Data source "${sourceId}" GeoJSON`,
+        );
         return { data };
       },
     },
@@ -92,9 +97,23 @@ function requirePortableKind(sourceId, portableSource, expectedKind) {
 
 function portableGeoJson(sourceId, portableSource, validateGeoJson) {
   requirePortableKind(sourceId, portableSource, "geojson");
-  validateGeoJson(
+  requireValidGeoJson(
+    validateGeoJson,
     portableSource.data,
     `Portable data source "${sourceId}" GeoJSON`,
   );
   return structuredClone(portableSource.data);
+}
+
+function requireValidGeoJson(validateGeoJson, value, description) {
+  const result = validateGeoJson(value, description);
+  if (!result || typeof result !== "object" || !result.schema) return;
+  if (!result.schema.ok) {
+    throw new Error(`${description} ${result.schema.errors[0].message}`);
+  }
+  if (result.admission?.status === "rejected") {
+    throw new Error(
+      `${description} exceeds GeoJSON admission limits: ${result.admission.violations.join(", ")}.`,
+    );
+  }
 }

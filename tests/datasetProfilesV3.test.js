@@ -930,13 +930,6 @@ test("GeoJSON validation enforces type-specific coordinate nesting and minima", 
     },
     { type: "Polygon", coordinates: [ring] },
     { type: "MultiPolygon", coordinates: [[ring], [ring]] },
-    {
-      type: "GeometryCollection",
-      geometries: [
-        { type: "Point", coordinates: [0, 0] },
-        { type: "LineString", coordinates: [[0, 0], [1, 1]] },
-      ],
-    },
   ]) {
     assert.doesNotThrow(() => validateGeoJson(featureCollection(
       geometry,
@@ -975,6 +968,13 @@ test("GeoJSON validation enforces type-specific coordinate nesting and minima", 
     { type: "MultiPolygon", coordinates: [ring] },
     { type: "MultiPolygon", coordinates: [] },
     { type: "GeometryCollection", geometries: [] },
+    {
+      type: "GeometryCollection",
+      geometries: [
+        { type: "Point", coordinates: [0, 0] },
+        { type: "LineString", coordinates: [[0, 0], [1, 1]] },
+      ],
+    },
     {
       type: "GeometryCollection",
       geometries: [{ type: "Point", coordinates: [[0, 0]] }],
