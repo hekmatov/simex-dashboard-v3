@@ -14,6 +14,10 @@ import {
 } from "../src/data/dataService.js";
 import { createDashboardSourceProviders } from "../src/data/dashboardSourceProviders.js";
 import { validateGeoJson } from "../src/lib/loadDashboard.js";
+import {
+  GEOJSON_LIMITS,
+  validateGeoJson as validateBoundedGeoJson,
+} from "../src/lib/geoJsonValidation.js";
 
 test("tracked and packaged geography descriptors share the live geography boundary", () => {
   assert.equal(isGeoJsonDescriptor({ kind: "geojson", path: "areas.geojson" }), true);
@@ -422,16 +426,16 @@ test("dashboard providers load tracked, uploaded, inline, and GeoJSON sources", 
       return [{ text }];
     },
     profileDataset: (rows) => ({ rowCount: rows.length, fingerprint: "p".repeat(64) }),
-    fetchJson: async (url) => {
+    fetchText: async (url) => {
       calls.push(["geojson", url]);
-      return {
+      return JSON.stringify({
         type: "FeatureCollection",
         features: [{
           type: "Feature",
           properties: { name: "North" },
           geometry: { type: "Point", coordinates: [4.9, 52.3] },
         }],
-      };
+      });
     },
     sourceUrl: (path) => `/base/${path}`,
     validateGeoJson: (data) => data,
@@ -486,9 +490,9 @@ test("dashboard providers parse the existing portable payload without network ac
     },
     parseCsvText: (text) => [{ text }],
     profileDataset: () => ({ rowCount: 1, fingerprint: "q".repeat(64) }),
-    fetchJson: async () => {
+    fetchText: async () => {
       networkCalls += 1;
-      return {};
+      return "{}";
     },
     sourceUrl: (path) => path,
     validateGeoJson: (data) => data,
@@ -520,7 +524,7 @@ test("portable GeoJSON is validated with its legacy label before cloning", async
     loadCsv: unexpected,
     parseCsvText: unexpected,
     profileDataset: unexpected,
-    fetchJson: unexpected,
+    fetchText: unexpected,
     sourceUrl: (path) => path,
     validateGeoJson,
   }));
@@ -544,4 +548,30 @@ test("portable GeoJSON is validated with its legacy label before cloning", async
     }),
     /Portable data source "regions" GeoJSON Position must contain at least two finite numbers/,
   );
+});
+
+test("tracked GeoJSON rejects the encoded-byte hard boundary before transport parsing", async () => {
+  let parsedTransportCalls = 0;
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv: () => [],
+    parseCsvText: () => [],
+    profileDataset: () => ({}),
+    fetchJson: async () => {
+      parsedTransportCalls += 1;
+      throw new Error("Tracked GeoJSON was parsed before bounded validation.");
+    },
+    fetchText: async () => "x".repeat(GEOJSON_LIMITS.encodedBytes.hardMin),
+    sourceUrl: (path) => path,
+    validateGeoJson: validateBoundedGeoJson,
+  }));
+
+  await assert.rejects(
+    providers.resolve("geojson").load({
+      sourceId: "regions",
+      descriptor: { kind: "geojson", path: "data/regions.geojson" },
+      portableSource: null,
+    }),
+    /exceeds GeoJSON admission limits: encodedBytes/,
+  );
+  assert.equal(parsedTransportCalls, 0);
 });

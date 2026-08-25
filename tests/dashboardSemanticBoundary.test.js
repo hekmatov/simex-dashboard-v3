@@ -419,7 +419,7 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       mutate(value) {
         landing(value).hero = landing(value);
       },
-      error: /cyclic structural reference|Unknown landing hero for page "home" property "hero"/i,
+      error: /Dashboard configuration property "pages" 0 property "landing" property "hero" contains a cyclic structural reference\./,
     },
   };
 
@@ -439,6 +439,16 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       );
     });
   }
+});
+
+test("structural cycle guards allow shared non-cyclic references", async () => {
+  const { dashboard, profiles } = await trackedInputs();
+  const sharedProofPoint = landing(dashboard).proofPoints[0];
+  landing(dashboard).proofPoints[1] = sharedProofPoint;
+  dashboard.datasetProfiles = profiles;
+
+  assert.doesNotThrow(() => validateDashboardConfig(dashboard));
+  assert.doesNotThrow(() => normalizeDashboardSource(dashboard, profiles));
 });
 
 test("runtime loading rejects a dashboard without a migratable version", async () => {

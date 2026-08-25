@@ -289,19 +289,43 @@ function validatePositionValue(value, path, state) {
 function validatePropertyData(properties, path, propertyKeys) {
   const rootEntries = dataEntries(properties, path, "properties");
   for (const [key] of rootEntries) propertyKeys.add(key);
-  const stack = rootEntries.map(([key, value]) => ({ value, path: `${path}.${key}` }));
+  const activePath = new WeakSet();
+  const stack = rootEntries.map(([key, value]) => ({
+    kind: "enter",
+    value,
+    path: `${path}.${key}`,
+  }));
   while (stack.length > 0) {
     const current = stack.pop();
+    if (current.kind === "exit") {
+      activePath.delete(current.value);
+      continue;
+    }
     if (isJsonScalar(current.value)) continue;
+    if (activePath.has(current.value)) {
+      fail(
+        "property-cycle",
+        current.path,
+        "GeoJSON property data cannot contain cyclic references.",
+      );
+    }
+    activePath.add(current.value);
+    stack.push({ kind: "exit", value: current.value });
     if (Array.isArray(current.value)) {
       const values = denseArray(current.value, current.path);
       for (let index = 0; index < values.length; index += 1) {
-        stack.push({ value: values[index], path: `${current.path}[${index}]` });
+        stack.push({
+          kind: "enter",
+          value: values[index],
+          path: `${current.path}[${index}]`,
+        });
       }
       continue;
     }
     const entries = dataEntries(current.value, current.path, "property value");
-    for (const [key, value] of entries) stack.push({ value, path: `${current.path}.${key}` });
+    for (const [key, value] of entries) {
+      stack.push({ kind: "enter", value, path: `${current.path}.${key}` });
+    }
   }
 }
 
@@ -486,7 +510,59 @@ function isUsableJoinValue(value) {
 }
 
 function encodedSize(value) {
-  return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+  const encoder = new TextEncoder();
+  const activePath = new WeakSet();
+  const stack = [{ kind: "value", value }];
+  let bytes = 0;
+  while (stack.length > 0) {
+    const frame = stack.pop();
+    if (frame.kind === "token") {
+      bytes += encoder.encode(frame.value).byteLength;
+      continue;
+    }
+    if (frame.kind === "exit") {
+      activePath.delete(frame.value);
+      continue;
+    }
+    if (frame.value === null || typeof frame.value !== "object") {
+      bytes += encoder.encode(JSON.stringify(frame.value)).byteLength;
+      continue;
+    }
+    if (activePath.has(frame.value)) {
+      fail(
+        "property-cycle",
+        "$",
+        "GeoJSON data cannot contain cyclic references.",
+      );
+    }
+    activePath.add(frame.value);
+    const sequence = [{ kind: "token", value: Array.isArray(frame.value) ? "[" : "{" }];
+    if (Array.isArray(frame.value)) {
+      for (let index = 0; index < frame.value.length; index += 1) {
+        if (index > 0) sequence.push({ kind: "token", value: "," });
+        sequence.push({ kind: "value", value: frame.value[index] });
+      }
+      sequence.push({ kind: "token", value: "]" });
+    } else {
+      const entries = Object.entries(frame.value)
+        .filter(([, entry]) => entry !== undefined);
+      for (let index = 0; index < entries.length; index += 1) {
+        const [key, entry] = entries[index];
+        if (index > 0) sequence.push({ kind: "token", value: "," });
+        sequence.push(
+          { kind: "token", value: JSON.stringify(key) },
+          { kind: "token", value: ":" },
+          { kind: "value", value: entry },
+        );
+      }
+      sequence.push({ kind: "token", value: "}" });
+    }
+    sequence.push({ kind: "exit", value: frame.value });
+    for (let index = sequence.length - 1; index >= 0; index -= 1) {
+      stack.push(sequence[index]);
+    }
+  }
+  return bytes;
 }
 
 function schemaError(code, path, message) {

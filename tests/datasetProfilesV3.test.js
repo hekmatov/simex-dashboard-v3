@@ -599,7 +599,7 @@ test("runtime loading filters fallback extras and fails closed for invalid embed
   );
 });
 
-test("descriptor validation rejects accessors without invoking them", () => {
+test("runtime and descriptor validation reject accessors without invoking them", async () => {
   let invocations = 0;
   const source = {};
   Object.defineProperty(source, "kind", {
@@ -622,6 +622,11 @@ test("descriptor validation rejects accessors without invoking them", () => {
     /data propert/i,
   );
   assert.equal(invocations, 0);
+  await assert.rejects(
+    loadDashboardConfig(sourceLoadingDashboard({ cases: source }), {}),
+    /data propert/i,
+  );
+  assert.equal(invocations, 0);
 
   const dataSources = {};
   Object.defineProperty(dataSources, "cases", {
@@ -633,6 +638,11 @@ test("descriptor validation rejects accessors without invoking them", () => {
   });
   assert.throws(
     () => validateDashboardSourceDescriptors({ dataSources }),
+    /data propert/i,
+  );
+  assert.equal(invocations, 0);
+  await assert.rejects(
+    loadDashboardConfig(sourceLoadingDashboard(dataSources), {}),
     /data propert/i,
   );
   assert.equal(invocations, 0);

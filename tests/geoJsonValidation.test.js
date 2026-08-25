@@ -174,6 +174,42 @@ test("removed historical diagnostics do not reject and the summary stays lean", 
   assert.equal(Object.hasOwn(result.admission.facts, "structuralNodes"), false);
 });
 
+test("deep nested property data is measured without recursive serialization", () => {
+  let nested = { leaf: true };
+  for (let index = 0; index < 20_000; index += 1) nested = { next: nested };
+  const result = validateGeoJson(collection([
+    feature({ type: "Point", coordinates: [0, 0] }, { nested }),
+  ]));
+
+  assert.equal(result.schema.ok, true);
+  assert.equal(result.admission.status, "normal");
+  assert.deepEqual(result.summary.propertyKeys, ["nested"]);
+});
+
+test("shared non-cyclic property data remains admissible", () => {
+  const shared = { label: "shared", values: [1, 2, 3] };
+  const result = validateGeoJson(collection([
+    feature({ type: "Point", coordinates: [0, 0] }, { left: shared, right: shared }),
+  ]));
+
+  assert.equal(result.schema.ok, true);
+  assert.equal(result.admission.status, "normal");
+  assert.deepEqual(result.summary.propertyKeys, ["left", "right"]);
+});
+
+test("cyclic property data returns a typed schema rejection", () => {
+  const cyclic = { label: "cycle" };
+  cyclic.self = cyclic;
+  const result = validateGeoJson(collection([
+    feature({ type: "Point", coordinates: [0, 0] }, { cyclic }),
+  ]));
+
+  assert.equal(result.schema.ok, false);
+  assert.equal(result.schema.errors[0].code, "property-cycle");
+  assert.equal(result.admission, null);
+  assert.equal(result.summary, null);
+});
+
 test("admission warns and rejects only on the calibrated four facts", () => {
   const base = collection([feature({ type: "Point", coordinates: [0, 0] })]);
   assert.equal(inspectGeoJsonAdmission({

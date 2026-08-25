@@ -119,6 +119,7 @@ const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
+  preflightDashboardInput(dashboard);
   const v4 = dashboard?.configVersion === 5
     ? structuredClone(dashboard)
     : migrateDashboardV3ToV4(dashboard);
@@ -248,7 +249,7 @@ export async function loadDashboardConfig(
     loadCsv,
     parseCsvText,
     profileDataset,
-    fetchJson,
+    fetchText,
     sourceUrl,
     validateGeoJson: validateBoundedGeoJson,
   }));
@@ -298,6 +299,46 @@ export async function loadDashboardConfig(
   };
 }
 
+function preflightDashboardInput(dashboard) {
+  const activePath = new WeakSet();
+  const stack = [{
+    kind: "enter",
+    value: dashboard,
+    description: "Dashboard configuration",
+  }];
+
+  while (stack.length > 0) {
+    const frame = stack.pop();
+    if (frame.kind === "exit") {
+      activePath.delete(frame.value);
+      continue;
+    }
+    if (frame.value === null || typeof frame.value !== "object") continue;
+    if (activePath.has(frame.value)) {
+      throw new TypeError(
+        `${frame.description} contains a cyclic structural reference.`,
+      );
+    }
+
+    activePath.add(frame.value);
+    stack.push({ kind: "exit", value: frame.value });
+    const children = Array.isArray(frame.value)
+      ? denseDataArray(frame.value, frame.description).map((value, index) => ({
+        kind: "enter",
+        value,
+        description: `${frame.description} ${index}`,
+      }))
+      : plainDataEntries(frame.value, frame.description).map(([key, value]) => ({
+        kind: "enter",
+        value,
+        description: `${frame.description} property "${key}"`,
+      }));
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      stack.push(children[index]);
+    }
+  }
+}
+
 export async function loadDashboardConfigProgressively(
   dashboard,
   datasetProfiles,
@@ -329,7 +370,7 @@ export async function loadDashboardConfigProgressively(
     loadCsv,
     parseCsvText,
     profileDataset,
-    fetchJson,
+    fetchText,
     sourceUrl,
     validateGeoJson: validateBoundedGeoJson,
   }));
@@ -1018,6 +1059,14 @@ async function fetchJson(url, description) {
     throw new Error(`Could not load ${description}`);
   }
   return response.json();
+}
+
+async function fetchText(url, description) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Could not load ${description}`);
+  }
+  return response.text();
 }
 
 function plainDataEntries(value, description) {

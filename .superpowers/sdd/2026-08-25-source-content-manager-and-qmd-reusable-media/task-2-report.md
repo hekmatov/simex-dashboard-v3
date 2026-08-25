@@ -41,3 +41,15 @@ Fragments count LineString as one, MultiLineString members, Polygon rings, and M
 ## Evidence boundary and residuals
 
 SCM-S15 engine evidence is updated to targeted deterministic passing only. The report does not claim manager UI, package-wide replacement validation, publication/rollback, shared map-budget composition, mounted preview/runtime use, browser geometry, or review cleanliness. Those remain later-task residuals.
+
+## Review fix round
+
+- Corrections BASE: `8e2db75be2506024b46c39fa70512619e0ef6058`
+- Fix commit / HEAD: the commit containing this report, with subject `fix(content): harden bounded GeoJSON loading`
+- Focused RED: 10 tests / 4 pass / 6 fail. The failures exposed tracked transport parsing before admission, recursive size measurement on 20,000-deep property data, runtime normalization before descriptor-safe inspection, the runtime's incidental cycle error, and the first shared-reference fixture's unrelated profile/loading setup. The cycle rejection regression was then added without executing the known non-terminating old path.
+- Focused GREEN: 11 tests / 11 pass / 0 fail, including deep property data, typed cycle rejection, shared-DAG acceptance, tracked pre-parse rejection, runtime accessor safety, exact dashboard cycle errors, and shared dashboard references.
+- Exact Task 2 GREEN: 129 tests / 129 pass / 0 fail / 0 skipped / 0 todo.
+
+The tracked GeoJSON provider now receives raw response text, delegates it to the central four-gate authority, and parses only an accepted payload. Object-input byte measurement and property inspection are iterative and active-path cycle-safe, while repeated references outside the active path remain admissible. Runtime dashboard normalization performs the same descriptor-safe, cycle-safe structural preflight before any version property read or clone. The dashboard semantic-boundary assertion now requires the exact typed cycle-guard message and independently accepts a shared non-cyclic reference.
+
+This bounded correction changed only `src/data/dashboardSourceProviders.js`, `src/lib/geoJsonValidation.js`, `src/lib/loadDashboard.js`, the four focused Task 2 test files, and this report. The parent-owned `progress.md` change was preserved unstaged. No Task 3 behavior, manager work, full suite, build, browser check, composition claim, real-use claim, or review-clean claim was added.

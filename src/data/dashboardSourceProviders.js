@@ -2,7 +2,7 @@ export function createDashboardSourceProviders({
   loadCsv,
   parseCsvText,
   profileDataset,
-  fetchJson,
+  fetchText,
   sourceUrl,
   validateGeoJson,
 }) {
@@ -72,16 +72,16 @@ export function createDashboardSourceProviders({
             ),
           };
         }
-        const data = await fetchJson(
+        const text = await fetchText(
           sourceUrl(descriptor.path),
           `data file: ${descriptor.path}`,
         );
         requireValidGeoJson(
           validateGeoJson,
-          data,
+          text,
           `Data source "${sourceId}" GeoJSON`,
         );
-        return { data };
+        return { data: JSON.parse(text) };
       },
     },
   ];
