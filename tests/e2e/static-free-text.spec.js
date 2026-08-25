@@ -62,6 +62,8 @@ const SAVED_QMD = [
   "```{python echo=true}",
   "print('saved, never executed')",
   "```",
+  "",
+  ...Array.from({ length: 72 }, (_, index) => `- Fullscreen controlled overflow note ${index + 1}`),
 ].join("\n");
 
 test.beforeEach(async ({ request }) => {
@@ -167,7 +169,9 @@ for (const viewport of VIEWPORTS) {
     expect(await page.evaluate(() => window.authoredCodeRan)).toBeUndefined();
     expect(authoredResourceRequests).toEqual([]);
     const buildComposition = await inspectStaticComposition(panel);
+    expect(buildComposition.sourceId).toBe(updated.panel.sourceId);
     expect(buildComposition.sourceRevision).toBe("2");
+    expect(buildComposition.content).toContain("Updated priorities");
     expect(buildComposition.authoringActionCount).toBe(1);
 
     await page.getByLabel("Dashboard mode")
@@ -184,10 +188,23 @@ for (const viewport of VIEWPORTS) {
     await expect(fullscreen).toContainText("Updated priorities");
     await expectInertAuthoredSurface(fullscreen, "Updated priorities");
     const fullscreenComposition = await inspectStaticComposition(fullscreen);
+    expect(fullscreenComposition.sourceId).toBe(viewComposition.sourceId);
     expect(fullscreenComposition.content).toBe(viewComposition.content);
     expect(fullscreenComposition.sourceRevision).toBe(viewComposition.sourceRevision);
     expect(fullscreenComposition.overflowY).toBe("auto");
     expect(fullscreenComposition.authoringActionCount).toBe(0);
+    const fullscreenText = fullscreen.locator(".free-text-chart-view");
+    const beforeFullscreenScroll = await fullscreenText.evaluate((node) => ({
+      scrollHeight: node.scrollHeight,
+      clientHeight: node.clientHeight,
+      scrollTop: node.scrollTop,
+    }));
+    expect(beforeFullscreenScroll.scrollHeight).toBeGreaterThan(beforeFullscreenScroll.clientHeight);
+    await fullscreenText.evaluate((node) => {
+      node.scrollTop = Math.min(240, node.scrollHeight - node.clientHeight);
+    });
+    await expect.poll(() => fullscreenText.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+    expect(await fullscreenText.evaluate((node) => getComputedStyle(node).overflowY)).toBe("auto");
     expect(authoredResourceRequests).toEqual([]);
     await fullscreen.getByRole("button", { name: "Exit focus" }).click();
     await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
@@ -362,6 +379,7 @@ async function inspectStaticComposition(surface) {
     const view = node.querySelector(".free-text-chart-view");
     return {
       content: node.querySelector('[data-portable-qmd-sink="safe-dom"]')?.innerHTML ?? "",
+      sourceId: view?.getAttribute("data-static-source-id") ?? null,
       sourceRevision: view?.getAttribute("data-static-source-revision") ?? null,
       footprint: panel?.getAttribute("data-footprint") ?? null,
       columns: panel ? getComputedStyle(panel).getPropertyValue("--chart-footprint-columns").trim() : null,

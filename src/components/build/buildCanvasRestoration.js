@@ -66,6 +66,26 @@ export function selectedTargetUsability({
   };
 }
 
+export function selectedTargetRevealDecision({
+  targetRect,
+  viewport,
+  attempts = 0,
+  minimumVisibleWidth,
+  minimumVisibleHeight,
+}) {
+  const usability = selectedTargetUsability({
+    targetRect,
+    viewport,
+    minimumVisibleWidth,
+    minimumVisibleHeight,
+  });
+  return {
+    ...usability,
+    shouldScroll: attempts === 0 && !usability.usable,
+    complete: usability.usable,
+  };
+}
+
 export function resolveCanonicalCanvasWidths({ viewMax, buildMax }) {
   const resolvedViewMax = finiteWidth(viewMax);
   return {

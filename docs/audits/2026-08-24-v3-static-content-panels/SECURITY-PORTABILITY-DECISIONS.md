@@ -55,6 +55,8 @@
 - Build is the only authoring-capable surface. Failed-Image Replace/Edit uses the canonical Build selection bridge; View and fullscreen provide Retry plus non-authoring explanation only. Hidden Image viewer actions reveal by hover, focus-within, or explicit touch state without reserving new layout space.
 - Static authoring state is transient. Compression, selection, scroll, and focus restoration do not alter saved panel placement, dashboard v4, bundle v4, authored bytes, or chart config v3. The six-stage Add chart workflow remains separate from the four-stage static workflow.
 - Static types still bypass data providers, playback time, Chrono Groups, and Scenes. Slice 5 does not change or claim Present/Audience protocol descriptors, readiness, reconnect, ordering, passive composition, or Audience failure handling; those remain Slice 6.
+- Fix round 1 changes no security or persistence owner. The fullscreen recovery journey removes and restores the same validated bytes only through the existing content-addressed durable store, then exercises canonical Retry; no test hook or alternate resolver is added to production. The recovered `blob:` URL remains window-local, failures still disclose no raw identity, and strict validation is unchanged.
+- Exact Free-text source ID/revision markers are compared only on the established canonical rendered owner. Arbitrary QMD remains inert safe-DOM data with no sanitizer, executable/resource-loading construct, or new attribute authority. Material target clearance changes only Build reveal timing and does not persist geometry or authoring state.
 
 ## Decision table
 

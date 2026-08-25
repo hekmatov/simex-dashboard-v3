@@ -76,6 +76,59 @@ test("selected target usability distinguishes visible, recoverable, and unusable
   }).recovery, "restore-target");
 });
 
+test("reveal waits for canonical material clearance instead of any viewport intersection", () => {
+  assert.equal(typeof model?.selectedTargetRevealDecision, "function");
+  const viewport = { width: 768, height: 900 };
+  const fullyUsable = model.selectedTargetRevealDecision({
+    targetRect: { top: 120, right: 620, bottom: 420, left: 80 },
+    viewport,
+    attempts: 0,
+  });
+  assert.deepEqual(fullyUsable, {
+    usable: true,
+    recovery: null,
+    visibleWidth: 540,
+    visibleHeight: 300,
+    shouldScroll: false,
+    complete: true,
+  });
+
+  const sliver = model.selectedTargetRevealDecision({
+    targetRect: { top: 120, right: 1167, bottom: 420, left: 767 },
+    viewport,
+    attempts: 0,
+  });
+  assert.equal(sliver.visibleWidth, 1);
+  assert.equal(sliver.shouldScroll, true);
+  assert.equal(sliver.complete, false);
+
+  const partiallyClipped = model.selectedTargetRevealDecision({
+    targetRect: { top: 741, right: 620, bottom: 1041, left: 80 },
+    viewport,
+    attempts: 0,
+  });
+  assert.equal(partiallyClipped.visibleHeight, 159);
+  assert.equal(partiallyClipped.shouldScroll, true);
+  assert.equal(partiallyClipped.complete, false);
+
+  const offscreen = model.selectedTargetRevealDecision({
+    targetRect: { top: 920, right: 620, bottom: 1220, left: 80 },
+    viewport,
+    attempts: 0,
+  });
+  assert.equal(offscreen.visibleHeight, 0);
+  assert.equal(offscreen.shouldScroll, true);
+  assert.equal(offscreen.complete, false);
+
+  const waitingAfterScroll = model.selectedTargetRevealDecision({
+    targetRect: { top: 741, right: 620, bottom: 1041, left: 80 },
+    viewport,
+    attempts: 1,
+  });
+  assert.equal(waitingAfterScroll.shouldScroll, false);
+  assert.equal(waitingAfterScroll.complete, false);
+});
+
 test("Build maximum width is bounded by View and equal effective widths share a breakpoint", () => {
   assert.equal(model.resolveCanonicalCanvasWidths({ viewMax: 1280, buildMax: 1440 }).buildMax, 1280);
   assert.equal(model.responsiveProjectionForWidth(1016), model.responsiveProjectionForWidth(1016));

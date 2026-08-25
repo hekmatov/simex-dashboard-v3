@@ -233,7 +233,31 @@ for (const viewport of VIEWPORTS) {
     await panel.getByRole("button", { name: "Focus chart" }).click();
     const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
     await expect(fullscreen.locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
-    await expect(fullscreen.getByRole("button", { name: "Zoom in" })).toBeAttached();
+    const fullscreenImageView = fullscreen.locator(".chart-image-view");
+    const fullscreenActions = fullscreenImageView.locator(".chart-image-actions");
+    const exitFocus = fullscreen.getByRole("button", { name: "Exit focus" });
+    await page.mouse.move(0, 0);
+    await exitFocus.focus();
+    await expect(fullscreenActions).toHaveCSS("opacity", "0");
+    const fullscreenRestBox = await fullscreenImageView.boundingBox();
+    await fullscreenImageView.hover();
+    await expect(fullscreenActions).toHaveCSS("opacity", "1");
+    expect(await fullscreenImageView.boundingBox()).toEqual(fullscreenRestBox);
+    await page.mouse.move(0, 0);
+    await exitFocus.focus();
+    await expect(fullscreenActions).toHaveCSS("opacity", "0");
+    await fullscreenImageView.getByRole("button", { name: "Zoom in" }).focus();
+    await expect(fullscreenActions).toHaveCSS("opacity", "1");
+    await exitFocus.focus();
+    await expect(fullscreenActions).toHaveCSS("opacity", "0");
+    await fullscreenImageView.evaluate((node) => node.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerType: "touch",
+      pointerId: 82,
+      button: 0,
+    })));
+    await expect(fullscreenImageView).toHaveClass(/chart-image-view--touch-actions/);
+    await expect(fullscreenActions).toHaveCSS("opacity", "1");
     const fullscreenComposition = await inspectImageComposition(fullscreen);
     expect(fullscreenComposition.sourceId).toBe(viewComposition.sourceId);
     expect(fullscreenComposition.sourceRevision).toBe(viewComposition.sourceRevision);
@@ -242,7 +266,37 @@ for (const viewport of VIEWPORTS) {
     expect(fullscreenComposition.rotationMatrix).toBe(viewComposition.rotationMatrix);
     expect(fullscreenComposition.fit).toBe(viewComposition.fit);
     expect(fullscreenComposition.authoringActionCount).toBe(0);
+    const fullscreenSavedGeometry = await savedImageGeometry(fullscreenImageView);
+    await fullscreenImageView.getByRole("button", { name: "Zoom in" }).click();
+    await expect(fullscreenImageView).toHaveAttribute("data-image-zoom-scale", "1.25");
+    expect(await savedImageGeometry(fullscreenImageView)).toEqual(fullscreenSavedGeometry);
+    await fullscreenImageView.getByRole("button", { name: "Reset view" }).click();
+    await expect(fullscreenImageView).toHaveAttribute("data-image-zoom-scale", "1");
+    expect(await savedImageGeometry(fullscreenImageView)).toEqual(fullscreenSavedGeometry);
     await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+    await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
+
+    const siblingPanel = page.locator(
+      `[data-panel-id]:not([data-panel-id="${panelId}"])[data-canonical-panel-id]`,
+    ).first();
+    await expect(siblingPanel).toBeAttached();
+    const failedAssetId = await removeDurableImageAsset(page, title);
+    expect(failedAssetId).toMatch(/^asset-[0-9a-f]{64}$/);
+    await panel.hover();
+    await panel.getByRole("button", { name: "Focus chart" }).click();
+    const failedFullscreen = page.getByRole("dialog", { name: "Focused chart" });
+    await expect(failedFullscreen.locator('[data-static-failure="asset-read-failed"]')).toBeVisible();
+    await expect(failedFullscreen.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(failedFullscreen.getByRole("button", { name: "Replace" })).toHaveCount(0);
+    await expect(failedFullscreen.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
+    await expect(siblingPanel).toBeAttached();
+    await restoreDurableImageAsset(page, failedAssetId);
+    await failedFullscreen.getByRole("button", { name: "Retry" }).click();
+    const recoveredFullscreenImage = failedFullscreen.locator('img[alt="Updated clinic readiness map"]');
+    await expect(recoveredFullscreenImage).toBeVisible();
+    await expect(recoveredFullscreenImage).toHaveAttribute("src", /^blob:/);
+    await expect(siblingPanel).toBeAttached();
+    await failedFullscreen.getByRole("button", { name: "Exit focus" }).click();
     await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
@@ -565,4 +619,48 @@ async function inspectImageComposition(surface) {
       authoringActionCount: node.querySelectorAll(".panel-actions").length,
     };
   });
+}
+
+async function savedImageGeometry(imageView) {
+  return imageView.locator(".chart-image-saved-geometry").evaluate((node) => ({
+    viewBox: node.getAttribute("viewBox"),
+    fit: node.getAttribute("preserveAspectRatio"),
+    rotation: node.querySelector(".chart-image-saved-rotation")?.getAttribute("transform") ?? null,
+  }));
+}
+
+async function removeDurableImageAsset(page, title) {
+  return page.evaluate(async ({ key, expectedTitle }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const panel = dashboard.pages.flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find((candidate) => candidate.title === expectedTitle);
+    const source = dashboard.dataSources[panel.sourceId];
+    const assetId = source.origin.assetId;
+    const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
+    const asset = await store.read(assetId);
+    globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__ = asset;
+    await store.remove(assetId);
+    return assetId;
+  }, { key: STORAGE_KEY, expectedTitle: title });
+}
+
+async function restoreDurableImageAsset(page, expectedAssetId) {
+  const restoredAssetId = await page.evaluate(async () => {
+    const asset = globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__;
+    const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
+    const transactionId = `fullscreen-retry-${Date.now()}`;
+    const staged = await store.stage({
+      bytes: asset.bytes,
+      mediaType: asset.mediaType,
+      width: asset.width,
+      height: asset.height,
+      transactionId,
+    });
+    await store.commit(staged.assetId, { transactionId });
+    delete globalThis.__SIMEX_REMOVED_FULLSCREEN_ASSET__;
+    return staged.assetId;
+  });
+  expect(restoredAssetId).toBe(expectedAssetId);
 }

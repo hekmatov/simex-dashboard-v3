@@ -65,6 +65,10 @@ test("canonical ChartView routes typed Free text without rows or playback projec
   assert.equal(await active.locator(".portable-qmd-table-scroll").getAttribute("tabindex"), "0");
   assert.equal(await active.locator(".portable-qmd-code-scroll").getAttribute("tabindex"), "0");
   assert.equal(await active.locator(".free-text-chart-view__content").getAttribute("data-portable-qmd-sink"), "safe-dom");
+  assert.equal(await active.locator(".free-text-chart-view").getAttribute("data-static-source-id"), "situation-source");
+  assert.equal(await passive.locator(".free-text-chart-view").getAttribute("data-static-source-id"), "situation-source");
+  assert.equal(await active.locator(".free-text-chart-view").getAttribute("data-static-source-revision"), "1");
+  assert.equal(await passive.locator(".free-text-chart-view").getAttribute("data-static-source-revision"), "1");
   assert.equal(await active.locator("[data-chart-state]").count(), 0);
   assert.equal(await active.locator('[data-chart-interaction-mode="active"]').count(), 1);
   assert.equal(await passive.locator('[data-chart-interaction-mode="passive"]').count(), 1);

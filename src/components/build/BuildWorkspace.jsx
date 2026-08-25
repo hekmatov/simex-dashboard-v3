@@ -7,6 +7,7 @@ import BuildStructureRail from "./BuildStructureRail.jsx";
 import {
   captureBuildCanvasState,
   restoreBuildCanvasState,
+  selectedTargetRevealDecision,
   selectedTargetUsability,
 } from "./buildCanvasRestoration.js";
 import {
@@ -290,11 +291,12 @@ export default function BuildWorkspace({
         return;
       }
       const rect = target.getBoundingClientRect();
-      const intersectsViewport = rect.bottom > 0
-        && rect.right > 0
-        && rect.top < window.innerHeight
-        && rect.left < window.innerWidth;
-      if (attempts === 0 && !intersectsViewport) {
+      const revealDecision = selectedTargetRevealDecision({
+        targetRect: rect,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        attempts,
+      });
+      if (revealDecision.shouldScroll) {
         target.scrollIntoView({
           block: selection.kind === "chart" ? "center" : "start",
           inline: "nearest",
@@ -302,7 +304,7 @@ export default function BuildWorkspace({
         });
       }
       attempts += 1;
-      if (intersectsViewport) {
+      if (revealDecision.complete) {
         onRevealComplete?.(id);
         return;
       }

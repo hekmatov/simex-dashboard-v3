@@ -30,6 +30,8 @@ test("Build and View route one saved Image model through equal content and footp
   assert.equal(attribute(buildImage, "data-footprint"), attribute(viewImage, "data-footprint"));
   assert.equal(styleProperty(buildImage, "--chart-footprint-columns"), styleProperty(viewImage, "--chart-footprint-columns"));
   assert.equal(styleProperty(buildImage, "--chart-footprint-rows"), styleProperty(viewImage, "--chart-footprint-rows"));
+  assert.equal(attribute(buildImage, "data-static-source-id"), "image-source");
+  assert.equal(attribute(buildImage, "data-static-source-id"), attribute(viewImage, "data-static-source-id"));
   assert.equal(attribute(buildImage, "data-static-source-revision"), attribute(viewImage, "data-static-source-revision"));
   assert.equal(attribute(buildImage, "src"), attribute(viewImage, "src"));
   assert.equal(attribute(buildImage, "alt"), attribute(viewImage, "alt"));
