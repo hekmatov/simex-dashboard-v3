@@ -25,7 +25,7 @@ Fix round: 1/5 — 2 Important and 1 Minor findings addressed, 0 open; the tempo
 4. Composition RED lacked canonical source/revision evidence on the rendered Image/Free-text owners. GREEN adds data markers to those existing owner nodes and proves the same saved Image model, source revision, footprint, and fullscreen dispatch.
 5. Restoration RED had no unit-level return-state authority for document scroll and the initiating control. GREEN adds capture/restore functions to `UnitOrbit`, restoring scroll before focus with `preventScroll`.
 6. Initial production focus RED was a test-selector error: the modal is named by `aria-labelledby`, not `aria-label`. Correcting the semantic selector made focus-clearance assertions inspect the real dialog; no product change resulted.
-7. The full three-viewport route reached 7/8 with only Free-text 768×900 failing by two document pixels after Discard. Trace evidence showed `BuildWorkspace` smooth-scrolled an already visible focused target after `UnitOrbit` captured its return snapshot. GREEN skips the redundant scroll for visible targets; the focused 768×900 production rerun passed with exact scroll, selection, focus, and geometry restoration.
+7. The full three-viewport route reached 7/8 with only Free-text 768×900 failing by two document pixels after Discard. Trace evidence showed `BuildWorkspace` smooth-scrolled a focused target that already met the canonical 240×160 material-usability threshold after `UnitOrbit` captured its return snapshot. GREEN skips the redundant scroll only for materially usable targets; the focused 768×900 production rerun passed with exact scroll, selection, focus, and geometry restoration.
 
 ## Fix round 1/5 strict RED → GREEN
 

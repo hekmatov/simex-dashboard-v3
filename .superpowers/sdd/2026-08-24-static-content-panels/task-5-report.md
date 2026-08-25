@@ -22,7 +22,7 @@ No durable v4 owner, Image validation boundary, Free-text safe-DOM boundary, six
 - `DisplayedChartGrid.findChart` locates that same model for `FullscreenDisplay`, which continues through `ChartView`. Image fullscreen stays active; Free-text fullscreen owns its internal scroll.
 - `ChartPanel.requestEdit` is the single Build edit bridge for ordinary Edit and failed-Image Replace/Edit. View/fullscreen have no authoring callback.
 - `ChartView` owns an Image retry nonce. Every Retry begins a new effect-owned attempt while preserving per-attempt release on replay, supersession, and unmount.
-- `UnitOrbit` owns return-state capture/restore. `BuildWorkspace` reveals only offscreen targets, avoiding an unnecessary smooth-scroll race for already visible panels. `modes.css` remains the sole transient Build compression owner.
+- `UnitOrbit` owns return-state capture/restore. `BuildWorkspace` avoids scrolling targets only when at least the canonical 240×160 area is visible; materially unusable clipped or offscreen targets scroll once and wait for usable clearance. `modes.css` remains the sole transient Build compression owner.
 - The canonical Free-text and Image content nodes expose source/revision evidence markers. These markers report existing saved identity and do not create another data or render contract.
 - `buildCanvasRestoration.js::selectedTargetRevealDecision` owns reveal completion through the existing 240×160 `selectedTargetUsability` contract. `BuildWorkspace` scrolls only the first unusable frame and waits until the target is materially usable.
 
@@ -34,7 +34,7 @@ No durable v4 owner, Image validation boundary, Free-text safe-DOM boundary, six
 4. Build/View composition: RED lacked content-owner source/revision markers and a saved-model equality test. GREEN proves equal Image model/source/footprint through Build, View, and fullscreen plus real-route Free-text equality.
 5. Return-state ownership: RED had no document-scroll/trigger snapshot API. GREEN restores scroll before focus with `preventScroll`; the UnitOrbit suite passes.
 6. Production focus selector: the first route run failed all focus checks because the test looked for `aria-label` while the real dialog uses `aria-labelledby`. The semantic selector was corrected; no product change.
-7. Narrow restoration: the corrected full matrix passed 7/8. Free-text at 768×900 restored to 5381 instead of 5379 because a redundant smooth scroll was still animating after Discard. GREEN skips scroll for an already visible reveal target; focused 768×900 passed with exact restoration.
+7. Narrow restoration: the corrected full matrix passed 7/8. Free-text at 768×900 restored to 5381 instead of 5379 because a redundant smooth scroll was still animating after Discard. GREEN skips scroll only for a reveal target meeting the canonical 240×160 material-usability threshold; focused 768×900 passed with exact restoration.
 
 ## Fix round 1/5 strict RED → GREEN
 
