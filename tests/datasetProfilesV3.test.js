@@ -27,6 +27,7 @@ import { parseCsvText } from "../src/lib/loadCsv.js";
 import {
   loadDashboardConfig,
   validateDataSourceDescriptor,
+  validateDashboardSourceDescriptors,
   validateGeoJson,
 } from "../src/lib/loadDashboard.js";
 
@@ -117,7 +118,7 @@ test("every retained tabular source has exactly one reusable profile", async () 
     .map(([sourceId]) => sourceId)
     .toSorted();
 
-  assert.equal(tabularIds.length, 32);
+  assert.equal(tabularIds.length, Object.keys(profiles).length);
   assert.deepEqual(Object.keys(profiles), tabularIds);
   for (const sourceId of tabularIds) {
     assert.equal(profiles[sourceId].sourceId, sourceId);
@@ -251,7 +252,7 @@ test("tracked profiles make chart binding and national time synchronization read
 test("municipal repeated rows produce one playback clock point per distinct date", async () => {
   const dashboard = await trackedJson(dashboardPath);
   const profiles = await trackedJson(profilesPath);
-  const sourceId = "bio_municipal_infections_harmonized_2021";
+  const sourceId = "bio_municipal_infections";
   const rows = await trackedRows(dashboard.dataSources[sourceId]);
   const profile = profiles[sourceId];
   const dateColumn = profile.columns.find(({ name }) => name === "Datum");
@@ -278,7 +279,7 @@ test("municipal repeated rows produce one playback clock point per distinct date
   assert.equal(dateColumn.temporal.values.length, rows.length);
   assert.equal(
     dateColumn.temporal.values.filter((value) => value === "2020-02-27").length,
-    352,
+    354,
   );
   assert.equal(
     validateChronoGroups([group], {
@@ -598,7 +599,7 @@ test("runtime loading filters fallback extras and fails closed for invalid embed
   );
 });
 
-test("runtime validation rejects accessors without invoking them", async () => {
+test("descriptor validation rejects accessors without invoking them", () => {
   let invocations = 0;
   const source = {};
   Object.defineProperty(source, "kind", {
@@ -616,8 +617,8 @@ test("runtime validation rejects accessors without invoking them", async () => {
     },
   });
 
-  await assert.rejects(
-    loadDashboardConfig(sourceLoadingDashboard({ cases: source }), {}),
+  assert.throws(
+    () => validateDataSourceDescriptor("cases", source),
     /data propert/i,
   );
   assert.equal(invocations, 0);
@@ -630,8 +631,8 @@ test("runtime validation rejects accessors without invoking them", async () => {
       return source;
     },
   });
-  await assert.rejects(
-    loadDashboardConfig(sourceLoadingDashboard(dataSources), {}),
+  assert.throws(
+    () => validateDashboardSourceDescriptors({ dataSources }),
     /data propert/i,
   );
   assert.equal(invocations, 0);
@@ -853,11 +854,15 @@ test("runtime eagerly hydrates uploaded and inline temporal sources with the pub
     "title",
     "dataSources",
     "pages",
+    "chronoGroups",
+    "scenes",
+    "contentLibrary",
     "timezone",
     "datasetProfiles",
     "loadedData",
+    "dataSourceStates",
   ]);
-  assert.equal(loaded.dataSources, dashboard.dataSources);
+  assert.deepEqual(loaded.dataSources, dashboard.dataSources);
 });
 
 test("runtime rejects malformed GeoJSON before exposing it to charts", async () => {

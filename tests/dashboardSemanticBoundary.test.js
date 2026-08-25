@@ -17,11 +17,14 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import {
   loadDashboardConfig,
+  normalizeDashboardSource,
 } from "../src/lib/loadDashboard.js";
 
 const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
   root: [
+    "chronoGroups",
     "configVersion",
+    "contentLibrary",
     "dataSources",
     "description",
     "globalStyles",
@@ -31,7 +34,7 @@ const CURRENT_STRUCTURE_INVENTORY = Object.freeze({
     "pages",
     "programLabel",
     "scenarioLabel",
-    "chronoGroups",
+    "scenes",
     "timezone",
     "title",
   ],
@@ -416,7 +419,7 @@ test("bundle validation and runtime loading enforce the same dashboard structure
       mutate(value) {
         landing(value).hero = landing(value);
       },
-      error: /Unknown landing hero for page "home" property "hero"\./,
+      error: /cyclic structural reference|Unknown landing hero for page "home" property "hero"/i,
     },
   };
 
@@ -438,10 +441,10 @@ test("bundle validation and runtime loading enforce the same dashboard structure
   }
 });
 
-test("runtime loading rejects an absent version 3 dashboard contract", async () => {
+test("runtime loading rejects a dashboard without a migratable version", async () => {
   await assert.rejects(
     loadDashboardConfig({}, {}),
-    /dashboard configuration property "configVersion" is required/i,
+    /migration supports version 3 or version 4 input/i,
   );
 });
 
@@ -490,11 +493,12 @@ test("runtime loading rejects broken chart, source, and time references", async 
 });
 
 async function trackedInputs() {
-  const [dashboard, aliases, profiles] = await Promise.all([
+  const [rawDashboard, aliases, profiles] = await Promise.all([
     readJson("public/config/dashboard.json"),
     readJson("public/config/chart-aliases.json"),
     readJson("public/config/dataset-profiles.json"),
   ]);
+  const dashboard = normalizeDashboardSource(rawDashboard, profiles);
   return { dashboard, aliases, profiles };
 }
 

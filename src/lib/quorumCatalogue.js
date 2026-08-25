@@ -9,6 +9,7 @@ import {
   validateDashboardStructure,
 } from "../charting/config/dashboardConfigStructure.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
+import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
 import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
@@ -30,7 +31,9 @@ import {
   TIME_SYNC_MATCHING_POLICIES,
   validateEffectiveTimeSyncMatching,
 } from "../charting/time/chronoGroupModel.js";
-import { validateDataSourceDescriptor } from "./loadDashboard.js";
+import {
+  validateDataSourceDescriptor,
+} from "./loadDashboard.js";
 import { validateStaticSource } from "../static-content/staticSourceSchema.js";
 
 const CONTRACT_VERSION = "2";
@@ -308,7 +311,11 @@ function semanticChartType(schema) {
 }
 
 function buildDashboardContext(dashboard) {
-  const root = migrateDashboardV3ToV4(requiredRecord(dashboard, "dashboard"));
+  const input = requiredRecord(dashboard, "dashboard");
+  const v4 = input.configVersion === 5
+    ? structuredClone(input)
+    : migrateDashboardV3ToV4(input);
+  const root = migrateDashboardV4ToV5(v4);
   const structure = validateDashboardStructure(root);
   if (root.configVersion !== DASHBOARD_CONFIG_STRUCTURE.version) {
     throw new Error(`dashboard configuration version ${DASHBOARD_CONFIG_STRUCTURE.version} is required`);

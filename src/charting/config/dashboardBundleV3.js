@@ -374,18 +374,30 @@ function sanitizeStructural(value, context = "structural") {
   }
 }
 
-function assertStructuralData(value, description = "Dashboard configuration") {
+function assertStructuralData(
+  value,
+  description = "Dashboard configuration",
+  activePath = new WeakSet(),
+) {
   if (value === null || typeof value !== "object") return;
+  if (activePath.has(value)) {
+    throw new Error(`${description} contains a cyclic structural reference.`);
+  }
+  activePath.add(value);
+  try {
   if (Array.isArray(value)) {
     denseDataArray(value, description).forEach((entry, index) => (
-      assertStructuralData(entry, `${description} ${index}`)
+      assertStructuralData(entry, `${description} ${index}`, activePath)
     ));
     return;
   }
   for (const [key, entry] of plainDataEntries(value, description)) {
     if (!RUNTIME_CONFIGURATION_KEYS.has(key)) {
-      assertStructuralData(entry, `${description} property "${key}"`);
+      assertStructuralData(entry, `${description} property "${key}"`, activePath);
     }
+  }
+  } finally {
+    activePath.delete(value);
   }
 }
 

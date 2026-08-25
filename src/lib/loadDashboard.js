@@ -554,15 +554,15 @@ function mergeDatasetProfiles(externalProfiles, embeddedProfiles) {
 
 export function validateDataSourceDescriptor(sourceId, source) {
   validateSourceId(sourceId);
-  if (isTypedStaticSource(source)) {
-    validateStaticSource(source);
-    return "static";
-  }
   const entries = plainDataEntries(
     source,
     `Data source "${sourceId}" descriptor`,
   );
   const kind = entryValue(entries, "kind");
+  if (kind === "staticText" || kind === "staticImage") {
+    validateStaticSource(source);
+    return "static";
+  }
   if (kind === "inline") {
     rejectUnknownEntries(
       entries,
