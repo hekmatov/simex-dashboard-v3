@@ -55,23 +55,17 @@ export function prepareStaticPanelTransaction({
     revision: committedRevision,
   };
   const transactionAssets = assetsForCommittedSource(committedSource, assets);
-  const mergedAssets = {
-    ...(candidateDashboard.assets ?? {}),
-    ...transactionAssets,
-  };
-  validateAuthoredAssetManifest(mergedAssets);
-  if (authoredAssetManifestBytes(mergedAssets) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
-    throw new Error("The Image transaction exceeds the dashboard's 200 MiB authored-asset budget.");
-  }
-  validateStaticSource(committedSource, { assets: mergedAssets });
-
-  if (Object.hasOwn(candidateDashboard, "assets") || Object.keys(transactionAssets).length > 0) {
-    candidateDashboard.assets = mergedAssets;
-  }
   candidateDashboard.dataSources = {
     ...(candidateDashboard.dataSources ?? {}),
     [panel.sourceId]: committedSource,
   };
+  const mergedAssets = {
+    ...(candidateDashboard.assets ?? {}),
+    ...transactionAssets,
+  };
+  if (Object.hasOwn(candidateDashboard, "assets") || Object.keys(transactionAssets).length > 0) {
+    candidateDashboard.assets = mergedAssets;
+  }
 
   if (operation === "create") {
     const target = validateStaticDestination(destination, candidateDashboard);
@@ -90,6 +84,13 @@ export function prepareStaticPanelTransaction({
       assetIds: [previousAssetId],
     });
   }
+
+  const finalAssets = candidateDashboard.assets ?? {};
+  validateAuthoredAssetManifest(finalAssets);
+  if (authoredAssetManifestBytes(finalAssets) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
+    throw new Error("The Image transaction exceeds the dashboard's 200 MiB authored-asset budget.");
+  }
+  validateStaticSource(committedSource, { assets: finalAssets });
 
   validateDashboardChartReferences(
     collectPanelPlacements(candidateDashboard),

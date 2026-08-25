@@ -302,6 +302,54 @@ test("direct over-budget Image transaction is rejected before dashboard or store
   assert.notDeepEqual(dashboard, before);
 });
 
+test("replacement prunes superseded ownership before final-candidate budget validation", () => {
+  const assets = ceilingAssets({ replacedBytes: IMAGE_ASSET_LIMITS.maxBytes });
+  const dashboard = imageDashboard({
+    panels: [panel("image-panel", "image", "old-source", "Old image")],
+    sources: { "old-source": imageSource(1, "asset-old") },
+    assets,
+  });
+  const prepared = prepareStaticPanelTransaction({
+    dashboard,
+    operation: "update",
+    panelId: "image-panel",
+    panel: panel("image-panel", "image", "new-source", "New image"),
+    source: imageSource(1, "asset-new"),
+    assets: {
+      "asset-new": { ...assetManifest("f", "staged"), byteLength: IMAGE_ASSET_LIMITS.maxBytes },
+    },
+  });
+
+  assert.equal(Object.hasOwn(prepared.candidateDashboard.assets, "asset-old"), false);
+  assert.equal(Object.hasOwn(prepared.candidateDashboard.assets, "asset-new"), true);
+  assert.equal(
+    Object.values(prepared.candidateDashboard.assets).reduce((sum, entry) => sum + entry.byteLength, 0),
+    IMAGE_ASSET_LIMITS.dashboardBudgetBytes,
+  );
+});
+
+test("genuinely over-budget replacement rejects the final candidate atomically", () => {
+  const assets = ceilingAssets({ replacedBytes: 8 * 1024 * 1024 });
+  const dashboard = imageDashboard({
+    panels: [panel("image-panel", "image", "old-source", "Old image")],
+    sources: { "old-source": imageSource(1, "asset-old") },
+    assets,
+  });
+  const before = structuredClone(dashboard);
+
+  assert.throws(() => prepareStaticPanelTransaction({
+    dashboard,
+    operation: "update",
+    panelId: "image-panel",
+    panel: panel("image-panel", "image", "new-source", "New image"),
+    source: imageSource(1, "asset-new"),
+    assets: {
+      "asset-new": { ...assetManifest("f", "staged"), byteLength: IMAGE_ASSET_LIMITS.maxBytes },
+    },
+  }), /200 MiB authored-asset budget/i);
+  assert.deepEqual(dashboard, before);
+});
+
 test("prepared transaction snapshots reject post-validation nested mutation", () => {
   const prepared = prepareStaticPanelTransaction({
     dashboard: fixtureDashboard(),
@@ -478,6 +526,24 @@ function assetManifest(seed, storageState = "durable") {
     sha256: seed.repeat(64),
     storageState,
   };
+}
+
+function ceilingAssets({ replacedBytes }) {
+  const assets = {
+    "asset-old": { ...assetManifest("a"), byteLength: replacedBytes },
+  };
+  let remaining = IMAGE_ASSET_LIMITS.dashboardBudgetBytes - replacedBytes;
+  let index = 0;
+  while (remaining > 0) {
+    const byteLength = Math.min(IMAGE_ASSET_LIMITS.maxBytes, remaining);
+    assets[`asset-ceiling-${index}`] = {
+      ...assetManifest(((index + 1) % 10).toString()),
+      byteLength,
+    };
+    remaining -= byteLength;
+    index += 1;
+  }
+  return assets;
 }
 
 function panel(id, typeId, sourceId, title) {
