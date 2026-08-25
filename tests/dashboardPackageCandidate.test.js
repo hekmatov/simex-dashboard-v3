@@ -70,7 +70,7 @@ function dashboard() {
   };
 }
 
-test("a V3 bundle candidate retains its creation time and complete nested manifest", () => {
+test("a V4 bundle candidate retains its creation time and complete nested manifest", () => {
   const bundle = serializeDashboardBundle(dashboard(), {
     now: "2026-08-21T09:10:11.000Z",
   });
@@ -103,7 +103,7 @@ test("a V3 bundle candidate retains its creation time and complete nested manife
 test("a raw valid V3 configuration is reviewable without a creation timestamp", () => {
   const candidate = parseDashboardPackageCandidate(JSON.stringify(dashboard()));
   assert.equal(candidate.exportedAt, null);
-  assert.equal(candidate.config.configVersion, 3);
+  assert.equal(candidate.config.configVersion, 4);
   assert.equal(candidate.summary.pages[0].name, "Home");
 });
 
@@ -115,6 +115,46 @@ test("an invalid package preserves the authoritative V3 validation error", () =>
       metadata: { exportedAt: null },
       config: dashboard(),
     })),
-    /version 3 bundles only/i,
+    /version 4 bundles only/i,
   );
 });
+
+test("a bundle candidate carries verified authored payloads and linked dependency disclosure", () => {
+  const config = dashboard();
+  config.configVersion = 4;
+  config.dataSources["linked-image"] = staticImage({
+    kind: "url",
+    url: "https://example.test/briefing.png",
+  });
+  config.pages[0].sections[0].panels.push({
+    id: "linked_panel",
+    chart: chart({
+      id: "linked",
+      typeId: "image",
+      sourceId: "linked-image",
+      roles: {},
+      transformations: {
+        filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap",
+      },
+    }),
+  });
+  const bundle = serializeDashboardBundle(config, { now: null });
+  const candidate = parseDashboardPackageCandidate(JSON.stringify(bundle));
+
+  assert.deepEqual(candidate.assetPayloads, {});
+  assert.deepEqual(candidate.networkDependencies, ["https://example.test/briefing.png"]);
+});
+
+function staticImage(origin) {
+  return {
+    kind: "staticImage",
+    sourceVersion: 1,
+    revision: 1,
+    origin,
+    alt: "Briefing",
+    decorative: false,
+    fit: "contain",
+    crop: { x: 0, y: 0, width: 1000, height: 1000 },
+    rotation: 0,
+  };
+}

@@ -183,7 +183,7 @@ test("the storage reader hydrates asset references before applying the v3 dashbo
   );
 });
 
-test("embedded image references hydrate through the live image-chart validation boundary", async () => {
+test("legacy embedded image references hydrate before deterministic replacement-required migration", async () => {
   const memory = createMemoryAssetStore();
   const persistence = createDashboardAssetPersistence({ store: memory.store });
   const prepared = await persistence.prepare(validImageDashboard());
@@ -193,14 +193,10 @@ test("embedded image references hydrate through the live image-chart validation 
     getItem: () => JSON.stringify(prepared.storageConfig),
   }, key, { assets: persistence });
 
-  assert.equal(
-    restored.dataSources.briefing.rows[0].src,
-    "data:image/png;base64,aW1hZ2U=",
-  );
-  assert.equal(
-    Object.hasOwn(restored.dataSources.briefing.rows[0], "browserAssetId"),
-    false,
-  );
+  assert.equal(restored.configVersion, 4);
+  assert.equal(restored.dataSources.briefing.kind, "staticImage");
+  assert.equal(restored.dataSources.briefing.origin.kind, "replacementRequired");
+  assert.equal(Object.hasOwn(restored.dataSources.briefing, "rows"), false);
 });
 
 test("a browser asset id is the stable data-service identity across dashboard reloads", () => {

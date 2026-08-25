@@ -1,8 +1,8 @@
 # SimEx Dashboard V2
 
 SimEx Dashboard V2 is a static React and ECharts application for simulation
-exercise situational awareness and decision support. Its chart data,
-configuration, and portable bundle contracts are version 3.
+exercise situational awareness and decision support. Contained chart configs
+remain version 3; dashboard schemas and portable bundles are version 4.
 
 The default HeV-A26 dashboard demonstrates biomedical and socio-economic
 monitoring. The application is a reusable authoring and display system rather
@@ -98,6 +98,11 @@ Create a flash-drive package:
 pnpm.cmd package:flashdrive
 ```
 
+The flash-drive build includes uploaded local PNG, JPEG, and WebP Image-panel
+bytes under content-hashed package paths. HTTPS-linked Images remain network
+dependencies and are listed during export; they are not fetched or silently
+embedded, so they can be unavailable offline.
+
 Preview the built app:
 
 ```powershell
@@ -159,7 +164,7 @@ and explicit permission. It never extrapolates.
 
 ## Portable dashboard bundles
 
-Exported files have exactly four outer keys. The following is a shape
+Exported files have exactly five outer keys. The following is a shape
 schematic, not an importable bundle: a real export contains a canonical
 timestamp or `null`, one fingerprint entry for every data source, and the
 complete validated dashboard configuration.
@@ -167,30 +172,42 @@ complete validated dashboard configuration.
 ```json
 {
   "bundleType": "simex-dashboard-bundle",
-  "version": 3,
+  "version": 4,
   "metadata": {
     "exportedAt": "<canonical ISO-8601 timestamp or null>",
     "sourceFingerprints": {
       "<source-id>": "<deterministic fingerprint or null>"
-    }
+    },
+    "networkDependencies": ["<https-linked-image-url>"]
   },
   "config": {
-    "configVersion": 3,
+    "configVersion": 4,
     "...": "<complete dashboard configuration>"
+  },
+  "assetPayloads": {
+    "<asset-id>": {
+      "mediaType": "image/png",
+      "byteLength": 1234,
+      "sha256": "<content hash>",
+      "base64": "<verified local bytes>"
+    }
   }
 }
 ```
 
-Version 2 bundles and legacy alternate shapes are rejected; the app does not
-guess or silently migrate their meaning. The user-facing error is:
+Older bundle envelopes and legacy alternate shapes are rejected. Raw version 3
+dashboard configs are deterministically migrated before validation. The
+user-facing envelope error is:
 
 ```text
-This dashboard supports version 3 bundles only.
+This dashboard supports version 4 bundles only.
 ```
 
-Tracked files remain file-backed. Uploaded CSV text and schema-authorized
-inline rows travel inside the bundle. Export a bundle before substantial
-browser editing or before importing another configuration.
+Tracked files remain file-backed. Uploaded CSV text, schema-authorized inline
+rows, Free-text sources, and verified local Image bytes travel inside the
+bundle. Import stages and validates every local asset before replacing the
+dashboard. Export refuses missing or corrupt local bytes and separately lists
+HTTPS-linked Image dependencies.
 
 ## Optional Quorum companion
 

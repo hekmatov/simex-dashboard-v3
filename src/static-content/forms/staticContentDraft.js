@@ -271,7 +271,7 @@ export function finalizeStaticContentDraft(state) {
   if (state.stage !== "preview-and-add") throw new Error("Static content must reach Preview & add before finalization.");
   validateDestinationValue(state.destination);
   if (!state.contentTypeId) throw new Error("Static content type is required.");
-  const source = validateStaticSource(state.source, { assets: state.assets });
+  const source = sourceForAuthoringSave(state.source, { assets: state.assets });
   validateFreeTextContent(source);
   const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
   requiredText(panel.title, "Static panel title");
@@ -364,10 +364,25 @@ function validateStageEntry(state, stage) {
   if (STATIC_CONTENT_STAGES.indexOf(stage) >= 1) validateDestinationValue(state.destination);
   if (STATIC_CONTENT_STAGES.indexOf(stage) >= 2 && !state.contentTypeId) throw new Error("Choose a static content type before continuing.");
   if (stage === "preview-and-add") {
-    validateStaticSource(state.source, { assets: state.assets });
+    sourceForAuthoringSave(state.source, { assets: state.assets });
     validateFreeTextContent(state.source);
     requiredText(state.panel?.title, "Static panel title");
   }
+}
+
+function sourceForAuthoringSave(source, { assets } = {}) {
+  validateStaticSource(source, { assets });
+  const normalized = normalizeStaticSource(source);
+  if (
+    normalized.kind === "staticImage"
+    && !normalized.decorative
+    && normalized.alt.trim() === ""
+  ) {
+    throw new Error("A non-decorative image requires alternative text before save.");
+  }
+  if (normalized.kind === "staticImage") delete normalized.migrationWarnings;
+  validateStaticSource(normalized, { assets });
+  return normalized;
 }
 
 function validateFreeTextContent(source) {

@@ -24,9 +24,20 @@ import { applyCitationToSourceCharts } from "./charting/presentation/chartCitati
 import {
   integrateCreatedChart,
   integrateSavedChart,
+  normalizeStoredDashboardConfig,
   parseDashboardBundle,
   serializeDashboardBundle,
 } from "./charting/config/dashboardBundleV3.js";
+import { browserAuthoredAssetStore } from "./static-content/assets/browserAuthoredAssetRuntime.js";
+import { commitDurableStaticPanelTransaction } from "./static-content/assets/durableStaticPanelCommit.js";
+import { reconcileAuthoredAssets } from "./static-content/assets/reconcileAuthoredAssets.js";
+import {
+  decodeBrowserImageAsset,
+  discardSessionImageAsset,
+  IMAGE_ASSET_LIMITS,
+  readSessionImageAssetBytes,
+  validateImageAsset,
+} from "./static-content/image/imageAssetValidation.js";
 import {
   hydrateConfigurationBeforeStorageWrite,
   recoveryPackageError,
@@ -102,6 +113,19 @@ const SESSION_ONLY_MESSAGES = Object.freeze({
 });
 const DASHBOARD_LOOK_PERSISTENCE_WARNING = "Couldn’t save dashboard appearance. Your selection remains active for this session.";
 const dashboardAssetPersistence = createDashboardAssetPersistence();
+
+async function reconcileSavedAuthoredAssets(dashboard) {
+  if (Object.keys(dashboard?.assets ?? {}).length === 0) return null;
+  try {
+    return await reconcileAuthoredAssets({
+      store: browserAuthoredAssetStore,
+      dashboard,
+    });
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [dashboardEntry] = React.useState(() => parseDashboardEntry(
     typeof window === "undefined" ? "" : window.location.search,
@@ -344,19 +368,26 @@ export default function App() {
           setError(null);
         };
         if (dashboardEntry.surface === "audience") {
-          publish(await loadDashboardConfig(
+          const loaded = await loadDashboardConfig(
             selected,
             profiles,
             portableSources,
-          ));
+            { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
+          );
+          publish(loaded);
+          await reconcileSavedAuthoredAssets(loaded);
           return;
         }
-        await loadDashboardConfigProgressively(
+        const loaded = await loadDashboardConfigProgressively(
           selected,
           profiles,
           portableSources,
-          { onUpdate: publish },
+          {
+            onUpdate: publish,
+            readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId),
+          },
         );
+        await reconcileSavedAuthoredAssets(loaded);
       })
       .catch((loadError) => {
         if (!disposed) setError(loadError);
@@ -510,7 +541,7 @@ export default function App() {
       const profiles = nextConfig.datasetProfiles
         ?? dashboardRef.current?.datasetProfiles
         ?? {};
-      const stored = configurationForStorage(
+      const stored = canonicalConfigurationForStorage(
         { ...nextConfig, datasetProfiles: profiles },
         trackedProfiles,
       );
@@ -528,7 +559,7 @@ export default function App() {
           stored,
           configuredFallbackProfiles,
           null,
-          { allowTypedStaticSources: true },
+          { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
         );
         lastDashboardPersistenceRef.current = false;
         reportPersistence(
@@ -550,7 +581,7 @@ export default function App() {
           prepared.runtimeConfig,
           configuredFallbackProfiles,
           null,
-          { allowTypedStaticSources: true },
+          { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
         );
       } catch (loadError) {
         await prepared.rollback();
@@ -586,7 +617,7 @@ export default function App() {
   async function persistDashboardLookConfiguration(nextConfig) {
     try {
       const trackedProfiles = trackedDatasetProfilesRef.current;
-      const stored = configurationForStorage(nextConfig, trackedProfiles);
+      const stored = canonicalConfigurationForStorage(nextConfig, trackedProfiles);
       const configuredFallbackProfiles = profilesForConfiguredCsvSources(
         stored.dataSources,
         trackedProfiles,
@@ -927,53 +958,28 @@ export default function App() {
   }
 
   async function persistSessionAwareConfiguration(nextConfig) {
-    if (!Object.hasOwn(nextConfig, "assets")) {
-      return persistConfiguration(nextConfig);
-    }
-    let persistedProjection = null;
-    const sessionPortable = await commitSessionImageDashboardForV3Persistence(
-      nextConfig,
-      async (portableV3) => {
-        const persistedPortable = await persistConfiguration(portableV3);
-        persistedProjection = dashboardRef.current;
-        return persistedPortable;
-      },
-    );
-    const sessionDashboard = withRuntimeDashboardProjection(
-      sessionPortable,
-      persistedProjection ?? dashboardRef.current,
-    );
-    lastDashboardPersistenceRef.current = false;
-    reportPersistence("dashboard", false, SESSION_ONLY_MESSAGES.dashboard);
-    dashboardRef.current = sessionDashboard;
-    setDashboard(sessionDashboard);
-    setError(null);
-    setOperationError("");
-    return configurationForPortableUse(sessionDashboard);
+    return persistConfiguration(nextConfig);
   }
 
   async function commitStaticPanel(prepared) {
     const controller = ensureDashboardCommitController();
     const previousDashboard = controller.getCurrent();
     if (hasStagedStaticImageAsset(prepared)) {
-      const result = await commitStaticPanelTransaction(prepared, {
-        controller,
-        commitPrepared: (transaction) => controller.commitPreparedWith(
-          transaction,
-          async (candidate) => candidate,
-        ),
+      const result = await commitDurableStaticPanelTransaction({
+        prepared,
+        store: browserAuthoredAssetStore,
+        readSessionAsset: readSessionImageAssetBytes,
+        discardSessionAsset: discardSessionImageAsset,
+        commitPrepared: (transaction) => commitStaticPanelTransaction(transaction, {
+          controller,
+        }),
       });
-      const sessionDashboard = withRuntimeDashboardProjection(
-        result.dashboard,
-        dashboardRef.current,
-      );
-      lastDashboardPersistenceRef.current = false;
-      reportPersistence("dashboard", false, SESSION_ONLY_MESSAGES.dashboard);
-      dashboardRef.current = sessionDashboard;
-      setDashboard(sessionDashboard);
-      setError(null);
-      setOperationError("");
-      return { ...result, dashboard: sessionDashboard };
+      await cleanupReplacedDashboardAssets(previousDashboard, result.dashboard, {
+        transactionKind: "static-content",
+        failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
+      });
+      await reconcileSavedAuthoredAssets(result.dashboard);
+      return result;
     }
     const result = await commitStaticPanelTransaction(prepared, {
       controller,
@@ -1052,12 +1058,37 @@ export default function App() {
     setPackageImportError("");
     try {
       const previousDashboard = dashboardRef.current;
+      const importedAssetBytes = Object.values(packageImportCandidate.config.assets ?? {})
+        .reduce((total, asset) => total + (asset?.byteLength ?? 0), 0);
+      if (importedAssetBytes > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
+        throw new Error("Imported Images exceed the dashboard's 200 MiB authored-asset budget.");
+      }
       const committed = await commitDashboardPackageImport({
         candidate: packageImportCandidate,
         prepare: async () => {
           await dashboardRendererRef.current?.prepareForPackageImport?.();
         },
         replace: commitConfiguration,
+        validateAsset: async ({ bytes, manifest }) => {
+          const validation = await validateImageAsset({
+            bytes,
+            declaredMediaType: manifest.mediaType,
+            decode: decodeBrowserImageAsset,
+          });
+          if (
+            !validation.ok
+            || validation.asset.width !== manifest.width
+            || validation.asset.height !== manifest.height
+          ) {
+            throw new Error(
+              validation.errors?.[0]?.message
+              ?? "Imported Image payload metadata does not match its manifest.",
+            );
+          }
+        },
+        stageAsset: (input) => browserAuthoredAssetStore.stage(input),
+        rollbackAsset: (assetId, options) => browserAuthoredAssetStore.rollback(assetId, options),
+        commitAsset: (assetId, options) => browserAuthoredAssetStore.commit(assetId, options),
         rebase: (importedDashboard) => {
           dashboardRendererRef.current?.resetAfterPackageImport?.(importedDashboard);
         },
@@ -1093,11 +1124,15 @@ export default function App() {
           readText: (path) => readPackageAsset(path, "text"),
           readJson: (path) => readPackageAsset(path, "json"),
           readImageDataUrl: readPackageImageDataUrl,
+          readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId),
         },
       );
       const bundle = serializeDashboardBundle(
         prepared.config,
-        { now: new Date().toISOString() },
+        {
+          now: new Date().toISOString(),
+          assetPayloads: prepared.assetPayloads,
+        },
       );
       downloadBundle(
         bundle,
@@ -1389,8 +1424,7 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
   const retainedProfiles = Object.fromEntries(
     Object.entries(config.datasetProfiles ?? {}).filter(([sourceId, profile]) => {
       const source = config.dataSources?.[sourceId];
-      if (source?.type === "uploadedCsv") return true;
-      if (source?.kind !== "csv") return false;
+      if (source?.type !== "uploadedCsv" && source?.kind !== "csv") return false;
       return JSON.stringify(profile) !== JSON.stringify(fallbackProfiles[sourceId]);
     }),
   );
@@ -1404,6 +1438,14 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
 
 export function configurationForEditBaseline(dashboard, fallbackProfiles = {}) {
   return configurationForStorage(dashboard, fallbackProfiles);
+}
+
+function canonicalConfigurationForStorage(dashboard, fallbackProfiles = {}) {
+  const portable = configurationForStorage(dashboard, fallbackProfiles);
+  const canonical = normalizeStoredDashboardConfig(portable, {
+    profiles: fallbackProfiles,
+  });
+  return configurationForStorage(canonical, fallbackProfiles);
 }
 
 function configurationForSemanticUse(dashboard) {
@@ -1427,59 +1469,9 @@ function configurationForPortableUse(dashboard) {
   return structuredClone(portableDashboard);
 }
 
-export function projectSessionImageDashboardForV3Persistence(dashboard) {
-  const projected = configurationForPortableUse(dashboard);
-  const sessionAssetIds = new Set(Object.keys(projected.assets ?? {}));
-  delete projected.assets;
-  if (sessionAssetIds.size === 0) return projected;
-
-  const removedSourceIds = new Set();
-  for (const [sourceId, source] of Object.entries(projected.dataSources ?? {})) {
-    if (
-      source?.kind === "staticImage"
-      && source.origin?.kind === "asset"
-      && sessionAssetIds.has(source.origin.assetId)
-    ) {
-      removedSourceIds.add(sourceId);
-      delete projected.dataSources[sourceId];
-    }
-  }
-  for (const page of projected.pages ?? []) {
-    for (const section of page.sections ?? []) {
-      section.panels = (section.panels ?? []).filter((panel) => {
-        const chart = panel?.chart ?? panel;
-        return !removedSourceIds.has(chart?.sourceId);
-      });
-    }
-  }
-  return projected;
-}
-
-export async function commitSessionImageDashboardForV3Persistence(
-  dashboard,
-  persistV3,
-) {
-  if (typeof persistV3 !== "function") {
-    throw new TypeError("A version 3 dashboard persistence function is required.");
-  }
-  const projected = projectSessionImageDashboardForV3Persistence(dashboard);
-  await persistV3(projected);
-  return configurationForPortableUse(dashboard);
-}
-
 function hasStagedStaticImageAsset(prepared) {
   return Object.values(prepared?.candidateDashboard?.assets ?? {})
     .some((entry) => entry?.storageState === "staged");
-}
-
-function withRuntimeDashboardProjection(portableDashboard, currentDashboard) {
-  const projected = structuredClone(portableDashboard);
-  for (const key of ["loadedData", "dataSourceStates", "chartDataStates"]) {
-    if (currentDashboard && Object.hasOwn(currentDashboard, key)) {
-      projected[key] = structuredClone(currentDashboard[key]);
-    }
-  }
-  return projected;
 }
 
 function requireChartAuthoringPayload(payload) {

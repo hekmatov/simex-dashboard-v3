@@ -31,15 +31,17 @@ for (const viewport of VIEWPORTS) {
     const title = `Readiness image ${viewport.width}`;
     const panelId = await createImage(page, title);
     const storageInspection = await inspectStagedImageStorage(page, title);
-    expect(storageInspection.persistedPanel).toBeNull();
-    expect(storageInspection.persistedAssets).toBeUndefined();
-    expect(storageInspection.sessionAssets).toHaveLength(1);
-    expect(storageInspection.sessionAssets[0].id).toMatch(/^asset-[0-9a-f]{64}$/);
-    expect(storageInspection.sessionAssets[0].entry).not.toHaveProperty("bytes");
-    expect(storageInspection.sessionAssets[0].entry.mediaType).toBe("image/png");
-    const originalAssetId = storageInspection.sessionAssets[0].id;
+    expect(storageInspection.persistedPanel?.id).toBe(panelId);
+    const [originalAssetId] = Object.keys(storageInspection.persistedAssets ?? {});
+    expect(originalAssetId).toMatch(/^asset-[0-9a-f]{64}$/);
+    expect(storageInspection.persistedAssets[originalAssetId]).toMatchObject({
+      mediaType: "image/png",
+      storageState: "durable",
+    });
+    expect(storageInspection.persistedAssets[originalAssetId]).not.toHaveProperty("bytes");
+    expect(storageInspection.sessionAssets).toHaveLength(0);
     await createAndEditOrdinaryChart(page, `Post-image chart ${viewport.width}`);
-    await expect.poll(() => sessionAssetIds(page)).toEqual([originalAssetId]);
+    await expect.poll(() => sessionAssetIds(page)).toEqual([]);
 
     let panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
@@ -77,12 +79,11 @@ for (const viewport of VIEWPORTS) {
     await expect(editor.getByText(/replacement\.png is ready/)).toBeVisible();
     await expect(editor.getByLabel("Crop x")).toHaveValue("0");
     await expect(editor.getByText(/Review alternative text after replacement/)).toBeVisible();
-    await expect.poll(() => sessionAssetIds(page)).toEqual(expect.arrayContaining([originalAssetId]));
-    expect(await sessionAssetIds(page)).toHaveLength(2);
+    expect(await sessionAssetIds(page)).toHaveLength(1);
     await editor.getByRole("button", { name: "Undo replacement" }).click();
     await expect(editor.getByLabel("Crop x")).toHaveValue("200");
     await expect(editor.getByText(/Review alternative text after replacement/)).toHaveCount(0);
-    await expect.poll(() => sessionAssetIds(page)).toEqual([originalAssetId]);
+    await expect.poll(() => sessionAssetIds(page)).toEqual([]);
 
     const cropSelection = editor.getByRole("group", { name: /Crop selection/ });
     await cropSelection.focus();
@@ -185,11 +186,11 @@ for (const viewport of VIEWPORTS) {
       mimeType: "image/png",
       buffer: REPLACEMENT_PNG,
     });
-    expect(await sessionAssetIds(page)).toHaveLength(2);
+    expect(await sessionAssetIds(page)).toHaveLength(1);
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
     confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
     await confirmation.getByRole("button", { name: "Discard" }).click();
-    await expect.poll(() => sessionAssetIds(page)).toEqual([originalAssetId]);
+    await expect.poll(() => sessionAssetIds(page)).toEqual([]);
     panel = canonicalPanel(page, panelId);
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
@@ -265,11 +266,6 @@ for (const viewport of VIEWPORTS) {
 }
 
 test("IM-06 reload continuation restores the original asset and saved transform", async ({ page }) => {
-  test.info().annotations.push({
-    type: "blocked-by-slice-4",
-    description: "Authored IndexedDB durability and dashboard/bundle v4 reload are owned by Slice 4.",
-  });
-  test.fixme(true, "Blocked by Slice 4: authored IndexedDB durability and dashboard/bundle v4 reload are not part of Slice 3.");
   await page.setViewportSize({ width: 1024, height: 768 });
   await openBiomedicalBuild(page);
   await createImage(page, "Reload image checkpoint");
@@ -278,6 +274,7 @@ test("IM-06 reload continuation restores the original asset and saved transform"
   await page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true }).click();
   const after = await readSavedImage(page, "Reload image checkpoint");
   expect(after.source).toEqual(before.source);
+  await scrollPanelIntoView(page, after.panel.id);
   await expect(canonicalPanel(page, after.panel.id).locator('img[alt="Clinic readiness by district"]')).toBeVisible();
 });
 
@@ -362,15 +359,16 @@ async function createAndEditOrdinaryChart(page, title) {
   await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toHaveCount(0);
   await expect.poll(() => findPersistedChartId(page, `${title} updated`)).toBe(chartId);
-  const v3Shape = await page.evaluate((key) => {
+  const durableShape = await page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
     return {
+      configVersion: dashboard.configVersion,
       hasAssets: Object.hasOwn(dashboard, "assets"),
       staticImages: Object.values(dashboard.dataSources)
         .filter(({ kind }) => kind === "staticImage").length,
     };
   }, STORAGE_KEY);
-  expect(v3Shape).toEqual({ hasAssets: false, staticImages: 0 });
+  expect(durableShape).toEqual({ configVersion: 4, hasAssets: true, staticImages: 1 });
 }
 
 async function findPersistedChartId(page, title) {
@@ -438,6 +436,17 @@ async function readSavedImage(page, title) {
 
 function canonicalPanel(page, panelId) {
   return page.locator(`[data-panel-id="${panelId}"][data-canonical-panel-id]`);
+}
+
+async function scrollPanelIntoView(page, panelId) {
+  const found = await page.evaluate((id) => {
+    const panel = document.querySelector(
+      `[data-panel-id="${CSS.escape(id)}"][data-canonical-panel-id]`,
+    );
+    panel?.scrollIntoView({ block: "center" });
+    return panel !== null;
+  }, panelId);
+  expect(found).toBe(true);
 }
 
 async function openImageEditor(panel, page, title) {

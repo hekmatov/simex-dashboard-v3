@@ -121,10 +121,11 @@ test("typed resolvers return render models and bounded failure states before row
   const ready = await resolveStaticImageSource(image, {
     sourceId: "image-source",
     assets: { "asset-map": { mediaType: "image/png", byteLength: 20, width: 4, height: 5, sha256: "b".repeat(64), storageState: "durable" } },
-    resolveAsset: async () => ({ url: "blob:asset-map" }),
+    resolveAsset: async () => ({ url: "blob:asset-map", release: () => true }),
   });
   assert.equal(ready.status, "ready");
   assert.equal(ready.url, "blob:asset-map");
+  assert.equal(ready.release(), true);
   assert.deepEqual(ready.crop, { x: 0, y: 0, width: 1000, height: 1000 });
 
   const failure = await resolveStaticImageSource(image, {

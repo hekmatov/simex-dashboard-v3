@@ -7,6 +7,7 @@ import { createServer } from "vite";
 
 import {
   discardSessionImageAsset,
+  resolveSessionImageAsset,
   stageSessionImageAsset,
 } from "../src/static-content/image/imageAssetValidation.js";
 import { prepareOperationalData } from "../src/charting/data/prepareOperationalData.js";
@@ -101,6 +102,7 @@ test("typed static Image routes canonically without rows and applies saved metad
     renderContext: {
       sources: { "image-source": source },
       assets: { [staged.assetId]: staged.manifestEntry },
+      resolveStaticAsset: () => resolveSessionImageAsset(staged.assetId),
     },
     interactionMode: "active",
     surface: "view",

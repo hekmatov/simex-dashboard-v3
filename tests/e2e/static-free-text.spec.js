@@ -178,11 +178,6 @@ for (const viewport of VIEWPORTS) {
 test(
   "FT-11 reload continuation preserves the exact saved QMD and revision",
   async ({ page }) => {
-    test.info().annotations.push({
-      type: "blocked-by-slice-4",
-      description: "Dashboard/bundle v4 reload and import validation is owned by Slice 4.",
-    });
-    test.fixme(true, "Dashboard/bundle v4 reload and import validation is owned by Slice 4.");
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 1024, height: 768 });
     await openBiomedicalBuild(page);

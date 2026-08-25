@@ -107,6 +107,26 @@ export async function validateImageAsset(input = {}) {
   };
 }
 
+export async function decodeBrowserImageAsset(bytes, mediaType) {
+  const blob = new Blob([bytes], { type: mediaType });
+  if (typeof createImageBitmap === "function") {
+    const bitmap = await createImageBitmap(blob);
+    const decoded = { mediaType, width: bitmap.width, height: bitmap.height, frameCount: 1 };
+    bitmap.close?.();
+    return decoded;
+  }
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+    await image.decode();
+    return { mediaType, width: image.naturalWidth, height: image.naturalHeight, frameCount: 1 };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export async function stageSessionImageAsset(input = {}) {
   const browserQuotaAvailableBytes = await availableBrowserQuota(input.browserQuotaAvailableBytes);
   const filePreflight = preflightFile(input.file, {
@@ -133,6 +153,7 @@ export async function stageSessionImageAsset(input = {}) {
       : bytesDataUrl(immutableBytes, validation.asset.mediaType);
     entry = Object.freeze({
       url,
+      bytes: immutableBytes,
       mediaType: validation.asset.mediaType,
       byteLength: immutableBytes.byteLength,
       width: validation.asset.width,
@@ -190,7 +211,23 @@ function sessionImageAssetBytes() {
 
 export function resolveSessionImageAsset(assetId) {
   const entry = SESSION_IMAGE_ASSETS.get(assetId);
-  return entry ? { ...entry } : null;
+  if (!entry) return null;
+  const { bytes: _bytes, ...resolved } = entry;
+  return { ...resolved };
+}
+
+export function readSessionImageAssetBytes(assetId) {
+  const entry = SESSION_IMAGE_ASSETS.get(assetId);
+  if (!entry) return null;
+  return {
+    assetId,
+    bytes: entry.bytes.slice(),
+    mediaType: entry.mediaType,
+    byteLength: entry.byteLength,
+    width: entry.width,
+    height: entry.height,
+    sha256: entry.sha256,
+  };
 }
 
 export function discardSessionImageAsset(assetId) {

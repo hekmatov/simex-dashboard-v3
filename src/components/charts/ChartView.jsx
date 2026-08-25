@@ -140,6 +140,9 @@ function ResolvedChartContent({ props, interactionMode }) {
   const resolvedRendering = canReuseChartRendering(settledResolution, props)
     ? settledResolution
     : initialResolution;
+  React.useEffect(() => () => {
+    resolvedRendering?.model?.release?.();
+  }, [resolvedRendering]);
   return renderChartContent({ ...props, resolvedRendering }, interactionMode);
 }
 

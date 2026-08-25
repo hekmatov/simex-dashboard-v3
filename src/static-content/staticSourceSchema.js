@@ -7,6 +7,7 @@ const IMAGE_ROTATIONS = new Set([0, 90, 180, 270]);
 const IMAGE_MEDIA_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const ASSET_STORAGE_STATES = new Set(["staged", "durable", "missing"]);
 const SHA256 = /^[0-9a-f]{64}$/i;
+const MIGRATION_WARNINGS = new Set(["legacy-fit-fill", "missing-alt", "replacement-required"]);
 
 export function normalizeStaticSource(source) {
   const value = record(source, "Static source");
@@ -31,6 +32,9 @@ export function normalizeStaticSource(source) {
       fit: value.fit ?? "contain",
       crop: clone(value.crop ?? { x: 0, y: 0, width: 1000, height: 1000 }),
       rotation: value.rotation ?? 0,
+      ...(Array.isArray(value.migrationWarnings)
+        ? { migrationWarnings: [...value.migrationWarnings] }
+        : {}),
     };
   }
   throw new Error(`Unknown static source kind "${String(value.kind)}".`);
@@ -61,7 +65,12 @@ export function validateStaticImageSource(source, { assets } = {}) {
   if (value.decorative && value.alt !== "") {
     throw new Error("A decorative image must store empty alt text.");
   }
-  if (!value.decorative && value.alt.trim() === "") {
+  validateMigrationWarnings(value.migrationWarnings);
+  if (
+    !value.decorative
+    && value.alt.trim() === ""
+    && !value.migrationWarnings?.includes("missing-alt")
+  ) {
     throw new Error("A non-decorative image requires alternative text.");
   }
   if (!IMAGE_FITS.has(value.fit)) throw new Error("Static image fit must be contain or cover.");
@@ -81,6 +90,10 @@ export function validateAuthoredAssetManifest(assets) {
   for (const [assetId, rawEntry] of Object.entries(manifest)) {
     requiredText(assetId, "Authored asset id");
     const entry = record(rawEntry, `Authored asset "${assetId}"`);
+    const knownKeys = new Set(["mediaType", "byteLength", "width", "height", "sha256", "storageState"]);
+    for (const key of Object.keys(entry)) {
+      if (!knownKeys.has(key)) throw new Error(`Authored asset "${assetId}" property "${key}" is unknown.`);
+    }
     if (!IMAGE_MEDIA_TYPES.has(entry.mediaType)) {
       throw new Error(`Authored asset "${assetId}" media type is unsupported.`);
     }
@@ -95,6 +108,13 @@ export function validateAuthoredAssetManifest(assets) {
     }
   }
   return assets;
+}
+
+function validateMigrationWarnings(value) {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || value.some((entry) => !MIGRATION_WARNINGS.has(entry))) {
+    throw new Error("Static image migration warnings are invalid.");
+  }
 }
 
 function validateBase(source, description) {

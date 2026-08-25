@@ -5,6 +5,7 @@ import {
   IMAGE_ASSET_LIMITS,
   discardSessionImageAsset,
   inspectImageAnimation,
+  readSessionImageAssetBytes,
   resolveSessionImageAsset,
   stageSessionImageAsset,
   validateImageAsset,
@@ -252,6 +253,11 @@ test("session staging deduplicates immutable original bytes without creating dur
   const resolved = resolveSessionImageAsset(staged.assetId);
   assert.match(resolved.url, /^(?:blob:|data:image\/png)/);
   assert.equal(resolved.byteLength, PNG.length);
+  assert.equal(Object.hasOwn(resolved, "bytes"), false);
+  const durableInput = readSessionImageAssetBytes(staged.assetId);
+  assert.deepEqual(durableInput.bytes, PNG);
+  durableInput.bytes[0] = 0;
+  assert.deepEqual(readSessionImageAssetBytes(staged.assetId).bytes, PNG);
   discardSessionImageAsset(staged.assetId);
   assert.equal(resolveSessionImageAsset(staged.assetId), null);
 });

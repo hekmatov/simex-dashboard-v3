@@ -1,6 +1,7 @@
 import { parseTemporalValue } from "../charting/data/temporal.js";
 import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
+import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { stripLegacyVantaBackground } from "../charting/config/dashboardPresentationV3.js";
 import {
   normalizeDashboardTemporalConfig,
@@ -141,8 +142,9 @@ const GEOJSON_COLLECTION_GEOMETRY_KEYS = new Set([
   "type",
 ]);
 
-function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
-  const presentationNormalized = stripLegacyVantaBackground(dashboard);
+export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
+  const migrated = migrateDashboardV3ToV4(dashboard);
+  const presentationNormalized = stripLegacyVantaBackground(migrated);
   const normalized = normalizeDashboardTemporalConfig(presentationNormalized, {
     profiles: temporalMigrationProfiles(presentationNormalized, suppliedProfiles),
   });
@@ -240,15 +242,10 @@ export async function loadDashboardConfig(
   dashboard,
   datasetProfiles,
   portableSources = null,
-  { allowTypedStaticSources = false } = {},
+  { readAuthoredAsset } = {},
 ) {
-  dashboard = stripLegacyVantaBackground(dashboard);
-  validateDashboardStructure(dashboard, {
-    allowRuntimeState: true,
-    requireComplete: false,
-  });
-  validateDashboardSourceDescriptors(dashboard, { allowTypedStaticSources });
   dashboard = normalizeDashboardSource(dashboard, datasetProfiles);
+  validateDashboardSourceDescriptors(dashboard);
   const structure = validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
   });
@@ -293,6 +290,11 @@ export async function loadDashboardConfig(
     loadedData,
     profiles: hydratedProfiles,
   } = await dataService.hydrateAll({ purpose: "compatibility" });
+  const dataSourceStates = await resolveStaticSourceStates(
+    dataSources,
+    dashboard.assets ?? {},
+    { readAuthoredAsset },
+  );
 
   validateChronoGroups(dashboard.chronoGroups ?? [], {
     charts: chartReferences.map(({ chart }) => chart),
@@ -306,6 +308,7 @@ export async function loadDashboardConfig(
     dataSources,
     datasetProfiles: hydratedProfiles,
     loadedData,
+    dataSourceStates,
   };
 }
 
@@ -313,26 +316,25 @@ export async function loadDashboardConfigProgressively(
   dashboard,
   datasetProfiles,
   portableSources = null,
-  { onUpdate = () => {} } = {},
+  { onUpdate = () => {}, readAuthoredAsset } = {},
 ) {
-  dashboard = stripLegacyVantaBackground(dashboard);
-  validateDashboardStructure(dashboard, {
-    allowRuntimeState: true,
-    requireComplete: false,
-  });
-  validateDashboardSourceDescriptors(dashboard);
   dashboard = normalizeDashboardSource(dashboard, datasetProfiles);
+  validateDashboardSourceDescriptors(dashboard);
   const structure = validateDashboardStructure(dashboard, {
     allowRuntimeState: true,
   });
   validateCanonicalDashboardTemporalConfig(dashboard);
   const dashboardEntries = plainDataEntries(dashboard, "Dashboard config");
   const dataSources = entryValue(dashboardEntries, "dataSources") ?? {};
+  const tabularDataSources = Object.fromEntries(
+    plainDataEntries(dataSources, "Dashboard dataSources")
+      .filter(([, source]) => !isTypedStaticSource(source)),
+  );
   const reusableProfiles = mergeDatasetProfiles(
-    profilesForConfiguredCsvSources(dataSources, datasetProfiles),
+    profilesForConfiguredCsvSources(tabularDataSources, datasetProfiles),
     entryValue(dashboardEntries, "datasetProfiles"),
   );
-  validateDatasetProfiles(dataSources, reusableProfiles);
+  validateDatasetProfiles(tabularDataSources, reusableProfiles);
   const chartReferences = validateDashboardChartReferences(
     structure,
     dataSources,
@@ -346,16 +348,20 @@ export async function loadDashboardConfigProgressively(
     validateGeoJson,
   }));
   const dataService = createDataService({
-    dataSources,
+    dataSources: tabularDataSources,
     profiles: reusableProfiles,
     portableSources,
     providers,
     cache: dashboardSourceCache,
   });
-  const sourceIds = Object.keys(dataSources);
+  const sourceIds = Object.keys(tabularDataSources);
   const loadedData = {};
   const hydratedProfiles = { ...reusableProfiles };
-  const dataSourceStates = {};
+  const dataSourceStates = await resolveStaticSourceStates(
+    dataSources,
+    dashboard.assets ?? {},
+    { readAuthoredAsset },
+  );
 
   for (const sourceId of sourceIds) {
     const request = { sourceId, purpose: "dashboard" };
@@ -418,10 +424,7 @@ export async function loadDashboardConfigProgressively(
   }
 }
 
-function validateDashboardSourceDescriptors(
-  dashboard,
-  { allowTypedStaticSources = false } = {},
-) {
+export function validateDashboardSourceDescriptors(dashboard) {
   const dashboardEntries = plainDataEntries(
     dashboard,
     "Dashboard config",
@@ -431,12 +434,9 @@ function validateDashboardSourceDescriptors(
     dataSources,
     "Dashboard dataSources",
   )) {
-    if (allowTypedStaticSources && isTypedStaticSource(source)) {
+    if (isTypedStaticSource(source)) {
       validateSourceId(sourceId);
-      validateStaticSource(source);
-      if (source.kind === "staticImage" && source.origin.kind === "asset") {
-        throw new Error("Authored static image assets require the dashboard version 4 persistence boundary.");
-      }
+      validateStaticSource(source, { assets: dashboard.assets ?? {} });
       continue;
     }
     validateDataSourceDescriptor(sourceId, source);
@@ -445,6 +445,47 @@ function validateDashboardSourceDescriptors(
 
 function isTypedStaticSource(source) {
   return source?.kind === "staticText" || source?.kind === "staticImage";
+}
+
+async function resolveStaticSourceStates(
+  dataSources,
+  assets,
+  { readAuthoredAsset } = {},
+) {
+  const states = {};
+  for (const [sourceId, source] of plainDataEntries(
+    dataSources,
+    "Dashboard dataSources",
+  )) {
+    if (!isTypedStaticSource(source)) continue;
+    if (source.kind === "staticText" || source.origin.kind !== "asset") {
+      states[sourceId] = source.origin?.kind === "replacementRequired"
+        ? { status: "error", code: "replacement-required" }
+        : { status: "ready" };
+      continue;
+    }
+    const asset = assets[source.origin.assetId];
+    if (!asset || asset.storageState !== "durable") {
+      states[sourceId] = { status: "error", code: "authored-asset-missing" };
+      continue;
+    }
+    if (typeof readAuthoredAsset !== "function") {
+      states[sourceId] = { status: "ready" };
+      continue;
+    }
+    try {
+      await readAuthoredAsset(source.origin.assetId);
+      states[sourceId] = { status: "ready" };
+    } catch (error) {
+      states[sourceId] = {
+        status: "error",
+        code: error?.code === "AUTHORED_ASSET_CORRUPT"
+          ? "authored-asset-corrupt"
+          : "authored-asset-missing",
+      };
+    }
+  }
+  return states;
 }
 
 export function profilesForConfiguredCsvSources(
@@ -493,6 +534,10 @@ function mergeDatasetProfiles(externalProfiles, embeddedProfiles) {
 
 export function validateDataSourceDescriptor(sourceId, source) {
   validateSourceId(sourceId);
+  if (isTypedStaticSource(source)) {
+    validateStaticSource(source);
+    return "static";
+  }
   const entries = plainDataEntries(
     source,
     `Data source "${sourceId}" descriptor`,

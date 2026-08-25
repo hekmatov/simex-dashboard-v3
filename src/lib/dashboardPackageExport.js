@@ -26,6 +26,7 @@ export async function prepareDashboardPackageExport(dashboard, {
   readText = missingReader("CSV"),
   readJson = missingReader("GeoJSON"),
   readImageDataUrl = missingReader("image"),
+  readAuthoredAsset = missingReader("authored image"),
 } = {}) {
   const config = structuredClone(dashboard);
   for (const key of RUNTIME_KEYS) delete config[key];
@@ -82,12 +83,67 @@ export async function prepareDashboardPackageExport(dashboard, {
     }
   }
 
+  const assetPayloads = {};
+  const authoredSourceByAsset = new Map();
+  for (const [sourceId, source] of Object.entries(sources)) {
+    if (source?.kind === "staticImage" && source.origin?.kind === "asset") {
+      authoredSourceByAsset.set(source.origin.assetId, sourceId);
+    }
+  }
+  for (const [assetId, sourceId] of [...authoredSourceByAsset].sort()) {
+    const manifestEntry = config.assets?.[assetId];
+    if (!manifestEntry || manifestEntry.storageState !== "durable") {
+      throw new Error(`Local Image source "${sourceId}" is missing durable authored bytes.`);
+    }
+    let asset;
+    try {
+      asset = await readAuthoredAsset(assetId, { sourceId, source: sources[sourceId] });
+    } catch (cause) {
+      const state = cause?.code === "AUTHORED_ASSET_CORRUPT" ? "corrupt" : "missing";
+      throw new Error(`Local Image source "${sourceId}" has ${state} authored bytes.`, { cause });
+    }
+    const bytes = asset?.bytes instanceof Uint8Array
+      ? asset.bytes
+      : asset?.bytes instanceof ArrayBuffer
+        ? new Uint8Array(asset.bytes)
+        : null;
+    const corrupt = (
+      !bytes
+      || asset.assetId !== assetId
+      || asset.mediaType !== manifestEntry.mediaType
+      || asset.byteLength !== manifestEntry.byteLength
+      || bytes.byteLength !== manifestEntry.byteLength
+      || asset.width !== manifestEntry.width
+      || asset.height !== manifestEntry.height
+      || asset.sha256 !== manifestEntry.sha256
+      || sha256HexSync(bytes) !== manifestEntry.sha256
+    );
+    if (corrupt) {
+      throw new Error(`Local Image source "${sourceId}" has corrupt authored bytes.`);
+    }
+    assetPayloads[assetId] = {
+      base64: encodeAssetBase64(bytes),
+      byteLength: manifestEntry.byteLength,
+      mediaType: manifestEntry.mediaType,
+      sha256: manifestEntry.sha256,
+    };
+  }
+
+  const networkDependencies = [...new Set(Object.values(sources).flatMap((source) => (
+    source?.kind === "staticImage" && source.origin?.kind === "url"
+      ? [source.origin.url]
+      : []
+  )))].sort();
+
   return {
     config,
+    assetPayloads,
     manifest: {
       embeddedCsvCount: Object.values(sources).filter((source) => source?.type === "uploadedCsv").length,
       embeddedGeoJsonCount: Object.values(sources).filter((source) => source?.type === "uploadedGeoJson").length,
       embeddedImageCount,
+      authoredAssetCount: Object.keys(assetPayloads).length,
+      networkDependencies,
     },
   };
 }
@@ -124,3 +180,7 @@ function missingReader(kind) {
     throw new Error(`${kind} source material could not be read for dashboard package export.`);
   };
 }
+import {
+  encodeAssetBase64,
+  sha256HexSync,
+} from "../static-content/assets/assetPayloadEnvelope.js";

@@ -8,6 +8,7 @@ import {
   DASHBOARD_CONFIG_STRUCTURE,
   validateDashboardStructure,
 } from "../charting/config/dashboardConfigStructure.js";
+import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import {
   validateDashboardChartReferences,
 } from "../charting/config/dashboardSemanticReferences.js";
@@ -307,7 +308,7 @@ function semanticChartType(schema) {
 }
 
 function buildDashboardContext(dashboard) {
-  const root = requiredRecord(dashboard, "dashboard");
+  const root = migrateDashboardV3ToV4(requiredRecord(dashboard, "dashboard"));
   const structure = validateDashboardStructure(root);
   if (root.configVersion !== DASHBOARD_CONFIG_STRUCTURE.version) {
     throw new Error(`dashboard configuration version ${DASHBOARD_CONFIG_STRUCTURE.version} is required`);

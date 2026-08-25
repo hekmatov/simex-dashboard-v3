@@ -381,6 +381,11 @@ function validateMemberEligibility({
   member,
   profiles,
 }) {
+  if (schema.authoringWorkflow === "static") {
+    throw new Error(
+      `Static panel "${chart.id}" cannot join Chrono Groups.`,
+    );
+  }
   if (chart.presentation?.collection != null) {
     throw new Error(
       `Member chart "${chart.id}" is a Collection display. Collection displays cannot join Chrono Groups.`,

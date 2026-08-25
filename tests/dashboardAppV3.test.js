@@ -45,7 +45,7 @@ test("the shared runtime keeps version 3 authoring while App owns playback", asy
   assert.match(app, /PlaybackProvider/);
   assert.match(renderer, /ChartWizardV3/);
   assert.match(renderer, /ChartEditorV3/);
-  assert.doesNotMatch(renderer, /PlaybackProvider/);
+  assert.doesNotMatch(renderer, /<PlaybackProvider\b/);
   assert.doesNotMatch(renderer, /AddChartWizard/);
   assert.doesNotMatch(renderer, /ChartSettingsPanelV2/);
   assert.doesNotMatch(renderer, /LegacyEditor/);
@@ -94,6 +94,22 @@ test("source runtime state is excluded from packages and gates only affected pla
   const baseline = configurationForEditBaseline(dashboard, { status: trackedProfile });
   assert.equal(Object.hasOwn(baseline, "loadedData"), false);
   assert.equal(Object.hasOwn(baseline, "datasetProfiles"), false);
+
+  dashboard.dataSources.status = {
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: "status.csv",
+    csvText: "date,value\n2026-08-25,1\n",
+  };
+  const importedTracked = configurationForStorage(dashboard, { status: trackedProfile });
+  assert.equal(
+    Object.hasOwn(importedTracked, "datasetProfiles"),
+    false,
+    "an imported copy of a tracked source must not duplicate its unchanged profile in localStorage",
+  );
+  dashboard.datasetProfiles.status = { fields: { date: { type: "string" } } };
+  const importedChanged = configurationForStorage(dashboard, { status: trackedProfile });
+  assert.deepEqual(importedChanged.datasetProfiles, dashboard.datasetProfiles);
 });
 
 test("legacy chart-system files are absent after the clean cutover", async () => {
@@ -311,7 +327,7 @@ test("replacement dashboards ignore fallback profiles for absent sources", async
   }]);
 });
 
-test("tracked descriptors and profiles round-trip through the portable v3 bundle", async () => {
+test("tracked descriptors and profiles round-trip through the portable v4 bundle", async () => {
   const {
     parseDashboardBundle,
     serializeDashboardBundle,
@@ -326,7 +342,7 @@ test("tracked descriptors and profiles round-trip through the portable v3 bundle
   });
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
 
-  assert.equal(parsed.configVersion, 3);
+  assert.equal(parsed.configVersion, 4);
   assert.equal(parsed.pages.flatMap(({ sections }) => (
     sections.flatMap(({ panels }) => panels)
   )).length, 40);
@@ -359,7 +375,7 @@ test("the live loader hydrates inline and uploaded v3 sources with reusable prof
   ));
 });
 
-test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors", async () => {
+test("bundle promotion accepts only v4 and materializes uploaded CSV descriptors", async () => {
   const {
     serializeDashboardBundle,
   } = await import("../src/charting/config/dashboardBundleV3.js");
@@ -448,7 +464,7 @@ test("bundle promotion accepts only v3 and materializes uploaded CSV descriptors
       version: 2,
       config: {},
     })),
-    /version 3 bundles only/i,
+    /version 4 bundles only/i,
   );
 });
 

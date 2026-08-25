@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slice 3 in-session Image validation/composition is implemented, while Slice 4 durability/portability and Slice 6 Audience work remain pending
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slice 4 durability/portability is implemented and review pending, while Slice 6 protocol/Audience fidelity remains pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Slice 1 implementation status
@@ -33,6 +33,17 @@
 - SP-17 is partial only at the bounded session-staging layer. Replaced, undone, canceled, and discarded unreferenced session blobs revoke their object URLs; adopted assets and saved sibling references survive. Durable reference graphs, interrupted-transaction grace, and reload cleanup remain exclusively Slice 4.
 - SP-22 is verified only for the current application session. The journey inspected the v3 configuration after ordinary chart create/edit and confirmed those chart changes persisted while no staged local Image panel/assets or unsaved image fields entered v3; complete-pair Keep/Discard restored the saved source, alt, and transform. The exact reload assertion is retained as `fixme` with a `blocked-by-slice-4` reason and is not reported as Passing.
 - SP-15–SP-16, SP-19, and SP-21 remain untouched and pending Slice 4/Slice 6. No bundle v4, schema v4, import/export, durable reference cleanup, offline package, separate-window asset lease, or durable reload claim is made by Slice 3.
+
+## Slice 4 durability and portability implementation status
+
+- SP-09 is implemented. Accepted authored raster bytes are copied into the dedicated content-addressed IndexedDB store, deduplicated by SHA-256, and read back only after manifest/hash verification. The JSON configuration retains a byte-free manifest and no original path; object URLs are per-window reference-counted leases and are revoked after the final release.
+- SP-10, SP-11, and SP-15 are implemented at the engine/App boundary. Export preflight refuses missing or corrupt referenced local bytes, embeds verified local payloads, and lists linked HTTPS Images as network dependencies without fetching or silently embedding them. Package promotion materializes accepted local rasters only below generated `data/authored/<sha256>.<ext>` paths with content-derived names, containment enforcement, and exact PNG/JPEG/WebP MIME.
+- SP-16 is implemented. Import migrates before validation, validates the complete v4 asset/reference envelope and decodes raster payloads, stages every verified payload, performs one dashboard replacement, and commits only afterward. Missing/hash-corrupt payloads fail before mutation; staging or replacement failure rolls back the stage and leaves the previous dashboard authoritative.
+- SP-17 is implemented at the deterministic engine/reconciliation layer. The reference graph protects saved panels, current drafts, undo snapshots, and live transactions. Reconciliation never removes a referenced identity and retains unreferenced/staged records for an exact 24-hour recovery grace before reclaiming them.
+- SP-21 is implemented through the existing `dashboardBundleV3.js` canonical boundary: dashboard schema v4 and export bundle v4 migrate v3 input before validation, while every contained chart remains chart config v3. Legacy Image conversion is deterministic/idempotent; URL/package origins remain classified, blob/unsafe origins require replacement, and static temporal membership is removed without weakening Scene validation.
+- SP-22 is now verified across reload. Saved Free-text and Image state reload from dashboard v4; only authored bytes enter IndexedDB, while unsaved QMD/alt/crop/rotation/fit drafts remain application-session-only. The retained FT-11 and IM-06 checkpoints pass and localStorage contains neither binary payloads nor duplicated tracked profiles.
+- Production portability passed with one 36.16 MB v4 export reused across missing, corrupt, and valid fresh-context imports. The valid import reloaded with network disabled, rendered local Image in main View/fullscreen, preserved inert Free-text at 1440×900 and 768×900, and resolved the Image in the currently wired passive separate Audience page. That last check establishes portable per-window byte resolution only; SP-18/SP-19 protocol/reconnect composition and SP-20 Audience failure isolation remain Slice 6.
+- The user-directed Free-text rule is unchanged: all text kinds are accepted by default and rendered inertly through safe DOM construction. Slice 4 adds no sanitizer, deny-list, authored HTML execution, or text-driven external resource loading. Strict Image validation remains unchanged.
 
 ## Decision table
 

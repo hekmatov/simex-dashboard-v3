@@ -10,6 +10,10 @@ import {
   serializeDashboardBundle,
 } from "../src/charting/config/dashboardBundleV3.js";
 import { loadDashboardConfig } from "../src/lib/loadDashboard.js";
+import {
+  encodeAssetBase64,
+  sha256HexSync,
+} from "../src/static-content/assets/assetPayloadEnvelope.js";
 
 test("package preparation embeds tracked, generated, geographic, and image source material", async () => {
   const dashboard = packageDashboard();
@@ -76,10 +80,12 @@ test("package preparation embeds tracked, generated, geographic, and image sourc
     embeddedCsvCount: 3,
     embeddedGeoJsonCount: 1,
     embeddedImageCount: 1,
+    authoredAssetCount: 0,
+    networkDependencies: [],
   });
 });
 
-test("a self-contained package round-trips every embedded source", async () => {
+test("a self-contained package round-trips tabular sources and isolates legacy embedded Images", async () => {
   const geoJson = {
     type: "FeatureCollection",
     features: [{
@@ -106,7 +112,8 @@ test("a self-contained package round-trips every embedded source", async () => {
   assert.equal(imported.dataSources.cases.csvText, "date,cases\n2026-08-21,4\n");
   assert.equal(imported.dataSources.generated.csvText, "date,total\n2026-08-21,4\n");
   assert.deepEqual(imported.dataSources.boundaries.geoJson, geoJson);
-  assert.equal(imported.dataSources.image.rows[0].src, "data:image/png;base64,aW1hZ2U=");
+  assert.equal(imported.dataSources.image.kind, "staticImage");
+  assert.equal(imported.dataSources.image.origin.kind, "replacementRequired");
 });
 
 test("package preparation strips browser-only asset references", async () => {
@@ -205,6 +212,143 @@ test("export readiness reports every unfinished draft with its recovery action",
     { id: "inline-rename", label: "Unfinished rename", actionLabel: "Return to rename" },
   ]);
 });
+
+test("package preparation preflights local authored bytes and discloses linked network dependencies", async () => {
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const sha256 = sha256HexSync(bytes);
+  const assetId = `asset-${sha256}`;
+  const dashboard = authoredImageDashboard({ assetId, sha256 });
+
+  const prepared = await prepareDashboardPackageExport(dashboard, {
+    readAuthoredAsset: async (requestedId) => {
+      assert.equal(requestedId, assetId);
+      return {
+        assetId,
+        mediaType: "image/png",
+        byteLength: bytes.byteLength,
+        width: 8,
+        height: 6,
+        sha256,
+        bytes,
+      };
+    },
+  });
+
+  assert.deepEqual(prepared.assetPayloads, {
+    [assetId]: {
+      base64: encodeAssetBase64(bytes),
+      byteLength: bytes.byteLength,
+      mediaType: "image/png",
+      sha256,
+    },
+  });
+  assert.deepEqual(prepared.manifest.networkDependencies, ["https://example.test/map.png"]);
+  assert.equal(prepared.manifest.authoredAssetCount, 1);
+  const bundle = serializeDashboardBundle(prepared.config, {
+    now: null,
+    assetPayloads: prepared.assetPayloads,
+  });
+  assert.equal(bundle.version, 4);
+});
+
+test("package preparation rejects missing or corrupt local authored bytes before export", async () => {
+  const expectedBytes = new Uint8Array([1, 2, 3, 4]);
+  const sha256 = sha256HexSync(expectedBytes);
+  const assetId = `asset-${sha256}`;
+  const dashboard = authoredImageDashboard({ assetId, sha256 });
+
+  await assert.rejects(
+    prepareDashboardPackageExport(dashboard, {
+      readAuthoredAsset: async () => {
+        throw Object.assign(new Error("not found"), { code: "AUTHORED_ASSET_MISSING" });
+      },
+    }),
+    /local-image.*missing|missing.*local-image/i,
+  );
+  await assert.rejects(
+    prepareDashboardPackageExport(dashboard, {
+      readAuthoredAsset: async () => ({
+        assetId,
+        mediaType: "image/png",
+        byteLength: 4,
+        width: 8,
+        height: 6,
+        sha256,
+        bytes: new Uint8Array([9, 9, 9, 9]),
+      }),
+    }),
+    /local-image.*corrupt|corrupt.*local-image/i,
+  );
+});
+
+function authoredImageDashboard({ assetId, sha256 }) {
+  return {
+    configVersion: 4,
+    id: "authored-package-dashboard",
+    title: "Authored package dashboard",
+    timezone: "UTC",
+    dataSources: {
+      "local-image": staticImageSource({ kind: "asset", assetId }),
+      "linked-image": staticImageSource({ kind: "url", url: "https://example.test/map.png" }),
+    },
+    datasetProfiles: {},
+    assets: {
+      [assetId]: {
+        mediaType: "image/png",
+        byteLength: 4,
+        width: 8,
+        height: 6,
+        sha256,
+        storageState: "durable",
+      },
+    },
+    chronoGroups: [],
+    pages: [{
+      id: "overview",
+      title: "Overview",
+      sections: [{
+        id: "images",
+        title: "Images",
+        panels: [
+          imageChart("local-chart", "local-image"),
+          imageChart("linked-chart", "linked-image"),
+        ],
+      }],
+    }],
+  };
+}
+
+function staticImageSource(origin) {
+  return {
+    kind: "staticImage",
+    sourceVersion: 1,
+    revision: 1,
+    origin,
+    alt: "Operational image",
+    decorative: false,
+    fit: "contain",
+    crop: { x: 0, y: 0, width: 1000, height: 1000 },
+    rotation: 0,
+  };
+}
+
+function imageChart(id, sourceId) {
+  return {
+    configVersion: 3,
+    id,
+    typeId: "image",
+    title: id,
+    description: "",
+    sourceId,
+    roles: {},
+    transformations: {
+      filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap",
+    },
+    presentation: { title: { align: "left" }, collection: null },
+    interaction: { zoom: { enabled: true }, timeSync: null },
+    layout: { size: "standard" },
+  };
+}
 
 function packageDashboard() {
   return {

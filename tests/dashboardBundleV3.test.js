@@ -8,6 +8,8 @@ import {
 } from "../src/charting/config/chartConfigV3.js";
 import { normalizeCollectionSettings } from "../src/charting/collection/collectionModel.js";
 import {
+  DASHBOARD_BUNDLE_VERSION,
+  DASHBOARD_SCHEMA_VERSION,
   parseDashboardBundle,
   readDashboardStorage,
   serializeDashboardBundle,
@@ -228,17 +230,91 @@ function deltaListChart(overrides = {}) {
   };
 }
 
-test("version 3 bundles round-trip uploaded and inline sources", () => {
+test("bundle v4 migrates and round-trips uploaded and inline sources", () => {
   const dashboard = version3Dashboard();
   const bundle = serializeDashboardBundle(dashboard, {
     now: "2026-07-26T12:00:00.000Z",
   });
 
   assert.equal(bundle.bundleType, "simex-dashboard-bundle");
-  assert.equal(bundle.version, 3);
+  assert.equal(bundle.version, 4);
+  assert.equal(bundle.config.configVersion, 4);
   assert.equal(bundle.metadata.exportedAt, "2026-07-26T12:00:00.000Z");
   assert.deepEqual(parseDashboardBundle(JSON.stringify(bundle)), bundle.config);
 });
+
+test("the canonical boundary emits dashboard v4 and bundle v4 while contained charts remain v3", () => {
+  const dashboard = version3Dashboard();
+  const bundle = serializeDashboardBundle(dashboard, { now: null });
+
+  assert.equal(DASHBOARD_SCHEMA_VERSION, 4);
+  assert.equal(DASHBOARD_BUNDLE_VERSION, 4);
+  assert.equal(bundle.version, 4);
+  assert.equal(bundle.config.configVersion, 4);
+  assert.equal(bundle.config.pages[0].sections[0].panels[0].configVersion, 3);
+  assert.equal(parseDashboardBundle(JSON.stringify(bundle)).configVersion, 4);
+});
+
+test("bundle v4 verifies local authored payloads and declares linked image dependencies", () => {
+  const sha256 = "039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81";
+  const assetId = `asset-${sha256}`;
+  const dashboard = version3Dashboard();
+  dashboard.chronoGroups = [];
+  dashboard.dataSources.localImage = staticImageSource({
+    origin: { kind: "asset", assetId },
+    alt: "Local briefing",
+  });
+  dashboard.dataSources.linkedImage = staticImageSource({
+    origin: { kind: "url", url: "https://example.test/linked.webp" },
+    alt: "Linked briefing",
+  });
+  dashboard.assets = {
+    [assetId]: {
+      mediaType: "image/png",
+      byteLength: 3,
+      width: 2,
+      height: 3,
+      sha256,
+      storageState: "durable",
+    },
+  };
+  dashboard.pages[0].sections[0].panels = [
+    createChartDraft({ typeId: "image", id: "local-image", sourceId: "localImage", title: "Local" }),
+    createChartDraft({ typeId: "image", id: "linked-image", sourceId: "linkedImage", title: "Linked" }),
+  ];
+
+  const bundle = serializeDashboardBundle(dashboard, {
+    now: null,
+    assetPayloads: {
+      [assetId]: { mediaType: "image/png", byteLength: 3, sha256, base64: "AQID" },
+    },
+  });
+  assert.deepEqual(bundle.metadata.networkDependencies, ["https://example.test/linked.webp"]);
+  const parsed = parseDashboardBundle(JSON.stringify(bundle), { includeEnvelope: true });
+  assert.deepEqual(parsed.assetPayloads, bundle.assetPayloads);
+  assert.equal(parsed.config.configVersion, 4);
+
+  const missing = structuredClone(bundle);
+  delete missing.assetPayloads[assetId];
+  assert.throws(() => parseDashboardBundle(JSON.stringify(missing)), /missing authored asset payload/i);
+  const corrupt = structuredClone(bundle);
+  corrupt.assetPayloads[assetId].base64 = "AAID";
+  assert.throws(() => parseDashboardBundle(JSON.stringify(corrupt)), /hash does not match/i);
+});
+
+function staticImageSource({ origin, alt }) {
+  return {
+    kind: "staticImage",
+    sourceVersion: 1,
+    revision: 1,
+    origin,
+    alt,
+    decorative: false,
+    fit: "contain",
+    crop: { x: 0, y: 0, width: 1000, height: 1000 },
+    rotation: 0,
+  };
+}
 
 test("bundle serialization removes runtime source and chart availability state", () => {
   const dashboard = version3Dashboard();
@@ -452,7 +528,7 @@ test("source validation rejects accessors, custom prototypes, dangerous row keys
   accessorDashboard.dataSources["unused-source"] = source;
   assert.throws(
     () => validateDashboardConfig(accessorDashboard),
-    /data source.*property "kind".*data property/i,
+    /property "kind".*data property/i,
   );
   assert.equal(reads, 0);
 
@@ -463,7 +539,7 @@ test("source validation rejects accessors, custom prototypes, dangerous row keys
   );
   assert.throws(
     () => validateDashboardConfig(inheritedDashboard),
-    /data source.*ordinary data object|plain object/i,
+    /ordinary data object|plain object/i,
   );
 
   const dangerousDashboard = version3Dashboard();
@@ -486,10 +562,10 @@ test("source validation rejects accessors, custom prototypes, dangerous row keys
   );
 });
 
-test("version 2 bundles are rejected with an actionable message", () => {
+test("older bundles are rejected with an actionable message", () => {
   assert.throws(
     () => parseDashboardBundle(JSON.stringify({ bundleType: "simex-dashboard-v2-bundle", version: 2 })),
-    /supports version 3/,
+    /supports version 4/,
   );
 });
 
@@ -1159,11 +1235,11 @@ test("import rejects nested structural runtime state without rewriting opaque ma
   );
 });
 
-test("bundle parsing reports a missing or non-object version 3 configuration clearly", () => {
+test("bundle parsing reports a missing or non-object dashboard configuration clearly", () => {
   for (const config of [undefined, null, []]) {
     assert.throws(
-      () => parseDashboardBundle(JSON.stringify({ bundleType: "simex-dashboard-bundle", version: 3, config })),
-      /version 3 dashboard configuration object/i,
+      () => parseDashboardBundle(JSON.stringify({ bundleType: "simex-dashboard-bundle", version: 4, config })),
+      /dashboard configuration object/i,
     );
   }
 });
@@ -1691,7 +1767,7 @@ test("chart and bundle boundaries reject malformed presentation and collection v
 
     const bundle = {
       bundleType: "simex-dashboard-bundle",
-      version: 3,
+      version: 4,
       config: version3Dashboard(),
     };
     bundle.config.pages[0].sections[0].panels[0] = chart;

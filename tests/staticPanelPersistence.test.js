@@ -15,6 +15,8 @@ import {
   finalizeStaticContentDraft,
 } from "../src/static-content/forms/staticContentDraft.js";
 import { prepareStaticPanelTransaction } from "../src/static-content/staticPanelTransaction.js";
+import { commitDurableStaticPanelTransaction } from "../src/static-content/assets/durableStaticPanelCommit.js";
+import { sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
 
 function createDashboard() {
   return {
@@ -69,7 +71,7 @@ test("App persistence validation accepts a provisional v3 typed static transacti
   );
 });
 
-test("the App-owned persistence boundary enables provisional typed static validation", async () => {
+test("the App-owned persistence boundary admits canonical v4 typed static validation", async () => {
   const vite = await createServer({
     root: process.cwd(),
     appType: "custom",
@@ -108,13 +110,14 @@ test("the App-owned persistence boundary enables provisional typed static valida
     validateConfigurationForPersistence(candidate, {}),
     candidate,
   );
-  assert.throws(
-    () => validateConfigurationForPersistence({ ...candidate, assets: {} }, {}),
-    /Unknown dashboard configuration property "assets"/,
+  const canonical = { ...candidate, configVersion: 4, assets: {} };
+  assert.strictEqual(
+    validateConfigurationForPersistence(canonical, {}),
+    canonical,
   );
 });
 
-test("provisional App session hydration excludes typed static sources from tabular loading", async () => {
+test("dashboard v4 hydration excludes typed static sources from tabular loading without an opt-in flag", async () => {
   const draft = createStaticContentDraft({
     stage: "preview-and-add",
     contentTypeId: "freeText",
@@ -136,34 +139,74 @@ test("provisional App session hydration excludes typed static sources from tabul
     source: finalized.source,
   }).candidateDashboard;
 
-  const hydrated = await loadDashboardConfig(candidate, {}, null, {
-    allowTypedStaticSources: true,
-  });
+  const hydrated = await loadDashboardConfig(candidate, {}, null);
 
+  assert.equal(hydrated.configVersion, 4);
   assert.equal(hydrated.dataSources[finalized.panel.sourceId].kind, "staticText");
   assert.equal(Object.hasOwn(hydrated.loadedData, finalized.panel.sourceId), false);
   assert.equal(Object.hasOwn(hydrated.datasetProfiles, finalized.panel.sourceId), false);
 });
 
-test("ordinary chart create and edit commits survive a staged Image through the App v3 bridge", async () => {
-  const vite = await createServer({
-    root: process.cwd(),
-    appType: "custom",
-    logLevel: "silent",
-    server: { middlewareMode: true },
-  });
-  let commitSessionImageDashboardForV3Persistence;
-  try {
-    ({ commitSessionImageDashboardForV3Persistence } = await vite.ssrLoadModule("/src/App.jsx"));
-  } finally {
-    await vite.close();
-  }
+test("dashboard loading exposes missing and corrupt local Image bytes as source-scoped state", async () => {
+  const dashboard = createDashboard();
+  dashboard.configVersion = 4;
+  const sha256 = "a".repeat(64);
+  const assetId = "asset-local";
+  dashboard.assets = {
+    [assetId]: {
+      mediaType: "image/png",
+      byteLength: 80,
+      width: 2,
+      height: 3,
+      sha256,
+      storageState: "missing",
+    },
+  };
+  dashboard.dataSources.briefing = {
+    kind: "staticImage",
+    sourceVersion: 1,
+    revision: 1,
+    origin: { kind: "asset", assetId },
+    alt: "Briefing",
+    decorative: false,
+    fit: "contain",
+    crop: { x: 0, y: 0, width: 1000, height: 1000 },
+    rotation: 0,
+  };
+  dashboard.pages[0].sections[0].panels.push(createChartDraft({
+    typeId: "image",
+    id: "briefing-image",
+    sourceId: "briefing",
+    title: "Briefing",
+  }));
 
+  const missing = await loadDashboardConfig(dashboard, {}, null);
+  assert.deepEqual(missing.dataSourceStates.briefing, {
+    status: "error",
+    code: "authored-asset-missing",
+  });
+
+  dashboard.assets[assetId].storageState = "durable";
+  const corrupt = await loadDashboardConfig(dashboard, {}, null, {
+    readAuthoredAsset: async () => {
+      throw Object.assign(new Error("hash mismatch"), { code: "AUTHORED_ASSET_CORRUPT" });
+    },
+  });
+  assert.deepEqual(corrupt.dataSourceStates.briefing, {
+    status: "error",
+    code: "authored-asset-corrupt",
+  });
+});
+
+test("ordinary chart create and edit commits survive a staged Image through durable v4 persistence", async () => {
   const dashboard = createDashboard();
   dashboard.dataSources.status = {
     kind: "inline",
     rows: [{ label: "Ready", value: 12 }],
   };
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const sha256 = sha256HexSync(bytes);
+  const assetId = `asset-${sha256}`;
   const staged = prepareStaticPanelTransaction({
     dashboard,
     operation: "create",
@@ -178,7 +221,7 @@ test("ordinary chart create and edit commits survive a staged Image through the 
       kind: "staticImage",
       sourceVersion: 1,
       revision: 1,
-      origin: { kind: "asset", assetId: "asset-readiness" },
+      origin: { kind: "asset", assetId },
       alt: "Readiness by district",
       decorative: false,
       fit: "contain",
@@ -186,30 +229,51 @@ test("ordinary chart create and edit commits survive a staged Image through the 
       rotation: 0,
     },
     assets: {
-      "asset-readiness": {
+      [assetId]: {
         mediaType: "image/png",
-        byteLength: 80,
+        byteLength: bytes.byteLength,
         width: 2,
         height: 3,
-        sha256: "a".repeat(64),
+        sha256,
         storageState: "staged",
       },
     },
   });
   const persisted = [];
-  const commit = (candidate) => commitSessionImageDashboardForV3Persistence(
-    candidate,
-    async (v3Candidate) => {
-      validateDashboardConfig(v3Candidate, {
-        allowBrowserAssetIds: true,
-        allowTypedStaticSources: true,
-      });
-      persisted.push(structuredClone(v3Candidate));
-      return structuredClone(v3Candidate);
+  const durableRecords = new Map();
+  const store = {
+    async stage(input) {
+      durableRecords.set(assetId, { status: "staged", input });
+      return { assetId };
     },
-  );
+    async commit(id) {
+      durableRecords.get(id).status = "durable";
+    },
+    async rollback(id) {
+      durableRecords.delete(id);
+    },
+  };
+  const commit = async (candidate) => {
+    validateDashboardConfig(candidate);
+    persisted.push(structuredClone(candidate));
+    return structuredClone(candidate);
+  };
   const controller = createSerializedDashboardCommitController({ initialDashboard: dashboard, commit });
-  await controller.commitPreparedWith(staged, async (candidate) => candidate);
+  await commitDurableStaticPanelTransaction({
+    prepared: staged,
+    store,
+    readSessionAsset: () => ({
+      assetId,
+      bytes,
+      mediaType: "image/png",
+      byteLength: bytes.byteLength,
+      width: 2,
+      height: 3,
+      sha256,
+    }),
+    commitPrepared: (transaction) => controller.commitPrepared(transaction),
+    transactionId: "static-save",
+  });
 
   const chart = readinessChart();
   const created = await controller.mutate((current) => integrateCreatedChart(
@@ -224,18 +288,16 @@ test("ordinary chart create and edit commits survive a staged Image through the 
 
   assert.equal(created.dataSources["readiness-image-source"].kind, "staticImage");
   assert.equal(saved.pages[0].sections[0].panels.at(-1).title, "Updated readiness");
-  assert.equal(saved.assets["asset-readiness"].storageState, "staged");
-  assert.equal(persisted.length, 2);
+  assert.equal(saved.assets[assetId].storageState, "durable");
+  assert.equal(durableRecords.get(assetId).status, "durable");
+  assert.equal(persisted.length, 3);
   for (const candidate of persisted) {
-    assert.equal(Object.hasOwn(candidate, "assets"), false);
-    assert.equal(Object.hasOwn(candidate.dataSources, "readiness-image-source"), false);
-    assert.equal(
-      candidate.pages[0].sections[0].panels.some(({ id }) => id === "readiness-image"),
-      false,
-    );
+    assert.equal(candidate.configVersion, 4);
+    assert.equal(candidate.assets[assetId].storageState, "durable");
+    assert.equal(candidate.dataSources["readiness-image-source"].kind, "staticImage");
   }
-  assert.equal(persisted[0].pages[0].sections[0].panels.at(-1).id, chart.id);
-  assert.equal(persisted[1].pages[0].sections[0].panels.at(-1).title, "Updated readiness");
+  assert.equal(persisted[1].pages[0].sections[0].panels.at(-1).id, chart.id);
+  assert.equal(persisted[2].pages[0].sections[0].panels.at(-1).title, "Updated readiness");
 });
 
 function readinessChart() {

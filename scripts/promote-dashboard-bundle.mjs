@@ -13,7 +13,9 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const DEFAULT_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..");
 
 export function preparePromotedDashboard(bundleText) {
-  const config = parseDashboardBundle(stripBom(bundleText));
+  const { config, assetPayloads } = parseDashboardBundle(stripBom(bundleText), {
+    includeEnvelope: true,
+  });
   const promoted = structuredClone(config);
   const files = [];
   const datasetProfiles = structuredClone(promoted.datasetProfiles ?? {});
@@ -52,11 +54,31 @@ export function preparePromotedDashboard(bundleText) {
     };
   }
 
+  for (const source of Object.values(promoted.dataSources ?? {})) {
+    if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") continue;
+    const assetId = source.origin.assetId;
+    const manifest = promoted.assets?.[assetId];
+    const payload = assetPayloads[assetId];
+    const extension = authoredAssetExtension(manifest?.mediaType);
+    const relativePath = `data/authored/${manifest.sha256}.${extension}`;
+    files.push({
+      relativePath,
+      contents: decodeBase64(payload.base64),
+    });
+    source.origin = { kind: "package", path: relativePath };
+  }
+  if (promoted.assets !== undefined) delete promoted.assets;
+
   promoted.datasetProfiles = datasetProfiles;
   validateDatasetProfiles(promoted.dataSources, promoted.datasetProfiles);
   return {
     config: promoted,
     files,
+    networkDependencies: [...new Set(Object.values(promoted.dataSources ?? {}).flatMap((source) => (
+      source?.kind === "staticImage" && source.origin?.kind === "url"
+        ? [source.origin.url]
+        : []
+    )))].sort(),
   };
 }
 
@@ -80,7 +102,7 @@ export async function promoteDashboardBundle({
     const outputPath = path.resolve(publicDir, file.relativePath);
     assertWithinPublicDirectory(outputPath, publicDir);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, file.contents, "utf8");
+    await fs.writeFile(outputPath, file.contents, typeof file.contents === "string" ? "utf8" : undefined);
   }
   await fs.writeFile(
     configPath,
@@ -110,7 +132,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT_PATH) {
   );
 }
 
-function assertWithinPublicDirectory(outputPath, publicDir) {
+export function assertWithinPublicDirectory(outputPath, publicDir) {
   const relative = path.relative(path.resolve(publicDir), outputPath);
   if (
     relative === ""
@@ -120,6 +142,17 @@ function assertWithinPublicDirectory(outputPath, publicDir) {
   ) {
     throw new Error("Promoted data must remain inside the public directory.");
   }
+}
+
+function authoredAssetExtension(mediaType) {
+  if (mediaType === "image/png") return "png";
+  if (mediaType === "image/jpeg") return "jpg";
+  if (mediaType === "image/webp") return "webp";
+  throw new Error(`Unsupported authored asset media type "${String(mediaType)}".`);
+}
+
+function decodeBase64(value) {
+  return Uint8Array.from(Buffer.from(value, "base64"));
 }
 
 function provenanceLabel(source, fallback) {

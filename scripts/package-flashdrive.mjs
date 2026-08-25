@@ -38,6 +38,7 @@ await fs.writeFile(
   path.join(releaseDir, "start-dashboard-server.ps1"),
   `$ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$rootPrefix = $root.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 $listener = $null
 $port = $null
 
@@ -76,6 +77,7 @@ function Get-ContentType($path) {
     ".png" { return "image/png" }
     ".jpg" { return "image/jpeg" }
     ".jpeg" { return "image/jpeg" }
+    ".webp" { return "image/webp" }
     ".svg" { return "image/svg+xml" }
     default { return "application/octet-stream" }
   }
@@ -90,7 +92,7 @@ try {
       $relative = $requestPath.TrimStart("/") -replace "/", [System.IO.Path]::DirectorySeparatorChar
       $fullPath = [System.IO.Path]::GetFullPath((Join-Path $root $relative))
 
-      if (-not $fullPath.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+      if (-not $fullPath.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         $body = [System.Text.Encoding]::UTF8.GetBytes("Not found")
         $context.Response.StatusCode = 404
         $context.Response.ContentType = "text/plain; charset=utf-8"
@@ -141,11 +143,13 @@ Use edit mode inside the dashboard:
 - \`Upload CSV\` adds a CSV as a dashboard data source.
 - \`Export dashboard\` saves dashboard edits plus uploaded CSV data into one JSON file.
 - \`Import dashboard\` restores that JSON file later.
+- Local PNG, JPEG, and WebP Image-panel files are included under content-hashed package paths.
 - The package uses the tracked default configuration included in the build.
 
 ## Caveats
 
 - Online map tiles require internet access.
+- HTTPS-linked Image panels remain network dependencies and can be unavailable offline; exports list them explicitly.
 - Keep the PowerShell window open while using \`START_DASHBOARD.bat\`.
 - If an institution has strict browser security rules, host this folder on any static file host instead.
 `,

@@ -11,12 +11,15 @@ export function parseDashboardPackageCandidate(text) {
     throw new Error("Dashboard bundle must be valid JSON.");
   }
 
-  const rawConfig = parsed?.configVersion === 3 && parsed?.bundleType === undefined;
+  const rawConfig = [3, 4].includes(parsed?.configVersion) && parsed?.bundleType === undefined;
   const authoritativeText = rawConfig
     ? JSON.stringify(serializeDashboardBundle(parsed, { now: null }))
     : text;
-  const config = parseDashboardBundle(authoritativeText);
-  const exportedAt = rawConfig ? null : parsed?.metadata?.exportedAt ?? null;
+  const { config, assetPayloads } = parseDashboardBundle(authoritativeText, {
+    includeEnvelope: true,
+  });
+  const authoritativeBundle = JSON.parse(authoritativeText);
+  const exportedAt = authoritativeBundle.metadata.exportedAt;
   const pages = (config.pages ?? []).map((page) => Object.freeze({
     id: page.id,
     name: page.label ?? page.title ?? page.id,
@@ -36,6 +39,10 @@ export function parseDashboardPackageCandidate(text) {
 
   return Object.freeze({
     config,
+    assetPayloads: Object.freeze(structuredClone(assetPayloads)),
+    networkDependencies: Object.freeze([
+      ...authoritativeBundle.metadata.networkDependencies,
+    ]),
     exportedAt,
     summary: Object.freeze({ pages: Object.freeze(pages) }),
   });

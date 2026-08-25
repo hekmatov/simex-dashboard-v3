@@ -129,6 +129,124 @@ test("preparation and replacement failures preserve the candidate and current re
   assert.equal(rendererDrafts.sectionDrafts.shared_section.title, "Uncommitted current Section");
 });
 
+test("import stages every verified authored payload before one replacement and commits afterward", async () => {
+  const events = [];
+  const candidate = importCandidate();
+  const committed = await commitDashboardPackageImport({
+    candidate,
+    prepare: async () => { events.push("prepare"); },
+    stageAsset: async (input) => {
+      events.push(`stage:${input.assetId}`);
+      assert.deepEqual([...input.bytes], [1, 2, 3, 4]);
+      assert.equal(input.width, 8);
+      return { assetId: input.assetId };
+    },
+    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    commitAsset: async (assetId) => { events.push(`commit:${assetId}`); },
+    replace: async (config) => {
+      events.push("replace");
+      return structuredClone(config);
+    },
+    rebase: () => { events.push("rebase"); },
+    transactionId: "import-one",
+  });
+
+  assert.equal(committed.configVersion, 4);
+  assert.deepEqual(events, [
+    "prepare",
+    "stage:asset-local",
+    "replace",
+    "commit:asset-local",
+    "rebase",
+  ]);
+});
+
+test("asset staging or replacement failure rolls back staged bytes and never partially rebases", async () => {
+  const candidate = importCandidate();
+  const events = [];
+  await assert.rejects(commitDashboardPackageImport({
+    candidate,
+    prepare: async () => { events.push("prepare"); },
+    stageAsset: async (input) => {
+      events.push(`stage:${input.assetId}`);
+      throw Object.assign(new Error("storage full"), { code: "AUTHORED_ASSET_QUOTA_EXHAUSTED" });
+    },
+    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    commitAsset: async () => { events.push("commit"); },
+    replace: async () => { events.push("replace"); },
+    rebase: () => { events.push("rebase"); },
+    transactionId: "import-quota",
+  }), /storage full/);
+  assert.deepEqual(events, ["prepare", "stage:asset-local"]);
+
+  events.length = 0;
+  await assert.rejects(commitDashboardPackageImport({
+    candidate,
+    prepare: async () => { events.push("prepare"); },
+    stageAsset: async (input) => {
+      events.push(`stage:${input.assetId}`);
+      return { assetId: input.assetId };
+    },
+    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    commitAsset: async () => { events.push("commit"); },
+    replace: async () => {
+      events.push("replace");
+      throw new Error("replacement persistence failed");
+    },
+    rebase: () => { events.push("rebase"); },
+    transactionId: "import-replace",
+  }), /replacement persistence failed/);
+  assert.deepEqual(events, [
+    "prepare",
+    "stage:asset-local",
+    "replace",
+    "rollback:asset-local",
+  ]);
+});
+
+test("invalid imported raster bytes abort before asset staging or dashboard replacement", async () => {
+  const events = [];
+  await assert.rejects(commitDashboardPackageImport({
+    candidate: importCandidate(),
+    prepare: async () => { events.push("prepare"); },
+    validateAsset: async () => {
+      events.push("validate");
+      throw new Error("Imported Image payload is not a valid single-frame raster.");
+    },
+    stageAsset: async () => { events.push("stage"); },
+    replace: async () => { events.push("replace"); },
+    rebase: () => { events.push("rebase"); },
+  }), /valid single-frame raster/i);
+  assert.deepEqual(events, ["prepare", "validate"]);
+});
+
+function importCandidate() {
+  return {
+    config: {
+      ...dashboard({ programLabel: "Imported" }),
+      configVersion: 4,
+      assets: {
+        "asset-local": {
+          mediaType: "image/png",
+          byteLength: 4,
+          width: 8,
+          height: 6,
+          sha256: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
+          storageState: "durable",
+        },
+      },
+    },
+    assetPayloads: {
+      "asset-local": {
+        base64: "AQIDBA==",
+        byteLength: 4,
+        mediaType: "image/png",
+        sha256: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
+      },
+    },
+  };
+}
+
 function fakeClock() {
   let now = 0;
   let nextId = 1;

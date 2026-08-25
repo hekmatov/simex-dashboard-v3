@@ -2,6 +2,7 @@ import React from "react";
 
 import {
   discardUnreferencedSessionImageAssets,
+  decodeBrowserImageAsset,
   stageSessionImageAsset,
   validateImageOrigin,
 } from "../../static-content/image/imageAssetValidation.js";
@@ -46,7 +47,7 @@ export function ImageSourceEditor({
     const result = await stageSessionImageAsset({
       file,
       declaredMediaType: file.type,
-      decode: decodeBrowserImage,
+      decode: decodeBrowserImageAsset,
     });
     if (!mountedRef.current || intakeRevision !== intakeRevisionRef.current) {
       if (result.ok) {
@@ -164,26 +165,6 @@ export function ImageSourceEditor({
       </section>
     </>
   );
-}
-
-async function decodeBrowserImage(bytes, mediaType) {
-  const blob = new Blob([bytes], { type: mediaType });
-  if (typeof createImageBitmap === "function") {
-    const bitmap = await createImageBitmap(blob);
-    const decoded = { mediaType, width: bitmap.width, height: bitmap.height, frameCount: 1 };
-    bitmap.close?.();
-    return decoded;
-  }
-  const url = URL.createObjectURL(blob);
-  try {
-    const image = new Image();
-    image.decoding = "async";
-    image.src = url;
-    await image.decode();
-    return { mediaType, width: image.naturalWidth, height: image.naturalHeight, frameCount: 1 };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 function reportOriginError(origin, setValidation) {

@@ -3,7 +3,7 @@ import {
   validateStaticImageSource,
   validateStaticTextSource,
 } from "./staticSourceSchema.js";
-import { resolveSessionImageAsset } from "./image/imageAssetValidation.js";
+import { resolveBrowserAuthoredAsset } from "./assets/browserAuthoredAssetRuntime.js";
 
 export function resolveStaticSource(source, options = {}) {
   if (source?.kind === "staticText") return resolveStaticTextSource(source, options);
@@ -44,7 +44,7 @@ export function resolveStaticTextSource(source, { sourceId = null } = {}) {
 export function resolveStaticImageSource(source, {
   sourceId = null,
   assets = {},
-  resolveAsset = resolveSessionImageAsset,
+  resolveAsset = resolveBrowserAuthoredAsset,
 } = {}) {
   try {
     validateStaticImageSource(source);
@@ -104,6 +104,7 @@ export function resolveStaticImageSource(source, {
       }
       url = resolved?.url;
       if (typeof url !== "string" || url === "") throw new Error("Asset URL is unavailable.");
+      return readyImageModel(source, sourceId, url, entry, resolved);
     } catch {
       return imageAssetReadFailure(source, sourceId);
     }
@@ -132,11 +133,11 @@ export function resolveStaticImageSource(source, {
 
 function resolvedImageAssetModel(source, sourceId, asset, manifestEntry) {
   return typeof asset?.url === "string" && asset.url
-    ? readyImageModel(source, sourceId, asset.url, manifestEntry)
+    ? readyImageModel(source, sourceId, asset.url, manifestEntry, asset)
     : imageAssetReadFailure(source, sourceId);
 }
 
-function readyImageModel(source, sourceId, url, intrinsic = null) {
+function readyImageModel(source, sourceId, url, intrinsic = null, lease = null) {
   return {
     status: "ready",
     kind: "staticImage",
@@ -152,6 +153,7 @@ function readyImageModel(source, sourceId, url, intrinsic = null) {
     width: positiveDimension(intrinsic?.width),
     height: positiveDimension(intrinsic?.height),
     networkDependent: source.origin.kind === "url",
+    ...(typeof lease?.release === "function" ? { release: lease.release } : {}),
   };
 }
 

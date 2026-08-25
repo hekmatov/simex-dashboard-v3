@@ -41,6 +41,9 @@ export async function buildPortableData({
   if (embedPortableData) {
     for (const sourceId of Object.keys(dataSources)) {
       const source = dataSources[sourceId];
+      if (source?.kind === "staticText" || source?.kind === "staticImage") {
+        continue;
+      }
       const sourcePath = validateDataSourceDescriptor(sourceId, source);
       const absoluteSourcePath = path.join(publicDir, sourcePath);
       if (source.kind === "geojson") {

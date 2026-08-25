@@ -1,6 +1,6 @@
 # Step 7S Post-Step-7 Ownership Inventory
 
-**Status:** PASS — exact production, CSS, test, and browser ownership is synchronized with the fidelity matrix and executable ledger. This gate implements no feature; production work begins only in a later commit.
+**Status:** PASS ownership gate; Slices 1–4 now realize the listed owners through durable dashboard/bundle v4 implementation. Slice 4 is implementation complete and review pending.
 
 **Accepted Step 7 anchor:** `01511bd5a56978965b8dfc8cdbec3b51c2e17e77`
 
@@ -23,6 +23,17 @@
 9. `AudienceSnapshotMonitor.jsx` is only a monitor capture consumer. Image readiness and failure are owned by `useAudienceStaticAssetReadiness.js` and cell-scoped rendering in `AudienceDisplay`/`DisplayedChartGrid`.
 10. `ChartView.jsx::withPlaybackTimeContext` gates on static capability before asking for a playback context. `resolveChartRendering.js::resolveChartRendering` invokes `resolveStaticSource` before dataset dependency checks and `prepareChartData`; typed static sources never receive a time filter.
 11. `src/charting/forms/schemaRevision.js` remains unchanged: it reconciles data-source profile revisions and is not the registry-revision owner. Registry revision is owned by `chartSchemaRegistry.js::createChartSchemaRegistry`; per-option revision is owned by the private `chartCatalogue.js::schemaRevision` function.
+
+## Slice 4 realized ownership
+
+- `src/static-content/assets/browserAuthoredAssetStore.js` is the sole new authored-binary authority. It owns content-addressed IndexedDB staging/commit/read/removal, typed unavailable/quota/missing/corrupt failures, inventory, and per-window reference-counted object URL leases.
+- `src/static-content/assets/durableStaticPanelCommit.js` bridges the existing prepared static transaction to staged bytes and the existing serialized dashboard committer. Dashboard publication precedes durable asset commit; failure rolls back only records created by the transaction.
+- `src/static-content/assets/assetReferenceGraph.js` and `reconcileAuthoredAssets.js` own saved/draft/undo/transaction reachability and the exact 24-hour orphan grace. They do not delete referenced records.
+- `src/static-content/assets/assetPayloadEnvelope.js` owns deterministic base64/hash envelope operations shared by bundle export/import and offline promotion. It is not a second store.
+- `src/static-content/assets/browserAuthoredAssetRuntime.js` owns the one window-local store instance and session-first/durable-fallback lease resolution. `ChartView` owns final lease release when a resolution is replaced or unmounted.
+- `src/App.jsx` now persists canonical dashboard v4 JSON only, invokes durable static commit, runs startup/replacement reconciliation, preflights export bytes, and stages complete imported payloads before replacement. The Slice 2/3 session projection is removed. `browserStorage` still owns JSON/preferences only; no binary or unsaved static draft is stored there.
+- `src/charting/config/dashboardBundleV3.js` remains the canonical migration/validation/serialization boundary despite its historical filename. No competing v4 module was introduced; `migrateDashboardV3ToV4.js` runs before v4 validation and contained charts remain v3.
+- Offline promotion owns generated `data/authored/<sha256>.<ext>` payloads only. Linked HTTPS Images remain declared dependencies; generated paths remain beneath the package root with content type derived from validated media type.
 
 ## Clean-baseline findings
 
@@ -92,6 +103,9 @@ These paths and exported symbols are fixed before implementation:
 | `src/static-content/assets/browserAuthoredAssetStore.js` | `createBrowserAuthoredAssetStore`, `stageAuthoredAsset`, `commitAuthoredAsset`, `readAuthoredAsset`, `createObjectUrlLease` |
 | `src/static-content/assets/assetReferenceGraph.js` | `buildAssetReferenceGraph`, `findAuthoredAssetOrphans` |
 | `src/static-content/assets/reconcileAuthoredAssets.js` | `reconcileAuthoredAssets` |
+| `src/static-content/assets/assetPayloadEnvelope.js` | `decodeAssetBase64`, `encodeAssetBase64`, `sha256HexSync` |
+| `src/static-content/assets/browserAuthoredAssetRuntime.js` | `browserAuthoredAssetStore`, `resolveBrowserAuthoredAsset` |
+| `src/static-content/assets/durableStaticPanelCommit.js` | `commitDurableStaticPanelTransaction` |
 | `src/charting/config/migrateDashboardV3ToV4.js` | `migrateDashboardV3ToV4`, `isolateStaticTemporalMembership` |
 | `src/components/presentation/useAudienceStaticAssetReadiness.js` | `useAudienceStaticAssetReadiness` |
 | `src/styles/static-content.css` | Free-text prose/overflow, active Image controls/transforms, static editor/failure selectors |

@@ -13,7 +13,11 @@ import {
   normalizeChartInstance,
 } from "./chartConfigV3.js";
 import { stripLegacyVantaBackground } from "./dashboardPresentationV3.js";
-import { validateDashboardStructure } from "./dashboardConfigStructure.js";
+import {
+  DASHBOARD_CONFIG_STRUCTURE,
+  validateDashboardStructure,
+} from "./dashboardConfigStructure.js";
+import { migrateDashboardV3ToV4 } from "./migrateDashboardV3ToV4.js";
 import {
   validateDashboardChartReferences,
 } from "./dashboardSemanticReferences.js";
@@ -27,8 +31,14 @@ import {
   validateAuthoredAssetManifest,
   validateStaticSource,
 } from "../../static-content/staticSourceSchema.js";
+import {
+  decodeAssetBase64,
+  sha256HexSync,
+} from "../../static-content/assets/assetPayloadEnvelope.js";
 
-export const DASHBOARD_CONFIG_VERSION = 3;
+export const DASHBOARD_SCHEMA_VERSION = DASHBOARD_CONFIG_STRUCTURE.version;
+export const DASHBOARD_BUNDLE_VERSION = 4;
+export const DASHBOARD_CONFIG_VERSION = DASHBOARD_SCHEMA_VERSION;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 
 const RUNTIME_CONFIGURATION_KEYS = new Set([
@@ -42,8 +52,9 @@ const TRACKED_SOURCE_KEYS = new Set(["kind", "path", "parsingMetadata", "provena
 const UPLOADED_CSV_SOURCE_KEYS = new Set(["browserAssetId", "csvText", "fileName", "fingerprint", "kind", "parsingMetadata", "provenance", "sourceFingerprint", "type"]);
 const UPLOADED_GEOJSON_SOURCE_KEYS = new Set(["browserAssetId", "fileName", "fingerprint", "geoJson", "kind", "provenance", "sourceFingerprint", "type"]);
 const INLINE_SOURCE_KEYS = new Set(["browserImageAssetIds", "fingerprint", "kind", "parsingMetadata", "provenance", "rows", "sourceFingerprint"]);
-const BUNDLE_KEYS = new Set(["bundleType", "config", "metadata", "version"]);
-const BUNDLE_METADATA_KEYS = new Set(["exportedAt", "sourceFingerprints"]);
+const BUNDLE_KEYS = new Set(["assetPayloads", "bundleType", "config", "metadata", "version"]);
+const BUNDLE_METADATA_KEYS = new Set(["exportedAt", "networkDependencies", "sourceFingerprints"]);
+const ASSET_PAYLOAD_KEYS = new Set(["base64", "byteLength", "mediaType", "sha256"]);
 const PROVENANCE_KEYS = new Set(["label"]);
 const PARSING_RULE_KEYS = new Set(["format", "interpretation", "timezone"]);
 const PARSING_INTERPRETATIONS = new Set(["auto", "boolean", "category", "geographic", "numeric", "temporal"]);
@@ -267,6 +278,7 @@ function validateSource(
     allowBrowserAssetIds = false,
     allowTypedStaticSources = false,
     allowSessionImageAssets = false,
+    assets,
   } = {},
 ) {
   validateSourceId(sourceId);
@@ -295,15 +307,8 @@ function validateSource(
   } else if (kind === "inline") {
     rejectUnknownEntries(entries, INLINE_SOURCE_KEYS, `data source "${sourceId}"`);
     validateRows(entryValue(entries, "rows"), `Inline data source "${sourceId}" rows`);
-  } else if (allowTypedStaticSources && isTypedStaticSource(source)) {
-    validateStaticSource(source);
-    if (
-      kind === "staticImage"
-      && source.origin.kind === "asset"
-      && !allowSessionImageAssets
-    ) {
-      throw new Error("Authored static image assets require the dashboard version 4 persistence boundary.");
-    }
+  } else if (isTypedStaticSource(source)) {
+    validateStaticSource(source, { assets });
   } else {
     throw new Error(`Data source "${sourceId}" kind and type are not supported by chart system v3.`);
   }
@@ -417,8 +422,9 @@ function normalizeDashboardChartInstances(config) {
   };
 }
 
-function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
-  const chartNormalized = normalizeDashboardChartInstances(config);
+export function normalizeDashboardBoundary(config, { profiles = {} } = {}) {
+  const migrated = migrateDashboardV3ToV4(config);
+  const chartNormalized = normalizeDashboardChartInstances(migrated);
   const presentationNormalized = stripLegacyVantaBackground(chartNormalized);
   return normalizeDashboardTemporalConfig(presentationNormalized, {
     profiles: temporalMigrationProfiles(presentationNormalized, profiles),
@@ -440,21 +446,26 @@ export function validateDashboardConfig(
     allowSessionImageAssets = false,
   } = {},
 ) {
+  const input = config;
+  assertStructuralData(config);
+  config = migrateDashboardV3ToV4(config);
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
   });
   validateCanonicalDashboardTemporalConfig(config);
-  if (config.configVersion !== DASHBOARD_CONFIG_VERSION) throw new Error("Dashboard configuration version 3 is required.");
+  if (config.configVersion !== DASHBOARD_SCHEMA_VERSION) throw new Error("Dashboard configuration version 4 is required.");
   requiredString(config.id, "Dashboard id"); requiredString(config.title, "Dashboard title");
   const sourceEntries = plainDataEntries(config.dataSources, "Dashboard dataSources");
   const profiles = config.datasetProfiles ?? {};
   plainDataEntries(profiles, "Dashboard datasetProfiles");
+  validateAuthoredAssetManifest(config.assets ?? {});
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) {
     validateSource(sourceId, source, {
       allowBrowserAssetIds,
       allowTypedStaticSources,
       allowSessionImageAssets,
+      assets: config.assets ?? {},
     });
     sources.set(sourceId, source);
   }
@@ -466,6 +477,7 @@ export function validateDashboardConfig(
     structure,
     config.dataSources,
     {
+      assets: config.assets ?? {},
       columnTypesForSource: (sourceId, source) => (
         sourceColumnTypes(sourceId, source, profiles)
       ),
@@ -509,7 +521,7 @@ export function validateDashboardConfig(
       scenes: config.scenes,
     });
   }
-  return config;
+  return input;
 }
 
 function isTypedStaticSource(source) {
@@ -621,45 +633,45 @@ export function integrateSavedChart(dashboard, payload) {
   return next;
 }
 
-/**
- * Validates the portable v3 shape plus the bounded in-memory Image manifest.
- * The manifest is deliberately not part of the v3 storage or bundle contract;
- * Slice 4 owns that durable boundary.
- */
+/** Validates the complete dashboard-v4 session candidate, including assets. */
 export function validateDashboardSessionCandidate(candidate) {
-  const { assets, ...portable } = structuredClone(candidate);
-  validateDashboardConfig(portable, {
+  validateDashboardConfig(candidate, {
     allowBrowserAssetIds: true,
-    allowTypedStaticSources: true,
-    allowSessionImageAssets: true,
   });
-  if (assets === undefined) return candidate;
-  validateAuthoredAssetManifest(assets);
-  for (const source of Object.values(candidate.dataSources ?? {})) {
-    if (source?.kind === "staticImage") validateStaticSource(source, { assets });
-  }
   return candidate;
 }
 
-export function serializeDashboardBundle(config, { now = null } = {}) {
+export function serializeDashboardBundle(config, { now = null, assetPayloads = {} } = {}) {
   const chartNormalized = serializableConfig(
     normalizeDashboardChartInstances(config),
   );
   const serializable = normalizeDashboardBoundary(chartNormalized);
   validateDashboardConfig(serializable);
   if (now !== null && !validCanonicalInstant(now)) throw new Error("Bundle export time must be a valid canonical ISO-8601 timestamp or null.");
-  return { bundleType: DASHBOARD_BUNDLE_TYPE, version: DASHBOARD_CONFIG_VERSION, metadata: { exportedAt: now, sourceFingerprints: sourceFingerprints(serializable.dataSources) }, config: serializable };
+  const verifiedPayloads = validateAssetPayloadEnvelope(serializable, assetPayloads);
+  return {
+    bundleType: DASHBOARD_BUNDLE_TYPE,
+    version: DASHBOARD_BUNDLE_VERSION,
+    metadata: {
+      exportedAt: now,
+      sourceFingerprints: sourceFingerprints(serializable.dataSources),
+      networkDependencies: linkedImageDependencies(serializable),
+    },
+    config: serializable,
+    assetPayloads: verifiedPayloads,
+  };
 }
 
-export function parseDashboardBundle(text) {
+export function parseDashboardBundle(text, { includeEnvelope = false } = {}) {
   let bundle;
   try { bundle = JSON.parse(text); } catch { throw new Error("Dashboard bundle must be valid JSON."); }
-  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || bundle.version !== DASHBOARD_CONFIG_VERSION) throw new Error("This dashboard supports version 3 bundles only.");
-  if (!isRecord(bundle.config)) throw new Error("Bundle config must be a version 3 dashboard configuration object.");
+  if (!isRecord(bundle) || bundle.bundleType !== DASHBOARD_BUNDLE_TYPE || bundle.version !== DASHBOARD_BUNDLE_VERSION) throw new Error("This dashboard supports version 4 bundles only.");
+  if (!isRecord(bundle.config)) throw new Error("Bundle config must be a dashboard configuration object.");
   const bundleEntries = plainDataEntries(bundle, "Dashboard bundle");
   rejectUnknownEntries(bundleEntries, BUNDLE_KEYS, "dashboard bundle");
   const config = normalizeDashboardBoundary(structuredClone(bundle.config));
   validateDashboardConfig(config);
+  const assetPayloads = validateAssetPayloadEnvelope(config, bundle.assetPayloads ?? {});
   const metadataEntries = plainDataEntries(bundle.metadata, "Dashboard bundle metadata");
   rejectUnknownEntries(metadataEntries, BUNDLE_METADATA_KEYS, "dashboard bundle metadata");
   const exportedAt = entryValue(metadataEntries, "exportedAt");
@@ -668,7 +680,61 @@ export function parseDashboardBundle(text) {
     entryValue(metadataEntries, "sourceFingerprints"),
     sourceFingerprints(config.dataSources),
   );
-  return config;
+  validateNetworkDependencies(
+    entryValue(metadataEntries, "networkDependencies"),
+    linkedImageDependencies(config),
+  );
+  return includeEnvelope ? { config, assetPayloads } : config;
+}
+
+function validateAssetPayloadEnvelope(config, value) {
+  const payloadEntries = plainDataEntries(value, "Dashboard bundle assetPayloads");
+  const payloads = {};
+  for (const [assetId, payload] of payloadEntries) {
+    const manifest = config.assets?.[assetId];
+    if (!manifest) throw new Error(`Dashboard bundle contains unknown authored asset payload "${assetId}".`);
+    const entries = plainDataEntries(payload, `Authored asset payload "${assetId}"`);
+    rejectUnknownEntries(entries, ASSET_PAYLOAD_KEYS, `authored asset payload "${assetId}"`);
+    const bytes = decodeAssetBase64(entryValue(entries, "base64"));
+    const sha256 = entryValue(entries, "sha256");
+    const byteLength = entryValue(entries, "byteLength");
+    const mediaType = entryValue(entries, "mediaType");
+    if (bytes.byteLength !== byteLength || byteLength !== manifest.byteLength) {
+      throw new Error(`Authored asset payload "${assetId}" byte length does not match its manifest.`);
+    }
+    if (mediaType !== manifest.mediaType) {
+      throw new Error(`Authored asset payload "${assetId}" media type does not match its manifest.`);
+    }
+    if (sha256 !== manifest.sha256 || sha256HexSync(bytes) !== sha256) {
+      throw new Error(`Authored asset payload "${assetId}" hash does not match its manifest.`);
+    }
+    payloads[assetId] = { base64: entryValue(entries, "base64"), byteLength, mediaType, sha256 };
+  }
+  for (const source of Object.values(config.dataSources ?? {})) {
+    if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") continue;
+    if (!Object.hasOwn(payloads, source.origin.assetId)) {
+      throw new Error(`Dashboard bundle is missing authored asset payload "${source.origin.assetId}".`);
+    }
+  }
+  return payloads;
+}
+
+function linkedImageDependencies(config) {
+  return [...new Set(Object.values(config.dataSources ?? {}).flatMap((source) => (
+    source?.kind === "staticImage" && source.origin?.kind === "url"
+      ? [source.origin.url]
+      : []
+  )))].sort();
+}
+
+function validateNetworkDependencies(value, expected) {
+  const dependencies = denseDataArray(value, "Dashboard bundle networkDependencies");
+  if (dependencies.some((entry) => typeof entry !== "string")) {
+    throw new Error("Dashboard bundle networkDependencies must contain URLs.");
+  }
+  if (JSON.stringify([...dependencies].sort()) !== JSON.stringify(expected)) {
+    throw new Error("Dashboard bundle networkDependencies do not match linked image sources.");
+  }
 }
 
 function validateSourceFingerprints(value, expected) {
