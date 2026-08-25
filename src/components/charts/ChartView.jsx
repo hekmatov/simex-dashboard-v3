@@ -189,6 +189,7 @@ function ResolvedChartContent({ props, interactionMode }) {
 function requiresEffectOwnedResolution(props) {
   const chart = props?.chart;
   if (chart?.typeId !== "image" || !chart.sourceId) return false;
+  if (Object.hasOwn(props.renderContext ?? {}, "staticSourceResolution")) return false;
   const source = valueForId(props.renderContext?.sources, chart.sourceId);
   return typeof document !== "undefined"
     && source?.kind === "staticImage"
@@ -262,7 +263,10 @@ export function presentationFrameProps(chart) {
   };
 }
 
-function withPlaybackTimeContext(props, playback) {
+export function withPlaybackTimeContext(props, playback) {
+  if (isStaticContentChart(props.chart)) {
+    return { ...props, timeContext: undefined };
+  }
   const memberTimeContext = playback?.timeContextForChart?.(props.chart?.id);
   if (
     Number.isFinite(memberTimeContext?.activeEpochMs)

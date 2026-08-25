@@ -290,11 +290,17 @@ export async function loadDashboardConfig(
     loadedData,
     profiles: hydratedProfiles,
   } = await dataService.hydrateAll({ purpose: "compatibility" });
-  const dataSourceStates = await resolveStaticSourceStates(
+  const staticSourceStates = await resolveStaticSourceStates(
     dataSources,
     dashboard.assets ?? {},
     { readAuthoredAsset },
   );
+  const dataSourceStates = {
+    ...Object.fromEntries(
+      Object.keys(tabularDataSources).map((sourceId) => [sourceId, { status: "ready" }]),
+    ),
+    ...staticSourceStates,
+  };
 
   validateChronoGroups(dashboard.chronoGroups ?? [], {
     charts: chartReferences.map(({ chart }) => chart),

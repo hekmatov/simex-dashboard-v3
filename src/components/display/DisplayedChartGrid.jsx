@@ -7,6 +7,7 @@ import ChartView from "../charts/ChartView.jsx";
 export default function DisplayedChartGrid({
   dashboard,
   chartIds = [],
+  items,
   layout = "solo",
   timeContextForChart = () => null,
   timeContextAuthority,
@@ -14,10 +15,15 @@ export default function DisplayedChartGrid({
   layoutSystem,
   getCellProps,
   renderCellControls,
+  staticAssetReadiness = new Map(),
 }) {
-  const charts = chartIds
-    .map((chartId) => findChart(dashboard, chartId))
-    .filter(Boolean);
+  const presentationItems = items ?? chartIds.map(
+    (chartId) => ({ kind: "chart", chart_id: chartId }),
+  );
+  const entries = presentationItems
+    .map((item) => ({ item, chart: findChart(dashboard, presentationItemId(item)) }))
+    .filter(({ chart }) => Boolean(chart));
+  const charts = entries.map(({ chart }) => chart);
   const count = charts.length;
   const className = [
     "displayed-chart-grid",
@@ -33,7 +39,7 @@ export default function DisplayedChartGrid({
       data-display-surface={surface}
       data-layout-system={layoutSystem ?? (surface === "audience" ? "presentation" : undefined)}
     >
-      {charts.map((chart, index) => {
+      {entries.map(({ item, chart }, index) => {
         const cellProps = getCellProps?.(chart, index, charts) ?? {};
         const suppliedClassName = cellProps.className;
         const attributes = { ...cellProps };
@@ -47,9 +53,16 @@ export default function DisplayedChartGrid({
               surface === "fullscreen" ? "multi-fullscreen-cell" : "",
               surface === "fullscreen" ? `multi-cell-${index + 1}` : "",
               suppliedClassName,
+              item.kind === "image" ? "audience-static-image-cell" : "",
+              item.kind === "image"
+                ? `audience-static-image-${staticAssetReadiness.get(item.panel_id)?.status ?? "loading"}`
+                : "",
             ].filter(Boolean).join(" ")}
             key={chart.id}
             data-displayed-chart-id={chart.id}
+            data-presentation-item-kind={item.kind}
+            data-image-source-id={item.kind === "image" ? item.source_id : undefined}
+            data-image-revision={item.kind === "image" ? item.revision : undefined}
           >
             {renderCellControls?.(chart, index, charts)}
             <ChartView
@@ -64,8 +77,11 @@ export default function DisplayedChartGrid({
                 assets: dashboard.assets ?? {},
                 mapName: chart.presentation?.map?.geoSource ?? chart.id,
                 accessibilityEnabled: dashboard.globalStyles?.accessibility?.enabled === true,
+                ...(item.kind === "image" ? {
+                  staticSourceResolution: staticAssetReadiness.get(item.panel_id),
+                } : {}),
               }}
-              timeContext={timeContextForChart(chart.id)}
+              timeContext={item.kind === "chart" ? timeContextForChart(chart.id) : null}
               timeContextAuthority={timeContextAuthority}
               interactionMode={surface === "audience" ? "passive" : "active"}
               surface={surface}
@@ -75,6 +91,10 @@ export default function DisplayedChartGrid({
       })}
     </div>
   );
+}
+
+function presentationItemId(item) {
+  return item?.kind === "image" ? item.panel_id : item?.chart_id;
 }
 
 export function findChart(dashboard, chartId) {

@@ -1,6 +1,6 @@
 # Static Content Sketch Decision and Rejection Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with user-directed sketch deviations recorded 2026-08-24 and the implemented permissive inert-text deviation recorded 2026-08-25
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with user-directed sketch deviations recorded 2026-08-24, the implemented permissive inert-text deviation recorded 2026-08-25, and Sketch 024 implemented in Slice 6
 **Sketches:** `.planning/sketches/021-*` through `024-*`
 
 ## Comparative decision
@@ -53,6 +53,15 @@ On 2026-08-25 the user explicitly directed: “Abort use of sanitizer. Allow all
 - At widths of 900px and above, the accepted temporary Build response uses the existing page-frame compression owner while the static editor is open. Below 900px, the responsive expression uses the established overlay instead of persistent compression. Both paths restore selection, scroll, focus, and the saved canvas without mutating panel placement or chart state.
 - The only implementation deviation discovered was a narrow-screen smooth-scroll race in the existing reveal coordinator: an already visible focused target was scrolled again, moving the document by two pixels after the return snapshot. Slice 5 now suppresses that unnecessary scroll. This is a fidelity correction, not a design change.
 - The permissive inert-text override and strict Image boundary remain binding. No Slice 6 Present/Audience protocol or composition decision is preempted or promoted.
+
+## Slice 6 implementation disposition
+
+- Sketch 024 Variant A is realized through the production Present and separate-Audience routes. Image and temporal charts share one ordered composition, while saved Free text is absent from the selector and rejected by protocol/index validation.
+- The passive Audience uses stable 16:9 one-, two-, and four-cell layouts. Saved Image transforms are applied through the canonical renderer; pending and failure states retain the cell footprint, expose no control, and do not interrupt chart siblings.
+- The binding interaction was inspected at 1920×1080 and 1366×768. Advancing the temporal chart by one day changed only the chart frame; Image descriptor identity, revision, source, rendered asset, and fit transform remained equal.
+- Forced local-asset failure remained bounded to the Image cell. Restoring the exact bytes and reopening Audience independently resolved the same revision after reconnect/replay.
+- There is no implementation deviation from Sketch 024. The trusted v3 identity/revision descriptor and destination-local readiness hook are the concrete protocol realization of the approved passive design; no object URL, bytes, transform, or time state crosses the channel.
+- The permissive inert-text override remains unchanged: arbitrary source is inert Build/View/fullscreen content only and is never presentable. Strict Image validation remains unchanged.
 
 ## Master review rejection history
 

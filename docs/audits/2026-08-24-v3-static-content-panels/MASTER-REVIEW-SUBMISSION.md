@@ -4,6 +4,8 @@
 
 **Approved without design deviations** at discovery commit `e159db11593f784459e50f7707d93987fa996527`. All ten requested decisions and all 36 fidelity rows are binding accepted design requirements. They are not implemented functionality. Production work remains blocked until Step 7 is accepted and the post-Step-7 ownership inventory is committed and synchronized; that gate prohibits production code, configuration, dependencies, and tests before it passes.
 
+**Post-gate implementation status (2026-08-25):** Step 7 was accepted, the ownership gate passed, and Slices 1–6 are implementation complete on `codex/static-content-panels-implementation`. The final 36-row disposition is Passing across engine, mounted UI/composition, and retained intended-use evidence under the user-directed permissive-inert Free-text contract. Slice 6 review remains pending. This status does not rewrite the historical discovery verdict or its pre-implementation gate language.
+
 ### Subsequent user sketch-review amendments
 
 On 2026-08-24 the user interactively reviewed all four sketches and selected **021=A, 022=B, 023=A, 024=A**. For 023 A, Image actions must be hidden at rest and reveal on pointer hover, keyboard focus within, or explicit touch/tap; Audience remains control-free. These accepted amendments supersede only the affected sketch winner/presentation details and are synchronized into the specification, decision record, fidelity matrix, implementation ledger, manifest, and disposable prototypes. They do not authorize implementation.
@@ -44,6 +46,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 - Security/portability record: `docs/audits/2026-08-24-v3-static-content-panels/SECURITY-PORTABILITY-DECISIONS.md`
 - File-by-file plan: `docs/superpowers/plans/2026-08-24-static-content-panels.md`
 - Step 7 wait list: `docs/audits/2026-08-24-v3-static-content-panels/STEP-7-WAIT-LIST.md`
+- Slice 6 evidence: `docs/audits/2026-08-24-v3-static-content-panels/SLICE-6-EVIDENCE-STATUS.md`; `.superpowers/sdd/2026-08-24-static-content-panels/task-6-report.md`
 
 ## Discovery evidence
 

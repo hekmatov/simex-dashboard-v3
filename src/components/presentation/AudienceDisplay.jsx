@@ -2,31 +2,52 @@ import React from "react";
 
 import DisplayedChartGrid from "../display/DisplayedChartGrid.jsx";
 import { buildMemberTimeContexts } from "../playback/PlaybackProvider.jsx";
+import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
+import { validatePresentationState } from "../../lib/presentationProtocol.js";
+import useAudienceStaticAssetReadiness from "./useAudienceStaticAssetReadiness.js";
 
 export default function AudienceDisplay({
   dashboard,
   connectionStatus,
   presentationState,
+  presentableItemIndex: suppliedPresentableItemIndex,
 }) {
-  if (!dashboard || !presentationState) {
+  const presentableItemIndex = React.useMemo(
+    () => suppliedPresentableItemIndex ?? buildPresentableItemIndex(dashboard),
+    [dashboard, suppliedPresentableItemIndex],
+  );
+  const trustedState = React.useMemo(() => {
+    if (!dashboard || !presentationState) return null;
+    try {
+      return validatePresentationState(presentationState, { presentableItemIndex });
+    } catch {
+      return null;
+    }
+  }, [dashboard, presentableItemIndex, presentationState]);
+  const staticAssetReadiness = useAudienceStaticAssetReadiness({
+    dashboard,
+    items: trustedState?.items ?? [],
+  });
+
+  if (!dashboard || !trustedState) {
     return <AudienceWaiting />;
   }
 
-  const chronoGroup = presentationState.time
+  const chronoGroup = trustedState.time
     ? (dashboard.chronoGroups ?? []).find(
-      ({ id }) => id === presentationState.time.group_id,
+      ({ id }) => id === trustedState.time.group_id,
     )
     : null;
   const memberTimeContexts = buildMemberTimeContexts(
     chronoGroup,
-    presentationState.time?.active_epoch_ms,
+    trustedState.time?.active_epoch_ms,
   );
-  const facts = presentationState.audience_facts;
+  const facts = trustedState.audience_facts;
   const dashboardName = facts.dashboard_name ? dashboard.title : null;
   const parentName = facts.parent_chrono_group ? chronoGroup?.name ?? null : null;
   const sceneName = null;
   const sceneDate = facts.scene_date
-    ? canonicalTime(presentationState.time?.active_epoch_ms)
+    ? canonicalTime(trustedState.time?.active_epoch_ms)
     : null;
   const sharedHeaderVisible = Boolean(
     dashboardName || parentName || sceneName,
@@ -52,20 +73,21 @@ export default function AudienceDisplay({
       )}
       <DisplayedChartGrid
         dashboard={dashboard}
-        chartIds={presentationState.displayed_chart_ids}
-        layout={presentationState.layout}
+        items={trustedState.items}
+        layout={trustedState.layout}
+        staticAssetReadiness={staticAssetReadiness}
         timeContextForChart={(chartId) => memberTimeContexts[chartId] ?? null}
         surface="audience"
       />
       {sceneDate && (
         <time
           className="audience-scene-date"
-          dateTime={new Date(presentationState.time.active_epoch_ms).toISOString()}
+          dateTime={new Date(trustedState.time.active_epoch_ms).toISOString()}
         >
           {sceneDate}
         </time>
       )}
-      {presentationState.blackout && <div className="audience-blackout" aria-hidden="true" />}
+      {trustedState.blackout && <div className="audience-blackout" aria-hidden="true" />}
     </main>
   );
 }

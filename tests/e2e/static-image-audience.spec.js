@@ -1,0 +1,321 @@
+import { expect, test } from "@playwright/test";
+
+import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
+
+const CONTROL_URL = "http://127.0.0.1:4174";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+const IMAGE_TITLE = "Audience readiness map";
+const IMAGE_ALT = "Audience readiness districts";
+const FREE_TEXT_TITLE = "Moderator-only notes";
+const PNG = Buffer.from(imageFixtureBytes("image/png"));
+
+test.beforeEach(async ({ request }) => {
+  await request.post(`${CONTROL_URL}/__test__/reset`);
+  await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, {
+    data: { mode: "match" },
+  });
+});
+
+test("saved Image and temporal chart keep exact identity through passive Audience layouts, failure, and replay", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await openBiomedical(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await createFreeText(page);
+  const imagePanelId = await createImage(page);
+  const authored = await presentationFixtureIdentity(page, imagePanelId);
+
+  await installAudienceStateObserver(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.locator(".present-workspace")).toBeVisible();
+  await expect(page.locator(`[data-presentable-item-id="${authored.freeTextPanelId}"]`)).toHaveCount(0);
+  await expect(page.getByText(FREE_TEXT_TITLE, { exact: true })).toHaveCount(0);
+
+  await presentChoice(page, authored.temporalChartId).getByRole("checkbox").check();
+  await presentChoice(page, imagePanelId).getByRole("checkbox").check();
+  const audience = await openAudience(page);
+  await audience.setViewportSize({ width: 1920, height: 1080 });
+  await expectAudienceCount(audience, 2);
+  await expect(audience.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+  await expectNoOverflow(audience);
+  const twoCellGeometry = await audienceGeometry(audience);
+  expect(twoCellGeometry.viewport).toEqual({ width: 1920, height: 1080 });
+  expect(twoCellGeometry.cells).toHaveLength(2);
+  expect(twoCellGeometry.cells.every(({ width, height }) => width > 0 && height > 0)).toBe(true);
+  await captureCheckpoint(audience, testInfo, "audience-1920x1080-two-cell.png");
+
+  const firstProtocol = await observedAudienceState(page);
+  expect(firstProtocol.items).toEqual([
+    { kind: "chart", chart_id: authored.temporalChartId },
+    {
+      kind: "image",
+      panel_id: imagePanelId,
+      source_id: authored.imageSourceId,
+      revision: authored.imageRevision,
+    },
+  ]);
+  expect(Object.keys(firstProtocol.items[1]).sort()).toEqual([
+    "kind", "panel_id", "revision", "source_id",
+  ]);
+
+  const beforeTime = await audienceImageSnapshot(audience, imagePanelId);
+  await page.getByLabel("Synchronized time").selectOption(authored.chronoGroupId);
+  const slider = page.getByLabel("Presentation time");
+  await expect(slider).toBeEnabled();
+  const priorSliderValue = await slider.inputValue();
+  const maximum = Number(await slider.getAttribute("max"));
+  await slider.press(Number(priorSliderValue) < maximum ? "ArrowRight" : "ArrowLeft");
+  await expect(slider).not.toHaveValue(priorSliderValue);
+  await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
+    .not.toBe(firstProtocol.time?.active_epoch_ms);
+  const afterTimeProtocol = await observedAudienceState(page);
+  const afterTime = await audienceImageSnapshot(audience, imagePanelId);
+  expect(afterTimeProtocol.items[1]).toEqual(firstProtocol.items[1]);
+  expect(afterTime).toEqual(beforeTime);
+
+  await presentChoice(page, authored.temporalChartId).getByRole("checkbox").uncheck();
+  await expectAudienceCount(audience, 1);
+  await captureCheckpoint(audience, testInfo, "audience-1920x1080-one-cell.png");
+  await presentChoice(page, authored.temporalChartId).getByRole("checkbox").check();
+  await expectAudienceCount(audience, 2);
+  for (const chartId of authored.additionalChartIds) {
+    await presentChoice(page, chartId).getByRole("checkbox").check();
+  }
+  await expectAudienceCount(audience, 4);
+  await expect(audience.locator(".displayed-chart-grid")).toHaveClass(/layout-grid2x2/);
+  await captureCheckpoint(audience, testInfo, "audience-1920x1080-four-cell.png");
+
+  const failedAssetId = await removeDurableImageAsset(page, imagePanelId);
+  expect(failedAssetId).toBe(authored.assetId);
+  await audience.reload({ waitUntil: "domcontentloaded" });
+  await expect(audience.locator('[data-static-failure="asset-read-failed"]')).toBeVisible();
+  await expectAudienceCount(audience, 4);
+  await expect(audience.locator('[data-presentation-item-kind="chart"]')).toHaveCount(3);
+  await expect(audience.locator("button, .chart-image-actions, .static-content-state__actions")).toHaveCount(0);
+  await expectNoOverflow(audience);
+  const failedProtocol = await observedAudienceState(page);
+  expect(failedProtocol.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  await captureCheckpoint(audience, testInfo, "audience-1920x1080-four-cell-failure.png");
+
+  await restoreDurableImageAsset(page, failedAssetId);
+  await audience.close();
+  const reconnected = await reopenAudience(page);
+  await reconnected.setViewportSize({ width: 1366, height: 768 });
+  await expectAudienceCount(reconnected, 4);
+  await expect(reconnected.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+  await expectNoOverflow(reconnected);
+  const replayed = await observedAudienceState(page);
+  expect(replayed.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  const compactGeometry = await audienceGeometry(reconnected);
+  expect(compactGeometry.viewport).toEqual({ width: 1366, height: 768 });
+  expect(compactGeometry.cells).toHaveLength(4);
+  await captureCheckpoint(reconnected, testInfo, "audience-1366x768-four-cell-reconnected.png");
+});
+
+async function openBiomedical(page) {
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+}
+
+async function createFreeText(page) {
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill(FREE_TEXT_TITLE);
+  await wizard.getByLabel("QMD-style source").fill([
+    "## Internal runbook",
+    "<script>globalThis.__mustRemainInert = true</script>",
+    "![remote](https://example.test/must-not-load.png)",
+  ].join("\n"));
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+}
+
+async function createImage(page) {
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill(IMAGE_TITLE);
+  await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
+    name: "audience-readiness.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await expect(wizard.getByText(/audience-readiness\.png is ready/)).toBeVisible();
+  await wizard.getByLabel("Alternative text").fill(IMAGE_ALT);
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await expect(wizard.getByLabel("Canonical static content preview").locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  await expect.poll(() => panelIdByTitle(page, IMAGE_TITLE)).not.toBeNull();
+  return panelIdByTitle(page, IMAGE_TITLE);
+}
+
+async function panelIdByTitle(page, title) {
+  return page.evaluate(({ key, expectedTitle }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    return dashboard.pages.flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find((panel) => panel.title === expectedTitle)?.id ?? null;
+  }, { key: STORAGE_KEY, expectedTitle: title });
+}
+
+async function presentationFixtureIdentity(page, imagePanelId) {
+  return page.evaluate(({ key, requestedImagePanelId, freeTextTitle }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const panels = dashboard.pages.flatMap(({ sections }) => sections)
+      .flatMap(({ panels: sectionPanels }) => sectionPanels)
+      .map((placement) => placement.chart ?? placement);
+    const image = panels.find(({ id }) => id === requestedImagePanelId);
+    const source = dashboard.dataSources[image.sourceId];
+    const chronoGroup = dashboard.chronoGroups.find((group) => (
+      (group.members ?? []).some(({ chartId }) => panels.some((panel) => (
+        panel.id === chartId && !["image", "freeText"].includes(panel.typeId)
+      )))
+    ));
+    const temporalChartId = chronoGroup.members.find(({ chartId }) => panels.some((panel) => (
+      panel.id === chartId && !["image", "freeText"].includes(panel.typeId)
+    ))).chartId;
+    const additionalChartIds = panels
+      .filter(({ id, typeId }) => id !== temporalChartId && !["image", "freeText"].includes(typeId))
+      .slice(0, 2)
+      .map(({ id }) => id);
+    return {
+      imageSourceId: image.sourceId,
+      imageRevision: source.revision,
+      assetId: source.origin.assetId,
+      freeTextPanelId: panels.find(({ title }) => title === freeTextTitle).id,
+      chronoGroupId: chronoGroup.id,
+      temporalChartId,
+      additionalChartIds,
+    };
+  }, { key: STORAGE_KEY, requestedImagePanelId: imagePanelId, freeTextTitle: FREE_TEXT_TITLE });
+}
+
+function presentChoice(page, itemId) {
+  return page.locator(`[data-presentable-item-id="${itemId}"]`);
+}
+
+async function openAudience(page) {
+  const popup = page.context().waitForEvent("page");
+  await page.getByRole("button", { name: "Open audience display" }).click();
+  const audience = await popup;
+  await audience.waitForLoadState("domcontentloaded");
+  await expect(audience.locator(".audience-display")).toBeVisible();
+  return audience;
+}
+
+async function reopenAudience(page) {
+  const popup = page.context().waitForEvent("page");
+  await page.getByRole("button", { name: "Reopen audience display" }).click();
+  const audience = await popup;
+  await audience.waitForLoadState("domcontentloaded");
+  await expect(audience.locator(".audience-display")).toBeVisible();
+  return audience;
+}
+
+async function installAudienceStateObserver(page) {
+  await page.evaluate(() => {
+    const originalPostMessage = BroadcastChannel.prototype.postMessage;
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = { latestState: null };
+    BroadcastChannel.prototype.postMessage = function observePresentationState(data) {
+      if (data?.protocol_version === 3 && data.type === "state") {
+        globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState = structuredClone(data.payload);
+      }
+      return originalPostMessage.call(this, data);
+    };
+  });
+}
+
+async function observedAudienceState(page) {
+  await expect.poll(() => page.evaluate(() => Boolean(
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState,
+  ))).toBe(true);
+  return page.evaluate(() => structuredClone(
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState,
+  ));
+}
+
+async function expectAudienceCount(audience, count) {
+  await expect(audience.locator(".displayed-chart-grid")).toHaveClass(new RegExp(`displayed-count-${count}`));
+  await expect(audience.locator("[data-displayed-chart-id]")).toHaveCount(count);
+}
+
+async function audienceImageSnapshot(audience, panelId) {
+  return audience.locator(`[data-displayed-chart-id="${panelId}"]`).evaluate((cell) => {
+    const image = cell.querySelector("img");
+    return {
+      sourceId: cell.getAttribute("data-image-source-id"),
+      revision: cell.getAttribute("data-image-revision"),
+      renderedRevision: cell.querySelector("[data-static-source-revision]")?.getAttribute("data-static-source-revision"),
+      src: image?.getAttribute("src"),
+      transform: cell.querySelector("[data-image-transform-order]")?.getAttribute("data-image-transform-order"),
+    };
+  });
+}
+
+async function audienceGeometry(audience) {
+  return audience.evaluate(() => ({
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    cells: [...document.querySelectorAll("[data-displayed-chart-id]")].map((cell) => {
+      const bounds = cell.getBoundingClientRect();
+      return { width: Math.round(bounds.width), height: Math.round(bounds.height) };
+    }),
+  }));
+}
+
+async function expectNoOverflow(audience) {
+  await expect.poll(() => audience.evaluate(() => (
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    && document.documentElement.scrollHeight <= document.documentElement.clientHeight
+  ))).toBe(true);
+}
+
+async function removeDurableImageAsset(page, panelId) {
+  return page.evaluate(async ({ key, requestedPanelId }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const panel = dashboard.pages.flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find(({ id }) => id === requestedPanelId);
+    const assetId = dashboard.dataSources[panel.sourceId].origin.assetId;
+    const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
+    globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__ = await store.read(assetId);
+    await store.remove(assetId);
+    return assetId;
+  }, { key: STORAGE_KEY, requestedPanelId: panelId });
+}
+
+async function restoreDurableImageAsset(page, expectedAssetId) {
+  const restored = await page.evaluate(async () => {
+    const asset = globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__;
+    const store = globalThis[Symbol.for("simex.browser-authored-asset-store")];
+    const transactionId = `audience-reconnect-${Date.now()}`;
+    const staged = await store.stage({
+      bytes: asset.bytes,
+      mediaType: asset.mediaType,
+      width: asset.width,
+      height: asset.height,
+      transactionId,
+    });
+    await store.commit(staged.assetId, { transactionId });
+    delete globalThis.__SIMEX_REMOVED_AUDIENCE_ASSET__;
+    return staged.assetId;
+  });
+  expect(restored).toBe(expectedAssetId);
+}
+
+async function captureCheckpoint(page, testInfo, name) {
+  const path = testInfo.outputPath(name);
+  await page.screenshot({ path, fullPage: true });
+  await testInfo.attach(name, { path, contentType: "image/png" });
+}

@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slice 5 canonical Build/View/fullscreen composition is implementation complete and review pending, while Slice 6 protocol/Audience fidelity remains pending
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slices 1–6 are implementation complete and Slice 6 review is pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Slice 1 implementation status
@@ -57,6 +57,17 @@
 - Static types still bypass data providers, playback time, Chrono Groups, and Scenes. Slice 5 does not change or claim Present/Audience protocol descriptors, readiness, reconnect, ordering, passive composition, or Audience failure handling; those remain Slice 6.
 - Fix round 1 changes no security or persistence owner. The fullscreen recovery journey removes and restores the same validated bytes only through the existing content-addressed durable store, then exercises canonical Retry; no test hook or alternate resolver is added to production. The recovered `blob:` URL remains window-local, failures still disclose no raw identity, and strict validation is unchanged.
 - Exact Free-text source ID/revision markers are compared only on the established canonical rendered owner. Arbitrary QMD remains inert safe-DOM data with no sanitizer, executable/resource-loading construct, or new attribute authority. Material target clearance changes only Build reveal timing and does not persist geometry or authoring state.
+
+## Slice 6 Present/Audience implementation status
+
+- SP-18 is passing across engine, mounted composition, and retained production use. Present consumes one trusted presentable-item index: ordinary charts remain trusted descriptors, complete saved Images join directly, and Free text is absent. Protocol v3 exact-field parsing rejects injected Free text, unknown/stale Image identity or revision, and all URL/blob/bytes/transform/crop/fit/time/frame/Scene/Chrono fields.
+- SP-19 is passing. Audience receives only the ordered Image identity/revision descriptor, revalidates it against the same current index on publish, receive, replay, and reconnect, and resolves the durable source separately per destination/window/cell. No object URL, raster bytes, or resolver result crosses the channel.
+- SP-20 is passing for Audience. The readiness hook owns an effect-scoped lease for the exact destination/cell/revision; one forced missing asset produced only a passive bounded error in its cell, exposed no control or raw identity, and left three temporal chart siblings live. Restoring exact bytes and reopening Audience resolved the same revision.
+- SP-21 remains unchanged: dashboard schema and bundle are v4; contained chart shape remains v3. Presentation protocol v3 is its own exact channel version and does not change those persistence versions.
+- SP-22 remains passing. Present/Audience never receives static drafts. It can select only saved Image identity/revision and cannot reconstruct arbitrary Free-text or unsaved asset state.
+- Static sources receive no playback time and cannot enter data preparation, Chrono Groups, or Scenes. The strict Scene schema is unchanged. A retained temporal-chart time advance changed only the chart frame while Image descriptor, revision, source, rendered URL, and fit remained equal.
+- The user-directed Free-text rule is unchanged: arbitrary source remains accepted and inert, with no sanitizer, deny-list, DOMPurify, executable construct, or authored resource authority. Slice 6 grants Free text no Present or Audience capability. Strict Image validation, durable hashing, and per-window lease ownership remain unchanged.
+- The materially affected fresh-context portability continuation passed with network disabled: the imported local Image independently resolved in the separate Audience window without channel bytes or object URLs.
 
 ## Decision table
 

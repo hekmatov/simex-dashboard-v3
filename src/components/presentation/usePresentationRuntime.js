@@ -13,12 +13,12 @@ export const DEFAULT_AUDIENCE_FACTS = Object.freeze({
 });
 const AUDIENCE_FACT_KEYS = new Set(Object.keys(DEFAULT_AUDIENCE_FACTS));
 
-export default function usePresentationRuntime(validChartIds) {
+export default function usePresentationRuntime(presentableItemIndex) {
   const controllerRef = React.useRef(null);
   const sessionIdRef = React.useRef(null);
   const audienceWindowRef = React.useRef(null);
-  const validChartIdsRef = React.useRef(validChartIds);
-  validChartIdsRef.current = validChartIds;
+  const presentableItemIndexRef = React.useRef(presentableItemIndex);
+  presentableItemIndexRef.current = presentableItemIndex;
 
   const [displayState, setDisplayState] = React.useState(initialDisplayState);
   const [connectionStatus, setConnectionStatus] = React.useState("not-open");
@@ -33,9 +33,18 @@ export default function usePresentationRuntime(validChartIds) {
     setDisplayState((current) => reduceDisplayState(
       current,
       action,
-      validChartIdsRef.current,
+      presentableItemIndexRef.current?.keys?.(),
     ));
   }, []);
+
+  React.useEffect(() => {
+    setDisplayState((current) => reduceDisplayState(current, {
+      type: "companion_reconcile",
+      chart_ids: current.displayed_chart_ids.filter(
+        (id) => presentableItemIndex.has(id),
+      ),
+    }, presentableItemIndex.keys()));
+  }, [presentableItemIndex]);
 
   const setAudienceFactVisible = React.useCallback((key, visible) => {
     if (!AUDIENCE_FACT_KEYS.has(key)) return;
@@ -66,7 +75,7 @@ export default function usePresentationRuntime(validChartIds) {
       try {
         controller = createPresentationControllerChannel({
           sessionId,
-          validChartIds: validChartIdsRef.current,
+          getPresentableItemIndex: () => presentableItemIndexRef.current,
           onConnectionChange: setConnectionStatus,
         });
         controller.start();

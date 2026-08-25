@@ -63,7 +63,7 @@ export default function AudienceSnapshotMonitor({
 
   const structureKey = React.useMemo(() => JSON.stringify({
     activePageId: presentationState.active_page_id,
-    chartIds: presentationState.displayed_chart_ids,
+    items: presentationState.items,
     layout: presentationState.layout,
     audienceFacts: presentationState.audience_facts,
     blackout: presentationState.blackout,

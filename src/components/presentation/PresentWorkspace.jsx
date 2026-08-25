@@ -2,8 +2,7 @@ import React from "react";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
 import { MAX_DISPLAYED_CHARTS } from "../../lib/displayController.js";
-import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
-import { getStaticPanelCapabilities } from "../../static-content/staticPanelCapabilities.js";
+import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
 
 export default function PresentWorkspace({
@@ -12,10 +11,19 @@ export default function PresentWorkspace({
   onModeRequest,
   onOpenDashboardLook,
   runtime,
+  presentableItemIndex: suppliedPresentableItemIndex,
   accessibilityEnabled,
   themeProjection,
 }) {
   const playback = usePlayback();
+  React.useEffect(() => {
+    playback.dispatch({ type: "openView" });
+    return () => playback.dispatch({ type: "closeView" });
+    // Present owns synchronized playback while it is mounted.
+    // The first dispatch is sufficient; later playback dispatch identities
+    // may change as the active group changes and must not recycle this lease.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const {
     displayState,
     onDisplayAction,
@@ -31,9 +39,13 @@ export default function PresentWorkspace({
     end,
   } = runtime;
 
+  const presentableItemIndex = React.useMemo(
+    () => suppliedPresentableItemIndex ?? buildPresentableItemIndex(dashboard),
+    [dashboard, suppliedPresentableItemIndex],
+  );
   const chartGroups = React.useMemo(
-    () => configuredChartGroups(dashboard),
-    [dashboard],
+    () => configuredChartGroups(dashboard, presentableItemIndex),
+    [dashboard, presentableItemIndex],
   );
   const chartsById = React.useMemo(
     () => new Map(chartGroups.flatMap(({ charts }) => charts.map((chart) => [chart.id, chart]))),
@@ -42,7 +54,9 @@ export default function PresentWorkspace({
   const activePage = (dashboard?.pages ?? []).find(({ id }) => id === activePageId)
     ?? dashboard?.pages?.[0]
     ?? null;
-  const displayedChartIds = displayState.displayed_chart_ids;
+  const displayedChartIds = displayState.displayed_chart_ids.filter(
+    (itemId) => presentableItemIndex.has(itemId),
+  );
   const layout = displayState.layout;
   const selectedCharts = displayedChartIds
     .map((chartId) => chartsById.get(chartId))
@@ -60,7 +74,7 @@ export default function PresentWorkspace({
 
   const presentationState = React.useMemo(() => ({
     active_page_id: activePage?.id ?? "dashboard",
-    displayed_chart_ids: displayedChartIds,
+    items: projectPresentableItems(displayedChartIds, presentableItemIndex),
     layout,
     time: playback.activeGroupId !== null && Number.isFinite(playback.activeEpochMs)
       ? {
@@ -74,6 +88,7 @@ export default function PresentWorkspace({
     activePage?.id,
     blackout,
     displayedChartIds,
+    presentableItemIndex,
     playback.activeEpochMs,
     playback.activeGroupId,
     layout,
@@ -267,6 +282,8 @@ export default function PresentWorkspace({
                         <label
                           className={`present-chart-choice${unavailable ? " is-unavailable" : ""}`}
                           key={chart.id}
+                          data-presentable-item-id={chart.id}
+                          data-presentable-item-kind={presentableItemIndex.get(chart.id).descriptor.kind}
                         >
                           <input
                             type="checkbox"
@@ -416,13 +433,13 @@ function canonicalTime(epochMs) {
   return iso.endsWith("T00:00:00.000Z") ? iso.slice(0, 10) : iso;
 }
 
-function configuredChartGroups(dashboard) {
+function configuredChartGroups(dashboard, presentableItemIndex) {
   return (dashboard?.pages ?? []).flatMap((page) => (
     (page.sections ?? []).map((section) => {
       const charts = (section.panels ?? [])
         .map((panel) => panel.chart ?? panel)
         .filter((chart) => typeof chart?.id === "string" && chart.id.length > 0)
-        .filter(isPresentableChart);
+        .filter((chart) => presentableItemIndex.has(chart.id));
       return {
         id: `${page.id}-${section.id}`,
         label: `${page.label ?? page.title ?? page.id} / ${section.title ?? section.id}`,
@@ -432,11 +449,10 @@ function configuredChartGroups(dashboard) {
   ));
 }
 
-function isPresentableChart(chart) {
-  if (typeof chart?.typeId !== "string" || chart.typeId.length === 0) return true;
-  const schema = getChartSchema(chart.typeId);
-  if (schema.authoringWorkflow !== "static") return true;
-  return getStaticPanelCapabilities(schema).surfaces.present;
+export function projectPresentableItems(itemIds, presentableItemIndex) {
+  return itemIds.map(
+    (itemId) => structuredClone(presentableItemIndex.get(itemId).descriptor),
+  );
 }
 
 function layoutChoices(count) {

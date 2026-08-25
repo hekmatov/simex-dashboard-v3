@@ -57,6 +57,7 @@ import {
   createBuildDraftCoordinatorState,
   reduceBuildDraftCoordinator,
 } from "./buildDraftCoordinator.js";
+import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -857,7 +858,7 @@ function chronoGroupDraftInput(dashboard, charts, groupOverride = undefined) {
   };
 }
 
-function temporalAuthoringCharts(dashboard) {
+export function temporalAuthoringCharts(dashboard) {
   const memberships = new Map();
   const membershipLists = new Map();
   for (const group of dashboard.chronoGroups ?? []) {
@@ -869,7 +870,9 @@ function temporalAuthoringCharts(dashboard) {
     }
   }
   const variableCache = new Map();
-  return collectChartPlacements(dashboard).map((placement) => {
+  return collectChartPlacements(dashboard)
+    .filter(({ chart }) => isTemporalAuthoringChart(chart))
+    .map((placement) => {
     const chart = placement.chart;
     const member = memberships.get(chart.id);
     const timeField = bindingField(chart.roles?.[member?.timeRole])
@@ -906,12 +909,13 @@ function temporalAuthoringCharts(dashboard) {
       sourceChart: chart,
       timeRole: member?.timeRole ?? temporalRoleName(chart.roles),
     };
-  });
+    });
 }
 
 function initialScene(dashboard, preferredPageId) {
   const group = dashboard.chronoGroups?.[0];
-  const placements = collectChartPlacements(dashboard);
+  const placements = collectChartPlacements(dashboard)
+    .filter(({ chart }) => isTemporalAuthoringChart(chart));
   const memberIds = new Set(group?.chartIds ?? (group?.members ?? []).map(({ chartId }) => chartId));
   const eligible = placements.filter(({ chart, pageId }) => (
     memberIds.has(chart.id) && (!preferredPageId || pageId === preferredPageId)
@@ -953,13 +957,17 @@ function sceneValidationContext(dashboard) {
   };
 }
 
-function sceneEligibleCharts(dashboard, charts, scene) {
+export function sceneEligibleCharts(dashboard, charts, scene) {
   const group = dashboard.chronoGroups?.find(({ id }) => id === scene?.chronoGroupId);
   const memberIds = new Set(group?.chartIds ?? (group?.members ?? []).map(({ chartId }) => chartId));
-  return charts.filter((chart) => memberIds.has(chart.id) && chart.pageId === scene?.pageId);
+  return charts.filter((chart) => (
+    isTemporalAuthoringChart(chart.sourceChart ?? chart)
+    && memberIds.has(chart.id)
+    && chart.pageId === scene?.pageId
+  ));
 }
 
-function mergeChronoGroup(groups, saved, charts) {
+export function mergeChronoGroup(groups, saved, charts) {
   const existing = groups.find(({ id }) => id === saved.id);
   const chartById = new Map(charts.map((chart) => [chart.id, chart]));
   const memberById = new Map((existing?.members ?? []).map((member) => [member.chartId, member]));
@@ -973,7 +981,7 @@ function mergeChronoGroup(groups, saved, charts) {
     },
     matching: matchingValue(saved.defaultMatching),
     secondsPerFrame: saved.secondsPerFrame,
-    members: saved.chartIds.map((chartId) => ({
+    members: saved.chartIds.filter((chartId) => chartById.has(chartId)).map((chartId) => ({
       ...(memberById.get(chartId) ?? {}),
       chartId,
       timeRole: memberById.get(chartId)?.timeRole ?? chartById.get(chartId)?.timeRole ?? "observation",
@@ -985,6 +993,14 @@ function mergeChronoGroup(groups, saved, charts) {
   return existing
     ? groups.map((group) => group.id === saved.id ? next : group)
     : [...groups, next];
+}
+
+function isTemporalAuthoringChart(chart) {
+  try {
+    return getChartSchema(chart?.typeId).authoringWorkflow !== "static";
+  } catch {
+    return true;
+  }
 }
 
 function mergeScene(scenes, saved) {

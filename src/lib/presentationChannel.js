@@ -13,7 +13,8 @@ export function createPresentationControllerChannel({
   channelName = presentationChannelName(sessionId),
   createChannel = (name) => new BroadcastChannel(name),
   scheduler = defaultScheduler(),
-  validChartIds,
+  presentableItemIndex,
+  getPresentableItemIndex = () => presentableItemIndex,
   onConnectionChange = () => {},
 } = {}) {
   let active = false;
@@ -37,19 +38,30 @@ export function createPresentationControllerChannel({
         sequence: ++sequence,
         type,
         payload,
-        validChartIds,
+        presentableItemIndex: getPresentableItemIndex(),
       }),
     );
   }
 
   function sendLatestState() {
-    if (latestState) post("state", latestState);
+    if (!latestState) return;
+    try {
+      validatePresentationState(latestState, {
+        presentableItemIndex: getPresentableItemIndex(),
+      });
+    } catch {
+      return;
+    }
+    post("state", latestState);
   }
 
   function handleMessage({ data }) {
     let message;
     try {
-      message = parsePresentationMessage(data, { sessionId, validChartIds });
+      message = parsePresentationMessage(data, {
+        sessionId,
+        presentableItemIndex: getPresentableItemIndex(),
+      });
     } catch {
       return;
     }
@@ -77,7 +89,9 @@ export function createPresentationControllerChannel({
   }
 
   function publish(state) {
-    latestState = structuredClone(validatePresentationState(state, { validChartIds }));
+    latestState = structuredClone(validatePresentationState(state, {
+      presentableItemIndex: getPresentableItemIndex(),
+    }));
     if (active) sendLatestState();
   }
 
@@ -108,7 +122,8 @@ export function createPresentationAudienceChannel({
   channelName = presentationChannelName(sessionId),
   createChannel = (name) => new BroadcastChannel(name),
   scheduler = defaultScheduler(),
-  validChartIds,
+  presentableItemIndex,
+  getPresentableItemIndex = () => presentableItemIndex,
   onStateChange = () => {},
   onConnectionChange = () => {},
 } = {}) {
@@ -131,7 +146,7 @@ export function createPresentationAudienceChannel({
         sequence: ++sequence,
         type,
         payload: {},
-        validChartIds,
+        presentableItemIndex: getPresentableItemIndex(),
       }),
     );
   }
@@ -144,7 +159,10 @@ export function createPresentationAudienceChannel({
   function handleMessage({ data }) {
     let message;
     try {
-      message = parsePresentationMessage(data, { sessionId, validChartIds });
+      message = parsePresentationMessage(data, {
+        sessionId,
+        presentableItemIndex: getPresentableItemIndex(),
+      });
     } catch {
       return;
     }

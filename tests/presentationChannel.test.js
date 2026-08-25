@@ -5,9 +5,29 @@ const channelModule = await import("../src/lib/presentationChannel.js").catch(
   () => null,
 );
 
+const presentableItemIndex = new Map([
+  ["chart-a", {
+    id: "chart-a",
+    descriptor: { kind: "chart", chart_id: "chart-a" },
+  }],
+  ["chart-b", {
+    id: "chart-b",
+    descriptor: { kind: "chart", chart_id: "chart-b" },
+  }],
+  ["image-a", {
+    id: "image-a",
+    descriptor: {
+      kind: "image",
+      panel_id: "image-a",
+      source_id: "image-source-a",
+      revision: 7,
+    },
+  }],
+]);
+
 const firstScene = {
   active_page_id: "biomedical",
-  displayed_chart_ids: ["chart-a"],
+  items: [{ kind: "chart", chart_id: "chart-a" }],
   layout: "solo",
   time: null,
   audience_facts: {
@@ -21,7 +41,10 @@ const firstScene = {
 };
 const secondScene = {
   ...firstScene,
-  displayed_chart_ids: ["chart-a", "chart-b"],
+  items: [
+    { kind: "chart", chart_id: "chart-a" },
+    { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 7 },
+  ],
   layout: "sideBySide",
   blackout: true,
 };
@@ -92,7 +115,7 @@ function createChannel(name) {
   return new FakeBroadcastChannel(name);
 }
 
-function setup() {
+function setup({ getPresentableItemIndex = () => presentableItemIndex } = {}) {
   assert.ok(channelModule, "presentation channel must be implemented");
   const scheduler = new FakeScheduler();
   const states = [];
@@ -101,12 +124,14 @@ function setup() {
     sessionId: "session-001",
     createChannel,
     scheduler,
+    getPresentableItemIndex,
     onConnectionChange: (status) => statuses.push(status),
   });
   const audience = channelModule.createPresentationAudienceChannel({
     sessionId: "session-001",
     createChannel,
     scheduler,
+    getPresentableItemIndex,
     onStateChange: (state) => states.push(state),
   });
   return { audience, controller, scheduler, states, statuses };
@@ -147,6 +172,7 @@ test("a reloaded audience receives the controller's latest state", () => {
     sessionId: "session-001",
     createChannel,
     scheduler,
+    getPresentableItemIndex: () => presentableItemIndex,
     onStateChange: (state) => reloadedStates.push(state),
   });
   controller.publish(secondScene);
@@ -154,6 +180,71 @@ test("a reloaded audience receives the controller's latest state", () => {
 
   assert.deepEqual(states, [firstScene]);
   assert.deepEqual(reloadedStates, [secondScene]);
+
+  reloaded.dispose();
+  controller.dispose();
+});
+
+test("reconnect replays the exact trusted Image identity and revision snapshot", () => {
+  const { audience, controller, scheduler } = setup();
+  controller.start();
+  audience.start();
+  controller.publish(secondScene);
+  audience.dispose();
+
+  const replayed = [];
+  const reloaded = channelModule.createPresentationAudienceChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => presentableItemIndex,
+    onStateChange: (state) => replayed.push(state),
+  });
+  reloaded.start();
+
+  assert.deepEqual(replayed, [secondScene]);
+  assert.deepEqual(replayed[0].items[1], {
+    kind: "image",
+    panel_id: "image-a",
+    source_id: "image-source-a",
+    revision: 7,
+  });
+
+  reloaded.dispose();
+  controller.dispose();
+});
+
+test("reconnect refuses a snapshot after its Image revision becomes stale", () => {
+  let currentIndex = presentableItemIndex;
+  const { audience, controller, scheduler } = setup({
+    getPresentableItemIndex: () => currentIndex,
+  });
+  controller.start();
+  audience.start();
+  controller.publish(secondScene);
+  audience.dispose();
+  currentIndex = new Map(presentableItemIndex);
+  currentIndex.set("image-a", {
+    ...presentableItemIndex.get("image-a"),
+    descriptor: {
+      kind: "image",
+      panel_id: "image-a",
+      source_id: "image-source-a",
+      revision: 8,
+    },
+  });
+
+  const replayed = [];
+  const reloaded = channelModule.createPresentationAudienceChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => currentIndex,
+    onStateChange: (state) => replayed.push(state),
+  });
+  reloaded.start();
+
+  assert.deepEqual(replayed, []);
 
   reloaded.dispose();
   controller.dispose();

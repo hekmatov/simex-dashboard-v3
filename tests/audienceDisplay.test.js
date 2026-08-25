@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { readFile } from "node:fs/promises";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -23,6 +24,24 @@ const dashboard = {
   scenarioLabel: "Scenario identity must not be Audience scene identity",
   dataSources: {
     status: { kind: "inline", rows: [{ entity: "A", value: 1 }] },
+    "image-source": {
+      kind: "staticImage",
+      sourceVersion: 1,
+      revision: 3,
+      origin: { kind: "url", url: "https://example.test/response-map.png" },
+      alt: "Response map",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    "text-source": {
+      kind: "staticText",
+      sourceVersion: 1,
+      revision: 1,
+      renderingPolicy: "portable-qmd-v1",
+      qmd: "## Moderator only",
+    },
   },
   datasetProfiles: {
     status: {
@@ -38,7 +57,8 @@ const dashboard = {
     title: "Biomedical response",
     sections: [{
       id: "overview",
-      panels: ["chart-a", "chart-b", "chart-c", "chart-d"].map((id) => ({
+      panels: [
+        ...["chart-a", "chart-b", "chart-c", "chart-d"].map((id) => ({
         configVersion: 3,
         id,
         typeId: "kpi",
@@ -52,7 +72,20 @@ const dashboard = {
         presentation: { title: { align: "left" }, collection: null },
         interaction: { zoom: { enabled: true }, timeSync: null },
         layout: { size: "standard" },
-      })),
+        })),
+        {
+          id: "image-a",
+          typeId: "image",
+          title: "Response map",
+          sourceId: "image-source",
+        },
+        {
+          id: "free-text-a",
+          typeId: "freeText",
+          title: "Moderator only",
+          sourceId: "text-source",
+        },
+      ],
     }],
   }],
   chronoGroups: [{
@@ -65,7 +98,10 @@ const dashboard = {
 
 const twoChartScene = {
   active_page_id: "biomedical",
-  displayed_chart_ids: ["chart-b", "chart-a"],
+  items: [
+    { kind: "chart", chart_id: "chart-b" },
+    { kind: "chart", chart_id: "chart-a" },
+  ],
   layout: "sideBySide",
   time: null,
   audience_facts: {
@@ -200,4 +236,107 @@ test("audience retains a disconnected scene and blackouts it without unmounting 
     assert.doesNotMatch(html, /chart-panel-action-rail/);
     assert.doesNotMatch(html, /chart-zoom-guard/);
   }
+});
+
+test("Audience accepts a trusted Image descriptor passively and rejects Free text or stale Image injection", () => {
+  const imageScene = {
+    ...twoChartScene,
+    items: [
+      { kind: "chart", chart_id: "chart-a" },
+      { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 3 },
+    ],
+  };
+  const imageHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    presentationState: imageScene,
+  }));
+  const staleHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    presentationState: {
+      ...imageScene,
+      items: [{ kind: "image", panel_id: "image-a", source_id: "image-source", revision: 2 }],
+      layout: "solo",
+    },
+  }));
+  const freeTextHtml = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard,
+    connectionStatus: "connected",
+    presentationState: {
+      ...imageScene,
+      items: [{ kind: "freeText", panel_id: "free-text-a" }],
+      layout: "solo",
+    },
+  }));
+
+  assert.match(imageHtml, /data-presentation-item-kind="image"/);
+  assert.match(imageHtml, /data-image-revision="3"/);
+  assert.match(imageHtml, /Loading saved image/);
+  assert.doesNotMatch(imageHtml, /<button|Image viewer actions|Moderator only/);
+  assert.match(staleHtml, /Audience display ready/);
+  assert.match(freeTextHtml, /Audience display ready/);
+  assert.doesNotMatch(freeTextHtml, /Moderator only/);
+});
+
+test("Audience Image fit/transform is passive and one failed cell leaves chart siblings rendered", () => {
+  const imageItem = { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 3 };
+  const ready = renderToStaticMarkup(React.createElement(gridModule.default, {
+    dashboard,
+    items: [imageItem],
+    layout: "solo",
+    surface: "audience",
+    staticAssetReadiness: new Map([["image-a", {
+      status: "ready",
+      kind: "staticImage",
+      sourceId: "image-source",
+      revision: 3,
+      src: "https://example.test/response-map.png",
+      url: "https://example.test/response-map.png",
+      alt: "Response map",
+      decorative: false,
+      fit: "cover",
+      crop: { x: 100, y: 50, width: 800, height: 900 },
+      rotation: 90,
+      width: 1600,
+      height: 900,
+    }]]),
+  }));
+  const failed = renderToStaticMarkup(React.createElement(gridModule.default, {
+    dashboard,
+    items: [
+      { kind: "chart", chart_id: "chart-a" },
+      imageItem,
+      { kind: "chart", chart_id: "chart-b" },
+      { kind: "chart", chart_id: "chart-c" },
+    ],
+    layout: "grid2x2",
+    surface: "audience",
+    staticAssetReadiness: new Map([["image-a", {
+      status: "error",
+      kind: "staticImage",
+      sourceId: "image-source",
+      revision: 3,
+      failure: { code: "asset-read-failed", message: "Forced failure", retryable: true },
+    }]]),
+  }));
+
+  assert.match(ready, /displayed-count-1/);
+  assert.match(ready, /data-image-transform-order="rotation-crop-fit"/);
+  assert.match(ready, /preserveAspectRatio="xMidYMid slice"/);
+  assert.doesNotMatch(ready, /<button|Image viewer actions|tabindex/);
+  assert.match(failed, /displayed-count-4/);
+  assert.match(failed, /Image unavailable/);
+  assert.match(failed, /Forced failure/);
+  assert.match(failed, /data-displayed-chart-id="chart-a"/);
+  assert.match(failed, /data-displayed-chart-id="chart-b"/);
+  assert.match(failed, /data-displayed-chart-id="chart-c"/);
+  assert.doesNotMatch(failed, /<button|Retry|Replace|Edit/);
+});
+
+test("presentation CSS reserves passive Image loading/error geometry in 1/2/4-cell layouts", async () => {
+  const css = await readFile(new URL("../src/styles/presentation.css", import.meta.url), "utf8");
+  assert.match(css, /\.displayed-count-1,[\s\S]*\.displayed-count-2,[\s\S]*\.displayed-count-4/);
+  assert.match(css, /\.audience-static-image-cell :is\([\s\S]*\.chart-image-pending,[\s\S]*\.static-content-state/);
+  assert.match(css, /\.chart-image-actions,[\s\S]*\.static-content-state__actions[\s\S]*display: none/);
 });

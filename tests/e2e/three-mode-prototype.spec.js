@@ -105,23 +105,26 @@ test("Present opens an audience window and sends a two-chart layout", async ({ p
 
 test("Present retains synchronized time through blackout, reload, disconnect, and reopen", async ({ page }) => {
   await enterPresent(page);
-  await installAudienceStateObserver(page.context());
+  await installAudienceStateObserver(page);
   const audience = await openAudience(page);
   await selectTwoAudienceCharts(page);
 
   await page.getByLabel("Synchronized time").selectOption({ index: 1 });
   await expect.poll(async () => Number.isFinite(
-    await observedAudienceEpoch(audience),
+    await observedAudienceEpoch(page),
   )).toBe(true);
-  const previousEpoch = await observedAudienceEpoch(audience);
+  const previousEpoch = await observedAudienceEpoch(page);
   const presentationTime = page.getByLabel("Presentation time");
   await expect(presentationTime).toBeEnabled();
   const previousTime = await presentationTime.inputValue();
-  await presentationTime.press("ArrowLeft");
+  const maximumTime = Number(await presentationTime.getAttribute("max"));
+  await presentationTime.press(
+    Number(previousTime) < maximumTime ? "ArrowRight" : "ArrowLeft",
+  );
   await expect(presentationTime).not.toHaveValue(previousTime);
-  await expect.poll(() => observedAudienceEpoch(audience))
+  await expect.poll(() => observedAudienceEpoch(page))
     .not.toBe(previousEpoch);
-  const activeEpochMs = await observedAudienceEpoch(audience);
+  const activeEpochMs = await observedAudienceEpoch(page);
   expect(Number.isFinite(activeEpochMs)).toBe(true);
 
   await page.getByRole("button", { name: "Blackout" }).click();
@@ -130,17 +133,18 @@ test("Present retains synchronized time through blackout, reload, disconnect, an
   await audience.reload();
   await expect(audience.locator(".audience-blackout")).toBeVisible();
   await expect(audience.locator("[data-displayed-chart-id]")).toHaveCount(2);
-  await expect.poll(() => observedAudienceEpoch(audience)).toBe(activeEpochMs);
+  await expect.poll(() => observedAudienceEpoch(page)).toBe(activeEpochMs);
 
   await page.getByRole("button", { name: "Restore" }).click();
   await expect(audience.locator(".audience-blackout")).toHaveCount(0);
   await audience.close();
-  await expect(page.getByText("Audience display disconnected", { exact: true }))
+  await expect(page.getByRole("region", { name: "Audience display connection" })
+    .getByText("Audience display disconnected", { exact: true }))
     .toBeVisible({ timeout: 7_000 });
 
   const reopened = await reopenAudience(page);
   await expect(reopened.locator("[data-displayed-chart-id]")).toHaveCount(2);
-  await expect.poll(() => observedAudienceEpoch(reopened)).toBe(activeEpochMs);
+  await expect.poll(() => observedAudienceEpoch(page)).toBe(activeEpochMs);
 });
 
 test("iPad and 1200px Build plus a 1920 by 1080 audience have no horizontal overflow", async ({ page }) => {
@@ -212,29 +216,21 @@ async function expectNoHorizontalOverflow(page) {
   ))).toBe(true);
 }
 
-async function installAudienceStateObserver(context) {
-  await context.addInitScript(() => {
-    const parameters = new URLSearchParams(globalThis.location.search);
-    const channelId = parameters.get("channel");
-    if (parameters.get("surface") !== "audience" || !channelId) return;
-
-    const observation = { latestState: null };
-    const channel = new BroadcastChannel(`simex-presentation-${channelId}`);
-    channel.addEventListener("message", ({ data }) => {
-      if (
-        data?.protocol_version === 1
-        && data.session_id === channelId
-        && data.type === "state"
-      ) {
-        observation.latestState = structuredClone(data.payload);
+async function installAudienceStateObserver(page) {
+  await page.evaluate(() => {
+    const originalPostMessage = BroadcastChannel.prototype.postMessage;
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = { latestState: null };
+    BroadcastChannel.prototype.postMessage = function observePresentationState(data) {
+      if (data?.protocol_version === 3 && data.type === "state") {
+        globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState = structuredClone(data.payload);
       }
-    });
-    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = observation;
+      return originalPostMessage.call(this, data);
+    };
   });
 }
 
-async function observedAudienceEpoch(audience) {
-  return audience.evaluate(() => (
+async function observedAudienceEpoch(page) {
+  return page.evaluate(() => (
     globalThis.__SIMEX_E2E_AUDIENCE_STATE__?.latestState?.time?.active_epoch_ms
       ?? null
   ));

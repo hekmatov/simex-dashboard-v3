@@ -1,6 +1,6 @@
 # Step 7S Post-Step-7 Ownership Inventory
 
-**Status:** PASS ownership gate; Slices 1–5 now realize the listed owners through canonical Build/View/fullscreen composition. Slice 5 is implementation complete and review pending.
+**Status:** PASS ownership gate; Slices 1–6 now realize the listed owners through canonical Build/View/fullscreen/Present/Audience composition. Slice 6 is implementation complete and review pending.
 
 **Accepted Step 7 anchor:** `01511bd5a56978965b8dfc8cdbec3b51c2e17e77`
 
@@ -45,6 +45,18 @@
 - `src/components/charts/FreeTextChartView.jsx` and `ImageChartView.jsx` expose source/revision evidence markers only on their canonical rendered owners. Static content CSS ownership remains unchanged; Slice 5 adds no presentation/Audience CSS.
 - The exact six-stage chart workflow and separate four-stage static workflow remain unchanged. Durable v4 persistence, authored-byte storage, and strict validation remain Slice 4 owners; Present/Audience protocol and passive composition remain Slice 6 owners.
 - Fix round 1 adds no production fullscreen or asset-store owner. Behavioral coverage drives the existing `FullscreenDisplay` → `DisplayedChartGrid.findChart` → `ChartView` path and injects failure only through the existing browser-authored store API. Free-text source ID/revision evidence remains on `FreeTextChartView`; no second model lookup or renderer is introduced.
+
+## Slice 6 realized ownership
+
+- `src/static-content/staticPanelCapabilities.js::buildPresentableItemIndex` is the single trusted Present/Audience item authority. It retains ordinary chart descriptors, admits only complete saved Images, and excludes Free text.
+- `src/lib/presentationProtocol.js` owns exact ordered v3 descriptor syntax and field rejection. `src/lib/presentationChannel.js` owns publish, receive, replay, and reconnect revalidation against the current index. Neither owner transfers URLs, blobs, bytes, transforms, crop/fit, time, frame, Chrono, or Scene state.
+- `src/components/presentation/PresentWorkspace.jsx` projects internal selected IDs back through the trusted index before publication and owns one mount-scoped playback-view lease. It does not infer a descriptor from an ID.
+- `src/components/presentation/AudienceDisplay.jsx` rebuilds the same trusted index and delegates descriptor-aware cells to the canonical `DisplayedChartGrid`/`findChart`/`ChartView` chain. Invalid/stale state produces no cell.
+- `src/components/presentation/useAudienceStaticAssetReadiness.js` owns exact destination/cell/revision Image acquisition, settlement, and release. Each effect setup releases only its own attempt under StrictMode. `AudienceSnapshotMonitor.jsx` remains a capture consumer and owns no readiness state.
+- `src/components/display/DisplayedChartGrid.jsx` owns descriptor-preserving grid order and per-cell static readiness injection. `src/components/charts/ChartView.jsx::withPlaybackTimeContext` and `src/charting/rendering/resolveChartRendering.js` remain the canonical static-before-time/data boundaries.
+- `src/components/build/BuildWorkspace.jsx::temporalAuthoringCharts, sceneEligibleCharts, mergeChronoGroup` owns UI-side static filtering. Central v4 validation/migration remains fail-closed; the strict Scene schema is unchanged.
+- `src/lib/loadDashboard.js` now preserves ready states for successfully hydrated tabular sources while merging typed-static source states. This prevents a static save/reload from disabling existing chart/Chrono readiness without adding a provider path for static sources.
+- `src/styles/presentation.css` exclusively owns passive 1/2/4-cell Audience Image loading/failure/fit geometry. It contains no Free-text Audience selector and no active Image control rule.
 
 ## Clean-baseline findings
 
@@ -140,7 +152,7 @@ These paths and exported symbols are fixed before implementation:
 | FT-03–FT-06 | `tests/portableQmdPolicy.test.js`; `tests/portableQmdDomSafety.test.js`; `tests/staticContentDraft.test.js` | `tests/e2e/static-free-text.spec.js` |
 | FT-07–FT-10 | `tests/staticContentDraft.test.js`; `tests/freeTextChartView.test.js`; `tests/chartViewV3.test.js`; `tests/v3RuntimeBoundaries.test.js` | `tests/e2e/static-free-text.spec.js` |
 | FT-11 | `tests/staticPanelTransaction.test.js`; `tests/buildDirtyState.test.js`; `tests/buildAuthoringExitProtection.test.js`; `tests/fullscreenDisplay.test.js` | `tests/e2e/static-free-text.spec.js` |
-| FT-12 | `tests/presentWorkspace.test.js`; `tests/presentationProtocol.test.js`; `tests/audienceDisplay.test.js` | `tests/e2e/static-free-text.spec.js` |
+| FT-12 | `tests/presentWorkspace.test.js`; `tests/presentationProtocol.test.js`; `tests/presentationChannel.test.js`; `tests/audienceDisplay.test.js` | `tests/e2e/static-image-audience.spec.js` |
 | IM-02 | `tests/imageAssetValidation.test.js` | `tests/e2e/static-image.spec.js` |
 | IM-03, IM-04, IM-07 | `tests/browserAuthoredAssetStore.test.js`; `tests/staticSourceSchema.test.js`; `tests/dashboardPackageExport.test.js`; `tests/dashboardBundleV3.test.js` | `tests/e2e/static-image.spec.js`; `tests/e2e/static-content-portability.spec.js` |
 | IM-05 | `tests/staticSourceSchema.test.js`; `tests/imageChartView.test.js`; `tests/audienceDisplay.test.js` | `tests/e2e/static-image.spec.js`; `tests/e2e/static-image-audience.spec.js` |
@@ -150,7 +162,7 @@ These paths and exported symbols are fixed before implementation:
 | IM-13 | `tests/imageChartView.test.js`; `tests/audienceDisplay.test.js`; `tests/staticPanelComposition.test.js` | `tests/e2e/static-image.spec.js`; `tests/e2e/static-image-audience.spec.js` |
 | IM-14 | `tests/staticContentDraft.test.js`; `tests/staticPanelTransaction.test.js`; `tests/buildAuthoringExitProtection.test.js`; `tests/fullscreenDisplay.test.js` | `tests/e2e/static-image.spec.js` |
 | IM-15 | `tests/presentWorkspace.test.js`; `tests/presentationProtocol.test.js`; `tests/presentationChannel.test.js`; `tests/audienceDisplay.test.js`; `tests/staticSourceResolver.test.js` | `tests/e2e/static-image-audience.spec.js` |
-| IM-16 | `tests/audienceDisplay.test.js` | `tests/e2e/static-image-audience.spec.js` |
+| IM-16 | `tests/audienceDisplay.test.js`; `tests/audienceStaticAssetReadiness.test.js`; `tests/staticSourceResolver.test.js` | `tests/e2e/static-image-audience.spec.js` |
 | PS-01 | `tests/staticPanelTransaction.test.js`; `tests/browserAuthoredAssetStore.test.js`; `tests/buildDirtyState.test.js`; `tests/chartDraftSession.test.js`; `tests/dashboardAppV3.test.js` | `tests/e2e/static-free-text.spec.js`; `tests/e2e/static-image.spec.js` |
 | PS-02 | `tests/dashboardBundleV3.test.js`; `tests/dashboardAssetPersistence.test.js`; `tests/dashboardMigrationV4.test.js`; `tests/staticTemporalBoundary.test.js`; `tests/sceneSchema.test.js` | `tests/e2e/static-content-portability.spec.js` |
 | PS-03 | `tests/dashboardBundleV3.test.js`; `tests/dashboardPackageCandidate.test.js`; `tests/dashboardPackageExport.test.js`; `tests/dashboardPackageImportTransaction.test.js`; `tests/dashboardAppV3.test.js` | `tests/e2e/static-content-portability.spec.js` |

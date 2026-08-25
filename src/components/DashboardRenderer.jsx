@@ -53,6 +53,7 @@ import {
 } from "../lib/dashboardSelectors.js";
 import { createDebouncedDashboardEdits } from "../lib/dashboardCommitController.js";
 import { createImportedRendererDraftState } from "../lib/dashboardPackageImportTransaction.js";
+import { buildPresentableItemIndex } from "../static-content/staticPanelCapabilities.js";
 import { collectDashboardPackageExportIssues } from "../lib/dashboardPackageExport.js";
 import { summarizeDashboardContent } from "../lib/dashboardContentReset.js";
 import { validateGeoJson } from "../lib/loadDashboard.js";
@@ -226,13 +227,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, [editMode, onBuildStructureProjectionChange, workingDashboard]);
   const activePage =
     workingDashboard.pages.find((page) => page.id === activePageId) ?? workingDashboard.pages[0];
-  const presentationValidChartIds = React.useMemo(
-    () => configuredCharts(dashboard)
-      .map((chart) => chart?.id)
-      .filter((chartId) => typeof chartId === "string" && chartId.length > 0),
+  const presentableItemIndex = React.useMemo(
+    () => buildPresentableItemIndex(dashboard),
     [dashboard],
   );
-  const presentationRuntime = usePresentationRuntime(presentationValidChartIds);
+  const presentationRuntime = usePresentationRuntime(presentableItemIndex);
   React.useEffect(() => {
     const transition = resolveScenePresentTransition(
       appliedScenePresentSignatureRef.current,
@@ -1367,6 +1366,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onModeRequest={onModeRequest}
         onOpenDashboardLook={onOpenDashboardLook}
         runtime={presentationRuntime}
+        presentableItemIndex={presentableItemIndex}
         accessibilityEnabled={accessibilityEnabled}
         themeProjection={themeProjection}
       />

@@ -279,6 +279,31 @@ test("Free-text panels are absent from the Present catalogue", () => {
   assert.doesNotMatch(html, /field-guide/);
 });
 
+test("Present projects ordered chart and exact saved Image descriptors without time fields", () => {
+  assert.equal(typeof presentModule?.projectPresentableItems, "function");
+  const index = new Map([
+    ["chart-a", { descriptor: { kind: "chart", chart_id: "chart-a" } }],
+    ["image-a", { descriptor: {
+      kind: "image",
+      panel_id: "image-a",
+      source_id: "image-source",
+      revision: 9,
+    } }],
+  ]);
+
+  const descriptors = presentModule.projectPresentableItems(
+    ["image-a", "chart-a"],
+    index,
+  );
+  assert.deepEqual(descriptors, [
+    { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 9 },
+    { kind: "chart", chart_id: "chart-a" },
+  ]);
+  assert.equal(Object.hasOwn(descriptors[0], "time"), false);
+  assert.equal(Object.hasOwn(descriptors[0], "fit"), false);
+  assert.equal(Object.hasOwn(descriptors[0], "url"), false);
+});
+
 function elementMarkupByAriaLabel(html, tagName, label) {
   const marker = `aria-label="${label}"`;
   const markerIndex = html.indexOf(marker);

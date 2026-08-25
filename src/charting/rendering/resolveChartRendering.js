@@ -41,7 +41,10 @@ function resolveTypedStaticRendering(renderingInput) {
   const source = renderingSource(renderingInput, chart?.sourceId);
   if (chart?.typeId === "image" && source?.kind === "staticImage") {
     const schema = getChartSchema(chart.typeId);
-    const resolved = resolveStaticImageSource(source, {
+    const suppliedResolution = renderingInput.renderContext?.staticSourceResolution;
+    const suppliedIdentityMatches = suppliedResolution?.sourceId === chart.sourceId
+      && suppliedResolution?.revision === source.revision;
+    const resolved = suppliedIdentityMatches ? suppliedResolution : resolveStaticImageSource(source, {
       sourceId: chart.sourceId,
       assets: renderingInput.renderContext?.assets ?? {},
       resolveAsset: renderingInput.renderContext?.resolveStaticAsset,
@@ -103,7 +106,11 @@ function resolveTypedStaticRendering(renderingInput) {
 
 function staticImageRenderingResolution(resolved, schema, renderingInput) {
   return renderingResolution({
-    status: resolved.status === "ready" ? "available" : "unavailable",
+    status: resolved.status === "ready"
+      ? "available"
+      : resolved.status === "loading"
+        ? "pending"
+        : "unavailable",
     schema,
     prepared: null,
     model: {
@@ -346,14 +353,25 @@ function renderingResolution({
 }
 
 function captureRenderingInput(input) {
+  const timeContext = isStaticRenderingType(input.chart?.typeId)
+    ? undefined
+    : input.timeContext;
   return Object.freeze({
     chart: input.chart,
     rows: input.rows,
     datasetProfile: input.datasetProfile,
     geoData: input.geoData,
-    timeContext: input.timeContext,
+    timeContext,
     renderContext: input.renderContext,
   });
+}
+
+function isStaticRenderingType(typeId) {
+  try {
+    return getChartSchema(typeId).authoringWorkflow === "static";
+  } catch {
+    return false;
+  }
 }
 
 function isRenderingInput(input) {

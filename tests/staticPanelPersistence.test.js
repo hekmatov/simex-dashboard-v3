@@ -131,8 +131,13 @@ test("dashboard v4 hydration excludes typed static sources from tabular loading 
     source: { kind: "staticText", qmd: "No dataset hydration required." },
   });
   const finalized = finalizeStaticContentDraft(draft);
+  const dashboard = createDashboard();
+  dashboard.dataSources.status = {
+    kind: "inline",
+    rows: [{ state: "Ready", count: 4 }],
+  };
   const candidate = prepareStaticPanelTransaction({
-    dashboard: createDashboard(),
+    dashboard,
     operation: "create",
     destination: finalized.destination,
     panel: finalized.panel,
@@ -145,6 +150,8 @@ test("dashboard v4 hydration excludes typed static sources from tabular loading 
   assert.equal(hydrated.dataSources[finalized.panel.sourceId].kind, "staticText");
   assert.equal(Object.hasOwn(hydrated.loadedData, finalized.panel.sourceId), false);
   assert.equal(Object.hasOwn(hydrated.datasetProfiles, finalized.panel.sourceId), false);
+  assert.deepEqual(hydrated.dataSourceStates.status, { status: "ready" });
+  assert.deepEqual(hydrated.dataSourceStates[finalized.panel.sourceId], { status: "ready" });
 });
 
 test("dashboard loading exposes missing and corrupt local Image bytes as source-scoped state", async () => {

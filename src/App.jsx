@@ -32,6 +32,7 @@ import {
   serializeDashboardBundle,
 } from "./charting/config/dashboardBundleV3.js";
 import { browserAuthoredAssetStore } from "./static-content/assets/browserAuthoredAssetRuntime.js";
+import { buildPresentableItemIndex } from "./static-content/staticPanelCapabilities.js";
 import { commitDurableStaticPanelTransaction } from "./static-content/assets/durableStaticPanelCommit.js";
 import { reconcileAuthoredAssets } from "./static-content/assets/reconcileAuthoredAssets.js";
 import {
@@ -191,6 +192,10 @@ export default function App() {
     [playbackChartCollections.charts],
   );
   validChartIdsRef.current = validChartIds;
+  const presentableItemIndex = React.useMemo(
+    () => buildPresentableItemIndex(dashboard),
+    [dashboard],
+  );
   const playbackGroups = React.useMemo(
     () => readyChronoGroups(dashboard),
     [dashboard?.dataSourceStates, dashboard?.pages, dashboard?.chronoGroups],
@@ -411,7 +416,7 @@ export default function App() {
     try {
       channel = createPresentationAudienceChannel({
         sessionId: dashboardEntry.channelId,
-        validChartIds,
+        presentableItemIndex,
         onStateChange: setAudiencePresentationState,
         onConnectionChange: setAudienceConnectionStatus,
       });
@@ -420,7 +425,7 @@ export default function App() {
       setAudienceConnectionStatus("waiting");
     }
     return () => channel?.dispose();
-  }, [dashboard, dashboardEntry.channelId, dashboardEntry.surface, validChartIds]);
+  }, [dashboard, dashboardEntry.channelId, dashboardEntry.surface, presentableItemIndex]);
 
   React.useEffect(() => () => {
     dashboardCommitControllerRef.current?.dispose();
@@ -1177,6 +1182,7 @@ export default function App() {
           dashboard={dashboard}
           connectionStatus={audienceConnectionStatus}
           presentationState={audiencePresentationState}
+          presentableItemIndex={presentableItemIndex}
         />
       </div>
     );

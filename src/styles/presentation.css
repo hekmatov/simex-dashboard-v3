@@ -155,6 +155,58 @@
   border-radius: 16px;
   overflow: hidden;
   padding: 16px;
+  position: relative;
+}
+
+.displayed-chart-grid[data-display-surface="audience"]:is(
+  .displayed-count-1,
+  .displayed-count-2,
+  .displayed-count-4
+) .displayed-chart-cell {
+  align-content: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.displayed-chart-grid[data-display-surface="audience"] .audience-static-image-cell {
+  isolation: isolate;
+}
+
+.displayed-chart-grid[data-display-surface="audience"] .audience-static-image-cell :is(
+  .chart-view-frame,
+  .chart-image-view,
+  .chart-image-viewport,
+  .chart-image-pending,
+  .static-content-state
+) {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.displayed-chart-grid[data-display-surface="audience"] .audience-static-image-cell :is(
+  .chart-image-pending,
+  .static-content-state
+) {
+  align-content: center;
+  display: grid;
+  justify-items: center;
+  margin: 0;
+  text-align: center;
+}
+
+.displayed-chart-grid[data-display-surface="audience"] .audience-static-image-cell .chart-image-viewport {
+  border-radius: 10px;
+  min-height: 0;
+}
+
+.displayed-chart-grid[data-display-surface="audience"] .audience-static-image-cell :is(
+  .chart-image-actions,
+  .static-content-state__actions
+) {
+  display: none;
 }
 
 .displayed-chart-grid[data-display-surface="audience"] .chart-view-frame,

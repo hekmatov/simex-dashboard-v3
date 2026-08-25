@@ -1,4 +1,4 @@
-export const PRESENTATION_PROTOCOL_VERSION = 2;
+export const PRESENTATION_PROTOCOL_VERSION = 3;
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const MESSAGE_TYPES = new Set(["ready", "state", "heartbeat", "ended"]);
@@ -18,7 +18,7 @@ const ENVELOPE_FIELDS = [
 ];
 const STATE_FIELDS = [
   "active_page_id",
-  "displayed_chart_ids",
+  "items",
   "layout",
   "time",
   "audience_facts",
@@ -32,6 +32,8 @@ const AUDIENCE_FACT_FIELDS = [
   "scene_date",
 ];
 const TIME_FIELDS = ["group_id", "active_epoch_ms"];
+const CHART_ITEM_FIELDS = ["kind", "chart_id"];
+const IMAGE_ITEM_FIELDS = ["kind", "panel_id", "source_id", "revision"];
 
 export function presentationChannelName(sessionId) {
   assertIdentifier(sessionId, "session ID");
@@ -43,7 +45,7 @@ export function makePresentationMessage({
   sequence,
   type,
   payload,
-  validChartIds,
+  presentableItemIndex,
 }) {
   const message = {
     protocol_version: PRESENTATION_PROTOCOL_VERSION,
@@ -52,24 +54,24 @@ export function makePresentationMessage({
     type,
     payload: structuredClone(payload),
   };
-  validateMessage(message, { validChartIds });
+  validateMessage(message, { presentableItemIndex });
   return message;
 }
 
-export function parsePresentationMessage(value, { sessionId, validChartIds } = {}) {
+export function parsePresentationMessage(value, { sessionId, presentableItemIndex } = {}) {
   const message = structuredClone(value);
-  validateMessage(message, { sessionId, validChartIds });
+  validateMessage(message, { sessionId, presentableItemIndex });
   return message;
 }
 
-export function validatePresentationState(state, { validChartIds } = {}) {
+export function validatePresentationState(state, { presentableItemIndex } = {}) {
   assertPlainObject(state, "presentation state");
   assertExactFields(state, STATE_FIELDS, "presentation state");
   assertIdentifier(state.active_page_id, "active page ID");
-  assertChartIds(state.displayed_chart_ids, validChartIds);
+  assertPresentationItems(state.items, presentableItemIndex);
 
-  if (!LAYOUTS_BY_COUNT[state.displayed_chart_ids.length].has(state.layout)) {
-    throw new Error("layout is not valid for displayed chart count");
+  if (!LAYOUTS_BY_COUNT[state.items.length].has(state.layout)) {
+    throw new Error("layout is not valid for presentation item count");
   }
   validateAudienceFacts(state.audience_facts);
   if (typeof state.blackout !== "boolean") {
@@ -79,7 +81,7 @@ export function validatePresentationState(state, { validChartIds } = {}) {
   return state;
 }
 
-function validateMessage(message, { sessionId, validChartIds }) {
+function validateMessage(message, { sessionId, presentableItemIndex }) {
   assertPlainObject(message, "presentation message");
   assertExactFields(message, ENVELOPE_FIELDS, "presentation message");
   if (message.protocol_version !== PRESENTATION_PROTOCOL_VERSION) {
@@ -97,7 +99,7 @@ function validateMessage(message, { sessionId, validChartIds }) {
   }
 
   if (message.type === "state") {
-    validatePresentationState(message.payload, { validChartIds });
+    validatePresentationState(message.payload, { presentableItemIndex });
   } else {
     assertPlainObject(message.payload, "presentation payload");
     assertExactFields(message.payload, [], "presentation payload");
@@ -126,22 +128,52 @@ function validateTime(time) {
   }
 }
 
-function assertChartIds(chartIds, validChartIds) {
-  if (!Array.isArray(chartIds) || chartIds.length > 4) {
-    throw new Error("displayed chart IDs must contain 0 to 4 items");
+function assertPresentationItems(items, presentableItemIndex) {
+  if (!Array.isArray(items) || items.length > 4) {
+    throw new Error("presentation items must contain 0 to 4 items");
   }
-  const allowedIds = validChartIds == null ? null : new Set(validChartIds);
   const uniqueIds = new Set();
-  for (const chartId of chartIds) {
-    assertIdentifier(chartId, "chart ID");
-    if (uniqueIds.has(chartId)) {
-      throw new Error("displayed chart IDs must be unique chart IDs");
+  for (const item of items) {
+    assertPlainObject(item, "presentation item");
+    const itemId = validatePresentationItem(item);
+    if (uniqueIds.has(itemId)) {
+      throw new Error("presentation state must contain unique presentation items");
     }
-    if (allowedIds && !allowedIds.has(chartId)) {
-      throw new Error("displayed chart ID is not allowed");
+    uniqueIds.add(itemId);
+
+    if (presentableItemIndex != null) {
+      const trusted = presentableItemIndex.get?.(itemId)?.descriptor;
+      if (!trusted || !descriptorsEqual(item, trusted)) {
+        throw new Error("presentation item identity or revision is not allowed");
+      }
     }
-    uniqueIds.add(chartId);
   }
+}
+
+function validatePresentationItem(item) {
+  if (item.kind === "chart") {
+    assertExactFields(item, CHART_ITEM_FIELDS, "presentation item");
+    assertIdentifier(item.chart_id, "chart ID");
+    return item.chart_id;
+  }
+  if (item.kind === "image") {
+    assertExactFields(item, IMAGE_ITEM_FIELDS, "presentation item");
+    assertIdentifier(item.panel_id, "Image panel ID");
+    assertIdentifier(item.source_id, "Image source ID");
+    if (!Number.isSafeInteger(item.revision) || item.revision < 1) {
+      throw new Error("Image revision must be a positive integer");
+    }
+    return item.panel_id;
+  }
+  throw new Error("presentation item descriptor kind is not allowed");
+}
+
+function descriptorsEqual(left, right) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length && leftKeys.every(
+    (key) => Object.hasOwn(right, key) && left[key] === right[key],
+  );
 }
 
 function assertIdentifier(value, label) {

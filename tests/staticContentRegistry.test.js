@@ -76,11 +76,15 @@ test("surface, authoring, and time capabilities are exact for static content", (
   });
 });
 
-test("presentable index includes saved Image identity and revision but excludes Free text", () => {
+test("presentable index includes charts and saved Image identity/revision but excludes Free text", () => {
   const dashboard = fixtureDashboard();
   const index = buildPresentableItemIndex(dashboard);
 
-  assert.deepEqual([...index.keys()], ["image-panel"]);
+  assert.deepEqual([...index.keys()], ["chart-panel", "image-panel"]);
+  assert.deepEqual(index.get("chart-panel")?.descriptor, {
+    kind: "chart",
+    chart_id: "chart-panel",
+  });
   assert.deepEqual(index.get("image-panel"), {
     id: "image-panel",
     title: "Response map",
@@ -94,6 +98,10 @@ test("presentable index includes saved Image identity and revision but excludes 
       revision: 4,
     },
   });
+});
+
+test("presentable index is empty while the dashboard is still loading", () => {
+  assert.deepEqual([...buildPresentableItemIndex(null)], []);
 });
 
 test("static destinations accept dashboard sections and reject temporal ownership", () => {
@@ -140,6 +148,7 @@ function fixtureDashboard() {
         id: "section-a",
         panels: [
           { id: "text-panel", chart: { id: "text-panel", typeId: "freeText", title: "Brief", sourceId: "text-source" } },
+          { id: "chart-panel", chart: { id: "chart-panel", typeId: "kpi", title: "Status", sourceId: "chart-source" } },
           { id: "image-panel", chart: { id: "image-panel", typeId: "image", title: "Response map", sourceId: "image-source" } },
         ],
       }],

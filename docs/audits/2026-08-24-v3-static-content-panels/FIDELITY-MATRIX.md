@@ -1,9 +1,54 @@
 # Step 7S Static Content Fidelity Matrix
 
-**Status:** Accepted design requirements — Slices 1–5 implemented through canonical Build/View/fullscreen composition and restoration; Slice 5 review and Slice 6 protocol/Audience fidelity remain pending
+**Status:** Accepted design requirements — Slices 1–6 implementation complete across Build/View/fullscreen/Present/Audience; Slice 6 review pending
 **Layer rule:** S = semantic correctness, C = composition correctness, R = real-use correctness
 
 Every accepted invariant identifies its eventual production owner and a falsifiable check. Sketch evidence demonstrates the design only; it is never implementation evidence.
+
+## Final Step 7S controlling 36-row disposition
+
+This is the binding final ledger. It supersedes every earlier per-slice `pending`, `partial`, `not promoted`, and `not implemented` status retained below as historical execution provenance. “Passing” means the named layer has sufficient deterministic, mounted composition, or intended-use evidence under the current user-directed permissive-inert Free-text contract and strict Image contract.
+
+| ID | Engine | UI/composition | Fidelity | Durable evidence |
+|---|---|---|---|---|
+| FT-01 | Passing | Passing | Passing | Slice 1 registry/workflow and Slice 5 canonical composition reports |
+| FT-02 | Passing | Passing | Passing | Slice 1 catalogue plus retained Free-text journeys |
+| FT-03 | Passing | Passing | Passing | Slice 2 arbitrary-source inert compiler/DOM/browser evidence |
+| FT-04 | Passing | Passing | Passing | Canonical renderer plus exact source/revision Build/View/fullscreen evidence |
+| FT-05 | Passing | Passing | Passing | Safe DOM/resource-boundary tests and retained DOM inspection |
+| FT-06 | Passing | Passing | Passing | Restricted bundled math and arbitrary inert corpus evidence |
+| FT-07 | Passing | Passing | Passing | Wide/narrow source/preview authoring journey |
+| FT-08 | Passing | Passing | Passing | Blocking resource/complexity and last-valid preview evidence |
+| FT-09 | Passing | Passing | Passing | Canonical saved-panel responsive overflow journey |
+| FT-10 | Passing | Passing | Passing | Source equality and internal scroll/fullscreen evidence |
+| FT-11 | Passing | Passing | Passing | v4 reload/import/offline exact source/revision continuation |
+| FT-12 | Passing | Passing | Passing | Slice 6 selector, injected protocol rejection, and live Audience absence |
+| IM-01 | Passing | Passing | Passing | Slice 1/3 catalogue and guided Image authoring evidence |
+| IM-02 | Passing | Passing | Passing | Strict byte/decode/dimension/animation validation evidence |
+| IM-03 | Passing | Passing | Passing | Content-addressed authored store and v4 portability evidence |
+| IM-04 | Passing | Passing | Passing | HTTPS/package-origin validation and dependency disclosure evidence |
+| IM-05 | Passing | Passing | Passing | Explicit alt/decorative validation and canonical rendering evidence |
+| IM-06 | Passing | Passing | Passing | Nondestructive transform plus reload equality evidence |
+| IM-07 | Passing | Passing | Passing | Local/linked/package source and offline behavior evidence |
+| IM-08 | Passing | Passing | Passing | Guided source/accessibility/transform authoring evidence |
+| IM-09 | Passing | Passing | Passing | Active viewer reveal/zoom/reset without saved mutation |
+| IM-10 | Passing | Passing | Passing | Rotation/crop/fit geometry at retained viewports |
+| IM-11 | Passing | Passing | Passing | Passive review and atomic Add evidence |
+| IM-12 | Passing | Passing | Passing | Complete-pair dirty Keep/Discard recovery evidence |
+| IM-13 | Passing | Passing | Passing | Cell/fullscreen failure isolation and durable Retry evidence |
+| IM-14 | Passing | Passing | Passing | Exact edit/cancel/save/reload restoration evidence |
+| IM-15 | Passing | Passing | Passing | Exact v3 Image descriptor and chart-time/Image-invariance journey |
+| IM-16 | Passing | Passing | Passing | Per-window readiness, passive failure, sibling, reconnect/replay journey |
+| PS-01 | Passing | Passing | Passing | Application-session-only draft and leave/export guards |
+| PS-02 | Passing | Passing | Passing | Dashboard schema v4 migration/validation and retained load evidence |
+| PS-03 | Passing | Passing | Passing | Bundle v4 exact round-trip and contained chart-v3 evidence |
+| PS-04 | Passing | Passing | Passing | Generated offline package/path/MIME checks plus service-worker use journey |
+| PS-05 | Passing | Passing | Passing | Missing/corrupt/quota/atomic-import recovery journeys |
+| PS-06 | Passing | Passing | Passing | Canonical mode ownership and exact Build restoration matrix |
+| PS-07 | Passing | Passing | Passing | Build/View/fullscreen plus passive 1/2/4-cell Audience geometry |
+| PS-08 | Passing | Passing | Passing | Unchanged Scene schema, static filtering, no-time/data, temporal coexistence |
+
+Final Slice 6 evidence is in `.superpowers/sdd/2026-08-24-static-content-panels/task-6-report.md` and `SLICE-6-EVIDENCE-STATUS.md`. Prior slice reports remain the controlling evidence for rows not materially affected by Task 6; they were not redundantly rerun.
 
 ## Slice 5 controlling Build/View composition disposition
 

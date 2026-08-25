@@ -11,6 +11,7 @@ const TEMPORAL_DESTINATION_KEYS = Object.freeze([
   "time",
   "timeContext",
 ]);
+const PRESENTATION_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 
 export function getStaticPanelCapabilities(typeOrSchema) {
   const schema = typeof typeOrSchema === "string"
@@ -54,30 +55,44 @@ export function listStaticContentTypeOptions({
 
 export function buildPresentableItemIndex(dashboard = {}) {
   const index = new Map();
-  for (const page of dashboard.pages ?? []) {
+  for (const page of dashboard?.pages ?? []) {
     for (const section of page.sections ?? []) {
       for (const placement of section.panels ?? []) {
         const panel = placement.chart ?? placement;
-        if (panel?.typeId !== "image") continue;
-        const source = dashboard.dataSources?.[panel.sourceId];
-        if (source?.kind !== "staticImage" || !Number.isInteger(source.revision) || source.revision < 1) continue;
+        if (!PRESENTATION_IDENTIFIER.test(panel?.id ?? "")) continue;
+        if (panel.typeId === "freeText") continue;
+        const descriptor = panel.typeId === "image"
+          ? imagePresentationDescriptor(panel, dashboard?.dataSources)
+          : { kind: "chart", chart_id: panel.id };
+        if (!descriptor) continue;
         index.set(panel.id, {
           id: panel.id,
           title: panel.title,
           typeId: panel.typeId,
           pageId: page.id,
           sectionId: section.id,
-          descriptor: {
-            kind: "image",
-            panel_id: panel.id,
-            source_id: panel.sourceId,
-            revision: source.revision,
-          },
+          descriptor,
         });
       }
     }
   }
   return index;
+}
+
+function imagePresentationDescriptor(panel, sources = {}) {
+  if (!PRESENTATION_IDENTIFIER.test(panel.sourceId ?? "")) return null;
+  const source = sources?.[panel.sourceId];
+  if (
+    source?.kind !== "staticImage"
+    || !Number.isSafeInteger(source.revision)
+    || source.revision < 1
+  ) return null;
+  return {
+    kind: "image",
+    panel_id: panel.id,
+    source_id: panel.sourceId,
+    revision: source.revision,
+  };
 }
 
 export function validateStaticDestination(destination, dashboard = {}) {

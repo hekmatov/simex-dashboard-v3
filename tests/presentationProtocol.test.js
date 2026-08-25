@@ -5,9 +5,32 @@ const protocolModule = await import("../src/lib/presentationProtocol.js").catch(
   () => null,
 );
 
+const presentableItemIndex = new Map([
+  ["chart-a", {
+    id: "chart-a",
+    descriptor: { kind: "chart", chart_id: "chart-a" },
+  }],
+  ["chart-b", {
+    id: "chart-b",
+    descriptor: { kind: "chart", chart_id: "chart-b" },
+  }],
+  ["image-a", {
+    id: "image-a",
+    descriptor: {
+      kind: "image",
+      panel_id: "image-a",
+      source_id: "image-source-a",
+      revision: 7,
+    },
+  }],
+]);
+
 const scene = {
   active_page_id: "biomedical",
-  displayed_chart_ids: ["chart-a", "chart-b"],
+  items: [
+    { kind: "chart", chart_id: "chart-a" },
+    { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 7 },
+  ],
   layout: "sideBySide",
   time: { group_id: "epidemic-time", active_epoch_ms: 1_801_440_000_000 },
   audience_facts: {
@@ -27,10 +50,11 @@ test("presentation protocol creates a complete versioned state message", () => {
     sequence: 1,
     type: "state",
     payload: scene,
+    presentableItemIndex,
   });
 
   assert.deepEqual(message, {
-    protocol_version: 2,
+    protocol_version: 3,
     session_id: "session-001",
     sequence: 1,
     type: "state",
@@ -61,8 +85,14 @@ test("presentation protocol validates identifiers, count-valid layouts, and fini
     /identifier/,
   );
   assert.throws(
-    () => protocolModule.validatePresentationState({ ...scene, displayed_chart_ids: ["chart-a", "chart-a"] }),
-    /unique chart IDs/,
+    () => protocolModule.validatePresentationState({
+      ...scene,
+      items: [
+        { kind: "chart", chart_id: "chart-a" },
+        { kind: "chart", chart_id: "chart-a" },
+      ],
+    }, { presentableItemIndex }),
+    /unique presentation items/,
   );
   assert.throws(
     () => protocolModule.validatePresentationState({ ...scene, layout: "grid2x2" }),
@@ -73,9 +103,64 @@ test("presentation protocol validates identifiers, count-valid layouts, and fini
       protocolModule.validatePresentationState({
         ...scene,
         time: { group_id: "epidemic-time", active_epoch_ms: Number.NaN },
-      }),
+      }, { presentableItemIndex }),
     /finite/,
   );
+});
+
+test("presentation protocol accepts only trusted ordered chart and exact Image identity descriptors", () => {
+  assert.ok(protocolModule, "presentation protocol must be implemented");
+
+  assert.deepEqual(
+    protocolModule.validatePresentationState(scene, { presentableItemIndex }).items,
+    [
+      { kind: "chart", chart_id: "chart-a" },
+      { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 7 },
+    ],
+  );
+
+  for (const descriptor of [
+    { kind: "freeText", panel_id: "field-guide" },
+    { kind: "chart", chart_id: "unknown-chart" },
+    { kind: "image", panel_id: "image-a", source_id: "stale-source", revision: 7 },
+    { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 6 },
+  ]) {
+    assert.throws(
+      () => protocolModule.validatePresentationState({
+        ...scene,
+        items: [descriptor],
+        layout: "solo",
+      }, { presentableItemIndex }),
+      /not allowed|descriptor kind|identity|revision/i,
+    );
+  }
+});
+
+test("Image descriptors reject URLs, blobs, transforms, asset bytes, and temporal fields", () => {
+  assert.ok(protocolModule, "presentation protocol must be implemented");
+  const image = presentableItemIndex.get("image-a").descriptor;
+  for (const [field, value] of [
+    ["url", "https://example.test/image.png"],
+    ["blob_url", "blob:https://example.test/secret"],
+    ["crop", { x: 0, y: 0, width: 1000, height: 1000 }],
+    ["fit", "cover"],
+    ["rotation", 90],
+    ["asset_bytes", "AAAA"],
+    ["chrono_group_id", "group-a"],
+    ["scene_id", "scene-a"],
+    ["frame_id", "frame-a"],
+    ["time", { active_epoch_ms: 1 }],
+  ]) {
+    assert.throws(
+      () => protocolModule.validatePresentationState({
+        ...scene,
+        items: [{ ...image, [field]: value }],
+        layout: "solo",
+      }, { presentableItemIndex }),
+      /unknown presentation item field/,
+      field,
+    );
+  }
 });
 
 test("presentation protocol requires the five independent Audience fact flags", () => {
@@ -112,7 +197,7 @@ test("presentation protocol requires the five independent Audience fact flags", 
 test("presentation protocol accepts only the four small message types for the expected session", () => {
   assert.ok(protocolModule, "presentation protocol must be implemented");
   const ready = {
-    protocol_version: 2,
+    protocol_version: 3,
     session_id: "session-001",
     sequence: 1,
     type: "ready",
@@ -120,14 +205,17 @@ test("presentation protocol accepts only the four small message types for the ex
   };
 
   assert.deepEqual(
-    protocolModule.parsePresentationMessage(ready, { sessionId: "session-001" }),
+    protocolModule.parsePresentationMessage(ready, {
+      sessionId: "session-001",
+      presentableItemIndex,
+    }),
     ready,
   );
   assert.throws(
     () =>
       protocolModule.parsePresentationMessage(
         { ...ready, type: "authoring-command" },
-        { sessionId: "session-001" },
+        { sessionId: "session-001", presentableItemIndex },
       ),
     /message type/,
   );
@@ -135,7 +223,7 @@ test("presentation protocol accepts only the four small message types for the ex
     () =>
       protocolModule.parsePresentationMessage(
         { ...ready, session_id: "other-session" },
-        { sessionId: "session-001" },
+        { sessionId: "session-001", presentableItemIndex },
       ),
     /session/,
   );
