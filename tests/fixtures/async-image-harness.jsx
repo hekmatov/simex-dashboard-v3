@@ -9,6 +9,7 @@ import {
 
 const root = createRoot(document.getElementById("root"));
 const pending = new Map();
+const releaseCounts = new Map();
 
 function source(assetId, alt) {
   return {
@@ -62,8 +63,16 @@ window.mountAsyncImage = (suffix, alt) => {
   return assetId;
 };
 
-window.resolveAsyncImage = (assetId, url) => pending.get(assetId)?.resolve({ url });
+window.resolveAsyncImage = (assetId, url) => pending.get(assetId)?.resolve({
+  url,
+  release() {
+    releaseCounts.set(assetId, (releaseCounts.get(assetId) ?? 0) + 1);
+    return true;
+  },
+});
 window.rejectAsyncImage = (assetId) => pending.get(assetId)?.reject(new Error("fixture failure"));
+window.unmountAsyncImage = () => root.render(null);
+window.asyncImageReleaseCount = (assetId) => releaseCounts.get(assetId) ?? 0;
 window.validateImageFixture = async (mediaType, base64) => {
   const binary = atob(base64);
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));

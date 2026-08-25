@@ -18,6 +18,8 @@ export function createBrowserAuthoredAssetStore({
     adapter: durableAdapter,
     stage(input) { return stageAuthoredAsset(store, input); },
     commit(assetId, options) { return commitAuthoredAsset(store, assetId, options); },
+    commitMany(assetIds, options) { return commitAuthoredAssets(store, assetIds, options); },
+    verify(assetId) { return verifyAuthoredAsset(store, assetId); },
     read(assetId) { return readAuthoredAsset(store, assetId); },
     createObjectUrlLease(assetId) { return createObjectUrlLease(store, assetId); },
     async rollback(assetId, { transactionId } = {}) {
@@ -58,6 +60,7 @@ export async function stageAuthoredAsset(store, input = {}) {
   try {
     const existing = await store.adapter.get(assetId);
     if (existing) {
+      await verifyStoredRecord(existing);
       assertRecordMatches(existing, { bytes, mediaType, width, height, sha256 });
       const transactionIds = [...new Set([
         ...(existing.transactionIds ?? []),
@@ -90,6 +93,53 @@ export async function stageAuthoredAsset(store, input = {}) {
 }
 
 export async function commitAuthoredAsset(store, assetId, { transactionId } = {}) {
+  const [committed] = await commitAuthoredAssets(store, [assetId], { transactionId });
+  return committed;
+}
+
+export async function commitAuthoredAssets(store, assetIds, { transactionId } = {}) {
+  assertStore(store);
+  const ids = [...new Set((assetIds ?? []).map((assetId) => (
+    requiredText(assetId, "Authored asset id")
+  )))];
+  try {
+    const committedAt = store.now();
+    const committed = [];
+    for (const id of ids) {
+      const record = await store.adapter.get(id);
+      if (!record) throw authoredError(
+        "AUTHORED_ASSET_MISSING",
+        `Authored asset "${id}" is missing.`,
+      );
+      await verifyStoredRecord(record);
+      const transactionIds = transactionId
+        ? (record.transactionIds ?? []).filter((value) => value !== transactionId)
+        : [];
+      committed.push({
+        ...record,
+        status: "durable",
+        durableAt: committedAt,
+        transactionIds,
+      });
+    }
+    if (committed.length > 1 && typeof store.adapter.putMany !== "function") {
+      throw authoredError(
+        "AUTHORED_ASSET_STORAGE_UNAVAILABLE",
+        "Authored asset storage cannot commit this transaction atomically.",
+      );
+    }
+    if (typeof store.adapter.putMany === "function") {
+      await store.adapter.putMany(committed);
+    } else if (committed.length === 1) {
+      await store.adapter.put(committed[0]);
+    }
+    return committed.map(cloneRecord);
+  } catch (error) {
+    throw normalizeStorageError(error);
+  }
+}
+
+export async function verifyAuthoredAsset(store, assetId) {
   assertStore(store);
   const id = requiredText(assetId, "Authored asset id");
   try {
@@ -99,17 +149,7 @@ export async function commitAuthoredAsset(store, assetId, { transactionId } = {}
       `Authored asset "${id}" is missing.`,
     );
     await verifyStoredRecord(record);
-    const transactionIds = transactionId
-      ? (record.transactionIds ?? []).filter((value) => value !== transactionId)
-      : [];
-    const committed = {
-      ...record,
-      status: "durable",
-      durableAt: store.now(),
-      transactionIds,
-    };
-    await store.adapter.put(committed);
-    return cloneRecord(committed);
+    return cloneRecord(record);
   } catch (error) {
     throw normalizeStorageError(error);
   }
@@ -247,6 +287,10 @@ function createIndexedDbAdapter(indexedDB) {
       await requestResult(await database(), "readwrite", (objectStore) => objectStore.put(record));
       return cloneRecord(record);
     },
+    async putMany(records) {
+      await putManyRecords(await database(), records);
+      return records.map(cloneRecord);
+    },
     async remove(id) {
       await requestResult(await database(), "readwrite", (objectStore) => objectStore.delete(id));
     },
@@ -259,6 +303,23 @@ function createIndexedDbAdapter(indexedDB) {
       return Array.isArray(records) ? records : [];
     },
   };
+}
+
+function putManyRecords(db, records) {
+  return new Promise((resolve, reject) => {
+    let transaction;
+    try {
+      transaction = db.transaction(STORE_NAME, "readwrite");
+      const objectStore = transaction.objectStore(STORE_NAME);
+      for (const record of records) objectStore.put(record);
+    } catch (error) {
+      reject(normalizeStorageError(error));
+      return;
+    }
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(normalizeStorageError(transaction.error));
+    transaction.onabort = () => reject(normalizeStorageError(transaction.error));
+  });
 }
 
 function openDatabase(indexedDB) {

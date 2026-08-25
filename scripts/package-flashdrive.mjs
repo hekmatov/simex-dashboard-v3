@@ -143,8 +143,17 @@ Use edit mode inside the dashboard:
 - \`Upload CSV\` adds a CSV as a dashboard data source.
 - \`Export dashboard\` saves dashboard edits plus uploaded CSV data into one JSON file.
 - \`Import dashboard\` restores that JSON file later.
-- Local PNG, JPEG, and WebP Image-panel files are included under content-hashed package paths.
-- The package uses the tracked default configuration included in the build.
+- The package uses the tracked or promoted configuration included in the build.
+- Local PNG, JPEG, and WebP Image-panel files are included under content-hashed package paths only when the maintainer exported and promoted the authored dashboard before packaging.
+
+## Maintainer Packaging Sequence
+
+The package:flashdrive command does not read browser IndexedDB. To include browser-authored Image bytes, the maintainer must:
+
+1. Use Download Dashboard Package in the app.
+2. Place that export at the project root as packaged-dashboard-bundle.json.
+3. Run pnpm.cmd promote:bundle and review the promoted public/config/dashboard.json plus generated files under public/data/.
+4. Run pnpm.cmd package:flashdrive.
 
 ## Caveats
 

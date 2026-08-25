@@ -1513,6 +1513,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           disabled: moderatorMutationLocked || buildDraftLocked,
           sectionDrafts,
           onSelect: activateBuildCanvasSelection,
+          onRemovePanel: removePanel,
           onReorderSection: reorderBuildSection,
           onStructureCommand: applyBuildStructureCommand,
           onAddPage: addBuildPage,

@@ -110,6 +110,19 @@ export function renderChartContent(props, interactionMode) {
 }
 
 function ResolvedChartContent({ props, interactionMode }) {
+  const releasedModelsRef = React.useRef(new WeakSet());
+  const releaseResolution = React.useCallback((resolution) => {
+    const model = resolution?.model;
+    if (
+      model === null
+      || typeof model !== "object"
+      || typeof model.release !== "function"
+      || releasedModelsRef.current.has(model)
+    ) return false;
+    releasedModelsRef.current.add(model);
+    model.release();
+    return true;
+  }, []);
   const initialResolution = React.useMemo(() => (
     canReuseChartRendering(props.resolvedRendering, props)
       ? props.resolvedRendering
@@ -127,22 +140,28 @@ function ResolvedChartContent({ props, interactionMode }) {
 
   React.useEffect(() => {
     let current = true;
+    let resolvedPending = null;
     setSettledResolution(null);
     if (initialResolution.status !== "pending" || !initialResolution.pending) {
       return () => { current = false; };
     }
     Promise.resolve(initialResolution.pending).then((settled) => {
+      resolvedPending = settled;
       if (current) setSettledResolution(settled);
+      else releaseResolution(settled);
     });
-    return () => { current = false; };
-  }, [initialResolution]);
+    return () => {
+      current = false;
+      if (resolvedPending) releaseResolution(resolvedPending);
+    };
+  }, [initialResolution, releaseResolution]);
 
   const resolvedRendering = canReuseChartRendering(settledResolution, props)
     ? settledResolution
     : initialResolution;
   React.useEffect(() => () => {
-    resolvedRendering?.model?.release?.();
-  }, [resolvedRendering]);
+    releaseResolution(resolvedRendering);
+  }, [releaseResolution, resolvedRendering]);
   return renderChartContent({ ...props, resolvedRendering }, interactionMode);
 }
 

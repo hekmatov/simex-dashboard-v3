@@ -69,6 +69,17 @@ export function createSerializedDashboardCommitController({
         return cloneDashboard(current);
       });
     },
+    replaceWith(dashboard, commitOperation) {
+      const replacement = cloneDashboard(dashboard);
+      if (typeof commitOperation !== "function") {
+        return Promise.reject(new TypeError("A dashboard commit function is required."));
+      }
+      return enqueue(async () => {
+        const committed = await commitOperation(replacement);
+        current = cloneDashboard(committed);
+        return cloneDashboard(current);
+      });
+    },
     commitPrepared(prepared) {
       return commitPreparedWith(prepared, commit);
     },

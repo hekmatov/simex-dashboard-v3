@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
+import { serializeDashboardBundle } from "../../src/charting/config/dashboardBundleV3.js";
 
 const APP_URL = "http://127.0.0.1:4173/";
 const CONTROL_URL = "http://127.0.0.1:4174";
@@ -18,6 +19,10 @@ const TEXT_QMD = [
   "![remote](https://example.test/blocked.png)",
 ].join("\n");
 const PNG = Buffer.from(imageFixtureBytes("image/png"));
+const REPLACEMENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -58,6 +63,8 @@ test("bundle v4 restores local Image and Free-text in a fresh offline browser co
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
   ]);
   await download.saveAs(bundlePath);
+  const exported = JSON.parse(await readFile(bundlePath, "utf8"));
+  await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
   const bundle = JSON.parse(await readFile(bundlePath, "utf8"));
   expect(bundle.version).toBe(4);
   expect(bundle.config.configVersion).toBe(4);
@@ -145,6 +152,203 @@ test("bundle v4 restores local Image and Free-text in a fresh offline browser co
   }
 });
 
+test("package import quota failure preserves the prior dashboard and authored store", async ({
+  browser,
+  page,
+}, testInfo) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openBiomedicalBuild(page);
+  await createFreeText(page);
+  await createImage(page);
+  const bundlePath = testInfo.outputPath("quota-import-bundle-v4.json");
+  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v4"));
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download Dashboard Package" }).click(),
+  ]);
+  await download.saveAs(bundlePath);
+  const exported = JSON.parse(await readFile(bundlePath, "utf8"));
+  await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
+
+  const freshContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  try {
+    const importedPage = await freshContext.newPage();
+    await importedPage.goto(APP_URL);
+    await openBiomedicalBuild(importedPage, { navigate: false });
+    const priorStorage = await importedPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    const priorAssets = await authoredStoreRecords(importedPage);
+    await importedPage.evaluate((key) => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function setItem(storageKey, value) {
+        if (storageKey === key) throw new DOMException("quota injected", "QuotaExceededError");
+        return original.call(this, storageKey, value);
+      };
+    }, STORAGE_KEY);
+
+    await packageInput(importedPage).setInputFiles(bundlePath);
+    const review = importedPage.getByRole("dialog", { name: "Review package contents" });
+    await review.getByRole("button", { name: "Load package" }).click();
+
+    await expect(review).toBeVisible();
+    await expect(review).toContainText(/storage is full|could not be loaded/i, { timeout: 60_000 });
+    expect(await importedPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY))
+      .toBe(priorStorage);
+    expect(await authoredStoreRecords(importedPage)).toEqual(priorAssets);
+    await expect(importedPage.getByText(TEXT_TITLE, { exact: true })).toHaveCount(0);
+    await expect(importedPage.getByText(IMAGE_TITLE, { exact: true })).toHaveCount(0);
+  } finally {
+    await freshContext.close();
+  }
+});
+
+test("Image replacement and removal reclaim only unreferenced durable bytes", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openBiomedicalBuild(page);
+  const firstTitle = "Shared asset first panel";
+  const siblingTitle = "Shared asset sibling panel";
+  const firstId = await createImage(page, {
+    title: firstTitle,
+    alt: "Shared bytes first rendering",
+  });
+  const siblingId = await createImage(page, {
+    title: siblingTitle,
+    alt: "Shared bytes sibling rendering",
+  });
+
+  await expect.poll(() => authoredAssetState(page)).toMatchObject({
+    manifestCount: 1,
+    recordCount: 1,
+    manifestBytes: PNG.byteLength,
+    statuses: ["durable"],
+  });
+  const shared = await authoredAssetState(page);
+  const [sharedAssetId] = shared.manifestIds;
+
+  const firstPanel = canonicalPanel(page, firstId);
+  await scrollPanelIntoView(page, firstId);
+  await firstPanel.hover();
+  await firstPanel.getByLabel(`${firstTitle} actions`)
+    .getByRole("button", { name: "Edit chart" }).click();
+  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  await editor.locator("#static-image-file").setInputFiles({
+    name: "replacement.png",
+    mimeType: "image/png",
+    buffer: REPLACEMENT_PNG,
+  });
+  await expect(editor.getByText(/replacement\.png is ready/)).toBeVisible();
+  await editor.getByLabel("Alternative text").fill("Replacement bytes rendering");
+  await editor.getByRole("button", { name: "Continue" }).click();
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(editor).toHaveCount(0);
+
+  await expect.poll(() => authoredAssetState(page)).toMatchObject({
+    manifestCount: 2,
+    recordCount: 2,
+    manifestBytes: PNG.byteLength + REPLACEMENT_PNG.byteLength,
+    statuses: ["durable", "durable"],
+  });
+  const replaced = await authoredAssetState(page);
+  expect(replaced.manifestIds).toContain(sharedAssetId);
+  await expect(canonicalPanel(page, siblingId)
+    .locator('img[alt="Shared bytes sibling rendering"]')).toBeVisible();
+
+  await removePanel(page, siblingId, siblingTitle);
+  await expect.poll(() => authoredAssetState(page)).toMatchObject({
+    manifestCount: 1,
+    recordCount: 1,
+    manifestBytes: REPLACEMENT_PNG.byteLength,
+    statuses: ["durable"],
+  });
+  const siblingRemoved = await authoredAssetState(page);
+  expect(siblingRemoved.manifestIds).not.toContain(sharedAssetId);
+
+  await page.reload();
+  await openBiomedicalBuild(page, { navigate: false });
+  await scrollPanelIntoView(page, firstId);
+  await expect(canonicalPanel(page, firstId)
+    .locator('img[alt="Replacement bytes rendering"]')).toBeVisible();
+  await removePanel(page, firstId, firstTitle);
+  await expect.poll(() => authoredAssetState(page)).toMatchObject({
+    manifestCount: 0,
+    recordCount: 0,
+    manifestBytes: 0,
+    statuses: [],
+  });
+
+  await page.reload();
+  await openBiomedical(page);
+  await expect(canonicalPanel(page, firstId)).toHaveCount(0);
+  await expect(canonicalPanel(page, siblingId)).toHaveCount(0);
+});
+
+test("post-replacement asset commit failure reloads from its recoverable journal", async ({
+  browser,
+  page,
+}, testInfo) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openBiomedicalBuild(page);
+  const imagePanelId = await createImage(page);
+  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v4.json");
+  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v4"));
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download Dashboard Package" }).click(),
+  ]);
+  await download.saveAs(bundlePath);
+  const exported = JSON.parse(await readFile(bundlePath, "utf8"));
+  await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
+
+  const freshContext = await browser.newContext({ viewport: { width: 1024, height: 768 } });
+  try {
+    const importedPage = await freshContext.newPage();
+    await importedPage.goto(APP_URL);
+    await openBiomedicalBuild(importedPage, { navigate: false });
+    await importedPage.evaluate(() => {
+      const originalPut = IDBObjectStore.prototype.put;
+      globalThis.__SIMEX_ORIGINAL_IDB_PUT__ = originalPut;
+      IDBObjectStore.prototype.put = function failDurableAuthoredAsset(record, ...args) {
+        if (this.name === "assets" && record?.status === "durable") {
+          throw new DOMException("injected authored commit failure", "AbortError");
+        }
+        return originalPut.call(this, record, ...args);
+      };
+    });
+
+    await packageInput(importedPage).setInputFiles(bundlePath);
+    const review = importedPage.getByRole("dialog", { name: "Review package contents" });
+    await review.getByRole("button", { name: "Load package" }).click();
+    await expect(review).toBeVisible();
+    await expect(review).toContainText(/storage is unavailable|could not be loaded/i, {
+      timeout: 60_000,
+    });
+    const staged = await authoredStoreRecords(importedPage);
+    expect(staged).toHaveLength(1);
+    expect(staged[0]).toMatchObject({ status: "staged" });
+    expect(staged[0].transactionIds).toHaveLength(1);
+    expect(JSON.parse(await importedPage.evaluate(
+      (key) => localStorage.getItem(key),
+      STORAGE_KEY,
+    )).assets).toHaveProperty(staged[0].id);
+    await expect(canonicalPanel(importedPage, imagePanelId)).toBeVisible();
+
+    await importedPage.evaluate(() => {
+      IDBObjectStore.prototype.put = globalThis.__SIMEX_ORIGINAL_IDB_PUT__;
+      delete globalThis.__SIMEX_ORIGINAL_IDB_PUT__;
+    });
+    await importedPage.reload();
+    await openBiomedical(importedPage);
+    await expect(importedPage.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+    await expect.poll(() => authoredStoreRecords(importedPage)).toMatchObject([
+      { status: "durable", transactionIds: [] },
+    ]);
+  } finally {
+    await freshContext.close();
+  }
+});
+
 async function openBiomedicalBuild(page, { navigate = true } = {}) {
   if (navigate) await page.goto(APP_URL);
   await openBiomedical(page);
@@ -171,28 +375,43 @@ async function createFreeText(page) {
   await expect(wizard).toHaveCount(0);
 }
 
-async function createImage(page) {
+async function createImage(page, {
+  title = IMAGE_TITLE,
+  alt = IMAGE_ALT,
+  buffer = PNG,
+} = {}) {
   await page.getByRole("button", { name: "Add static content", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add static content" });
   await wizard.getByRole("button", { name: "Continue" }).click();
   await wizard.getByLabel("Image").check();
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await wizard.getByLabel("Panel title").fill(IMAGE_TITLE);
+  await wizard.getByLabel("Panel title").fill(title);
   await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles({
     name: "portable.png",
     mimeType: "image/png",
-    buffer: PNG,
+    buffer,
   });
   await expect(wizard.getByText(/portable\.png is ready/)).toBeVisible();
-  await wizard.getByLabel("Alternative text").fill(IMAGE_ALT);
+  await wizard.getByLabel("Alternative text").fill(alt);
   await wizard.getByRole("button", { name: "Continue" }).click();
   await expect(wizard.getByLabel("Canonical static content preview")
-    .locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+    .locator(`img[alt="${alt}"]`)).toBeVisible();
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
-  const panel = page.getByLabel(`${IMAGE_TITLE} actions`).locator("..");
+  const panel = page.getByLabel(`${title} actions`).locator("..");
   await expect(panel).toBeAttached();
   return panel.getAttribute("data-panel-id");
+}
+
+async function removePanel(page, panelId, title) {
+  const panel = canonicalPanel(page, panelId);
+  await scrollPanelIntoView(page, panelId);
+  await panel.hover();
+  await panel.getByLabel(`${title} actions`)
+    .getByRole("button", { name: "Remove chart" }).click();
+  await page.getByRole("dialog", { name: "Remove this chart?" })
+    .getByRole("button", { name: "Remove chart" }).click();
+  await expect(panel).toHaveCount(0);
 }
 
 async function expectRejectedImport(page, path, message) {
@@ -258,4 +477,75 @@ async function scrollPanelIntoView(page, panelId) {
 
 function flipBase64Byte(value) {
   return `${value[0] === "A" ? "B" : "A"}${value.slice(1)}`;
+}
+
+async function authoredStoreRecords(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open("simex-authored-assets-v1", 1);
+    request.onerror = () => reject(request.error);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains("assets")) {
+        request.result.createObjectStore("assets", { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => {
+      const transaction = request.result.transaction("assets", "readonly");
+      const getAll = transaction.objectStore("assets").getAll();
+      getAll.onerror = () => reject(getAll.error);
+      getAll.onsuccess = () => resolve(getAll.result.map(({ bytes, ...record }) => ({
+        ...record,
+        bytes: Array.from(bytes ?? []),
+      })));
+    };
+  }));
+}
+
+async function authoredAssetState(page) {
+  const records = await authoredStoreRecords(page);
+  const manifest = await page.evaluate((key) => (
+    JSON.parse(localStorage.getItem(key))?.assets ?? {}
+  ), STORAGE_KEY);
+  return {
+    manifestCount: Object.keys(manifest).length,
+    manifestIds: Object.keys(manifest).sort(),
+    manifestBytes: Object.values(manifest)
+      .reduce((total, entry) => total + entry.byteLength, 0),
+    recordCount: records.length,
+    recordIds: records.map(({ id }) => id).sort(),
+    statuses: records.map(({ status }) => status).sort(),
+  };
+}
+
+function compactStaticBundle(exported) {
+  const staticPanels = exported.config.pages
+    .flatMap((page) => page.sections.flatMap((section) => section.panels))
+    .filter((placement) => ["freeText", "image"].includes((placement.chart ?? placement).typeId));
+  const sourceIds = staticPanels.map((placement) => (placement.chart ?? placement).sourceId);
+  const compactConfig = structuredClone(exported.config);
+  const biomedical = compactConfig.pages.find(({ id }) => id === "biomedical");
+  compactConfig.pages = [{
+    ...biomedical,
+    sections: [{ ...biomedical.sections[0], panels: staticPanels }],
+  }];
+  compactConfig.dataSources = Object.fromEntries(sourceIds.map((sourceId) => [
+    sourceId,
+    compactConfig.dataSources[sourceId],
+  ]));
+  compactConfig.datasetProfiles = {};
+  compactConfig.chronoGroups = [];
+  compactConfig.scenes = [];
+  const compactAssetIds = Object.values(compactConfig.dataSources)
+    .flatMap((source) => source?.origin?.kind === "asset" ? [source.origin.assetId] : []);
+  compactConfig.assets = Object.fromEntries(compactAssetIds.map((assetId) => [
+    assetId,
+    compactConfig.assets[assetId],
+  ]));
+  const compactPayloads = Object.fromEntries(compactAssetIds.map((assetId) => [
+    assetId,
+    exported.assetPayloads[assetId],
+  ]));
+  return serializeDashboardBundle(compactConfig, {
+    now: exported.metadata.exportedAt,
+    assetPayloads: compactPayloads,
+  });
 }

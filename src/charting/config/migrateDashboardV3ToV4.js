@@ -21,21 +21,38 @@ export function isolateStaticTemporalMembership(input, suppliedStaticChartIds = 
   const staticChartIds = suppliedStaticChartIds === null
     ? collectStaticChartIds(dashboard, new Set())
     : new Set(suppliedStaticChartIds);
-  const retainedGroupIds = new Set();
+  const groupsRemovedByStaticIsolation = new Set();
   dashboard.chronoGroups = (dashboard.chronoGroups ?? []).flatMap((group) => {
-    const members = (group?.members ?? []).filter(({ chartId }) => !staticChartIds.has(chartId));
-    if (members.length === 0) return [];
-    retainedGroupIds.add(group.id);
+    if (!Array.isArray(group?.members)) return [group];
+    const containsStatic = group.members.some(({ chartId }) => staticChartIds.has(chartId));
+    if (!containsStatic) return [group];
+    const members = group.members.filter(({ chartId }) => !staticChartIds.has(chartId));
+    if (members.length === 0) {
+      groupsRemovedByStaticIsolation.add(group.id);
+      return [];
+    }
     return [{ ...group, members }];
   });
   dashboard.scenes = (dashboard.scenes ?? []).flatMap((scene) => {
-    if (!retainedGroupIds.has(scene?.chronoGroupId)) return [];
-    const chartIds = scene.present?.chartIds?.filter((id) => !staticChartIds.has(id));
-    const frameChartId = scene.frames?.chartId;
-    if (staticChartIds.has(frameChartId) || chartIds?.length === 0) return [];
+    if (groupsRemovedByStaticIsolation.has(scene?.chronoGroupId)) return [];
+    const staticFrame = staticChartIds.has(scene?.frames?.chartId);
+    const staticMembers = Array.isArray(scene?.members)
+      && scene.members.some(({ chartId }) => staticChartIds.has(chartId));
+    const staticPresent = Array.isArray(scene?.present?.chartIds)
+      && scene.present.chartIds.some((id) => staticChartIds.has(id));
+    if (!staticFrame && !staticMembers && !staticPresent) return [scene];
+    if (staticFrame) return [];
+    const members = staticMembers
+      ? scene.members.filter(({ chartId }) => !staticChartIds.has(chartId))
+      : scene.members;
+    const chartIds = staticPresent
+      ? scene.present.chartIds.filter((id) => !staticChartIds.has(id))
+      : scene.present?.chartIds;
+    if (members?.length === 0 || chartIds?.length === 0) return [];
     return [{
       ...scene,
-      ...(scene.present && chartIds ? {
+      ...(staticMembers ? { members } : {}),
+      ...(staticPresent ? {
         present: { ...scene.present, chartIds },
       } : {}),
     }];

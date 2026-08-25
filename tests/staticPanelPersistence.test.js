@@ -300,6 +300,91 @@ test("ordinary chart create and edit commits survive a staged Image through dura
   assert.equal(persisted[2].pages[0].sections[0].panels.at(-1).title, "Updated readiness");
 });
 
+test("post-replacement durable commit failure leaves the new referenced bytes staged for recovery", async () => {
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const sha256 = sha256HexSync(bytes);
+  const assetId = `asset-${sha256}`;
+  const prepared = prepareStaticPanelTransaction({
+    dashboard: createDashboard(),
+    operation: "create",
+    destination: { pageId: "overview", sectionId: "summary" },
+    panel: createChartDraft({
+      typeId: "image",
+      id: "recoverable-image",
+      sourceId: "recoverable-image-source",
+      title: "Recoverable image",
+    }),
+    source: {
+      kind: "staticImage",
+      sourceVersion: 1,
+      revision: 1,
+      origin: { kind: "asset", assetId },
+      alt: "Recoverable",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    assets: {
+      [assetId]: {
+        mediaType: "image/png",
+        byteLength: bytes.byteLength,
+        width: 2,
+        height: 3,
+        sha256,
+        storageState: "staged",
+      },
+    },
+  });
+  const records = new Map();
+  const events = [];
+  let committedDashboard = null;
+  const store = {
+    async stage() {
+      records.set(assetId, { status: "staged", transactionIds: ["static-recovery"] });
+      events.push("stage");
+      return { assetId };
+    },
+    async verify() { events.push("verify"); },
+    async commitMany() {
+      events.push("commit-many");
+      throw new Error("injected authored commit failure");
+    },
+    async rollback() { events.push("rollback"); records.delete(assetId); },
+  };
+  let discarded = 0;
+
+  await assert.rejects(commitDurableStaticPanelTransaction({
+    prepared,
+    store,
+    readSessionAsset: () => ({
+      assetId,
+      bytes,
+      mediaType: "image/png",
+      byteLength: bytes.byteLength,
+      width: 2,
+      height: 3,
+      sha256,
+    }),
+    discardSessionAsset: () => { discarded += 1; },
+    commitPrepared: async (transaction) => {
+      events.push("dashboard-commit");
+      committedDashboard = structuredClone(transaction.candidateDashboard);
+      return { dashboard: committedDashboard, committedRevision: 1 };
+    },
+    transactionId: "static-recovery",
+  }), (error) => {
+    assert.match(error.message, /authored commit failure/);
+    assert.equal(error.dashboardCommitted, true);
+    return true;
+  });
+
+  assert.equal(committedDashboard.assets[assetId].storageState, "durable");
+  assert.equal(records.get(assetId).status, "staged");
+  assert.equal(discarded, 0);
+  assert.deepEqual(events, ["stage", "verify", "dashboard-commit", "commit-many"]);
+});
+
 function readinessChart() {
   return {
     configVersion: 3,

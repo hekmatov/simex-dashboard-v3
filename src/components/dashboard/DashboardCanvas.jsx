@@ -186,6 +186,9 @@ export default function DashboardCanvas({
                             editPageId={buildState ? activePage.id : undefined}
                             editSectionId={buildState ? section.id : undefined}
                             onBuildSelect={buildState?.onSelect}
+                            onRemove={buildState
+                              ? () => buildState.onRemovePanel?.(placement.id)
+                              : undefined}
                             onDisplayAction={onDisplayAction}
                             multiSelectMode={multiSelectMode}
                             isMultiSelected={multiPanelIds.includes(chart.id)}

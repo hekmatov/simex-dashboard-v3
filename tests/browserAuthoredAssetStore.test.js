@@ -77,6 +77,28 @@ test("authored reads reject missing and hash-corrupt records with typed failures
   });
 });
 
+test("dedup staging verifies existing stored bytes before trusting matching metadata", async () => {
+  const adapter = createMemoryAdapter();
+  const store = createBrowserAuthoredAssetStore({ adapter });
+  const staged = await stageAuthoredAsset(store, {
+    bytes: PNG_BYTES,
+    mediaType: "image/png",
+    width: 2,
+    height: 3,
+    transactionId: "first",
+  });
+  adapter.records.get(staged.assetId).bytes[0] = 0;
+
+  await assert.rejects(stageAuthoredAsset(store, {
+    bytes: PNG_BYTES,
+    mediaType: "image/png",
+    width: 2,
+    height: 3,
+    transactionId: "dedup",
+  }), { code: "AUTHORED_ASSET_CORRUPT" });
+  assert.deepEqual(adapter.records.get(staged.assetId).transactionIds, ["first"]);
+});
+
 test("quota and unavailable IndexedDB failures remain distinguishable", async () => {
   const unavailable = createBrowserAuthoredAssetStore({ indexedDB: null });
   await assert.rejects(stageAuthoredAsset(unavailable, {

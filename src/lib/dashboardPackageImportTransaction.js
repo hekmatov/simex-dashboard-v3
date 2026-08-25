@@ -5,16 +5,22 @@ export async function commitDashboardPackageImport({
   prepare,
   validateAsset = async () => {},
   stageAsset,
+  preflightAsset = async () => {},
   rollbackAsset = async () => {},
   commitAsset = async () => {},
+  commitAssets = null,
   replace,
   rebase,
   transactionId = createImportTransactionId(),
 }) {
   await prepare();
+  const payloadEntries = Object.entries(candidate.assetPayloads ?? {}).sort();
+  if (payloadEntries.length > 1 && typeof commitAssets !== "function") {
+    throw new Error("Dashboard package import requires an atomic authored asset commit boundary.");
+  }
   const stagedAssetIds = [];
   try {
-    for (const [assetId, payload] of Object.entries(candidate.assetPayloads ?? {}).sort()) {
+    for (const [assetId, payload] of payloadEntries) {
       if (typeof stageAsset !== "function") {
         throw new Error("Dashboard package import requires authored asset storage.");
       }
@@ -36,6 +42,9 @@ export async function commitDashboardPackageImport({
       }
       stagedAssetIds.push(assetId);
     }
+    for (const assetId of stagedAssetIds) {
+      await preflightAsset(assetId, { transactionId });
+    }
   } catch (error) {
     await rollbackStagedAssets(stagedAssetIds, rollbackAsset, transactionId);
     throw error;
@@ -48,11 +57,35 @@ export async function commitDashboardPackageImport({
     await rollbackStagedAssets(stagedAssetIds, rollbackAsset, transactionId);
     throw error;
   }
-  for (const assetId of stagedAssetIds) {
-    await commitAsset(assetId, { transactionId });
+  try {
+    if (typeof commitAssets === "function") {
+      await commitAssets(stagedAssetIds, { transactionId });
+    } else {
+      for (const assetId of stagedAssetIds) {
+        await commitAsset(assetId, { transactionId });
+      }
+    }
+    rebase(committed);
+  } catch (error) {
+    try {
+      rebase(committed);
+    } catch {
+      // The persisted dashboard remains authoritative even if UI rebasing also fails.
+    }
+    throw dashboardCommittedError(error, committed);
   }
-  rebase(committed);
   return committed;
+}
+
+function dashboardCommittedError(error, committed) {
+  const wrapped = new Error(
+    error?.message || "Dashboard replacement committed, but authored assets remain staged for recovery.",
+    { cause: error },
+  );
+  wrapped.code = error?.code ?? "AUTHORED_ASSET_COMMIT_RECOVERY_REQUIRED";
+  wrapped.dashboardCommitted = true;
+  wrapped.committedDashboard = structuredClone(committed);
+  return wrapped;
 }
 
 async function rollbackStagedAssets(assetIds, rollbackAsset, transactionId) {

@@ -10,6 +10,7 @@ import {
   createStaticContentDraft,
   finalizeStaticContentDraft,
 } from "../src/static-content/forms/staticContentDraft.js";
+import { validateScene } from "../src/charting/time/sceneSchema.js";
 
 test("legacy Image URL migration is deterministic, idempotent, and keeps chart config v3", () => {
   const legacy = legacyImageDashboard({ src: "https://example.test/briefing.png", fit: "fill", alt: "" });
@@ -105,6 +106,50 @@ test("temporal isolation removes only static membership and dependent invalid sc
   assert.equal(isolated.pages[0].sections[0].panels.length, 2);
 });
 
+test("temporal isolation leaves unrelated malformed Scenes for strict validation", () => {
+  const dashboard = legacyImageDashboard({ src: "images/briefing.png", alt: "Briefing" });
+  const ordinary = createChartDraft({
+    typeId: "pie",
+    id: "status-chart",
+    sourceId: "status",
+    title: "Status",
+  });
+  dashboard.dataSources.status = { kind: "inline", rows: [{ label: "Ready", value: 1 }] };
+  dashboard.pages[0].sections[0].panels.push(ordinary);
+  dashboard.chronoGroups = [{
+    id: "ordinary-group",
+    name: "Ordinary",
+    period: { start: "2027-05-01", end: "2027-05-01" },
+    matching: { policy: "exact" },
+    secondsPerFrame: 1,
+    members: [{ chartId: "status-chart", timeRole: "observation" }],
+  }];
+  const missingParent = ordinaryScene({
+    id: "missing-parent",
+    chronoGroupId: "does-not-exist",
+  });
+  const emptyPresent = ordinaryScene({
+    id: "empty-present",
+    present: { chartIds: [], layout: "single" },
+  });
+  dashboard.scenes = [missingParent, emptyPresent];
+
+  const isolated = isolateStaticTemporalMembership(dashboard, new Set(["briefing-image"]));
+
+  assert.deepEqual(isolated.scenes, [missingParent, emptyPresent]);
+  const sceneContext = {
+    chronoGroups: dashboard.chronoGroups,
+    pages: [{ id: "overview" }],
+    charts: [{ id: "status-chart", pageId: "overview" }],
+  };
+  assert.throws(() => validateScene(isolated.scenes[0], sceneContext), /parent Chrono Group/);
+  assert.throws(() => validateScene(isolated.scenes[1], sceneContext), /one to four charts/);
+  assert.deepEqual(
+    isolateStaticTemporalMembership(isolated, new Set(["briefing-image"])),
+    isolated,
+  );
+});
+
 test("a migrated missing alt remains viewable but must be corrected before an authoring save", () => {
   const migrated = migrateDashboardV3ToV4(legacyImageDashboard({
     src: "images/briefing.png",
@@ -163,5 +208,23 @@ function legacyImageDashboard({ src, alt = "", fit = "contain" }) {
         })],
       }],
     }],
+  };
+}
+
+function ordinaryScene(overrides = {}) {
+  return {
+    id: "ordinary-scene",
+    name: "Ordinary scene",
+    pageId: "overview",
+    chronoGroupId: "ordinary-group",
+    period: {
+      start: "2027-05-01T00:00:00.000Z",
+      end: "2027-05-01T00:00:00.000Z",
+    },
+    frames: { mode: "source", chartId: "status-chart", selection: "all" },
+    members: [{ chartId: "status-chart", width: 1 }],
+    present: { chartIds: ["status-chart"], layout: "single" },
+    audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+    ...overrides,
   };
 }

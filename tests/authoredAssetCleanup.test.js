@@ -72,6 +72,54 @@ test("reconciliation removes only decided orphans and never a referenced asset",
   assert.equal(records.has("saved"), true);
 });
 
+test("startup reconciliation finalizes a referenced staged recovery journal", async () => {
+  const records = new Map([
+    ["saved-stage", record("saved-stage", "staged", 0)],
+  ]);
+  records.get("saved-stage").transactionIds = ["interrupted-import"];
+  const committed = [];
+  const store = {
+    async list() { return [...records.values()].map((value) => structuredClone(value)); },
+    async commitMany(assetIds) {
+      committed.push(...assetIds);
+      for (const assetId of assetIds) {
+        records.set(assetId, {
+          ...records.get(assetId),
+          status: "durable",
+          transactionIds: [],
+        });
+      }
+    },
+    async remove(id) { records.delete(id); },
+  };
+
+  const result = await reconcileAuthoredAssets({
+    store,
+    dashboard: { assets: { "saved-stage": manifest() } },
+    now: 4 * DAY,
+  });
+
+  assert.deepEqual(committed, ["saved-stage"]);
+  assert.deepEqual(result.recoveredAssetIds, ["saved-stage"]);
+  assert.equal(records.get("saved-stage").status, "durable");
+});
+
+test("a zero-asset imported dashboard reclaims the previous durable authored record", async () => {
+  const records = new Map([["previous", record("previous", "durable", 0)]]);
+  const removed = [];
+  const result = await reconcileAuthoredAssets({
+    store: {
+      async list() { return [...records.values()]; },
+      async remove(id) { removed.push(id); records.delete(id); },
+    },
+    dashboard: { configVersion: 4, assets: {}, dataSources: {} },
+    now: DAY,
+  });
+
+  assert.deepEqual(removed, ["previous"]);
+  assert.deepEqual(result.removedAssetIds, ["previous"]);
+});
+
 function manifest() {
   return {
     mediaType: "image/png",

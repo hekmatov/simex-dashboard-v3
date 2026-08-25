@@ -220,6 +220,109 @@ test("invalid imported raster bytes abort before asset staging or dashboard repl
   assert.deepEqual(events, ["prepare", "validate"]);
 });
 
+test("import preflights staged bytes before replacement and journals an atomic commit failure", async () => {
+  const events = [];
+  let current = dashboard({ programLabel: "Prior" });
+  const candidate = importCandidate();
+
+  await assert.rejects(commitDashboardPackageImport({
+    candidate,
+    prepare: async () => { events.push("prepare"); },
+    stageAsset: async (input) => {
+      events.push(`stage:${input.assetId}`);
+      return { assetId: input.assetId };
+    },
+    preflightAsset: async (assetId) => { events.push(`preflight:${assetId}`); },
+    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    replace: async (config) => {
+      events.push("replace");
+      current = structuredClone(config);
+      return current;
+    },
+    commitAssets: async (assetIds) => {
+      events.push(`commit-many:${assetIds.join(",")}`);
+      throw new Error("injected atomic asset commit failure");
+    },
+    rebase: (committed) => {
+      events.push("rebase-recovery");
+      current = structuredClone(committed);
+    },
+    transactionId: "import-commit-failure",
+  }), (error) => {
+    assert.match(error.message, /atomic asset commit failure/);
+    assert.equal(error.dashboardCommitted, true);
+    return true;
+  });
+
+  assert.equal(current.programLabel, "Imported");
+  assert.deepEqual(events, [
+    "prepare",
+    "stage:asset-local",
+    "preflight:asset-local",
+    "replace",
+    "commit-many:asset-local",
+    "rebase-recovery",
+  ]);
+});
+
+test("import preflight failure rolls back staging and preserves the prior dashboard", async () => {
+  const events = [];
+  let current = dashboard({ programLabel: "Prior" });
+  await assert.rejects(commitDashboardPackageImport({
+    candidate: importCandidate(),
+    prepare: async () => { events.push("prepare"); },
+    stageAsset: async (input) => {
+      events.push(`stage:${input.assetId}`);
+      return { assetId: input.assetId };
+    },
+    preflightAsset: async (assetId) => {
+      events.push(`preflight:${assetId}`);
+      throw Object.assign(new Error("dedup bytes corrupt"), { code: "AUTHORED_ASSET_CORRUPT" });
+    },
+    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    replace: async (config) => {
+      events.push("replace");
+      current = structuredClone(config);
+      return current;
+    },
+    rebase: () => { events.push("rebase"); },
+    transactionId: "import-preflight-failure",
+  }), /dedup bytes corrupt/);
+  assert.equal(current.programLabel, "Prior");
+  assert.deepEqual(events, [
+    "prepare",
+    "stage:asset-local",
+    "preflight:asset-local",
+    "rollback:asset-local",
+  ]);
+});
+
+test("a multi-asset import refuses a non-atomic commit boundary before replacement", async () => {
+  const candidate = importCandidate();
+  candidate.config.assets["asset-second"] = {
+    ...candidate.config.assets["asset-local"],
+  };
+  candidate.assetPayloads["asset-second"] = {
+    ...candidate.assetPayloads["asset-local"],
+  };
+  const events = [];
+
+  await assert.rejects(commitDashboardPackageImport({
+    candidate,
+    prepare: async () => { events.push("prepare"); },
+    stageAsset: async ({ assetId }) => {
+      events.push(`stage:${assetId}`);
+      return { assetId };
+    },
+    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    commitAsset: async (assetId) => { events.push(`commit:${assetId}`); },
+    replace: async () => { events.push("replace"); },
+    rebase: () => { events.push("rebase"); },
+  }), /atomic authored asset commit/i);
+
+  assert.deepEqual(events, ["prepare"]);
+});
+
 function importCandidate() {
   return {
     config: {

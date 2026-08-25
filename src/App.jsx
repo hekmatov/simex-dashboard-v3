@@ -1,6 +1,9 @@
 import React from "react";
 import { chartRuntimeArtifactRegistry } from "./charting/runtime/chartRuntimeArtifactRegistry.js";
-import { commitStaticPanelTransaction } from "./static-content/staticPanelTransaction.js";
+import {
+  commitStaticPanelTransaction,
+  removeDashboardPanel,
+} from "./static-content/staticPanelTransaction.js";
 import { getChartSchema } from "./charting/schemas/chartSchemaRegistry.js";
 
 import DashboardRenderer from "./components/DashboardRenderer.jsx";
@@ -115,7 +118,6 @@ const DASHBOARD_LOOK_PERSISTENCE_WARNING = "Couldn’t save dashboard appearance
 const dashboardAssetPersistence = createDashboardAssetPersistence();
 
 async function reconcileSavedAuthoredAssets(dashboard) {
-  if (Object.keys(dashboard?.assets ?? {}).length === 0) return null;
   try {
     return await reconcileAuthoredAssets({
       store: browserAuthoredAssetStore,
@@ -535,7 +537,7 @@ export default function App() {
     return persisted;
   }
 
-  async function persistConfiguration(nextConfig) {
+  async function persistConfiguration(nextConfig, { requireDurableStorage = false } = {}) {
     try {
       const trackedProfiles = trackedDatasetProfilesRef.current;
       const profiles = nextConfig.datasetProfiles
@@ -555,6 +557,7 @@ export default function App() {
         prepared = await dashboardAssetPersistence.prepare(stored);
       } catch (assetError) {
         if (!isDashboardAssetStorageError(assetError)) throw assetError;
+        if (requireDurableStorage) throw assetError;
         const sessionDashboard = await loadDashboardConfig(
           stored,
           configuredFallbackProfiles,
@@ -588,9 +591,20 @@ export default function App() {
         throw loadError;
       }
       try {
-        persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+        const persisted = persistDashboardStorage(JSON.stringify(prepared.storageConfig, null, 2));
+        if (requireDurableStorage && !persisted) {
+          await prepared.rollback();
+          throw new Error("Browser dashboard storage is unavailable.");
+        }
       } catch (storageError) {
-        if (!isStorageQuotaError(storageError)) throw storageError;
+        if (!isStorageQuotaError(storageError)) {
+          await prepared.rollback();
+          throw storageError;
+        }
+        if (requireDurableStorage) {
+          await prepared.rollback();
+          throw storageError;
+        }
         lastDashboardPersistenceRef.current = false;
         reportPersistence(
           "dashboard",
@@ -957,6 +971,14 @@ export default function App() {
     return committed;
   }
 
+  function commitImportedConfiguration(nextConfig) {
+    const portable = configurationForPortableUse(nextConfig);
+    return ensureDashboardCommitController().replaceWith(
+      portable,
+      (candidate) => persistConfiguration(candidate, { requireDurableStorage: true }),
+    );
+  }
+
   async function persistSessionAwareConfiguration(nextConfig) {
     return persistConfiguration(nextConfig);
   }
@@ -988,6 +1010,7 @@ export default function App() {
       transactionKind: "static-content",
       failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
     });
+    await reconcileSavedAuthoredAssets(result.dashboard);
     return result;
   }
 
@@ -1013,27 +1036,12 @@ export default function App() {
     const controller = ensureDashboardCommitController();
     const previousDashboard = controller.getCurrent();
     const committed = await controller.mutate((next) => {
-      let removedChartId = null;
-      for (const page of next.pages ?? []) {
-        for (const section of page.sections ?? []) {
-          section.panels = section.panels.filter((panel) => {
-            if (panel.id !== panelId) return true;
-            removedChartId = (panel.chart ?? panel).id;
-            return false;
-          });
-        }
-      }
-      if (removedChartId === null) return;
-      next.chronoGroups = (next.chronoGroups ?? []).flatMap((group) => {
-        const members = group.members.filter(
-          ({ chartId }) => chartId !== removedChartId,
-        );
-        return members.length > 0 ? [{ ...group, members }] : [];
-      });
+      removeDashboardPanel(next, panelId);
     });
     await cleanupReplacedDashboardAssets(previousDashboard, committed, {
       transactionKind: "panel-removal",
     });
+    await reconcileSavedAuthoredAssets(committed);
     return committed;
   }
 
@@ -1068,7 +1076,7 @@ export default function App() {
         prepare: async () => {
           await dashboardRendererRef.current?.prepareForPackageImport?.();
         },
-        replace: commitConfiguration,
+        replace: commitImportedConfiguration,
         validateAsset: async ({ bytes, manifest }) => {
           const validation = await validateImageAsset({
             bytes,
@@ -1087,8 +1095,9 @@ export default function App() {
           }
         },
         stageAsset: (input) => browserAuthoredAssetStore.stage(input),
+        preflightAsset: (assetId) => browserAuthoredAssetStore.verify(assetId),
         rollbackAsset: (assetId, options) => browserAuthoredAssetStore.rollback(assetId, options),
-        commitAsset: (assetId, options) => browserAuthoredAssetStore.commit(assetId, options),
+        commitAssets: (assetIds, options) => browserAuthoredAssetStore.commitMany(assetIds, options),
         rebase: (importedDashboard) => {
           dashboardRendererRef.current?.resetAfterPackageImport?.(importedDashboard);
         },
@@ -1098,6 +1107,7 @@ export default function App() {
       await cleanupReplacedDashboardAssets(previousDashboard, committed, {
         failureMessage: "The package was loaded, but source files from the previous dashboard could not be removed from browser storage.",
       });
+      await reconcileSavedAuthoredAssets(committed);
       return committed;
     } catch (importError) {
       setPackageImportError(

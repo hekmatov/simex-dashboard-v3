@@ -47,6 +47,9 @@ export async function commitDurableStaticPanelTransaction({
     if (stagedAssetIds.length > 0) {
       durablePrepared.candidateDashboard.configVersion = 4;
     }
+    for (const assetId of stagedAssetIds) {
+      await store.verify?.(assetId);
+    }
   } catch (error) {
     await rollbackAll(store, stagedAssetIds, transactionId);
     throw error;
@@ -59,8 +62,24 @@ export async function commitDurableStaticPanelTransaction({
     await rollbackAll(store, stagedAssetIds, transactionId);
     throw error;
   }
+  try {
+    if (typeof store.commitMany === "function") {
+      await store.commitMany(stagedAssetIds, { transactionId });
+    } else {
+      for (const assetId of stagedAssetIds) {
+        await store.commit(assetId, { transactionId });
+      }
+    }
+  } catch (error) {
+    const wrapped = new Error(error?.message || "Authored asset commit requires recovery.", {
+      cause: error,
+    });
+    wrapped.code = error?.code ?? "AUTHORED_ASSET_COMMIT_RECOVERY_REQUIRED";
+    wrapped.dashboardCommitted = true;
+    wrapped.committedDashboard = structuredClone(committed.dashboard ?? committed);
+    throw wrapped;
+  }
   for (const assetId of stagedAssetIds) {
-    await store.commit(assetId, { transactionId });
     discardSessionAsset(assetId);
   }
   return committed;

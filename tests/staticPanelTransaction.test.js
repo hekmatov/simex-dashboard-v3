@@ -12,6 +12,7 @@ import {
   commitStaticPanelTransaction,
   nextStaticSourceRevision,
   prepareStaticPanelTransaction,
+  removeDashboardPanel,
 } from "../src/static-content/staticPanelTransaction.js";
 
 test("source revision begins at one and increments only when saved source content changes", () => {
@@ -79,6 +80,56 @@ test("a text transaction keeps a v3 dashboard portable when no asset manifest is
   });
 
   assert.equal(Object.hasOwn(prepared.candidateDashboard, "assets"), false);
+});
+
+test("replacing an Image source removes only the superseded source and manifest ownership", () => {
+  const dashboard = imageDashboard({
+    panels: [panel("image-panel", "image", "image-source", "Response map")],
+    sources: { "image-source": imageSource(3, "asset-old") },
+    assets: {
+      "asset-old": assetManifest("a"),
+      "manifest-only": assetManifest("b"),
+    },
+  });
+  const prepared = prepareStaticPanelTransaction({
+    dashboard,
+    operation: "update",
+    panelId: "image-panel",
+    panel: panel("image-panel", "image", "replacement-source", "Updated response map"),
+    source: imageSource(1, "asset-new"),
+    assets: { "asset-new": assetManifest("c", "staged") },
+  });
+
+  assert.equal(Object.hasOwn(prepared.candidateDashboard.dataSources, "image-source"), false);
+  assert.deepEqual(Object.keys(prepared.candidateDashboard.assets).sort(), [
+    "asset-new",
+    "manifest-only",
+  ]);
+  assert.equal(prepared.candidateDashboard.dataSources["replacement-source"].origin.assetId, "asset-new");
+});
+
+test("panel deletion retains shared static ownership until the final sibling is removed", () => {
+  const dashboard = imageDashboard({
+    panels: [
+      panel("image-a", "image", "source-a", "Response A"),
+      panel("image-b", "image", "source-b", "Response B"),
+    ],
+    sources: {
+      "source-a": imageSource(1, "asset-shared"),
+      "source-b": imageSource(1, "asset-shared"),
+    },
+    assets: { "asset-shared": assetManifest("d") },
+  });
+
+  const first = removeDashboardPanel(dashboard, "image-a");
+  assert.equal(first.removedChartId, "image-a");
+  assert.equal(Object.hasOwn(dashboard.dataSources, "source-a"), false);
+  assert.equal(Object.hasOwn(dashboard.dataSources, "source-b"), true);
+  assert.equal(Object.hasOwn(dashboard.assets, "asset-shared"), true);
+
+  removeDashboardPanel(dashboard, "image-b");
+  assert.equal(Object.hasOwn(dashboard.dataSources, "source-b"), false);
+  assert.equal(Object.hasOwn(dashboard.assets, "asset-shared"), false);
 });
 
 test("commit failure leaves the old saved source revision authoritative and retry commits once", async () => {
@@ -328,17 +379,44 @@ function textSource(qmd, revision = 1) {
   };
 }
 
-function imageSource(revision = 1) {
+function imageSource(revision = 1, assetId = "asset-map") {
   return {
     kind: "staticImage",
     sourceVersion: 1,
     revision,
-    origin: { kind: "asset", assetId: "asset-map" },
+    origin: { kind: "asset", assetId },
     alt: "Response map",
     decorative: false,
     fit: "contain",
     crop: { x: 0, y: 0, width: 1000, height: 1000 },
     rotation: 0,
+  };
+}
+
+function imageDashboard({ panels, sources, assets }) {
+  return {
+    configVersion: 4,
+    dataSources: structuredClone(sources),
+    assets: structuredClone(assets),
+    chronoGroups: [],
+    pages: [{
+      id: "page-a",
+      sections: [{
+        id: "section-a",
+        panels: panels.map((chart) => ({ id: chart.id, chart })),
+      }],
+    }],
+  };
+}
+
+function assetManifest(seed, storageState = "durable") {
+  return {
+    mediaType: "image/png",
+    byteLength: 20,
+    width: 4,
+    height: 5,
+    sha256: seed.repeat(64),
+    storageState,
   };
 }
 

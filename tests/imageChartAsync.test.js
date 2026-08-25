@@ -55,6 +55,54 @@ test("canonical ChartView resolves durable Image promises and ignores superseded
   assert.equal(await page.locator('[data-static-failure]').count(), 0);
 });
 
+test("superseded and unmounted durable Image resolutions release every lease exactly once", async () => {
+  const firstId = await page.evaluate(() => window.mountAsyncImage("d", "First leased image"));
+  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const secondId = await page.evaluate(() => window.mountAsyncImage("e", "Current leased image"));
+
+  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
+    assetId: firstId,
+    url: PNG_URL,
+  });
+  await page.waitForFunction((assetId) => window.asyncImageReleaseCount(assetId) === 1, firstId);
+  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), secondId), 0);
+
+  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
+    assetId: secondId,
+    url: PNG_URL,
+  });
+  await page.locator('img[alt="Current leased image"]').waitFor();
+  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), secondId), 0);
+
+  await page.evaluate(() => window.unmountAsyncImage());
+  await page.waitForFunction((assetId) => window.asyncImageReleaseCount(assetId) === 1, secondId);
+  await page.evaluate(() => window.unmountAsyncImage());
+  await page.waitForTimeout(20);
+  assert.deepEqual(await page.evaluate(([first, second]) => [
+    window.asyncImageReleaseCount(first),
+    window.asyncImageReleaseCount(second),
+  ], [firstId, secondId]), [1, 1]);
+});
+
+test("an Image resolution arriving after unmount releases its lease while rejection stays inert", async () => {
+  const resolvedId = await page.evaluate(() => window.mountAsyncImage("f", "Unmounted resolution"));
+  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await page.evaluate(() => window.unmountAsyncImage());
+  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
+    assetId: resolvedId,
+    url: PNG_URL,
+  });
+  await page.waitForFunction((assetId) => window.asyncImageReleaseCount(assetId) === 1, resolvedId);
+
+  const rejectedId = await page.evaluate(() => window.mountAsyncImage("0", "Unmounted rejection"));
+  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  await page.evaluate(() => window.unmountAsyncImage());
+  await page.evaluate((assetId) => window.rejectAsyncImage(assetId), rejectedId);
+  await page.waitForTimeout(20);
+  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), rejectedId), 0);
+  assert.equal(await page.locator("img").count(), 0);
+});
+
 test("canonical ChartView turns a durable resolver rejection into stable panel recovery", async () => {
   const assetId = await page.evaluate(() => window.mountAsyncImage("c", "Failed image"));
   await page.getByText("Loading saved image…", { exact: true }).waitFor();

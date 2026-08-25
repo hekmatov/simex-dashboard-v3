@@ -92,16 +92,28 @@ pnpm.cmd build
 git diff --check
 ```
 
-Create a flash-drive package:
+Create a flash-drive package from the currently tracked/promoted dashboard:
 
 ```powershell
 pnpm.cmd package:flashdrive
 ```
 
-The flash-drive build includes uploaded local PNG, JPEG, and WebP Image-panel
-bytes under content-hashed package paths. HTTPS-linked Images remain network
-dependencies and are listed during export; they are not fetched or silently
-embedded, so they can be unavailable offline.
+`package:flashdrive` does not read browser IndexedDB and therefore cannot include
+browser-authored Image bytes by itself. To include the dashboard currently
+authored in the browser:
+
+1. Use **Download Dashboard Package** in the app.
+2. Place the downloaded file at the project root as
+   `packaged-dashboard-bundle.json`.
+3. Run `pnpm.cmd promote:bundle`.
+4. Review the promoted `public/config/dashboard.json` and generated files under
+   `public/data/`.
+5. Run `pnpm.cmd package:flashdrive`.
+
+That export → promote → package sequence materializes local PNG, JPEG, and WebP
+Image-panel bytes under content-hashed package paths. HTTPS-linked Images remain
+network dependencies and are listed during export; they are not fetched or
+silently embedded, so they can be unavailable offline.
 
 Preview the built app:
 

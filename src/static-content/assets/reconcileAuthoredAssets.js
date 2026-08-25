@@ -20,7 +20,20 @@ export async function reconcileAuthoredAssets({
     undoAssetIds,
     transactionAssetIds,
   });
-  const decisions = findAuthoredAssetOrphans(await store.list(), graph, { now });
+  const records = await store.list();
+  const referenced = new Set(graph.referencedAssetIds);
+  const recoveredAssetIds = records
+    .filter((record) => record?.status === "staged" && referenced.has(record.id))
+    .map(({ id }) => id)
+    .sort();
+  if (recoveredAssetIds.length > 0) {
+    if (typeof store.commitMany === "function") {
+      await store.commitMany(recoveredAssetIds);
+    } else if (typeof store.commit === "function") {
+      for (const assetId of recoveredAssetIds) await store.commit(assetId);
+    }
+  }
+  const decisions = findAuthoredAssetOrphans(records, graph, { now });
   const removedAssetIds = [];
   for (const assetId of decisions.deleteAssetIds) {
     await store.remove(assetId);
@@ -29,6 +42,7 @@ export async function reconcileAuthoredAssets({
   return Object.freeze({
     graph,
     decisions,
+    recoveredAssetIds: Object.freeze(recoveredAssetIds),
     removedAssetIds: Object.freeze(removedAssetIds),
   });
 }
