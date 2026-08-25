@@ -1,7 +1,7 @@
 # GeoJSON Limits Decision
 
 **Date:** 2026-08-25
-**Decision status:** Second corrected calibrated technical guardrail submitted for renewed V3 Design master review. Review of `3f97ff9` accepted the distributed part/ring, exact structural-node, and exact per-feature-key corrections but required greater byte/property margin below the observed 48 MB failure. The bounded 36 MB probe below resolves that remaining finding. No legitimate-project exclusion or material user-level UX tradeoff was found.
+**Decision status:** Accepted by the V3 Design master at prerequisite HEAD `c28b59d`. Review of `3f97ff9` accepted the distributed part/ring, exact structural-node, and exact per-feature-key corrections but required greater byte/property margin below the observed 48 MB failure; the bounded 36 MB probe in `c28b59d` resolved that final finding. No legitimate-project exclusion or material user-level UX tradeoff was found.
 **Implementation status:** Planning evidence only. The limits authority, UI, transactions, and SCM-S15 remain proposed, unimplemented, and not verified.
 **Spike:** `.planning/spikes/001-geojson-limit-calibration/README.md`
 
@@ -136,4 +136,4 @@ The original `measurements.json` preserves its historical `parts` and source-uni
 
 ## Planning consequence
 
-The second corrected calibrated guardrail does not require a user decision: it excludes no known legitimate fixture and does not introduce a material user-level UX tradeoff. It is submitted for renewed master review. No production task or test may substitute different constants without a recorded limits-decision amendment, and completing this record does not promote SCM-S15 or any other amendment row.
+The second corrected calibrated guardrail does not require a user decision: it excludes no known legitimate fixture and does not introduce a material user-level UX tradeoff. The V3 Design master accepted it at `c28b59d`. No production task or test may substitute different constants without a recorded limits-decision amendment, and accepting this prerequisite does not promote SCM-S15 or any other amendment row.
