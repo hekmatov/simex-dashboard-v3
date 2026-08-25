@@ -600,6 +600,9 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
   await confirmation.getByRole("button", { name: "Discard" }).click();
   await expect(editor).toHaveCount(0);
+  const requestedTarget = page.locator('[role="treeitem"][aria-label="Confirmed cases"]');
+  await expect(requestedTarget).toHaveAttribute("aria-selected", "true");
+  await expect(canonicalPanel(page, "bio_confirmed_cases")).toBeVisible();
   await expect.poll(() => sessionAssetInventory(page)).toEqual([]);
   await expect.poll(() => revokedObjectUrls(page)).toContain(stagedInventory[0].url);
   const savedAfter = await readSavedImage(page, "Dirty selection image");

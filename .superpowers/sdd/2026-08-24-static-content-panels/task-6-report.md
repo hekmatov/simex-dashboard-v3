@@ -167,6 +167,6 @@ GREEN evidence:
 - consolidated affected suite: **155/155 passed** in 6.38 seconds;
 - runtime boundary: passed, `remoteRuntimeDependencies: []`;
 - production build: **891 modules**, 15.31 seconds;
-- real local replacement Keep/Discard: **1/1 passed** in 16.4 seconds at **1440×900**. It retained source/alt/crop/rotation/fit plus the exact staged identity through Keep editing, then proved empty session inventory, exact blob URL revocation, unchanged saved source, and completed Dashboard-map navigation after Discard.
+- real local replacement Keep/Discard: **1/1 passed** in 17.0 seconds at **1440×900**. It retained source/alt/crop/rotation/fit plus the exact staged identity through Keep editing, then proved empty session inventory, exact blob URL revocation, unchanged saved source, `Confirmed cases` as the active `aria-selected="true"` Dashboard-map tree item, and the visible canonical `bio_confirmed_cases` canvas panel after Discard.
 
 IM-02, IM-14, PS-01, and PS-05 are restored to Passing. No Free-text, protocol, persistence-version, or visual-design contract changed; there are no deviations or blockers.

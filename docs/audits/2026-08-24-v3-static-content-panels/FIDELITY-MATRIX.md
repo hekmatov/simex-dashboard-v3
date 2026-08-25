@@ -36,14 +36,14 @@ This is the binding final ledger. It supersedes every earlier per-slice `pending
 | IM-11 | Passing | Passing | Passing | Passive review and atomic Add evidence |
 | IM-12 | Passing | Passing | Passing | Complete-pair dirty Keep/Discard recovery evidence |
 | IM-13 | Passing | Passing | Passing | Cell/fullscreen failure isolation and durable Retry evidence |
-| IM-14 | Passing | Passing | Passing | Real local replacement retains exact draft and staged identity through Keep editing; Dashboard-map Discard cleans the draft then completes navigation |
+| IM-14 | Passing | Passing | Passing | Real local replacement retains exact draft and staged identity through Keep editing; Dashboard-map Discard cleans the draft, selects `Confirmed cases` (`aria-selected=true`), and reveals canonical `bio_confirmed_cases` |
 | IM-15 | Passing | Passing | Passing | The representative canonical ChartView exposes its active date; retained Audience independently asserts date and canvas pixel-hash change while Image descriptor/revision/src/transform remain exact |
 | IM-16 | Passing | Passing | Passing | During passive Image failure all three Chrono-group siblings prove nonzero live canvases and each independently changes active date plus pixel hash; exact Image revision then restores/replays |
 | PS-01 | Passing | Passing | Passing | Transaction applies source/panel, merges only reachable finalized asset, prunes superseded ownership, then validates exact <=200 MiB final candidate before mutation |
 | PS-02 | Passing | Passing | Passing | Dashboard schema v4 migration/validation and retained load evidence |
 | PS-03 | Passing | Passing | Passing | Bundle v4 exact round-trip and contained chart-v3 evidence |
 | PS-04 | Passing | Passing | Passing | `portableFlashdriveLaunch.test.js` copies a generated package, launches its Windows PowerShell server, proves contained PNG MIME/bytes and traversal denial, then runs offline main + separate 1366×768 Audience with zero external requests and verified stop/cleanup |
-| PS-05 | Passing | Passing | Passing | Dashboard-map Discard reuses shared cleanup: new staged replacement and blob URL are removed while saved/source/undo identities remain protected |
+| PS-05 | Passing | Passing | Passing | Dashboard-map Discard reuses shared cleanup: new staged replacement and exact blob URL are removed, saved/source identities remain protected, and the requested canonical target becomes active |
 | PS-06 | Passing | Passing | Passing | Canonical mode ownership and exact Build restoration matrix |
 | PS-07 | Passing | Passing | Passing | Build/View/fullscreen plus passive 1/2/4-cell Audience geometry |
 | PS-08 | Passing | Passing | Passing | Owner-token reducer and StrictMode Present tests preserve pre-existing/overlapping playback owners; retained Audience chart time/render changes before and through isolated Image failure |
