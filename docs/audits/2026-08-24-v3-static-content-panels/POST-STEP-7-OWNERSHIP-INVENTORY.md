@@ -10,6 +10,8 @@
 
 **Approved design provenance:** the six docs/sketch-only commits from `3d76055` through `0d68df8` were cherry-picked onto the accepted anchor. No production source, test, dependency, generated catalogue, lockfile, or production CSS change precedes this inventory.
 
+**Proposed amendment boundary (2026-08-25):** This inventory remains the realized ownership record for the completed Step 7S baseline. The Source Content Manager and QMD Reusable Media specification names proposed future owners only to make its fidelity rows falsifiable. Those owners are unimplemented and must receive a fresh post-approval ownership reconciliation before any implementation plan or production edit.
+
 ## Gate decisions
 
 1. The live Build/View render chain is `DashboardRenderer` → `DashboardModeWorkspace` → `DashboardCanvas` → `ChartPanel` → `ChartView`. `ViewShell.jsx` and the page-frame portion of `BuildWorkspace.jsx` are not canonical render owners.

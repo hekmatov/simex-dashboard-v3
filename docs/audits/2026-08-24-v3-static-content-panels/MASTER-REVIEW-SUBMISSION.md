@@ -10,6 +10,18 @@
 
 Step 7S is ready for master review at implementation HEAD `b366ba17fe856aede46ba8301b8a530520e4d2cd`: engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. This record requests master acceptance; it does not claim that master acceptance has already been granted.
 
+## Proposed 2026-08-25 architectural amendment
+
+The user has approved the architectural direction for **Source Content Manager and QMD Reusable Media**, including the explicit dashboard-schema/package-bundle V4→V5 deviation with V4 import compatibility and chart configuration remaining V3. The written amendment is proposed and unimplemented. It does not change the completed Step 7S implementation result or inherit its Passing statuses.
+
+Master review is requested for:
+
+- docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md;
+- docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md;
+- docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md.
+
+No implementation planning is authorized. After master review resolves the written conflicts/deviations, the user must approve the resulting written amendment before ownership reconciliation or planning begins.
+
 ### Subsequent user sketch-review amendments
 
 On 2026-08-24 the user interactively reviewed all four sketches and selected **021=A, 022=B, 023=A, 024=A**. For 023 A, Image actions must be hidden at rest and reveal on pointer hover, keyboard focus within, or explicit touch/tap; Audience remains control-free. These accepted amendments supersede only the affected sketch winner/presentation details and are synchronized into the specification, decision record, fidelity matrix, implementation ledger, manifest, and disposable prototypes. They do not authorize implementation.
@@ -51,6 +63,9 @@ The first review rejected approval at `64c0143` while accepting the architectura
 - File-by-file plan: `docs/superpowers/plans/2026-08-24-static-content-panels.md`
 - Step 7 wait list: `docs/audits/2026-08-24-v3-static-content-panels/STEP-7-WAIT-LIST.md`
 - Slice 6 evidence: `docs/audits/2026-08-24-v3-static-content-panels/SLICE-6-EVIDENCE-STATUS.md`; `.superpowers/sdd/2026-08-24-static-content-panels/task-6-report.md`
+- Proposed Source Content Manager/QMD media amendment: `docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md`
+- Proposed amendment fidelity matrix: `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md`
+- Proposed amendment security/deviations: `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md`
 
 ## Discovery evidence
 

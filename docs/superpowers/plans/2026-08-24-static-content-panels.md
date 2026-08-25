@@ -2,6 +2,8 @@
 
 > The implementation branch is rooted at accepted Step 7 commit `01511bd5a56978965b8dfc8cdbec3b51c2e17e77`. The approved Step 7S discovery commits were transferred as documentation/sketches only. The ownership gate passed before production work began; Slices 1–6 are implemented, their independent implementation review is clean, and master acceptance remains pending.
 
+> **Planning hold for the 2026-08-25 amendment:** Source Content Manager and QMD Reusable Media are specified in docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md. They are not part of this completed six-slice plan or its 36-row ledger. No implementation plan exists yet; master review and final user approval of the written amendment must precede ownership reconciliation and planning.
+
 **Goal:** Deliver a separate static-content workflow with portable Free text and an enhanced existing Image type, including durable/offline assets and Image-only Present/Audience support.
 
 **Architecture:** Static panels retain dashboard panel identity but reference typed non-CSV sources. A separate four-stage authoring flow creates them. One canonical runtime resolver/renderer serves Build preview, ordinary panels, View, fullscreen, and—only for Image—passive Audience. Authored assets use dedicated IndexedDB storage plus a dashboard manifest and bundle payload.

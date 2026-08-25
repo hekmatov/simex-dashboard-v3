@@ -3,6 +3,8 @@
 **Status:** Approved design at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slices 1–6 are implemented, the final 36-row fidelity disposition is Passing, the independent implementation review is clean, and master acceptance is pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
+**Proposed amendment boundary (2026-08-25):** SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md records a separate unimplemented security/deviation set for reusable media, managed CSV sources, bounded local QMD media, and the user-approved dashboard/package V4→V5 deviation. The existing Step 7S decisions and evidence remain intact; the amendment awaits master review and final user approval.
+
 ## Slice 1 implementation status
 
 - SP-18 is partial: the registry surface policy and identity/revision-only presentable index are implemented; Present protocol and separate Audience enforcement remain pending Slice 6.

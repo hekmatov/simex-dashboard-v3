@@ -5,6 +5,8 @@
 
 Every accepted invariant identifies its eventual production owner and a falsifiable check. Sketch evidence demonstrates the design only; it is never implementation evidence.
 
+**Proposed amendment boundary (2026-08-25):** The existing 36-row Step 7S disposition below remains Passing. Source Content Manager and QMD Reusable Media introduce 30 separate proposed, unimplemented rows in SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md. Those rows do not inherit this matrix's implementation status and cannot be promoted before master review, final user approval, implementation, and retained live evidence.
+
 ## Final Step 7S controlling 36-row disposition
 
 This is the binding final ledger. It supersedes every earlier per-slice `pending`, `partial`, `not promoted`, and `not implemented` status retained below as historical execution provenance. “Passing” means the named layer has sufficient deterministic, mounted composition, or intended-use evidence under the current user-directed permissive-inert Free-text contract and strict Image contract.

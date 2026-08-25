@@ -6,6 +6,8 @@
 **Scope:** discovery, specification, and disposable prototypes only
 **Production implementation:** blocked until Step 7 is accepted
 
+**2026-08-25 amendment notice:** The implemented Step 7S baseline and its 36/36 Passing fidelity result remain unchanged. The user-approved Source Content Manager and QMD Reusable Media direction is documented separately in docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md. That written amendment, its V4→V5 deviation, and all companion fidelity/security rows are proposed and unimplemented pending V3 Design master review and final user approval.
+
 ## Decision summary
 
 Static content is a peer authoring concept, not a special case inside chart creation.
