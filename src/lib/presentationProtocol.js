@@ -81,6 +81,28 @@ export function validatePresentationState(state, { presentableItemIndex } = {}) 
   return state;
 }
 
+export function reconcilePresentationState(state, { presentableItemIndex } = {}) {
+  assertPlainObject(state, "presentation state");
+  if (!Array.isArray(state.items)) {
+    return validatePresentationState(state, { presentableItemIndex });
+  }
+  const items = state.items.filter((item) => {
+    assertPlainObject(item, "presentation item");
+    const itemId = validatePresentationItem(item);
+    const trusted = presentableItemIndex?.get?.(itemId)?.descriptor;
+    return trusted && descriptorsEqual(item, trusted);
+  });
+  const allowedLayouts = LAYOUTS_BY_COUNT[items.length];
+  const reconciled = {
+    ...state,
+    items: structuredClone(items),
+    layout: allowedLayouts.has(state.layout)
+      ? state.layout
+      : allowedLayouts.values().next().value,
+  };
+  return validatePresentationState(reconciled, { presentableItemIndex });
+}
+
 function validateMessage(message, { sessionId, presentableItemIndex }) {
   assertPlainObject(message, "presentation message");
   assertExactFields(message, ENVELOPE_FIELDS, "presentation message");

@@ -205,7 +205,10 @@ export function FreeTextSourceEditor({
               <h3 id={`${id}-errors-title`}>Fix before continuing</h3>
               <ol>
                 {analysis.errors.map((error, index) => (
-                  <li key={`${error.rule}-${error.location.line}-${error.location.column}-${index}`}>
+                  <li
+                    key={`${error.rule}-${error.location.line}-${error.location.column}-${index}`}
+                    data-validation-rule={error.rule}
+                  >
                     <a
                       href={`#${id}`}
                       onClick={(event) => {

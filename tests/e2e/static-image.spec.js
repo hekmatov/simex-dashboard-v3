@@ -9,6 +9,8 @@ const VIEWPORTS = [
   { width: 768, height: 900 },
 ];
 const PNG = Buffer.from(imageFixtureBytes("image/png"));
+const JPEG = Buffer.from(imageFixtureBytes("image/jpeg"));
+const WEBP = Buffer.from(imageFixtureBytes("image/webp"));
 const REPLACEMENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
@@ -361,6 +363,239 @@ test("IM-06 reload continuation restores the original asset and saved transform"
   await expect(canonicalPanel(page, after.panel.id).locator('img[alt="Clinic readiness by district"]')).toBeVisible();
 });
 
+test("IM-02 live intake classifies every rejection and accepts real PNG JPEG WebP replacements", async ({ page }) => {
+  test.setTimeout(240_000);
+  await installControllableStorageQuota(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  let wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Intake boundary corpus");
+  const input = wizard.getByLabel("PNG, JPEG, or WebP file");
+
+  const oversized = Buffer.alloc((12 * 1024 * 1024) + 1);
+  PNG.copy(oversized);
+  const cases = [
+    {
+      code: "media-type-mismatch",
+      file: upload("spoofed.jpg", "image/jpeg", PNG),
+      message: "The declared image type does not match its file signature.",
+    },
+    {
+      code: "corrupt-image",
+      file: upload("truncated.png", "image/png", PNG.subarray(0, 20)),
+      message: "The PNG chunk is truncated.",
+    },
+    {
+      code: "animated-image",
+      file: upload("animated.png", "image/png", pngWithChunk("acTL", Buffer.from([0, 0, 0, 2, 0, 0, 0, 0]))),
+      message: "APNG is not supported; choose a single-frame raster image.",
+    },
+    {
+      code: "animated-image",
+      file: upload("animated.webp", "image/webp", animatedWebp()),
+      message: "Animated WebP is not supported; choose a single-frame raster image.",
+    },
+    {
+      code: "file-size-limit",
+      file: upload("too-large.png", "image/png", oversized),
+      message: "The image exceeds the 12 MiB encoded file limit.",
+    },
+    {
+      code: "dimension-limit",
+      file: upload("too-wide.png", "image/png", pngWithDimensions(16_385, 1)),
+      message: "The image exceeds the 16,384 px dimension limit.",
+    },
+    {
+      code: "megapixel-limit",
+      file: upload("too-many-pixels.png", "image/png", pngWithDimensions(10_000, 5_001)),
+      message: "The decoded image exceeds the 50 megapixel limit.",
+    },
+  ];
+  for (const rejected of cases) {
+    await input.setInputFiles(rejected.file);
+    const error = wizard.locator(`[data-validation-code="${rejected.code}"]`);
+    await expect(error).toHaveText(rejected.message);
+    expect(await sessionAssetIds(page)).toEqual([]);
+  }
+
+  await wizard.getByLabel("Image origin").selectOption("url");
+  const url = wizard.getByLabel("HTTPS image URL");
+  for (const [value, message] of [
+    ["not-a-url", "Image URL must be a valid https URL."],
+    ["http://unsafe.example.test/map.png", "Image URL must use https."],
+    ["file:///C:/private/map.png", "Image URL must use https."],
+  ]) {
+    await url.fill(value);
+    await url.blur();
+    await expect(wizard.locator('[data-validation-code="invalid-origin"]')).toHaveText(message);
+  }
+  await wizard.getByLabel("Image origin").selectOption("package");
+  const packagePath = wizard.getByLabel("Dashboard package path");
+  for (const value of ["../private/map.png", "assets/%2e%2e/private.png", "C:\\private\\map.png"]) {
+    await packagePath.fill(value);
+    await packagePath.blur();
+    await expect(wizard.locator('[data-validation-code="invalid-origin"]'))
+      .toHaveText("Image package path must be a safe dashboard-owned relative path.");
+  }
+
+  await wizard.getByLabel("Image origin").selectOption("asset");
+  const localInput = wizard.getByLabel("PNG, JPEG, or WebP file");
+  await localInput.setInputFiles(upload("accepted.png", "image/png", PNG));
+  await expect(wizard.getByText(/accepted\.png is ready/)).toBeVisible();
+  await wizard.getByLabel("Alternative text").fill("Validated intake corpus");
+  await wizard.getByLabel("Crop x").fill("120");
+  await localInput.setInputFiles(upload("accepted.jpg", "image/jpeg", JPEG));
+  await expect(wizard.getByText(/accepted\.jpg is ready/)).toBeVisible();
+  await expect(wizard.getByLabel("Crop x")).toHaveValue("0");
+  await expect(wizard.getByText("Review alternative text after replacement.")).toBeVisible();
+  await localInput.setInputFiles(upload("accepted.webp", "image/webp", WEBP));
+  await expect(wizard.getByText(/accepted\.webp is ready/)).toBeVisible();
+  await expect(wizard.locator(".static-image-validation")).toHaveCount(0);
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+  const accepted = await readSavedImage(page, "Intake boundary corpus");
+  expect(accepted.source.revision).toBe(1);
+  expect(accepted.asset.mediaType).toBe("image/webp");
+});
+
+test("IM-02 dashboard-budget and browser-quota failures recover through an exact replacement", async ({ page }) => {
+  test.setTimeout(180_000);
+  await installControllableStorageQuota(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await createImage(page, "Intake budget corpus");
+  await addDashboardBudgetFixture(page);
+  await page.reload();
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  let saved = await readSavedImage(page, "Intake budget corpus");
+  expect(await page.evaluate((key) => Boolean(
+    JSON.parse(localStorage.getItem(key)).assets["asset-budget-fixture"],
+  ), STORAGE_KEY)).toBe(true);
+  await scrollPanelIntoView(page, saved.panel.id);
+  await openImageEditor(canonicalPanel(page, saved.panel.id), page, "Intake budget corpus");
+  let wizard = page.getByRole("dialog", { name: "Edit static content" });
+  await wizard.locator("#static-image-file").setInputFiles(upload("budget.png", "image/png", PNG));
+  await expect(wizard.locator('[data-validation-code="product-budget"]'))
+    .toHaveText("The image would exceed the dashboard's 200 MiB authored-asset budget.");
+  await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+
+  await removeDashboardBudgetFixture(page);
+  await page.reload();
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  saved = await readSavedImage(page, "Intake budget corpus");
+  await scrollPanelIntoView(page, saved.panel.id);
+  await openImageEditor(canonicalPanel(page, saved.panel.id), page, "Intake budget corpus");
+  wizard = page.getByRole("dialog", { name: "Edit static content" });
+  await setStorageQuotaMode(page, "insufficient");
+  await wizard.locator("#static-image-file").setInputFiles(upload("quota.png", "image/png", PNG));
+  await expect(wizard.locator('[data-validation-code="browser-quota"]'))
+    .toHaveText("Browser storage quota is insufficient for this image.");
+  await setStorageQuotaMode(page, "available");
+  await wizard.locator("#static-image-file").setInputFiles(upload("recovered.jpg", "image/jpeg", JPEG));
+  await expect(wizard.getByText(/recovered\.jpg is ready/)).toBeVisible();
+  await expect(wizard.getByText("Review alternative text after replacement.")).toBeVisible();
+  await wizard.getByLabel("Alternative text").fill("Recovered validated intake corpus");
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByRole("button", { name: "Save" }).click();
+  await expect(wizard).toHaveCount(0);
+  saved = await readSavedImage(page, "Intake budget corpus");
+  expect(saved.source.revision).toBe(2);
+  expect(saved.asset.mediaType).toBe("image/jpeg");
+  await expect(canonicalPanel(page, saved.panel.id)
+    .locator('img[alt="Recovered validated intake corpus"]')).toBeVisible();
+});
+
+test("IM-08 guided crop remains operable with keyboard and pointer at actual 200 percent page zoom", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Zoomed crop proof");
+  await wizard.getByLabel("PNG, JPEG, or WebP file").setInputFiles(
+    upload("zoom-crop.png", "image/png", PNG),
+  );
+  await expect(wizard.getByText(/zoom-crop\.png is ready/)).toBeVisible();
+  await wizard.getByLabel("Alternative text").fill("Zoomed crop fixture");
+  await wizard.getByLabel("Crop width").fill("800");
+  await wizard.getByLabel("Crop height").fill("800");
+
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
+  await expect.poll(() => page.evaluate(() => window.visualViewport?.scale)).toBe(2);
+  const crop = wizard.getByRole("group", { name: /Crop selection/ });
+  await crop.scrollIntoViewIfNeeded();
+  await crop.focus();
+  await expect(crop).toBeFocused();
+  await crop.press("Shift+ArrowRight");
+  await expect(wizard.getByLabel("Crop x")).toHaveValue("1");
+
+  const beforeMove = await crop.boundingBox();
+  await page.mouse.move(beforeMove.x + (beforeMove.width / 2), beforeMove.y + (beforeMove.height / 2));
+  await page.mouse.down();
+  await page.mouse.move(beforeMove.x + (beforeMove.width * 0.6), beforeMove.y + (beforeMove.height * 0.6));
+  await page.mouse.up();
+  await expect(wizard.getByLabel("Crop x")).not.toHaveValue("1");
+  await expect(wizard.getByLabel("Crop y")).not.toHaveValue("0");
+
+  const widthBeforeResize = await wizard.getByLabel("Crop width").inputValue();
+  const resize = wizard.getByRole("button", { name: "Resize crop from bottom right" });
+  await resize.scrollIntoViewIfNeeded();
+  const resizeBox = await resize.boundingBox();
+  await page.mouse.move(resizeBox.x + (resizeBox.width / 2), resizeBox.y + (resizeBox.height / 2));
+  await page.mouse.down();
+  await page.mouse.move(resizeBox.x + resizeBox.width + 16, resizeBox.y + resizeBox.height + 12);
+  await page.mouse.up();
+  await expect(wizard.getByLabel("Crop width")).not.toHaveValue(widthBeforeResize);
+
+  const cropX = wizard.getByLabel("Crop x");
+  await cropX.scrollIntoViewIfNeeded();
+  await cropX.focus();
+  await expect(cropX).toBeFocused();
+  const zoomGeometry = await wizard.evaluate((dialog) => {
+    const focused = document.activeElement;
+    const focusRect = focused.getBoundingClientRect();
+    const cropSelection = dialog.querySelector(".image-crop-selection");
+    const style = getComputedStyle(cropSelection);
+    return {
+      pageScale: window.visualViewport?.scale,
+      focusVisible: focusRect.top >= 0 && focusRect.bottom <= window.innerHeight,
+      focusOutline: getComputedStyle(focused).outlineStyle,
+      documentFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      dialogFits: dialog.scrollWidth <= dialog.clientWidth,
+      cropVariables: [
+        style.getPropertyValue("--image-crop-x").trim(),
+        style.getPropertyValue("--image-crop-y").trim(),
+        style.getPropertyValue("--image-crop-width").trim(),
+        style.getPropertyValue("--image-crop-height").trim(),
+      ],
+      cropBounds: cropSelection.getBoundingClientRect().toJSON(),
+    };
+  });
+  expect(zoomGeometry.pageScale).toBe(2);
+  expect(zoomGeometry.focusVisible).toBe(true);
+  expect(zoomGeometry.focusOutline).not.toBe("none");
+  expect(zoomGeometry.documentFits).toBe(true);
+  expect(zoomGeometry.dialogFits).toBe(true);
+  expect(zoomGeometry.cropVariables.every(Boolean)).toBe(true);
+  expect(zoomGeometry.cropBounds.width).toBeGreaterThan(0);
+  expect(zoomGeometry.cropBounds.height).toBeGreaterThan(0);
+  await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 1 });
+});
+
 async function openBiomedicalBuild(page) {
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true }).click();
@@ -663,4 +898,87 @@ async function restoreDurableImageAsset(page, expectedAssetId) {
     return staged.assetId;
   });
   expect(restoredAssetId).toBe(expectedAssetId);
+}
+
+function upload(name, mimeType, buffer) {
+  return { name, mimeType, buffer };
+}
+
+function pngWithDimensions(width, height) {
+  const bytes = Buffer.from(PNG);
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  bytes.writeUInt32BE(crc32(bytes.subarray(12, 29)), 29);
+  return bytes;
+}
+
+function pngWithChunk(type, data) {
+  const chunk = Buffer.alloc(12 + data.length);
+  chunk.writeUInt32BE(data.length, 0);
+  chunk.write(type, 4, 4, "ascii");
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, 8 + data.length)), 8 + data.length);
+  return Buffer.concat([PNG.subarray(0, 33), chunk, PNG.subarray(33)]);
+}
+
+function animatedWebp() {
+  const bytes = Buffer.from(WEBP);
+  bytes[20] |= 0x02;
+  return bytes;
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const value of bytes) {
+    crc ^= value;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+async function installControllableStorageQuota(page) {
+  await page.addInitScript(() => {
+    const storage = navigator.storage;
+    if (!storage) return;
+    const original = storage.estimate?.bind(storage);
+    Object.defineProperty(storage, "estimate", {
+      configurable: true,
+      value: async () => globalThis.__SIMEX_E2E_QUOTA_MODE__ === "insufficient"
+        ? { quota: 1, usage: 0 }
+        : original
+          ? original()
+          : { quota: 1024 * 1024 * 1024, usage: 0 },
+    });
+  });
+}
+
+async function setStorageQuotaMode(page, mode) {
+  await page.evaluate((value) => {
+    globalThis.__SIMEX_E2E_QUOTA_MODE__ = value;
+  }, mode);
+}
+
+async function addDashboardBudgetFixture(page) {
+  await page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    dashboard.assets["asset-budget-fixture"] = {
+      mediaType: "image/png",
+      byteLength: 200 * 1024 * 1024,
+      width: 1,
+      height: 1,
+      sha256: "a".repeat(64),
+      storageState: "durable",
+    };
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, STORAGE_KEY);
+}
+
+async function removeDashboardBudgetFixture(page) {
+  await page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    delete dashboard.assets["asset-budget-fixture"];
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, STORAGE_KEY);
 }

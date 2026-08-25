@@ -2,22 +2,40 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const distDir = path.join(rootDir, "dist");
-const releaseRootDir = path.join(rootDir, "release");
-const preferredReleaseDir = path.join(releaseRootDir, "SimEx Dashboard V2 Flashdrive");
-let releaseDir = preferredReleaseDir;
+const SCRIPT_PATH = fileURLToPath(import.meta.url);
+const DEFAULT_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..");
 
-await fs.mkdir(releaseRootDir, { recursive: true });
-try {
-  await fs.rm(preferredReleaseDir, { recursive: true, force: true });
-} catch (error) {
-  releaseDir = path.join(releaseRootDir, `SimEx Dashboard V2 Flashdrive ${timestampForFolder()}`);
-  console.warn(`Could not replace the existing flash-drive folder because it is locked. Writing a fresh package to ${path.relative(rootDir, releaseDir)} instead.`);
-}
-await fs.cp(distDir, releaseDir, { recursive: true });
+export async function packageFlashDrive({
+  rootDir = DEFAULT_ROOT,
+  releaseDir: requestedReleaseDir,
+} = {}) {
+  const resolvedRoot = path.resolve(rootDir);
+  const distDir = path.join(resolvedRoot, "dist");
+  const releaseRootDir = path.join(resolvedRoot, "release");
+  const preferredReleaseDir = path.join(releaseRootDir, "SimEx Dashboard V2 Flashdrive");
+  let releaseDir = requestedReleaseDir
+    ? path.resolve(requestedReleaseDir)
+    : preferredReleaseDir;
 
-await fs.writeFile(
+  await fs.mkdir(requestedReleaseDir ? path.dirname(releaseDir) : releaseRootDir, { recursive: true });
+  if (requestedReleaseDir) {
+    try {
+      await fs.access(releaseDir);
+      throw new Error(`Requested flash-drive output already exists: ${releaseDir}`);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  } else {
+    try {
+      await fs.rm(preferredReleaseDir, { recursive: true, force: true });
+    } catch (error) {
+      releaseDir = path.join(releaseRootDir, `SimEx Dashboard V2 Flashdrive ${timestampForFolder()}`);
+      console.warn(`Could not replace the existing flash-drive folder because it is locked. Writing a fresh package to ${path.relative(resolvedRoot, releaseDir)} instead.`);
+    }
+  }
+  await fs.cp(distDir, releaseDir, { recursive: true });
+
+  await fs.writeFile(
   path.join(releaseDir, "START_DASHBOARD.bat"),
   `@echo off
 setlocal
@@ -34,7 +52,7 @@ if errorlevel 1 (
   "utf8",
 );
 
-await fs.writeFile(
+  await fs.writeFile(
   path.join(releaseDir, "start-dashboard-server.ps1"),
   `$ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -62,7 +80,9 @@ if (-not $listener) {
 }
 
 $url = "http://127.0.0.1:$port/"
-Start-Process $url
+if ($env:SIMEX_PORTABLE_NO_BROWSER -ne "1") {
+  Start-Process $url
+}
 Write-Host "SimEx Dashboard V2 is running at $url"
 Write-Host "Close this window to stop the dashboard server."
 
@@ -116,7 +136,7 @@ try {
   "utf8",
 );
 
-await fs.writeFile(
+  await fs.writeFile(
   path.join(releaseDir, "START_HERE.md"),
   `# SimEx Dashboard V2 Flash Drive Package
 
@@ -165,7 +185,13 @@ The package:flashdrive command does not read browser IndexedDB. To include brows
   "utf8",
 );
 
-console.log(`Flash-drive package written to ${path.relative(rootDir, releaseDir)}`);
+  console.log(`Flash-drive package written to ${path.relative(resolvedRoot, releaseDir)}`);
+  return { releaseDir };
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === SCRIPT_PATH) {
+  await packageFlashDrive();
+}
 
 function timestampForFolder() {
   const date = new Date();

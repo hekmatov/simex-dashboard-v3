@@ -302,7 +302,9 @@ function safeRotation(value) {
 function safeImageSource(value) {
   if (typeof value !== "string" || !value.trim()) return null;
   const src = value.trim();
+  const containedPackagePath = /^(?:[a-z0-9][a-z0-9._-]*\/)+[a-z0-9][a-z0-9._-]*$/i.test(src);
   return /^(?:https:|blob:|\/|\.\/|\.\.\/|data:image\/[a-z0-9.+-]+;base64,)/i.test(src)
+    || containedPackagePath
     ? src
     : null;
 }

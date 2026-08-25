@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   IMAGE_ASSET_LIMITS,
+  authoredAssetManifestBytes,
   discardSessionImageAsset,
   inspectImageAnimation,
   readSessionImageAssetBytes,
@@ -50,6 +51,14 @@ const DECODED = (mediaType) => ({
 });
 const PNG = imageFixtureBytes("image/png");
 const WEBP = imageFixtureBytes("image/webp");
+
+test("authored Image intake counts the complete saved manifest before staging", () => {
+  assert.equal(authoredAssetManifestBytes({
+    durable: { byteLength: 12 },
+    staged: { byteLength: 8 },
+    malformed: { byteLength: -4 },
+  }), 20);
+});
 
 test("genuinely decodable single-frame PNG, JPEG, and WebP require the decoder boundary", async () => {
   const fixtures = [

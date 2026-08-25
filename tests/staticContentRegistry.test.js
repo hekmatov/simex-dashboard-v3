@@ -104,6 +104,73 @@ test("presentable index is empty while the dashboard is still loading", () => {
   assert.deepEqual([...buildPresentableItemIndex(null)], []);
 });
 
+test("presentable index excludes every recovery-only or incomplete saved Image", () => {
+  const dashboard = fixtureDashboard();
+  const validSource = dashboard.dataSources["image-source"];
+  const recoveryCases = {
+    replacement: {
+      ...validSource,
+      origin: { kind: "replacementRequired", reason: "Legacy blob source" },
+      migrationWarnings: ["replacement-required"],
+    },
+    missingAlt: {
+      ...validSource,
+      alt: "",
+      migrationWarnings: ["missing-alt"],
+    },
+    unsafeUrl: {
+      ...validSource,
+      origin: { kind: "url", url: "http://example.test/map.png" },
+    },
+    missingManifest: {
+      ...validSource,
+      origin: { kind: "asset", assetId: "asset-missing" },
+    },
+    missingBytes: {
+      ...validSource,
+      origin: { kind: "asset", assetId: "asset-missing-bytes" },
+    },
+    stagedRecovery: {
+      ...validSource,
+      origin: { kind: "asset", assetId: "asset-staged" },
+    },
+  };
+  dashboard.dataSources = {
+    ...dashboard.dataSources,
+    ...Object.fromEntries(Object.entries(recoveryCases).map(([id, source]) => [`source-${id}`, source])),
+    "source-durable": {
+      ...validSource,
+      origin: { kind: "asset", assetId: "asset-durable" },
+    },
+  };
+  dashboard.assets = {
+    "asset-missing-bytes": assetManifestEntry("b", "missing"),
+    "asset-staged": assetManifestEntry("c", "staged"),
+    "asset-durable": assetManifestEntry("d", "durable"),
+  };
+  dashboard.pages[0].sections[0].panels.push(
+    ...Object.keys(recoveryCases).map((id) => ({
+      id: `image-${id}`,
+      typeId: "image",
+      title: id,
+      sourceId: `source-${id}`,
+    })),
+    {
+      id: "image-durable",
+      typeId: "image",
+      title: "Durable",
+      sourceId: "source-durable",
+    },
+  );
+
+  const index = buildPresentableItemIndex(dashboard);
+
+  assert.equal(index.has("image-durable"), true);
+  for (const id of Object.keys(recoveryCases)) {
+    assert.equal(index.has(`image-${id}`), false, id);
+  }
+});
+
 test("static destinations accept dashboard sections and reject temporal ownership", () => {
   const dashboard = fixtureDashboard();
   assert.deepEqual(
@@ -153,5 +220,16 @@ function fixtureDashboard() {
         ],
       }],
     }],
+  };
+}
+
+function assetManifestEntry(seed, storageState) {
+  return {
+    mediaType: "image/png",
+    byteLength: 68,
+    width: 2,
+    height: 3,
+    sha256: seed.repeat(64),
+    storageState,
   };
 }

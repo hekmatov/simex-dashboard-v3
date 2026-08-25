@@ -1,7 +1,7 @@
 import React from "react";
 
 import { usePlayback } from "../playback/PlaybackProvider.jsx";
-import { MAX_DISPLAYED_CHARTS } from "../../lib/displayController.js";
+import { MAX_DISPLAYED_CHARTS, reduceDisplayState } from "../../lib/displayController.js";
 import { buildPresentableItemIndex } from "../../static-content/staticPanelCapabilities.js";
 import AudienceSnapshotMonitor from "./AudienceSnapshotMonitor.jsx";
 
@@ -16,14 +16,13 @@ export default function PresentWorkspace({
   themeProjection,
 }) {
   const playback = usePlayback();
+  const playbackDispatchRef = React.useRef(playback.dispatch);
+  playbackDispatchRef.current = playback.dispatch;
+  const playbackViewOwner = `present:${React.useId()}`;
   React.useEffect(() => {
-    playback.dispatch({ type: "openView" });
-    return () => playback.dispatch({ type: "closeView" });
-    // Present owns synchronized playback while it is mounted.
-    // The first dispatch is sufficient; later playback dispatch identities
-    // may change as the active group changes and must not recycle this lease.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    playbackDispatchRef.current({ type: "openView", owner: playbackViewOwner });
+    return () => playbackDispatchRef.current({ type: "closeView", owner: playbackViewOwner });
+  }, [playbackViewOwner]);
   const {
     displayState,
     onDisplayAction,
@@ -54,10 +53,12 @@ export default function PresentWorkspace({
   const activePage = (dashboard?.pages ?? []).find(({ id }) => id === activePageId)
     ?? dashboard?.pages?.[0]
     ?? null;
-  const displayedChartIds = displayState.displayed_chart_ids.filter(
-    (itemId) => presentableItemIndex.has(itemId),
+  const reconciledDisplayState = React.useMemo(
+    () => reconcilePresentDisplayState(displayState, presentableItemIndex),
+    [displayState, presentableItemIndex],
   );
-  const layout = displayState.layout;
+  const displayedChartIds = reconciledDisplayState.displayed_chart_ids;
+  const layout = reconciledDisplayState.layout;
   const selectedCharts = displayedChartIds
     .map((chartId) => chartsById.get(chartId))
     .filter(Boolean);
@@ -453,6 +454,21 @@ export function projectPresentableItems(itemIds, presentableItemIndex) {
   return itemIds.map(
     (itemId) => structuredClone(presentableItemIndex.get(itemId).descriptor),
   );
+}
+
+export function reconcilePresentDisplayState(displayState, presentableItemIndex) {
+  const reconciled = reduceDisplayState(displayState, {
+    type: "companion_reconcile",
+    chart_ids: displayState.displayed_chart_ids.filter(
+      (itemId) => presentableItemIndex.has(itemId),
+    ),
+  }, presentableItemIndex.keys());
+  const allowedLayouts = layoutChoices(reconciled.displayed_chart_ids.length);
+  if (allowedLayouts.some(({ value }) => value === reconciled.layout)) return reconciled;
+  return {
+    ...reconciled,
+    layout: allowedLayouts[0]?.value ?? "solo",
+  };
 }
 
 function layoutChoices(count) {

@@ -61,19 +61,34 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
     "kind", "panel_id", "revision", "source_id",
   ]);
 
+  await injectRejectedFreeTextEnvelope(page, firstProtocol);
+  await page.waitForTimeout(250);
+  await expectAudienceCount(audience, 2);
+  await expect(audience.getByText("Injected protocol Free text", { exact: true })).toHaveCount(0);
+  await expect(audience.locator('[data-presentation-item-kind="freeText"]')).toHaveCount(0);
+  await expect(audience.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
+
   const beforeTime = await audienceImageSnapshot(audience, imagePanelId);
   await page.getByLabel("Synchronized time").selectOption(authored.chronoGroupId);
   const slider = page.getByLabel("Presentation time");
   await expect(slider).toBeEnabled();
-  const priorSliderValue = await slider.inputValue();
-  const maximum = Number(await slider.getAttribute("max"));
-  await slider.press(Number(priorSliderValue) < maximum ? "ArrowRight" : "ArrowLeft");
-  await expect(slider).not.toHaveValue(priorSliderValue);
+  await expect.poll(async () => (await observedAudienceState(page)).time?.group_id)
+    .toBe(authored.chronoGroupId);
+  await audience.waitForTimeout(600);
+  const beforeChart = await audienceChartSnapshot(audience, authored.temporalChartId);
+  const beforeChartTime = await observedAudienceState(page);
+  const firstTarget = await moveRangeToOtherBoundary(slider);
   await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
-    .not.toBe(firstProtocol.time?.active_epoch_ms);
+    .not.toBe(beforeChartTime.time?.active_epoch_ms);
+  await expect.poll(() => audienceChartSnapshot(audience, authored.temporalChartId), {
+    timeout: 15_000,
+  }).not.toEqual(beforeChart);
   const afterTimeProtocol = await observedAudienceState(page);
+  const afterChart = await audienceChartSnapshot(audience, authored.temporalChartId);
   const afterTime = await audienceImageSnapshot(audience, imagePanelId);
   expect(afterTimeProtocol.items[1]).toEqual(firstProtocol.items[1]);
+  expect(afterTimeProtocol.time.active_epoch_ms).not.toBe(beforeChartTime.time.active_epoch_ms);
+  expect(afterChart).not.toEqual(beforeChart);
   expect(afterTime).toEqual(beforeTime);
 
   await presentChoice(page, authored.temporalChartId).getByRole("checkbox").uncheck();
@@ -98,6 +113,22 @@ test("saved Image and temporal chart keep exact identity through passive Audienc
   await expectNoOverflow(audience);
   const failedProtocol = await observedAudienceState(page);
   expect(failedProtocol.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  await audience.waitForTimeout(600);
+  const failedChartBefore = await audienceChartSnapshot(audience, authored.temporalChartId);
+  const failedImageBefore = await audienceImageSnapshot(audience, imagePanelId);
+  await moveRangeToOppositeBoundary(slider, firstTarget);
+  await expect.poll(async () => (await observedAudienceState(page)).time?.active_epoch_ms)
+    .not.toBe(failedProtocol.time?.active_epoch_ms);
+  await expect.poll(() => audienceChartSnapshot(audience, authored.temporalChartId), {
+    timeout: 15_000,
+  }).not.toEqual(failedChartBefore);
+  const failedAfterTime = await observedAudienceState(page);
+  expect(failedAfterTime.items.find(({ kind }) => kind === "image")).toEqual(firstProtocol.items[1]);
+  expect(await audienceImageSnapshot(audience, imagePanelId)).toEqual(failedImageBefore);
+  await expect(audience.locator('[data-static-failure="asset-read-failed"]')).toBeVisible();
+  await expect(audience.locator('[data-presentation-item-kind="chart"]')).toHaveCount(3);
+  await expect(audience.locator("button, .chart-image-actions, .static-content-state__actions")).toHaveCount(0);
+  await expectNoOverflow(audience);
   await captureCheckpoint(audience, testInfo, "audience-1920x1080-four-cell-failure.png");
 
   await restoreDurableImageAsset(page, failedAssetId);
@@ -226,14 +257,41 @@ async function reopenAudience(page) {
 async function installAudienceStateObserver(page) {
   await page.evaluate(() => {
     const originalPostMessage = BroadcastChannel.prototype.postMessage;
-    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = { latestState: null };
+    globalThis.__SIMEX_E2E_AUDIENCE_STATE__ = { latestState: null, latestEnvelope: null };
+    globalThis.__SIMEX_E2E_NATIVE_BROADCAST_POST__ = originalPostMessage;
     BroadcastChannel.prototype.postMessage = function observePresentationState(data) {
       if (data?.protocol_version === 3 && data.type === "state") {
         globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestState = structuredClone(data.payload);
+        globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestEnvelope = structuredClone(data);
       }
       return originalPostMessage.call(this, data);
     };
   });
+}
+
+async function injectRejectedFreeTextEnvelope(page, acceptedState) {
+  await page.evaluate((state) => {
+    const accepted = globalThis.__SIMEX_E2E_AUDIENCE_STATE__.latestEnvelope;
+    const channel = new BroadcastChannel(`simex-presentation-${accepted.session_id}`);
+    globalThis.__SIMEX_E2E_NATIVE_BROADCAST_POST__.call(channel, {
+      protocol_version: 3,
+      session_id: accepted.session_id,
+      sequence: accepted.sequence + 10_000,
+      type: "state",
+      payload: {
+        ...structuredClone(state),
+        items: [{
+          kind: "freeText",
+          panel_id: "injected-free-text",
+          source_id: "injected-source",
+          revision: 1,
+          source: "Injected protocol Free text",
+        }],
+        layout: "solo",
+      },
+    });
+    channel.close();
+  }, acceptedState);
 }
 
 async function observedAudienceState(page) {
@@ -261,6 +319,46 @@ async function audienceImageSnapshot(audience, panelId) {
       transform: cell.querySelector("[data-image-transform-order]")?.getAttribute("data-image-transform-order"),
     };
   });
+}
+
+async function audienceChartSnapshot(audience, chartId) {
+  return audience.locator(`[data-displayed-chart-id="${chartId}"]`).evaluate((cell) => {
+    const canvas = cell.querySelector("canvas");
+    const pixelData = canvas?.toDataURL("image/png") ?? "";
+    let pixelHash = 2166136261;
+    for (let index = 0; index < pixelData.length; index += 1) {
+      pixelHash ^= pixelData.charCodeAt(index);
+      pixelHash = Math.imul(pixelHash, 16777619);
+    }
+    return {
+      kind: cell.getAttribute("data-presentation-item-kind"),
+      text: cell.textContent.replace(/\s+/g, " ").trim(),
+      pixelHash: pixelHash >>> 0,
+      canvasWidth: canvas?.width ?? 0,
+      canvasHeight: canvas?.height ?? 0,
+      table: cell.querySelector("table")?.textContent.replace(/\s+/g, " ").trim() ?? "",
+      temporalStatus: cell.querySelector("[data-temporal-status]")?.getAttribute("data-temporal-status") ?? "",
+    };
+  });
+}
+
+async function moveRangeToOtherBoundary(slider) {
+  const current = Number(await slider.inputValue());
+  const minimum = Number(await slider.getAttribute("min"));
+  const maximum = Number(await slider.getAttribute("max"));
+  const target = current === maximum ? minimum : maximum;
+  await slider.press(target === minimum ? "Home" : "End");
+  await expect(slider).toHaveValue(String(target));
+  return target;
+}
+
+async function moveRangeToOppositeBoundary(slider, currentBoundary) {
+  const minimum = Number(await slider.getAttribute("min"));
+  const maximum = Number(await slider.getAttribute("max"));
+  const target = currentBoundary === maximum ? minimum : maximum;
+  await slider.press(target === minimum ? "Home" : "End");
+  await expect(slider).toHaveValue(String(target));
+  return target;
 }
 
 async function audienceGeometry(audience) {

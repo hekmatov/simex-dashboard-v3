@@ -17,7 +17,10 @@ export const initialPlaybackState = Object.freeze({
   blackoutActive: false,
   reducedMotion: false,
   playbackView: false,
+  playbackViewOwners: Object.freeze([]),
 });
+
+const LEGACY_PLAYBACK_VIEW_OWNER = "legacy";
 
 /**
  * Pure synchronized-playback reducer.
@@ -202,14 +205,22 @@ export function reducePlaybackState(state, action) {
     });
   }
   if (action.type === "openView") {
+    const owner = playbackViewOwner(action);
+    const owners = playbackViewOwners(state);
     return withChanges(state, {
       playbackView: true,
+      playbackViewOwners: owners.includes(owner)
+        ? owners
+        : Object.freeze([...owners, owner]),
       playing: false,
     });
   }
   if (action.type === "closeView") {
+    const owner = playbackViewOwner(action);
+    const owners = playbackViewOwners(state).filter((candidate) => candidate !== owner);
     return withChanges(state, {
-      playbackView: false,
+      playbackView: owners.length > 0,
+      playbackViewOwners: Object.freeze(owners),
       playing: false,
     });
   }
@@ -274,4 +285,21 @@ function withChanges(state, changes) {
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function playbackViewOwner(action) {
+  if (action.owner === undefined) return LEGACY_PLAYBACK_VIEW_OWNER;
+  if (typeof action.owner !== "string" || action.owner.trim() === "") {
+    throw new TypeError("Playback view owner must be a non-empty string.");
+  }
+  return action.owner;
+}
+
+function playbackViewOwners(state) {
+  if (Array.isArray(state.playbackViewOwners) && state.playbackViewOwners.length > 0) {
+    return state.playbackViewOwners;
+  }
+  return state.playbackView === true
+    ? Object.freeze([LEGACY_PLAYBACK_VIEW_OWNER])
+    : Object.freeze([]);
 }

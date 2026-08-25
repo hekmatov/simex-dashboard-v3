@@ -66,6 +66,25 @@ const SAVED_QMD = [
   ...Array.from({ length: 72 }, (_, index) => `- Fullscreen controlled overflow note ${index + 1}`),
 ].join("\n");
 
+const LINK_QMD = [
+  "# Safe link corpus",
+  "",
+  "[Safe offline destination](https://safe.example.test/bounded)",
+  "[Safe local detail](#local-detail)",
+  "",
+  "## Local detail",
+  "",
+  "[Unsafe javascript](javascript:window.__unsafeNavigation=true)",
+  "[Unsafe encoded javascript](jav%61script:window.__unsafeNavigation=true)",
+  "[Unsafe data](data:text/html,unsafe)",
+  "[Unsafe blob](blob:https://safe.example.test/not-allowed)",
+  "[Unsafe file](file:///C:/Windows/win.ini)",
+  "[Unsafe mail](mailto:test@example.test)",
+  "<a href=\"javascript:window.__unsafeMarkup=true\">Raw unsafe markup</a>",
+].join("\n");
+
+const SAFE_RECOVERY_QMD = "# Boundary recovery\n\nCurrent-session source recovered.";
+
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, {
@@ -238,6 +257,147 @@ test(
   },
 );
 
+test("FT-05 View and fullscreen activate only safe links by pointer and keyboard", async ({ page, context }) => {
+  test.setTimeout(120_000);
+  const controlledRequests = [];
+  await context.route("https://safe.example.test/**", async (route) => {
+    controlledRequests.push(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<!doctype html><title>Bounded offline destination</title><p>Controlled local response</p>",
+    });
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await createFreeText(page, {
+    title: "Link activation field guide",
+    qmd: LINK_QMD,
+    viewport: { width: 1280, height: 800 },
+    previewText: "Safe link corpus",
+  });
+  const saved = await readSavedFreeText(page, "Link activation field guide");
+  await page.getByLabel("Dashboard mode")
+    .getByRole("button", { name: "View", exact: true }).click();
+  const panel = canonicalPanel(page, saved.panel.id);
+  await panel.scrollIntoViewIfNeeded();
+  await expectPortableLinkCorpus(panel, saved.panel.id);
+  expect(controlledRequests).toEqual([]);
+
+  const viewPopupPromise = context.waitForEvent("page");
+  await panel.getByRole("link", { name: /Safe offline destination/ }).click();
+  const viewPopup = await viewPopupPromise;
+  await viewPopup.waitForLoadState("domcontentloaded");
+  expect(viewPopup.url()).toBe("https://safe.example.test/bounded");
+  expect(await viewPopup.evaluate(() => window.opener)).toBeNull();
+  await viewPopup.close();
+  expect(controlledRequests).toEqual(["https://safe.example.test/bounded"]);
+
+  await panel.getByRole("button", { name: "Focus chart" }).click();
+  const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
+  await expectPortableLinkCorpus(fullscreen, saved.panel.id);
+  const fullscreenLink = fullscreen.getByRole("link", { name: /Safe offline destination/ });
+  await fullscreenLink.focus();
+  await expect(fullscreenLink).toBeFocused();
+  const fullscreenPopupPromise = context.waitForEvent("page");
+  await fullscreenLink.press("Enter");
+  const fullscreenPopup = await fullscreenPopupPromise;
+  await fullscreenPopup.waitForLoadState("domcontentloaded");
+  expect(fullscreenPopup.url()).toBe("https://safe.example.test/bounded");
+  expect(await fullscreenPopup.evaluate(() => window.opener)).toBeNull();
+  await fullscreenPopup.close();
+  expect(controlledRequests).toEqual([
+    "https://safe.example.test/bounded",
+    "https://safe.example.test/bounded",
+  ]);
+  expect(await page.evaluate(() => ({
+    unsafeNavigation: window.__unsafeNavigation,
+    unsafeMarkup: window.__unsafeMarkup,
+  }))).toEqual({ unsafeNavigation: undefined, unsafeMarkup: undefined });
+});
+
+test("FT-06 live authoring blocks every resource boundary and preserves recoverable session source", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Free text").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Unsaved boundary traversal");
+  const source = wizard.getByLabel("QMD-style source");
+  await source.fill(SAFE_RECOVERY_QMD);
+  await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+
+  const tooManyColumns = tableWithColumns(21);
+  const tooManyRows = tableWithRows(101);
+  const renderedNodeOverflow = [
+    ...Array.from({ length: 2_499 }, () => "x"),
+    "---", "---", "---",
+  ].join("\n\n");
+  const mathExpansionOverflow = `$${"\\frac{x}{x}".repeat(220)}$`;
+  const cases = [
+    {
+      rule: "source-size",
+      value: "a".repeat(102_401),
+      message: "Portable QMD source is 102401 bytes; the limit is 102400.",
+    },
+    {
+      rule: "nesting-depth",
+      value: `${"> ".repeat(7)}deep`,
+      message: "Portable QMD nesting is 7 levels; the limit is 6.",
+    },
+    {
+      rule: "table-columns",
+      value: tooManyColumns,
+      message: "This table has 21 columns; the limit is 20.",
+    },
+    {
+      rule: "table-rows",
+      value: tooManyRows,
+      message: "This table has 101 rows; the limit is 100.",
+    },
+    {
+      rule: "rendered-nodes",
+      value: renderedNodeOverflow,
+      message: "Portable QMD renders 5001 DOM nodes; the limit is 5000.",
+    },
+    {
+      rule: "rendered-nodes",
+      value: mathExpansionOverflow,
+      message: "Portable QMD renders 5946 DOM nodes; the limit is 5000.",
+    },
+  ];
+
+  for (const boundary of cases) {
+    await source.fill(boundary.value);
+    const error = wizard.locator(`[data-validation-rule="${boundary.rule}"]`);
+    await expect(error).toBeVisible();
+    await expect(error.locator("a")).toContainText(boundary.message);
+    await expect(source).toHaveValue(boundary.value);
+    await expect(source).toHaveAttribute("aria-invalid", "true");
+    await expect(wizard.getByRole("button", { name: "Continue" })).toBeDisabled();
+    await expect(wizard.getByRole("button", { name: "Preview & add", exact: true })).toBeDisabled();
+    await expect(wizard.getByRole("tabpanel", { name: "Preview" }))
+      .toContainText("Current-session source recovered");
+    await error.locator("a").click();
+    await expect(source).toBeFocused();
+    await expect(source).toHaveValue(boundary.value);
+    await source.fill(SAFE_RECOVERY_QMD);
+    await expect(wizard.getByRole("status")).toContainText("Preview is up to date");
+    await expect(wizard.getByRole("button", { name: "Continue" })).toBeEnabled();
+    await expect(wizard.getByRole("button", { name: "Preview & add", exact: true })).toBeEnabled();
+  }
+
+  expect(await readSavedFreeText(page, "Unsaved boundary traversal")).toBeNull();
+  await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  await confirmation.getByRole("button", { name: "Discard" }).click();
+  await expect(wizard).toHaveCount(0);
+  expect(await readSavedFreeText(page, "Unsaved boundary traversal")).toBeNull();
+});
+
 async function openBiomedicalBuild(page) {
   await page.goto("/");
   await page.locator(".dashboard-command-page-scroller")
@@ -246,7 +406,12 @@ async function openBiomedicalBuild(page) {
     .getByRole("button", { name: "Build", exact: true }).click();
 }
 
-async function createFreeText(page, { title, qmd, viewport }) {
+async function createFreeText(page, {
+  title,
+  qmd,
+  viewport,
+  previewText = "Operational priorities",
+}) {
   await page.getByRole("button", { name: "Add static content", exact: true }).click();
   const wizard = page.getByRole("dialog", { name: "Add static content" });
   await wizard.getByRole("button", { name: "Continue" }).click();
@@ -262,26 +427,63 @@ async function createFreeText(page, { title, qmd, viewport }) {
     await expect(sourceEditor).toHaveAttribute("data-layout", "tabs");
     await expect(wizard.getByRole("tab", { name: "Source" })).toHaveAttribute("aria-selected", "true");
     await wizard.getByRole("tab", { name: "Preview" }).click();
-    await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText("Operational priorities");
+    await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(previewText);
     await wizard.getByRole("tab", { name: "Source" }).click();
     await expect(source).toBeVisible();
     await source.focus();
     await expect(source).toBeFocused();
   } else {
     await expect(sourceEditor).toHaveAttribute("data-layout", "split");
-    await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText("Operational priorities");
+    await expect(wizard.getByRole("tabpanel", { name: "Preview" })).toContainText(previewText);
     await expect(wizard.getByRole("tablist", { name: "Free text editor panes" })).toBeHidden();
   }
 
   await wizard.getByRole("button", { name: "Continue" }).click();
-  await expect(wizard.getByLabel("Canonical static content preview")).toContainText("Operational priorities");
+  await expect(wizard.getByLabel("Canonical static content preview")).toContainText(previewText);
   await wizard.getByRole("button", { name: "Add", exact: true }).click();
   await expect(wizard).toHaveCount(0);
+}
+
+async function expectPortableLinkCorpus(surface, panelId) {
+  const sink = surface.locator('[data-portable-qmd-sink="safe-dom"]');
+  const links = sink.getByRole("link");
+  await expect(links).toHaveCount(2);
+  const safe = sink.getByRole("link", { name: /Safe offline destination/ });
+  await expect(safe).toHaveAttribute("href", "https://safe.example.test/bounded");
+  await expect(safe).toHaveAttribute("target", "_blank");
+  await expect(safe).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(sink.getByRole("link", { name: "Safe local detail" }))
+    .toHaveAttribute("href", `#${panelId}-local-detail`);
+  for (const text of [
+    "Unsafe javascript",
+    "Unsafe encoded javascript",
+    "Unsafe data",
+    "Unsafe blob",
+    "Unsafe file",
+    "Unsafe mail",
+    "Raw unsafe markup",
+  ]) {
+    await expect(sink).toContainText(text);
+  }
+  await expect(sink).toContainText('<a href="javascript:window.__unsafeMarkup=true">Raw unsafe markup</a>');
+  await expect(sink.locator("script,iframe,img,video,audio,object,embed,form,button,[src],[srcset],[poster]")).toHaveCount(0);
+  await expect(sink.locator("[onclick],[onerror],[onload],[onmouseover],[style]")).toHaveCount(0);
+}
+
+function tableWithColumns(count) {
+  const header = Array.from({ length: count }, (_, index) => `C${index + 1}`);
+  return `| ${header.join(" | ")} |\n| ${header.map(() => "---").join(" | ")} |\n| ${header.map(() => "x").join(" | ")} |`;
+}
+
+function tableWithRows(count) {
+  const body = Array.from({ length: count - 1 }, (_, index) => `| R${index + 1} | yes |`);
+  return `| Facility | Ready |\n| --- | --- |\n${body.join("\n")}`;
 }
 
 async function readSavedFreeText(page, title) {
   return page.evaluate(({ key, expectedTitle }) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
+    if (!dashboard) return null;
     for (const pageItem of dashboard.pages ?? []) {
       for (const section of pageItem.sections ?? []) {
         for (const placement of section.panels ?? []) {

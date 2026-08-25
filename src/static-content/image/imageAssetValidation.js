@@ -14,6 +14,13 @@ export const IMAGE_ASSET_LIMITS = Object.freeze({
   dashboardWarningBytes: 160 * MIB,
 });
 
+export function authoredAssetManifestBytes(assets = {}) {
+  return Object.values(assets).reduce(
+    (total, entry) => total + finiteNonNegative(entry?.byteLength),
+    0,
+  );
+}
+
 export async function validateImageAsset(input = {}) {
   const warnings = [];
   const bytes = await readBytes(input.bytes ?? input.file);

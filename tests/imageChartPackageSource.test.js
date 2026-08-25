@@ -29,3 +29,28 @@ test("an image chart renders an image embedded by dashboard package export", asy
   assert.match(html, /<img[^>]+src="data:image\/png;base64,aW1hZ2U="/);
   assert.doesNotMatch(html, /cannot be displayed/i);
 });
+
+test("a promoted package Image renders its contained bare relative path", async () => {
+  const vite = await createServer({
+    root: process.cwd(),
+    appType: "custom",
+    logLevel: "silent",
+    server: { middlewareMode: true },
+  });
+  const { default: ImageChartView } = await vite.ssrLoadModule(
+    "/src/components/charts/ImageChartView.jsx",
+  );
+  await vite.close();
+
+  const html = renderToStaticMarkup(React.createElement(ImageChartView, {
+    model: {
+      src: `data/authored/${"a".repeat(64)}.png`,
+      alt: "Promoted package image",
+      fit: "contain",
+    },
+    chart: { title: "Promoted image" },
+  }));
+
+  assert.match(html, /<img[^>]+src="data\/authored\/[a-f0-9]{64}\.png"/);
+  assert.doesNotMatch(html, /cannot be displayed/i);
+});

@@ -3,6 +3,7 @@ import {
   chartSchemaRegistry,
   getChartSchema,
 } from "../charting/schemas/chartSchemaRegistry.js";
+import { validateStaticImageSource } from "./staticSourceSchema.js";
 
 const TEMPORAL_DESTINATION_KEYS = Object.freeze([
   "chronoGroupId",
@@ -62,7 +63,7 @@ export function buildPresentableItemIndex(dashboard = {}) {
         if (!PRESENTATION_IDENTIFIER.test(panel?.id ?? "")) continue;
         if (panel.typeId === "freeText") continue;
         const descriptor = panel.typeId === "image"
-          ? imagePresentationDescriptor(panel, dashboard?.dataSources)
+          ? imagePresentationDescriptor(panel, dashboard?.dataSources, dashboard?.assets)
           : { kind: "chart", chart_id: panel.id };
         if (!descriptor) continue;
         index.set(panel.id, {
@@ -79,13 +80,20 @@ export function buildPresentableItemIndex(dashboard = {}) {
   return index;
 }
 
-function imagePresentationDescriptor(panel, sources = {}) {
+function imagePresentationDescriptor(panel, sources = {}, assets = {}) {
   if (!PRESENTATION_IDENTIFIER.test(panel.sourceId ?? "")) return null;
   const source = sources?.[panel.sourceId];
+  try {
+    validateStaticImageSource(source, { assets });
+  } catch {
+    return null;
+  }
+  if (source.origin.kind === "replacementRequired") return null;
+  if (!source.decorative && source.alt.trim() === "") return null;
+  if (source.migrationWarnings?.includes("replacement-required")) return null;
   if (
-    source?.kind !== "staticImage"
-    || !Number.isSafeInteger(source.revision)
-    || source.revision < 1
+    source.origin.kind === "asset"
+    && assets[source.origin.assetId]?.storageState !== "durable"
   ) return null;
   return {
     kind: "image",

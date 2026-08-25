@@ -2,6 +2,7 @@ import {
   makePresentationMessage,
   parsePresentationMessage,
   presentationChannelName,
+  reconcilePresentationState,
   validatePresentationState,
 } from "./presentationProtocol.js";
 
@@ -89,7 +90,7 @@ export function createPresentationControllerChannel({
   }
 
   function publish(state) {
-    latestState = structuredClone(validatePresentationState(state, {
+    latestState = structuredClone(reconcilePresentationState(state, {
       presentableItemIndex: getPresentableItemIndex(),
     }));
     if (active) sendLatestState();

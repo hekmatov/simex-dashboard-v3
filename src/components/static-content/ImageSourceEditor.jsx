@@ -1,6 +1,7 @@
 import React from "react";
 
 import {
+  authoredAssetManifestBytes,
   discardUnreferencedSessionImageAssets,
   decodeBrowserImageAsset,
   stageSessionImageAsset,
@@ -48,6 +49,7 @@ export function ImageSourceEditor({
       file,
       declaredMediaType: file.type,
       decode: decodeBrowserImageAsset,
+      currentAssetBytes: authoredAssetManifestBytes(assets),
     });
     if (!mountedRef.current || intakeRevision !== intakeRevisionRef.current) {
       if (result.ok) {
@@ -127,10 +129,16 @@ export function ImageSourceEditor({
           {validation.errors.length > 0 && (
             <div className="static-image-validation" role="alert">
               <strong>Choose another image</strong>
-              {validation.errors.map((error) => <p key={error.code}>{error.message}</p>)}
+              {validation.errors.map((error) => (
+                <p key={error.code} data-validation-code={error.code}>{error.message}</p>
+              ))}
             </div>
           )}
-          {validation.warnings.map((warning) => <p key={warning.code} role="status">{warning.message}</p>)}
+          {validation.warnings.map((warning) => (
+            <p key={warning.code} data-validation-code={warning.code} role="status">
+              {warning.message}
+            </p>
+          ))}
           {imageEditing.replacementUndo && (
             <button type="button" className="secondary" onClick={onUndoReplacement}>Undo replacement</button>
           )}

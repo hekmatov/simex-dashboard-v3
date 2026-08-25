@@ -176,7 +176,7 @@ test("DashboardRenderer composes Present without mounting the fullscreen display
   assert.doesNotMatch(html, /fullscreen-backdrop/);
 });
 
-test("Present forwards display state without substituting layout or enforcing capacity", () => {
+test("Present synchronously normalizes invalid layout while preserving capacity", () => {
   const mismatchedLayoutHtml = renderPresent(presentModule.default, {
     displayState: {
       display_revision: 2,
@@ -189,10 +189,10 @@ test("Present forwards display state without substituting layout or enforcing ca
     "select",
     "Scene layout",
   );
-  assert.doesNotMatch(
+  assert.match(
     sceneLayout,
-    /selected=""/,
-    "Present must not substitute a count-derived layout for displayState.layout",
+    /<option value="sideBySide" selected="">/,
+    "Present must synchronously select a count-valid layout",
   );
 
   const fullSceneHtml = renderPresent(presentModule.default, {
@@ -279,6 +279,53 @@ test("Free-text panels are absent from the Present catalogue", () => {
   assert.doesNotMatch(html, /field-guide/);
 });
 
+test("recovery-only Images are absent from the Present catalogue", () => {
+  const recoveryDashboard = {
+    ...dashboard,
+    dataSources: {
+      "recovery-source": {
+        kind: "staticImage",
+        sourceVersion: 1,
+        revision: 2,
+        origin: { kind: "replacementRequired", reason: "Legacy blob source" },
+        alt: "Unavailable map",
+        decorative: false,
+        fit: "contain",
+        crop: { x: 0, y: 0, width: 1000, height: 1000 },
+        rotation: 0,
+        migrationWarnings: ["replacement-required"],
+      },
+    },
+    pages: [{
+      ...dashboard.pages[0],
+      sections: [{
+        ...dashboard.pages[0].sections[0],
+        panels: [
+          dashboard.pages[0].sections[0].panels[0],
+          {
+            id: "recovery-image",
+            title: "Recovery image",
+            typeId: "image",
+            sourceId: "recovery-source",
+          },
+        ],
+      }],
+    }],
+  };
+  const html = renderPresent(presentModule.default, {
+    dashboard: recoveryDashboard,
+    displayState: {
+      display_revision: 6,
+      displayed_chart_ids: [],
+      layout: "solo",
+    },
+  });
+
+  assert.match(html, />Cases</);
+  assert.doesNotMatch(html, />Recovery image</);
+  assert.doesNotMatch(html, /data-presentable-item-id="recovery-image"/);
+});
+
 test("Present projects ordered chart and exact saved Image descriptors without time fields", () => {
   assert.equal(typeof presentModule?.projectPresentableItems, "function");
   const index = new Map([
@@ -302,6 +349,22 @@ test("Present projects ordered chart and exact saved Image descriptors without t
   assert.equal(Object.hasOwn(descriptors[0], "time"), false);
   assert.equal(Object.hasOwn(descriptors[0], "fit"), false);
   assert.equal(Object.hasOwn(descriptors[0], "url"), false);
+});
+
+test("Present synchronously normalizes layout when trusted selection shrinks", () => {
+  assert.equal(typeof presentModule?.reconcilePresentDisplayState, "function");
+  const trusted = new Map([
+    ["chart-a", { descriptor: { kind: "chart", chart_id: "chart-a" } }],
+  ]);
+
+  const reconciled = presentModule.reconcilePresentDisplayState({
+    display_revision: 8,
+    displayed_chart_ids: ["chart-a", "stale-image"],
+    layout: "sideBySide",
+  }, trusted);
+
+  assert.deepEqual(reconciled.displayed_chart_ids, ["chart-a"]);
+  assert.equal(reconciled.layout, "solo");
 });
 
 function elementMarkupByAriaLabel(html, tagName, label) {

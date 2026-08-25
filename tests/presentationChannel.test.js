@@ -250,6 +250,40 @@ test("reconnect refuses a snapshot after its Image revision becomes stale", () =
   controller.dispose();
 });
 
+test("publish synchronously drops a stale revision and normalizes its layout before replay", () => {
+  let currentIndex = presentableItemIndex;
+  const { audience, controller, scheduler, states } = setup({
+    getPresentableItemIndex: () => currentIndex,
+  });
+  controller.start();
+  audience.start();
+  controller.publish(secondScene);
+  currentIndex = new Map([...presentableItemIndex].filter(([id]) => id !== "image-a"));
+
+  controller.publish(secondScene);
+  audience.dispose();
+  const replayed = [];
+  const reloaded = channelModule.createPresentationAudienceChannel({
+    sessionId: "session-001",
+    createChannel,
+    scheduler,
+    getPresentableItemIndex: () => currentIndex,
+    onStateChange: (state) => replayed.push(state),
+  });
+  reloaded.start();
+
+  const normalized = {
+    ...secondScene,
+    items: [{ kind: "chart", chart_id: "chart-a" }],
+    layout: "solo",
+  };
+  assert.deepEqual(states, [secondScene, normalized]);
+  assert.deepEqual(replayed, [normalized]);
+
+  reloaded.dispose();
+  controller.dispose();
+});
+
 test("malformed channel messages are ignored without replacing the audience scene", () => {
   const { audience, controller, states } = setup();
   controller.start();

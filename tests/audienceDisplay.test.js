@@ -279,6 +279,52 @@ test("Audience accepts a trusted Image descriptor passively and rejects Free tex
   assert.doesNotMatch(freeTextHtml, /Moderator only/);
 });
 
+test("Audience rejects an injected recovery-only Image descriptor", () => {
+  const recoveryDashboard = {
+    ...dashboard,
+    dataSources: {
+      ...dashboard.dataSources,
+      "recovery-source": {
+        ...dashboard.dataSources["image-source"],
+        origin: { kind: "replacementRequired", reason: "Legacy blob source" },
+        migrationWarnings: ["replacement-required"],
+      },
+    },
+    pages: [{
+      ...dashboard.pages[0],
+      sections: [{
+        ...dashboard.pages[0].sections[0],
+        panels: [
+          ...dashboard.pages[0].sections[0].panels,
+          {
+            id: "recovery-image",
+            typeId: "image",
+            title: "Recovery image",
+            sourceId: "recovery-source",
+          },
+        ],
+      }],
+    }],
+  };
+  const html = renderToStaticMarkup(React.createElement(audienceModule.default, {
+    dashboard: recoveryDashboard,
+    connectionStatus: "connected",
+    presentationState: {
+      ...twoChartScene,
+      items: [{
+        kind: "image",
+        panel_id: "recovery-image",
+        source_id: "recovery-source",
+        revision: 3,
+      }],
+      layout: "solo",
+    },
+  }));
+
+  assert.match(html, /Audience display ready/);
+  assert.doesNotMatch(html, /Recovery image|data-presentation-item-kind="image"/);
+});
+
 test("Audience Image fit/transform is passive and one failed cell leaves chart siblings rendered", () => {
   const imageItem = { kind: "image", panel_id: "image-a", source_id: "image-source", revision: 3 };
   const ready = renderToStaticMarkup(React.createElement(gridModule.default, {

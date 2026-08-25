@@ -1,10 +1,43 @@
 # Task 6 report — Present/Audience compatibility
 
-**Status:** Implementation complete; review pending
+**Status:** Fix round 1/5 addressed; five Important findings closed, implementation complete, review pending
+
+The initial implementation evidence below remains provenance. This fix round adds the missing trusted-index, synchronous layout, playback-owner, and retained intended-use evidence without weakening permissive-inert Free text or strict Image validation.
 
 **Branch:** `codex/static-content-panels-implementation`
 
 **Starting HEAD:** `098c173eb04d026a266adba284778304ec803e08`
+
+## Fix round 1/5 closure
+
+All five Important findings are addressed:
+
+- The trusted index admits an Image only when its saved source has complete identity/revision, valid alt/transform semantics, an allowed non-recovery origin, no recovery warning, and—when asset-backed—a matching complete durable manifest. `replacementRequired`, missing, incomplete, and stale-recovery Images are absent from Present and rejected by Audience.
+- `reconcilePresentDisplayState` and `reconcilePresentationState` filter current trusted descriptors and choose a count-valid layout synchronously. The publish boundary repeats reconciliation, so shrink, revision change, replay, and reconnect cannot publish an invalid intermediate layout.
+- Playback view ownership is tokenized. Present owns one stable StrictMode token and releases only that token; pre-existing, overlapping, replayed, and legacy owners retain compatible state semantics.
+- The live separate-window journey injects a stale/malicious Free-text v3 envelope through the real channel, proves accepted cells are unchanged, changes actual temporal chart date/pixels while Image identity/render stays exact, changes charts again through an isolated passive Image failure, and restores/replays the exact Image revision.
+- The formerly partial FT-05, FT-06, IM-02, IM-08, and PS-04 rows now have binding intended-use evidence: link activation, every resource limit, the complete real-raster intake corpus, true 200% browser zoom crop editing, and an actually copied/launched/offline Windows portable package.
+
+### Fix-round verification
+
+- Core trusted-index/layout/channel/playback suite: **35/35 passed**.
+- Final affected Node sweep: **77/78 passed**. Every 77 executed assertion passed, including the copied Windows launcher journey. The only failure is the unchanged legacy `playbackComponentsV3.test.js` raw-Node loader, which aborts before assertions because Node parses imported `FreeTextChartView.jsx` as JavaScript without JSX transformation.
+- Runtime boundary: **passed**, `remoteRuntimeDependencies: []`, with canonical View/Build/Present/Audience `ChartView` entrypoints.
+- Production build: **passed**, **891 modules**, **9.68 seconds**. Existing Three/Vanta, mixed `ChartFootprintPicker` import, and chunk-size warnings remain informational.
+- `static-image-audience.spec.js`: **1/1 passed in 52.7 seconds** at 1920×1080 and 1366×768, including 1/2/4-cell layouts, real-channel rejection, two temporal changes, isolated failure, and exact replay.
+- `static-free-text.spec.js --grep "FT-0[56]"`: **2/2 passed in 39.0 seconds**.
+- `static-image.spec.js --grep "IM-0[28]"`: **3/3 passed in 37.0 seconds**.
+- `portableFlashdriveLaunch.test.js`: **1/1 passed** through a real copied package and generated PowerShell launcher; exact PNG bytes and `image/png` MIME, traversal denial, offline main and passive 1366×768 separate Audience, zero external requests, server stop, and exact temporary-copy removal were asserted.
+
+### Retained fixture detail
+
+- FT-05 covers safe external/local and fragment links plus JavaScript (plain/encoded), data, blob, file, mail, and raw-HTML source. View pointer and fullscreen keyboard activate only the bounded safe local target; unsafe forms stay inert and create no request/navigation/resource.
+- FT-06 traverses 102,401 source bytes, nesting depth 7, 21 table columns, 101 table rows, 5,001 generated nodes, and a 5,946-node math expansion. Each exact typed error blocks progression, preserves the current-session source/last-valid preview, focuses the error, recovers after correction, and leaves no draft in storage.
+- IM-02 uses decoder-valid PNG/JPEG/WebP and controlled spoof, corrupt/truncated, CRC-valid APNG, animated WebP, 12 MiB + 1 byte, 16,385-pixel dimension, 50.01-megapixel, unsafe URL/path/protocol, complete-manifest dashboard budget, and browser-quota fixtures. Replacement and exact typed recovery are exercised through the live authoring UI.
+- IM-08 uses Chromium `Emulation.setPageScaleFactor(2)`, keyboard and pointer crop move/resize, visible focused controls, changed geometry, and document/dialog horizontal containment.
+- PS-04 builds a fixture from the real production `dist`, promotion, portable-data generator, and Image payload; copies the generated package to a second directory; launches its own `start-dashboard-server.ps1`; runs browser offline after service-worker activation; then kills the launcher and recursively removes only the verified `mkdtemp` target.
+
+## Initial implementation evidence (retained provenance)
 
 ## Delivered contract
 
@@ -64,7 +97,9 @@ The binding screenshots were visually inspected at 1920×1080 (one, two, four ce
 - The retained observer was corrected to capture moderator-side `BroadcastChannel` posts because a popup listener cannot observe the initial message sent before it subscribes. Slider movement is now boundary-safe, and a duplicate disconnected label is scoped. These are evidence repairs, not product relaxations.
 - The full older `three-mode-prototype.spec.js` contains one unrelated stale Build navigation locator (`Dashboard structure > Scenario`) that timed out after 2.5 minutes. The five effective retained presentation cases and the corrected synchronized case pass; Task 6 does not alter that Build navigation.
 - A broader legacy Chrono model run continues to contain six pre-existing expected-state failures. The static-specific temporal suite is green; the unrelated corpus was not redundantly rerun.
+- The unchanged `playbackComponentsV3.test.js` harness currently aborts before assertions when raw Node reaches JSX in `FreeTextChartView.jsx`; this is a test-loader baseline, not a Task 6 product failure. The reducer, owner-token, StrictMode Present, canonical browser playback, runtime-boundary, and build checks are green.
+- The PS-04 launcher test requires execution outside this session's filesystem/network sandbox because sandboxed PowerShell reports `HttpListener.IsSupported === false` and `The handle is invalid`. The authorized run uses the generated launcher unchanged and proves its process and temporary-copy cleanup.
 
 ## Closure
 
-IM-15, IM-16, FT-12, and PS-08 are implementation-complete with engine, mounted UI/composition, and retained production-browser evidence. Final Step 7S ledger rows are reconciled to the current permissive-inert Free-text contract and strict Image contract. Review remains the only pending Task 6 gate.
+FT-05, FT-06, FT-12, IM-02, IM-08, IM-15, IM-16, PS-04, and PS-08 are restored to Passing with engine, mounted UI/composition, and retained intended-use evidence. Every row in the final 36-row Step 7S ledger is now Passing under the current permissive-inert Free-text contract and strict Image contract. Review remains the only pending Task 6 gate.
