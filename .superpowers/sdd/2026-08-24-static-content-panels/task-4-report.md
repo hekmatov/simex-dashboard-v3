@@ -10,7 +10,7 @@ Atomic implementation commit: `ead7ec641b5904428cd9287fc26336fd95200bf5`. The fi
 
 ## Status
 
-Implementation complete, review pending. Fix round 1/5 addresses all 6 requested findings (5 Important, 1 Minor); 0 are open. Task 4 replaces the bounded Slice 2/3 session bridges with one dashboard-v4/IndexedDB durability authority, upgrades the existing canonical bundle boundary to v4 while retaining contained chart v3, makes import atomic, verifies export dependencies and authored bytes, and materializes authored assets under contained offline-package paths.
+Implementation complete, review pending. Fix round 2/5 addresses the remaining Important StrictMode async lease-lifecycle finding; 1 is addressed and 0 are open. Browser asset-origin resolution now starts only inside its owning effect, while synchronous SSR, URL/package Image, Free-text, ordinary chart, and static time-bypass behavior remain unchanged.
 
 The retained Free-text and Image reload checkpoints are closed. Free-text remains excluded from Present/Audience and all temporal systems. The currently wired passive separate Audience page was exercised only as a local-asset portability smoke check; Slice 6 still owns protocol/reconnect/composition/failure fidelity. Slice 5 still owns full Build/View composition review.
 
@@ -58,9 +58,15 @@ The retained Free-text and Image reload checkpoints are closed. Free-text remain
 1. Orphan ownership RED: replacement unioned old manifest/source entries indefinitely and canonical Build removal exposed a live-looking button with no callback. Unit RED first failed on missing prune/remove ownership; the production RED timed out at 180 seconds waiting for a removal confirmation that never opened. GREEN prunes only superseded unshared static ownership, routes canonical removal, reconciles after static save/remove/import/startup even for zero assets, and recovers referenced staged journals. Focused cleanup/transaction coverage passed within the 53/53 run; the production inventory journey passed 1/1 in 38.7 seconds.
 2. Import quota RED: a real `Storage.prototype.setItem` `QuotaExceededError` closed review and published imported panels session-only. GREEN adds a strict `replaceWith` persistence boundary: failure rolls back staged candidate assets, leaves controller/current dashboard and localStorage unchanged, preserves prior IndexedDB records, retains review, and reports quota. Exact browser journey passed 1/1 in 24.1 seconds.
 3. Commit/dedup RED: dedup trusted metadata without re-hashing stored bytes, and a later asset commit could fail after dashboard persistence without a defined authority. GREEN re-hashes deduplicated records, preflights staged records, commits batches in one IndexedDB transaction, refuses multi-asset import without an atomic batch API, and preserves a referenced staged transaction journal if the postreplacement batch fails. Corrupt-dedup and injected unit failures pass; the browser journal/reload journey passed 1/1 in 18.3 seconds.
-4. Async lease RED: rapid source changes and unmount timed out with unreleased resolved leases. GREEN tracks resolution-model release identity and releases stale, current, rejected/inert, and post-unmount completions exactly once. Browser-backed focused cases pass within the 53/53 run.
+4. Async lease RED: rapid source changes and unmount timed out with unreleased resolved leases. The initial GREEN tracked resolution-model release identity and passed the non-Strict harness within the 53/53 run; fix round 2 supersedes that overpromotion with lifecycle-owned StrictMode evidence.
 5. Migration scope RED: isolation silently removed unrelated missing-parent and empty-Present Scenes. GREEN tracks only groups removed due to static membership and rewrites/drops only Scenes containing that static cause; the unrelated corpus reaches and fails unchanged strict `sceneSchema` validation. Migration corpus is 5/5 and idempotent.
 6. Operator text inspection RED: README implied `package:flashdrive` alone included browser-authored bytes and generated `START_HERE.md` repeated that claim. GREEN documents the exact app export → project-root `packaged-dashboard-bundle.json` → `pnpm.cmd promote:bundle` → review → `pnpm.cmd package:flashdrive` sequence. The generator ran successfully and the actual emitted instructions were inspected; the physical launcher was not launched.
+
+## Fix round 2/5 strict RED → GREEN
+
+1. StrictMode lease ownership RED: the real Chromium harness originally mounted outside `React.StrictMode`. After matching `main.jsx` and making every resolver call a distinct attempt, the old implementation failed 3/6 lifecycle cases: the committed Image never became visible after replay cleanup revoked its URL, a source update created an abandoned render-time attempt, and unmount left a replay-created attempt unreleased. Lease fidelity was downgraded during this RED.
+2. GREEN: browser asset-origin Image resolution no longer runs during render or `useMemo`. Each effect setup invokes and owns one attempt; its closure alone publishes or releases that attempt. Strict setup → cleanup → setup therefore creates two independently owned attempts, while source updates create one new attempt. Replay-discarded, superseded, unmounted, and current acquired leases release exactly once; rejection remains inert; the current blob stays fetchable until its own cleanup. Staged synchronous and immediately fulfilled async cases also settle, and SSR retains its synchronous resolver path.
+3. Production checkpoint RED/GREEN: the first focused production run exposed a staged preview remaining pending because the initial implementation effect-owned only durable manifests even though the real staged browser resolver is async. Expanding the browser boundary to every asset origin made the preview pass. A later reload assertion initially failed because the test had not activated the intentionally deferred below-viewport panel; after the retained canonical scroll activation, production passed 1/1 at 1024×768 in 12.9 seconds with a visible reloaded raster, `blob:` source, and successful active-URL byte fetch.
 
 ## Migration corpus
 
@@ -82,7 +88,7 @@ The retained Free-text and Image reload checkpoints are closed. Free-text remain
 - Dashboard JSON carries media type, byte length, dimensions, hash, and storage state, never bytes or URLs.
 - Staged assets are transaction facts, not draft recovery. Unsaved authoring fields cannot be reconstructed after reload.
 - A referenced asset is never eligible for deletion. Unreferenced staged records remain recoverable for exactly 24 hours. Durable orphans are reclaimed after successful replacement/removal/import reconciliation.
-- Object URLs are window-local leases. The store creates one URL per window/asset, increments references, and revokes only after the final release.
+- Object URLs are window-local leases. The store creates one URL per window/asset, increments references, and revokes only after the final release. In the browser, `ChartView` invokes asset-origin resolution only from the owning effect, so StrictMode replay cannot create an unowned render-time lease or release the active attempt.
 - Linked HTTPS Images are intentionally not fetched during export. Their URLs are declared as network dependencies and remain panel-scoped failures offline.
 
 ## Browser and offline evidence
@@ -94,15 +100,16 @@ The retained Free-text and Image reload checkpoints are closed. Free-text remain
 - At 768×900 the fresh imported page had `documentWidth <= viewportWidth`. Manual fresh-origin inspection likewise confirmed exact reloaded Free-text and safe-DOM containment at 1440×900 and 768×900.
 - At 1440×900, while offline, the currently wired separate Audience page resolved and displayed the local Image passively. This proves the durable per-window asset path used by the existing capability, not Slice 6 protocol/reconnect/composition completeness.
 - Fix round production evidence at 1024×768: quota import preserved exact prior localStorage/IndexedDB and did not publish imported panels; replacement/removal measured manifest/record byte budgets across deduplicated sibling survival and final reclamation; injected postreplacement durable commit failure left one staged transaction journal and reload promoted it to durable.
+- Fix round 2/5 production evidence at 1024×768 passed the real `main.jsx` StrictMode root: staged preview settled, the saved Image reloaded from IndexedDB, its active `blob:` URL remained fetchable, and the raster was visible after canonical lazy-panel activation.
 - The retained fresh-context/offline journey was rerun with a compact static-only bundle to avoid redundant 36.16 MB tracked payload cycles. It passed 1/1 in 30.3 seconds at 1440×900 and 768×900 through missing/corrupt rejection, import/reload, network-disabled reload, main/fullscreen, inert Free-text DOM inspection, and the currently wired passive Audience Image.
 - Production build passed with 890 modules transformed. The offline browser journey used the production build/server and network-disabled reload. The physical flash-drive copy/launcher itself was not launched; generated-path/MIME/root containment is deterministic engine evidence.
 
 ## Checks and results
 
-- Original Task 4 directly impacted engine command: 218/218 passed in 8.59 seconds. Fix round 1/5 focused command: 53/53 passed in 11.54 seconds. Fix round impacted canonical/bundle/export/render/schema command: 124/124 passed in 12.00 seconds.
+- Original Task 4 directly impacted engine command: 218/218 passed in 8.59 seconds. Fix round 1/5 focused command: 53/53 passed in 11.54 seconds. Fix round impacted canonical/bundle/export/render/schema command: 124/124 passed in 12.00 seconds. Fix round 2/5 final directly affected StrictMode/resolver/Image/temporal command passed 38/38 in 10.07 seconds; the supported impacted durability/App/package command passed 48/48 in 13.80 seconds.
 - Authored store: 7/7 passed. Migration/temporal: 6/6 passed. Final migration/draft/transaction regression set: 26/26 passed. Bundle/canonical: 57/57 passed. Static loader bypass: 2/2 passed. Export/candidate/import: 16/16 passed. Invalid-raster import: 5/5 passed. Offline promotion: 4/4 passed. Quorum catalogue: 39/39 passed. Focused App/localStorage quota regression: 1/1 passed.
-- Fix-round Playwright: compact fresh-context/offline 1/1 (30.3s); quota rollback 1/1 (24.1s); replacement/removal/reload inventory 1/1 (38.7s); postreplacement staged-journal recovery 1/1 (18.3s). Retained reload specs remain FT-11 1/1 and IM-06 1/1.
-- Production build: passed, 890 modules transformed. Existing advisories only: Three/Vanta classic scripts, mixed static/dynamic `ChartFootprintPicker`, and large chunk size.
+- Fix-round Playwright: compact fresh-context/offline 1/1 (30.3s); quota rollback 1/1 (24.1s); replacement/removal/reload inventory 1/1 (38.7s); postreplacement staged-journal recovery 1/1 (18.3s); StrictMode staged-preview/durable-reload/active-blob 1/1 (12.9s). Retained reload specs remain FT-11 1/1 and IM-06 1/1.
+- Production build: passed, 890 modules transformed in 9.30 seconds. Existing advisories only: Three/Vanta classic scripts, mixed static/dynamic `ChartFootprintPicker`, and large chunk size.
 
 ## Skips, deferrals, and baseline anomalies
 
@@ -112,6 +119,7 @@ The retained Free-text and Image reload checkpoints are closed. Free-text remain
 - The broad repository `chronoGroupModelV3` command retains six inherited playback-state drift failures. Task 4 neither changes nor claims them.
 - Vite-backed Node tests fail inside the restricted Windows filesystem sandbox with `Cannot read directory "../../../../../.."` / unresolved `vite.config.js`; the identical escalated commands reached and passed product assertions.
 - A stale service-worker cache on an earlier development origin served obsolete code. The journey moved to a fresh origin/context; no product change was made for that test-environment artifact.
+- The combined optional `chartRenderingV3.test.js` run retains an unrelated expectation that omits the already-established `legacyInline: true` field. `chartSystemV3IntegrationFixes.test.js` and `playbackComponentsV3.test.js` also abort in their inherited raw-JSX Node loader after `FreeTextChartView.jsx` gained JSX. Neither baseline touches this fix; directly affected and supported impacted suites are reported separately.
 
 ## Deviations
 

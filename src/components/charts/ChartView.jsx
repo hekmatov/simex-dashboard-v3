@@ -110,24 +110,15 @@ export function renderChartContent(props, interactionMode) {
 }
 
 function ResolvedChartContent({ props, interactionMode }) {
-  const releasedModelsRef = React.useRef(new WeakSet());
-  const releaseResolution = React.useCallback((resolution) => {
-    const model = resolution?.model;
-    if (
-      model === null
-      || typeof model !== "object"
-      || typeof model.release !== "function"
-      || releasedModelsRef.current.has(model)
-    ) return false;
-    releasedModelsRef.current.add(model);
-    model.release();
-    return true;
-  }, []);
+  const effectOwned = requiresEffectOwnedResolution(props);
   const initialResolution = React.useMemo(() => (
-    canReuseChartRendering(props.resolvedRendering, props)
+    effectOwned
+      ? pendingStaticImageResolution(props)
+      : canReuseChartRendering(props.resolvedRendering, props)
       ? props.resolvedRendering
       : resolveChartRendering(props)
   ), [
+    effectOwned,
     props.chart,
     props.datasetProfile,
     props.geoData,
@@ -139,30 +130,90 @@ function ResolvedChartContent({ props, interactionMode }) {
   const [settledResolution, setSettledResolution] = React.useState(null);
 
   React.useEffect(() => {
-    let current = true;
-    let resolvedPending = null;
-    setSettledResolution(null);
-    if (initialResolution.status !== "pending" || !initialResolution.pending) {
-      return () => { current = false; };
+    if (!effectOwned) {
+      setSettledResolution(null);
+      return undefined;
     }
-    Promise.resolve(initialResolution.pending).then((settled) => {
-      resolvedPending = settled;
-      if (current) setSettledResolution(settled);
-      else releaseResolution(settled);
-    });
+    let current = true;
+    let ownedResolution = null;
+    let released = false;
+    const releaseOwnedResolution = () => {
+      if (released || typeof ownedResolution?.model?.release !== "function") return false;
+      released = true;
+      ownedResolution.model.release();
+      return true;
+    };
+    const publish = (resolution) => {
+      ownedResolution = resolution;
+      if (current) setSettledResolution(resolution);
+      else releaseOwnedResolution();
+    };
+    setSettledResolution(null);
+    const attempt = resolveChartRendering(props);
+    if (attempt.status !== "pending" || !attempt.pending) {
+      publish(attempt);
+    } else {
+      Promise.resolve(attempt.pending).then(publish);
+    }
     return () => {
       current = false;
-      if (resolvedPending) releaseResolution(resolvedPending);
+      releaseOwnedResolution();
     };
-  }, [initialResolution, releaseResolution]);
+  }, [
+    effectOwned,
+    props.chart,
+    props.datasetProfile,
+    props.geoData,
+    props.renderContext,
+    props.rows,
+    props.timeContext,
+  ]);
 
   const resolvedRendering = canReuseChartRendering(settledResolution, props)
     ? settledResolution
     : initialResolution;
-  React.useEffect(() => () => {
-    releaseResolution(resolvedRendering);
-  }, [releaseResolution, resolvedRendering]);
   return renderChartContent({ ...props, resolvedRendering }, interactionMode);
+}
+
+function requiresEffectOwnedResolution(props) {
+  const chart = props?.chart;
+  if (chart?.typeId !== "image" || !chart.sourceId) return false;
+  const source = valueForId(props.renderContext?.sources, chart.sourceId);
+  return typeof document !== "undefined"
+    && source?.kind === "staticImage"
+    && source.origin?.kind === "asset";
+}
+
+function pendingStaticImageResolution(props) {
+  const sourceId = props.chart?.sourceId;
+  const source = valueForId(props.renderContext?.sources, sourceId);
+  return {
+    status: "pending",
+    schema: getChartSchema("image"),
+    prepared: null,
+    model: {
+      kind: "image",
+      status: "loading",
+      staticSource: true,
+      sourceId,
+      revision: source?.revision ?? null,
+    },
+    message: null,
+    inputKey: {
+      chart: props.chart,
+      rows: props.rows,
+      datasetProfile: props.datasetProfile,
+      geoData: props.geoData,
+      timeContext: props.timeContext,
+      renderContext: props.renderContext,
+    },
+  };
+}
+
+function valueForId(collection, id) {
+  if (collection instanceof Map) return collection.get(id);
+  if (Array.isArray(collection)) return collection.find((entry) => entry?.id === id);
+  return collection?.[id];
 }
 
 function isStaticContentChart(chart) {

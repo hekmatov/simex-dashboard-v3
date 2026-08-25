@@ -31,6 +31,32 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
+test("production StrictMode root keeps the reloaded durable Image URL active", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openBiomedicalBuild(page);
+  const panelId = await createImage(page, {
+    title: "StrictMode durable image",
+    alt: "StrictMode durable marker",
+  });
+
+  await page.reload();
+  await openBiomedical(page);
+  await scrollPanelIntoView(page, panelId);
+  const image = canonicalPanel(page, panelId).locator('img[alt="StrictMode durable marker"]');
+  await expect(image).toBeVisible();
+  const activeUrl = await image.getAttribute("src");
+  expect(activeUrl).toMatch(/^blob:/);
+  expect(await page.evaluate(async (url) => {
+    try {
+      const response = await fetch(url);
+      return response.ok && (await response.blob()).size > 0;
+    } catch {
+      return false;
+    }
+  }, activeUrl)).toBe(true);
+});
+
 test("bundle v4 restores local Image and Free-text in a fresh offline browser context", async ({
   browser,
   page,

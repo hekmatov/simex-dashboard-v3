@@ -10,6 +10,11 @@ import {
 const root = createRoot(document.getElementById("root"));
 const pending = new Map();
 const releaseCounts = new Map();
+const attemptsByAsset = new Map();
+let attemptSequence = 0;
+
+const PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (character) => character.charCodeAt(0));
 
 function source(assetId, alt) {
   return {
@@ -25,22 +30,36 @@ function source(assetId, alt) {
   };
 }
 
-function manifestEntry(assetId) {
+function manifestEntry(assetId, storageState = "durable") {
   return {
     mediaType: "image/png",
     byteLength: 68,
     width: 1,
     height: 1,
     sha256: assetId.slice("asset-".length),
-    storageState: "durable",
+    storageState,
   };
 }
 
-window.mountAsyncImage = (suffix, alt) => {
+function createAsyncAttempt(assetId) {
+  const attemptId = `${assetId}:attempt-${++attemptSequence}`;
+  const promise = new Promise((resolve, reject) => pending.set(attemptId, {
+    assetId,
+    attemptId,
+    resolve,
+    reject,
+    url: null,
+  }));
+  const attempts = attemptsByAsset.get(assetId) ?? [];
+  attempts.push(attemptId);
+  attemptsByAsset.set(assetId, attempts);
+  return promise;
+}
+
+function renderImage({ suffix, alt, storageState, resolveStaticAsset }) {
   const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
   const staticSource = source(assetId, alt);
-  const promise = new Promise((resolve, reject) => pending.set(assetId, { resolve, reject }));
-  root.render(React.createElement(ChartView, {
+  root.render(React.createElement(React.StrictMode, null, React.createElement(ChartView, {
     chart: {
       configVersion: 3,
       id: `image-${suffix}`,
@@ -55,24 +74,66 @@ window.mountAsyncImage = (suffix, alt) => {
     },
     renderContext: {
       sources: { [`source-${suffix}`]: staticSource },
-      assets: { [assetId]: manifestEntry(assetId) },
-      resolveStaticAsset: () => promise,
+      assets: { [assetId]: manifestEntry(assetId, storageState) },
+      resolveStaticAsset,
     },
     surface: "view",
-  }));
+  })));
   return assetId;
+}
+
+window.mountAsyncImage = (suffix, alt) => {
+  const assetId = `asset-${suffix.repeat(64).slice(0, 64)}`;
+  return renderImage({
+    suffix,
+    alt,
+    storageState: "durable",
+    resolveStaticAsset: () => createAsyncAttempt(assetId),
+  });
 };
 
-window.resolveAsyncImage = (assetId, url) => pending.get(assetId)?.resolve({
-  url,
-  release() {
-    releaseCounts.set(assetId, (releaseCounts.get(assetId) ?? 0) + 1);
-    return true;
-  },
+window.mountSynchronousImage = (suffix, alt) => renderImage({
+  suffix,
+  alt,
+  storageState: "staged",
+  resolveStaticAsset: () => ({ url: `data:image/png;base64,${PNG_BASE64}` }),
 });
-window.rejectAsyncImage = (assetId) => pending.get(assetId)?.reject(new Error("fixture failure"));
+window.mountImmediateAsyncImage = (suffix, alt) => renderImage({
+  suffix,
+  alt,
+  storageState: "durable",
+  resolveStaticAsset: async () => ({ url: `data:image/png;base64,${PNG_BASE64}` }),
+});
+window.asyncImageAttemptIds = (assetId) => [...(attemptsByAsset.get(assetId) ?? [])];
+window.resolveAsyncImageAttempt = (attemptId) => {
+  const attempt = pending.get(attemptId);
+  if (!attempt) return null;
+  const url = URL.createObjectURL(new Blob([PNG_BYTES], { type: "image/png" }));
+  attempt.url = url;
+  attempt.resolve({
+    url,
+    release() {
+      releaseCounts.set(attemptId, (releaseCounts.get(attemptId) ?? 0) + 1);
+      URL.revokeObjectURL(url);
+      return true;
+    },
+  });
+  return url;
+};
+window.rejectAsyncImageAttempt = (attemptId) => pending.get(attemptId)?.reject(new Error("fixture failure"));
 window.unmountAsyncImage = () => root.render(null);
-window.asyncImageReleaseCount = (assetId) => releaseCounts.get(assetId) ?? 0;
+window.asyncImageReleaseCount = (attemptId) => releaseCounts.get(attemptId) ?? 0;
+window.asyncImageAttemptUrl = (attemptId) => pending.get(attemptId)?.url ?? null;
+window.asyncImageAttemptUrlIsReadable = async (attemptId) => {
+  const url = pending.get(attemptId)?.url;
+  if (!url) return false;
+  try {
+    const response = await fetch(url);
+    return response.ok && (await response.blob()).size === PNG_BYTES.byteLength;
+  } catch {
+    return false;
+  }
+};
 window.validateImageFixture = async (mediaType, base64) => {
   const binary = atob(base64);
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));

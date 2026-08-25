@@ -5,7 +5,6 @@ import { chromium } from "@playwright/test";
 import { createServer } from "vite";
 import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
-const PNG_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const vite = await createServer({
   root: process.cwd(),
   logLevel: "silent",
@@ -34,83 +33,112 @@ after(async () => {
   await vite.close();
 });
 
-test("canonical ChartView resolves durable Image promises and ignores superseded completions", async () => {
-  const firstId = await page.evaluate(() => window.mountAsyncImage("a", "First image"));
-  await page.getByRole("status").filter({ hasText: "Loading saved image" }).waitFor();
+async function attemptsFor(assetId, count) {
+  await page.waitForFunction(({ id, expected }) => (
+    window.asyncImageAttemptIds(id).length === expected
+  ), { id: assetId, expected: count });
+  return page.evaluate((id) => window.asyncImageAttemptIds(id), assetId);
+}
 
-  const secondId = await page.evaluate(() => window.mountAsyncImage("b", "Second image"));
-  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
-    assetId: firstId,
-    url: PNG_URL,
-  });
-  await page.waitForTimeout(50);
-  assert.equal(await page.locator('img[alt="First image"]').count(), 0);
-  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 1);
+async function resolveAttempt(attemptId) {
+  return page.evaluate((id) => window.resolveAsyncImageAttempt(id), attemptId);
+}
 
-  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
-    assetId: secondId,
-    url: PNG_URL,
-  });
-  await page.locator('img[alt="Second image"]').waitFor();
-  assert.equal(await page.locator('[data-static-failure]').count(), 0);
+async function expectReleased(attemptId) {
+  await page.waitForFunction((id) => window.asyncImageReleaseCount(id) === 1, attemptId);
+}
+
+test("StrictMode replay owns independent attempts and keeps the active Image URL valid", async () => {
+  const assetId = await page.evaluate(() => window.mountAsyncImage("a", "Strict leased image"));
+  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const [replayDiscarded, active] = await attemptsFor(assetId, 2);
+
+  await resolveAttempt(replayDiscarded);
+  await expectReleased(replayDiscarded);
+  await resolveAttempt(active);
+  await page.locator('img[alt="Strict leased image"]').waitFor();
+
+  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), active), 0);
+  assert.equal(await page.evaluate((id) => window.asyncImageAttemptUrlIsReadable(id), active), true);
+  assert.equal(
+    await page.locator('img[alt="Strict leased image"]').getAttribute("src"),
+    await page.evaluate((id) => window.asyncImageAttemptUrl(id), active),
+  );
+
+  await page.evaluate(() => window.unmountAsyncImage());
+  await expectReleased(active);
+  assert.deepEqual(await page.evaluate((ids) => ids.map(
+    (id) => window.asyncImageReleaseCount(id),
+  ), [replayDiscarded, active]), [1, 1]);
 });
 
-test("superseded and unmounted durable Image resolutions release every lease exactly once", async () => {
+test("source supersession releases every discarded attempt without revoking the replacement", async () => {
   const firstId = await page.evaluate(() => window.mountAsyncImage("d", "First leased image"));
   await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const firstAttempts = await attemptsFor(firstId, 2);
   const secondId = await page.evaluate(() => window.mountAsyncImage("e", "Current leased image"));
+  const [secondAttempt] = await attemptsFor(secondId, 1);
 
-  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
-    assetId: firstId,
-    url: PNG_URL,
-  });
-  await page.waitForFunction((assetId) => window.asyncImageReleaseCount(assetId) === 1, firstId);
-  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), secondId), 0);
+  for (const attemptId of firstAttempts) await resolveAttempt(attemptId);
+  for (const attemptId of firstAttempts) await expectReleased(attemptId);
+  assert.equal(await page.locator('img[alt="First leased image"]').count(), 0);
+  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 1);
 
-  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
-    assetId: secondId,
-    url: PNG_URL,
-  });
+  await resolveAttempt(secondAttempt);
   await page.locator('img[alt="Current leased image"]').waitFor();
-  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), secondId), 0);
+  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), secondAttempt), 0);
+  assert.equal(await page.evaluate((id) => window.asyncImageAttemptUrlIsReadable(id), secondAttempt), true);
 
   await page.evaluate(() => window.unmountAsyncImage());
-  await page.waitForFunction((assetId) => window.asyncImageReleaseCount(assetId) === 1, secondId);
-  await page.evaluate(() => window.unmountAsyncImage());
-  await page.waitForTimeout(20);
-  assert.deepEqual(await page.evaluate(([first, second]) => [
-    window.asyncImageReleaseCount(first),
-    window.asyncImageReleaseCount(second),
-  ], [firstId, secondId]), [1, 1]);
+  await expectReleased(secondAttempt);
 });
 
-test("an Image resolution arriving after unmount releases its lease while rejection stays inert", async () => {
+test("unmount-before-resolution releases every replay attempt while rejection stays inert", async () => {
   const resolvedId = await page.evaluate(() => window.mountAsyncImage("f", "Unmounted resolution"));
   await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const resolvedAttempts = await attemptsFor(resolvedId, 2);
   await page.evaluate(() => window.unmountAsyncImage());
-  await page.evaluate(({ assetId, url }) => window.resolveAsyncImage(assetId, url), {
-    assetId: resolvedId,
-    url: PNG_URL,
-  });
-  await page.waitForFunction((assetId) => window.asyncImageReleaseCount(assetId) === 1, resolvedId);
+  for (const attemptId of resolvedAttempts) await resolveAttempt(attemptId);
+  for (const attemptId of resolvedAttempts) await expectReleased(attemptId);
 
   const rejectedId = await page.evaluate(() => window.mountAsyncImage("0", "Unmounted rejection"));
   await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const rejectedAttempts = await attemptsFor(rejectedId, 2);
   await page.evaluate(() => window.unmountAsyncImage());
-  await page.evaluate((assetId) => window.rejectAsyncImage(assetId), rejectedId);
+  for (const attemptId of rejectedAttempts) {
+    await page.evaluate((id) => window.rejectAsyncImageAttempt(id), attemptId);
+  }
   await page.waitForTimeout(20);
-  assert.equal(await page.evaluate((id) => window.asyncImageReleaseCount(id), rejectedId), 0);
+  assert.deepEqual(await page.evaluate((ids) => ids.map(
+    (id) => window.asyncImageReleaseCount(id),
+  ), rejectedAttempts), [0, 0]);
   assert.equal(await page.locator("img").count(), 0);
 });
 
 test("canonical ChartView turns a durable resolver rejection into stable panel recovery", async () => {
   const assetId = await page.evaluate(() => window.mountAsyncImage("c", "Failed image"));
   await page.getByText("Loading saved image…", { exact: true }).waitFor();
-  await page.evaluate((id) => window.rejectAsyncImage(id), assetId);
+  const attempts = await attemptsFor(assetId, 2);
+  for (const attemptId of attempts) {
+    await page.evaluate((id) => window.rejectAsyncImageAttempt(id), attemptId);
+  }
   await page.locator('[data-static-failure="asset-read-failed"]').waitFor();
   assert.equal(await page.getByRole("button", { name: "Retry" }).count(), 1);
   await page.waitForTimeout(50);
   assert.equal(await page.locator('[data-static-failure="asset-read-failed"]').count(), 1);
+});
+
+test("a synchronous staged Image resolver retains canonical rendering under StrictMode", async () => {
+  await page.evaluate(() => window.mountSynchronousImage("1", "Synchronous image"));
+  await page.locator('img[alt="Synchronous image"]').waitFor();
+  assert.equal(await page.locator('[data-static-failure]').count(), 0);
+  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 0);
+});
+
+test("an immediately fulfilled async Image resolver settles under StrictMode", async () => {
+  await page.evaluate(() => window.mountImmediateAsyncImage("2", "Immediate async image"));
+  await page.locator('img[alt="Immediate async image"]').waitFor();
+  assert.equal(await page.getByText("Loading saved image…", { exact: true }).count(), 0);
 });
 
 test("locally controlled PNG, JPEG, and WebP fixtures pass the production browser decoder boundary", async () => {
