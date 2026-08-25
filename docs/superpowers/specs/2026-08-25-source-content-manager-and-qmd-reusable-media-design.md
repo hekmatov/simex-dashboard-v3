@@ -10,7 +10,7 @@
 
 The V3 Design master-accepted Step 7S result remains intact and retained on its unmerged implementation branch: engine implemented, UI implemented, 36/36 existing fidelity rows verified Passing, and independent implementation review clean. This amendment does not downgrade or reinterpret that evidence.
 
-The amendment adds a proposed reusable-content layer above the existing authored-asset, dataSources, and datasetProfiles authorities. Every new requirement in this document is proposed and unimplemented. Its fidelity rows live in SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md; its security and deviation decisions live in SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md.
+The amendment adds a proposed reusable-content layer above the existing authored-asset, dataSources, and datasetProfiles authorities. Every new requirement in this document is proposed and unimplemented. Its fidelity rows live in SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md; its security and deviation decisions live in SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md; exact post-approval existing/proposed/test/browser ownership lives in SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md.
 
 ## Product boundary
 
@@ -374,4 +374,4 @@ Completion submission must separately report engine implemented, UI implemented,
 
 The V3 Design master and user approved the final written amendment at `81531b4b939e89b529d0ddee36241e517c33956d`. This approves the design, not production implementation or any fidelity promotion.
 
-The bounded GeoJSON calibration prerequisite is complete and found no legitimate-dataset exclusion or material user-level UX tradeoff. Its technical guardrail is submitted to the master in `GEOJSON-LIMITS-DECISION.md`; SCM-S15 remains proposed, unimplemented, and not verified. The exact post-approval ownership reconciliation remains the second non-production prerequisite. The final implementation plan may begin only after the master accepts the guardrail and ownership reconciliation. No GeoJSON production task or test may encode guessed or alternate limits.
+The bounded GeoJSON calibration prerequisite is complete and found no legitimate-dataset exclusion or material user-level UX tradeoff. Its technical guardrail is submitted to the master in `GEOJSON-LIMITS-DECISION.md`; SCM-S15 remains proposed, unimplemented, and not verified. The exact post-approval ownership reconciliation is also complete in `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md`. The final implementation plan may begin only after the master accepts both prerequisite results. No GeoJSON production task or test may encode guessed or alternate limits.

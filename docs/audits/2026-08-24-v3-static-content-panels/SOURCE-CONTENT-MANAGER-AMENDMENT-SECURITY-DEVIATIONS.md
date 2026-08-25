@@ -4,6 +4,8 @@
 **Status:** Final written amendment master/user-approved at `81531b4b939e89b529d0ddee36241e517c33956d`; production remains proposed, unimplemented, and not verified.
 **Base status preserved:** the implemented Step 7S 36-row result was accepted by the V3 Design master at b366ba17fe856aede46ba8301b8a530520e4d2cd, with documentation closure at db63d8e772ce96b17de19b7a89f256a72926d08d. It remains Passing, independently review-clean, branch-retained, and unmerged. No decision below is implementation evidence.
 
+**Post-approval ownership:** `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md` fixes the single owners and retained evidence paths that must implement these decisions. It creates no production authority and promotes no proposed status.
+
 ## GeoJSON pre-implementation calibration decision
 
 The user does not choose numeric GeoJSON limits. The approved bounded disposable Chromium calibration ran after written amendment approval and before the final implementation plan. Its verified legitimate-project baseline covers `gemeente_2020.geojson`, `gemeente_2021.geojson`, `gemeente_2026.geojson`, and `netherlands-provinces.geojson`:
@@ -77,4 +79,4 @@ The amendment does not change these accepted constraints:
 
 ## Approval gate
 
-The V3 Design master and user approved the final written amendment at `81531b4b939e89b529d0ddee36241e517c33956d`. No proposed decision or deviation is Implemented or Passing. The completed calibration is planning evidence submitted for master technical review; exact ownership reconciliation remains required before the final implementation plan.
+The V3 Design master and user approved the final written amendment at `81531b4b939e89b529d0ddee36241e517c33956d`. No proposed decision or deviation is Implemented or Passing. The completed calibration and exact post-approval ownership reconciliation are non-production prerequisite evidence submitted for master technical review before the final implementation plan.

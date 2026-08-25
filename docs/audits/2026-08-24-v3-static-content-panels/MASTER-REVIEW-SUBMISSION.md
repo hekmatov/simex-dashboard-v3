@@ -14,13 +14,15 @@ The V3 Design master accepted Step 7S at implementation HEAD `b366ba17fe856aede4
 
 The V3 Design master and user approved the final written **Source Content Manager and QMD Reusable Media** amendment at `81531b4b939e89b529d0ddee36241e517c33956d`, including managed builder-controlled CSV and GeoJSON, the explicit dashboard-schema/package-bundle V4→V5 deviation with V4 import compatibility, and chart configuration remaining V3. Production remains proposed, unimplemented, and not verified. It does not change the completed Step 7S result or inherit its Passing statuses.
 
-The controlling written amendment comprises:
+The controlling written amendment and completed non-production prerequisites comprise:
 
 - docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md;
 - docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md;
-- docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md.
+- docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md;
+- docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md;
+- docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md.
 
-No production implementation or final implementation plan is authorized yet. The first approved non-production prerequisite is complete: `.planning/spikes/001-geojson-limit-calibration/README.md` and `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` establish exact calibrated limits from the four legitimate files, independent ladders, current production owners, and inspected Chromium evidence. No legitimate fixture is excluded and no material user-level UX tradeoff was found. The guardrail is submitted to the master for technical review; SCM-S15 remains proposed/unimplemented/not verified. Exact post-approval ownership reconciliation remains the second prerequisite before the final plan.
+No production implementation or final implementation plan is authorized yet. Both approved non-production prerequisites are complete. `.planning/spikes/001-geojson-limit-calibration/README.md` and `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` establish exact calibrated limits from the four legitimate files, independent ladders, current production owners, and inspected Chromium evidence. No legitimate fixture is excluded and no material user-level UX tradeoff was found. `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md` resolves every existing integration owner, proposed single-responsibility path, deterministic test file, and retained browser journey, including the current uploadedGeoJson authoring-selector gap. The guardrail and ownership gate are submitted to the master for technical review; all 36 amendment rows, including SCM-S15, remain proposed/unimplemented/not verified.
 
 ### Subsequent user sketch-review amendments
 
@@ -67,6 +69,7 @@ The first review rejected approval at `64c0143` while accepting the architectura
 - Approved amendment fidelity matrix (all rows still proposed/unimplemented): `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md`
 - Approved amendment security/deviations (all production statuses still proposed): `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md`
 - Calibrated GeoJSON limits decision: `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`
+- Post-approval amendment ownership inventory: `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md`
 
 ## Discovery evidence
 
@@ -90,4 +93,4 @@ The matrix contains 36 accepted design rows across semantic, composition, and re
 
 ## Historical discovery exit and current handoff
 
-The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete and V3 Design master-accepted; the accepted implementation branch remains retained and unmerged. The separate 2026-08-25 Source Content Manager/QMD reusable-media written amendment is master/user-approved but remains wholly unimplemented; its calibrated limits and exact ownership reconciliation must pass before final planning.
+The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete and V3 Design master-accepted; the accepted implementation branch remains retained and unmerged. The separate 2026-08-25 Source Content Manager/QMD reusable-media written amendment is master/user-approved but remains wholly unimplemented; its calibrated limits and exact ownership reconciliation prerequisites are complete and submitted for master technical review before final-planning authority.
