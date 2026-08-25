@@ -50,6 +50,7 @@ export function ImageSourceEditor({
       declaredMediaType: file.type,
       decode: decodeBrowserImageAsset,
       currentAssetBytes: authoredAssetManifestBytes(assets),
+      currentAssetIds: Object.keys(assets),
     });
     if (!mountedRef.current || intakeRevision !== intakeRevisionRef.current) {
       if (result.ok) {

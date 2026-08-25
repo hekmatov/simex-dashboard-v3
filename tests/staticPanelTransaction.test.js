@@ -14,6 +14,7 @@ import {
   prepareStaticPanelTransaction,
   removeDashboardPanel,
 } from "../src/static-content/staticPanelTransaction.js";
+import { IMAGE_ASSET_LIMITS } from "../src/static-content/image/imageAssetValidation.js";
 
 test("source revision begins at one and increments only when saved source content changes", () => {
   const source = textSource("Old situation", 3);
@@ -240,6 +241,65 @@ test("a staged Image transaction can commit atomically to session state without 
   assert.equal(controller.getCurrent().dataSources["image-source"].revision, 1);
   assert.equal(sessionCommits, 1);
   assert.equal(durableCommits, 0);
+});
+
+test("Image transaction admits only the finalized source asset and retains unrelated saved inventory", () => {
+  const dashboard = imageDashboard({
+    panels: [panel("saved-image", "image", "saved-source", "Saved")],
+    sources: { "saved-source": imageSource(1, "asset-saved") },
+    assets: { "asset-saved": assetManifest("d") },
+  });
+  const prepared = prepareStaticPanelTransaction({
+    dashboard,
+    operation: "create",
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    panel: panel("image-panel", "image", "image-source", "Response map"),
+    source: imageSource(1, "asset-b"),
+    assets: {
+      "asset-a": assetManifest("a", "staged"),
+      "asset-b": assetManifest("b", "staged"),
+    },
+  });
+  assert.deepEqual(Object.keys(prepared.candidateDashboard.assets).sort(), ["asset-b", "asset-saved"]);
+  assert.deepEqual(prepared.candidateDashboard.assets["asset-saved"], dashboard.assets["asset-saved"]);
+});
+
+test("direct over-budget Image transaction is rejected before dashboard or store mutation", () => {
+  const dashboard = fixtureDashboard();
+  const before = structuredClone(dashboard);
+  const assets = {};
+  for (let index = 0; index < 16; index += 1) {
+    assets[`asset-${index}`] = {
+      ...assetManifest(String(index % 10), "durable"),
+      byteLength: 12 * 1024 * 1024,
+    };
+  }
+  dashboard.assets = assets;
+  dashboard.dataSources = {
+    ...dashboard.dataSources,
+    ...Object.fromEntries(Object.keys(assets).map((assetId, index) => [
+      `source-${index}`,
+      imageSource(1, assetId),
+    ])),
+  };
+  dashboard.pages[0].sections[0].panels.push(...Object.keys(assets).map((assetId, index) => ({
+    id: `image-${index}`,
+    chart: panel(`image-${index}`, "image", `source-${index}`, `Image ${index}`),
+  })));
+  const mutationSnapshot = structuredClone(dashboard);
+
+  assert.throws(() => prepareStaticPanelTransaction({
+    dashboard,
+    operation: "create",
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    panel: panel("over-budget", "image", "over-budget-source", "Over budget"),
+    source: imageSource(1, "asset-new"),
+    assets: {
+      "asset-new": { ...assetManifest("f", "staged"), byteLength: IMAGE_ASSET_LIMITS.maxBytes },
+    },
+  }), /200 MiB authored-asset budget/i);
+  assert.deepEqual(dashboard, mutationSnapshot);
+  assert.notDeepEqual(dashboard, before);
 });
 
 test("prepared transaction snapshots reject post-validation nested mutation", () => {

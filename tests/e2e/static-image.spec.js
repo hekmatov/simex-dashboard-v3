@@ -482,14 +482,20 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
   expect(await page.evaluate((key) => Boolean(
     JSON.parse(localStorage.getItem(key)).assets["asset-budget-fixture"],
   ), STORAGE_KEY)).toBe(true);
-  await scrollPanelIntoView(page, saved.panel.id);
-  await openImageEditor(canonicalPanel(page, saved.panel.id), page, "Intake budget corpus");
-  let wizard = page.getByRole("dialog", { name: "Edit static content" });
+  await page.getByRole("button", { name: "Add static content", exact: true }).click();
+  let wizard = page.getByRole("dialog", { name: "Add static content" });
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Image").check();
+  await wizard.getByRole("button", { name: "Continue" }).click();
+  await wizard.getByLabel("Panel title").fill("Rejected near-budget create");
   await wizard.locator("#static-image-file").setInputFiles(upload("budget.png", "image/png", PNG));
   await expect(wizard.locator('[data-validation-code="product-budget"]'))
     .toHaveText("The image would exceed the dashboard's 200 MiB authored-asset budget.");
   await wizard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("dialog", { name: "Discard static content changes?" })
+    .getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
+  expect(await sessionAssetIds(page)).toEqual([]);
 
   await removeDashboardBudgetFixture(page);
   await page.reload();

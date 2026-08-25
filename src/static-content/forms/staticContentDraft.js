@@ -280,9 +280,15 @@ export function finalizeStaticContentDraft(state) {
     destination: clone(state.destination),
     panel: clone(panel),
     source: clone(source),
-    assets: clone(state.assets),
+    assets: finalizedAssetsForSource(source, state.assets),
     draftRevision: state.draftRevision,
   };
+}
+
+function finalizedAssetsForSource(source, assets = {}) {
+  if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") return {};
+  const entry = assets[source.origin.assetId];
+  return entry ? { [source.origin.assetId]: clone(entry) } : {};
 }
 
 export function isStaticContentDraftDirty(state) {

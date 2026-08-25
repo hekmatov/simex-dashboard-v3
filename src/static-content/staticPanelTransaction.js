@@ -6,6 +6,10 @@ import {
   validateAuthoredAssetManifest,
   validateStaticSource,
 } from "./staticSourceSchema.js";
+import {
+  IMAGE_ASSET_LIMITS,
+  authoredAssetManifestBytes,
+} from "./image/imageAssetValidation.js";
 
 export function nextStaticSourceRevision(previousSource, nextSource) {
   const next = normalizeStaticSource(nextSource);
@@ -50,14 +54,18 @@ export function prepareStaticPanelTransaction({
     ...normalizeStaticSource(source),
     revision: committedRevision,
   };
+  const transactionAssets = assetsForCommittedSource(committedSource, assets);
   const mergedAssets = {
     ...(candidateDashboard.assets ?? {}),
-    ...structuredClone(assets),
+    ...transactionAssets,
   };
   validateAuthoredAssetManifest(mergedAssets);
+  if (authoredAssetManifestBytes(mergedAssets) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
+    throw new Error("The Image transaction exceeds the dashboard's 200 MiB authored-asset budget.");
+  }
   validateStaticSource(committedSource, { assets: mergedAssets });
 
-  if (Object.hasOwn(candidateDashboard, "assets") || Object.keys(assets).length > 0) {
+  if (Object.hasOwn(candidateDashboard, "assets") || Object.keys(transactionAssets).length > 0) {
     candidateDashboard.assets = mergedAssets;
   }
   candidateDashboard.dataSources = {
@@ -98,6 +106,14 @@ export function prepareStaticPanelTransaction({
     baseDashboard,
     candidateDashboard,
   });
+}
+
+function assetsForCommittedSource(source, assets) {
+  if (source?.kind !== "staticImage" || source.origin?.kind !== "asset") return {};
+  const assetId = source.origin.assetId;
+  return Object.hasOwn(assets ?? {}, assetId)
+    ? { [assetId]: structuredClone(assets[assetId]) }
+    : {};
 }
 
 export function removeDashboardPanel(dashboard, panelId) {

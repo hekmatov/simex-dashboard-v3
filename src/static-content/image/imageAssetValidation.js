@@ -136,9 +136,12 @@ export async function decodeBrowserImageAsset(bytes, mediaType) {
 
 export async function stageSessionImageAsset(input = {}) {
   const browserQuotaAvailableBytes = await availableBrowserQuota(input.browserQuotaAvailableBytes);
+  const accountedAssetIds = new Set(input.currentAssetIds ?? []);
+  const aggregateAssetBytes = finiteNonNegative(input.currentAssetBytes)
+    + sessionImageAssetBytes(accountedAssetIds);
   const filePreflight = preflightFile(input.file, {
     browserQuotaAvailableBytes,
-    currentAssetBytes: finiteNonNegative(input.currentAssetBytes) + sessionImageAssetBytes(),
+    currentAssetBytes: aggregateAssetBytes,
   });
   if (filePreflight) return filePreflight;
   const bytes = await readBytes(input.bytes ?? input.file);
@@ -146,7 +149,7 @@ export async function stageSessionImageAsset(input = {}) {
     ...input,
     bytes,
     browserQuotaAvailableBytes,
-    currentAssetBytes: finiteNonNegative(input.currentAssetBytes) + sessionImageAssetBytes(),
+    currentAssetBytes: aggregateAssetBytes,
   });
   if (!validation.ok) return validation;
   const immutableBytes = bytes.slice();
@@ -210,9 +213,11 @@ async function availableBrowserQuota(explicit) {
   return Number.POSITIVE_INFINITY;
 }
 
-function sessionImageAssetBytes() {
+function sessionImageAssetBytes(excludedAssetIds = new Set()) {
   let total = 0;
-  for (const entry of SESSION_IMAGE_ASSETS.values()) total += finiteNonNegative(entry?.byteLength);
+  for (const [assetId, entry] of SESSION_IMAGE_ASSETS.entries()) {
+    if (!excludedAssetIds.has(assetId)) total += finiteNonNegative(entry?.byteLength);
+  }
   return total;
 }
 

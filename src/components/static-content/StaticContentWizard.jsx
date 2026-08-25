@@ -39,7 +39,11 @@ export function StaticContentWizard({
     initialDraft,
     (provided) => provided
       ? structuredClone(provided)
-      : createStaticContentDraft({ destination, mode: editor ? "edit" : "create" }),
+      : createStaticContentDraft({
+          destination,
+          mode: editor ? "edit" : "create",
+          assets: dashboard.assets ?? {},
+        }),
   );
   const [submitError, setSubmitError] = React.useState("");
   const [freeTextValidation, setFreeTextValidation] = React.useState(null);

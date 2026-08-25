@@ -157,6 +157,40 @@ test("Image replacement resets geometry, retains alt for review, and remains und
   assert.equal(undone.imageEditing.altReviewRequired, false);
 });
 
+test("Image finalization exposes only the selected draft asset while preserving superseded assets for undo", () => {
+  const manifest = (seed) => ({
+    mediaType: "image/png",
+    byteLength: 48,
+    width: 8,
+    height: 6,
+    sha256: seed.repeat(64),
+    storageState: "staged",
+  });
+  let draft = createStaticContentDraft({
+    mode: "edit",
+    stage: "content",
+    panel: { id: "image-panel", typeId: "image", title: "Response map", sourceId: "image-source" },
+    source: {
+      kind: "staticImage",
+      origin: { kind: "asset", assetId: "asset-a" },
+      alt: "Response map",
+    },
+    assets: { "asset-a": manifest("a") },
+    destination: { pageId: "page-a", sectionId: "section-a" },
+  });
+  draft = reduceStaticContentDraft(draft, {
+    type: "replaceImage",
+    origin: { kind: "asset", assetId: "asset-b" },
+    manifestEntry: manifest("b"),
+  });
+  assert.deepEqual(Object.keys(draft.assets).sort(), ["asset-a", "asset-b"]);
+  assert.equal(draft.imageEditing.replacementUndo.source.origin.assetId, "asset-a");
+
+  draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
+  const finalized = finalizeStaticContentDraft(draft);
+  assert.deepEqual(Object.keys(finalized.assets), ["asset-b"]);
+});
+
 test("decorative Image authoring preserves hidden authored alt for undo while runtime alt stays empty", () => {
   let draft = createStaticContentDraft({
     contentTypeId: "image",

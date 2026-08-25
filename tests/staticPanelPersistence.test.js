@@ -392,6 +392,67 @@ test("post-replacement durable commit failure leaves the new referenced bytes st
   assert.deepEqual(events, ["stage", "verify", "dashboard-commit", "commit-many"]);
 });
 
+test("durable Image save stages only the finalized replacement, never superseded draft bytes", async () => {
+  const bytesA = new Uint8Array([1, 1, 1, 1]);
+  const bytesB = new Uint8Array([2, 2, 2, 2]);
+  const idA = `asset-${sha256HexSync(bytesA)}`;
+  const idB = `asset-${sha256HexSync(bytesB)}`;
+  const manifest = (bytes, storageState = "staged") => ({
+    mediaType: "image/png",
+    byteLength: bytes.byteLength,
+    width: 2,
+    height: 3,
+    sha256: sha256HexSync(bytes),
+    storageState,
+  });
+  const prepared = prepareStaticPanelTransaction({
+    dashboard: createDashboard(),
+    operation: "create",
+    destination: { pageId: "overview", sectionId: "summary" },
+    panel: createChartDraft({
+      typeId: "image",
+      id: "replacement-image",
+      sourceId: "replacement-source",
+      title: "Replacement",
+    }),
+    source: {
+      kind: "staticImage",
+      sourceVersion: 1,
+      revision: 1,
+      origin: { kind: "asset", assetId: idB },
+      alt: "Replacement B",
+      decorative: false,
+      fit: "contain",
+      crop: { x: 0, y: 0, width: 1000, height: 1000 },
+      rotation: 0,
+    },
+    assets: { [idA]: manifest(bytesA), [idB]: manifest(bytesB) },
+  });
+  assert.deepEqual(Object.keys(prepared.candidateDashboard.assets), [idB]);
+  const staged = [];
+  await commitDurableStaticPanelTransaction({
+    prepared,
+    store: {
+      async stage({ bytes }) {
+        const assetId = `asset-${sha256HexSync(bytes)}`;
+        staged.push(assetId);
+        return { assetId };
+      },
+      async verify() {},
+      async commit() {},
+      async rollback() {},
+    },
+    readSessionAsset(assetId) {
+      const bytes = assetId === idA ? bytesA : bytesB;
+      return { assetId, bytes, ...manifest(bytes) };
+    },
+    async commitPrepared(transaction) {
+      return { dashboard: transaction.candidateDashboard };
+    },
+  });
+  assert.deepEqual(staged, [idB]);
+});
+
 function readinessChart() {
   return {
     configVersion: 3,
