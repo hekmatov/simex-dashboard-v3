@@ -10,8 +10,12 @@ import {
   validateImageAsset,
   validateImageOrigin,
 } from "../src/static-content/image/imageAssetValidation.js";
+import {
+  IMAGE_FIXTURE_DIMENSIONS,
+  imageFixtureBytes,
+} from "./fixtures/imageFixtureBytes.js";
 
-const PNG = Uint8Array.from([
+const PNG_STUB = Uint8Array.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
   0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
   0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03,
@@ -21,7 +25,7 @@ const PNG = Uint8Array.from([
   0xae, 0x42, 0x60, 0x82,
 ]);
 
-const JPEG = Uint8Array.from([
+const JPEG_STUB = Uint8Array.from([
   0xff, 0xd8,
   0xff, 0xc0, 0x00, 0x11, 0x08,
   0x00, 0x03, 0x00, 0x02,
@@ -29,7 +33,7 @@ const JPEG = Uint8Array.from([
   0xff, 0xd9,
 ]);
 
-const WEBP = Uint8Array.from([
+const WEBP_STUB = Uint8Array.from([
   0x52, 0x49, 0x46, 0x46, 0x16, 0x00, 0x00, 0x00,
   0x57, 0x45, 0x42, 0x50,
   0x56, 0x50, 0x38, 0x58, 0x0a, 0x00, 0x00, 0x00,
@@ -38,25 +42,57 @@ const WEBP = Uint8Array.from([
   0x02, 0x00, 0x00,
 ]);
 
-test("single-frame PNG, JPEG, and WebP require matching signature, declaration, and decoded metadata", async () => {
-  for (const fixture of [
-    { bytes: PNG, mediaType: "image/png", width: 2, height: 3 },
-    { bytes: JPEG, mediaType: "image/jpeg", width: 2, height: 3 },
-    { bytes: WEBP, mediaType: "image/webp", width: 2, height: 3 },
-  ]) {
+const DECODED = (mediaType) => ({
+  mediaType,
+  ...IMAGE_FIXTURE_DIMENSIONS,
+  frameCount: 1,
+});
+const PNG = imageFixtureBytes("image/png");
+const WEBP = imageFixtureBytes("image/webp");
+
+test("genuinely decodable single-frame PNG, JPEG, and WebP require the decoder boundary", async () => {
+  const fixtures = [
+    { bytes: imageFixtureBytes("image/png"), mediaType: "image/png" },
+    { bytes: imageFixtureBytes("image/jpeg"), mediaType: "image/jpeg" },
+    { bytes: imageFixtureBytes("image/webp"), mediaType: "image/webp" },
+  ];
+  for (const fixture of fixtures) {
     const result = await validateImageAsset({
       ...fixture,
       declaredMediaType: fixture.mediaType,
-      decoded: { mediaType: fixture.mediaType, width: fixture.width, height: fixture.height, frameCount: 1 },
+      decoded: DECODED(fixture.mediaType),
     });
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(result.asset, {
       mediaType: fixture.mediaType,
       byteLength: fixture.bytes.byteLength,
-      width: fixture.width,
-      height: fixture.height,
+      ...IMAGE_FIXTURE_DIMENSIONS,
       frameCount: 1,
     });
+  }
+  for (const fixture of fixtures) {
+    const withoutDecoder = await validateImageAsset({
+      bytes: fixture.bytes,
+      declaredMediaType: fixture.mediaType,
+    });
+    assert.equal(withoutDecoder.ok, false);
+    assert.equal(withoutDecoder.errors[0].code, "decoder-required");
+  }
+});
+
+test("header-only PNG, JPEG, and WebP stubs never pass as decoded raster images", async () => {
+  for (const [mediaType, bytes] of [
+    ["image/png", PNG_STUB],
+    ["image/jpeg", JPEG_STUB],
+    ["image/webp", WEBP_STUB],
+  ]) {
+    const result = await validateImageAsset({
+      bytes,
+      declaredMediaType: mediaType,
+      decoded: DECODED(mediaType),
+    });
+    assert.equal(result.ok, false, mediaType);
+    assert.equal(result.errors[0].code, "corrupt-image", mediaType);
   }
 });
 
@@ -104,6 +140,68 @@ test("encoded, decoded, product-budget, and browser-quota limits stay distinguis
   });
   assert.equal(warning.ok, true);
   assert.equal(warning.warnings[0].code, "product-budget-warning");
+});
+
+test("production intake rejects encoded size and browser quota before reading or decoding the file", async () => {
+  for (const [fileSize, quota, expectedCode] of [
+    [IMAGE_ASSET_LIMITS.maxBytes + 1, Number.POSITIVE_INFINITY, "file-size-limit"],
+    [PNG.byteLength, PNG.byteLength - 1, "browser-quota"],
+  ]) {
+    let reads = 0;
+    let decodes = 0;
+    const result = await stageSessionImageAsset({
+      file: {
+        size: fileSize,
+        type: "image/png",
+        async arrayBuffer() {
+          reads += 1;
+          return PNG.slice().buffer;
+        },
+      },
+      browserQuotaAvailableBytes: quota,
+      decode: async () => {
+        decodes += 1;
+        return DECODED("image/png");
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errors[0].code, expectedCode);
+    assert.equal(reads, 0, expectedCode);
+    assert.equal(decodes, 0, expectedCode);
+  }
+});
+
+test("production intake rejects encoded dimensions before invoking the decoder", async () => {
+  let decodes = 0;
+  const result = await stageSessionImageAsset({
+    bytes: pngWithDimensions(16_385, 1),
+    declaredMediaType: "image/png",
+    decode: async () => {
+      decodes += 1;
+      return { mediaType: "image/png", width: 16_385, height: 1, frameCount: 1 };
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0].code, "dimension-limit");
+  assert.equal(decodes, 0);
+});
+
+test("production intake includes already staged images in aggregate budget classification", async () => {
+  const first = await stageSessionImageAsset({
+    bytes: PNG,
+    declaredMediaType: "image/png",
+    decoded: DECODED("image/png"),
+  });
+  assert.equal(first.ok, true);
+  const second = await stageSessionImageAsset({
+    bytes: WEBP,
+    declaredMediaType: "image/webp",
+    decoded: DECODED("image/webp"),
+    currentAssetBytes: IMAGE_ASSET_LIMITS.dashboardBudgetBytes - WEBP.byteLength,
+  });
+  assert.equal(second.ok, false);
+  assert.equal(second.errors[0].code, "product-budget");
+  discardSessionImageAsset(first.assetId);
 });
 
 test("origins allow HTTPS and dashboard-owned paths while rejecting local and traversal authority", () => {
@@ -156,6 +254,38 @@ test("session staging deduplicates immutable original bytes without creating dur
   assert.equal(resolved.byteLength, PNG.length);
   discardSessionImageAsset(staged.assetId);
   assert.equal(resolveSessionImageAsset(staged.assetId), null);
+});
+
+test("draft cleanup revokes only unreferenced staged assets and preserves saved siblings", async () => {
+  const png = await stageSessionImageAsset({
+    bytes: imageFixtureBytes("image/png"),
+    declaredMediaType: "image/png",
+    decoded: DECODED("image/png"),
+  });
+  const jpeg = await stageSessionImageAsset({
+    bytes: imageFixtureBytes("image/jpeg"),
+    declaredMediaType: "image/jpeg",
+    decoded: DECODED("image/jpeg"),
+  });
+  const webp = await stageSessionImageAsset({
+    bytes: imageFixtureBytes("image/webp"),
+    declaredMediaType: "image/webp",
+    decoded: DECODED("image/webp"),
+  });
+  const lifecycle = await import("../src/static-content/image/imageAssetValidation.js");
+  assert.equal(typeof lifecycle.discardUnreferencedSessionImageAssets, "function");
+  assert.deepEqual(lifecycle.discardUnreferencedSessionImageAssets(
+    [jpeg.assetId, webp.assetId],
+    [webp.assetId],
+  ), {
+    discarded: [jpeg.assetId],
+    retained: [webp.assetId],
+  });
+  assert.ok(resolveSessionImageAsset(png.assetId));
+  assert.equal(resolveSessionImageAsset(jpeg.assetId), null);
+  assert.ok(resolveSessionImageAsset(webp.assetId));
+  discardSessionImageAsset(png.assetId);
+  discardSessionImageAsset(webp.assetId);
 });
 
 function withPngChunk(bytes, type, data) {

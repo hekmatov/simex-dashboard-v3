@@ -11,6 +11,7 @@ import {
 } from "../src/static-content/image/imageAssetValidation.js";
 import { prepareOperationalData } from "../src/charting/data/prepareOperationalData.js";
 import { buildOperationalRenderModel } from "../src/charting/rendering/operationalAdapter.js";
+import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
 const vite = await createServer({
   root: process.cwd(),
@@ -28,15 +29,7 @@ const { ImageSourceEditor } = await vite.ssrLoadModule("/src/components/static-c
 const { ImageTransformEditor } = await vite.ssrLoadModule("/src/components/static-content/ImageTransformEditor.jsx");
 await vite.close();
 
-const PNG = Uint8Array.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-  0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03,
-  0x08, 0x06, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
-  0xae, 0x42, 0x60, 0x82,
-]);
+const PNG = imageFixtureBytes("image/png");
 
 test("operational Image preparation is an explicit legacy-inline adapter and rejects typed static sources", () => {
   const schema = { typeId: "image" };
@@ -114,11 +107,11 @@ test("typed static Image routes canonically without rows and applies saved metad
   }));
   assert.match(html, /data-static-image="true"/);
   assert.match(html, /alt="Clinic readiness map"/);
-  assert.match(html, /--image-crop-x:10%/);
-  assert.match(html, /--image-crop-y:20%/);
-  assert.match(html, /--image-crop-width:70%/);
-  assert.match(html, /--image-saved-rotation:90deg/);
-  assert.match(html, /object-fit:cover/);
+  assert.match(html, /data-image-transform-order="rotation-crop-fit"/);
+  assert.match(html, /viewBox="100 200 700 600"/);
+  assert.match(html, /preserveAspectRatio="xMidYMid slice"/);
+  assert.match(html, /transform="rotate\(90 500 500\)"/);
+  assert.match(html, /object-fit:fill/);
   assert.match(html, /data-image-zoom-scale="1"/);
   assert.doesNotMatch(html, /chart-status-error|No chart data/);
   discardSessionImageAsset(staged.assetId);

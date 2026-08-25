@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
@@ -11,6 +12,7 @@ const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
 );
+const REPLACEMENT_PNG = Buffer.from(imageFixtureBytes("image/png"));
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -35,6 +37,9 @@ for (const viewport of VIEWPORTS) {
     expect(storageInspection.sessionAssets[0].id).toMatch(/^asset-[0-9a-f]{64}$/);
     expect(storageInspection.sessionAssets[0].entry).not.toHaveProperty("bytes");
     expect(storageInspection.sessionAssets[0].entry.mediaType).toBe("image/png");
+    const originalAssetId = storageInspection.sessionAssets[0].id;
+    await createAndEditOrdinaryChart(page, `Post-image chart ${viewport.width}`);
+    await expect.poll(() => sessionAssetIds(page)).toEqual([originalAssetId]);
 
     let panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
@@ -67,14 +72,17 @@ for (const viewport of VIEWPORTS) {
     await editor.locator("#static-image-file").setInputFiles({
       name: "replacement.png",
       mimeType: "image/png",
-      buffer: PNG,
+      buffer: REPLACEMENT_PNG,
     });
     await expect(editor.getByText(/replacement\.png is ready/)).toBeVisible();
     await expect(editor.getByLabel("Crop x")).toHaveValue("0");
     await expect(editor.getByText(/Review alternative text after replacement/)).toBeVisible();
+    await expect.poll(() => sessionAssetIds(page)).toEqual(expect.arrayContaining([originalAssetId]));
+    expect(await sessionAssetIds(page)).toHaveLength(2);
     await editor.getByRole("button", { name: "Undo replacement" }).click();
     await expect(editor.getByLabel("Crop x")).toHaveValue("200");
     await expect(editor.getByText(/Review alternative text after replacement/)).toHaveCount(0);
+    await expect.poll(() => sessionAssetIds(page)).toEqual([originalAssetId]);
 
     const cropSelection = editor.getByRole("group", { name: /Crop selection/ });
     await cropSelection.focus();
@@ -97,13 +105,43 @@ for (const viewport of VIEWPORTS) {
     await expect(editor).toHaveCount(0);
 
     panel = canonicalPanel(page, panelId);
-    const savedTransform = panel.locator(".chart-image-saved-window");
+    const savedTransform = panel.locator(".chart-image-saved-geometry");
     await expect(panel.locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
-    await expect(savedTransform).toHaveCSS("--image-crop-x", "10%");
-    await expect(savedTransform).toHaveCSS("--image-crop-y", "21%");
-    await expect(savedTransform).toHaveCSS("--image-crop-width", "80%");
-    await expect(savedTransform).toHaveCSS("--image-crop-height", "70%");
-    await expect(savedTransform).toHaveCSS("--image-saved-rotation", "180deg");
+    await expect(savedTransform).toHaveAttribute("data-image-transform-order", "rotation-crop-fit");
+    await expect(savedTransform).toHaveAttribute("viewBox", "100 210 800 700");
+    await expect(savedTransform).toHaveAttribute("preserveAspectRatio", "xMidYMid slice");
+    await expect(savedTransform.locator(".chart-image-saved-rotation"))
+      .toHaveAttribute("transform", "rotate(180 500 500)");
+    const transformComposition = await savedTransform.evaluate((svg) => {
+      const group = svg.querySelector(".chart-image-saved-rotation");
+      const outer = svg.getScreenCTM();
+      const rotation = group.transform.baseVal.consolidate().matrix;
+      const rendered = group.getScreenCTM();
+      const expected = outer.multiply(rotation);
+      const delta = Math.max(...["a", "b", "c", "d", "e", "f"]
+        .map((key) => Math.abs(rendered[key] - expected[key])));
+      const viewBox = svg.viewBox.baseVal;
+      return {
+        delta,
+        viewBox: [viewBox.x, viewBox.y, viewBox.width, viewBox.height],
+      };
+    });
+    expect(transformComposition.viewBox).toEqual([100, 210, 800, 700]);
+    expect(transformComposition.delta).toBeLessThan(0.001);
+
+    await openImageEditor(panel, page, title);
+    editor = page.getByRole("dialog", { name: "Edit static content" });
+    await editor.locator("#static-image-file").setInputFiles({
+      name: "cancelled-replacement.png",
+      mimeType: "image/png",
+      buffer: REPLACEMENT_PNG,
+    });
+    expect(await sessionAssetIds(page)).toHaveLength(2);
+    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+    confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+    await confirmation.getByRole("button", { name: "Discard" }).click();
+    await expect.poll(() => sessionAssetIds(page)).toEqual([originalAssetId]);
+    panel = canonicalPanel(page, panelId);
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
     panel = canonicalPanel(page, panelId);
@@ -128,7 +166,7 @@ for (const viewport of VIEWPORTS) {
     await expect(imageView).toHaveClass(/chart-image-view--touch-actions/);
     await imageView.getByRole("button", { name: "Zoom in" }).click();
     await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1.25");
-    await expect(imageView.locator(".chart-image-saved-window")).toHaveCSS("--image-crop-x", "10%");
+    await expect(imageView.locator(".chart-image-saved-geometry")).toHaveAttribute("viewBox", "100 210 800 700");
     await imageView.getByRole("button", { name: "Reset view" }).click();
     await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1");
 
@@ -231,6 +269,71 @@ async function createImage(page, title) {
   return panel.getAttribute("data-panel-id");
 }
 
+async function createAndEditOrdinaryChart(page, title) {
+  await page.getByRole("button", { name: "Add chart", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  const stageLabels = await wizard.getByRole("navigation", { name: "Chart creation steps" })
+    .getByRole("button").allTextContents();
+  expect(stageLabels.map((label) => label.replace(
+    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
+    "",
+  ))).toEqual([
+    "Destination",
+    "Chart type",
+    "Data source",
+    "Map and prepare data",
+    "Configure chart",
+    "Review and create",
+  ]);
+  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
+  await wizard.getByRole("button", { name: /^Line\./ }).click();
+  await wizard.getByLabel("Dashboard data source").selectOption("bio_cases");
+  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
+  await wizard.getByRole("button", { name: "Add measurement" }).click();
+  await wizard.getByLabel("Observation / X-axis").selectOption("date");
+  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
+  await wizard.getByLabel("Chart title").fill(title);
+  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
+  await wizard.getByRole("button", { name: "Create chart" }).click();
+  await expect(wizard).toHaveCount(0);
+
+  await expect.poll(() => findPersistedChartId(page, title)).not.toBeNull();
+  const chartId = await findPersistedChartId(page, title);
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  if (await map.isVisible()) {
+    await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  }
+  const panel = canonicalPanel(page, chartId);
+  await panel.scrollIntoViewIfNeeded();
+  await panel.hover();
+  await panel.getByRole("button", { name: "Edit chart", exact: true }).click();
+  const editor = page.locator(".chart-editor-v3");
+  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  await editor.getByLabel("Chart title").fill(`${title} updated`);
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await expect.poll(() => findPersistedChartId(page, `${title} updated`)).toBe(chartId);
+  const v3Shape = await page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    return {
+      hasAssets: Object.hasOwn(dashboard, "assets"),
+      staticImages: Object.values(dashboard.dataSources)
+        .filter(({ kind }) => kind === "staticImage").length,
+    };
+  }, STORAGE_KEY);
+  expect(v3Shape).toEqual({ hasAssets: false, staticImages: 0 });
+}
+
+async function findPersistedChartId(page, title) {
+  return page.evaluate(({ key, expectedTitle }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    return dashboard.pages.flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .find((chart) => chart.title === expectedTitle)?.id ?? null;
+  }, { key: STORAGE_KEY, expectedTitle: title });
+}
+
 async function inspectStagedImageStorage(page, title) {
   return page.evaluate(({ key, expectedTitle }) => {
     const persistedText = localStorage.getItem(key);
@@ -252,6 +355,14 @@ async function inspectStagedImageStorage(page, title) {
       sessionAssets: [...sessionMap.entries()].map(([id, entry]) => ({ id, entry: { ...entry } })),
     };
   }, { key: STORAGE_KEY, expectedTitle: title });
+}
+
+async function sessionAssetIds(page) {
+  return page.evaluate(() => {
+    const sessionKey = Object.getOwnPropertySymbols(globalThis)
+      .find((symbol) => Symbol.keyFor(symbol) === "simex.session-image-assets");
+    return sessionKey ? [...globalThis[sessionKey].keys()].sort() : [];
+  });
 }
 
 async function readSavedImage(page, title) {

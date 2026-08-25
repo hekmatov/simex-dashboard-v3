@@ -478,7 +478,7 @@ export default function App() {
       dashboardCommitControllerRef.current =
         createSerializedDashboardCommitController({
           initialDashboard: configurationForPortableUse(initialDashboard),
-          commit: persistConfiguration,
+          commit: persistSessionAwareConfiguration,
         });
     }
     return dashboardCommitControllerRef.current;
@@ -924,6 +924,32 @@ export default function App() {
     ));
     publishCommittedChartArtifact(payload?.runtimeArtifact);
     return committed;
+  }
+
+  async function persistSessionAwareConfiguration(nextConfig) {
+    if (!Object.hasOwn(nextConfig, "assets")) {
+      return persistConfiguration(nextConfig);
+    }
+    let persistedProjection = null;
+    const sessionPortable = await commitSessionImageDashboardForV3Persistence(
+      nextConfig,
+      async (portableV3) => {
+        const persistedPortable = await persistConfiguration(portableV3);
+        persistedProjection = dashboardRef.current;
+        return persistedPortable;
+      },
+    );
+    const sessionDashboard = withRuntimeDashboardProjection(
+      sessionPortable,
+      persistedProjection ?? dashboardRef.current,
+    );
+    lastDashboardPersistenceRef.current = false;
+    reportPersistence("dashboard", false, SESSION_ONLY_MESSAGES.dashboard);
+    dashboardRef.current = sessionDashboard;
+    setDashboard(sessionDashboard);
+    setError(null);
+    setOperationError("");
+    return configurationForPortableUse(sessionDashboard);
   }
 
   async function commitStaticPanel(prepared) {
@@ -1399,6 +1425,46 @@ function configurationForPortableUse(dashboard) {
     ...portableDashboard
   } = dashboard;
   return structuredClone(portableDashboard);
+}
+
+export function projectSessionImageDashboardForV3Persistence(dashboard) {
+  const projected = configurationForPortableUse(dashboard);
+  const sessionAssetIds = new Set(Object.keys(projected.assets ?? {}));
+  delete projected.assets;
+  if (sessionAssetIds.size === 0) return projected;
+
+  const removedSourceIds = new Set();
+  for (const [sourceId, source] of Object.entries(projected.dataSources ?? {})) {
+    if (
+      source?.kind === "staticImage"
+      && source.origin?.kind === "asset"
+      && sessionAssetIds.has(source.origin.assetId)
+    ) {
+      removedSourceIds.add(sourceId);
+      delete projected.dataSources[sourceId];
+    }
+  }
+  for (const page of projected.pages ?? []) {
+    for (const section of page.sections ?? []) {
+      section.panels = (section.panels ?? []).filter((panel) => {
+        const chart = panel?.chart ?? panel;
+        return !removedSourceIds.has(chart?.sourceId);
+      });
+    }
+  }
+  return projected;
+}
+
+export async function commitSessionImageDashboardForV3Persistence(
+  dashboard,
+  persistV3,
+) {
+  if (typeof persistV3 !== "function") {
+    throw new TypeError("A version 3 dashboard persistence function is required.");
+  }
+  const projected = projectSessionImageDashboardForV3Persistence(dashboard);
+  await persistV3(projected);
+  return configurationForPortableUse(dashboard);
 }
 
 function hasStagedStaticImageAsset(prepared) {

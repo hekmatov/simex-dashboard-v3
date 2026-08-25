@@ -527,12 +527,6 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-saved-window {
-  clip-path: inset(
-    var(--image-crop-y)
-    calc(100% - var(--image-crop-x) - var(--image-crop-width))
-    calc(100% - var(--image-crop-y) - var(--image-crop-height))
-    var(--image-crop-x)
-  );
   inset: 0;
   overflow: hidden;
   position: absolute;
@@ -545,13 +539,18 @@ pre.portable-qmd-math-fallback {
   width: 100%;
 }
 
+.chart-image-saved-geometry,
+.chart-image-normalized-source,
 .chart-image-view img {
   display: block;
   height: 100%;
   max-height: 100%;
   max-width: 100%;
-  transform: rotate(var(--image-saved-rotation));
   width: 100%;
+}
+
+.chart-image-saved-geometry {
+  overflow: hidden;
 }
 
 .chart-image-loading {

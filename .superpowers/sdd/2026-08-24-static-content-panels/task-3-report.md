@@ -16,6 +16,42 @@ IM-14 is deliberately not reported as fully Passing. The retained create → rel
 
 The user-directed permissive inert-text override was not applied to Image. Image retains strict signature, structure, decode, animation, origin, resource, accessibility, and recovery validation.
 
+## Review fix round 1/5
+
+Reviewer disposition: 6 Important and 1 Minor findings reproduced; 7 addressed, 0 open. Review remains pending and is not marked clean.
+
+Fix-round starting commit: `bb0ad1986f9f59cd79787f3b810cc31401a8aa94`.
+
+### Exact reproductions and REDs
+
+1. Real raster validation: the valid generated JPEG initially failed `corrupt-image` at the SOS/entropy boundary, while synthetic PNG and decoderless inputs were accepted. After correcting the fixture copy, the focused RED still proved header-only PNG/JPEG/WebP stubs and a missing decoder boundary were accepted by the old implementation. The browser integration did not yet prove actual decode.
+2. Post-Image chart commits: the real serialized controller reproduced `Unknown dashboard configuration property "assets"` while `integrateCreatedChart` validated a candidate containing the session manifest. The retained journey then exposed a second RED after the initial bridge: the created chart persisted, but its editor reported `No chart data to preview` because the bridge reattached a portable return instead of the hydrated runtime projection.
+3. Transform geometry: the canonical markup RED contained CSS `clip-path`, `object-fit:cover`, and `rotate(...)` on the image but no ordered saved-geometry representation. A test requiring `data-image-transform-order="rotation-crop-fit"`, normalized `viewBox`, outer fit, and rotation transform failed.
+4. Intake preflight: three production-facing tests failed: oversized/quota-blocked `File` inputs were read/decoded, over-dimension encoded metadata reached the decoder, and an already staged sibling was not included in aggregate budget classification.
+5. Async resolver: both Chromium cases timed out waiting for `Loading saved image…`; a Promise returned by the durable asset resolver was treated synchronously as unavailable, with no completion or cancellation subscription in canonical `ChartView`.
+6. Lifecycle cleanup: the retained 1440×900 journey found both original and replacement session blobs after Undo; the focused cleanup helper did not exist. This established the missing object-URL revoke/unreferenced-session-blob path.
+7. Evidence synchronization: `SLICE-3-EVIDENCE-STATUS.md` simultaneously reported `151/151` and a `102-test` directly impacted set.
+
+The first Vite-backed RED attempt was blocked by the known Windows filesystem sandbox (`Cannot read directory "../../../../../.."`). The identical commands were rerun outside that restriction to observe the product assertions. One retained chart-editor rerun also exposed a test-navigation omission (Appearance had not been selected before locating Chart title); that assertion was corrected without changing product behavior.
+
+### GREEN implementation
+
+- Validation now requires real PNG IDAT, WebP payload, and robust JPEG SOF/SOS/entropy/EOI structure plus an explicit production decoder boundary. Exact locally controlled 2×3 PNG/JPEG/WebP fixtures pass Chromium `createImageBitmap`; header-only stubs, spoofing, corruption, APNG/animated WebP, decoded mismatch, and all resource limits retain stable rejection codes.
+- Intake preflights `File.size`, aggregate session/product budget, and available browser quota before full read/decode, then checks encoded dimensions/megapixels before invoking the least-privilege browser decoder. Accepted bytes are copied only after all checks.
+- The bounded session/v3 bridge validates session manifests separately, projects session asset-origin Image panels/sources out of v3 persistence, persists ordinary chart create/edit changes, preserves the typed Image/assets in controller session state, and reattaches the hydrated runtime projection. It does not add IndexedDB, schema v4, or a second durable path.
+- Saved rendering is explicit rotation → normalized SVG viewBox crop → outer contain/cover fit. Transient zoom/pan remains outside this saved geometry. SSR tests assert the ordered geometry and the retained browser journey compares the real composed DOM matrices.
+- Canonical `ChartView` now subscribes to pending durable resolver Promises, renders a stable pending state, accepts synchronous resolvers unchanged, ignores superseded completion after cleanup, and resolves rejection to the typed panel recovery state. Static Image still bypasses rows, dataset preparation, playback, Chrono, and Scene paths.
+- Undo, cancel/discard, successful replacement, and unmounted/stale intake cleanup selectively revoke and remove unreferenced session assets. Retained/saved siblings and adopted assets survive; intake revision and adopted-ID guards prevent stale cleanup races.
+- The evidence ledger, binding matrix, security record, progress ledger, and this report now use one directly impacted result: 160/160.
+
+### Fix-round GREEN evidence
+
+- Focused Image asset/render/App suites: 20/20 passed.
+- Canonical async/browser-decoder suite: 3/3 passed.
+- Directly impacted Image/static/chart/legacy suite: first 159/160 with one stale `object-fit:cover` expectation; after aligning it with the approved outer SVG fit contract, the final post-refactor rerun passed 160/160 in 7.44 seconds.
+- Production build: 883 modules transformed, passed in 10.87 seconds with only the existing advisories.
+- Retained production journeys: 1440×900 passed in 43.6 seconds, 1024×768 in 27.3 seconds, and 768×900 in 25.8 seconds. Each now includes ordinary six-stage chart creation and chart editing after Image, v3/session shape inspection, repeated replace→Undo/Discard cleanup, and saved geometry matrix composition. The sole retained reload `fixme` remains blocked by Slice 4 and was not selected by the viewport-specific rerun commands.
+
 ## Implementation
 
 ### Validation, staging, and source contracts
@@ -79,16 +115,16 @@ Earlier focused checkpoints passed as follows:
 The final directly impacted command included the legacy operational pipeline:
 
 ```text
-node --test tests/staticContentRegistry.test.js tests/staticSourceSchema.test.js tests/staticPanelPersistence.test.js tests/staticPanelTransaction.test.js tests/staticContentDraft.test.js tests/imageAssetValidation.test.js tests/imageTransform.test.js tests/imageChartView.test.js tests/imageChartPackageSource.test.js tests/chartViewV3.test.js tests/sceneViewComposition.test.js tests/chartSchemasV3.test.js tests/panelEditingV3.test.js tests/chartDataPipelineV3.test.js
+node --test tests/staticContentRegistry.test.js tests/staticSourceSchema.test.js tests/staticPanelPersistence.test.js tests/staticPanelTransaction.test.js tests/staticContentDraft.test.js tests/imageAssetValidation.test.js tests/imageTransform.test.js tests/imageChartView.test.js tests/imageChartAsync.test.js tests/imageChartPackageSource.test.js tests/chartViewV3.test.js tests/sceneViewComposition.test.js tests/chartSchemasV3.test.js tests/panelEditingV3.test.js tests/chartDataPipelineV3.test.js
 ```
 
 Final result:
 
 ```text
-tests 151
-pass 151
+tests 160
+pass 160
 fail 0
-duration_ms 4779.1364
+duration_ms 7442.2435
 ```
 
 This covers strict intake/resource policy, immutable session staging, transform bounds, four-stage draft behavior, stale-safe transactions, typed source resolution, bounded legacy compatibility, canonical SSR/component routing, semantic controls, failures, package source behavior, and directly impacted chart/panel/scene regressions.
@@ -108,7 +144,7 @@ fail 67
 duration_ms 16276.4973
 ```
 
-This broad command is recorded non-green and is not used to promote the slice. The failures include the existing raw-JSX Node-loader class introduced by prior JSX-backed component imports plus unrelated temporal/data/profile/application-baseline assertions. The 151-test directly impacted set is green; the 67 broad failures are not claimed fixed, accepted, or owned by Slice 3.
+This broad command is recorded non-green and is not used to promote the slice. The failures include the existing raw-JSX Node-loader class introduced by prior JSX-backed component imports plus unrelated temporal/data/profile/application-baseline assertions. The 160-test directly impacted set is green; the 67 previously recorded broad failures are not claimed fixed, accepted, or owned by Slice 3. The broad command was not rerun in fix round 1 because the required focused/impacted set deterministically covers every changed owner.
 
 ### Production build
 
@@ -117,7 +153,7 @@ The first restricted build produced the known Windows esbuild sandbox denial (`C
 ```text
 npm run build
 ✓ 883 modules transformed
-✓ built in 9.81s
+✓ built in 10.87s
 ```
 
 Prebuild regenerated the expected 146,080 biomedical map rows, 415 aggregate rows, 352 bubble rows, 415 dates, 352 municipalities, 34 tabular profiles, 38 portable data sources, and the Quorum catalogue with 27 chart types / 2 static types / 40 configured charts. Remaining output is limited to the existing non-module Three/Vanta scripts, mixed static/dynamic `ChartFootprintPicker` import, and chunk-size advisory.
@@ -128,19 +164,13 @@ Prebuild regenerated the expected 146,080 biomedical map rows, 415 aggregate row
 node node_modules/@playwright/test/cli.js test tests/e2e/static-image.spec.js
 ```
 
-Final result:
-
-```text
-3 passed
-1 skipped
-duration 50.4s
-```
+Fix-round result: all three viewport cases passed when rerun individually. The one reload test remains an explicit Slice-4 `fixme` and was not selected by those viewport-specific commands.
 
 | Viewport | Material checkpoints inspected | Result |
 |---|---|---|
-| 1440×900 | four stages; typed local source/byte-free manifest; storage isolation; Reset image; Keep/Discard; replacement/alt review/undo; keyboard crop and quarter turn; canonical saved crop/alt; unobscured focus; Build/View/fullscreen; rest/hover/focus/touch reveal without shift; transient zoom/reset; forced Build/View failure inventory; raw-ID suppression; sibling survival; bounded page | Passed, 15.8s |
-| 1024×768 | same complete in-session lifecycle and production DOM/state assertions at the dense desktop viewport | Passed, 14.8s |
-| 768×900 | same complete lifecycle, focus/control operation, action reveal, stable error recovery, and no root horizontal growth at the narrow viewport | Passed, 17.5s |
+| 1440×900 | four Image stages; typed local source/byte-free manifest; normal six-stage chart create/edit afterward; v3/session isolation; Reset/Keep/Discard; repeated replace/undo/cancel cleanup; keyboard crop and quarter turn; rotation→crop→fit DOM matrix; unobscured focus; Build/View/fullscreen; reveal without shift; transient zoom/reset; forced recovery; sibling survival; bounded page | Passed, 43.6s |
+| 1024×768 | same complete production lifecycle, chart-commit bridge, blob cleanup, geometry composition, and DOM/state assertions at the dense desktop viewport | Passed, 27.3s |
+| 768×900 | same complete lifecycle, chart create/edit, cleanup, geometry, focus/control operation, action reveal, stable recovery, and no root horizontal growth at the narrow viewport | Passed, 25.8s |
 
 The fourth test retains the exact reload continuation and is annotated:
 
@@ -193,6 +223,10 @@ Tests:
 - `tests/imageAssetValidation.test.js`
 - `tests/imageTransform.test.js`
 - `tests/imageChartView.test.js`
+- `tests/imageChartAsync.test.js`
+- `tests/fixtures/async-image-harness.html`
+- `tests/fixtures/async-image-harness.jsx`
+- `tests/fixtures/imageFixtureBytes.js`
 - `tests/e2e/static-image.spec.js`
 - `tests/staticContentDraft.test.js`
 - `tests/staticPanelTransaction.test.js`
@@ -215,7 +249,7 @@ Task 4 remains the sole owner of authored IndexedDB durability, reference graphs
 
 ### Evidence boundaries
 
-- The retained browser journey accepts PNG in production; the full accepted PNG/JPEG/WebP and rejected spoof/corrupt/animated/limit matrix is deterministic engine evidence, not an overclaimed production-browser corpus.
+- The retained production journey accepts PNG through the live authoring UI, and the focused Chromium harness passes exact PNG/JPEG/WebP bytes through the same staging contract plus `createImageBitmap`. The rejected spoof/corrupt/animated/limit matrix remains deterministic engine evidence; exhaustive rejection UI sampling is not claimed.
 - Separate Audience, Present protocol identity, durable cross-window local bytes, and Audience failure isolation remain Slice 6/Slice 4 work.
 - Explicit browser 200% zoom and exhaustive fullscreen pan/failure boundaries were not independently sampled; the semantic controls, responsive required viewports, active fullscreen route, and deterministic clamp/range rules pass.
 - The broad repository unit command remains non-green at 67 failures. No review-clean status is claimed; review is the controller's separate next step.

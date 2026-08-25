@@ -17,7 +17,10 @@ import ImageSourceEditor from "./ImageSourceEditor.jsx";
 import ImageTransformEditor from "./ImageTransformEditor.jsx";
 import ChartView from "../charts/ChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
-import { resolveSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
+import {
+  discardUnreferencedSessionImageAssets,
+  resolveSessionImageAsset,
+} from "../../static-content/image/imageAssetValidation.js";
 
 export function StaticContentWizard({
   open = false,
@@ -71,6 +74,7 @@ export function StaticContentWizard({
       validateCompiledFreeText(draft);
       const result = finalizeStaticContentDraft(draft);
       await onCreate?.(result);
+      cleanupImageDraftAssets(draft, dashboard, result);
       dispatch({ type: "committed" });
     } catch (error) {
       setSubmitError(error?.message ?? "Static content could not be saved.");
@@ -141,6 +145,7 @@ export function StaticContentWizard({
         confirmLabel="Discard"
         onCancel={() => dispatch({ type: "keepEditing" })}
         onConfirm={() => {
+          cleanupImageDraftAssets(draft, dashboard);
           dispatch({ type: "discard" });
           onClose?.({ discarded: true, draft });
         }}
@@ -240,7 +245,11 @@ function ImageFields({ draft, dispatch }) {
       imageEditing={draft.imageEditing}
       onOriginChange={(origin) => dispatch({ type: "updateSource", updates: { origin } })}
       onReplace={({ origin, manifestEntry }) => dispatch({ type: "replaceImage", origin, manifestEntry })}
-      onUndoReplacement={() => dispatch({ type: "undoImageReplacement" })}
+      onUndoReplacement={() => {
+        const retained = Object.keys(draft.imageEditing?.replacementUndo?.assets ?? {});
+        discardUnreferencedSessionImageAssets(Object.keys(draft.assets ?? {}), retained);
+        dispatch({ type: "undoImageReplacement" });
+      }}
       onAltChange={(alt) => dispatch({ type: "setImageAlt", alt })}
       onDecorativeChange={(decorative) => dispatch({ type: "setImageDecorative", decorative })}
     />
@@ -291,6 +300,22 @@ function resolveImageDraftUrl(source) {
   if (source?.origin?.kind === "url") return source.origin.url;
   if (source?.origin?.kind === "package") return source.origin.path;
   return "";
+}
+
+function cleanupImageDraftAssets(draft, dashboard, committed = null) {
+  if (draft.contentTypeId !== "image") return;
+  const retained = new Set();
+  const replacementSourceId = committed?.panel?.sourceId;
+  for (const [sourceId, source] of Object.entries(dashboard?.dataSources ?? {})) {
+    const effectiveSource = sourceId === replacementSourceId ? committed.source : source;
+    if (effectiveSource?.kind === "staticImage" && effectiveSource.origin?.kind === "asset") {
+      retained.add(effectiveSource.origin.assetId);
+    }
+  }
+  if (committed?.source?.kind === "staticImage" && committed.source.origin?.kind === "asset") {
+    retained.add(committed.source.origin.assetId);
+  }
+  discardUnreferencedSessionImageAssets(Object.keys(draft.assets ?? {}), retained);
 }
 
 function focusRestoration(stage) {

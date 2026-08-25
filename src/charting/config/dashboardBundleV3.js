@@ -23,7 +23,10 @@ import {
   validateGeoJson,
   validateDatasetProfiles,
 } from "../../lib/loadDashboard.js";
-import { validateStaticSource } from "../../static-content/staticSourceSchema.js";
+import {
+  validateAuthoredAssetManifest,
+  validateStaticSource,
+} from "../../static-content/staticSourceSchema.js";
 
 export const DASHBOARD_CONFIG_VERSION = 3;
 export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
@@ -260,7 +263,11 @@ function sourceColumnTypes(sourceId, source, profiles) {
 function validateSource(
   sourceId,
   source,
-  { allowBrowserAssetIds = false, allowTypedStaticSources = false } = {},
+  {
+    allowBrowserAssetIds = false,
+    allowTypedStaticSources = false,
+    allowSessionImageAssets = false,
+  } = {},
 ) {
   validateSourceId(sourceId);
   const entries = plainDataEntries(source, `Data source "${sourceId}"`);
@@ -290,7 +297,11 @@ function validateSource(
     validateRows(entryValue(entries, "rows"), `Inline data source "${sourceId}" rows`);
   } else if (allowTypedStaticSources && isTypedStaticSource(source)) {
     validateStaticSource(source);
-    if (kind === "staticImage" && source.origin.kind === "asset") {
+    if (
+      kind === "staticImage"
+      && source.origin.kind === "asset"
+      && !allowSessionImageAssets
+    ) {
       throw new Error("Authored static image assets require the dashboard version 4 persistence boundary.");
     }
   } else {
@@ -423,7 +434,11 @@ function validCanonicalInstant(now) {
 /** Validates all configured charts, source records, and page/section placement in a v3 dashboard. */
 export function validateDashboardConfig(
   config,
-  { allowBrowserAssetIds = false, allowTypedStaticSources = false } = {},
+  {
+    allowBrowserAssetIds = false,
+    allowTypedStaticSources = false,
+    allowSessionImageAssets = false,
+  } = {},
 ) {
   const structure = validateDashboardStructure(config, {
     allowRuntimeState: true,
@@ -436,7 +451,11 @@ export function validateDashboardConfig(
   plainDataEntries(profiles, "Dashboard datasetProfiles");
   const sources = new Map();
   for (const [sourceId, source] of sourceEntries) {
-    validateSource(sourceId, source, { allowBrowserAssetIds, allowTypedStaticSources });
+    validateSource(sourceId, source, {
+      allowBrowserAssetIds,
+      allowTypedStaticSources,
+      allowSessionImageAssets,
+    });
     sources.set(sourceId, source);
   }
   const tabularDataSources = Object.fromEntries(
@@ -574,7 +593,7 @@ export function integrateCreatedChart(dashboard, payload, target) {
   } else {
     throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
   }
-  validateDashboardConfig(next, { allowBrowserAssetIds: true });
+  validateDashboardSessionCandidate(next);
   return next;
 }
 
@@ -598,8 +617,28 @@ export function integrateSavedChart(dashboard, payload) {
   }
   if (!replaced) throw new Error(`Chart "${chart.id}" does not exist in the dashboard.`);
   next.chronoGroups = structuredClone(payload.chronoGroups ?? next.chronoGroups ?? []);
-  validateDashboardConfig(next, { allowBrowserAssetIds: true });
+  validateDashboardSessionCandidate(next);
   return next;
+}
+
+/**
+ * Validates the portable v3 shape plus the bounded in-memory Image manifest.
+ * The manifest is deliberately not part of the v3 storage or bundle contract;
+ * Slice 4 owns that durable boundary.
+ */
+export function validateDashboardSessionCandidate(candidate) {
+  const { assets, ...portable } = structuredClone(candidate);
+  validateDashboardConfig(portable, {
+    allowBrowserAssetIds: true,
+    allowTypedStaticSources: true,
+    allowSessionImageAssets: true,
+  });
+  if (assets === undefined) return candidate;
+  validateAuthoredAssetManifest(assets);
+  for (const source of Object.values(candidate.dataSources ?? {})) {
+    if (source?.kind === "staticImage") validateStaticSource(source, { assets });
+  }
+  return candidate;
 }
 
 export function serializeDashboardBundle(config, { now = null } = {}) {

@@ -46,17 +46,33 @@ function resolveTypedStaticRendering(renderingInput) {
       assets: renderingInput.renderContext?.assets ?? {},
       resolveAsset: renderingInput.renderContext?.resolveStaticAsset,
     });
-    return renderingResolution({
-      status: resolved.status === "ready" ? "available" : "unavailable",
-      schema,
-      prepared: null,
-      model: {
-        ...resolved,
-        kind: "image",
-        staticSource: true,
-      },
-      inputKey: renderingInput,
-    });
+    if (resolved && typeof resolved.then === "function") {
+      const pending = Promise.resolve(resolved)
+        .then((settled) => staticImageRenderingResolution(settled, schema, renderingInput))
+        .catch(() => staticImageRenderingResolution({
+          status: "error",
+          failure: {
+            code: "asset-read-failed",
+            message: "The saved image asset could not be read.",
+            retryable: true,
+          },
+        }, schema, renderingInput));
+      return renderingResolution({
+        status: "pending",
+        schema,
+        prepared: null,
+        model: {
+          kind: "image",
+          status: "loading",
+          staticSource: true,
+          sourceId: chart.sourceId,
+          revision: source.revision,
+        },
+        inputKey: renderingInput,
+        pending,
+      });
+    }
+    return staticImageRenderingResolution(resolved, schema, renderingInput);
   }
   if (chart?.typeId !== "freeText") return null;
   const schema = getChartSchema(chart.typeId);
@@ -80,6 +96,20 @@ function resolveTypedStaticRendering(renderingInput) {
       revision: resolved.revision,
       renderingPolicy: resolved.renderingPolicy,
       qmd: resolved.qmd,
+    },
+    inputKey: renderingInput,
+  });
+}
+
+function staticImageRenderingResolution(resolved, schema, renderingInput) {
+  return renderingResolution({
+    status: resolved.status === "ready" ? "available" : "unavailable",
+    schema,
+    prepared: null,
+    model: {
+      ...resolved,
+      kind: "image",
+      staticSource: true,
     },
     inputKey: renderingInput,
   });
@@ -258,7 +288,7 @@ export function canReuseChartRendering(resolution, input = {}) {
   try {
     const key = resolution?.inputKey;
     if (
-      (resolution?.status !== "available" && resolution?.status !== "unavailable")
+      !["available", "unavailable", "pending"].includes(resolution?.status)
       || key === null
       || typeof key !== "object"
       || !isRenderingInput(input)
@@ -297,6 +327,7 @@ function renderingResolution({
   prepared,
   model,
   inputKey,
+  pending = null,
 }) {
   const message = model.kind === "error"
     ? boundedMessage(model.message)
@@ -310,6 +341,7 @@ function renderingResolution({
       : { ...model, message },
     message,
     inputKey,
+    ...(pending ? { pending } : {}),
   });
 }
 

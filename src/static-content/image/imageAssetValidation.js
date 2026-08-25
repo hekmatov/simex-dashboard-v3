@@ -40,7 +40,12 @@ export async function validateImageAsset(input = {}) {
     const label = animation.kind === "apng" ? "APNG" : "Animated WebP";
     return failed("animated-image", `${label} is not supported; choose a single-frame raster image.`);
   }
-
+  if (inspected.width > IMAGE_ASSET_LIMITS.maxDimension || inspected.height > IMAGE_ASSET_LIMITS.maxDimension) {
+    return failed("dimension-limit", "The image exceeds the 16,384 px dimension limit.");
+  }
+  if ((inspected.width * inspected.height) > IMAGE_ASSET_LIMITS.maxMegapixels * 1_000_000) {
+    return failed("megapixel-limit", "The decoded image exceeds the 50 megapixel limit.");
+  }
   let decoded = input.decoded;
   if (!decoded && typeof input.decode === "function") {
     try {
@@ -49,12 +54,9 @@ export async function validateImageAsset(input = {}) {
       return failed("decode-failed", "The image could not be decoded safely.");
     }
   }
-  decoded ??= {
-    mediaType: inspected.mediaType,
-    width: inspected.width,
-    height: inspected.height,
-    frameCount: animation.frameCount ?? 1,
-  };
+  if (!decoded) {
+    return failed("decoder-required", "The image must pass the browser decoder before it can be used.");
+  }
   const decodedMediaType = normalizeMediaType(decoded.mediaType);
   if (
     decodedMediaType !== inspected.mediaType
@@ -106,8 +108,19 @@ export async function validateImageAsset(input = {}) {
 }
 
 export async function stageSessionImageAsset(input = {}) {
+  const browserQuotaAvailableBytes = await availableBrowserQuota(input.browserQuotaAvailableBytes);
+  const filePreflight = preflightFile(input.file, {
+    browserQuotaAvailableBytes,
+    currentAssetBytes: finiteNonNegative(input.currentAssetBytes) + sessionImageAssetBytes(),
+  });
+  if (filePreflight) return filePreflight;
   const bytes = await readBytes(input.bytes ?? input.file);
-  const validation = await validateImageAsset({ ...input, bytes });
+  const validation = await validateImageAsset({
+    ...input,
+    bytes,
+    browserQuotaAvailableBytes,
+    currentAssetBytes: finiteNonNegative(input.currentAssetBytes) + sessionImageAssetBytes(),
+  });
   if (!validation.ok) return validation;
   const immutableBytes = bytes.slice();
   const sha256 = await sha256Hex(immutableBytes);
@@ -142,6 +155,39 @@ export async function stageSessionImageAsset(input = {}) {
   };
 }
 
+function preflightFile(file, { browserQuotaAvailableBytes, currentAssetBytes }) {
+  if (!file || !Number.isFinite(file.size)) return null;
+  if (file.size > IMAGE_ASSET_LIMITS.maxBytes) {
+    return failed("file-size-limit", "The image exceeds the 12 MiB encoded file limit.");
+  }
+  if ((currentAssetBytes + file.size) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
+    return failed("product-budget", "The image would exceed the dashboard's 200 MiB authored-asset budget.");
+  }
+  if (Number.isFinite(browserQuotaAvailableBytes) && browserQuotaAvailableBytes < file.size) {
+    return failed("browser-quota", "Browser storage quota is insufficient for this image.");
+  }
+  return null;
+}
+
+async function availableBrowserQuota(explicit) {
+  if (Number.isFinite(explicit)) return Math.max(0, explicit);
+  try {
+    const estimate = await globalThis.navigator?.storage?.estimate?.();
+    if (Number.isFinite(estimate?.quota) && Number.isFinite(estimate?.usage)) {
+      return Math.max(0, estimate.quota - estimate.usage);
+    }
+  } catch {
+    // Validation still applies the fixed product budget when browser quota cannot be estimated.
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function sessionImageAssetBytes() {
+  let total = 0;
+  for (const entry of SESSION_IMAGE_ASSETS.values()) total += finiteNonNegative(entry?.byteLength);
+  return total;
+}
+
 export function resolveSessionImageAsset(assetId) {
   const entry = SESSION_IMAGE_ASSETS.get(assetId);
   return entry ? { ...entry } : null;
@@ -155,6 +201,20 @@ export function discardSessionImageAsset(assetId) {
   }
   SESSION_IMAGE_ASSETS.delete(assetId);
   return true;
+}
+
+export function discardUnreferencedSessionImageAssets(candidateAssetIds, retainedAssetIds = []) {
+  const retainedSet = new Set(retainedAssetIds);
+  const discarded = [];
+  const retained = [];
+  for (const assetId of new Set(candidateAssetIds)) {
+    if (retainedSet.has(assetId)) {
+      if (SESSION_IMAGE_ASSETS.has(assetId)) retained.push(assetId);
+      continue;
+    }
+    if (discardSessionImageAsset(assetId)) discarded.push(assetId);
+  }
+  return { discarded, retained };
 }
 
 export function inspectImageAnimation(bytesInput, mediaType) {
@@ -231,7 +291,15 @@ function inspectRaster(bytes) {
   if (matches(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
     const chunks = readPngChunks(bytes);
     const header = chunks[0];
-    if (header?.type !== "IHDR" || header.data.byteLength !== 13 || !chunks.some(({ type }) => type === "IEND")) {
+    const imageDataIndex = chunks.findIndex(({ type }) => type === "IDAT");
+    const endIndex = chunks.findIndex(({ type }) => type === "IEND");
+    if (
+      header?.type !== "IHDR"
+      || header.data.byteLength !== 13
+      || imageDataIndex <= 0
+      || endIndex <= imageDataIndex
+      || endIndex !== chunks.length - 1
+    ) {
       throw new Error("The PNG structure is incomplete.");
     }
     const view = new DataView(header.data.buffer, header.data.byteOffset, header.data.byteLength);
@@ -246,11 +314,17 @@ function inspectJpeg(bytes) {
   let offset = 2;
   let size = null;
   let ended = false;
-  while (offset < bytes.byteLength) {
-    if (bytes[offset] !== 0xff) throw new Error("The JPEG segment structure is corrupt.");
-    while (bytes[offset] === 0xff) offset += 1;
-    const marker = bytes[offset];
-    offset += 1;
+  let scanCount = 0;
+  let pendingMarker = null;
+  while (pendingMarker !== null || offset < bytes.byteLength) {
+    let marker = pendingMarker;
+    pendingMarker = null;
+    if (marker === null) {
+      if (bytes[offset] !== 0xff) throw new Error("The JPEG segment structure is corrupt.");
+      while (bytes[offset] === 0xff) offset += 1;
+      marker = bytes[offset];
+      offset += 1;
+    }
     if (marker === 0xd9) {
       ended = true;
       break;
@@ -264,15 +338,40 @@ function inspectJpeg(bytes) {
       size = dimensions("image/jpeg", (bytes[offset + 5] << 8) | bytes[offset + 6], (bytes[offset + 3] << 8) | bytes[offset + 4]);
     }
     offset += length;
+    if (marker === 0xda) {
+      scanCount += 1;
+      const next = nextJpegEntropyMarker(bytes, offset);
+      pendingMarker = next.marker;
+      offset = next.offset;
+    }
   }
-  if (!ended || !size) throw new Error("The JPEG structure is incomplete.");
+  if (!ended || !size || scanCount === 0) throw new Error("The JPEG structure is incomplete.");
   return size;
+}
+
+function nextJpegEntropyMarker(bytes, start) {
+  let offset = start;
+  while (offset < bytes.byteLength) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    while (bytes[offset] === 0xff) offset += 1;
+    const marker = bytes[offset];
+    offset += 1;
+    if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    return { marker, offset };
+  }
+  throw new Error("The JPEG scan data is truncated.");
 }
 
 function inspectWebp(bytes) {
   const chunks = readWebpChunks(bytes);
   const chunk = chunks.find(({ type }) => ["VP8X", "VP8 ", "VP8L"].includes(type));
   if (!chunk) throw new Error("The WebP image header is missing.");
+  if (!chunks.some(({ type }) => type === "VP8 " || type === "VP8L" || type === "ANMF")) {
+    throw new Error("The WebP image payload is missing.");
+  }
   if (chunk.type === "VP8X") {
     if (chunk.data.byteLength < 10) throw new Error("The WebP extended header is truncated.");
     return dimensions(

@@ -35,7 +35,10 @@ export default function ChartView(props) {
   });
   const content = state && !state.hasValidContent
     ? null
-    : renderChartContent(playbackProps, interactionMode);
+    : React.createElement(ResolvedChartContent, {
+        props: playbackProps,
+        interactionMode,
+      });
   return React.createElement(ChartDataStateBoundary, {
     state,
     chartName: props.chart?.title,
@@ -104,6 +107,40 @@ export function renderChartContent(props, interactionMode) {
   } catch {
     return React.createElement(ChartStatus, { message: "This chart cannot be displayed." });
   }
+}
+
+function ResolvedChartContent({ props, interactionMode }) {
+  const initialResolution = React.useMemo(() => (
+    canReuseChartRendering(props.resolvedRendering, props)
+      ? props.resolvedRendering
+      : resolveChartRendering(props)
+  ), [
+    props.chart,
+    props.datasetProfile,
+    props.geoData,
+    props.renderContext,
+    props.resolvedRendering,
+    props.rows,
+    props.timeContext,
+  ]);
+  const [settledResolution, setSettledResolution] = React.useState(null);
+
+  React.useEffect(() => {
+    let current = true;
+    setSettledResolution(null);
+    if (initialResolution.status !== "pending" || !initialResolution.pending) {
+      return () => { current = false; };
+    }
+    Promise.resolve(initialResolution.pending).then((settled) => {
+      if (current) setSettledResolution(settled);
+    });
+    return () => { current = false; };
+  }, [initialResolution]);
+
+  const resolvedRendering = canReuseChartRendering(settledResolution, props)
+    ? settledResolution
+    : initialResolution;
+  return renderChartContent({ ...props, resolvedRendering }, interactionMode);
 }
 
 function isStaticContentChart(chart) {

@@ -33,6 +33,10 @@ export default function ImageChartView({
     setTouchActions(false);
   }, [src, model?.revision, surface, active]);
 
+  if (model?.status === "loading") {
+    return <div className="chart-image-pending" role="status" aria-live="polite">Loading saved image…</div>;
+  }
+
   if (!src && model?.staticSource !== true && model?.status !== "error") {
     return <div className="chart-status-error" role="status" aria-live="polite">This chart image cannot be displayed.</div>;
   }
@@ -48,6 +52,8 @@ export default function ImageChartView({
 
   const title = chart.title || "Chart image";
   const crop = safeCrop(model?.crop);
+  const rotation = safeRotation(model?.rotation);
+  const fit = safeFit(model?.fit);
   const decorative = model?.decorative === true;
   const movePan = (next) => setPan(clampImagePan(next, scale));
   const setNextScale = (nextScale) => {
@@ -133,27 +139,32 @@ export default function ImageChartView({
     >
       <div className="chart-image-viewport">
         {loadState === "loading" && <span className="chart-image-loading" aria-hidden="true" />}
-        <div
-          className="chart-image-saved-window"
-          style={{
-            "--image-crop-x": `${crop.x / 10}%`,
-            "--image-crop-y": `${crop.y / 10}%`,
-            "--image-crop-width": `${crop.width / 10}%`,
-            "--image-crop-height": `${crop.height / 10}%`,
-            "--image-saved-rotation": `${safeRotation(model?.rotation)}deg`,
-          }}
-        >
+        <div className="chart-image-saved-window">
           <div className="chart-image-transient" style={{ transform: `translate(${pan.x}%, ${pan.y}%) scale(${scale})` }}>
-            {src && <img
-              src={src}
-              alt={decorative ? "" : String(model?.alt ?? "")}
-              role={decorative ? "presentation" : undefined}
-              aria-hidden={decorative ? "true" : undefined}
-              style={{ objectFit: safeFit(model?.fit) }}
-              onLoad={() => setLoadState("ready")}
-              onError={() => setLoadState("error")}
-              draggable="false"
-            />}
+            {src && <svg
+              className="chart-image-saved-geometry"
+              data-image-transform-order="rotation-crop-fit"
+              viewBox={`${crop.x} ${crop.y} ${crop.width} ${crop.height}`}
+              preserveAspectRatio={fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"}
+              focusable="false"
+            >
+              <g className="chart-image-saved-rotation" transform={`rotate(${rotation} 500 500)`}>
+                <foreignObject x="0" y="0" width="1000" height="1000">
+                  <div className="chart-image-normalized-source" xmlns="http://www.w3.org/1999/xhtml">
+                    <img
+                      src={src}
+                      alt={decorative ? "" : String(model?.alt ?? "")}
+                      role={decorative ? "presentation" : undefined}
+                      aria-hidden={decorative ? "true" : undefined}
+                      style={{ objectFit: "fill" }}
+                      onLoad={() => setLoadState("ready")}
+                      onError={() => setLoadState("error")}
+                      draggable="false"
+                    />
+                  </div>
+                </foreignObject>
+              </g>
+            </svg>}
           </div>
         </div>
       </div>

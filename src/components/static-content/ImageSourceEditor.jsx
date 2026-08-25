@@ -1,6 +1,7 @@
 import React from "react";
 
 import {
+  discardUnreferencedSessionImageAssets,
   stageSessionImageAsset,
   validateImageOrigin,
 } from "../../static-content/image/imageAssetValidation.js";
@@ -16,6 +17,9 @@ export function ImageSourceEditor({
   onDecorativeChange,
 } = {}) {
   const [validation, setValidation] = React.useState({ status: "idle", errors: [], warnings: [] });
+  const mountedRef = React.useRef(true);
+  const intakeRevisionRef = React.useRef(0);
+  const acceptedAssetIdRef = React.useRef(null);
   const origin = source.origin ?? { kind: "replacementRequired", reason: "Choose an image." };
   const [originKind, setSelectedOriginKind] = React.useState(
     ["url", "package"].includes(origin.kind) ? origin.kind : "asset",
@@ -23,6 +27,10 @@ export function ImageSourceEditor({
   React.useEffect(() => {
     setSelectedOriginKind(["url", "package"].includes(origin.kind) ? origin.kind : "asset");
   }, [origin.kind]);
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+    intakeRevisionRef.current += 1;
+  }, []);
 
   const setOriginKind = (kind) => {
     setSelectedOriginKind(kind);
@@ -33,32 +41,27 @@ export function ImageSourceEditor({
   const chooseFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const intakeRevision = ++intakeRevisionRef.current;
     setValidation({ status: "validating", errors: [], warnings: [] });
-    let decoded;
-    try {
-      decoded = await decodeBrowserImage(file);
-    } catch {
-      setValidation({
-        status: "error",
-        errors: [{ code: "decode-failed", message: "The image could not be decoded. Choose a valid PNG, JPEG, or WebP file." }],
-        warnings: [],
-      });
-      return;
-    }
-    const currentAssetBytes = Object.values(assets).reduce(
-      (total, entry) => total + (Number.isFinite(entry?.byteLength) ? entry.byteLength : 0),
-      0,
-    );
     const result = await stageSessionImageAsset({
       file,
       declaredMediaType: file.type,
-      decoded,
-      currentAssetBytes,
+      decode: decodeBrowserImage,
     });
+    if (!mountedRef.current || intakeRevision !== intakeRevisionRef.current) {
+      if (result.ok) {
+        discardUnreferencedSessionImageAssets(
+          [result.assetId],
+          [...Object.keys(assets), acceptedAssetIdRef.current].filter(Boolean),
+        );
+      }
+      return;
+    }
     if (!result.ok) {
       setValidation({ status: "error", errors: result.errors, warnings: result.warnings });
       return;
     }
+    acceptedAssetIdRef.current = result.assetId;
     onReplace?.({
       origin: { kind: "asset", assetId: result.assetId },
       manifestEntry: result.manifestEntry,
@@ -163,20 +166,21 @@ export function ImageSourceEditor({
   );
 }
 
-async function decodeBrowserImage(file) {
+async function decodeBrowserImage(bytes, mediaType) {
+  const blob = new Blob([bytes], { type: mediaType });
   if (typeof createImageBitmap === "function") {
-    const bitmap = await createImageBitmap(file);
-    const decoded = { mediaType: file.type, width: bitmap.width, height: bitmap.height, frameCount: 1 };
+    const bitmap = await createImageBitmap(blob);
+    const decoded = { mediaType, width: bitmap.width, height: bitmap.height, frameCount: 1 };
     bitmap.close?.();
     return decoded;
   }
-  const url = URL.createObjectURL(file);
+  const url = URL.createObjectURL(blob);
   try {
     const image = new Image();
     image.decoding = "async";
     image.src = url;
     await image.decode();
-    return { mediaType: file.type, width: image.naturalWidth, height: image.naturalHeight, frameCount: 1 };
+    return { mediaType, width: image.naturalWidth, height: image.naturalHeight, frameCount: 1 };
   } finally {
     URL.revokeObjectURL(url);
   }
