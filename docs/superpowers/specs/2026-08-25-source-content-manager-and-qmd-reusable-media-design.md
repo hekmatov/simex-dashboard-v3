@@ -16,12 +16,12 @@ The amendment adds a proposed reusable-content layer above the existing authored
 
 - QMD remains the native portable formatted-text panel. Google Docs integration is deferred.
 - Every committed uploaded image becomes a dashboard-wide reusable media item.
-- Build gains a **Source content** command that opens a Source Content Manager for reusable media and builder-controlled CSV sources.
-- Dashboard-generated and intermediate sources remain dashboard-owned and are absent from normal management and pickers.
-- The manager exposes uploaded, linked/project, packaged, and conservatively classified legacy-import CSV inputs with explicit origin labels.
+- Build gains a **Source content** command that opens a Source Content Manager for reusable media and builder-controlled CSV and GeoJSON sources.
+- Dashboard-generated and intermediate CSV/GeoJSON sources remain dashboard-owned and are absent from normal management and pickers.
+- The manager exposes uploaded, linked/project, packaged, and conservatively classified legacy-import CSV and GeoJSON inputs with explicit origin labels where those origins are supported.
 - A source is never classified as generated from a filename or path alone. Generated ownership requires explicit trusted provenance.
 - The content library is dashboard-contained. This amendment does not introduce an external asset library, cloud account, or shared cross-dashboard service.
-- Builder-facing managed-data scope is CSV only. GeoJSON descriptors, including `map.geoSource`, remain outside Source Content Manager ownership and may be addressed by a later amendment.
+- Builder-facing managed-data scope includes CSV and GeoJSON. No additional dashboard, bundle, or chart-configuration version change is introduced beyond the already-approved dashboard V5, bundle V5, and chart configuration V3.
 
 ## Layered content library
 
@@ -66,7 +66,7 @@ The layers retain their existing authorities:
 
 - mediaId is the stable logical identity used by placements and QMD.
 - assets[assetId] plus authored-asset storage remain the content-addressed byte authority.
-- dataSources[sourceId] remains the CSV/GeoJSON descriptor authority. Only builder-controlled CSV descriptors receive `contentLibrary.sourceEntries` records in this amendment; builder-facing GeoJSON management is outside scope.
+- dataSources[sourceId] remains the CSV/GeoJSON descriptor and authoritative data-kind owner. Eligible builder-controlled CSV and GeoJSON descriptors receive `contentLibrary.sourceEntries` records keyed by the same `sourceId`; a source entry derives kind from `dataSources` and does not duplicate descriptor or payload authority.
 - datasetProfiles[sourceId] remains the CSV profile authority.
 - `contentLibrary` records contain management, origin, provenance, display, current-revision, and health facts. They do not duplicate committed image bytes, CSV payloads, profiles, or placement metadata.
 
@@ -106,38 +106,39 @@ A committed media-library record is itself a durable asset reference. It remains
 
 ### Data sources
 
-- **Uploaded:** builder-uploaded CSV descriptor and profile.
-- **Linked/project:** explicitly linked project source with a relink operation.
-- **Packaged:** contained dashboard/package CSV.
-- **Legacy import:** conservative fallback when V4 evidence cannot prove a stronger origin.
-- **Generated:** only when trusted schema provenance explicitly declares dashboard-owned generation/intermediate ownership.
+- **Uploaded:** builder-uploaded CSV descriptor/profile or validated GeoJSON descriptor/payload.
+- **Linked/project:** explicitly linked CSV or GeoJSON project source with a relink operation.
+- **Packaged:** contained dashboard/package CSV or GeoJSON.
+- **Legacy import:** conservative CSV/GeoJSON fallback when V4 evidence cannot prove a stronger origin.
+- **Generated:** only when trusted schema provenance explicitly declares dashboard-owned CSV/GeoJSON generation or intermediate ownership.
 
-Builder-owned CSV `contentLibrary.sourceEntries` records appear in the manager and chart picker. Dashboard-owned generated/intermediate records and all GeoJSON descriptors do not.
+Builder-owned CSV and GeoJSON `contentLibrary.sourceEntries` records appear in the manager and eligible chart-authoring selectors. Dashboard-owned generated/intermediate records do not.
 
 ## Direct dependencies and deletion
 
-Deletion never cascades. A referenced media or CSV item cannot be deleted until visible direct uses and draft uses are removed or replaced and any restorable undo retention is explicitly discarded.
+Deletion never cascades. A referenced media, CSV, or GeoJSON item cannot be deleted until saved direct uses and actual active drafts, active replacement state, and active transactions that retain it are resolved.
 
 ### Visible direct use
 
 - Media: QMD embeddings and Static Image panels.
-- CSV: each chart/panel whose primary `sourceId` is the managed CSV, including a map chart. A map chart's separate `map.geoSource` GeoJSON descriptor is not a managed CSV dependency in this amendment.
+- CSV: each chart/panel whose primary `sourceId` is the managed CSV, including a map chart.
+- GeoJSON: each map chart/panel whose `chart.presentation.map.geoSource` is the managed GeoJSON `sourceId`.
 
 ### Draft use
 
-- Open application-session QMD, Image, or chart-authoring drafts that retain the media item or managed CSV are temporary deletion blockers.
+- Open application-session QMD, Image, or chart-authoring drafts, active replacement state, and active transactions that retain the media item, CSV, or GeoJSON are temporary deletion blockers.
 
-### Restorable undo retention
+### Reversible-state boundary
 
-- An active/restorable undo scope that can restore a `mediaId` or `sourceId` is a temporary deletion blocker even when no visible panel or draft uses the item.
-- When undo is the only retention, the manager explains the temporary blocker and offers an explicit **Discard relevant undo history** action before deletion can become eligible.
-- Deletion and undo cleanup are reconciled atomically; the application never creates a dangling `mediaId` or `sourceId`.
+- Build **Reset** remains the whole-unsaved-session reset. The current application has no CSV or GeoJSON undo. This amendment does not introduce Ctrl/Cmd+Z, a global media/CSV/GeoJSON history, or global Build Undo/Redo controls; any future global undo system is a separate design initiative.
+- The existing Image-authoring replacement snapshot is contextual and owned only by the active Image draft/replacement state. The action is renamed **Restore previous image** and remains visibly beside the replacement status/action area until Save, Discard, or restore resolves it.
+- While that active replacement state retains the prior image, it is a deletion blocker. Once Save, Discard, or **Restore previous image** resolves the draft, no general undo dependency remains. Deletion and draft/transaction cleanup never create a dangling `mediaId` or `sourceId`.
 
 Page and section are breadcrumbs to the dependent panel, not additional dependency records. Chrono groups, Scenes, and presentation compositions are not direct dependencies because they reference charts/panels rather than content records. They may appear only as downstream impact contexts when temporal replacement warnings matter.
 
 Transient Present image messages and active object-URL leases are not durable dependencies. A committed media revision becomes authoritative immediately; active leases may continue safely until released or refresh to the new revision through their existing lifecycle.
 
-Dependency detail shows **Page › Section › Panel** for visible panel use, offers navigation, and offers guided replace/remove actions. Delete remains visibly disabled with an inline explanation while a visible use, draft, or restorable undo blocker exists; this disabled action does not open a confirmation dialog. Only an eligible delete opens the destructive confirmation modal. If a future schema introduces a new direct owner, the dependency model and UI must expose it.
+Dependency detail shows **Page › Section › Panel** for saved direct panel use, offers navigation, and offers guided replace/remove actions. Delete remains visibly disabled with an inline explanation while a saved direct use, actual active draft/replacement state, or active transaction exists; this disabled action does not open a confirmation dialog. Only an eligible delete opens the destructive confirmation modal. If a future schema introduces a new direct owner, the dependency model and UI must expose it.
 
 ## Replacement semantics
 
@@ -160,7 +161,16 @@ Dependency detail shows **Page › Section › Panel** for visible panel use, of
 - A structurally incompatible replacement makes no change and offers **Import as new source** plus guided remapping.
 - Failed refresh/replacement retains the last committed descriptor, profile, and usable runtime data.
 
-Media and CSV replacement, rollback, staged cleanup, dashboard persistence, and reference reconciliation are one transaction. No partial content-library/source/profile/byte publication is permitted.
+### GeoJSON replacement and relink
+
+- Stored GeoJSON exposes **Replace file**. Linked/project GeoJSON exposes **Relink**.
+- Compatible replacement preserves `sourceId` only after the candidate passes the single GeoJSON validation authority and direct-map structural validation.
+- Malformed, empty, or unsupported GeoJSON; validation/limit failure; removal of an explicitly selected join property; or a candidate that makes a directly dependent map structurally unusable hard-blocks replacement.
+- Changed feature count, bounding box, geometry-type mix, or reduced-but-nonzero identifier/join coverage warns but may be confirmed. GeoJSON changes do not themselves create Chrono Group, Scene, or presentation-composition temporal warnings.
+- A structurally incompatible replacement makes no change and offers **Import as new source** plus guided remapping.
+- GeoJSON upload safety requires explicit byte, feature-count, and coordinate-complexity limits owned by one validation authority. Current evidence does not justify exact numeric thresholds in this design record; those numbers are a mandatory planning decision that must be resolved before implementation tasks and tests are written, not an implementer choice.
+
+Media, CSV, and GeoJSON replacement, rollback, staged cleanup, dashboard persistence, and reference reconciliation are one transaction. No partial content-library/source/profile/payload publication is permitted.
 
 ## Source Content Manager
 
@@ -190,26 +200,34 @@ Both tabs provide:
 - **Used by** with Page › Section › Panel breadcrumbs;
 - rename label, replace/relink, delete, navigation, and guided remediation.
 
+Data Sources additionally provides a **CSV / GeoJSON** kind filter.
+
 Labels, filenames, captions, descriptions, provenance summaries, and imported metadata render as text.
 
 ### Media detail
 
 Manager media creation can set the default description. Media detail includes preview, dimensions, encoded file size, portability, an editable default description, revision, health, and direct uses. Changing the default description never rewrites alt text on existing QMD or Image placements.
 
-External items show **External**, **Network required**, and **Create local copy**. That action creates a new stored `mediaId` only after either a local upload or a browser-permitted direct HTTPS fetch passes the full existing raster validation pipeline. It leaves the external media record and every existing Image use unchanged, then returns and selects the new local QMD-eligible item. It never uses a proxy, privilege escalation, silent fetch, or CORS bypass; when direct fetch is unavailable, the user must provide a local file upload. Missing/corrupt identity and dependencies remain visible until explicit repair.
+An External / Network required HTTPS image item shows **Import as local media** in Media detail. That action creates a new stored `mediaId` only after either a local upload or a browser-permitted direct HTTPS fetch passes the full existing raster validation pipeline. It leaves the external media record and every existing standalone Image use unchanged. It never uses a proxy, privilege escalation, silent fetch, or CORS bypass; when direct fetch is unavailable, the user must provide a local file upload. It does not apply to CSV, GeoJSON, stored/packaged media, or arbitrary URLs typed in QMD. Missing/corrupt identity and dependencies remain visible until explicit repair.
 
 ### Data-source detail
 
-CSV detail includes searchable preview, profile/column summary, origin, provenance, health, update status, direct uses, and downstream temporal impact contexts where relevant. Management supports upload, profile, preview, search, rename label, replace/relink, select, and download where permitted. It does not provide cell editing or derivative mutation.
+CSV detail includes searchable table preview, dataset profile/column summary, origin, provenance, health, update status, direct uses, and downstream temporal impact contexts where relevant.
+
+GeoJSON detail does not claim `datasetProfiles` or a CSV table preview. It provides feature count, geometry-type distribution, bounding box, property keys, origin, provenance, health, update status, direct map uses, and a bounded map preview with an accessible textual fallback.
+
+Data-source management supports CSV and GeoJSON upload, type-appropriate validation/summary/preview, search, rename label, replace/relink, select, and download where permitted. It does not provide cell/feature editing or derivative mutation.
 
 ## Existing authoring-flow integration
 
-- The six-stage Add chart workflow remains exact. Its existing Data source stage selects a managed builder-owned CSV or uploads/profiles/registers one as part of the chart transaction.
+- The six-stage Add chart workflow remains exact. Its existing Data source stage selects a managed builder-owned CSV or uploads/profiles/registers one as part of the chart transaction. The map-geography portion of that unchanged workflow selects eligible tracked, packaged, or uploaded GeoJSON and supports **Upload GeoJSON** without adding or removing a stage.
 - The four-stage Add static content workflow remains exact. Image Content adds **Choose from media** alongside upload and linked origins.
-- QMD **Insert image** opens a focused media picker. The picker may select an eligible local item or upload/create one. For an external item, it offers **Create local copy** and returns/selects the newly validated local item without changing the external record or its existing Image placements.
+- QMD **Insert image** opens a focused media picker. The picker may select an eligible local item or upload/create one. When an External / Network required HTTPS image cannot be inserted directly, the picker offers **Import as local media** and returns/selects the newly validated local QMD-eligible item without changing the external record or its existing Image placements.
 - Generated/intermediate sources are absent from the manager and all authoring pickers.
 
-Uploads initiated inside QMD, Image, or chart authoring remain application-session drafts and commit atomically only with the completed panel/chart. Cancel invokes existing safe staged cleanup and creates no unexplained library/source entry.
+Uploads initiated inside QMD, Image, or chart authoring—including GeoJSON upload in map geography—remain application-session drafts and commit atomically only with the completed panel/chart. Cancel invokes existing safe staged cleanup and creates no unexplained library/source entry.
+
+The current authoring selector has a planning-visible integration gap: runtime and storage recognize both tracked `kind: "geojson"` and dataset `type: "uploadedGeoJson"`, but `validatedGeoSourceOptions` currently admits only tracked `kind: "geojson"`. Planning must reconcile that selector with the accepted eligible uploaded/packaged GeoJSON representations without changing the six workflow stages.
 
 A manager upload previews and names the candidate, then commits it explicitly with **Add to dashboard**. Once committed, an unused item persists until deliberate deletion.
 
@@ -225,7 +243,7 @@ Only a validated local destination creates an image:
 
 HTTP, HTTPS, data:, blob:, file:, malformed, unknown, missing, external-only, and unapproved attribute forms remain inert visible text and cause no request.
 
-QMD may embed only a stored or packaged media item whose record, revision, byte identity, MIME, dimensions, and health validate. An existing HTTPS-linked media item remains usable by standalone Image panels and visible in the manager as **External / Network required**, but cannot enter QMD directly. **Create local copy** creates and selects a new stored, QMD-eligible `mediaId` through local upload or a browser-permitted direct HTTPS fetch that passes the full validation pipeline; it never mutates the external identity or existing placements.
+QMD may embed only a stored or packaged media item whose record, revision, byte identity, MIME, dimensions, and health validate. An existing HTTPS-linked media item remains usable by standalone Image panels and visible in the manager as **External / Network required**, but cannot enter QMD directly. **Import as local media** creates and selects a new stored, QMD-eligible `mediaId` through local upload or a browser-permitted direct HTTPS fetch that passes the full validation pipeline; it never mutates the external identity or existing placements. It is an explicit picker/detail action for an existing external media item, never a conversion of an arbitrary raw-QMD URL.
 
 The media default description, set during manager creation or edited in media detail, pre-fills alt for each new QMD or Image placement. Each placement owns its alt and may override it or explicitly become decorative. Changing a media default never silently rewrites existing placements.
 
@@ -274,14 +292,14 @@ This amendment is the user-approved deviation from V4 to V5:
 - V4 dashboard/package import remains supported and migrates before V5 validation;
 - chart configuration remains V3.
 
-V4 migration creates stable logical media records under `contentLibrary.mediaItems` for existing Static Image origins, rewrites placements to `mediaId`, and creates `contentLibrary.sourceEntries` records for eligible CSV descriptors. Classification uses explicit provenance; uncertain CSV inputs become legacy-import, never filename-inferred generated. GeoJSON descriptors remain in `dataSources` without builder-facing content-library management in this amendment.
+V4 migration creates stable logical media records under `contentLibrary.mediaItems` for existing Static Image origins, rewrites placements to `mediaId`, and creates `contentLibrary.sourceEntries` records for eligible builder-controlled CSV and GeoJSON descriptors. Classification uses explicit provenance; uncertain CSV/GeoJSON inputs become legacy-import, never filename/path-inferred generated.
 
 Bundle/package V5 includes:
 
 - the V5 dashboard and `contentLibrary`;
 - every retained stored/packaged media record, including unused library items;
 - each referenced content-addressed payload exactly once;
-- builder-controlled CSV descriptors and profiles through their existing authorities;
+- builder-controlled CSV and GeoJSON descriptors/payloads through `dataSources`, with CSV profiles only through `datasetProfiles`;
 - no object URL, ad hoc QMD base64, duplicated panel payload, or silently fetched external image.
 
 Export/import validates media IDs, revisions, hashes, MIME, dimensions, animation state, QMD references, source records, profiles, and contained paths atomically. Missing/corrupt retained media blocks a claim of complete portability unless the item is explicitly external and disclosed as network-required. Package import is all-or-nothing.
@@ -291,23 +309,23 @@ Export/import validates media IDs, revisions, hashes, MIME, dimensions, animatio
 Item health is one of **Ready, External, Missing, Corrupt, Needs relink, Needs review**. Health is descriptive state, not permission to discard identity or dependencies.
 
 - Quota, decode, parse, hash, validation, and persistence errors occur before commit.
-- Failed CSV refresh/replacement retains the last committed source/profile.
+- Failed CSV refresh/replacement retains the last committed source/profile; failed GeoJSON refresh/replacement retains the last committed descriptor/payload.
 - Missing/corrupt media and source identities remain repairable.
-- Startup cleanup respects committed media records, saved sources, open drafts, undo scopes, and active transactions.
+- Startup cleanup respects committed media records, saved sources, actual open drafts, active Image replacement state, and active transactions. It assumes no global/restorable content-history owner.
 - Unsaved recovery remains application-session-only.
 - SVG, APNG, animated WebP, active markup, mismatched MIME, unsafe paths/protocols, and arbitrary QMD CSS remain rejected or inert under the existing strict boundaries.
 - Authored labels and metadata are text. QMD attributes are allowlisted and tokenized.
-- **Create local copy** never proxies or silently fetches an external image, elevates browser privileges, or bypasses CORS. A direct HTTPS fetch is attempted only through browser-permitted behavior; otherwise local upload is required, and either path must pass the complete existing validation pipeline before the new stored item commits.
+- **Import as local media** never proxies or silently fetches an external image, elevates browser privileges, or bypasses CORS. A direct HTTPS fetch is attempted only through browser-permitted behavior; otherwise local upload is required, and either path must pass the complete existing validation pipeline before the new stored item commits.
 
 ## Fidelity and completion gate
 
-The proposed amendment fidelity matrix uses three distinct layers:
+The proposed amendment fidelity matrix contains 36 unimplemented rows across three distinct layers:
 
 1. **Semantic:** schemas, identities, validation, dependencies, replacement decisions, migration, and transaction boundaries.
 2. **Composition:** live manager/picker/inspector layout, focus, controls, responsive behavior, and rendered QMD geometry.
-3. **Real use:** the eight retained end-to-end journeys named in the amendment matrix.
+3. **Real use:** the eleven retained end-to-end journeys named in the amendment matrix.
 
-Planned journeys cannot collapse into label checks or broad smoke tests. Browser checkpoints must inspect meaningful state, geometry, dependencies, navigation, atomic outcomes, and failure isolation at Build 1440×900 and 1024×768, plus QMD View 390×844 and fullscreen where specified. A pure engine or isolated component is not implementation evidence.
+Planned journeys cannot collapse into label checks or broad smoke tests. Browser checkpoints must inspect meaningful state, geometry, dependencies, navigation, atomic outcomes, and failure isolation at Build 1440×900 and 1024×768, plus QMD View 390×844 and fullscreen only where specified for QMD/media. GeoJSON journeys use the two material Build viewports unless a future accepted fidelity decision proves another map-output viewport material. A pure engine or isolated component is not implementation evidence.
 
 Completion submission must separately report engine implemented, UI implemented, and fidelity verified. No proposed row may be promoted while missing, partial, or wired only to a model/test harness.
 

@@ -5,7 +5,7 @@
 
 Every accepted invariant identifies its eventual production owner and a falsifiable check. Sketch evidence demonstrates the design only; it is never implementation evidence.
 
-**Proposed amendment boundary (2026-08-25):** The existing 36-row Step 7S disposition below remains Passing. Source Content Manager and QMD Reusable Media introduce 30 separate proposed, unimplemented rows in SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md. Those rows do not inherit this matrix's implementation status and cannot be promoted before master review, final user approval, implementation, and retained live evidence.
+**Proposed amendment boundary (2026-08-25):** The existing 36-row Step 7S disposition below remains Passing. Source Content Manager and QMD Reusable Media introduce 36 separate proposed, unimplemented rows in SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md, including distinct GeoJSON semantic, composition, and real-use requirements. Those rows do not inherit this matrix's implementation status and cannot be promoted before master review, final user approval, implementation, and retained live evidence.
 
 ## Final Step 7S controlling 36-row disposition
 

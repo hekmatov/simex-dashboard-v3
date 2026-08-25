@@ -12,7 +12,7 @@ The V3 Design master accepted Step 7S at implementation HEAD `b366ba17fe856aede4
 
 ## Proposed 2026-08-25 architectural amendment
 
-The user has approved the architectural direction for **Source Content Manager and QMD Reusable Media**, including the explicit dashboard-schema/package-bundle V4→V5 deviation with V4 import compatibility and chart configuration remaining V3. The written amendment is proposed and unimplemented. It does not change the completed Step 7S implementation result or inherit its Passing statuses.
+The user has approved the architectural direction for **Source Content Manager and QMD Reusable Media**, including managed builder-controlled CSV and GeoJSON, the explicit dashboard-schema/package-bundle V4→V5 deviation with V4 import compatibility, and chart configuration remaining V3. The written amendment is proposed and unimplemented. It does not change the completed Step 7S implementation result or inherit its Passing statuses.
 
 Master review is requested for:
 
