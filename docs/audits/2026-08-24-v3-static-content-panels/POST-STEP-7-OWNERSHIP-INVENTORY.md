@@ -198,3 +198,5 @@ These checks passed for the synchronized gate files. Production implementation s
 - `isContainedPackageImagePath` is the shared package-path predicate. `ImageTransformEditor`, `ImageChartView`, and `staticSourceResolver` consume only explicit package authority.
 
 Exact updated tests are `tests/staticPanelTransaction.test.js`, `tests/staticPanelPersistence.test.js`, `tests/staticContentDraft.test.js`, `tests/imageAssetValidation.test.js`, `tests/staticSourceSchema.test.js`, `tests/dashboardMigrationV4.test.js`, `tests/imageChartPackageSource.test.js`, and `tests/e2e/static-image.spec.js`.
+
+Final hardening fix round 2 clarifies ordering within those owners: `stageSessionImageAsset` resolves content identity before unique aggregate accounting; `prepareStaticPanelTransaction` validates only after applying and pruning the cloned final candidate; and exported `cleanupImageDraftAssets` is invoked by both wizard Discard and `DashboardRenderer.discardStaticDraftAndSelect`. Exact new evidence remains in `tests/imageAssetValidation.test.js`, `tests/staticPanelTransaction.test.js`, and the real local-replacement case in `tests/e2e/static-image.spec.js`.

@@ -1,6 +1,6 @@
 # Step 7S Static Content Fidelity Matrix
 
-**Status:** Slice 6 fix round 2/5 addressed — both Important evidence groups closed against the unchanged binding journeys; implementation complete, review pending
+**Status:** Final hardening fix round 2 addressed — IM-02, IM-14, PS-01, and PS-05 restored after engine, production UI, and retained real-use evidence passed
 **Layer rule:** S = semantic correctness, C = composition correctness, R = real-use correctness
 
 Every accepted invariant identifies its eventual production owner and a falsifiable check. Sketch evidence demonstrates the design only; it is never implementation evidence.
@@ -24,7 +24,7 @@ This is the binding final ledger. It supersedes every earlier per-slice `pending
 | FT-11 | Passing | Passing | Passing | v4 reload/import/offline exact source/revision continuation |
 | FT-12 | Passing | Passing | Passing | Registry/Present/Audience tests exclude recovery-only/incomplete Images; the real separate Audience channel rejects injected Free-text v3 without disturbing accepted cells |
 | IM-01 | Passing | Passing | Passing | Slice 1/3 catalogue and guided Image authoring evidence |
-| IM-02 | Passing | Passing | Passing | `static-image.spec.js` IM-02 uses real PNG/JPEG/WebP decoders and controlled spoof, corrupt, APNG, animated WebP, byte/dimension/megapixel, origin/path, dashboard-budget, and browser-quota fixtures with exact recovery/replacement |
+| IM-02 | Passing | Passing | Passing | Structural/decode validation precedes SHA identity; saved/staged duplicates add zero budget/quota bytes, while genuinely new over-budget bytes retain exact typed rejection |
 | IM-03 | Passing | Passing | Passing | Content-addressed authored store and v4 portability evidence |
 | IM-04 | Passing | Passing | Passing | HTTPS/package-origin validation and dependency disclosure evidence |
 | IM-05 | Passing | Passing | Passing | Explicit alt/decorative validation and canonical rendering evidence |
@@ -36,14 +36,14 @@ This is the binding final ledger. It supersedes every earlier per-slice `pending
 | IM-11 | Passing | Passing | Passing | Passive review and atomic Add evidence |
 | IM-12 | Passing | Passing | Passing | Complete-pair dirty Keep/Discard recovery evidence |
 | IM-13 | Passing | Passing | Passing | Cell/fullscreen failure isolation and durable Retry evidence |
-| IM-14 | Passing | Passing | Passing | Exact edit/cancel/save/reload restoration evidence |
+| IM-14 | Passing | Passing | Passing | Real local replacement retains exact draft and staged identity through Keep editing; Dashboard-map Discard cleans the draft then completes navigation |
 | IM-15 | Passing | Passing | Passing | The representative canonical ChartView exposes its active date; retained Audience independently asserts date and canvas pixel-hash change while Image descriptor/revision/src/transform remain exact |
 | IM-16 | Passing | Passing | Passing | During passive Image failure all three Chrono-group siblings prove nonzero live canvases and each independently changes active date plus pixel hash; exact Image revision then restores/replays |
-| PS-01 | Passing | Passing | Passing | Application-session-only draft and leave/export guards |
+| PS-01 | Passing | Passing | Passing | Transaction applies source/panel, merges only reachable finalized asset, prunes superseded ownership, then validates exact <=200 MiB final candidate before mutation |
 | PS-02 | Passing | Passing | Passing | Dashboard schema v4 migration/validation and retained load evidence |
 | PS-03 | Passing | Passing | Passing | Bundle v4 exact round-trip and contained chart-v3 evidence |
 | PS-04 | Passing | Passing | Passing | `portableFlashdriveLaunch.test.js` copies a generated package, launches its Windows PowerShell server, proves contained PNG MIME/bytes and traversal denial, then runs offline main + separate 1366×768 Audience with zero external requests and verified stop/cleanup |
-| PS-05 | Passing | Passing | Passing | Missing/corrupt/quota/atomic-import recovery journeys |
+| PS-05 | Passing | Passing | Passing | Dashboard-map Discard reuses shared cleanup: new staged replacement and blob URL are removed while saved/source/undo identities remain protected |
 | PS-06 | Passing | Passing | Passing | Canonical mode ownership and exact Build restoration matrix |
 | PS-07 | Passing | Passing | Passing | Build/View/fullscreen plus passive 1/2/4-cell Audience geometry |
 | PS-08 | Passing | Passing | Passing | Owner-token reducer and StrictMode Present tests preserve pre-existing/overlapping playback owners; retained Audience chart time/render changes before and through isolated Image failure |

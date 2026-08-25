@@ -143,3 +143,9 @@ Quarto documents that its Markdown is Pandoc-based and includes broad raw HTML/i
 - A bare package preview/render path is authorized only when it matches the generated `data/authored/<sha256>.(png|jpg|jpeg|webp)` form or arrives with explicit contained-package-path authority. Editor and renderer reuse `isContainedPackageImagePath`; arbitrary relative strings remain invalid.
 
 These rules narrow mutation and path authority. They introduce no sanitizer, deny-list, executable text, or authored text resource-loading behavior.
+
+### Identity and final-candidate ordering
+
+- Product budget and browser quota charge content-addressed incremental bytes, not upload attempts. Encoded size and raster structure/decode remain strict; SHA identity is resolved before aggregate accounting, and an identity already present in the saved manifest or session registry adds zero bytes.
+- The transaction ceiling applies to the finalized reachable candidate after source/panel replacement and superseded unshared ownership pruning. A same-size old→new replacement at exactly 200 MiB is valid; a genuinely larger final candidate fails before durable store or dashboard mutation.
+- Navigation-driven Discard is an asset lifecycle event. It executes shared draft cleanup before dropping editor state, revokes newly staged blob URLs, and retains every identity still referenced by the saved dashboard or valid undo scope.

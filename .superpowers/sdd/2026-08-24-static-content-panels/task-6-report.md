@@ -151,3 +151,22 @@ Strict RED evidence included three asset ownership failures, accepted trailing J
 The final post-commit consolidated affected sweep passed **152/152 in 5.11 seconds**. It also exposed and corrected one stale composition fixture that still put `width`/`height` on the static source instead of the authored-asset manifest; the rerun proves canonical Build/View/fullscreen composition against the exact schema. The final runtime boundary passed with no remote dependencies, and the final production build passed with **891 modules in 9.88 seconds**.
 
 There are no new deviations or blockers. The strict JPEG terminal-EOI rule and exact typed-key rejection are accepted compatibility boundaries; the package-path change narrows authority rather than broadening relative-path acceptance.
+
+## Final hardening fix round 2
+
+Three second-order ownership defects were reproduced before implementation:
+
+- focused engine RED: **3/29 failed** because saved/staged duplicates were charged before identity and an old→new ceiling replacement was rejected before pruning;
+- production browser RED: a real local replacement survived Dashboard-map Discard as one session registry/blob URL entry for the full 20-second poll.
+
+The implemented boundaries are now ordered explicitly. Image intake performs encoded/structure/decode validation, computes SHA identity, then charges only incremental unique bytes against product and browser quota. Transaction preparation clones the candidate, applies source/panel, merges only the finalized reachable asset, prunes superseded unshared ownership, and only then validates the exact manifest and 200 MiB ceiling before mutation. Navigation-driven Discard invokes the same exported `cleanupImageDraftAssets` authority used by the wizard before clearing the preserved draft and completing selection.
+
+GREEN evidence:
+
+- focused engine: **29/29 passed**;
+- consolidated affected suite: **155/155 passed** in 6.38 seconds;
+- runtime boundary: passed, `remoteRuntimeDependencies: []`;
+- production build: **891 modules**, 15.31 seconds;
+- real local replacement Keep/Discard: **1/1 passed** in 16.4 seconds at **1440×900**. It retained source/alt/crop/rotation/fit plus the exact staged identity through Keep editing, then proved empty session inventory, exact blob URL revocation, unchanged saved source, and completed Dashboard-map navigation after Discard.
+
+IM-02, IM-14, PS-01, and PS-05 are restored to Passing. No Free-text, protocol, persistence-version, or visual-design contract changed; there are no deviations or blockers.

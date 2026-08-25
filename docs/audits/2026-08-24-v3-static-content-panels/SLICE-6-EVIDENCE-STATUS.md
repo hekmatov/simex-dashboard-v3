@@ -1,6 +1,6 @@
 # Slice 6 Present/Audience Evidence Status
 
-**Status:** Fix round 2/5 addressed; two Important evidence groups closed, implementation complete, review pending
+**Status:** Final hardening fix round 2 addressed; IM-02, IM-14, PS-01, and PS-05 restored, implementation complete, review pending
 
 FT-05, FT-06, IM-08, IM-15, and IM-16 are restored after their original binding journeys passed without wording changes or deviations. Free text remains permissive and inert with no sanitizer; Image intake and presentability remain strict.
 
@@ -36,3 +36,5 @@ Exact RED/GREEN history, browser checkpoints, baseline disclosures, and implemen
 **Status:** 7 findings addressed, 0 open; implementation complete, review pending.
 
 The final 36-row disposition remains Passing after new strict RED→GREEN evidence for aggregate asset budget authority, finalized-source-only manifests, unified static dirty selection, multiply-used legacy Image migration, terminal JPEG EOI, exact typed static schemas, and contained packaged preview paths. The final consolidated affected sweep passed 152/152; runtime boundaries passed with no remote dependencies; and the 891-module production build passed in 9.88 seconds. Material Chromium evidence passed at 1440×900 for near-budget creation and exact Keep editing/Discard draft retention, and at 1280×800 for packaged generated-path crop preview. No Free-text source-policy or protocol behavior changed.
+
+Final hardening fix round 2 adds identity-before-accounting duplicate cases, pruned-final-candidate replacement cases, and a real local staged-replacement navigation journey. RED was 3/29 focused failures plus one leaked session/blob entry. GREEN is 29/29 focused, 155/155 consolidated, runtime boundary passed with no remote dependencies, production build passed with 891 modules in 15.31 seconds, and Chromium passed 1/1 in 16.4 seconds at 1440×900. Discard preserved the saved source, removed the staged registry entry, observed exact blob URL revocation, and completed the requested Dashboard-map navigation.

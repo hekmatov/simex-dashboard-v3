@@ -343,3 +343,5 @@ Even after design approval, production execution remains blocked until Step 7 is
 - Package crop preview and canonical rendering consume the same contained-path authority. Exact generated `data/authored/<sha>.<raster-extension>` paths are supported without accepting arbitrary bare relative paths.
 
 These are validation, transaction, and ownership clarifications within the approved design. They do not add a visual variant, a new persistence version, a sanitizer, or a protocol field.
+
+The final accounting order is content-addressed: strict raster validation, SHA identity, then incremental unique budget/quota charge. The transaction order is final-candidate based: apply, merge finalized reachable asset, prune superseded ownership, then validate. Any explicit authoring Discard, including selection-driven Discard, runs the shared staged-asset cleanup before editor state is released.
