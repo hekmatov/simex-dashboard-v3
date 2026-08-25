@@ -42,6 +42,8 @@ test("media rename changes only display metadata and validation rejects split au
   assert.equal(renamed.revision, item.revision);
   assert.equal(renamed.displayName, "Updated response map");
   assert.equal(renamed.defaultDescription, "Default description for new placements");
+  assert.equal(Object.isFrozen(renamed), true);
+  assert.equal(Object.isFrozen(renamed.current), true);
   assert.equal(validateMediaItem(item, { assets: { "asset-map": {} } }), item);
   assert.throws(() => validateMediaItem({ ...item, alt: "placement-owned" }, {
     assets: { "asset-map": {} },

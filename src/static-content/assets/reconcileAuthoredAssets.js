@@ -6,9 +6,7 @@ import {
 export async function reconcileAuthoredAssets({
   store,
   dashboard = null,
-  draftAssetIds = [],
-  undoAssetIds = [],
-  transactionAssetIds = [],
+  activeRetainers = null,
   now = Date.now(),
 } = {}) {
   if (!store || typeof store.list !== "function" || typeof store.remove !== "function") {
@@ -16,9 +14,7 @@ export async function reconcileAuthoredAssets({
   }
   const graph = buildAssetReferenceGraph({
     dashboard,
-    draftAssetIds,
-    undoAssetIds,
-    transactionAssetIds,
+    activeRetainers,
   });
   const records = await store.list();
   const referenced = new Set(graph.referencedAssetIds);

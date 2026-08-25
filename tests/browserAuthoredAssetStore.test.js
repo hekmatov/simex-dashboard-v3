@@ -171,6 +171,36 @@ test("object URL leases are per store/window and revoke only after the final rel
   otherLease.release();
 });
 
+test("transaction snapshots restore exact prior byte records for dashboard compensation", async () => {
+  const adapter = createMemoryAdapter();
+  const store = createBrowserAuthoredAssetStore({ adapter, now: () => 1_000 });
+  const assetId = `asset-${PNG_SHA}`;
+  const absent = await store.snapshot([assetId]);
+  await stageAuthoredAsset(store, {
+    bytes: PNG_BYTES,
+    mediaType: "image/png",
+    width: 2,
+    height: 3,
+    transactionId: "candidate",
+  });
+  await store.commitMany([assetId], { transactionId: "candidate" });
+  await store.restore(absent);
+  assert.equal(adapter.records.has(assetId), false);
+
+  await stageAuthoredAsset(store, {
+    bytes: PNG_BYTES,
+    mediaType: "image/png",
+    width: 2,
+    height: 3,
+    transactionId: "prior",
+  });
+  const prior = await store.snapshot([assetId]);
+  await store.commitMany([assetId], { transactionId: "prior" });
+  await store.restore(prior);
+  assert.equal(adapter.records.get(assetId).status, "staged");
+  assert.deepEqual(adapter.records.get(assetId).transactionIds, ["prior"]);
+});
+
 function createMemoryAdapter({ putError = null } = {}) {
   const adapter = {
     records: new Map(),

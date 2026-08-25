@@ -35,6 +35,7 @@ import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "./static
 import { buildPresentableItemIndex } from "./static-content/staticPanelCapabilities.js";
 import { commitDurableStaticPanelTransaction } from "./static-content/assets/durableStaticPanelCommit.js";
 import { reconcileAuthoredAssets } from "./static-content/assets/reconcileAuthoredAssets.js";
+import { createContentDraftCoordinator } from "./content-library/contentDraftTransaction.js";
 import {
   decodeBrowserImageAsset,
   discardSessionImageAsset,
@@ -118,11 +119,12 @@ const SESSION_ONLY_MESSAGES = Object.freeze({
 const DASHBOARD_LOOK_PERSISTENCE_WARNING = "Couldn’t save dashboard appearance. Your selection remains active for this session.";
 const dashboardAssetPersistence = createDashboardAssetPersistence();
 
-async function reconcileSavedAuthoredAssets(dashboard) {
+async function reconcileSavedAuthoredAssets(dashboard, activeRetainers = null) {
   try {
     return await reconcileAuthoredAssets({
       store: browserAuthoredAssetStore,
       dashboard,
+      activeRetainers,
     });
   } catch {
     return null;
@@ -186,6 +188,17 @@ export default function App() {
   const companionClientRef = React.useRef(null);
   const dashboardRendererRef = React.useRef(null);
   const buildPanelScrollRef = React.useRef(null);
+  const contentDraftCoordinatorRef = React.useRef(null);
+  if (contentDraftCoordinatorRef.current === null) {
+    contentDraftCoordinatorRef.current = createContentDraftCoordinator({
+      getDashboard: () => dashboardRef.current,
+      commitDashboard: (candidate) => commitConfiguration(candidate),
+      assetStore: browserAuthoredAssetStore,
+      readSessionAsset: readSessionImageAssetBytes,
+      discardSessionAsset: discardSessionImageAsset,
+    });
+  }
+  const contentDraftCoordinator = contentDraftCoordinatorRef.current;
   const playbackChartCollections = playbackChartSelectorRef.current(dashboard, activePageId);
   const validChartIds = React.useMemo(
     () => new Set(playbackChartCollections.charts.map(({ id }) => id)),
@@ -233,6 +246,10 @@ export default function App() {
     const scheduler = lookCommitSchedulerRef.current;
     void scheduler?.flush().finally(() => scheduler.dispose());
   }, []);
+
+  React.useEffect(() => () => {
+    void contentDraftCoordinator.dispose();
+  }, [contentDraftCoordinator]);
 
   React.useEffect(() => {
     if (!lookPersistenceFlash) return undefined;
@@ -382,7 +399,7 @@ export default function App() {
             { readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId) },
           );
           publish(loaded);
-          await reconcileSavedAuthoredAssets(loaded);
+          await reconcileSavedAuthoredAssets(loaded, contentDraftCoordinator.getActiveRetainers());
           return;
         }
         const loaded = await loadDashboardConfigProgressively(
@@ -394,7 +411,7 @@ export default function App() {
             readAuthoredAsset: (assetId) => browserAuthoredAssetStore.read(assetId),
           },
         );
-        await reconcileSavedAuthoredAssets(loaded);
+        await reconcileSavedAuthoredAssets(loaded, contentDraftCoordinator.getActiveRetainers());
       })
       .catch((loadError) => {
         if (!disposed) setError(loadError);
@@ -899,6 +916,9 @@ export default function App() {
           setBlockedReason(result?.reason ?? "Finish the current Build operation before changing mode.");
           return;
         }
+        for (const owner of ["manager", "qmd", "image", "chart"]) {
+          await contentDraftCoordinator.discardOwner(owner, { reason: "mode-departure" });
+        }
         setEditBaseline(null);
       }
       if (nextMode === "build") {
@@ -1005,7 +1025,7 @@ export default function App() {
         transactionKind: "static-content",
         failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
       });
-      await reconcileSavedAuthoredAssets(result.dashboard);
+      await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
       return result;
     }
     const result = await commitStaticPanelTransaction(prepared, {
@@ -1015,7 +1035,7 @@ export default function App() {
       transactionKind: "static-content",
       failureMessage: "Static content was saved, but replaced browser assets could not be removed.",
     });
-    await reconcileSavedAuthoredAssets(result.dashboard);
+    await reconcileSavedAuthoredAssets(result.dashboard, contentDraftCoordinator.getActiveRetainers());
     return result;
   }
 
@@ -1046,7 +1066,7 @@ export default function App() {
     await cleanupReplacedDashboardAssets(previousDashboard, committed, {
       transactionKind: "panel-removal",
     });
-    await reconcileSavedAuthoredAssets(committed);
+    await reconcileSavedAuthoredAssets(committed, contentDraftCoordinator.getActiveRetainers());
     return committed;
   }
 
@@ -1112,7 +1132,7 @@ export default function App() {
       await cleanupReplacedDashboardAssets(previousDashboard, committed, {
         failureMessage: "The package was loaded, but source files from the previous dashboard could not be removed from browser storage.",
       });
-      await reconcileSavedAuthoredAssets(committed);
+      await reconcileSavedAuthoredAssets(committed, contentDraftCoordinator.getActiveRetainers());
       return committed;
     } catch (importError) {
       setPackageImportError(
@@ -1282,6 +1302,7 @@ export default function App() {
     <DashboardRenderer
       ref={dashboardRendererRef}
       dashboard={dashboard}
+      contentDraftCoordinator={contentDraftCoordinator}
       mode={mode}
       activePageId={activePageId}
       onActivePageChange={setActivePageId}

@@ -62,6 +62,10 @@ import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
 export default function BuildWorkspace({
   themeProjection,
   dashboard,
+  contentDraftCoordinator = null,
+  onContentDraftStage,
+  onContentDraftCommit,
+  onContentDraftDiscard,
   activePage,
   pageType,
   buildPanelOpen = false,

@@ -9,30 +9,34 @@ import { reconcileAuthoredAssets } from "../src/static-content/assets/reconcileA
 
 const DAY = 24 * 60 * 60 * 1_000;
 
-test("the reference graph protects saved, draft, undo, and transaction assets", () => {
+test("the reference graph protects saved assets and exact active coordinator retainers", () => {
   const graph = buildAssetReferenceGraph({
     dashboard: {
       assets: { saved: manifest(), manifestOnly: manifest() },
-      dataSources: {
-        image: { kind: "staticImage", origin: { kind: "asset", assetId: "saved" } },
+      contentLibrary: {
+        mediaItems: {
+          "media-saved": { current: { kind: "asset", assetId: "saved" } },
+        },
       },
     },
-    draftAssetIds: ["draft"],
-    undoAssetIds: ["undo"],
-    transactionAssetIds: ["staging"],
+    activeRetainers: {
+      assetIds: ["draft", "replacement", "staging"],
+      mediaIds: [], sourceIds: [], records: [],
+    },
   });
 
   assert.deepEqual(graph.referencedAssetIds, [
     "draft",
     "manifestOnly",
+    "replacement",
     "saved",
     "staging",
-    "undo",
   ]);
   assert.deepEqual(graph.references.saved.map(({ kind }) => kind), [
     "saved-manifest",
-    "saved-source",
+    "saved-media",
   ]);
+  assert.deepEqual(graph.references.replacement.map(({ kind }) => kind), ["active-retainer"]);
 });
 
 test("orphan decisions retain every reference and a staged asset for exactly 24 hours", () => {

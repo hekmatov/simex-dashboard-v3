@@ -2,9 +2,7 @@ export const AUTHORED_ASSET_STAGING_GRACE_MS = 24 * 60 * 60 * 1_000;
 
 export function buildAssetReferenceGraph({
   dashboard = null,
-  draftAssetIds = [],
-  undoAssetIds = [],
-  transactionAssetIds = [],
+  activeRetainers = null,
 } = {}) {
   const references = new Map();
   for (const assetId of Object.keys(dashboard?.assets ?? {})) {
@@ -15,9 +13,7 @@ export function buildAssetReferenceGraph({
       addReference(references, item.current.assetId, { kind: "saved-media", mediaId });
     }
   }
-  addReferences(references, draftAssetIds, "session-draft");
-  addReferences(references, undoAssetIds, "session-undo");
-  addReferences(references, transactionAssetIds, "transaction-staging");
+  addReferences(references, activeRetainers?.assetIds, "active-retainer");
   const referencedAssetIds = [...references.keys()].sort();
   return Object.freeze({
     referencedAssetIds: Object.freeze(referencedAssetIds),

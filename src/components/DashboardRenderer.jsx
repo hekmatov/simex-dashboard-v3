@@ -11,6 +11,7 @@ import {
   activeLocalAuthoringDrafts,
   buildLeaveBlockReason,
   createBuildDirtyState,
+  hasActiveContentRetainers,
   hasActiveLocalAuthoringDrafts,
   hasEditingLocalAuthoringDrafts,
   hasUnsavedAuthoredContent,
@@ -77,6 +78,7 @@ import { resolveBrowserAuthoredAsset } from "../static-content/assets/browserAut
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
+  contentDraftCoordinator = null,
   mode,
   activePageId,
   onActivePageChange,
@@ -136,6 +138,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [staticContentDraft, setStaticContentDraft] = React.useState(null);
   const [staticContentDirty, setStaticContentDirty] = React.useState(false);
   const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
+  const [contentDraftRetainers, setContentDraftRetainers] = React.useState(() => (
+    contentDraftCoordinator?.getActiveRetainers?.() ?? null
+  ));
   const [chartDraftSessionRevision, setChartDraftSessionRevision] = React.useState(0);
   const [inlineRenameDirty, setInlineRenameDirty] = React.useState(false);
   const [packageImportConfirmation, setPackageImportConfirmation] = React.useState(false);
@@ -147,6 +152,26 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     scenario: false,
     dashboardMetadata: false,
   });
+  React.useEffect(() => {
+    if (!contentDraftCoordinator) {
+      setContentDraftRetainers(null);
+      return undefined;
+    }
+    setContentDraftRetainers(contentDraftCoordinator.getActiveRetainers());
+    return contentDraftCoordinator.subscribe(setContentDraftRetainers);
+  }, [contentDraftCoordinator]);
+  const onContentDraftStage = React.useCallback(
+    (input) => contentDraftCoordinator?.stageDraft(input),
+    [contentDraftCoordinator],
+  );
+  const onContentDraftCommit = React.useCallback(
+    (draftId, buildCandidate) => contentDraftCoordinator?.commitDraft(draftId, { buildCandidate }),
+    [contentDraftCoordinator],
+  );
+  const onContentDraftDiscard = React.useCallback(
+    (draftId, reason) => contentDraftCoordinator?.discardDraft(draftId, { reason }),
+    [contentDraftCoordinator],
+  );
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
   const [pendingStaticBuildSelection, setPendingStaticBuildSelection] = React.useState(null);
   const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
@@ -268,7 +293,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     structure: localAuthoringDirty || layoutDraftDirty,
     scenario: localAuthoringDirty,
     inlineRename: inlineRenameDirty,
-    pendingContent: pendingEdits.hasPending(),
+    pendingContent: pendingEdits.hasPending() || hasActiveContentRetainers(contentDraftRetainers),
     chronoGroup: externalDirty.chronoGroup,
     scene: externalDirty.scene,
     dashboardMetadata: externalDirty.dashboardMetadata,
@@ -1462,6 +1487,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       key={buildTreeResetGeneration}
       themeProjection={themeProjection}
       dashboard={workingDashboard}
+      contentDraftCoordinator={contentDraftCoordinator}
+      onContentDraftStage={onContentDraftStage}
+      onContentDraftCommit={onContentDraftCommit}
+      onContentDraftDiscard={onContentDraftDiscard}
       activePage={activePage}
       pageType={landingActive ? "landing" : "analytical"}
       buildPanelOpen={buildPanelOpen}
@@ -1541,6 +1570,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         activePage={activePage}
         pageType={landingActive ? "landing" : "analytical"}
         dashboard={workingDashboard}
+        contentDraftCoordinator={contentDraftCoordinator}
+        onContentDraftStage={onContentDraftStage}
+        onContentDraftCommit={onContentDraftCommit}
+        onContentDraftDiscard={onContentDraftDiscard}
         contentRenderContext={contentRenderContext}
         buildPanelOpen={buildPanelOpen}
         buildStaticAuthoringOpen={Boolean(editMode && selectedPanelIsStatic && chartEditorVisible)}
@@ -1579,6 +1612,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         open={Boolean(chartWizardTarget)}
         destination={chartWizardTarget}
         dashboard={dashboard}
+        onContentDraftStage={onContentDraftStage}
+        onContentDraftCommit={onContentDraftCommit}
+        onContentDraftDiscard={onContentDraftDiscard}
         initialDraftState={chartDraftSessionStore.get(chartDraftSessionKey)}
         suspendControllerRef={chartWizardControllerRef}
         disabled={moderatorMutationLocked}
@@ -1611,6 +1647,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       {staticWizardTarget && <StaticContentWizard
         open
         dashboard={workingDashboard}
+        onContentDraftStage={onContentDraftStage}
+        onContentDraftCommit={onContentDraftCommit}
+        onContentDraftDiscard={onContentDraftDiscard}
         destination={staticWizardTarget}
         initialDraft={staticContentDraft}
         disabled={moderatorMutationLocked}

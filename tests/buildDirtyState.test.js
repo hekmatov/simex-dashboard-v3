@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createBuildDirtyState,
+  hasActiveContentRetainers,
   hasUnsavedAuthoredContent,
 } from "../src/components/build/buildDirtyState.js";
 
@@ -36,4 +37,10 @@ test("cosmetic and unknown state never triggers the authored-content warning", (
     palette: true,
     futureCosmeticProjection: true,
   }), false);
+});
+
+test("only exact active content-retainer records make the Build content slice dirty", () => {
+  assert.equal(hasActiveContentRetainers({ records: [] }), false);
+  assert.equal(hasActiveContentRetainers({ records: [{ ownerId: "qmd-a", status: "staged" }] }), true);
+  assert.equal(hasActiveContentRetainers(null), false);
 });

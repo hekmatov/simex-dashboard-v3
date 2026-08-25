@@ -68,3 +68,25 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - **Ruling: run the two Playwright files without the draft command's literal separator token — Playwright treats `--` as a file expression rather than an option terminator — cost if wrong: the requested journeys never start.**
 - **Ruling: partition the 11 Chromium journeys after the live companion watchdog — every post-watchdog failure was connection refusal and each bounded partition passed — cost if wrong: a real cross-journey leak could be hidden; isolated-state `beforeEach` plus clean per-partition reset limits that risk.**
 - **Ruling: do not regenerate `dist` to make PS-04 consume V5 — Task 1 explicitly prohibits a full build/generated-output update — cost if wrong: the exact Node command remains 259/260 until the authorized build/release slice refreshes the compiled client.**
+
+## Task 3 — Draft publication and durable rename models
+
+**Implementation state:** SCM-S03/SCM-S04/SCM-S13 engine and application-session lifetime transport implemented. Complete rows remain unpromoted because manager composition, concrete upload flows, and retained browser journeys are later tasks.
+
+### RED evidence
+
+- The exact pre-production command discovered 74 tests: 68 passed and 6 failed, with zero skipped/todo.
+- Intended failures were missing `sourceEntrySchema.js`, missing `contentDraftTransaction.js`, missing active-retainer dirty/cleanup projection, and unfrozen media rename.
+- The existing dashboard App Vite SSR check also failed because the managed filesystem sandbox denied `vite.config.js`; this was classified as inherited environment behavior before production changes.
+
+### Implemented contract
+
+- Frozen media/source rename copies; trusted explicit CSV/GeoJSON provenance classification; sorted builder-manageable listing.
+- One App-owned coordinator with exact stage/update/commit/discard/owner/transaction/snapshot/subscription/disposal API and exact prop/callback transport.
+- Pure one-candidate publication with authored-byte snapshots, dashboard/byte compensation, surfaced rollback failures, and completed-owner-only cleanup.
+- Exact active retainers drive Build dirty state and startup authored-asset reconciliation. Committed unused media survives; abandoned or failed session assets do not.
+
+### Fresh targeted verification
+
+- Exact Task 3 command outside the restrictive filesystem sandbox: **85 passed / 0 failed / 0 skipped / 0 todo**, 7.42 s.
+- No full build, full suite, Playwright, browser checkpoint, composition promotion, or real-use promotion was run or claimed for this engine/lifetime slice.

@@ -30,6 +30,10 @@ export function hasUnsavedAuthoredContent(state = {}) {
   return AUTHORED_DIRTY_KEYS.some((key) => state?.[key] === true);
 }
 
+export function hasActiveContentRetainers(activeRetainers) {
+  return Array.isArray(activeRetainers?.records) && activeRetainers.records.length > 0;
+}
+
 const LOCAL_AUTHORING_DRAFT_KEYS = Object.freeze([
   "structure",
   "scenario",

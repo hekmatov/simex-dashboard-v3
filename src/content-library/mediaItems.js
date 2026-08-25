@@ -29,11 +29,11 @@ export function renameMediaItem(item, { displayName, defaultDescription } = {}) 
   if (typeof defaultDescription !== "string") {
     throw new TypeError("Media default description must be a string.");
   }
-  return {
+  return deepFreeze({
     ...structuredClone(item),
     displayName: displayName.trim(),
     defaultDescription,
-  };
+  });
 }
 
 export function validateMediaItem(item, { assets } = {}) {
@@ -161,4 +161,10 @@ function requiredText(value, description) {
 
 function positiveInteger(value, description) {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${description} must be a positive integer.`);
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || ArrayBuffer.isView(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
 }

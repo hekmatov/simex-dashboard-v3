@@ -22,6 +22,35 @@ export function createBrowserAuthoredAssetStore({
     verify(assetId) { return verifyAuthoredAsset(store, assetId); },
     read(assetId) { return readAuthoredAsset(store, assetId); },
     createObjectUrlLease(assetId) { return createObjectUrlLease(store, assetId); },
+    async snapshot(assetIds) {
+      const snapshot = new Map();
+      for (const assetId of normalizedAssetIds(assetIds)) {
+        snapshot.set(assetId, cloneRecord(await durableAdapter.get(assetId)) ?? null);
+      }
+      return snapshot;
+    },
+    async restore(snapshot) {
+      if (!(snapshot instanceof Map)) throw new TypeError("Authored asset snapshot must be a Map.");
+      const records = new Map([...snapshot].map(([assetId, record]) => [
+        requiredText(assetId, "Authored asset id"),
+        cloneRecord(record) ?? null,
+      ]));
+      if (typeof durableAdapter.restore === "function") {
+        await durableAdapter.restore(records);
+      } else {
+        const retained = [...records.values()].filter(Boolean);
+        if (retained.length > 1 && typeof durableAdapter.putMany === "function") {
+          await durableAdapter.putMany(retained);
+        } else {
+          for (const record of retained) await durableAdapter.put(record);
+        }
+        for (const [assetId, record] of records) {
+          if (record === null) await durableAdapter.remove(assetId);
+        }
+      }
+      for (const assetId of records.keys()) releaseAllLeases(leases, assetId, urlApi);
+      return true;
+    },
     async rollback(assetId, { transactionId } = {}) {
       const record = await durableAdapter.get(assetId);
       if (!record) return false;
@@ -294,6 +323,9 @@ function createIndexedDbAdapter(indexedDB) {
     async remove(id) {
       await requestResult(await database(), "readwrite", (objectStore) => objectStore.delete(id));
     },
+    async restore(snapshot) {
+      await restoreRecords(await database(), snapshot);
+    },
     async list() {
       const records = await requestResult(
         await database(),
@@ -303,6 +335,26 @@ function createIndexedDbAdapter(indexedDB) {
       return Array.isArray(records) ? records : [];
     },
   };
+}
+
+function restoreRecords(db, snapshot) {
+  return new Promise((resolve, reject) => {
+    let transaction;
+    try {
+      transaction = db.transaction(STORE_NAME, "readwrite");
+      const objectStore = transaction.objectStore(STORE_NAME);
+      for (const [assetId, record] of snapshot) {
+        if (record === null) objectStore.delete(assetId);
+        else objectStore.put(record);
+      }
+    } catch (error) {
+      reject(normalizeStorageError(error));
+      return;
+    }
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(normalizeStorageError(transaction.error));
+    transaction.onabort = () => reject(normalizeStorageError(transaction.error));
+  });
 }
 
 function putManyRecords(db, records) {
@@ -428,6 +480,11 @@ function requiredText(value, description) {
     `${description} is required.`,
   );
   return value.trim();
+}
+
+function normalizedAssetIds(assetIds) {
+  if (!Array.isArray(assetIds)) throw new TypeError("Authored asset ids must be an array.");
+  return [...new Set(assetIds.map((assetId) => requiredText(assetId, "Authored asset id")))].sort();
 }
 
 function authoredError(code, message, cause) {

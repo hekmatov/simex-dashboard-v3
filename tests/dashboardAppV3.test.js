@@ -112,6 +112,34 @@ test("source runtime state is excluded from packages and gates only affected pla
   assert.deepEqual(importedChanged.datasetProfiles, dashboard.datasetProfiles);
 });
 
+test("App owns one scoped content coordinator and transports only its wrappers through authoring", async () => {
+  const app = await source("src/App.jsx");
+  const renderer = await source("src/components/DashboardRenderer.jsx");
+  const modeWorkspace = await source("src/components/dashboard/DashboardModeWorkspace.jsx");
+  const buildWorkspace = await source("src/components/build/BuildWorkspace.jsx");
+  const chartWizard = await source("src/components/chart-authoring/ChartWizardV3.jsx");
+  const staticWizard = await source("src/components/static-content/StaticContentWizard.jsx");
+
+  assert.match(app, /createContentDraftCoordinator/);
+  assert.match(app, /contentDraftCoordinator\.dispose/);
+  assert.match(app, /<DashboardRenderer[\s\S]*contentDraftCoordinator=/);
+  assert.match(renderer, /onContentDraftStage[\s\S]*stageDraft/);
+  assert.match(renderer, /onContentDraftCommit[\s\S]*commitDraft/);
+  assert.match(renderer, /onContentDraftDiscard[\s\S]*discardDraft/);
+  assert.match(renderer, /<DashboardModeWorkspace[\s\S]*contentDraftCoordinator=/);
+  assert.match(renderer, /<BuildWorkspace[\s\S]*contentDraftCoordinator=/);
+  assert.match(renderer, /<ChartWizardV3[\s\S]*onContentDraftStage=/);
+  assert.match(renderer, /<StaticContentWizard[\s\S]*onContentDraftStage=/);
+  for (const sourceText of [modeWorkspace, buildWorkspace]) {
+    assert.match(sourceText, /contentDraftCoordinator/);
+  }
+  for (const sourceText of [chartWizard, staticWizard]) {
+    assert.match(sourceText, /onContentDraftStage/);
+    assert.match(sourceText, /onContentDraftCommit/);
+    assert.match(sourceText, /onContentDraftDiscard/);
+  }
+});
+
 test("legacy chart-system files are absent after the clean cutover", async () => {
   const legacyFiles = [
     "src/components/AddChartWizard.jsx",
