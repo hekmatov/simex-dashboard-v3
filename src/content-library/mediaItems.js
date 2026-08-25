@@ -51,6 +51,7 @@ export function validateMediaItem(item, { assets } = {}) {
   }
   if (!ORIGINS.has(item.origin)) throw new Error("Media origin is invalid.");
   if (!HEALTH.has(item.health)) throw new Error("Media health is invalid.");
+  validateCurrentCoherence(item);
   if (item.dimensions !== undefined) {
     record(item.dimensions, "Media dimensions");
     rejectUnknown(item.dimensions, ["width", "height"], "Media dimensions");
@@ -69,7 +70,59 @@ export function validateMediaItem(item, { assets } = {}) {
   ) {
     throw new Error(`Media item references unknown asset "${item.current.assetId}".`);
   }
+  const manifest = item.current.kind === "asset"
+    ? assets?.[item.current.assetId]
+    : undefined;
+  if (manifest) validateManifestMetadata(item, manifest);
   return item;
+}
+
+function validateCurrentCoherence(item) {
+  if (item.current.kind === "url") {
+    if (item.origin !== "external") throw new Error("Media URL current source requires external origin.");
+    if (item.health !== "external") throw new Error("Media URL current source requires external health.");
+    return;
+  }
+  if (item.health === "external") {
+    throw new Error("Media external health requires a URL current source.");
+  }
+  if (item.current.kind === "package" && item.origin !== "packaged") {
+    throw new Error("Media package current source requires packaged origin.");
+  }
+  if (
+    item.current.kind === "asset"
+    && !["uploaded", "legacy-import"].includes(item.origin)
+  ) {
+    throw new Error("Media asset current source requires uploaded or legacy-import origin.");
+  }
+}
+
+function validateManifestMetadata(item, manifest) {
+  if (
+    item.dimensions !== undefined
+    && manifest.width !== undefined
+    && manifest.height !== undefined
+    && (
+      item.dimensions.width !== manifest.width
+      || item.dimensions.height !== manifest.height
+    )
+  ) {
+    throw new Error("Media dimensions must match the authored asset manifest.");
+  }
+  if (
+    item.byteLength !== undefined
+    && manifest.byteLength !== undefined
+    && item.byteLength !== manifest.byteLength
+  ) {
+    throw new Error("Media byte length must match the authored asset manifest.");
+  }
+  if (
+    item.mediaType !== undefined
+    && manifest.mediaType !== undefined
+    && item.mediaType !== manifest.mediaType
+  ) {
+    throw new Error("Media type must match the authored asset manifest.");
+  }
 }
 
 function validateCurrent(current) {

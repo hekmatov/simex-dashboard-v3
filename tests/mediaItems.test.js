@@ -47,3 +47,36 @@ test("media rename changes only display metadata and validation rejects split au
     assets: { "asset-map": {} },
   }), /alt.*unknown/i);
 });
+
+test("media validation enforces current origin and external-health coherence", () => {
+  assert.throws(() => validateMediaItem(makeMediaItem({
+    current: { kind: "url", url: "https://example.test/map.png" },
+    origin: "uploaded",
+    health: "external",
+  })), /URL.*origin|origin.*URL/i);
+  assert.throws(() => validateMediaItem(makeMediaItem({
+    current: { kind: "url", url: "https://example.test/map.png" },
+    origin: "external",
+    health: "ready",
+  })), /URL.*external health|external health.*URL/i);
+  assert.throws(() => validateMediaItem(makeMediaItem({
+    health: "external",
+  }), { assets: { "asset-map": {
+    mediaType: "image/png", byteLength: 20, width: 4, height: 5,
+  } } }), /external health.*URL|URL.*external health/i);
+});
+
+test("media validation rejects supplied asset metadata that differs from its manifest", () => {
+  const assets = {
+    "asset-map": { mediaType: "image/png", byteLength: 20, width: 4, height: 5 },
+  };
+  assert.throws(() => validateMediaItem(makeMediaItem({
+    dimensions: { width: 8, height: 5 },
+  }), { assets }), /dimensions.*manifest|manifest.*dimensions/i);
+  assert.throws(() => validateMediaItem(makeMediaItem({
+    byteLength: 21,
+  }), { assets }), /byte length.*manifest|manifest.*byte length/i);
+  assert.throws(() => validateMediaItem(makeMediaItem({
+    mediaType: "image/jpeg",
+  }), { assets }), /media type.*manifest|manifest.*media type/i);
+});

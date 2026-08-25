@@ -41,3 +41,15 @@ test("content library validates key identity and derives source kind from dataSo
     mediaItems: {}, sourceEntries: { cases: makeSourceEntry("csv") },
   }, { dataSources: { cases: { kind: "staticText" } } }), /CSV or GeoJSON/i);
 });
+
+test("content library rejects a Static Image placement whose mediaId is missing", () => {
+  assert.throws(() => validateContentLibrary({
+    mediaItems: { "media-unused": makeMediaItem({ mediaId: "media-unused" }) },
+    sourceEntries: {},
+  }, {
+    assets: { "asset-map": {} },
+    dataSources: {
+      briefing: { kind: "staticImage", sourceVersion: 2, mediaId: "media-missing" },
+    },
+  }), /media-missing.*MediaItem|MediaItem.*media-missing/i);
+});

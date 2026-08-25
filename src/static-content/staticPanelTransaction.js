@@ -67,6 +67,9 @@ export function prepareStaticPanelTransaction({
   const previousSourceId = previousPlacement?.panel?.sourceId ?? null;
   const committedPlacement = normalizeStaticSource(placement);
   const isImage = committedPlacement.kind === "staticImage";
+  const previousMediaItem = isImage
+    ? previousDashboard.contentLibrary?.mediaItems?.[committedPlacement.mediaId]
+    : null;
   if (isImage) {
     validateMediaItem(mediaItem, { assets });
     if (mediaItem.mediaId !== committedPlacement.mediaId) {
@@ -89,6 +92,15 @@ export function prepareStaticPanelTransaction({
   candidateDashboard.contentLibrary = normalizeContentLibrary(candidateDashboard.contentLibrary);
   if (isImage) {
     candidateDashboard.contentLibrary.mediaItems[mediaItem.mediaId] = structuredClone(mediaItem);
+    const previousAssetId = operation === "update"
+      && previousMediaItem?.current?.kind === "asset"
+      && mediaItem.current.kind === "asset"
+      && previousMediaItem.current.assetId !== mediaItem.current.assetId
+      ? previousMediaItem.current.assetId
+      : null;
+    if (previousAssetId) {
+      pruneStaticOwnership(candidateDashboard, { assetIds: [previousAssetId] });
+    }
   }
 
   if (operation === "create") {
@@ -109,6 +121,17 @@ export function prepareStaticPanelTransaction({
   }
 
   const finalAssets = candidateDashboard.assets ?? {};
+  const declaredStagedAssetIds = new Set(stagedAssetIds);
+  const selectedAssetId = isImage && mediaItem.current.kind === "asset"
+    ? mediaItem.current.assetId
+    : null;
+  if (
+    selectedAssetId
+    && finalAssets[selectedAssetId]?.storageState === "staged"
+    && !declaredStagedAssetIds.has(selectedAssetId)
+  ) {
+    throw new Error(`The selected staged Image asset "${selectedAssetId}" must be declared in stagedAssetIds.`);
+  }
   validateAuthoredAssetManifest(finalAssets);
   if (authoredAssetManifestBytes(finalAssets) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
     throw new Error("The Image transaction exceeds the dashboard's 200 MiB authored-asset budget.");

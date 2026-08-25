@@ -23,6 +23,14 @@ export function validateContentLibrary(value, authorities = {}) {
     validateMediaItem(item, { assets: authorities.assets });
     if (item.mediaId !== mediaId) throw new Error(`MediaItem mediaId "${item.mediaId}" must match key "${mediaId}".`);
   }
+  for (const descriptor of Object.values(authorities.dataSources ?? {})) {
+    if (
+      descriptor?.kind === "staticImage"
+      && !Object.hasOwn(library.mediaItems, descriptor.mediaId)
+    ) {
+      throw new Error(`Static Image placement MediaItem "${String(descriptor.mediaId)}" does not exist.`);
+    }
+  }
   for (const [sourceId, entry] of Object.entries(library.sourceEntries)) {
     validateSourceEntry(entry);
     if (entry.sourceId !== sourceId) throw new Error(`SourceEntry sourceId "${entry.sourceId}" must match key "${sourceId}".`);

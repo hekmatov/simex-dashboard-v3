@@ -39,6 +39,36 @@ test("bundle promotion materializes authored Images under hashed contained packa
   assert.deepEqual(promoted.networkDependencies, ["https://example.test/linked.webp"]);
 });
 
+test("bundle promotion emits one physical file for two logical media items sharing one asset", () => {
+  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const sha256 = sha256HexSync(bytes);
+  const assetId = `asset-${sha256}`;
+  const dashboard = portableDashboard({ assetId, sha256 });
+  dashboard.contentLibrary.mediaItems["media-unused-shared"] = mediaItem({
+    mediaId: "media-unused-shared",
+    current: { kind: "asset", assetId },
+    origin: "uploaded",
+    health: "ready",
+    dimensions: { width: 8, height: 6 },
+    byteLength: 4,
+    mediaType: "image/png",
+  });
+  const bundle = serializeDashboardBundle(dashboard, {
+    now: null,
+    assetPayloads: {
+      [assetId]: {
+        base64: "AQIDBA==", byteLength: 4, mediaType: "image/png", sha256,
+      },
+    },
+  });
+
+  const promoted = preparePromotedDashboard(JSON.stringify(bundle));
+  const expectedCurrent = { kind: "package", path: `data/authored/${sha256}.png` };
+  assert.deepEqual(promoted.config.contentLibrary.mediaItems["media-local"].current, expectedCurrent);
+  assert.deepEqual(promoted.config.contentLibrary.mediaItems["media-unused-shared"].current, expectedCurrent);
+  assert.deepEqual(promoted.files.map(({ relativePath }) => relativePath), [expectedCurrent.path]);
+});
+
 test("promotion containment rejects sibling-prefix and traversal output paths", () => {
   const publicDir = path.resolve("C:/example/public");
   assert.doesNotThrow(() => assertWithinPublicDirectory(

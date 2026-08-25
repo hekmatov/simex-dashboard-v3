@@ -151,3 +151,39 @@ Fresh scoped result: 36 rows, 36 unique exact IDs (FT-01–12, IM-01–16, PS-01
 PS-04 remains a truthful 259/260 exact-gate residual for this Task-1 commit; it is not claimed Passing. The later master-authorized pre-merge gate must refresh the generated client and rerun PS-04. Until it passes there, Task 17 must not claim the affected row or integrated sweep completely verified.
 
 No implementation or focused source behavior is currently failing.
+
+## Fix Round 1 — V5 Image Ownership Invariants
+
+**Status:** DONE. This section records only the five independently validated Task-1 findings T1-01–T1-05; it does not claim the broader review is clean. The retained PS-04 stale-`dist` residual and Task-17 authorized-build condition above are unchanged.
+
+### Changed files
+
+- `src/content-library/contentLibrarySchema.js`
+- `src/content-library/mediaItems.js`
+- `src/static-content/staticPanelTransaction.js`
+- `scripts/promote-dashboard-bundle.mjs`
+- `tests/contentLibrarySchema.test.js`
+- `tests/mediaItems.test.js`
+- `tests/staticPanelTransaction.test.js`
+- `tests/staticContentPortablePackage.test.js`
+
+### RED evidence
+
+- T1-01: `node --test tests/contentLibrarySchema.test.js` — 2/3 passed; the new missing-placement-MediaItem case failed with `Missing expected exception`.
+- T1-02/T1-03: `node --test tests/staticPanelTransaction.test.js` — 8/10 passed; the undeclared selected staged asset failed with `Missing expected exception`, and exact-budget replacement failed on the unpruned previous asset. The shared-asset and genuine-over-budget guards already passed.
+- T1-04: `node --test tests/staticContentPortablePackage.test.js` — 4/5 passed; two logical MediaItems sharing one asset emitted the identical physical path twice.
+- T1-05: `node --test tests/mediaItems.test.js` — 3/5 passed; current/origin/external-health and supplied-manifest metadata mismatches were accepted.
+
+### Minimal GREEN implementation
+
+- Every `staticImage` placement now resolves its `mediaId` in `contentLibrary.mediaItems`; unused logical media remains valid.
+- A selected asset whose manifest is `staged` must appear in `stagedAssetIds`; rejection occurs on cloned transaction state and inputs remain unchanged.
+- Same-MediaItem replacement captures its previous asset and calls the existing reference-aware pruning owner before budget validation. Unreferenced bytes are removed, physically shared bytes remain, exact 200 MiB passes, and 200 MiB + 1 byte still rejects.
+- Promotion deduplicates emitted authored paths while rewriting every logical MediaItem to the contained package path, including an unused logical record sharing the physical asset.
+- Media validation enforces Task-1 current-kind/origin/external-health coherence and compares supplied dimensions, byte length, and media type with the referenced manifest. Exhaustive health transitions and Task-15 package validation remain deferred.
+
+### GREEN evidence
+
+- Focused: content-library schema 3/3; media items 5/5; static transaction 10/10; portable promotion 5/5.
+- Bounded combined correction selection (the four focused files plus V4 migration, V5/V3 bundle, App persistence, and package export): **102/102 passed**, 0 failed, 4.30 s outside the restrictive filesystem sandbox required by the existing Vite App-boundary check.
+- No full build, full unit suite, Playwright suite, or PS-04 rerun was performed.

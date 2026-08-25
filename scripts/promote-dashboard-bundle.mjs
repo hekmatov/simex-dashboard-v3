@@ -18,6 +18,7 @@ export function preparePromotedDashboard(bundleText) {
   });
   const promoted = structuredClone(config);
   const files = [];
+  const emittedAuthoredPaths = new Set();
   const datasetProfiles = structuredClone(promoted.datasetProfiles ?? {});
 
   for (const [sourceId, source] of Object.entries(promoted.dataSources ?? {})) {
@@ -64,10 +65,13 @@ export function preparePromotedDashboard(bundleText) {
     }
     const extension = authoredAssetExtension(manifest?.mediaType);
     const relativePath = `data/authored/${manifest.sha256}.${extension}`;
-    files.push({
-      relativePath,
-      contents: decodeBase64(payload.base64),
-    });
+    if (!emittedAuthoredPaths.has(relativePath)) {
+      files.push({
+        relativePath,
+        contents: decodeBase64(payload.base64),
+      });
+      emittedAuthoredPaths.add(relativePath);
+    }
     mediaItem.current = { kind: "package", path: relativePath };
     mediaItem.origin = "packaged";
     mediaItem.health = "ready";

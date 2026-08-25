@@ -74,6 +74,74 @@ test("prepared transaction snapshots reject post-validation mutation", () => {
   assert.throws(() => { prepared.candidateDashboard.dataSources["image-source"].alt = "mutated"; }, /read only|extensible|object is not extensible/i);
 });
 
+test("a selected staged Image asset must be declared without mutating transaction inputs", () => {
+  const dashboard = emptyDashboard();
+  const payload = imagePayload();
+  payload.stagedAssetIds = [];
+  const dashboardBefore = structuredClone(dashboard);
+  const payloadBefore = structuredClone(payload);
+
+  assert.throws(() => prepareStaticPanelTransaction({
+    dashboard, operation: "create", ...payload,
+  }), /selected staged Image asset.*stagedAssetIds/i);
+  assert.deepEqual(dashboard, dashboardBefore);
+  assert.deepEqual(payload, payloadBefore);
+});
+
+test("same-MediaItem replacement prunes the previous asset before exact budget validation", () => {
+  const dashboard = makeDashboardV5();
+  dashboard.assets["asset-map"].byteLength = 10 * 1024 * 1024;
+  dashboard.contentLibrary.mediaItems["media-image-source"].byteLength = 10 * 1024 * 1024;
+  const nextBytes = 200 * 1024 * 1024;
+  const prepared = prepareStaticPanelTransaction({
+    dashboard,
+    operation: "update",
+    panelId: "image-panel",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: dashboard.pages[0].sections[0].panels[0].chart,
+    placement: dashboard.dataSources["image-source"],
+    mediaItem: makeMediaItem({
+      revision: 4,
+      current: { kind: "asset", assetId: "asset-next" },
+      dimensions: { width: 10, height: 10 },
+      byteLength: nextBytes,
+    }),
+    assets: {
+      "asset-next": {
+        mediaType: "image/png", byteLength: nextBytes, width: 10, height: 10,
+        sha256: "b".repeat(64), storageState: "staged",
+      },
+    },
+    stagedAssetIds: ["asset-next"],
+  });
+
+  assert.equal(Object.hasOwn(prepared.candidateDashboard.assets, "asset-map"), false);
+  assert.equal(prepared.candidateDashboard.assets["asset-next"].byteLength, nextBytes);
+});
+
+test("same-MediaItem replacement preserves a previous asset shared by another logical media item", () => {
+  const dashboard = makeDashboardV5();
+  dashboard.contentLibrary.mediaItems["media-shared"] = makeMediaItem({ mediaId: "media-shared" });
+  const payload = replacementPayload(dashboard, { assetId: "asset-next", byteLength: 40 });
+
+  const prepared = prepareStaticPanelTransaction({ dashboard, operation: "update", ...payload });
+
+  assert.equal(Object.hasOwn(prepared.candidateDashboard.assets, "asset-map"), true);
+  assert.equal(prepared.candidateDashboard.contentLibrary.mediaItems["media-shared"].current.assetId, "asset-map");
+});
+
+test("same-MediaItem replacement still rejects a genuinely over-budget next asset", () => {
+  const dashboard = makeDashboardV5();
+  const payload = replacementPayload(dashboard, {
+    assetId: "asset-over-budget",
+    byteLength: (200 * 1024 * 1024) + 1,
+  });
+
+  assert.throws(() => prepareStaticPanelTransaction({
+    dashboard, operation: "update", ...payload,
+  }), /200 MiB authored-asset budget/i);
+});
+
 function emptyDashboard() {
   const dashboard = makeDashboardV5();
   dashboard.pages[0].sections[0].panels = [];
@@ -92,5 +160,27 @@ function imagePayload() {
     mediaItem: makeMediaItem({ mediaId: "media-map", revision: 1, current: { kind: "asset", assetId: "asset-map" }, dimensions: { width: 4, height: 5 }, byteLength: 20 }),
     assets: { "asset-map": asset },
     stagedAssetIds: ["asset-map"],
+  };
+}
+
+function replacementPayload(dashboard, { assetId, byteLength }) {
+  return {
+    panelId: "image-panel",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel: dashboard.pages[0].sections[0].panels[0].chart,
+    placement: dashboard.dataSources["image-source"],
+    mediaItem: makeMediaItem({
+      revision: 4,
+      current: { kind: "asset", assetId },
+      dimensions: { width: 8, height: 8 },
+      byteLength,
+    }),
+    assets: {
+      [assetId]: {
+        mediaType: "image/png", byteLength, width: 8, height: 8,
+        sha256: "b".repeat(64), storageState: "staged",
+      },
+    },
+    stagedAssetIds: [assetId],
   };
 }
