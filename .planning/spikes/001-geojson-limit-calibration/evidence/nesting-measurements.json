@@ -1,0 +1,3632 @@
+{
+  "generatedAt": "2026-08-25T14:47:58.140Z",
+  "baseUrl": "http://127.0.0.1:4187",
+  "profiles": [
+    {
+      "id": "build-1440",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "cpuRate": 1,
+      "heapMiB": 1024,
+      "ladder": "full",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36",
+        "platform": "Win32",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "devicePixelRatio": 1
+        },
+        "hardwareConcurrency": 16,
+        "deviceMemory": 16,
+        "heapLimitBytes": 1174405120,
+        "longTaskObserver": true
+      },
+      "project": [],
+      "ladders": [
+        {
+          "metadata": {
+            "id": "collectionDepth-1",
+            "dimension": "collectionDepth",
+            "requestedValue": 1,
+            "encodedBytes": 225,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 1,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 3,
+            "visitedNodes": 3
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.10000000894069672,
+              "validateMs": 0.3999999910593033,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0.19999998807907104,
+              "persistenceWriteMs": 0.4000000059604645,
+              "persistenceReloadMs": 0.7999999970197678,
+              "packageExportMs": 19.599999994039536,
+              "packageImportMs": 2.0999999940395355,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0.10000000894069672,
+              "firstUsableMapMs": 24,
+              "interactionResponseMs": 33.29999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.30000001192092896,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1022332,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.10000000894069672,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.29999999701976776,
+              "packageExportMs": 1.5,
+              "packageImportMs": 0.9000000059604645,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29,
+              "interactionResponseMs": 32.69999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 535615,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.19999998807907104,
+              "persistenceReloadMs": 0.30000001192092896,
+              "packageExportMs": 1.199999988079071,
+              "packageImportMs": 0.800000011920929,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.599999994039536,
+              "interactionResponseMs": 33.20000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -1085341,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "validateMs": {
+              "median": 0,
+              "p95": 0.3999999910593033,
+              "max": 0.3999999910593033
+            },
+            "summaryMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "hashMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.19999998807907104,
+              "max": 0.19999998807907104
+            },
+            "persistenceWriteMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "persistenceReloadMs": {
+              "median": 0.30000001192092896,
+              "p95": 0.7999999970197678,
+              "max": 0.7999999970197678
+            },
+            "packageExportMs": {
+              "median": 1.5,
+              "p95": 19.599999994039536,
+              "max": 19.599999994039536
+            },
+            "packageImportMs": {
+              "median": 0.9000000059604645,
+              "p95": 2.0999999940395355,
+              "max": 2.0999999940395355
+            },
+            "packageBytes": {
+              "median": 977,
+              "p95": 977,
+              "max": 977
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "firstUsableMapMs": {
+              "median": 29,
+              "p95": 29.599999994039536,
+              "max": 29.599999994039536
+            },
+            "interactionResponseMs": {
+              "median": 33.20000000298023,
+              "p95": 33.29999999701977,
+              "max": 33.29999999701977
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 535615,
+              "p95": 1022332,
+              "max": 1022332
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-4",
+            "dimension": "collectionDepth",
+            "requestedValue": 4,
+            "encodedBytes": 360,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 4,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 6,
+            "visitedNodes": 6
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.10000000894069672,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.29999999701976776,
+              "packageExportMs": 1.2999999970197678,
+              "packageImportMs": 1,
+              "packageBytes": 1112,
+              "mapRegistrationMs": 0.10000000894069672,
+              "firstUsableMapMs": 25.599999994039536,
+              "interactionResponseMs": 34.20000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 542204,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.10000000894069672,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.6000000089406967,
+              "packageImportMs": 0.7999999970197678,
+              "packageBytes": 1112,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 28.5,
+              "interactionResponseMs": 33.900000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 634844,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.29999999701976776,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.0999999940395355,
+              "packageImportMs": 0.7999999970197678,
+              "packageBytes": 1112,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 30.600000008940697,
+              "interactionResponseMs": 32.79999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -981504,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "validateMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "persistenceWriteMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "packageExportMs": {
+              "median": 1.2999999970197678,
+              "p95": 1.6000000089406967,
+              "max": 1.6000000089406967
+            },
+            "packageImportMs": {
+              "median": 0.7999999970197678,
+              "p95": 1,
+              "max": 1
+            },
+            "packageBytes": {
+              "median": 1112,
+              "p95": 1112,
+              "max": 1112
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "firstUsableMapMs": {
+              "median": 28.5,
+              "p95": 30.600000008940697,
+              "max": 30.600000008940697
+            },
+            "interactionResponseMs": {
+              "median": 33.900000005960464,
+              "p95": 34.20000000298023,
+              "max": 34.20000000298023
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 542204,
+              "p95": 634844,
+              "max": 634844
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-8",
+            "dimension": "collectionDepth",
+            "requestedValue": 8,
+            "encodedBytes": 540,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 8,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 10,
+            "visitedNodes": 10
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 0.8999999910593033,
+              "packageImportMs": 0.7000000029802322,
+              "packageBytes": 1292,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 27.200000002980232,
+              "interactionResponseMs": 33.70000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 586920,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 0.8999999910593033,
+              "packageImportMs": 0.9000000059604645,
+              "packageBytes": 1292,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 30.399999991059303,
+              "interactionResponseMs": 33.400000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 595164,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.2000000029802322,
+              "packageImportMs": 0.7000000029802322,
+              "packageBytes": 1292,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 30.200000002980232,
+              "interactionResponseMs": 32.599999994039536,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -1087296,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "validateMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "persistenceWriteMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "packageExportMs": {
+              "median": 0.8999999910593033,
+              "p95": 1.2000000029802322,
+              "max": 1.2000000029802322
+            },
+            "packageImportMs": {
+              "median": 0.7000000029802322,
+              "p95": 0.9000000059604645,
+              "max": 0.9000000059604645
+            },
+            "packageBytes": {
+              "median": 1292,
+              "p95": 1292,
+              "max": 1292
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 30.200000002980232,
+              "p95": 30.399999991059303,
+              "max": 30.399999991059303
+            },
+            "interactionResponseMs": {
+              "median": 33.400000005960464,
+              "p95": 33.70000000298023,
+              "max": 33.70000000298023
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 586920,
+              "p95": 595164,
+              "max": 595164
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-16",
+            "dimension": "collectionDepth",
+            "requestedValue": 16,
+            "encodedBytes": 900,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 16,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 18,
+            "visitedNodes": 18
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.19999998807907104,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1,
+              "packageImportMs": 0.7000000029802322,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 27.299999997019768,
+              "interactionResponseMs": 33.1000000089407,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 772428,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.20000000298023224,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.2000000029802322,
+              "packageImportMs": 0.7999999970197678,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 30.400000005960464,
+              "interactionResponseMs": 33.599999994039536,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -785152,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.10000000894069672,
+              "parseMs": 0,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.19999998807907104,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1,
+              "packageImportMs": 0.7999999970197678,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 31.200000002980232,
+              "interactionResponseMs": 32.29999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 773936,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "validateMs": {
+              "median": 0,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "stableStringifyMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "persistenceWriteMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "packageExportMs": {
+              "median": 1,
+              "p95": 1.2000000029802322,
+              "max": 1.2000000029802322
+            },
+            "packageImportMs": {
+              "median": 0.7999999970197678,
+              "p95": 0.7999999970197678,
+              "max": 0.7999999970197678
+            },
+            "packageBytes": {
+              "median": 1652,
+              "p95": 1652,
+              "max": 1652
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 30.400000005960464,
+              "p95": 31.200000002980232,
+              "max": 31.200000002980232
+            },
+            "interactionResponseMs": {
+              "median": 33.1000000089407,
+              "p95": 33.599999994039536,
+              "max": 33.599999994039536
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 772428,
+              "p95": 773936,
+              "max": 773936
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-32",
+            "dimension": "collectionDepth",
+            "requestedValue": 32,
+            "encodedBytes": 1620,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 32,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 34,
+            "visitedNodes": 34
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.19999998807907104,
+              "persistenceReloadMs": 0.10000000894069672,
+              "packageExportMs": 1.7000000029802322,
+              "packageImportMs": 1.3999999910593033,
+              "packageBytes": 2372,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 25,
+              "interactionResponseMs": 37.20000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -756328,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.10000000894069672,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.0999999940395355,
+              "packageImportMs": 1,
+              "packageBytes": 2372,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 26,
+              "interactionResponseMs": 33.099999994039536,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1154072,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.19999998807907104,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.2999999970197678,
+              "packageImportMs": 1.2000000029802322,
+              "packageBytes": 2372,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 30,
+              "interactionResponseMs": 33.5,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -767652,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "validateMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "persistenceWriteMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "packageExportMs": {
+              "median": 1.2999999970197678,
+              "p95": 1.7000000029802322,
+              "max": 1.7000000029802322
+            },
+            "packageImportMs": {
+              "median": 1.2000000029802322,
+              "p95": 1.3999999910593033,
+              "max": 1.3999999910593033
+            },
+            "packageBytes": {
+              "median": 2372,
+              "p95": 2372,
+              "max": 2372
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 26,
+              "p95": 30,
+              "max": 30
+            },
+            "interactionResponseMs": {
+              "median": 33.5,
+              "p95": 37.20000000298023,
+              "max": 37.20000000298023
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": -756328,
+              "p95": 1154072,
+              "max": 1154072
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-64",
+            "dimension": "collectionDepth",
+            "requestedValue": 64,
+            "encodedBytes": 3060,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 64,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 66,
+            "visitedNodes": 66
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.20000000298023224,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.6000000089406967,
+              "packageImportMs": 1.7999999970197678,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 25.200000002980232,
+              "interactionResponseMs": 33.20000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 157988,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.10000000894069672,
+              "parseMs": 0,
+              "validateMs": 0.19999998807907104,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.7999999970197678,
+              "packageImportMs": 1.2999999970197678,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 27.900000005960464,
+              "interactionResponseMs": 33.79999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 114308,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.10000000894069672,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.29999999701976776,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.5,
+              "packageImportMs": 1.3999999910593033,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.5,
+              "interactionResponseMs": 32.19999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 119532,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "validateMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "hashMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "persistenceWriteMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "packageExportMs": {
+              "median": 1.6000000089406967,
+              "p95": 1.7999999970197678,
+              "max": 1.7999999970197678
+            },
+            "packageImportMs": {
+              "median": 1.3999999910593033,
+              "p95": 1.7999999970197678,
+              "max": 1.7999999970197678
+            },
+            "packageBytes": {
+              "median": 3812,
+              "p95": 3812,
+              "max": 3812
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 27.900000005960464,
+              "p95": 29.5,
+              "max": 29.5
+            },
+            "interactionResponseMs": {
+              "median": 33.20000000298023,
+              "p95": 33.79999999701977,
+              "max": 33.79999999701977
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 119532,
+              "p95": 157988,
+              "max": 157988
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "acceptedGeometryTypes-all",
+            "dimension": "acceptedGeometryTypes",
+            "requestedValue": "all",
+            "encodedBytes": 1605,
+            "features": 7,
+            "totalPositions": 31,
+            "maxFeaturePositions": 10,
+            "parts": 6,
+            "rings": 3,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "Point": 2,
+              "MultiPoint": 1,
+              "LineString": 2,
+              "MultiLineString": 1,
+              "Polygon": 1,
+              "MultiPolygon": 1,
+              "GeometryCollection": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1103,
+              52.102000000000004
+            ],
+            "observedDepth": 5,
+            "visitedNodes": 53
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.20000000298023224,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.199999988079071,
+              "packageImportMs": 1.2999999970197678,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 25.30000001192093,
+              "interactionResponseMs": 33.69999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -766840,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0,
+              "validateMs": 0.20000000298023224,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.30000001192092896,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.300000011920929,
+              "packageImportMs": 1.3999999910593033,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 28.799999997019768,
+              "interactionResponseMs": 33.30000001192093,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1103819,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.10000000894069672,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.29999999701976776,
+              "persistenceReloadMs": 0.10000000894069672,
+              "packageExportMs": 1.3999999910593033,
+              "packageImportMs": 1.4000000059604645,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 28.5,
+              "interactionResponseMs": 33.900000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -797497,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "parseMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "validateMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "persistenceWriteMs": {
+              "median": 0.29999999701976776,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "persistenceReloadMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "packageExportMs": {
+              "median": 1.300000011920929,
+              "p95": 1.3999999910593033,
+              "max": 1.3999999910593033
+            },
+            "packageImportMs": {
+              "median": 1.3999999910593033,
+              "p95": 1.4000000059604645,
+              "max": 1.4000000059604645
+            },
+            "packageBytes": {
+              "median": 2357,
+              "p95": 2357,
+              "max": 2357
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 28.5,
+              "p95": 28.799999997019768,
+              "max": 28.799999997019768
+            },
+            "interactionResponseMs": {
+              "median": 33.69999998807907,
+              "p95": 33.900000005960464,
+              "max": 33.900000005960464
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": -766840,
+              "p95": 1103819,
+              "max": 1103819
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "build-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "cpuRate": 1,
+      "heapMiB": 1024,
+      "ladder": "checkpoints",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36",
+        "platform": "Win32",
+        "viewport": {
+          "width": 1024,
+          "height": 768,
+          "devicePixelRatio": 1
+        },
+        "hardwareConcurrency": 16,
+        "deviceMemory": 16,
+        "heapLimitBytes": 1174405120,
+        "longTaskObserver": true
+      },
+      "project": [],
+      "ladders": [
+        {
+          "metadata": {
+            "id": "collectionDepth-1",
+            "dimension": "collectionDepth",
+            "requestedValue": 1,
+            "encodedBytes": 225,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 1,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 3,
+            "visitedNodes": 3
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.5999999940395355,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0.19999998807907104,
+              "persistenceWriteMs": 0.5,
+              "persistenceReloadMs": 0.29999999701976776,
+              "packageExportMs": 15.400000005960464,
+              "packageImportMs": 1.1000000089406967,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 30.200000002980232,
+              "interactionResponseMs": 32.400000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1021872,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.5,
+              "packageImportMs": 0.9000000059604645,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 28.5,
+              "interactionResponseMs": 33.69999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 535635,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.10000000894069672,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.300000011920929,
+              "packageImportMs": 0.7999999970197678,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.599999994039536,
+              "interactionResponseMs": 33.400000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -1091129,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "validateMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "hashMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.19999998807907104,
+              "max": 0.19999998807907104
+            },
+            "persistenceWriteMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "packageExportMs": {
+              "median": 1.5,
+              "p95": 15.400000005960464,
+              "max": 15.400000005960464
+            },
+            "packageImportMs": {
+              "median": 0.9000000059604645,
+              "p95": 1.1000000089406967,
+              "max": 1.1000000089406967
+            },
+            "packageBytes": {
+              "median": 977,
+              "p95": 977,
+              "max": 977
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 29.599999994039536,
+              "p95": 30.200000002980232,
+              "max": 30.200000002980232
+            },
+            "interactionResponseMs": {
+              "median": 33.400000005960464,
+              "p95": 33.69999998807907,
+              "max": 33.69999998807907
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 535635,
+              "p95": 1021872,
+              "max": 1021872
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-16",
+            "dimension": "collectionDepth",
+            "requestedValue": 16,
+            "encodedBytes": 900,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 16,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 18,
+            "visitedNodes": 18
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.10000000894069672,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.29999999701976776,
+              "packageExportMs": 2.1000000089406967,
+              "packageImportMs": 1.7999999970197678,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 21.799999997019768,
+              "interactionResponseMs": 34,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 835404,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0,
+              "validateMs": 0.10000000894069672,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.3999999910593033,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.2999999970197678,
+              "packageImportMs": 1.1000000089406967,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 28.799999997019768,
+              "interactionResponseMs": 33.1000000089407,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -672412,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.09999999403953552,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.2999999970197678,
+              "packageImportMs": 0.7000000029802322,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.899999991059303,
+              "interactionResponseMs": 33.6000000089407,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 790640,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "parseMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "validateMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "persistenceWriteMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.3999999910593033,
+              "max": 0.3999999910593033
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "packageExportMs": {
+              "median": 1.2999999970197678,
+              "p95": 2.1000000089406967,
+              "max": 2.1000000089406967
+            },
+            "packageImportMs": {
+              "median": 1.1000000089406967,
+              "p95": 1.7999999970197678,
+              "max": 1.7999999970197678
+            },
+            "packageBytes": {
+              "median": 1652,
+              "p95": 1652,
+              "max": 1652
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 28.799999997019768,
+              "p95": 29.899999991059303,
+              "max": 29.899999991059303
+            },
+            "interactionResponseMs": {
+              "median": 33.6000000089407,
+              "p95": 34,
+              "max": 34
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 790640,
+              "p95": 835404,
+              "max": 835404
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-64",
+            "dimension": "collectionDepth",
+            "requestedValue": 64,
+            "encodedBytes": 3060,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 64,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 66,
+            "visitedNodes": 66
+          },
+          "samples": [
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.20000000298023224,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 2.2000000029802322,
+              "packageImportMs": 1.2999999970197678,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 25.700000002980232,
+              "interactionResponseMs": 33.29999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 176800,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.10000000894069672,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.10000000894069672,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.9000000059604645,
+              "packageImportMs": 1.0999999940395355,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0.10000000894069672,
+              "firstUsableMapMs": 28.700000002980232,
+              "interactionResponseMs": 32.79999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 130684,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.10000000894069672,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 2,
+              "packageImportMs": 1.2999999970197678,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.5,
+              "interactionResponseMs": 32.79999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 242660,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "parseMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "validateMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "hashMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "persistenceWriteMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "persistenceReloadMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "packageExportMs": {
+              "median": 2,
+              "p95": 2.2000000029802322,
+              "max": 2.2000000029802322
+            },
+            "packageImportMs": {
+              "median": 1.2999999970197678,
+              "p95": 1.2999999970197678,
+              "max": 1.2999999970197678
+            },
+            "packageBytes": {
+              "median": 3812,
+              "p95": 3812,
+              "max": 3812
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "firstUsableMapMs": {
+              "median": 28.700000002980232,
+              "p95": 29.5,
+              "max": 29.5
+            },
+            "interactionResponseMs": {
+              "median": 32.79999999701977,
+              "p95": 33.29999999701977,
+              "max": 33.29999999701977
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 176800,
+              "p95": 242660,
+              "max": 242660
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "acceptedGeometryTypes-all",
+            "dimension": "acceptedGeometryTypes",
+            "requestedValue": "all",
+            "encodedBytes": 1605,
+            "features": 7,
+            "totalPositions": 31,
+            "maxFeaturePositions": 10,
+            "parts": 6,
+            "rings": 3,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "Point": 2,
+              "MultiPoint": 1,
+              "LineString": 2,
+              "MultiLineString": 1,
+              "Polygon": 1,
+              "MultiPolygon": 1,
+              "GeometryCollection": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1103,
+              52.102000000000004
+            ],
+            "observedDepth": 5,
+            "visitedNodes": 53
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.29999999701976776,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.10000000894069672,
+              "persistenceWriteMs": 0.20000000298023224,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 1.4000000059604645,
+              "packageImportMs": 1.5,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 25.099999994039536,
+              "interactionResponseMs": 33.30000001192093,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -804028,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.09999999403953552,
+              "validateMs": 0.10000000894069672,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.19999998807907104,
+              "persistenceReloadMs": 0.30000001192092896,
+              "packageExportMs": 1.2999999970197678,
+              "packageImportMs": 0.8999999910593033,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.399999991059303,
+              "interactionResponseMs": 34,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1128127,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0.10000000894069672,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.09999999403953552,
+              "persistenceWriteMs": 0.4000000059604645,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 1.2000000029802322,
+              "packageImportMs": 1,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 29.200000002980232,
+              "interactionResponseMs": 32.900000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -541933,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "validateMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "summaryMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "stableStringifyMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "hashMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "persistenceWriteMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "persistenceReloadMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "packageExportMs": {
+              "median": 1.2999999970197678,
+              "p95": 1.4000000059604645,
+              "max": 1.4000000059604645
+            },
+            "packageImportMs": {
+              "median": 1,
+              "p95": 1.5,
+              "max": 1.5
+            },
+            "packageBytes": {
+              "median": 2357,
+              "p95": 2357,
+              "max": 2357
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 29.200000002980232,
+              "p95": 29.399999991059303,
+              "max": 29.399999991059303
+            },
+            "interactionResponseMs": {
+              "median": 33.30000001192093,
+              "p95": 34,
+              "max": 34
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": -541933,
+              "p95": 1128127,
+              "max": 1128127
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "constrained-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "cpuRate": 4,
+      "heapMiB": 512,
+      "ladder": "full",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36",
+        "platform": "Win32",
+        "viewport": {
+          "width": 1024,
+          "height": 768,
+          "devicePixelRatio": 1
+        },
+        "hardwareConcurrency": 16,
+        "deviceMemory": 16,
+        "heapLimitBytes": 637534208,
+        "longTaskObserver": true
+      },
+      "project": [],
+      "ladders": [
+        {
+          "metadata": {
+            "id": "collectionDepth-1",
+            "dimension": "collectionDepth",
+            "requestedValue": 1,
+            "encodedBytes": 225,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 1,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 3,
+            "visitedNodes": 3
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.4000000059604645,
+              "validateMs": 3.7999999970197678,
+              "validateError": null,
+              "summaryMs": 0.20000000298023224,
+              "summaryError": null,
+              "stableStringifyMs": 0.5,
+              "hashMs": 1.1000000089406967,
+              "persistenceWriteMs": 1.5,
+              "persistenceReloadMs": 0.5999999940395355,
+              "packageExportMs": 100.29999999701977,
+              "packageImportMs": 9.099999994039536,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0.5999999940395355,
+              "firstUsableMapMs": 42.20000000298023,
+              "interactionResponseMs": 32.400000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.3999999910593033,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1022280,
+              "longTasks": [
+                {
+                  "startTime": 824.5999999940395,
+                  "duration": 147
+                }
+              ]
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0.19999998807907104,
+              "validateMs": 0.4000000059604645,
+              "validateError": null,
+              "summaryMs": 0.20000000298023224,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0.19999998807907104,
+              "persistenceWriteMs": 0.7999999970197678,
+              "persistenceReloadMs": 0.6000000089406967,
+              "packageExportMs": 7.799999997019768,
+              "packageImportMs": 6.700000002980232,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 10.800000011920929,
+              "interactionResponseMs": 34,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 535595,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.20000000298023224,
+              "validateMs": 0,
+              "validateError": null,
+              "summaryMs": 0.20000000298023224,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.5999999940395355,
+              "persistenceReloadMs": 0.30000001192092896,
+              "packageExportMs": 7.700000002980232,
+              "packageImportMs": 6.700000002980232,
+              "packageBytes": 977,
+              "mapRegistrationMs": 0.09999999403953552,
+              "firstUsableMapMs": 15,
+              "interactionResponseMs": 32.79999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.4000000059604645,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -1078717,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "parseMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "validateMs": {
+              "median": 0.4000000059604645,
+              "p95": 3.7999999970197678,
+              "max": 3.7999999970197678
+            },
+            "summaryMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "stableStringifyMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "hashMs": {
+              "median": 0.20000000298023224,
+              "p95": 1.1000000089406967,
+              "max": 1.1000000089406967
+            },
+            "persistenceWriteMs": {
+              "median": 0.7999999970197678,
+              "p95": 1.5,
+              "max": 1.5
+            },
+            "persistenceReloadMs": {
+              "median": 0.5999999940395355,
+              "p95": 0.6000000089406967,
+              "max": 0.6000000089406967
+            },
+            "packageExportMs": {
+              "median": 7.799999997019768,
+              "p95": 100.29999999701977,
+              "max": 100.29999999701977
+            },
+            "packageImportMs": {
+              "median": 6.700000002980232,
+              "p95": 9.099999994039536,
+              "max": 9.099999994039536
+            },
+            "packageBytes": {
+              "median": 977,
+              "p95": 977,
+              "max": 977
+            },
+            "mapRegistrationMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "firstUsableMapMs": {
+              "median": 15,
+              "p95": 42.20000000298023,
+              "max": 42.20000000298023
+            },
+            "interactionResponseMs": {
+              "median": 32.79999999701977,
+              "p95": 34,
+              "max": 34
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.3999999910593033,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 535595,
+              "p95": 1022280,
+              "max": 1022280
+            },
+            "longTasks": {
+              "count": 1,
+              "maxDurationMs": 147
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-4",
+            "dimension": "collectionDepth",
+            "requestedValue": 4,
+            "encodedBytes": 360,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 4,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 6,
+            "visitedNodes": 6
+          },
+          "samples": [
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0,
+              "validateMs": 0.3999999910593033,
+              "validateError": null,
+              "summaryMs": 0.20000000298023224,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.4000000059604645,
+              "persistenceReloadMs": 0.3999999910593033,
+              "packageExportMs": 5.399999991059303,
+              "packageImportMs": 4.600000008940697,
+              "packageBytes": 1112,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 8.799999997019768,
+              "interactionResponseMs": 34.20000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 541372,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0,
+              "validateMs": 0.09999999403953552,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.7999999970197678,
+              "persistenceReloadMs": 0.5999999940395355,
+              "packageExportMs": 9.300000011920929,
+              "packageImportMs": 7.399999991059303,
+              "packageBytes": 1112,
+              "mapRegistrationMs": 0.20000000298023224,
+              "firstUsableMapMs": 12.600000008940697,
+              "interactionResponseMs": 32.099999994039536,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.19999998807907104,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 634868,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0,
+              "validateMs": 0.5999999940395355,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.7999999970197678,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 6.4000000059604645,
+              "packageImportMs": 5.699999988079071,
+              "packageBytes": 1112,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 15.799999997019768,
+              "interactionResponseMs": 33.80000001192093,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.19999998807907104,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -1034044,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "validateMs": {
+              "median": 0.3999999910593033,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "summaryMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "stableStringifyMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "hashMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "persistenceWriteMs": {
+              "median": 0.7999999970197678,
+              "p95": 0.7999999970197678,
+              "max": 0.7999999970197678
+            },
+            "persistenceReloadMs": {
+              "median": 0.3999999910593033,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "packageExportMs": {
+              "median": 6.4000000059604645,
+              "p95": 9.300000011920929,
+              "max": 9.300000011920929
+            },
+            "packageImportMs": {
+              "median": 5.699999988079071,
+              "p95": 7.399999991059303,
+              "max": 7.399999991059303
+            },
+            "packageBytes": {
+              "median": 1112,
+              "p95": 1112,
+              "max": 1112
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "firstUsableMapMs": {
+              "median": 12.600000008940697,
+              "p95": 15.799999997019768,
+              "max": 15.799999997019768
+            },
+            "interactionResponseMs": {
+              "median": 33.80000001192093,
+              "p95": 34.20000000298023,
+              "max": 34.20000000298023
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 541372,
+              "p95": 634868,
+              "max": 634868
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-8",
+            "dimension": "collectionDepth",
+            "requestedValue": 8,
+            "encodedBytes": 540,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 8,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 10,
+            "visitedNodes": 10
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0,
+              "validateMs": 0.29999999701976776,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.30000001192092896,
+              "hashMs": 0.19999998807907104,
+              "persistenceWriteMs": 0.7999999970197678,
+              "persistenceReloadMs": 0.5,
+              "packageExportMs": 6.4000000059604645,
+              "packageImportMs": 4,
+              "packageBytes": 1292,
+              "mapRegistrationMs": 0.10000000894069672,
+              "firstUsableMapMs": 10.699999988079071,
+              "interactionResponseMs": 32.900000005960464,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 586872,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0,
+              "validateMs": 0.19999998807907104,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0,
+              "persistenceWriteMs": 0.5,
+              "persistenceReloadMs": 0.29999999701976776,
+              "packageExportMs": 7.700000002980232,
+              "packageImportMs": 5.5999999940395355,
+              "packageBytes": 1292,
+              "mapRegistrationMs": 0.19999998807907104,
+              "firstUsableMapMs": 16.900000005960464,
+              "interactionResponseMs": 33,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 595152,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0,
+              "validateMs": 0.20000000298023224,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.29999999701976776,
+              "persistenceWriteMs": 1,
+              "persistenceReloadMs": 0.3999999910593033,
+              "packageExportMs": 6.5,
+              "packageImportMs": 6.299999997019768,
+              "packageBytes": 1292,
+              "mapRegistrationMs": 0.09999999403953552,
+              "firstUsableMapMs": 15.600000008940697,
+              "interactionResponseMs": 32.69999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.19999998807907104,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -1024504,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "parseMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "validateMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "stableStringifyMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "hashMs": {
+              "median": 0.19999998807907104,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "persistenceWriteMs": {
+              "median": 0.7999999970197678,
+              "p95": 1,
+              "max": 1
+            },
+            "persistenceReloadMs": {
+              "median": 0.3999999910593033,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "packageExportMs": {
+              "median": 6.5,
+              "p95": 7.700000002980232,
+              "max": 7.700000002980232
+            },
+            "packageImportMs": {
+              "median": 5.5999999940395355,
+              "p95": 6.299999997019768,
+              "max": 6.299999997019768
+            },
+            "packageBytes": {
+              "median": 1292,
+              "p95": 1292,
+              "max": 1292
+            },
+            "mapRegistrationMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.19999998807907104,
+              "max": 0.19999998807907104
+            },
+            "firstUsableMapMs": {
+              "median": 15.600000008940697,
+              "p95": 16.900000005960464,
+              "max": 16.900000005960464
+            },
+            "interactionResponseMs": {
+              "median": 32.900000005960464,
+              "p95": 33,
+              "max": 33
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 586872,
+              "p95": 595152,
+              "max": 595152
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-16",
+            "dimension": "collectionDepth",
+            "requestedValue": 16,
+            "encodedBytes": 900,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 16,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 18,
+            "visitedNodes": 18
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.10000000894069672,
+              "validateMs": 0.5,
+              "validateError": null,
+              "summaryMs": 0.09999999403953552,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0.5,
+              "persistenceWriteMs": 0.9000000059604645,
+              "persistenceReloadMs": 0.7000000029802322,
+              "packageExportMs": 6.5999999940395355,
+              "packageImportMs": 4.200000002980232,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0.20000000298023224,
+              "firstUsableMapMs": 10,
+              "interactionResponseMs": 33.6000000089407,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 772436,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.09999999403953552,
+              "parseMs": 0.20000000298023224,
+              "validateMs": 0.5,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.5999999940395355,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.3999999910593033,
+              "persistenceReloadMs": 0.6000000089406967,
+              "packageExportMs": 8.299999997019768,
+              "packageImportMs": 4.5999999940395355,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 14.800000011920929,
+              "interactionResponseMs": 32.69999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -854068,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.30000001192092896,
+              "parseMs": 0,
+              "validateMs": 0.19999998807907104,
+              "validateError": null,
+              "summaryMs": 0.10000000894069672,
+              "summaryError": null,
+              "stableStringifyMs": 0,
+              "hashMs": 0.29999999701976776,
+              "persistenceWriteMs": 0.7000000029802322,
+              "persistenceReloadMs": 0.20000000298023224,
+              "packageExportMs": 7.700000002980232,
+              "packageImportMs": 5.799999997019768,
+              "packageBytes": 1652,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 15.5,
+              "interactionResponseMs": 34,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 774040,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "parseMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "validateMs": {
+              "median": 0.5,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "summaryMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "stableStringifyMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "hashMs": {
+              "median": 0.29999999701976776,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "persistenceWriteMs": {
+              "median": 0.7000000029802322,
+              "p95": 0.9000000059604645,
+              "max": 0.9000000059604645
+            },
+            "persistenceReloadMs": {
+              "median": 0.6000000089406967,
+              "p95": 0.7000000029802322,
+              "max": 0.7000000029802322
+            },
+            "packageExportMs": {
+              "median": 7.700000002980232,
+              "p95": 8.299999997019768,
+              "max": 8.299999997019768
+            },
+            "packageImportMs": {
+              "median": 4.5999999940395355,
+              "p95": 5.799999997019768,
+              "max": 5.799999997019768
+            },
+            "packageBytes": {
+              "median": 1652,
+              "p95": 1652,
+              "max": 1652
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "firstUsableMapMs": {
+              "median": 14.800000011920929,
+              "p95": 15.5,
+              "max": 15.5
+            },
+            "interactionResponseMs": {
+              "median": 33.6000000089407,
+              "p95": 34,
+              "max": 34
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 772436,
+              "p95": 774040,
+              "max": 774040
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-32",
+            "dimension": "collectionDepth",
+            "requestedValue": 32,
+            "encodedBytes": 1620,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 32,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 34,
+            "visitedNodes": 34
+          },
+          "samples": [
+            {
+              "encodeMs": 0,
+              "parseMs": 0.20000000298023224,
+              "validateMs": 0.4000000059604645,
+              "validateError": null,
+              "summaryMs": 0.29999999701976776,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0.5,
+              "persistenceWriteMs": 0.7999999970197678,
+              "persistenceReloadMs": 0.5,
+              "packageExportMs": 6.700000002980232,
+              "packageImportMs": 7.199999988079071,
+              "packageBytes": 2372,
+              "mapRegistrationMs": 0.20000000298023224,
+              "firstUsableMapMs": 8.099999994039536,
+              "interactionResponseMs": 31.700000002980232,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -748076,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.19999998807907104,
+              "parseMs": 0,
+              "validateMs": 0.30000001192092896,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.19999998807907104,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.7000000029802322,
+              "persistenceReloadMs": 0.19999998807907104,
+              "packageExportMs": 7,
+              "packageImportMs": 7.5,
+              "packageBytes": 2372,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 13.899999991059303,
+              "interactionResponseMs": 33.70000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1154128,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0,
+              "parseMs": 0.20000000298023224,
+              "validateMs": 0.5,
+              "validateError": null,
+              "summaryMs": 0,
+              "summaryError": null,
+              "stableStringifyMs": 0.09999999403953552,
+              "hashMs": 0.30000001192092896,
+              "persistenceWriteMs": 0.6000000089406967,
+              "persistenceReloadMs": 0.5999999940395355,
+              "packageExportMs": 9.099999994039536,
+              "packageImportMs": 8.400000005960464,
+              "packageBytes": 2372,
+              "mapRegistrationMs": 0.20000000298023224,
+              "firstUsableMapMs": 10.799999997019768,
+              "interactionResponseMs": 34,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -773828,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0,
+              "p95": 0.19999998807907104,
+              "max": 0.19999998807907104
+            },
+            "parseMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "validateMs": {
+              "median": 0.4000000059604645,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "summaryMs": {
+              "median": 0,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "stableStringifyMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.19999998807907104,
+              "max": 0.19999998807907104
+            },
+            "hashMs": {
+              "median": 0.30000001192092896,
+              "p95": 0.5,
+              "max": 0.5
+            },
+            "persistenceWriteMs": {
+              "median": 0.7000000029802322,
+              "p95": 0.7999999970197678,
+              "max": 0.7999999970197678
+            },
+            "persistenceReloadMs": {
+              "median": 0.5,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "packageExportMs": {
+              "median": 7,
+              "p95": 9.099999994039536,
+              "max": 9.099999994039536
+            },
+            "packageImportMs": {
+              "median": 7.5,
+              "p95": 8.400000005960464,
+              "max": 8.400000005960464
+            },
+            "packageBytes": {
+              "median": 2372,
+              "p95": 2372,
+              "max": 2372
+            },
+            "mapRegistrationMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "firstUsableMapMs": {
+              "median": 10.799999997019768,
+              "p95": 13.899999991059303,
+              "max": 13.899999991059303
+            },
+            "interactionResponseMs": {
+              "median": 33.70000000298023,
+              "p95": 34,
+              "max": 34
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": -748076,
+              "p95": 1154128,
+              "max": 1154128
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "collectionDepth-64",
+            "dimension": "collectionDepth",
+            "requestedValue": 64,
+            "encodedBytes": 3060,
+            "features": 1,
+            "totalPositions": 1,
+            "maxFeaturePositions": 1,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "GeometryCollection": 64,
+              "Point": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1,
+              52.1
+            ],
+            "observedDepth": 66,
+            "visitedNodes": 66
+          },
+          "samples": [
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0.3999999910593033,
+              "validateMs": 0.800000011920929,
+              "validateError": null,
+              "summaryMs": 0.29999999701976776,
+              "summaryError": null,
+              "stableStringifyMs": 0.3999999910593033,
+              "hashMs": 0.4000000059604645,
+              "persistenceWriteMs": 0.7000000029802322,
+              "persistenceReloadMs": 0.6000000089406967,
+              "packageExportMs": 11.199999988079071,
+              "packageImportMs": 13,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0.10000000894069672,
+              "firstUsableMapMs": 7.0999999940395355,
+              "interactionResponseMs": 21.5,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 143220,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0.20000000298023224,
+              "validateMs": 0.7999999970197678,
+              "validateError": null,
+              "summaryMs": 0.20000000298023224,
+              "summaryError": null,
+              "stableStringifyMs": 0.3999999910593033,
+              "hashMs": 0.4000000059604645,
+              "persistenceWriteMs": 0.5999999940395355,
+              "persistenceReloadMs": 0.6000000089406967,
+              "packageExportMs": 11.199999988079071,
+              "packageImportMs": 10.300000011920929,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 6,
+              "interactionResponseMs": 32,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.10000000894069672,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 132944,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.19999998807907104,
+              "parseMs": 0.10000000894069672,
+              "validateMs": 0.7000000029802322,
+              "validateError": null,
+              "summaryMs": 0.19999998807907104,
+              "summaryError": null,
+              "stableStringifyMs": 0.4000000059604645,
+              "hashMs": 0.20000000298023224,
+              "persistenceWriteMs": 0.5,
+              "persistenceReloadMs": 0.6000000089406967,
+              "packageExportMs": 10.099999994039536,
+              "packageImportMs": 11.799999997019768,
+              "packageBytes": 3812,
+              "mapRegistrationMs": 0.20000000298023224,
+              "firstUsableMapMs": 6.700000002980232,
+              "interactionResponseMs": 32.19999998807907,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 133700,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "parseMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.3999999910593033,
+              "max": 0.3999999910593033
+            },
+            "validateMs": {
+              "median": 0.7999999970197678,
+              "p95": 0.800000011920929,
+              "max": 0.800000011920929
+            },
+            "summaryMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "stableStringifyMs": {
+              "median": 0.3999999910593033,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "hashMs": {
+              "median": 0.4000000059604645,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "persistenceWriteMs": {
+              "median": 0.5999999940395355,
+              "p95": 0.7000000029802322,
+              "max": 0.7000000029802322
+            },
+            "persistenceReloadMs": {
+              "median": 0.6000000089406967,
+              "p95": 0.6000000089406967,
+              "max": 0.6000000089406967
+            },
+            "packageExportMs": {
+              "median": 11.199999988079071,
+              "p95": 11.199999988079071,
+              "max": 11.199999988079071
+            },
+            "packageImportMs": {
+              "median": 11.799999997019768,
+              "p95": 13,
+              "max": 13
+            },
+            "packageBytes": {
+              "median": 3812,
+              "p95": 3812,
+              "max": 3812
+            },
+            "mapRegistrationMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "firstUsableMapMs": {
+              "median": 6.700000002980232,
+              "p95": 7.0999999940395355,
+              "max": 7.0999999940395355
+            },
+            "interactionResponseMs": {
+              "median": 32,
+              "p95": 32.19999998807907,
+              "max": 32.19999998807907
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.10000000894069672,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 133700,
+              "p95": 143220,
+              "max": 143220
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        },
+        {
+          "metadata": {
+            "id": "acceptedGeometryTypes-all",
+            "dimension": "acceptedGeometryTypes",
+            "requestedValue": "all",
+            "encodedBytes": 1605,
+            "features": 7,
+            "totalPositions": 31,
+            "maxFeaturePositions": 10,
+            "parts": 6,
+            "rings": 3,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "Point": 2,
+              "MultiPoint": 1,
+              "LineString": 2,
+              "MultiLineString": 1,
+              "Polygon": 1,
+              "MultiPolygon": 1,
+              "GeometryCollection": 1
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1103,
+              52.102000000000004
+            ],
+            "observedDepth": 5,
+            "visitedNodes": 53
+          },
+          "samples": [
+            {
+              "encodeMs": 0.3999999910593033,
+              "parseMs": 0.30000001192092896,
+              "validateMs": 2.5999999940395355,
+              "validateError": null,
+              "summaryMs": 0.29999999701976776,
+              "summaryError": null,
+              "stableStringifyMs": 0.10000000894069672,
+              "hashMs": 0.3999999910593033,
+              "persistenceWriteMs": 0.5,
+              "persistenceReloadMs": 0.7999999970197678,
+              "packageExportMs": 8.299999997019768,
+              "packageImportMs": 9.100000008940697,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 14.699999988079071,
+              "interactionResponseMs": 34.20000000298023,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.30000001192092896,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -763204,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0.29999999701976776,
+              "validateMs": 0.5999999940395355,
+              "validateError": null,
+              "summaryMs": 0.4000000059604645,
+              "summaryError": null,
+              "stableStringifyMs": 0.20000000298023224,
+              "hashMs": 0.29999999701976776,
+              "persistenceWriteMs": 0.5999999940395355,
+              "persistenceReloadMs": 0.4000000059604645,
+              "packageExportMs": 9.200000002980232,
+              "packageImportMs": 7.799999997019768,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 10,
+              "interactionResponseMs": 33.6000000089407,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.20000000298023224,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": 1105147,
+              "longTasks": []
+            },
+            {
+              "encodeMs": 0.20000000298023224,
+              "parseMs": 0,
+              "validateMs": 0.7000000029802322,
+              "validateError": null,
+              "summaryMs": 0.29999999701976776,
+              "summaryError": null,
+              "stableStringifyMs": 0.29999999701976776,
+              "hashMs": 0.29999999701976776,
+              "persistenceWriteMs": 0.7999999970197678,
+              "persistenceReloadMs": 0.7000000029802322,
+              "packageExportMs": 9.699999988079071,
+              "packageImportMs": 9,
+              "packageBytes": 2357,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 7.799999997019768,
+              "interactionResponseMs": 32.79999999701977,
+              "concurrentMapCount": 1,
+              "mapError": "Invalid geoJson format\nCannot read properties of undefined (reading 'length')",
+              "rollbackMs": 0.09999999403953552,
+              "rollbackPreserved": 1,
+              "heapDeltaBytes": -770813,
+              "longTasks": []
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.3999999910593033,
+              "max": 0.3999999910593033
+            },
+            "parseMs": {
+              "median": 0.29999999701976776,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "validateMs": {
+              "median": 0.7000000029802322,
+              "p95": 2.5999999940395355,
+              "max": 2.5999999940395355
+            },
+            "summaryMs": {
+              "median": 0.29999999701976776,
+              "p95": 0.4000000059604645,
+              "max": 0.4000000059604645
+            },
+            "stableStringifyMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "hashMs": {
+              "median": 0.29999999701976776,
+              "p95": 0.3999999910593033,
+              "max": 0.3999999910593033
+            },
+            "persistenceWriteMs": {
+              "median": 0.5999999940395355,
+              "p95": 0.7999999970197678,
+              "max": 0.7999999970197678
+            },
+            "persistenceReloadMs": {
+              "median": 0.7000000029802322,
+              "p95": 0.7999999970197678,
+              "max": 0.7999999970197678
+            },
+            "packageExportMs": {
+              "median": 9.200000002980232,
+              "p95": 9.699999988079071,
+              "max": 9.699999988079071
+            },
+            "packageImportMs": {
+              "median": 9,
+              "p95": 9.100000008940697,
+              "max": 9.100000008940697
+            },
+            "packageBytes": {
+              "median": 2357,
+              "p95": 2357,
+              "max": 2357
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0,
+              "max": 0
+            },
+            "firstUsableMapMs": {
+              "median": 10,
+              "p95": 14.699999988079071,
+              "max": 14.699999988079071
+            },
+            "interactionResponseMs": {
+              "median": 33.6000000089407,
+              "p95": 34.20000000298023,
+              "max": 34.20000000298023
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.20000000298023224,
+              "p95": 0.30000001192092896,
+              "max": 0.30000001192092896
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": -763204,
+              "p95": 1105147,
+              "max": 1105147
+            },
+            "longTasks": {
+              "count": 0,
+              "maxDurationMs": 0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

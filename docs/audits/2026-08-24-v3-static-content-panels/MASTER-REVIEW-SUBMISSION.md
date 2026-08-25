@@ -10,19 +10,17 @@
 
 The V3 Design master accepted Step 7S at implementation HEAD `b366ba17fe856aede46ba8301b8a530520e4d2cd`: engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. Documentation closure is `db63d8e772ce96b17de19b7a89f256a72926d08d`; the implementation remains branch-retained and unmerged.
 
-## Proposed 2026-08-25 architectural amendment
+## Approved 2026-08-25 architectural amendment and prerequisite submission
 
-The user has approved the architectural direction for **Source Content Manager and QMD Reusable Media**, including managed builder-controlled CSV and GeoJSON, the explicit dashboard-schema/package-bundle V4→V5 deviation with V4 import compatibility, and chart configuration remaining V3. The written amendment is proposed and unimplemented. It does not change the completed Step 7S implementation result or inherit its Passing statuses.
+The V3 Design master and user approved the final written **Source Content Manager and QMD Reusable Media** amendment at `81531b4b939e89b529d0ddee36241e517c33956d`, including managed builder-controlled CSV and GeoJSON, the explicit dashboard-schema/package-bundle V4→V5 deviation with V4 import compatibility, and chart configuration remaining V3. Production remains proposed, unimplemented, and not verified. It does not change the completed Step 7S result or inherit its Passing statuses.
 
-Master review is requested for:
+The controlling written amendment comprises:
 
 - docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md;
 - docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md;
 - docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md.
 
-No implementation planning is authorized. After master review resolves the written conflicts/deviations, the user must approve the resulting written amendment before ownership reconciliation or planning begins.
-
-The user has approved the GeoJSON limit-calibration method, not numeric caps. After written amendment approval and before the final implementation plan or any GeoJSON production task/test, a bounded disposable spike must calibrate warning and hard resource/nesting limits from the four legitimate project files plus independent fixture ladders and actual Chromium measurements. It publishes `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` for master review. The result returns to the user only if it excludes a legitimate intended dataset or creates a material UX tradeoff; otherwise it is a technical guardrail. No guessed numeric limit may enter a production task or test.
+No production implementation or final implementation plan is authorized yet. The first approved non-production prerequisite is complete: `.planning/spikes/001-geojson-limit-calibration/README.md` and `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` establish exact calibrated limits from the four legitimate files, independent ladders, current production owners, and inspected Chromium evidence. No legitimate fixture is excluded and no material user-level UX tradeoff was found. The guardrail is submitted to the master for technical review; SCM-S15 remains proposed/unimplemented/not verified. Exact post-approval ownership reconciliation remains the second prerequisite before the final plan.
 
 ### Subsequent user sketch-review amendments
 
@@ -65,9 +63,10 @@ The first review rejected approval at `64c0143` while accepting the architectura
 - File-by-file plan: `docs/superpowers/plans/2026-08-24-static-content-panels.md`
 - Step 7 wait list: `docs/audits/2026-08-24-v3-static-content-panels/STEP-7-WAIT-LIST.md`
 - Slice 6 evidence: `docs/audits/2026-08-24-v3-static-content-panels/SLICE-6-EVIDENCE-STATUS.md`; `.superpowers/sdd/2026-08-24-static-content-panels/task-6-report.md`
-- Proposed Source Content Manager/QMD media amendment: `docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md`
-- Proposed amendment fidelity matrix: `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md`
-- Proposed amendment security/deviations: `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md`
+- Approved Source Content Manager/QMD media amendment: `docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md`
+- Approved amendment fidelity matrix (all rows still proposed/unimplemented): `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-FIDELITY.md`
+- Approved amendment security/deviations (all production statuses still proposed): `docs/audits/2026-08-24-v3-static-content-panels/SOURCE-CONTENT-MANAGER-AMENDMENT-SECURITY-DEVIATIONS.md`
+- Calibrated GeoJSON limits decision: `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`
 
 ## Discovery evidence
 
@@ -91,4 +90,4 @@ The matrix contains 36 accepted design rows across semantic, composition, and re
 
 ## Historical discovery exit and current handoff
 
-The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete and V3 Design master-accepted; the accepted implementation branch remains retained and unmerged. Only the separate proposed 2026-08-25 Source Content Manager/QMD reusable-media amendment awaits written master review and final user approval before planning.
+The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete and V3 Design master-accepted; the accepted implementation branch remains retained and unmerged. The separate 2026-08-25 Source Content Manager/QMD reusable-media written amendment is master/user-approved but remains wholly unimplemented; its calibrated limits and exact ownership reconciliation must pass before final planning.

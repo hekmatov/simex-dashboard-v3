@@ -1,10 +1,10 @@
 # Source Content Manager and QMD Reusable Media
 
 **Date:** 2026-08-25
-**Status:** User-approved architectural decisions; written amendment proposed for V3 Design master review and final user approval. Unimplemented.
+**Status:** Final written amendment approved by the V3 Design master and user at `81531b4b939e89b529d0ddee36241e517c33956d`. Unimplemented.
 **Applies after:** V3 Design master-accepted and implemented Step 7S static-content baseline at implementation HEAD b366ba17fe856aede46ba8301b8a530520e4d2cd and documentation closure db63d8e772ce96b17de19b7a89f256a72926d08d; the accepted branch is retained and unmerged
 **Version deviation:** dashboard schema V5 and package bundle V5, with V4 import compatibility; chart configuration remains V3
-**Implementation authority:** none. This specification must be master-reviewed and user-approved before implementation planning begins.
+**Implementation authority:** production implementation and the final implementation plan remain unauthorized. The approved non-production GeoJSON calibration and ownership-reconciliation prerequisites may proceed.
 
 ## Relationship to Step 7S
 
@@ -174,7 +174,7 @@ Media, CSV, and GeoJSON replacement, rollback, staged cleanup, dashboard persist
 
 ## GeoJSON limit-calibration gate
 
-The user is not expected to select numeric GeoJSON limits. After written amendment approval but before final implementation tasks or tests are written, the project must run one bounded disposable GeoJSON limit-calibration spike. The spike is planning evidence, not production implementation, and must not modify production source, production tests, manifests, dependencies, or generated catalogues.
+The user is not expected to select numeric GeoJSON limits. The approved bounded disposable calibration ran after written amendment approval and published `.planning/spikes/001-geojson-limit-calibration/README.md` plus `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`. The spike is planning evidence, not production implementation, and did not modify production source, production tests, manifests, dependencies, or generated catalogues.
 
 The current four legitimate project GeoJSON files—`gemeente_2020.geojson`, `gemeente_2021.geojson`, `gemeente_2026.geojson`, and `netherlands-provinces.geojson`—provide this verified baseline:
 
@@ -199,13 +199,13 @@ Disposable fixture ladders must vary these dimensions independently so one dimen
 - accepted geometry types;
 - concurrent active maps.
 
-The spike must exercise actual Chromium journeys for upload/read, parse/validation/summary, manager map preview, replacement compatibility, persistence/reload, map registration/render, pan/zoom/resize, and package export/import. It uses Build at 1440×900 and 1024×768 plus one pinned constrained Chromium device/CPU-memory profile recorded with the evidence.
+The spike exercised actual Chromium paths for upload/read, parse/validation/summary, preview-equivalent map rendering, replacement-compatibility equivalent, persistence/reload, map registration/render, pan/zoom/resize, and package export/import. Because the manager is unimplemented, the decision record names each current-production substitution. It used Build at 1440×900 and 1024×768 plus a pinned 1024×768, 4× CPU, 512 MiB V8 old-space profile.
 
 For each phase and fixture step, record median and p95 latency, main-thread long tasks, time to first usable preview/map, interaction responsiveness, memory and serialized footprint, and rollback behavior. Select separate warning and hard-cap thresholds from observed performance or memory knees, with margin above every legitimate project fixture. Encoded bytes alone are never sufficient.
 
 Join compatibility and identifier coverage remain replacement outcomes, not resource-size limits. The limit checker must itself be bounded against adversarial nesting and coordinate complexity so determining whether input is safe cannot become the denial-of-service path.
 
-Final limits are centralized in one validation authority and published with rationale, corpus facts, fixture generators, environment, measurements, knees, margins, and rollback evidence in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`:
+The calibrated limits, proposed single authority, rationale, corpus facts, fixture generators, environment, measurements, knees, margins, and rollback evidence are published in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`:
 
 - below the warning threshold: accept normally;
 - from warning through the safe pre-cap range: warn and allow only where the measured path remains safe;
@@ -372,13 +372,6 @@ Completion submission must separately report engine implemented, UI implemented,
 
 ## Approval and calibration gate
 
-This document records the user-approved architectural direction, not approval of the written amendment and not implementation authorization.
+The V3 Design master and user approved the final written amendment at `81531b4b939e89b529d0ddee36241e517c33956d`. This approves the design, not production implementation or any fidelity promotion.
 
-No implementation plan is authorized by this amendment record. Before a final implementation plan:
-
-1. V3 Design master reviews this specification and the proposed fidelity/security/deviation records.
-2. Exact conflicts and deviations are accepted, revised, or rejected.
-3. The user approves the resulting written amendment.
-4. Only then may the bounded disposable GeoJSON calibration spike and ownership reconciliation run as non-production inputs; the spike produces the GeoJSON limits decision record.
-5. The master reviews the calibrated technical guardrail, returning it to the user only for a legitimate-dataset exclusion or material UX tradeoff.
-6. The final implementation plan may begin only after the calibrated guardrail and ownership reconciliation both pass. No GeoJSON production task or test may pre-encode guessed limits.
+The bounded GeoJSON calibration prerequisite is complete and found no legitimate-dataset exclusion or material user-level UX tradeoff. Its technical guardrail is submitted to the master in `GEOJSON-LIMITS-DECISION.md`; SCM-S15 remains proposed, unimplemented, and not verified. The exact post-approval ownership reconciliation remains the second non-production prerequisite. The final implementation plan may begin only after the master accepts the guardrail and ownership reconciliation. No GeoJSON production task or test may encode guessed or alternate limits.

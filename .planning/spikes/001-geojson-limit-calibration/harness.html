@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GeoJSON limit calibration</title>
+    <style>
+      body { margin: 0; font: 14px system-ui, sans-serif; color: #18334e; background: #f4f5f5; }
+      header { padding: 12px 16px; background: #fff; border-bottom: 1px solid #c7cbcf; }
+      #status { font-weight: 600; }
+      #maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; padding: 8px; }
+      .map-host { min-height: 260px; background: #fff; border: 1px solid #c7cbcf; }
+    </style>
+  </head>
+  <body>
+    <header><span id="status">Calibration harness ready</span></header>
+    <main id="maps" aria-label="Disposable map benchmark"></main>
+    <script type="module" src="./harness.mjs"></script>
+  </body>
+</html>

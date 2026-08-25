@@ -1,0 +1,793 @@
+{
+  "generatedAt": "2026-08-25T14:53:20.368Z",
+  "baseUrl": "http://127.0.0.1:4187",
+  "profiles": [
+    {
+      "id": "build-1440",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "cpuRate": 1,
+      "heapMiB": 1024,
+      "ladder": "full",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36",
+        "platform": "Win32",
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "devicePixelRatio": 1
+        },
+        "hardwareConcurrency": 16,
+        "deviceMemory": 16,
+        "heapLimitBytes": 1174405120,
+        "longTaskObserver": true
+      },
+      "project": [],
+      "ladders": [
+        {
+          "metadata": {
+            "id": "totalPositions-6630",
+            "dimension": "totalPositions",
+            "requestedValue": 6630,
+            "encodedBytes": 176626,
+            "features": 27,
+            "totalPositions": 6630,
+            "maxFeaturePositions": 250,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "LineString": 27
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1998999999999995,
+              52.1006
+            ],
+            "observedDepth": 3,
+            "visitedNodes": 6684
+          },
+          "samples": [
+            {
+              "encodeMs": 0.7999999970197678,
+              "parseMs": 1.0999999940395355,
+              "validateMs": 9,
+              "validateError": null,
+              "summaryMs": 1.800000011920929,
+              "summaryError": null,
+              "stableStringifyMs": 3.2000000029802322,
+              "hashMs": 0.7000000029802322,
+              "persistenceWriteMs": 0.9000000059604645,
+              "persistenceReloadMs": 1,
+              "packageExportMs": 70.1000000089407,
+              "packageImportMs": 42.900000005960464,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0.10000000894069672,
+              "firstUsableMapMs": 34,
+              "interactionResponseMs": 26.099999994039536,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.29999999701976776,
+              "replacementCompatibilityMs": 0.20000000298023224,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 10621277,
+              "longTasks": [
+                {
+                  "startTime": 658.1999999880791,
+                  "duration": 145
+                }
+              ]
+            },
+            {
+              "encodeMs": 0.7999999970197678,
+              "parseMs": 0.5999999940395355,
+              "validateMs": 6.100000008940697,
+              "validateError": null,
+              "summaryMs": 0.5999999940395355,
+              "summaryError": null,
+              "stableStringifyMs": 3.2999999970197678,
+              "hashMs": 0.5,
+              "persistenceWriteMs": 0.5999999940395355,
+              "persistenceReloadMs": 1.2000000029802322,
+              "packageExportMs": 45.8999999910593,
+              "packageImportMs": 40.099999994039536,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 11.799999997019768,
+              "interactionResponseMs": 29.900000005960464,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0,
+              "replacementCompatibilityMs": 0,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 18314204,
+              "longTasks": [
+                {
+                  "startTime": 855,
+                  "duration": 96
+                }
+              ]
+            },
+            {
+              "encodeMs": 1.2999999970197678,
+              "parseMs": 0.5,
+              "validateMs": 6.700000002980232,
+              "validateError": null,
+              "summaryMs": 0.5999999940395355,
+              "summaryError": null,
+              "stableStringifyMs": 2.6000000089406967,
+              "hashMs": 0.3999999910593033,
+              "persistenceWriteMs": 0.7000000029802322,
+              "persistenceReloadMs": 0.9000000059604645,
+              "packageExportMs": 46.20000000298023,
+              "packageImportMs": 38.20000000298023,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 10.799999997019768,
+              "interactionResponseMs": 33.099999994039536,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.09999999403953552,
+              "replacementCompatibilityMs": 0,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 1915368,
+              "longTasks": [
+                {
+                  "startTime": 1004.3999999910593,
+                  "duration": 93
+                }
+              ]
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 0.7999999970197678,
+              "p95": 1.2999999970197678,
+              "max": 1.2999999970197678
+            },
+            "parseMs": {
+              "median": 0.5999999940395355,
+              "p95": 1.0999999940395355,
+              "max": 1.0999999940395355
+            },
+            "validateMs": {
+              "median": 6.700000002980232,
+              "p95": 9,
+              "max": 9
+            },
+            "summaryMs": {
+              "median": 0.5999999940395355,
+              "p95": 1.800000011920929,
+              "max": 1.800000011920929
+            },
+            "stableStringifyMs": {
+              "median": 3.2000000029802322,
+              "p95": 3.2999999970197678,
+              "max": 3.2999999970197678
+            },
+            "hashMs": {
+              "median": 0.5,
+              "p95": 0.7000000029802322,
+              "max": 0.7000000029802322
+            },
+            "persistenceWriteMs": {
+              "median": 0.7000000029802322,
+              "p95": 0.9000000059604645,
+              "max": 0.9000000059604645
+            },
+            "persistenceReloadMs": {
+              "median": 1,
+              "p95": 1.2000000029802322,
+              "max": 1.2000000029802322
+            },
+            "packageExportMs": {
+              "median": 46.20000000298023,
+              "p95": 70.1000000089407,
+              "max": 70.1000000089407
+            },
+            "packageImportMs": {
+              "median": 40.099999994039536,
+              "p95": 42.900000005960464,
+              "max": 42.900000005960464
+            },
+            "packageBytes": {
+              "median": 177378,
+              "p95": 177378,
+              "max": 177378
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "firstUsableMapMs": {
+              "median": 11.799999997019768,
+              "p95": 34,
+              "max": 34
+            },
+            "interactionResponseMs": {
+              "median": 29.900000005960464,
+              "p95": 33.099999994039536,
+              "max": 33.099999994039536
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "replacementCompatibilityMs": {
+              "median": 0,
+              "p95": 0.20000000298023224,
+              "max": 0.20000000298023224
+            },
+            "replacementJoinCoverageRatio": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "packageRollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 10621277,
+              "p95": 18314204,
+              "max": 18314204
+            },
+            "longTasks": {
+              "count": 3,
+              "maxDurationMs": 145
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "build-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "cpuRate": 1,
+      "heapMiB": 1024,
+      "ladder": "checkpoints",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36",
+        "platform": "Win32",
+        "viewport": {
+          "width": 1024,
+          "height": 768,
+          "devicePixelRatio": 1
+        },
+        "hardwareConcurrency": 16,
+        "deviceMemory": 16,
+        "heapLimitBytes": 1174405120,
+        "longTaskObserver": true
+      },
+      "project": [],
+      "ladders": [
+        {
+          "metadata": {
+            "id": "totalPositions-6630",
+            "dimension": "totalPositions",
+            "requestedValue": 6630,
+            "encodedBytes": 176626,
+            "features": 27,
+            "totalPositions": 6630,
+            "maxFeaturePositions": 250,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "LineString": 27
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1998999999999995,
+              52.1006
+            ],
+            "observedDepth": 3,
+            "visitedNodes": 6684
+          },
+          "samples": [
+            {
+              "encodeMs": 0.9000000059604645,
+              "parseMs": 0.5999999940395355,
+              "validateMs": 9.900000005960464,
+              "validateError": null,
+              "summaryMs": 1.3999999910593033,
+              "summaryError": null,
+              "stableStringifyMs": 3.1000000089406967,
+              "hashMs": 0.5999999940395355,
+              "persistenceWriteMs": 0.8999999910593033,
+              "persistenceReloadMs": 1.5,
+              "packageExportMs": 68.09999999403954,
+              "packageImportMs": 44.599999994039536,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 31.799999997019768,
+              "interactionResponseMs": 22.900000005960464,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.29999999701976776,
+              "replacementCompatibilityMs": 0.10000000894069672,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 17039933,
+              "longTasks": [
+                {
+                  "startTime": 652.7999999970198,
+                  "duration": 144
+                }
+              ]
+            },
+            {
+              "encodeMs": 1,
+              "parseMs": 1,
+              "validateMs": 6.0999999940395355,
+              "validateError": null,
+              "summaryMs": 0.7000000029802322,
+              "summaryError": null,
+              "stableStringifyMs": 3.5,
+              "hashMs": 0.4000000059604645,
+              "persistenceWriteMs": 0.5,
+              "persistenceReloadMs": 1,
+              "packageExportMs": 53.30000001192093,
+              "packageImportMs": 39.70000000298023,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0.09999999403953552,
+              "firstUsableMapMs": 14.600000008940697,
+              "interactionResponseMs": 33.8999999910593,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.09999999403953552,
+              "replacementCompatibilityMs": 0,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 6463420,
+              "longTasks": [
+                {
+                  "startTime": 844.0999999940395,
+                  "duration": 105
+                }
+              ]
+            },
+            {
+              "encodeMs": 1,
+              "parseMs": 0.6000000089406967,
+              "validateMs": 5.899999991059303,
+              "validateError": null,
+              "summaryMs": 0.6000000089406967,
+              "summaryError": null,
+              "stableStringifyMs": 3,
+              "hashMs": 0.3999999910593033,
+              "persistenceWriteMs": 0.5999999940395355,
+              "persistenceReloadMs": 0.9000000059604645,
+              "packageExportMs": 46.099999994039536,
+              "packageImportMs": 38.29999999701977,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 11.099999994039536,
+              "interactionResponseMs": 32.400000005960464,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.09999999403953552,
+              "replacementCompatibilityMs": 0,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 4693732,
+              "longTasks": [
+                {
+                  "startTime": 1007.5999999940395,
+                  "duration": 94
+                }
+              ]
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "parseMs": {
+              "median": 0.6000000089406967,
+              "p95": 1,
+              "max": 1
+            },
+            "validateMs": {
+              "median": 6.0999999940395355,
+              "p95": 9.900000005960464,
+              "max": 9.900000005960464
+            },
+            "summaryMs": {
+              "median": 0.7000000029802322,
+              "p95": 1.3999999910593033,
+              "max": 1.3999999910593033
+            },
+            "stableStringifyMs": {
+              "median": 3.1000000089406967,
+              "p95": 3.5,
+              "max": 3.5
+            },
+            "hashMs": {
+              "median": 0.4000000059604645,
+              "p95": 0.5999999940395355,
+              "max": 0.5999999940395355
+            },
+            "persistenceWriteMs": {
+              "median": 0.5999999940395355,
+              "p95": 0.8999999910593033,
+              "max": 0.8999999910593033
+            },
+            "persistenceReloadMs": {
+              "median": 1,
+              "p95": 1.5,
+              "max": 1.5
+            },
+            "packageExportMs": {
+              "median": 53.30000001192093,
+              "p95": 68.09999999403954,
+              "max": 68.09999999403954
+            },
+            "packageImportMs": {
+              "median": 39.70000000298023,
+              "p95": 44.599999994039536,
+              "max": 44.599999994039536
+            },
+            "packageBytes": {
+              "median": 177378,
+              "p95": 177378,
+              "max": 177378
+            },
+            "mapRegistrationMs": {
+              "median": 0,
+              "p95": 0.09999999403953552,
+              "max": 0.09999999403953552
+            },
+            "firstUsableMapMs": {
+              "median": 14.600000008940697,
+              "p95": 31.799999997019768,
+              "max": 31.799999997019768
+            },
+            "interactionResponseMs": {
+              "median": 32.400000005960464,
+              "p95": 33.8999999910593,
+              "max": 33.8999999910593
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.09999999403953552,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "replacementCompatibilityMs": {
+              "median": 0,
+              "p95": 0.10000000894069672,
+              "max": 0.10000000894069672
+            },
+            "replacementJoinCoverageRatio": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "packageRollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 6463420,
+              "p95": 17039933,
+              "max": 17039933
+            },
+            "longTasks": {
+              "count": 3,
+              "maxDurationMs": 144
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "constrained-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "cpuRate": 4,
+      "heapMiB": 512,
+      "ladder": "full",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36",
+        "platform": "Win32",
+        "viewport": {
+          "width": 1024,
+          "height": 768,
+          "devicePixelRatio": 1
+        },
+        "hardwareConcurrency": 16,
+        "deviceMemory": 16,
+        "heapLimitBytes": 637534208,
+        "longTaskObserver": true
+      },
+      "project": [],
+      "ladders": [
+        {
+          "metadata": {
+            "id": "totalPositions-6630",
+            "dimension": "totalPositions",
+            "requestedValue": 6630,
+            "encodedBytes": 176626,
+            "features": 27,
+            "totalPositions": 6630,
+            "maxFeaturePositions": 250,
+            "parts": 0,
+            "rings": 0,
+            "propertyKeyCount": 1,
+            "geometryTypes": {
+              "LineString": 27
+            },
+            "bbox": [
+              5.1,
+              52.1,
+              5.1998999999999995,
+              52.1006
+            ],
+            "observedDepth": 3,
+            "visitedNodes": 6684
+          },
+          "samples": [
+            {
+              "encodeMs": 4.199999988079071,
+              "parseMs": 6.800000011920929,
+              "validateMs": 56.19999998807907,
+              "validateError": null,
+              "summaryMs": 4.800000011920929,
+              "summaryError": null,
+              "stableStringifyMs": 17.600000008940697,
+              "hashMs": 4.5999999940395355,
+              "persistenceWriteMs": 3.7000000029802322,
+              "persistenceReloadMs": 4.4000000059604645,
+              "packageExportMs": 388.29999999701977,
+              "packageImportMs": 239,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 1,
+              "firstUsableMapMs": 216,
+              "interactionResponseMs": 96.30000001192093,
+              "concurrentMapCount": 1,
+              "rollbackMs": 1.7000000029802322,
+              "replacementCompatibilityMs": 0.29999999701976776,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 9883145,
+              "longTasks": [
+                {
+                  "startTime": 959.3000000119209,
+                  "duration": 842
+                },
+                {
+                  "startTime": 1815.5,
+                  "duration": 68
+                }
+              ]
+            },
+            {
+              "encodeMs": 5.100000008940697,
+              "parseMs": 3,
+              "validateMs": 35,
+              "validateError": null,
+              "summaryMs": 3.2999999970197678,
+              "summaryError": null,
+              "stableStringifyMs": 13.700000002980232,
+              "hashMs": 2.3999999910593033,
+              "persistenceWriteMs": 2.4000000059604645,
+              "persistenceReloadMs": 4.700000002980232,
+              "packageExportMs": 265.5,
+              "packageImportMs": 228.29999999701977,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0.20000000298023224,
+              "firstUsableMapMs": 72.8999999910593,
+              "interactionResponseMs": 81.5,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.20000000298023224,
+              "replacementCompatibilityMs": 0,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 3852396,
+              "longTasks": [
+                {
+                  "startTime": 1912.1000000089407,
+                  "duration": 104
+                },
+                {
+                  "startTime": 2020.7000000029802,
+                  "duration": 564
+                },
+                {
+                  "startTime": 2595.1000000089407,
+                  "duration": 55
+                }
+              ]
+            },
+            {
+              "encodeMs": 4.9000000059604645,
+              "parseMs": 3.2000000029802322,
+              "validateMs": 36.29999999701977,
+              "validateError": null,
+              "summaryMs": 3.2000000029802322,
+              "summaryError": null,
+              "stableStringifyMs": 12,
+              "hashMs": 1.7999999970197678,
+              "persistenceWriteMs": 2,
+              "persistenceReloadMs": 4.299999997019768,
+              "packageExportMs": 248.90000000596046,
+              "packageImportMs": 206.1000000089407,
+              "packageBytes": 177378,
+              "mapRegistrationMs": 0,
+              "firstUsableMapMs": 68,
+              "interactionResponseMs": 73.29999999701977,
+              "concurrentMapCount": 1,
+              "rollbackMs": 0.4000000059604645,
+              "replacementCompatibilityMs": 0,
+              "replacementJoinCoverageRatio": 1,
+              "rollbackPreserved": 1,
+              "packageRollbackPreserved": 1,
+              "heapDeltaBytes": 19495788,
+              "longTasks": [
+                {
+                  "startTime": 2676.5,
+                  "duration": 95
+                },
+                {
+                  "startTime": 2775.6000000089407,
+                  "duration": 517
+                }
+              ]
+            }
+          ],
+          "phases": {
+            "encodeMs": {
+              "median": 4.9000000059604645,
+              "p95": 5.100000008940697,
+              "max": 5.100000008940697
+            },
+            "parseMs": {
+              "median": 3.2000000029802322,
+              "p95": 6.800000011920929,
+              "max": 6.800000011920929
+            },
+            "validateMs": {
+              "median": 36.29999999701977,
+              "p95": 56.19999998807907,
+              "max": 56.19999998807907
+            },
+            "summaryMs": {
+              "median": 3.2999999970197678,
+              "p95": 4.800000011920929,
+              "max": 4.800000011920929
+            },
+            "stableStringifyMs": {
+              "median": 13.700000002980232,
+              "p95": 17.600000008940697,
+              "max": 17.600000008940697
+            },
+            "hashMs": {
+              "median": 2.3999999910593033,
+              "p95": 4.5999999940395355,
+              "max": 4.5999999940395355
+            },
+            "persistenceWriteMs": {
+              "median": 2.4000000059604645,
+              "p95": 3.7000000029802322,
+              "max": 3.7000000029802322
+            },
+            "persistenceReloadMs": {
+              "median": 4.4000000059604645,
+              "p95": 4.700000002980232,
+              "max": 4.700000002980232
+            },
+            "packageExportMs": {
+              "median": 265.5,
+              "p95": 388.29999999701977,
+              "max": 388.29999999701977
+            },
+            "packageImportMs": {
+              "median": 228.29999999701977,
+              "p95": 239,
+              "max": 239
+            },
+            "packageBytes": {
+              "median": 177378,
+              "p95": 177378,
+              "max": 177378
+            },
+            "mapRegistrationMs": {
+              "median": 0.20000000298023224,
+              "p95": 1,
+              "max": 1
+            },
+            "firstUsableMapMs": {
+              "median": 72.8999999910593,
+              "p95": 216,
+              "max": 216
+            },
+            "interactionResponseMs": {
+              "median": 81.5,
+              "p95": 96.30000001192093,
+              "max": 96.30000001192093
+            },
+            "concurrentMapCount": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackMs": {
+              "median": 0.4000000059604645,
+              "p95": 1.7000000029802322,
+              "max": 1.7000000029802322
+            },
+            "replacementCompatibilityMs": {
+              "median": 0,
+              "p95": 0.29999999701976776,
+              "max": 0.29999999701976776
+            },
+            "replacementJoinCoverageRatio": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "rollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "packageRollbackPreserved": {
+              "median": 1,
+              "p95": 1,
+              "max": 1
+            },
+            "heapDeltaBytes": {
+              "median": 9883145,
+              "p95": 19495788,
+              "max": 19495788
+            },
+            "longTasks": {
+              "count": 7,
+              "maxDurationMs": 842
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
