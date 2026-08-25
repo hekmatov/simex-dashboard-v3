@@ -333,3 +333,13 @@ They are disposable design evidence, not production components. Detailed accepta
 The V3 Design master approved the original specification at `e159db11593f784459e50f7707d93987fa996527`. During the subsequent interactive sketch review, the user selected 021=A, 022=B, 023=A with hidden-at-rest Image actions, and 024=A. On 2026-08-25 the user explicitly superseded the original Free-text sanitizer/deny-list contract: all authored source is accepted by default, unsupported forms render inertly, and authored content may never execute or load resources. This is an accepted security/design deviation; it changes only the Free-text source-policy and safe-rendering sections above, not resource limits, canonical composition, lifecycle, Present exclusion, or later Slice 4 persistence ownership.
 
 Even after design approval, production execution remains blocked until Step 7 is accepted and the implementation plan’s hard ownership-resolution gate commits an exact inventory from that final Step 7 commit. Every provisional/generic production owner in the fidelity matrix and ledger must be replaced by exact source/function/CSS/test ownership before implementation begins.
+
+## Implemented hardening clarifications
+
+- A new Image draft accounts for the current saved asset manifest; the final transaction independently enforces the unique reachable 200 MiB candidate before persistence. Superseded draft assets remain session-only for undo and never enter the finalized transaction manifest.
+- Static and chart editor dirtiness feed one authoritative Build selection decision with explicit Keep editing/Discard behavior. Same-placement selection is allowed; a different placement cannot silently unmount the static draft.
+- Legacy shared Image sources split into deterministic chart-specific identities based on original usage. A mixed non-Image consumer retains the original inline source; an all-Image source leaves no orphan.
+- JPEG files require terminal EOI. Typed static sources, origin variants, and crop are exact-key schemas; arbitrary Free-text values remain accepted as inert source.
+- Package crop preview and canonical rendering consume the same contained-path authority. Exact generated `data/authored/<sha>.<raster-extension>` paths are supported without accepting arbitrary bare relative paths.
+
+These are validation, transaction, and ownership clarifications within the approved design. They do not add a visual variant, a new persistence version, a sanitizer, or a protocol field.

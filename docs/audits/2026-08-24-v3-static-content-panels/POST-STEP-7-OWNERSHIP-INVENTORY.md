@@ -187,3 +187,14 @@ Required checks before commit:
 5. `git diff --name-only 243f28a..HEAD` contains documentation only.
 
 These checks passed for the synchronized gate files. Production implementation still requires the planned TDD slices; the gate itself implements no feature.
+
+## Final hardening ownership amendments
+
+- `StaticContentWizard` seeds create drafts from `dashboard.assets`; `ImageSourceEditor` and `stageValidatedImageAsset` own de-duplicated intake preflight. `prepareStaticPanelTransaction` is the final aggregate-budget and source-reachability authority before mutation.
+- `staticContentDraft.finalizeStaticContentDraft` owns the session-draft→transaction boundary: undo may retain superseded identities, while the finalized transaction manifest contains only the selected local asset.
+- `DashboardRenderer` owns the unified `chartEditorDirty || staticContentDirty` selection decision and the existing Keep editing/Discard route. `BuildWorkspace` reports selection intent to that authority while continuing to lock unrelated authoring mutations.
+- `migrateDashboardV3ToV4` owns original-usage preplanning and deterministic chart-specific IDs for multiply-used legacy Image sources.
+- `validateImageAsset` owns terminal JPEG EOI; `staticSourceSchema` and `validateImageOrigin` own exact typed-key rejection.
+- `isContainedPackageImagePath` is the shared package-path predicate. `ImageTransformEditor`, `ImageChartView`, and `staticSourceResolver` consume only explicit package authority.
+
+Exact updated tests are `tests/staticPanelTransaction.test.js`, `tests/staticPanelPersistence.test.js`, `tests/staticContentDraft.test.js`, `tests/imageAssetValidation.test.js`, `tests/staticSourceSchema.test.js`, `tests/dashboardMigrationV4.test.js`, `tests/imageChartPackageSource.test.js`, and `tests/e2e/static-image.spec.js`.

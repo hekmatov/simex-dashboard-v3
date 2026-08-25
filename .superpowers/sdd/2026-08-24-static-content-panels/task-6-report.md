@@ -125,3 +125,29 @@ The binding screenshots were visually inspected at 1920×1080 (one, two, four ce
 ## Closure
 
 FT-05, FT-06, FT-12, IM-02, IM-08, IM-15, IM-16, PS-04, and PS-08 are restored to Passing with engine, mounted UI/composition, and retained intended-use evidence. Every row in the final 36-row Step 7S ledger is now Passing under the current permissive-inert Free-text contract and strict Image contract. Review remains the only pending Task 6 gate.
+
+## Whole-branch hardening wave
+
+Seven independently reproduced boundary defects were closed without changing the binding journey text or the permissive-inert Free-text contract:
+
+- **IM-02 / PS-01:** create drafts now begin with the saved dashboard manifest, session-staged identities are counted once, and the prepared final candidate is rejected above 200 MiB before store or dashboard mutation.
+- **IM-11 / PS-05:** A→B replacement keeps A/B only in the session draft for undo; finalization and persistence carry only B, retain unrelated saved manifests, and preserve the draft on failure.
+- **IM-14 / PS-06:** DashboardRenderer derives one chart-or-static dirty authority. Same-placement selection remains available; different selection opens the existing Keep editing/Discard decision and retains exact source, alt, crop, rotation, and fit until explicit discard.
+- **PS-02:** migration preplans usage from the original dashboard, splits multiply-used legacy Image sources into deterministic chart-specific IDs, retains the original inline source only for non-Image consumers, and is idempotent.
+- **IM-02:** JPEG acceptance now requires terminal EOI; an appended-payload fixture returns `corrupt-image`.
+- **IM-04 / PS-02:** `staticText`, `staticImage`, every origin variant, and crop reject unknown keys while intentional `migrationWarnings` remain supported. Arbitrary text values remain accepted and inert.
+- **IM-04 / IM-08:** package crop preview and canonical Image rendering reuse the same exported contained-package-path predicate. Exact generated `data/authored/<sha>.<ext>` paths work with package authority; arbitrary relative strings do not.
+
+Strict RED evidence included three asset ownership failures, accepted trailing JPEG payload, accepted unknown schema keys, unsplit shared migration identity, arbitrary bare-path rendering, absent package preview, and a dirty selection that initially bypassed the decision route. GREEN evidence:
+
+- affected unit/SSR sweep: **106/106 passed** in 4.34 seconds;
+- final persistence/migration additions: **14/14 passed** in 3.15 seconds;
+- runtime boundary: **passed**, `remoteRuntimeDependencies: []`;
+- production build: **891 modules**, 9.93 seconds;
+- real near-budget Image create and typed product-budget recovery: **passed** at 1440×900;
+- real dirty static selection Keep/Discard with full Image draft equality: **1/1 passed** in 13.3 seconds at 1440×900;
+- real packaged generated-path crop preview: **1/1 passed** in 12.9 seconds at 1280×800.
+
+The final post-commit consolidated affected sweep passed **152/152 in 5.11 seconds**. It also exposed and corrected one stale composition fixture that still put `width`/`height` on the static source instead of the authored-asset manifest; the rerun proves canonical Build/View/fullscreen composition against the exact schema. The final runtime boundary passed with no remote dependencies, and the final production build passed with **891 modules in 9.88 seconds**.
+
+There are no new deviations or blockers. The strict JPEG terminal-EOI rule and exact typed-key rejection are accepted compatibility boundaries; the package-path change narrows authority rather than broadening relative-path acceptance.

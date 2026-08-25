@@ -80,3 +80,7 @@ No ledger row may change Fidelity status to Passing until its engine and UI/comp
 ## Historical Step 7 production hold — satisfied
 
 The hold applied only to the Step 7S discovery branch. Step 7 was accepted, the ownership gate passed, and Tasks 1–6 were implemented on `codex/static-content-panels-implementation`. The historical overlap list remains in `docs/audits/2026-08-24-v3-static-content-panels/STEP-7-WAIT-LIST.md`; it is not a current implementation blocker.
+
+## Final hardening evidence addendum
+
+The controlling 36-row disposition remains fully Passing after new retained evidence closed the final authority gaps. Exact additions: IM-02/PS-01 use `tests/imageAssetValidation.test.js`, `tests/staticPanelTransaction.test.js`, and the IM-02 case in `tests/e2e/static-image.spec.js`; IM-11/PS-05 use `tests/staticContentDraft.test.js`, `tests/staticPanelPersistence.test.js`, and `tests/staticPanelTransaction.test.js`; IM-14/PS-06 use the dirty-selection case in `tests/e2e/static-image.spec.js`; PS-02 uses `tests/dashboardMigrationV4.test.js`; IM-04/PS-02 use `tests/staticSourceSchema.test.js`; IM-04/IM-08 use `tests/imageChartPackageSource.test.js`, the SSR package-preview case in `tests/staticContentDraft.test.js`, and the packaged-preview case in `tests/e2e/static-image.spec.js`. These additions do not alter any binding task wording or the arbitrary-source inert Free-text override.

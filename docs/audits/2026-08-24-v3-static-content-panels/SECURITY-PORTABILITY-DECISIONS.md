@@ -133,3 +133,13 @@ No authored input may create script, CSS, custom-element behavior, external subr
 ## Source basis
 
 Quarto documents that its Markdown is Pandoc-based and includes broad raw HTML/iframe, citation, executable-computation, and extension forms. Under the 2026-08-25 user override these forms are accepted as source data but are not interpreted. The production boundary therefore avoids authored HTML parsing entirely and constructs output with DOM APIs/text nodes. Exact-pinned bundled KaTeX is the only trusted rich-output generator; it runs with `trust: false`, strict restrictions, no user macros/resources, and a renderer-owned marker around its HTML/internal-SVG geometry. This explicit deviation supersedes the original DOMPurify/deny-list decision while preserving the no-execution/no-resource threat boundary.
+
+## Final hardening decisions
+
+- The 200 MiB dashboard authored-asset ceiling is enforced twice: authoring intake counts the saved manifest plus unique session-staged identities, and transaction preparation recomputes the unique source-reachable final candidate before durable staging or dashboard mutation.
+- Superseded replacement bytes remain session-only while undo is available. A prepared transaction contains only its finalized source-reachable manifest entry; unrelated already-saved manifest entries remain authoritative. A failed save preserves the draft and undo inventory.
+- JPEG compatibility is deliberately strict: EOI must be terminal. Any appended byte is `corrupt-image`, even if a permissive browser decoder could display the prefix.
+- Typed `staticText`, `staticImage`, origin variants, and crop records reject unknown keys. `migrationWarnings` is the sole intentional migration metadata key; this does not constrain arbitrary authored text values.
+- A bare package preview/render path is authorized only when it matches the generated `data/authored/<sha256>.(png|jpg|jpeg|webp)` form or arrives with explicit contained-package-path authority. Editor and renderer reuse `isContainedPackageImagePath`; arbitrary relative strings remain invalid.
+
+These rules narrow mutation and path authority. They introduce no sanitizer, deny-list, executable text, or authored text resource-loading behavior.

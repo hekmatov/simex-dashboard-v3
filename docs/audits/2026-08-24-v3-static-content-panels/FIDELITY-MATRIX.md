@@ -137,3 +137,19 @@ This table is the binding current disposition for the Image rows below. It delib
 ## Implementation acceptance gate
 
 No row may move to Implemented based only on a parser, schema, transform engine, registry entry, isolated component, or sketch. At minimum, the live production journeys FT-11, FT-12, IM-14, IM-15, and IM-16 must pass, with evidence captured at the material viewports and states listed above. Deterministic checks establish semantic facts once; browser tasks are required only where composition or real-use behavior can change the acceptance decision.
+
+## Whole-branch hardening reconciliation
+
+The final 36-row controlling disposition above remains Passing. Newly retained evidence strengthens these exact rows without changing their task text:
+
+| IDs | New deterministic evidence | New retained evidence |
+|---|---|---|
+| IM-02, PS-01 | `tests/imageAssetValidation.test.js`; `tests/staticPanelTransaction.test.js` | `tests/e2e/static-image.spec.js` near-budget Add static Image rejects before staging and recovers |
+| IM-11, PS-05 | `tests/staticContentDraft.test.js`; `tests/staticPanelPersistence.test.js`; `tests/staticPanelTransaction.test.js` | Session undo retains A/B; save publishes only B and preserves unrelated saved manifests |
+| IM-14, PS-06 | `tests/staticContentDraft.test.js`; authoritative dirty-state integration | `tests/e2e/static-image.spec.js` exact full-draft Keep editing/Discard journey at 1440×900 |
+| PS-02 | `tests/dashboardMigrationV4.test.js` shared all-Image and mixed-consumer fixtures | Deterministic migration/edit evidence is sufficient because this is schema identity, not composition |
+| IM-02 | `tests/imageAssetValidation.test.js` appended-payload JPEG fixture | Existing real decoder corpus remains binding |
+| IM-04, PS-02 | `tests/staticSourceSchema.test.js` table-driven exact-key boundary | Existing import/authoring recovery journeys remain binding |
+| IM-04, IM-08 | `tests/imageChartPackageSource.test.js`; `tests/staticContentDraft.test.js` SSR | `tests/e2e/static-image.spec.js` packaged generated-path preview at 1280×800 |
+
+The final consolidated affected sweep passed 152/152; runtime boundaries, the 891-module production build, and the three material Chromium journeys passed. No row is partial or missing.

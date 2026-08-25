@@ -30,3 +30,9 @@ FT-05, FT-06, IM-08, IM-15, and IM-16 are restored after their original binding 
 - Copied Windows package launch/offline/cleanup: **1/1 passed** in the final affected sweep.
 
 Exact RED/GREEN history, browser checkpoints, baseline disclosures, and implementation owners are recorded in `.superpowers/sdd/2026-08-24-static-content-panels/task-6-report.md`.
+
+## Whole-branch hardening wave
+
+**Status:** 7 findings addressed, 0 open; implementation complete, review pending.
+
+The final 36-row disposition remains Passing after new strict RED→GREEN evidence for aggregate asset budget authority, finalized-source-only manifests, unified static dirty selection, multiply-used legacy Image migration, terminal JPEG EOI, exact typed static schemas, and contained packaged preview paths. The final consolidated affected sweep passed 152/152; runtime boundaries passed with no remote dependencies; and the 891-module production build passed in 9.88 seconds. Material Chromium evidence passed at 1440×900 for near-budget creation and exact Keep editing/Discard draft retention, and at 1280×800 for packaged generated-path crop preview. No Free-text source-policy or protocol behavior changed.
