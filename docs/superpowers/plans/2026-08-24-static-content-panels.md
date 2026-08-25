@@ -1,6 +1,6 @@
 # Static Content Panels Implementation Plan
 
-> The implementation branch is rooted at accepted Step 7 commit `01511bd5a56978965b8dfc8cdbec3b51c2e17e77`. The approved Step 7S discovery commits were transferred as documentation/sketches only. The ownership gate passed before production work began; Slices 1–6 are implemented, their independent implementation review is clean, and master acceptance remains pending.
+> The implementation branch is rooted at accepted Step 7 commit `01511bd5a56978965b8dfc8cdbec3b51c2e17e77`. The approved Step 7S discovery commits were transferred as documentation/sketches only. The ownership gate passed before production work began; Slices 1–6 are implemented, their independent implementation review is clean, and the V3 Design master accepted the implemented baseline at `b366ba17fe856aede46ba8301b8a530520e4d2cd` with documentation closure `db63d8e772ce96b17de19b7a89f256a72926d08d`. The accepted implementation remains branch-retained and unmerged.
 
 > **Planning hold for the 2026-08-25 amendment:** Source Content Manager and QMD Reusable Media are specified in docs/superpowers/specs/2026-08-25-source-content-manager-and-qmd-reusable-media-design.md. They are not part of this completed six-slice plan or its 36-row ledger. No implementation plan exists yet; master review and final user approval of the written amendment must precede ownership reconciliation and planning.
 

@@ -4,11 +4,11 @@
 
 **Approved without design deviations** at discovery commit `e159db11593f784459e50f7707d93987fa996527`. All ten requested decisions and all 36 fidelity rows are binding accepted design requirements. They are not implemented functionality. Production work remains blocked until Step 7 is accepted and the post-Step-7 ownership inventory is committed and synchronized; that gate prohibits production code, configuration, dependencies, and tests before it passes.
 
-**Post-gate implementation status (2026-08-25):** Step 7 was accepted, the ownership gate passed, and Slices 1–6 are implementation complete on `codex/static-content-panels-implementation`. The final 36-row disposition is Passing across engine, mounted UI/composition, and retained intended-use evidence under the user-directed permissive-inert Free-text contract. The final independent implementation review at `b366ba17fe856aede46ba8301b8a530520e4d2cd` is clean with no open findings. Step 7S is submitted for V3 Design master acceptance; master acceptance is pending. This status does not rewrite the historical discovery verdict or its pre-implementation gate language.
+**Post-gate implementation status (2026-08-25):** Step 7 was accepted, the ownership gate passed, and Slices 1–6 are implementation complete on `codex/static-content-panels-implementation`. The final 36-row disposition is Passing across engine, mounted UI/composition, and retained intended-use evidence under the user-directed permissive-inert Free-text contract. The final independent implementation review at `b366ba17fe856aede46ba8301b8a530520e4d2cd` is clean with no open findings, and the V3 Design master accepted that implemented Step 7S baseline. Documentation closure is `db63d8e772ce96b17de19b7a89f256a72926d08d`. The accepted branch remains retained and unmerged. This status does not rewrite the historical discovery verdict or its pre-implementation gate language.
 
-## Current implementation submission
+## Accepted implementation baseline
 
-Step 7S is ready for master review at implementation HEAD `b366ba17fe856aede46ba8301b8a530520e4d2cd`: engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. This record requests master acceptance; it does not claim that master acceptance has already been granted.
+The V3 Design master accepted Step 7S at implementation HEAD `b366ba17fe856aede46ba8301b8a530520e4d2cd`: engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. Documentation closure is `db63d8e772ce96b17de19b7a89f256a72926d08d`; the implementation remains branch-retained and unmerged.
 
 ## Proposed 2026-08-25 architectural amendment
 
@@ -89,4 +89,4 @@ The matrix contains 36 accepted design rows across semantic, composition, and re
 
 ## Historical discovery exit and current handoff
 
-The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete; this renewed handoff is submitted for master acceptance, which remains pending.
+The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete and V3 Design master-accepted; the accepted implementation branch remains retained and unmerged. Only the separate proposed 2026-08-25 Source Content Manager/QMD reusable-media amendment awaits written master review and final user approval before planning.
