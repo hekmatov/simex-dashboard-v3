@@ -108,13 +108,94 @@ test("typed static Image routes canonically without rows and applies saved metad
   assert.match(html, /data-static-image="true"/);
   assert.match(html, /alt="Clinic readiness map"/);
   assert.match(html, /data-image-transform-order="rotation-crop-fit"/);
-  assert.match(html, /viewBox="100 200 700 600"/);
+  assert.match(html, /viewBox="0\.3 0\.4 2\.1 1\.2"/);
   assert.match(html, /preserveAspectRatio="xMidYMid slice"/);
-  assert.match(html, /transform="rotate\(90 500 500\)"/);
-  assert.match(html, /object-fit:fill/);
+  assert.match(html, /transform="matrix\(0 1 -1 0 3 0\)"/);
+  assert.match(html, /<foreignObject x="0" y="0" width="2" height="3">/);
+  assert.doesNotMatch(html, /object-fit:fill/);
   assert.match(html, /data-image-zoom-scale="1"/);
   assert.doesNotMatch(html, /chart-status-error|No chart data/);
   discardSessionImageAsset(staged.assetId);
+});
+
+test("saved geometry preserves intrinsic aspect while mapping rotated normalized crops to pixels", () => {
+  const cases = [
+    {
+      name: "landscape zero contain",
+      width: 1200,
+      height: 600,
+      rotation: 0,
+      fit: "contain",
+      viewBox: "120 120 840 300",
+      matrix: "matrix(1 0 0 1 0 0)",
+      preserve: "xMidYMid meet",
+    },
+    {
+      name: "landscape quarter-turn cover",
+      width: 1200,
+      height: 600,
+      rotation: 90,
+      fit: "cover",
+      viewBox: "60 240 420 600",
+      matrix: "matrix(0 1 -1 0 600 0)",
+      preserve: "xMidYMid slice",
+    },
+    {
+      name: "portrait zero cover",
+      width: 600,
+      height: 1200,
+      rotation: 0,
+      fit: "cover",
+      viewBox: "60 240 420 600",
+      matrix: "matrix(1 0 0 1 0 0)",
+      preserve: "xMidYMid slice",
+    },
+    {
+      name: "portrait three-quarter-turn contain",
+      width: 600,
+      height: 1200,
+      rotation: 270,
+      fit: "contain",
+      viewBox: "120 120 840 300",
+      matrix: "matrix(0 -1 1 0 0 600)",
+      preserve: "xMidYMid meet",
+    },
+  ];
+
+  for (const geometry of cases) {
+    const html = renderToStaticMarkup(React.createElement(ImageChartView, {
+      chart: { title: geometry.name },
+      model: {
+        kind: "image",
+        status: "ready",
+        src: "/controlled-non-square.png",
+        width: geometry.width,
+        height: geometry.height,
+        alt: geometry.name,
+        decorative: false,
+        fit: geometry.fit,
+        crop: { x: 100, y: 200, width: 700, height: 500 },
+        rotation: geometry.rotation,
+        revision: 1,
+      },
+      interactionMode: "passive",
+      surface: "audience",
+    }));
+    assert.match(html, new RegExp(`viewBox="${geometry.viewBox}"`), geometry.name);
+    assert.match(html, new RegExp(`preserveAspectRatio="${geometry.preserve}"`), geometry.name);
+    assert.match(html, new RegExp(`transform="${geometry.matrix.replace(/[()]/g, "\\$&")}"`), geometry.name);
+    assert.match(
+      html,
+      new RegExp(`<foreignObject x="0" y="0" width="${geometry.width}" height="${geometry.height}">`),
+      geometry.name,
+    );
+    assert.match(
+      html,
+      new RegExp(`<img[^>]*width="${geometry.width}"[^>]*height="${geometry.height}"`),
+      geometry.name,
+    );
+    assert.doesNotMatch(html, /object-fit:fill/, geometry.name);
+  }
 });
 
 test("decorative and passive Image rendering remove announced content and all controls", () => {

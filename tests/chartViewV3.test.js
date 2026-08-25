@@ -289,7 +289,7 @@ test("table values render non-finite values as unavailable", () => {
   assert.doesNotMatch(html, /Infinity/);
 });
 
-test("image render models use safe sources, alternative text, and outer fit geometry", () => {
+test("legacy image render models discover intrinsic geometry before applying saved fit", () => {
   const imageRows = [{ src: "/maps/readiness.png", alt: "Readiness map", fit: "cover" }];
   const image = renderToStaticMarkup(React.createElement(ChartView, {
     chart: { typeId: "image", title: "Readiness map", roles: {} },
@@ -305,8 +305,8 @@ test("image render models use safe sources, alternative text, and outer fit geom
 
   assert.match(image, /src="\/maps\/readiness.png"/);
   assert.match(image, /alt="Readiness map"/);
-  assert.match(image, /preserveAspectRatio="xMidYMid slice"/);
-  assert.match(image, /data-image-transform-order="rotation-crop-fit"/);
+  assert.match(image, /class="chart-image-intrinsic-probe"/);
+  assert.doesNotMatch(image, /preserveAspectRatio|data-image-transform-order/);
   assert.doesNotMatch(image, /Reset view|data-image-zoom-scale|chart-image-actions/);
   assert.doesNotMatch(image, /chart-zoom-guard|Hold Ctrl while scrolling to zoom/);
   assert.match(unsafe, /chart-status-error/);

@@ -540,13 +540,25 @@ pre.portable-qmd-math-fallback {
 }
 
 .chart-image-saved-geometry,
-.chart-image-normalized-source,
-.chart-image-view img {
+.chart-image-normalized-source {
   display: block;
   height: 100%;
+  width: 100%;
+}
+
+.chart-image-normalized-source img {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.chart-image-intrinsic-probe {
+  display: block;
+  height: auto;
   max-height: 100%;
   max-width: 100%;
-  width: 100%;
+  opacity: 0;
+  width: auto;
 }
 
 .chart-image-saved-geometry {

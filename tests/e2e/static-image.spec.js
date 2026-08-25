@@ -8,11 +8,11 @@ const VIEWPORTS = [
   { width: 1024, height: 768 },
   { width: 768, height: 900 },
 ];
-const PNG = Buffer.from(
+const PNG = Buffer.from(imageFixtureBytes("image/png"));
+const REPLACEMENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
 );
-const REPLACEMENT_PNG = Buffer.from(imageFixtureBytes("image/png"));
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/reset`);
@@ -88,7 +88,6 @@ for (const viewport of VIEWPORTS) {
     await cropSelection.focus();
     await cropSelection.press("ArrowRight");
     await expect(editor.getByLabel("Crop x")).toHaveValue("210");
-    await editor.getByRole("button", { name: "Rotate right" }).click();
     await editor.getByLabel("Alternative text").fill("Updated clinic readiness map");
     const resetImage = editor.getByRole("button", { name: "Reset image" });
     await resetImage.focus();
@@ -105,15 +104,21 @@ for (const viewport of VIEWPORTS) {
     await expect(editor).toHaveCount(0);
 
     panel = canonicalPanel(page, panelId);
-    const savedTransform = panel.locator(".chart-image-saved-geometry");
+    let savedTransform = panel.locator(".chart-image-saved-geometry");
     await expect(panel.locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
     await expect(savedTransform).toHaveAttribute("data-image-transform-order", "rotation-crop-fit");
-    await expect(savedTransform).toHaveAttribute("viewBox", "100 210 800 700");
+    await expect(savedTransform).toHaveAttribute("data-image-source-width", "2");
+    await expect(savedTransform).toHaveAttribute("data-image-source-height", "3");
+    await expect(savedTransform).toHaveAttribute("data-image-rotated-width", "3");
+    await expect(savedTransform).toHaveAttribute("data-image-rotated-height", "2");
+    await expect(savedTransform).toHaveAttribute("viewBox", "0.63 0.2 2.1 1.6");
     await expect(savedTransform).toHaveAttribute("preserveAspectRatio", "xMidYMid slice");
     await expect(savedTransform.locator(".chart-image-saved-rotation"))
-      .toHaveAttribute("transform", "rotate(180 500 500)");
+      .toHaveAttribute("transform", "matrix(0 1 -1 0 3 0)");
     const transformComposition = await savedTransform.evaluate((svg) => {
       const group = svg.querySelector(".chart-image-saved-rotation");
+      const source = svg.querySelector("foreignObject");
+      const image = svg.querySelector("img");
       const outer = svg.getScreenCTM();
       const rotation = group.transform.baseVal.consolidate().matrix;
       const rendered = group.getScreenCTM();
@@ -121,13 +126,57 @@ for (const viewport of VIEWPORTS) {
       const delta = Math.max(...["a", "b", "c", "d", "e", "f"]
         .map((key) => Math.abs(rendered[key] - expected[key])));
       const viewBox = svg.viewBox.baseVal;
+      const sourceCorners = [
+        new DOMPoint(0, 0),
+        new DOMPoint(2, 0),
+        new DOMPoint(2, 3),
+        new DOMPoint(0, 3),
+      ].map((point) => point.matrixTransform(rotation));
+      const bounds = {
+        x: [Math.min(...sourceCorners.map(({ x }) => x)), Math.max(...sourceCorners.map(({ x }) => x))],
+        y: [Math.min(...sourceCorners.map(({ y }) => y)), Math.max(...sourceCorners.map(({ y }) => y))],
+      };
+      const rect = svg.getBoundingClientRect();
+      const expectedCoverScale = Math.max(rect.width / viewBox.width, rect.height / viewBox.height);
+      const actualScale = Math.hypot(outer.a, outer.b);
       return {
         delta,
+        bounds,
+        sourcePlane: [source.width.baseVal.value, source.height.baseVal.value],
+        intrinsic: [image.naturalWidth, image.naturalHeight],
+        actualScale,
+        expectedCoverScale,
         viewBox: [viewBox.x, viewBox.y, viewBox.width, viewBox.height],
       };
     });
-    expect(transformComposition.viewBox).toEqual([100, 210, 800, 700]);
+    expect(transformComposition.sourcePlane).toEqual([2, 3]);
+    expect(transformComposition.intrinsic).toEqual([2, 3]);
+    expect(transformComposition.bounds).toEqual({ x: [0, 3], y: [0, 2] });
+    for (const [index, expectedValue] of [0.63, 0.2, 2.1, 1.6].entries()) {
+      expect(Math.abs(transformComposition.viewBox[index] - expectedValue)).toBeLessThan(0.000001);
+    }
     expect(transformComposition.delta).toBeLessThan(0.001);
+    expect(Math.abs(transformComposition.actualScale - transformComposition.expectedCoverScale)).toBeLessThan(0.01);
+
+    await openImageEditor(panel, page, title);
+    editor = page.getByRole("dialog", { name: "Edit static content" });
+    await editor.getByLabel("Fit", { exact: true }).selectOption("contain");
+    await editor.getByRole("button", { name: "Continue" }).click();
+    await editor.getByRole("button", { name: "Save" }).click();
+    await expect(editor).toHaveCount(0);
+    panel = canonicalPanel(page, panelId);
+    savedTransform = panel.locator(".chart-image-saved-geometry");
+    await expect(savedTransform).toHaveAttribute("preserveAspectRatio", "xMidYMid meet");
+    const containComposition = await savedTransform.evaluate((svg) => {
+      const viewBox = svg.viewBox.baseVal;
+      const rect = svg.getBoundingClientRect();
+      const matrix = svg.getScreenCTM();
+      return {
+        actualScale: Math.hypot(matrix.a, matrix.b),
+        expectedContainScale: Math.min(rect.width / viewBox.width, rect.height / viewBox.height),
+      };
+    });
+    expect(Math.abs(containComposition.actualScale - containComposition.expectedContainScale)).toBeLessThan(0.01);
 
     await openImageEditor(panel, page, title);
     editor = page.getByRole("dialog", { name: "Edit static content" });
@@ -166,7 +215,7 @@ for (const viewport of VIEWPORTS) {
     await expect(imageView).toHaveClass(/chart-image-view--touch-actions/);
     await imageView.getByRole("button", { name: "Zoom in" }).click();
     await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1.25");
-    await expect(imageView.locator(".chart-image-saved-geometry")).toHaveAttribute("viewBox", "100 210 800 700");
+    await expect(imageView.locator(".chart-image-saved-geometry")).toHaveAttribute("viewBox", "0.63 0.2 2.1 1.6");
     await imageView.getByRole("button", { name: "Reset view" }).click();
     await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1");
 

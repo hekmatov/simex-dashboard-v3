@@ -21,6 +21,8 @@ export default function ImageChartView({
   const src = safeImageSource(model?.src ?? model?.url);
   const active = interactionMode === "active" && zoomEnabled === true;
   const [loadState, setLoadState] = React.useState(src ? "loading" : "error");
+  const trustedIntrinsic = safeIntrinsicSize(model);
+  const [intrinsicSize, setIntrinsicSize] = React.useState(trustedIntrinsic);
   const [scale, setScale] = React.useState(MIN_IMAGE_SCALE);
   const [pan, setPan] = React.useState({ x: 0, y: 0 });
   const [touchActions, setTouchActions] = React.useState(false);
@@ -28,10 +30,11 @@ export default function ImageChartView({
 
   React.useEffect(() => {
     setLoadState(src ? "loading" : "error");
+    setIntrinsicSize(safeIntrinsicSize(model));
     setScale(MIN_IMAGE_SCALE);
     setPan({ x: 0, y: 0 });
     setTouchActions(false);
-  }, [src, model?.revision, surface, active]);
+  }, [src, model?.revision, model?.width, model?.height, surface, active]);
 
   if (model?.status === "loading") {
     return <div className="chart-image-pending" role="status" aria-live="polite">Loading saved image…</div>;
@@ -54,7 +57,23 @@ export default function ImageChartView({
   const crop = safeCrop(model?.crop);
   const rotation = safeRotation(model?.rotation);
   const fit = safeFit(model?.fit);
+  const savedGeometry = computeSavedImageGeometry({
+    width: intrinsicSize?.width,
+    height: intrinsicSize?.height,
+    crop,
+    rotation,
+  });
   const decorative = model?.decorative === true;
+  const onImageLoad = (event) => {
+    if (!trustedIntrinsic) {
+      const discovered = safeIntrinsicSize({
+        width: event.currentTarget.naturalWidth,
+        height: event.currentTarget.naturalHeight,
+      });
+      if (discovered) setIntrinsicSize(discovered);
+    }
+    setLoadState("ready");
+  };
   const movePan = (next) => setPan(clampImagePan(next, scale));
   const setNextScale = (nextScale) => {
     const next = clampScale(nextScale);
@@ -141,30 +160,44 @@ export default function ImageChartView({
         {loadState === "loading" && <span className="chart-image-loading" aria-hidden="true" />}
         <div className="chart-image-saved-window">
           <div className="chart-image-transient" style={{ transform: `translate(${pan.x}%, ${pan.y}%) scale(${scale})` }}>
-            {src && <svg
+            {src && savedGeometry ? <svg
               className="chart-image-saved-geometry"
               data-image-transform-order="rotation-crop-fit"
-              viewBox={`${crop.x} ${crop.y} ${crop.width} ${crop.height}`}
+              data-image-source-width={savedGeometry.sourceWidth}
+              data-image-source-height={savedGeometry.sourceHeight}
+              data-image-rotated-width={savedGeometry.rotatedWidth}
+              data-image-rotated-height={savedGeometry.rotatedHeight}
+              viewBox={savedGeometry.viewBox}
               preserveAspectRatio={fit === "cover" ? "xMidYMid slice" : "xMidYMid meet"}
               focusable="false"
             >
-              <g className="chart-image-saved-rotation" transform={`rotate(${rotation} 500 500)`}>
-                <foreignObject x="0" y="0" width="1000" height="1000">
+              <g className="chart-image-saved-rotation" transform={savedGeometry.rotationMatrix}>
+                <foreignObject x="0" y="0" width={savedGeometry.sourceWidth} height={savedGeometry.sourceHeight}>
                   <div className="chart-image-normalized-source" xmlns="http://www.w3.org/1999/xhtml">
                     <img
                       src={src}
                       alt={decorative ? "" : String(model?.alt ?? "")}
                       role={decorative ? "presentation" : undefined}
                       aria-hidden={decorative ? "true" : undefined}
-                      style={{ objectFit: "fill" }}
-                      onLoad={() => setLoadState("ready")}
+                      width={savedGeometry.sourceWidth}
+                      height={savedGeometry.sourceHeight}
+                      onLoad={onImageLoad}
                       onError={() => setLoadState("error")}
                       draggable="false"
                     />
                   </div>
                 </foreignObject>
               </g>
-            </svg>}
+            </svg> : src && <img
+              className="chart-image-intrinsic-probe"
+              src={src}
+              alt={decorative ? "" : String(model?.alt ?? "")}
+              role={decorative ? "presentation" : undefined}
+              aria-hidden={decorative ? "true" : undefined}
+              onLoad={onImageLoad}
+              onError={() => setLoadState("error")}
+              draggable="false"
+            />}
           </div>
         </div>
       </div>
@@ -202,8 +235,51 @@ export function clampImagePan(value, scale) {
   };
 }
 
+export function computeSavedImageGeometry({ width, height, crop, rotation } = {}) {
+  const intrinsic = safeIntrinsicSize({ width, height });
+  if (!intrinsic) return null;
+  const savedCrop = safeCrop(crop);
+  const savedRotation = safeRotation(rotation);
+  const quarterTurn = savedRotation === 90 || savedRotation === 270;
+  const rotatedWidth = quarterTurn ? intrinsic.height : intrinsic.width;
+  const rotatedHeight = quarterTurn ? intrinsic.width : intrinsic.height;
+  const cropPixels = [
+    (savedCrop.x / 1000) * rotatedWidth,
+    (savedCrop.y / 1000) * rotatedHeight,
+    (savedCrop.width / 1000) * rotatedWidth,
+    (savedCrop.height / 1000) * rotatedHeight,
+  ].map(formatGeometryNumber);
+  return {
+    sourceWidth: intrinsic.width,
+    sourceHeight: intrinsic.height,
+    rotatedWidth,
+    rotatedHeight,
+    viewBox: cropPixels.join(" "),
+    rotationMatrix: sourceRotationMatrix(savedRotation, intrinsic.width, intrinsic.height),
+  };
+}
+
 function clampScale(value) {
   return clampNumber(Number.isFinite(value) ? value : MIN_IMAGE_SCALE, MIN_IMAGE_SCALE, MAX_IMAGE_SCALE);
+}
+
+function safeIntrinsicSize(value) {
+  return Number.isInteger(value?.width) && value.width > 0
+    && Number.isInteger(value?.height) && value.height > 0
+    ? { width: value.width, height: value.height }
+    : null;
+}
+
+function sourceRotationMatrix(rotation, width, height) {
+  if (rotation === 90) return `matrix(0 1 -1 0 ${height} 0)`;
+  if (rotation === 180) return `matrix(-1 0 0 -1 ${width} ${height})`;
+  if (rotation === 270) return `matrix(0 -1 1 0 0 ${width})`;
+  return "matrix(1 0 0 1 0 0)";
+}
+
+function formatGeometryNumber(value) {
+  const rounded = Math.round(value * 1_000_000) / 1_000_000;
+  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 function clampNumber(value, minimum, maximum) {

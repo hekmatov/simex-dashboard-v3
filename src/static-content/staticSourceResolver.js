@@ -98,7 +98,7 @@ export function resolveStaticImageSource(source, {
       const resolved = resolveAsset(source.origin.assetId, entry);
       if (resolved && typeof resolved.then === "function") {
         return resolved.then(
-          (asset) => resolvedImageAssetModel(source, sourceId, asset),
+          (asset) => resolvedImageAssetModel(source, sourceId, asset, entry),
           () => imageAssetReadFailure(source, sourceId),
         );
       }
@@ -122,16 +122,21 @@ export function resolveStaticImageSource(source, {
     });
   }
 
-  return readyImageModel(source, sourceId, url);
+  return readyImageModel(
+    source,
+    sourceId,
+    url,
+    source.origin.kind === "asset" ? assets[source.origin.assetId] : null,
+  );
 }
 
-function resolvedImageAssetModel(source, sourceId, asset) {
+function resolvedImageAssetModel(source, sourceId, asset, manifestEntry) {
   return typeof asset?.url === "string" && asset.url
-    ? readyImageModel(source, sourceId, asset.url)
+    ? readyImageModel(source, sourceId, asset.url, manifestEntry)
     : imageAssetReadFailure(source, sourceId);
 }
 
-function readyImageModel(source, sourceId, url) {
+function readyImageModel(source, sourceId, url, intrinsic = null) {
   return {
     status: "ready",
     kind: "staticImage",
@@ -144,8 +149,14 @@ function readyImageModel(source, sourceId, url) {
     fit: source.fit,
     crop: structuredClone(source.crop),
     rotation: source.rotation,
+    width: positiveDimension(intrinsic?.width),
+    height: positiveDimension(intrinsic?.height),
     networkDependent: source.origin.kind === "url",
   };
+}
+
+function positiveDimension(value) {
+  return Number.isInteger(value) && value > 0 ? value : null;
 }
 
 function imageAssetReadFailure(source, sourceId) {

@@ -42,7 +42,7 @@ The first Vite-backed RED attempt was blocked by the known Windows filesystem sa
 - Saved rendering is explicit rotation → normalized SVG viewBox crop → outer contain/cover fit. Transient zoom/pan remains outside this saved geometry. SSR tests assert the ordered geometry and the retained browser journey compares the real composed DOM matrices.
 - Canonical `ChartView` now subscribes to pending durable resolver Promises, renders a stable pending state, accepts synchronous resolvers unchanged, ignores superseded completion after cleanup, and resolves rejection to the typed panel recovery state. Static Image still bypasses rows, dataset preparation, playback, Chrono, and Scene paths.
 - Undo, cancel/discard, successful replacement, and unmounted/stale intake cleanup selectively revoke and remove unreferenced session assets. Retained/saved siblings and adopted assets survive; intake revision and adopted-ID guards prevent stale cleanup races.
-- The evidence ledger, binding matrix, security record, progress ledger, and this report now use one directly impacted result: 160/160.
+- At the conclusion of fix round 1, the evidence ledger, binding matrix, security record, progress ledger, and this report used one directly impacted result: 160/160.
 
 ### Fix-round GREEN evidence
 
@@ -51,6 +51,27 @@ The first Vite-backed RED attempt was blocked by the known Windows filesystem sa
 - Directly impacted Image/static/chart/legacy suite: first 159/160 with one stale `object-fit:cover` expectation; after aligning it with the approved outer SVG fit contract, the final post-refactor rerun passed 160/160 in 7.44 seconds.
 - Production build: 883 modules transformed, passed in 10.87 seconds with only the existing advisories.
 - Retained production journeys: 1440×900 passed in 43.6 seconds, 1024×768 in 27.3 seconds, and 768×900 in 25.8 seconds. Each now includes ordinary six-stage chart creation and chart editing after Image, v3/session shape inspection, repeated replace→Undo/Discard cleanup, and saved geometry matrix composition. The sole retained reload `fixme` remains blocked by Slice 4 and was not selected by the viewport-specific rerun commands.
+
+## Review fix round 2/5
+
+Reviewer disposition: 1 Important finding reproduced; 1 addressed, 0 open. Review remains pending and is not marked clean.
+
+### Exact reproduction and RED
+
+The renderer used every raster as a 1000×1000 source plane, forced the HTML image through `object-fit:fill`, rotated around `(500, 500)`, and applied normalized crop coordinates directly as the SVG viewBox. The trusted asset-manifest width/height stopped at the static resolver boundary, so landscape and portrait inputs were distorted to a square before the otherwise ordered transform nodes ran.
+
+The focused RED added literal, hand-derived geometry for landscape and portrait sources at 0°, 90°, and 270°, asymmetric crop, and contain/cover. `node --test tests/imageChartView.test.js` produced 5 passed / 2 failed: the canonical staged 2×3 Image emitted `viewBox="100 200 700 600"`, `rotate(90 500 500)`, and a 1000×1000 foreignObject instead of `viewBox="0.3 0.4 2.1 1.2"`, `matrix(0 1 -1 0 3 0)`, and a 2×3 source plane. The 1200×600 landscape case likewise emitted normalized `100 200 700 500` instead of pixel-mapped `120 120 840 300`.
+
+The first strengthened 1440×900 browser run reached the new geometry checkpoint and exposed only SVG DOM float32 representation (`0.629999995…` for authored `0.63`), not a product mismatch. The assertion was narrowed to a 1e-6 tolerance around the hand-derived literal and the identical production journey then passed.
+
+### GREEN implementation and evidence
+
+- The validated asset-manifest width/height now crosses the static resolver boundary into the canonical Image render model. URL/package and bounded legacy-inline sources with no inventory geometry render an undistorted intrinsic probe until `naturalWidth`/`naturalHeight` is available; saved transforms are not fabricated against a square fallback.
+- `ImageChartView` maps integer-permille crop into the rotated intrinsic pixel plane. 90°/270° exchange width and height and use positive-bounds matrices; 0°/180° retain extents. The original intrinsic foreignObject and image dimensions remain unchanged, while SVG `preserveAspectRatio` applies contain/cover only after rotation and crop.
+- Original staged bytes and content identity are untouched. The transient pan/zoom wrapper remains outside the saved intrinsic rotation/crop/fit geometry.
+- Focused renderer/resolver/schema/async/legacy checks passed 37/37 in 3.81 seconds. The final directly impacted suite passed 161/161 in 7.40 seconds.
+- The production build passed with 883 modules transformed in 9.93 seconds and only the existing advisories.
+- Strengthened production journeys passed at 1440×900 in 29.7 seconds, 1024×768 in 25.2 seconds, and 768×900 in 30.7 seconds. Each used the controlled decoded 2×3 PNG and inspected its natural 2×3 geometry, 2×3 foreignObject, 3×2 quarter-turn bounds, asymmetric pixel crop, rotation matrix, and actual outer cover and contain scales. The sole reload `fixme` remains blocked by Slice 4.
 
 ## Implementation
 
@@ -71,7 +92,7 @@ The first Vite-backed RED attempt was blocked by the known Windows filesystem sa
 ### Canonical routing and viewer
 
 - Typed `staticImage` resolves before tabular preparation in `resolveChartRendering`, so it accepts no dataset/time/Chrono/Scene context and uses the same canonical `ChartView` in authoring preview, Build, View, and fullscreen.
-- `ImageChartView` applies saved crop/rotation/fit outside a separate transient pan/zoom layer. Active surfaces provide 1–3× zoom in quarter steps, clamped pan, Reset view, keyboard operations, and semantic buttons. Passive surfaces render no controls.
+- `ImageChartView` applies saved rotation in the trusted intrinsic source plane, maps normalized crop into the resulting pixel extents, and applies outer fit outside a separate transient pan/zoom layer. Active surfaces provide 1–3× zoom in quarter steps, clamped pan, Reset view, keyboard operations, and semantic buttons. Passive surfaces render no controls.
 - The hidden action overlay is absolute and reserves no layout space. It reveals on hover, focus-within, or explicit touch/tap; the retained browser test compares the container bounding box before/after reveal.
 - Nondecorative Image requires authored alt. Decorative Image renders `alt=""` with presentation exclusion. Loading/failure stays inside a stable panel boundary; Build exposes Retry/Replace/Edit, ordinary View exposes Retry plus a Build explanation, and raw URL/source/asset identifiers are not disclosed.
 - The existing inline-row operational Image is now explicitly tagged `legacy-inline-image`. Typed `staticImage` descriptors are rejected from `prepareOperationalData`, and `operationalAdapter` refuses an explicitly typed prepared marker while continuing to accept untagged historical artifacts as bounded migration compatibility. This is the compatibility path required by the brief.
@@ -121,10 +142,10 @@ node --test tests/staticContentRegistry.test.js tests/staticSourceSchema.test.js
 Final result:
 
 ```text
-tests 160
-pass 160
+tests 161
+pass 161
 fail 0
-duration_ms 7442.2435
+duration_ms 7396.5187
 ```
 
 This covers strict intake/resource policy, immutable session staging, transform bounds, four-stage draft behavior, stale-safe transactions, typed source resolution, bounded legacy compatibility, canonical SSR/component routing, semantic controls, failures, package source behavior, and directly impacted chart/panel/scene regressions.
@@ -144,7 +165,7 @@ fail 67
 duration_ms 16276.4973
 ```
 
-This broad command is recorded non-green and is not used to promote the slice. The failures include the existing raw-JSX Node-loader class introduced by prior JSX-backed component imports plus unrelated temporal/data/profile/application-baseline assertions. The 160-test directly impacted set is green; the 67 previously recorded broad failures are not claimed fixed, accepted, or owned by Slice 3. The broad command was not rerun in fix round 1 because the required focused/impacted set deterministically covers every changed owner.
+This broad command is recorded non-green and is not used to promote the slice. The failures include the existing raw-JSX Node-loader class introduced by prior JSX-backed component imports plus unrelated temporal/data/profile/application-baseline assertions. The 161-test directly impacted set is green; the 67 previously recorded broad failures are not claimed fixed, accepted, or owned by Slice 3. The broad command was not rerun in fix round 2 because the required focused/impacted set deterministically covers every changed owner.
 
 ### Production build
 
@@ -153,7 +174,7 @@ The first restricted build produced the known Windows esbuild sandbox denial (`C
 ```text
 npm run build
 ✓ 883 modules transformed
-✓ built in 10.87s
+✓ built in 9.93s
 ```
 
 Prebuild regenerated the expected 146,080 biomedical map rows, 415 aggregate rows, 352 bubble rows, 415 dates, 352 municipalities, 34 tabular profiles, 38 portable data sources, and the Quorum catalogue with 27 chart types / 2 static types / 40 configured charts. Remaining output is limited to the existing non-module Three/Vanta scripts, mixed static/dynamic `ChartFootprintPicker` import, and chunk-size advisory.
@@ -164,13 +185,13 @@ Prebuild regenerated the expected 146,080 biomedical map rows, 415 aggregate row
 node node_modules/@playwright/test/cli.js test tests/e2e/static-image.spec.js
 ```
 
-Fix-round result: all three viewport cases passed when rerun individually. The one reload test remains an explicit Slice-4 `fixme` and was not selected by those viewport-specific commands.
+Fix-round-2 result: all three viewport cases passed when rerun individually. The one reload test remains an explicit Slice-4 `fixme` and was not selected by those viewport-specific commands.
 
 | Viewport | Material checkpoints inspected | Result |
 |---|---|---|
-| 1440×900 | four Image stages; typed local source/byte-free manifest; normal six-stage chart create/edit afterward; v3/session isolation; Reset/Keep/Discard; repeated replace/undo/cancel cleanup; keyboard crop and quarter turn; rotation→crop→fit DOM matrix; unobscured focus; Build/View/fullscreen; reveal without shift; transient zoom/reset; forced recovery; sibling survival; bounded page | Passed, 43.6s |
-| 1024×768 | same complete production lifecycle, chart-commit bridge, blob cleanup, geometry composition, and DOM/state assertions at the dense desktop viewport | Passed, 27.3s |
-| 768×900 | same complete lifecycle, chart create/edit, cleanup, geometry, focus/control operation, action reveal, stable recovery, and no root horizontal growth at the narrow viewport | Passed, 25.8s |
+| 1440×900 | four Image stages; typed local source/byte-free manifest; normal six-stage chart create/edit afterward; v3/session isolation; Reset/Keep/Discard; repeated replace/undo/cancel cleanup; keyboard crop; controlled 2×3 intrinsic source → 3×2 quarter-turn bounds → asymmetric pixel crop → actual cover/contain scales; unobscured focus; Build/View/fullscreen; reveal without shift; transient zoom/reset; forced recovery; sibling survival; bounded page | Passed, 29.7s |
+| 1024×768 | same complete production lifecycle, chart-commit bridge, blob cleanup, natural/source-plane dimensions, rotated bounds, crop mapping, cover/contain scale, and DOM/state assertions at the dense desktop viewport | Passed, 25.2s |
+| 768×900 | same complete lifecycle, chart create/edit, cleanup, intrinsic transform geometry including both outer fit modes, focus/control operation, action reveal, stable recovery, and no root horizontal growth at the narrow viewport | Passed, 30.7s |
 
 The fourth test retains the exact reload continuation and is annotated:
 
