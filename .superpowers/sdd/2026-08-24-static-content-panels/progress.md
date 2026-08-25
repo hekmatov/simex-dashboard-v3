@@ -82,3 +82,5 @@ Task 5: implementation complete; prior fix rounds 1–2 complete; review pending
 Task 5: fix round 1/5 (3 addressed, 0 open — material Build reveal clearance; behavioral Image/Free-text fullscreen fidelity and durable Retry; exact Free-text source ID/revision/content equality). Focused impacted coverage passed 49/49 plus isolated fullscreen lookup 1/1; runtime boundary passed; production build passed with 890 modules/9.29s. The strengthened production matrix passed 8/8 in 3.3 minutes at 1440×900, 1024×768, and 768×900 plus both reload continuations. Implementation complete, review pending; Slice 6 Present/Audience protocol/composition remains explicitly unclaimed.
 
 Task 5: fix round 2/5 (1 Minor documentation claim addressed, 0 open — reveal wording now matches canonical material usability: at least 240×160 visible avoids scrolling; materially unusable clipped/offscreen targets scroll once and wait). Documentation-only; proportional exact-text and diff checks pass. Implementation complete, review pending.
+
+Task 5: complete (commits 62674cc..f1ee4d5, review clean; no findings remain; Present/Audience protocol and fidelity remain Slice 6).
