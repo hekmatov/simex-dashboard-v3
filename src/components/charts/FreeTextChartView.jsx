@@ -30,6 +30,7 @@ export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
       className="free-text-chart-view"
       aria-labelledby={titleId}
       data-static-content-kind="freeText"
+      data-static-source-id={model?.sourceId}
       data-static-source-revision={model?.revision}
     >
       <header className="free-text-chart-view__header">

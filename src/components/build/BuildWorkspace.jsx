@@ -289,7 +289,12 @@ export default function BuildWorkspace({
         frame = window.requestAnimationFrame(reveal);
         return;
       }
-      if (attempts === 0) {
+      const rect = target.getBoundingClientRect();
+      const intersectsViewport = rect.bottom > 0
+        && rect.right > 0
+        && rect.top < window.innerHeight
+        && rect.left < window.innerWidth;
+      if (attempts === 0 && !intersectsViewport) {
         target.scrollIntoView({
           block: selection.kind === "chart" ? "center" : "start",
           inline: "nearest",
@@ -297,11 +302,6 @@ export default function BuildWorkspace({
         });
       }
       attempts += 1;
-      const rect = target.getBoundingClientRect();
-      const intersectsViewport = rect.bottom > 0
-        && rect.right > 0
-        && rect.top < window.innerHeight
-        && rect.left < window.innerWidth;
       if (intersectsViewport) {
         onRevealComplete?.(id);
         return;

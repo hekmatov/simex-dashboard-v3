@@ -128,6 +128,52 @@ test("canonical ChartView turns a durable resolver rejection into stable panel r
   assert.equal(await page.locator('[data-static-failure="asset-read-failed"]').count(), 1);
 });
 
+test("Retry starts a fresh effect-owned resolver attempt and recovers only the failed Image panel", async () => {
+  const assetId = await page.evaluate(() => window.mountAsyncImage("b", "Recovered image"));
+  await page.getByText("Loading saved image…", { exact: true }).waitFor();
+  const failedAttempts = await attemptsFor(assetId, 2);
+  for (const attemptId of failedAttempts) {
+    await page.evaluate((id) => window.rejectAsyncImageAttempt(id), attemptId);
+  }
+
+  await page.locator('[data-static-failure="asset-read-failed"]').waitFor();
+  await page.getByRole("button", { name: "Retry" }).click();
+  const retryAttempts = await attemptsFor(assetId, 3);
+  const retryAttempt = retryAttempts[2];
+  await resolveAttempt(retryAttempt);
+
+  await page.locator('img[alt="Recovered image"]').waitFor();
+  assert.equal(await page.locator('[data-static-failure]').count(), 0);
+  assert.equal(await page.evaluate((id) => window.asyncImageAttemptUrlIsReadable(id), retryAttempt), true);
+  await page.evaluate(() => window.unmountAsyncImage());
+  await expectReleased(retryAttempt);
+});
+
+test("Build Image failure Replace and Edit use the same canonical authoring selection", async () => {
+  await page.route("https://example.test/**", (route) => route.abort("failed"));
+  await page.evaluate(() => window.mountBuildImageFailure());
+  await page.locator('[data-static-failure="image-load-failed"]').waitFor();
+  await page.getByRole("button", { name: "Replace", exact: true }).click();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+
+  assert.deepEqual(await page.evaluate(() => window.buildImageSelections()), [
+    {
+      kind: "chart",
+      pageId: "page-a",
+      sectionId: "section-a",
+      placementId: "build-failed-placement",
+      chartId: "build-failed-image",
+    },
+    {
+      kind: "chart",
+      pageId: "page-a",
+      sectionId: "section-a",
+      placementId: "build-failed-placement",
+      chartId: "build-failed-image",
+    },
+  ]);
+});
+
 test("a synchronous staged Image resolver retains canonical rendering under StrictMode", async () => {
   await page.evaluate(() => window.mountSynchronousImage("1", "Synchronous image"));
   await page.locator('img[alt="Synchronous image"]').waitFor();

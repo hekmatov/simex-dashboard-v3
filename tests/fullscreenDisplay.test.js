@@ -123,6 +123,22 @@ test("the shared displayed-chart grid is available to the fullscreen surface", (
   );
 });
 
+test("findChart is the public canonical lookup for placement-wrapped and direct saved panels", () => {
+  assert.equal(typeof gridModule?.findChart, "function");
+  const wrapped = {
+    id: "placement-static",
+    chart: { id: "static-image", typeId: "image", title: "Static image" },
+  };
+  const direct = { id: "direct-static", typeId: "freeText", title: "Static text" };
+  const savedDashboard = {
+    pages: [{ sections: [{ panels: [wrapped, direct] }] }],
+  };
+
+  assert.equal(gridModule.findChart(savedDashboard, "static-image"), wrapped.chart);
+  assert.equal(gridModule.findChart(savedDashboard, "direct-static"), direct);
+  assert.equal(gridModule.findChart(savedDashboard, "missing"), null);
+});
+
 test("View provides a visible Compare charts entry to the existing multi-select flow", () => {
   assert.equal(typeof viewModule?.default, "function", "ViewShell must be implemented");
   assert.equal(typeof playbackModule?.PlaybackProvider, "function", "PlaybackProvider must be implemented");

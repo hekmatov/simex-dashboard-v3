@@ -111,6 +111,7 @@ export function renderChartContent(props, interactionMode) {
 
 function ResolvedChartContent({ props, interactionMode }) {
   const effectOwned = requiresEffectOwnedResolution(props);
+  const [resolutionAttempt, setResolutionAttempt] = React.useState(0);
   const initialResolution = React.useMemo(() => (
     effectOwned
       ? pendingStaticImageResolution(props)
@@ -126,6 +127,7 @@ function ResolvedChartContent({ props, interactionMode }) {
     props.resolvedRendering,
     props.rows,
     props.timeContext,
+    resolutionAttempt,
   ]);
   const [settledResolution, setSettledResolution] = React.useState(null);
 
@@ -167,12 +169,21 @@ function ResolvedChartContent({ props, interactionMode }) {
     props.renderContext,
     props.rows,
     props.timeContext,
+    resolutionAttempt,
   ]);
 
   const resolvedRendering = canReuseChartRendering(settledResolution, props)
     ? settledResolution
     : initialResolution;
-  return renderChartContent({ ...props, resolvedRendering }, interactionMode);
+  const retryImageResolution = () => {
+    if (effectOwned) setResolutionAttempt((attempt) => attempt + 1);
+    props.onImageRetry?.();
+  };
+  return renderChartContent({
+    ...props,
+    resolvedRendering,
+    onImageRetry: retryImageResolution,
+  }, interactionMode);
 }
 
 function requiresEffectOwnedResolution(props) {

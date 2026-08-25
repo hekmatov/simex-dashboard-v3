@@ -111,8 +111,15 @@ for (const viewport of VIEWPORTS) {
     if (viewport.width > 860) expect(overflow.internal).toBe(true);
     expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewportWidth);
 
+    await panel.locator(".free-text-chart-view").evaluate((node) => {
+      node.scrollTop = Math.min(120, node.scrollHeight - node.clientHeight);
+    });
+    await prepareFreeTextEditorTrigger(panel, title);
+    const beforeDiscard = await inspectBuildStaticState(page, panel);
+
     await openFreeTextEditor(panel, page, title);
     let editor = page.getByRole("dialog", { name: "Edit static content" });
+    await expectStaticEditorCompression(page, viewport, beforeDiscard);
     const editorSource = editor.getByLabel("QMD-style source");
     await editorSource.fill(INERT_QMD);
     await expect(editor.getByRole("status")).toContainText("Preview is up to date");
@@ -132,17 +139,22 @@ for (const viewport of VIEWPORTS) {
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect(editor).toHaveCount(0);
     expect((await readSavedFreeText(page, title)).source.qmd).toBe(INITIAL_QMD);
+    await expectBuildStaticRestored(page, saved.panel.id, beforeDiscard);
 
     panel = canonicalPanel(page, saved.panel.id);
     await panel.scrollIntoViewIfNeeded();
+    await prepareFreeTextEditorTrigger(panel, title);
+    const beforeSave = await inspectBuildStaticState(page, panel);
     await openFreeTextEditor(panel, page, title);
     editor = page.getByRole("dialog", { name: "Edit static content" });
+    await expectStaticEditorCompression(page, viewport, beforeSave);
     await editor.getByLabel("QMD-style source").fill(SAVED_QMD);
     await expect(editor.getByRole("status")).toContainText("Preview is up to date");
     await editor.getByRole("button", { name: "Continue" }).click();
     await expect(editor.getByLabel("Canonical static content preview")).toContainText("Updated priorities");
     await editor.getByRole("button", { name: "Save" }).click();
     await expect(editor).toHaveCount(0);
+    await expectBuildStaticRestored(page, saved.panel.id, beforeSave, { preserveContentScroll: false });
 
     const updated = await readSavedFreeText(page, title);
     expect(updated.source.qmd).toBe(SAVED_QMD);
@@ -154,6 +166,9 @@ for (const viewport of VIEWPORTS) {
     await expectInertAuthoredSurface(panel, "Updated priorities");
     expect(await page.evaluate(() => window.authoredCodeRan)).toBeUndefined();
     expect(authoredResourceRequests).toEqual([]);
+    const buildComposition = await inspectStaticComposition(panel);
+    expect(buildComposition.sourceRevision).toBe("2");
+    expect(buildComposition.authoringActionCount).toBe(1);
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "View", exact: true }).click();
@@ -161,13 +176,21 @@ for (const viewport of VIEWPORTS) {
     await panel.scrollIntoViewIfNeeded();
     await expect(panel).toContainText("Updated priorities");
     await expectInertAuthoredSurface(panel, "Updated priorities");
+    const viewComposition = await inspectStaticComposition(panel);
+    expect(viewComposition).toEqual({ ...buildComposition, authoringActionCount: 0 });
     await panel.getByRole("button", { name: "Focus chart" }).click();
     const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
     await expect(fullscreen).toContainText(title);
     await expect(fullscreen).toContainText("Updated priorities");
     await expectInertAuthoredSurface(fullscreen, "Updated priorities");
+    const fullscreenComposition = await inspectStaticComposition(fullscreen);
+    expect(fullscreenComposition.content).toBe(viewComposition.content);
+    expect(fullscreenComposition.sourceRevision).toBe(viewComposition.sourceRevision);
+    expect(fullscreenComposition.overflowY).toBe("auto");
+    expect(fullscreenComposition.authoringActionCount).toBe(0);
     expect(authoredResourceRequests).toEqual([]);
     await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+    await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
 
     await page.getByLabel("Dashboard mode")
       .getByRole("button", { name: "Present", exact: true }).click();
@@ -261,10 +284,92 @@ function canonicalPanel(page, panelId) {
 }
 
 async function openFreeTextEditor(panel, page, title) {
-  await panel.hover();
   await panel.getByLabel(`${title} actions`)
     .getByRole("button", { name: "Edit chart" }).click();
   await expect(page.getByRole("dialog", { name: "Edit static content" })).toBeVisible();
+}
+
+async function prepareFreeTextEditorTrigger(panel, title) {
+  await panel.hover();
+  const trigger = panel.getByLabel(`${title} actions`)
+    .getByRole("button", { name: "Edit chart" });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.focus();
+  await expect(trigger).toBeFocused();
+}
+
+async function inspectBuildStaticState(page, panel) {
+  return panel.evaluate((node) => {
+    const frame = document.querySelector(".canonical-dashboard-frame.build-workspace");
+    const content = node.querySelector(".free-text-chart-view");
+    const rect = node.getBoundingClientRect();
+    return {
+      frameWidth: frame.getBoundingClientRect().width,
+      footprint: node.getAttribute("data-footprint"),
+      placementId: node.getAttribute("data-canonical-placement-id"),
+      selected: node.classList.contains("selected"),
+      panelWidth: rect.width,
+      scrollLeft: window.scrollX,
+      scrollTop: window.scrollY,
+      contentScrollTop: content?.scrollTop ?? 0,
+    };
+  });
+}
+
+async function expectStaticEditorCompression(page, viewport, before) {
+  const frame = page.locator(".canonical-dashboard-frame.build-workspace");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
+  const openState = await page.evaluate(() => {
+    const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
+    const dialog = document.querySelector('.static-content-dialog[role="dialog"]');
+    const focused = document.activeElement;
+    const rect = focused?.getBoundingClientRect();
+    return {
+      frameWidth: frameNode.getBoundingClientRect().width,
+      focusInside: Boolean(dialog?.contains(focused)),
+      focusClear: Boolean(rect && rect.top >= 0 && rect.bottom <= window.innerHeight),
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
+  else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(openState.focusInside).toBe(true);
+  expect(openState.focusClear).toBe(true);
+  expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
+}
+
+async function expectBuildStaticRestored(page, panelId, before, { preserveContentScroll = true } = {}) {
+  const frame = page.locator(".canonical-dashboard-frame.build-workspace");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before.scrollTop);
+  await expect.poll(() => page.evaluate((placementId) => (
+    document.activeElement?.getAttribute("data-build-edit-for") === placementId
+  ), before.placementId)).toBe(true);
+  const panel = canonicalPanel(page, panelId);
+  const restored = await inspectBuildStaticState(page, panel);
+  expect(restored.footprint).toBe(before.footprint);
+  expect(restored.placementId).toBe(before.placementId);
+  expect(restored.selected).toBe(true);
+  expect(Math.abs(restored.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(Math.abs(restored.panelWidth - before.panelWidth)).toBeLessThan(1);
+  if (preserveContentScroll) expect(restored.contentScrollTop).toBe(before.contentScrollTop);
+}
+
+async function inspectStaticComposition(surface) {
+  return surface.evaluate((node) => {
+    const panel = node.matches("[data-panel-id]") ? node : node.querySelector("[data-panel-id]");
+    const view = node.querySelector(".free-text-chart-view");
+    return {
+      content: node.querySelector('[data-portable-qmd-sink="safe-dom"]')?.innerHTML ?? "",
+      sourceRevision: view?.getAttribute("data-static-source-revision") ?? null,
+      footprint: panel?.getAttribute("data-footprint") ?? null,
+      columns: panel ? getComputedStyle(panel).getPropertyValue("--chart-footprint-columns").trim() : null,
+      rows: panel ? getComputedStyle(panel).getPropertyValue("--chart-footprint-rows").trim() : null,
+      overflowY: view ? getComputedStyle(view).overflowY : null,
+      authoringActionCount: node.querySelectorAll(".panel-actions").length,
+    };
+  });
 }
 
 async function expectProductionMathGeometry(panel) {

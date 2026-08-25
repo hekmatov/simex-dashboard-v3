@@ -1508,6 +1508,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         pageType={landingActive ? "landing" : "analytical"}
         dashboard={workingDashboard}
         buildPanelOpen={buildPanelOpen}
+        buildStaticAuthoringOpen={Boolean(editMode && selectedPanelIsStatic && chartEditorVisible)}
         buildState={editMode ? {
           selection: buildSelection,
           disabled: moderatorMutationLocked || buildDraftLocked,

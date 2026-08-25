@@ -77,7 +77,7 @@ export default function DisplayedChartGrid({
   );
 }
 
-function findChart(dashboard, chartId) {
+export function findChart(dashboard, chartId) {
   for (const page of dashboard?.pages ?? []) {
     for (const section of page.sections ?? []) {
       const panel = (section.panels ?? []).find(

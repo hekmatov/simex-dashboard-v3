@@ -48,8 +48,10 @@ for (const viewport of VIEWPORTS) {
     await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
     await expect(panel).not.toContainText(/Dataset|Chrono Group|Scene|Time controls/i);
 
+    const beforeDiscard = await inspectBuildImageState(page, panel);
     await openImageEditor(panel, page, title);
     let editor = page.getByRole("dialog", { name: "Edit static content" });
+    await expectStaticEditorCompression(page, viewport, beforeDiscard);
     await editor.getByLabel("Alternative text").fill("Unsaved alternative text");
     await editor.getByLabel("Crop width").fill("700");
     await editor.getByRole("button", { name: "Reset image" }).click();
@@ -66,11 +68,14 @@ for (const viewport of VIEWPORTS) {
     await expect(editor).toHaveCount(0);
     panel = canonicalPanel(page, panelId);
     await expect(panel.locator('img[alt="Clinic readiness by district"]')).toBeVisible();
+    await expectBuildImageRestored(page, panelId, beforeDiscard);
 
     panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
+    const beforeSave = await inspectBuildImageState(page, panel);
     await openImageEditor(panel, page, title);
     editor = page.getByRole("dialog", { name: "Edit static content" });
+    await expectStaticEditorCompression(page, viewport, beforeSave);
     await editor.locator("#static-image-file").setInputFiles({
       name: "replacement.png",
       mimeType: "image/png",
@@ -103,6 +108,7 @@ for (const viewport of VIEWPORTS) {
     await expect(editor.getByLabel("Canonical static content preview").locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
     await editor.getByRole("button", { name: "Save" }).click();
     await expect(editor).toHaveCount(0);
+    await expectBuildImageRestored(page, panelId, beforeSave, { preserveViewer: false });
 
     panel = canonicalPanel(page, panelId);
     let savedTransform = panel.locator(".chart-image-saved-geometry");
@@ -192,10 +198,14 @@ for (const viewport of VIEWPORTS) {
     await confirmation.getByRole("button", { name: "Discard" }).click();
     await expect.poll(() => sessionAssetIds(page)).toEqual([]);
     panel = canonicalPanel(page, panelId);
+    const buildComposition = await inspectImageComposition(panel);
+    expect(buildComposition.authoringActionCount).toBe(1);
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
     panel = canonicalPanel(page, panelId);
     await panel.scrollIntoViewIfNeeded();
+    const viewComposition = await inspectImageComposition(panel);
+    expect(viewComposition).toEqual({ ...buildComposition, authoringActionCount: 0 });
     const imageView = panel.locator(".chart-image-view");
     const imageActions = imageView.locator(".chart-image-actions");
     await page.mouse.move(0, 0);
@@ -224,7 +234,16 @@ for (const viewport of VIEWPORTS) {
     const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
     await expect(fullscreen.locator('img[alt="Updated clinic readiness map"]')).toBeVisible();
     await expect(fullscreen.getByRole("button", { name: "Zoom in" })).toBeAttached();
+    const fullscreenComposition = await inspectImageComposition(fullscreen);
+    expect(fullscreenComposition.sourceId).toBe(viewComposition.sourceId);
+    expect(fullscreenComposition.sourceRevision).toBe(viewComposition.sourceRevision);
+    expect(fullscreenComposition.alt).toBe(viewComposition.alt);
+    expect(fullscreenComposition.viewBox).toBe(viewComposition.viewBox);
+    expect(fullscreenComposition.rotationMatrix).toBe(viewComposition.rotationMatrix);
+    expect(fullscreenComposition.fit).toBe(viewComposition.fit);
+    expect(fullscreenComposition.authoringActionCount).toBe(0);
     await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+    await expect(panel.getByRole("button", { name: "Focus chart" })).toBeFocused();
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
     panel = canonicalPanel(page, panelId);
@@ -249,6 +268,16 @@ for (const viewport of VIEWPORTS) {
     await expect(page.locator(
       `[data-panel-id]:not([data-panel-id="${panelId}"])[data-canonical-panel-id]`,
     ).first()).toBeAttached();
+    await panel.getByRole("button", { name: "Retry" }).click();
+    await expect(panel.locator('[data-static-failure="image-load-failed"]')).toBeVisible();
+    await panel.getByRole("button", { name: "Replace" }).click();
+    editor = page.getByRole("dialog", { name: "Edit static content" });
+    await expect(editor).toBeVisible();
+    await expect(editor.getByLabel("HTTPS image URL")).toHaveValue("https://example.test/unavailable.png");
+    await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(editor).toHaveCount(0);
+    panel = canonicalPanel(page, panelId);
+    await expect(panel.locator('[data-static-failure="image-load-failed"]')).toBeVisible();
 
     await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
     panel = canonicalPanel(page, panelId);
@@ -453,4 +482,87 @@ async function openImageEditor(panel, page, title) {
   await panel.hover();
   await panel.getByLabel(`${title} actions`).getByRole("button", { name: "Edit chart" }).click();
   await expect(page.getByRole("dialog", { name: "Edit static content" })).toBeVisible();
+}
+
+async function inspectBuildImageState(page, panel) {
+  return panel.evaluate((node) => {
+    const frame = document.querySelector(".canonical-dashboard-frame.build-workspace");
+    const viewer = node.querySelector(".chart-image-view");
+    const rect = node.getBoundingClientRect();
+    return {
+      frameWidth: frame.getBoundingClientRect().width,
+      footprint: node.getAttribute("data-footprint"),
+      placementId: node.getAttribute("data-canonical-placement-id"),
+      selected: node.classList.contains("selected"),
+      panelWidth: rect.width,
+      scrollLeft: window.scrollX,
+      scrollTop: window.scrollY,
+      viewerScale: viewer?.getAttribute("data-image-zoom-scale") ?? null,
+      viewerPanX: viewer?.getAttribute("data-image-pan-x") ?? null,
+      viewerPanY: viewer?.getAttribute("data-image-pan-y") ?? null,
+    };
+  });
+}
+
+async function expectStaticEditorCompression(page, viewport, before) {
+  const frame = page.locator(".canonical-dashboard-frame.build-workspace");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "true");
+  const openState = await page.evaluate(() => {
+    const frameNode = document.querySelector(".canonical-dashboard-frame.build-workspace");
+    const dialog = document.querySelector('.static-content-dialog[role="dialog"]');
+    const focused = document.activeElement;
+    const rect = focused?.getBoundingClientRect();
+    return {
+      frameWidth: frameNode.getBoundingClientRect().width,
+      focusInside: Boolean(dialog?.contains(focused)),
+      focusClear: Boolean(rect && rect.top >= 0 && rect.bottom <= window.innerHeight),
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  if (viewport.width >= 900) expect(openState.frameWidth).toBeLessThan(before.frameWidth - 80);
+  else expect(Math.abs(openState.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(openState.focusInside).toBe(true);
+  expect(openState.focusClear).toBe(true);
+  expect(openState.documentWidth).toBeLessThanOrEqual(openState.viewportWidth);
+}
+
+async function expectBuildImageRestored(page, panelId, before, { preserveViewer = true } = {}) {
+  const frame = page.locator(".canonical-dashboard-frame.build-workspace");
+  await expect(frame).toHaveAttribute("data-build-static-authoring-open", "false");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before.scrollTop);
+  await expect.poll(() => page.evaluate((placementId) => (
+    document.activeElement?.getAttribute("data-build-edit-for") === placementId
+  ), before.placementId)).toBe(true);
+  const restored = await inspectBuildImageState(page, canonicalPanel(page, panelId));
+  expect(restored.footprint).toBe(before.footprint);
+  expect(restored.placementId).toBe(before.placementId);
+  expect(restored.selected).toBe(true);
+  expect(Math.abs(restored.frameWidth - before.frameWidth)).toBeLessThan(1);
+  expect(Math.abs(restored.panelWidth - before.panelWidth)).toBeLessThan(1);
+  if (preserveViewer) {
+    expect(restored.viewerScale).toBe(before.viewerScale);
+    expect(restored.viewerPanX).toBe(before.viewerPanX);
+    expect(restored.viewerPanY).toBe(before.viewerPanY);
+  }
+}
+
+async function inspectImageComposition(surface) {
+  return surface.evaluate((node) => {
+    const panel = node.matches("[data-panel-id]") ? node : node.querySelector("[data-panel-id]");
+    const viewer = node.querySelector(".chart-image-view");
+    const geometry = node.querySelector(".chart-image-saved-geometry");
+    return {
+      sourceId: viewer?.getAttribute("data-static-source-id") ?? null,
+      sourceRevision: viewer?.getAttribute("data-static-source-revision") ?? null,
+      alt: node.querySelector(".chart-image-view img")?.getAttribute("alt") ?? null,
+      viewBox: geometry?.getAttribute("viewBox") ?? null,
+      rotationMatrix: geometry?.querySelector(".chart-image-saved-rotation")?.getAttribute("transform") ?? null,
+      fit: geometry?.getAttribute("preserveAspectRatio") ?? null,
+      footprint: panel?.getAttribute("data-footprint") ?? null,
+      columns: panel ? getComputedStyle(panel).getPropertyValue("--chart-footprint-columns").trim() : null,
+      rows: panel ? getComputedStyle(panel).getPropertyValue("--chart-footprint-rows").trim() : null,
+      authoringActionCount: node.querySelectorAll(".panel-actions").length,
+    };
+  });
 }

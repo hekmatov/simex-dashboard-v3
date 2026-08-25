@@ -1,6 +1,6 @@
 # Step 7S Post-Step-7 Ownership Inventory
 
-**Status:** PASS ownership gate; Slices 1–4 now realize the listed owners through durable dashboard/bundle v4 implementation. Slice 4 is implementation complete and review pending.
+**Status:** PASS ownership gate; Slices 1–5 now realize the listed owners through canonical Build/View/fullscreen composition. Slice 5 is implementation complete and review pending.
 
 **Accepted Step 7 anchor:** `01511bd5a56978965b8dfc8cdbec3b51c2e17e77`
 
@@ -34,6 +34,16 @@
 - `src/App.jsx` now persists canonical dashboard v4 JSON only, invokes durable static commit, runs startup/replacement reconciliation, preflights export bytes, and stages complete imported payloads before replacement. The Slice 2/3 session projection is removed. `browserStorage` still owns JSON/preferences only; no binary or unsaved static draft is stored there.
 - `src/charting/config/dashboardBundleV3.js` remains the canonical migration/validation/serialization boundary despite its historical filename. No competing v4 module was introduced; `migrateDashboardV3ToV4.js` runs before v4 validation and contained charts remain v3.
 - Offline promotion owns generated `data/authored/<sha256>.<ext>` payloads only. Linked HTTPS Images remain declared dependencies; generated paths remain beneath the package root with content type derived from validated media type.
+
+## Slice 5 realized ownership
+
+- `src/components/DashboardRenderer.jsx`, `src/components/dashboard/DashboardModeWorkspace.jsx`, `src/components/dashboard/DashboardCanvas.jsx`, `src/components/ChartPanel.jsx`, and `src/components/charts/ChartView.jsx` remain the only live Build/View static composition chain. `buildStaticAuthoringOpen` is a transient layout signal, not a second model or renderer.
+- `src/components/display/DisplayedChartGrid.jsx::findChart` is the public model lookup shared by grid/fullscreen composition. `src/components/FullscreenDisplay.jsx` continues to render the result through `ChartView`; Free-text and Image do not get prototype fullscreen branches.
+- `src/components/ChartPanel.jsx::requestEdit` owns both the ordinary Build Edit path and failed-Image Replace/Edit path. It delegates to the existing canonical Build selection callback and is disabled outside Build. View and fullscreen never receive authoring actions.
+- `src/components/charts/ChartView.jsx` owns each Image resolution attempt and retry nonce. An effect setup acquires one attempt, cleanup releases that attempt, and Retry starts a new attempt without changing durable asset or StrictMode ownership.
+- `src/components/build/UnitOrbit.jsx::captureUnitOrbitReturnState, restoreUnitOrbitReturnState` owns document scroll and initiating-control return around static authoring. `src/components/build/BuildWorkspace.jsx` owns reveal coordination and avoids scrolling an already visible target. `src/styles/modes.css` remains the sole Build page-frame compression owner; the state is reversible and does not write saved geometry.
+- `src/components/charts/FreeTextChartView.jsx` and `ImageChartView.jsx` expose source/revision evidence markers only on their canonical rendered owners. Static content CSS ownership remains unchanged; Slice 5 adds no presentation/Audience CSS.
+- The exact six-stage chart workflow and separate four-stage static workflow remain unchanged. Durable v4 persistence, authored-byte storage, and strict validation remain Slice 4 owners; Present/Audience protocol and passive composition remain Slice 6 owners.
 
 ## Clean-baseline findings
 

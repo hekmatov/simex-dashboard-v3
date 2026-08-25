@@ -15,6 +15,7 @@ export default function DashboardModeWorkspace({
   pageType,
   dashboard,
   buildPanelOpen = false,
+  buildStaticAuthoringOpen = false,
   buildState = null,
   buildWorkspace = null,
   displayState,
@@ -106,6 +107,7 @@ export default function DashboardModeWorkspace({
         mode={mode}
         pageType={pageType}
         buildPanelOpen={buildPanelOpen}
+        buildStaticAuthoringOpen={buildStaticAuthoringOpen}
         pageId={activePage?.id}
         dashboardHeader={<DashboardHeader activePage={activePage} dashboard={dashboard} />}
         workspaceControls={buildMode ? buildWorkspace : null}

@@ -1,9 +1,20 @@
 # Step 7S Static Content Fidelity Matrix
 
-**Status:** Accepted design requirements — Slices 1–4 implemented through dashboard/bundle v4 durability, fresh-context import, and offline reload; Slice 5 Build/View composition review and Slice 6 protocol/Audience fidelity remain pending
+**Status:** Accepted design requirements — Slices 1–5 implemented through canonical Build/View/fullscreen composition and restoration; Slice 5 review and Slice 6 protocol/Audience fidelity remain pending
 **Layer rule:** S = semantic correctness, C = composition correctness, R = real-use correctness
 
 Every accepted invariant identifies its eventual production owner and a falsifiable check. Sketch evidence demonstrates the design only; it is never implementation evidence.
+
+## Slice 5 controlling Build/View composition disposition
+
+This table is the binding Slice 5 disposition. It supersedes the earlier `Slice 5 pending`, incomplete Image composition, and partial cross-mode restoration statements below. Engine, mounted UI/composition, and production-route fidelity are kept separate. It does not promote Present/Audience protocol, reconnect, ordering, or composition owned by Slice 6.
+
+| Rows | Engine | UI/composition | Fidelity |
+|---|---|---|---|
+| FT-04, FT-09–FT-11, IM-09–IM-10, IM-13–IM-14, PS-06–PS-07 ordinary/fullscreen portions | Passing: one saved static model and source/revision identity feed Build, View, and fullscreen; capability mapping keeps authoring in Build, active Image viewing in View/fullscreen, Free-text internal overflow, and panel-scoped recovery | Passing through the exact canonical `DashboardRenderer` → `DashboardModeWorkspace` → `DashboardCanvas` → `ChartPanel` → `ChartView` chain. Fullscreen finds the same model through `DisplayedChartGrid.findChart` and dispatches through `FullscreenDisplay`; no alternate static renderer exists. Build-only Edit/Replace route through the canonical selection bridge; View has no authoring action | Production Chromium inspects equal saved content, model markers, source revision, footprint/geometry owners, and overflow owners in Build/View/fullscreen at 1440×900, 1024×768, and 768×900. Image actions are absent at rest, reveal by intent without geometry shift, and remain keyboard/touch discoverable. Free-text remains scrollable in its panel and fullscreen |
+| PS-06 restoration | Passing: authoring-open state is transient and never mutates saved placement or chart configuration; return snapshots include selection, window scroll, and the initiating Edit control | Wide Build uses the existing page-frame compression owner while static authoring is open and restores it on close/cancel/save. Below 900px the accepted overlay expression avoids persistent compression. The reveal coordinator no longer smooth-scrolls an already visible focused panel, preventing a narrow-screen restoration race | Production routes verify selection, panel scroll, document scroll, focus clearance while open, trigger-focus return, and exact post-close/cancel/save restoration. The 768×900 RED exposed a two-pixel smooth-scroll race; the focused production rerun passed after the visibility guard. Existing chart placement/configuration remained unchanged throughout static actions |
+| IM-13 recovery | Passing: Retry creates a new effect-owned asset-resolution attempt and retains final lease cleanup; Replace/Edit uses the same Build selection bridge | A failed Image retains its canonical cell and sibling. Build exposes Retry plus Replace/Edit; ordinary View/fullscreen expose Retry and non-authoring explanation. Raw asset/source identities are not disclosed | Component integration proves Retry can resolve after failure and a failed sibling cannot remove the healthy panel. Production Build failure routes Replace into the four-stage static editor and Cancel returns to the same failed cell; View/fullscreen retain non-authoring recovery |
+| IM-15–IM-16 and PS-07 Audience portions | Unchanged from Slice 4: Image identity/revision and durable resolution remain available; Free-text remains excluded and static types remain non-temporal | Not promoted. Slice 5 deliberately does not change Present/Audience protocol, readiness, ordering, reconnect, passive composition, or Audience CSS | Pending Slice 6 retained journeys and failure-isolation evidence |
 
 ## Slice 4 controlling durability disposition
 

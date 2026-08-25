@@ -40,6 +40,37 @@ export function revealUnitOrbitAnchor(
   return true;
 }
 
+export function captureUnitOrbitReturnState({
+  windowRef = typeof window === "undefined" ? null : window,
+  focusTarget = null,
+} = {}) {
+  if (!windowRef) return null;
+  return {
+    scrollLeft: windowRef.scrollX,
+    scrollTop: windowRef.scrollY,
+    focusTarget,
+  };
+}
+
+export function restoreUnitOrbitReturnState(
+  state,
+  {
+    windowRef = typeof window === "undefined" ? null : window,
+    schedule = windowRef?.requestAnimationFrame?.bind(windowRef),
+  } = {},
+) {
+  if (!state || !windowRef || !schedule) return false;
+  schedule(() => {
+    windowRef.scrollTo({
+      left: state.scrollLeft,
+      top: state.scrollTop,
+      behavior: "auto",
+    });
+    state.focusTarget?.focus?.({ preventScroll: true });
+  });
+  return true;
+}
+
 export function resolveUnitOrbitSize(orbit, viewportWidth) {
   const rect = orbit.getBoundingClientRect();
   const innerScroller = orbit.querySelector(".unit-orbit-scroll");
@@ -124,6 +155,7 @@ export default function UnitOrbit({
 }) {
   const orbitRef = React.useRef(null);
   const invokerRef = React.useRef(null);
+  const returnStateRef = React.useRef(null);
   const recenteredRef = React.useRef(false);
   const focusedRef = React.useRef(false);
   const frameRef = React.useRef(0);
@@ -140,6 +172,10 @@ export default function UnitOrbit({
       && activeElement.dataset.buildEditFor === anchorPlacementId
       ? activeElement
       : findEditButton(anchor, anchorPlacementId);
+    returnStateRef.current = captureUnitOrbitReturnState({
+      windowRef: window,
+      focusTarget: invokerRef.current,
+    });
     recenteredRef.current = false;
     focusedRef.current = false;
 
@@ -200,7 +236,11 @@ export default function UnitOrbit({
       const focusTarget = invokerRef.current?.isConnected
         ? invokerRef.current
         : findAnchor(anchorPlacementId);
-      window.requestAnimationFrame(() => focusTarget?.focus?.({ preventScroll: true }));
+      restoreUnitOrbitReturnState({
+        ...returnStateRef.current,
+        focusTarget,
+      }, { windowRef: window });
+      returnStateRef.current = null;
     };
   }, [anchorPlacementId, open]);
 

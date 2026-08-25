@@ -127,6 +127,8 @@ export default function ImageChartView({
     <figure
       className={`chart-image-view${active ? " chart-image-view--active" : ""}${touchActions ? " chart-image-view--touch-actions" : ""}`}
       data-static-image="true"
+      data-static-source-id={model?.sourceId}
+      data-static-source-revision={model?.revision}
       data-image-zoom-scale={active ? scale : undefined}
       data-image-pan-x={active ? pan.x : undefined}
       data-image-pan-y={active ? pan.y : undefined}

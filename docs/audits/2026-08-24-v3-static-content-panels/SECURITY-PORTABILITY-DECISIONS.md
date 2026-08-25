@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slice 4 durability/portability is implemented and review pending, while Slice 6 protocol/Audience fidelity remains pending
+**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slice 5 canonical Build/View/fullscreen composition is implementation complete and review pending, while Slice 6 protocol/Audience fidelity remains pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Slice 1 implementation status
@@ -46,6 +46,15 @@
 - Fix round 1/5 added production evidence at 1024×768: browser quota abort preserved byte-for-byte prior localStorage plus authored-store inventory; replace/delete/reload measured deduplicated sibling survival and orphan reclamation; an injected post-replacement IDB commit failure left one referenced staged journal that reload promoted to durable. The generated flash-drive `START_HERE.md` now states the required app export → `packaged-dashboard-bundle.json` → `promote:bundle` → `package:flashdrive` sequence; packaging alone does not claim access to browser IndexedDB.
 - Fix round 2/5 added real Chromium StrictMode evidence: replay-discarded, superseded, unmounted, current, rejected, synchronous-staged, and immediately fulfilled attempts pass. The production 1024×768 root settled staged preview, reloaded the durable Image, rendered it, and fetched bytes successfully from its active `blob:` URL.
 - The user-directed Free-text rule is unchanged: all text kinds are accepted by default and rendered inertly through safe DOM construction. Slice 4 adds no sanitizer, deny-list, authored HTML execution, or text-driven external resource loading. Strict Image validation remains unchanged.
+
+## Slice 5 Build/View/fullscreen implementation status
+
+- The saved static model follows the same canonical Build/View chain as ordinary charts: `DashboardRenderer` → `DashboardModeWorkspace` → `DashboardCanvas` → `ChartPanel` → `ChartView`. Fullscreen obtains that same model through `DisplayedChartGrid.findChart` and `FullscreenDisplay`; there is no prototype or alternate static renderer.
+- The permissive inert-text contract is unchanged. Slice 5 adds no sanitizer, deny-list, authored HTML parser, executable content, or text-driven resource loading. Free-text content is mounted through the established safe DOM boundary and owns its own scroll overflow in both cells and fullscreen.
+- Strict Image validation and durable v4 ownership are unchanged. Retry begins a fresh effect-owned resolver attempt, preserves the established per-attempt lease cleanup, and does not weaken origin/MIME/hash/dimension/animation validation. Failures are panel-scoped and reveal no raw URL, asset ID, source ID, or storage detail.
+- Build is the only authoring-capable surface. Failed-Image Replace/Edit uses the canonical Build selection bridge; View and fullscreen provide Retry plus non-authoring explanation only. Hidden Image viewer actions reveal by hover, focus-within, or explicit touch state without reserving new layout space.
+- Static authoring state is transient. Compression, selection, scroll, and focus restoration do not alter saved panel placement, dashboard v4, bundle v4, authored bytes, or chart config v3. The six-stage Add chart workflow remains separate from the four-stage static workflow.
+- Static types still bypass data providers, playback time, Chrono Groups, and Scenes. Slice 5 does not change or claim Present/Audience protocol descriptors, readiness, reconnect, ordering, passive composition, or Audience failure handling; those remain Slice 6.
 
 ## Decision table
 

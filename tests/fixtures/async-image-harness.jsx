@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 
 import ChartView from "/src/components/charts/ChartView.jsx";
+import ChartPanel from "/src/components/ChartPanel.jsx";
 import {
   discardSessionImageAsset,
   stageSessionImageAsset,
@@ -12,6 +13,7 @@ const pending = new Map();
 const releaseCounts = new Map();
 const attemptsByAsset = new Map();
 let attemptSequence = 0;
+let buildSelections = [];
 
 const PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (character) => character.charCodeAt(0));
@@ -104,6 +106,44 @@ window.mountImmediateAsyncImage = (suffix, alt) => renderImage({
   storageState: "durable",
   resolveStaticAsset: async () => ({ url: `data:image/png;base64,${PNG_BASE64}` }),
 });
+window.mountBuildImageFailure = () => {
+  buildSelections = [];
+  const chart = {
+    configVersion: 3,
+    id: "build-failed-image",
+    typeId: "image",
+    title: "Build failed image",
+    sourceId: "build-failed-source",
+    roles: {},
+    transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
+    presentation: { background: { color: "#FFFFFF", transparent: false }, title: { align: "left" }, collection: null },
+    interaction: { zoom: { enabled: false }, timeSync: null },
+    layout: { size: "standard", width: 2, height: 1 },
+  };
+  root.render(React.createElement(ChartPanel, {
+    panel: chart,
+    dataSources: {
+      "build-failed-source": {
+        kind: "staticImage",
+        sourceVersion: 1,
+        revision: 1,
+        origin: { kind: "url", url: "https://example.test/missing-build-image.png" },
+        alt: "Unavailable build image",
+        decorative: false,
+        fit: "contain",
+        crop: { x: 0, y: 0, width: 1000, height: 1000 },
+        rotation: 0,
+      },
+    },
+    editMode: true,
+    isSelected: true,
+    placementId: "build-failed-placement",
+    editPageId: "page-a",
+    editSectionId: "section-a",
+    onBuildSelect: (selection) => buildSelections.push(selection),
+  }));
+};
+window.buildImageSelections = () => [...buildSelections];
 window.asyncImageAttemptIds = (assetId) => [...(attemptsByAsset.get(assetId) ?? [])];
 window.resolveAsyncImageAttempt = (attemptId) => {
   const attempt = pending.get(attemptId);

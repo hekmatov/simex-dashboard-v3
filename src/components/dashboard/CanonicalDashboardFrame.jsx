@@ -5,6 +5,7 @@ export default function CanonicalDashboardFrame({
   pageType,
   pageId,
   buildPanelOpen = false,
+  buildStaticAuthoringOpen = false,
   dashboardHeader,
   workspaceControls = null,
   pageContent,
@@ -18,6 +19,7 @@ export default function CanonicalDashboardFrame({
       data-canonical-mode={mode}
       data-page-type={pageType}
       data-dashboard-map-open={mode === "build" ? String(buildPanelOpen) : undefined}
+      data-build-static-authoring-open={mode === "build" ? String(buildStaticAuthoringOpen) : undefined}
     >
       <div className="canonical-dashboard-header">{dashboardHeader}</div>
       {workspaceControls ? (

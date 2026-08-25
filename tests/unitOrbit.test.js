@@ -185,6 +185,37 @@ test("layout restoration reveals the attached chart without changing editor focu
   assert.deepEqual(calls, [{ block: "center", inline: "nearest", behavior: "auto" }]);
 });
 
+test("closing Unit Orbit restores the pre-editor viewport before returning trigger focus", () => {
+  assert.equal(typeof orbitModule?.captureUnitOrbitReturnState, "function");
+  assert.equal(typeof orbitModule?.restoreUnitOrbitReturnState, "function");
+  const calls = [];
+  const focusTarget = {
+    focus(options) {
+      calls.push(["focus", options]);
+    },
+  };
+  const windowRef = {
+    scrollX: 18,
+    scrollY: 684,
+    scrollTo(options) {
+      calls.push(["scroll", options]);
+    },
+  };
+  const state = orbitModule.captureUnitOrbitReturnState({ windowRef, focusTarget });
+  assert.deepEqual(state, { scrollLeft: 18, scrollTop: 684, focusTarget });
+
+  orbitModule.restoreUnitOrbitReturnState(state, {
+    windowRef,
+    schedule(callback) {
+      callback();
+    },
+  });
+  assert.deepEqual(calls, [
+    ["scroll", { left: 18, top: 684, behavior: "auto" }],
+    ["focus", { preventScroll: true }],
+  ]);
+});
+
 test("a dirty Build workspace allows only the current chart to reopen", () => {
   const current = { kind: "chart", placementId: "confirmed-cases" };
   assert.equal(

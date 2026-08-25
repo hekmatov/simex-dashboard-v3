@@ -75,6 +75,17 @@ function ChartPanel({
     () => typeof IntersectionObserver === "undefined",
   );
   const shouldRenderChart = !suspended && (chartVisible || isSelected);
+  const requestEdit = () => {
+    if (editControlDisabled) return;
+    if (onEdit) onEdit();
+    else onBuildSelect?.({
+      kind: "chart",
+      pageId: editPageId,
+      sectionId: editSectionId,
+      placementId,
+      chartId: chart.id,
+    });
+  };
 
   const clearHold = () => {
     if (holdTimer.current !== null) {
@@ -163,15 +174,7 @@ function ChartPanel({
               if (!editDisabled) onRemove?.();
             }} />
             <IconControl interactionId="panel.edit-chart" className="secondary" tooltipPlacement="below" disabled={editControlDisabled} data-build-edit-for={placementId} onClick={() => {
-              if (editControlDisabled) return;
-              if (onEdit) onEdit();
-              else onBuildSelect?.({
-                kind: "chart",
-                pageId: editPageId,
-                sectionId: editSectionId,
-                placementId,
-                chartId: chart.id,
-              });
+              requestEdit();
             }} />
           </>
         )}
@@ -188,8 +191,8 @@ function ChartPanel({
           renderContext={renderContext}
           interactionMode="active"
           surface={editMode ? "build" : "view"}
-          onImageReplace={onEdit}
-          onImageEdit={onEdit}
+          onImageReplace={requestEdit}
+          onImageEdit={requestEdit}
         />
       ) : (
         <div className="chart-deferred-placeholder" aria-hidden="true">

@@ -1849,7 +1849,14 @@
 
   .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"] {
     --simex-dashboard-map-reserved-width: 404px;
+  }
 
+  .canonical-dashboard-frame.build-workspace[data-build-static-authoring-open="true"] {
+    --simex-dashboard-map-reserved-width: min(444px, 38vw);
+  }
+
+  .canonical-dashboard-frame.build-workspace[data-dashboard-map-open="true"],
+  .canonical-dashboard-frame.build-workspace[data-build-static-authoring-open="true"] {
     margin-left: max(24px, calc((100vw - var(--simex-dashboard-map-reserved-width) - var(--simex-canonical-canvas-max-width)) / 2));
     margin-right: auto;
     min-width: 0;
