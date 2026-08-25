@@ -6,6 +6,13 @@ DONE — engine/lifetime scope only. Source Content Manager composition, concret
 
 Validated finding fix round complete at BASE `0a659743335ac17591b8e49149740522567259a7`.
 
+Final T3-R06 correction complete at BASE `be6416f026a271008385f4d94f26615cd8697113`.
+
+- Narrow RED: **8 pass / 1 fail / 0 skipped / 0 todo**; the exact chart lookalike `{chart:{id:'chart-complete'}}` published without passing `finalizeWizardDraft`. The same table covers shallow static and missing-media lookalikes.
+- Focused GREEN across coordinator and both finalizer owners: **34 pass / 0 fail / 0 skipped / 0 todo**.
+- Fresh exact Task 3 selection: **91 pass / 0 fail / 0 skipped / 0 todo**, 7.65 s.
+- Technical ruling: each existing finalizer owns a module-private `WeakSet` brand and exports only an identity predicate. The coordinator consumes that brand before its required payload clone and retains only a session-local completed-draft ID. This is cycle-safe, cannot be recreated by structural lookalikes, adds no serializable marker, duplicates no chart/static schema, and keeps manager explicit Add unchanged. Cost: finalizer results must be passed directly to `stageDraft` in the same application session; cloning a result before staging intentionally removes proof of finalization.
+
 - Focused RED: **11 pass / 4 fail / 0 skipped / 0 todo**. The exact failures proved active-only staged assets were promoted, unfinished authoring owners could publish, an internal draft ID overwrote a public transaction, and post-commit session cleanup rolled back durable bytes after dashboard publication.
 - Focused GREEN: **15 pass / 0 fail / 0 skipped / 0 todo**.
 - Fresh exact Task 3 selection: **91 pass / 0 fail / 0 skipped / 0 todo**, 7.97 s.
@@ -14,7 +21,7 @@ Validated finding fix round complete at BASE `0a659743335ac17591b8e4914974052256
 - Startup reconciliation promotes only saved manifest/media references. Active retainers protect staged bytes from orphan deletion but never promote them.
 - Internal `content-draft:*` IDs collision-check before publication and never overwrite/remove public transactions. Unrelated public transactions survive both draft success and failure.
 - Renderer transports the exact coordinator prop to both authoring wizards while retaining wrapper callbacks.
-- Authoring completion ruling: manager Add is the explicit commit boundary; Image/QMD accept only the structural output of `finalizeStaticContentDraft`, and chart accepts only the structural output of `finalizeWizardDraft`. No second completion marker or future manager flow was introduced. Cost if wrong: a future concrete adapter must stage the existing finalizer result as its payload, rather than an unfinished form state.
+- Authoring completion ruling: manager Add is the explicit commit boundary; Image/QMD accept only the exact session object returned by `finalizeStaticContentDraft`, and chart accepts only the exact session object returned by `finalizeWizardDraft`. No serializable completion marker or future manager flow was introduced. Cost if wrong: a future concrete adapter must stage the existing finalizer result directly, rather than a clone or unfinished form state.
 
 - BASE: `47ef652`
 - Branch: `codex/static-content-panels-implementation`

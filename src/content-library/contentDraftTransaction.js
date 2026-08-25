@@ -1,3 +1,6 @@
+import { isFinalizedWizardResult } from "../charting/forms/wizardDraft.js";
+import { isFinalizedStaticContentResult } from "../static-content/forms/staticContentDraft.js";
+
 export function stageContentDraft(input = {}) {
   const draft = normalizeDraft(input);
   return freezeRecord({ ...draft, status: "staged" });
@@ -27,15 +30,18 @@ export function createContentDraftCoordinator({
 
   const drafts = new Map();
   const transactions = new Map();
+  const finalizedDraftIds = new Set();
   const listeners = new Set();
   let disposed = false;
 
   const coordinator = {
     stageDraft(input) {
       assertActive();
+      const finalized = isAuthoringPayloadFinalized(input?.owner, input?.payload);
       const draft = stageContentDraft(input);
       if (drafts.has(draft.draftId)) throw new Error(`Content draft "${draft.draftId}" already exists.`);
       drafts.set(draft.draftId, draft);
+      if (finalized) finalizedDraftIds.add(draft.draftId);
       emit();
       return draft;
     },
@@ -47,6 +53,10 @@ export function createContentDraftCoordinator({
       }
       const updated = stageContentDraft({ ...current, ...structuredClone(patch), draftId: current.draftId });
       drafts.set(current.draftId, updated);
+      if (Object.hasOwn(patch, "payload") || Object.hasOwn(patch, "owner")) {
+        if (isAuthoringPayloadFinalized(updated.owner, patch.payload)) finalizedDraftIds.add(current.draftId);
+        else finalizedDraftIds.delete(current.draftId);
+      }
       emit();
       return updated;
     },
@@ -61,7 +71,7 @@ export function createContentDraftCoordinator({
       let internalTransactionStarted = false;
       const stagedAssetIds = [];
       try {
-        assertDraftReadyForCommit(draft);
+        assertDraftReadyForCommit(draft, finalizedDraftIds);
         if (transactions.has(transactionId)) {
           throw new Error(`Content transaction "${transactionId}" already exists.`);
         }
@@ -143,6 +153,7 @@ export function createContentDraftCoordinator({
           cleanupErrors.push(cleanupError);
         }
         drafts.delete(draft.draftId);
+        finalizedDraftIds.delete(draft.draftId);
         if (internalTransactionStarted) transactions.delete(transactionId);
         emit();
         if (cleanupErrors.length > 0) {
@@ -155,6 +166,7 @@ export function createContentDraftCoordinator({
       const draft = requireDraft(draftId);
       discardContentDraft(draft, { reason });
       drafts.delete(draft.draftId);
+      finalizedDraftIds.delete(draft.draftId);
       emit();
       await cleanupAssets(draft.assetIds, draft.draftId);
       return true;
@@ -207,6 +219,7 @@ export function createContentDraftCoordinator({
       const draftRecords = [...drafts.values()];
       const transactionRecords = [...transactions.values()];
       drafts.clear();
+      finalizedDraftIds.clear();
       transactions.clear();
       emit();
       for (const record of [...draftRecords, ...transactionRecords]) {
@@ -272,6 +285,7 @@ export function createContentDraftCoordinator({
 
   function clearCompleted(draft, transactionId, candidateResult) {
     drafts.delete(draft.draftId);
+    finalizedDraftIds.delete(draft.draftId);
     transactions.delete(transactionId);
     const failedAssetIds = [];
     const errors = [];
@@ -312,16 +326,17 @@ export function createContentDraftCoordinator({
   }
 }
 
-function assertDraftReadyForCommit(draft) {
+function assertDraftReadyForCommit(draft, finalizedDraftIds) {
   if (draft.owner === "manager") return;
-  const payload = draft.payload;
-  const staticFinalized = (draft.owner === "image" || draft.owner === "qmd")
-    && payload?.destination && payload?.panel && payload?.placement
-    && payload?.assets && Array.isArray(payload?.stagedAssetIds);
-  const chartFinalized = draft.owner === "chart" && payload?.chart && typeof payload.chart === "object";
-  if (!staticFinalized && !chartFinalized) {
+  if (!finalizedDraftIds.has(draft.draftId)) {
     throw new Error(`${draft.owner} content must be finalized before publication.`);
   }
+}
+
+function isAuthoringPayloadFinalized(owner, payload) {
+  if (owner === "chart") return isFinalizedWizardResult(payload);
+  if (owner === "image" || owner === "qmd") return isFinalizedStaticContentResult(payload);
+  return false;
 }
 
 function normalizeDraft(input) {

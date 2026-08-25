@@ -11,6 +11,11 @@ import {
 import { validateMediaItem } from "../../content-library/mediaItems.js";
 
 let fallbackIdentitySequence = 0;
+const finalizedStaticContentResults = new WeakSet();
+
+export function isFinalizedStaticContentResult(value) {
+  return Boolean(value && typeof value === "object" && finalizedStaticContentResults.has(value));
+}
 
 export const STATIC_CONTENT_STAGES = Object.freeze([
   "destination",
@@ -327,7 +332,7 @@ export function finalizeStaticContentDraft(state) {
   const panel = normalizePanel(state.panel, state.contentTypeId, state.draftIdentity);
   requiredText(panel.title, "Static panel title");
   requiredText(panel.sourceId, "Static panel source id");
-  return {
+  const result = {
     destination: clone(state.destination),
     panel: clone(panel),
     placement: clone(placement),
@@ -335,6 +340,8 @@ export function finalizeStaticContentDraft(state) {
     assets: finalizedAssetsForSource(placement, state.mediaItem, state.assets),
     stagedAssetIds: stagedAssetIdsForSource(state.mediaItem, state.assets),
   };
+  finalizedStaticContentResults.add(result);
+  return result;
 }
 
 function finalizedAssetsForSource(source, mediaItem, assets = {}) {

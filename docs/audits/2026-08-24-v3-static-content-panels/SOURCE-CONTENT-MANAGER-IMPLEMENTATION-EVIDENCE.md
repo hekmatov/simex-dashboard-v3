@@ -100,4 +100,10 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Active-only retainers protect staged bytes without promoting them; only saved manifest/media references recover staged journal entries.
 - Internal coordinator transaction IDs collision-check; public transaction ownership survives draft success/failure.
 - Exact coordinator prop transport reaches both authoring wizards, alongside the wrapper callbacks.
-- Completion uses existing finalizer output shapes: manager is the explicit Add owner, Image/QMD stage `finalizeStaticContentDraft` output, and chart stages `finalizeWizardDraft` output. No manager UI or Task 4+ architecture was added.
+- Completion uses exact finalizer-returned session objects: manager is the explicit Add owner, Image/QMD stage `finalizeStaticContentDraft` output directly, and chart stages `finalizeWizardDraft` output directly. No manager UI or Task 4+ architecture was added.
+
+### Final T3-R06 correction
+
+- BASE `be6416f026a271008385f4d94f26615cd8697113`; narrow RED **8/9 passing**, focused GREEN **34/34 passing**, exact Task 3 selection **91/91 passing** in 7.65 s.
+- Shallow chart, static, and missing-media lookalikes cannot publish. Positive coordinator tests pass actual objects returned by `finalizeWizardDraft` and `finalizeStaticContentDraft`.
+- Finalizer-owned module-private `WeakSet` brands are consumed before coordinator cloning and reduced to a session-only completed-draft ID. This avoids a serializable/spoofable marker, schema duplication, import cycles, and future-flow behavior; manager explicit Add remains allowed.

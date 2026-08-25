@@ -7,6 +7,13 @@ import {
   finalizeContentDraft,
   stageContentDraft,
 } from "../src/content-library/contentDraftTransaction.js";
+import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
+import { createWizardState, finalizeWizardDraft } from "../src/charting/forms/wizardDraft.js";
+import {
+  createStaticContentDraft,
+  finalizeStaticContentDraft,
+  reduceStaticContentDraft,
+} from "../src/static-content/forms/staticContentDraft.js";
 import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
 
 test("pure content draft transitions are immutable and retain exact owner context", () => {
@@ -102,9 +109,11 @@ test("manager Add publishes one immutable candidate and deliberately keeps an un
 
 test("authoring owners cannot publish until their existing finalizer result is staged", async () => {
   for (const [owner, payload] of [
-    ["image", {}],
-    ["qmd", {}],
-    ["chart", {}],
+    ["chart", { chart: { id: "chart-complete" } }],
+    ["image", { destination: {}, panel: {}, placement: {}, assets: {}, stagedAssetIds: [] }],
+    ["qmd", { destination: {}, panel: {}, placement: {}, assets: {}, stagedAssetIds: [] }],
+    ["image", { destination: {}, panel: {}, placement: { kind: "staticImage" }, mediaItem: null, assets: {}, stagedAssetIds: [] }],
+    ["qmd", { destination: {}, panel: {}, placement: { kind: "staticText" }, mediaItem: null, assets: {}, stagedAssetIds: [] }],
   ]) {
     const harness = coordinatorHarness();
     harness.coordinator.stageDraft({ draftId: `${owner}-draft`, owner, kind: `${owner}-add`, payload, assetIds: [], mediaIds: [], sourceIds: [] });
@@ -115,9 +124,10 @@ test("authoring owners cannot publish until their existing finalizer result is s
   }
 
   const chart = coordinatorHarness();
+  const finalizedChart = finalizeWizardDraft(validChartWizardState());
   chart.coordinator.stageDraft({
     draftId: "chart-complete", owner: "chart", kind: "chart-add",
-    payload: { chart: { id: "chart-complete" } }, assetIds: [], mediaIds: [], sourceIds: [],
+    payload: finalizedChart, assetIds: [], mediaIds: [], sourceIds: [],
   });
   await chart.coordinator.commitDraft("chart-complete", {
     buildCandidate: ({ dashboard }) => ({ dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: ["chart-complete"] }),
@@ -126,9 +136,10 @@ test("authoring owners cannot publish until their existing finalizer result is s
 
   for (const owner of ["image", "qmd"]) {
     const harness = coordinatorHarness();
+    const finalizedStatic = finalizeStaticContentDraft(validStaticContentState());
     harness.coordinator.stageDraft({
       draftId: `${owner}-complete`, owner, kind: `${owner}-add`,
-      payload: { destination: {}, panel: {}, placement: {}, assets: {}, stagedAssetIds: [] },
+      payload: finalizedStatic,
       assetIds: [], mediaIds: [], sourceIds: [],
     });
     await harness.coordinator.commitDraft(`${owner}-complete`, {
@@ -137,6 +148,38 @@ test("authoring owners cannot publish until their existing finalizer result is s
     assert.equal(harness.commits.length, 1);
   }
 });
+
+function validChartWizardState() {
+  return createWizardState({
+    draft: createChartDraft("line", {
+      id: "chart-complete", title: "Complete chart", sourceId: "source",
+      roles: {
+        measurements: [{ field: "value", axis: "primary" }],
+        observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+    }),
+    profiles: {
+      source: {
+        rowCount: 1,
+        columns: [
+          { name: "value", type: "numeric", values: [1] },
+          { name: "date", type: "temporal", temporal: { values: ["2026-01-01"], diagnostics: [], parsingMetadata: { interpretation: "temporal", format: "YYYY-MM-DD", timezone: "date-only" } } },
+        ],
+      },
+    },
+  });
+}
+
+function validStaticContentState() {
+  let state = createStaticContentDraft({
+    destination: { pageId: "page", sectionId: "section" },
+    contentTypeId: "freeText",
+    panel: { id: "static-complete", title: "Complete static content", sourceId: "static-source" },
+    placement: { kind: "staticText", qmd: "Complete" },
+  });
+  state = reduceStaticContentDraft(state, { type: "setStage", stage: "preview-and-add" });
+  return state;
+}
 
 test("internal draft transaction collisions never overwrite or remove a public transaction", async () => {
   const harness = coordinatorHarness();

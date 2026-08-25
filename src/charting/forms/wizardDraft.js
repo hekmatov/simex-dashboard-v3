@@ -49,6 +49,11 @@ const DANGEROUS_PATH_SEGMENTS = new Set([
   "prototype",
   "constructor",
 ]);
+const finalizedWizardResults = new WeakSet();
+
+export function isFinalizedWizardResult(value) {
+  return Boolean(value && typeof value === "object" && finalizedWizardResults.has(value));
+}
 
 export function createWizardState(options = {}) {
   if (!isRecord(options)) {
@@ -302,6 +307,7 @@ export function finalizeWizardDraft(state) {
     validateProposedGroups(state, state.chronoGroups, chart);
     result.chronoGroups = structuredClone(state.chronoGroups);
   }
+  finalizedWizardResults.add(result);
   return result;
 }
 
