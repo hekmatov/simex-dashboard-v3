@@ -46,4 +46,8 @@ Task 2: minor addressed incidentally: dependency rationale corrected — GHSA-38
 
 - Ruling (user-directed 2026-08-25): abort sanitizer use and allow all kinds of text by default. Interpret this safely as accepting arbitrary source while rendering raw HTML/scripts/iframes/executable/media/unknown constructs inertly, with no execution or resource loading; remove DOMPurify and the sanitizer production boundary, retain resource limits, and construct DOM through safe APIs/trusted bundled renderers — why: the user explicitly superseded the earlier sanitizer/deny-list contract — cost if wrong: unsupported syntax appears as literal text rather than active embedded content.
 
-Task 2: user-directed permissive inert-text design complete and verified — DOMPurify/sanitizer removed; arbitrary source saves as inert visible text/code through direct safe-DOM construction; resource limits and trusted restricted math retained; focused 63/63, production build, and retained 3-viewport journey passed with the single Slice-4 FT-11 reload skip; atomic commit pending this report.
+Task 2: user-directed permissive inert-text design complete and verified — DOMPurify/sanitizer removed; arbitrary source saves as inert visible text/code through direct safe-DOM construction; resource limits and trusted restricted math retained; focused 63/63, production build, and retained 3-viewport journey passed with the single Slice-4 FT-11 reload skip; commits bf23e5b..c1971c7.
+
+Task 2: documentation synchronization fix complete — current ownership names `tests/portableQmdDomSafety.test.js` and the security record names the exact-pinned two-package dependency set; commit 0bddb1c.
+
+Task 2: complete (commits 7a12719..0bddb1c, review clean under the user-directed permissive inert-text contract; FT-11 reload remains pending Slice 4 and FT-12 protocol/Audience evidence remains pending Slice 6).
