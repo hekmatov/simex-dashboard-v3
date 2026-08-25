@@ -1,7 +1,7 @@
 # GeoJSON Limits Decision
 
 **Date:** 2026-08-25
-**Decision status:** Corrected calibrated technical guardrail submitted for renewed V3 Design master review. Master review did not accept commit `526003d`; the bounded correction below resolves its four findings. No legitimate-project exclusion or material user-level UX tradeoff was found.
+**Decision status:** Second corrected calibrated technical guardrail submitted for renewed V3 Design master review. Review of `3f97ff9` accepted the distributed part/ring, exact structural-node, and exact per-feature-key corrections but required greater byte/property margin below the observed 48 MB failure. The bounded 36 MB probe below resolves that remaining finding. No legitimate-project exclusion or material user-level UX tradeoff was found.
 **Implementation status:** Planning evidence only. The limits authority, UI, transactions, and SCM-S15 remain proposed, unimplemented, and not verified.
 **Spike:** `.planning/spikes/001-geojson-limit-calibration/README.md`
 
@@ -13,14 +13,14 @@ For per-source limits, **normal** means every dimension is below its warning thr
 
 | Dimension | Normal | Warn and allow after explicit confirmation | Hard reject | Basis |
 |---|---:|---:|---:|---|
-| Encoded UTF-8 bytes | < 32,000,000 | 32,000,000–47,999,999 | ≥ 48,000,000 | Fresh constrained 16/24/32 MB rungs completed; 32 MB was 441.3 ms package-import p95 with a 1,567 ms max long task. A fresh 48 MB rung did not complete within 90 seconds and reached 923,045,888 bytes Chromium working set. An 8 MB source is normal. |
+| Encoded UTF-8 bytes | < 32,000,000 | 32,000,000–35,999,999 | ≥ 36,000,000 | The constrained 32 MB rung completed at 441.3 ms package-import p95/1,567 ms max long task. A fresh 35,999,997-byte rung completed at 543.4 ms/2,000 ms, reaching the predeclared hard knee. The 36 MB rejected boundary leaves 12 MB (25%) below the retained 48 MB resource failure. An 8 MB source is normal. |
 | Feature count | < 2,000 | 2,000–7,999 | ≥ 8,000 | Constrained 4,000-feature interaction was 512 ms p95; 8,000 reached 1,828 ms with a 2,807 ms long task. |
 | Total coordinate positions | < 20,000 | 20,000–49,999 | ≥ 50,000 | 20k package import was 610 ms p95; 50k reached 1,579 ms with a 3,864 ms long task. |
 | Positions in one feature | < 20,000 | 20,000–49,999 | ≥ 50,000 | 20k package import was 590 ms p95; 50k reached 1,556 ms with a 3,680 ms long task. |
 | Geometry parts | < 2,000 | 2,000–3,999 | ≥ 4,000 | A realistic 500-feature MultiPolygon distribution at 2,000 parts completed with a 1,588 ms max long task; 4,000 crossed the hard-knee rule at 2,097 ms. The former single-feature 2,000-ring case remains allowed. |
 | Polygon rings | < 2,000 | 2,000–3,999 | ≥ 4,000 | Counted independently from parts but calibrated on the same one-ring-per-part distribution; 8,000 reached 1,752 ms package import and a 4,605 ms max long task. Current maximum is 360. |
 | Maximum own property keys on one feature | < 512 | 512–999 | ≥ 1,000 | Exact fixtures report 512 and 1,000 `Object.keys(feature.properties).length`; 1,000 was 19.8 ms package-import p95. This is a bounded metadata ceiling, not a source-wide union of names. Current maximum is seven. |
-| Total encoded property-value bytes | < 32,000,000 | 32,000,000–47,999,999 | ≥ 48,000,000 | Exactly 32 MB completed at 426.1 ms package-import p95, 1,483 ms max long task, and 224,054,934-byte max heap delta. The 48 MB encoded resource failure supplies the hard safety ceiling because property values are a subset of encoded source bytes. |
+| Total encoded property-value bytes | < 32,000,000 | 32,000,000–35,999,999 | ≥ 36,000,000 | Exactly 32 MB completed at 426.1 ms package-import p95, 1,483 ms max long task, and 224,054,934-byte max heap delta. The 35,999,997-byte encoded rung contained 35,999,833 property-value bytes and reached the 2,000 ms hard knee, so the same conservative boundary applies. |
 | Traversal/object depth | < 16 | 16–31 | ≥ 32 | Current corpus depth is five. The iterative checker is capped well below the verified depth-64 probe so adversarial inspection remains bounded. |
 | Whole-document structural nodes | < 30,000 | 30,000–49,999 | ≥ 50,000 | 40,000 nodes completed at 648.8 ms package-import p95/1,459 ms max long task; 50,000 reached 860 ms/2,180 ms. Current corpus maximum is 8,407. |
 
@@ -75,7 +75,7 @@ Each retained phase/rung has three samples; p95 in this bounded spike is the max
 | gemeente_2026.geojson | 186,955 | 342 | 6,458 | 58 | 350 | 350 | 6 | 8,194 | Polygon/MultiPolygon |
 | netherlands-provinces.geojson | 134,969 | 12 | 1,635 | 196 | 23 | 27 | 7 | 1,728 | Polygon/MultiPolygon |
 
-Every legitimate file is normal under every calibrated source limit. The largest structural-node count is 8,407 against warning 30,000/hard 50,000; the largest part/ring counts are 360 against warning 2,000/hard 4,000; and the largest encoded source is 193,816 bytes against warning 32 MB/hard 48 MB. Current page concurrency is also normal at a maximum of two.
+Every legitimate file is normal under every calibrated source limit. The largest structural-node count is 8,407 against warning 30,000/hard 50,000; the largest part/ring counts are 360 against warning 2,000/hard 4,000; and the largest encoded source is 193,816 bytes against warning 32 MB/hard 36 MB. Current page concurrency is also normal at a maximum of two.
 
 ## Measurements and knees
 
@@ -91,12 +91,12 @@ The retained decisive constrained knees remain 8,000 features, 50,000 total/sing
 
 | Corrected dimension | Lower/normal evidence | Warning/hard evidence |
 |---|---|---|
-| Encoded/property-value bytes | 8 MB property value: 114.5 ms package import; 16/24 MB encoded: 221.8/336.8 ms | 32 MB encoded: 441.3 ms/1,567 ms max long task; 32 MB property value: 426.1 ms/1,483 ms; fresh 48 MB encoded failed to complete within 90 s and reached 923,045,888-byte Chromium working set |
+| Encoded/property-value bytes | 8 MB property value: 114.5 ms package import; 32 MB encoded: 441.3 ms/1,567 ms max long task; 32 MB property value: 426.1 ms/1,483 ms | 36 MB encoded: 543.4 ms package import/2,000 ms max long task/216,171,884-byte max heap delta; fresh 48 MB encoded failed to complete within 90 s and reached 923,045,888-byte Chromium working set |
 | Distributed parts/rings | 2,000 across 500 features: 453.9 ms package import/1,588 ms max long task | 4,000: 794.9 ms/2,097 ms; 8,000: 1,752 ms/4,605 ms |
 | Whole-document structural nodes | 30,000: 478.6 ms package import/1,086 ms max long task; 40,000: 648.8/1,459 ms | 50,000: 860 ms/2,180 ms |
 | Maximum own keys per feature | 512: 16.2 ms package import | 1,000: 19.8 ms; bounded semantic ceiling retained |
 
-Bytes still do not decide geometry complexity by themselves, but the observed 48 MB constrained resource failure now supplies a demonstrably non-product-restrictive byte/property safety ceiling. The 32 MB successful rung is the tested margin below it and is more than 165× the largest legitimate source.
+Bytes still do not decide geometry complexity by themselves. The 36 MB constrained rung completed but reached the predeclared 2,000 ms hard knee, so 36 MB is the rejected boundary and 32 MB is the highest fully measured allowed rung. That boundary leaves 12 MB (25%) below the observed 48 MB constrained resource failure and remains more than 185× the largest legitimate source.
 
 ## Path substitutions
 
@@ -117,7 +117,7 @@ These substitutions calibrate the technical guardrail but do not implement or ve
 
 - All 333 retained main-ladder samples preserved the original candidate after injected empty-feature rejection.
 - The focused rollback file records 9/9 `rollbackPreserved` and 9/9 `packageRollbackPreserved` observations across the three profiles.
-- All 51 completed master-correction samples recorded `rollbackPreserved = 1` and `packageRollbackPreserved = 1`; the intentionally stopped 48 MB resource-failure rung published nothing.
+- All 54 completed master-correction samples recorded `rollbackPreserved = 1` and `packageRollbackPreserved = 1`; the intentionally stopped 48 MB resource-failure rung published nothing.
 - GeometryCollection runtime failure remained isolated and did not mutate its candidate.
 - The initial invalid disposable package fixture and excess MultiPolygon nesting were corrected before measurements were accepted; both are recorded in the spike investigation trail.
 
@@ -128,6 +128,7 @@ These substitutions calibrate the technical guardrail but do not implement or ve
 - Raw per-type follow-up: `.planning/spikes/001-geojson-limit-calibration/evidence/geometry-type-measurements.json`
 - Raw rollback probe: `.planning/spikes/001-geojson-limit-calibration/evidence/rollback-measurements.json`
 - Master-correction encoded/property-value, distributed-parts/rings, per-feature-key, and structural-node samples: `.planning/spikes/001-geojson-limit-calibration/evidence/master-correction-*.json`
+- Second master-correction byte-margin samples: `.planning/spikes/001-geojson-limit-calibration/evidence/master-correction-byte-margin-36m.json`
 - Master-correction 48 MB resource-failure checkpoint: `.planning/spikes/001-geojson-limit-calibration/evidence/master-correction-resource-failure.md`
 - Inspected checkpoints: `.planning/spikes/001-geojson-limit-calibration/evidence/browser-checkpoints.md`
 
@@ -135,4 +136,4 @@ The original `measurements.json` preserves its historical `parts` and source-uni
 
 ## Planning consequence
 
-The corrected calibrated guardrail does not require a user decision: it excludes no known legitimate fixture and does not introduce a material user-level UX tradeoff. It is submitted for renewed master review. No production task or test may substitute different constants without a recorded limits-decision amendment, and completing this record does not promote SCM-S15 or any other amendment row.
+The second corrected calibrated guardrail does not require a user decision: it excludes no known legitimate fixture and does not introduce a material user-level UX tradeoff. It is submitted for renewed master review. No production task or test may substitute different constants without a recorded limits-decision amendment, and completing this record does not promote SCM-S15 or any other amendment row.

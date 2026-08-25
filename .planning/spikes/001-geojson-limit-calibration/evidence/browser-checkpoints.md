@@ -43,3 +43,10 @@ Observed production facts:
 - At 1024×768 it resized to 1,012×756 CSS pixels with document overflow 0 and retained the focused map/status.
 
 This checkpoint proves current map registration/render/resize integration only. It is not evidence that the proposed manager, summary preview, replacement UI, or SCM-S15 production authority is implemented.
+
+## Second master-correction byte checkpoint — constrained 1024×768
+
+- Only the unresolved byte/property margin was probed: one fresh three-sample Chromium rung requested 36,000,000 encoded bytes and produced 35,999,997 encoded bytes with 35,999,833 total encoded property-value bytes.
+- The bounded fixture was one Point feature, one coordinate position, one geometry part, zero rings, two maximum own keys, and six structural nodes. Its map geometry is intentionally trivial, so no new composition claim is made.
+- Package-import p95 was 543.4 ms, summary p95 406.6 ms, interaction p95 39.9 ms, maximum heap delta 216,171,884 bytes, and maximum long task exactly 2,000 ms. All three ordinary and package rollback assertions remained preserved.
+- The exact 2,000 ms predeclared hard knee establishes 36 MB as a conservative rejected boundary. The prior 32 MB rung remains the highest fully measured allowed value; the retained 48 MB resource failure remains the failed-region evidence. No 40/44 MB run was needed.
