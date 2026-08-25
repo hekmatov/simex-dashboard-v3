@@ -12,7 +12,7 @@
 
 **Authority:** Written amendment `81531b4`; master-accepted GeoJSON calibration `c28b59d`; master-accepted ownership reconciliation `dc06f8c`; accepted Step 7S implementation `b366ba17fe856aede46ba8301b8a530520e4d2cd`; Step 7S documentation closure `db63d8e772ce96b17de19b7a89f256a72926d08d`.
 
-**Review history:** First plan `ebdc52b` was rejected for incomplete ordering/ownership/lifetime/mechanical contracts. Second correction `fed576e` was rejected after a focused live-owner check found wrong GeoJSON warning boundaries, missing DashboardCanvas/ChartPanel transport, an incomplete Static Image atomic payload, no parser-owned QMD suffix pass, no mounted draft coordinator, a map provider below sibling consumers, cleanup disconnected from real retainers, Task 12 missing its Build save-dispatch test, and residual generic owners. Third correction `69deabc` was not accepted because `StaticContentEditor` remained outside the Image cutover and the QMD root AST was conflated with the parse-result wrapper; the user then superseded the ten-metric admission interpretation. This correction closes both live-owner blockers and makes the four-gate policy governing without changing the approved product scope.
+**Review history:** First plan `ebdc52b` was rejected for incomplete ordering/ownership/lifetime/mechanical contracts. Second correction `fed576e` was rejected after a focused live-owner check found wrong GeoJSON warning boundaries, missing DashboardCanvas/ChartPanel transport, an incomplete Static Image atomic payload, no parser-owned QMD suffix pass, no mounted draft coordinator, a map provider below sibling consumers, cleanup disconnected from real retainers, Task 12 missing its Build save-dispatch test, and residual generic owners. Third correction `69deabc` was not accepted because `StaticContentEditor` remained outside the Image cutover and the QMD root AST was conflated with the parse-result wrapper; the user then superseded the ten-metric admission interpretation. Correction `4b52fda` passed lean-policy and Image-owner review but was not finally accepted because the QMD policy/footnote typedefs did not match the live parser and `SOURCE_GEOJSON_LIMIT_KEYS` lacked one importable production owner. This correction closes those two mechanical contracts without changing product scope.
 
 **Planning status:** Planning only. All 36 amendment rows remain `Proposed / unimplemented / not verified`.
 
@@ -45,7 +45,7 @@
 | `src/content-library/mediaItems.js` | `createMediaItem(input)`, `replaceMediaItemRevision(item,current)`, `renameMediaItem(item,{displayName,defaultDescription})`, `validateMediaItem(item,{assets})`. |
 | `src/content-library/sourceEntrySchema.js` | `classifyManagedSource(sourceId,descriptor)`, `validateSourceEntry(entry,context)`, `renameSourceEntry(entry,displayName)`, `listManageableSourceEntries(library,dataSources)`. |
 | `src/content-library/geoJsonSourceEntry.js` | `normalizeManagedGeoJsonSource(sourceId,descriptor,validation)`; `summarizeGeoJsonSource(validation) -> GeoJsonSummary`. |
-| `src/lib/geoJsonValidation.js` | `GEOJSON_LIMITS` with exactly `encodedBytes`, `features`, `totalPositions`, and `renderableFragments`; separate `GEOJSON_CONCURRENT_MAPS={normalMax:2,eagerMax:4}`; `validateGeoJsonSchema(value) -> GeoJsonSchemaResult`; `inspectGeoJsonAdmission({encodedBytes,featureCollection}) -> GeoJsonAdmissionResult`; `validateGeoJson(input,options) -> GeoJsonValidationResult`. One iterative authority keeps schema/compatibility failures distinct from four-gate resource admission. |
+| `src/lib/geoJsonValidation.js` | Frozen `GEOJSON_LIMITS` with exactly `encodedBytes`, `features`, `totalPositions`, and `renderableFragments` in that order; frozen derived `SOURCE_GEOJSON_LIMIT_KEYS=Object.freeze(Object.keys(GEOJSON_LIMITS))`; separate `GEOJSON_CONCURRENT_MAPS={normalMax:2,eagerMax:4}`; `validateGeoJsonSchema(value) -> GeoJsonSchemaResult`; `inspectGeoJsonAdmission({encodedBytes,featureCollection}) -> GeoJsonAdmissionResult`; `validateGeoJson(input,options) -> GeoJsonValidationResult`. One iterative authority keeps schema/compatibility failures distinct from four-gate resource admission. |
 | `src/content-library/contentDraftTransaction.js` | Pure `stageContentDraft`, `finalizeContentDraft`, `discardContentDraft` plus mounted `createContentDraftCoordinator(adapters) -> ContentDraftCoordinator`. The coordinator owns application-session drafts and transactions, commits registry+bytes/descriptors/profiles/payloads atomically, discards staged state, and exposes real retainers. |
 | `src/content-library/contentDependencyGraph.js` | `buildContentDependencyGraph(input)` plus media/CSV/GeoJSON direct-use, active-retention, and CSV-impact selectors. QMD edges consume the portable-QMD parser API. |
 | `src/content-library/contentDeletionTransaction.js` | `prepareContentDeletion(input)`; `commitContentDeletion(plan,adapters)`. No-cascade block/confirm/rollback. |
@@ -160,8 +160,8 @@ Seven Playwright files are created: `source-content-manager.spec.js`, `source-co
 /** @typedef {{schema:GeoJsonSchemaResult,admission:GeoJsonAdmissionResult|null,summary:GeoJsonSummary|null,compatibility?:{ok:boolean,errors:Array<{code:string,path:string,message:string}>}}} GeoJsonValidationResult */
 /** @typedef {{status:'needs-review'|'degraded',sourceIds:string[]}} TemporalReview */
 /** @typedef {{tokenIndex:number,mediaId:string,alt:string,attributes:{width:string,align:'start'|'center'|'end',flow:'block'|'wrap-start'|'wrap-end',frame:'none'|'outline'|'card',caption:string,decorative:boolean},sourceText:string}} PortableMediaNode */
-/** @typedef {{type:'root',policy:object,source:string,tokens:object[],footnotes:object}} PortableQmdAst */
-/** @typedef {{type:'root',policy:object,source:string,tokens:object[],footnotes:object,mediaNodes:PortableMediaNode[],annotations:Array<{tokenIndex:number,suffixTokenIndex:number|null}>}} AnnotatedPortableQmdAst */
+/** @typedef {{type:'root',policy:string,source:string,tokens:object[],footnotes:object[]}} PortableQmdAst */
+/** @typedef {{type:'root',policy:string,source:string,tokens:object[],footnotes:object[],mediaNodes:PortableMediaNode[],annotations:Array<{tokenIndex:number,suffixTokenIndex:number|null}>}} AnnotatedPortableQmdAst */
 /** @typedef {{ok:boolean,ast:AnnotatedPortableQmdAst|null,errors:object[],warnings:object[],stats:object}} ParsedPortableQmdResult */
 /** @typedef {{assetIds:string[],mediaIds:string[],sourceIds:string[],records:{ownerId:string,kind:string,status:string,assetIds:string[],mediaIds:string[],sourceIds:string[]}[]}} ActiveContentRetainers */
 ```
@@ -173,14 +173,14 @@ Seven Playwright files are created: `source-content-manager.spec.js`, `source-co
 `GEOJSON_LIMITS` exact shape is:
 
 ```js
-{
-  encodedBytes:{normalMax:31999999,warningMin:32000000,hardMin:36000000},
-  features:{normalMax:1999,warningMin:2000,hardMin:8000},
-  totalPositions:{normalMax:19999,warningMin:20000,hardMin:50000},
-  renderableFragments:{normalMax:1999,warningMin:2000,hardMin:4000}
-}
-
-GEOJSON_CONCURRENT_MAPS = {normalMax:2,eagerMax:4}
+export const GEOJSON_LIMITS = Object.freeze({
+  encodedBytes:Object.freeze({normalMax:31999999,warningMin:32000000,hardMin:36000000}),
+  features:Object.freeze({normalMax:1999,warningMin:2000,hardMin:8000}),
+  totalPositions:Object.freeze({normalMax:19999,warningMin:20000,hardMin:50000}),
+  renderableFragments:Object.freeze({normalMax:1999,warningMin:2000,hardMin:4000})
+});
+export const SOURCE_GEOJSON_LIMIT_KEYS = Object.freeze(Object.keys(GEOJSON_LIMITS));
+export const GEOJSON_CONCURRENT_MAPS = Object.freeze({normalMax:2,eagerMax:4});
 ```
 
 These are the only resource-admission metrics. `renderableFragments` counts LineString = 1; MultiLineString = number of LineString members; Polygon = number of exterior/interior rings; MultiPolygon = total exterior/interior rings across polygon members; Point, MultiPoint, and null geometry = 0. It never separately counts a polygon part, so a one-ring MultiPolygon with N members has N fragments, not 2N. The 2,000/4,000 threshold is directly supported by distributed one-ring MultiPolygon evidence and is a conservative inference for other line/ring subpaths; it does not apply to points. `GEOJSON_CONCURRENT_MAPS` is a separate workspace scheduling export, not a source-limit key and never accepted by `geoJsonAtBoundary`. Values through `normalMax` are normal; `warningMin` through `hardMin - 1` warn and allow; `hardMin` rejects before commit.
@@ -248,7 +248,7 @@ Expected: exactly 36 rows and zero non-Passing rows.
 
 - [ ] **RED:** Import `GEOJSON_LIMITS`, `GEOJSON_CONCURRENT_MAPS`, and `SOURCE_GEOJSON_LIMIT_KEYS` in the boundary fixture builder. Assert the exact four triples and that every obsolete metric plus `concurrentMaps` is rejected by `geoJsonAtBoundary`. Assert exact `renderableFragments` counts for Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon, null geometry, mixed features, and one-ring MultiPolygon non-double-counting. Assert schema errors are distinct from admission and cover FeatureCollection/Feature shape, supported types, finite coordinates, arity/nesting, line/ring minima/closure, and GeometryCollection rejection; selected join absence/zero coverage remains compatibility. Assert high property-key count, deep nested property data, and high container diagnostics below the byte gate do not independently hard-reject, and the summary exposes only sorted `propertyKeys`, four-gate facts, geometry/bounds, and optional non-blocking `maxPositionsPerFeature`. Assert `dataset/uploadedGeoJson`, tracked GeoJSON, and package descriptors normalize without `datasetProfiles`.
 - [ ] Run `node --test tests/geoJsonValidation.test.js tests/geoJsonSourceEntry.test.js tests/progressiveDashboardLoad.test.js tests/chartSourceProfile.test.js tests/dashboardSemanticBoundary.test.js tests/datasetProfilesV3.test.js tests/dataServiceFoundation.test.js`. Expected: FAIL because the lean central authority/summary and delegation do not exist.
-- [ ] **GREEN:** Implement the exact four constants from Shared Contracts. Byte-gate before parse; validate supported geometry iteratively; count total positions and `renderableFragments` exactly without double-counting polygon parts; sort union `propertyKeys`; abort only on the four admission gates or separate schema failures. Keep arbitrary nested properties lazy/iterative and never recursively expand them during upload/summary. Existing loaders delegate and never copy constants; CSV-only `datasetProfiles` remains unchanged.
+- [ ] **GREEN:** Implement the exact frozen table and its production-derived `SOURCE_GEOJSON_LIMIT_KEYS` export from Shared Contracts. Byte-gate before parse; validate supported geometry iteratively; count total positions and `renderableFragments` exactly without double-counting polygon parts; sort union `propertyKeys`; abort only on the four admission gates or separate schema failures. Keep arbitrary nested properties lazy/iterative and never recursively expand them during upload/summary. Existing loaders and test fixtures import the production exports and never copy constants; CSV-only `datasetProfiles` remains unchanged.
 - [ ] Re-run the exact command. Expected: PASS with no copied literal thresholds in production consumers or test fixtures; tests import the authority and controlling design records retain the documented values.
 - [ ] Update SCM-S15 engine evidence without promoting composition/real-use; commit `feat(content): centralize bounded GeoJSON validation`.
 
@@ -535,7 +535,7 @@ Every row remains proposed until its same-slice record update. “Evidence” me
 - [x] QMD external import is reachable through a separate non-selectable row, panel-draft-owned in the picker, and library-owned only from manager detail.
 - [x] QMD identity, serializer alt, distinct annotated-root/result-wrapper types, diagnostic-preserving compile path, safe host/portal bridge, one lease owner, and single-parser dependency extraction are explicit.
 - [x] Rename, media/CSV/GeoJSON manager Add/cancel, physical/logical dedupe choice, default-description semantics, and uploadedGeoJson selector closure have exact owners.
-- [x] `GEOJSON_LIMITS` contains exactly four `normalMax/warningMin/hardMin` source triples, fragment counting is exact, schema/compatibility results are separate, removed metrics cannot reject, and `GEOJSON_CONCURRENT_MAPS` is used only by the shared live-map/preview registry fixture and provider.
+- [x] `GEOJSON_LIMITS` contains exactly four ordered frozen triples; production exports frozen `SOURCE_GEOJSON_LIMIT_KEYS=Object.freeze(Object.keys(GEOJSON_LIMITS))`; fragment counting is exact, schema/compatibility results are separate, removed metrics cannot reject, and `GEOJSON_CONCURRENT_MAPS` is used only by the shared live-map/preview registry fixture and provider.
 - [x] CSV temporal shapes, impact kinds, array/top-level Scene ownership, layouts, clearing, migration/package preservation, Present warning, and protocol negative are exact.
 - [x] Every helper/type/signature used here is defined in the file map or Shared Contracts; the undefined-symbol and signature-consistency scan has no findings.
 - [x] Every deterministic test named by Tasks 1–16 appears in the Task-17 targeted sweep; all task-local production/test owners are exact paths with no generic or conditional fallback.

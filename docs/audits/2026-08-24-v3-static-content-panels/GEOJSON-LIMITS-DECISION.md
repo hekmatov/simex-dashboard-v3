@@ -7,7 +7,7 @@
 
 ## Decision
 
-The final implementation plan must centralize exactly four resource-admission checks in proposed `src/lib/geoJsonValidation.js`. Current `src/lib/loadDashboard.js::validateGeoJson` becomes a consumer rather than retaining a second table. Schema validity, direct-map compatibility, diagnostic information, and runtime scheduling remain separately typed outcomes.
+The final implementation plan must centralize exactly four resource-admission checks in proposed `src/lib/geoJsonValidation.js`. That module owns the ordered frozen `GEOJSON_LIMITS` table and the sole importable derived key list, `SOURCE_GEOJSON_LIMIT_KEYS=Object.freeze(Object.keys(GEOJSON_LIMITS))`; test fixtures import it and never define a duplicate authority. Current `src/lib/loadDashboard.js::validateGeoJson` becomes a consumer rather than retaining a second table. Schema validity, direct-map compatibility, diagnostic information, and runtime scheduling remain separately typed outcomes.
 
 For per-source limits, **normal** means every dimension is below its warning threshold; **warn** means at least one dimension reaches its warning threshold while none reaches a hard cap; **reject** means any dimension reaches a hard cap. Rejection occurs before durable commit and leaves the previous source/package/dashboard unchanged.
 
