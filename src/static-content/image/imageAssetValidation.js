@@ -82,23 +82,15 @@ export async function validateImageAsset(input = {}) {
     return failed("megapixel-limit", "The decoded image exceeds the 50 megapixel limit.");
   }
 
-  const currentAssetBytes = finiteNonNegative(input.currentAssetBytes);
-  const projectedBytes = currentAssetBytes + bytes.byteLength;
-  if (projectedBytes > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
-    return failed("product-budget", "The image would exceed the dashboard's 200 MiB authored-asset budget.");
-  }
-  if (
-    Number.isFinite(input.browserQuotaAvailableBytes)
-    && input.browserQuotaAvailableBytes < bytes.byteLength
-  ) {
-    return failed("browser-quota", "Browser storage quota is insufficient for this image.");
-  }
-  if (projectedBytes >= IMAGE_ASSET_LIMITS.dashboardWarningBytes) {
-    warnings.push({
-      code: "product-budget-warning",
-      category: "quota-warning",
-      message: "This dashboard has used at least 80% of its authored-asset budget.",
+  if (!input.skipStorageAccounting) {
+    const storage = validateImageStorageAccounting({
+      byteLength: bytes.byteLength,
+      incrementalBytes: input.incrementalAssetBytes,
+      currentAssetBytes: input.currentAssetBytes,
+      browserQuotaAvailableBytes: input.browserQuotaAvailableBytes,
     });
+    if (!storage.ok) return storage;
+    warnings.push(...storage.warnings);
   }
   return {
     ok: true,
@@ -136,25 +128,29 @@ export async function decodeBrowserImageAsset(bytes, mediaType) {
 
 export async function stageSessionImageAsset(input = {}) {
   const browserQuotaAvailableBytes = await availableBrowserQuota(input.browserQuotaAvailableBytes);
-  const accountedAssetIds = new Set(input.currentAssetIds ?? []);
-  const aggregateAssetBytes = finiteNonNegative(input.currentAssetBytes)
-    + sessionImageAssetBytes(accountedAssetIds);
-  const filePreflight = preflightFile(input.file, {
-    browserQuotaAvailableBytes,
-    currentAssetBytes: aggregateAssetBytes,
-  });
+  const filePreflight = preflightFile(input.file);
   if (filePreflight) return filePreflight;
   const bytes = await readBytes(input.bytes ?? input.file);
   const validation = await validateImageAsset({
     ...input,
     bytes,
-    browserQuotaAvailableBytes,
-    currentAssetBytes: aggregateAssetBytes,
+    skipStorageAccounting: true,
   });
   if (!validation.ok) return validation;
   const immutableBytes = bytes.slice();
   const sha256 = await sha256Hex(immutableBytes);
   const assetId = `asset-${sha256}`;
+  const accountedAssetIds = new Set(input.currentAssetIds ?? []);
+  const aggregateAssetBytes = finiteNonNegative(input.currentAssetBytes)
+    + sessionImageAssetBytes(accountedAssetIds);
+  const alreadyAccounted = accountedAssetIds.has(assetId) || SESSION_IMAGE_ASSETS.has(assetId);
+  const storage = validateImageStorageAccounting({
+    byteLength: immutableBytes.byteLength,
+    incrementalBytes: alreadyAccounted ? 0 : immutableBytes.byteLength,
+    currentAssetBytes: aggregateAssetBytes,
+    browserQuotaAvailableBytes,
+  });
+  if (!storage.ok) return storage;
   let entry = SESSION_IMAGE_ASSETS.get(assetId);
   if (!entry) {
     const blob = new Blob([immutableBytes], { type: validation.asset.mediaType });
@@ -174,6 +170,7 @@ export async function stageSessionImageAsset(input = {}) {
   }
   return {
     ...validation,
+    warnings: [...validation.warnings, ...storage.warnings],
     assetId,
     manifestEntry: {
       mediaType: entry.mediaType,
@@ -186,18 +183,38 @@ export async function stageSessionImageAsset(input = {}) {
   };
 }
 
-function preflightFile(file, { browserQuotaAvailableBytes, currentAssetBytes }) {
+function preflightFile(file) {
   if (!file || !Number.isFinite(file.size)) return null;
   if (file.size > IMAGE_ASSET_LIMITS.maxBytes) {
     return failed("file-size-limit", "The image exceeds the 12 MiB encoded file limit.");
   }
-  if ((currentAssetBytes + file.size) > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
+  return null;
+}
+
+function validateImageStorageAccounting({
+  byteLength,
+  incrementalBytes,
+  currentAssetBytes,
+  browserQuotaAvailableBytes,
+}) {
+  const incremental = Number.isFinite(incrementalBytes)
+    ? finiteNonNegative(incrementalBytes)
+    : finiteNonNegative(byteLength);
+  const projectedBytes = finiteNonNegative(currentAssetBytes) + incremental;
+  if (projectedBytes > IMAGE_ASSET_LIMITS.dashboardBudgetBytes) {
     return failed("product-budget", "The image would exceed the dashboard's 200 MiB authored-asset budget.");
   }
-  if (Number.isFinite(browserQuotaAvailableBytes) && browserQuotaAvailableBytes < file.size) {
+  if (Number.isFinite(browserQuotaAvailableBytes) && browserQuotaAvailableBytes < incremental) {
     return failed("browser-quota", "Browser storage quota is insufficient for this image.");
   }
-  return null;
+  const warnings = projectedBytes >= IMAGE_ASSET_LIMITS.dashboardWarningBytes
+    ? [{
+        code: "product-budget-warning",
+        category: "quota-warning",
+        message: "This dashboard has used at least 80% of its authored-asset budget.",
+      }]
+    : [];
+  return { ok: true, errors: [], warnings };
 }
 
 async function availableBrowserQuota(explicit) {

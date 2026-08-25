@@ -167,10 +167,10 @@ test("encoded, decoded, product-budget, and browser-quota limits stay distinguis
   assert.equal(warning.warnings[0].code, "product-budget-warning");
 });
 
-test("production intake rejects encoded size and browser quota before reading or decoding the file", async () => {
-  for (const [fileSize, quota, expectedCode] of [
-    [IMAGE_ASSET_LIMITS.maxBytes + 1, Number.POSITIVE_INFINITY, "file-size-limit"],
-    [PNG.byteLength, PNG.byteLength - 1, "browser-quota"],
+test("production intake keeps encoded-size preflight but resolves identity before quota accounting", async () => {
+  for (const [fileSize, quota, expectedCode, expectedReads, expectedDecodes] of [
+    [IMAGE_ASSET_LIMITS.maxBytes + 1, Number.POSITIVE_INFINITY, "file-size-limit", 0, 0],
+    [PNG.byteLength, PNG.byteLength - 1, "browser-quota", 1, 1],
   ]) {
     let reads = 0;
     let decodes = 0;
@@ -191,8 +191,8 @@ test("production intake rejects encoded size and browser quota before reading or
     });
     assert.equal(result.ok, false);
     assert.equal(result.errors[0].code, expectedCode);
-    assert.equal(reads, 0, expectedCode);
-    assert.equal(decodes, 0, expectedCode);
+    assert.equal(reads, expectedReads, expectedCode);
+    assert.equal(decodes, expectedDecodes, expectedCode);
   }
 });
 
@@ -227,6 +227,47 @@ test("production intake includes already staged images in aggregate budget class
   assert.equal(second.ok, false);
   assert.equal(second.errors[0].code, "product-budget");
   discardSessionImageAsset(first.assetId);
+});
+
+test("saved and staged duplicate identities add zero product-budget and quota bytes", async () => {
+  const seeded = await stageSessionImageAsset({
+    bytes: PNG,
+    declaredMediaType: "image/png",
+    decoded: DECODED("image/png"),
+  });
+  assert.equal(seeded.ok, true);
+
+  discardSessionImageAsset(seeded.assetId);
+  const savedDuplicate = await stageSessionImageAsset({
+    bytes: PNG.slice(),
+    declaredMediaType: "image/png",
+    decoded: DECODED("image/png"),
+    currentAssetBytes: IMAGE_ASSET_LIMITS.dashboardBudgetBytes,
+    currentAssetIds: [seeded.assetId],
+    browserQuotaAvailableBytes: 0,
+  });
+  assert.equal(savedDuplicate.ok, true, JSON.stringify(savedDuplicate.errors));
+  assert.equal(savedDuplicate.assetId, seeded.assetId);
+
+  const stagedDuplicate = await stageSessionImageAsset({
+    bytes: PNG.slice(),
+    declaredMediaType: "image/png",
+    decoded: DECODED("image/png"),
+    currentAssetBytes: IMAGE_ASSET_LIMITS.dashboardBudgetBytes - PNG.byteLength,
+    browserQuotaAvailableBytes: 0,
+  });
+  assert.equal(stagedDuplicate.ok, true, JSON.stringify(stagedDuplicate.errors));
+  assert.equal(stagedDuplicate.assetId, seeded.assetId);
+
+  const genuinelyNew = await stageSessionImageAsset({
+    bytes: WEBP,
+    declaredMediaType: "image/webp",
+    decoded: DECODED("image/webp"),
+    currentAssetBytes: IMAGE_ASSET_LIMITS.dashboardBudgetBytes - PNG.byteLength,
+  });
+  assert.equal(genuinelyNew.ok, false);
+  assert.equal(genuinelyNew.errors[0].code, "product-budget");
+  discardSessionImageAsset(seeded.assetId);
 });
 
 test("origins allow HTTPS and dashboard-owned paths while rejecting local and traversal authority", () => {
