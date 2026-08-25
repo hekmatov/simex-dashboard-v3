@@ -48,6 +48,7 @@ export function validateStaticSource(source, options = {}) {
 
 export function validateStaticTextSource(source) {
   const value = record(source, "Static text source");
+  rejectUnknownKeys(value, ["kind", "sourceVersion", "revision", "renderingPolicy", "qmd"], "Static text source");
   validateBase(value, "Static text source");
   if (value.renderingPolicy !== PORTABLE_QMD_POLICY) {
     throw new Error(`Static text rendering policy "${String(value.renderingPolicy)}" is unsupported.`);
@@ -58,6 +59,10 @@ export function validateStaticTextSource(source) {
 
 export function validateStaticImageSource(source, { assets } = {}) {
   const value = record(source, "Static image source");
+  rejectUnknownKeys(value, [
+    "kind", "sourceVersion", "revision", "origin", "alt", "decorative",
+    "fit", "crop", "rotation", "migrationWarnings",
+  ], "Static image source");
   validateBase(value, "Static image source");
   validateImageOriginContract(value.origin);
   if (typeof value.decorative !== "boolean") throw new TypeError("Static image decorative must be boolean.");
@@ -126,6 +131,7 @@ function validateBase(source, description) {
 
 function validateCrop(crop) {
   const value = record(crop, "Static image crop");
+  rejectUnknownKeys(value, ["x", "y", "width", "height"], "Static image crop");
   for (const key of ["x", "y", "width", "height"]) {
     if (!Number.isInteger(value[key])) throw new Error(`Static image crop ${key} must be an integer.`);
   }
@@ -138,6 +144,13 @@ function validateCrop(crop) {
     || value.y + value.height > 1000
   ) {
     throw new Error("Static image crop must stay within the normalized 0–1000 frame.");
+  }
+}
+
+function rejectUnknownKeys(value, knownKeys, description) {
+  const known = new Set(knownKeys);
+  for (const key of Object.keys(value)) {
+    if (!known.has(key)) throw new Error(`${description} property "${key}" is unknown.`);
   }
 }
 

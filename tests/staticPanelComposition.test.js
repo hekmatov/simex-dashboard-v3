@@ -168,8 +168,6 @@ function staticDashboard() {
         fit: "cover",
         crop: { x: 100, y: 200, width: 600, height: 700 },
         rotation: 270,
-        width: 800,
-        height: 1200,
       },
       "text-source": {
         kind: "staticText",

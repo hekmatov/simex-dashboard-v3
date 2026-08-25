@@ -68,6 +68,31 @@ test("image validation rejects invalid cross-field accessibility, transform, and
   }
 });
 
+test("typed static schemas reject unknown keys at every source, origin, and crop boundary", () => {
+  const text = normalizeStaticSource({ kind: "staticText", qmd: "<script>literal and inert</script>" });
+  const image = normalizeStaticSource({
+    kind: "staticImage",
+    origin: { kind: "url", url: "https://example.test/map.png" },
+    alt: "Response map",
+  });
+  assert.equal(validateStaticTextSource(text).qmd, "<script>literal and inert</script>");
+  const cases = [
+    [() => validateStaticTextSource({ ...text, surprise: true }), /Static text source.*surprise.*unknown/i],
+    [() => validateStaticImageSource({ ...image, surprise: true }), /Static image source.*surprise.*unknown/i],
+    [() => validateStaticImageSource({ ...image, origin: { ...image.origin, surprise: true } }), /Image URL origin.*surprise.*unknown/i],
+    [() => validateStaticImageSource({ ...image, origin: { kind: "asset", assetId: "asset-map", surprise: true } }), /Image asset origin.*surprise.*unknown/i],
+    [() => validateStaticImageSource({ ...image, origin: { kind: "package", path: "assets/map.png", surprise: true } }), /Image package origin.*surprise.*unknown/i],
+    [() => validateStaticImageSource({ ...image, origin: { kind: "replacementRequired", reason: "replace", surprise: true } }), /Image replacement origin.*surprise.*unknown/i],
+    [() => validateStaticImageSource({ ...image, crop: { ...image.crop, surprise: true } }), /Static image crop.*surprise.*unknown/i],
+  ];
+  for (const [validate, message] of cases) assert.throws(validate, message);
+
+  assert.equal(validateStaticImageSource({
+    ...image,
+    migrationWarnings: ["missing-alt"],
+  }).migrationWarnings[0], "missing-alt");
+});
+
 test("asset manifest validation proves source-to-durable-asset integrity", () => {
   const assets = {
     "asset-map": {

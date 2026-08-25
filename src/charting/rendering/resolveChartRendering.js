@@ -184,6 +184,9 @@ function renderingSource(renderingInput, sourceId) {
   const sourceMetadata = metadata instanceof Map
     ? metadata.get(sourceId)
     : metadata?.[sourceId];
+  if (descriptor?.kind === "staticText" || descriptor?.kind === "staticImage") {
+    return descriptor;
+  }
   return descriptor || sourceMetadata
     ? { ...(descriptor ?? {}), ...(sourceMetadata ?? {}), id: sourceId }
     : { id: sourceId };
