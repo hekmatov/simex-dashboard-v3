@@ -19,7 +19,7 @@
 - SP-07 renders restricted local math through trusted bundled KaTeX with accessible labels and `trust: false`, strict restrictions, no user macros, and no resource URLs. Renderer-marked KaTeX HTML/internal SVG geometry supports superscripts, fractions, roots, and sums. Authored SVG/HTML/styles never become DOM; citations and unsafe math remain visible inert source instead of errors.
 - SP-18 is now passing for the Free-text capability, trusted presentable index, Present catalogue, and production Present absence. Protocol injection and separate-Audience enforcement remain pending Slice 6, so SP-18 is still partial overall.
 - SP-22 is verified in-session: the production journey inspects the stored saved QMD while an unsaved edit is dirty, after Discard, and after Save. Reload restoration remains pending Slice 4's dashboard/bundle v4 bridge, so reload-dependent SP-22 fidelity is not claimed.
-- The production audit has no high or critical findings. It reports one pre-existing moderate ECharts advisory (`GHSA-fgmj-fm8m-jvvx`); none of the three Slice 2 dependencies is implicated.
+- The production audit has no high or critical findings. It reports one pre-existing moderate ECharts advisory (`GHSA-fgmj-fm8m-jvvx`); neither package in the exact-pinned two-package Slice 2 set (`markdown-it`, `katex`) is implicated.
 
 ## Decision table
 

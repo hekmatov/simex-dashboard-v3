@@ -112,7 +112,7 @@ These paths and exported symbols are fixed before implementation:
 |---|---|---|
 | FT-01 | `tests/wizardDraftV3.test.js`; `tests/chartWizardProofDeck.test.js`; `tests/buildCommandHeader.test.js`; `tests/staticContentDraft.test.js` | `tests/e2e/v3-chart-creation.spec.js`; `tests/e2e/static-free-text.spec.js`; `tests/e2e/static-image.spec.js` |
 | FT-02, IM-01 | `tests/chartSchemasV3.test.js`; `tests/chartCatalogueSelection.test.js`; `tests/iconSystem.test.js`; `tests/quorumCatalogueV2.test.js`; `tests/catalogueSharedAuthorities.test.js`; `tests/staticContentRegistry.test.js` | `tests/e2e/static-free-text.spec.js`; `tests/e2e/static-image.spec.js` |
-| FT-03–FT-06 | `tests/portableQmdPolicy.test.js`; `tests/portableQmdSanitization.test.js`; `tests/staticContentDraft.test.js` | `tests/e2e/static-free-text.spec.js` |
+| FT-03–FT-06 | `tests/portableQmdPolicy.test.js`; `tests/portableQmdDomSafety.test.js`; `tests/staticContentDraft.test.js` | `tests/e2e/static-free-text.spec.js` |
 | FT-07–FT-10 | `tests/staticContentDraft.test.js`; `tests/freeTextChartView.test.js`; `tests/chartViewV3.test.js`; `tests/v3RuntimeBoundaries.test.js` | `tests/e2e/static-free-text.spec.js` |
 | FT-11 | `tests/staticPanelTransaction.test.js`; `tests/buildDirtyState.test.js`; `tests/buildAuthoringExitProtection.test.js`; `tests/fullscreenDisplay.test.js` | `tests/e2e/static-free-text.spec.js` |
 | FT-12 | `tests/presentWorkspace.test.js`; `tests/presentationProtocol.test.js`; `tests/audienceDisplay.test.js` | `tests/e2e/static-free-text.spec.js` |

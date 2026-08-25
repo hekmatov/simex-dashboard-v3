@@ -624,3 +624,7 @@ Synchronized records:
 - Arbitrary syntax cannot create authored styles, foreign elements, event handlers, executable code, unsafe navigation, or subresource requests.
 - `git diff --cached --check` passed for the complete 24-file atomic override delta; no unstaged task delta remained before commit.
 - The only open feature concern remains FT-11 reload/import fidelity pending Slice 4. The pre-existing moderate ECharts advisory and Vite warnings remain outside this slice. No active-content decision or additional context is required.
+
+### Documentation synchronization fix (round 3/5)
+
+The binding ownership inventory now names the live `tests/portableQmdDomSafety.test.js` successor for FT-03–FT-06, and the security record now describes the manifest-accurate two-package exact-pinned Slice 2 set (`markdown-it`, `katex`). Earlier `portableQmdSanitization.test.js` references in this report are retained only inside historical command/file provenance and are explicitly superseded by the controlling user-override section.
