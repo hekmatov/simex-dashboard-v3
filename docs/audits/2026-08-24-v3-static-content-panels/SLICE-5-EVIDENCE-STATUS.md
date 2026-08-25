@@ -2,9 +2,9 @@
 
 Date: 2026-08-25
 
-Status: implementation complete, review pending
+Status: implementation complete; prior fix rounds 1–2 complete; review pending
 
-Fix round: 1/5 — 2 Important and 1 Minor findings addressed, 0 open; the temporarily downgraded PS-07/IM-13 fullscreen behavior, exact Free-text source identity, and materially usable reveal clearance claims are restored
+Review history: 2 Important and 2 Minor findings addressed, 0 open. Fix round 1/5 restored the temporarily downgraded PS-07/IM-13 fullscreen behavior, exact Free-text source identity, and materially usable reveal-clearance claims; fix round 2/5 corrected the matching documentation wording.
 
 ## Layer status
 

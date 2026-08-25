@@ -10,9 +10,9 @@ Atomic initial implementation commit: `9fee89caf926a2ea03b114e24e0b6d25deee3dab`
 
 ## Status
 
-Implementation complete, review pending. Saved Free-text and Image panels now have explicit fidelity evidence through the exact canonical Build/View chain and canonical fullscreen dispatch. Build alone owns authoring actions. View and fullscreen retain only active viewing/recovery allowed by surface capabilities. Static actions preserve saved canvas/chart state and restore selection, scroll, focus, and the initiating control.
+Implementation complete; prior fix rounds 1–2 are complete and review remains pending. Across the review history, 2 Important and 2 Minor findings are addressed and 0 are open. Saved Free-text and Image panels now have explicit fidelity evidence through the exact canonical Build/View chain and canonical fullscreen dispatch. Build alone owns authoring actions. View and fullscreen retain only active viewing/recovery allowed by surface capabilities. Static actions preserve saved canvas/chart state and restore selection, scroll, focus, and the initiating control.
 
-Fix round 1/5 addresses 2 Important and 1 Minor findings; 3 are addressed and 0 are open. PS-07/IM-13 fullscreen behavior, exact Free-text source identity, and materially usable Build-target clearance were downgraded during RED and restored only after their strengthened component and production-route checks passed.
+Fix round 1/5 addressed 2 Important and 1 Minor findings: PS-07/IM-13 fullscreen behavior, exact Free-text source identity, and materially usable Build-target clearance were downgraded during RED and restored only after their strengthened component and production-route checks passed. Fix round 2/5 addressed 1 Minor documentation claim so reveal wording matches that canonical clearance contract.
 
 No durable v4 owner, Image validation boundary, Free-text safe-DOM boundary, six-stage Add chart workflow, or four-stage static workflow was replaced. Neither static type enters Chrono Groups, Scenes, data preparation, or playback time. Slice 6 Present/Audience protocol and composition remain pending.
 
