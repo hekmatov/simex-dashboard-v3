@@ -120,6 +120,7 @@ export default function ChartWizardV3({
   initialDraftState = null,
   suspendControllerRef = null,
   disabled = false,
+  contentDraftCoordinator = null,
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,

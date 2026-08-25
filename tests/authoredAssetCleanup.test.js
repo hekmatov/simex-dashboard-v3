@@ -108,6 +108,25 @@ test("startup reconciliation finalizes a referenced staged recovery journal", as
   assert.equal(records.get("saved-stage").status, "durable");
 });
 
+test("an active-only retainer protects staged bytes without promoting them", async () => {
+  const records = new Map([["active-stage", record("active-stage", "staged", 0)]]);
+  const committed = [];
+  const result = await reconcileAuthoredAssets({
+    store: {
+      async list() { return [...records.values()]; },
+      async commitMany(ids) { committed.push(...ids); },
+      async remove(id) { records.delete(id); },
+    },
+    dashboard: { assets: {} },
+    activeRetainers: { assetIds: ["active-stage"], mediaIds: [], sourceIds: [], records: [] },
+    now: 4 * DAY,
+  });
+  assert.deepEqual(committed, []);
+  assert.deepEqual(result.recoveredAssetIds, []);
+  assert.equal(records.get("active-stage").status, "staged");
+  assert.deepEqual(result.decisions.retainedReferencedAssetIds, ["active-stage"]);
+});
+
 test("a zero-asset imported dashboard reclaims the previous durable authored record", async () => {
   const records = new Map([["previous", record("previous", "durable", 0)]]);
   const removed = [];

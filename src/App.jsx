@@ -43,6 +43,7 @@ import {
   readSessionImageAssetBytes,
   validateImageAsset,
 } from "./static-content/image/imageAssetValidation.js";
+
 import {
   hydrateConfigurationBeforeStorageWrite,
   recoveryPackageError,
@@ -105,6 +106,12 @@ import { DashboardChartThemeProvider } from "./theme/DashboardChartThemeContext.
 
 export { DASHBOARD_STORAGE_KEY } from "./lib/dashboardMode.js";
 export { validateConfigurationForPersistence };
+
+export function createDurableContentDraftCommit(persist) {
+  if (typeof persist !== "function") throw new TypeError("A dashboard persistence function is required.");
+  return (candidate) => persist(candidate, { requireDurableStorage: true });
+}
+
 const DEVICE_LAYOUT_STORAGE_KEY = "simex-dashboard-device-layout-v3";
 const SESSION_ONLY_MESSAGES = Object.freeze({
   dashboard: "Dashboard changes are applied for this session but cannot be retained after reload.",
@@ -192,7 +199,7 @@ export default function App() {
   if (contentDraftCoordinatorRef.current === null) {
     contentDraftCoordinatorRef.current = createContentDraftCoordinator({
       getDashboard: () => dashboardRef.current,
-      commitDashboard: (candidate) => commitConfiguration(candidate),
+      commitDashboard: commitDurableContentDraftConfiguration,
       assetStore: browserAuthoredAssetStore,
       readSessionAsset: readSessionImageAssetBytes,
       discardSessionAsset: discardSessionImageAsset,
@@ -994,6 +1001,13 @@ export default function App() {
     ));
     publishCommittedChartArtifact(payload?.runtimeArtifact);
     return committed;
+  }
+
+  function commitDurableContentDraftConfiguration(nextConfig) {
+    return ensureDashboardCommitController().replaceWith(
+      configurationForPortableUse(nextConfig),
+      createDurableContentDraftCommit(persistConfiguration),
+    );
   }
 
   function commitImportedConfiguration(nextConfig) {

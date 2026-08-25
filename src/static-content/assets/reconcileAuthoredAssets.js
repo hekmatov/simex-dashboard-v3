@@ -17,9 +17,11 @@ export async function reconcileAuthoredAssets({
     activeRetainers,
   });
   const records = await store.list();
-  const referenced = new Set(graph.referencedAssetIds);
+  const saved = new Set(Object.entries(graph.references)
+    .filter(([, references]) => references.some(({ kind }) => kind === "saved-manifest" || kind === "saved-media"))
+    .map(([assetId]) => assetId));
   const recoveredAssetIds = records
-    .filter((record) => record?.status === "staged" && referenced.has(record.id))
+    .filter((record) => record?.status === "staged" && saved.has(record.id))
     .map(({ id }) => id)
     .sort();
   if (recoveredAssetIds.length > 0) {

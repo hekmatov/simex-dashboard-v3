@@ -100,6 +100,85 @@ test("manager Add publishes one immutable candidate and deliberately keeps an un
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
 });
 
+test("authoring owners cannot publish until their existing finalizer result is staged", async () => {
+  for (const [owner, payload] of [
+    ["image", {}],
+    ["qmd", {}],
+    ["chart", {}],
+  ]) {
+    const harness = coordinatorHarness();
+    harness.coordinator.stageDraft({ draftId: `${owner}-draft`, owner, kind: `${owner}-add`, payload, assetIds: [], mediaIds: [], sourceIds: [] });
+    await assert.rejects(harness.coordinator.commitDraft(`${owner}-draft`, {
+      buildCandidate: () => ({ dashboard: harness.dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: [] }),
+    }), /finalized before publication/);
+    assert.deepEqual(harness.commits, []);
+  }
+
+  const chart = coordinatorHarness();
+  chart.coordinator.stageDraft({
+    draftId: "chart-complete", owner: "chart", kind: "chart-add",
+    payload: { chart: { id: "chart-complete" } }, assetIds: [], mediaIds: [], sourceIds: [],
+  });
+  await chart.coordinator.commitDraft("chart-complete", {
+    buildCandidate: ({ dashboard }) => ({ dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: ["chart-complete"] }),
+  });
+  assert.equal(chart.commits.length, 1);
+
+  for (const owner of ["image", "qmd"]) {
+    const harness = coordinatorHarness();
+    harness.coordinator.stageDraft({
+      draftId: `${owner}-complete`, owner, kind: `${owner}-add`,
+      payload: { destination: {}, panel: {}, placement: {}, assets: {}, stagedAssetIds: [] },
+      assetIds: [], mediaIds: [], sourceIds: [],
+    });
+    await harness.coordinator.commitDraft(`${owner}-complete`, {
+      buildCandidate: ({ dashboard }) => ({ dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: [`${owner}-complete`] }),
+    });
+    assert.equal(harness.commits.length, 1);
+  }
+});
+
+test("internal draft transaction collisions never overwrite or remove a public transaction", async () => {
+  const harness = coordinatorHarness();
+  harness.coordinator.beginTransaction({ transactionId: "content-draft:collision", kind: "public", assetIds: ["public"], mediaIds: [], sourceIds: [] });
+  harness.coordinator.stageDraft({ draftId: "collision", owner: "manager", kind: "media-add", payload: {}, assetIds: [], mediaIds: [], sourceIds: [] });
+  await assert.rejects(harness.coordinator.commitDraft("collision", {
+    buildCandidate: ({ dashboard }) => ({ dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: [] }),
+  }), /already exists/);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, [
+    { ownerId: "content-draft:collision", kind: "public", status: "active", assetIds: ["public"], mediaIds: [], sourceIds: [] },
+  ]);
+});
+
+test("post-commit session cleanup failure retains cleanup state without reverting dashboard or bytes", async () => {
+  const harness = coordinatorHarness({ rejectSessionDiscard: true });
+  harness.sessionAssets.set("asset-new", sessionAsset("asset-new"));
+  harness.coordinator.stageDraft({ draftId: "cleanup", owner: "manager", kind: "media-add", payload: {}, assetIds: ["asset-new"], mediaIds: [], sourceIds: [] });
+  const result = await harness.coordinator.commitDraft("cleanup", {
+    buildCandidate({ dashboard }) {
+      dashboard.assets["asset-new"] = manifest();
+      return { dashboard, commitAssetIds: ["asset-new"], discardAssetIds: [], itemIds: [] };
+    },
+  });
+  assert.equal(harness.dashboard.assets["asset-new"].storageState, "durable");
+  assert.equal(harness.assetRecords.get("asset-new").status, "durable");
+  assert.equal(result.cleanup.status, "cleanup-required");
+  assert.deepEqual(harness.coordinator.getActiveRetainers().assetIds, ["asset-new"]);
+});
+
+test("unrelated public transactions survive draft success and failure", async () => {
+  for (const rejectCommit of [false, true]) {
+    const harness = coordinatorHarness({ rejectCommit });
+    harness.coordinator.beginTransaction({ transactionId: "public", kind: "delete", assetIds: ["held"], mediaIds: [], sourceIds: [] });
+    harness.coordinator.stageDraft({ draftId: `draft-${rejectCommit}`, owner: "manager", kind: "media-add", payload: {}, assetIds: [], mediaIds: [], sourceIds: [] });
+    const commit = harness.coordinator.commitDraft(`draft-${rejectCommit}`, {
+      buildCandidate: ({ dashboard }) => ({ dashboard, commitAssetIds: [], discardAssetIds: [], itemIds: [] }),
+    });
+    if (rejectCommit) await assert.rejects(commit, /persistence failed/); else await commit;
+    assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId), ["public"]);
+  }
+});
+
 test("explicit Cancel, owner departure, and dispose remove only session drafts", async () => {
   const harness = coordinatorHarness();
   for (const [draftId, owner, assetId] of [
@@ -124,7 +203,7 @@ test("validation and persistence failures publish no durable item and restore by
     const harness = coordinatorHarness({ rejectCommit: failure === "persistence" });
     harness.sessionAssets.set("asset-failed", sessionAsset("asset-failed"));
     harness.coordinator.stageDraft({
-      draftId: `failed-${failure}`, owner: "chart", kind: "chart", payload: {},
+      draftId: `failed-${failure}`, owner: "manager", kind: "chart", payload: {},
       assetIds: ["asset-failed"], mediaIds: [], sourceIds: ["source-failed"],
     });
     await assert.rejects(harness.coordinator.commitDraft(`failed-${failure}`, {
@@ -142,7 +221,7 @@ test("validation and persistence failures publish no durable item and restore by
   }
 });
 
-function coordinatorHarness({ rejectCommit = false } = {}) {
+function coordinatorHarness({ rejectCommit = false, rejectSessionDiscard = false } = {}) {
   let dashboard = makeDashboardV5();
   const commits = [];
   const sessionAssets = new Map();
@@ -173,7 +252,10 @@ function coordinatorHarness({ rejectCommit = false } = {}) {
     },
     assetStore,
     readSessionAsset: (id) => sessionAssets.get(id) ?? null,
-    discardSessionAsset: (id) => sessionAssets.delete(id),
+    discardSessionAsset: (id) => {
+      if (rejectSessionDiscard) throw new Error("session cleanup failed");
+      return sessionAssets.delete(id);
+    },
   });
   return {
     coordinator, commits, sessionAssets, assetRecords,

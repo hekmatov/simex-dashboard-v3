@@ -1610,6 +1610,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       {editMode && <>
       <ChartWizardV3
         open={Boolean(chartWizardTarget)}
+        contentDraftCoordinator={contentDraftCoordinator}
         destination={chartWizardTarget}
         dashboard={dashboard}
         onContentDraftStage={onContentDraftStage}
@@ -1646,6 +1647,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       />
       {staticWizardTarget && <StaticContentWizard
         open
+        contentDraftCoordinator={contentDraftCoordinator}
         dashboard={workingDashboard}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}

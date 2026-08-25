@@ -58,8 +58,13 @@ export function createContentDraftCoordinator({
       const transactionId = `content-draft:${draft.draftId}`;
       let candidateResult;
       let assetSnapshot = null;
+      let internalTransactionStarted = false;
       const stagedAssetIds = [];
       try {
+        assertDraftReadyForCommit(draft);
+        if (transactions.has(transactionId)) {
+          throw new Error(`Content transaction "${transactionId}" already exists.`);
+        }
         candidateResult = normalizeCandidateResult(buildCandidate({
           dashboard: structuredClone(previousDashboard),
           draft: structuredClone(draft),
@@ -72,6 +77,7 @@ export function createContentDraftCoordinator({
           mediaIds: draft.mediaIds,
           sourceIds: draft.sourceIds,
         }));
+        internalTransactionStarted = true;
         drafts.set(draft.draftId, freezeRecord({ ...draft, status: "committing" }));
         emit();
         assetSnapshot = await assetStore.snapshot?.(candidateResult.commitAssetIds) ?? null;
@@ -116,10 +122,11 @@ export function createContentDraftCoordinator({
           }
           throw assetError;
         }
-        clearCompleted(draft, transactionId, candidateResult);
+        const cleanup = clearCompleted(draft, transactionId, candidateResult);
         return freezeRecord({
           dashboard: structuredClone(committedDashboard ?? candidateResult.dashboard),
           itemIds: candidateResult.itemIds,
+          cleanup,
         });
       } catch (error) {
         const cleanupErrors = [];
@@ -136,7 +143,7 @@ export function createContentDraftCoordinator({
           cleanupErrors.push(cleanupError);
         }
         drafts.delete(draft.draftId);
-        transactions.delete(transactionId);
+        if (internalTransactionStarted) transactions.delete(transactionId);
         emit();
         if (cleanupErrors.length > 0) {
           throw new AggregateError([error, ...cleanupErrors], "Content draft failed and cleanup did not complete.");
@@ -266,8 +273,54 @@ export function createContentDraftCoordinator({
   function clearCompleted(draft, transactionId, candidateResult) {
     drafts.delete(draft.draftId);
     transactions.delete(transactionId);
-    discardSessionIds([...candidateResult.commitAssetIds, ...candidateResult.discardAssetIds]);
+    const failedAssetIds = [];
+    const errors = [];
+    for (const assetId of uniqueSorted([...candidateResult.commitAssetIds, ...candidateResult.discardAssetIds])) {
+      try {
+        discardSessionAsset(assetId);
+      } catch (error) {
+        failedAssetIds.push(assetId);
+        errors.push(error);
+      }
+    }
+    let cleanupTransactionId = null;
+    if (failedAssetIds.length > 0) {
+      cleanupTransactionId = availableInternalId(`${transactionId}:session-cleanup`);
+      transactions.set(cleanupTransactionId, transactionRecord({
+        transactionId: cleanupTransactionId,
+        kind: "post-commit-session-cleanup",
+        status: "cleanup-required",
+        assetIds: failedAssetIds,
+        mediaIds: [],
+        sourceIds: [],
+      }));
+    }
     emit();
+    return freezeRecord({
+      status: errors.length > 0 ? "cleanup-required" : "complete",
+      transactionId: cleanupTransactionId,
+      assetIds: failedAssetIds,
+      errors: errors.map((error) => error?.message ?? String(error)),
+    });
+  }
+
+  function availableInternalId(base) {
+    let candidate = base;
+    let suffix = 2;
+    while (transactions.has(candidate)) candidate = `${base}:${suffix++}`;
+    return candidate;
+  }
+}
+
+function assertDraftReadyForCommit(draft) {
+  if (draft.owner === "manager") return;
+  const payload = draft.payload;
+  const staticFinalized = (draft.owner === "image" || draft.owner === "qmd")
+    && payload?.destination && payload?.panel && payload?.placement
+    && payload?.assets && Array.isArray(payload?.stagedAssetIds);
+  const chartFinalized = draft.owner === "chart" && payload?.chart && typeof payload.chart === "object";
+  if (!staticFinalized && !chartFinalized) {
+    throw new Error(`${draft.owner} content must be finalized before publication.`);
   }
 }
 

@@ -90,3 +90,14 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Exact Task 3 command outside the restrictive filesystem sandbox: **85 passed / 0 failed / 0 skipped / 0 todo**, 7.42 s.
 - No full build, full suite, Playwright, browser checkpoint, composition promotion, or real-use promotion was run or claimed for this engine/lifetime slice.
+
+### Validated finding fix round
+
+- BASE `0a659743335ac17591b8e49149740522567259a7`; focused RED **11/15 passing** with four exact contract failures; focused GREEN **15/15 passing**.
+- Fresh exact Task 3 selection: **91 passed / 0 failed / 0 skipped / 0 todo**, 7.97 s.
+- Durable manager Add now runs through serialized `replaceWith` plus `requireDurableStorage:true`; dashboard-asset/localStorage failure rejects and byte compensation leaves no durable record, while success survives reload.
+- Post-commit session cleanup failure retains explicit `cleanup-required` state and cannot revert the already-published dashboard/durable bytes.
+- Active-only retainers protect staged bytes without promoting them; only saved manifest/media references recover staged journal entries.
+- Internal coordinator transaction IDs collision-check; public transaction ownership survives draft success/failure.
+- Exact coordinator prop transport reaches both authoring wizards, alongside the wrapper callbacks.
+- Completion uses existing finalizer output shapes: manager is the explicit Add owner, Image/QMD stage `finalizeStaticContentDraft` output, and chart stages `finalizeWizardDraft` output. No manager UI or Task 4+ architecture was added.

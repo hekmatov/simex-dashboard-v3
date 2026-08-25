@@ -29,6 +29,7 @@ export function StaticContentWizard({
   initialDraft,
   editor = false,
   disabled = false,
+  contentDraftCoordinator = null,
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,

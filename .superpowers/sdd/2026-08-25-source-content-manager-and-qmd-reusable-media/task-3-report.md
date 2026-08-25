@@ -4,6 +4,18 @@
 
 DONE — engine/lifetime scope only. Source Content Manager composition, concrete upload/picker flows, QMD runtime, replacement/deletion UI, recovery UI, and browser fidelity remain later-task work.
 
+Validated finding fix round complete at BASE `0a659743335ac17591b8e49149740522567259a7`.
+
+- Focused RED: **11 pass / 4 fail / 0 skipped / 0 todo**. The exact failures proved active-only staged assets were promoted, unfinished authoring owners could publish, an internal draft ID overwrote a public transaction, and post-commit session cleanup rolled back durable bytes after dashboard publication.
+- Focused GREEN: **15 pass / 0 fail / 0 skipped / 0 todo**.
+- Fresh exact Task 3 selection: **91 pass / 0 fail / 0 skipped / 0 todo**, 7.97 s.
+- The App coordinator now uses the serialized controller's durable `replaceWith` path. Dashboard-asset/localStorage failures reject rather than report a session-only Add; byte compensation leaves no durable record, and a successful manager Add survives a serialized reload check.
+- Session-byte disposal after a successful dashboard/byte commit is best-effort and explicit: failures retain a `cleanup-required` transaction and return cleanup details without reverting the committed dashboard or durable bytes.
+- Startup reconciliation promotes only saved manifest/media references. Active retainers protect staged bytes from orphan deletion but never promote them.
+- Internal `content-draft:*` IDs collision-check before publication and never overwrite/remove public transactions. Unrelated public transactions survive both draft success and failure.
+- Renderer transports the exact coordinator prop to both authoring wizards while retaining wrapper callbacks.
+- Authoring completion ruling: manager Add is the explicit commit boundary; Image/QMD accept only the structural output of `finalizeStaticContentDraft`, and chart accepts only the structural output of `finalizeWizardDraft`. No second completion marker or future manager flow was introduced. Cost if wrong: a future concrete adapter must stage the existing finalizer result as its payload, rather than an unfinished form state.
+
 - BASE: `47ef652`
 - Branch: `codex/static-content-panels-implementation`
 - Task commit / HEAD: the commit containing this report, with subject `feat(content): add scoped content draft publication`

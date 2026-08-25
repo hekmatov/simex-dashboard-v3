@@ -130,14 +130,42 @@ test("App owns one scoped content coordinator and transports only its wrappers t
   assert.match(renderer, /<BuildWorkspace[\s\S]*contentDraftCoordinator=/);
   assert.match(renderer, /<ChartWizardV3[\s\S]*onContentDraftStage=/);
   assert.match(renderer, /<StaticContentWizard[\s\S]*onContentDraftStage=/);
+  assert.match(renderer, /<ChartWizardV3[\s\S]*contentDraftCoordinator=/);
+  assert.match(renderer, /<StaticContentWizard[\s\S]*contentDraftCoordinator=/);
   for (const sourceText of [modeWorkspace, buildWorkspace]) {
     assert.match(sourceText, /contentDraftCoordinator/);
   }
   for (const sourceText of [chartWizard, staticWizard]) {
+    assert.match(sourceText, /contentDraftCoordinator/);
     assert.match(sourceText, /onContentDraftStage/);
     assert.match(sourceText, /onContentDraftCommit/);
     assert.match(sourceText, /onContentDraftDiscard/);
   }
+  assert.match(app, /commitDashboard: commitDurableContentDraftConfiguration/);
+  assert.match(app, /replaceWith\([\s\S]*createDurableContentDraftCommit\(persistConfiguration\)/);
+});
+
+test("content draft dashboard commits require durable storage and survive a reload", async () => {
+  const { createServer } = await import("vite");
+  const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
+  const { createDurableContentDraftCommit } = await vite.ssrLoadModule("/src/App.jsx");
+  await vite.close();
+  let stored = null;
+  for (const message of ["Dashboard asset storage is unavailable.", "Browser dashboard storage is unavailable."]) {
+    const failing = createDurableContentDraftCommit(async (_candidate, options) => {
+      assert.equal(options.requireDurableStorage, true);
+      throw new Error(message);
+    });
+    await assert.rejects(failing({ contentLibrary: { mediaItems: { unused: {} } } }), /storage is unavailable/);
+    assert.equal(stored, null);
+  }
+  const commit = createDurableContentDraftCommit(async (candidate, options) => {
+    assert.equal(options.requireDurableStorage, true);
+    stored = JSON.stringify(candidate);
+    return structuredClone(candidate);
+  });
+  await commit({ contentLibrary: { mediaItems: { unused: { mediaId: "unused" } } } });
+  assert.equal(JSON.parse(stored).contentLibrary.mediaItems.unused.mediaId, "unused");
 });
 
 test("legacy chart-system files are absent after the clean cutover", async () => {
