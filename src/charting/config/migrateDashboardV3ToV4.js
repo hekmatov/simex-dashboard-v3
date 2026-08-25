@@ -62,6 +62,28 @@ export function isolateStaticTemporalMembership(input, suppliedStaticChartIds = 
 
 function migrateLegacyImageSources(dashboard, staticChartIds) {
   const usages = sourceUsage(dashboard);
+  const originalSources = structuredClone(dashboard.dataSources ?? {});
+  const sourcePlan = new Map();
+  const originalsToRemove = new Set();
+  for (const [sourceId, entries] of usages.entries()) {
+    const legacySource = originalSources[sourceId];
+    if (legacySource?.kind !== "inline" || !Array.isArray(legacySource.rows)) continue;
+    const imageEntries = entries.filter(({ typeId }) => typeId === "image");
+    if (imageEntries.length === 0) continue;
+    const splitRequired = entries.length > 1;
+    for (const entry of imageEntries) {
+      sourcePlan.set(entry.id, splitRequired
+        ? uniqueSourceId(dashboard.dataSources, `${sourceId}--static-${entry.id}`)
+        : sourceId);
+      if (splitRequired) {
+        dashboard.dataSources[sourcePlan.get(entry.id)] = null;
+      }
+    }
+    if (splitRequired && imageEntries.length === entries.length) originalsToRemove.add(sourceId);
+  }
+  for (const [sourceId, value] of Object.entries(dashboard.dataSources ?? {})) {
+    if (value === null) delete dashboard.dataSources[sourceId];
+  }
   for (const page of dashboard.pages ?? []) {
     for (const section of page.sections ?? []) {
       section.panels = (section.panels ?? []).map((placement) => {
@@ -69,7 +91,7 @@ function migrateLegacyImageSources(dashboard, staticChartIds) {
         const chart = wrapped ? placement.chart : placement;
         if (!isRecord(chart) || chart.typeId !== "image") return placement;
         staticChartIds.add(chart.id);
-        const legacySource = dashboard.dataSources?.[chart.sourceId];
+        const legacySource = originalSources[chart.sourceId];
         if (legacySource?.kind === "staticImage") return placement;
         if (legacySource?.kind !== "inline" || !Array.isArray(legacySource.rows)) {
           return placement;
@@ -77,16 +99,14 @@ function migrateLegacyImageSources(dashboard, staticChartIds) {
         if (legacySource.rows.length !== 1) {
           throw new Error(`Legacy Image chart "${chart.id}" manual data must contain exactly one row.`);
         }
-        const mixedUse = usages.get(chart.sourceId)?.some(({ typeId }) => typeId !== "image");
-        const sourceId = mixedUse
-          ? uniqueSourceId(dashboard.dataSources, `${chart.sourceId}--static-${chart.id}`)
-          : chart.sourceId;
+        const sourceId = sourcePlan.get(chart.id) ?? chart.sourceId;
         dashboard.dataSources[sourceId] = migrateLegacyImageRow(legacySource.rows[0]);
         const migratedChart = { ...chart, sourceId };
         return wrapped ? { ...placement, chart: migratedChart } : migratedChart;
       });
     }
   }
+  for (const sourceId of originalsToRemove) delete dashboard.dataSources[sourceId];
 }
 
 function migrateLegacyImageRow(row = {}) {

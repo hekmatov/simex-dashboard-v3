@@ -11,6 +11,7 @@ import {
   finalizeStaticContentDraft,
 } from "../src/static-content/forms/staticContentDraft.js";
 import { validateScene } from "../src/charting/time/sceneSchema.js";
+import { prepareStaticPanelTransaction } from "../src/static-content/staticPanelTransaction.js";
 
 test("legacy Image URL migration is deterministic, idempotent, and keeps chart config v3", () => {
   const legacy = legacyImageDashboard({ src: "https://example.test/briefing.png", fit: "fill", alt: "" });
@@ -75,6 +76,56 @@ test("legacy Image paths stay packaged while blob and unsafe sources require rep
     assert.equal(migrated.dataSources.briefing.origin.kind, "replacementRequired", src);
     assert.deepEqual(migrated.dataSources.briefing.migrationWarnings, ["replacement-required"]);
   }
+});
+
+test("multiply-used legacy Image sources split deterministically without leaving the original orphan", () => {
+  const legacy = legacyImageDashboard({ src: "images/briefing.png", alt: "Briefing" });
+  const second = createChartDraft({
+    typeId: "image",
+    id: "briefing-image-b",
+    sourceId: "briefing",
+    title: "Briefing image B",
+  });
+  legacy.pages[0].sections[0].panels.push(second);
+
+  const migrated = migrateDashboardV3ToV4(legacy);
+  const panels = migrated.pages[0].sections[0].panels;
+  assert.equal(panels[0].sourceId, "briefing--static-briefing-image");
+  assert.equal(panels[1].sourceId, "briefing--static-briefing-image-b");
+  assert.equal(Object.hasOwn(migrated.dataSources, "briefing"), false);
+  assert.deepEqual(migrated.dataSources[panels[0].sourceId], migrated.dataSources[panels[1].sourceId]);
+  assert.deepEqual(migrateDashboardV3ToV4(migrated), migrated);
+
+  const siblingBefore = structuredClone(migrated.dataSources[panels[1].sourceId]);
+  const prepared = prepareStaticPanelTransaction({
+    dashboard: migrated,
+    operation: "update",
+    panelId: panels[0].id,
+    panel: panels[0],
+    source: { ...migrated.dataSources[panels[0].sourceId], alt: "Edited A" },
+  });
+  assert.equal(prepared.candidateDashboard.dataSources[panels[0].sourceId].alt, "Edited A");
+  assert.deepEqual(
+    prepared.candidateDashboard.dataSources[panels[1].sourceId],
+    siblingBefore,
+  );
+});
+
+test("mixed legacy source usage retains the original inline source for its non-Image consumer", () => {
+  const legacy = legacyImageDashboard({ src: "images/briefing.png", alt: "Briefing" });
+  legacy.pages[0].sections[0].panels.push(createChartDraft({
+    typeId: "table",
+    id: "briefing-table",
+    sourceId: "briefing",
+    title: "Briefing table",
+  }));
+
+  const migrated = migrateDashboardV3ToV4(legacy);
+  const [image, table] = migrated.pages[0].sections[0].panels;
+  assert.equal(image.sourceId, "briefing--static-briefing-image");
+  assert.equal(table.sourceId, "briefing");
+  assert.deepEqual(migrated.dataSources.briefing, legacy.dataSources.briefing);
+  assert.equal(migrated.dataSources[image.sourceId].kind, "staticImage");
 });
 
 test("temporal isolation removes only static membership and dependent invalid scenes", () => {
