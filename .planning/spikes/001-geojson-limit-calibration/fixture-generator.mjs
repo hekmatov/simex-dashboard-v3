@@ -10,6 +10,10 @@ export const LADDER_DEFINITIONS = Object.freeze({
   propertyValueBytes: [16_000, 128_000, 512_000, 1_000_000, 2_000_000, 4_000_000],
   collectionDepth: [1, 4, 8, 16, 32, 64],
   concurrentMaps: [1, 2, 4, 6, 8, 12],
+  encodedBytesExtension: [16_000_000, 24_000_000, 32_000_000, 48_000_000, 64_000_000],
+  propertyValueBytesExtension: [8_000_000, 12_000_000, 16_000_000, 24_000_000, 32_000_000, 48_000_000, 64_000_000],
+  distributedPartsRings: [4_000, 8_000, 12_000, 16_000, 24_000, 32_000],
+  structuralNodes: [50_000, 100_000, 200_000, 300_000, 500_000],
 });
 
 export const ACCEPTED_GEOMETRY_TYPES = Object.freeze([
@@ -26,6 +30,8 @@ export function fixtureFor(dimension, value) {
   switch (dimension) {
     case "encodedBytes":
       return collection([pointFeature(0, { padding: "x".repeat(Math.max(0, value - 180)) })]);
+    case "encodedBytesExtension":
+      return collection([pointFeature(0, { padding: "x".repeat(Math.max(0, value - 180)) })]);
     case "features":
       return collection(Array.from({ length: value }, (_, index) => pointFeature(index)));
     case "totalPositions":
@@ -36,10 +42,16 @@ export function fixtureFor(dimension, value) {
       return collection([multiPolygonFeature(value)]);
     case "propertyKeys":
       return collection([pointFeature(0, Object.fromEntries(
-        Array.from({ length: value }, (_, index) => [`property_${index}`, index]),
+        Array.from({ length: Math.max(0, value - 1) }, (_, index) => [`property_${index}`, index]),
       ))]);
     case "propertyValueBytes":
-      return collection([pointFeature(0, { payload: "v".repeat(value) })]);
+      return collection([pointFeature(0, { payload: "v".repeat(Math.max(0, value - 13)) })]);
+    case "propertyValueBytesExtension":
+      return collection([pointFeature(0, { payload: "v".repeat(Math.max(0, value - 13)) })]);
+    case "distributedPartsRings":
+      return collection(distributedMultiPolygonFeatures(value, 500));
+    case "structuralNodes":
+      return structuralNodeFixture(value);
     case "collectionDepth":
       return collection([geometryCollectionFeature(value)]);
     case "acceptedGeometryTypes":
@@ -68,13 +80,15 @@ export function summarizeGeoJson(geoJson, {
   maxDepth = 128,
 } = {}) {
   const geometryTypes = {};
-  const propertyKeys = new Set();
+  let maxPropertyKeysPerFeature = 0;
   let positions = 0;
   let maxFeaturePositions = 0;
   let parts = 0;
   let rings = 0;
   let visitedNodes = 0;
   let observedDepth = 0;
+  let totalEncodedPropertyValueBytes = 0;
+  const structuralNodeCount = countStructuralNodes(geoJson, { maxNodes, maxDepth });
   const bounds = [Infinity, Infinity, -Infinity, -Infinity];
 
   function countGeometry(root, featureIndex) {
@@ -118,9 +132,8 @@ export function summarizeGeoJson(geoJson, {
           for (const entry of next.value) coordinateStack.push({ value: entry, depth: next.depth + 1 });
         }
       }
-      if (["MultiPoint", "MultiLineString", "MultiPolygon"].includes(value.type)) {
-        parts += value.coordinates?.length ?? 0;
-      }
+      if (["Point", "LineString", "Polygon"].includes(value.type)) parts += 1;
+      if (["MultiPoint", "MultiLineString", "MultiPolygon"].includes(value.type)) parts += value.coordinates?.length ?? 0;
       if (value.type === "Polygon") rings += value.coordinates?.length ?? 0;
       if (value.type === "MultiPolygon") {
         rings += (value.coordinates ?? []).reduce((total, polygon) => total + polygon.length, 0);
@@ -131,7 +144,13 @@ export function summarizeGeoJson(geoJson, {
   }
 
   for (const [index, feature] of (geoJson.features ?? []).entries()) {
-    for (const key of Object.keys(feature.properties ?? {})) propertyKeys.add(key);
+    for (const value of Object.values(feature.properties ?? {})) {
+      totalEncodedPropertyValueBytes += new TextEncoder().encode(JSON.stringify(value)).byteLength;
+    }
+    maxPropertyKeysPerFeature = Math.max(
+      maxPropertyKeysPerFeature,
+      Object.keys(feature.properties ?? {}).length,
+    );
     countGeometry(feature.geometry, index);
   }
   return {
@@ -140,12 +159,39 @@ export function summarizeGeoJson(geoJson, {
     maxFeaturePositions,
     parts,
     rings,
-    propertyKeyCount: propertyKeys.size,
+    maxPropertyKeysPerFeature,
+    totalEncodedPropertyValueBytes,
     geometryTypes,
     bbox: Number.isFinite(bounds[0]) ? bounds : null,
     observedDepth,
     visitedNodes,
+    structuralNodeCount,
   };
+}
+
+export function countStructuralNodes(value, {
+  maxNodes = 2_000_000,
+  maxDepth = 128,
+} = {}) {
+  const stack = [{ value, depth: 1 }];
+  let count = 0;
+  while (stack.length) {
+    const current = stack.pop();
+    if (!current.value || typeof current.value !== "object") continue;
+    count += 1;
+    if (count > maxNodes) throw new Error("structural-node-budget-exceeded");
+    if (current.depth > maxDepth) throw new Error("structural-depth-budget-exceeded");
+    if (Array.isArray(current.value)) {
+      for (const entry of current.value) {
+        if (entry && typeof entry === "object") stack.push({ value: entry, depth: current.depth + 1 });
+      }
+      continue;
+    }
+    for (const entry of Object.values(current.value)) {
+      if (entry && typeof entry === "object") stack.push({ value: entry, depth: current.depth + 1 });
+    }
+  }
+  return count;
 }
 
 function collection(features) {
@@ -193,6 +239,33 @@ function multiPolygonFeature(ringCount) {
       coordinates: Array.from({ length: ringCount }, (_, index) => [closedRing(index)]),
     },
   };
+}
+
+function distributedMultiPolygonFeatures(totalParts, featureCount) {
+  const actualFeatures = Math.min(totalParts, featureCount);
+  const baseParts = Math.floor(totalParts / actualFeatures);
+  const remainder = totalParts % actualFeatures;
+  let partIndex = 0;
+  return Array.from({ length: actualFeatures }, (_, featureIndex) => {
+    const count = baseParts + (featureIndex < remainder ? 1 : 0);
+    const coordinates = Array.from({ length: count }, () => [closedRing(partIndex++)]);
+    return {
+      type: "Feature",
+      id: `distributed-${featureIndex}`,
+      properties: { name: `Distributed polygon ${featureIndex}`, district: featureIndex % 20 },
+      geometry: { type: "MultiPolygon", coordinates },
+    };
+  });
+}
+
+function structuralNodeFixture(targetNodes) {
+  const base = collection([pointFeature(0)]);
+  const baseNodes = countStructuralNodes(base);
+  base.features[0].properties.payload = Array.from(
+    { length: Math.max(0, targetNodes - baseNodes - 1) },
+    () => [],
+  );
+  return base;
 }
 
 function geometryCollectionFeature(depth) {

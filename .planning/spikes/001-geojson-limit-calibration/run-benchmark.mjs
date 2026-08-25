@@ -10,6 +10,8 @@ const baseUrl = argument("--base-url") ?? "http://127.0.0.1:4187";
 const outputPath = argument("--output");
 if (!outputPath) throw new Error("--output is required");
 const onlyDimensions = new Set((argument("--dimensions") ?? "").split(",").filter(Boolean));
+const onlyProfiles = new Set((argument("--profiles") ?? "").split(",").filter(Boolean));
+const valueOverride = (argument("--values") ?? "").split(",").filter(Boolean).map(Number);
 
 const profiles = [
   { id: "build-1440", viewport: { width: 1440, height: 900 }, cpuRate: 1, heapMiB: 1_024, ladder: "full" },
@@ -29,7 +31,7 @@ const results = {
 };
 const repetitions = 3;
 
-for (const profile of profiles) {
+for (const profile of profiles.filter((entry) => onlyProfiles.size === 0 || onlyProfiles.has(entry.id))) {
   const browser = await chromium.launch({
     headless: true,
     args: [
@@ -45,6 +47,9 @@ for (const profile of profiles) {
   await page.waitForFunction(() => Boolean(window.calibrationHarness));
   const environment = await page.evaluate(() => window.calibrationHarness.environment());
   const project = [];
+  const ladders = [];
+  const profileResult = { ...profile, environment, project, ladders };
+  results.profiles.push(profileResult);
   for (const fixture of onlyDimensions.size === 0 ? projectFixtures : []) {
     const result = await page.evaluate(
       ([path, repeats]) => window.calibrationHarness.measureProjectFixture(path, repeats),
@@ -53,7 +58,6 @@ for (const profile of profiles) {
     project.push(result);
     progress(profile.id, `project:${result.metadata.id}`, result.phases);
   }
-  const ladders = [];
   if (onlyDimensions.has("rollbackProbe")) {
     const result = await page.evaluate(
       (repeats) => window.calibrationHarness.measureGeneratedFixture("totalPositions", 6_630, repeats),
@@ -64,9 +68,10 @@ for (const profile of profiles) {
   }
   for (const [dimension, values] of Object.entries(LADDER_DEFINITIONS)) {
     if (onlyDimensions.size > 0 && !onlyDimensions.has(dimension)) continue;
+    const configuredValues = valueOverride.length > 0 ? valueOverride : values;
     const selected = profile.ladder === "full"
-      ? values
-      : [values[0], values[Math.floor(values.length / 2)], values.at(-1)];
+      ? configuredValues
+      : [configuredValues[0], configuredValues[Math.floor(configuredValues.length / 2)], configuredValues.at(-1)];
     for (const value of selected) {
       try {
         const result = await page.evaluate(
@@ -78,6 +83,7 @@ for (const profile of profiles) {
           [dimension, value, repetitions],
         );
         ladders.push(result);
+        await fs.writeFile(outputPath, `${JSON.stringify(results, null, 2)}\n`, "utf8");
         progress(profile.id, result.metadata.id, result.phases);
         if (hardKnee(result)) {
           process.stdout.write(`EARLY-STOP ${profile.id} ${dimension} after ${value}\n`);
@@ -85,6 +91,7 @@ for (const profile of profiles) {
         }
       } catch (error) {
         ladders.push({ dimension, requestedValue: value, harnessError: error.message });
+        await fs.writeFile(outputPath, `${JSON.stringify(results, null, 2)}\n`, "utf8");
         process.stdout.write(`ERROR ${profile.id} ${dimension}-${value}: ${error.message}\n`);
         break;
       }
@@ -108,7 +115,6 @@ for (const profile of profiles) {
       }
     }
   }
-  results.profiles.push({ ...profile, environment, project, ladders });
   await fs.writeFile(outputPath, `${JSON.stringify(results, null, 2)}\n`, "utf8");
   await browser.close();
 }

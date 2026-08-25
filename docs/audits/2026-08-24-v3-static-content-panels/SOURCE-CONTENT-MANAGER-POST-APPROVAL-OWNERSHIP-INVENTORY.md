@@ -3,7 +3,7 @@
 **Date:** 2026-08-25
 **Status:** Post-approval ownership prerequisite complete. The written amendment is approved; production remains unimplemented and not verified.
 **Approved amendment:** `81531b4b939e89b529d0ddee36241e517c33956d`
-**Calibration prerequisite:** `526003d195cd769de52e23563d2f244fb4feaea3`
+**Initial calibration commit:** `526003d195cd769de52e23563d2f244fb4feaea3`; its master-requested bounded correction is recorded in `GEOJSON-LIMITS-DECISION.md` and the spike evidence.
 **Implementation branch:** `codex/static-content-panels-implementation`
 
 This inventory resolves the amendment's owners against live HEAD before final implementation planning. It creates no production owner. Every path labelled **proposed** is an exact intended path with one responsibility and remains uncreated. The accepted Step 7S baseline remains engine implemented, UI implemented, 36/36 fidelity rows Passing, independently review-clean, branch-retained, and unmerged. All 36 amendment rows remain **Proposed / unimplemented / not verified**.
@@ -154,7 +154,7 @@ Material states remain Build 1440×900 and 1024×768, with QMD View 390×844 and
 
 ## Planning gate disposition
 
-- GeoJSON limit calibration: complete and recorded in `GEOJSON-LIMITS-DECISION.md`; no legitimate fixture excluded and no user-level tradeoff identified.
+- GeoJSON limit calibration: corrected after master review and recorded in `GEOJSON-LIMITS-DECISION.md`; no legitimate fixture excluded and no user-level tradeoff identified; renewed master acceptance is pending.
 - Exact owner reconciliation: complete in this inventory; the uploadedGeoJson authoring-selector gap has a named current owner and exact intended correction path.
 - Generic, conditional, or unresolved production owner: none retained.
 - Amendment implementation state: engine unimplemented; UI unimplemented; fidelity not verified.

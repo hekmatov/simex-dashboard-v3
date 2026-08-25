@@ -7,7 +7,7 @@
 
 - URL: `/.planning/spikes/001-geojson-limit-calibration/harness.html?project=/data/geo/gemeente_2021.geojson`
 - Visible inspected status: `gemeente_2021.geojson: 352 features, 6630 positions`.
-- Inspected metadata: 193,816 bytes; 352 features; 6,630 positions; 87 maximum positions/feature; 10 parts; 357 rings; six property keys; Polygon 347 and MultiPolygon 5; traversal depth 5.
+- Inspected metadata under the corrected metric: 193,816 bytes; 352 features; 6,630 positions; 87 maximum positions/feature; 357 geometry parts; 357 rings; maximum six own property keys on one feature; 8,407 whole-document structural nodes; Polygon 347 and MultiPolygon 5; traversal depth 5.
 - Map host geometry: 1,409×302 CSS pixels within a 1,425-pixel document viewport; document overflow 0.
 - Harness interaction result: first usable map 71.6 ms and geo-roam/resize response 58.6 ms in this inspected run.
 
@@ -18,6 +18,13 @@
 - Inspected metadata: 574,529 bytes; 4,000 independent features; 4,000 positions.
 - Map host geometry: 993×302 CSS pixels within a 1,009-pixel document viewport; document overflow 0.
 - Harness interaction result: first usable map 97.4 ms and geo-roam/resize response 133.4 ms in this inspected normal-device run. The constrained raw profile retains the material 346.8/511.8 ms p95 results.
+
+## Master-correction polygon distribution — 1440×900 and 1024×768
+
+- At 1440×900, `distributedPartsRings-2000` rendered 500 MultiPolygon features, 2,000 parts, 2,000 rings, and 10,000 positions in one 1,422×300 CSS-pixel canvas. The checkpoint output reported one map host, first usable map 118.2 ms, interaction/resize 84.4 ms, and no map-path error.
+- At 1024×768, `distributedPartsRings-4000` rendered the same 500-feature distribution with 4,000 parts, 4,000 rings, and 20,000 positions in one 1,006×300 CSS-pixel canvas. The checkpoint output reported one map host, first usable map 91.0 ms, interaction/resize 100.9 ms, and no map-path error.
+- The visible canvases stayed inside their harness content panes. The diagnostic JSON `<pre>` can itself create a small page scrollbar and is not production-composition evidence; map-host geometry and the checkpoint's pre-diagnostic `documentOverflow: 0` are the relevant inspected facts.
+- These normal-device inspections supplement, but do not replace, the constrained raw measurements: 2,000 distributed rings remained below the hard-knee rule at a 1,588 ms maximum long task; 4,000 crossed it at 2,097 ms; 8,000 reached 1,752 ms package-import p95 and a 4,605 ms maximum long task.
 
 ## Nearest current production journey
 

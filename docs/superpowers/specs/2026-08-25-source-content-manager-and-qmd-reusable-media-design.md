@@ -195,6 +195,7 @@ Disposable fixture ladders must vary these dimensions independently so one dimen
 - positions concentrated in one feature;
 - parts and rings;
 - property-key count and property-value volume;
+- whole-document structural-node count;
 - nesting and GeometryCollection depth;
 - accepted geometry types;
 - concurrent active maps.
@@ -202,6 +203,15 @@ Disposable fixture ladders must vary these dimensions independently so one dimen
 The spike exercised actual Chromium paths for upload/read, parse/validation/summary, preview-equivalent map rendering, replacement-compatibility equivalent, persistence/reload, map registration/render, pan/zoom/resize, and package export/import. Because the manager is unimplemented, the decision record names each current-production substitution. It used Build at 1440×900 and 1024×768 plus a pinned 1024×768, 4× CPU, 512 MiB V8 old-space profile.
 
 For each phase and fixture step, record median and p95 latency, main-thread long tasks, time to first usable preview/map, interaction responsiveness, memory and serialized footprint, and rollback behavior. Select separate warning and hard-cap thresholds from observed performance or memory knees, with margin above every legitimate project fixture. Encoded bytes alone are never sufficient.
+
+Master review did not accept the initial calibration commit `526003d` because its byte/property and part/ring hard caps preceded observed knees, it omitted an exact node budget, and it conflated per-feature property keys with a source-wide union. The bounded correction retains every unaffected measurement and establishes these exact clarified contracts:
+
+- encoded source bytes and total encoded property-value bytes are normal below 32,000,000, warning from 32,000,000 through 47,999,999, and hard-rejected at 48,000,000 or above;
+- geometry parts and polygon rings are each normal below 2,000, warning from 2,000 through 3,999, and hard-rejected at 4,000 or above;
+- maximum own property keys means the maximum `Object.keys(feature.properties).length` on any one feature, never the union of names across the source; it warns at 512 and hard-rejects at 1,000;
+- a whole-document structural node is every non-null object or array container reachable from the parsed root, including feature, properties, geometry, coordinate nesting/position arrays, and nested property containers; scalars do not add nodes. It warns at 30,000 and hard-rejects at 50,000, with depth still warning at 16 and hard-rejected at 32.
+
+The exact counting and stop-before-expansion rules remain canonical in `GEOJSON-LIMITS-DECISION.md`; production consumes those constants from one authority rather than duplicating them.
 
 Join compatibility and identifier coverage remain replacement outcomes, not resource-size limits. The limit checker must itself be bounded against adversarial nesting and coordinate complexity so determining whether input is safe cannot become the denial-of-service path.
 

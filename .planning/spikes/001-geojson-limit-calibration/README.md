@@ -47,6 +47,8 @@ node .planning/spikes/001-geojson-limit-calibration/run-benchmark.mjs --base-url
 node .planning/spikes/001-geojson-limit-calibration/run-benchmark.mjs --base-url http://127.0.0.1:4187 --dimensions rollbackProbe --output .planning/spikes/001-geojson-limit-calibration/evidence/rollback-measurements.json
 ~~~
 
+The master-correction runner options `--profiles constrained-1024` and `--values 16000000,24000000` restrict a follow-up to exact profiles/rungs. Correction evidence is written after every completed rung so an intentionally stopped resource-failure probe cannot erase prior samples.
+
 The runner uses three samples per phase/rung. In this bounded calibration, p95 is therefore the maximum observed sample; raw samples are retained for audit rather than implying population-level precision.
 
 ## What to Expect
@@ -83,10 +85,15 @@ The harness records per sample:
 6. The completed ladder exposed two isolated evidence gaps: ECharts threw before GeometryCollection timings were retained, and the all-types probe had a runner-scope typo. The harness retained map errors instead of discarding prior phase measurements, and only the missing depth/type probes were rerun.
 7. Per-type isolation showed Point, MultiPoint, LineString, MultiLineString, Polygon, and MultiPolygon complete the current ECharts path without the GeometryCollection error. GeometryCollection fails at depth 1 even though current structural validation accepts depths through 64.
 8. A focused rollback probe confirmed malformed-candidate and injected package-read failures preserve their inputs in all 9 samples per assertion (three samples across three profiles; 18 asserted rollback outcomes total).
+9. Master review retained the feature, coordinate, type, concurrency, rollback, viewport, and corpus evidence but rejected four under-specified limits. The correction extended only byte/property-volume and parts/rings ladders, added a whole-document structural-node ladder, and made the property-key metric exact.
+10. Fresh constrained runs completed 16, 24, and 32 MB encoded/property-value rungs. A fresh 48 MB encoded rung failed to complete within a bounded 90-second window and reached a 923,045,888-byte Chromium working set; the exact benchmark process was stopped and the failure recorded rather than converted into a timing sample.
+11. A realistic 500-feature MultiPolygon distribution separated the old single-feature ring shape from ordinary multi-feature load: 2,000 parts/rings stayed below the hard-knee rule, 4,000 crossed it through a 2,097 ms long task, and 8,000 reached a 4,605 ms long task.
+12. Structural-node fixtures count every object/array container in the whole document. 40,000 nodes completed below the hard-knee rule; 50,000 reached a 2,180 ms long task. Property-key fixtures now request and report the maximum own keys on one Feature.properties object exactly, not the union of names across the source.
+13. Historical `measurements.json` retains the initial `parts` and `propertyKeyCount` diagnostic fields for audit. Those two field definitions are superseded by the corrected generator and `master-correction-*` evidence; retained timing/geometry/type/concurrency results are unchanged.
 
 ## Results
 
-**Verdict: VALIDATED.** The calibrated limits in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` exclude none of the four legitimate project fixtures and introduce no material user-level UX tradeoff. The guardrail can proceed to master technical review without asking the user to choose numbers.
+**Verdict: VALIDATED; corrected result submitted, master acceptance pending.** The calibrated limits in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` exclude none of the four legitimate project fixtures and introduce no material user-level UX tradeoff. The guardrail can proceed to renewed master technical review without asking the user to choose numbers.
 
 Key knees in the constrained 1024×768, 4× CPU, 512 MiB V8 old-space profile:
 
@@ -96,6 +103,8 @@ Key knees in the constrained 1024×768, 4× CPU, 512 MiB V8 old-space profile:
 | Total positions | 20,000: package import 610 ms; interaction 175 ms | 50,000: package import 1,579 ms; 3,864 ms max long task |
 | Positions in one feature | 20,000: package import 590 ms; interaction 115 ms | 50,000: package import 1,556 ms; 3,680 ms max long task |
 | Concurrent 20k-position maps | 2: first map 302 ms; interaction 387 ms | 4: 572/784 ms; 6: 820/1,122 ms with 2,151 ms max long task |
-| Encoded bytes alone | 4 MB: 60 ms package import | 8 MB: 112 ms; byte size alone is not the geometry knee |
+| Encoded/property-value bytes | 8 MB property value: 114.5 ms package import; 16 MB encoded: 221.8 ms | 32 MB encoded: 441.3 ms/1,567 ms max long task; fresh 48 MB encoded resource-failed beyond 90 s with 923 MB Chromium working set |
+| Distributed parts/rings | 2,000 across 500 features: 453.9 ms package import/1,588 ms max long task | 4,000: 794.9 ms/2,097 ms; 8,000: 1,752 ms/4,605 ms |
+| Whole-document structural nodes | 40,000: 648.8 ms package import/1,459 ms max long task | 50,000: 860 ms/2,180 ms |
 
-The future checker must be iterative and budgeted. It must reject at the first hard cap, byte-gate before parse, exclude join coverage from resource decisions, and classify GeometryCollection as structurally unsupported for the current map runtime rather than pretending it is a slow-but-supported case.
+The future checker must be iterative and budgeted. Its structural-node metric counts every object and array container reachable from the parsed root, including FeatureCollection/features, Feature/properties/geometry, coordinate nesting/position arrays, and nested property containers; scalar values are governed by encoded byte budgets and do not add nodes. The property-key metric is the maximum `Object.keys(feature.properties).length` for any one feature, not a source-wide name union. The checker must reject at the first hard cap, byte-gate before parse, exclude join coverage from resource decisions, and classify GeometryCollection as structurally unsupported for the current map runtime rather than pretending it is a slow-but-supported case.
