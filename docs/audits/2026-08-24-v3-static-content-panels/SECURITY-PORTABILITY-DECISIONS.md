@@ -1,6 +1,6 @@
 # Static Content Security and Portability Decision Record
 
-**Status:** Approved by V3 Design master at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slices 1–6 are implementation complete and Slice 6 review is pending
+**Status:** Approved design at `e159db11593f784459e50f7707d93987fa996527`, with the user-approved 2026-08-25 permissive inert-text deviation recorded below; Slices 1–6 are implemented, the final 36-row fidelity disposition is Passing, the independent implementation review is clean, and master acceptance is pending
 **Applies to:** `portable-qmd-v1`, enhanced `image`, bundle v4, flash-drive package
 
 ## Slice 1 implementation status

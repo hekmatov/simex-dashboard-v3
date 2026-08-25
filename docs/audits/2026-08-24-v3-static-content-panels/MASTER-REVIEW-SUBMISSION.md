@@ -4,7 +4,11 @@
 
 **Approved without design deviations** at discovery commit `e159db11593f784459e50f7707d93987fa996527`. All ten requested decisions and all 36 fidelity rows are binding accepted design requirements. They are not implemented functionality. Production work remains blocked until Step 7 is accepted and the post-Step-7 ownership inventory is committed and synchronized; that gate prohibits production code, configuration, dependencies, and tests before it passes.
 
-**Post-gate implementation status (2026-08-25):** Step 7 was accepted, the ownership gate passed, and Slices 1–6 are implementation complete on `codex/static-content-panels-implementation`. The final 36-row disposition is Passing across engine, mounted UI/composition, and retained intended-use evidence under the user-directed permissive-inert Free-text contract. Slice 6 review remains pending. This status does not rewrite the historical discovery verdict or its pre-implementation gate language.
+**Post-gate implementation status (2026-08-25):** Step 7 was accepted, the ownership gate passed, and Slices 1–6 are implementation complete on `codex/static-content-panels-implementation`. The final 36-row disposition is Passing across engine, mounted UI/composition, and retained intended-use evidence under the user-directed permissive-inert Free-text contract. The final independent implementation review at `b366ba17fe856aede46ba8301b8a530520e4d2cd` is clean with no open findings. Step 7S is submitted for V3 Design master acceptance; master acceptance is pending. This status does not rewrite the historical discovery verdict or its pre-implementation gate language.
+
+## Current implementation submission
+
+Step 7S is ready for master review at implementation HEAD `b366ba17fe856aede46ba8301b8a530520e4d2cd`: engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. This record requests master acceptance; it does not claim that master acceptance has already been granted.
 
 ### Subsequent user sketch-review amendments
 
@@ -66,8 +70,8 @@ The first review rejected approval at `64c0143` while accepting the architectura
 
 ## Fidelity status
 
-The matrix contains 36 accepted design rows across semantic, composition, and real-use layers, with a matching 36-row executable plan ledger. PS-02/PS-03 state dashboard schema v4, export bundle v4, and chart config v3 explicitly. No row is labeled Implemented or Passing. The later implementation must pass live creation/editing/View/fullscreen journeys for both types, Free-text Present exclusion, Image Present/Audience, and Audience failure isolation.
+The matrix contains 36 accepted design rows across semantic, composition, and real-use layers, with a matching 36-row executable plan ledger. PS-02/PS-03 state dashboard schema v4, export bundle v4, and chart config v3 explicitly. At implementation HEAD `b366ba17fe856aede46ba8301b8a530520e4d2cd`, all 36 rows are Passing for engine, mounted UI/composition, and retained intended-use fidelity, including live creation/editing/View/fullscreen journeys for both types, Free-text Present exclusion, Image Present/Audience, and Audience failure isolation.
 
-## Exit from this discovery task
+## Historical discovery exit and current handoff
 
-The verdict is synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger. Retain this branch as design provenance. Start implementation later from the final accepted Step 7 commit, not by continuing from or merging production changes into this worktree.
+The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete; this renewed handoff is submitted for master acceptance, which remains pending.

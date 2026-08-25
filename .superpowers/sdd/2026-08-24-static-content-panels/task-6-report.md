@@ -1,6 +1,6 @@
 # Task 6 report — Present/Audience compatibility
 
-**Status:** Fix round 2/5 addressed; two Important evidence groups closed, implementation complete, review pending
+**Status:** Final hardening complete; engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. Master acceptance is pending.
 
 The initial implementation evidence below remains provenance. This fix round adds the missing trusted-index, synchronous layout, playback-owner, and retained intended-use evidence without weakening permissive-inert Free text or strict Image validation.
 
@@ -124,7 +124,11 @@ The binding screenshots were visually inspected at 1920×1080 (one, two, four ce
 
 ## Closure
 
-FT-05, FT-06, FT-12, IM-02, IM-08, IM-15, IM-16, PS-04, and PS-08 are restored to Passing with engine, mounted UI/composition, and retained intended-use evidence. Every row in the final 36-row Step 7S ledger is now Passing under the current permissive-inert Free-text contract and strict Image contract. Review remains the only pending Task 6 gate.
+FT-05, FT-06, FT-12, IM-02, IM-08, IM-15, IM-16, PS-04, and PS-08 are restored to Passing with engine, mounted UI/composition, and retained intended-use evidence. Every row in the final 36-row Step 7S ledger is Passing under the current permissive-inert Free-text contract and strict Image contract. Independent implementation review is clean; only master acceptance remains pending.
+
+## Final independent review
+
+The completed Step 7S implementation at `b366ba17fe856aede46ba8301b8a530520e4d2cd` received a clean independent implementation review with no open findings. Engine implementation, mounted UI/composition, and retained intended-use fidelity are each complete and remain separately recorded. Step 7S is submitted for master acceptance; master acceptance has not yet been granted.
 
 ## Whole-branch hardening wave
 

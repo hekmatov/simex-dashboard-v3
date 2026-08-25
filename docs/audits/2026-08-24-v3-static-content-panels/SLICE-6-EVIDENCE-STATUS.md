@@ -1,6 +1,6 @@
 # Slice 6 Present/Audience Evidence Status
 
-**Status:** Final hardening fix round 2 addressed; IM-02, IM-14, PS-01, and PS-05 restored, implementation complete, review pending
+**Status:** Final hardening fix round 2 addressed; IM-02, IM-14, PS-01, and PS-05 restored; engine implemented, UI implemented, all 36 fidelity rows verified Passing, and independent implementation review clean. Master acceptance is pending.
 
 FT-05, FT-06, IM-08, IM-15, and IM-16 are restored after their original binding journeys passed without wording changes or deviations. Free text remains permissive and inert with no sanitizer; Image intake and presentability remain strict.
 
@@ -33,7 +33,7 @@ Exact RED/GREEN history, browser checkpoints, baseline disclosures, and implemen
 
 ## Whole-branch hardening wave
 
-**Status:** 7 findings addressed, 0 open; implementation complete, review pending.
+**Status:** 7 findings addressed, 0 open; implementation complete and independent implementation review clean. Master acceptance is pending.
 
 The final 36-row disposition remains Passing after new strict RED→GREEN evidence for aggregate asset budget authority, finalized-source-only manifests, unified static dirty selection, multiply-used legacy Image migration, terminal JPEG EOI, exact typed static schemas, and contained packaged preview paths. The final consolidated affected sweep passed 152/152; runtime boundaries passed with no remote dependencies; and the 891-module production build passed in 9.88 seconds. Material Chromium evidence passed at 1440×900 for near-budget creation and exact Keep editing/Discard draft retention, and at 1280×800 for packaged generated-path crop preview. No Free-text source-policy or protocol behavior changed.
 
