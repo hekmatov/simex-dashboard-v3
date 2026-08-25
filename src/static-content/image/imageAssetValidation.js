@@ -299,10 +299,12 @@ export function validateImageOrigin(origin) {
     throw new TypeError("Image origin must be an object.");
   }
   if (origin.kind === "asset") {
+    rejectUnknownOriginKeys(origin, ["kind", "assetId"], "Image asset origin");
     const assetId = requiredText(origin.assetId, "Image asset id");
     return { kind: "asset", assetId, networkDependent: false };
   }
   if (origin.kind === "url") {
+    rejectUnknownOriginKeys(origin, ["kind", "url"], "Image URL origin");
     const url = requiredText(origin.url, "Image URL");
     let parsed;
     try {
@@ -314,19 +316,16 @@ export function validateImageOrigin(origin) {
     return { kind: "url", url: parsed.href, networkDependent: true };
   }
   if (origin.kind === "package") {
+    rejectUnknownOriginKeys(origin, ["kind", "path"], "Image package origin");
     const path = requiredText(origin.path, "Image package path");
     const normalized = path.replaceAll("\\", "/");
-    if (
-      normalized.startsWith("/")
-      || /^[a-z]:/i.test(normalized)
-      || normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
-      || /%(?:2e|2f|5c)/i.test(normalized)
-    ) {
+    if (!isContainedPackageImagePath(normalized)) {
       throw new Error("Image package path must be a safe dashboard-owned relative path.");
     }
     return { kind: "package", path: normalized, networkDependent: false };
   }
   if (origin.kind === "replacementRequired") {
+    rejectUnknownOriginKeys(origin, ["kind", "reason"], "Image replacement origin");
     return {
       kind: "replacementRequired",
       reason: requiredText(origin.reason, "Image replacement reason"),
@@ -334,6 +333,23 @@ export function validateImageOrigin(origin) {
     };
   }
   throw new Error(`Unknown image origin "${String(origin.kind)}".`);
+}
+
+export function isContainedPackageImagePath(value) {
+  if (typeof value !== "string" || value === "") return false;
+  const normalized = value.replaceAll("\\", "/");
+  return !normalized.startsWith("/")
+    && !/^[a-z]:/i.test(normalized)
+    && !normalized.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+    && !/%(?:2e|2f|5c)/i.test(normalized)
+    && !/^[a-z][a-z0-9+.-]*:/i.test(normalized);
+}
+
+function rejectUnknownOriginKeys(origin, knownKeys, description) {
+  const known = new Set(knownKeys);
+  for (const key of Object.keys(origin)) {
+    if (!known.has(key)) throw new Error(`${description} property "${key}" is unknown.`);
+  }
 }
 
 function inspectRaster(bytes) {
@@ -375,6 +391,9 @@ function inspectJpeg(bytes) {
       offset += 1;
     }
     if (marker === 0xd9) {
+      if (offset !== bytes.byteLength) {
+        throw new Error("The JPEG EOI marker must be terminal; trailing bytes are not allowed.");
+      }
       ended = true;
       break;
     }

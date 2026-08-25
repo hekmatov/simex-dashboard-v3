@@ -525,6 +525,114 @@ test("IM-02 dashboard-budget and browser-quota failures recover through an exact
     .locator('img[alt="Recovered validated intake corpus"]')).toBeVisible();
 });
 
+test("dirty static selection keeps the complete draft until explicit Discard", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openBiomedicalBuild(page);
+  const panelId = await createImage(page, "Dirty selection image");
+  const savedBefore = await readSavedImage(page, "Dirty selection image");
+  const panel = canonicalPanel(page, panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await openImageEditor(panel, page, "Dirty selection image");
+  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  await editor.getByLabel("Image origin").selectOption("url");
+  await editor.getByLabel("HTTPS image URL").fill("https://example.test/dirty-selection.png");
+  await editor.getByLabel("Alternative text").fill("Complete retained draft");
+  await editor.getByLabel("Crop x").fill("120");
+  await editor.getByLabel("Crop y").fill("80");
+  await editor.getByLabel("Crop width").fill("700");
+  await editor.getByLabel("Crop height").fill("800");
+  await editor.getByRole("button", { name: "Rotate right" }).click();
+  await editor.getByLabel("Fit", { exact: true }).selectOption("cover");
+  const retainedDraft = {
+    url: await editor.getByLabel("HTTPS image URL").inputValue(),
+    alt: await editor.getByLabel("Alternative text").inputValue(),
+    cropX: await editor.getByLabel("Crop x").inputValue(),
+    cropY: await editor.getByLabel("Crop y").inputValue(),
+    cropWidth: await editor.getByLabel("Crop width").inputValue(),
+    cropHeight: await editor.getByLabel("Crop height").inputValue(),
+    rotation: await editor.locator(".image-rotation-controls output").textContent(),
+    fit: await editor.getByLabel("Fit", { exact: true }).inputValue(),
+  };
+
+  const activateTreeItem = async (label) => {
+    await page.evaluate(() => {
+      const mapButton = [...document.querySelectorAll("button")]
+        .find((node) => node.textContent?.trim() === "Dashboard map");
+      mapButton?.click();
+    });
+    const activated = await page.evaluate((itemLabel) => {
+      const item = [...document.querySelectorAll('[role="treeitem"]')]
+        .find((node) => node.getAttribute("aria-label") === itemLabel);
+      item?.click();
+      return Boolean(item);
+    }, label);
+    await page.waitForTimeout(350);
+    return activated;
+  };
+
+  expect(await activateTreeItem("Dirty selection image")).toBe(true);
+  await expect(page.getByRole("dialog", { name: "Discard static content changes?" })).toHaveCount(0);
+  await expect(editor.getByLabel("Alternative text")).toHaveValue("Complete retained draft");
+
+  expect(await activateTreeItem("Confirmed cases")).toBe(true);
+  let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  await confirmation.getByRole("button", { name: "Keep editing" }).click();
+  await expect(editor.getByLabel("HTTPS image URL")).toHaveValue(retainedDraft.url);
+  await expect(editor.getByLabel("Alternative text")).toHaveValue(retainedDraft.alt);
+  await expect(editor.getByLabel("Crop x")).toHaveValue(retainedDraft.cropX);
+  await expect(editor.getByLabel("Crop y")).toHaveValue(retainedDraft.cropY);
+  await expect(editor.getByLabel("Crop width")).toHaveValue(retainedDraft.cropWidth);
+  await expect(editor.getByLabel("Crop height")).toHaveValue(retainedDraft.cropHeight);
+  await expect(editor.locator(".image-rotation-controls output")).toHaveText(retainedDraft.rotation);
+  await expect(editor.getByLabel("Fit", { exact: true })).toHaveValue(retainedDraft.fit);
+
+  expect(await activateTreeItem("Confirmed cases")).toBe(true);
+  confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
+  await confirmation.getByRole("button", { name: "Discard" }).click();
+  await expect(editor).toHaveCount(0);
+  const savedAfter = await readSavedImage(page, "Dirty selection image");
+  expect(savedAfter.source).toEqual(savedBefore.source);
+});
+
+test("packaged Image source appears in the real guided crop preview", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openBiomedicalBuild(page);
+  const panelId = await createImage(page, "Packaged crop preview");
+  const packagedPath = `data/authored/${"a".repeat(64)}.png`;
+  await page.evaluate(({ key, title, path }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const placement = dashboard.pages.flatMap((pageEntry) => pageEntry.sections)
+      .flatMap((section) => section.panels)
+      .find((entry) => (entry.chart ?? entry).title === title);
+    const panel = placement.chart ?? placement;
+    const previous = dashboard.dataSources[panel.sourceId];
+    dashboard.dataSources[panel.sourceId] = {
+      ...previous,
+      revision: previous.revision + 1,
+      origin: { kind: "package", path },
+    };
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY, title: "Packaged crop preview", path: packagedPath });
+  await page.route(`**/${packagedPath}`, (route) => route.fulfill({
+    status: 200,
+    contentType: "image/png",
+    body: PNG,
+  }));
+  await page.reload();
+  await page.locator(".dashboard-command-page-scroller")
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  const panel = canonicalPanel(page, panelId);
+  await panel.scrollIntoViewIfNeeded();
+  await openImageEditor(panel, page, "Packaged crop preview");
+  const editor = page.getByRole("dialog", { name: "Edit static content" });
+  const preview = editor.locator('[data-image-crop-preview] img');
+  await expect(preview).toHaveAttribute("src", packagedPath);
+  await expect(preview).toBeVisible();
+});
+
 for (const viewport of IM08_VIEWPORTS) {
 test(`IM-08 guided crop remains operable with keyboard and pointer at actual 200 percent page zoom at ${viewport.width}x${viewport.height}`, async ({ page, context }) => {
   test.setTimeout(150_000);

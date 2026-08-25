@@ -163,7 +163,7 @@ export default function BuildWorkspace({
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const locked = mutationsDisabled || chartDraftOpen;
   const auxiliaryLocked = mutationsDisabled || (chartDraftOpen && !chartEditorPlacementId);
-  const navigationLocked = mutationsDisabled || chartDraftDirty || localAuthoringEditing;
+  const navigationLocked = mutationsDisabled || localAuthoringEditing;
   const chronoGroupDraftSuspended = chronoGroupDraft?.status === "suspended"
     && hasActiveLocalAuthoringDrafts({ chronoGroup: chronoGroupDraft });
   const sceneDraftSuspended = sceneDraft?.status === "suspended"

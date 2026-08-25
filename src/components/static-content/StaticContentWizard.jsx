@@ -262,6 +262,7 @@ function ImageFields({ draft, dispatch }) {
     <ImageTransformEditor
       source={source}
       sourceUrl={resolveImageDraftUrl(source)}
+      containedPackagePath={source.origin?.kind === "package"}
       sourceControls={sourceControls}
       onTransformChange={({ crop, rotation, fit }) => dispatch({ type: "setImageTransform", crop, rotation, fit })}
       onReset={() => dispatch({ type: "resetImage" })}

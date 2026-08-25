@@ -5,6 +5,7 @@ import {
   nudgeImageCrop,
   rotateImageCrop,
 } from "../../static-content/image/imageTransform.js";
+import { isContainedPackageImagePath } from "../../static-content/image/imageAssetValidation.js";
 
 const CROP_FIELDS = Object.freeze([
   ["x", "Crop x"],
@@ -16,6 +17,7 @@ const CROP_FIELDS = Object.freeze([
 export function ImageTransformEditor({
   source = {},
   sourceUrl = "",
+  containedPackagePath = false,
   sourceControls,
   onTransformChange,
   onReset,
@@ -60,7 +62,7 @@ export function ImageTransformEditor({
         style={previewVariables(transform)}
         aria-label="Image crop preview"
       >
-        {safePreviewSource(sourceUrl) ? (
+        {safePreviewSource(sourceUrl, containedPackagePath) ? (
           <img src={sourceUrl} alt="" aria-hidden="true" draggable="false" />
         ) : (
           <p>Choose an image to preview the crop.</p>
@@ -169,9 +171,11 @@ function previewVariables({ crop, rotation }) {
   };
 }
 
-function safePreviewSource(value) {
-  return typeof value === "string"
-    && /^(?:https:|blob:|data:image\/(?:png|jpeg|webp);base64,|\/|\.\/)/i.test(value.trim());
+function safePreviewSource(value, containedPackageAuthority = false) {
+  if (typeof value !== "string") return false;
+  const source = value.trim();
+  if (/^(?:https:|blob:|data:image\/(?:png|jpeg|webp);base64,|\/|\.\/)/i.test(source)) return true;
+  return containedPackageAuthority && isContainedPackageImagePath(source);
 }
 
 export default ImageTransformEditor;

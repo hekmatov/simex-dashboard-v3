@@ -54,3 +54,32 @@ test("a promoted package Image renders its contained bare relative path", async 
   assert.match(html, /<img[^>]+src="data\/authored\/[a-f0-9]{64}\.png"/);
   assert.doesNotMatch(html, /cannot be displayed/i);
 });
+
+test("the canonical Image renderer does not treat arbitrary bare relative strings as authority", async () => {
+  const vite = await createServer({
+    root: process.cwd(),
+    appType: "custom",
+    logLevel: "silent",
+    server: { middlewareMode: true },
+  });
+  const { default: ImageChartView } = await vite.ssrLoadModule(
+    "/src/components/charts/ImageChartView.jsx",
+  );
+  await vite.close();
+  const rejected = renderToStaticMarkup(React.createElement(ImageChartView, {
+    model: { src: "untrusted/path.png", alt: "No", fit: "contain" },
+    chart: { title: "Untrusted" },
+  }));
+  assert.doesNotMatch(rejected, /<img/);
+
+  const packageAuthorized = renderToStaticMarkup(React.createElement(ImageChartView, {
+    model: {
+      src: "assets/maps/briefing.png",
+      containedPackagePath: true,
+      alt: "Contained",
+      fit: "contain",
+    },
+    chart: { title: "Contained" },
+  }));
+  assert.match(packageAuthorized, /<img[^>]+src="assets\/maps\/briefing\.png"/);
+});

@@ -125,6 +125,21 @@ test("spoofing, corruption, decoded mismatch, APNG, and animated WebP have stabl
   assert.deepEqual(inspectImageAnimation(animatedWebp, "image/webp"), { animated: true, frameCount: null, kind: "animated-webp" });
 });
 
+test("JPEG validation requires EOI to be the terminal encoded bytes", async () => {
+  const jpeg = imageFixtureBytes("image/jpeg");
+  const appended = new Uint8Array(jpeg.byteLength + 4);
+  appended.set(jpeg);
+  appended.set([0x50, 0x41, 0x59, 0x4c], jpeg.byteLength);
+  const result = await validateImageAsset({
+    bytes: appended,
+    declaredMediaType: "image/jpeg",
+    decoded: DECODED("image/jpeg"),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0].code, "corrupt-image");
+  assert.match(result.errors[0].message, /terminal|trailing/i);
+});
+
 test("encoded, decoded, product-budget, and browser-quota limits stay distinguishable", async () => {
   const oversized = new Uint8Array(IMAGE_ASSET_LIMITS.maxBytes + 1);
   oversized.set(PNG.subarray(0, Math.min(PNG.length, oversized.length)));

@@ -330,6 +330,26 @@ test("the routed wizard uses a real form and keeps Preview & add free of Image a
   assert.doesNotMatch(previewHtml, /Reset image/);
 });
 
+test("guided Image crop preview renders a validated packaged path", () => {
+  const draft = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "page-a", sectionId: "section-a" },
+    contentTypeId: "image",
+    panel: { id: "image-panel", typeId: "image", title: "Response map", sourceId: "image-source" },
+    source: {
+      kind: "staticImage",
+      origin: { kind: "package", path: `data/authored/${"a".repeat(64)}.png` },
+      alt: "Response map",
+    },
+  });
+  const html = renderToStaticMarkup(React.createElement(wizardModule.StaticContentWizard, {
+    open: true,
+    dashboard: { pages: [{ id: "page-a", sections: [{ id: "section-a" }] }] },
+    initialDraft: draft,
+  }));
+  assert.match(html, /data-image-crop-preview[\s\S]*<img[^>]+src="data\/authored\/[a-f0-9]{64}\.png"/);
+});
+
 test("surface failure boundary exposes only the actions each surface owns", () => {
   assert.equal(typeof boundaryModule?.StaticContentStateBoundary, "function");
   const render = (surface) => renderToStaticMarkup(React.createElement(

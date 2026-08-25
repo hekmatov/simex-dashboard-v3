@@ -153,6 +153,7 @@ function readyImageModel(source, sourceId, url, intrinsic = null, lease = null) 
     width: positiveDimension(intrinsic?.width),
     height: positiveDimension(intrinsic?.height),
     networkDependent: source.origin.kind === "url",
+    containedPackagePath: source.origin.kind === "package",
     ...(typeof lease?.release === "function" ? { release: lease.release } : {}),
   };
 }

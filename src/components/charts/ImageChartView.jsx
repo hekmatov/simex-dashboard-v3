@@ -2,6 +2,7 @@ import React from "react";
 
 import { StaticContentStateBoundary } from "../static-content/StaticContentStateBoundary.jsx";
 import { titleContainerProps } from "./chartViewPresentation.js";
+import { isContainedPackageImagePath } from "../../static-content/image/imageAssetValidation.js";
 
 const MIN_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 3;
@@ -18,7 +19,7 @@ export default function ImageChartView({
   onReplace,
   onEdit,
 }) {
-  const src = safeImageSource(model?.src ?? model?.url);
+  const src = safeImageSource(model?.src ?? model?.url, model?.containedPackagePath === true);
   const active = interactionMode === "active" && zoomEnabled === true;
   const [loadState, setLoadState] = React.useState(src ? "loading" : "error");
   const trustedIntrinsic = safeIntrinsicSize(model);
@@ -299,12 +300,13 @@ function safeRotation(value) {
   return [0, 90, 180, 270].includes(value) ? value : 0;
 }
 
-function safeImageSource(value) {
+function safeImageSource(value, containedPackageAuthority = false) {
   if (typeof value !== "string" || !value.trim()) return null;
   const src = value.trim();
-  const containedPackagePath = /^(?:[a-z0-9][a-z0-9._-]*\/)+[a-z0-9][a-z0-9._-]*$/i.test(src);
-  return /^(?:https:|blob:|\/|\.\/|\.\.\/|data:image\/[a-z0-9.+-]+;base64,)/i.test(src)
-    || containedPackagePath
+  const generatedPackagePath = /^data\/authored\/[a-f0-9]{64}\.(?:png|jpe?g|webp)$/i.test(src);
+  return /^(?:https:|blob:|\/|\.\/|data:image\/[a-z0-9.+-]+;base64,)/i.test(src)
+    || generatedPackagePath
+    || (containedPackageAuthority && isContainedPackageImagePath(src))
     ? src
     : null;
 }

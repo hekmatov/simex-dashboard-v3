@@ -147,6 +147,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     dashboardMetadata: false,
   });
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
+  const [pendingStaticBuildSelection, setPendingStaticBuildSelection] = React.useState(null);
   const [buildRevealRequest, setBuildRevealRequest] = React.useState(null);
   const [buildTreeResetGeneration, setBuildTreeResetGeneration] = React.useState(0);
   const [buildSelectionError, setBuildSelectionError] = React.useState("");
@@ -253,6 +254,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const localAuthoringDirty = hasActiveLocalAuthoringDrafts(localAuthoringDrafts);
   const localAuthoringEditing = hasEditingLocalAuthoringDrafts(localAuthoringDrafts);
   const buildDraftLocked = Boolean(chartEditorDirty || staticContentDirty || localAuthoringEditing);
+  const selectedEditorDirty = Boolean(chartEditorDirty || staticContentDirty);
   const moderatorMutationLocked = moderatorOperation.kind !== null;
   const layoutDraftDirty = ["dirty", "saving", "error", "suspended"].includes(buildLayoutDraft?.status);
   const authoredDirty = hasUnsavedAuthoredContent({
@@ -1053,7 +1055,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (selection) void requestBuildSelection(selection, { intent: "activate" });
   }
 
-  function requestBuildSelection(nextSelection, { intent = "activate" } = {}) {
+  function requestBuildSelection(nextSelection, { intent = "activate", discardStaticDraft = false } = {}) {
     if (
       moderatorOperationGateRef.current.isActive()
       || !isValidBuildSelection(dashboardStateRef.current, nextSelection)
@@ -1061,10 +1063,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     const reactivatingCurrentChart = nextSelection.kind === "chart"
       && nextSelection.placementId === chartEditorPlacementId
       && intent === "activate";
-    if (
-      chartEditorDirty
-      && !reactivatingCurrentChart
-    ) {
+    if (selectedEditorDirty && !reactivatingCurrentChart && selectedPanelIsStatic && !discardStaticDraft) {
+      setPendingStaticBuildSelection({ selection: nextSelection, intent });
+      setChartEditorVisible(false);
+      return Promise.resolve(false);
+    }
+    if (chartEditorDirty && !reactivatingCurrentChart) {
       setBuildSelectionError("Finish or cancel the open chart editor before changing Page.");
       return Promise.resolve(false);
     }
@@ -1078,6 +1082,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       setChartEditorPlacementId(null);
       setChartEditBaseline(null);
       setChartEditorDirty(false);
+      setStaticContentDraft(null);
+      setStaticContentDirty(false);
     }
     if (nextSelection.kind === "chronoGroup") {
       setBuildSelection(nextSelection);
@@ -1176,6 +1182,15 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (!activePage || !section) return;
     setChartWizardTarget({ pageId: activePage.id, sectionId: section.id });
     setChartWizardSuspended(false);
+  }
+
+  function discardStaticDraftAndSelect() {
+    const pending = pendingStaticBuildSelection;
+    if (!pending) return;
+    setPendingStaticBuildSelection(null);
+    setStaticContentDraft(null);
+    setStaticContentDirty(false);
+    void requestBuildSelection(pending.selection, { ...pending, discardStaticDraft: true });
   }
 
   function openStaticContentWizard(sectionId) {
@@ -1381,7 +1396,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       panel={selectedPanel}
       source={workingDashboard.dataSources?.[selectedPanel.sourceId]}
       assets={workingDashboard.assets ?? {}}
+      initialDraft={staticContentDraft}
       disabled={moderatorMutationLocked}
+      onDraftChange={setStaticContentDraft}
       onDirtyChange={setStaticContentDirty}
       onSave={async ({ panel, source, assets }) => {
         await pendingEdits.flush();
@@ -1396,6 +1413,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         await onStaticPanelCommit(prepared);
         setChartEditorVisible(false);
         setChartEditorPlacementId(null);
+        setStaticContentDraft(null);
         setStaticContentDirty(false);
       }}
       onCancel={cancelSelectedPanel}
@@ -1441,7 +1459,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       onCloseChartEditor={dismissSelectedPanel}
       onResumeChartEditor={() => setChartEditorVisible(Boolean(chartEditorPlacementId))}
       chartDraftOpen={chartAuthoringActive}
-      chartDraftDirty={chartEditorDirty}
+      chartDraftDirty={selectedEditorDirty}
       mutationsDisabled={moderatorMutationLocked}
       deviceLayout={deviceLayout}
       focusLabelKey={focusInspectorLabelKey}
@@ -1611,6 +1629,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           onImportConfig(event.target.files?.[0]);
           event.target.value = "";
         }}
+      />
+      <ConfirmDialog
+        open={pendingStaticBuildSelection !== null}
+        title="Discard static content changes?"
+        message="Your unsaved static content changes last only for this application session."
+        cancelLabel="Keep editing"
+        confirmLabel="Discard"
+        onCancel={() => {
+          setPendingStaticBuildSelection(null);
+          setChartEditorVisible(true);
+        }}
+        onConfirm={discardStaticDraftAndSelect}
       />
       <ConfirmDialog
         open={packageImportConfirmation}
