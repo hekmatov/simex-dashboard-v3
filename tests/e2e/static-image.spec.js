@@ -535,8 +535,17 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   await panel.scrollIntoViewIfNeeded();
   await openImageEditor(panel, page, "Dirty selection image");
   const editor = page.getByRole("dialog", { name: "Edit static content" });
-  await editor.getByLabel("Image origin").selectOption("url");
-  await editor.getByLabel("HTTPS image URL").fill("https://example.test/dirty-selection.png");
+  await installObjectUrlRevocationObserver(page);
+  await editor.locator("#static-image-file").setInputFiles({
+    name: "dirty-local-replacement.png",
+    mimeType: "image/png",
+    buffer: REPLACEMENT_PNG,
+  });
+  await expect(editor.getByText(/dirty-local-replacement\.png is ready/)).toBeVisible();
+  const stagedInventory = await sessionAssetInventory(page);
+  expect(stagedInventory).toHaveLength(1);
+  expect(stagedInventory[0].id).not.toBe(savedBefore.source.origin.assetId);
+  expect(stagedInventory[0].url).toMatch(/^(?:blob:|data:image\/png)/);
   await editor.getByLabel("Alternative text").fill("Complete retained draft");
   await editor.getByLabel("Crop x").fill("120");
   await editor.getByLabel("Crop y").fill("80");
@@ -545,7 +554,7 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   await editor.getByRole("button", { name: "Rotate right" }).click();
   await editor.getByLabel("Fit", { exact: true }).selectOption("cover");
   const retainedDraft = {
-    url: await editor.getByLabel("HTTPS image URL").inputValue(),
+    assetId: stagedInventory[0].id,
     alt: await editor.getByLabel("Alternative text").inputValue(),
     cropX: await editor.getByLabel("Crop x").inputValue(),
     cropY: await editor.getByLabel("Crop y").inputValue(),
@@ -578,7 +587,7 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   expect(await activateTreeItem("Confirmed cases")).toBe(true);
   let confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
   await confirmation.getByRole("button", { name: "Keep editing" }).click();
-  await expect(editor.getByLabel("HTTPS image URL")).toHaveValue(retainedDraft.url);
+  expect(await sessionAssetInventory(page)).toEqual(stagedInventory);
   await expect(editor.getByLabel("Alternative text")).toHaveValue(retainedDraft.alt);
   await expect(editor.getByLabel("Crop x")).toHaveValue(retainedDraft.cropX);
   await expect(editor.getByLabel("Crop y")).toHaveValue(retainedDraft.cropY);
@@ -591,6 +600,8 @@ test("dirty static selection keeps the complete draft until explicit Discard", a
   confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
   await confirmation.getByRole("button", { name: "Discard" }).click();
   await expect(editor).toHaveCount(0);
+  await expect.poll(() => sessionAssetInventory(page)).toEqual([]);
+  await expect.poll(() => revokedObjectUrls(page)).toContain(stagedInventory[0].url);
   const savedAfter = await readSavedImage(page, "Dirty selection image");
   expect(savedAfter.source).toEqual(savedBefore.source);
 });
@@ -848,6 +859,32 @@ async function sessionAssetIds(page) {
       .find((symbol) => Symbol.keyFor(symbol) === "simex.session-image-assets");
     return sessionKey ? [...globalThis[sessionKey].keys()].sort() : [];
   });
+}
+
+async function sessionAssetInventory(page) {
+  return page.evaluate(() => {
+    const sessionKey = Object.getOwnPropertySymbols(globalThis)
+      .find((symbol) => Symbol.keyFor(symbol) === "simex.session-image-assets");
+    const registry = sessionKey ? globalThis[sessionKey] : null;
+    return registry instanceof Map
+      ? [...registry.entries()].map(([id, entry]) => ({ id, url: entry.url }))
+      : [];
+  });
+}
+
+async function installObjectUrlRevocationObserver(page) {
+  await page.evaluate(() => {
+    globalThis.__simexRevokedObjectUrls = [];
+    const original = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url) => {
+      globalThis.__simexRevokedObjectUrls.push(url);
+      return original(url);
+    };
+  });
+}
+
+async function revokedObjectUrls(page) {
+  return page.evaluate(() => [...(globalThis.__simexRevokedObjectUrls ?? [])]);
 }
 
 async function readSavedImage(page, title) {

@@ -307,8 +307,8 @@ function resolveImageDraftUrl(source) {
   return "";
 }
 
-function cleanupImageDraftAssets(draft, dashboard, committed = null) {
-  if (draft.contentTypeId !== "image") return;
+export function cleanupImageDraftAssets(draft, dashboard, committed = null) {
+  if (draft?.contentTypeId !== "image") return;
   const retained = new Set();
   const replacementSourceId = committed?.panel?.sourceId;
   for (const [sourceId, source] of Object.entries(dashboard?.dataSources ?? {})) {

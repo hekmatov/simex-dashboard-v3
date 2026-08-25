@@ -3,7 +3,7 @@
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
-import StaticContentWizard from "./static-content/StaticContentWizard.jsx";
+import StaticContentWizard, { cleanupImageDraftAssets } from "./static-content/StaticContentWizard.jsx";
 import BuildWorkspace from "./build/BuildWorkspace.jsx";
 import DashboardPackageExportDialog from "./build/DashboardPackageExportDialog.jsx";
 import DeleteDashboardContentDialog from "./build/DeleteDashboardContentDialog.jsx";
@@ -1187,6 +1187,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function discardStaticDraftAndSelect() {
     const pending = pendingStaticBuildSelection;
     if (!pending) return;
+    cleanupImageDraftAssets(staticContentDraft, dashboardStateRef.current);
     setPendingStaticBuildSelection(null);
     setStaticContentDraft(null);
     setStaticContentDirty(false);
