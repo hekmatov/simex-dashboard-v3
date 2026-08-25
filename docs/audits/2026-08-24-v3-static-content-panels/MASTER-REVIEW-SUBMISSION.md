@@ -22,6 +22,8 @@ Master review is requested for:
 
 No implementation planning is authorized. After master review resolves the written conflicts/deviations, the user must approve the resulting written amendment before ownership reconciliation or planning begins.
 
+The user has approved the GeoJSON limit-calibration method, not numeric caps. After written amendment approval and before the final implementation plan or any GeoJSON production task/test, a bounded disposable spike must calibrate warning and hard resource/nesting limits from the four legitimate project files plus independent fixture ladders and actual Chromium measurements. It publishes `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md` for master review. The result returns to the user only if it excludes a legitimate intended dataset or creates a material UX tradeoff; otherwise it is a technical guardrail. No guessed numeric limit may enter a production task or test.
+
 ### Subsequent user sketch-review amendments
 
 On 2026-08-24 the user interactively reviewed all four sketches and selected **021=A, 022=B, 023=A, 024=A**. For 023 A, Image actions must be hidden at rest and reveal on pointer hover, keyboard focus within, or explicit touch/tap; Audience remains control-free. These accepted amendments supersede only the affected sketch winner/presentation details and are synchronized into the specification, decision record, fidelity matrix, implementation ledger, manifest, and disposable prototypes. They do not authorize implementation.

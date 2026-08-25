@@ -168,9 +168,50 @@ Dependency detail shows **Page › Section › Panel** for saved direct panel us
 - Malformed, empty, or unsupported GeoJSON; validation/limit failure; removal of an explicitly selected join property; or a candidate that makes a directly dependent map structurally unusable hard-blocks replacement.
 - Changed feature count, bounding box, geometry-type mix, or reduced-but-nonzero identifier/join coverage warns but may be confirmed. GeoJSON changes do not themselves create Chrono Group, Scene, or presentation-composition temporal warnings.
 - A structurally incompatible replacement makes no change and offers **Import as new source** plus guided remapping.
-- GeoJSON upload safety requires explicit byte, feature-count, and coordinate-complexity limits owned by one validation authority. Current evidence does not justify exact numeric thresholds in this design record; those numbers are a mandatory planning decision that must be resolved before implementation tasks and tests are written, not an implementer choice.
+- GeoJSON upload safety requires the warning and hard-cap limits established by the pre-implementation calibration gate below and owned by one validation authority. No production task or test may encode guessed numeric values.
 
 Media, CSV, and GeoJSON replacement, rollback, staged cleanup, dashboard persistence, and reference reconciliation are one transaction. No partial content-library/source/profile/payload publication is permitted.
+
+## GeoJSON limit-calibration gate
+
+The user is not expected to select numeric GeoJSON limits. After written amendment approval but before final implementation tasks or tests are written, the project must run one bounded disposable GeoJSON limit-calibration spike. The spike is planning evidence, not production implementation, and must not modify production source, production tests, manifests, dependencies, or generated catalogues.
+
+The current four legitimate project GeoJSON files—`gemeente_2020.geojson`, `gemeente_2021.geojson`, `gemeente_2026.geojson`, and `netherlands-provinces.geojson`—provide this verified baseline:
+
+| Baseline fact | Verified value | File |
+|---|---:|---|
+| Largest encoded file | 193,816 bytes | `gemeente_2021.geojson` |
+| Maximum features | 355 | `gemeente_2020.geojson` |
+| Maximum total coordinate positions | approximately 6,630 | `gemeente_2021.geojson` |
+| Maximum positions in one feature | 196 | `netherlands-provinces.geojson` |
+
+The corpus contains shallow Polygon/MultiPolygon geometry with flat properties. It is sufficient to protect current legitimate fixtures but insufficient by itself to set warning or hard caps.
+
+Disposable fixture ladders must vary these dimensions independently so one dimension does not conceal another:
+
+- encoded bytes;
+- feature count;
+- total geometry/coordinate-position count;
+- positions concentrated in one feature;
+- parts and rings;
+- property-key count and property-value volume;
+- nesting and GeometryCollection depth;
+- accepted geometry types;
+- concurrent active maps.
+
+The spike must exercise actual Chromium journeys for upload/read, parse/validation/summary, manager map preview, replacement compatibility, persistence/reload, map registration/render, pan/zoom/resize, and package export/import. It uses Build at 1440×900 and 1024×768 plus one pinned constrained Chromium device/CPU-memory profile recorded with the evidence.
+
+For each phase and fixture step, record median and p95 latency, main-thread long tasks, time to first usable preview/map, interaction responsiveness, memory and serialized footprint, and rollback behavior. Select separate warning and hard-cap thresholds from observed performance or memory knees, with margin above every legitimate project fixture. Encoded bytes alone are never sufficient.
+
+Join compatibility and identifier coverage remain replacement outcomes, not resource-size limits. The limit checker must itself be bounded against adversarial nesting and coordinate complexity so determining whether input is safe cannot become the denial-of-service path.
+
+Final limits are centralized in one validation authority and published with rationale, corpus facts, fixture generators, environment, measurements, knees, margins, and rollback evidence in `docs/audits/2026-08-24-v3-static-content-panels/GEOJSON-LIMITS-DECISION.md`:
+
+- below the warning threshold: accept normally;
+- from warning through the safe pre-cap range: warn and allow only where the measured path remains safe;
+- above a hard resource or nesting cap: reject before commit.
+
+The master reviews this technical guardrail. The calibration result returns to the user only if it would exclude a legitimate intended dataset or creates a material UX tradeoff; otherwise the user is not asked to choose the numbers. The approved limits decision is a prerequisite to the final implementation plan. No GeoJSON production task or test may be written with guessed values.
 
 ## Source Content Manager
 
@@ -329,13 +370,15 @@ Planned journeys cannot collapse into label checks or broad smoke tests. Browser
 
 Completion submission must separately report engine implemented, UI implemented, and fidelity verified. No proposed row may be promoted while missing, partial, or wired only to a model/test harness.
 
-## Approval gate
+## Approval and calibration gate
 
 This document records the user-approved architectural direction, not approval of the written amendment and not implementation authorization.
 
-Before any implementation plan:
+No implementation plan is authorized by this amendment record. Before a final implementation plan:
 
 1. V3 Design master reviews this specification and the proposed fidelity/security/deviation records.
 2. Exact conflicts and deviations are accepted, revised, or rejected.
 3. The user approves the resulting written amendment.
-4. Only then may ownership reconciliation and implementation planning begin.
+4. Only then may the bounded disposable GeoJSON calibration spike and ownership reconciliation run as non-production inputs; the spike produces the GeoJSON limits decision record.
+5. The master reviews the calibrated technical guardrail, returning it to the user only for a legitimate-dataset exclusion or material UX tradeoff.
+6. The final implementation plan may begin only after the calibrated guardrail and ownership reconciliation both pass. No GeoJSON production task or test may pre-encode guessed limits.
