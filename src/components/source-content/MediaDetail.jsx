@@ -1,5 +1,6 @@
 import React from "react";
 import { commitMediaReplacement, prepareMediaReplacement } from "../../content-library/contentReplacementTransaction.js";
+import { contentHealthMessage } from "../../content-library/contentHealth.js";
 import { browserAuthoredAssetStore } from "../../static-content/assets/browserAuthoredAssetRuntime.js";
 import { discardSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
 import DependencyList from "./DependencyList.jsx";
@@ -23,6 +24,7 @@ export default function MediaDetail({
   const [replacementBusy, setReplacementBusy] = React.useState(false);
   const [replacementError, setReplacementError] = React.useState("");
   const [replacementStatus, setReplacementStatus] = React.useState("");
+  const requiresRepair = ["missing", "corrupt", "needs-relink", "needs-review"].includes(item.record.health);
   const mountedRef = React.useRef(false);
   const prepareGenerationRef = React.useRef(0);
   const replacementPlanRef = React.useRef(null);
@@ -139,8 +141,9 @@ export default function MediaDetail({
           {item.record.byteLength && <div><dt>Encoded size</dt><dd>{item.record.byteLength} bytes</dd></div>}
           <div><dt>Portability</dt><dd>{item.record.current.kind === "url" ? "Network required" : "Portable"}</dd></div>
         </dl>
+        {requiresRepair && <p role="status">{contentHealthMessage(item.record.health)}</p>}
         <p className="source-content-placeholder">Media preview is added with the media management flow.</p>
-        <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementStatus(""); setReplaceOpen(true); }}>Replace library file everywhere</button>
+        <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementStatus(""); setReplaceOpen(true); }}>{requiresRepair ? "Repair media" : "Replace library file everywhere"}</button>
         {replacementStatus && <p role="status">{replacementStatus}</p>}
         {item.record.current.kind === "url" && item.record.origin === "external" && (
           <ManagerMediaIntake

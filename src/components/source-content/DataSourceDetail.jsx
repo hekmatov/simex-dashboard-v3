@@ -28,6 +28,10 @@ export default function DataSourceDetail({
   const [importedSourceLabel, setImportedSourceLabel] = React.useState("");
   const [importedRemapTargets, setImportedRemapTargets] = React.useState([]);
   const isGeoJson = item.kind === "geojson";
+  const requiresRepair = ["missing", "corrupt", "needs-relink", "needs-review"].includes(item.record.health);
+  const repairLabel = item.record.origin === "linked-project" || item.record.health === "needs-relink"
+    ? "Relink"
+    : requiresRepair ? "Repair source" : "Replace file";
   const replacementPlanRef = React.useRef(null);
   const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard });
   lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard };
@@ -136,9 +140,9 @@ export default function DataSourceDetail({
           item={item}
           source={dashboard.dataSources?.[item.id]}
           geoData={geoData ?? dashboard.loadedData?.[item.id]}
-          action={<button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{item.record.origin === "linked-project" ? "Relink" : "Replace file"}</button>}
+          action={<button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{repairLabel}</button>}
         />}
-      {item.kind === "csv" && <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{item.record.origin === "linked-project" ? "Relink" : "Replace file"}</button>}
+      {item.kind === "csv" && <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{repairLabel}</button>}
       <RenameSource item={item} onRename={onRename} />
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
       <ContentActionDialog

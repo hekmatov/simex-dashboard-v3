@@ -123,9 +123,16 @@ function MediaImage({ src, mediaItem, safeAttributes, decorative }) {
 }
 
 function Fallback({ mediaItem }) {
+  const message = mediaItem?.health === "needs-relink"
+    ? " needs relinking in Build."
+    : mediaItem?.health === "needs-review"
+    ? " needs review in Build."
+    : mediaItem?.health === "corrupt"
+    ? " is corrupt and needs repair in Build."
+    : " is unavailable and needs repair in Build.";
   return <span className="qmd-media-view__fallback" role="status">
     <strong>{mediaItem?.displayName || "Embedded image"}</strong>
-    <span> is unavailable.</span>
+    <span>{message}</span>
   </span>;
 }
 

@@ -215,6 +215,8 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Task 14 final review: APPROVED. SCM-S16/R10/R11 Passing; GeoJSON replacement branch of SCM-C08 Passing and overall row now complete for replacement/relink behaviors. Task 14 complete at `748b9d685025feb360c04d15a80b8460f8393a35`.
 - Proportional-execution ruling for Tasks 15–17: one short owner/fixture preflight; nearest implementation tests; one final task-specific deterministic selection; browser only after GREEN; isolate fixture after two setup failures; one scoped review; no optional closure commits/evidence infrastructure; Task 17 verification-only.
 - Task 15: BASE `748b9d685025feb360c04d15a80b8460f8393a35`; brief `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/task-15-brief.md`; fresh implementer owns V5 persistence/package/offline portability and Journey G.
+- Task 15 final affected-boundary review: APPROVED at `fd4d5499f7bfacafc6a70a318c11d3ca80641758`; the task is closed with the existing PS-04 pre-merge residual and no separate closure commit.
+- Task 16: BASE `fd4d5499f7bfacafc6a70a318c11d3ca80641758`; typed health/recovery and cleanup implementation in progress under `task-16-brief.md`.
 
 ## Task 15 implementation candidate
 

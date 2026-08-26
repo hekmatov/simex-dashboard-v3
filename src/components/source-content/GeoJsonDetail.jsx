@@ -10,7 +10,11 @@ export default function GeoJsonDetail({ item, source, geoData, summary: supplied
   const [propertyLimit, setPropertyLimit] = React.useState(PROPERTY_PAGE_SIZE);
   const validation = React.useMemo(() => suppliedSummary ? null : validateGeoJson(geoData), [geoData, suppliedSummary]);
   const summary = suppliedSummary ?? validation?.summary ?? null;
-  if (!summary) return <p role="status">GeoJSON summary is unavailable. Repair this source to restore its preview.</p>;
+  if (!summary) return <section aria-labelledby="geojson-detail-heading">
+    <h3 id="geojson-detail-heading">GeoJSON details</h3>
+    <p role="status">GeoJSON summary is unavailable. Repair this source to restore its preview.</p>
+    {action}
+  </section>;
   const matchingKeys = summary.propertyKeys.filter((key) => key.toLocaleLowerCase().includes(propertyQuery.trim().toLocaleLowerCase()));
   const displayedKeys = matchingKeys.slice(0, propertyLimit);
   const geometry = Object.entries(summary.geometryTypeCounts).map(([type, count]) => `${type} ${count}`).join(", ");

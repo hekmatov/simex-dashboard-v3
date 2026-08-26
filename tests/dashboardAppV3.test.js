@@ -121,7 +121,10 @@ test("App owns one scoped content coordinator and transports only its wrappers t
   const staticWizard = await source("src/components/static-content/StaticContentWizard.jsx");
 
   assert.match(app, /createContentDraftCoordinator/);
-  assert.match(app, /contentDraftCoordinator\.dispose/);
+  assert.match(app, /createDeferredCoordinatorDisposal/);
+  assert.match(app, /contentDraftCoordinatorDisposalRef\.current\.retain\(contentDraftCoordinator\)/);
+  assert.match(app, /contentDraftCoordinator\.subscribe\(\(activeRetainers\)/);
+  assert.match(app, /reconcileSavedAuthoredAssets\(current, activeRetainers\)/);
   assert.match(app, /<DashboardRenderer[\s\S]*contentDraftCoordinator=/);
   assert.match(renderer, /onContentDraftStage[\s\S]*stageDraft/);
   assert.match(renderer, /onContentDraftCommit[\s\S]*commitDraft/);

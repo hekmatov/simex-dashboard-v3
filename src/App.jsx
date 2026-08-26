@@ -266,6 +266,11 @@ export default function App() {
     [contentDraftCoordinator],
   );
 
+  React.useEffect(() => contentDraftCoordinator.subscribe((activeRetainers) => {
+    const current = dashboardRef.current;
+    if (current) void reconcileSavedAuthoredAssets(current, activeRetainers);
+  }), [contentDraftCoordinator]);
+
   React.useEffect(() => {
     if (!lookPersistenceFlash) return undefined;
     const timerId = window.setTimeout(() => setLookPersistenceFlash(""), 4500);
