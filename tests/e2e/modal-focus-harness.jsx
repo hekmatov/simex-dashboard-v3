@@ -141,6 +141,11 @@ function Harness() {
     ),
     React.createElement(ChartWizardV3, {
       open: wizardOpen,
+      destination: {
+        pageId: "overview",
+        sectionId: "response",
+        relation: "append",
+      },
       dataSources: {},
       loadedData: {},
       chronoGroups: [],

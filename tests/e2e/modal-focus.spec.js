@@ -3,21 +3,24 @@ import { expect, test } from "@playwright/test";
 const HARNESS_URL =
   "http://127.0.0.1:4175/tests/e2e/modal-focus-harness.html";
 
-test("wizard traps both Tab directions and Escape opens the discard lifecycle", async ({
+test("wizard traps both Tab directions and explicit discard restores its trigger", async ({
   page,
 }) => {
   await page.goto(HARNESS_URL);
   const trigger = page.getByRole("button", { name: "Open chart wizard" });
   await trigger.click();
+  const initialWizard = page.getByRole("dialog", { name: "Add new chart" });
+  await initialWizard.getByRole("gridcell", {
+    name: "Set chart size to 3 columns by 2 rows",
+  }).click();
+  await initialWizard.getByRole("button", { name: "Next step", exact: true }).click();
 
-  const wizard = page.getByRole("dialog", {
-    name: "Choose the chart format",
-  });
+  const wizard = page.getByRole("dialog", { name: "Add new chart" });
   await expect(wizard).toBeVisible();
+  await expect(wizard.getByRole("heading", { name: "Choose a chart type" })).toBeVisible();
   await expect(
-    wizard.getByRole("button", { name: "Chart type", exact: true }),
+    wizard.getByRole("button", { name: /^Chart type\./ }),
   ).toBeFocused();
-
   const enabledButtons = wizard.locator("button:not([disabled])");
   const first = enabledButtons.first();
   const last = enabledButtons.last();
@@ -35,12 +38,9 @@ test("wizard traps both Tab directions and Escape opens the discard lifecycle", 
   await expect.poll(() => activeElementIsInside(page, wizard)).toBe(true);
   expect((await modalSnapshot(page)).backgroundActivations).toBe(0);
 
-  const selectedStep = wizard.getByRole("button", {
-    name: "Chart type",
-    exact: true,
-  });
-  await selectedStep.focus();
-  await page.keyboard.press("Escape");
+  const discardTrigger = wizard.getByRole("button", { name: "Discard chart draft" });
+  await discardTrigger.focus();
+  await discardTrigger.evaluate((button) => button.click());
   const discard = page.getByRole("dialog", { name: "Discard chart?" });
   await expect(discard).toBeVisible();
   await expect(
@@ -52,9 +52,9 @@ test("wizard traps both Tab directions and Escape opens the discard lifecycle", 
 
   await page.keyboard.press("Escape");
   await expect(discard).toHaveCount(0);
-  await expect(selectedStep).toBeFocused();
+  await expect(discardTrigger).toBeFocused();
 
-  await wizard.getByRole("button", { name: "Close" }).click();
+  await discardTrigger.evaluate((button) => button.click());
   await expect(discard).toBeVisible();
   await discard.getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
@@ -117,21 +117,23 @@ test("reopened wizard focuses the reset selected step rather than stale state", 
   await page.goto(HARNESS_URL);
   const trigger = page.getByRole("button", { name: "Open chart wizard" });
   await trigger.click();
-  let wizard = page.locator(".chart-wizard-backdrop[role=\"dialog\"]");
-  await wizard.getByRole("button", { name: "Data roles" }).click();
-  await expect(wizard).toHaveAccessibleName(
-    "Tell the chart what each column means",
-  );
-  await wizard.getByRole("button", { name: "Close" }).click();
+  let wizard = page.getByRole("dialog", { name: "Add new chart" });
+  await wizard.getByRole("gridcell", {
+    name: "Set chart size to 3 columns by 2 rows",
+  }).click();
+  await wizard.getByRole("button", { name: "Next step", exact: true }).click();
+  await expect(wizard.getByRole("heading", { name: "Choose a chart type" })).toBeVisible();
+  await wizard.getByRole("button", { name: "Discard chart draft" })
+    .evaluate((button) => button.click());
   await page.getByRole("dialog", { name: "Discard chart?" })
     .getByRole("button", { name: "Discard" })
     .click();
   await expect(wizard).toHaveCount(0);
 
   await trigger.click();
-  wizard = page.locator(".chart-wizard-backdrop[role=\"dialog\"]");
+  wizard = page.getByRole("dialog", { name: "Add new chart" });
   await expect(
-    wizard.getByRole("button", { name: "Chart type", exact: true }),
+    wizard.getByRole("button", { name: /^Destination\./ }),
   ).toBeFocused();
 });
 

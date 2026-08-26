@@ -429,6 +429,16 @@ export default function ChartWizardV3({
   React.useEffect(() => {
     if (!open) return;
     setWizard((current) => {
+      if (current.closed) {
+        return createChartWizardState({
+          loadedData: safeLoadedData,
+          profiles: safeDatasetProfiles,
+          chronoGroups: safeGroups,
+          existingCharts: safeExistingCharts,
+          destination,
+          dashboardRevision,
+        });
+      }
       const resumed = current.suspension
         ? reduceWizardState(current, { type: "resume" })
         : current;
