@@ -23,7 +23,10 @@ test("a pending header edit and immediate chart save commit in order", async ({
   page,
 }) => {
   await page.getByRole("button", { name: "Build" }).click();
-  await page.getByLabel("Program label").fill("Race-safe exercise");
+  const map = await openBiomedicalPageInspector(page);
+  await map.getByLabel("Page title", { exact: true })
+    .fill("Race-safe exercise");
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
   await page.getByRole("button", { name: "Edit chart" }).first().click();
   await page.getByRole("button", {
     name: "Appearance",
@@ -34,17 +37,16 @@ test("a pending header edit and immediate chart save commit in order", async ({
 
   await expect.poll(() => page.evaluate((key) => {
     const config = JSON.parse(localStorage.getItem(key));
-    const charts = config.pages.flatMap(({ sections }) => (
-      sections.flatMap(({ panels }) => panels)
-    ));
+    const biomedical = config.pages.find(({ id }) => id === "biomedical");
+    const charts = biomedical.sections.flatMap(({ panels }) => panels);
     return {
-      programLabel: config.programLabel,
+      pageTitle: biomedical.title,
       chartSaved: charts.some(({ title }) => (
         title === "Race-safe chart title"
       )),
     };
   }, STORAGE_KEY)).toEqual({
-    programLabel: "Race-safe exercise",
+    pageTitle: "Race-safe exercise",
     chartSaved: true,
   });
 });
@@ -52,20 +54,37 @@ test("a pending header edit and immediate chart save commit in order", async ({
 test("reset cancels a pending header callback so it cannot reappear", async ({
   page,
 }) => {
-  const baseline = await page.locator(".dashboard-brand-block .eyebrow")
-    .textContent();
   await page.getByRole("button", { name: "Build" }).click();
-  await page.getByLabel("Program label").fill("Must never reappear");
-  await page.getByRole("button", { name: "Reset edits" }).click();
+  const map = await openBiomedicalPageInspector(page);
+  const baselineHeading = (await page.locator(".dashboard-brand-block h1")
+    .textContent()).trim();
+  await map.getByLabel("Page title", { exact: true })
+    .fill("Must never reappear");
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard these edits?" })
-    .getByRole("button", { name: "Reset edits" })
+    .getByRole("button", { name: "Reset", exact: true })
     .click();
   await page.waitForTimeout(800);
 
-  await expect(page.locator(".dashboard-brand-block .eyebrow")).toHaveText(
-    baseline.trim(),
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText(
+    baselineHeading,
   );
-  await expect.poll(() => page.evaluate((key) => (
-    JSON.parse(localStorage.getItem(key)).programLabel
-  ), STORAGE_KEY)).toBe(baseline.trim());
+  await expect.poll(() => storedBiomedicalTitle(page)).toBe(
+    baselineHeading,
+  );
 });
+
+async function openBiomedicalPageInspector(page) {
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  return map;
+}
+
+function storedBiomedicalTitle(page) {
+  return page.evaluate((key) => {
+    const config = JSON.parse(localStorage.getItem(key));
+    return config.pages.find(({ id }) => id === "biomedical").title;
+  }, STORAGE_KEY);
+}
