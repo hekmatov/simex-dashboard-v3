@@ -132,6 +132,49 @@ test("annotation owns exact original spans across inert code, angle destinations
   assert.equal(parsed.ast.mediaNodes[0].sourceStart > source.indexOf(inert), true);
 });
 
+test("canonical image tokens own distinct raw spans for reference and inline local images", () => {
+  const reference = '![Reference map][stored]{width=25% align=start flow=block frame=none decorative=false}';
+  const firstInline = '![Inline map](simex-media:inline){width=33% align=center flow=block frame=outline decorative=false}';
+  const secondInline = '![Inline map](simex-media:inline){width=66% align=end flow=wrap-start frame=card decorative=false}';
+  const unresolved = '![Unresolved][absent]';
+  const unsafe = '![Unsafe][remote]';
+  const source = [
+    reference,
+    firstInline,
+    secondInline,
+    unresolved,
+    unsafe,
+    "[stored]: simex-media:stored",
+    "[remote]: https://example.test/remote.png",
+  ].join("\n\n");
+  const parsed = parsePortableQmdWithMedia(source);
+
+  assert.deepEqual(parsed.ast.mediaNodes.map(({ mediaId, sourceText, sourceStart, sourceEnd }) => ({
+    mediaId,
+    sourceText,
+    sourceStart,
+    sourceEnd,
+    exactSlice: source.slice(sourceStart, sourceEnd),
+  })), [
+    { mediaId: "stored", sourceText: reference, sourceStart: 0, sourceEnd: reference.length, exactSlice: reference },
+    {
+      mediaId: "inline",
+      sourceText: firstInline,
+      sourceStart: reference.length + 2,
+      sourceEnd: reference.length + 2 + firstInline.length,
+      exactSlice: firstInline,
+    },
+    {
+      mediaId: "inline",
+      sourceText: secondInline,
+      sourceStart: reference.length + 4 + firstInline.length,
+      sourceEnd: reference.length + 4 + firstInline.length + secondInline.length,
+      exactSlice: secondInline,
+    },
+  ]);
+  assert.equal(parsed.ast.mediaNodes.some((node) => node.mediaId === "remote" || node.mediaId === "absent"), false);
+});
+
 test("annotation extends the parser-owned image span through one validated immediate suffix only", () => {
   const placement = '![Map](simex-media:map){width=50% align=center flow=block frame=none decorative=false}';
   const source = `${placement}{width=25%} tail`;

@@ -11,6 +11,7 @@ const parser = new MarkdownIt({
   typographer: false,
   breaks: false,
 });
+parser.use(portableImageSourceOffsetsPlugin);
 parser.use(portableCalloutPlugin);
 parser.use(portableMathPlugin);
 parser.use(portableFootnotePlugin);
@@ -36,10 +37,12 @@ export function parsePortableQmd(source) {
   const extracted = extractFootnotes(source);
   const env = { footnoteDefinitions: extracted.footnotes };
   const tokens = parser.parse(extracted.source, env);
-  const footnotes = extracted.footnotes.map((footnote) => ({
-    ...footnote,
-    tokens: parser.parseInline(footnote.content, env),
-  }));
+  annotateInlineImageSourceOffsets(tokens, source);
+  const footnotes = extracted.footnotes.map((footnote) => {
+    const footnoteTokens = parser.parseInline(footnote.content, env);
+    annotateInlineImageSourceOffsets(footnoteTokens, source, footnote.sourceStart);
+    return { ...footnote, tokens: footnoteTokens };
+  });
   const ast = Object.freeze({
     type: "root",
     policy: PORTABLE_QMD_POLICY.id,
@@ -56,6 +59,95 @@ export function parsePortableQmd(source) {
     stats: Object.freeze({ sourceBytes, ...validation.stats }),
   });
 }
+
+function portableImageSourceOffsetsPlugin(md) {
+  const ruleIndex = md.inline.ruler.__find__("image");
+  const canonicalImageRule = md.inline.ruler.__rules__[ruleIndex]?.fn;
+  if (typeof canonicalImageRule !== "function") throw new Error("Markdown image parser rule is unavailable.");
+  md.inline.ruler.at("image", (state, silent) => {
+    const sourceStart = state.pos;
+    const accepted = canonicalImageRule(state, silent);
+    if (!accepted || silent) return accepted;
+    const token = state.tokens[state.tokens.length - 1];
+    if (token?.type === "image") {
+      token.meta = {
+        ...(token.meta ?? {}),
+        portableImageInlineStart: sourceStart,
+        portableImageInlineEnd: state.pos,
+      };
+    }
+    return accepted;
+  });
+}
+
+function annotateInlineImageSourceOffsets(tokens, source, fixedSourceStart = null) {
+  const lineOffsets = sourceLineOffsets(source);
+  const rangeCursors = new Map();
+  for (const token of tokens) {
+    if (token.type !== "inline" || !Array.isArray(token.children)) continue;
+    const segments = Number.isInteger(fixedSourceStart)
+      ? [{ inlineStart: 0, sourceStart: fixedSourceStart }]
+      : inlineSourceSegments(token, source, lineOffsets, rangeCursors);
+    token.meta = { ...(token.meta ?? {}), portableInlineSourceSegments: segments };
+    for (const child of token.children) {
+      if (child.type !== "image") continue;
+      const relativeStart = child.meta?.portableImageInlineStart;
+      const relativeEnd = child.meta?.portableImageInlineEnd;
+      const sourceStart = projectInlineOffset(relativeStart, segments);
+      const sourceEnd = projectInlineOffset(relativeEnd, segments);
+      child.meta = {
+        ...(child.meta ?? {}),
+        portableImageSourceStart: sourceStart,
+        portableImageSourceEnd: sourceEnd,
+      };
+    }
+  }
+}
+
+function inlineSourceSegments(token, source, lineOffsets, rangeCursors) {
+  if (!Array.isArray(token.map)) return [];
+  const rangeStart = lineOffsets[token.map[0]] ?? source.length;
+  const rangeEnd = lineOffsets[token.map[1]] ?? source.length;
+  const rangeKey = `${rangeStart}:${rangeEnd}`;
+  const cursor = Math.max(rangeStart, rangeCursors.get(rangeKey) ?? rangeStart);
+  const contiguousStart = source.indexOf(token.content, cursor);
+  if (contiguousStart >= cursor && contiguousStart + token.content.length <= rangeEnd) {
+    rangeCursors.set(rangeKey, contiguousStart + token.content.length);
+    return [{ inlineStart: 0, sourceStart: contiguousStart }];
+  }
+
+  const segments = [];
+  let inlineStart = 0;
+  let sourceCursor = cursor;
+  for (const contentLine of token.content.split("\n")) {
+    const sourceStart = source.indexOf(contentLine, sourceCursor);
+    if (sourceStart < sourceCursor || sourceStart + contentLine.length > rangeEnd) return [];
+    segments.push({ inlineStart, sourceStart });
+    inlineStart += contentLine.length + 1;
+    sourceCursor = sourceStart + contentLine.length;
+  }
+  rangeCursors.set(rangeKey, sourceCursor);
+  return segments;
+}
+
+function projectInlineOffset(offset, segments) {
+  if (!Number.isInteger(offset) || segments.length === 0) return null;
+  let segment = segments[0];
+  for (const candidate of segments) {
+    if (candidate.inlineStart > offset) break;
+    segment = candidate;
+  }
+  return segment.sourceStart + offset - segment.inlineStart;
+}
+
+function sourceLineOffsets(source) {
+  const offsets = [0];
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\n") offsets.push(index + 1);
+  }
+  return offsets;
+}
+
 function extractFootnotes(source) {
   const lines = source.split("\n");
   const footnotes = [];

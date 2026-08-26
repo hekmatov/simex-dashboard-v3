@@ -561,6 +561,63 @@ test("authoring edits exact parser-owned placements when inert and duplicate lit
   assert.match(result.afterChange, /\n\n!\[Duplicate\]\(simex-media:second\)\{width=75% align=end/);
 });
 
+test("authoring edits reference, inline, and duplicate placements by their canonical token identity", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    const reference = '![Reference][stored]{width=25% align=start flow=block frame=none decorative=false}';
+    const inline = '![Inline](simex-media:first){width=33% align=center flow=block frame=outline decorative=false}';
+    const duplicate = '![Inline](simex-media:first){width=66% align=end flow=wrap-start frame=card decorative=false}';
+    const definition = "[stored]: simex-media:first";
+    const mediaItems = {
+      first: { mediaId: "first", revision: 1, current: { kind: "asset", assetId: "asset-first" }, displayName: "First", defaultDescription: "First", origin: "uploaded", health: "missing" },
+    };
+    let latestSource = "";
+    function Harness() {
+      const [source, setSource] = React.useState([reference, inline, duplicate, definition].join("\n\n"));
+      latestSource = source;
+      return React.createElement(FreeTextSourceEditor, { id: "reference-qmd", value: source, panelId: "reference-panel", mediaItems, assets: {}, onChange: setSource });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && target.querySelectorAll("[data-qmd-media-select]").length !== 3; index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelectorAll("[data-qmd-media-select]")[0]?.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    target.querySelector('input[name="qmd-media-width"][value="50%"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const afterReference = latestSource;
+    target.querySelectorAll("[data-qmd-media-select]")[1]?.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    target.querySelector('input[name="qmd-media-width"][value="75%"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const afterInline = latestSource;
+    target.querySelectorAll("[data-qmd-media-select]")[2]?.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    target.querySelector('input[name="qmd-media-width"][value="100%"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const afterDuplicate = latestSource;
+    root.unmount();
+    return { reference, inline, duplicate, definition, afterReference, afterInline, afterDuplicate };
+  });
+
+  assert.equal(result.afterReference.includes(result.reference), false);
+  assert.match(result.afterReference, /!\[Reference\]\(simex-media:first\)\{width=50% align=start/);
+  assert.equal(result.afterReference.includes(result.inline), true);
+  assert.equal(result.afterReference.includes(result.duplicate), true);
+  assert.equal(result.afterReference.endsWith(result.definition), true);
+  assert.match(result.afterInline, /!\[Reference\]\(simex-media:first\)\{width=50% align=start/);
+  assert.match(result.afterInline, /!\[Inline\]\(simex-media:first\)\{width=75% align=center/);
+  assert.equal(result.afterInline.includes(result.duplicate), true);
+  assert.equal(result.afterInline.endsWith(result.definition), true);
+  assert.match(result.afterDuplicate, /!\[Reference\]\(simex-media:first\)\{width=50% align=start/);
+  assert.match(result.afterDuplicate, /!\[Inline\]\(simex-media:first\)\{width=75% align=center/);
+  assert.match(result.afterDuplicate, /!\[Inline\]\(simex-media:first\)\{width=100% align=end/);
+  assert.equal(result.afterDuplicate.endsWith(result.definition), true);
+});
+
 test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {
   const initial = "# Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);
