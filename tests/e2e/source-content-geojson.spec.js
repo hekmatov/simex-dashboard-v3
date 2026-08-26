@@ -58,6 +58,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await closeManager(page);
   await page.reload();
   await openBuild(page, { width: 1440, height: 900 });
+  await openTargetPage(page, target);
   manager = await openDataSourceManager(page);
   await selectSourceRow(manager, SOURCE_NAME);
   let detail = manager.getByRole("region", { name: "Content detail" });
@@ -137,6 +138,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.reload();
   await openBuild(page, { width: 1024, height: 768 });
+  await openTargetPage(page, target);
   manager = await openDataSourceManager(page);
   expect(await manager.getAttribute("data-manager-layout")).toBe("tablet");
   await manager.getByLabel("Filter by usage").selectOption("used");
@@ -155,6 +157,136 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await intake.getByLabel("GeoJSON file").setInputFiles({ ...GEOJSON_FILE, name: "journey-i-tablet-cancel.geojson" });
   await intake.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await geoJsonInventory(page)).toEqual(tabletBeforeCancel);
+});
+
+test("Journey J — invalid GeoJSON replacement blocks and imports as new", async ({ page }) => {
+  test.setTimeout(180_000);
+  await openBuild(page, { width: 1440, height: 900 });
+  await persistDashboardForReplacement(page, "J");
+  const target = await seedGeoJsonReplacementTarget(page, "J");
+  await page.reload();
+  await openBuild(page, { width: 1440, height: 900 });
+  await openTargetPage(page, target);
+  const panel = page.locator(`.chart-panel[data-panel-id="${target.chartId}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator("canvas").first()).toBeVisible();
+  const before = await geoJsonReplacementSnapshot(page, target);
+
+  let manager = await openDataSourceManager(page);
+  await selectSourceRow(manager, target.displayName);
+  let detail = manager.getByRole("region", { name: "Content detail" });
+  let trigger = detail.getByRole("button", { name: "Replace file", exact: true });
+  await trigger.click();
+  let dialog = page.getByRole("dialog", { name: `Replace ${target.displayName} file?` });
+  await dialog.getByLabel("Replacement GeoJSON").setInputFiles(invalidJoinReplacement(target));
+  await expect(dialog.getByRole("alert")).toHaveAttribute("data-replacement-reason", "selected-join-field-absent");
+  await expect(dialog.getByRole("region", { name: "Affected panels" })).toContainText(target.chartTitle);
+  await expect(dialog.getByRole("button", { name: "Import as new source" })).toBeEnabled();
+  expect(await geoJsonReplacementSnapshot(page, target)).toEqual(before);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(trigger).toBeFocused();
+  expect(await geoJsonReplacementSnapshot(page, target)).toEqual(before);
+
+  await trigger.click();
+  dialog = page.getByRole("dialog", { name: `Replace ${target.displayName} file?` });
+  await dialog.getByLabel("Replacement GeoJSON").setInputFiles(invalidJoinReplacement(target));
+  await dialog.getByRole("button", { name: "Import as new source" }).click();
+  await expect(dialog.getByRole("status").filter({ hasText: "Imported as" })).toBeVisible();
+  const imported = await geoJsonReplacementSnapshot(page, target);
+  expect(imported.sourceIdentity).toEqual(before.sourceIdentity);
+  expect(imported.entry).toEqual(before.entry);
+  expect(imported.chart).toEqual(before.chart);
+  expect(imported.temporal).toEqual(before.temporal);
+  expect(imported.managedGeoJsonIds).toHaveLength(before.managedGeoJsonIds.length + 1);
+  const importedId = imported.managedGeoJsonIds.find((id) => !before.managedGeoJsonIds.includes(id));
+  expect(importedId).toBeTruthy();
+  expect(importedId).not.toBe(target.sourceId);
+  await expect(detail).toContainText("2 features");
+  await expect(detail).toContainText("4, 52, 5, 52");
+  await dialog.getByRole("region", { name: "Affected panels" }).getByRole("button", { name: new RegExp(target.chartTitle) }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "Source content authoring" })).toHaveCount(0);
+  await expect(panel.locator("canvas").first()).toBeVisible();
+  expect((await geoJsonReplacementSnapshot(page, target)).render).toEqual(before.render);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.reload();
+  await openBuild(page, { width: 1024, height: 768 });
+  await openTargetPage(page, target);
+  manager = await openDataSourceManager(page);
+  await selectSourceRow(manager, target.displayName);
+  detail = manager.getByRole("region", { name: "Content detail" });
+  trigger = detail.getByRole("button", { name: "Replace file", exact: true });
+  await trigger.click();
+  dialog = page.getByRole("dialog", { name: `Replace ${target.displayName} file?` });
+  await dialog.getByLabel("Replacement GeoJSON").setInputFiles(invalidJoinReplacement(target));
+  await expect(dialog.getByRole("alert")).toHaveAttribute("data-replacement-reason", "selected-join-field-absent");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(trigger).toBeFocused();
+  expect(await managerOverflow(manager)).toBe(false);
+});
+
+test("Journey K — valid GeoJSON geometry change warns then confirms", async ({ page }) => {
+  test.setTimeout(180_000);
+  await openBuild(page, { width: 1440, height: 900 });
+  await persistDashboardForReplacement(page, "K");
+  const target = await seedGeoJsonReplacementTarget(page, "K");
+  await page.reload();
+  await openBuild(page, { width: 1440, height: 900 });
+  await openTargetPage(page, target);
+  const panel = page.locator(`.chart-panel[data-panel-id="${target.chartId}"]`);
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.locator("canvas").first()).toBeVisible();
+  const before = await geoJsonReplacementSnapshot(page, target);
+
+  let manager = await openDataSourceManager(page);
+  await selectSourceRow(manager, target.displayName);
+  let detail = manager.getByRole("region", { name: "Content detail" });
+  let trigger = detail.getByRole("button", { name: "Replace file", exact: true });
+  await trigger.click();
+  let dialog = page.getByRole("dialog", { name: `Replace ${target.displayName} file?` });
+  await dialog.getByLabel("Replacement GeoJSON").setInputFiles(changedGeometryReplacement(target));
+  const warnings = dialog.getByRole("region", { name: "GeoJSON replacement warnings" });
+  await expect(warnings.locator('[data-replacement-warning="bounding-box-changed"]')).toBeVisible();
+  await expect(warnings.locator('[data-replacement-warning="geometry-mix-changed"]')).toBeVisible();
+  await expect(warnings.locator('[data-replacement-warning="join-coverage-reduced"]')).toContainText("falls from 2 of 2 to 1 of 2");
+  await expect(dialog).not.toContainText("Chrono Group");
+  await expect(dialog).not.toContainText("Scene presentation");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(trigger).toBeFocused();
+  expect(await geoJsonReplacementSnapshot(page, target)).toEqual(before);
+
+  await trigger.click();
+  dialog = page.getByRole("dialog", { name: `Replace ${target.displayName} file?` });
+  await dialog.getByLabel("Replacement GeoJSON").setInputFiles(changedGeometryReplacement(target));
+  await dialog.getByRole("button", { name: "Confirm GeoJSON replacement" }).click();
+  await expect(dialog).toHaveCount(0);
+  await closeManager(page);
+  await expect(panel.locator("canvas").first()).toBeVisible();
+  const confirmed = await geoJsonReplacementSnapshot(page, target);
+  expect(confirmed.sourceId).toBe(before.sourceId);
+  expect(confirmed.sourceIdentity.fileName).toBe("journey-k-changed.geojson");
+  expect(confirmed.entry.sourceId).toBe(before.entry.sourceId);
+  expect(confirmed.chart).toEqual(before.chart);
+  expect(confirmed.temporal).toEqual(before.temporal);
+  expect(confirmed.render).not.toEqual(before.render);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.reload();
+  await openBuild(page, { width: 1024, height: 768 });
+  await openTargetPage(page, target);
+  const tabletPanel = page.locator(`.chart-panel[data-panel-id="${target.chartId}"]`);
+  await tabletPanel.scrollIntoViewIfNeeded();
+  await expect(tabletPanel.locator("canvas").first()).toBeVisible();
+  manager = await openDataSourceManager(page);
+  await selectSourceRow(manager, target.displayName);
+  detail = manager.getByRole("region", { name: "Content detail" });
+  await expect(detail).toContainText("LineString 1, Point 1");
+  await expect(detail).toContainText("7, 53, 9, 54");
+  expect(await managerOverflow(manager)).toBe(false);
+  const tablet = await geoJsonReplacementSnapshot(page, target);
+  expect(tablet.sourceIdentity).toEqual(confirmed.sourceIdentity);
+  expect(tablet.temporal).toEqual(before.temporal);
 });
 
 async function openBuild(page, viewport) {
@@ -291,4 +423,130 @@ async function mapBudgetSnapshot(page) {
       deferred: statuses.filter((status) => status === "deferred").length,
     };
   });
+}
+
+async function seedGeoJsonReplacementTarget(page, journey) {
+  return page.evaluate(({ key, journeyName }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const refs = dashboard.pages.flatMap((pageValue) => pageValue.sections.flatMap((section) => (
+      section.panels.map((placement) => ({ page: pageValue, section, placement, chart: placement.chart ?? placement }))
+    )));
+    const target = refs.find(({ chart }) => chart.id === "bio_municipality_choropleth_animation")
+      ?? refs.find(({ chart }) => chart.presentation?.map?.geoSource && dashboard.loadedData?.[chart.sourceId]);
+    if (!target) throw new Error(`Journey ${journeyName} requires a live map chart.`);
+    const dataDisplayName = `Journey ${journeyName} map data`;
+    const dataSourceId = Object.keys(dashboard.contentLibrary?.sourceEntries ?? {})
+      .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === dataDisplayName);
+    if (!dataSourceId) throw new Error(`Journey ${journeyName} requires its manager-added map data.`);
+    target.chart.sourceId = dataSourceId;
+    target.chart.roles = {
+      geography: { field: "municipality", interpretation: "geographic" },
+      value: { field: "cases" },
+      time: { field: "date", interpretation: "temporal" },
+    };
+    const values = ["A", "B"];
+    const sourceId = `journey-${journeyName.toLowerCase()}-boundaries`;
+    const displayName = `Journey ${journeyName} boundaries`;
+    const joinField = target.chart.presentation.map.joinField || "journeyCode";
+    target.chart.presentation.map.joinField = joinField;
+    target.chart.presentation.map.geoSource = sourceId;
+    const geoJson = {
+      type: "FeatureCollection",
+      features: values.map((value, index) => ({
+        type: "Feature",
+        properties: { [joinField]: value, label: `Journey ${journeyName} ${index + 1}` },
+        geometry: { type: "Point", coordinates: [4 + index, 52] },
+      })),
+    };
+    dashboard.dataSources[sourceId] = { kind: "dataset", type: "uploadedGeoJson", fileName: `${sourceId}.geojson`, geoJson, provenance: { label: displayName } };
+    dashboard.contentLibrary ??= { mediaItems: {}, sourceEntries: {} };
+    dashboard.contentLibrary.sourceEntries ??= {};
+    dashboard.contentLibrary.sourceEntries[sourceId] = {
+      sourceId, origin: "uploaded", ownership: "builder", displayName,
+      provenance: { fileName: `${sourceId}.geojson` }, health: "ready",
+    };
+    localStorage.setItem(key, JSON.stringify(dashboard));
+    return { sourceId, displayName, chartId: target.chart.id, chartTitle: target.chart.title, pageLabel: target.page.label ?? target.page.title, joinField, values };
+  }, { key: STORAGE_KEY, journeyName: journey });
+}
+
+async function openTargetPage(page, target) {
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: target.pageLabel, exact: true }).click();
+}
+
+async function persistDashboardForReplacement(page, journey) {
+  const manager = await openDataSourceManager(page);
+  const intake = manager.getByRole("region", { name: "Add GeoJSON to dashboard" });
+  await intake.getByRole("button", { name: "Add GeoJSON", exact: true }).click();
+  await intake.getByLabel("GeoJSON file").setInputFiles({ ...GEOJSON_FILE, name: `journey-${journey.toLowerCase()}-seed.geojson` });
+  await intake.getByLabel("Display name").fill(`Journey ${journey} seed`);
+  await intake.getByRole("button", { name: "Add to dashboard", exact: true }).click();
+  const csvIntake = manager.getByRole("region", { name: "Add CSV to dashboard" });
+  await csvIntake.getByRole("button", { name: "Add CSV", exact: true }).click();
+  await csvIntake.getByLabel("CSV file").setInputFiles({
+    name: `journey-${journey.toLowerCase()}-map.csv`,
+    mimeType: "text/csv",
+    buffer: Buffer.from("date,municipality,cases\n2026-01-01,A,4\n2026-01-01,B,7\n"),
+  });
+  await csvIntake.getByLabel("Display name").fill(`Journey ${journey} map data`);
+  await csvIntake.getByRole("button", { name: "Add to dashboard", exact: true }).click();
+  await closeManager(page);
+}
+
+function invalidJoinReplacement(target) {
+  return geoJsonFile("journey-j-invalid.geojson", {
+    type: "FeatureCollection",
+    features: target.values.map((value, index) => ({
+      type: "Feature",
+      properties: { removedJoin: value },
+      geometry: { type: "Point", coordinates: [6 + index, 53] },
+    })),
+  });
+}
+
+function changedGeometryReplacement(target) {
+  return geoJsonFile("journey-k-changed.geojson", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { [target.joinField]: target.values[0] },
+      geometry: { type: "Point", coordinates: [7, 53] },
+    }, {
+      type: "Feature",
+      properties: { [target.joinField]: "journey-k-unmatched" },
+      geometry: { type: "LineString", coordinates: [[8, 53], [9, 54]] },
+    }],
+  });
+}
+
+function geoJsonFile(name, value) {
+  return { name, mimeType: "application/geo+json", buffer: Buffer.from(JSON.stringify(value)) };
+}
+
+async function geoJsonReplacementSnapshot(page, target) {
+  return page.evaluate(({ key, targetValue }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const chart = dashboard.pages.flatMap(({ sections }) => sections).flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement).find(({ id }) => id === targetValue.chartId);
+    const canvas = document.querySelector(`.chart-panel[data-panel-id="${CSS.escape(targetValue.chartId)}"] canvas`);
+    return {
+      sourceId: targetValue.sourceId,
+      source: dashboard.dataSources[targetValue.sourceId],
+      sourceIdentity: {
+        kind: dashboard.dataSources[targetValue.sourceId]?.kind,
+        type: dashboard.dataSources[targetValue.sourceId]?.type,
+        fileName: dashboard.dataSources[targetValue.sourceId]?.fileName,
+        provenance: dashboard.dataSources[targetValue.sourceId]?.provenance,
+      },
+      payload: dashboard.loadedData?.[targetValue.sourceId] ?? dashboard.dataSources[targetValue.sourceId]?.geoJson,
+      entry: dashboard.contentLibrary?.sourceEntries?.[targetValue.sourceId],
+      chart,
+      temporal: { chronoGroups: dashboard.chronoGroups ?? [], scenes: dashboard.scenes ?? [] },
+      managedGeoJsonIds: Object.entries(dashboard.contentLibrary?.sourceEntries ?? {})
+        .filter(([id]) => dashboard.dataSources?.[id]?.type === "uploadedGeoJson")
+        .map(([id]) => id).sort(),
+      render: canvas?.toDataURL() ?? null,
+    };
+  }, { key: STORAGE_KEY, targetValue: target });
 }

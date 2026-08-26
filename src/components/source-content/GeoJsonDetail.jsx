@@ -5,7 +5,7 @@ import GeoJsonPreview from "./GeoJsonPreview.jsx";
 
 const PROPERTY_PAGE_SIZE = 100;
 
-export default function GeoJsonDetail({ item, source, geoData, summary: suppliedSummary }) {
+export default function GeoJsonDetail({ item, source, geoData, summary: suppliedSummary, action = null }) {
   const [propertyQuery, setPropertyQuery] = React.useState("");
   const [propertyLimit, setPropertyLimit] = React.useState(PROPERTY_PAGE_SIZE);
   const validation = React.useMemo(() => suppliedSummary ? null : validateGeoJson(geoData), [geoData, suppliedSummary]);
@@ -42,6 +42,7 @@ export default function GeoJsonDetail({ item, source, geoData, summary: supplied
         <button type="button" className="secondary" onClick={() => setPropertyLimit((current) => current + PROPERTY_PAGE_SIZE)}>Show more property keys</button>
       )}
       <GeoJsonPreview sourceId={item.id} geoData={geoData ?? source?.geoJson} summary={summary} />
+      {action}
     </section>
   );
 }

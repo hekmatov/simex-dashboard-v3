@@ -1,6 +1,7 @@
 import React from "react";
 import { commitCsvReplacement, prepareCsvReplacement } from "../../content-library/csvReplacementTransaction.js";
-import { parseUploadedCsvFile } from "../chart-authoring/ChartWizardV3.jsx";
+import { commitGeoJsonReplacement, prepareGeoJsonReplacement } from "../../content-library/geoJsonReplacementTransaction.js";
+import { parseUploadedCsvFile, parseUploadedGeoJsonFile } from "../chart-authoring/ChartWizardV3.jsx";
 import CsvDetail from "./CsvDetail.jsx";
 import GeoJsonDetail from "./GeoJsonDetail.jsx";
 import ContentActionDialog from "./ContentActionDialog.jsx";
@@ -26,6 +27,7 @@ export default function DataSourceDetail({
   const [replacementStatus, setReplacementStatus] = React.useState("");
   const [importedSourceLabel, setImportedSourceLabel] = React.useState("");
   const [importedRemapTargets, setImportedRemapTargets] = React.useState([]);
+  const isGeoJson = item.kind === "geojson";
   const replacementPlanRef = React.useRef(null);
   const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard });
   lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard };
@@ -45,23 +47,30 @@ export default function DataSourceDetail({
       if (replacementPlanRef.current?.draft) {
         await discardPreparedCsv(replacementPlanRef.current, "csv-replacement-changed", { contentDraftCoordinator, onContentDraftDiscard });
       }
-      const plan = await prepareCsvReplacement({
-        dashboard,
-        sourceId: item.id,
-        file,
-        parseCandidate: (candidateFile) => parseUploadedCsvFile(candidateFile, dashboard.dataSources ?? {}),
-      });
+      const plan = isGeoJson
+        ? await prepareGeoJsonReplacement({
+          dashboard,
+          sourceId: item.id,
+          file,
+          parseCandidate: (candidateFile) => parseUploadedGeoJsonFile(candidateFile, dashboard.dataSources ?? {}),
+        })
+        : await prepareCsvReplacement({
+          dashboard,
+          sourceId: item.id,
+          file,
+          parseCandidate: (candidateFile) => parseUploadedCsvFile(candidateFile, dashboard.dataSources ?? {}),
+        });
       if (plan.draft) await onContentDraftStage?.(plan.draft);
       replacementPlanRef.current = plan;
       setReplacementPlan(plan);
-      setReplacementLabel(file.name || "Replacement CSV");
+      setReplacementLabel(file.name || (isGeoJson ? "Replacement GeoJSON" : "Replacement CSV"));
       setReplacementStatus(plan.status);
     } catch (error) {
       replacementPlanRef.current = null;
       setReplacementPlan(null);
       setReplacementLabel("");
       setReplacementStatus("");
-      setReplacementError(error?.message ?? "The replacement CSV could not be prepared.");
+      setReplacementError(error?.message ?? `The replacement ${isGeoJson ? "GeoJSON" : "CSV"} could not be prepared.`);
     } finally {
       setReplacementBusy(false);
     }
@@ -86,12 +95,19 @@ export default function DataSourceDetail({
     setReplacementBusy(true);
     setReplacementError("");
     try {
-      const result = await commitCsvReplacement(replacementPlan, {
-        mode: mode === "confirm-temporal" ? "replace" : mode,
-        confirmTemporalReview: mode === "confirm-temporal",
-        contentDraftCoordinator,
-        commitDraft: (draftId, buildCandidate) => onContentDraftCommit?.(draftId, buildCandidate),
-      });
+      const result = isGeoJson
+        ? await commitGeoJsonReplacement(replacementPlan, {
+          mode: mode === "confirm-geojson" ? "replace" : mode,
+          confirmWarnings: mode === "confirm-geojson",
+          contentDraftCoordinator,
+          commitDraft: (draftId, buildCandidate) => onContentDraftCommit?.(draftId, buildCandidate),
+        })
+        : await commitCsvReplacement(replacementPlan, {
+          mode: mode === "confirm-temporal" ? "replace" : mode,
+          confirmTemporalReview: mode === "confirm-temporal",
+          contentDraftCoordinator,
+          commitDraft: (draftId, buildCandidate) => onContentDraftCommit?.(draftId, buildCandidate),
+        });
       replacementPlanRef.current = null;
       setReplacementPlan(null);
       if (mode === "import-as-new") {
@@ -106,7 +122,7 @@ export default function DataSourceDetail({
     } catch (error) {
       replacementPlanRef.current = null;
       setReplacementPlan(null);
-      setReplacementError(error?.message ?? "The CSV replacement failed. The previous source remains active.");
+      setReplacementError(error?.message ?? `The ${isGeoJson ? "GeoJSON" : "CSV"} replacement failed. The previous source remains active.`);
     } finally {
       setReplacementBusy(false);
     }
@@ -116,26 +132,32 @@ export default function DataSourceDetail({
     <article className="source-content-detail-card">
       {item.kind === "csv"
         ? <CsvDetail item={item} source={dashboard.dataSources?.[item.id]} datasetProfile={datasetProfile} />
-        : <GeoJsonDetail item={item} source={dashboard.dataSources?.[item.id]} geoData={geoData ?? dashboard.loadedData?.[item.id]} />}
+        : <GeoJsonDetail
+          item={item}
+          source={dashboard.dataSources?.[item.id]}
+          geoData={geoData ?? dashboard.loadedData?.[item.id]}
+          action={<button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{item.record.origin === "linked-project" ? "Relink" : "Replace file"}</button>}
+        />}
       {item.kind === "csv" && <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{item.record.origin === "linked-project" ? "Relink" : "Replace file"}</button>}
       <RenameSource item={item} onRename={onRename} />
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
       <ContentActionDialog
         open={replaceOpen}
-        action="replace-csv"
+        action={isGeoJson ? "replace-geojson" : "replace-csv"}
         itemLabel={item.record.displayName}
         busy={replacementBusy}
         error={replacementError}
-        replacementReady={replacementPlan?.status === "ready" || replacementPlan?.status === "requires-temporal-review"}
+        replacementReady={replacementPlan?.status === "ready" || replacementPlan?.status === "requires-temporal-review" || replacementPlan?.status === "requires-confirmation"}
         replacementLabel={replacementLabel}
         replacementStatus={replacementPlan?.status ?? replacementStatus}
         replacementReason={replacementPlan?.reason ?? null}
+        replacementWarnings={replacementPlan?.warnings ?? []}
         canImportAsNew={replacementPlan?.canImportAsNew === true}
         remapTargets={replacementPlan?.remapTargets ?? importedRemapTargets}
         impactContexts={replacementPlan?.impactContexts ?? []}
         importedSourceLabel={importedSourceLabel}
         onReplacementFile={(file) => void chooseReplacement(file)}
-        onConfirm={() => void publish(replacementPlan?.status === "requires-temporal-review" ? "confirm-temporal" : "replace")}
+        onConfirm={() => void publish(replacementPlan?.status === "requires-temporal-review" ? "confirm-temporal" : replacementPlan?.status === "requires-confirmation" ? "confirm-geojson" : "replace")}
         onImportAsNew={() => void publish("import-as-new")}
         onNavigate={(use) => {
           setReplaceOpen(false);

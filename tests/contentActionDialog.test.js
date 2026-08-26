@@ -105,6 +105,35 @@ test("temporal CSV replacement exposes an explicit warning confirmation without 
   assert.doesNotMatch(html, /<button type="button" disabled="">Confirm replacement/u);
 });
 
+test("GeoJSON replacement renders structural blocks and geometry warnings without temporal contexts", () => {
+  const blocked = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace-geojson",
+    itemLabel: "Boundaries",
+    replacementLabel: "candidate.geojson",
+    replacementStatus: "blocked",
+    replacementReason: { code: "selected-join-field-absent", message: 'Selected join property "code" is absent.' },
+    canImportAsNew: true,
+    remapTargets: [{ id: "map", pageLabel: "Overview", sectionLabel: "Response", panelLabel: "Cases map" }],
+  }));
+  assert.match(blocked, /Replace Boundaries file\?/u);
+  assert.match(blocked, /data-replacement-reason="selected-join-field-absent"/u);
+  assert.match(blocked, />Import as new source</u);
+  assert.match(blocked, /Overview[\s\S]*Response[\s\S]*Cases map/u);
+
+  const warning = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace-geojson",
+    itemLabel: "Boundaries",
+    replacementReady: true,
+    replacementStatus: "requires-confirmation",
+    replacementWarnings: [{ code: "join-coverage-reduced", message: "Usable join coverage falls from 2 of 2 to 1 of 2." }],
+  }));
+  assert.match(warning, /Usable join coverage falls/u);
+  assert.match(warning, />Confirm GeoJSON replacement<\/button>/u);
+  assert.doesNotMatch(warning, /Chrono Group|Scene presentation|temporal content/u);
+});
+
 test("manager dependency collections carry retainer and deletion state through the passive detail boundary", () => {
   const uses = [];
   uses.activeRetainers = [{ ownerId: "draft-a", kind: "image-draft" }];

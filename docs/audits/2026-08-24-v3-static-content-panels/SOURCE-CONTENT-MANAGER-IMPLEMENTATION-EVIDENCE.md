@@ -345,3 +345,24 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Live inspection established `src/components/chart-authoring/ChartWizardV3.jsx` as the existing owner of the six-stage draft/commit boundary. The Task 13 cost is limited to staged GeoJSON selection and atomic publication through `contentDraftTransaction`; stage count/order remains exact.
 - Proposed edits to `geoJsonSourceEntry.js` and `sourceEntrySchema.js` were removed because planned transaction/schema authorities already carried the acceptance contract.
 - Exactly four admission gates remain authoritative. Concentration diagnostics and nested properties do not hard-block, and map concurrency is runtime scheduling only. No Task 14 replacement/relink behavior is included.
+
+## Task 14 — GeoJSON replacement and relink
+
+**Implementation state:** SCM-S16, SCM-R10, SCM-R11, and the GeoJSON replacement/relink branch of SCM-C08 are Passing. GeoJSON uses one schema/four-gate authority followed by separately typed direct-map compatibility; no temporal-review contexts are created.
+
+### RED and deterministic evidence
+
+- Exact seven-file RED was **49/52 passing** with failures limited to the missing replacement owner, map-coverage inspection, and typed action dialog.
+- Exact seven-file GREEN is **58/58 passing**, zero failed/skipped/todo, 3.72 s. It covers malformed/schema failure, exactly four hard-limit fixtures generated from `SOURCE_GEOJSON_LIMIT_KEYS`, selected-join removal, zero usable coverage, obsolete diagnostic negatives, feature/bounds/geometry-mix/reduced-nonzero coverage warnings, cancel, import/remap, stable expected-current identity, persistence rollback, and zero Chrono/Scene/presentation temporal contexts.
+
+### Named Journeys J and K
+
+- Journey J exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey J — invalid GeoJSON replacement blocks and imports as new"` — **1/1 passing**, 45.6 s test / 47.7 s total.
+- Journey K exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey K — valid GeoJSON geometry change warns then confirms"` — **1/1 passing**, 45.9 s test / 47.7 s total.
+- Build 1440×900 and 1024×768 inspected typed dialogs, cancel/focus, exact original identity/render retention on block, distinct import identity, guided live-panel remap, bbox/geometry-mix/reduced-coverage warning facts, stable sourceId and direct chart binding on confirm, changed map render/canonical summary, live tablet map/detail, bounded manager geometry, and unchanged Chrono Group/Scene/presentation state.
+
+### Ruling and scope boundary
+
+- `src/components/source-content/DataSourceDetail.jsx` was verified and authorized as the existing mounted replacement lifecycle carrier omitted from the Task 14 owner list. The implementation reuses its coordinator/modal/navigation contracts; no parallel lifecycle exists.
+- The existing geography adapter, ECharts registration, and dependency breadcrumb owners already consume the committed payload and remap targets, so no changes were required there.
+- No Task 15 persistence/package, Task 16 recovery/cleanup, hidden metric, global undo, or parent progress update is included.

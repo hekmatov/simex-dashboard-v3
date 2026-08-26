@@ -12,6 +12,7 @@ export default function ContentActionDialog({
   replacementLabel = "",
   replacementStatus = "",
   replacementReason = null,
+  replacementWarnings = [],
   canImportAsNew = false,
   remapTargets = [],
   impactContexts = [],
@@ -22,11 +23,13 @@ export default function ContentActionDialog({
   onConfirm,
   onCancel,
 } = {}) {
-  if (action === "replace-csv") {
+  if (action === "replace-csv" || action === "replace-geojson") {
     if (!open) return null;
-    const id = `replace-csv-${safeId(itemLabel)}`;
+    const geoJson = action === "replace-geojson";
+    const id = `${geoJson ? "replace-geojson" : "replace-csv"}-${safeId(itemLabel)}`;
     const blocked = replacementStatus === "blocked";
     const requiresTemporalReview = replacementStatus === "requires-temporal-review";
+    const requiresGeoJsonConfirmation = replacementStatus === "requires-confirmation";
     const nonCommittable = blocked;
     return (
       <ModalFocusScope
@@ -43,11 +46,17 @@ export default function ContentActionDialog({
       >
         <section className="confirm-dialog">
           <h2 id={`${id}-title`}>Replace {itemLabel} file?</h2>
-          <p id={`${id}-message`}>Choose a CSV file. The current source identity is retained only when every directly dependent chart remains structurally valid.</p>
-          <label><span>Replacement CSV</span><input data-modal-initial-focus="true" type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
+          <p id={`${id}-message`}>Choose a {geoJson ? "GeoJSON" : "CSV"} file. The current source identity is retained only when every directly dependent {geoJson ? "map" : "chart"} remains structurally valid.</p>
+          <label><span>Replacement {geoJson ? "GeoJSON" : "CSV"}</span><input data-modal-initial-focus="true" type="file" accept={geoJson ? ".geojson,.json,application/geo+json,application/json" : ".csv,text/csv"} disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
           {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
           {(blocked || requiresTemporalReview) && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
           {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+          {requiresGeoJsonConfirmation && replacementWarnings.length > 0 && (
+            <section aria-label="GeoJSON replacement warnings">
+              <h3>Confirm changed map facts</h3>
+              <ul>{replacementWarnings.map((warning) => <li key={`${warning.code}:${warning.chartId ?? "source"}`} data-replacement-warning={warning.code}>{warning.message}</li>)}</ul>
+            </section>
+          )}
           {remapTargets.length > 0 && (
             <section aria-label="Affected panels">
               <h3>Affected panels</h3>
@@ -69,7 +78,7 @@ export default function ContentActionDialog({
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
             <button type="button" disabled={busy || !replacementReady || nonCommittable} onClick={onConfirm}>
-              {busy ? "Replacing…" : requiresTemporalReview ? "Confirm replacement and mark affected temporal content" : "Replace file"}
+              {busy ? "Replacing…" : requiresTemporalReview ? "Confirm replacement and mark affected temporal content" : requiresGeoJsonConfirmation ? "Confirm GeoJSON replacement" : geoJson ? "Replace GeoJSON" : "Replace file"}
             </button>
           </div>
         </section>
