@@ -58,7 +58,7 @@ import {
   reduceBuildDraftCoordinator,
 } from "./buildDraftCoordinator.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
-import SourceContentWorkspace from "../source-content/SourceContentWorkspace.jsx";
+import SourceContentWorkspace, { createSourceContentViewState } from "../source-content/SourceContentWorkspace.jsx";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -134,6 +134,7 @@ export default function BuildWorkspace({
   const activeAuxiliary = draftCoordinator.activeAuxiliary?.surface ?? null;
   const parkedAuxiliaries = draftCoordinator.parkedAuxiliaries;
   const [structureDraft, setStructureDraft] = React.useState(null);
+  const [sourceContentViewState, setSourceContentViewState] = React.useState(() => createSourceContentViewState());
   const [chronoGroupDraft, setChronoGroupDraft] = React.useState(null);
   const [sceneDraft, setSceneDraft] = React.useState(null);
   const [chronoContentState, setChronoContentState] = React.useState(null);
@@ -343,12 +344,17 @@ export default function BuildWorkspace({
     } catch {
       return;
     }
-    window.requestAnimationFrame(() => {
-      if (restoration.chartEditorOpen) onResumeChartEditor?.();
-      window.scrollTo({ top: commands.scrollTop, left: commands.scrollLeft, behavior: "auto" });
-      if (commands.focusId) document.getElementById(commands.focusId)?.focus();
+    const restoredSelection = commands.selection
+      ? chooseSelection(commands.selection, { intent: "restore" })
+      : Promise.resolve(true);
+    void Promise.resolve(restoredSelection).catch(() => false).then(() => {
+      window.requestAnimationFrame(() => {
+        if (restoration.chartEditorOpen) onResumeChartEditor?.();
+        window.scrollTo({ top: commands.scrollTop, left: commands.scrollLeft, behavior: "auto" });
+        if (commands.focusId) document.getElementById(commands.focusId)?.focus();
+      });
     });
-  }, [dashboard, onResumeChartEditor]);
+  }, [dashboard, onResumeChartEditor, chooseSelection]);
 
   const initializeAuxiliary = (surface) => {
     if (surface === "structure") {
@@ -688,7 +694,7 @@ export default function BuildWorkspace({
           />
           {activeAuxiliary && typeof document !== "undefined" && createPortal((
             <aside
-              className="build-authoring-auxiliary"
+              className={`build-authoring-auxiliary${renderedAuxiliary === "source-content" ? " build-authoring-auxiliary--source-content" : ""}`}
               {...dashboardThemeRootProps(themeProjection)}
               data-authoring-surface={renderedAuxiliary}
               role={renderedAuxiliary === "source-content" ? "complementary" : "dialog"}
@@ -705,6 +711,8 @@ export default function BuildWorkspace({
               {renderedAuxiliary === "source-content" && (
                 <SourceContentWorkspace
                   dashboard={dashboard}
+                  viewState={sourceContentViewState}
+                  onViewStateChange={setSourceContentViewState}
                   onContentDraftStage={onContentDraftStage}
                   onContentDraftCommit={onContentDraftCommit}
                   onContentDraftDiscard={onContentDraftDiscard}

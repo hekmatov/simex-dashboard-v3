@@ -50,3 +50,17 @@ test("rename draft stages exact manager ownership before one candidate commit", 
   assert.equal(candidate.dashboard.contentLibrary.mediaItems["media-map"].defaultDescription, "Updated description");
   assert.deepEqual(candidate.commitAssetIds, []);
 });
+
+test("committed usage metadata is passive until a navigation handler is supplied", () => {
+  const html = renderToStaticMarkup(React.createElement(ContentDetail, {
+    item: {
+      id: "cases",
+      kind: "csv",
+      record: makeSourceEntry("csv"),
+      uses: [{ id: "use-1", pageLabel: "Biomedical", sectionLabel: "Signals", panelLabel: "Cases" }],
+      activeRetainers: [],
+    },
+  }));
+  assert.match(html, /Biomedical[\s\S]*Signals[\s\S]*Cases/);
+  assert.doesNotMatch(html, /<button[^>]*source-content-breadcrumb/);
+});

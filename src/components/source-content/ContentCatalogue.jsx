@@ -56,7 +56,7 @@ export default function ContentCatalogue({
                   <span>{item.typeLabel}</span>
                   <span>{item.record.origin}</span>
                   <span>{item.record.health}</span>
-                  <span>{item.usageCount === 1 ? "1 use" : `${item.usageCount} uses`}</span>
+                  {Number.isSafeInteger(item.usageCount) && <span>{item.usageCount === 1 ? "1 use" : `${item.usageCount} uses`}</span>}
                 </span>
               </button>
             </li>

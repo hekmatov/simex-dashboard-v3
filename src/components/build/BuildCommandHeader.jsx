@@ -54,6 +54,12 @@ export default function BuildCommandHeader({
             >
               Source content
             </button>
+          </div>
+        </section>
+
+        <section className="build-command-group" data-build-command-group="structure" aria-label="Structure commands">
+          <strong className="build-command-group__label">Structure</strong>
+          <div className="build-command-group__controls">
             <button
               type="button"
               className="secondary"

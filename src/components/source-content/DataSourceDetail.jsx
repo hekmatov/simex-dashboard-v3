@@ -7,7 +7,7 @@ export default function DataSourceDetail({ item, datasetProfile, onRename }) {
     <article className="source-content-detail-card">
       {item.kind === "csv" ? <CsvDetail item={item} datasetProfile={datasetProfile} /> : <GeoJsonShell item={item} />}
       <RenameSource item={item} onRename={onRename} />
-      <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} />
+      <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
     </article>
   );
 }

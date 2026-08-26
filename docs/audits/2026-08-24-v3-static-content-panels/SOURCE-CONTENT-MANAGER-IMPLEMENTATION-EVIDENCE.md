@@ -131,3 +131,13 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Upload/picker/import-local, replacement/relink, delete/recovery, computed dependency blockers/actions, GeoJSON preview, full CSV preview/profile, and all Task 5+ journeys remain unimplemented and unverified.
 - No full build, full suite, generated-output refresh, dependency addition, or parent progress update was performed.
+
+### Validated T4-R01–R06 correction round
+
+- BASE `37462084ab42b5b0611ab45b2e1388c81f505e02`; focused deterministic RED **36/40** and exact GREEN **40/40**, with zero skipped/todo.
+- Final corrected Chromium command: **4/4 passed**, 1.0 min.
+- 1440×900: Content region has exactly three controls; Structure separately retains Pages & sections; six/four stages pass; a changed valid page selection restores exactly on close before scroll/focus; host horizontal scroll is absent; workspace and desktop catalogue/detail panes are contained and ordered; close/reopen preserves every browse field and selection.
+- 1024×768: host horizontal scroll is absent; workspace and visible pane are contained; one canonical canvas persists; tablet detail remains material across close/reopen and Back restores the selected row and filters.
+- Build owns only serializable browse state. Conditional manager unmount still discards unresolved rename drafts; no hidden workspace, local catalogue overlay, or persistence bypass exists.
+- Direct-use graph scanning and enabled breadcrumb navigation were removed from Task 4. Only supplied committed usage metadata renders, as passive text unless a future owner supplies navigation.
+- C01–C03 are Passing on these corrected facts. C04 remains Partial; passive breadcrumbs are present only for supplied metadata and Task 6 dependency computation/navigation remains deferred.

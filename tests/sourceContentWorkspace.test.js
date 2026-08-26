@@ -15,7 +15,7 @@ const vite = await createServer({
 const workspaceModule = await vite.ssrLoadModule("/src/components/source-content/SourceContentWorkspace.jsx");
 await vite.close();
 
-const { default: SourceContentWorkspace, managerLayoutForWidth, visibleManagerItems } = workspaceModule;
+const { default: SourceContentWorkspace, createSourceContentViewState, managerLayoutForWidth, visibleManagerItems } = workspaceModule;
 
 function dashboard() {
   return makeDashboardV5({
@@ -66,6 +66,29 @@ test("catalogue filters preserve builder content and exclude trusted generated s
   });
   assert.deepEqual(items.map(({ id }) => id), ["cases"]);
   assert.equal(items.some(({ id }) => id === "generated"), false);
+  assert.equal(items[0].usageCount, null);
+});
+
+test("controlled serializable browse state restores every manager view field", () => {
+  assert.equal(typeof createSourceContentViewState, "function");
+  const viewState = createSourceContentViewState({
+    tab: "sources",
+    queries: { media: "map", sources: "cases" },
+    filters: {
+      media: { origin: "packaged", status: "ready", usage: "unused", kind: "all" },
+      sources: { origin: "legacy-import", status: "ready", usage: "all", kind: "csv" },
+    },
+    selections: { media: "media-image-source", sources: "cases" },
+    tabletDetailOpen: true,
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(viewState)), viewState);
+  const html = renderToStaticMarkup(React.createElement(SourceContentWorkspace, {
+    dashboard: dashboard(), viewportWidth: 1024, viewState, onViewStateChange: () => {},
+  }));
+  assert.match(html, /data-manager-layout="tablet"/);
+  assert.match(html, /role="tab" aria-selected="true">Data sources/);
+  assert.match(html, /<span>Display name<\/span>/);
+  assert.match(html, />Back</);
 });
 
 test("catalogue exposes the complete accessible filter inventory and renders metadata as text", () => {

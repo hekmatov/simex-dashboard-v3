@@ -45,3 +45,16 @@ DONE — manager shell, catalogue composition, passive detail metadata, durable 
 - Evidence: this report, amendment fidelity C01–C04, security/deviation focus rows, and implementation evidence.
 
 No Task 5+ picker/detail actions, dependency computation, new dependency, design-system change, full build, full suite, or parent `progress.md` edit was made.
+
+## Validated T4-R01–R06 correction round
+
+- BASE `37462084ab42b5b0611ab45b2e1388c81f505e02`.
+- Focused RED: exact Task 4 deterministic selection **36 passed / 4 failed / 0 skipped / 0 todo**. Failures were the fourth Content control, enabled dependency breadcrumb, computed zero-use state, and missing controlled browse-state owner.
+- Exact deterministic GREEN: **40 passed / 0 failed / 0 skipped / 0 todo**, 2.81 s.
+- Corrected Chromium file: **4 passed / 0 failed**, 1.0 min. Intermediate 1/4 and 3/4 runs identified only invalid test ownership/locators before the final accepted facts were reached.
+- Source content now has an explicit full-width auxiliary host modifier with a fluid child. At 1440×900 and 1024×768, the mounted host satisfies `scrollWidth <= clientWidth`; workspace and visible panes stay within the host; desktop panes remain ordered side-by-side.
+- Close/Escape applies the saved page/section/panel selection through the existing selection command path before restoring scroll and focus. The mounted journey changes from Home to another page while open and verifies exact Home restoration on close.
+- Content contains exactly Add chart, Add static content, and Source content. Pages & sections remains functional in a separate Structure command group; six/four stages remain unchanged.
+- BuildWorkspace owns one serializable browse-state snapshot. Tab, per-tab queries, origin/status/usage/kind filters, selections, and tablet list/detail state survive unmount/reopen; rename forms and unresolved coordinator drafts remain local and discard normally.
+- Task 6 dependency computation was removed. Current detail renders only supplied committed usage metadata, uses passive breadcrumb text without a navigation handler, and exposes no dependency graph or delete behavior.
+- SCM-C01–C03 remain Passing only after the corrected deterministic and mounted facts. SCM-C04 remains Partial with passive breadcrumbs and Task 6 explicitly deferred.

@@ -28,7 +28,7 @@ export default function MediaDetail({ item, onRename }) {
         <label><span>Default description</span><textarea value={defaultDescription} onChange={(event) => setDefaultDescription(event.target.value)} /></label>
         <button type="submit" className="secondary" disabled={!onRename || (displayName.trim() === item.record.displayName && defaultDescription === item.record.defaultDescription)}>Save metadata</button>
       </form>
-      <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} />
+      <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
     </article>
   );
 }

@@ -52,9 +52,13 @@ function renderWorkspace(buildPanelOpen = false) {
 
 test("Build commands are grouped by task above an independently inert Dashboard map", () => {
   const html = renderWorkspace(false);
+  const contentGroup = html.match(/<section[^>]*data-build-command-group="content"[\s\S]*?<\/section>/)?.[0] ?? "";
 
   assert.match(html, /aria-label="Build commands"/);
-  assert.match(html, /data-build-command-group="content"[\s\S]*Add chart[\s\S]*Add static content[\s\S]*Source content[\s\S]*Pages &amp; sections/);
+  assert.deepEqual([...contentGroup.matchAll(/<button\b/g)].length, 3);
+  assert.match(contentGroup, /Add chart[\s\S]*Add static content[\s\S]*Source content/);
+  assert.doesNotMatch(contentGroup, /Pages &amp; sections/);
+  assert.match(html, /data-build-command-group="structure"[\s\S]*Pages &amp; sections/);
   assert.match(html, /data-build-command-group="time"[\s\S]*Chrono Studio[\s\S]*Scene Studio/);
   assert.match(html, /data-build-command-group="layout"[\s\S]*Layout changes[\s\S]*Save Layout Changes[\s\S]*Discard Layout Changes/);
   assert.match(html, /data-build-command-group="session"[\s\S]*Reset[\s\S]*Finish Build[\s\S]*Delete dashboard content/);

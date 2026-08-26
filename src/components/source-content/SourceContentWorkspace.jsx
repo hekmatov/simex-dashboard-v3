@@ -10,18 +10,29 @@ export default function SourceContentWorkspace({
   dashboard,
   viewportWidth,
   initialSelectedId = null,
+  viewState = null,
+  onViewStateChange,
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
 }) {
   const width = useViewportWidth(viewportWidth);
   const layout = managerLayoutForWidth(width);
-  const [tab, setTab] = React.useState("media");
-  const [queries, setQueries] = React.useState({ media: "", sources: "" });
-  const [filterState, setFilterState] = React.useState({ media: { ...EMPTY_FILTERS }, sources: { ...EMPTY_FILTERS } });
-  const [selections, setSelections] = React.useState({ media: initialSelectedId, sources: null });
-  const [tabletDetailOpen, setTabletDetailOpen] = React.useState(Boolean(initialSelectedId));
+  const [localViewState, setLocalViewState] = React.useState(() => createSourceContentViewState({
+    selections: { media: initialSelectedId, sources: null },
+    tabletDetailOpen: Boolean(initialSelectedId),
+  }));
+  const browseState = viewState ?? localViewState;
+  const { tab, queries, filters: filterState, selections, tabletDetailOpen } = browseState;
   const pendingDraftIds = React.useRef(new Set());
+
+  const updateViewState = (updater) => {
+    const next = createSourceContentViewState(
+      typeof updater === "function" ? updater(browseState) : updater,
+    );
+    if (viewState === null) setLocalViewState(next);
+    onViewStateChange?.(next);
+  };
 
   React.useEffect(() => () => {
     for (const draftId of pendingDraftIds.current) onContentDraftDiscard?.(draftId, "manager-unmount");
@@ -35,8 +46,11 @@ export default function SourceContentWorkspace({
     ?? (layout === "desktop" ? items[0] ?? null : null);
 
   const selectItem = (id) => {
-    setSelections((current) => ({ ...current, [tab]: id }));
-    if (layout === "tablet") setTabletDetailOpen(true);
+    updateViewState((current) => ({
+      ...current,
+      selections: { ...current.selections, [tab]: id },
+      tabletDetailOpen: layout === "tablet" ? true : current.tabletDetailOpen,
+    }));
   };
 
   const rename = async (values) => {
@@ -59,14 +73,17 @@ export default function SourceContentWorkspace({
     query: queries[tab],
     filters: filterState[tab],
     selectedId: selected?.id ?? null,
-    onQueryChange: (query) => setQueries((current) => ({ ...current, [tab]: query })),
-    onFilterChange: (name, value) => setFilterState((current) => ({ ...current, [tab]: { ...current[tab], [name]: value } })),
+    onQueryChange: (query) => updateViewState((current) => ({ ...current, queries: { ...current.queries, [tab]: query } })),
+    onFilterChange: (name, value) => updateViewState((current) => ({
+      ...current,
+      filters: { ...current.filters, [tab]: { ...current.filters[tab], [name]: value } },
+    })),
     onSelect: selectItem,
   };
   const catalogue = tab === "media" ? <MediaCatalogue {...catalogueProps} /> : <DataSourceCatalogue {...catalogueProps} />;
   const detail = (
     <section className="source-content-detail" aria-label="Content detail">
-      {layout === "tablet" && <button type="button" className="secondary source-content-back" onClick={() => setTabletDetailOpen(false)}>Back</button>}
+      {layout === "tablet" && <button type="button" className="secondary source-content-back" onClick={() => updateViewState((current) => ({ ...current, tabletDetailOpen: false }))}>Back</button>}
       <ContentDetail item={selected} datasetProfile={dashboard.datasetProfiles?.[selected?.id]} onRename={rename} />
     </section>
   );
@@ -77,8 +94,8 @@ export default function SourceContentWorkspace({
         <p>Manage reusable media and dashboard data sources without leaving the canvas.</p>
       </header>
       <div className="source-content-tabs" role="tablist" aria-label="Source content categories">
-        <button type="button" role="tab" aria-selected={tab === "media"} onClick={() => { setTab("media"); setTabletDetailOpen(false); }}>Media</button>
-        <button type="button" role="tab" aria-selected={tab === "sources"} onClick={() => { setTab("sources"); setTabletDetailOpen(false); }}>Data sources</button>
+        <button type="button" role="tab" aria-selected={tab === "media"} onClick={() => updateViewState((current) => ({ ...current, tab: "media", tabletDetailOpen: false }))}>Media</button>
+        <button type="button" role="tab" aria-selected={tab === "sources"} onClick={() => updateViewState((current) => ({ ...current, tab: "sources", tabletDetailOpen: false }))}>Data sources</button>
       </div>
       <div className="source-content-composition">
         {(layout === "desktop" || !tabletDetailOpen) && catalogue}
@@ -86,6 +103,28 @@ export default function SourceContentWorkspace({
       </div>
     </section>
   );
+}
+
+export function createSourceContentViewState(input = {}) {
+  const queries = input.queries ?? {};
+  const filters = input.filters ?? {};
+  const selections = input.selections ?? {};
+  return {
+    tab: input.tab === "sources" ? "sources" : "media",
+    queries: {
+      media: String(queries.media ?? ""),
+      sources: String(queries.sources ?? ""),
+    },
+    filters: {
+      media: normalizedFilters(filters.media),
+      sources: normalizedFilters(filters.sources),
+    },
+    selections: {
+      media: optionalId(selections.media),
+      sources: optionalId(selections.sources),
+    },
+    tabletDetailOpen: input.tabletDetailOpen === true,
+  };
 }
 
 export function managerLayoutForWidth(width) {
@@ -111,26 +150,33 @@ export function visibleManagerItems(dashboard = {}, tab = "media", filters = {})
 }
 
 function contentItem(dashboard, id, kind, record) {
-  const uses = directUses(dashboard, id, kind);
-  return { id, kind, record, typeLabel: kind === "media" ? "Image" : kind === "csv" ? "CSV" : "GeoJSON", usageCount: uses.length, uses, activeRetainers: [] };
+  const uses = Array.isArray(record.uses) ? record.uses : [];
+  const usageCount = Number.isSafeInteger(record.usageCount) && record.usageCount >= 0
+    ? record.usageCount
+    : uses.length > 0 ? uses.length : null;
+  return {
+    id,
+    kind,
+    record,
+    typeLabel: kind === "media" ? "Image" : kind === "csv" ? "CSV" : "GeoJSON",
+    usageCount,
+    usageKnown: usageCount !== null,
+    uses,
+    activeRetainers: [],
+  };
 }
 
-function directUses(dashboard, id, kind) {
-  const uses = [];
-  for (const page of dashboard.pages ?? []) for (const section of page.sections ?? []) for (const panel of section.panels ?? []) {
-    const chart = panel.chart ?? panel;
-    const placement = dashboard.dataSources?.[chart.sourceId];
-    const matches = kind === "media" ? placement?.mediaId === id
-      : kind === "csv" ? chart.sourceId === id
-        : chart.presentation?.map?.geoSource === id;
-    if (matches) uses.push({
-      id: `${page.id}:${section.id}:${panel.id}`,
-      pageId: page.id, pageLabel: page.label ?? page.title ?? page.id,
-      sectionId: section.id, sectionLabel: section.title ?? section.label ?? section.id,
-      panelId: panel.id, panelLabel: chart.title ?? panel.id,
-    });
-  }
-  return uses;
+function normalizedFilters(value = {}) {
+  return {
+    origin: String(value.origin ?? EMPTY_FILTERS.origin),
+    status: String(value.status ?? EMPTY_FILTERS.status),
+    usage: String(value.usage ?? EMPTY_FILTERS.usage),
+    kind: String(value.kind ?? EMPTY_FILTERS.kind),
+  };
+}
+
+function optionalId(value) {
+  return typeof value === "string" && value ? value : null;
 }
 
 function useViewportWidth(explicitWidth) {

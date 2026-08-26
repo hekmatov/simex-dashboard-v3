@@ -13,7 +13,8 @@ test.beforeEach(async ({ page, request }) => {
 test("three Build content commands preserve six/four stage contracts", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
   const content = page.getByRole("region", { name: "Content commands" });
-  await expect(content.getByRole("button")).toHaveText(["Add chart", "Add static content", "Source content", "Pages & sections"]);
+  await expect(content.getByRole("button")).toHaveText(["Add chart", "Add static content", "Source content"]);
+  await expect(page.getByRole("region", { name: "Structure commands" }).getByRole("button")).toHaveText(["Pages & sections"]);
 
   await content.getByRole("button", { name: "Add chart" }).click();
   const chartWizard = page.getByRole("dialog", { name: "Add new chart" });
@@ -30,6 +31,10 @@ test("non-modal manager restores canvas selection scroll and focus", async ({ pa
   await openBuild(page, { width: 1440, height: 900 });
   const canvas = page.locator("[data-canonical-canvas-instance]");
   const canvasInstance = await canvas.getAttribute("data-canonical-canvas-instance");
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const originalSelection = page.locator('[role="treeitem"][aria-selected="true"]').first();
+  await expect(originalSelection).toBeVisible();
+  const originalSelectionLabel = await originalSelection.getAttribute("aria-label");
   await page.evaluate(() => window.scrollTo(0, Math.min(240, document.documentElement.scrollHeight - innerHeight)));
   const beforeScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
 
@@ -39,9 +44,17 @@ test("non-modal manager restores canvas selection scroll and focus", async ({ pa
   await expect(manager).toBeVisible();
   await expect(canvas).toHaveAttribute("data-canonical-canvas-instance", canvasInstance);
   await expect(canvas).toHaveCount(1);
+  const changedSelection = page.locator('[role="treeitem"][data-build-node-kind="page"]:not([aria-selected="true"])').first();
+  const changedSelectionLabel = await changedSelection.getAttribute("aria-label");
+  await changedSelection.evaluate((node) => {
+    node.focus();
+    node.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  });
+  await expect(page.getByRole("treeitem", { name: changedSelectionLabel, exact: true })).toHaveAttribute("aria-selected", "true");
 
   await manager.getByRole("button", { name: "Close", exact: true }).click();
   await expect(manager).toHaveCount(0);
+  await expect(page.getByRole("treeitem", { name: originalSelectionLabel, exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(sourceCommand).toBeFocused();
   await expect.poll(() => page.evaluate(() => ({ x: scrollX, y: scrollY }))).toEqual(beforeScroll);
 });
@@ -49,6 +62,7 @@ test("non-modal manager restores canvas selection scroll and focus", async ({ pa
 test("desktop composition keeps canvas and catalogue state without overflow", async ({ page }) => {
   await openBuild(page, { width: 1440, height: 900 });
   await page.getByRole("button", { name: "Source content", exact: true }).click();
+  const host = page.getByRole("complementary", { name: "Source content authoring" });
   const manager = page.locator('.source-content-workspace[data-manager-layout="desktop"]');
   await expect(manager).toBeVisible();
   await expect(manager.getByRole("region", { name: "Media catalogue" })).toBeVisible();
@@ -64,28 +78,65 @@ test("desktop composition keeps canvas and catalogue state without overflow", as
   await manager.getByRole("button", { name: "Save name" }).click();
   await expect(nameField).toHaveValue(`${originalName} managed`);
   await expect(manager.getByRole("region", { name: "Data source catalogue" })).toContainText(`${originalName} managed`);
+  const sourceSearch = manager.getByLabel("Search data sources");
+  await sourceSearch.fill("Generated");
+  await manager.getByLabel("Filter by origin").selectOption("legacy-import");
+  await manager.getByLabel("Filter by status").selectOption("ready");
+  await manager.getByLabel("Filter by usage").selectOption("used");
+  await manager.getByLabel("Filter by kind").selectOption("csv");
 
   await manager.getByRole("tab", { name: "Media" }).click();
   const search = manager.getByLabel("Search media");
   await search.fill("image");
   await manager.getByLabel("Filter by origin").selectOption("legacy-import");
+  await manager.getByLabel("Filter by status").selectOption("ready");
+  await manager.getByLabel("Filter by usage").selectOption("unused");
   await manager.getByRole("tab", { name: "Data sources" }).click();
   await expect(manager.getByLabel("Filter by kind")).toBeVisible();
   await manager.getByRole("tab", { name: "Media" }).click();
   await expect(search).toHaveValue("image");
   await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
+  await host.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Source content", exact: true }).click();
+  await expect(manager.getByRole("tab", { name: "Media" })).toHaveAttribute("aria-selected", "true");
+  await expect(manager.getByLabel("Search media")).toHaveValue("image");
+  await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
+  await expect(manager.getByLabel("Filter by status")).toHaveValue("ready");
+  await expect(manager.getByLabel("Filter by usage")).toHaveValue("unused");
+  await manager.getByRole("tab", { name: "Data sources" }).click();
+  await expect(manager.getByLabel("Search data sources")).toHaveValue("Generated");
+  await expect(manager.getByLabel("Filter by origin")).toHaveValue("legacy-import");
+  await expect(manager.getByLabel("Filter by status")).toHaveValue("ready");
+  await expect(manager.getByLabel("Filter by usage")).toHaveValue("used");
+  await expect(manager.getByLabel("Filter by kind")).toHaveValue("csv");
+  await manager.getByLabel("Filter by usage").selectOption("all");
+  await expect(manager.locator('.source-content-row[aria-pressed="true"]')).toContainText(`${originalName} managed`);
 
   const geometry = await page.evaluate(() => {
+    const host = document.querySelector('.build-authoring-auxiliary[data-authoring-surface="source-content"]');
+    const workspace = host?.querySelector(".source-content-workspace")?.getBoundingClientRect();
+    const catalogue = host?.querySelector(".source-content-catalogue")?.getBoundingClientRect();
+    const detail = host?.querySelector(".source-content-detail")?.getBoundingClientRect();
     const canvas = document.querySelector("[data-canonical-canvas-instance]")?.getBoundingClientRect();
     return {
+      hostClientWidth: host?.clientWidth ?? 0,
+      hostScrollWidth: host?.scrollWidth ?? 0,
+      workspaceLeft: workspace?.left ?? -1,
+      workspaceRight: workspace?.right ?? innerWidth + 1,
+      hostLeft: host?.getBoundingClientRect().left ?? 0,
+      hostRight: host?.getBoundingClientRect().right ?? 0,
+      catalogueRight: catalogue?.right ?? 0,
+      detailLeft: detail?.left ?? 0,
       canvasWidth: canvas?.width ?? 0,
       canvasHeight: canvas?.height ?? 0,
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
+  expect(geometry.hostScrollWidth).toBeLessThanOrEqual(geometry.hostClientWidth);
+  expect(geometry.workspaceLeft).toBeGreaterThanOrEqual(geometry.hostLeft);
+  expect(geometry.workspaceRight).toBeLessThanOrEqual(geometry.hostRight);
+  expect(geometry.catalogueRight).toBeLessThanOrEqual(geometry.detailLeft);
   expect(geometry.canvasWidth).toBeGreaterThan(240);
   expect(geometry.canvasHeight).toBeGreaterThan(160);
-  expect(geometry.overflow).toBe(0);
 });
 
 test("tablet composition navigates list to detail with Back and preserves filters", async ({ page }) => {
@@ -93,6 +144,7 @@ test("tablet composition navigates list to detail with Back and preserves filter
   const canvas = page.locator("[data-canonical-canvas-instance]");
   const canvasInstance = await canvas.getAttribute("data-canonical-canvas-instance");
   await page.getByRole("button", { name: "Source content", exact: true }).click();
+  const host = page.getByRole("complementary", { name: "Source content authoring" });
   const manager = page.locator('.source-content-workspace[data-manager-layout="tablet"]');
   await expect(manager).toBeVisible();
   await expect(canvas).toHaveAttribute("data-canonical-canvas-instance", canvasInstance);
@@ -107,21 +159,39 @@ test("tablet composition navigates list to detail with Back and preserves filter
   await firstItem.click();
   await expect(manager.getByRole("button", { name: "Back", exact: true })).toBeVisible();
   await expect(manager.getByRole("region", { name: "Content detail" })).toContainText(selectedName);
+  await host.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Source content", exact: true }).click();
+  await expect(manager.getByRole("button", { name: "Back", exact: true })).toBeVisible();
+  await expect(manager.getByRole("region", { name: "Content detail" })).toContainText(selectedName);
   await manager.getByRole("button", { name: "Back", exact: true }).click();
   await expect(manager.getByLabel("Search data sources")).toHaveValue("");
   await expect(manager.getByLabel("Filter by kind")).toHaveValue("all");
   await expect(firstItem).toHaveAttribute("aria-pressed", "true");
   const geometry = await page.evaluate(() => {
+    const host = document.querySelector('.build-authoring-auxiliary[data-authoring-surface="source-content"]');
+    const workspace = host?.querySelector(".source-content-workspace")?.getBoundingClientRect();
+    const pane = host?.querySelector(".source-content-catalogue")?.getBoundingClientRect();
     const bounds = document.querySelector("[data-canonical-canvas-instance]")?.getBoundingClientRect();
     return {
+      hostClientWidth: host?.clientWidth ?? 0,
+      hostScrollWidth: host?.scrollWidth ?? 0,
+      hostLeft: host?.getBoundingClientRect().left ?? 0,
+      hostRight: host?.getBoundingClientRect().right ?? 0,
+      workspaceLeft: workspace?.left ?? -1,
+      workspaceRight: workspace?.right ?? innerWidth + 1,
+      paneLeft: pane?.left ?? -1,
+      paneRight: pane?.right ?? innerWidth + 1,
       canvasWidth: bounds?.width ?? 0,
       canvasHeight: bounds?.height ?? 0,
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
+  expect(geometry.hostScrollWidth).toBeLessThanOrEqual(geometry.hostClientWidth);
+  expect(geometry.workspaceLeft).toBeGreaterThanOrEqual(geometry.hostLeft);
+  expect(geometry.workspaceRight).toBeLessThanOrEqual(geometry.hostRight);
+  expect(geometry.paneLeft).toBeGreaterThanOrEqual(geometry.hostLeft);
+  expect(geometry.paneRight).toBeLessThanOrEqual(geometry.hostRight);
   expect(geometry.canvasWidth).toBeGreaterThan(240);
   expect(geometry.canvasHeight).toBeGreaterThan(160);
-  expect(geometry.overflow).toBe(0);
 });
 
 async function openBuild(page, viewport) {
