@@ -94,7 +94,7 @@ test("presentable index includes charts and saved Image identity/revision but ex
     descriptor: {
       kind: "image",
       panel_id: "image-panel",
-      source_id: "image-source",
+      media_id: "media-image-source",
       revision: 4,
     },
   });
@@ -107,41 +107,52 @@ test("presentable index is empty while the dashboard is still loading", () => {
 test("presentable index excludes every recovery-only or incomplete saved Image", () => {
   const dashboard = fixtureDashboard();
   const validSource = dashboard.dataSources["image-source"];
+  const validMedia = dashboard.contentLibrary.mediaItems["media-image-source"];
   const recoveryCases = {
     replacement: {
-      ...validSource,
-      origin: { kind: "replacementRequired", reason: "Legacy blob source" },
-      migrationWarnings: ["replacement-required"],
+      source: { ...validSource, mediaId: "media-replacement" },
+      media: {
+        ...assetMediaItem("media-replacement", "asset-replacement", "needs-relink"),
+        origin: "legacy-import",
+      },
     },
     missingAlt: {
-      ...validSource,
-      alt: "",
-      migrationWarnings: ["missing-alt"],
+      source: { ...validSource, mediaId: "media-missing-alt", alt: "" },
+      media: { ...validMedia, mediaId: "media-missing-alt" },
     },
     unsafeUrl: {
-      ...validSource,
-      origin: { kind: "url", url: "http://example.test/map.png" },
+      source: { ...validSource, mediaId: "media-unsafe-url" },
+      media: {
+        ...validMedia,
+        mediaId: "media-unsafe-url",
+        current: { kind: "url", url: "http://example.test/map.png" },
+      },
     },
     missingManifest: {
-      ...validSource,
-      origin: { kind: "asset", assetId: "asset-missing" },
+      source: { ...validSource, mediaId: "media-missing-manifest" },
+      media: assetMediaItem("media-missing-manifest", "asset-missing"),
     },
     missingBytes: {
-      ...validSource,
-      origin: { kind: "asset", assetId: "asset-missing-bytes" },
+      source: { ...validSource, mediaId: "media-missing-bytes" },
+      media: assetMediaItem("media-missing-bytes", "asset-missing-bytes"),
     },
     stagedRecovery: {
-      ...validSource,
-      origin: { kind: "asset", assetId: "asset-staged" },
+      source: { ...validSource, mediaId: "media-staged" },
+      media: assetMediaItem("media-staged", "asset-staged"),
     },
   };
   dashboard.dataSources = {
     ...dashboard.dataSources,
-    ...Object.fromEntries(Object.entries(recoveryCases).map(([id, source]) => [`source-${id}`, source])),
+    ...Object.fromEntries(Object.entries(recoveryCases).map(([id, { source }]) => [`source-${id}`, source])),
     "source-durable": {
       ...validSource,
-      origin: { kind: "asset", assetId: "asset-durable" },
+      mediaId: "media-durable",
     },
+  };
+  dashboard.contentLibrary.mediaItems = {
+    ...dashboard.contentLibrary.mediaItems,
+    ...Object.fromEntries(Object.values(recoveryCases).map(({ media }) => [media.mediaId, media])),
+    "media-durable": assetMediaItem("media-durable", "asset-durable"),
   };
   dashboard.assets = {
     "asset-missing-bytes": assetManifestEntry("b", "missing"),
@@ -199,9 +210,8 @@ function fixtureDashboard() {
       },
       "image-source": {
         kind: "staticImage",
-        sourceVersion: 1,
-        revision: 4,
-        origin: { kind: "url", url: "https://example.test/map.png" },
+        sourceVersion: 2,
+        mediaId: "media-image-source",
         alt: "Response map",
         decorative: false,
         fit: "contain",
@@ -209,6 +219,21 @@ function fixtureDashboard() {
         rotation: 0,
       },
     },
+    contentLibrary: {
+      mediaItems: {
+        "media-image-source": {
+          mediaId: "media-image-source",
+          revision: 4,
+          current: { kind: "url", url: "https://example.test/map.png" },
+          displayName: "Response map",
+          defaultDescription: "Response map",
+          origin: "external",
+          health: "external",
+        },
+      },
+      sourceEntries: {},
+    },
+    assets: {},
     pages: [{
       id: "page-a",
       sections: [{
@@ -220,6 +245,18 @@ function fixtureDashboard() {
         ],
       }],
     }],
+  };
+}
+
+function assetMediaItem(mediaId, assetId, health = "ready") {
+  return {
+    mediaId,
+    revision: 4,
+    current: { kind: "asset", assetId },
+    displayName: "Response map",
+    defaultDescription: "Response map",
+    origin: "uploaded",
+    health,
   };
 }
 
