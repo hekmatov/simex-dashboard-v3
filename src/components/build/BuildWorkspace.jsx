@@ -58,6 +58,7 @@ import {
   reduceBuildDraftCoordinator,
 } from "./buildDraftCoordinator.js";
 import { getChartSchema } from "../../charting/schemas/chartSchemaRegistry.js";
+import SourceContentWorkspace from "../source-content/SourceContentWorkspace.jsx";
 
 export default function BuildWorkspace({
   themeProjection,
@@ -690,8 +691,8 @@ export default function BuildWorkspace({
               className="build-authoring-auxiliary"
               {...dashboardThemeRootProps(themeProjection)}
               data-authoring-surface={renderedAuxiliary}
-              role="dialog"
-              aria-modal="false"
+              role={renderedAuxiliary === "source-content" ? "complementary" : "dialog"}
+              aria-modal={renderedAuxiliary === "source-content" ? undefined : "false"}
               aria-label={`${auxiliaryLabel(renderedAuxiliary)} authoring`}
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;
@@ -701,6 +702,14 @@ export default function BuildWorkspace({
               }}
             >
               <button type="button" className="secondary build-auxiliary-close" onClick={closeAuxiliary}>Close</button>
+              {renderedAuxiliary === "source-content" && (
+                <SourceContentWorkspace
+                  dashboard={dashboard}
+                  onContentDraftStage={onContentDraftStage}
+                  onContentDraftCommit={onContentDraftCommit}
+                  onContentDraftDiscard={onContentDraftDiscard}
+                />
+              )}
               {renderedAuxiliary === "structure" && structureDraft && <StructureAuthoring draft={structureDraft} disabled={locked} onAction={dispatchStructure} />}
               {renderedAuxiliary === "chrono-group" && chronoContentState?.view === "library" && (
                 <ChronoStudio state={chronoContentState} cards={selectChronoStudioCards(chronoContentState)} onAction={dispatchChronoContent} />
@@ -824,6 +833,7 @@ function auxiliaryLabel(surface) {
     structure: "Structure",
     "chrono-group": "Chrono Studio",
     scene: "Scene Studio",
+    "source-content": "Source content",
   })[surface] ?? "Build work";
 }
 

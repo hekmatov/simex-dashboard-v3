@@ -54,7 +54,7 @@ test("Build commands are grouped by task above an independently inert Dashboard 
   const html = renderWorkspace(false);
 
   assert.match(html, /aria-label="Build commands"/);
-  assert.match(html, /data-build-command-group="content"[\s\S]*Add chart[\s\S]*Pages &amp; sections/);
+  assert.match(html, /data-build-command-group="content"[\s\S]*Add chart[\s\S]*Add static content[\s\S]*Source content[\s\S]*Pages &amp; sections/);
   assert.match(html, /data-build-command-group="time"[\s\S]*Chrono Studio[\s\S]*Scene Studio/);
   assert.match(html, /data-build-command-group="layout"[\s\S]*Layout changes[\s\S]*Save Layout Changes[\s\S]*Discard Layout Changes/);
   assert.match(html, /data-build-command-group="session"[\s\S]*Reset[\s\S]*Finish Build[\s\S]*Delete dashboard content/);

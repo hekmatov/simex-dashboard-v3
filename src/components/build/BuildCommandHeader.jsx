@@ -44,6 +44,17 @@ export default function BuildCommandHeader({
               {staticDraftAvailable ? "Resume static content draft" : "Add static content"}
             </button>
             <button
+              id="source-content-command"
+              type="button"
+              className="secondary"
+              data-context-shelf-entry="source-content"
+              data-unit-orbit-preserve-open
+              disabled={auxiliaryLocked}
+              onClick={() => onOpenAuxiliary?.("source-content")}
+            >
+              Source content
+            </button>
+            <button
               type="button"
               className="secondary"
               data-context-shelf-entry="structure"

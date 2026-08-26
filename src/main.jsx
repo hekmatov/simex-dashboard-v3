@@ -9,6 +9,7 @@ import "./styles/presentation.css";
 import "./styles/dashboard-style-grammar.css";
 import "./styles/chart-data-state.css";
 import "./styles/static-content.css";
+import "./styles/source-content.css";
 import "./styles/source-viewer.css";
 import "./styles/immersive-display.css";
 

@@ -35,7 +35,10 @@ import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "./static
 import { buildPresentableItemIndex } from "./static-content/staticPanelCapabilities.js";
 import { commitDurableStaticPanelTransaction } from "./static-content/assets/durableStaticPanelCommit.js";
 import { reconcileAuthoredAssets } from "./static-content/assets/reconcileAuthoredAssets.js";
-import { createContentDraftCoordinator } from "./content-library/contentDraftTransaction.js";
+import {
+  createContentDraftCoordinator,
+  createDeferredCoordinatorDisposal,
+} from "./content-library/contentDraftTransaction.js";
 import {
   decodeBrowserImageAsset,
   discardSessionImageAsset,
@@ -196,6 +199,7 @@ export default function App() {
   const dashboardRendererRef = React.useRef(null);
   const buildPanelScrollRef = React.useRef(null);
   const contentDraftCoordinatorRef = React.useRef(null);
+  const contentDraftCoordinatorDisposalRef = React.useRef(null);
   if (contentDraftCoordinatorRef.current === null) {
     contentDraftCoordinatorRef.current = createContentDraftCoordinator({
       getDashboard: () => dashboardRef.current,
@@ -206,6 +210,9 @@ export default function App() {
     });
   }
   const contentDraftCoordinator = contentDraftCoordinatorRef.current;
+  if (contentDraftCoordinatorDisposalRef.current === null) {
+    contentDraftCoordinatorDisposalRef.current = createDeferredCoordinatorDisposal();
+  }
   const playbackChartCollections = playbackChartSelectorRef.current(dashboard, activePageId);
   const validChartIds = React.useMemo(
     () => new Set(playbackChartCollections.charts.map(({ id }) => id)),
@@ -254,9 +261,10 @@ export default function App() {
     void scheduler?.flush().finally(() => scheduler.dispose());
   }, []);
 
-  React.useEffect(() => () => {
-    void contentDraftCoordinator.dispose();
-  }, [contentDraftCoordinator]);
+  React.useEffect(
+    () => contentDraftCoordinatorDisposalRef.current.retain(contentDraftCoordinator),
+    [contentDraftCoordinator],
+  );
 
   React.useEffect(() => {
     if (!lookPersistenceFlash) return undefined;

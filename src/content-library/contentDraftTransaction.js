@@ -1,6 +1,28 @@
 import { isFinalizedWizardResult } from "../charting/forms/wizardDraft.js";
 import { isFinalizedStaticContentResult } from "../static-content/forms/staticContentDraft.js";
 
+export function createDeferredCoordinatorDisposal({ schedule = queueMicrotask } = {}) {
+  if (typeof schedule !== "function") throw new TypeError("Content draft disposal scheduler is required.");
+  let generation = 0;
+  return Object.freeze({
+    retain(coordinator) {
+      if (!coordinator || typeof coordinator.dispose !== "function") {
+        throw new TypeError("Content draft coordinator disposal requires a coordinator.");
+      }
+      const retainedGeneration = ++generation;
+      let released = false;
+      return () => {
+        if (released) return false;
+        released = true;
+        schedule(() => {
+          if (generation === retainedGeneration) void coordinator.dispose();
+        });
+        return true;
+      };
+    },
+  });
+}
+
 export function stageContentDraft(input = {}) {
   const draft = normalizeDraft(input);
   return freezeRecord({ ...draft, status: "staged" });

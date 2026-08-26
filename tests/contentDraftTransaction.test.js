@@ -7,6 +7,7 @@ import {
   finalizeContentDraft,
   stageContentDraft,
 } from "../src/content-library/contentDraftTransaction.js";
+import * as contentDraftTransaction from "../src/content-library/contentDraftTransaction.js";
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 import { createWizardState, finalizeWizardDraft } from "../src/charting/forms/wizardDraft.js";
 import {
@@ -15,6 +16,26 @@ import {
   reduceStaticContentDraft,
 } from "../src/static-content/forms/staticContentDraft.js";
 import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
+
+test("StrictMode effect replay keeps the reused content draft coordinator active until the final release", async () => {
+  assert.equal(typeof contentDraftTransaction.createDeferredCoordinatorDisposal, "function");
+  const scheduled = [];
+  let disposeCalls = 0;
+  const lifecycle = contentDraftTransaction.createDeferredCoordinatorDisposal({
+    schedule: (callback) => scheduled.push(callback),
+  });
+  const coordinator = { async dispose() { disposeCalls += 1; } };
+
+  const releaseReplay = lifecycle.retain(coordinator);
+  releaseReplay();
+  const releaseMounted = lifecycle.retain(coordinator);
+  await scheduled.shift()();
+  assert.equal(disposeCalls, 0);
+
+  releaseMounted();
+  await scheduled.shift()();
+  assert.equal(disposeCalls, 1);
+});
 
 test("pure content draft transitions are immutable and retain exact owner context", () => {
   const input = {

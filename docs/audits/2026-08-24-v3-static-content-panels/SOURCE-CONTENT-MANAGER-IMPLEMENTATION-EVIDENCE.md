@@ -107,3 +107,27 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - BASE `be6416f026a271008385f4d94f26615cd8697113`; narrow RED **8/9 passing**, focused GREEN **34/34 passing**, exact Task 3 selection **91/91 passing** in 7.65 s.
 - Shallow chart, static, and missing-media lookalikes cannot publish. Positive coordinator tests pass actual objects returned by `finalizeWizardDraft` and `finalizeStaticContentDraft`.
 - Finalizer-owned module-private `WeakSet` brands are consumed before coordinator cloning and reduced to a session-only completed-draft ID. This avoids a serializable/spoofable marker, schema duplication, import cycles, and future-flow behavior; manager explicit Add remains allowed.
+
+## Task 4 — Non-modal manager shell and catalogue composition
+
+**Implementation state:** SCM-C01–C03 Engine/UI/Fidelity Passing for the bounded manager-shell journeys. SCM-C04 is partial: passive type metadata plus durable rename/default-description are implemented; action-rich detail flows remain later work.
+
+### RED and deterministic evidence
+
+- Initial exact Task 4 selection: **32 passed / 3 failed / 0 skipped / 0 todo** on the intended missing command/workspace/detail contracts.
+- Exact Task 4 GREEN: **38 passed / 0 failed / 0 skipped / 0 todo**, 2.93 s.
+- The first mounted run produced **3 passed / 1 failed**. Browser capture proved the rename failed before persistence with `Content draft coordinator is disposed` during StrictMode effect replay.
+- Focused lifecycle RED/GREEN: `tests/contentDraftTransaction.test.js` moved from **9/10** to **10/10** passing. App now defers coordinator disposal behind a retained-generation check, so replay cleanup is cancelled while final unmount still disposes.
+
+### Mounted Chromium evidence
+
+- Correct command: `pnpm.cmd test:e2e tests/e2e/source-content-manager.spec.js --project=chromium`.
+- Final result: **4 passed / 0 failed**, 53.4 s.
+- 1440×900: exact command inventory and six/four stage counts; one persistent canonical canvas; close restores scroll and Source content focus; desktop split; durable rename reflected in the open catalogue; search/filter continuity; usable canvas target; zero horizontal overflow.
+- 1024×768: one unchanged canonical canvas; tablet list-to-detail/Back; selected row and filters preserved; usable canvas target; zero horizontal overflow.
+- No local catalogue projection or persistence bypass was introduced. The open manager consumes the dashboard published through the App-owned serialized coordinator.
+
+### Deferred truth
+
+- Upload/picker/import-local, replacement/relink, delete/recovery, computed dependency blockers/actions, GeoJSON preview, full CSV preview/profile, and all Task 5+ journeys remain unimplemented and unverified.
+- No full build, full suite, generated-output refresh, dependency addition, or parent progress update was performed.
