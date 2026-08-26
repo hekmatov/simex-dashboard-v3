@@ -175,7 +175,7 @@ test("native Ctrl-wheel guarding, image zoom, reduced motion, and listener clean
   expect(controlled.defaultPrevented).toBe(true);
   expect(controlled.dispatchResult).toBe(false);
   await expect(image).toHaveAttribute("data-image-zoom-scale", "1.25");
-  await expect(page.locator(".chart-image-zoom-status")).toHaveText("Zoom 125%");
+  await expect(page.locator(".chart-image-zoom-status")).toHaveText("125%");
   await expect.poll(() => zoomSnapshot(page)).toMatchObject({
     rendererWheelEvents: [{ ctrlKey: true, defaultPrevented: true }],
   });
@@ -204,7 +204,9 @@ test("native Ctrl-wheel guarding, image zoom, reduced motion, and listener clean
   await expect(disabledImage).not.toHaveAttribute("data-image-zoom-scale", /.+/);
   await expect(disabledChart.locator(".chart-image-zoom-controls")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Reset image zoom", exact: true }).click();
+  const resetView = page.getByRole("button", { name: "Reset view", exact: true });
+  await resetView.focus();
+  await page.keyboard.press("Enter");
   await expect(image).toHaveAttribute("data-image-zoom-scale", "1");
 
   await page.getByRole("button", { name: "Rerender zoom guard", exact: true }).click();

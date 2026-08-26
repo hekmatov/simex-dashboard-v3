@@ -208,7 +208,7 @@ function Harness() {
           interaction: { zoom: { enabled: true } },
         },
         model: {
-          src: "/showcase/section-1-collage.svg",
+          src: "/assets/pwa-icon.svg",
           alt: "Disabled zoom test",
           fit: "contain",
         },
@@ -253,7 +253,7 @@ function ZoomRendererTarget({ revision }) {
         interaction: { zoom: { enabled: true } },
       },
       model: {
-        src: "/showcase/section-1-collage.svg",
+        src: "/assets/pwa-icon.svg",
         alt: "Zoom test",
         fit: "contain",
       },
