@@ -199,7 +199,7 @@ test("Sketch 012 keeps independent browse context for Chrono and Scene Studios",
   let state = createChronoContentState({ studio: "scene", query: "scene search", pageId: "biomedical" });
   state = reduceChronoContent(state, { type: "SET_STUDIO", studio: "chrono" });
   assert.equal(state.query, "");
-  assert.equal(state.pageId, "biomedical");
+  assert.equal(state.pageId, null);
   state = reduceChronoContent(state, { type: "SET_QUERY", query: "group search" });
   state = reduceChronoContent(state, { type: "SET_STUDIO", studio: "scene" });
   assert.equal(state.query, "scene search");
