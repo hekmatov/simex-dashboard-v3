@@ -173,6 +173,14 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
       sha256,
       storageState: "missing",
     },
+    "asset-unused": {
+      mediaType: "image/png",
+      byteLength: 80,
+      width: 2,
+      height: 3,
+      sha256,
+      storageState: "missing",
+    },
   };
   dashboard.dataSources.briefing = {
     kind: "staticImage",
@@ -196,6 +204,18 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
     byteLength: 80,
     mediaType: "image/png",
   };
+  dashboard.contentLibrary.mediaItems["media-unused"] = {
+    mediaId: "media-unused",
+    revision: 2,
+    current: { kind: "asset", assetId: "asset-unused" },
+    displayName: "Unused QMD media",
+    defaultDescription: "Unused QMD media",
+    origin: "uploaded",
+    health: "ready",
+    dimensions: { width: 2, height: 3 },
+    byteLength: 80,
+    mediaType: "image/png",
+  };
   dashboard.pages[0].sections[0].panels.push(createChartDraft({
     typeId: "image",
     id: "briefing-image",
@@ -213,8 +233,14 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
     health: "missing",
     repair: { action: "replace" },
   });
+  assert.equal(missing.contentLibrary.mediaItems["media-unused"].health, "ready");
+  assert.deepEqual(missing.runtimeContentHealth.mediaItems["media-unused"], {
+    health: "missing",
+    repair: { action: "replace" },
+  });
 
   dashboard.assets[assetId].storageState = "durable";
+  dashboard.assets["asset-unused"].storageState = "durable";
   const corrupt = await loadDashboardConfig(dashboard, {}, null, {
     readAuthoredAsset: async () => {
       throw Object.assign(new Error("hash mismatch"), { code: "AUTHORED_ASSET_CORRUPT" });
@@ -226,6 +252,11 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
   });
   assert.equal(corrupt.contentLibrary.mediaItems["media-briefing"].health, "ready");
   assert.deepEqual(corrupt.runtimeContentHealth.mediaItems["media-briefing"], {
+    health: "corrupt",
+    repair: { action: "replace" },
+  });
+  assert.equal(corrupt.contentLibrary.mediaItems["media-unused"].health, "ready");
+  assert.deepEqual(corrupt.runtimeContentHealth.mediaItems["media-unused"], {
     health: "corrupt",
     repair: { action: "replace" },
   });

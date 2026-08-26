@@ -274,11 +274,15 @@ export async function loadDashboardConfig(
     sourceEntries: dashboard.contentLibrary?.sourceEntries ?? {},
     purpose: "compatibility",
   });
-  const staticSourceStates = await resolveStaticSourceStates(
-    dataSources,
-    dashboard.assets ?? {},
+  const runtimeMediaHealth = await resolveRuntimeMediaHealth(
     dashboard.contentLibrary?.mediaItems ?? {},
+    dashboard.assets ?? {},
     { readAuthoredAsset },
+  );
+  const staticSourceStates = resolveStaticSourceStates(
+    dataSources,
+    dashboard.contentLibrary?.mediaItems ?? {},
+    runtimeMediaHealth,
   );
   const dataSourceStates = {
     ...tabularSourceStates,
@@ -299,9 +303,8 @@ export async function loadDashboardConfig(
     loadedData,
     dataSourceStates,
     runtimeContentHealth: runtimeContentHealth({
-      mediaItems: dashboard.contentLibrary?.mediaItems,
+      mediaHealth: runtimeMediaHealth,
       sourceEntries: dashboard.contentLibrary?.sourceEntries,
-      dataSources,
       dataSourceStates,
     }),
   };
@@ -392,11 +395,15 @@ export async function loadDashboardConfigProgressively(
   const sourceIds = Object.keys(tabularDataSources);
   const loadedData = {};
   const hydratedProfiles = { ...reusableProfiles };
-  const dataSourceStates = await resolveStaticSourceStates(
-    dataSources,
-    dashboard.assets ?? {},
+  const runtimeMediaHealth = await resolveRuntimeMediaHealth(
     dashboard.contentLibrary?.mediaItems ?? {},
+    dashboard.assets ?? {},
     { readAuthoredAsset },
+  );
+  const dataSourceStates = resolveStaticSourceStates(
+    dataSources,
+    dashboard.contentLibrary?.mediaItems ?? {},
+    runtimeMediaHealth,
   );
 
   for (const sourceId of sourceIds) {
@@ -455,9 +462,8 @@ export async function loadDashboardConfigProgressively(
         ]),
       ),
       runtimeContentHealth: runtimeContentHealth({
-        mediaItems: dashboard.contentLibrary?.mediaItems,
+        mediaHealth: runtimeMediaHealth,
         sourceEntries: dashboard.contentLibrary?.sourceEntries,
-        dataSources,
         dataSourceStates,
       }),
     };
@@ -489,12 +495,7 @@ function isTypedStaticSource(source) {
   return source?.kind === "staticText" || source?.kind === "staticImage";
 }
 
-async function resolveStaticSourceStates(
-  dataSources,
-  assets,
-  mediaItems,
-  { readAuthoredAsset } = {},
-) {
+function resolveStaticSourceStates(dataSources, mediaItems, runtimeMediaHealth) {
   const states = {};
   for (const [sourceId, source] of plainDataEntries(
     dataSources,
@@ -506,36 +507,56 @@ async function resolveStaticSourceStates(
       continue;
     }
     const mediaItem = mediaItems[source.mediaId];
-    if (!mediaItem || mediaItem.health === "needs-relink") {
+    const health = runtimeMediaHealth[source.mediaId]?.health ?? mediaItem?.health;
+    if (!mediaItem || health === "needs-relink") {
       states[sourceId] = { status: "error", code: "replacement-required" };
       continue;
     }
-    if (mediaItem.current.kind !== "asset") {
-      states[sourceId] = { status: "ready" };
-      continue;
-    }
-    const asset = assets[mediaItem.current.assetId];
-    if (!asset || asset.storageState !== "durable") {
+    if (health === "missing") {
       states[sourceId] = { status: "error", code: "authored-asset-missing" };
       continue;
     }
-    if (typeof readAuthoredAsset !== "function") {
-      states[sourceId] = { status: "ready" };
+    if (health === "corrupt") {
+      states[sourceId] = { status: "error", code: "authored-asset-corrupt" };
       continue;
     }
-    try {
-      await readAuthoredAsset(mediaItem.current.assetId);
-      states[sourceId] = { status: "ready" };
-    } catch (error) {
-      states[sourceId] = {
-        status: "error",
-        code: error?.code === "AUTHORED_ASSET_CORRUPT"
-          ? "authored-asset-corrupt"
-          : "authored-asset-missing",
-      };
-    }
+    states[sourceId] = { status: "ready" };
   }
   return states;
+}
+
+async function resolveRuntimeMediaHealth(
+  mediaItems,
+  assets,
+  { readAuthoredAsset } = {},
+) {
+  const health = {};
+  for (const [mediaId, item] of plainDataEntries(
+    mediaItems,
+    "Content media items",
+  )) {
+    if (item?.current?.kind !== "asset") continue;
+    if (item.health === "needs-relink") {
+      health[mediaId] = healthSummary(deriveContentHealth({ item, requiresRelink: true }));
+      continue;
+    }
+    const asset = assets[item.current.assetId];
+    if (!asset || asset.storageState !== "durable") {
+      health[mediaId] = healthSummary(deriveContentHealth({ item, asset: null }));
+      continue;
+    }
+    if (typeof readAuthoredAsset !== "function") continue;
+    try {
+      await readAuthoredAsset(item.current.assetId);
+    } catch (error) {
+      health[mediaId] = healthSummary(deriveContentHealth({
+        item,
+        asset: error?.code === "AUTHORED_ASSET_CORRUPT" ? undefined : null,
+        failure: error?.code === "AUTHORED_ASSET_CORRUPT" ? { code: error.code } : null,
+      }));
+    }
+  }
+  return Object.freeze(health);
 }
 
 async function hydrateManagedSources({ dataService, sourceIds, profiles, sourceEntries, purpose }) {
@@ -556,20 +577,8 @@ async function hydrateManagedSources({ dataService, sourceIds, profiles, sourceE
   return { loadedData, profiles: hydratedProfiles, states };
 }
 
-function runtimeContentHealth({ mediaItems = {}, sourceEntries = {}, dataSources = {}, dataSourceStates = {} } = {}) {
-  const media = {};
-  for (const [sourceId, source] of plainDataEntries(dataSources, "Dashboard dataSources")) {
-    if (source?.kind !== "staticImage") continue;
-    const item = mediaItems?.[source.mediaId];
-    const state = dataSourceStates[sourceId];
-    if (!item || state?.status !== "error") continue;
-    media[source.mediaId] = healthSummary(deriveContentHealth({
-      item,
-      asset: state.code === "authored-asset-missing" ? null : undefined,
-      failure: state.code === "authored-asset-corrupt" ? { code: state.code } : null,
-      requiresRelink: state.code === "replacement-required",
-    }));
-  }
+function runtimeContentHealth({ mediaHealth = {}, sourceEntries = {}, dataSourceStates = {} } = {}) {
+  const media = { ...mediaHealth };
   const sources = {};
   for (const [sourceId, item] of plainDataEntries(sourceEntries, "Content source entries")) {
     const state = dataSourceStates[sourceId];
