@@ -103,7 +103,7 @@ export function renderChartContent(props, interactionMode) {
     });
     const activeDate = chartActiveDate(props.timeContext?.activeEpochMs);
     const framedView = React.createElement("div", {
-      ...presentationFrameProps(props.chart),
+      ...presentationFrameProps(props.chart, props.canonicalPlotId),
       ...(activeDate ? { "data-chart-active-date": activeDate } : {}),
       "data-chart-interaction-mode": interactionMode,
     }, view);
@@ -255,7 +255,7 @@ export function chartZoomEnabled(chart, suppliedSchema) {
   }
 }
 
-export function presentationFrameProps(chart) {
+export function presentationFrameProps(chart, canonicalPlotId) {
   const align = ["left", "center", "right"].includes(chart?.presentation?.title?.align)
     ? chart.presentation.title.align
     : "left";
@@ -264,6 +264,7 @@ export function presentationFrameProps(chart) {
   );
   return {
     className: "chart-view-frame",
+    "data-canonical-plot-id": canonicalPlotId ?? chart?.id,
     "data-title-align": align,
     style: {
       textAlign: align,
