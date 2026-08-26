@@ -84,7 +84,7 @@ test("Data Source actions and Review repairs are concise and explicit", async ({
   const wizard = await openWizard(page);
   await wizard.getByRole("button", { name: /^Chart type\./ }).click();
   await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("Dashboard data source").selectOption("bio_cases");
+  await wizard.getByLabel("Managed data source").selectOption("bio_cases");
 
   const viewSource = wizard.getByRole("button", { name: "View source CSV", exact: true });
   const resetSource = wizard.getByRole("button", { name: "Reset selection", exact: true });
