@@ -17,6 +17,7 @@ import {
 import { prepareChartData } from "../src/charting/data/prepareChartData.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
+import { resolveChartRendering } from "../src/charting/rendering/resolveChartRendering.js";
 import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
 
 const viteModuleUrl = import.meta.resolve("vite");
@@ -1006,7 +1007,7 @@ test("custom and ECharts views honor left, center, and right title alignment wit
   }
 });
 
-test("the pre-existing 26 chart render paths remain reachable while static renderer slices are pending", () => {
+test("the 26 chart render paths remain reachable through data and typed static renderers", () => {
   const axis = {
     rows: [{ category: "May", value: 4 }],
     roles: {
@@ -1125,7 +1126,7 @@ test("the pre-existing 26 chart render paths remain reachable while static rende
       roles: { columns: [{ field: "facility" }, { field: "score" }] },
     },
     image: {
-      rows: [{ src: "/map.png", alt: "Response map", fit: "contain" }],
+      rows: [{ src: "https://example.test/map.png", alt: "Response map", fit: "contain" }],
       roles: {},
       inline: true,
     },
@@ -1179,25 +1180,37 @@ test("the pre-existing 26 chart render paths remain reachable while static rende
   const reachability = [];
   for (const chart of dashboard.pages[0].sections[0].panels) {
     const source = dashboard.dataSources[chart.sourceId];
-    const rows = sourceRows(source);
+    const rows = source.kind === "staticImage" ? [] : sourceRows(source);
     const datasetProfile = profileDataset(rows, source.parsingMetadata);
-    const prepared = prepareChartData({ chart, rows, datasetProfile, geoData });
-    const model = buildRenderModel({ chart, prepared, datasetProfile, geoData });
+    const renderContext = {
+      accessibilityEnabled: true,
+      sources: dashboard.dataSources,
+      mediaItems: dashboard.contentLibrary?.mediaItems ?? {},
+      assets: dashboard.assets ?? {},
+    };
+    const resolved = source.kind === "staticImage"
+      ? resolveChartRendering({ chart, rows, datasetProfile, geoData, renderContext })
+      : null;
+    const prepared = resolved?.prepared
+      ?? prepareChartData({ chart, rows, datasetProfile, geoData });
+    const model = resolved?.model
+      ?? buildRenderModel({ chart, prepared, datasetProfile, geoData });
+    const status = resolved?.status ?? prepared.status;
     const html = renderToStaticMarkup(React.createElement(ChartView, {
       chart,
       rows,
       datasetProfile,
       geoData,
       accessibilityEnabled: true,
-      renderContext: { accessibilityEnabled: true },
+      renderContext,
     }));
     reachability.push([
       chart.typeId,
-      prepared.status,
+      status,
       model.kind,
       !html.includes("chart-status-error"),
     ]);
-    assert.equal(prepared.status, "ready", chart.typeId);
+    assert.equal(status, source.kind === "staticImage" ? "available" : "ready", chart.typeId);
     assert.equal(model.kind, expectedKinds[chart.typeId] ?? "echarts", chart.typeId);
     assert.doesNotMatch(html, /chart-status-error/, chart.typeId);
     assert.match(html, new RegExp(chart.title), chart.typeId);

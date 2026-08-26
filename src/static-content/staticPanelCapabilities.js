@@ -3,6 +3,7 @@ import {
   chartSchemaRegistry,
   getChartSchema,
 } from "../charting/schemas/chartSchemaRegistry.js";
+import { validateMediaItem } from "../content-library/mediaItems.js";
 import { validateStaticImageSource } from "./staticSourceSchema.js";
 
 const TEMPORAL_DESTINATION_KEYS = Object.freeze([
@@ -89,7 +90,15 @@ function imagePresentationDescriptor(panel, sources = {}, contentLibrary = {}, a
     return null;
   }
   const mediaItem = contentLibrary?.mediaItems?.[source.mediaId];
-  if (!mediaItem || mediaItem.mediaId !== source.mediaId || mediaItem.health === "needs-relink") return null;
+  try {
+    validateMediaItem(mediaItem, { assets });
+  } catch {
+    return null;
+  }
+  if (
+    mediaItem.mediaId !== source.mediaId
+    || ["missing", "corrupt", "needs-relink", "needs-review"].includes(mediaItem.health)
+  ) return null;
   if (!source.decorative && source.alt.trim() === "") return null;
   if (
     mediaItem.current.kind === "asset"
