@@ -1,13 +1,13 @@
-# Source Content Manager and QMD Reusable Media — Proposed Fidelity Matrix
+# Source Content Manager and QMD Reusable Media — Fidelity Matrix
 
 **Post-approval ownership:** `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md` fixes every existing integration owner, proposed single-responsibility path, deterministic test file, and retained browser journey. The inventory implements no row.
 
 **Date:** 2026-08-25
-**Status:** Master/user-approved binding amendment requirements. Task 1 has implemented the DashboardV5 and Static Image live engine/wiring slice for SCM-S01/S02/S03; the complete amendment rows remain unpromoted and fidelity remains unverified.
+**Status:** Master/user-approved binding amendment requirements with bounded Tasks 1–5 implementation evidence recorded. DashboardV5/Static Image, GeoJSON authority, draft publication, manager shell, and QMD safe-host/runtime slices are implemented only to their row-level statuses below; later manager journeys and complete amendment fidelity remain pending.
 **Base fidelity:** the existing Step 7S 36-row matrix remains 36/36 Passing and is not modified by this proposal.
 **Layer rule:** semantic, composition, and real-use verification are separate. A passing engine cannot promote UI or fidelity.
 
-Each table uses the exact required fields. Production owners are proposed exact ownership boundaries for review, not an implementation plan or authorization.
+Each table uses the exact required fields. Production owners and status cells distinguish implemented bounded slices from proposed later ownership; row-level evidence, not this summary, governs promotion.
 
 For SCM-S15, `renderableFragments` counts LineString = 1; MultiLineString = number of LineString members; Polygon = number of exterior/interior rings; MultiPolygon = total exterior/interior rings across polygon members; Point, MultiPoint, and null geometry = 0. It never separately counts a polygon part, so a one-ring MultiPolygon with N members has N fragments, not 2N. The 2,000/4,000 threshold is directly supported by distributed one-ring MultiPolygon evidence and is a conservative inference for other line/ring subpaths; it does not apply to points.
 

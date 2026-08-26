@@ -172,3 +172,11 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Task 6 dependency/delete, Task 7 picker/import, Task 8 replacement, Task 9 inspector controls and exhaustive width/wrap/RTL/narrow-collapse geometry, and complete Journey C fidelity remain pending.
 - No sanitizer, manager/picker action, replacement behavior, dependency graph, generated output, full build, full suite, or parent progress update was introduced.
+
+### Validated T5-R01–R04 correction
+
+- BASE `363a7c6ffa5874bb34bb4ec22a13dbdfd468c88c`; corrected focused RED **0/3**, focused GREEN **3/3**, complete component selection **14/14**, and fresh exact Task 5 selection **94/94** with zero skipped/todo.
+- A rejected non-blob resolver lease now transfers ownership before its immediate release, so subsequent effect cleanup cannot release a non-idempotent handle twice. Normal healthy acquire/release, recompile, and unmount remain covered.
+- Logical block alignment now places start, center, and end at 0, 140, and 280 px respectively for a 280 px item in the mounted 560 px content column.
+- `.free-text-chart-view__content` is the live inline-size container owner. The focused 400 px contract preserves authored `wrap-start` data while the existing narrow query produces `float:none` and `max-inline-size:100%`.
+- Document summaries were corrected for Tasks 1–5 current bounded status. Fidelity/security row-level statuses were not promoted or otherwise changed by this correction.

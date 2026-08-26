@@ -53,3 +53,13 @@ The planned real `ChartView` Free-text checkpoint mounted one shared QMD documen
 - Existing DashboardRenderer/DashboardModeWorkspace/DashboardCanvas/ChartPanel transport required no production change because Task 1 already carries the full `ContentRenderContext`; the Task 5 consumer was the missing link.
 
 No parent `progress.md`, Task 6+ owner, dependency, generated output, full build, or full suite was changed or run.
+
+## Validated T5-R01–R04 correction round
+
+- BASE `363a7c6ffa5874bb34bb4ec22a13dbdfd468c88c`.
+- Corrected focused RED: **0 passed / 3 failed / 0 skipped / 0 todo**. A rejected non-blob resolver result released twice across rejection/unmount; 50%-width center/end blocks landed at 12/0 px rather than 140/280 px in the 560 px content column; the narrow surface reported `container-type:normal` and retained its float.
+- Minimal GREEN: rejected resolver ownership clears before immediate release; normal healthy acquire/release/recompile/unmount behavior is unchanged. Logical block margins are start `0/auto`, center `auto/auto`, and end `auto/0`.
+- The actual `.free-text-chart-view__content` ancestry now owns `container-type:inline-size`; at a 400 px mounted content width, the authored `wrap-start` token remains present while the live query collapses float and raises max inline size to 100%.
+- Focused regression GREEN: **3/3**. Complete focused component selection: **14/14**. Fresh exact Task 5 selection: **94/94**, zero skipped/todo, 11.01 s.
+- Fidelity/security document summaries now reflect bounded Tasks 1–5 implementation and later pending work. Reviewed row-level statuses are unchanged.
+- No broad suite, repeated broad browser checkpoint, Task 6/9 implementation, or parent progress edit was performed.

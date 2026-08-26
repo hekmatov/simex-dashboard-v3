@@ -1,10 +1,10 @@
-# Source Content Manager and QMD Reusable Media — Proposed Security and Deviation Record
+# Source Content Manager and QMD Reusable Media — Security and Deviation Record
 
 **Date:** 2026-08-25
-**Status:** Final written amendment master/user-approved at `81531b4b939e89b529d0ddee36241e517c33956d`; Task 1 implements the D02/D03 Static Image engine/live-wiring slice and the panel-scoped D09 publication boundary. Later manager/QMD branches and amendment fidelity remain unverified.
+**Status:** Final written amendment master/user-approved at `81531b4b939e89b529d0ddee36241e517c33956d`; bounded Tasks 1–5 now implement the row-level DashboardV5/Static Image, GeoJSON authority, draft publication, manager shell, and QMD request-authority slices recorded below. Later manager journeys and complete amendment fidelity remain pending.
 **Base status preserved:** the implemented Step 7S 36-row result was accepted by the V3 Design master at b366ba17fe856aede46ba8301b8a530520e4d2cd, with documentation closure at db63d8e772ce96b17de19b7a89f256a72926d08d. It remains Passing, independently review-clean, branch-retained, and unmerged. No decision below is implementation evidence.
 
-**Post-approval ownership:** `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md` fixes the single owners and retained evidence paths that must implement these decisions. It creates no production authority and promotes no proposed status.
+**Post-approval ownership:** `SOURCE-CONTENT-MANAGER-POST-APPROVAL-OWNERSHIP-INVENTORY.md` fixes the single owners and retained evidence paths. Current implementation truth is carried by each decision's status and `SOURCE-CONTENT-MANAGER-IMPLEMENTATION-EVIDENCE.md`; unimplemented later rows remain proposed.
 
 `renderableFragments` counts LineString = 1; MultiLineString = number of LineString members; Polygon = number of exterior/interior rings; MultiPolygon = total exterior/interior rings across polygon members; Point, MultiPoint, and null geometry = 0. It never separately counts a polygon part, so a one-ring MultiPolygon with N members has N fragments, not 2N. The 2,000/4,000 threshold is directly supported by distributed one-ring MultiPolygon evidence and is a conservative inference for other line/ring subpaths; it does not apply to points.
 

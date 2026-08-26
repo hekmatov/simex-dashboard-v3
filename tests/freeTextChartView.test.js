@@ -225,6 +225,97 @@ test("mounted Build, View, and fullscreen Free text keep local health authority 
   ]);
 });
 
+test("QMD logical start, center, and end alignment place block media at the expected inline positions", async () => {
+  const positions = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "qmd-alignment-contract";
+    target.style.width = "600px";
+    const root = ReactDOMClient.createRoot(target);
+    const mediaItems = Object.fromEntries(["start", "center", "end"].map((align) => [align, {
+      mediaId: align, revision: 1, current: { kind: "asset", assetId: `asset-${align}` },
+      displayName: align, defaultDescription: align, origin: "uploaded", health: "missing",
+    }]));
+    root.render(React.createElement(FreeTextChartView, {
+      model: {
+        sourceId: "alignment", revision: 1,
+        qmd: ["start", "center", "end"].map((align) => `![${align}](simex-media:${align}){width=50% align=${align} flow=block frame=none decorative=false}`).join("\n\n"),
+      },
+      chart: { id: "alignment-panel", title: "Alignment" },
+      contentRenderContext: { mediaItems, assets: {} },
+    }));
+    for (let index = 0; index < 50 && target.querySelectorAll(".qmd-media-view").length !== 3; index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const content = target.querySelector(".free-text-chart-view__content").getBoundingClientRect();
+    const values = [...target.querySelectorAll(".qmd-media-view")].map((node) => ({
+      align: node.className.match(/align-(start|center|end)/)?.[1],
+      left: Math.round(node.getBoundingClientRect().left - content.left),
+      width: Math.round(node.getBoundingClientRect().width),
+    }));
+    root.unmount();
+    return values;
+  });
+
+  assert.deepEqual(positions, [
+    { align: "start", left: 0, width: 280 },
+    { align: "center", left: 140, width: 280 },
+    { align: "end", left: 280, width: 280 },
+  ]);
+});
+
+test("narrow wrap collapse is owned by the actual Free-text content container", async () => {
+  const contract = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "qmd-container-contract";
+    target.style.width = "400px";
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(FreeTextChartView, {
+      model: {
+        sourceId: "narrow-wrap", revision: 1,
+        qmd: "![Wrap](simex-media:wrap){width=75% align=start flow=wrap-start frame=none decorative=false}",
+      },
+      chart: { id: "narrow-wrap-panel", title: "Narrow wrap" },
+      contentRenderContext: {
+        mediaItems: {
+          wrap: {
+            mediaId: "wrap", revision: 1, current: { kind: "asset", assetId: "asset-wrap" },
+            displayName: "Wrap", defaultDescription: "Wrap", origin: "uploaded", health: "missing",
+          },
+        },
+        assets: {},
+      },
+    }));
+    for (let index = 0; index < 50 && !target.querySelector(".qmd-media-view"); index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const content = target.querySelector(".free-text-chart-view__content");
+    const media = target.querySelector(".qmd-media-view");
+    const value = {
+      containerType: getComputedStyle(content).containerType,
+      authoredFlow: media.dataset.qmdMediaFlow,
+      float: getComputedStyle(media).float,
+      maxInlineSize: getComputedStyle(media).maxInlineSize,
+    };
+    root.unmount();
+    return value;
+  });
+
+  assert.deepEqual(contract, {
+    containerType: "inline-size",
+    authoredFlow: "wrap-start",
+    float: "none",
+    maxInlineSize: "100%",
+  });
+});
+
 test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {
   const initial = "# Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);

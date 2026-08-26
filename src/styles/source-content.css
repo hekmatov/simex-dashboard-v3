@@ -38,6 +38,10 @@
   display: contents;
 }
 
+.free-text-chart-view__content {
+  container-type: inline-size;
+}
+
 .qmd-media-view {
   display: block;
   box-sizing: border-box;
@@ -47,8 +51,8 @@
 }
 
 .qmd-media-view--align-start { margin-inline: 0 auto; }
-.qmd-media-view--align-center { margin-inline: 0.75rem auto; }
-.qmd-media-view--align-end { margin-inline: 0 0; }
+.qmd-media-view--align-center { margin-inline: auto; }
+.qmd-media-view--align-end { margin-inline: auto 0; }
 .qmd-media-view--flow-wrap-start,
 .qmd-media-view--flow-wrap-end { max-inline-size: 50%; }
 .qmd-media-view--flow-wrap-start { float: inline-start; margin-inline-end: 1rem; }

@@ -151,3 +151,46 @@ test("known missing media keeps a bounded logical fallback and only Build expose
   assert.equal(result.images, 0);
   assert.equal(result.repairs, 1);
 });
+
+test("a rejected non-blob resolver result transfers release ownership exactly once", async () => {
+  const result = await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: QmdMediaView } = await import("/src/components/charts/QmdMediaView.jsx");
+    const target = document.querySelector("#target");
+    const root = ReactDOMClient.createRoot(target);
+    let releases = 0;
+    root.render(React.createElement(QmdMediaView, {
+      mediaItem: {
+        mediaId: "invalid-lease",
+        revision: 1,
+        current: { kind: "asset", assetId: "asset-invalid" },
+        health: "ready",
+        displayName: "Invalid lease",
+        defaultDescription: "Invalid lease",
+        origin: "uploaded",
+        dimensions: { width: 800, height: 400 },
+        byteLength: 100,
+        mediaType: "image/png",
+      },
+      attributes: { width: "100%", align: "center", flow: "block", frame: "none", caption: "", decorative: false },
+      assets: { "asset-invalid": { assetId: "asset-invalid" } },
+      resolveAsset: async () => ({
+        url: "https://example.test/not-an-object-url.png",
+        release() {
+          releases += 1;
+          return true;
+        },
+      }),
+    }));
+    for (let index = 0; index < 50 && !target.textContent.includes("unavailable"); index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const releasesAfterRejection = releases;
+    root.unmount();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return { releasesAfterRejection, releasesAfterUnmount: releases };
+  });
+
+  assert.deepEqual(result, { releasesAfterRejection: 1, releasesAfterUnmount: 1 });
+});

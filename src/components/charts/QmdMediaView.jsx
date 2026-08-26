@@ -22,9 +22,13 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
     if (!healthy || !assetId || !assetPresent || typeof resolveAsset !== "function") return undefined;
     Promise.resolve(resolveAsset(assetId)).then((next) => {
       acquired = next;
-      if (!current) next?.release?.();
+      if (!current) {
+        acquired = null;
+        next?.release?.();
+      }
       else if (typeof next?.url === "string" && next.url.startsWith("blob:")) setLease(next);
       else {
+        acquired = null;
         next?.release?.();
         setResolutionFailed(true);
       }
