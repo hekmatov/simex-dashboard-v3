@@ -437,6 +437,9 @@ test("selected dashboard style reaches crown, Build authoring, and Present chrom
     await expect(page.locator(".view-shell")).toBeVisible();
     await expect(page.locator(".dashboard-command-pinned-actions .dashboard-look-trigger"))
       .toHaveCSS("background-color", style.panelAltPaint);
+    await page.mouse.move(0, 0);
+    await expect(page.locator(".dashboard-command-pinned-actions .chrono-view-button"))
+      .toHaveCSS("background-color", style.panelPaint);
 
     const viewChrome = await readChrome(page, {
       dashboardLook: ".dashboard-command-pinned-actions .dashboard-look-trigger",
