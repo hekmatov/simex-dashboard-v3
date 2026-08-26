@@ -17,6 +17,11 @@ const retired = [
   ["TIME", "_GROUP"].join(""),
   ["time synchronization", " group"].join(""),
 ];
+const HISTORICAL_DOCUMENTATION = [
+  path.normalize("docs/audits"),
+  path.normalize("docs/superpowers/plans"),
+  path.normalize("docs/superpowers/sketches"),
+];
 
 function containsRetiredToken(value, token) {
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -32,11 +37,12 @@ async function filesUnder(root) {
   return nested.flat();
 }
 
-test("source, tests, scripts, packaged config, and documentation use only the Chrono Group domain", async () => {
+test("source, tests, scripts, packaged config, and current documentation use only the Chrono Group domain", async () => {
   const findings = [];
   for (const root of ["src", "tests", "scripts", "public/config", "docs"]) {
     for (const file of await filesUnder(root)) {
       if (file.endsWith("chronoTerminology.test.js")) continue;
+      if (HISTORICAL_DOCUMENTATION.some((directory) => file.startsWith(`${directory}${path.sep}`))) continue;
       const text = await readFile(file, "utf8");
       for (const token of retired) if (containsRetiredToken(text, token)) findings.push(`${file}: ${token}`);
       for (const token of retired) if (containsRetiredToken(path.basename(file), token)) findings.push(file);
