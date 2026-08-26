@@ -57,7 +57,7 @@ test("production StrictMode root keeps the reloaded durable Image URL active", a
   }, activeUrl)).toBe(true);
 });
 
-test("bundle v4 restores local Image and Free-text in a fresh offline browser context", async ({
+test("bundle v5 restores local Image and Free-text in a fresh offline browser context", async ({
   browser,
   page,
 }, testInfo) => {
@@ -68,7 +68,7 @@ test("bundle v4 restores local Image and Free-text in a fresh offline browser co
   const imagePanelId = await createImage(page);
 
   const authored = await persistedStaticContent(page);
-  expect(authored.configVersion).toBe(4);
+  expect(authored.configVersion).toBe(5);
   expect(authored.text.source.qmd).toBe(TEXT_QMD);
   expect(authored.text.source.revision).toBe(1);
   expect(authored.image.panel.id).toBe(imagePanelId);
@@ -82,8 +82,8 @@ test("bundle v4 restores local Image and Free-text in a fresh offline browser co
   await openBiomedical(page);
   await expectStaticPanels(page, authored.image.panel.id, authored.text.panel.id);
 
-  const bundlePath = testInfo.outputPath("static-content-bundle-v4.json");
-  page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v4"));
+  const bundlePath = testInfo.outputPath("static-content-bundle-v5.json");
+  page.once("dialog", (dialog) => dialog.accept("static-content-bundle-v5"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
@@ -92,11 +92,11 @@ test("bundle v4 restores local Image and Free-text in a fresh offline browser co
   const exported = JSON.parse(await readFile(bundlePath, "utf8"));
   await writeFile(bundlePath, JSON.stringify(compactStaticBundle(exported)));
   const bundle = JSON.parse(await readFile(bundlePath, "utf8"));
-  expect(bundle.version).toBe(4);
-  expect(bundle.config.configVersion).toBe(4);
-  expect(Object.keys(bundle.assetPayloads)).toEqual([authored.image.source.origin.assetId]);
+  expect(bundle.version).toBe(5);
+  expect(bundle.config.configVersion).toBe(5);
+  expect(Object.keys(bundle.assetPayloads)).toEqual([authored.image.mediaItem.current.assetId]);
 
-  const assetId = authored.image.source.origin.assetId;
+  const assetId = authored.image.mediaItem.current.assetId;
   const missingPath = testInfo.outputPath("missing-payload.json");
   const missing = structuredClone(bundle);
   delete missing.assetPayloads[assetId];
@@ -187,8 +187,8 @@ test("package import quota failure preserves the prior dashboard and authored st
   await openBiomedicalBuild(page);
   await createFreeText(page);
   await createImage(page);
-  const bundlePath = testInfo.outputPath("quota-import-bundle-v4.json");
-  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v4"));
+  const bundlePath = testInfo.outputPath("quota-import-bundle-v5.json");
+  page.once("dialog", (dialog) => dialog.accept("quota-import-bundle-v5"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
@@ -217,7 +217,10 @@ test("package import quota failure preserves the prior dashboard and authored st
     await review.getByRole("button", { name: "Load package" }).click();
 
     await expect(review).toBeVisible();
-    await expect(review).toContainText(/storage is full|could not be loaded/i, { timeout: 60_000 });
+    await expect(review).toContainText(
+      /storage is full|could not restore the prior dashboard and authored asset store/i,
+      { timeout: 60_000 },
+    );
     expect(await importedPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY))
       .toBe(priorStorage);
     expect(await authoredStoreRecords(importedPage)).toEqual(priorAssets);
@@ -228,7 +231,7 @@ test("package import quota failure preserves the prior dashboard and authored st
   }
 });
 
-test("Image replacement and removal reclaim only unreferenced durable bytes", async ({ page }) => {
+test("Image replacement and panel removal retain reusable durable media bytes", async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1024, height: 768 });
   await openBiomedicalBuild(page);
@@ -282,13 +285,13 @@ test("Image replacement and removal reclaim only unreferenced durable bytes", as
 
   await removePanel(page, siblingId, siblingTitle);
   await expect.poll(() => authoredAssetState(page)).toMatchObject({
-    manifestCount: 1,
-    recordCount: 1,
-    manifestBytes: REPLACEMENT_PNG.byteLength,
-    statuses: ["durable"],
+    manifestCount: 2,
+    recordCount: 2,
+    manifestBytes: PNG.byteLength + REPLACEMENT_PNG.byteLength,
+    statuses: ["durable", "durable"],
   });
   const siblingRemoved = await authoredAssetState(page);
-  expect(siblingRemoved.manifestIds).not.toContain(sharedAssetId);
+  expect(siblingRemoved.manifestIds).toContain(sharedAssetId);
 
   await page.reload();
   await openBiomedicalBuild(page, { navigate: false });
@@ -297,10 +300,10 @@ test("Image replacement and removal reclaim only unreferenced durable bytes", as
     .locator('img[alt="Replacement bytes rendering"]')).toBeVisible();
   await removePanel(page, firstId, firstTitle);
   await expect.poll(() => authoredAssetState(page)).toMatchObject({
-    manifestCount: 0,
-    recordCount: 0,
-    manifestBytes: 0,
-    statuses: [],
+    manifestCount: 2,
+    recordCount: 2,
+    manifestBytes: PNG.byteLength + REPLACEMENT_PNG.byteLength,
+    statuses: ["durable", "durable"],
   });
 
   await page.reload();
@@ -309,7 +312,7 @@ test("Image replacement and removal reclaim only unreferenced durable bytes", as
   await expect(canonicalPanel(page, siblingId)).toHaveCount(0);
 });
 
-test("post-replacement asset commit failure reloads from its recoverable journal", async ({
+test("asset commit failure restores the prior dashboard and authored store atomically", async ({
   browser,
   page,
 }, testInfo) => {
@@ -317,8 +320,8 @@ test("post-replacement asset commit failure reloads from its recoverable journal
   await page.setViewportSize({ width: 1024, height: 768 });
   await openBiomedicalBuild(page);
   const imagePanelId = await createImage(page);
-  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v4.json");
-  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v4"));
+  const bundlePath = testInfo.outputPath("commit-recovery-bundle-v5.json");
+  page.once("dialog", (dialog) => dialog.accept("commit-recovery-bundle-v5"));
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Download Dashboard Package" }).click(),
@@ -332,6 +335,8 @@ test("post-replacement asset commit failure reloads from its recoverable journal
     const importedPage = await freshContext.newPage();
     await importedPage.goto(APP_URL);
     await openBiomedicalBuild(importedPage, { navigate: false });
+    const priorStorage = await importedPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    const priorAssets = await authoredStoreRecords(importedPage);
     await importedPage.evaluate(() => {
       const originalPut = IDBObjectStore.prototype.put;
       globalThis.__SIMEX_ORIGINAL_IDB_PUT__ = originalPut;
@@ -350,15 +355,10 @@ test("post-replacement asset commit failure reloads from its recoverable journal
     await expect(review).toContainText(/storage is unavailable|could not be loaded/i, {
       timeout: 60_000,
     });
-    const staged = await authoredStoreRecords(importedPage);
-    expect(staged).toHaveLength(1);
-    expect(staged[0]).toMatchObject({ status: "staged" });
-    expect(staged[0].transactionIds).toHaveLength(1);
-    expect(JSON.parse(await importedPage.evaluate(
-      (key) => localStorage.getItem(key),
-      STORAGE_KEY,
-    )).assets).toHaveProperty(staged[0].id);
-    await expect(canonicalPanel(importedPage, imagePanelId)).toBeVisible();
+    expect(await authoredStoreRecords(importedPage)).toEqual(priorAssets);
+    expect(await importedPage.evaluate((key) => localStorage.getItem(key), STORAGE_KEY))
+      .toBe(priorStorage);
+    await expect(canonicalPanel(importedPage, imagePanelId)).toHaveCount(0);
 
     await importedPage.evaluate(() => {
       IDBObjectStore.prototype.put = globalThis.__SIMEX_ORIGINAL_IDB_PUT__;
@@ -366,10 +366,8 @@ test("post-replacement asset commit failure reloads from its recoverable journal
     });
     await importedPage.reload();
     await openBiomedical(importedPage);
-    await expect(importedPage.locator(`img[alt="${IMAGE_ALT}"]`)).toBeVisible();
-    await expect.poll(() => authoredStoreRecords(importedPage)).toMatchObject([
-      { status: "durable", transactionIds: [] },
-    ]);
+    await expect(importedPage.locator(`img[alt="${IMAGE_ALT}"]`)).toHaveCount(0);
+    expect(await authoredStoreRecords(importedPage)).toEqual(priorAssets);
   } finally {
     await freshContext.close();
   }
@@ -461,6 +459,7 @@ async function persistedStaticContent(page) {
     const imagePanel = charts.find(({ title }) => title === imageTitle);
     const textSource = dashboard.dataSources[textPanel.sourceId];
     const imageSource = dashboard.dataSources[imagePanel.sourceId];
+    const imageMediaItem = dashboard.contentLibrary.mediaItems[imageSource.mediaId];
     return {
       configVersion: dashboard.configVersion,
       serialized,
@@ -468,7 +467,8 @@ async function persistedStaticContent(page) {
       image: {
         panel: imagePanel,
         source: imageSource,
-        asset: dashboard.assets[imageSource.origin.assetId],
+        mediaItem: imageMediaItem,
+        asset: dashboard.assets[imageMediaItem.current.assetId],
       },
     };
   }, { key: STORAGE_KEY, textTitle: TEXT_TITLE, imageTitle: IMAGE_TITLE });
@@ -557,11 +557,20 @@ function compactStaticBundle(exported) {
     sourceId,
     compactConfig.dataSources[sourceId],
   ]));
+  const mediaIds = Object.values(compactConfig.dataSources)
+    .flatMap((source) => source?.kind === "staticImage" && source.mediaId ? [source.mediaId] : []);
+  compactConfig.contentLibrary = {
+    mediaItems: Object.fromEntries(mediaIds.map((mediaId) => [
+      mediaId,
+      compactConfig.contentLibrary.mediaItems[mediaId],
+    ])),
+    sourceEntries: {},
+  };
   compactConfig.datasetProfiles = {};
   compactConfig.chronoGroups = [];
   compactConfig.scenes = [];
-  const compactAssetIds = Object.values(compactConfig.dataSources)
-    .flatMap((source) => source?.origin?.kind === "asset" ? [source.origin.assetId] : []);
+  const compactAssetIds = Object.values(compactConfig.contentLibrary.mediaItems)
+    .flatMap((item) => item?.current?.kind === "asset" ? [item.current.assetId] : []);
   compactConfig.assets = Object.fromEntries(compactAssetIds.map((assetId) => [
     assetId,
     compactConfig.assets[assetId],
