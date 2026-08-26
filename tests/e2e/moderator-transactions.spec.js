@@ -232,7 +232,11 @@ async function armPendingChartDismissal(page, dismissal) {
             new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
           );
         }
-        resolve(true);
+        resolve({
+          editorConnected: editor.isConnected
+            && document.querySelector(".chart-editor-v3") === editor,
+          savingDisabled: saving.matches(":disabled"),
+        });
       };
       const observer = new MutationObserver(inspect);
       observer.observe(document.body, {
@@ -395,12 +399,14 @@ for (const dismissal of ["Escape", "backdrop"]) {
     await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
     await armPendingChartDismissal(page, dismissal);
     await editor.getByRole("button", { name: "Save changes" }).click();
-    await page.evaluate(() => globalThis.__SIMEX_PENDING_DISMISSAL__);
-    await expect(editor).toBeVisible();
-    await expect(editor.getByRole("alert")).toContainText("Browser storage is full");
-    await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-    await editor.getByRole("button", { name: "Save changes" }).click();
+    expect(await page.evaluate(() => globalThis.__SIMEX_PENDING_DISMISSAL__)).toEqual({
+      editorConnected: true,
+      savingDisabled: true,
+    });
     await expect(editor).toBeHidden();
+    await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
+      .toBeVisible();
+    await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
   });
 }
 
