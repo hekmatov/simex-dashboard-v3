@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildCsvContentDraft,
   buildStaticPanelContentDraftCandidate,
   createContentDraftCoordinator,
   discardContentDraft,
@@ -17,6 +18,7 @@ import {
   reduceStaticContentDraft,
 } from "../src/static-content/forms/staticContentDraft.js";
 import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
+import { profileDataset } from "../src/charting/data/profileDataset.js";
 
 test("StrictMode effect replay keeps the reused content draft coordinator active until the final release", async () => {
   assert.equal(typeof contentDraftTransaction.createDeferredCoordinatorDisposal, "function");
@@ -36,6 +38,70 @@ test("StrictMode effect replay keeps the reused content draft coordinator active
   releaseMounted();
   await scheduled.shift()();
   assert.equal(disposeCalls, 1);
+});
+
+test("manager CSV Add publishes descriptor profile and unused source entry in one candidate", async () => {
+  const harness = coordinatorHarness();
+  const rows = [{ region: "North", value: 12 }, { region: "South", value: 14 }];
+  const profile = profileDataset(rows);
+  const input = buildCsvContentDraft({
+    owner: "manager",
+    sourceId: "upload-exercise-status",
+    source: {
+      kind: "dataset",
+      type: "uploadedCsv",
+      fileName: "exercise-status.csv",
+      csvText: "region,value\nNorth,12\nSouth,14\n",
+    },
+    profile,
+    displayName: "Exercise status",
+  });
+  const { buildCandidate, ...draft } = input;
+  harness.coordinator.stageDraft(draft);
+  const result = await harness.coordinator.commitDraft(input.draftId, { buildCandidate });
+
+  assert.deepEqual(result.itemIds, ["upload-exercise-status"]);
+  assert.deepEqual(harness.dashboard.dataSources["upload-exercise-status"], input.source);
+  assert.deepEqual(harness.dashboard.datasetProfiles["upload-exercise-status"], profile);
+  assert.deepEqual(harness.dashboard.contentLibrary.sourceEntries["upload-exercise-status"], input.entry);
+  assert.equal(JSON.stringify(harness.dashboard.pages).includes("upload-exercise-status"), false);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+});
+
+test("chart CSV draft publishes source registration and completed chart atomically", async () => {
+  const harness = coordinatorHarness();
+  const rows = [{ date: "2026-01-01", value: 6 }];
+  const profile = profileDataset(rows, { date: { interpretation: "temporal" } });
+  const wizard = createWizardState({
+    draft: createChartDraft("line", {
+      id: "chart-upload-ready", title: "Ready status", sourceId: "upload-ready",
+      roles: {
+        measurements: [{ field: "value", axis: "primary" }],
+        observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+    }),
+    loadedData: { "upload-ready": rows },
+    profiles: { "upload-ready": profile },
+    chronoGroups: [],
+  });
+  const finalized = finalizeWizardDraft(wizard);
+  const input = buildCsvContentDraft({
+    owner: "chart",
+    sourceId: "upload-ready",
+    source: { kind: "dataset", type: "uploadedCsv", fileName: "ready.csv", csvText: "date,value\n2026-01-01,6\n" },
+    profile,
+    displayName: "Ready status",
+    finalized,
+    destination: { pageId: "overview", sectionId: "response", relation: "append" },
+  });
+  const { buildCandidate, ...draft } = input;
+  harness.coordinator.stageDraft(draft);
+  await harness.coordinator.commitDraft(input.draftId, { buildCandidate });
+
+  assert.equal(harness.dashboard.pages[0].sections[0].panels.at(-1).id, finalized.chart.id);
+  assert.equal(harness.dashboard.pages[0].sections[0].panels.at(-1).sourceId, "upload-ready");
+  assert.equal(harness.dashboard.contentLibrary.sourceEntries["upload-ready"].ownership, "builder");
+  assert.equal(harness.dashboard.datasetProfiles["upload-ready"].fingerprint, profile.fingerprint);
 });
 
 test("pure content draft transitions are immutable and retain exact owner context", () => {

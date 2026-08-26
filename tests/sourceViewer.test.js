@@ -19,6 +19,9 @@ const {
   default: SourceViewer,
   createSourceViewerDismissHandler,
 } = await import("../src/components/SourceViewer.jsx");
+const {
+  buildSourceDownloadDescriptor,
+} = await import("../src/components/source-data/sourceViewerProtocol.js");
 
 const csvSource = Object.freeze({
   type: "uploadedCsv",
@@ -122,6 +125,22 @@ test("rendering and dismissing never mutate the saved dashboard or restoration s
 
   assert.equal(JSON.stringify({ savedLayout, restoration }), before);
   assert.equal(restored, restoration);
+});
+
+test("uploaded CSV download reuses the source descriptor and never invents a second payload", () => {
+  const descriptor = buildSourceDownloadDescriptor("source-surveillance", csvSource);
+  assert.equal(descriptor.fileName, "surveillance.csv");
+  assert.equal(descriptor.mediaType, "text/csv;charset=utf-8");
+  assert.equal(descriptor.text, csvSource.csvText);
+  assert.equal(descriptor.path, null);
+
+  assert.deepEqual(buildSourceDownloadDescriptor("tracked", { kind: "csv", path: "data/tracked.csv" }), {
+    fileName: "tracked.csv",
+    mediaType: "text/csv",
+    text: null,
+    path: "/data/tracked.csv",
+  });
+  assert.equal(buildSourceDownloadDescriptor("inline", { kind: "inline", rows: [] }), null);
 });
 
 function renderSource(overrides = {}) {

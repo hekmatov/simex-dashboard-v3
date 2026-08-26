@@ -1,8 +1,10 @@
 import React from "react";
 import SourceCsvViewerButton from "../source-data/SourceCsvViewerButton.jsx";
 import { IconControl } from "../common/SimExIcon.js";
+import DataSourcePicker from "../source-content/DataSourcePicker.jsx";
 
 export default function DataSourceStep({
+  dashboard = {},
   dataSources = {},
   loadedData = {},
   selectedSourceId = "",
@@ -24,7 +26,6 @@ export default function DataSourceStep({
   onGeoSourceChange = noop,
   onRequestClear = noop,
 } = {}) {
-  const entries = sourceEntries(dataSources, loadedData);
   const warnings = profileWarnings(profile);
   const blocked = Array.isArray(prerequisites)
     && prerequisites.some((value) => typeof value === "string" && value);
@@ -37,51 +38,20 @@ export default function DataSourceStep({
     React.createElement("h3", { id: "chart-wizard-data-source-heading" }, "Select data source"),
     React.createElement(PrerequisiteNotice, { messages: prerequisites }),
     React.createElement(
-      "div",
-      { className: "chart-wizard-source-grid" },
-      React.createElement(
-        "section",
-        { className: "wizard-choice-card" },
-        React.createElement("h4", null, "Use an existing CSV"),
-        React.createElement(
-          "label",
-          null,
-          "Dashboard data source",
-          React.createElement(
-            "select",
-            {
-              value: selectedSourceKind === "existing" ? selectedSourceId : "",
-              disabled: blocked,
-              onChange: (event) => onSelectExisting(event.target.value),
-            },
-            React.createElement("option", { value: "" }, "Choose a source"),
-            entries.map(({ id, label }) => React.createElement(
-              "option",
-              { key: id, value: id },
-              label,
-            )),
-          ),
-        ),
-      ),
-      React.createElement(
-        "section",
-        { className: "wizard-choice-card" },
-        React.createElement("h4", null, "Upload a new CSV"),
-        React.createElement(
-          "p",
-          null,
-          "The CSV is kept with the dashboard configuration so the chart can be reopened.",
-        ),
-        React.createElement("input", {
-          type: "file",
-          accept: ".csv,text/csv",
-          disabled: blocked,
-          onChange: (event) => onUploadCsv(event.target.files?.[0] ?? null),
-        }),
-        uploadError
-          ? React.createElement("p", { className: "wizard-error", role: "alert" }, uploadError)
-          : null,
-      ),
+      React.Fragment,
+      null,
+      React.createElement(DataSourcePicker, {
+        dashboard: {
+          ...dashboard,
+          dataSources: dashboard.dataSources ?? dataSources,
+        },
+        loadedData,
+        selectedSourceId: selectedSourceKind === "existing" ? selectedSourceId : "",
+        disabled: blocked,
+        uploadError,
+        onSelect: onSelectExisting,
+        onUpload: onUploadCsv,
+      }),
       manualAllowed
         ? React.createElement(
             "section",
@@ -366,19 +336,6 @@ function PrerequisiteNotice({ messages }) {
       items.map((item) => React.createElement("li", { key: item }, item)),
     ),
   );
-}
-
-function sourceEntries(dataSources, loadedData) {
-  if (!isRecord(dataSources)) return [];
-  return Object.entries(dataSources).flatMap(([id, source]) => {
-    if (typeof id !== "string" || !Array.isArray(readEntry(loadedData, id))) {
-      return [];
-    }
-    return [{
-      id,
-      label: source?.fileName ? `${id} — ${source.fileName}` : id,
-    }];
-  });
 }
 
 function profileWarnings(profile) {

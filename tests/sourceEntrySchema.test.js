@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   classifyManagedSource,
+  createUploadedCsvSourceEntry,
   listManageableSourceEntries,
   renameSourceEntry,
   validateSourceEntry,
@@ -73,4 +74,28 @@ test("manageable source listing returns only valid builder-owned CSV and GeoJSON
     { sourceId: "boundaries", kind: "geojson" },
     { sourceId: "cases", kind: "csv" },
   ]);
+});
+
+test("uploaded CSV registration derives one builder-owned entry without duplicating payload authority", () => {
+  const entry = createUploadedCsvSourceEntry({
+    sourceId: "upload-exercise-status",
+    displayName: " Exercise status ",
+    fileName: "exercise-status.csv",
+    fingerprint: "f".repeat(64),
+  });
+
+  assert.deepEqual(entry, {
+    sourceId: "upload-exercise-status",
+    origin: "uploaded",
+    ownership: "builder",
+    displayName: "Exercise status",
+    provenance: {
+      fileName: "exercise-status.csv",
+      profileFingerprint: "f".repeat(64),
+    },
+    health: "ready",
+  });
+  assert.equal(Object.isFrozen(entry), true);
+  assert.equal("csvText" in entry, false);
+  assert.equal("columns" in entry, false);
 });

@@ -50,6 +50,7 @@ import {
   legacySizeForFootprint,
   resolveChartFootprint,
 } from "../chartPanelLayout.js";
+import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
@@ -158,6 +159,8 @@ export default function ChartWizardV3({
   const [uploadError, setUploadError] = React.useState("");
   const [submissionError, setSubmissionError] = React.useState("");
   const transactionIdRef = React.useRef(null);
+  const csvDraftIdRef = React.useRef(null);
+  const csvCandidateRef = React.useRef(null);
   const submissionGateRef = React.useRef(null);
   if (submissionGateRef.current === null) {
     submissionGateRef.current = createSubmissionGate();
@@ -183,7 +186,12 @@ export default function ChartWizardV3({
 
   function requestClose() {
     if (operationLocked()) return false;
-    const suspended = reduceWizardState(wizard, {
+    void discardCsvDraft("chart-csv-close");
+    const closingWizard = sourceKind === "upload"
+      ? clearSelectedSource(wizard)
+      : wizard;
+    if (sourceKind === "upload") clearUploadedCsvUi(wizard.draft?.sourceId);
+    const suspended = reduceWizardState(closingWizard, {
       type: "suspend",
       restoration: {
         stage: wizard.stage,
@@ -229,6 +237,32 @@ export default function ChartWizardV3({
   React.useEffect(() => (
     () => onDirtyChange(false)
   ), [onDirtyChange]);
+  React.useEffect(() => () => {
+    if (csvDraftIdRef.current) onContentDraftDiscard?.(csvDraftIdRef.current, "chart-csv-unmount");
+    csvDraftIdRef.current = null;
+    csvCandidateRef.current = null;
+  }, [onContentDraftDiscard]);
+
+  async function discardCsvDraft(reason) {
+    const draftId = csvDraftIdRef.current;
+    csvDraftIdRef.current = null;
+    csvCandidateRef.current = null;
+    if (draftId) await onContentDraftDiscard?.(draftId, reason);
+  }
+
+  function clearUploadedCsvUi(sourceId) {
+    setSourceKind("");
+    setManualTable(null);
+    setManualErrors([]);
+    setPendingSourceUi(null);
+    if (sourceId) {
+      setLocalRows((current) => {
+        const next = { ...current };
+        delete next[sourceId];
+        return next;
+      });
+    }
+  }
 
   React.useEffect(() => {
     if (!open) return;
@@ -493,6 +527,7 @@ export default function ChartWizardV3({
   };
   const selectExisting = (sourceId) => {
     if (!sourceId) return;
+    void discardCsvDraft("chart-csv-source-changed");
     const rows = readEntry(safeLoadedData, sourceId) ?? [];
     const sourceMetadata = readEntry(safeDataSources, sourceId);
     requestSourceSelection({
@@ -512,10 +547,24 @@ export default function ChartWizardV3({
   const uploadCsv = async (file) => {
     if (!file) return;
     try {
+      await discardCsvDraft("chart-csv-replaced");
       const parsed = await parseUploadedCsvFile(file, {
         ...safeDataSources,
         ...localRows,
       });
+      const input = buildCsvContentDraft({
+        owner: "chart",
+        sourceId: parsed.sourceId,
+        source: parsed.source,
+        profile: parsed.profile,
+        displayName: uploadedCsvDisplayName(parsed.source.fileName),
+      });
+      if (typeof onContentDraftStage === "function") {
+        const { buildCandidate: _buildCandidate, entry: _entry, source: _source, profile: _profile, ...draft } = input;
+        const staged = onContentDraftStage(draft);
+        csvDraftIdRef.current = staged?.draftId ?? draft.draftId;
+        csvCandidateRef.current = parsed;
+      }
       requestSourceSelection({
         sourceId: parsed.sourceId,
         source: parsed.source,
@@ -561,6 +610,7 @@ export default function ChartWizardV3({
   };
   const selectManual = () => {
     if (!wizard.draft) return;
+    void discardCsvDraft("chart-csv-source-changed");
     const schema = getChartSchema(wizard.draft.typeId);
     updateManual(createManualDataTemplate(schema), {
       schema,
@@ -647,6 +697,29 @@ export default function ChartWizardV3({
         }));
         const result = await executeChartCreate(snapshot, {
           persist: async (payload, reviewedPlacement) => {
+            if (sourceKind === "upload" && csvDraftIdRef.current && csvCandidateRef.current) {
+              const candidate = csvCandidateRef.current;
+              const input = buildCsvContentDraft({
+                owner: "chart",
+                sourceId: candidate.sourceId,
+                source: candidate.source,
+                profile: candidate.profile,
+                displayName: uploadedCsvDisplayName(candidate.source.fileName),
+                finalized,
+                destination: reviewedPlacement,
+              });
+              if (!contentDraftCoordinator || typeof contentDraftCoordinator.updateDraft !== "function") {
+                throw new Error("Chart CSV publication requires the content draft coordinator.");
+              }
+              contentDraftCoordinator.updateDraft(csvDraftIdRef.current, {
+                payload: input.payload,
+                sourceIds: input.sourceIds,
+              });
+              await onContentDraftCommit?.(csvDraftIdRef.current, input.buildCandidate);
+              csvDraftIdRef.current = null;
+              csvCandidateRef.current = null;
+              return { dashboardRevision: dashboardRevision ?? "session-current" };
+            }
             if (typeof onCreate !== "function") {
               throw new TypeError("Chart creation requires an onCreate callback.");
             }
@@ -668,6 +741,7 @@ export default function ChartWizardV3({
           if (result.status === "committed") {
             setSubmissionError("");
             onSuspendedChange(false);
+            if (sourceKind === "upload") onClose?.();
           } else if (result.status === "ambiguous") {
             setSubmissionError("Creation outcome is uncertain. Reconcile this transaction before retrying.");
           } else {
@@ -675,6 +749,11 @@ export default function ChartWizardV3({
           }
         }
       } catch (error) {
+        if (sourceKind === "upload") {
+          await discardCsvDraft("chart-csv-validation-or-persistence-failure");
+          setWizard((current) => clearSelectedSource(current));
+          clearUploadedCsvUi(wizard.draft?.sourceId);
+        }
         setSubmissionError(safeMessage(error));
       } finally {
         setSubmitting(false);
@@ -683,6 +762,7 @@ export default function ChartWizardV3({
   };
   function confirmClose() {
     if (operationLocked()) return;
+    void discardCsvDraft("chart-csv-cancel");
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
     onDraftStateChange(closed);
@@ -903,6 +983,7 @@ export default function ChartWizardV3({
           : null,
         wizard.stage === "data-source"
           ? React.createElement(DataSourceStep, {
+              dashboard,
               dataSources: safeDataSources,
               loadedData: safeLoadedData,
               selectedSourceId: wizard.draft?.sourceId ?? "",
@@ -1599,6 +1680,20 @@ export async function parseUploadedCsvFile(file, existingSources = {}) {
     rows,
     profile: profileDataset(rows),
   };
+}
+
+function uploadedCsvDisplayName(fileName) {
+  return String(fileName ?? "Uploaded CSV")
+    .replace(/\.csv$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim() || "Uploaded CSV";
+}
+
+function clearSelectedSource(wizard) {
+  if (!wizard?.draft?.sourceId) return wizard;
+  return reduceWizardState({ ...wizard, confirmation: "clearSource" }, {
+    type: "confirmClearSource",
+  });
 }
 
 export function createChartWizardState({

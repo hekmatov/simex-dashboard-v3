@@ -32,6 +32,15 @@ export function sortSourceRows(rows, sort) {
     .map(({ row }) => row);
 }
 
+export function filterSourceRows(rows, columns, query) {
+  const normalized = String(query ?? "").trim().toLocaleLowerCase();
+  if (!normalized) return rows;
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  return rows.filter((row) => safeColumns.some((column) => (
+    String(row?.[column] ?? "").toLocaleLowerCase().includes(normalized)
+  )));
+}
+
 function compareValues(left, right) {
   if (typeof left === "number" && typeof right === "number") {
     return left - right;

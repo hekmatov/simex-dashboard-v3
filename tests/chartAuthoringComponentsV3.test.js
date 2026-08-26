@@ -33,11 +33,14 @@ import { validateGeoJson } from "../src/lib/loadDashboard.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
+const viteModuleUrl = import.meta.resolve("vite");
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
   if (url.endsWith(".jsx")) {
     const loaded = await nextLoad(url, { ...context, format: "module" });
-    return { format: "module", source: loaded.source, shortCircuit: true };
+    const { transformWithEsbuild } = await import(${JSON.stringify(viteModuleUrl)});
+    const transformed = await transformWithEsbuild(loaded.source.toString(), url, { loader: "jsx", format: "esm" });
+    return { format: "module", source: transformed.code, shortCircuit: true };
   }
   return nextLoad(url, context);
 }
@@ -100,6 +103,11 @@ const {
   default: DataSourceStep,
 } = await import(
   "../src/components/chart-authoring/DataSourceStep.jsx"
+);
+const {
+  default: DataSourcePicker,
+} = await import(
+  "../src/components/source-content/DataSourcePicker.jsx"
 );
 const {
   default: DataRolesStep,
@@ -1048,7 +1056,7 @@ test("hostile or incomplete authoring props fail closed without rendering raw ob
   assert.doesNotMatch(section, /\[object Object\]/);
 });
 
-test("wizard exposes four directly clickable button tabs in the approved order", () => {
+test("wizard exposes the exact six directly clickable stages in the approved order", () => {
   const html = render(React.createElement(ChartWizardV3, {
     open: true,
     dataSources: {},
@@ -1057,20 +1065,23 @@ test("wizard exposes four directly clickable button tabs in the approved order",
     onClose() {},
     onCreate() {},
   }));
-  const tabs = [
-    ["wizard.select-chart-type", "Chart type"],
-    ["wizard.select-data-source", "Data source"],
-    ["wizard.configure-data-roles", "Data roles"],
-    ["wizard.style-and-layout", "Style and layout"],
+  const stages = [
+    ["chart-stage-destination", "Destination"],
+    ["chart-stage-chart-type", "Chart type"],
+    ["chart-stage-data-source", "Data source"],
+    ["chart-stage-map-and-prepare-data", "Map and prepare data"],
+    ["chart-stage-configure-chart", "Configure chart"],
+    ["chart-stage-review-and-create", "Review and create"],
   ];
   let lastIndex = -1;
-  for (const [interactionId, label] of tabs) {
-    const markup = buttonMarkupByInteraction(html, interactionId);
+  for (const [id, label] of stages) {
+    const markup = buttonMarkupById(html, id);
     const index = html.indexOf(markup);
-    assert.match(markup, new RegExp(`aria-label="${label}"`));
+    assert.match(markup, new RegExp(`aria-label="${label}\\.`));
     assert.ok(index > lastIndex, `${label} should be in order`);
     lastIndex = index;
   }
+  assert.equal((html.match(/id="chart-stage-/g) ?? []).length, 6);
   assert.doesNotMatch(
     html.slice(html.indexOf("Choose a chart type")),
     /Background|Series color|Line width|Bar width/,
@@ -1095,7 +1106,7 @@ test("wizard controller retains detached authoritative existing chart context", 
   assert.deepEqual(existing.interaction.timeSync, null);
 });
 
-test("every wizard tab remains enabled and explains unmet prerequisites", () => {
+test("every wizard stage remains enabled and explains unmet prerequisites", () => {
   const html = render(React.createElement(ChartWizardV3, {
     open: true,
     dataSources: {},
@@ -1105,15 +1116,17 @@ test("every wizard tab remains enabled and explains unmet prerequisites", () => 
     onCreate() {},
   }));
 
-  for (const interactionId of [
-    "wizard.select-chart-type",
-    "wizard.select-data-source",
-    "wizard.configure-data-roles",
-    "wizard.style-and-layout",
+  for (const id of [
+    "chart-stage-destination",
+    "chart-stage-chart-type",
+    "chart-stage-data-source",
+    "chart-stage-map-and-prepare-data",
+    "chart-stage-configure-chart",
+    "chart-stage-review-and-create",
   ]) {
-    assert.doesNotMatch(buttonMarkupByInteraction(html, interactionId), /disabled=""/);
+    assert.doesNotMatch(buttonMarkupById(html, id), /disabled=""/);
   }
-  assert.match(html, /Choose a chart type/);
+  assert.match(buttonMarkupById(html, "chart-stage-chart-type"), /Waiting on prerequisite/);
 });
 
 test("an early destination explains prerequisites without exposing crashing controls", () => {
@@ -1181,7 +1194,7 @@ test("discard and source-removal confirmations call only the approved callbacks"
     onSelectExisting() {},
     onRequestClear() {},
   }));
-  assert.match(source, /Remove source/);
+  assert.match(source, /aria-label="Reset selection"/);
 });
 
 test("a generically locked confirmation ignores both cancel activation and Escape", () => {
@@ -1254,6 +1267,37 @@ test("local CSV upload uses the existing parser and returns a profiled dataset s
     parsed.profile.columns.find(({ name }) => name === "value").type,
     "numeric",
   );
+});
+
+test("data-source picker lists only managed builder CSV and keeps upload chart-draft owned", () => {
+  const calls = [];
+  const html = render(React.createElement(DataSourcePicker, {
+    dashboard: {
+      contentLibrary: { sourceEntries: {
+        managed: {
+          sourceId: "managed", origin: "uploaded", ownership: "builder", displayName: "Managed cases",
+          provenance: { fileName: "managed.csv" }, health: "ready",
+        },
+        generated: {
+          sourceId: "generated", origin: "generated", ownership: "dashboard", displayName: "Generated summary",
+          provenance: { ownership: "dashboard", generated: true }, health: "ready",
+        },
+      } },
+      dataSources: {
+        managed: { kind: "dataset", type: "uploadedCsv", fileName: "managed.csv", csvText: "region,value\nNorth,1\n" },
+        generated: { kind: "csv", path: "data/generated.csv", provenance: { ownership: "dashboard", generated: true } },
+      },
+    },
+    loadedData: { managed: [{ region: "North", value: 1 }], generated: [{ value: 9 }] },
+    onSelect: (id) => calls.push(id),
+    onUpload: () => {},
+  }));
+
+  assert.match(html, /Managed cases/);
+  assert.doesNotMatch(html, /Generated summary/);
+  assert.match(html, /Upload a new CSV/);
+  assert.match(html, /data-draft-owner="chart"/);
+  assert.deepEqual(calls, []);
 });
 
 test("local CSV upload rejects oversized files before reading them", async () => {
@@ -3374,6 +3418,16 @@ function buttonMarkupByInteraction(html, interactionId) {
   const start = html.lastIndexOf("<button", markerIndex);
   const end = html.indexOf("</button>", markerIndex);
   assert.ok(start >= 0 && end >= markerIndex, `Malformed icon control ${interactionId}`);
+  return html.slice(start, end + "</button>".length);
+}
+
+function buttonMarkupById(html, id) {
+  const marker = `id="${id}"`;
+  const markerIndex = html.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `Missing button ${id}`);
+  const start = html.lastIndexOf("<button", markerIndex);
+  const end = html.indexOf("</button>", markerIndex);
+  assert.ok(start >= 0 && end >= markerIndex, `Malformed button ${id}`);
   return html.slice(start, end + "</button>".length);
 }
 

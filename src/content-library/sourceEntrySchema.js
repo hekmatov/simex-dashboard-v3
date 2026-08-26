@@ -2,6 +2,82 @@ const SOURCE_ORIGINS = new Set(["uploaded", "linked-project", "packaged", "legac
 const SOURCE_OWNERS = new Set(["builder", "dashboard"]);
 const SOURCE_HEALTH = new Set(["ready", "missing", "corrupt", "needs-relink", "needs-review"]);
 
+export function createUploadedCsvSourceEntry({ sourceId, displayName, fileName, fingerprint } = {}) {
+  const normalizedSourceId = requiredText(sourceId, "Source entry sourceId");
+  const entry = {
+    sourceId: normalizedSourceId,
+    origin: "uploaded",
+    ownership: "builder",
+    displayName: requiredText(displayName, "Source entry display name"),
+    provenance: {
+      fileName: requiredText(fileName, "Uploaded CSV file name"),
+      profileFingerprint: requiredText(fingerprint, "Uploaded CSV profile fingerprint"),
+    },
+    health: "ready",
+  };
+  validateSourceEntry(entry, {
+    sourceId: normalizedSourceId,
+    descriptor: { kind: "dataset", type: "uploadedCsv", fileName },
+  });
+  return deepFreeze(entry);
+}
+
+export function buildCsvContentDraft({
+  owner,
+  sourceId,
+  source,
+  profile,
+  displayName,
+  finalized = null,
+  destination = null,
+} = {}) {
+  const normalizedOwner = requiredText(owner, "CSV draft owner");
+  if (!new Set(["manager", "chart"]).has(normalizedOwner)) throw new Error('CSV draft owner must be "manager" or "chart".');
+  const normalizedSourceId = requiredText(sourceId, "CSV source id");
+  record(source, "CSV source descriptor");
+  if (source.kind !== "dataset" || source.type !== "uploadedCsv" || typeof source.csvText !== "string") {
+    throw new Error("CSV draft requires the existing uploadedCsv descriptor shape.");
+  }
+  record(profile, "CSV dataset profile");
+  if (!Array.isArray(profile.columns) || !Number.isSafeInteger(profile.rowCount)) throw new Error("CSV draft requires a complete dataset profile.");
+  if (normalizedOwner === "chart" && finalized !== null) record(finalized.chart, "Finalized chart CSV content");
+  const entry = createUploadedCsvSourceEntry({ sourceId: normalizedSourceId, displayName, fileName: source.fileName, fingerprint: profile.fingerprint });
+  const payload = normalizedOwner === "chart"
+    ? { finalized, sourceId: normalizedSourceId, source: structuredClone(source), profile: structuredClone(profile), entry, destination: structuredClone(destination) }
+    : { sourceId: normalizedSourceId, source: structuredClone(source), profile: structuredClone(profile), entry };
+  const draftId = `${normalizedOwner}-csv-${normalizedSourceId}`;
+  return {
+    draftId,
+    owner: normalizedOwner,
+    kind: normalizedOwner === "manager" ? "manager-csv-add" : "chart-csv-add",
+    payload,
+    assetIds: [],
+    mediaIds: [],
+    sourceIds: [normalizedSourceId],
+    entry,
+    source: structuredClone(source),
+    profile: structuredClone(profile),
+    buildCandidate({ dashboard, draft }) {
+      const currentPayload = draft?.payload ?? payload;
+      const next = structuredClone(dashboard);
+      next.dataSources ??= {};
+      next.datasetProfiles ??= {};
+      next.contentLibrary ??= { mediaItems: {}, sourceEntries: {} };
+      next.contentLibrary.sourceEntries ??= {};
+      if (Object.hasOwn(next.dataSources, normalizedSourceId) || Object.hasOwn(next.contentLibrary.sourceEntries, normalizedSourceId)) {
+        throw new Error(`Data source "${normalizedSourceId}" already exists.`);
+      }
+      next.dataSources[normalizedSourceId] = structuredClone(currentPayload.source);
+      next.datasetProfiles[normalizedSourceId] = structuredClone(currentPayload.profile);
+      next.contentLibrary.sourceEntries[normalizedSourceId] = structuredClone(currentPayload.entry);
+      const candidate = normalizedOwner === "chart"
+        ? integrateChartWithoutDuplicateSource(next, currentPayload.finalized, currentPayload.destination)
+        : next;
+      return { dashboard: candidate, commitAssetIds: [], discardAssetIds: [], itemIds: [normalizedSourceId] };
+    },
+  };
+}
+
 export function classifyManagedSource(sourceId, descriptor) {
   requiredText(sourceId, "Managed source id");
   const kind = descriptorKind(descriptor);
@@ -86,6 +162,29 @@ function descriptorOrigin(descriptor) {
   if (descriptor?.browserAssetId) return "uploaded";
   if (["csv", "geojson"].includes(descriptor?.kind)) return "linked-project";
   return "packaged";
+}
+
+function integrateChartWithoutDuplicateSource(dashboard, finalized, destination) {
+  record(finalized?.chart, "Finalized chart CSV content");
+  record(destination, "Chart CSV destination");
+  const next = structuredClone(dashboard);
+  const page = next.pages?.find(({ id }) => id === destination.pageId);
+  const section = page?.sections?.find(({ id }) => id === destination.sectionId);
+  if (!section) throw new Error("The selected chart destination no longer exists.");
+  const relation = destination.placement?.relation ?? destination.relation ?? "append";
+  const chart = structuredClone(finalized.chart);
+  if (relation === "append") {
+    section.panels.push(chart);
+  } else if (relation === "before" || relation === "after") {
+    const anchorId = destination.placement?.anchorId ?? destination.anchorId;
+    const anchorIndex = section.panels.findIndex((panel) => (panel.chart ?? panel).id === anchorId);
+    if (anchorIndex < 0) throw new Error("The reviewed chart placement anchor no longer exists.");
+    section.panels.splice(relation === "before" ? anchorIndex : anchorIndex + 1, 0, chart);
+  } else {
+    throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
+  }
+  if (finalized.chronoGroups !== undefined) next.chronoGroups = structuredClone(finalized.chronoGroups);
+  return next;
 }
 
 function record(value, description) {

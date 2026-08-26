@@ -291,3 +291,27 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Width reaches CSS only as a validated percentage data token. No arbitrary pixels, inline width style, authored class/style/event, free/absolute position, or border-style authority was added.
 - Only stored/packaged identities reach media hosts/picker selection. Change/Open never replace library bytes or revision. Missing/corrupt View/fullscreen remains bounded, passive, and request-free; Build repair is unchanged.
 - No Task 10 behavior, parent progress update, generated output, dependency, full build, or full suite is included.
+
+## Task 10 — CSV Manager Add, chart registration, and Journey D
+
+**Implementation state:** SCM-R04 is Passing. The CSV branches of SCM-S04, SCM-C04, and SCM-C05 are Passing; those cross-kind rows remain Partial for the later GeoJSON manager/selector/detail slice.
+
+### RED and deterministic evidence
+
+- Exact RED preceded production: **23/29 passing** with intended missing uploaded-CSV entry/draft/download/filter owners and the absent `DataSourcePicker.jsx`. Inherited JSX/Vite loader constraints were corrected before Task 10 behavior was evaluated.
+- Focused core GREEN was **43/43** and chart-authoring GREEN was **68/68**, including exact six-stage IDs/order, managed-only CSV eligibility, and chart draft ownership.
+- Fresh exact accepted command: `node --test tests/sourceEntrySchema.test.js tests/contentDraftTransaction.test.js tests/contentDetail.test.js tests/sourceViewer.test.js tests/sourceViewerSort.test.js tests/wizardDraftV3.test.js tests/chartAuthoringComponentsV3.test.js` — **116 passed / 0 failed / 0 skipped / 0 todo**, 2.763 s.
+- Deterministic cases prove one atomic manager descriptor/profile/SourceEntry candidate, one atomic chart registration/finalized-chart candidate, unused-source retention, matching-content separate identity, read-only search/download, generated-source exclusion, and exhaustive validation/persistence/owner-exit rollback inventories.
+
+### Named Journey D checkpoint
+
+- Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-csv.spec.js --project=chromium --grep "Journey D — CSV upload through six stages then catalogue management"` — **1/1 passing**, 39.1 s test time and 41.9 s total.
+- Build 1440×900 proved manager Cancel/no-publication, explicit Add of an unused source, descriptor/profile/entry identity correspondence, reload survival, and a matching-fingerprint warning without dedupe.
+- A chart upload remained absent from durable inventory until completion; explicit discard retained the exact prior inventory. A fresh upload preserved the exact six stages and atomically published one source/profile/entry with one completed chart.
+- Reopened detail exposed origin/health, three-row profile, the named chart dependency, read-only preview search, original-filename download, and focus return on Close.
+- Build 1024×768 after reload proved bounded manager geometry, reachable detail, tablet Back, and exact committed inventory retention.
+
+### Scope boundary
+
+- Papa Parse, dataset profiling, and source viewer/filter remain the single existing authorities. The manager and chart flows add no second CSV parser/profile/cache owner.
+- No CSV replacement/relink, temporal warning, GeoJSON manager, cell editing, derivative mutation, generated-output ownership, or parent progress update is introduced.

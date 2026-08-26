@@ -35,6 +35,26 @@ export function buildSourceViewerDescriptor(sourceId, source, context = {}) {
   return null;
 }
 
+export function buildSourceDownloadDescriptor(sourceId, source) {
+  const viewer = buildSourceViewerDescriptor(sourceId, source);
+  if (!viewer) return null;
+  const fallbackName = `${viewer.sourceId}.csv`;
+  if (viewer.mode === "text") {
+    return {
+      fileName: csvFileName(source?.fileName, fallbackName),
+      mediaType: "text/csv;charset=utf-8",
+      text: viewer.csvText,
+      path: null,
+    };
+  }
+  return {
+    fileName: csvFileName(source?.fileName ?? viewer.path, fallbackName),
+    mediaType: "text/csv",
+    text: null,
+    path: viewer.path,
+  };
+}
+
 export function openSourceViewer({
   sourceId,
   source,
@@ -91,6 +111,13 @@ export function openSourceViewer({
 
 function nonEmpty(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function csvFileName(value, fallback) {
+  const normalized = nonEmpty(value);
+  if (!normalized) return fallback;
+  const name = normalized.split(/[\\/]/).at(-1);
+  return name?.toLocaleLowerCase().endsWith(".csv") ? name : fallback;
 }
 
 function viewerInvocation(context, datasetId, csvPath) {

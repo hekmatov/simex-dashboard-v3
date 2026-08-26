@@ -8,6 +8,7 @@ import {
   SOURCE_VIEWER_VERSION,
 } from "../components/source-data/sourceViewerProtocol.js";
 import {
+  filterSourceRows,
   nextSourceSort,
   sortSourceRows,
 } from "./sourceViewerSort.js";
@@ -59,20 +60,12 @@ export default function SourceCsvViewer() {
       setSort(null);
       try {
         const csvText = await sourceText(descriptor);
-        const parsed = Papa.parse(csvText, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-        });
-        if (parsed.errors.length > 0) {
-          throw new Error(parsed.errors[0].message);
-        }
-        const columns = parsed.meta.fields ?? Object.keys(parsed.data[0] ?? {});
+        const parsed = parseSourceCsvText(csvText);
         setState({
           status: "ready",
           descriptor,
-          columns,
-          rows: parsed.data,
+          columns: parsed.columns,
+          rows: parsed.rows,
           error: "",
         });
       } catch (error) {
@@ -94,16 +87,9 @@ export default function SourceCsvViewer() {
     };
   }, []);
 
-  const queryLower = query.trim().toLocaleLowerCase();
   const filteredRows = React.useMemo(() => (
-    queryLower
-      ? state.rows.filter((row) => state.columns.some((column) => (
-          String(row?.[column] ?? "")
-            .toLocaleLowerCase()
-            .includes(queryLower)
-        )))
-      : state.rows
-  ), [queryLower, state.columns, state.rows]);
+    filterSourceRows(state.rows, state.columns, query)
+  ), [query, state.columns, state.rows]);
   const sortedRows = React.useMemo(
     () => sortSourceRows(filteredRows, sort),
     [filteredRows, sort],
@@ -277,6 +263,19 @@ export default function SourceCsvViewer() {
       : null,
     ),
   );
+}
+
+export function parseSourceCsvText(csvText) {
+  const parsed = Papa.parse(csvText, {
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+  });
+  if (parsed.errors.length > 0) throw new Error(parsed.errors[0].message);
+  return {
+    columns: parsed.meta.fields ?? Object.keys(parsed.data[0] ?? {}),
+    rows: parsed.data,
+  };
 }
 
 function provenanceItem(label, value) {

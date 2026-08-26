@@ -39,3 +39,14 @@ test("source sorting is stable, type-aware, and keeps missing values last", () =
   );
   assert.equal(sortModule.sortSourceRows(rows, null), rows);
 });
+
+test("source preview search uses the viewer's all-column literal matching", () => {
+  assert.equal(typeof sortModule?.filterSourceRows, "function");
+  const rows = [
+    { region: "North", value: 12 },
+    { region: "South", value: 14 },
+  ];
+  assert.deepEqual(sortModule.filterSourceRows(rows, ["region", "value"], "14"), [rows[1]]);
+  assert.deepEqual(sortModule.filterSourceRows(rows, ["region", "value"], " north "), [rows[0]]);
+  assert.equal(sortModule.filterSourceRows(rows, ["region", "value"], ""), rows);
+});

@@ -1,6 +1,7 @@
 import { isFinalizedWizardResult } from "../charting/forms/wizardDraft.js";
 import { isFinalizedStaticContentResult } from "../static-content/forms/staticContentDraft.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
+export { buildCsvContentDraft } from "./sourceEntrySchema.js";
 
 export function createDeferredCoordinatorDisposal({ schedule = queueMicrotask } = {}) {
   if (typeof schedule !== "function") throw new TypeError("Content draft disposal scheduler is required.");
@@ -431,7 +432,7 @@ function assertDraftReadyForCommit(draft, finalizedDraftIds) {
 }
 
 function isAuthoringPayloadFinalized(owner, payload) {
-  if (owner === "chart") return isFinalizedWizardResult(payload);
+  if (owner === "chart") return isFinalizedWizardResult(payload?.finalized ?? payload);
   if (owner === "image" || owner === "qmd" || owner === "qmd-panel") return isFinalizedStaticContentResult(payload);
   return false;
 }

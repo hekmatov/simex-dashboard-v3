@@ -20,7 +20,8 @@ test("detail routes media and CSV to type-appropriate passive shells", () => {
   assert.match(media, /Media details/);
   assert.match(media, /Default description/);
   assert.match(media, /Revision/);
-  assert.doesNotMatch(media, /Delete|Replace|Import as local media/);
+  assert.match(media, /Replace library file everywhere/);
+  assert.doesNotMatch(media, /Delete|Import as local media/);
 
   const csv = renderToStaticMarkup(React.createElement(ContentDetail, {
     item: { id: "cases", kind: "csv", record: makeSourceEntry("csv"), usageCount: 0 },
@@ -29,6 +30,26 @@ test("detail routes media and CSV to type-appropriate passive shells", () => {
   assert.match(csv, /CSV details/);
   assert.match(csv, /2 rows/);
   assert.doesNotMatch(csv, /GeoJSON preview|Delete|Replace/);
+});
+
+test("CSV detail reuses the searchable viewer and exposes permitted download without cell editing", () => {
+  const source = {
+    kind: "dataset",
+    type: "uploadedCsv",
+    fileName: "exercise-status.csv",
+    csvText: "region,value\nNorth,12\nSouth,14\n",
+  };
+  const html = renderToStaticMarkup(React.createElement(ContentDetail, {
+    item: { id: "status", kind: "csv", record: makeSourceEntry("csv", { sourceId: "status", origin: "uploaded", displayName: "Exercise status" }), usageCount: 0 },
+    dashboard: { dataSources: { status: source } },
+    datasetProfile: { rowCount: 2, columns: [{ name: "region", type: "category" }, { name: "value", type: "numeric" }] },
+  }));
+
+  assert.match(html, /Search preview/);
+  assert.match(html, /North/);
+  assert.match(html, /aria-label="View source CSV"/);
+  assert.match(html, /download="exercise-status\.csv"/);
+  assert.doesNotMatch(html, /contenteditable|Edit cell|Save cells/);
 });
 
 test("External media detail alone exposes manager-owned Import as local media", () => {

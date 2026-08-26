@@ -2,10 +2,10 @@ import React from "react";
 import CsvDetail from "./CsvDetail.jsx";
 import DependencyList from "./DependencyList.jsx";
 
-export default function DataSourceDetail({ item, datasetProfile, onRename }) {
+export default function DataSourceDetail({ item, dashboard = {}, datasetProfile, onRename }) {
   return (
     <article className="source-content-detail-card">
-      {item.kind === "csv" ? <CsvDetail item={item} datasetProfile={datasetProfile} /> : <GeoJsonShell item={item} />}
+      {item.kind === "csv" ? <CsvDetail item={item} source={dashboard.dataSources?.[item.id]} datasetProfile={datasetProfile} /> : <GeoJsonShell item={item} />}
       <RenameSource item={item} onRename={onRename} />
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
     </article>
