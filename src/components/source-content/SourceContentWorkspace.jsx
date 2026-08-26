@@ -136,9 +136,9 @@ export function managerLayoutForWidth(width) {
 
 export function visibleManagerItems(dashboard = {}, tab = "media", filters = {}) {
   const base = tab === "media"
-    ? Object.entries(dashboard.contentLibrary?.mediaItems ?? {}).map(([id, record]) => contentItem(dashboard, id, "media", record))
+    ? Object.entries(dashboard.contentLibrary?.mediaItems ?? {}).map(([id, record]) => contentItem(dashboard, id, "media", record, dependencyStateFor(dashboard, "media", id)))
     : listManageableSourceEntries(dashboard.contentLibrary ?? {}, dashboard.dataSources ?? {})
-      .map((record) => contentItem(dashboard, record.sourceId, record.kind, record));
+      .map((record) => contentItem(dashboard, record.sourceId, record.kind, record, dependencyStateFor(dashboard, record.kind, record.sourceId)));
   const query = String(filters.query ?? "").trim().toLocaleLowerCase();
   return base.filter((item) => (
     (!query || item.record.displayName.toLocaleLowerCase().includes(query) || item.id.toLocaleLowerCase().includes(query))
@@ -149,8 +149,10 @@ export function visibleManagerItems(dashboard = {}, tab = "media", filters = {})
   )).sort((left, right) => left.record.displayName.localeCompare(right.record.displayName));
 }
 
-function contentItem(dashboard, id, kind, record) {
-  const uses = Array.isArray(record.uses) ? record.uses : [];
+function contentItem(dashboard, id, kind, record, dependencyState = null) {
+  const uses = Array.isArray(dependencyState?.uses)
+    ? dependencyState.uses
+    : Array.isArray(record.uses) ? record.uses : [];
   const usageCount = Number.isSafeInteger(record.usageCount) && record.usageCount >= 0
     ? record.usageCount
     : uses.length > 0 ? uses.length : null;
@@ -162,8 +164,12 @@ function contentItem(dashboard, id, kind, record) {
     usageCount,
     usageKnown: usageCount !== null,
     uses,
-    activeRetainers: [],
+    activeRetainers: Array.isArray(dependencyState?.activeRetainers) ? dependencyState.activeRetainers : [],
   };
+}
+
+function dependencyStateFor(dashboard, kind, id) {
+  return dashboard.contentDependencyState?.[`${kind}:${id}`] ?? null;
 }
 
 function normalizedFilters(value = {}) {

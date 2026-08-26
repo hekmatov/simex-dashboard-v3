@@ -1,0 +1,80 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createServer } from "vite";
+
+const vite = await createServer({ root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true } });
+const dependencyModule = await vite.ssrLoadModule("/src/components/source-content/DependencyList.jsx");
+const dialogModule = await vite.ssrLoadModule("/src/components/source-content/ContentActionDialog.jsx");
+const workspaceModule = await vite.ssrLoadModule("/src/components/source-content/SourceContentWorkspace.jsx");
+const rendererModule = await vite.ssrLoadModule("/src/components/DashboardRenderer.jsx");
+await vite.close();
+const DependencyList = dependencyModule.default;
+const ContentActionDialog = dialogModule.default;
+const { visibleManagerItems } = workspaceModule;
+const { projectContentManagerDependencies } = rendererModule;
+
+test("blocked delete is visibly disabled with inline guided navigation and no dialog", () => {
+  const html = renderToStaticMarkup(React.createElement(DependencyList, {
+    uses: [{ id: "use-a", pageLabel: "Operations", sectionLabel: "Signals", panelLabel: "Map" }],
+    activeRetainers: [],
+    deletion: { status: "blocked", itemLabel: "Boundaries" },
+    onNavigate() {},
+  }));
+  assert.match(html, /<button[^>]*disabled[^>]*>Delete<\/button>/);
+  assert.match(html, /Remove or replace the direct use before deleting/);
+  assert.match(html, /Operations[\s\S]*Signals[\s\S]*Map/);
+  assert.doesNotMatch(html, /role="dialog"/);
+});
+
+test("eligible delete renders only the scoped destructive confirmation modal", () => {
+  const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "delete",
+    itemLabel: "Unused source",
+  }));
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /Delete Unused source\?/);
+  assert.match(html, /This removes the managed item/);
+  assert.match(html, />Cancel<\/button>/);
+  assert.match(html, />Delete<\/button>/);
+  assert.doesNotMatch(html, /Replace|Relink|Import as new/);
+});
+
+test("manager dependency collections carry retainer and deletion state through the passive detail boundary", () => {
+  const uses = [];
+  uses.activeRetainers = [{ ownerId: "draft-a", kind: "image-draft" }];
+  uses.deletion = { status: "blocked", itemLabel: "Unused image" };
+  const html = renderToStaticMarkup(React.createElement(DependencyList, { uses, usageKnown: true }));
+  assert.match(html, /Active work retains this item: image-draft/);
+  assert.match(html, /<button[^>]*disabled[^>]*>Delete<\/button>/);
+});
+
+test("source dependency state attaches after durable SourceEntry validation", () => {
+  const dashboard = {
+    contentLibrary: {
+      mediaItems: {},
+      sourceEntries: {
+        cases: {
+          sourceId: "cases",
+          origin: "linked-project",
+          ownership: "builder",
+          displayName: "Cases",
+          provenance: { path: "cases.csv" },
+          health: "ready",
+        },
+      },
+    },
+    dataSources: { cases: { kind: "csv", origin: "linked-project" } },
+    datasetProfiles: {},
+    pages: [],
+  };
+  const projected = projectContentManagerDependencies({ dashboard, onDelete() {} });
+  const [item] = visibleManagerItems(projected, "sources", {});
+  assert.equal(item.id, "cases");
+  assert.equal(item.uses.deletion.status, "ready");
+  assert.equal(typeof item.uses.onDelete, "function");
+  assert.equal(Object.hasOwn(projected.contentLibrary.sourceEntries.cases, "uses"), false);
+  assert.equal(Object.keys(projected).includes("contentDependencyState"), false);
+});

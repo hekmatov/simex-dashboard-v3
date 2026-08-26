@@ -180,3 +180,27 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Logical block alignment now places start, center, and end at 0, 140, and 280 px respectively for a 280 px item in the mounted 560 px content column.
 - `.free-text-chart-view__content` is the live inline-size container owner. The focused 400 px contract preserves authored `wrap-start` data while the existing narrow query produces `float:none` and `max-inline-size:100%`.
 - Document summaries were corrected for Tasks 1–5 current bounded status. Fidelity/security row-level statuses were not promoted or otherwise changed by this correction.
+
+## Task 6 — Direct dependency graph and atomic no-cascade deletion
+
+**Implementation state:** SCM-S05 and SCM-S06 are Passing for the bounded direct-graph/retainer/context slice. SCM-S07 is Passing for the bounded deletion engine plus mounted manager carrier. The delete branch of SCM-C08 is Passing; the complete C08 row remains Partial pending later replacement/relink modals.
+
+### RED and deterministic evidence
+
+- The initial exact pre-production command was unusable because Node ignored not-yet-created paths and reported **11/11 passing**.
+- With tests present, the intended RED was **11 passing / 3 file-level failures**: missing graph/deletion modules plus the inherited linked-worktree Vite/esbuild access restriction for the JSX selection.
+- Focused transient-carrier RED/GREEN: **2/3** then **3/3**. Focused post-validation SourceEntry carrier RED/GREEN: **3/4** with `Source entry property "uses" is unknown`, then **4/4**.
+- Fresh exact Task 6 selection outside the inherited Vite restriction: **22/22 passing**, zero skipped/todo, 3.686 s.
+
+### Implemented boundary
+
+- Task 5 annotated QMD media, Static Image mediaId, managed primary CSV sourceId, and map geoSource GeoJSON are the only direct saved edges. Breadcrumbs are edge context and duplicate panel/content references collapse.
+- Actual active draft/replacement/transaction retainers are separate from saved uses. Chrono/Scene/Scene-presentation are downstream CSV impacts; Present/Audience payloads and leases are transient and GeoJSON has no temporal contexts.
+- The manager receives a transient, non-enumerable dependency/action carrier after durable source validation. Blocked Delete is disabled with inline guidance and no dialog; ready Delete owns the scoped destructive confirmation.
+- The transaction rechecks identity/revision, never cascades through dependents, preserves shared authority, and compensates dashboard/authority writes on failure.
+
+### Mounted checkpoint and deferred truth
+
+- Planned Chromium selection, with no literal `--` separator: `pnpm.cmd exec playwright test tests/e2e/source-content-manager.spec.js --project=chromium --grep "desktop composition|tablet composition"` — **2/2 passing**, 24.6 s, at 1440×900 and 1024×768.
+- The authorized DashboardRenderer → BuildWorkspace → SourceContentWorkspace carrier remained mounted without regressing the canonical canvas, durable rename, desktop split, or tablet list/detail/Back composition.
+- The bounded viewport cases do not separately click an eligible deletion; no broader delete/recovery Journey A/I browser promotion is claimed. Task 7 picker/import, Task 8 replacement/relink, later preview/recovery flows, full build, and full suite remain pending.

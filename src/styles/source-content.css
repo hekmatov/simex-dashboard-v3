@@ -34,6 +34,10 @@
   .source-content-back { margin-bottom: 12px; }
 }
 @media (max-width: 767px) { .source-content-workspace { display: none; } }
+.source-content-delete-action { display: grid; gap: 8px; justify-items: start; margin-block-start: 16px; }
+.source-content-delete-action > button { min-block-size: 44px; min-inline-size: 88px; }
+.source-content-delete-action > button:disabled { cursor: not-allowed; opacity: .55; }
+.source-content-delete-action > p { margin: 0; max-inline-size: 48rem; }
 .qmd-media-host {
   display: contents;
 }

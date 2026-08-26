@@ -75,6 +75,8 @@ import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
 import { resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
+import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
+import { prepareContentDeletion, commitContentDeletion } from "../content-library/contentDeletionTransaction.js";
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -1406,6 +1408,30 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     resolveAsset: resolveBrowserAuthoredAsset,
     requestRepair: ({ panelId }) => panelId && openPanelEditor(panelId),
   };
+  const navigateContentDependency = React.useCallback((use) => {
+    const selection = selectionForPlacement(dashboardStateRef.current, use.panelId);
+    const activate = buildWorkspaceSelectionRef.current ?? requestBuildSelectionRef.current;
+    if (selection) void activate?.(selection, { intent: "activate" });
+  }, []);
+  const deleteManagedContent = React.useCallback(async (plan) => {
+      await pendingEdits.flush();
+      return commitContentDeletion(plan, {
+        getDashboard: () => dashboardStateRef.current,
+        commitDashboard: async (candidate) => onDashboardChange(candidate),
+      });
+  }, [onDashboardChange, pendingEdits]);
+  const managerDashboard = React.useMemo(() => editMode ? projectContentManagerDependencies({
+    dashboard: workingDashboard,
+    activeRetainers: contentDraftRetainers,
+    onNavigate: navigateContentDependency,
+    onDelete: deleteManagedContent,
+  }) : workingDashboard, [
+    contentDraftRetainers,
+    deleteManagedContent,
+    editMode,
+    navigateContentDependency,
+    workingDashboard,
+  ]);
 
   if (mode === "present") {
     return (
@@ -1486,7 +1512,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     <BuildWorkspace
       key={buildTreeResetGeneration}
       themeProjection={themeProjection}
-      dashboard={workingDashboard}
+      dashboard={managerDashboard}
       contentDraftCoordinator={contentDraftCoordinator}
       onContentDraftStage={onContentDraftStage}
       onContentDraftCommit={onContentDraftCommit}
@@ -2201,6 +2227,33 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
 });
 
 export default DashboardRenderer;
+
+export function projectContentManagerDependencies({ dashboard, activeRetainers, onNavigate, onDelete }) {
+  const projected = { ...dashboard };
+  const graph = buildContentDependencyGraph({ dashboard, activeRetainers });
+  const contentDependencyState = Object.create(null);
+  for (const [mediaId, record] of Object.entries(projected.contentLibrary?.mediaItems ?? {})) {
+    contentDependencyState[`media:${mediaId}`] = createManagerDependencyState({ dashboard, graph, record, kind: "media", id: mediaId, onNavigate, onDelete });
+  }
+  for (const [sourceId, record] of Object.entries(projected.contentLibrary?.sourceEntries ?? {})) {
+    const kind = String(record.kind ?? projected.dataSources?.[sourceId]?.kind ?? "").toLocaleLowerCase();
+    if (kind === "csv" || kind === "geojson") contentDependencyState[`${kind}:${sourceId}`] = createManagerDependencyState({ dashboard, graph, record, kind, id: sourceId, onNavigate, onDelete });
+  }
+  Object.defineProperty(projected, "contentDependencyState", { value: Object.freeze(contentDependencyState) });
+  return projected;
+}
+
+function createManagerDependencyState({ dashboard, graph, record, kind, id, onNavigate, onDelete }) {
+  const plan = prepareContentDeletion({ dashboard, graph, item: { kind, id } });
+  const uses = [...plan.directUses];
+  Object.defineProperties(uses, {
+    activeRetainers: { value: plan.retainers },
+    deletion: { value: { ...plan, itemLabel: record.displayName ?? id } },
+    onNavigate: { value: onNavigate },
+    onDelete: { value: onDelete },
+  });
+  return Object.freeze({ uses, activeRetainers: plan.retainers });
+}
 
 function DashboardFooter({ dashboard }) {
   const feedbackUrl = dashboard.feedbackUrl || feedbackMailtoUrl(dashboard.contactEmail);

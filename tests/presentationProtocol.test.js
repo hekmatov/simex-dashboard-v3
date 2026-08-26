@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { buildContentDependencyGraph } from "../src/content-library/contentDependencyGraph.js";
 
 const protocolModule = await import("../src/lib/presentationProtocol.js").catch(
   () => null,
@@ -227,4 +228,22 @@ test("presentation protocol accepts only the four small message types for the ex
       ),
     /session/,
   );
+});
+
+test("Present and Audience runtime payloads do not become durable content dependencies", () => {
+  const dashboard = {
+    contentLibrary: { mediaItems: {}, sourceEntries: { cases: { sourceId: "cases", kind: "csv" } } },
+    dataSources: { cases: { kind: "csv" } },
+    pages: [{ id: "page-a", sections: [{ id: "section-a", panels: [{ id: "chart-a", chart: { id: "chart-a", sourceId: "cases" } }] }] }],
+  };
+  const baseline = buildContentDependencyGraph({ dashboard });
+  const withRuntime = buildContentDependencyGraph({
+    dashboard,
+    presentationState: scene,
+    audienceMessages: [protocolModule.makePresentationMessage({
+      sessionId: "session-001", sequence: 1, type: "state", payload: scene, presentableItemIndex,
+    })],
+    mediaLeases: [{ mediaId: "media-image-source-a", revision: 7 }],
+  });
+  assert.deepEqual(withRuntime.directUses, baseline.directUses);
 });

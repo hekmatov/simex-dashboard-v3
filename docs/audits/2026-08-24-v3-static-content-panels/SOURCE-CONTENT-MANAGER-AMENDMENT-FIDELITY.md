@@ -62,6 +62,17 @@ For SCM-S15, `renderableFragments` counts LineString = 1; MultiLineString = numb
 | SCM-R10 — Structurally invalid GeoJSON replacement hard-blocks atomically and offers Import as new source plus guided remapping. | Proposed `src/lib/geoJsonValidation.js`, `src/content-library/geoJsonReplacementTransaction.js`, `src/components/source-content/GeoJsonDetail.jsx`, `src/components/source-content/ContentActionDialog.jsx`, `src/components/source-content/DependencyList.jsx`; `src/charting/data/prepareGeographyData.js`; `src/charting/rendering/geographyAdapter.js` | SCM-S15–S16 and SCM-C08–C09 green with malformed/empty/unsupported/limit/join fixtures. | Journey J: replace directly used GeoJSON with a candidate that removes the selected join property and makes the map unusable → inspect block/no mutation → choose Import as new source → inspect guided remap/cancel. | Build 1440×900 and 1024×768; hard-block/import-as-new/cancel | Original sourceId/descriptor/payload/map pixels unchanged, exact structural reason, distinct new sourceId, guided dependency targets, and no partial publication | Proposed / unimplemented / not verified | SCM-D07 |
 | SCM-R11 — Structurally valid GeoJSON geometry/join-coverage changes warn, commit on confirmation, and never create GeoJSON-origin temporal warnings. | Proposed `src/content-library/geoJsonReplacementTransaction.js`, `src/content-library/geoJsonSourceEntry.js`, `src/components/source-content/GeoJsonDetail.jsx`, `src/components/source-content/ContentActionDialog.jsx`; `src/charting/data/prepareGeographyData.js`; `src/charting/rendering/geographyAdapter.js`; `src/components/charts/EChartsChartView.jsx` | SCM-S16 and SCM-C08–C09 green with changed feature/bounds/geometry-mix/reduced-nonzero coverage fixtures. | Journey K: replace with structurally usable changed GeoJSON → inspect warning facts and direct map impacts → cancel once → confirm once → inspect updated map/summary and stable sourceId. | Build 1440×900 and 1024×768; warning/cancel/confirm | No-op cancel, stable sourceId, new descriptor/payload/summary/map after confirm, exact reduced-nonzero coverage warning, and absence of Chrono/Scene/presentation temporal contexts | Proposed / unimplemented / not verified | SCM-D07 |
 
+## Task 6 evidence-status overlay
+
+This overlay supersedes only the implementation-status/evidence cells for the named rows; the accepted row wording and later journey obligations remain unchanged.
+
+| Row | Current bounded status | Evidence / remaining boundary |
+|---|---|---|
+| SCM-S05 | Passing for Task 6 | Direct QMD/Image media, primary CSV, and map geoSource edges plus separate actual-active retainers are exact-tested; the transient carrier is mounted. Full Journey A/I creation/replacement combinations remain later work. |
+| SCM-S06 | Passing for Task 6 | Chrono/Scene/Scene-presentation are CSV impact contexts, not dependencies; Present/Audience/lease inputs do not change edges; GeoJSON has no temporal contexts. |
+| SCM-S07 | Passing for bounded delete slice | Blocked plans cannot commit or open a dialog; eligible plans are revision-checked, no-cascade, and compensating. Broader recovery journeys remain pending. |
+| SCM-C08 | Partial overall; delete branch Passing | Blocked inline guidance/navigation and eligible destructive confirmation are wired through the mounted manager carrier. Replacement/relink modals remain Tasks 8+ and are not promoted. |
+
 ## Promotion gate
 
 - All 36 proposed rows are initially Proposed / unimplemented / not verified.
