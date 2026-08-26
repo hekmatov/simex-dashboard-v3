@@ -13,7 +13,7 @@ Prototype for education and training only. Non-commercial. No guarantees of avai
 ## What the dashboard supports
 
 - A showcase Home page plus configurable operational dashboard pages.
-- A schema-generated, four-step chart wizard:
+- A schema-generated, six-stage chart wizard:
   1. select a chart type by communication purpose;
   2. select a tracked CSV, upload a CSV, or use schema-authorized concise
      manual data;
@@ -136,7 +136,7 @@ Node.js and package tools are build-time dependencies.
   version 3 boundary.
 - `src/charting/data/profileDataset.js` — dataset profiling.
 - `src/charting/data/prepareChartData.js` — canonical preparation pipeline.
-- `src/components/chart-authoring/ChartWizardV3.jsx` — four-step chart
+- `src/components/chart-authoring/ChartWizardV3.jsx` — six-stage chart
   authoring.
 - `src/components/chart-authoring/ChartEditorV3.jsx` — contextual editing and
   conversion.

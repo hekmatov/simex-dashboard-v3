@@ -7,6 +7,7 @@
     "test": "node --test",
     "test:unit": "node --test",
     "test:e2e": "playwright test",
+    "test:e2e:dev": "playwright test --max-failures=1",
     "build:biomedical-derivatives": "node scripts/build-biomedical-derivatives.mjs",
     "check:biomedical-derivatives": "node scripts/build-biomedical-derivatives.mjs --check",
     "icons:build": "node scripts/build-icon-reference.mjs",
