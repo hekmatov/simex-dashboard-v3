@@ -152,5 +152,5 @@ export default function DashboardModeWorkspace({
       />
     </div>
   );
-  return buildMode ? <BuildMapBudgetProvider>{frame}</BuildMapBudgetProvider> : frame;
+  return <BuildMapBudgetProvider enabled={buildMode}>{frame}</BuildMapBudgetProvider>;
 }

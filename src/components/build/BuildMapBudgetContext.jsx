@@ -89,10 +89,14 @@ export function createBuildMapBudget() {
   });
 }
 
-export function BuildMapBudgetProvider({ children }) {
+export function BuildMapBudgetProvider({ children, enabled = true }) {
   const budgetRef = React.useRef(null);
   budgetRef.current ??= createBuildMapBudget();
-  return React.createElement(BuildMapBudgetContext.Provider, { value: budgetRef.current }, children);
+  return React.createElement(
+    BuildMapBudgetContext.Provider,
+    { value: enabled ? budgetRef.current : null },
+    children,
+  );
 }
 
 export function useBuildMapBudgetSlot(input = {}) {
