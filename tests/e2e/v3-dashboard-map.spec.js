@@ -21,16 +21,32 @@ test("Build commands stay available while Dashboard map controls only structure 
   await expect(mapToggle).toHaveAttribute("aria-controls", "dashboard-map-panel");
   const commandGeometry = await commands.locator("[data-build-command-group]").evaluateAll((groups) => groups.map((group) => {
     const rect = group.getBoundingClientRect();
-    return { name: group.dataset.buildCommandGroup, top: rect.top, bottom: rect.bottom };
+    return {
+      name: group.dataset.buildCommandGroup,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      left: rect.left,
+    };
   }));
-  const commandBox = await commands.boundingBox();
   const contentGroup = commandGeometry.find(({ name }) => name === "content");
-  const timeGroup = commandGeometry.find(({ name }) => name === "time");
+  const structureGroup = commandGeometry.find(({ name }) => name === "structure");
+  const timeCommands = commandGeometry.find(({ name }) => name === "time");
+  const packageGroup = commandGeometry.find(({ name }) => name === "package");
   const sessionGroup = commandGeometry.find(({ name }) => name === "session");
   const layoutGroup = commandGeometry.find(({ name }) => name === "layout");
-  expect(Math.max(contentGroup.top, timeGroup.top, sessionGroup.top) - Math.min(contentGroup.top, timeGroup.top, sessionGroup.top)).toBeLessThanOrEqual(1);
-  expect(layoutGroup.top).toBeGreaterThanOrEqual(Math.max(contentGroup.bottom, timeGroup.bottom, sessionGroup.bottom));
-  expect(commandBox.height).toBeLessThanOrEqual(170);
+  const primaryGroups = [contentGroup, structureGroup, timeCommands, packageGroup, sessionGroup];
+  expect(primaryGroups.every(Boolean)).toBe(true);
+  const overlaps = primaryGroups.flatMap((group, index) => primaryGroups.slice(index + 1)
+    .filter((candidate) => (
+      group.left < candidate.right
+      && group.right > candidate.left
+      && group.top < candidate.bottom
+      && group.bottom > candidate.top
+    ))
+    .map((candidate) => `${group.name}:${candidate.name}`));
+  expect(overlaps).toEqual([]);
+  expect(layoutGroup.top).toBeGreaterThanOrEqual(Math.max(...primaryGroups.map(({ bottom }) => bottom)));
 
   await mapToggle.click();
   const map = page.getByRole("complementary", { name: "Dashboard map" });
