@@ -40,18 +40,22 @@ test("View, Build, and Present remain visible while preserving the active page",
     .toHaveAttribute("aria-current", "page");
 });
 
-test("Build metadata persists on save and stays editable after a failed save", async ({ page }) => {
-  await enterScenarioInspector(page);
-  const program = page.getByLabel("Program");
+test("Build metadata persists on save and stays editable after storage fallback", async ({ page }) => {
+  const passport = await enterScenarioInspector(page);
+  await passport.getByRole("button", { name: /^Edit Program:/ }).click();
+  const program = passport.getByLabel("Program", { exact: true });
   await program.fill("Three-mode training exercise");
-  await page.getByRole("button", { name: "View" }).click();
-  await expect(page.getByRole("button", { name: "View" }))
+  await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
+  await expect(passport).toContainText("Scenario saved");
+  await page.getByRole("button", { name: "View", exact: true }).click();
+  await expect(page.getByRole("button", { name: "View", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => page.evaluate((key) => (
     JSON.parse(localStorage.getItem(key)).programLabel
   ), STORAGE_KEY)).toBe("Three-mode training exercise");
 
   await enterScenarioInspector(page);
+  await passport.getByRole("button", { name: /^Edit Program:/ }).click();
   await program.fill("Retain this Build draft");
   await page.evaluate((storageKey) => {
     const originalSetItem = Storage.prototype.setItem;
@@ -63,11 +67,18 @@ test("Build metadata persists on save and stays editable after a failed save", a
     };
   }, STORAGE_KEY);
 
-  await page.getByRole("button", { name: "View" }).click();
-  await expect(page.getByRole("button", { name: "Build" }))
+  await passport.getByRole("button", { name: "Save Scenario", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
+  await expect(passport).toContainText("Scenario saved");
+  await expect(page.getByRole("status")).toContainText(
+    "Browser storage is full. Dashboard changes remain available for this session only.",
+  );
+  await expect.poll(() => page.evaluate((key) => (
+    JSON.parse(localStorage.getItem(key)).programLabel
+  ), STORAGE_KEY)).toBe("Three-mode training exercise");
+  await passport.getByRole("button", { name: "Edit Program: Retain this Build draft", exact: true }).click();
   await expect(program).toHaveValue("Retain this Build draft");
-  await expect(page.getByRole("alert")).toContainText("Browser storage is full");
 });
 
 test("View compares charts and closes fullscreen with Escape", async ({ page }) => {
@@ -172,10 +183,11 @@ async function openBiomedical(page) {
 }
 
 async function enterScenarioInspector(page) {
-  await page.getByRole("button", { name: "Build" }).click();
-  await page.getByRole("navigation", { name: "Dashboard structure" })
-    .getByRole("button", { name: "Scenario", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await page.locator(".dashboard-scenario-trigger").click();
+  const passport = page.getByRole("complementary", { name: "Scenario Passport" });
+  await expect(passport).toBeVisible();
+  return passport;
 }
 
 async function enterPresent(page) {
