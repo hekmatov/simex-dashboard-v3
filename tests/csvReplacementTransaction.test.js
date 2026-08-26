@@ -15,6 +15,10 @@ const ORIGINAL_ROWS = Object.freeze([
   { date: "2026-01-02", cases: 7, municipality: "B" },
 ]);
 const COMPATIBLE_ROWS = Object.freeze([
+  { date: "2026-01-01", cases: 8, municipality: "A" },
+  { date: "2026-01-02", cases: 11, municipality: "B" },
+]);
+const CHANGED_TEMPORAL_ROWS = Object.freeze([
   { date: "2026-02-01", cases: 8, municipality: "A" },
   { date: "2026-02-02", cases: 11, municipality: "B" },
 ]);
@@ -135,6 +139,23 @@ test("compatible non-temporal replacement preserves sourceId, chart V3, and map 
   assert.equal(harness.dashboard.pages[0].sections[0].panels[1].configVersion, 3);
   assert.deepEqual(harness.dashboard.dataSources.boundaries, beforeGeo);
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+});
+
+test("changed directly-used temporal observations require Task 12 review and cannot commit", async () => {
+  const harness = replacementHarness();
+  const before = structuredClone(harness.dashboard);
+  const plan = await preparePlan(harness.dashboard, CHANGED_TEMPORAL_ROWS);
+
+  assert.equal(plan.status, "requires-temporal-review");
+  assert.equal(plan.reason.code, "requires-temporal-review");
+  assert.equal(plan.canImportAsNew, false);
+  harness.coordinator.stageDraft(plan.draft);
+  await assert.rejects(commitCsvReplacement(plan, {
+    contentDraftCoordinator: harness.coordinator,
+  }), /temporal review/i);
+  assert.deepEqual(harness.dashboard, before);
+  assert.deepEqual(harness.commits, []);
+  await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "task-12-deferred" });
 });
 
 test("injected persistence failure rolls back descriptor, profile, entry, rows, and retainers", async () => {

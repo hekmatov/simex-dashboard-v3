@@ -70,11 +70,14 @@ export async function prepareCsvReplacement({
     panelId: placement.id ?? chart.id,
     panelLabel: placement.title ?? chart.title ?? placement.id ?? chart.id,
   }));
+  const temporalReviewReason = reasons.length === 0
+    ? changedTemporalObservationReason(directCharts, previous.loadedData?.[id], normalized.rows)
+    : null;
   const plan = {
     kind: "csv-replacement",
     sourceId: id,
-    status: reasons.length > 0 ? "blocked" : "ready",
-    reason: reasons[0] ?? null,
+    status: reasons.length > 0 ? "blocked" : temporalReviewReason ? "requires-temporal-review" : "ready",
+    reason: reasons[0] ?? temporalReviewReason,
     reasons,
     canImportAsNew: reasons.length > 0,
     importSourceId,
@@ -107,6 +110,9 @@ export async function commitCsvReplacement(plan, {
   }
   if (mode === "replace" && plan.status === "blocked") {
     throw new Error(plan.reason?.message ?? "The replacement CSV is structurally incompatible.");
+  }
+  if (mode === "replace" && plan.status === "requires-temporal-review") {
+    throw new Error(plan.reason?.message ?? "This CSV replacement requires temporal review before it can be committed.");
   }
   if (mode === "import-as-new" && !plan.canImportAsNew) {
     throw new Error("This CSV candidate cannot be imported as a new managed source.");
@@ -213,6 +219,40 @@ function configuredCharts(dashboard) {
     if (chart?.configVersion === 3) values.push({ page, section, placement, chart });
   }
   return values;
+}
+
+function changedTemporalObservationReason(directCharts, currentRows, candidateRows) {
+  const fields = new Set();
+  for (const { chart } of directCharts) collectTemporalFields(chart.roles, fields);
+  if (fields.size === 0) return null;
+  const changedFields = [...fields].filter((field) => (
+    !Array.isArray(currentRows)
+    || stableStringify(temporalObservationSeries(currentRows, field))
+      !== stableStringify(temporalObservationSeries(candidateRows, field))
+  )).sort();
+  if (changedFields.length === 0) return null;
+  return {
+    code: "requires-temporal-review",
+    fields: changedFields,
+    message: `This replacement changes directly used temporal observations for ${changedFields.map((field) => `"${field}"`).join(", ")} and requires temporal review before it can replace the current source.`,
+  };
+}
+
+function collectTemporalFields(value, fields) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectTemporalFields(item, fields);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  if (value.interpretation === "temporal" && typeof value.field === "string" && value.field) fields.add(value.field);
+  for (const child of Object.values(value)) collectTemporalFields(child, fields);
+}
+
+function temporalObservationSeries(rows, field) {
+  return [...new Set(rows
+    .map((row) => row?.[field])
+    .filter((value) => value !== null && value !== undefined && value !== "")
+    .map((value) => stableStringify(value)))].sort();
 }
 
 function currentAuthority(dashboard, sourceId) {

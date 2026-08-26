@@ -25,6 +25,8 @@ export default function ContentActionDialog({
     if (!open) return null;
     const id = `replace-csv-${safeId(itemLabel)}`;
     const blocked = replacementStatus === "blocked";
+    const requiresTemporalReview = replacementStatus === "requires-temporal-review";
+    const nonCommittable = blocked || requiresTemporalReview;
     return (
       <ModalFocusScope
         as="div"
@@ -43,7 +45,7 @@ export default function ContentActionDialog({
           <p id={`${id}-message`}>Choose a CSV file. The current source identity is retained only when every directly dependent chart remains structurally valid.</p>
           <label><span>Replacement CSV</span><input data-modal-initial-focus="true" type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
           {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
-          {blocked && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
+          {nonCommittable && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
           {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
           {remapTargets.length > 0 && (
             <section aria-label="Affected panels">
@@ -57,7 +59,7 @@ export default function ContentActionDialog({
           <div className="confirm-dialog-actions">
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
-            <button type="button" disabled={busy || !replacementReady || blocked} onClick={onConfirm}>{busy ? "Replacing…" : "Replace file"}</button>
+            <button type="button" disabled={busy || !replacementReady || nonCommittable} onClick={onConfirm}>{busy ? "Replacing…" : "Replace file"}</button>
           </div>
         </section>
       </ModalFocusScope>

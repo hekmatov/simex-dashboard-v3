@@ -10,11 +10,14 @@
 
 The exact five-file selection first failed because `src/content-library/csvReplacementTransaction.js` and `prepareChartData.js::validateChartDataCompatibility` did not exist. The focused mounted dialog test also failed because the CSV replacement action rendered no file intake, typed block reason, import action, or remap targets. These were the expected Task 11 failures.
 
+Review correction T11-R01 added a second focused RED: a candidate with changed directly-used temporal observations incorrectly returned `ready` and committed, while the mounted dialog disabled Replace without exposing why. The paired tests failed with actual status `ready` and missing `data-replacement-reason="requires-temporal-review"`.
+
 ## Minimal implementation
 
 - `prepareCsvReplacement` parses/injects a candidate, validates descriptor/profile safety and every directly dependent primary-source chart, snapshots current authority, and returns typed immutable block/ready plans plus Page › Section › Panel remap targets.
 - `commitCsvReplacement` uses the existing content-draft coordinator transaction lifetime and atomic dashboard publication. Replace preserves `sourceId`; incompatible Import as new publishes a distinct ID without silently remapping the original; persistence failure rolls back.
 - `validateChartDataCompatibility` is the live chart-data structural falsifier used by the transaction. Map charts validate their primary CSV while retaining `presentation.map.geoSource` unchanged.
+- Task 11 now compares the unique directly-used temporal observation series against current loaded rows. A changed series returns typed, non-structural `requires-temporal-review`; Replace and Import are unavailable and `commitCsvReplacement` rejects publication. It does not calculate impact contexts, warning confirmation, or `temporalReview` metadata; Task 12 remains the sole owner of those behaviors.
 - The existing manager detail/dialog owns file choice, typed reason, Cancel/focus return, Import as new, and guided remap. The imported plan retains its remap targets after publication.
 
 ## Technical rulings
@@ -27,7 +30,7 @@ The exact five-file selection first failed because `src/content-library/csvRepla
 
 - Exact deterministic command:
   `node --test tests/csvReplacementTransaction.test.js tests/contentActionDialog.test.js tests/contentDependencyGraph.test.js tests/chartConfigV3.test.js tests/chartRenderingV3.test.js`
-- Result: **67/67 passing**, zero fail/skip/todo.
+- Result after T11-R01: **69/69 passing**, zero fail/skip/todo.
 - Exact browser command:
   `pnpm.cmd test:e2e tests/e2e/source-content-csv.spec.js --project=chromium --grep "Journey E — incompatible CSV replacement blocks and imports as new"`
 - Result: **1/1 passing** in Chromium.

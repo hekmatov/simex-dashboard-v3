@@ -78,6 +78,24 @@ test("blocked CSV replacement exposes a typed reason, import-as-new, and guided 
   assert.doesNotMatch(html, />Delete</);
 });
 
+test("temporal CSV replacement is visibly deferred and cannot publish or import", () => {
+  const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace-csv",
+    itemLabel: "Cases",
+    replacementReady: false,
+    replacementStatus: "requires-temporal-review",
+    replacementReason: {
+      code: "requires-temporal-review",
+      message: "This replacement changes a directly used temporal observation series and requires review.",
+    },
+  }));
+  assert.match(html, /data-replacement-reason="requires-temporal-review"/u);
+  assert.match(html, /requires review/u);
+  assert.doesNotMatch(html, /Import as new source/u);
+  assert.match(html, /<button type="button" disabled="">Replace file<\/button>/u);
+});
+
 test("manager dependency collections carry retainer and deletion state through the passive detail boundary", () => {
   const uses = [];
   uses.activeRetainers = [{ ownerId: "draft-a", kind: "image-draft" }];
