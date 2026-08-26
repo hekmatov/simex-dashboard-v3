@@ -19,11 +19,14 @@ import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { buildRenderModel } from "../src/charting/rendering/buildRenderModel.js";
 import { getChartSchema } from "../src/charting/schemas/chartSchemaRegistry.js";
 
+const viteModuleUrl = import.meta.resolve("vite");
 register(`data:text/javascript,${encodeURIComponent(`
 export async function load(url, context, nextLoad) {
   if (url.endsWith(".jsx")) {
     const loaded = await nextLoad(url, { ...context, format: "module" });
-    return { format: "module", source: loaded.source, shortCircuit: true };
+    const { transformWithEsbuild } = await import(${JSON.stringify(viteModuleUrl)});
+    const transformed = await transformWithEsbuild(loaded.source.toString(), url, { loader: "jsx", format: "esm" });
+    return { format: "module", source: transformed.code, shortCircuit: true };
   }
   return nextLoad(url, context);
 }
