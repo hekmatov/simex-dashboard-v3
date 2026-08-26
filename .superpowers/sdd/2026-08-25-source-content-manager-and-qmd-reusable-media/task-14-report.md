@@ -14,6 +14,8 @@ The exact seven-file selection was **49/52 passing**. The three expected failure
 - Exactly four resource keys remain authoritative. Schema and direct-map compatibility stay separately typed; high property-key count, deeply nested property data, container diagnostics, and per-feature concentration do not independently block.
 - Structural failures preserve the current authority and expose Import as new source plus exact dependency breadcrumbs. Compatible feature/bounds/geometry-mix/reduced-nonzero coverage changes warn; confirmation preserves `sourceId` and publishes descriptor/payload/map state atomically.
 - Stored uploads expose Replace file; linked sources expose Relink through the same validation and transaction path. Expected-current checks and coordinator transaction retainers protect publication and rollback.
+- Confirmed browser-file relinks publish the existing durable embedded `dataset/uploadedGeoJson` descriptor, retain the logical sourceId and linked-project SourceEntry origin, and replace stale path provenance with the selected filename. Reload/provider evidence succeeds without `loadedData`, a served basename, or provider expansion.
+- Import as new derives uploaded origin and filename provenance from the browser-selected candidate descriptor. Geometry-mix warnings compare the complete sorted geometry-type key/count distribution.
 - GeoJSON replacement creates no Chrono Group, Scene, or presentation temporal contexts or review metadata.
 
 ## Rulings and cost
@@ -24,9 +26,10 @@ The exact seven-file selection was **49/52 passing**. The three expected failure
 
 ## GREEN and real use
 
-- Exact seven-file deterministic selection: **58/58 passing**, zero fail/skip/todo, 3.72 s.
-- Named Journey J independent Chromium selection: **1/1 passing**, 45.6 s test / 47.7 s total.
-- Named Journey K independent Chromium selection: **1/1 passing**, 45.9 s test / 47.7 s total.
+- Review-fix RED was **5/8 passing**, with exactly one intended failure for each finding: fake linked fetch path, packaged import origin, and keys-only geometry comparison.
+- Exact seven-file deterministic selection: **60/60 passing**, zero fail/skip/todo, 4.56 s. No extra test file was added.
+- Named Journey J independent Chromium selection: **1/1 passing**, 42.6 s test / 44.5 s total, including exact uploaded origin/filename provenance.
+- Named Journey K independent Chromium selection: **1/1 passing**, 38.9 s test / 41.7 s total, including identical geometry keys with Point/LineString counts changing 2/1 → 1/2.
 - Inspected Build 1440×900 and 1024×768: typed structural block, exact no-op cancel/focus return, distinct import identity, guided panel remap, stable original source/chart/temporal state and render, typed bbox/geometry-mix/reduced-coverage warnings, stable source identity on confirm, changed map render and canonical summary, live tablet map/detail, and zero manager overflow.
 
 ## Disposition

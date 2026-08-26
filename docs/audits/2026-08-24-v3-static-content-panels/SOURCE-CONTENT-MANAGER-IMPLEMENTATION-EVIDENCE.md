@@ -353,12 +353,12 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 ### RED and deterministic evidence
 
 - Exact seven-file RED was **49/52 passing** with failures limited to the missing replacement owner, map-coverage inspection, and typed action dialog.
-- Exact seven-file GREEN is **58/58 passing**, zero failed/skipped/todo, 3.72 s. It covers malformed/schema failure, exactly four hard-limit fixtures generated from `SOURCE_GEOJSON_LIMIT_KEYS`, selected-join removal, zero usable coverage, obsolete diagnostic negatives, feature/bounds/geometry-mix/reduced-nonzero coverage warnings, cancel, import/remap, stable expected-current identity, persistence rollback, and zero Chrono/Scene/presentation temporal contexts.
+- Review-fix RED was **5/8 passing**, with exact intended failures for a linked relink fake fetch path, browser import misclassified as packaged, and a keys-only geometry-mix comparison. Exact seven-file GREEN is now **60/60 passing**, zero failed/skipped/todo, 4.56 s, with no additional test file. It covers durable embedded relink reload through the existing provider after removing `loadedData`, zero basename transport, linked cancel/failure equality, exact uploaded import provenance, complete sorted geometry key/count comparison, the original schema/four-gate/compatibility cases, and zero Chrono/Scene/presentation temporal contexts.
 
 ### Named Journeys J and K
 
-- Journey J exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey J — invalid GeoJSON replacement blocks and imports as new"` — **1/1 passing**, 45.6 s test / 47.7 s total.
-- Journey K exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey K — valid GeoJSON geometry change warns then confirms"` — **1/1 passing**, 45.9 s test / 47.7 s total.
+- Journey J exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey J — invalid GeoJSON replacement blocks and imports as new"` — **1/1 passing**, 42.6 s test / 44.5 s total. The imported SourceEntry is exactly `origin:'uploaded'` with selected-filename provenance.
+- Journey K exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey K — valid GeoJSON geometry change warns then confirms"` — **1/1 passing**, 38.9 s test / 41.7 s total. Its live geometry distribution retains the same sorted keys while Point/LineString counts change 2/1 → 1/2.
 - Build 1440×900 and 1024×768 inspected typed dialogs, cancel/focus, exact original identity/render retention on block, distinct import identity, guided live-panel remap, bbox/geometry-mix/reduced-coverage warning facts, stable sourceId and direct chart binding on confirm, changed map render/canonical summary, live tablet map/detail, bounded manager geometry, and unchanged Chrono Group/Scene/presentation state.
 
 ### Ruling and scope boundary

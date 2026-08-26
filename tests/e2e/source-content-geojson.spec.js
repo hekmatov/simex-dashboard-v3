@@ -201,6 +201,15 @@ test("Journey J — invalid GeoJSON replacement blocks and imports as new", asyn
   const importedId = imported.managedGeoJsonIds.find((id) => !before.managedGeoJsonIds.includes(id));
   expect(importedId).toBeTruthy();
   expect(importedId).not.toBe(target.sourceId);
+  const importedEntry = await page.evaluate(({ key, sourceId }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const entry = dashboard.contentLibrary.sourceEntries[sourceId];
+    return { origin: entry.origin, provenance: entry.provenance };
+  }, { key: STORAGE_KEY, sourceId: importedId });
+  expect(importedEntry).toEqual({
+    origin: "uploaded",
+    provenance: { fileName: "journey-j-invalid.geojson" },
+  });
   await expect(detail).toContainText("2 features");
   await expect(detail).toContainText("4, 52, 5, 52");
   await dialog.getByRole("region", { name: "Affected panels" }).getByRole("button", { name: new RegExp(target.chartTitle) }).click();
@@ -281,8 +290,8 @@ test("Journey K — valid GeoJSON geometry change warns then confirms", async ({
   manager = await openDataSourceManager(page);
   await selectSourceRow(manager, target.displayName);
   detail = manager.getByRole("region", { name: "Content detail" });
-  await expect(detail).toContainText("LineString 1, Point 1");
-  await expect(detail).toContainText("7, 53, 9, 54");
+  await expect(detail).toContainText("LineString 2, Point 1");
+  await expect(detail).toContainText("7, 53, 10, 55");
   expect(await managerOverflow(manager)).toBe(false);
   const tablet = await geoJsonReplacementSnapshot(page, target);
   expect(tablet.sourceIdentity).toEqual(confirmed.sourceIdentity);
@@ -452,11 +461,15 @@ async function seedGeoJsonReplacementTarget(page, journey) {
     target.chart.presentation.map.geoSource = sourceId;
     const geoJson = {
       type: "FeatureCollection",
-      features: values.map((value, index) => ({
+      features: [...values.map((value, index) => ({
         type: "Feature",
         properties: { [joinField]: value, label: `Journey ${journeyName} ${index + 1}` },
         geometry: { type: "Point", coordinates: [4 + index, 52] },
-      })),
+      })), ...(journeyName === "K" ? [{
+        type: "Feature",
+        properties: { [joinField]: "journey-k-original-unmatched", label: "Journey K original line" },
+        geometry: { type: "LineString", coordinates: [[4, 51], [5, 51]] },
+      }] : [])],
     };
     dashboard.dataSources[sourceId] = { kind: "dataset", type: "uploadedGeoJson", fileName: `${sourceId}.geojson`, geoJson, provenance: { label: displayName } };
     dashboard.contentLibrary ??= { mediaItems: {}, sourceEntries: {} };
@@ -515,7 +528,11 @@ function changedGeometryReplacement(target) {
     }, {
       type: "Feature",
       properties: { [target.joinField]: "journey-k-unmatched" },
-      geometry: { type: "LineString", coordinates: [[8, 53], [9, 54]] },
+      geometry: { type: "LineString", coordinates: [[8, 53], [9, 53]] },
+    }, {
+      type: "Feature",
+      properties: { [target.joinField]: "journey-k-unmatched-2" },
+      geometry: { type: "LineString", coordinates: [[9, 54], [10, 55]] },
     }],
   });
 }

@@ -8,6 +8,10 @@ import {
   prepareGeoJsonReplacement,
 } from "../src/content-library/geoJsonReplacementTransaction.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
+import { createDashboardSourceProviders } from "../src/data/dashboardSourceProviders.js";
+import { createProviderRegistry } from "../src/data/providerRegistry.js";
+import { providerKindForDescriptor } from "../src/data/sourceRequest.js";
+import { validateGeoJson } from "../src/lib/geoJsonValidation.js";
 import { GEOJSON_LIMITS, SOURCE_GEOJSON_LIMIT_KEYS } from "./helpers/geoJsonBoundaryFixtures.js";
 import { makeDashboardV5, makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
 
@@ -76,6 +80,7 @@ test("geometry and reduced nonzero coverage warnings cancel exactly and confirm 
   assert.deepEqual(geoJsonReplacementWarnings(plan).map(({ code }) => code), [
     "feature-count-changed",
     "bounding-box-changed",
+    "geometry-mix-changed",
     "join-coverage-reduced",
   ]);
   harness.coordinator.stageDraft(plan.draft);
@@ -98,6 +103,20 @@ test("geometry and reduced nonzero coverage warnings cancel exactly and confirm 
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
 });
 
+test("same geometry keys with different counts require geometry-mix confirmation", async () => {
+  const plan = await preparePlan(replacementDashboard(), collection([
+    point({ code: "A" }, 8, 53),
+    point({ code: "B" }, 9, 53),
+    point({ code: "C" }, 10, 53),
+  ]));
+
+  assert.equal(plan.status, "requires-confirmation");
+  assert.equal(
+    geoJsonReplacementWarnings(plan).some(({ code }) => code === "geometry-mix-changed"),
+    true,
+  );
+});
+
 test("blocked candidate imports as a distinct source without silently replacing or remapping", async () => {
   const harness = replacementHarness();
   const before = structuredClone(harness.dashboard);
@@ -111,7 +130,74 @@ test("blocked candidate imports as a distinct source without silently replacing 
   assert.deepEqual(harness.dashboard.loadedData.boundaries, before.loadedData.boundaries);
   assert.equal(harness.dashboard.pages[0].sections[0].panels[0].presentation.map.geoSource, "boundaries");
   assert.deepEqual(harness.dashboard.loadedData[result.sourceId], plan.candidate.geoJson);
+  assert.equal(harness.dashboard.contentLibrary.sourceEntries[result.sourceId].origin, "uploaded");
+  assert.deepEqual(harness.dashboard.contentLibrary.sourceEntries[result.sourceId].provenance, {
+    fileName: "replacement.geojson",
+  });
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+});
+
+test("linked relink publishes a durable embedded descriptor and preserves equality on cancel or failure", async () => {
+  const linked = linkedReplacementDashboard();
+  const changed = collection([point({ code: "A" }, 7, 53), point({ code: "B" }, 8, 53)]);
+
+  const cancelled = replacementHarness({ dashboard: linked });
+  const cancelledBefore = structuredClone(cancelled.dashboard);
+  const cancelledPlan = await preparePlan(cancelled.dashboard, changed);
+  cancelled.coordinator.stageDraft(cancelledPlan.draft);
+  await cancelled.coordinator.discardDraft(cancelledPlan.draft.draftId, { reason: "geojson-relink-cancelled" });
+  assert.deepEqual(cancelled.dashboard, cancelledBefore);
+
+  const failing = replacementHarness({ dashboard: linked, failCommit: true });
+  const failingBefore = structuredClone(failing.dashboard);
+  const failingPlan = await preparePlan(failing.dashboard, changed);
+  await assert.rejects(
+    commitGeoJsonReplacement(failingPlan, { confirmWarnings: true, contentDraftCoordinator: failing.coordinator }),
+    /persistence failed/,
+  );
+  assert.deepEqual(failing.dashboard, failingBefore);
+
+  const confirmed = replacementHarness({ dashboard: linked });
+  const confirmedPlan = await preparePlan(confirmed.dashboard, changed);
+  const result = await commitGeoJsonReplacement(confirmedPlan, {
+    confirmWarnings: true,
+    contentDraftCoordinator: confirmed.coordinator,
+  });
+  const reloaded = JSON.parse(JSON.stringify(result.dashboard));
+  delete reloaded.loadedData;
+  const descriptor = reloaded.dataSources.boundaries;
+  assert.equal(result.sourceId, "boundaries");
+  assert.deepEqual(descriptor, {
+    kind: "dataset",
+    type: "uploadedGeoJson",
+    fileName: "replacement.geojson",
+    provenance: { label: "Boundaries" },
+    geoJson: changed,
+  });
+  assert.equal(descriptor.path, undefined);
+  assert.equal(reloaded.contentLibrary.sourceEntries.boundaries.origin, "linked-project");
+  assert.deepEqual(reloaded.contentLibrary.sourceEntries.boundaries.provenance, {
+    fileName: "replacement.geojson",
+  });
+
+  let transportCalls = 0;
+  const unexpectedTransport = async () => {
+    transportCalls += 1;
+    throw new Error("Durable relink attempted transport by served basename.");
+  };
+  const providers = createProviderRegistry(createDashboardSourceProviders({
+    loadCsv: unexpectedTransport,
+    parseCsvText: unexpectedTransport,
+    profileDataset: () => ({}),
+    fetchText: unexpectedTransport,
+    sourceUrl: (path) => path,
+    validateGeoJson,
+  }));
+  const providerKind = providerKindForDescriptor(descriptor);
+  const loaded = await providers.resolve(providerKind).load({ sourceId: "boundaries", descriptor, portableSource: null });
+  assert.equal(providerKind, "uploadedGeoJson");
+  assert.deepEqual(loaded.data, changed);
+  assert.equal(transportCalls, 0);
 });
 
 test("expected-current drift and persistence failure preserve the latest exact authority", async () => {
@@ -164,8 +250,24 @@ function replacementDashboard() {
   });
 }
 
-function replacementHarness({ failCommit = false } = {}) {
-  let dashboard = replacementDashboard();
+function linkedReplacementDashboard() {
+  const dashboard = replacementDashboard();
+  dashboard.dataSources.boundaries = {
+    kind: "geojson",
+    path: "data/boundaries.geojson",
+    provenance: { label: "Boundaries" },
+  };
+  dashboard.contentLibrary.sourceEntries.boundaries = makeSourceEntry("geojson", {
+    sourceId: "boundaries",
+    origin: "linked-project",
+    displayName: "Boundaries",
+    provenance: { path: "data/boundaries.geojson" },
+  });
+  return dashboard;
+}
+
+function replacementHarness({ failCommit = false, dashboard: initialDashboard = replacementDashboard() } = {}) {
+  let dashboard = structuredClone(initialDashboard);
   let failed = false;
   const commits = [];
   const coordinator = createContentDraftCoordinator({

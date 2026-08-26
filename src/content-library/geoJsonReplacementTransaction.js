@@ -187,20 +187,17 @@ function replacementCandidate(plan, dashboard, mode) {
     next.loadedData[targetId] = cloneIterative(plan.candidate.geoJson);
     next.contentLibrary.sourceEntries[targetId] = managedEntryFor(targetId, plan.candidate.source);
   } else {
-    const currentDescriptor = next.dataSources[targetId];
-    next.dataSources[targetId] = currentDescriptor?.kind === "geojson"
-      ? { ...currentDescriptor, path: plan.candidate.source.path ?? plan.candidate.source.fileName, geoJson: cloneIterative(plan.candidate.geoJson) }
-      : cloneIterative(plan.candidate.source);
-    next.loadedData[targetId] = cloneIterative(plan.candidate.geoJson);
     const currentEntry = next.contentLibrary.sourceEntries[targetId];
+    next.dataSources[targetId] = durableEmbeddedDescriptor(
+      plan.candidate.source,
+      plan.candidate.geoJson,
+      currentEntry.displayName,
+    );
+    next.loadedData[targetId] = cloneIterative(plan.candidate.geoJson);
     next.contentLibrary.sourceEntries[targetId] = {
       ...currentEntry,
       health: "ready",
-      provenance: {
-        ...currentEntry.provenance,
-        ...(plan.candidate.source.fileName ? { fileName: plan.candidate.source.fileName } : {}),
-        ...(plan.candidate.source.path ? { path: plan.candidate.source.path } : {}),
-      },
+      provenance: candidateFileProvenance(plan.candidate.source),
     };
   }
   return { dashboard: next, commitAssetIds: [], discardAssetIds: [], itemIds: [targetId] };
@@ -210,7 +207,7 @@ function replacementWarnings(current, candidate, coverage) {
   const warnings = [];
   if (current.summary.featureCount !== candidate.summary.featureCount) warnings.push(warning("feature-count-changed", `Feature count changes from ${current.summary.featureCount} to ${candidate.summary.featureCount}.`));
   if (!sameValue(current.summary.boundingBox, candidate.summary.boundingBox)) warnings.push(warning("bounding-box-changed", "The GeoJSON bounding box changes."));
-  if (!sameValue(Object.keys(current.summary.geometryTypeCounts).sort(), Object.keys(candidate.summary.geometryTypeCounts).sort())) warnings.push(warning("geometry-mix-changed", "The GeoJSON geometry-type mix changes."));
+  if (!sameValue(geometryTypeDistribution(current), geometryTypeDistribution(candidate))) warnings.push(warning("geometry-mix-changed", "The GeoJSON geometry-type mix changes."));
   for (const { direct, current: before, candidate: after } of coverage) {
     if (after.ok && before.ok && after.matchedCount > 0 && after.matchedCount < before.matchedCount) {
       warnings.push(warning("join-coverage-reduced", `Usable join coverage for "${direct.chart.title ?? direct.chart.id}" falls from ${before.matchedCount} of ${before.eligibleCount} to ${after.matchedCount} of ${after.eligibleCount}.`, direct.chart.id));
@@ -307,14 +304,32 @@ function availableSourceId(value, sources) {
 
 function warning(code, message, chartId = null) { return { code, message, ...(chartId ? { chartId } : {}) }; }
 function managedEntryFor(sourceId, descriptor) {
+  const uploaded = descriptor.kind === "dataset" && descriptor.type === "uploadedGeoJson";
   return {
     sourceId,
-    origin: descriptor.kind === "geojson" ? "linked-project" : descriptor.browserAssetId ? "uploaded" : "packaged",
+    origin: descriptor.kind === "geojson" ? "linked-project" : uploaded ? "uploaded" : "packaged",
     ownership: descriptor.provenance?.ownership === "dashboard" ? "dashboard" : "builder",
     displayName: descriptor.provenance?.label ?? descriptor.fileName ?? descriptor.path?.split(/[\\/]/u).at(-1) ?? sourceId,
-    provenance: structuredClone(descriptor.provenance ?? {}),
+    provenance: uploaded ? candidateFileProvenance(descriptor) : structuredClone(descriptor.provenance ?? {}),
     health: "ready",
   };
+}
+function durableEmbeddedDescriptor(descriptor, geoJson, label) {
+  const fileName = descriptor.fileName ?? descriptor.path?.split(/[\\/]/u).at(-1) ?? "replacement.geojson";
+  return {
+    kind: "dataset",
+    type: "uploadedGeoJson",
+    fileName,
+    provenance: { label: label ?? descriptor.provenance?.label ?? fileName },
+    geoJson: cloneIterative(geoJson),
+  };
+}
+function candidateFileProvenance(descriptor) {
+  const fileName = descriptor.fileName ?? descriptor.path?.split(/[\\/]/u).at(-1);
+  return fileName ? { fileName } : {};
+}
+function geometryTypeDistribution(validation) {
+  return Object.entries(validation.summary.geometryTypeCounts).sort(([left], [right]) => left.localeCompare(right));
 }
 function sameAuthority(expected, actual) { return JSON.stringify(expected) === JSON.stringify(actual); }
 function sameValue(left, right) { return stableStringify(left) === stableStringify(right); }
