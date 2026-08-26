@@ -16,12 +16,7 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   page,
 }) => {
   await openDashboard(page);
-  const controls = page.getByRole("region", {
-    name: "Synchronized playback controls",
-  });
-  const openPlayback = controls.getByRole("button", {
-    name: "Open playback view",
-  });
+  const viewMode = page.getByRole("button", { name: "View", exact: true });
   await page.getByRole("button", { name: "Build" }).click();
 
   const panel = page.locator('[data-panel-id="bio_confirmed_cases"]');
@@ -31,16 +26,11 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   const editorTitle = editor.getByLabel("Chart title");
   await editorTitle.fill("Playback-safe unsaved editor title");
 
-  await expect(openPlayback).toBeDisabled();
-  await expect(openPlayback).toHaveAttribute(
-    "aria-describedby",
-    "playback-entry-blocked-reason",
-  );
-  await expect(page.locator("#playback-entry-blocked-reason")).toContainText(
-    "Finish, save, or discard chart authoring",
-  );
-  await openPlayback.evaluate((button) => button.click());
+  await expect(viewMode).toBeDisabled();
+  await viewMode.evaluate((button) => button.click());
   await expect(page.locator(".playback-view")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Build", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
   await expect(editor).toBeVisible();
   await expect(editorTitle).toHaveValue("Playback-safe unsaved editor title");
 
@@ -56,30 +46,38 @@ test("playback entry preserves editor and wizard authoring until each workflow i
   await editorTitle.fill("Playback-safe saved editor title");
   await editor.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(editor).toHaveCount(0);
-  await expect(openPlayback).toBeEnabled();
+  await expect(viewMode).toBeEnabled();
 
   await page.getByRole("button", { name: "Add chart" }).first().click();
   const wizard = page.locator(".chart-wizard-backdrop");
+  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
   await wizard.getByLabel("Search chart types").fill("pie");
   await wizard.getByRole("button", { name: /^Pie\b/i }).click();
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await wizard.getByLabel("Managed data source").selectOption("bio_mortality");
+  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
+  await wizard.locator('[data-field-id="category"] select').selectOption("Age group");
+  await wizard.locator('[data-field-id="value"] select').selectOption("deaths");
+  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
   const wizardTitle = wizard.getByLabel("Chart title");
   await wizardTitle.fill("Playback-safe unsaved wizard title");
 
-  await expect(openPlayback).toBeDisabled();
-  await openPlayback.evaluate((button) => button.click());
-  await expect(page.locator(".playback-view")).toHaveCount(0);
+  await expect(viewMode).toBeEnabled();
+  await viewMode.evaluate((button) => button.click());
+  await expect(wizard).toBeHidden();
+  await expect(viewMode).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Resume chart draft" }).click();
   await expect(wizard).toBeVisible();
   await expect(wizardTitle).toHaveValue("Playback-safe unsaved wizard title");
 
-  await wizard.getByRole("button", { name: "Close" }).click();
+  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   const discard = page.getByRole("dialog", { name: "Discard chart?" });
   await discard.getByRole("button", { name: "Continue editing" }).click();
   await expect(wizardTitle).toHaveValue("Playback-safe unsaved wizard title");
-  await wizard.getByRole("button", { name: "Close" }).click();
+  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   await discard.getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
-  await expect(openPlayback).toBeEnabled();
+  await expect(viewMode).toBeEnabled();
 });
 
 test("default synchronized playback keeps line history, bar and map snapshots, and reopens at the same time", async ({

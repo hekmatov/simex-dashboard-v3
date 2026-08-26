@@ -54,7 +54,7 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full can
   await page.goto("/");
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   const expected = [
-    ["bio_current_cases_kpi", "compact", "span 1", "span 1", "360px"],
+    ["bio_current_cases_kpi", "standard", "span 2", "span 1", "360px"],
     ["bio_r_values", "standard", "span 2", "span 1", "360px"],
     ["bio_confirmed_cases", "wide", "span 4", "span 1", "360px"],
     ["bio_municipality_choropleth_animation", "full", "span 4", "span 2", "736px"],
@@ -105,7 +105,7 @@ test("rendered version-3 layouts drive desktop spans and a taller phone full can
   ));
   expect(obsoleteRenderedClasses).toEqual([]);
 
-  await page.getByRole("button", { name: "Phone", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
   const phoneHeights = await page.evaluate(() => {
     const measure = (panelId) => {
       const panel = document.querySelector(`[data-panel-id="${panelId}"]`);
