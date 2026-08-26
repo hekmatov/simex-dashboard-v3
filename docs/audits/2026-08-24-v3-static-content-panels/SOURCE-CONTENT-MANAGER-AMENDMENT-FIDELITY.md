@@ -101,3 +101,7 @@ This overlay supersedes only the implementation-status/evidence cells for the na
 - The disposable calibration alone did not promote SCM-S15. Task 2 now promotes only the implemented authority/current-delegation engine evidence; manager composition, transaction rollback, mounted consumers, and inspected real-use remain required before the complete row can pass.
 - Completion submission must report engine implemented, UI implemented, and fidelity verified separately.
 - The eleven real-use journeys are retained individually and cannot be silently merged or replaced without an approved deviation.
+
+## Task 17 execution hold — 2026-08-26
+
+The prescribed integrated deterministic run is **649/674 passing** and the one seven-file Chromium invocation is incomplete: it discovered 15 tests, visibly passed Journey C, then returned without an aggregate or outcomes for A, B, D–K. The Step 7S controlling parser remains 36/36 Passing. These results do not promote any amendment row beyond its retained task-local evidence. The uncompleted browser journeys, Vite/esbuild sandbox access failures, three `datasetProfilesV3` assertion failures, `dashboardBundleV3` raster-signature failure, and PS-04 copied-launcher startup failure remain visible acceptance gaps.

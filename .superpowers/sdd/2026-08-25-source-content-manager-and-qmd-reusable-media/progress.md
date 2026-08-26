@@ -251,6 +251,13 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Fix round 2 re-review: T1-01 through T1-05 all resolved; spec compliance APPROVED; code quality APPROVED.
 - Task 1: complete at `f81239ba288816603f3c6db14fc6b4a00141d5b9`; review clean; PS-04 retained solely as the authorized pre-merge generated-dist condition.
 
+## Task 17 verification record
+
+- Base reviewed head: `739188d93aed1cc2a118251b37af49a92daa1751`. Owner/fixture preflight clean; all seven retained browser files present; exact Step 7S parser remains **36/36 Passing**.
+- Required deterministic selection ran once: **649/674 passing, 25 failing**. Twenty failures are sandboxed Vite/esbuild configuration access; remaining failures are one raster-signature validation, three `datasetProfilesV3` assertions, and PS-04 copied-launcher startup.
+- Required seven-file Chromium command ran once without the extra literal separator. It discovered 15 tests and reported **Journey C passing** with retained DOM/geometry/request-authority trace evidence, but returned without aggregate output or results for A, B, D–K. No fixture was changed and no second full journey run was performed.
+- Task 17 is **not complete**: no amendment fidelity/security promotion, no master submission, no build/full suite/full Playwright run, no generated `dist` edit, and no PS-04 clearance. Evidence-only documentation is committed separately as `docs(content): submit Source Content Manager implementation evidence`.
+
 ## Task 2
 
 - Task 2: BASE `f81239ba288816603f3c6db14fc6b4a00141d5b9`.

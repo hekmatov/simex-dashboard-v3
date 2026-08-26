@@ -281,3 +281,7 @@ Step 7 is resubmitted for V3 Design master review. Please **approve**, **approve
 The renewed review at `801a37a` identified one stale assertion in the general Step 7 fidelity journey, not a production regression. The corrected `390×844` branch now treats the approved phone recovery state as authoritative: Build workspace/canvas remain mounted but hidden, the notice is visible, and canonical canvas/panel identity is retained. Resizing the same session to `768×1024` proves the notice clears and the same Build canvas/content becomes visible under the existing supported-viewport geometry contract.
 
 The exact `tests/e2e/v3-step7-fidelity.spec.js` journey passes from a clean archive of the committed correction. Production behavior, Step 7S, and Steps 8–10 are unchanged. Step 7 is resubmitted for V3 Design master review without claiming acceptance.
+
+## Source Content Manager Task 17 execution record — 2026-08-26
+
+This is not a master-submission approval request. The Source Content Manager integrated gate is not complete: its required deterministic selection returned 649/674 passing, while its one retained-seven-file Playwright invocation reported Journey C passing but ended without outcomes for A, B, D–K or a final aggregate. The accepted Step 7S parser remains 36/36 Passing. No production/test changes, full build, generated-output refresh, full suite, or PS-04 clearance is claimed. The unresolved integrated gate remains a pre-merge/release decision.

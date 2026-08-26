@@ -458,6 +458,8 @@ Expected: exactly 36 rows and zero non-Passing rows.
 
 - [ ] Run the amendment-targeted complete deterministic sweep below. Expected: every named affected test from Tasks 1–16 passes; do not label a smaller selection complete.
 
+  - 2026-08-26 execution: 649/674 passing; 25 failures recorded in the Task 17 evidence report. This checkbox remains open. No production/test remediation is authorized in Task 17.
+
 ```powershell
 $tests = @(
   'tests/contentLibrarySchema.test.js','tests/dashboardMigrationV5.test.js','tests/dashboardBundleV5.test.js','tests/mediaItems.test.js','tests/sourceEntrySchema.test.js','tests/geoJsonValidation.test.js','tests/geoJsonSourceEntry.test.js','tests/contentDraftTransaction.test.js','tests/contentDependencyGraph.test.js','tests/contentDeletionTransaction.test.js','tests/contentReplacementTransaction.test.js','tests/csvReplacementTransaction.test.js','tests/geoJsonReplacementTransaction.test.js','tests/contentHealth.test.js','tests/contentPackageValidation.test.js','tests/sourceContentWorkspace.test.js','tests/contentDetail.test.js','tests/contentPicker.test.js','tests/qmdMediaInspector.test.js','tests/qmdMediaView.test.js','tests/portableQmdMedia.test.js','tests/portableQmdDomSafety.test.js','tests/portableQmdPolicy.test.js','tests/freeTextChartView.test.js','tests/contentActionDialog.test.js','tests/geoJsonContentManager.test.js','tests/chartConfigV3.test.js','tests/prepareGeographyData.test.js',
@@ -468,7 +470,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Amendment-targeted deterministic sweep failed.
 ```
 
 - [ ] Run all seven retained files: `pnpm.cmd test:e2e -- tests/e2e/source-content-manager.spec.js tests/e2e/source-content-media.spec.js tests/e2e/qmd-reusable-media.spec.js tests/e2e/source-content-csv.spec.js tests/e2e/source-content-geojson.spec.js tests/e2e/source-content-portability.spec.js tests/e2e/source-content-recovery.spec.js --project=chromium`. Expected: 11 separately named A–K journeys plus manager composition cases pass. Inspect material checkpoints; do not accept screenshots without behavioral/geometry assertions.
+
+  - 2026-08-26 execution: command discovered 15 tests; only Journey C reported passing before the invocation returned without an aggregate. A, B, and D–K have no result and remain unpromoted.
 - [ ] Re-run the exact Step 7S 36-row block from the preflight. Expected: 36/36 Passing across engine/UI/fidelity.
+
+  - 2026-08-26 result: 36/36 unique controlling rows Passing across Engine/UI/Fidelity.
 - [ ] If and only if the master marks this execution pre-merge/release, run `pnpm.cmd build`, `pnpm.cmd test`, and the full Playwright suite. Otherwise record these as the Step 9/pre-merge gate and do not duplicate already sufficient targeted evidence.
 - [ ] Promote each amendment row only when its live owner, deterministic falsifier, browser journey, viewport/state, inspected evidence, and deviation record are present. Distinguish engine implemented, UI implemented, fidelity verified, and independent implementation review clean.
 - [ ] Verify all eleven journeys remain independent, all accepted negative assertions remain, no new deferral is hidden, and every plan checkbox/status/evidence statement is truthful; commit `docs(content): submit Source Content Manager implementation evidence`.
