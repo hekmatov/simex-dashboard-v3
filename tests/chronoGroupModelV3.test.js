@@ -14,6 +14,11 @@ import {
   initialPlaybackState,
   reducePlaybackState,
 } from "../src/charting/time/playbackReducer.js";
+import {
+  clearTemporalReviewSourceIds,
+  mergeTemporalReview,
+  validateTemporalReview,
+} from "../src/charting/time/temporalReview.js";
 
 const MAY_1 = Date.UTC(2027, 4, 1);
 const MAY_2 = Date.UTC(2027, 4, 2);
@@ -82,6 +87,27 @@ function synchronizationGroup(overrides = {}) {
     ...overrides,
   };
 }
+
+test("durable temporal review metadata validates, unions, and clears exact source ids", () => {
+  const review = mergeTemporalReview(
+    { status: "needs-review", sourceIds: ["z-source"] },
+    { status: "needs-review", sourceIds: ["a-source", "z-source"] },
+  );
+  assert.deepEqual(review, { status: "needs-review", sourceIds: ["a-source", "z-source"] });
+  assert.deepEqual(validateTemporalReview(review, { allowedStatuses: ["needs-review"] }), review);
+  assert.deepEqual(clearTemporalReviewSourceIds(review, ["a-source"]), { status: "needs-review", sourceIds: ["z-source"] });
+  assert.equal(clearTemporalReviewSourceIds(review, ["a-source", "z-source"]), undefined);
+  assert.throws(() => validateTemporalReview({ status: "degraded", sourceIds: [] }), /non-empty|sourceIds/i);
+
+  const group = synchronizationGroup({ temporalReview: review });
+  const groups = [group];
+  assert.strictEqual(validateChronoGroups(groups, {
+    charts: [lineChart()],
+    loadedData: { "primary-cases": [{ reportedAt: "2027-05-01", cases: 1 }] },
+    profiles: { "primary-cases": profileWithTimes(["2027-05-01"]) },
+    timezone: "UTC",
+  }), groups);
+});
 
 function validationContext(overrides = {}) {
   return {
@@ -653,11 +679,25 @@ test("group lookup returns the original group and reports deterministic diagnost
 
 test("the initial playback state is immutable and matches the v3 contract", () => {
   assert.deepEqual(initialPlaybackState, {
+    source: { kind: "default", id: null },
+    scope: "all-page",
+    frameIndex: 0,
+    period: null,
     activeGroupId: null,
+    activeSceneId: null,
     activeIndex: 0,
     playing: false,
     speed: 1,
+    secondsPerFrame: 1,
+    matchingOverride: "authored",
+    traceMode: "reveal",
+    availabilityVisible: false,
+    placement: "deck",
+    connection: "connected",
+    blackoutActive: false,
+    reducedMotion: false,
     playbackView: false,
+    playbackViewOwners: [],
   });
   assert.equal(Object.isFrozen(initialPlaybackState), true);
 });
@@ -683,7 +723,7 @@ test("play, pause, speed, and view actions transition deterministically", () => 
     reducePlaybackState(playing, { type: "pause" }),
     base,
   );
-  assert.deepEqual(faster, { ...playing, speed: 3 });
+  assert.deepEqual(faster, { ...playing, speed: 3, secondsPerFrame: 3, playing: false });
   assert.deepEqual(closed, {
     ...faster,
     playing: false,
@@ -693,6 +733,7 @@ test("play, pause, speed, and view actions transition deterministically", () => 
     ...faster,
     playing: false,
     playbackView: true,
+    playbackViewOwners: ["legacy"],
   });
 });
 
@@ -709,8 +750,10 @@ test("changing groups resets the index and pauses playback", () => {
     }),
     {
       ...state,
+      source: { kind: "group", id: "logistics" },
       activeGroupId: "logistics",
       activeIndex: 0,
+      frameIndex: 0,
       playing: false,
     },
   );
@@ -721,8 +764,10 @@ test("changing groups resets the index and pauses playback", () => {
     }),
     {
       ...state,
+      source: { kind: "default", id: null },
       activeGroupId: null,
       activeIndex: 0,
+      frameIndex: 0,
       playing: false,
     },
   );
@@ -746,7 +791,7 @@ test("previous, next, and seek clamp indices and pause manual navigation", () =>
       type: "next",
       clockLength: 3,
     }),
-    { ...state, activeIndex: 2, playing: false },
+    { ...state, activeIndex: 2, frameIndex: 2, playing: false },
   );
   assert.deepEqual(
     reducePlaybackState(state, {
@@ -754,7 +799,7 @@ test("previous, next, and seek clamp indices and pause manual navigation", () =>
       index: -10,
       clockLength: 3,
     }),
-    { ...state, activeIndex: 0, playing: false },
+    { ...state, activeIndex: 0, frameIndex: 0, playing: false },
   );
   assert.deepEqual(
     reducePlaybackState(state, {
@@ -762,7 +807,7 @@ test("previous, next, and seek clamp indices and pause manual navigation", () =>
       index: 99,
       clockLength: 3,
     }),
-    { ...state, activeIndex: 2, playing: false },
+    { ...state, activeIndex: 2, frameIndex: 2, playing: false },
   );
 });
 
@@ -774,6 +819,7 @@ test("a tick entering the final time atomically stops playback", () => {
   const atEnd = {
     ...playing,
     activeIndex: 2,
+    frameIndex: 2,
   };
 
   assert.deepEqual(
@@ -781,7 +827,7 @@ test("a tick entering the final time atomically stops playback", () => {
       type: "tick",
       clockLength: 3,
     }),
-    { ...playing, activeIndex: 2, playing: false },
+    { ...playing, activeIndex: 2, frameIndex: 2, playing: false },
   );
   assert.deepEqual(
     reducePlaybackState(atEnd, {
@@ -811,6 +857,7 @@ test("play is unavailable while the playback view is closed or the clock cannot 
   });
   const atEnd = validReducerState({
     activeIndex: 2,
+    frameIndex: 2,
     playing: false,
   });
 

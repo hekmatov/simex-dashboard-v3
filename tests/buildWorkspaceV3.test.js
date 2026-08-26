@@ -1,7 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {
+  clearChronoGroupReviewForSave,
+  clearSceneReviewForSave,
+} from "../src/charting/time/temporalReview.js";
 
 const model = await import("../src/components/build/buildCanvasRestoration.js").catch(() => null);
+
+test("Build save projections clear only the repaired Chrono or Scene review metadata", () => {
+  const group = {
+    id: "group-a", name: "Group A",
+    temporalReview: { status: "needs-review", sourceIds: ["cases"] },
+  };
+  const scene = {
+    id: "scene-a", name: "Scene A",
+    temporalReview: { status: "needs-review", sourceIds: ["cases"] },
+    present: { chartIds: ["chart-a"], layout: "single", temporalReview: { status: "degraded", sourceIds: ["cases"] } },
+  };
+  assert.deepEqual(clearChronoGroupReviewForSave(group), { id: "group-a", name: "Group A" });
+  assert.deepEqual(clearSceneReviewForSave(scene), {
+    id: "scene-a", name: "Scene A", present: { chartIds: ["chart-a"], layout: "single" },
+  });
+  assert.deepEqual(group.temporalReview.sourceIds, ["cases"]);
+  assert.deepEqual(scene.present.temporalReview.sourceIds, ["cases"]);
+});
 
 test("authoring chrome snapshots saved layout without mutating it", () => {
   assert.equal(typeof model?.captureBuildCanvasState, "function");

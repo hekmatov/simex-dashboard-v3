@@ -10,6 +10,7 @@ import {
   collectTemporalAvailability,
   validateIanaTimezone,
 } from "./temporalAvailability.js";
+import { validateTemporalReview } from "./temporalReview.js";
 
 const GROUP_KEYS = new Set([
   "id",
@@ -18,6 +19,7 @@ const GROUP_KEYS = new Set([
   "matching",
   "secondsPerFrame",
   "members",
+  "temporalReview",
 ]);
 const PERIOD_KEYS = new Set(["start", "end"]);
 const MEMBER_KEYS = new Set(["chartId", "timeRole", "matching"]);
@@ -272,6 +274,12 @@ function validateGroupShape(group) {
     throw new TypeError(
       `Chrono Group "${group.id}" members must be a non-empty array.`,
     );
+  }
+  if (group.temporalReview !== undefined) {
+    validateTemporalReview(group.temporalReview, {
+      allowedStatuses: ["needs-review"],
+      description: `Chrono Group "${group.id}" temporal review`,
+    });
   }
 }
 

@@ -1,6 +1,11 @@
 import { validateChartDataCompatibility } from "../charting/data/prepareChartData.js";
 import { validateCsvReplacementCandidate } from "../lib/loadDashboard.js";
 import { createUploadedCsvSourceEntry } from "./sourceEntrySchema.js";
+import {
+  buildContentDependencyGraph,
+  temporalImpactContexts,
+} from "./contentDependencyGraph.js";
+import { mergeTemporalReview } from "../charting/time/temporalReview.js";
 
 const DANGEROUS_COLUMNS = new Set(["__proto__", "constructor", "prototype"]);
 
@@ -73,6 +78,9 @@ export async function prepareCsvReplacement({
   const temporalReviewReason = reasons.length === 0
     ? changedTemporalObservationReason(directCharts, previous.loadedData?.[id], normalized.rows, currentProfile)
     : null;
+  const impactContexts = temporalReviewReason
+    ? temporalImpactContexts(buildContentDependencyGraph({ dashboard: previous }), id)
+    : [];
   const plan = {
     kind: "csv-replacement",
     sourceId: id,
@@ -82,6 +90,7 @@ export async function prepareCsvReplacement({
     canImportAsNew: reasons.length > 0,
     importSourceId,
     remapTargets,
+    impactContexts,
     expectedCurrent: currentAuthority(previous, id),
     candidate: normalized,
     draft: {
@@ -99,6 +108,7 @@ export async function prepareCsvReplacement({
 
 export async function commitCsvReplacement(plan, {
   mode = "replace",
+  confirmTemporalReview = false,
   contentDraftCoordinator,
   commitDraft,
 } = {}) {
@@ -111,7 +121,7 @@ export async function commitCsvReplacement(plan, {
   if (mode === "replace" && plan.status === "blocked") {
     throw new Error(plan.reason?.message ?? "The replacement CSV is structurally incompatible.");
   }
-  if (mode === "replace" && plan.status === "requires-temporal-review") {
+  if (mode === "replace" && plan.status === "requires-temporal-review" && confirmTemporalReview !== true) {
     throw new Error(plan.reason?.message ?? "This CSV replacement requires temporal review before it can be committed.");
   }
   if (mode === "import-as-new" && !plan.canImportAsNew) {
@@ -122,7 +132,7 @@ export async function commitCsvReplacement(plan, {
   const publish = typeof commitDraft === "function"
     ? commitDraft
     : (draftId, buildCandidate) => contentDraftCoordinator.commitDraft(draftId, { buildCandidate });
-  const result = await publish(plan.draft.draftId, ({ dashboard }) => replacementCandidate(plan, dashboard, mode));
+  const result = await publish(plan.draft.draftId, ({ dashboard }) => replacementCandidate(plan, dashboard, mode, { confirmTemporalReview }));
   return deepFreeze({
     status: mode === "import-as-new" ? "imported" : "committed",
     sourceId: mode === "import-as-new" ? plan.importSourceId : plan.sourceId,
@@ -131,11 +141,37 @@ export async function commitCsvReplacement(plan, {
   });
 }
 
-function replacementCandidate(plan, dashboard, mode) {
+export function csvReplacementWarnings(plan) {
+  return Object.freeze(plan?.status === "requires-temporal-review" && plan.reason
+    ? [structuredClone(plan.reason)]
+    : []);
+}
+
+export function applyCsvTemporalReview(dashboard, sourceId, impactContexts) {
+  const next = structuredClone(dashboard);
+  const id = requiredText(sourceId, "CSV temporal review sourceId");
+  for (const impact of impactContexts ?? []) {
+    if (impact.kind === "chrono-group") {
+      const group = next.chronoGroups?.find(({ id: groupId }) => groupId === impact.id);
+      if (group) group.temporalReview = mergeTemporalReview(group.temporalReview, { status: "needs-review", sourceIds: [id] });
+    }
+    if (impact.kind === "scene") {
+      const scene = next.scenes?.find(({ id: sceneId }) => sceneId === impact.id);
+      if (scene) scene.temporalReview = mergeTemporalReview(scene.temporalReview, { status: "needs-review", sourceIds: [id] });
+    }
+    if (impact.kind === "scene-presentation") {
+      const scene = next.scenes?.find(({ id: sceneId }) => sceneId === impact.id);
+      if (scene?.present) scene.present.temporalReview = mergeTemporalReview(scene.present.temporalReview, { status: "degraded", sourceIds: [id] });
+    }
+  }
+  return next;
+}
+
+function replacementCandidate(plan, dashboard, mode, { confirmTemporalReview = false } = {}) {
   if (!sameAuthority(plan.expectedCurrent, currentAuthority(dashboard, plan.sourceId))) {
     throw new Error("CSV replacement plan is stale; the current source authority changed.");
   }
-  const next = structuredClone(dashboard);
+  let next = structuredClone(dashboard);
   next.dataSources ??= {};
   next.datasetProfiles ??= {};
   next.loadedData ??= {};
@@ -165,7 +201,13 @@ function replacementCandidate(plan, dashboard, mode) {
         fileName: plan.candidate.source.fileName,
         profileFingerprint: plan.candidate.profile.fingerprint,
       },
+      ...(plan.status === "requires-temporal-review" && confirmTemporalReview === true
+        ? { updateStatus: "needs-review" }
+        : {}),
     };
+  }
+  if (mode === "replace" && plan.status === "requires-temporal-review" && confirmTemporalReview === true) {
+    next = applyCsvTemporalReview(next, plan.sourceId, plan.impactContexts);
   }
   return { dashboard: next, commitAssetIds: [], discardAssetIds: [], itemIds: [targetId] };
 }
@@ -180,6 +222,7 @@ function blockedWithoutCandidate(sourceId, expectedCurrent, reason) {
     canImportAsNew: false,
     importSourceId: null,
     remapTargets: [],
+    impactContexts: [],
     expectedCurrent,
     candidate: null,
     draft: null,

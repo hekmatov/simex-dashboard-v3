@@ -41,8 +41,12 @@ const dashboard = {
       ],
     }],
   }],
-  chronoGroups: [{ id: "chrono-a", name: "Chrono A", chartIds: ["map-panel"] }],
-  scenes: [{ id: "scene-a", name: "Scene A", chartIds: ["map-panel"], present: { items: [{ kind: "chart", chart_id: "map-panel" }] } }],
+  chronoGroups: [{ id: "chrono-a", name: "Chrono A", members: [{ chartId: "map-panel" }] }],
+  scenes: [{
+    id: "scene-a", name: "Scene A", members: [{ chartId: "map-panel" }],
+    chartIds: ["legacy-chart"], frames: { chartId: "map-panel" },
+    present: { chartIds: ["map-panel"] },
+  }],
 };
 
 const retainers = {

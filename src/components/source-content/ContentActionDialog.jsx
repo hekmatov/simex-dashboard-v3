@@ -14,6 +14,7 @@ export default function ContentActionDialog({
   replacementReason = null,
   canImportAsNew = false,
   remapTargets = [],
+  impactContexts = [],
   importedSourceLabel = "",
   onReplacementFile,
   onImportAsNew,
@@ -26,7 +27,7 @@ export default function ContentActionDialog({
     const id = `replace-csv-${safeId(itemLabel)}`;
     const blocked = replacementStatus === "blocked";
     const requiresTemporalReview = replacementStatus === "requires-temporal-review";
-    const nonCommittable = blocked || requiresTemporalReview;
+    const nonCommittable = blocked;
     return (
       <ModalFocusScope
         as="div"
@@ -45,7 +46,7 @@ export default function ContentActionDialog({
           <p id={`${id}-message`}>Choose a CSV file. The current source identity is retained only when every directly dependent chart remains structurally valid.</p>
           <label><span>Replacement CSV</span><input data-modal-initial-focus="true" type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
           {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
-          {nonCommittable && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
+          {(blocked || requiresTemporalReview) && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
           {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
           {remapTargets.length > 0 && (
             <section aria-label="Affected panels">
@@ -55,11 +56,21 @@ export default function ContentActionDialog({
               </li>)}</ul>
             </section>
           )}
+          {requiresTemporalReview && impactContexts.length > 0 && (
+            <section aria-label="Affected temporal content">
+              <h3>Affected temporal content</h3>
+              <ul>{impactContexts.map((impact) => (
+                <li key={`${impact.kind}:${impact.id}`}>{temporalImpactLabel(impact.kind)}: {impact.label ?? impact.id}</li>
+              ))}</ul>
+            </section>
+          )}
           {importedSourceLabel && <p role="status">Imported as {importedSourceLabel}. Choose an affected panel to remap it.</p>}
           <div className="confirm-dialog-actions">
             <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
             {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
-            <button type="button" disabled={busy || !replacementReady || nonCommittable} onClick={onConfirm}>{busy ? "Replacing…" : "Replace file"}</button>
+            <button type="button" disabled={busy || !replacementReady || nonCommittable} onClick={onConfirm}>
+              {busy ? "Replacing…" : requiresTemporalReview ? "Confirm replacement and mark affected temporal content" : "Replace file"}
+            </button>
           </div>
         </section>
       </ModalFocusScope>
@@ -118,6 +129,12 @@ export default function ContentActionDialog({
       onCancel={onCancel}
     />
   );
+}
+
+function temporalImpactLabel(kind) {
+  if (kind === "chrono-group") return "Chrono Group";
+  if (kind === "scene-presentation") return "Scene presentation";
+  return "Scene";
 }
 
 function RemapBreadcrumb({ target }) {

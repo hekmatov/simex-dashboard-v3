@@ -55,6 +55,7 @@ function renderPresent(Component, overrides = {}) {
   const {
     displayState: requestedDisplayState = displayState,
     runtime: runtimeOverrides = {},
+    playbackProps = {},
     ...componentOverrides
   } = overrides;
   const runtime = {
@@ -97,7 +98,7 @@ function renderPresent(Component, overrides = {}) {
     return renderToStaticMarkup(
       React.createElement(
         playbackModule.PlaybackProvider,
-        { groups: [], charts: [], loadedData: {}, profiles: {} },
+        { groups: [], charts: [], loadedData: {}, profiles: {}, ...playbackProps },
         React.createElement(Component, {
           dashboard,
           activePageId: "biomedical",
@@ -117,6 +118,28 @@ function renderPresent(Component, overrides = {}) {
     else delete globalThis.navigator;
   }
 }
+
+test("active degraded Scene warns the moderator while Present keeps rendering", () => {
+  const degradedScene = {
+    id: "scene-review",
+    chronoGroupId: "group-review",
+    present: {
+      chartIds: ["chart-a"],
+      layout: "single",
+      temporalReview: { status: "degraded", sourceIds: ["cases"] },
+    },
+  };
+  const html = renderPresent(presentModule.default, {
+    playbackProps: {
+      scenes: [degradedScene],
+      initialState: { activeSceneId: "scene-review", source: { kind: "scene", id: "scene-review" } },
+    },
+  });
+  assert.match(html, /data-active-scene-id="scene-review"/);
+  assert.match(html, /Scene presentation needs review/);
+  assert.match(html, /Displayed charts/);
+  assert.doesNotMatch(html, /temporalReview|sourceIds/);
+});
 
 test("Present workspace exposes the moderator scene controls without permission concepts", () => {
   assert.equal(

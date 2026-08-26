@@ -62,6 +62,24 @@ test("validates the complete source-frame Scene contract without changing it", (
   assert.deepEqual(value.frames.selectedEpochs, [Date.parse(JAN_10), Date.parse(JAN_20)]);
 });
 
+test("validates exact Scene and Scene Present temporal review statuses", () => {
+  const value = scene({
+    temporalReview: { status: "needs-review", sourceIds: ["cases"] },
+    present: {
+      chartIds: ["chart-a", "chart-b"],
+      layout: "vertical-divider",
+      temporalReview: { status: "degraded", sourceIds: ["cases"] },
+    },
+  });
+  assert.strictEqual(validateScene(value, context()), value);
+  assert.throws(() => validateScene(scene({
+    temporalReview: { status: "degraded", sourceIds: ["cases"] },
+  }), context()), /needs-review|status/i);
+  assert.throws(() => validateScene(scene({
+    present: { chartIds: ["chart-a", "chart-b"], layout: "vertical-divider", temporalReview: { status: "needs-review", sourceIds: ["cases"] } },
+  }), context()), /degraded|status/i);
+});
+
 test("validates calendar bounds, period containment, and positive cadence", () => {
   assert.doesNotThrow(() => validateScene(scene({
     frames: { mode: "calendar", interval: { value: 2, unit: "day" } },

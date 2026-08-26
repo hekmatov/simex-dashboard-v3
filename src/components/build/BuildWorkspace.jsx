@@ -47,6 +47,10 @@ import {
 } from "./buildDirtyState.js";
 import { deriveTemporalContentItems } from "../../charting/time/temporalNeedsAttention.js";
 import {
+  clearChronoGroupReviewForSave,
+  clearSceneReviewForSave,
+} from "../../charting/time/temporalReview.js";
+import {
   createChronoGroupDraft,
   reduceChronoGroupDraft,
   toSavedChronoGroup,
@@ -525,7 +529,7 @@ export default function BuildWorkspace({
       const saving = reduceChronoGroupDraft(chronoGroupDraft, action);
       setChronoGroupDraft(saving);
       if (saving.status !== "saving") return;
-      const savedGroup = toSavedChronoGroup(saving);
+      const savedGroup = clearChronoGroupReviewForSave(toSavedChronoGroup(saving));
       const chronoGroups = mergeChronoGroup(dashboard.chronoGroups ?? [], savedGroup, temporalCharts);
       const duplicateSourceId = chronoContentState?.operation?.intent === "duplicate"
         ? chronoContentState.operation.itemId
@@ -563,11 +567,12 @@ export default function BuildWorkspace({
       const saving = reduceSceneDraft(sceneDraft, action);
       setSceneDraft(saving);
       if (saving.status !== "saving") return;
-      const scenes = mergeScene(dashboard.scenes ?? [], saving.value);
+      const savedScene = clearSceneReviewForSave(saving.value);
+      const scenes = mergeScene(dashboard.scenes ?? [], savedScene);
       Promise.resolve(commitTemporalContent({ scenes }))
         .then(() => {
-          setSceneDraft((current) => reduceSceneDraft(current, { type: "SAVE_SUCCEEDED", savedValue: saving.value }));
-          setChronoContentState((current) => completeContentOperation(current, { scenes }, "scene", saving.value.id));
+          setSceneDraft((current) => reduceSceneDraft(current, { type: "SAVE_SUCCEEDED", savedValue: savedScene }));
+          setChronoContentState((current) => completeContentOperation(current, { scenes }, "scene", savedScene.id));
         })
         .catch((error) => setSceneDraft((current) => reduceSceneDraft(current, {
           type: "SAVE_FAILED",
@@ -1014,6 +1019,7 @@ export function mergeChronoGroup(groups, saved, charts) {
         : {}),
     })),
   };
+  delete next.temporalReview;
   return existing
     ? groups.map((group) => group.id === saved.id ? next : group)
     : [...groups, next];

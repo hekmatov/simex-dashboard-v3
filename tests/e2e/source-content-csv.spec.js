@@ -36,6 +36,112 @@ test.beforeEach(async ({ request }) => {
   await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
 });
 
+test("Journey F — valid temporal CSV replacement warns then confirms", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.addInitScript(() => {
+    const NativeBroadcastChannel = window.BroadcastChannel;
+    window.__journeyFProtocolMessages = [];
+    window.BroadcastChannel = class JourneyFBroadcastChannel extends NativeBroadcastChannel {
+      postMessage(value) {
+        window.__journeyFProtocolMessages.push(value);
+        return super.postMessage(value);
+      }
+    };
+  });
+  await openBiomedicalBuild(page, { width: 1440, height: 900 });
+  let manager = await openDataSourceManager(page);
+  const intake = manager.getByRole("region", { name: "Add CSV to dashboard" });
+  await intake.getByRole("button", { name: "Add CSV", exact: true }).click();
+  await intake.getByLabel("CSV file").setInputFiles(CHART_CSV);
+  await intake.getByLabel("Display name").fill("Journey F temporal CSV");
+  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await closeManager(page);
+  await seedJourneyFTemporalUse(page);
+  await page.reload();
+  await expect(page.getByLabel("Dashboard mode")).toBeVisible({ timeout: 15_000 });
+  await openBiomedicalBuild(page, { width: 1440, height: 900 });
+  const target = await temporalReplacementTarget(page);
+  const replacement = changedTemporalCsv();
+  const before = await temporalReviewSnapshot(page, target);
+
+  manager = await openDataSourceManager(page);
+  await selectSourceRow(manager, target.displayName);
+  let detail = manager.getByRole("region", { name: "Content detail" });
+  const triggerName = target.origin === "linked-project" ? "Relink" : "Replace file";
+  let trigger = detail.getByRole("button", { name: triggerName, exact: true });
+  await trigger.click();
+  let dialog = page.getByRole("dialog", { name: new RegExp(`Replace ${escapeRegExp(target.displayName)} file`) });
+  await dialog.getByLabel("Replacement CSV").setInputFiles(replacement);
+  await expect(dialog.getByRole("alert")).toHaveAttribute("data-replacement-reason", "requires-temporal-review");
+  const impacts = dialog.getByRole("region", { name: "Affected temporal content" });
+  await expect(impacts).toContainText(`Chrono Group: ${target.groupName}`);
+  await expect(impacts).toContainText(`Scene: ${target.sceneName}`);
+  await expect(impacts).toContainText(`Scene presentation: ${target.sceneName}`);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(await temporalReviewSnapshot(page, target)).toEqual(before);
+
+  await trigger.click();
+  dialog = page.getByRole("dialog", { name: new RegExp(`Replace ${escapeRegExp(target.displayName)} file`) });
+  await dialog.getByLabel("Replacement CSV").setInputFiles(replacement);
+  await dialog.getByRole("button", { name: "Confirm replacement and mark affected temporal content" }).click();
+  await expect(dialog).toHaveCount(0);
+  detail = manager.getByRole("region", { name: "Content detail" });
+  await expect(detail).toContainText("needs-review");
+  const marked = await temporalReviewSnapshot(page, target);
+  expect(marked.sourceId).toBe(before.sourceId);
+  expect(marked.rows).not.toEqual(before.rows);
+  expect(marked.groupReview).toEqual({ status: "needs-review", sourceIds: [target.sourceId] });
+  expect(marked.sceneReview).toEqual({ status: "needs-review", sourceIds: [target.sourceId] });
+  expect(marked.presentReview).toEqual({ status: "degraded", sourceIds: [target.sourceId] });
+  await closeManager(page);
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const chrono = page.getByRole("region", { name: "Chrono playback controls" });
+  await chrono.getByLabel("Chrono source").selectOption(`scene:${target.sceneId}`);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Present", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Scene presentation needs review" })).toBeVisible();
+  await expect(page.locator(".present-workspace")).toHaveAttribute("data-active-scene-id", target.sceneId);
+  await expect(page.locator(".present-selected-chart")).toHaveCount(target.presentChartCount);
+  const protocolMessages = await page.evaluate(() => window.__journeyFProtocolMessages);
+  expect(JSON.stringify(protocolMessages)).not.toContain("temporalReview");
+
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await page.getByRole("button", { name: "Chrono Studio", exact: true }).click();
+  let auxiliary = page.getByRole("dialog", { name: "Chrono Studio authoring" });
+  await auxiliary.getByRole("button", { name: target.groupName, exact: false }).click();
+  await expect(auxiliary.getByText("Needs attention", { exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
+  const repairedGroupName = `${target.groupName} repaired`;
+  await auxiliary.getByLabel("Chrono Group name").fill(repairedGroupName);
+  await auxiliary.getByRole("navigation", { name: "Chrono Group stages" }).getByRole("button", { name: /Review/ }).click();
+  await auxiliary.getByRole("button", { name: "Save Chrono Group" }).click();
+  await expect(auxiliary.getByRole("heading", { name: repairedGroupName, exact: true })).toBeVisible();
+  await expect.poll(async () => (await temporalReviewSnapshot(page, target)).groupReview).toBeNull();
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Scene Studio", exact: true }).click();
+  auxiliary = page.getByRole("dialog", { name: "Scene Studio authoring" });
+  await auxiliary.getByRole("button", { name: target.sceneName, exact: false }).click();
+  await expect(auxiliary.getByText("Needs attention", { exact: true })).toBeVisible();
+  await auxiliary.getByRole("button", { name: "Edit", exact: true }).click();
+  const repairedSceneName = `${target.sceneName} repaired`;
+  await auxiliary.getByLabel("Scene name").fill(repairedSceneName);
+  await auxiliary.getByRole("button", { name: "Save Scene" }).click();
+  await expect(auxiliary.getByRole("heading", { name: repairedSceneName, exact: true })).toBeVisible();
+  await expect.poll(async () => {
+    const snapshot = await temporalReviewSnapshot(page, target);
+    return { sceneReview: snapshot.sceneReview, presentReview: snapshot.presentReview };
+  }).toEqual({ sceneReview: null, presentReview: null });
+  await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
+  const repaired = await temporalReviewSnapshot(page, target);
+  expect(repaired.groupReview).toBeNull();
+  expect(repaired.sceneReview).toBeNull();
+  expect(repaired.presentReview).toBeNull();
+});
+
 test("Journey D — CSV upload through six stages then catalogue management", async ({ page }) => {
   test.setTimeout(180_000);
   await openBiomedicalBuild(page, { width: 1440, height: 900 });
@@ -303,6 +409,132 @@ async function csvInventory(page) {
 
 function csvFile(name, lines) {
   return { name, mimeType: "text/csv", buffer: Buffer.from(lines.join("\n")) };
+}
+
+async function seedJourneyFTemporalUse(page) {
+  await page.evaluate(async (key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const sourceId = Object.keys(dashboard.contentLibrary.sourceEntries)
+      .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === "Journey F temporal CSV");
+    if (!sourceId) throw new Error("Journey F manager source was not committed.");
+    dashboard.dataSources[sourceId].csvText = [
+      "date,cases,region",
+      "2026-01-01,4,North",
+      "2026-01-02,7,South",
+      "2026-01-03,9,North",
+    ].join("\n");
+    const page = dashboard.pages.find(({ id }) => id === "biomedical") ?? dashboard.pages[0];
+    const chart = page.sections.flatMap(({ panels }) => panels).map((placement) => placement.chart ?? placement)
+      .find(({ configVersion, typeId }) => configVersion === 3 && typeId === "line");
+    if (!chart) throw new Error("Journey F requires one V3 line chart.");
+    const group = {
+      id: "journey-f-group",
+      name: "Journey F playback",
+      period: { start: "2026-01-01", end: "2035-12-31" },
+      matching: { policy: "exact" },
+      secondsPerFrame: 1,
+      members: [{ chartId: chart.id, timeRole: "observation" }],
+    };
+    const scene = {
+      id: "journey-f-scene",
+      name: "Journey F scene",
+      pageId: page.id,
+      chronoGroupId: group.id,
+      period: { start: "2026-01-01T00:00:00.000Z", end: "2035-12-31T00:00:00.000Z" },
+      frames: { mode: "source", chartId: chart.id, selection: "all" },
+      members: [{ chartId: chart.id, width: 1 }],
+      present: { chartIds: [chart.id], layout: "single" },
+      audience: { datePosition: { xPermille: 680, yPermille: 40, widthPermille: 280 } },
+    };
+    chart.sourceId = sourceId;
+    chart.roles = {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    };
+    dashboard.chronoGroups = [...(dashboard.chronoGroups ?? []).filter(({ id }) => id !== group.id), group];
+    dashboard.scenes = [...(dashboard.scenes ?? []).filter(({ id }) => id !== scene.id), scene];
+    const { normalizeStoredDashboardConfig } = await import("/src/charting/config/dashboardBundleV3.js");
+    const configuredProfiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
+    try {
+      normalizeStoredDashboardConfig(dashboard, { profiles: { ...configuredProfiles, ...dashboard.datasetProfiles } });
+    } catch (error) {
+      throw new Error(`Journey F seed is invalid: ${error.message}`);
+    }
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, STORAGE_KEY);
+}
+
+async function temporalReplacementTarget(page) {
+  return page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const chartMap = new Map(dashboard.pages.flatMap(({ sections }) => sections).flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement).map((chart) => [chart.id, chart]));
+    const temporalField = (chart) => {
+      const pending = [chart.roles];
+      while (pending.length > 0) {
+        const value = pending.pop();
+        if (Array.isArray(value)) { pending.push(...value); continue; }
+        if (!value || typeof value !== "object") continue;
+        if (value.interpretation === "temporal" && typeof value.field === "string") return value.field;
+        pending.push(...Object.values(value));
+      }
+      return null;
+    };
+    for (const scene of dashboard.scenes ?? []) {
+      for (const chartId of scene.present?.chartIds ?? []) {
+        const chart = chartMap.get(chartId);
+        const field = chart && temporalField(chart);
+        const entry = chart && dashboard.contentLibrary?.sourceEntries?.[chart.sourceId];
+        const source = chart && dashboard.dataSources?.[chart.sourceId];
+        const group = (dashboard.chronoGroups ?? []).find(({ id, members }) => (
+          id === scene.chronoGroupId && members?.some((member) => member.chartId === chartId)
+        ));
+        if (field && entry && source?.type === "uploadedCsv" && typeof source.csvText === "string" && group) {
+          return {
+            sourceId: chart.sourceId,
+            displayName: entry.displayName,
+            origin: entry.origin,
+            temporalField: field,
+            sourceText: source.csvText,
+            groupId: group.id,
+            groupName: group.name,
+            sceneId: scene.id,
+            sceneName: scene.name,
+            presentChartCount: scene.present.chartIds.length,
+          };
+        }
+      }
+    }
+    throw new Error("Journey F requires a managed CSV used by a temporal Scene presentation.");
+  }, STORAGE_KEY);
+}
+
+function changedTemporalCsv() {
+  return csvFile("journey-f-temporal-change.csv", [
+    "date,cases,region",
+    "2035-01-01,4,North",
+    "2035-01-02,7,South",
+    "2035-01-03,9,North",
+  ]);
+}
+
+async function temporalReviewSnapshot(page, target) {
+  return page.evaluate(({ key, targetValue }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const group = dashboard.chronoGroups.find(({ id }) => id === targetValue.groupId);
+    const scene = dashboard.scenes.find(({ id }) => id === targetValue.sceneId);
+    return {
+      sourceId: targetValue.sourceId,
+      rows: dashboard.dataSources[targetValue.sourceId].csvText,
+      groupReview: group.temporalReview ?? null,
+      sceneReview: scene.temporalReview ?? null,
+      presentReview: scene.present?.temporalReview ?? null,
+    };
+  }, { key: STORAGE_KEY, targetValue: target });
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function seedUploadedMapSource(page) {

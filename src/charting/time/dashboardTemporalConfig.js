@@ -1,7 +1,8 @@
 import { parseTemporalValue } from "../data/temporal.js";
 import { migrateDashboardTimezoneToUtc } from "./normalizeTemporalConfig.js";
+import { validateTemporalReview } from "./temporalReview.js";
 
-const CANONICAL_GROUP_KEYS = Object.freeze([
+const CANONICAL_GROUP_REQUIRED_KEYS = Object.freeze([
   "id",
   "name",
   "period",
@@ -9,6 +10,7 @@ const CANONICAL_GROUP_KEYS = Object.freeze([
   "secondsPerFrame",
   "members",
 ]);
+const CANONICAL_GROUP_ALLOWED_KEYS = new Set([...CANONICAL_GROUP_REQUIRED_KEYS, "temporalReview"]);
 const PERIOD_KEYS = new Set(["start", "end"]);
 
 /**
@@ -166,20 +168,25 @@ function validateCanonicalChronoGroup(group) {
     throw new TypeError("Dashboard chronoGroups must contain objects.");
   }
   const keys = Object.keys(group);
-  const expected = new Set(CANONICAL_GROUP_KEYS);
   for (const key of keys) {
-    if (!expected.has(key)) {
+    if (!CANONICAL_GROUP_ALLOWED_KEYS.has(key)) {
       throw new Error(
         `Unknown Chrono Group property "${key}".`,
       );
     }
   }
-  for (const key of CANONICAL_GROUP_KEYS) {
+  for (const key of CANONICAL_GROUP_REQUIRED_KEYS) {
     if (!Object.hasOwn(group, key)) {
       throw new Error(
         `Chrono Group "${group.id ?? "unknown"}" ${key} is required.`,
       );
     }
+  }
+  if (group.temporalReview !== undefined) {
+    validateTemporalReview(group.temporalReview, {
+      allowedStatuses: ["needs-review"],
+      description: `Chrono Group "${group.id}" temporal review`,
+    });
   }
   if (Object.hasOwn(group, "primaryClock")) {
     throw new Error("Canonical Chrono Groups cannot contain primaryClock.");

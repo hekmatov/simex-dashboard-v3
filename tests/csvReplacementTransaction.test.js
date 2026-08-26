@@ -6,6 +6,7 @@ import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { createContentDraftCoordinator } from "../src/content-library/contentDraftTransaction.js";
 import {
   commitCsvReplacement,
+  csvReplacementWarnings,
   prepareCsvReplacement,
 } from "../src/content-library/csvReplacementTransaction.js";
 import { makeDashboardV5, makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
@@ -141,7 +142,7 @@ test("compatible non-temporal replacement preserves sourceId, chart V3, and map 
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
 });
 
-test("changed directly-used temporal observations require Task 12 review and cannot commit", async () => {
+test("changed temporal observations expose exact impacts, cancel exactly, and confirm durable review marks", async () => {
   const harness = replacementHarness();
   const before = structuredClone(harness.dashboard);
   const plan = await preparePlan(harness.dashboard, CHANGED_TEMPORAL_ROWS);
@@ -149,13 +150,32 @@ test("changed directly-used temporal observations require Task 12 review and can
   assert.equal(plan.status, "requires-temporal-review");
   assert.equal(plan.reason.code, "requires-temporal-review");
   assert.equal(plan.canImportAsNew, false);
+  assert.deepEqual(plan.impactContexts.map(({ kind, id }) => ({ kind, id })), [
+    { kind: "chrono-group", id: "cases-playback" },
+    { kind: "scene", id: "cases-scene" },
+    { kind: "scene-presentation", id: "cases-scene" },
+  ]);
+  assert.deepEqual(csvReplacementWarnings(plan).map(({ code }) => code), ["requires-temporal-review"]);
   harness.coordinator.stageDraft(plan.draft);
-  await assert.rejects(commitCsvReplacement(plan, {
-    contentDraftCoordinator: harness.coordinator,
-  }), /temporal review/i);
+  await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "csv-replacement-cancelled" });
   assert.deepEqual(harness.dashboard, before);
   assert.deepEqual(harness.commits, []);
-  await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "task-12-deferred" });
+
+  const confirmedPlan = await preparePlan(harness.dashboard, CHANGED_TEMPORAL_ROWS);
+  const result = await commitCsvReplacement(confirmedPlan, {
+    confirmTemporalReview: true,
+    contentDraftCoordinator: harness.coordinator,
+  });
+  assert.equal(result.sourceId, "cases");
+  assert.deepEqual(harness.dashboard.loadedData.cases, CHANGED_TEMPORAL_ROWS);
+  assert.deepEqual(harness.dashboard.chronoGroups.find(({ id }) => id === "cases-playback").temporalReview, {
+    status: "needs-review", sourceIds: ["cases"],
+  });
+  const scene = harness.dashboard.scenes.find(({ id }) => id === "cases-scene");
+  assert.deepEqual(scene.temporalReview, { status: "needs-review", sourceIds: ["cases"] });
+  assert.deepEqual(scene.present.temporalReview, { status: "degraded", sourceIds: ["cases"] });
+  assert.equal(harness.dashboard.contentLibrary.sourceEntries.cases.updateStatus, "needs-review");
+  assert.equal(Object.hasOwn(harness.dashboard.chronoGroups.find(({ id }) => id === "unrelated-playback"), "temporalReview"), false);
 });
 
 test("field-only observation bindings inherit temporal authority from the current profile", async () => {
@@ -173,6 +193,30 @@ test("field-only observation bindings inherit temporal authority from the curren
   }), /temporal review/i);
   assert.deepEqual(harness.dashboard, before);
   await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "task-12-deferred" });
+});
+
+test("repeat temporal confirmation unions sorted sourceIds and persistence failure rolls back every mark", async () => {
+  const harness = replacementHarness();
+  harness.dashboard.chronoGroups.find(({ id }) => id === "cases-playback").temporalReview = {
+    status: "needs-review", sourceIds: ["older-source"],
+  };
+  harness.dashboard.scenes.find(({ id }) => id === "cases-scene").present.temporalReview = {
+    status: "degraded", sourceIds: ["older-source"],
+  };
+  const plan = await preparePlan(harness.dashboard, CHANGED_TEMPORAL_ROWS);
+  await commitCsvReplacement(plan, { confirmTemporalReview: true, contentDraftCoordinator: harness.coordinator });
+  assert.deepEqual(harness.dashboard.chronoGroups.find(({ id }) => id === "cases-playback").temporalReview.sourceIds, ["cases", "older-source"]);
+  assert.deepEqual(harness.dashboard.scenes.find(({ id }) => id === "cases-scene").present.temporalReview.sourceIds, ["cases", "older-source"]);
+
+  const failing = replacementHarness({ failCommit: true });
+  const before = structuredClone(failing.dashboard);
+  const failingPlan = await preparePlan(failing.dashboard, CHANGED_TEMPORAL_ROWS);
+  await assert.rejects(commitCsvReplacement(failingPlan, {
+    confirmTemporalReview: true,
+    contentDraftCoordinator: failing.coordinator,
+  }), /persistence failed/);
+  assert.deepEqual(failing.dashboard, before);
+  assert.deepEqual(failing.coordinator.getActiveRetainers().records, []);
 });
 
 test("injected persistence failure rolls back descriptor, profile, entry, rows, and retainers", async () => {
@@ -234,6 +278,21 @@ function replacementDashboard({ implicitTemporalObservation = false } = {}) {
       cases: makeSourceEntry("csv", { sourceId: "cases", origin: "uploaded", displayName: "Cases", provenance: { fileName: "cases.csv", profileFingerprint: profile.fingerprint } }),
       boundaries: makeSourceEntry("geojson", { sourceId: "boundaries", origin: "uploaded", displayName: "Boundaries", provenance: { fileName: "boundaries.geojson" } }),
     } },
+    chronoGroups: [{
+      id: "cases-playback", name: "Cases playback", period: { start: "2026-01-01", end: "2026-02-28" },
+      matching: { policy: "exact" }, secondsPerFrame: 1,
+      members: [{ chartId: "cases-trend", timeRole: "observation" }],
+    }, {
+      id: "unrelated-playback", name: "Unrelated playback", period: { start: "2026-01-01", end: "2026-02-28" },
+      matching: { policy: "exact" }, secondsPerFrame: 1,
+      members: [{ chartId: "other-chart", timeRole: "observation" }],
+    }],
+    scenes: [{
+      id: "cases-scene", name: "Cases scene", chronoGroupId: "cases-playback", pageId: "overview",
+      members: [{ chartId: "cases-trend", width: 1 }],
+      chartIds: ["cases-trend"], frames: { mode: "source", chartId: "cases-trend", selection: "all" },
+      present: { chartIds: ["cases-trend"], layout: "single" },
+    }],
     pages: [{ id: "overview", title: "Overview", sections: [{ id: "response", title: "Response", panels: [line, map] }] }],
   });
 }

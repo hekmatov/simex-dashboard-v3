@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { normalizeDashboardTemporalConfig } from "../src/charting/time/dashboardTemporalConfig.js";
+import {
+  normalizeDashboardTemporalConfig,
+  validateCanonicalDashboardTemporalConfig,
+} from "../src/charting/time/dashboardTemporalConfig.js";
 import { migrateDashboardTimezoneToUtc } from "../src/charting/time/normalizeTemporalConfig.js";
 import {
   deriveTemporalContentItems,
@@ -10,6 +13,24 @@ import {
 
 const START = Date.UTC(2027, 0, 1);
 const END = Date.UTC(2027, 0, 3);
+
+test("canonical dashboard temporal config preserves optional valid review metadata and rejects malformed values", () => {
+  const config = {
+    timezone: "UTC",
+    chronoGroups: [{
+      id: "group-a", name: "Group A", period: { start: "2027-01-01", end: "2027-01-03" },
+      matching: { policy: "exact" }, secondsPerFrame: 1,
+      members: [{ chartId: "chart-a", timeRole: "observation" }],
+      temporalReview: { status: "needs-review", sourceIds: ["cases"] },
+    }],
+  };
+  assert.strictEqual(validateCanonicalDashboardTemporalConfig(config), config);
+  assert.deepEqual(normalizeDashboardTemporalConfig(config).chronoGroups[0].temporalReview, config.chronoGroups[0].temporalReview);
+  assert.throws(() => validateCanonicalDashboardTemporalConfig({
+    ...config,
+    chronoGroups: [{ ...config.chronoGroups[0], temporalReview: { status: "degraded", sourceIds: ["cases"] } }],
+  }), /needs-review|status/i);
+});
 
 test("live V3 timezone migration uses canonical runtime keys and preserves saved temporal ownership", () => {
   const live = {

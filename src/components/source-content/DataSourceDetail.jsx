@@ -85,7 +85,8 @@ export default function DataSourceDetail({
     setReplacementError("");
     try {
       const result = await commitCsvReplacement(replacementPlan, {
-        mode,
+        mode: mode === "confirm-temporal" ? "replace" : mode,
+        confirmTemporalReview: mode === "confirm-temporal",
         contentDraftCoordinator,
         commitDraft: (draftId, buildCandidate) => onContentDraftCommit?.(draftId, buildCandidate),
       });
@@ -121,15 +122,16 @@ export default function DataSourceDetail({
         itemLabel={item.record.displayName}
         busy={replacementBusy}
         error={replacementError}
-        replacementReady={replacementPlan?.status === "ready"}
+        replacementReady={replacementPlan?.status === "ready" || replacementPlan?.status === "requires-temporal-review"}
         replacementLabel={replacementLabel}
         replacementStatus={replacementPlan?.status ?? replacementStatus}
         replacementReason={replacementPlan?.reason ?? null}
         canImportAsNew={replacementPlan?.canImportAsNew === true}
         remapTargets={replacementPlan?.remapTargets ?? importedRemapTargets}
+        impactContexts={replacementPlan?.impactContexts ?? []}
         importedSourceLabel={importedSourceLabel}
         onReplacementFile={(file) => void chooseReplacement(file)}
-        onConfirm={() => void publish("replace")}
+        onConfirm={() => void publish(replacementPlan?.status === "requires-temporal-review" ? "confirm-temporal" : "replace")}
         onImportAsNew={() => void publish("import-as-new")}
         onNavigate={(use) => {
           setReplaceOpen(false);

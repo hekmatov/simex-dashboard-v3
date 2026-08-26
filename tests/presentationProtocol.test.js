@@ -66,7 +66,7 @@ test("presentation protocol creates a complete versioned state message", () => {
 test("presentation state rejects data and authoring fields", () => {
   assert.ok(protocolModule, "presentation protocol must be implemented");
 
-  for (const forbiddenField of ["rows", "dataSources", "csvText", "credentials"]) {
+  for (const forbiddenField of ["rows", "dataSources", "csvText", "credentials", "temporalReview"]) {
     assert.throws(
       () =>
         protocolModule.validatePresentationState({

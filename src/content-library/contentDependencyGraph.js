@@ -108,7 +108,13 @@ function addContexts(target, chartSources, chartIds, kind, id, label) {
 
 function chartIdsFor(value) {
   if (!value || typeof value !== "object") return [];
-  const values = [...(Array.isArray(value.chartIds) ? value.chartIds : []), ...(Array.isArray(value.charts) ? value.charts : []), ...(Array.isArray(value.items) ? value.items : [])];
+  const values = [
+    ...(Array.isArray(value.chartIds) ? value.chartIds : []),
+    ...(Array.isArray(value.charts) ? value.charts : []),
+    ...(Array.isArray(value.items) ? value.items : []),
+    ...(Array.isArray(value.members) ? value.members : []),
+    ...(value.frames?.chartId ? [value.frames.chartId] : []),
+  ];
   return uniqueSorted(values.flatMap((entry) => typeof entry === "string" ? [entry] : [entry?.chartId, entry?.chart_id, entry?.id].filter(Boolean)));
 }
 

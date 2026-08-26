@@ -23,6 +23,12 @@ export function deriveTemporalNeedsAttention(input = {}) {
   }
 
   for (const group of groups) {
+    if (group.temporalReview?.status === "needs-review") {
+      findings.push(finding(
+        "source-temporal-review", "group", group.id, "sources",
+        `Chrono Group "${group.id}" needs review after source changes: ${group.temporalReview.sourceIds.join(", ")}.`,
+      ));
+    }
     let validPeriod = true;
     try {
       assertPeriod(group.period, `Chrono Group "${group.id}"`);
@@ -66,6 +72,18 @@ export function deriveTemporalNeedsAttention(input = {}) {
   }
 
   for (const scene of scenes) {
+    if (scene.temporalReview?.status === "needs-review") {
+      findings.push(finding(
+        "source-temporal-review", "scene", scene.id, "sources",
+        `Scene "${scene.id}" needs review after source changes: ${scene.temporalReview.sourceIds.join(", ")}.`,
+      ));
+    }
+    if (scene.present?.temporalReview?.status === "degraded") {
+      findings.push(finding(
+        "present-temporal-review", "scene", scene.id, "composition",
+        `Scene "${scene.id}" presentation needs review after source changes: ${scene.present.temporalReview.sourceIds.join(", ")}.`,
+      ));
+    }
     const group = groupsById.get(scene.chronoGroupId);
     let validPeriod = true;
     try {
@@ -215,6 +233,7 @@ function normalizeRuntimeScene(scene) {
   const frames = scene?.frames;
   return {
     ...scene,
+    chronoGroupId: scene?.chronoGroupId ?? scene?.groupId,
     period: normalizeRuntimePeriod(scene?.period, "UTC"),
     chartIds: scene?.chartIds ?? members.map(({ chartId }) => chartId),
     frameRule: scene?.frameRule ?? runtimeFrameRule(frames),
@@ -308,7 +327,7 @@ export function deriveGroupPeriodChangeConsequence({ groupId, nextPeriod, scenes
   assertPeriod(nextPeriod, `Chrono Group "${groupId}"`);
   const affectedSceneIds = scenes
     .filter((scene) => (
-      scene.chronoGroupId === groupId
+      (scene.chronoGroupId ?? scene.groupId) === groupId
       && (
         scene.period?.startEpochMs < nextPeriod.startEpochMs
         || scene.period?.endEpochMs > nextPeriod.endEpochMs
@@ -341,8 +360,13 @@ function validPresent(present, sceneChartIds) {
   }
   if (new Set(present.chartIds).size !== present.chartIds.length) return false;
   if (present.chartIds.some((chartId) => !sceneChartIds.includes(chartId))) return false;
-  const expectedLayouts = { 1: "single", 2: "split", 3: "trio", 4: "quad" };
-  return present.layout === expectedLayouts[present.chartIds.length];
+  const expectedLayouts = {
+    1: ["single"],
+    2: ["vertical-divider", "horizontal-divider"],
+    3: ["large-top", "large-bottom", "large-left", "large-right"],
+    4: ["grid-2x2"],
+  };
+  return expectedLayouts[present.chartIds.length]?.includes(present.layout) === true;
 }
 
 function assertPeriod(period, description) {

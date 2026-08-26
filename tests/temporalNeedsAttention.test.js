@@ -78,6 +78,36 @@ test("Needs attention derives structural, data, frame, interpolation, and schema
   assert.equal(findings.every((finding) => finding.stage && finding.message), true);
 });
 
+test("persisted temporal review metadata projects into group and Scene findings with accepted layouts", () => {
+  const findings = deriveTemporalNeedsAttention({
+    timeZone: "UTC",
+    groups: [{
+      id: "group-review", period: { startEpochMs: START, endEpochMs: END }, matching: "Concurrent only",
+      members: [], temporalReview: { status: "needs-review", sourceIds: ["cases"] },
+    }],
+    scenes: [{
+      id: "scene-review", chronoGroupId: "group-review", pageId: "page-a",
+      period: { startEpochMs: START, endEpochMs: END }, chartIds: ["chart-a", "chart-b"],
+      frameRule: { type: "calendar", interval: 1, unit: "day" },
+      temporalReview: { status: "needs-review", sourceIds: ["cases"] },
+      present: {
+        chartIds: ["chart-a", "chart-b"], layout: "vertical-divider",
+        temporalReview: { status: "degraded", sourceIds: ["cases"] },
+      },
+    }],
+    charts: [
+      { id: "chart-a", pageId: "page-a", variables: [{ observations: [{ epochMs: START, value: 1 }] }] },
+      { id: "chart-b", pageId: "page-a", variables: [{ observations: [{ epochMs: START, value: 1 }] }] },
+    ],
+  });
+  assert.deepEqual(findings.filter(({ code }) => code.includes("temporal-review")).map(({ code, targetType, targetId }) => ({ code, targetType, targetId })), [
+    { code: "source-temporal-review", targetType: "group", targetId: "group-review" },
+    { code: "source-temporal-review", targetType: "scene", targetId: "scene-review" },
+    { code: "present-temporal-review", targetType: "scene", targetId: "scene-review" },
+  ]);
+  assert.equal(findings.some(({ code }) => code === "invalid-present-subset"), false);
+});
+
 test("group-period shortening returns edit-or-clamp consequences without mutating scenes", () => {
   const scenes = [{
     id: "scene-before",

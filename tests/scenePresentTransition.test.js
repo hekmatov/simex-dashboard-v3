@@ -26,6 +26,23 @@ test("a newly active Scene produces one atomic Present composition action", () =
   assert.ok(transition.signature);
 });
 
+test("degraded review metadata stays durable on the Scene and never enters the Present action", () => {
+  const degraded = {
+    ...scene,
+    present: {
+      ...scene.present,
+      temporalReview: { status: "degraded", sourceIds: ["cases"] },
+    },
+  };
+  const transition = transitionModule.resolveScenePresentTransition(null, degraded);
+  assert.deepEqual(transition.action, {
+    type: "scene_applied",
+    chart_ids: ["chart-b", "chart-a"],
+    layout: "sideBySide",
+  });
+  assert.equal(Object.hasOwn(transition.action, "temporalReview"), false);
+});
+
 test("the same active Scene does not overwrite later manual Present edits", () => {
   const first = transitionModule.resolveScenePresentTransition(null, scene);
   const repeated = transitionModule.resolveScenePresentTransition(

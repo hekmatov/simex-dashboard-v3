@@ -78,22 +78,31 @@ test("blocked CSV replacement exposes a typed reason, import-as-new, and guided 
   assert.doesNotMatch(html, />Delete</);
 });
 
-test("temporal CSV replacement is visibly deferred and cannot publish or import", () => {
+test("temporal CSV replacement exposes an explicit warning confirmation without import-as-new", () => {
   const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
     open: true,
     action: "replace-csv",
     itemLabel: "Cases",
-    replacementReady: false,
+    replacementReady: true,
     replacementStatus: "requires-temporal-review",
     replacementReason: {
       code: "requires-temporal-review",
       message: "This replacement changes a directly used temporal observation series and requires review.",
     },
+    impactContexts: [
+      { kind: "chrono-group", id: "cases-playback" },
+      { kind: "scene", id: "cases-scene" },
+      { kind: "scene-presentation", id: "cases-scene" },
+    ],
   }));
   assert.match(html, /data-replacement-reason="requires-temporal-review"/u);
   assert.match(html, /requires review/u);
   assert.doesNotMatch(html, /Import as new source/u);
-  assert.match(html, /<button type="button" disabled="">Replace file<\/button>/u);
+  assert.match(html, />Confirm replacement and mark affected temporal content<\/button>/u);
+  assert.match(html, /Chrono Group: cases-playback/u);
+  assert.match(html, /Scene: cases-scene/u);
+  assert.match(html, /Scene presentation: cases-scene/u);
+  assert.doesNotMatch(html, /<button type="button" disabled="">Confirm replacement/u);
 });
 
 test("manager dependency collections carry retainer and deletion state through the passive detail boundary", () => {

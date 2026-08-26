@@ -1,4 +1,5 @@
 import { isCanonicalUtcInstant } from "./temporalSchema.js";
+import { validateTemporalReview } from "./temporalReview.js";
 
 const FRAME_UNITS = new Set(["day", "month", "year"]);
 const MATCHING_POLICIES = new Set([
@@ -114,6 +115,12 @@ export function validateScene(scene, context = {}) {
 
   validateFrames(scene.frames, memberIds, scenePeriod);
   validatePresent(scene.present, [...memberIds]);
+  if (scene.temporalReview !== undefined) {
+    validateTemporalReview(scene.temporalReview, {
+      allowedStatuses: ["needs-review"],
+      description: `Scene "${scene.id}" temporal review`,
+    });
+  }
   if (
     scene.secondsPerFrame !== undefined
     && (!Number.isFinite(scene.secondsPerFrame) || scene.secondsPerFrame <= 0)
@@ -185,6 +192,12 @@ function validatePresent(present, memberIds) {
   const allowedLayouts = PRESENT_LAYOUTS[present.chartIds.length] ?? [];
   if (!allowedLayouts.includes(present.layout)) {
     throw new Error(`Scene Present layout must be one of ${allowedLayouts.map((layout) => `"${layout}"`).join(", ")} for this chart count.`);
+  }
+  if (present.temporalReview !== undefined) {
+    validateTemporalReview(present.temporalReview, {
+      allowedStatuses: ["degraded"],
+      description: "Scene Present temporal review",
+    });
   }
 }
 

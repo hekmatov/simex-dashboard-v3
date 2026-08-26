@@ -48,4 +48,6 @@ test("V4 migration is deterministic, idempotent, and conservatively registers CS
   assert.equal(first.contentLibrary.sourceEntries.cases.origin, "legacy-import");
   assert.equal(first.contentLibrary.sourceEntries.boundaries.ownership, "builder");
   assert.equal(first.pages[0].sections[0].panels[0].chart.configVersion, 3);
+  assert.equal(first.chronoGroups.every((group) => !Object.hasOwn(group, "temporalReview")), true);
+  assert.equal((first.scenes ?? []).every((scene) => !Object.hasOwn(scene, "temporalReview") && !Object.hasOwn(scene.present ?? {}, "temporalReview")), true);
 });

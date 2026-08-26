@@ -81,6 +81,18 @@ test("selectors derive saved content without duplicating it into navigation stat
   assert.notStrictEqual(state.chronoGroups, chronoGroups);
 });
 
+test("durable temporal review findings make Chrono and Scene cards visibly need attention", () => {
+  const findings = [
+    { itemType: "chronoGroup", itemId: "chrono-a", code: "source-temporal-review", message: "Cases changed; review this Chrono Group." },
+    { itemType: "scene", itemId: "scene-a", code: "present-temporal-review", message: "Cases changed; review this Scene presentation." },
+  ];
+  const state = createChronoContentState({ chronoGroups, scenes, pages, findings });
+  assert.equal(selectChronoStudioCards(state)[0].status, "needs-attention");
+  assert.match(selectChronoGroupContent(state, "chrono-a").statusReasons[0], /Cases changed/);
+  assert.equal(selectSceneStudioSections(state).flatMap(({ scenes: items }) => items).find(({ id }) => id === "scene-a").status, "needs-attention");
+  assert.match(selectSceneContent(state, "scene-a").statusReasons[0], /Scene presentation/);
+});
+
 test("reopening the active Scene Studio preserves its current browse context", () => {
   let state = createChronoContentState({
     chronoGroups,

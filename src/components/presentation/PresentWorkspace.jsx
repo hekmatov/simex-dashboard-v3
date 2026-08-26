@@ -73,6 +73,9 @@ export default function PresentWorkspace({
     activeGroup: playback.activeGroup,
     activeEpochMs: playback.activeEpochMs,
   });
+  const activeSceneTemporalReview = playback.activeScene?.present?.temporalReview?.status === "degraded"
+    ? playback.activeScene.present.temporalReview
+    : null;
 
   const presentationState = React.useMemo(() => ({
     active_page_id: activePage?.id ?? "dashboard",
@@ -143,6 +146,11 @@ export default function PresentWorkspace({
           </button>
         </div>
         {connectionError && <p className="present-connection-error" role="status">{connectionError}</p>}
+        {activeSceneTemporalReview && (
+          <p className="present-connection-error" role="status">
+            Scene presentation needs review after a source update. Rendering continues with the saved composition.
+          </p>
+        )}
       </section>
 
       <div className="present-workspace-body">
