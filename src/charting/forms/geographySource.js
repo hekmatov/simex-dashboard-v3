@@ -6,17 +6,26 @@ import {
 import {
   GEOGRAPHY_BINDING_CONTRACT,
 } from "../data/geographyBindingContract.js";
+import { listManageableSourceEntries } from "../../content-library/sourceEntrySchema.js";
 
 const GEO_SOURCE_FIELD =
   GEOGRAPHY_BINDING_CONTRACT.data_source.presentation_field;
 const JOIN_FIELD =
   GEOGRAPHY_BINDING_CONTRACT.join.presentation_field;
 
-export function validatedGeoSourceOptions(dataSources, geoDataSources) {
+export function validatedGeoSourceOptions(dataSources, geoDataSources, sourceEntries) {
   const sources = collectionEntries(dataSources);
+  const managedSourceIds = sourceEntries === undefined
+    ? null
+    : new Set(listManageableSourceEntries(
+      { sourceEntries: collectionObject(sourceEntries) },
+      collectionObject(dataSources),
+    ).filter(({ kind }) => kind === "geojson").map(({ sourceId }) => sourceId));
   return sources.flatMap(([sourceId, source]) => {
     const geoData = readEntry(geoDataSources, sourceId);
     if (
+      (managedSourceIds !== null && !managedSourceIds.has(sourceId))
+      ||
       !isEligibleGeoJsonDescriptor(source)
       || geoData?.type !== "FeatureCollection"
       || !Array.isArray(geoData.features)
@@ -132,6 +141,11 @@ function chartWithMap(chart, map) {
 function collectionEntries(value) {
   if (value instanceof Map) return [...value.entries()];
   return isRecord(value) ? Object.entries(value) : [];
+}
+
+function collectionObject(value) {
+  if (value instanceof Map) return Object.fromEntries(value);
+  return isRecord(value) ? value : {};
 }
 
 function readEntry(collection, key) {

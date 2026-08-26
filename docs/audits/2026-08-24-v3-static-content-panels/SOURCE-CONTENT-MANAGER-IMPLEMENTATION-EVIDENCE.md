@@ -330,14 +330,15 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Focused RED was **3/5 passing** in `tests/geoJsonContentManager.test.js`: the current selector excluded `type:'uploadedGeoJson'`, and no manager Add transaction existed.
 - The first exact eleven-file selection was **114/119 passing**, exposing only the absent manager UI/map-budget behavior and its mounted transport.
-- Fresh exact GREEN is **119/119 passing**, zero failed/skipped/todo. It covers the four-gate authority, canonical lean summary, high-property/nested-property non-blocking behavior, atomic Add/cancel/failure inventories, eligible tracked/dataset GeoJSON, exact six-stage chart authoring, direct dependencies/blocked deletion, common-ancestor budget allocation/release/priority, and live chart transport.
+- Fresh exact GREEN after the task-scoped correction is **120/120 passing**, zero failed/skipped/todo. It covers the four-gate authority, canonical lean summary, high-property/nested-property non-blocking behavior, atomic Add/cancel/failure inventories, builder-managed tracked/packaged/uploaded eligibility with dashboard-owned generated GeoJSON excluded, staged close/Escape disposal, exact six-stage chart authoring, direct dependencies/blocked deletion, common-ancestor budget allocation/activation/release/priority, visible degraded status, and live chart transport.
 
 ### Named Journey I checkpoint
 
-- Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey I — GeoJSON upload select preview dependency and blocked delete"` — **1/1 passing**, 48.7 s test time and 50.7 s total.
+- Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey I — GeoJSON upload select preview dependency and blocked delete"` — **1/1 passing**, 53.6 s test time and 55.3 s total after the task-scoped correction.
 - Build 1440×900 and 1024×768 inspected explicit manager Cancel and Add inventories, reload survival of an unused source, canonical summary fields, bounded preview plus textual fallback, and zero manager horizontal overflow. Tablet list/detail/Back remained reachable.
 - The real unchanged six-stage chart workflow selected an existing managed CSV and the uploaded GeoJSON, completed a Map scatter chart, then exposed the direct dependency breadcrumb `HeV-A26 Dashboard: Epidemiological overview › Outbreak dynamics › Journey I managed map`. Referenced Delete remained disabled and opened no dialog.
-- Five mounted map uses shared one provider: no more than four were allocated, no more than two were normal, excess work was deferred, and source admission/deletion was unchanged.
+- The journey discarded a staged GeoJSON with Escape, resumed the suspended wizard without that staged option, and proved dashboard-owned generated GeoJSON absent from the builder picker while tracked, packaged, and uploaded items remained eligible.
+- Five actual `Biomedical › Outbreak dynamics` dashboard maps entered the one shared provider through their production visibility observers: allocations 3–4 exposed the visible degraded warning, no more than four were allocated, no more than two were normal, excess work was deferred/activatable, and source admission/deletion was unchanged.
 
 ### Rulings and scope boundary
 

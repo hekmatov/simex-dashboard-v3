@@ -19,10 +19,10 @@ const vite = await createServer({
 });
 const [
   { default: GeoJsonDetail },
-  { createBuildMapBudget },
+  { createBuildMapBudget, mapBudgetNotice },
   { default: DataSourceStep },
   { default: DataSourceCatalogue },
-  { parseUploadedGeoJsonFile },
+  { clearStagedGeoJsonSelection, discardStagedGeoJsonDraft, parseUploadedGeoJsonFile },
 ] = await Promise.all([
   vite.ssrLoadModule("/src/components/source-content/GeoJsonDetail.jsx"),
   vite.ssrLoadModule("/src/components/build/BuildMapBudgetContext.jsx"),
@@ -91,7 +91,7 @@ test("GeoJSON detail renders the lean summary, bounded property controls, and ac
   assert.doesNotMatch(html, /maxDepth|structuralNodes|propertyValueBytes/);
 });
 
-test("one shared Build map budget prioritizes visible dashboard maps and activates deferred work on release", () => {
+test("one shared Build map budget activates deferred work without exceeding the eager limit", () => {
   const budget = createBuildMapBudget();
   const releasePreviewA = budget.acquire({ ownerId: "preview:a", kind: "preview", visible: true, active: true });
   budget.acquire({ ownerId: "preview:b", kind: "preview", visible: true, active: true });
@@ -107,8 +107,18 @@ test("one shared Build map budget prioritizes visible dashboard maps and activat
   assert.equal(budget.getSnapshot("preview:d").status, "deferred");
   assert.equal(budget.getSnapshot("preview:e").status, "deferred");
 
+  assert.equal(budget.activate("preview:e"), true);
+  assert.equal(budget.getSnapshot("preview:e").allocated, true);
+  assert.equal([
+    "dashboard:map", "preview:a", "preview:b", "preview:c", "preview:d", "preview:e",
+  ].filter((ownerId) => budget.getSnapshot(ownerId).allocated).length, 4);
+  assert.equal(budget.getSnapshot("dashboard:map").status, "normal");
+  assert.equal(mapBudgetNotice("degraded"), "Additional live map — performance may be reduced.");
+  assert.equal(mapBudgetNotice("normal"), "");
+
   releasePreviewA();
-  assert.equal(budget.getSnapshot("preview:d").status, "degraded");
+  assert.equal(budget.getSnapshot("preview:c").allocated, true);
+  assert.equal(budget.activate("missing"), false);
 });
 
 test("managed tracked, packaged, and uploaded GeoJSON are selectable and upload stays in the same data-source stage", () => {
@@ -116,10 +126,17 @@ test("managed tracked, packaged, and uploaded GeoJSON are selectable and upload 
     tracked: { kind: "geojson", path: "data/tracked.geojson", provenance: { label: "Tracked" } },
     packaged: { kind: "dataset", type: "uploadedGeoJson", fileName: "packaged.geojson", geoJson },
     uploaded: { kind: "dataset", type: "uploadedGeoJson", fileName: "uploaded.geojson", browserAssetId: "asset-1", geoJson },
+    generated: { kind: "geojson", path: "data/generated.geojson", provenance: { label: "Generated" } },
+  };
+  const sourceEntries = {
+    tracked: { sourceId: "tracked", origin: "linked-project", ownership: "builder", displayName: "Tracked", provenance: {}, health: "ready" },
+    packaged: { sourceId: "packaged", origin: "packaged", ownership: "builder", displayName: "Packaged", provenance: {}, health: "ready" },
+    uploaded: { sourceId: "uploaded", origin: "uploaded", ownership: "builder", displayName: "Uploaded", provenance: {}, health: "ready" },
+    generated: { sourceId: "generated", origin: "generated", ownership: "dashboard", displayName: "Generated", provenance: {}, health: "ready" },
   };
   assert.deepEqual(validatedGeoSourceOptions(dataSources, {
-    tracked: geoJson, packaged: geoJson, uploaded: geoJson,
-  }).map(({ value }) => value), ["tracked", "packaged", "uploaded"]);
+    tracked: geoJson, packaged: geoJson, uploaded: geoJson, generated: geoJson,
+  }, sourceEntries).map(({ value }) => value), ["tracked", "packaged", "uploaded"]);
 
   const html = renderToStaticMarkup(React.createElement(DataSourceStep, {
     geographyRequired: true,
@@ -129,6 +146,31 @@ test("managed tracked, packaged, and uploaded GeoJSON are selectable and upload 
   assert.match(html, /Map geography/);
   assert.match(html, /Upload GeoJSON/);
   assert.equal((html.match(/chart-wizard-step/g) ?? []).length, 1);
+});
+
+test("chart GeoJSON close and Escape cleanup discard staged authority while preserving suspension state", async () => {
+  for (const reason of ["chart-geojson-close", "chart-geojson-escape"]) {
+    const draftRef = { current: { draftId: `draft:${reason}`, candidate: { sourceId: "staged-boundaries" } } };
+    const discarded = [];
+    const wizard = {
+      stage: "data-source",
+      draft: {
+        id: "chart-draft",
+        title: "Preserved title",
+        presentation: { map: { geoSource: "staged-boundaries", scale: "sequential" } },
+      },
+    };
+    const cleared = clearStagedGeoJsonSelection(wizard, "staged-boundaries");
+    await discardStagedGeoJsonDraft(draftRef, (draftId, discardReason) => {
+      discarded.push([draftId, discardReason]);
+    }, reason);
+
+    assert.equal(draftRef.current, null);
+    assert.deepEqual(discarded, [[`draft:${reason}`, reason]]);
+    assert.equal(cleared.stage, "data-source");
+    assert.equal(cleared.draft.title, "Preserved title");
+    assert.equal(cleared.draft.presentation?.map?.geoSource, undefined);
+  }
 });
 
 test("manager exposes GeoJSON Add and the shared parser rejects invalid input before staging", async () => {

@@ -11,6 +11,7 @@ export function createBuildMapBudget() {
   const snapshots = new Map();
   const listeners = new Map();
   let sequence = 0;
+  let activationSequence = 0;
 
   const notify = (ownerId) => {
     for (const listener of listeners.get(ownerId) ?? []) listener();
@@ -18,7 +19,11 @@ export function createBuildMapBudget() {
   const recompute = () => {
     const active = [...requests.values()]
       .filter((request) => request.active)
-      .sort((left, right) => priority(left) - priority(right) || left.sequence - right.sequence);
+      .sort((left, right) => (
+        priority(left) - priority(right)
+        || right.activation - left.activation
+        || left.sequence - right.sequence
+      ));
     const next = new Map();
     for (const request of requests.values()) {
       if (!request.active) next.set(request.ownerId, INACTIVE);
@@ -51,7 +56,7 @@ export function createBuildMapBudget() {
   return Object.freeze({
     acquire(input) {
       const request = normalizeRequest(input);
-      requests.set(request.ownerId, { ...request, sequence: sequence += 1 });
+      requests.set(request.ownerId, { ...request, sequence: sequence += 1, activation: 0 });
       recompute();
       let released = false;
       return () => {
@@ -61,6 +66,13 @@ export function createBuildMapBudget() {
         recompute();
         return true;
       };
+    },
+    activate(ownerId) {
+      const request = requests.get(ownerId);
+      if (!request?.active || snapshots.get(ownerId)?.allocated === true) return false;
+      request.activation = activationSequence += 1;
+      recompute();
+      return snapshots.get(ownerId)?.allocated === true;
     },
     getSnapshot(ownerId) {
       return snapshots.get(ownerId) ?? INACTIVE;
@@ -90,11 +102,19 @@ export function useBuildMapBudgetSlot(input = {}) {
     if (!budget) return undefined;
     return budget.acquire(request);
   }, [budget, request.ownerId, request.kind, request.visible, request.active]);
-  return React.useSyncExternalStore(
+  const snapshot = React.useSyncExternalStore(
     (listener) => budget?.subscribe(request.ownerId, listener) ?? (() => {}),
     () => budget?.getSnapshot(request.ownerId) ?? (request.active ? UNBOUNDED : INACTIVE),
     () => request.active ? UNBOUNDED : INACTIVE,
   );
+  return React.useMemo(() => Object.freeze({
+    ...snapshot,
+    activate: () => budget?.activate(request.ownerId) ?? false,
+  }), [budget, request.ownerId, snapshot]);
+}
+
+export function mapBudgetNotice(status) {
+  return status === "degraded" ? "Additional live map — performance may be reduced." : "";
 }
 
 function normalizeRequest(input, { allowInactive = false } = {}) {

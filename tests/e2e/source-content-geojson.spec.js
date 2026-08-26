@@ -83,8 +83,17 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   const geoOptions = await wizard.getByLabel("GeoJSON source").locator("option").allTextContents();
   expect(geoOptions).toContain(SOURCE_NAME);
   expect(geoOptions).toContain("Journey I packaged boundaries");
+  expect(geoOptions).not.toContain("Journey I generated boundaries");
   expect(geoOptions.some((label) => /Netherlands|municipalit|province/i.test(label))).toBe(true);
   await expect(wizard.getByLabel("Upload GeoJSON")).toBeVisible();
+  await wizard.getByLabel("Upload GeoJSON").setInputFiles({ ...GEOJSON_FILE, name: "journey-i-staged-close.geojson" });
+  const stagedGeoSourceId = await wizard.getByLabel("GeoJSON source").inputValue();
+  expect(stagedGeoSourceId).toContain("journey-i-staged-close");
+  await page.keyboard.press("Escape");
+  await expect(wizard).toHaveCount(0);
+  await page.getByRole("button", { name: "Resume chart draft", exact: true }).click();
+  await expect(wizard).toBeVisible();
+  await expect(wizard.getByLabel("GeoJSON source").locator(`option[value="${stagedGeoSourceId}"]`)).toHaveCount(0);
   await wizard.getByLabel("Managed data source").selectOption("bio_wastewater_latest");
   await wizard.getByLabel("GeoJSON source").selectOption({ label: SOURCE_NAME });
   await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Map and prepare data\./ }).click();
@@ -101,6 +110,15 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   await seedMapBudgetCopies(page);
   await page.reload();
   await openBuild(page, { width: 1440, height: 900 });
+  await page.getByRole("navigation", { name: "Dashboard pages" })
+    .getByRole("button", { name: "Biomedical", exact: true }).click();
+  const seededMaps = page.locator('[data-canonical-section-id="outbreak_dynamics"] [data-panel-id^="journey-i-map-"]');
+  await expect(seededMaps).toHaveCount(4);
+  for (let index = 0; index < 3; index += 1) {
+    await seededMaps.nth(index).scrollIntoViewIfNeeded();
+    await expect(seededMaps.nth(index)).toBeVisible();
+  }
+  await expect(page.locator('[data-map-budget-status="degraded"]').first()).toBeVisible();
   manager = await openDataSourceManager(page);
   await manager.getByLabel("Filter by usage").selectOption("used");
   await selectSourceRow(manager, SOURCE_NAME);
@@ -112,6 +130,7 @@ test("Journey I — GeoJSON upload select preview dependency and blocked delete"
   expect(desktopBudget.allocated).toBeLessThanOrEqual(4);
   expect(desktopBudget.normal).toBeLessThanOrEqual(2);
   expect(desktopBudget.total).toBeGreaterThan(0);
+  await expect(page.getByText("Additional live map — performance may be reduced.").first()).toBeVisible();
   expect(await managerOverflow(manager)).toBe(false);
   await closeManager(page);
 
@@ -217,6 +236,22 @@ async function seedPackagedSource(page) {
       ownership: "builder",
       displayName: "Journey I packaged boundaries",
       provenance: { fileName: "journey-i-packaged.geojson" },
+      health: "ready",
+    };
+    const generatedId = "journey-i-generated";
+    dashboard.dataSources[generatedId] = {
+      ...structuredClone(dashboard.dataSources[sourceId]),
+      provenance: { label: "Journey I generated boundaries" },
+    };
+    if (dashboard.loadedData?.[sourceId]) {
+      dashboard.loadedData[generatedId] = structuredClone(dashboard.loadedData[sourceId]);
+    }
+    dashboard.contentLibrary.sourceEntries[generatedId] = {
+      sourceId: generatedId,
+      origin: "generated",
+      ownership: "dashboard",
+      displayName: "Journey I generated boundaries",
+      provenance: { generated: true },
       health: "ready",
     };
     localStorage.setItem(key, JSON.stringify(dashboard));

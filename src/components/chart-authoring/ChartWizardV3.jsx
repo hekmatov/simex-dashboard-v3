@@ -76,6 +76,21 @@ export async function parseUploadedGeoJsonFile(file, existingSources = {}) {
   };
 }
 
+export async function discardStagedGeoJsonDraft(draftRef, onDiscard, reason) {
+  const staged = draftRef?.current;
+  if (!staged) return false;
+  draftRef.current = null;
+  if (typeof onDiscard === "function") await onDiscard(staged.draftId, reason);
+  return true;
+}
+
+export function clearStagedGeoJsonSelection(wizard, sourceId) {
+  const next = structuredClone(wizard);
+  if (!sourceId || next?.draft?.presentation?.map?.geoSource !== sourceId) return next;
+  delete next.draft.presentation.map;
+  return next;
+}
+
 export function createChartCsvDraftLifecycle({
   stageDraft,
   updateDraft,
@@ -300,7 +315,19 @@ export default function ChartWizardV3({
   const geoDraftRef = React.useRef(null);
   const effectiveGeoDataSources = mergeCollections(safeGeoDataSources, localGeoData);
   const effectiveDataSources = mergeCollections(safeDataSources, localGeoDescriptors);
-  const geoSources = validatedGeoSourceOptions(effectiveDataSources, effectiveGeoDataSources);
+  const stagedGeoEntry = geoDraftRef.current?.sourceEntry;
+  const durableGeoSourceEntries = dashboard?.contentLibrary?.sourceEntries;
+  const effectiveGeoSourceEntries = durableGeoSourceEntries === undefined && !stagedGeoEntry
+    ? undefined
+    : mergeCollections(
+        durableGeoSourceEntries,
+        stagedGeoEntry ? { [stagedGeoEntry.sourceId]: stagedGeoEntry } : {},
+      );
+  const geoSources = validatedGeoSourceOptions(
+    effectiveDataSources,
+    effectiveGeoDataSources,
+    effectiveGeoSourceEntries,
+  );
   const [submissionError, setSubmissionError] = React.useState("");
   const transactionIdRef = React.useRef(null);
   const csvDraftAuthoritiesRef = React.useRef(null);
@@ -363,11 +390,15 @@ export default function ChartWizardV3({
   function requestClose() {
     if (operationLocked()) return false;
     void csvDraftLifecycle.discardAll("chart-csv-close");
-    const closingWizard = sourceKind === "upload"
+    const stagedGeoSourceId = geoDraftRef.current?.candidate?.sourceId;
+    void discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, "chart-geojson-close");
+    clearUploadedGeoJsonUi(stagedGeoSourceId);
+    let closingWizard = sourceKind === "upload"
       ? clearSelectedSource(wizard)
       : wizard.confirmation === "changeSource"
         ? reduceWizardState(wizard, { type: "cancelConfirmation" })
         : wizard;
+    closingWizard = clearStagedGeoJsonSelection(closingWizard, stagedGeoSourceId);
     if (sourceKind === "upload") clearUploadedCsvUi(wizard.draft?.sourceId);
     else setPendingSourceUi(null);
     const suspended = reduceWizardState(closingWizard, {
@@ -425,10 +456,17 @@ export default function ChartWizardV3({
     });
   }, [csvDraftLifecycle]);
   React.useEffect(() => () => {
-    const draftId = geoDraftRef.current?.draftId;
-    geoDraftRef.current = null;
-    if (draftId) void onContentDraftDiscard?.(draftId, "chart-geojson-unmount");
+    void discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, "chart-geojson-unmount");
   }, [onContentDraftDiscard]);
+
+  React.useEffect(() => {
+    if (open) return;
+    const stagedGeoSourceId = geoDraftRef.current?.candidate?.sourceId;
+    if (!stagedGeoSourceId) return;
+    void discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, "chart-geojson-closed");
+    clearUploadedGeoJsonUi(stagedGeoSourceId);
+    setWizard((current) => clearStagedGeoJsonSelection(current, stagedGeoSourceId));
+  }, [open, onContentDraftDiscard]);
 
   function clearUploadedCsvUi(sourceId) {
     setSourceKind("");
@@ -442,6 +480,21 @@ export default function ChartWizardV3({
         return next;
       });
     }
+  }
+
+  function clearUploadedGeoJsonUi(sourceId) {
+    setGeoUploadError("");
+    if (!sourceId) return;
+    setLocalGeoData((current) => {
+      const next = { ...current };
+      delete next[sourceId];
+      return next;
+    });
+    setLocalGeoDescriptors((current) => {
+      const next = { ...current };
+      delete next[sourceId];
+      return next;
+    });
   }
 
   React.useEffect(() => {
@@ -806,9 +859,7 @@ export default function ChartWizardV3({
     }
   };
   const discardGeoDraft = async (reason) => {
-    const draftId = geoDraftRef.current?.draftId;
-    geoDraftRef.current = null;
-    if (draftId) await onContentDraftDiscard?.(draftId, reason);
+    await discardStagedGeoJsonDraft(geoDraftRef, onContentDraftDiscard, reason);
   };
   const uploadGeoJson = async (file) => {
     if (!file) return;
@@ -823,10 +874,25 @@ export default function ChartWizardV3({
       });
       const staged = onContentDraftStage?.(input);
       if (!staged && typeof onContentDraftStage !== "function") throw new Error("Chart GeoJSON staging authority is unavailable.");
-      geoDraftRef.current = { draftId: staged?.draftId ?? input.draftId, candidate: parsed };
+      geoDraftRef.current = {
+        draftId: staged?.draftId ?? input.draftId,
+        candidate: parsed,
+        sourceEntry: input.payload.entry,
+      };
       setLocalGeoData((current) => ({ ...current, [parsed.sourceId]: parsed.geoJson }));
       setLocalGeoDescriptors((current) => ({ ...current, [parsed.sourceId]: parsed.source }));
-      updateAuthoringPath(["presentation", "map", "geoSource"], parsed.sourceId);
+      setWizard((current) => {
+        const selected = applyGeographySourceSelection(current.draft, {
+          sourceId: parsed.sourceId,
+          geoData: parsed.geoJson,
+          rows,
+        });
+        return reduceWizardState(current, {
+          type: "updateChart",
+          path: ["presentation", "map"],
+          value: selected.presentation.map,
+        });
+      });
     } catch (error) {
       await discardGeoDraft("chart-geojson-upload-failed");
       setGeoUploadError(safeMessage(error));
@@ -836,16 +902,7 @@ export default function ChartWizardV3({
     const stagedSourceId = geoDraftRef.current?.candidate?.sourceId;
     if (stagedSourceId && stagedSourceId !== value) {
       await discardGeoDraft("chart-geojson-selection-changed");
-      setLocalGeoData((current) => {
-        const next = { ...current };
-        delete next[stagedSourceId];
-        return next;
-      });
-      setLocalGeoDescriptors((current) => {
-        const next = { ...current };
-        delete next[stagedSourceId];
-        return next;
-      });
+      clearUploadedGeoJsonUi(stagedSourceId);
     }
     updateAuthoringPath(["presentation", "map", "geoSource"], value);
   };

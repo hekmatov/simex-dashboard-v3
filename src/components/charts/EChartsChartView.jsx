@@ -5,7 +5,7 @@ import { describeAccessibilityCompanion } from "../../charting/rendering/accessi
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import { titleContainerProps } from "./chartViewPresentation.js";
 import { chartDescriptionVisible } from "./chartViewPresentation.js";
-import { useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
+import { mapBudgetNotice, useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
 const DEFAULT_CHART_TEXT_THEME = Object.freeze({
@@ -117,8 +117,12 @@ export default function EChartsChartView({
       className: "chart-deferred-placeholder",
       role: "status",
       "data-map-budget-status": mapBudget.status,
-    }, "Map preview waits for an available rendering slot.");
+    },
+    React.createElement("p", null, "Map preview waits for an available rendering slot."),
+    React.createElement("button", { type: "button", onClick: mapBudget.activate }, "Render this map"));
   }
+
+  const budgetNotice = mapBudgetNotice(mapBudget.status);
 
   return React.createElement("section", {
     className: "chart-echarts-view",
@@ -135,6 +139,12 @@ export default function EChartsChartView({
       : undefined,
     ...titleContainerProps(chart),
   },
+  budgetNotice
+    ? React.createElement("p", {
+        className: "chart-map-budget-warning",
+        role: "status",
+      }, budgetNotice)
+    : null,
   accessibilityEnabled
     ? React.createElement("h3", {
         id: titleId,

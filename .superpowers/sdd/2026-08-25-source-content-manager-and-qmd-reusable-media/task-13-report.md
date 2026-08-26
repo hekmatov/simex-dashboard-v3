@@ -23,9 +23,17 @@ Focused RED was **3/5 passing**: the current selector excluded an uploaded-datas
 
 ## GREEN and real use
 
-- Exact eleven-file deterministic selection: **119/119 passing**, zero fail/skip/todo.
-- Named Journey I Chromium selection: **1/1 passing** (48.7 s test, 50.7 s total).
-- Inspected Build 1440×900 and 1024×768: Cancel/Add inventories, unused-source reload, canonical summary, preview/fallback, desktop/tablet bounded geometry and Back, exact six stages, eligible source variants, completed map dependency breadcrumb, blocked Delete/no dialog, and shared four-slot scheduling across five maps.
+- Exact eleven-file deterministic selection after the task-scoped correction: **120/120 passing**, zero fail/skip/todo.
+- Named Journey I Chromium selection after the task-scoped correction: **1/1 passing** (53.6 s test, 55.3 s total).
+- Inspected Build 1440×900 and 1024×768: Cancel/Add inventories, unused-source reload, canonical summary, preview/fallback, desktop/tablet bounded geometry and Back, exact six stages, builder-managed eligible source variants with dashboard-owned generated GeoJSON absent, completed map dependency breadcrumb, blocked Delete/no dialog, and shared four-slot scheduling across five real dashboard maps.
+
+## T13-R01–R03 correction
+
+- Focused correction RED was **3/6 passing**: `activate` was absent, a dashboard-owned generated source remained eligible, and staged GeoJSON close cleanup was absent. Focused GREEN is **6/6 passing**.
+- Close, Escape, and `open=false` now dispose the staged GeoJSON draft/retainer without discarding the suspended six-stage authoring state; the mounted journey proved Resume does not restore the discarded staged option.
+- The single common-ancestor registry now exposes explicit bounded activation, visible degraded status for allocations 3–4, dashboard-map priority and release, and fifth-plus deferral without rejecting a source.
+- Chart geography selection now consumes the dashboard's builder-managed `sourceEntries` classification: tracked, packaged, and uploaded GeoJSON remain eligible while generated/intermediate dashboard-owned GeoJSON is absent.
+- A concrete mounted stale-authority failure found during the correction was resolved inside the existing upload path: the just-validated GeoJSON candidate is passed directly into the same state transition, rather than relying on the previous render's source map.
 
 ## Disposition
 
