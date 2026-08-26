@@ -125,6 +125,9 @@ const {
 } = await import(
   "../src/components/chart-authoring/StyleLayoutStep.jsx"
 );
+const chartWizardModule = await import(
+  "../src/components/chart-authoring/ChartWizardV3.jsx"
+);
 const {
   default: ChartWizardV3,
   applyWizardMembership,
@@ -135,9 +138,7 @@ const {
   isChartWizardStateDirty,
   parseUploadedCsvFile,
   submitWizardDraft,
-} = await import(
-  "../src/components/chart-authoring/ChartWizardV3.jsx"
-);
+} = chartWizardModule;
 const {
   default: ChartEditorV3,
   acceptEditorSave,
@@ -1273,6 +1274,17 @@ test("local CSV upload uses the existing parser and returns a profiled dataset s
   assert.equal(
     parsed.profile.columns.find(({ name }) => name === "value").type,
     "numeric",
+  );
+});
+
+test("ordinary CSV line charts do not enter GeoJSON persistence when both GeoJSON identities are absent", () => {
+  const chart = validLineChart();
+
+  assert.equal(chart.presentation?.map?.geoSource, undefined);
+  assert.equal(typeof chartWizardModule.shouldCommitActiveGeoDraft, "function");
+  assert.equal(
+    chartWizardModule.shouldCommitActiveGeoDraft(null, chart.presentation?.map?.geoSource),
+    false,
   );
 });
 

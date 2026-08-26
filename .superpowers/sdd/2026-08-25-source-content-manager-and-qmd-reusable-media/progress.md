@@ -258,6 +258,18 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Required seven-file Chromium command ran once without the extra literal separator. It discovered 15 tests and reported **Journey C passing** with retained DOM/geometry/request-authority trace evidence, but returned without aggregate output or results for A, B, D–K. No fixture was changed and no second full journey run was performed.
 - Task 17 is **not complete**: no amendment fidelity/security promotion, no master submission, no build/full suite/full Playwright run, no generated `dist` edit, and no PS-04 clearance. Evidence-only documentation is committed separately as `docs(content): submit Source Content Manager implementation evidence`.
 
+## 2026-08-26 beta pre-release closure scope amendment
+
+- The master explicitly authorizes only the four established regression/fixture corrections in `beta-pre-release-closure-brief.md`, an accepted fresh build/generated-client refresh, PS-04 re-verification, the exact Task 17 deterministic selection in a Vite/HttpListener-capable environment, and the accepted local beta pre-release build/unit/Playwright gate.
+- This amendment does not authorize the three prior broad-review architecture findings, merge, push, deployment, main-branch edits, worktree deletion, or Step 7S acceptance.
+
+## 2026-08-26 beta pre-release closure result
+
+- The four established corrections are complete. Focused deterministic evidence is **148/148**, the bounded passive CSV-detail gate repair is **4/5 RED → 5/5 GREEN**, final combined four-file verification is **153/153**, Journey D and Journey I are each **1/1**, and the explicitly authorized legacy chart-authoring fixture is **10/10**.
+- Both accepted builds are GREEN at 925 modules. The exact Task 17 73-file selection ran once outside the sandbox at **673/674**; its sole passive-detail failure was corrected in the focused owner file without rerunning the exact selection. PS-04 is cleared after the generated-client refresh. Step 7S remains the retained **36/36** result and was not rerun.
+- The governing full unit gate is red at **1,516/1,558 passing, 42 failing**. The full Playwright restart stopped at a repeated common stale `Program label` locator after **10 passed / 2 failed / 174 not run**.
+- No fidelity/security/ledger row is promoted. Integrated beta pre-release and master acceptance remain pending. No broad architecture fix, merge, push, deployment, main edit, worktree deletion, or Step 7S acceptance was performed.
+
 ## Task 2
 
 - Task 2: BASE `f81239ba288816603f3c6db14fc6b4a00141d5b9`.

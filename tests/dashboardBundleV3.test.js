@@ -15,6 +15,11 @@ import {
   serializeDashboardBundle,
   validateDashboardConfig,
 } from "../src/charting/config/dashboardBundleV3.js";
+import {
+  encodeAssetBase64,
+  sha256HexSync,
+} from "../src/static-content/assets/assetPayloadEnvelope.js";
+import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
 function lineChart(overrides = {}) {
   return {
@@ -256,7 +261,8 @@ test("the canonical boundary emits dashboard v5 and bundle v5 while contained ch
 });
 
 test("bundle v5 verifies migrated local authored payloads and declares linked image dependencies", () => {
-  const sha256 = "039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81";
+  const bytes = imageFixtureBytes("image/png");
+  const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
   const dashboard = version3Dashboard();
   dashboard.chronoGroups = [];
@@ -271,7 +277,7 @@ test("bundle v5 verifies migrated local authored payloads and declares linked im
   dashboard.assets = {
     [assetId]: {
       mediaType: "image/png",
-      byteLength: 3,
+      byteLength: bytes.byteLength,
       width: 2,
       height: 3,
       sha256,
@@ -286,7 +292,12 @@ test("bundle v5 verifies migrated local authored payloads and declares linked im
   const bundle = serializeDashboardBundle(dashboard, {
     now: null,
     assetPayloads: {
-      [assetId]: { mediaType: "image/png", byteLength: 3, sha256, base64: "AQID" },
+      [assetId]: {
+        mediaType: "image/png",
+        byteLength: bytes.byteLength,
+        sha256,
+        base64: encodeAssetBase64(bytes),
+      },
     },
   });
   assert.deepEqual(bundle.metadata.networkDependencies, ["https://example.test/linked.webp"]);
@@ -298,7 +309,9 @@ test("bundle v5 verifies migrated local authored payloads and declares linked im
   delete missing.assetPayloads[assetId];
   assert.throws(() => parseDashboardBundle(JSON.stringify(missing)), /missing authored asset payload/i);
   const corrupt = structuredClone(bundle);
-  corrupt.assetPayloads[assetId].base64 = "AAID";
+  const corruptBytes = Uint8Array.from(bytes);
+  corruptBytes[corruptBytes.length - 1] ^= 1;
+  corrupt.assetPayloads[assetId].base64 = encodeAssetBase64(corruptBytes);
   assert.throws(() => parseDashboardBundle(JSON.stringify(corrupt)), /hash does not match/i);
 });
 

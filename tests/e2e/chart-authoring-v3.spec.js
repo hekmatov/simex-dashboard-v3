@@ -1,11 +1,16 @@
 import { expect, test } from "@playwright/test";
-import { fileURLToPath } from "node:url";
 
 const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
-const TIMELINE_FIXTURE = fileURLToPath(
-  new URL("../fixtures/timeline-events.csv", import.meta.url),
-);
+const TIMELINE_FIXTURE = {
+  name: "timeline-events.csv",
+  mimeType: "text/csv",
+  buffer: Buffer.from([
+    "event,start,end,lane,status",
+    "Hospital escalation,2027-05-01,2027-05-02,Health coordination,active",
+    "Evacuation decision,2027-05-02,2027-05-03,Civil protection,planned",
+  ].join("\n")),
+};
 
 test.describe.configure({ timeout: 150_000 });
 
@@ -28,26 +33,40 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await openWizard(page);
   let wizard = chartWizard(page);
 
-  await expect(wizard.getByRole("button", { name: "Data source" }))
+  await expectExactSixStages(wizard);
+  await expect(creationStage(wizard, /^Destination\. Complete\./))
     .toBeEnabled();
-  await expect(wizard.getByRole("button", { name: "Data roles" }))
+  await expect(creationStage(wizard, /^Chart type\. Not started\./))
     .toBeEnabled();
-  await expect(wizard.getByRole("button", { name: "Style and layout" }))
+  await expect(creationStage(wizard, /^Data source\. Waiting on prerequisite\./))
+    .toBeEnabled();
+  await expect(creationStage(wizard, /^Map and prepare data\. Waiting on prerequisite\./))
+    .toBeEnabled();
+  await expect(creationStage(wizard, /^Configure chart\. Waiting on prerequisite\./))
+    .toBeEnabled();
+  await expect(creationStage(wizard, /^Review and create\. Waiting on prerequisite\./))
     .toBeEnabled();
 
   await chooseType(wizard, "pie", /^Pie\b/i);
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await creationStage(wizard, /^Configure chart\./).click();
   await expect(wizard.getByLabel("Chart title")).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toHaveCount(0);
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(0);
 
   await wizard.getByRole("button", { name: "Close" }).click();
+  await expect(wizard).toHaveCount(0);
+  const resumeDraft = page.getByRole("button", { name: "Resume chart draft" });
+  await expect(resumeDraft).toBeVisible();
+  await resumeDraft.click();
+  wizard = chartWizard(page);
+
+  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   const discard = page.getByRole("dialog", { name: "Discard chart?" });
   await expect(discard).toBeVisible();
   await discard.getByRole("button", { name: "Continue editing" }).click();
   await expect(wizard).toBeVisible();
 
-  await wizard.getByRole("button", { name: "Close" }).click();
+  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   await discard.getByRole("button", { name: "Discard" }).click();
   await expect(wizard).toHaveCount(0);
 
@@ -62,11 +81,11 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
     wizard.getByRole("region", { name: "Selected source profile" }),
   ).toContainText("deaths");
 
-  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await creationStage(wizard, /^Map and prepare data\./).click();
   await selectRole(wizard, "category", "Age group");
   await selectRole(wizard, "value", "deaths");
 
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await creationStage(wizard, /^Configure chart\./).click();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(wizard.getByLabel("Title alignment")).toBeVisible();
   await expect(wizard.locator('[data-color-field="background"]')).toHaveCount(1);
@@ -76,11 +95,10 @@ test("fresh pie authoring progressively reveals schema fields and persists the c
   await wizard.getByRole("button", { name: "Add color" }).click();
   await wizard.getByLabel("Color 1", { exact: true }).fill("#DC2626");
   await wizard.getByLabel("Chart title").fill("E2E mortality composition");
+  await creationStage(wizard, /^Review and create\./).click();
   await wizard.getByRole("button", { name: "Create chart" }).click();
 
-  await expect(page.getByRole("dialog", {
-    name: "Preview and refine the chart",
-  })).toHaveCount(0);
+  await expect(wizard).toHaveCount(0);
   await expect.poll(() => page.evaluate((key) => {
     const dashboard = JSON.parse(localStorage.getItem(key));
     const chart = dashboard.pages
@@ -98,10 +116,10 @@ test("wizard eyedropper reveals the dashboard and Escape preserves the draft", a
   const wizard = chartWizard(page);
   await chooseType(wizard, "pie", /^Pie\b/i);
   await selectExistingSource(wizard, "bio_mortality");
-  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await creationStage(wizard, /^Map and prepare data\./).click();
   await selectRole(wizard, "category", "Age group");
   await selectRole(wizard, "value", "deaths");
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await creationStage(wizard, /^Configure chart\./).click();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
 
   const picker = wizard.getByRole("button", {
@@ -130,7 +148,7 @@ for (const scenario of [
     typeId: "scatter",
     query: "scatter",
     name: /^Scatter\b/i,
-    sourceId: "bio_municipal_infections_harmonized_2021",
+    sourceId: "bio_municipal_infections",
     roles: {
       x: "population",
       y: "infectionsPer10000",
@@ -153,7 +171,7 @@ for (const scenario of [
       time: "date",
     },
     title: "E2E preparedness heatmap",
-    visibleSections: ["Interactions"],
+    visibleSections: [],
     absentSections: ["Axes", "Collection", "Timeline", "Map"],
     resolveDuplicates: true,
   },
@@ -169,7 +187,7 @@ for (const scenario of [
       time: "date",
     },
     title: "E2E provincial target collection",
-    visibleSections: ["Targets", "Collection", "Interactions"],
+    visibleSections: ["Targets", "Collection"],
     absentSections: ["Axes", "Timeline", "Map"],
     filter: {
       field: "date",
@@ -187,7 +205,7 @@ for (const scenario of [
       time: "date",
     },
     title: "E2E provincial delta",
-    visibleSections: ["Targets", "Interactions"],
+    visibleSections: ["Targets"],
     absentSections: ["Axes", "Collection", "Timeline", "Map"],
     expectedDataField: "Comparison",
     filter: {
@@ -204,7 +222,7 @@ for (const scenario of [
     const wizard = chartWizard(page);
     await chooseType(wizard, scenario.query, scenario.name);
     await selectExistingSource(wizard, scenario.sourceId);
-    await wizard.getByRole("button", { name: "Data roles" }).click();
+    await creationStage(wizard, /^Map and prepare data\./).click();
     for (const [roleId, column] of Object.entries(scenario.roles)) {
       await selectRole(wizard, roleId, column);
     }
@@ -227,8 +245,12 @@ for (const scenario of [
       })).toBeVisible();
     }
 
-    await wizard.getByRole("button", { name: "Style and layout" }).click();
+    await creationStage(wizard, /^Configure chart\./).click();
     await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
+    await expect(wizard.getByRole("heading", { name: "Appearance" }))
+      .toBeVisible();
+    await expect(wizard.getByRole("heading", { name: "Labels" }))
+      .toBeVisible();
     for (const heading of scenario.visibleSections) {
       await expect(wizard.getByRole("heading", { name: heading })).toBeVisible();
     }
@@ -246,7 +268,7 @@ test("bullet renderer preflight prevents a false-ready collection with colliding
   await openWizard(page);
   const wizard = chartWizard(page);
   await chooseType(wizard, "bullet", /^Bullet\b/i);
-  await wizard.getByRole("button", { name: "Data source" }).click();
+  await creationStage(wizard, /^Data source\./).click();
   await wizard.locator('input[type="file"]').setInputFiles({
     name: "colliding-bullet-identities.csv",
     mimeType: "text/csv",
@@ -256,11 +278,11 @@ test("bullet renderer preflight prevents a false-ready collection with colliding
       " Ward A ,6,8",
     ].join("\n")),
   });
-  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await creationStage(wizard, /^Map and prepare data\./).click();
   await selectRole(wizard, "actual", "actual");
   await selectRole(wizard, "target", "capacity");
   await selectRole(wizard, "entity", "ward");
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await creationStage(wizard, /^Configure chart\./).click();
 
   const invalidPreview = wizard.locator(".chart-authoring-preview-invalid");
   await expect(invalidPreview).toBeVisible();
@@ -270,6 +292,7 @@ test("bullet renderer preflight prevents a false-ready collection with colliding
   await expect(invalidPreview.locator('[data-responsible-field="entity"]'))
     .toBeVisible();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toHaveCount(0);
+  await creationStage(wizard, /^Review and create\./).click();
   await expect(wizard.getByRole("button", { name: "Create chart" }))
     .toBeDisabled();
 });
@@ -280,7 +303,7 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
   await openWizard(page);
   const wizard = chartWizard(page);
   await chooseType(wizard, "timeline", /^Timeline\b/i);
-  await wizard.getByRole("button", { name: "Data source" }).click();
+  await creationStage(wizard, /^Data source\./).click();
   await wizard.locator('input[type="file"]').setInputFiles(TIMELINE_FIXTURE);
   const profile = wizard.getByRole("region", {
     name: "Selected source profile",
@@ -289,7 +312,7 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
   await expect(profile).toContainText("start");
   await expect(profile).toContainText("Date or time");
 
-  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await creationStage(wizard, /^Map and prepare data\./).click();
   for (const [roleId, column] of Object.entries({
     event: "event",
     start: "start",
@@ -300,7 +323,7 @@ test("timeline upload profiles real CSV columns and creates a timeline chart", a
     await selectRole(wizard, roleId, column);
   }
 
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await creationStage(wizard, /^Configure chart\./).click();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await expect(wizard.getByRole("heading", { name: "Timeline" })).toBeVisible();
   await expect(wizard.getByRole("heading", { name: "Axes" })).toHaveCount(0);
@@ -450,7 +473,7 @@ async function openWizard(page) {
 
 async function openBiomedicalPage(page) {
   await page.getByRole("navigation", { name: "Dashboard pages" })
-    .getByRole("button", { name: "Open Biomedical", exact: true })
+    .getByRole("button", { name: "Biomedical", exact: true })
     .click();
 }
 
@@ -459,13 +482,14 @@ function chartWizard(page) {
 }
 
 async function chooseType(wizard, query, accessibleName) {
+  await creationStage(wizard, /^Chart type\./).click();
   await wizard.getByLabel("Search chart types").fill(query);
   await wizard.getByRole("button", { name: accessibleName }).click();
 }
 
 async function selectExistingSource(wizard, sourceId) {
-  await wizard.getByRole("button", { name: "Data source" }).click();
-  await wizard.getByLabel("Dashboard data source").selectOption(sourceId);
+  await creationStage(wizard, /^Data source\./).click();
+  await wizard.getByLabel("Managed data source").selectOption(sourceId);
 }
 
 async function selectRole(wizard, roleId, column) {
@@ -475,9 +499,33 @@ async function selectRole(wizard, roleId, column) {
 
 async function createChart(wizard, title) {
   await wizard.getByLabel("Chart title").fill(title);
+  await creationStage(wizard, /^Review and create\./).click();
   await expect(wizard.getByRole("button", { name: "Create chart" }))
     .toBeEnabled();
   await wizard.getByRole("button", { name: "Create chart" }).click();
+}
+
+function creationStage(wizard, name) {
+  return wizard.getByRole("navigation", { name: "Chart creation steps" })
+    .getByRole("button", { name });
+}
+
+async function expectExactSixStages(wizard) {
+  const labels = await wizard
+    .getByRole("navigation", { name: "Chart creation steps" })
+    .getByRole("button")
+    .allTextContents();
+  expect(labels.map((label) => label.replace(
+    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
+    "",
+  ))).toEqual([
+    "Destination",
+    "Chart type",
+    "Data source",
+    "Map and prepare data",
+    "Configure chart",
+    "Review and create",
+  ]);
 }
 
 async function expectStoredChart(page, typeId, title) {

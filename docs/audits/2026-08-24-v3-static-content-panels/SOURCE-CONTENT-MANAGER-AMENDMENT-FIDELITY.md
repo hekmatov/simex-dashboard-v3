@@ -105,3 +105,9 @@ This overlay supersedes only the implementation-status/evidence cells for the na
 ## Task 17 execution hold — 2026-08-26
 
 The prescribed integrated deterministic run is **649/674 passing** and the one seven-file Chromium invocation is incomplete: it discovered 15 tests, visibly passed Journey C, then returned without an aggregate or outcomes for A, B, D–K. The Step 7S controlling parser remains 36/36 Passing. These results do not promote any amendment row beyond its retained task-local evidence. The uncompleted browser journeys, Vite/esbuild sandbox access failures, three `datasetProfilesV3` assertion failures, `dashboardBundleV3` raster-signature failure, and PS-04 copied-launcher startup failure remain visible acceptance gaps.
+
+## Beta pre-release closure fidelity status — 2026-08-26
+
+The authorized closure supersedes the prior execution facts, not the retained row dispositions. Focused deterministic evidence is 148/148, Journey D and Journey I are each 1/1, the reconciled six-stage chart-authoring fixture is 10/10, both accepted builds are green, and PS-04 is cleared. The exact 73-file selection was 673/674 before its sole stale passive-detail assertion was corrected in a 5/5 focused file.
+
+No fidelity row is promoted because the governing full unit gate is 1,516/1,558 with 42 failures and the full 186-test Playwright gate stopped at 10 passed / 2 failed / 174 not run on a repeated stale `Program label` locator. Task-local row evidence remains valid at its recorded scope; integrated A–K and amendment-wide fidelity acceptance remain pending.

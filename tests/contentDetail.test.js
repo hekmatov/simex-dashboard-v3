@@ -29,7 +29,8 @@ test("detail routes media and CSV to type-appropriate passive shells", () => {
   }));
   assert.match(csv, /CSV details/);
   assert.match(csv, /2 rows/);
-  assert.doesNotMatch(csv, /GeoJSON preview|Delete|Replace/);
+  assert.match(csv, /<button[^>]*disabled[^>]*>Replace file<\/button>/);
+  assert.doesNotMatch(csv, /GeoJSON preview|Delete/);
 });
 
 test("CSV detail reuses the searchable viewer and exposes permitted download without cell editing", () => {

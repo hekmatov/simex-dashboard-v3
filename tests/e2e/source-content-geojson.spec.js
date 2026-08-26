@@ -30,6 +30,7 @@ test.beforeEach(async ({ page, request }) => {
 
 test("Journey I — GeoJSON upload select preview dependency and blocked delete", async ({ page }) => {
   test.setTimeout(180_000);
+  const target = { pageLabel: "Biomedical" };
   await openBuild(page, { width: 1440, height: 900 });
   const before = await geoJsonInventory(page);
 

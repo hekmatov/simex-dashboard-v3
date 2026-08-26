@@ -109,3 +109,9 @@ The V3 Design master and user approved the final written amendment at `81531b4b9
 ## Task 17 verification status — 2026-08-26
 
 No security-deviation status is advanced by Task 17. The one deterministic sweep is 649/674 rather than a green integrated gate, and the seven-file browser command has only a retained Journey C passing trace, not independent A–K completion. In particular, Task 17 did not regenerate `dist`, weaken safe-media/package checks, suppress a negative assertion, or treat the known PS-04 generated-client condition as cleared. Any future promotion must begin from a completed green deterministic/browser gate and retain the accepted negative assertions.
+
+## Beta pre-release closure security status — 2026-08-26
+
+The authorized build refresh clears PS-04 specifically: the copied Windows package launched, served the structurally valid PNG with the declared MIME, rejected traversal, retained offline Audience behavior, and cleaned up. The bundle correction uses the repository's real 2×3 PNG and keeps signature, MIME, dimensions, byte length, SHA-256, and corruption checks active. The recovery-first assertions still require retained identity with no unusable payload reaching charts, and the GeoJSON commit predicate now requires an explicit matching selected identity.
+
+No security or deviation row is promoted by this closure. The exact deterministic selection was 673/674 before a focused 5/5 passive-detail assertion repair, while the full unit gate remains 1,516/1,558 and the full Playwright gate stopped at 10 passed / 2 failed / 174 not run. Master acceptance therefore remains pending.

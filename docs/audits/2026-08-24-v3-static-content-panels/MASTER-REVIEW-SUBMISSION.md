@@ -98,3 +98,9 @@ The matrix contains 36 accepted design rows across semantic, composition, and re
 ## Historical discovery exit and current handoff
 
 The discovery verdict remains synchronized into the specification, sketch records, security record, fidelity matrix, and implementation ledger, and the discovery branch remains design provenance. Implementation subsequently proceeded from the accepted Step 7 commit on the isolated implementation branch. That implementation and its independent review are complete and V3 Design master-accepted; the accepted implementation branch remains retained and unmerged. The separate 2026-08-25 Source Content Manager/QMD reusable-media written amendment is master/user-approved but remains wholly unimplemented and unverified. Its calibrated limits (`c28b59d`) and exact ownership reconciliation (`dc06f8c`) are master-accepted prerequisites; only the corrected executable plan is being submitted now.
+
+## Source Content Manager beta pre-release closure — pending
+
+The 2026-08-26 authorized closure corrects the four established regressions/fixtures, refreshes the generated client, clears PS-04, and records focused GREEN at 148/148, Journey D 1/1, Journey I 1/1, and the accepted six-stage chart-authoring fixture 10/10. The exact 73-file deterministic selection was 673/674 before its sole stale passive-detail assertion was corrected in a focused 5/5 file.
+
+This is **not a master acceptance submission**. The governing full unit gate is red at 1,516/1,558 with 42 failures. The full 186-test Playwright gate stopped at a repeated common `Program label` fixture failure after 10 passed / 2 failed / 174 not run. No amendment row is promoted; task-local evidence and the retained Step 7S 36/36 result remain unchanged. Source Content Manager amendment-wide master acceptance remains pending.

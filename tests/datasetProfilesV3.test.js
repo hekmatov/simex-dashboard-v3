@@ -761,14 +761,28 @@ test("compatibility loading recovers a cached failure in configured source order
   };
 
   try {
-    await assert.rejects(
-      loadDashboardConfig(
-        sourceLoadingDashboard({ task3CachedFailureLater: laterSource }),
-        { task3CachedFailureLater: laterProfile },
-      ),
-      /could not load data file/i,
+    const degraded = await loadDashboardConfig(
+      sourceLoadingDashboard({ task3CachedFailureLater: laterSource }),
+      { task3CachedFailureLater: laterProfile },
     );
     assert.deepEqual(requestedUrls, ["/data/task-3-round-2-later.csv"]);
+    assert.equal(
+      degraded.contentLibrary.sourceEntries.task3CachedFailureLater.sourceId,
+      "task3CachedFailureLater",
+    );
+    assert.equal(
+      degraded.contentLibrary.sourceEntries.task3CachedFailureLater.health,
+      "ready",
+    );
+    assert.deepEqual(degraded.dataSourceStates.task3CachedFailureLater, {
+      status: "error",
+      code: "source-load-failed",
+    });
+    assert.equal(Object.hasOwn(degraded.loadedData, "task3CachedFailureLater"), false);
+    assert.deepEqual(degraded.runtimeContentHealth.sourceEntries.task3CachedFailureLater, {
+      health: "corrupt",
+      repair: { action: "replace" },
+    });
     requestedUrls.length = 0;
 
     const loaded = await loadDashboardConfig(
@@ -871,11 +885,16 @@ test("runtime eagerly hydrates uploaded and inline temporal sources with the pub
     "datasetProfiles",
     "loadedData",
     "dataSourceStates",
+    "runtimeContentHealth",
   ]);
+  assert.deepEqual(loaded.runtimeContentHealth, {
+    mediaItems: {},
+    sourceEntries: {},
+  });
   assert.deepEqual(loaded.dataSources, dashboard.dataSources);
 });
 
-test("runtime rejects malformed GeoJSON before exposing it to charts", async () => {
+test("runtime retains malformed managed GeoJSON identity without exposing its payload to charts", async () => {
   const originalFetch = globalThis.fetch;
   const fixtures = [
     { type: "FeatureCollection" },
@@ -894,16 +913,26 @@ test("runtime rejects malformed GeoJSON before exposing it to charts", async () 
 
   try {
     for (const fixtureIndex of fixtures.keys()) {
-      await assert.rejects(
-        loadDashboardConfig(sourceLoadingDashboard({
-          [`regions-${fixtureIndex}`]: {
-            kind: "geojson",
-            path: `data/regions-${fixtureIndex}.geojson`,
-            provenance: { label: "Malformed fixture" },
-          },
-        }), {}),
-        /geojson/i,
-      );
+      const sourceId = `regions-${fixtureIndex}`;
+      const loaded = await loadDashboardConfig(sourceLoadingDashboard({
+        [sourceId]: {
+          kind: "geojson",
+          path: `data/regions-${fixtureIndex}.geojson`,
+          provenance: { label: "Malformed fixture" },
+        },
+      }), {});
+
+      assert.equal(loaded.contentLibrary.sourceEntries[sourceId].sourceId, sourceId);
+      assert.equal(loaded.contentLibrary.sourceEntries[sourceId].health, "ready");
+      assert.deepEqual(loaded.dataSourceStates[sourceId], {
+        status: "error",
+        code: "source-load-failed",
+      });
+      assert.equal(Object.hasOwn(loaded.loadedData, sourceId), false);
+      assert.deepEqual(loaded.runtimeContentHealth.sourceEntries[sourceId], {
+        health: "corrupt",
+        repair: { action: "replace" },
+      });
     }
   } finally {
     globalThis.fetch = originalFetch;

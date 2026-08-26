@@ -91,6 +91,13 @@ export function clearStagedGeoJsonSelection(wizard, sourceId) {
   return next;
 }
 
+export function shouldCommitActiveGeoDraft(activeGeoDraft, selectedGeoSourceId) {
+  return Boolean(
+    selectedGeoSourceId
+    && activeGeoDraft?.candidate?.sourceId === selectedGeoSourceId
+  );
+}
+
 export function createChartCsvDraftLifecycle({
   stageDraft,
   updateDraft,
@@ -1033,7 +1040,7 @@ export default function ChartWizardV3({
           persist: async (payload, reviewedPlacement) => {
             const activeGeoDraft = geoDraftRef.current;
             const selectedGeoSourceId = finalized.chart.presentation?.map?.geoSource;
-            if (activeGeoDraft?.candidate?.sourceId === selectedGeoSourceId) {
+            if (shouldCommitActiveGeoDraft(activeGeoDraft, selectedGeoSourceId)) {
               if (typeof onContentDraftCommit !== "function") {
                 throw new Error("Chart GeoJSON commit authority is unavailable.");
               }
