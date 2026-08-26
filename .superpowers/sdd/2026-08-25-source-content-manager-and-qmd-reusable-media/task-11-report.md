@@ -12,12 +12,14 @@ The exact five-file selection first failed because `src/content-library/csvRepla
 
 Review correction T11-R01 added a second focused RED: a candidate with changed directly-used temporal observations incorrectly returned `ready` and committed, while the mounted dialog disabled Replace without exposing why. The paired tests failed with actual status `ready` and missing `data-replacement-reason="requires-temporal-review"`.
 
+The bounded follow-up RED exercised the effective binding authority: an observation binding with no explicit `interpretation` but a current-profile column typed `temporal` still returned `ready`. The expected result was the same non-committable `requires-temporal-review` state, with the dashboard unchanged.
+
 ## Minimal implementation
 
 - `prepareCsvReplacement` parses/injects a candidate, validates descriptor/profile safety and every directly dependent primary-source chart, snapshots current authority, and returns typed immutable block/ready plans plus Page › Section › Panel remap targets.
 - `commitCsvReplacement` uses the existing content-draft coordinator transaction lifetime and atomic dashboard publication. Replace preserves `sourceId`; incompatible Import as new publishes a distinct ID without silently remapping the original; persistence failure rolls back.
 - `validateChartDataCompatibility` is the live chart-data structural falsifier used by the transaction. Map charts validate their primary CSV while retaining `presentation.map.geoSource` unchanged.
-- Task 11 now compares the unique directly-used temporal observation series against current loaded rows. A changed series returns typed, non-structural `requires-temporal-review`; Replace and Import are unavailable and `commitCsvReplacement` rejects publication. It does not calculate impact contexts, warning confirmation, or `temporalReview` metadata; Task 12 remains the sole owner of those behaviors.
+- Task 11 now compares the unique directly-used temporal observation series against current loaded rows. Temporal authority comes from either an explicit temporal interpretation or an observation field whose current profile column is temporal; an explicit non-temporal interpretation remains authoritative. A changed series returns typed, non-structural `requires-temporal-review`; Replace and Import are unavailable and `commitCsvReplacement` rejects publication. It does not calculate impact contexts, warning confirmation, or `temporalReview` metadata; Task 12 remains the sole owner of those behaviors.
 - The existing manager detail/dialog owns file choice, typed reason, Cancel/focus return, Import as new, and guided remap. The imported plan retains its remap targets after publication.
 
 ## Technical rulings
@@ -30,10 +32,11 @@ Review correction T11-R01 added a second focused RED: a candidate with changed d
 
 - Exact deterministic command:
   `node --test tests/csvReplacementTransaction.test.js tests/contentActionDialog.test.js tests/contentDependencyGraph.test.js tests/chartConfigV3.test.js tests/chartRenderingV3.test.js`
-- Result after T11-R01: **69/69 passing**, zero fail/skip/todo.
+- Result after the bounded T11-R01 follow-up: **70/70 passing**, zero fail/skip/todo. This includes explicit temporal bindings, profile-inferred temporal observation bindings, and genuinely non-temporal measure-only replacements.
 - Exact browser command:
   `pnpm.cmd test:e2e tests/e2e/source-content-csv.spec.js --project=chromium --grep "Journey E — incompatible CSV replacement blocks and imports as new"`
 - Result: **1/1 passing** in Chromium.
+- Journey E was not rerun for the profile-inference follow-up: the change is confined to the transaction engine's classification of an omitted-interpretation observation binding and reuses the already-mounted typed plan state; no UI or browser path changed. The retained inspected Journey E result remains the representative structural-incompatibility journey.
 - Inspected 1440×900 facts: live map canvas present; typed `missing-encoding-column`; original descriptor/profile/chart/render/GeoJSON equality after block and Cancel; trigger focus restored; Import as new creates one distinct source; original stays unchanged; guided target closes the auxiliary and selects the affected panel.
 - Inspected 1024×768 facts: same typed block and Cancel equality; trigger focus restored; source/profile/chart/GeoJSON and post-close render continuity; manager `scrollWidth <= clientWidth`.
 

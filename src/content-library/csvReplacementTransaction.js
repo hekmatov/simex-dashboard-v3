@@ -71,7 +71,7 @@ export async function prepareCsvReplacement({
     panelLabel: placement.title ?? chart.title ?? placement.id ?? chart.id,
   }));
   const temporalReviewReason = reasons.length === 0
-    ? changedTemporalObservationReason(directCharts, previous.loadedData?.[id], normalized.rows)
+    ? changedTemporalObservationReason(directCharts, previous.loadedData?.[id], normalized.rows, currentProfile)
     : null;
   const plan = {
     kind: "csv-replacement",
@@ -221,9 +221,12 @@ function configuredCharts(dashboard) {
   return values;
 }
 
-function changedTemporalObservationReason(directCharts, currentRows, candidateRows) {
+function changedTemporalObservationReason(directCharts, currentRows, candidateRows, currentProfile) {
   const fields = new Set();
-  for (const { chart } of directCharts) collectTemporalFields(chart.roles, fields);
+  const profiledTemporalFields = new Set((currentProfile?.columns ?? [])
+    .filter(({ type }) => type === "temporal")
+    .map(({ name }) => name));
+  for (const { chart } of directCharts) collectTemporalFields(chart.roles, fields, profiledTemporalFields);
   if (fields.size === 0) return null;
   const changedFields = [...fields].filter((field) => (
     !Array.isArray(currentRows)
@@ -238,14 +241,23 @@ function changedTemporalObservationReason(directCharts, currentRows, candidateRo
   };
 }
 
-function collectTemporalFields(value, fields) {
+function collectTemporalFields(value, fields, profiledTemporalFields, roleName = "") {
   if (Array.isArray(value)) {
-    for (const item of value) collectTemporalFields(item, fields);
+    for (const item of value) collectTemporalFields(item, fields, profiledTemporalFields, roleName);
     return;
   }
   if (!value || typeof value !== "object") return;
-  if (value.interpretation === "temporal" && typeof value.field === "string" && value.field) fields.add(value.field);
-  for (const child of Object.values(value)) collectTemporalFields(child, fields);
+  if (
+    typeof value.field === "string"
+    && value.field
+    && (
+      value.interpretation === "temporal"
+      || (roleName === "observation" && value.interpretation == null && profiledTemporalFields.has(value.field))
+    )
+  ) fields.add(value.field);
+  for (const [childRoleName, child] of Object.entries(value)) {
+    collectTemporalFields(child, fields, profiledTemporalFields, childRoleName);
+  }
 }
 
 function temporalObservationSeries(rows, field) {

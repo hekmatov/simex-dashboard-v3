@@ -158,6 +158,23 @@ test("changed directly-used temporal observations require Task 12 review and can
   await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "task-12-deferred" });
 });
 
+test("field-only observation bindings inherit temporal authority from the current profile", async () => {
+  const harness = replacementHarness({ implicitTemporalObservation: true });
+  const before = structuredClone(harness.dashboard);
+  const plan = await preparePlan(harness.dashboard, CHANGED_TEMPORAL_ROWS);
+
+  assert.equal(harness.dashboard.pages[0].sections[0].panels[0].roles.observation.interpretation, undefined);
+  assert.equal(harness.dashboard.datasetProfiles.cases.columns.find(({ name }) => name === "date").type, "temporal");
+  assert.equal(plan.status, "requires-temporal-review");
+  assert.deepEqual(plan.reason.fields, ["date"]);
+  harness.coordinator.stageDraft(plan.draft);
+  await assert.rejects(commitCsvReplacement(plan, {
+    contentDraftCoordinator: harness.coordinator,
+  }), /temporal review/i);
+  assert.deepEqual(harness.dashboard, before);
+  await harness.coordinator.discardDraft(plan.draft.draftId, { reason: "task-12-deferred" });
+});
+
 test("injected persistence failure rolls back descriptor, profile, entry, rows, and retainers", async () => {
   const harness = replacementHarness({ failCommit: true });
   const before = structuredClone(harness.dashboard);
@@ -186,11 +203,16 @@ async function preparePlan(dashboard, rows) {
   });
 }
 
-function replacementDashboard() {
+function replacementDashboard({ implicitTemporalObservation = false } = {}) {
   const profile = profileDataset(ORIGINAL_ROWS);
   const line = createChartDraft("line", {
     id: "cases-trend", title: "Cases trend", sourceId: "cases",
-    roles: { measurements: [{ field: "cases", axis: "primary" }], observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" } },
+    roles: {
+      measurements: [{ field: "cases", axis: "primary" }],
+      observation: implicitTemporalObservation
+        ? { field: "date" }
+        : { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+    },
   });
   const map = createChartDraft("choroplethMap", {
     id: "cases-map", title: "Cases map", sourceId: "cases",
@@ -216,8 +238,8 @@ function replacementDashboard() {
   });
 }
 
-function replacementHarness({ failCommit = false } = {}) {
-  let dashboard = replacementDashboard();
+function replacementHarness({ failCommit = false, implicitTemporalObservation = false } = {}) {
+  let dashboard = replacementDashboard({ implicitTemporalObservation });
   let failed = false;
   const commits = [];
   const coordinator = createContentDraftCoordinator({
