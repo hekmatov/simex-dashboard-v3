@@ -10,6 +10,10 @@ export async function commitDashboardPackageImport({
   rollbackAsset = async () => {},
   commitAsset = async () => {},
   commitAssets = null,
+  snapshotAssets = null,
+  restoreAssets = null,
+  snapshotDashboard = null,
+  restoreDashboard = null,
   replace,
   rebase,
   transactionId = createImportTransactionId(),
@@ -22,6 +26,17 @@ export async function commitDashboardPackageImport({
   if (payloadEntries.length > 1 && typeof commitAssets !== "function") {
     throw new Error("Dashboard package import requires an atomic authored asset commit boundary.");
   }
+  if (payloadEntries.length > 0 && (
+    typeof snapshotAssets !== "function"
+    || typeof restoreAssets !== "function"
+    || typeof snapshotDashboard !== "function"
+    || typeof restoreDashboard !== "function"
+  )) {
+    throw new Error("Dashboard package import requires compensatable asset and dashboard boundaries.");
+  }
+  const assetIds = payloadEntries.map(([assetId]) => assetId);
+  const assetSnapshot = payloadEntries.length > 0 ? await snapshotAssets(assetIds) : null;
+  const previousDashboard = payloadEntries.length > 0 ? await snapshotDashboard() : null;
   const stagedAssetIds = [];
   try {
     for (const [assetId, payload] of payloadEntries) {
@@ -50,17 +65,17 @@ export async function commitDashboardPackageImport({
       await preflightAsset(assetId, { transactionId });
     }
   } catch (error) {
-    await rollbackStagedAssets(stagedAssetIds, rollbackAsset, transactionId);
+    await compensateAssetsOrThrow({
+      error,
+      stagedAssetIds,
+      rollbackAsset,
+      restoreAssets,
+      assetSnapshot,
+      transactionId,
+    });
     throw error;
   }
 
-  let committed;
-  try {
-    committed = await replace(candidate.config);
-  } catch (error) {
-    await rollbackStagedAssets(stagedAssetIds, rollbackAsset, transactionId);
-    throw error;
-  }
   try {
     if (typeof commitAssets === "function") {
       await commitAssets(stagedAssetIds, { transactionId });
@@ -69,32 +84,87 @@ export async function commitDashboardPackageImport({
         await commitAsset(assetId, { transactionId });
       }
     }
+  } catch (error) {
+    await compensateAssetsOrThrow({
+      error,
+      stagedAssetIds,
+      rollbackAsset,
+      restoreAssets,
+      assetSnapshot,
+      transactionId,
+    });
+    throw error;
+  }
+
+  let committed;
+  try {
+    committed = await replace(candidate.config);
     rebase(committed);
   } catch (error) {
-    try {
-      rebase(committed);
-    } catch {
-      // The persisted dashboard remains authoritative even if UI rebasing also fails.
+    const restorationFailures = [];
+    if (payloadEntries.length > 0) {
+      try {
+        const restored = await restoreDashboard(previousDashboard);
+        if (committed !== undefined) rebase(restored ?? previousDashboard);
+      } catch (restoreError) {
+        restorationFailures.push(restoreError);
+      }
     }
-    throw dashboardCommittedError(error, committed);
+    try {
+      await compensateAssetsOrThrow({
+        error,
+        stagedAssetIds,
+        rollbackAsset,
+        restoreAssets,
+        assetSnapshot,
+        transactionId,
+      });
+    } catch (restoreError) {
+      restorationFailures.push(restoreError);
+    }
+    if (restorationFailures.length > 0) {
+      throw new AggregateError(
+        [error, ...restorationFailures],
+        "Dashboard package import could not restore the prior dashboard and authored asset store.",
+      );
+    }
+    throw error;
   }
   return committed;
 }
 
-function dashboardCommittedError(error, committed) {
-  const wrapped = new Error(
-    error?.message || "Dashboard replacement committed, but authored assets remain staged for recovery.",
-    { cause: error },
-  );
-  wrapped.code = error?.code ?? "AUTHORED_ASSET_COMMIT_RECOVERY_REQUIRED";
-  wrapped.dashboardCommitted = true;
-  wrapped.committedDashboard = structuredClone(committed);
-  return wrapped;
+async function compensateAssetsOrThrow({
+  error,
+  stagedAssetIds,
+  rollbackAsset,
+  restoreAssets,
+  assetSnapshot,
+  transactionId,
+}) {
+  const failures = [];
+  await rollbackStagedAssets(stagedAssetIds, rollbackAsset, transactionId, failures);
+  if (typeof restoreAssets === "function") {
+    try {
+      await restoreAssets(assetSnapshot);
+    } catch (restoreError) {
+      failures.push(restoreError);
+    }
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(
+      [error, ...failures],
+      "Dashboard package import could not restore the prior authored asset store.",
+    );
+  }
 }
 
-async function rollbackStagedAssets(assetIds, rollbackAsset, transactionId) {
+async function rollbackStagedAssets(assetIds, rollbackAsset, transactionId, failures = []) {
   for (const assetId of [...assetIds].reverse()) {
-    await rollbackAsset(assetId, { transactionId });
+    try {
+      await rollbackAsset(assetId, { transactionId });
+    } catch (error) {
+      failures.push(error);
+    }
   }
 }
 

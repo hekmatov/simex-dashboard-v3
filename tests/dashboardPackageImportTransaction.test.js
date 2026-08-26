@@ -129,11 +129,12 @@ test("preparation and replacement failures preserve the candidate and current re
   assert.equal(rendererDrafts.sectionDrafts.shared_section.title, "Uncommitted current Section");
 });
 
-test("import stages every verified authored payload before one replacement and commits afterward", async () => {
+test("import stages and atomically commits every verified authored payload before one dashboard replacement", async () => {
   const events = [];
   const candidate = importCandidate();
   const committed = await commitDashboardPackageImport({
     candidate,
+    ...compensationBoundary(),
     prepare: async () => { events.push("prepare"); },
     stageAsset: async (input) => {
       events.push(`stage:${input.assetId}`);
@@ -155,17 +156,18 @@ test("import stages every verified authored payload before one replacement and c
   assert.deepEqual(events, [
     "prepare",
     "stage:asset-local",
-    "replace",
     "commit:asset-local",
+    "replace",
     "rebase",
   ]);
 });
 
-test("asset staging or replacement failure rolls back staged bytes and never partially rebases", async () => {
+test("asset staging failure rolls back staged bytes and never replaces or rebases", async () => {
   const candidate = importCandidate();
   const events = [];
   await assert.rejects(commitDashboardPackageImport({
     candidate,
+    ...compensationBoundary(),
     prepare: async () => { events.push("prepare"); },
     stageAsset: async (input) => {
       events.push(`stage:${input.assetId}`);
@@ -178,29 +180,61 @@ test("asset staging or replacement failure rolls back staged bytes and never par
     transactionId: "import-quota",
   }), /storage full/);
   assert.deepEqual(events, ["prepare", "stage:asset-local"]);
+});
 
-  events.length = 0;
+test("dashboard replacement failure restores the exact prior dashboard and asset store", async () => {
+  const candidate = importCandidate();
+  const events = [];
+  let current = dashboard({ programLabel: "Prior" });
+  const assets = new Map();
+  const priorAssets = new Map(assets);
+
   await assert.rejects(commitDashboardPackageImport({
     candidate,
     prepare: async () => { events.push("prepare"); },
+    snapshotAssets: async () => new Map(assets),
+    restoreAssets: async (snapshot) => {
+      events.push("restore-assets");
+      assets.clear();
+      for (const [assetId, record] of snapshot) assets.set(assetId, structuredClone(record));
+    },
+    snapshotDashboard: async () => structuredClone(current),
+    restoreDashboard: async (dashboardValue) => {
+      events.push("restore-dashboard");
+      current = structuredClone(dashboardValue);
+      return current;
+    },
     stageAsset: async (input) => {
       events.push(`stage:${input.assetId}`);
+      assets.set(input.assetId, { status: "staged", transactionId: "import-replace" });
       return { assetId: input.assetId };
     },
-    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
-    commitAsset: async () => { events.push("commit"); },
-    replace: async () => {
+    rollbackAsset: async (assetId) => {
+      events.push(`rollback:${assetId}`);
+      assets.delete(assetId);
+    },
+    commitAssets: async (assetIds) => {
+      events.push(`commit-many:${assetIds.join(",")}`);
+      for (const assetId of assetIds) assets.set(assetId, { status: "durable" });
+    },
+    replace: async (config) => {
       events.push("replace");
+      current = structuredClone(config);
       throw new Error("replacement persistence failed");
     },
     rebase: () => { events.push("rebase"); },
     transactionId: "import-replace",
   }), /replacement persistence failed/);
+  assert.equal(current.programLabel, "Prior");
+  assert.deepEqual(assets, priorAssets);
   assert.deepEqual(events, [
     "prepare",
     "stage:asset-local",
+    "commit-many:asset-local",
     "replace",
+    "restore-dashboard",
     "rollback:asset-local",
+    "restore-assets",
   ]);
 });
 
@@ -208,6 +242,7 @@ test("invalid imported raster bytes abort before asset staging or dashboard repl
   const events = [];
   await assert.rejects(commitDashboardPackageImport({
     candidate: importCandidate(),
+    ...compensationBoundary(),
     prepare: async () => { events.push("prepare"); },
     validateAsset: async () => {
       events.push("validate");
@@ -220,20 +255,38 @@ test("invalid imported raster bytes abort before asset staging or dashboard repl
   assert.deepEqual(events, ["prepare", "validate"]);
 });
 
-test("import preflights staged bytes before replacement and journals an atomic commit failure", async () => {
+test("asset commit failure restores the exact prior dashboard and asset store without recovery state", async () => {
   const events = [];
   let current = dashboard({ programLabel: "Prior" });
   const candidate = importCandidate();
+  const assets = new Map();
+  const priorAssets = new Map(assets);
 
   await assert.rejects(commitDashboardPackageImport({
     candidate,
     prepare: async () => { events.push("prepare"); },
+    snapshotAssets: async () => new Map(assets),
+    restoreAssets: async (snapshot) => {
+      events.push("restore-assets");
+      assets.clear();
+      for (const [assetId, record] of snapshot) assets.set(assetId, structuredClone(record));
+    },
+    snapshotDashboard: async () => structuredClone(current),
+    restoreDashboard: async (dashboardValue) => {
+      events.push("restore-dashboard");
+      current = structuredClone(dashboardValue);
+      return current;
+    },
     stageAsset: async (input) => {
       events.push(`stage:${input.assetId}`);
+      assets.set(input.assetId, { status: "staged", transactionId: "import-commit-failure" });
       return { assetId: input.assetId };
     },
     preflightAsset: async (assetId) => { events.push(`preflight:${assetId}`); },
-    rollbackAsset: async (assetId) => { events.push(`rollback:${assetId}`); },
+    rollbackAsset: async (assetId) => {
+      events.push(`rollback:${assetId}`);
+      assets.delete(assetId);
+    },
     replace: async (config) => {
       events.push("replace");
       current = structuredClone(config);
@@ -241,27 +294,22 @@ test("import preflights staged bytes before replacement and journals an atomic c
     },
     commitAssets: async (assetIds) => {
       events.push(`commit-many:${assetIds.join(",")}`);
+      for (const assetId of assetIds) assets.set(assetId, { status: "durable" });
       throw new Error("injected atomic asset commit failure");
     },
-    rebase: (committed) => {
-      events.push("rebase-recovery");
-      current = structuredClone(committed);
-    },
+    rebase: () => { events.push("rebase"); },
     transactionId: "import-commit-failure",
-  }), (error) => {
-    assert.match(error.message, /atomic asset commit failure/);
-    assert.equal(error.dashboardCommitted, true);
-    return true;
-  });
+  }), /atomic asset commit failure/);
 
-  assert.equal(current.programLabel, "Imported");
+  assert.equal(current.programLabel, "Prior");
+  assert.deepEqual(assets, priorAssets);
   assert.deepEqual(events, [
     "prepare",
     "stage:asset-local",
     "preflight:asset-local",
-    "replace",
     "commit-many:asset-local",
-    "rebase-recovery",
+    "rollback:asset-local",
+    "restore-assets",
   ]);
 });
 
@@ -270,6 +318,7 @@ test("import preflight failure rolls back staging and preserves the prior dashbo
   let current = dashboard({ programLabel: "Prior" });
   await assert.rejects(commitDashboardPackageImport({
     candidate: importCandidate(),
+    ...compensationBoundary(),
     prepare: async () => { events.push("prepare"); },
     stageAsset: async (input) => {
       events.push(`stage:${input.assetId}`);
@@ -392,6 +441,28 @@ function importCandidate() {
         mediaType: "image/png",
         sha256: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
       },
+    },
+  };
+}
+
+function compensationBoundary() {
+  let current = dashboard({ programLabel: "Prior" });
+  const assets = new Map();
+  return {
+    snapshotAssets: async (assetIds) => new Map(assetIds.map((assetId) => [
+      assetId,
+      assets.has(assetId) ? structuredClone(assets.get(assetId)) : null,
+    ])),
+    restoreAssets: async (snapshot) => {
+      for (const [assetId, record] of snapshot) {
+        if (record === null) assets.delete(assetId);
+        else assets.set(assetId, structuredClone(record));
+      }
+    },
+    snapshotDashboard: async () => structuredClone(current),
+    restoreDashboard: async (dashboardValue) => {
+      current = structuredClone(dashboardValue);
+      return current;
     },
   };
 }

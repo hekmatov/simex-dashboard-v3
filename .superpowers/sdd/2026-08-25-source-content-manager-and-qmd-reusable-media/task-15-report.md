@@ -44,3 +44,13 @@ The focused contract failed on the absent `contentPackageValidation.js`. The new
 - **SCM-R07:** Passing for the named bounded Journey G acceptance.
 - **Residual:** PS-04 cold generated-client launch, deferred unchanged to Task 17 pre-merge.
 - **Out of scope:** Task 16 health/repair/cleanup, build/`dist`, full and release suites.
+
+## Scoped review correction
+
+- **R15-01 resolved:** import now snapshots the exact prior asset records and dashboard after preparation, stages/preflights every payload, commits assets atomically before dashboard replacement, and compensates every transaction asset plus the prior dashboard on asset-commit, replacement, or rebase failure. The recovery-required `dashboardCommitted` partial-success contract and its institutionalizing test were removed.
+- The live App uses the existing `browserAuthoredAssetStore.snapshot/restore` atomic adapter and serialized dashboard controller `getCurrent`/durable replacement boundary; no second store or persistence owner was added.
+- Focused import RED was **7/10** and GREEN is **10/10**. Asset-commit and dashboard-replacement injections both leave the exact prior dashboard, exact prior asset Map, and no staged import records.
+- **R15-02 resolved:** `imageAssetValidation.js` now exports `inspectRasterMetadata`, a thin public wrapper over its existing private structural PNG/JPEG/WebP parser. Package validation compares intrinsic MIME and dimensions with payload, manifest, and MediaItem metadata, while the existing animation inspector retains frame policy.
+- Focused raster/package RED rejected neither a PNG self-declared as JPEG nor forged 8×6 metadata and lacked the exported inspector. GREEN is **20/20**, including the existing valid PNG/JPEG/WebP fixture loop plus both new rejection cases.
+- Final corrected nine-file selection: **53/54**, with PS-04 the sole failure after successfully launching the copied package; no fail/skip/todo exists in the 53 live-source/product cases. No build or `dist` edit was made.
+- Final corrected Journey G: **1/1 passing**, 1.3 m test / 1.4 m total, retaining the same bounded online-load→offline acceptance and zero subsequent HTTP requests.

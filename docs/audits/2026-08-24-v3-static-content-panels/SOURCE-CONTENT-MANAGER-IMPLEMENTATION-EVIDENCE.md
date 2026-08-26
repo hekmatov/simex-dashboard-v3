@@ -395,3 +395,11 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - No Task 16 health, repair, cleanup, new hardening, build, generated `dist`, full suite, or release suite is included.
 - The sole residual is the already-recorded PS-04 cold generated-client condition assigned to Task 17 pre-merge reporting.
+
+### Task 15 scoped review correction
+
+- R15-01 removed the package import's recovery-required partial-success state. Existing exact asset snapshots/restores and the serialized dashboard controller now provide one compensatable sequence: prepare → snapshot → stage/preflight → atomic asset commit → dashboard replace/rebase. Asset-commit failure leaves the dashboard untouched; replace/rebase failure durably restores the prior dashboard; every path rolls back all transaction assets and restores exact prior asset records.
+- Focused transaction RED **7/10** → GREEN **10/10**. Injected asset-commit and dashboard-replacement failures each prove exact prior dashboard/store equality and empty import staging; no `dashboardCommitted` marker or recovery journal remains.
+- R15-02 exports the existing structural raster inspector instead of adding a parser. V5 package validation now binds intrinsic signature MIME and dimensions to payload/manifest/MediaItem declarations before mutation and retains the existing APNG/animated-WebP checks.
+- Focused package/raster GREEN is **20/20**, covering valid PNG/JPEG/WebP structural metadata, arbitrary PNG bytes self-declared as JPEG, forged dimensions, corruption, and animation.
+- Corrected final Task 15 selection is **53/54** with PS-04 alone; corrected Journey G is **1/1 passing** at 1.3 m test / 1.4 m total. The original cold generated-client deferral and no-build/no-`dist` boundary are unchanged.

@@ -8,7 +8,10 @@ import {
   decodeAssetBase64,
   sha256HexSync,
 } from "../static-content/assets/assetPayloadEnvelope.js";
-import { inspectImageAnimation } from "../static-content/image/imageAssetValidation.js";
+import {
+  inspectImageAnimation,
+  inspectRasterMetadata,
+} from "../static-content/image/imageAssetValidation.js";
 import { parsePortableQmdWithMedia } from "../static-content/qmd/portableQmdMedia.js";
 
 const GEOJSON_SUMMARY_KEYS = Object.freeze([
@@ -43,7 +46,7 @@ export function validateContentPackage(input) {
     }
     if (item.current.kind === "asset") {
       referencedAssetIds.add(item.current.assetId);
-      validateAssetPayload(mediaId, item.current.assetId, assets, assetPayloads);
+      validateAssetPayload(mediaId, item, assets, assetPayloads);
     }
   }
 
@@ -101,7 +104,8 @@ function validateQmdReferences(config) {
   }
 }
 
-function validateAssetPayload(mediaId, assetId, assets, payloads) {
+function validateAssetPayload(mediaId, item, assets, payloads) {
+  const assetId = item.current.assetId;
   const manifest = assets[assetId];
   if (!manifest || manifest.storageState !== "durable") {
     throw new Error(`Local media item "${mediaId}" is missing a durable authored asset manifest.`);
@@ -114,17 +118,30 @@ function validateAssetPayload(mediaId, assetId, assets, payloads) {
   if (
     payload.byteLength !== bytes.byteLength
     || payload.byteLength !== manifest.byteLength
+    || payload.byteLength !== item.byteLength
     || payload.mediaType !== manifest.mediaType
+    || payload.mediaType !== item.mediaType
     || payload.sha256 !== manifest.sha256
     || sha256HexSync(bytes) !== manifest.sha256
   ) {
     throw new Error(`Authored asset payload "${assetId}" hash, byte length, or media type does not match its manifest.`);
   }
+  let intrinsic;
   let animation;
   try {
-    animation = inspectImageAnimation(bytes, payload.mediaType);
+    intrinsic = inspectRasterMetadata(bytes);
+    animation = inspectImageAnimation(bytes, intrinsic.mediaType);
   } catch (cause) {
     throw new Error(`Authored asset payload "${assetId}" does not match its declared raster media type.`, { cause });
+  }
+  if (
+    intrinsic.mediaType !== payload.mediaType
+    || intrinsic.width !== manifest.width
+    || intrinsic.height !== manifest.height
+    || intrinsic.width !== item.dimensions?.width
+    || intrinsic.height !== item.dimensions?.height
+  ) {
+    throw new Error(`Authored asset payload "${assetId}" intrinsic media type or dimensions do not match its manifest and media item.`);
   }
   if (animation.animated) {
     throw new Error(`Authored asset payload "${assetId}" must be a single-frame image.`);

@@ -48,6 +48,34 @@ test("package validation rejects animated authored media before import mutation"
   );
 });
 
+test("package validation rejects arbitrary bytes self-declared as JPEG", () => {
+  const input = completePackage();
+  input.config.assets[ASSET_ID].mediaType = "image/jpeg";
+  input.assetPayloads[ASSET_ID].mediaType = "image/jpeg";
+  for (const item of Object.values(input.config.contentLibrary.mediaItems)) {
+    item.mediaType = "image/jpeg";
+  }
+
+  assert.throws(
+    () => validateContentPackage(input),
+    /signature|intrinsic|media type|declared raster/i,
+  );
+});
+
+test("package validation rejects forged manifest and media-item dimensions", () => {
+  const input = completePackage();
+  input.config.assets[ASSET_ID].width = 8;
+  input.config.assets[ASSET_ID].height = 6;
+  for (const item of Object.values(input.config.contentLibrary.mediaItems)) {
+    item.dimensions = { width: 8, height: 6 };
+  }
+
+  assert.throws(
+    () => validateContentPackage(input),
+    /dimension|intrinsic/i,
+  );
+});
+
 test("package validation requires logical records for builder-managed sources and CSV-only profiles", () => {
   const missingEntry = completePackage();
   delete missingEntry.config.contentLibrary.sourceEntries.boundaries;

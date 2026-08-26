@@ -1145,6 +1145,10 @@ export default function App() {
         preflightAsset: (assetId) => browserAuthoredAssetStore.verify(assetId),
         rollbackAsset: (assetId, options) => browserAuthoredAssetStore.rollback(assetId, options),
         commitAssets: (assetIds, options) => browserAuthoredAssetStore.commitMany(assetIds, options),
+        snapshotAssets: (assetIds) => browserAuthoredAssetStore.snapshot(assetIds),
+        restoreAssets: (snapshot) => browserAuthoredAssetStore.restore(snapshot),
+        snapshotDashboard: () => ensureDashboardCommitController().getCurrent(),
+        restoreDashboard: commitImportedConfiguration,
         rebase: (importedDashboard) => {
           dashboardRendererRef.current?.resetAfterPackageImport?.(importedDashboard);
         },

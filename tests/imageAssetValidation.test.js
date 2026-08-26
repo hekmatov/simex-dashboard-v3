@@ -6,6 +6,7 @@ import {
   authoredAssetManifestBytes,
   discardSessionImageAsset,
   inspectImageAnimation,
+  inspectRasterMetadata,
   readSessionImageAssetBytes,
   resolveSessionImageAsset,
   stageSessionImageAsset,
@@ -67,6 +68,10 @@ test("genuinely decodable single-frame PNG, JPEG, and WebP require the decoder b
     { bytes: imageFixtureBytes("image/webp"), mediaType: "image/webp" },
   ];
   for (const fixture of fixtures) {
+    assert.deepEqual(inspectRasterMetadata(fixture.bytes), {
+      mediaType: fixture.mediaType,
+      ...IMAGE_FIXTURE_DIMENSIONS,
+    });
     const result = await validateImageAsset({
       ...fixture,
       declaredMediaType: fixture.mediaType,

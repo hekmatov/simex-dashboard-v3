@@ -311,6 +311,10 @@ export function inspectImageAnimation(bytesInput, mediaType) {
   return { animated: false, frameCount: 1, kind: "single-frame" };
 }
 
+export function inspectRasterMetadata(bytesInput) {
+  return inspectRaster(asUint8Array(bytesInput));
+}
+
 export function validateImageOrigin(origin) {
   if (!origin || typeof origin !== "object" || Array.isArray(origin)) {
     throw new TypeError("Image origin must be an object.");
