@@ -65,8 +65,14 @@ export function prepareStaticPanelTransaction({
     ? candidateDashboard.dataSources?.[previousPlacement.panel.sourceId]
     : undefined;
   const previousSourceId = previousPlacement?.panel?.sourceId ?? null;
-  const committedPlacement = normalizeStaticSource(placement);
-  const isImage = committedPlacement.kind === "staticImage";
+  const normalizedPlacement = normalizeStaticSource(placement);
+  const isImage = normalizedPlacement.kind === "staticImage";
+  const committedPlacement = isImage
+    ? normalizedPlacement
+    : {
+        ...normalizedPlacement,
+        revision: nextStaticSourceRevision(existingPlacement, normalizedPlacement),
+      };
   const previousMediaItem = isImage
     ? previousDashboard.contentLibrary?.mediaItems?.[committedPlacement.mediaId]
     : null;

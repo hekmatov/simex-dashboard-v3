@@ -36,6 +36,42 @@ test("existing edit preserves media identity and expected current revision", () 
   assert.equal(prepared.candidateDashboard.contentLibrary.mediaItems["media-image-source"].revision, 3);
 });
 
+test("Free-text transaction increments revision only when saved content changes", () => {
+  const panel = {
+    ...makeDashboardV5().pages[0].sections[0].panels[0].chart,
+    id: "text-panel",
+    typeId: "freeText",
+    title: "Brief",
+    sourceId: "text-source",
+  };
+  const created = prepareStaticPanelTransaction({
+    dashboard: emptyDashboard(),
+    operation: "create",
+    destination: { pageId: "overview", sectionId: "response" },
+    panel,
+    placement: { kind: "staticText", qmd: "Initial brief" },
+  });
+  assert.equal(created.candidateDashboard.dataSources["text-source"].revision, 1);
+
+  const updated = prepareStaticPanelTransaction({
+    dashboard: created.candidateDashboard,
+    operation: "update",
+    panelId: "text-panel",
+    panel,
+    placement: { kind: "staticText", qmd: "Updated brief" },
+  });
+  assert.equal(updated.candidateDashboard.dataSources["text-source"].revision, 2);
+
+  const unchanged = prepareStaticPanelTransaction({
+    dashboard: updated.candidateDashboard,
+    operation: "update",
+    panelId: "text-panel",
+    panel,
+    placement: { kind: "staticText", qmd: "Updated brief" },
+  });
+  assert.equal(unchanged.candidateDashboard.dataSources["text-source"].revision, 2);
+});
+
 test("validation failure leaves the previous V5 dashboard and staged input exact", () => {
   const dashboard = emptyDashboard();
   const prior = structuredClone(dashboard);
