@@ -410,30 +410,28 @@ for (const dismissal of ["Escape", "backdrop"]) {
   });
 }
 
-test("failed chart removal reports inside its confirmation and clears on dismissal", async ({ page }) => {
+test("chart removal preserves session work when browser storage is full", async ({ page }) => {
   test.setTimeout(120_000);
   await openFirstChartEditor(page);
+  const removedPanelId = await page.locator(".chart-panel").first()
+    .getAttribute("data-panel-id");
+  const durableBefore = await storedDashboard(page);
   await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
   const confirmation = page.getByRole("dialog", { name: "Remove this chart?" });
   await expect(confirmation).toBeVisible();
 
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
   await confirmation.getByRole("button", { name: "Remove chart" }).click();
-  await expect(confirmation).toBeVisible();
-  await expect(page.locator(".chart-editor-v3")).toBeVisible();
-  await expect(confirmation.getByRole("alert"))
-    .toContainText("Browser storage is full");
-
-  await confirmation.getByRole("button", { name: "Keep chart" }).click();
-  await expect(confirmation).toBeHidden();
-  await expect(page.locator(".confirm-dialog [role=alert]")).toHaveCount(0);
-
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Remove chart" }).click();
-  await page.getByRole("dialog", { name: "Remove this chart?" })
-    .getByRole("button", { name: "Remove chart" }).click();
   await expect(confirmation).toBeHidden();
   await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
+    .toBeVisible();
+  await expect(page.locator(`[data-panel-id="${removedPanelId}"]`)).toHaveCount(0);
+
+  const durable = await storedDashboard(page);
+  expect(durable).toEqual(durableBefore);
+
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
 });
 
 test("non-quota chart removal failure remains local and retryable", async ({ page }) => {
