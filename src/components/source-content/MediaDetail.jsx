@@ -1,5 +1,9 @@
 import React from "react";
+import { commitMediaReplacement, prepareMediaReplacement } from "../../content-library/contentReplacementTransaction.js";
+import { browserAuthoredAssetStore } from "../../static-content/assets/browserAuthoredAssetRuntime.js";
+import { discardSessionImageAsset } from "../../static-content/image/imageAssetValidation.js";
 import DependencyList from "./DependencyList.jsx";
+import ContentActionDialog from "./ContentActionDialog.jsx";
 import { ManagerMediaIntake } from "./MediaCatalogue.jsx";
 
 export default function MediaDetail({
@@ -13,10 +17,82 @@ export default function MediaDetail({
 }) {
   const [displayName, setDisplayName] = React.useState(item.record.displayName);
   const [defaultDescription, setDefaultDescription] = React.useState(item.record.defaultDescription);
+  const [replaceOpen, setReplaceOpen] = React.useState(false);
+  const [replacementPlan, setReplacementPlan] = React.useState(null);
+  const [replacementLabel, setReplacementLabel] = React.useState("");
+  const [replacementBusy, setReplacementBusy] = React.useState(false);
+  const [replacementError, setReplacementError] = React.useState("");
+  const [replacementStatus, setReplacementStatus] = React.useState("");
   React.useEffect(() => {
     setDisplayName(item.record.displayName);
     setDefaultDescription(item.record.defaultDescription);
   }, [item.id, item.record.defaultDescription, item.record.displayName]);
+  React.useEffect(() => () => {
+    if (replacementPlan?.draft?.draftId) onContentDraftDiscard?.(replacementPlan.draft.draftId, "media-replacement-unmount");
+  }, [onContentDraftDiscard, replacementPlan]);
+
+  const chooseReplacement = async (file) => {
+    if (!file) return;
+    setReplacementBusy(true);
+    setReplacementError("");
+    try {
+      if (replacementPlan?.draft?.draftId) {
+        await onContentDraftDiscard?.(replacementPlan.draft.draftId, "media-replacement-changed");
+      }
+      const plan = await prepareMediaReplacement({
+        dashboard,
+        mediaId: item.id,
+        candidate: { file, declaredMediaType: file.type },
+      });
+      try {
+        onContentDraftStage?.(plan.draft);
+      } catch (error) {
+        discardSessionImageAsset(plan.newAssetId);
+        throw error;
+      }
+      setReplacementPlan(plan);
+      setReplacementLabel(file.name || "Validated image");
+    } catch (error) {
+      setReplacementPlan(null);
+      setReplacementLabel("");
+      setReplacementError(error?.message ?? "The replacement image could not be prepared.");
+    } finally {
+      setReplacementBusy(false);
+    }
+  };
+
+  const cancelReplacement = async () => {
+    if (replacementPlan?.draft?.draftId) {
+      await onContentDraftDiscard?.(replacementPlan.draft.draftId, "media-replacement-cancelled");
+    }
+    setReplacementPlan(null);
+    setReplacementLabel("");
+    setReplacementError("");
+    setReplaceOpen(false);
+  };
+
+  const confirmReplacement = async () => {
+    if (!replacementPlan) return;
+    setReplacementBusy(true);
+    setReplacementError("");
+    try {
+      await commitMediaReplacement(replacementPlan, {
+        contentDraftCoordinator,
+        commitDraft: (draftId, buildCandidate) => onContentDraftCommit?.(draftId, buildCandidate),
+        retireAsset: (assetId) => browserAuthoredAssetStore.remove(assetId),
+      });
+      setReplacementStatus(`${item.record.displayName} was replaced everywhere at revision ${replacementPlan.nextMediaItem.revision}.`);
+      setReplacementPlan(null);
+      setReplacementLabel("");
+      setReplaceOpen(false);
+    } catch (error) {
+      setReplacementPlan(null);
+      setReplacementLabel("");
+      setReplacementError(error?.message ?? "The media replacement failed. The previous revision remains active.");
+    } finally {
+      setReplacementBusy(false);
+    }
+  };
   return (
     <article className="source-content-detail-card">
       <section aria-labelledby="media-detail-heading">
@@ -31,6 +107,8 @@ export default function MediaDetail({
           <div><dt>Portability</dt><dd>{item.record.current.kind === "url" ? "Network required" : "Portable"}</dd></div>
         </dl>
         <p className="source-content-placeholder">Media preview is added with the media management flow.</p>
+        <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementStatus(""); setReplaceOpen(true); }}>Replace library file everywhere</button>
+        {replacementStatus && <p role="status">{replacementStatus}</p>}
         {item.record.current.kind === "url" && item.record.origin === "external" && (
           <ManagerMediaIntake
             dashboard={dashboard}
@@ -48,6 +126,18 @@ export default function MediaDetail({
         <button type="submit" className="secondary" disabled={!onRename || (displayName.trim() === item.record.displayName && defaultDescription === item.record.defaultDescription)}>Save metadata</button>
       </form>
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
+      <ContentActionDialog
+        open={replaceOpen}
+        action="replace"
+        itemLabel={item.record.displayName}
+        busy={replacementBusy}
+        error={replacementError}
+        replacementReady={Boolean(replacementPlan)}
+        replacementLabel={replacementLabel}
+        onReplacementFile={(file) => void chooseReplacement(file)}
+        onConfirm={() => void confirmReplacement()}
+        onCancel={() => void cancelReplacement()}
+      />
     </article>
   );
 }

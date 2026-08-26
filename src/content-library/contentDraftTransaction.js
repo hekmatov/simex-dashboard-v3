@@ -153,14 +153,17 @@ export function createContentDraftCoordinator({
           dashboard: structuredClone(previousDashboard),
           draft: structuredClone(draft),
         }));
-        transactions.set(transactionId, transactionRecord({
+        coordinator.beginTransaction({
           transactionId,
           kind: draft.kind,
-          status: "active",
-          assetIds: candidateResult.commitAssetIds,
+          assetIds: uniqueSorted([
+            ...draft.assetIds,
+            ...candidateResult.commitAssetIds,
+            ...candidateResult.discardAssetIds,
+          ]),
           mediaIds: draft.mediaIds,
           sourceIds: draft.sourceIds,
-        }));
+        });
         internalTransactionStarted = true;
         drafts.set(draft.draftId, freezeRecord({ ...draft, status: "committing" }));
         emit();
@@ -211,6 +214,7 @@ export function createContentDraftCoordinator({
           throw assetError;
         }
         const cleanup = clearCompleted(draft, transactionId, candidateResult);
+        coordinator.completeTransaction(transactionId);
         return freezeRecord({
           dashboard: structuredClone(committedDashboard ?? durableCandidateDashboard),
           itemIds: candidateResult.itemIds,
@@ -218,6 +222,16 @@ export function createContentDraftCoordinator({
         });
       } catch (error) {
         const cleanupErrors = [];
+        if (candidateResult) {
+          try {
+            const currentDashboard = structuredClone(getDashboard());
+            if (JSON.stringify(currentDashboard) !== JSON.stringify(previousDashboard)) {
+              await commitDashboard(structuredClone(previousDashboard), { transactionId, rollback: true });
+            }
+          } catch (cleanupError) {
+            cleanupErrors.push(cleanupError);
+          }
+        }
         try {
           await restoreAssets(assetSnapshot, stagedAssetIds, transactionId);
         } catch (cleanupError) {
@@ -232,7 +246,13 @@ export function createContentDraftCoordinator({
         }
         drafts.delete(draft.draftId);
         finalizedDraftIds.delete(draft.draftId);
-        if (internalTransactionStarted) transactions.delete(transactionId);
+        if (internalTransactionStarted) {
+          try {
+            await coordinator.failTransaction(transactionId, error);
+          } catch (cleanupError) {
+            cleanupErrors.push(cleanupError);
+          }
+        }
         emit();
         if (cleanupErrors.length > 0) {
           throw new AggregateError([error, ...cleanupErrors], "Content draft failed and cleanup did not complete.");
@@ -364,7 +384,6 @@ export function createContentDraftCoordinator({
   function clearCompleted(draft, transactionId, candidateResult) {
     drafts.delete(draft.draftId);
     finalizedDraftIds.delete(draft.draftId);
-    transactions.delete(transactionId);
     const failedAssetIds = [];
     const errors = [];
     for (const assetId of uniqueSorted([...candidateResult.commitAssetIds, ...candidateResult.discardAssetIds])) {

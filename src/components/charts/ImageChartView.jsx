@@ -33,10 +33,13 @@ export default function ImageChartView({
   React.useEffect(() => {
     setLoadState(src ? "loading" : "error");
     setIntrinsicSize(safeIntrinsicSize(model));
+  }, [src, model?.revision, model?.width, model?.height]);
+
+  React.useEffect(() => {
     setScale(MIN_IMAGE_SCALE);
     setPan({ x: 0, y: 0 });
     setTouchActions(false);
-  }, [src, model?.revision, model?.width, model?.height, surface, active]);
+  }, [model?.mediaId, surface, active]);
 
   if (model?.status === "loading") {
     return <div className="chart-image-pending" role="status" aria-live="polite">Loading saved image…</div>;

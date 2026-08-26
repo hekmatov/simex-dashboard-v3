@@ -238,3 +238,30 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - QMD selects only healthy stored/packaged identities. Image additionally selects only valid External HTTPS identities. Unhealthy identities remain explanatory, noninteractive inventory.
 - Import performs only explicit browser CORS fetch or user local upload through the existing raster validation path. No proxy, elevated fetch, second resolver, raw-QMD URL conversion, dependency, or network service was introduced.
 - The filename fallback supplies initial contextual alt only for a new local QMD upload with no External default. QMD source remains the placement owner and existing alt is never rewritten.
+
+## Task 8 — Atomic global media replacement and Journey B
+
+**Implementation state:** SCM-S08 and SCM-R02 are Passing for the accepted global media-replacement slice. The media-replace branch of SCM-C08 is Passing; C08 remains Partial because later CSV/GeoJSON replacement and relink dialogs are outside Task 8. Task 9 placement-inspector behavior remains unimplemented and unpromoted.
+
+### RED and deterministic evidence
+
+- Exact RED preceded production. The selected command could not load the absent `contentReplacementTransaction.js`, and the new store case observed immediate removal instead of lease-deferred retirement; 22 pre-existing assertions passed. Vite-backed view cases also reported the known sandbox-only esbuild ancestor-read denial, which is environmental rather than a product assertion.
+- Focused transaction/store/coordinator GREEN was **25/25**, including prepare/commit, expected-current drift, write/dashboard/publish compensation, coordinator lifetime, and old-asset lease retirement.
+- Fresh exact accepted command: `node --test tests/contentReplacementTransaction.test.js tests/staticSourceSchema.test.js tests/staticPanelTransaction.test.js tests/imageChartView.test.js tests/qmdMediaView.test.js tests/browserAuthoredAssetStore.test.js` — **40 passed / 0 failed / 0 skipped / 0 todo**, 2.639 s. This includes a shared-physical-old-asset case proving its manifest and bytes remain owned by the other logical media item.
+- The replacement plan is immutable and retains old/new asset IDs plus media ID through `beginTransaction`. Completion happens only after dashboard persistence and byte publication; failure compensates dashboard, store snapshot, session state, and retainers. Expected-current revision/identity drift rejects before durable writes.
+- Browser-authored byte retirement is lease-aware: removing the superseded asset marks it retired, keeps active object URLs/bytes readable, and deletes/revokes only after the final release.
+
+### Named Journey B checkpoint
+
+- Corrected command, with no literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-media.spec.js --project=chromium --grep "Journey B — global media replacement preserves placement state"` — **1/1 passing**, 47.3 s test time and 49.8 s total.
+- Build 1440×900 created one reusable media identity with distinct QMD and Image contextual state, set Image zoom to 1.5×, rejected an invalid candidate without mutation, and confirmed one scoped Replace library file everywhere action.
+- Exact before/after correspondence retained mediaId, Image alt/decorative/crop/rotation/fit, QMD alt/caption/width/align/frame/flow, and 1.5× viewer zoom while revision advanced 1→2 and hash/render changed for both uses.
+- The replacement dialog gave initial focus to file selection, reported invalid input in the dialog, committed only after explicit confirmation, returned focus to the trigger, and exposed no global Undo/Redo affordance.
+- View and fullscreen rendered revision 2 for both QMD and Image from the same logical media identity. Exhaustive write/dashboard/publish rollback and lease timing remain deterministic-test owners; the real browser owns representative validation, all-use update, focus, and surface continuity.
+
+### Row and boundary disposition
+
+- **SCM-S08:** Passing for stable identity, monotonic revision, one-candidate publication, expected-current safety, exact placement/viewer invariance, compensation, and old-lease safety.
+- **SCM-R02:** Passing for the accepted named Journey B at Build, View, and fullscreen.
+- **SCM-C08:** Media-replace branch Passing. The row remains Partial for later data-source replacement/relink dialogs.
+- No Task 9 placement controls, CSV/GeoJSON replacement/relink, global Undo/Redo, dependency, generated output, full build, full suite, or parent progress update is introduced.

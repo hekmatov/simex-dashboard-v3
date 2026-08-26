@@ -265,6 +265,91 @@ test("Journey A — media create reuse default external import restore dependenc
   expect(pageErrors).toEqual([]);
 });
 
+test("Journey B — global media replacement preserves placement state", async ({ page }) => {
+  test.setTimeout(180_000);
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await openBiomedicalBuild(page, { width: 1440, height: 900 });
+
+  let manager = await openManager(page);
+  const intake = await stageManagerFile(manager, "journey-b-original.png");
+  await intake.getByLabel("Display name").fill("Journey B shared media");
+  await intake.getByLabel("Default description").fill("Journey B default alt");
+  await intake.getByRole("button", { name: "Add to dashboard" }).click();
+  await closeManager(page);
+
+  const imagePanelId = await createImageFromPicker(page, {
+    title: "Journey B image",
+    mediaName: "Journey B shared media",
+    expectedAlt: "Journey B default alt",
+  });
+  const qmdPanelId = await createQmdFromPicker(page, {
+    title: "Journey B QMD",
+    mediaName: "Journey B shared media",
+    expectedAlt: "Journey B default alt",
+  });
+  await configureJourneyBPlacements(page, { imagePanelId, qmdPanelId });
+  await page.reload();
+  await openBiomedicalBuild(page, { width: 1440, height: 900 });
+
+  const before = await journeyBState(page, { imagePanelId, qmdPanelId });
+  const imagePanel = page.locator(`[data-panel-id="${imagePanelId}"]`);
+  await imagePanel.scrollIntoViewIfNeeded();
+  const imageView = imagePanel.locator(".chart-image-view");
+  await expect(imageView.locator('img[alt="Journey B contextual image alt"]')).toBeVisible();
+  await imageView.getByRole("button", { name: "Zoom in" }).click();
+  await imageView.getByRole("button", { name: "Zoom in" }).click();
+  await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1.5");
+
+  manager = await openManager(page);
+  await selectMediaRow(manager, "Journey B shared media");
+  const replaceTrigger = manager.getByRole("button", { name: "Replace library file everywhere" });
+  await replaceTrigger.focus();
+  await replaceTrigger.click();
+  let dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
+  await expect(dialog.getByLabel("Replacement image")).toBeFocused();
+
+  await dialog.getByLabel("Replacement image").setInputFiles({
+    name: "invalid.png", mimeType: "image/png", buffer: Buffer.from("not a raster"),
+  });
+  await expect(dialog.getByRole("alert")).toBeVisible();
+  expect(await journeyBState(page, { imagePanelId, qmdPanelId })).toEqual(before);
+
+  await dialog.getByLabel("Replacement image").setInputFiles({
+    name: "journey-b-replacement.jpg", mimeType: "image/jpeg", buffer: JPEG,
+  });
+  await expect(dialog.getByText("Ready: journey-b-replacement.jpg")).toBeVisible();
+  await dialog.getByRole("button", { name: "Replace everywhere" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(replaceTrigger).toBeFocused();
+  await expect(manager.getByRole("status")).toContainText("revision 2");
+
+  const after = await journeyBState(page, { imagePanelId, qmdPanelId });
+  expect(after.mediaId).toBe(before.mediaId);
+  expect(after.revision).toBe(before.revision + 1);
+  expect(after.assetId).not.toBe(before.assetId);
+  expect(after.hash).not.toBe(before.hash);
+  expect(after.imagePlacement).toEqual(before.imagePlacement);
+  expect(after.qmd).toBe(before.qmd);
+  await expect(imageView).toHaveAttribute("data-image-media-id", before.mediaId);
+  await expect(imageView).toHaveAttribute("data-image-media-revision", "2");
+  await expect(imageView).toHaveAttribute("data-image-zoom-scale", "1.5");
+  const qmdPanel = page.locator(`[data-panel-id="${qmdPanelId}"]`);
+  await expect(qmdPanel.locator(`[data-qmd-media-id="${before.mediaId}"][data-qmd-media-revision]`)).toHaveAttribute("data-qmd-media-revision", "2");
+  await expect(qmdPanel.locator('img[alt="Journey B contextual QMD alt"]')).toBeVisible();
+
+  await closeManager(page);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  await expect(page.locator(`[data-panel-id="${imagePanelId}"] img[alt="Journey B contextual image alt"]`)).toBeVisible();
+  await expect(page.locator(`[data-panel-id="${qmdPanelId}"] img[alt="Journey B contextual QMD alt"]`)).toBeVisible();
+  await page.locator(`[data-panel-id="${imagePanelId}"]`).getByRole("button", { name: "Focus chart" }).click();
+  const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
+  await expect(fullscreen.locator('img[alt="Journey B contextual image alt"]')).toBeVisible();
+  await expect(fullscreen.locator(".chart-image-view")).toHaveAttribute("data-image-media-revision", "2");
+  await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+  expect(pageErrors).toEqual([]);
+});
+
 async function openBiomedicalBuild(page, viewport) {
   await page.setViewportSize(viewport);
   if (page.url() === "about:blank") await page.goto("http://127.0.0.1:4175/");
@@ -272,6 +357,45 @@ async function openBiomedicalBuild(page, viewport) {
   const biomedical = page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Biomedical", exact: true });
   if (await biomedical.count()) await biomedical.click();
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+}
+
+async function configureJourneyBPlacements(page, { imagePanelId, qmdPanelId }) {
+  await page.evaluate(({ key, expectedImagePanelId, expectedQmdPanelId }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const panels = dashboard.pages.flatMap((item) => item.sections.flatMap((section) => section.panels));
+    const imagePanel = panels.find((entry) => (entry.chart ?? entry).id === expectedImagePanelId);
+    const qmdPanel = panels.find((entry) => (entry.chart ?? entry).id === expectedQmdPanelId);
+    const imageSource = dashboard.dataSources[(imagePanel.chart ?? imagePanel).sourceId];
+    const qmdSource = dashboard.dataSources[(qmdPanel.chart ?? qmdPanel).sourceId];
+    imageSource.alt = "Journey B contextual image alt";
+    imageSource.decorative = false;
+    imageSource.fit = "cover";
+    imageSource.crop = { x: 125, y: 250, width: 650, height: 500 };
+    imageSource.rotation = 90;
+    qmdSource.qmd = `![Journey B contextual QMD alt](simex-media:${imageSource.mediaId}){width=45% align=end flow=wrap-start frame=card caption="Journey B caption"}`;
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY, expectedImagePanelId: imagePanelId, expectedQmdPanelId: qmdPanelId });
+}
+
+async function journeyBState(page, { imagePanelId, qmdPanelId }) {
+  return page.evaluate(({ key, expectedImagePanelId, expectedQmdPanelId }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const panels = dashboard.pages.flatMap((item) => item.sections.flatMap((section) => section.panels));
+    const imagePanel = panels.find((entry) => (entry.chart ?? entry).id === expectedImagePanelId);
+    const qmdPanel = panels.find((entry) => (entry.chart ?? entry).id === expectedQmdPanelId);
+    const imageSource = dashboard.dataSources[(imagePanel.chart ?? imagePanel).sourceId];
+    const qmdSource = dashboard.dataSources[(qmdPanel.chart ?? qmdPanel).sourceId];
+    const media = dashboard.contentLibrary.mediaItems[imageSource.mediaId];
+    const manifest = dashboard.assets[media.current.assetId];
+    return {
+      mediaId: media.mediaId,
+      revision: media.revision,
+      assetId: media.current.assetId,
+      hash: manifest.sha256,
+      imagePlacement: imageSource,
+      qmd: qmdSource.qmd,
+    };
+  }, { key: STORAGE_KEY, expectedImagePanelId: imagePanelId, expectedQmdPanelId: qmdPanelId });
 }
 
 async function openManager(page) {

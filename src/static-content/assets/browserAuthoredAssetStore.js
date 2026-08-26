@@ -11,6 +11,8 @@ export function createBrowserAuthoredAssetStore({
 } = {}) {
   const durableAdapter = adapter ?? createIndexedDbAdapter(indexedDB);
   const leases = new Map();
+  const retired = new Set();
+  const retirements = new Map();
   const store = {
     now,
     urlApi,
@@ -35,6 +37,8 @@ export function createBrowserAuthoredAssetStore({
         requiredText(assetId, "Authored asset id"),
         cloneRecord(record) ?? null,
       ]));
+      await Promise.all([...records.keys()].map((assetId) => retirements.get(assetId)).filter(Boolean));
+      for (const assetId of records.keys()) retired.delete(assetId);
       if (typeof durableAdapter.restore === "function") {
         await durableAdapter.restore(records);
       } else {
@@ -64,11 +68,19 @@ export function createBrowserAuthoredAssetStore({
       return false;
     },
     async remove(assetId) {
-      await durableAdapter.remove(assetId);
-      releaseAllLeases(leases, assetId, urlApi);
+      const id = requiredText(assetId, "Authored asset id");
+      if (leases.has(id)) {
+        retired.add(id);
+        return false;
+      }
+      await durableAdapter.remove(id);
+      return true;
     },
+    waitForRetirements() { return Promise.all([...retirements.values()]); },
     list() { return durableAdapter.list(); },
     leases,
+    retired,
+    retirements,
   };
   return Object.freeze(store);
 }
@@ -245,6 +257,11 @@ export async function createObjectUrlLease(store, assetId) {
       if (entry.references === 0) {
         store.urlApi.revokeObjectURL(entry.url);
         store.leases.delete(id);
+        if (store.retired.delete(id)) {
+          const retirement = Promise.resolve(store.adapter.remove(id))
+            .finally(() => store.retirements.delete(id));
+          store.retirements.set(id, retirement);
+        }
       }
       return true;
     },

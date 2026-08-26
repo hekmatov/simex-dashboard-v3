@@ -171,6 +171,35 @@ test("object URL leases are per store/window and revoke only after the final rel
   otherLease.release();
 });
 
+test("removing a replaced asset defers byte deletion and URL revocation until its active lease releases", async () => {
+  const adapter = createMemoryAdapter();
+  const revoked = [];
+  const store = createBrowserAuthoredAssetStore({
+    adapter,
+    urlApi: {
+      createObjectURL: () => "blob:old-revision",
+      revokeObjectURL: (url) => revoked.push(url),
+    },
+  });
+  const staged = await stageAuthoredAsset(store, {
+    bytes: PNG_BYTES,
+    mediaType: "image/png",
+    width: 2,
+    height: 3,
+    transactionId: "old-revision",
+  });
+  await store.commit(staged.assetId, { transactionId: "old-revision" });
+  const lease = await store.createObjectUrlLease(staged.assetId);
+
+  assert.equal(await store.remove(staged.assetId), false);
+  assert.equal(adapter.records.has(staged.assetId), true);
+  assert.deepEqual(revoked, []);
+  assert.equal(lease.release(), true);
+  await store.waitForRetirements();
+  assert.equal(adapter.records.has(staged.assetId), false);
+  assert.deepEqual(revoked, ["blob:old-revision"]);
+});
+
 test("transaction snapshots restore exact prior byte records for dashboard compensation", async () => {
   const adapter = createMemoryAdapter();
   const store = createBrowserAuthoredAssetStore({ adapter, now: () => 1_000 });

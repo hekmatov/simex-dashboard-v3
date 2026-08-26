@@ -53,6 +53,7 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
   const common = {
     className,
     "data-qmd-media-id": mediaItem?.mediaId,
+    "data-qmd-media-revision": mediaItem?.revision,
     "data-qmd-media-health": available ? "ready" : mediaItem?.health ?? "missing",
     "data-qmd-media-flow": safeAttributes.flow,
     style: { "--qmd-media-width": safeAttributes.width },
