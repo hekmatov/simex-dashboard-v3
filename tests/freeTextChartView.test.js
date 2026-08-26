@@ -407,6 +407,79 @@ test("narrow wrap collapse is owned by the actual Free-text content container", 
   });
 });
 
+test("authoring preview selects one media placement and changes only its serialized media identity", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "qmd-inspector-editor-contract";
+    const mediaItems = {
+      first: {
+        mediaId: "first", revision: 4, current: { kind: "asset", assetId: "asset-first" },
+        displayName: "First map", defaultDescription: "First map", origin: "uploaded", health: "missing",
+        dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+      },
+      second: {
+        mediaId: "second", revision: 9, current: { kind: "asset", assetId: "asset-second" },
+        displayName: "Second map", defaultDescription: "Second map", origin: "uploaded", health: "ready",
+        dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+      },
+    };
+    const originalLibrary = structuredClone(mediaItems);
+    const actions = [];
+    let latestSource = "";
+    function Harness() {
+      const [source, setSource] = React.useState('![First map](simex-media:first){width=50% align=center flow=block frame=none caption="Original" decorative=false}');
+      latestSource = source;
+      return React.createElement(FreeTextSourceEditor, {
+        id: "inspector-qmd-source",
+        value: source,
+        panelId: "inspector-panel",
+        mediaItems,
+        assets: {},
+        onChange: setSource,
+        onOpenMediaItem: (mediaId) => actions.push(`open:${mediaId}`),
+      });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && !target.querySelector("[data-qmd-media-select]"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector("[data-qmd-media-select]")?.click();
+    for (let index = 0; index < 50 && !target.querySelector("[data-qmd-media-inspector]"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[name="qmd-media-width"][value="33%"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    target.querySelector('[aria-label="More image options"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const changePickerHasIntake = target.querySelector('[aria-label="Media picker"] input[type="file"], [aria-label="Media picker"] button[data-import-media]') !== null
+      || target.querySelector('[aria-label="Media picker"]')?.textContent.includes("Import as local media");
+    target.querySelector('input[value="second"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    target.querySelector("[data-qmd-media-select]")?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="open"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('[data-qmd-media-action="open"]')?.click();
+    const value = {
+      source: latestSource,
+      actions,
+      libraryUnchanged: JSON.stringify(mediaItems) === JSON.stringify(originalLibrary),
+      images: target.querySelectorAll("img").length,
+      changePickerHasIntake,
+    };
+    root.unmount();
+    return value;
+  });
+
+  assert.match(result.source, /\(simex-media:second\)/);
+  assert.match(result.source, /width=33% align=center flow=block frame=none caption="Original" decorative=false/);
+  assert.deepEqual(result.actions, ["open:second"]);
+  assert.equal(result.libraryUnchanged, true);
+  assert.equal(result.images, 0);
+  assert.equal(result.changePickerHasIntake, false);
+});
+
 test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {
   const initial = "# Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);

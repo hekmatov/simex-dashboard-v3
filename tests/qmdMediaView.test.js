@@ -74,7 +74,7 @@ test("healthy local media owns one lease and releases it exactly once on replace
     const first = {
       alt: target.querySelector("img")?.getAttribute("alt"),
       role: target.querySelector("img")?.getAttribute("role"),
-      width: target.querySelector(".qmd-media-view")?.style.getPropertyValue("--qmd-media-width"),
+      width: target.querySelector(".qmd-media-view")?.dataset.qmdMediaWidth,
       intrinsic: target.querySelector("img")?.getAttribute("width") + "x" + target.querySelector("img")?.getAttribute("height"),
     };
     render("two");
@@ -193,4 +193,105 @@ test("a rejected non-blob resolver result transfers release ownership exactly on
   });
 
   assert.deepEqual(result, { releasesAfterRejection: 1, releasesAfterUnmount: 1 });
+});
+
+test("allowlisted percentages are content-relative without inline style or horizontal overflow", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: QmdMediaView } = await import("/src/components/charts/QmdMediaView.jsx");
+    const target = document.querySelector("#target");
+    target.style.inlineSize = "600px";
+    const root = ReactDOMClient.createRoot(target);
+    const widths = ["25%", "33%", "50%", "66%", "75%", "100%", "37%"];
+    root.render(React.createElement("div", { id: "content-column" }, widths.map((width) => React.createElement(QmdMediaView, {
+      key: width,
+      mediaItem: {
+        mediaId: `media-${width}`, revision: 1, current: { kind: "asset", assetId: `asset-${width}` },
+        health: "missing", displayName: width, dimensions: { width: 800, height: 400 },
+      },
+      attributes: { width, align: "start", flow: "block", frame: "none", caption: "", alt: width, decorative: false },
+      assets: {},
+    }))));
+    for (let index = 0; index < 50 && target.querySelectorAll(".qmd-media-view").length !== widths.length; index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const column = target.querySelector("#content-column");
+    const columnWidth = column.getBoundingClientRect().width;
+    const measured = [...target.querySelectorAll(".qmd-media-view")].map((node) => ({
+      token: node.dataset.qmdMediaWidth,
+      ratio: Number((node.getBoundingClientRect().width / columnWidth).toFixed(2)),
+      inlineStyle: node.hasAttribute("style"),
+      overflow: node.scrollWidth > node.clientWidth,
+    }));
+    root.unmount();
+    return { measured, documentOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+  });
+
+  assert.deepEqual(result, {
+    measured: [
+      { token: "25%", ratio: 0.25, inlineStyle: false, overflow: false },
+      { token: "33%", ratio: 0.33, inlineStyle: false, overflow: false },
+      { token: "50%", ratio: 0.5, inlineStyle: false, overflow: false },
+      { token: "66%", ratio: 0.66, inlineStyle: false, overflow: false },
+      { token: "75%", ratio: 0.75, inlineStyle: false, overflow: false },
+      { token: "100%", ratio: 1, inlineStyle: false, overflow: false },
+      { token: "37%", ratio: 0.37, inlineStyle: false, overflow: false },
+    ],
+    documentOverflow: false,
+  });
+});
+
+test("wrap is capped, narrow collapse retains the token, and logical alignment follows RTL", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: QmdMediaView } = await import("/src/components/charts/QmdMediaView.jsx");
+    const target = document.querySelector("#target");
+    const root = ReactDOMClient.createRoot(target);
+    const mediaItem = {
+      mediaId: "logical-map", revision: 1, current: { kind: "asset", assetId: "asset-logical" },
+      health: "missing", displayName: "Logical map", dimensions: { width: 800, height: 400 },
+    };
+    const render = (width, align, flow, direction) => {
+      target.style.inlineSize = `${width}px`;
+      target.dir = direction;
+      root.render(React.createElement("div", { className: "free-text-chart-view__content" }, React.createElement(QmdMediaView, {
+        mediaItem,
+        attributes: { width: "75%", align, flow, frame: "outline", caption: "Caption", alt: "Map", decorative: false },
+        assets: {},
+      })));
+    };
+    const measure = async () => {
+      for (let index = 0; index < 50 && !target.querySelector(".qmd-media-view"); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const content = target.querySelector(".free-text-chart-view__content").getBoundingClientRect();
+      const media = target.querySelector(".qmd-media-view");
+      const rect = media.getBoundingClientRect();
+      return {
+        token: media.dataset.qmdMediaFlow,
+        widthRatio: Number((rect.width / content.width).toFixed(2)),
+        startGap: Math.round(rect.left - content.left),
+        endGap: Math.round(content.right - rect.right),
+        float: getComputedStyle(media).float,
+        caption: media.querySelector(".qmd-media-view__caption")?.textContent,
+        frame: media.classList.contains("qmd-media-view--frame-outline"),
+      };
+    };
+    render(600, "start", "wrap-start", "rtl");
+    const wideRtl = await measure();
+    render(400, "end", "wrap-start", "rtl");
+    const narrowRtl = await measure();
+    root.unmount();
+    return { wideRtl, narrowRtl };
+  });
+
+  assert.deepEqual(result.wideRtl, {
+    token: "wrap-start", widthRatio: 0.5, startGap: 300, endGap: 0, float: "inline-start", caption: "Caption", frame: true,
+  });
+  assert.deepEqual(result.narrowRtl, {
+    token: "wrap-start", widthRatio: 0.75, startGap: 0, endGap: 100, float: "none", caption: "Caption", frame: true,
+  });
 });

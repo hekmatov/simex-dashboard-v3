@@ -2,7 +2,7 @@ import React from "react";
 
 import { isContainedPackageImagePath } from "../../static-content/image/imageAssetValidation.js";
 
-export default function QmdMediaView({ mediaItem, attributes, assets, resolveAsset, onRepair }) {
+export default function QmdMediaView({ mediaItem, attributes, assets, resolveAsset, onRepair, onActivate }) {
   const safeAttributes = normalizeAttributes(attributes);
   const local = mediaItem?.current?.kind === "asset" || mediaItem?.current?.kind === "package";
   const healthy = local && mediaItem?.health === "ready";
@@ -56,21 +56,33 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
     "data-qmd-media-revision": mediaItem?.revision,
     "data-qmd-media-health": available ? "ready" : mediaItem?.health ?? "missing",
     "data-qmd-media-flow": safeAttributes.flow,
-    style: { "--qmd-media-width": safeAttributes.width },
+    "data-qmd-media-width": safeAttributes.width,
   };
+  const selectionLabel = `Edit placement for ${mediaItem?.displayName || "embedded image"}`;
 
   if (!available || (!src && resolutionFailed)) {
     return <span {...common} role="group">
-      <span className="qmd-media-view__fallback" role="status">
-        <strong>{mediaItem?.displayName || "Embedded image"}</strong>
-        <span> is unavailable.</span>
-        {typeof onRepair === "function" && <button type="button" className="secondary" onClick={onRepair}>Repair media</button>}
-      </span>
+      {typeof onActivate === "function" && typeof onRepair !== "function"
+        ? <button type="button" className="qmd-media-view__select" data-qmd-media-select="" aria-label={selectionLabel} onClick={onActivate}>
+            <Fallback mediaItem={mediaItem} />
+          </button>
+        : <>
+            <Fallback mediaItem={mediaItem} />
+            {typeof onActivate === "function" && <button type="button" className="secondary qmd-media-view__edit" data-qmd-media-select="" aria-label={selectionLabel} onClick={onActivate}>Edit placement</button>}
+          </>}
+      {typeof onRepair === "function" && <button type="button" className="secondary qmd-media-view__repair" onClick={onRepair}>Repair media</button>}
+      {safeAttributes.caption && <span className="qmd-media-view__caption">{safeAttributes.caption}</span>}
     </span>;
   }
 
   return <span {...common} role="group">
-    {src
+    {typeof onActivate === "function"
+      ? <button type="button" className="qmd-media-view__select" data-qmd-media-select="" aria-label={selectionLabel} onClick={onActivate}>
+          {src
+            ? <MediaImage src={src} mediaItem={mediaItem} safeAttributes={safeAttributes} decorative={decorative} />
+            : <span className="qmd-media-view__loading" role="status">Loading embedded image…</span>}
+        </button>
+      : src
       ? <img
           src={src}
           alt={decorative ? "" : String(mediaItem?.defaultDescription ? safeAlt(mediaItem, safeAttributes) : safeAttributes.alt ?? "")}
@@ -86,7 +98,7 @@ export default function QmdMediaView({ mediaItem, attributes, assets, resolveAss
 }
 
 function normalizeAttributes(attributes = {}) {
-  const width = /^(?:[1-9]\d?|100)%$/.test(attributes.width) ? attributes.width : "100%";
+  const width = /^(?:[1-9]\d|100)%$/.test(attributes.width) ? attributes.width : "100%";
   return {
     width,
     align: ["start", "center", "end"].includes(attributes.align) ? attributes.align : "center",
@@ -96,6 +108,25 @@ function normalizeAttributes(attributes = {}) {
     decorative: attributes.decorative === true,
     alt: typeof attributes.alt === "string" ? attributes.alt : "",
   };
+}
+
+function MediaImage({ src, mediaItem, safeAttributes, decorative }) {
+  return <img
+    src={src}
+    alt={decorative ? "" : String(mediaItem?.defaultDescription ? safeAlt(mediaItem, safeAttributes) : safeAttributes.alt ?? "")}
+    role={decorative ? "presentation" : undefined}
+    aria-hidden={decorative ? "true" : undefined}
+    width={mediaItem?.dimensions?.width}
+    height={mediaItem?.dimensions?.height}
+    draggable="false"
+  />;
+}
+
+function Fallback({ mediaItem }) {
+  return <span className="qmd-media-view__fallback" role="status">
+    <strong>{mediaItem?.displayName || "Embedded image"}</strong>
+    <span> is unavailable.</span>
+  </span>;
 }
 
 function safeAlt(mediaItem, attributes) {

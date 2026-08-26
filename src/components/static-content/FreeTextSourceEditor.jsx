@@ -2,7 +2,9 @@ import React from "react";
 
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
+import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../../static-content/qmd/portableQmdMedia.js";
 import MediaPicker from "../source-content/MediaPicker.jsx";
+import QmdMediaInspector from "./QmdMediaInspector.jsx";
 
 const NARROW_EDITOR_QUERY = "(max-width: 860px)";
 
@@ -18,6 +20,7 @@ export function FreeTextSourceEditor({
   onValidationChange,
   onMediaSelect,
   onMediaCreate,
+  onOpenMediaItem,
 } = {}) {
   const initial = React.useMemo(() => analyze(value, panelId), []);
   const [analysis, setAnalysis] = React.useState(initial);
@@ -26,6 +29,8 @@ export function FreeTextSourceEditor({
   const [activeTab, setActiveTab] = React.useState("source");
   const [narrow, setNarrow] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [pickerMode, setPickerMode] = React.useState("insert");
+  const [selectedMediaKey, setSelectedMediaKey] = React.useState(null);
   const evaluatedSource = React.useRef(value);
   const observedSource = React.useRef(value);
   const pendingChange = React.useRef(null);
@@ -162,6 +167,31 @@ export function FreeTextSourceEditor({
     onValidationChange?.(pendingValidation(nextSource, sourceRevision, lastValidRevision.current));
     onChange?.(nextSource);
   };
+  const mediaNodes = React.useMemo(() => {
+    const parsed = parsePortableQmdWithMedia(value);
+    return parsed.ast?.mediaNodes ?? [];
+  }, [value]);
+  const selectedMediaIndex = mediaIndexFromKey(selectedMediaKey);
+  const selectedMediaNode = Number.isInteger(selectedMediaIndex) ? mediaNodes[selectedMediaIndex] : null;
+  const selectedPlacement = selectedMediaNode ? {
+    mediaId: selectedMediaNode.mediaId,
+    alt: selectedMediaNode.alt,
+    ...selectedMediaNode.attributes,
+  } : null;
+  const updateSelectedPlacement = (placement) => {
+    if (!selectedMediaNode || !Number.isInteger(selectedMediaIndex)) return;
+    const replacement = serializePortableMediaReference(placement);
+    changeSource(replaceMediaNodeSource(value, mediaNodes, selectedMediaIndex, replacement));
+  };
+  const chooseMedia = (item) => {
+    if (pickerMode === "change" && selectedPlacement) {
+      updateSelectedPlacement({ ...selectedPlacement, mediaId: item.mediaId });
+      setPickerOpen(false);
+      return;
+    }
+    onMediaSelect?.(item);
+    setPickerOpen(false);
+  };
 
   return (
     <section
@@ -212,13 +242,16 @@ export function FreeTextSourceEditor({
             onChange={(event) => changeSource(event.target.value)}
           />
           <small id={`${id}-help`}>Portable QMD v1 renders locally. Unknown syntax is shown as text; code never executes.</small>
-          <button type="button" className="secondary" disabled={disabled} onClick={() => setPickerOpen(true)}>Insert image</button>
-          {pickerOpen && (
+          <button type="button" className="secondary" disabled={disabled} onClick={() => { setPickerMode("insert"); setPickerOpen(true); }}>Insert image</button>
+          {pickerOpen && pickerMode === "change" && (
+            <ChangeMediaPicker mediaItems={mediaItems} onSelect={chooseMedia} onCancel={() => setPickerOpen(false)} />
+          )}
+          {pickerOpen && pickerMode === "insert" && (
             <MediaPicker
               mediaItems={mediaItems}
               assets={assets}
               mode="qmd"
-              onSelect={(item) => { onMediaSelect?.(item); setPickerOpen(false); }}
+              onSelect={chooseMedia}
               onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }}
               onCancel={() => setPickerOpen(false)}
             />
@@ -270,12 +303,23 @@ export function FreeTextSourceEditor({
               model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }}
               chart={{ id: panelId, title: "Preview" }}
               contentRenderContext={previewRenderContext}
+              onMediaActivate={({ key }) => setSelectedMediaKey(key)}
             />
           ) : (
             <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>
           )}
         </section>
       </div>
+      {selectedPlacement && (
+        <QmdMediaInspector
+          placement={selectedPlacement}
+          mediaItem={valueForId(mediaItems, selectedPlacement.mediaId)}
+          disabled={disabled}
+          onChange={updateSelectedPlacement}
+          onChangeImage={() => { setPickerMode("change"); setPickerOpen(true); }}
+          onOpenMediaItem={(mediaId) => (onOpenMediaItem ?? contentRenderContext.openMediaItem)?.(mediaId)}
+        />
+      )}
       <p id={`${id}-status`} className="free-text-source-editor__status" role="status" aria-live="polite" aria-atomic="true">
         {status}
       </p>
@@ -293,6 +337,30 @@ function pendingValidation(source, sourceRevision, previewRevision) {
     sourceRevision,
     previewRevision,
   };
+}
+
+function ChangeMediaPicker({ mediaItems, onSelect, onCancel }) {
+  const eligible = collectionValues(mediaItems)
+    .filter((item) => item?.health === "ready" && ["asset", "package"].includes(item?.current?.kind))
+    .sort((left, right) => left.mediaId.localeCompare(right.mediaId));
+  return (
+    <section className="source-content-detail-card" aria-label="Media picker">
+      <header>
+        <h3>Change image</h3>
+        <p>Choose an existing portable local media item for this placement.</p>
+      </header>
+      <fieldset>
+        <legend>Available local media</legend>
+        {eligible.length === 0 ? <p>No eligible media is available.</p> : eligible.map((item) => (
+          <label key={item.mediaId}>
+            <input type="radio" name="qmd-media-change-selection" value={item.mediaId} onChange={() => onSelect(item)} />
+            <strong>{item.displayName}</strong> {item.origin} · {item.health}
+          </label>
+        ))}
+      </fieldset>
+      <button type="button" className="secondary" onClick={onCancel}>Close media picker</button>
+    </section>
+  );
 }
 
 function analyze(source, panelId) {
@@ -320,6 +388,35 @@ function sourceOffset(source, location) {
     offset += (lines[index]?.length ?? 0) + 1;
   }
   return Math.min(source.length, offset + Math.max(0, location.column - 1));
+}
+
+function mediaIndexFromKey(key) {
+  const match = /:(\d+)$/.exec(String(key ?? ""));
+  return match ? Number(match[1]) - 1 : null;
+}
+
+function replaceMediaNodeSource(source, mediaNodes, targetIndex, replacement) {
+  let cursor = 0;
+  for (let index = 0; index < mediaNodes.length; index += 1) {
+    const sourceText = mediaNodes[index].sourceText;
+    const start = source.indexOf(sourceText, cursor);
+    if (start < 0) throw new Error("The selected media placement is no longer present in the source.");
+    if (index === targetIndex) return `${source.slice(0, start)}${replacement}${source.slice(start + sourceText.length)}`;
+    cursor = start + sourceText.length;
+  }
+  throw new Error("The selected media placement is no longer present in the source.");
+}
+
+function valueForId(collection, id) {
+  if (collection instanceof Map) return collection.get(id);
+  if (Array.isArray(collection)) return collection.find((entry) => entry?.mediaId === id);
+  return collection?.[id];
+}
+
+function collectionValues(collection) {
+  if (collection instanceof Map) return [...collection.values()];
+  if (Array.isArray(collection)) return collection;
+  return Object.values(collection ?? {});
 }
 
 export default FreeTextSourceEditor;

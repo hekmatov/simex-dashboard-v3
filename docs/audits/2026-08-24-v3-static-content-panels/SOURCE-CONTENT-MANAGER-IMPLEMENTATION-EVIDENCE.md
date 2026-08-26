@@ -6,7 +6,7 @@
 
 **Starting HEAD:** `3bc143f858ae96a66275462b587bd2bc506cf781`
 
-**Status:** Implementation authorized and in progress. No amendment fidelity row is promoted by this preflight record.
+**Status:** Implementation authorized and in progress. Bounded Tasks 1–9 provide the row-level evidence recorded below; Task 10+ journeys and complete amendment fidelity remain pending.
 
 ## Pre-implementation browser-edit baseline gate
 
@@ -266,3 +266,28 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - **SCM-R02:** Passing for the accepted named Journey B at Build, View, and fullscreen.
 - **SCM-C08:** Media-replace branch Passing. The row remains Partial for later data-source replacement/relink dialogs.
 - No Task 9 placement controls, CSV/GeoJSON replacement/relink, global Undo/Redo, dependency, generated output, full build, full suite, or parent progress update is introduced.
+
+## Task 9 — QMD placement inspector, responsive geometry, and Journey C
+
+**Implementation state:** SCM-S11, SCM-C06, SCM-C07, and SCM-R03 are Passing for the complete accepted QMD allowlist/inspector/runtime slice. Task 10 CSV management and every later journey remain unimplemented and unpromoted.
+
+### RED and deterministic evidence
+
+- The first sandboxed exact command hit the inherited linked-worktree Vite/esbuild ancestor-read denial. The required exact command was rerun outside that restriction before production.
+- Usable exact RED was **29/34 passing** with five intended failures: absent inspector controls/routing, inline-style/no-data width authority, and fallback caption geometry.
+- Focused inspector/view correction reached **8/8 passing**. Pre-commit Change-mode intake isolation moved from **13/14 RED** to **14/14 GREEN**. Fresh exact deterministic command is **35/35 passing**, zero failed/skipped/todo, 10.623 s.
+- The selection covers every preset plus integer custom 10–100, malformed/pixel/style/event rejection, alt/decorative/caption separation, selected-node replacement, immutable media revision, no-inline-style content-relative geometry, wrap cap/collapse, RTL alignment, fallback, and safe DOM/request authority.
+
+### Named Journey C checkpoint
+
+- Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/qmd-reusable-media.spec.js --project=chromium --grep "Journey C — QMD media controls responsive RTL geometry and request authority"` — **1/1 passing**, 3.5 s test time and 5.3 s total.
+- Build 1440×900 exercised 25/33/50/66/75/100, custom 37%, End, Wrap start, Card, caption, contextual alt, Change image, and Open media item. Canonical preview synchronization preceded geometry inspection; authored 75% wrapped media measured exactly 50% of its content column with logical `inline-start` float and zero overflow.
+- Build 1024×768 measured final 37% content-relative width, Card/caption, stored 800×400 reserved 2:1 aspect, and zero panel/document overflow.
+- View 390×844 retained the authored wrap token and 37% width while float collapsed to `none`; fullscreen at 390×844 RTL retained logical end alignment, collapsed wrap, and rendered a bounded passive missing explanation with zero images or repair controls.
+- Placement/More/Open focus checkpoints passed. Change rewrote only `response`→`alternate`; Open routed `alternate`; the complete library snapshot including revisions remained equal. Page errors and authored external/data/file requests were zero.
+
+### Security and scope boundary
+
+- Width reaches CSS only as a validated percentage data token. No arbitrary pixels, inline width style, authored class/style/event, free/absolute position, or border-style authority was added.
+- Only stored/packaged identities reach media hosts/picker selection. Change/Open never replace library bytes or revision. Missing/corrupt View/fullscreen remains bounded, passive, and request-free; Build repair is unchanged.
+- No Task 10 behavior, parent progress update, generated output, dependency, full build, or full suite is included.

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
 import QmdMediaView from "./QmdMediaView.jsx";
 
-export function FreeTextChartView({ model, chart, contentRenderContext = {}, hostHeadingLevel = 2, surface = "view" } = {}) {
+export function FreeTextChartView({ model, chart, contentRenderContext = {}, hostHeadingLevel = 2, surface = "view", onMediaActivate } = {}) {
   const panelId = normalizePanelId(chart?.id ?? model?.sourceId);
   const titleId = `${panelId}-title`;
   const contentRef = React.useRef(null);
@@ -76,6 +76,9 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
       resolveAsset={contentRenderContext.resolveAsset}
       onRepair={surface === "build" && typeof contentRenderContext.requestRepair === "function"
         ? () => contentRenderContext.requestRepair({ mediaId: entry.mediaItem?.mediaId, panelId: chart?.id, surface })
+        : undefined}
+      onActivate={typeof onMediaActivate === "function"
+        ? () => onMediaActivate({ key: entry.key, mediaItem: entry.mediaItem, attributes: entry.attributes })
         : undefined}
     />, entry.host, entry.key))}
   </>;

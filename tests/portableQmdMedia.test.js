@@ -56,11 +56,18 @@ test("reference and attribute grammar accepts only the portable local allowlist"
   });
   for (const suffix of [
     "{width=9%}",
+    "{width=101%}",
+    "{width=20.5%}",
+    "{width=320px}",
     "{width=50% width=66%}",
     "{class=hero}",
     "{style=\"position:absolute\"}",
     "{onclick=alert(1)}",
   ]) assert.equal(validatePortableMediaAttributes(suffix).ok, false);
+
+  for (const width of ["25%", "33%", "50%", "66%", "75%", "100%", "10%", "37%"]) {
+    assert.equal(validatePortableMediaAttributes({ width }).attributes.width, width);
+  }
 });
 
 test("one annotation pass consumes one fully allowlisted immediate suffix and preserves remaining text", () => {
