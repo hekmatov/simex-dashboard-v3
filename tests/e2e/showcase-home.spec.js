@@ -20,9 +20,12 @@ test.beforeEach(async ({ request }) => {
 });
 
 test("standalone Home orients visitors and routes into both domains", async ({ page }) => {
+  const bootstrapResponse = page.waitForResponse((response) => (
+    response.url().endsWith("/companion/bootstrap")
+  ));
   await page.goto("/");
   await expectLandingReady(page);
-  await expect(page.getByText("Standalone", { exact: true })).toBeVisible();
+  expect((await bootstrapResponse).status()).toBe(404);
   await expect(page.locator("h1")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Explore the live dashboard" }).click();
@@ -87,14 +90,15 @@ test("phone layout remains readable without horizontal overflow", async ({ page 
   await expect(page.locator(".showcase-hero")).toHaveCSS("display", "grid");
 });
 
-test("Vanta follows reduced-motion preference changes", async ({ page }) => {
+test("retired Vanta background stays absent across reduced-motion preference changes", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expectLandingReady(page);
   await expect(page.locator("#vanta-background .vanta-canvas")).toHaveCount(0);
 
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await expect(page.locator("#vanta-background .vanta-canvas")).toHaveCount(1);
+  await expect(page.locator("#vanta-background .vanta-canvas")).toHaveCount(0);
+  await expectLandingReady(page);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator("#vanta-background .vanta-canvas")).toHaveCount(0);
