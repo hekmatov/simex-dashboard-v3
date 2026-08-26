@@ -23,48 +23,79 @@ export default function MediaDetail({
   const [replacementBusy, setReplacementBusy] = React.useState(false);
   const [replacementError, setReplacementError] = React.useState("");
   const [replacementStatus, setReplacementStatus] = React.useState("");
+  const mountedRef = React.useRef(false);
+  const prepareGenerationRef = React.useRef(0);
+  const replacementPlanRef = React.useRef(null);
+  const lifecycleRef = React.useRef({ contentDraftCoordinator, onContentDraftDiscard });
+  lifecycleRef.current = { contentDraftCoordinator, onContentDraftDiscard };
   React.useEffect(() => {
     setDisplayName(item.record.displayName);
     setDefaultDescription(item.record.defaultDescription);
   }, [item.id, item.record.defaultDescription, item.record.displayName]);
-  React.useEffect(() => () => {
-    if (replacementPlan?.draft?.draftId) onContentDraftDiscard?.(replacementPlan.draft.draftId, "media-replacement-unmount");
-  }, [onContentDraftDiscard, replacementPlan]);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      prepareGenerationRef.current += 1;
+      const plan = replacementPlanRef.current;
+      replacementPlanRef.current = null;
+      if (plan) {
+        void discardPreparedReplacement(plan, "media-replacement-unmount", lifecycleRef.current)
+          .catch((error) => console.error("Media replacement cleanup failed.", error));
+      }
+    };
+  }, []);
 
   const chooseReplacement = async (file) => {
     if (!file) return;
+    const generation = prepareGenerationRef.current + 1;
+    prepareGenerationRef.current = generation;
     setReplacementBusy(true);
     setReplacementError("");
     try {
       if (replacementPlan?.draft?.draftId) {
-        await onContentDraftDiscard?.(replacementPlan.draft.draftId, "media-replacement-changed");
+        await discardPreparedReplacement(replacementPlan, "media-replacement-changed", { contentDraftCoordinator, onContentDraftDiscard });
+        replacementPlanRef.current = null;
       }
       const plan = await prepareMediaReplacement({
         dashboard,
         mediaId: item.id,
         candidate: { file, declaredMediaType: file.type },
       });
+      if (!mountedRef.current || prepareGenerationRef.current !== generation) {
+        discardSessionImageAsset(plan.newAssetId);
+        return;
+      }
       try {
-        onContentDraftStage?.(plan.draft);
+        await onContentDraftStage?.(plan.draft);
       } catch (error) {
         discardSessionImageAsset(plan.newAssetId);
         throw error;
       }
+      if (!mountedRef.current || prepareGenerationRef.current !== generation) {
+        await discardPreparedReplacement(plan, "media-replacement-stale-prepare", { contentDraftCoordinator, onContentDraftDiscard });
+        return;
+      }
+      replacementPlanRef.current = plan;
       setReplacementPlan(plan);
       setReplacementLabel(file.name || "Validated image");
     } catch (error) {
+      if (!mountedRef.current || prepareGenerationRef.current !== generation) return;
+      replacementPlanRef.current = null;
       setReplacementPlan(null);
       setReplacementLabel("");
       setReplacementError(error?.message ?? "The replacement image could not be prepared.");
     } finally {
-      setReplacementBusy(false);
+      if (mountedRef.current && prepareGenerationRef.current === generation) setReplacementBusy(false);
     }
   };
 
   const cancelReplacement = async () => {
+    prepareGenerationRef.current += 1;
     if (replacementPlan?.draft?.draftId) {
-      await onContentDraftDiscard?.(replacementPlan.draft.draftId, "media-replacement-cancelled");
+      await discardPreparedReplacement(replacementPlan, "media-replacement-cancelled", { contentDraftCoordinator, onContentDraftDiscard });
     }
+    replacementPlanRef.current = null;
     setReplacementPlan(null);
     setReplacementLabel("");
     setReplacementError("");
@@ -82,10 +113,12 @@ export default function MediaDetail({
         retireAsset: (assetId) => browserAuthoredAssetStore.remove(assetId),
       });
       setReplacementStatus(`${item.record.displayName} was replaced everywhere at revision ${replacementPlan.nextMediaItem.revision}.`);
+      replacementPlanRef.current = null;
       setReplacementPlan(null);
       setReplacementLabel("");
       setReplaceOpen(false);
     } catch (error) {
+      replacementPlanRef.current = null;
       setReplacementPlan(null);
       setReplacementLabel("");
       setReplacementError(error?.message ?? "The media replacement failed. The previous revision remains active.");
@@ -140,4 +173,17 @@ export default function MediaDetail({
       />
     </article>
   );
+}
+
+async function discardPreparedReplacement(plan, reason, { contentDraftCoordinator, onContentDraftDiscard } = {}) {
+  const draftId = plan?.draft?.draftId;
+  if (!draftId) return false;
+  const record = contentDraftCoordinator?.getActiveRetainers?.().records
+    ?.find(({ ownerId }) => ownerId === draftId);
+  if (!record) {
+    discardSessionImageAsset(plan.newAssetId);
+    return false;
+  }
+  if (record.status !== "staged") return false;
+  return onContentDraftDiscard?.(draftId, reason) ?? false;
 }

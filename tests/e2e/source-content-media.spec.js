@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { imageFixtureBytes } from "../fixtures/imageFixtureBytes.js";
 
@@ -5,6 +6,7 @@ const CONTROL_URL = "http://127.0.0.1:4174";
 const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
 const PNG = Buffer.from(imageFixtureBytes("image/png"));
 const JPEG = Buffer.from(imageFixtureBytes("image/jpeg"));
+const JPEG_SHA256 = createHash("sha256").update(JPEG).digest("hex");
 const WEBP = Buffer.from(imageFixtureBytes("image/webp"));
 const EXTERNAL_ID = "journey-a-external";
 
@@ -304,9 +306,38 @@ test("Journey B — global media replacement preserves placement state", async (
   manager = await openManager(page);
   await selectMediaRow(manager, "Journey B shared media");
   const replaceTrigger = manager.getByRole("button", { name: "Replace library file everywhere" });
+  const replacementBaseline = await replacementInventory(page, `asset-${JPEG_SHA256}`);
+
   await replaceTrigger.focus();
   await replaceTrigger.click();
   let dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
+  await dialog.getByLabel("Replacement image").setInputFiles({
+    name: "journey-b-replacement.jpg", mimeType: "image/jpeg", buffer: JPEG,
+  });
+  await expect(dialog.getByText("Ready: journey-b-replacement.jpg")).toBeVisible();
+  await expect(manager.getByText("Active work retains this item: media-replacement.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(replaceTrigger).toBeFocused();
+  await expect(manager.getByText("Active work retains this item: media-replacement.")).toHaveCount(0);
+  expect(await replacementInventory(page, `asset-${JPEG_SHA256}`)).toEqual(replacementBaseline);
+
+  await replaceTrigger.click();
+  dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
+  await dialog.getByLabel("Replacement image").setInputFiles({
+    name: "journey-b-replacement.jpg", mimeType: "image/jpeg", buffer: JPEG,
+  });
+  await expect(dialog.getByText("Ready: journey-b-replacement.jpg")).toBeVisible();
+  await expect(manager.getByText("Active work retains this item: media-replacement.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(replaceTrigger).toBeFocused();
+  await expect(manager.getByText("Active work retains this item: media-replacement.")).toHaveCount(0);
+  expect(await replacementInventory(page, `asset-${JPEG_SHA256}`)).toEqual(replacementBaseline);
+
+  await replaceTrigger.focus();
+  await replaceTrigger.click();
+  dialog = page.getByRole("dialog", { name: "Replace Journey B shared media everywhere?" });
   await expect(dialog.getByLabel("Replacement image")).toBeFocused();
 
   await dialog.getByLabel("Replacement image").setInputFiles({
@@ -329,6 +360,7 @@ test("Journey B — global media replacement preserves placement state", async (
   expect(after.revision).toBe(before.revision + 1);
   expect(after.assetId).not.toBe(before.assetId);
   expect(after.hash).not.toBe(before.hash);
+  expect(after.hash).toBe(JPEG_SHA256);
   expect(after.imagePlacement).toEqual(before.imagePlacement);
   expect(after.qmd).toBe(before.qmd);
   await expect(imageView).toHaveAttribute("data-image-media-id", before.mediaId);
@@ -337,16 +369,29 @@ test("Journey B — global media replacement preserves placement state", async (
   const qmdPanel = page.locator(`[data-panel-id="${qmdPanelId}"]`);
   await expect(qmdPanel.locator(`[data-qmd-media-id="${before.mediaId}"][data-qmd-media-revision]`)).toHaveAttribute("data-qmd-media-revision", "2");
   await expect(qmdPanel.locator('img[alt="Journey B contextual QMD alt"]')).toBeVisible();
+  expect(await renderedImageHash(imageView.locator('img[alt="Journey B contextual image alt"]'))).toBe(JPEG_SHA256);
 
   await closeManager(page);
   await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
-  await expect(page.locator(`[data-panel-id="${imagePanelId}"] img[alt="Journey B contextual image alt"]`)).toBeVisible();
-  await expect(page.locator(`[data-panel-id="${qmdPanelId}"] img[alt="Journey B contextual QMD alt"]`)).toBeVisible();
+  const viewImage = page.locator(`[data-panel-id="${imagePanelId}"] img[alt="Journey B contextual image alt"]`);
+  const viewQmd = page.locator(`[data-panel-id="${qmdPanelId}"] img[alt="Journey B contextual QMD alt"]`);
+  await expect(viewImage).toBeVisible();
+  await expect(viewQmd).toBeVisible();
+  expect(await renderedImageHash(viewImage)).toBe(JPEG_SHA256);
+  await expect(page.locator(`[data-panel-id="${qmdPanelId}"] [data-qmd-media-id="${before.mediaId}"][data-qmd-media-revision]`)).toHaveAttribute("data-qmd-media-revision", "2");
   await page.locator(`[data-panel-id="${imagePanelId}"]`).getByRole("button", { name: "Focus chart" }).click();
   const fullscreen = page.getByRole("dialog", { name: "Focused chart" });
-  await expect(fullscreen.locator('img[alt="Journey B contextual image alt"]')).toBeVisible();
+  const fullscreenImage = fullscreen.locator('img[alt="Journey B contextual image alt"]');
+  await expect(fullscreenImage).toBeVisible();
+  expect(await renderedImageHash(fullscreenImage)).toBe(JPEG_SHA256);
   await expect(fullscreen.locator(".chart-image-view")).toHaveAttribute("data-image-media-revision", "2");
   await fullscreen.getByRole("button", { name: "Exit focus" }).click();
+  await page.locator(`[data-panel-id="${qmdPanelId}"]`).getByRole("button", { name: "Focus chart" }).click();
+  const qmdFullscreen = page.getByRole("dialog", { name: "Focused chart" });
+  const fullscreenQmd = qmdFullscreen.locator('img[alt="Journey B contextual QMD alt"]');
+  await expect(fullscreenQmd).toBeVisible();
+  await expect(qmdFullscreen.locator(`[data-qmd-media-id="${before.mediaId}"][data-qmd-media-revision]`)).toHaveAttribute("data-qmd-media-revision", "2");
+  await qmdFullscreen.getByRole("button", { name: "Exit focus" }).click();
   expect(pageErrors).toEqual([]);
 });
 
@@ -396,6 +441,35 @@ async function journeyBState(page, { imagePanelId, qmdPanelId }) {
       qmd: qmdSource.qmd,
     };
   }, { key: STORAGE_KEY, expectedImagePanelId: imagePanelId, expectedQmdPanelId: qmdPanelId });
+}
+
+async function replacementInventory(page, candidateAssetId) {
+  return page.evaluate(async ({ key, expectedCandidateAssetId }) => {
+    const { browserAuthoredAssetStore } = await import("/src/static-content/assets/browserAuthoredAssetRuntime.js");
+    const { readSessionImageAssetBytes } = await import("/src/static-content/image/imageAssetValidation.js");
+    const records = await browserAuthoredAssetStore.list();
+    const normalizedRecords = records
+      .map((record) => ({
+        ...record,
+        bytes: record.bytes ? Array.from(record.bytes) : null,
+        transactionIds: [...(record.transactionIds ?? [])].sort(),
+      }))
+      .sort((left, right) => String(left.assetId).localeCompare(String(right.assetId)));
+    const sessionBytes = readSessionImageAssetBytes(expectedCandidateAssetId);
+    return {
+      dashboard: localStorage.getItem(key),
+      store: JSON.stringify(normalizedRecords),
+      session: sessionBytes ? Array.from(sessionBytes) : null,
+    };
+  }, { key: STORAGE_KEY, expectedCandidateAssetId: candidateAssetId });
+}
+
+async function renderedImageHash(image) {
+  return image.evaluate(async (node) => {
+    const response = await fetch(node.currentSrc || node.src);
+    const digest = await crypto.subtle.digest("SHA-256", await response.arrayBuffer());
+    return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+  });
 }
 
 async function openManager(page) {

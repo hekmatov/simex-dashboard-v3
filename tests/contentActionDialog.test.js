@@ -42,6 +42,23 @@ test("eligible delete renders only the scoped destructive confirmation modal", (
   assert.doesNotMatch(html, /Replace|Relink|Import as new/);
 });
 
+test("media replacement renders only the focused non-destructive replacement action", () => {
+  const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace",
+    itemLabel: "Shared map",
+    replacementReady: true,
+    replacementLabel: "replacement.jpg",
+  }));
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /Replace Shared map everywhere\?/);
+  assert.match(html, /Replacement image/);
+  assert.match(html, /Ready: replacement.jpg/);
+  assert.match(html, />Cancel<\/button>/);
+  assert.match(html, />Replace everywhere<\/button>/);
+  assert.doesNotMatch(html, /Delete|Relink|Undo|Redo/);
+});
+
 test("manager dependency collections carry retainer and deletion state through the passive detail boundary", () => {
   const uses = [];
   uses.activeRetainers = [{ ownerId: "draft-a", kind: "image-draft" }];

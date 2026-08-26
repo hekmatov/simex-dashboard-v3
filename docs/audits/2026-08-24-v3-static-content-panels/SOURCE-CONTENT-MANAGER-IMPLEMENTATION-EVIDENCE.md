@@ -170,7 +170,7 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 ### Deferred truth
 
-- Task 6 dependency/delete, Task 7 picker/import, Task 8 replacement, Task 9 inspector controls and exhaustive width/wrap/RTL/narrow-collapse geometry, and complete Journey C fidelity remain pending.
+- At the Task 5 checkpoint, Tasks 6–8 and Task 9 inspector geometry remained pending. The later Task 6–8 sections below supersede that historical state; Task 9 inspector controls and complete Journey C fidelity remain pending.
 - No sanitizer, manager/picker action, replacement behavior, dependency graph, generated output, full build, full suite, or parent progress update was introduced.
 
 ### Validated T5-R01–R04 correction
@@ -203,7 +203,7 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Planned Chromium selection, with no literal `--` separator: `pnpm.cmd exec playwright test tests/e2e/source-content-manager.spec.js --project=chromium --grep "desktop composition|tablet composition"` — **2/2 passing**, 24.6 s, at 1440×900 and 1024×768.
 - The authorized DashboardRenderer → BuildWorkspace → SourceContentWorkspace carrier remained mounted without regressing the canonical canvas, durable rename, desktop split, or tablet list/detail/Back composition.
-- The bounded viewport cases do not separately click an eligible deletion; no broader delete/recovery Journey A/I browser promotion is claimed. Task 7 picker/import, Task 8 replacement/relink, later preview/recovery flows, full build, and full suite remain pending.
+- At the Task 6 checkpoint, the bounded viewport cases did not separately click an eligible deletion and Tasks 7–8 remained pending. The later Task 7–8 sections below supersede that historical state; later preview/recovery flows, full build, and full suite remain pending.
 
 ### Validated T6-R01–R04 correction
 
@@ -212,11 +212,11 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Mounted adapters snapshot authored bytes, publish the candidate dashboard, retain shared physical dedupe through the candidate asset-reference graph, remove unique bytes, and compensate dashboard plus bytes for injected publication or byte-delete failure.
 - The master explicitly authorized only `SourceContentWorkspace.jsx::visibleManagerItems/contentItem` for the post-validation transient carrier. Its exact zero-use state is now known-unused rather than unknown, without extending durable records.
 - Final planned Chromium selection **2/2 passing**, 40.4 s, at 1440×900 and 1024×768. Each viewport proves blocked used-source Delete opens no dialog; eligible retained external media opens the correctly named confirmation, Cancel owns initial focus, exact saved configuration is unchanged, and focus returns to Delete. The tablet detail pane is bounded and scrollable so the action remains reachable.
-- SCM-S07 and the SCM-C08 delete branch are Passing on this mounted evidence. C08 remains Partial for later replace/relink; no Task 7+ journey is promoted.
+- SCM-S07 and the SCM-C08 delete branch are Passing on this mounted evidence. At that checkpoint no Task 7+ journey was promoted; the later Task 8 section promotes the media-replace branch while C08 remains Partial for CSV/GeoJSON replacement/relink.
 
 ## Task 7 — Media creation, picker import, and Journey A
 
-**Implementation state:** SCM-S03 and SCM-R01 are Passing for the accepted media Journey A. The Task 7 manager/QMD/Image branches of SCM-S13, SCM-C04, and SCM-C05 are Passing; those cross-kind composition/lifecycle rows remain Partial for later chart/CSV/GeoJSON selector and browser owners. Task 8 global replacement/relink and Task 9 QMD inspector behavior remain unimplemented and unpromoted.
+**Implementation state:** SCM-S03 and SCM-R01 are Passing for the accepted media Journey A. The Task 7 manager/QMD/Image branches of SCM-S13, SCM-C04, and SCM-C05 are Passing; those cross-kind composition/lifecycle rows remain Partial for later chart/CSV/GeoJSON selector and browser owners. At the Task 7 checkpoint global replacement and Task 9 QMD inspector behavior remained unimplemented; the Task 8 section below supersedes the replacement state, while data-source relink and Task 9 remain pending.
 
 ### Correction RED and deterministic evidence
 
@@ -247,17 +247,18 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Exact RED preceded production. The selected command could not load the absent `contentReplacementTransaction.js`, and the new store case observed immediate removal instead of lease-deferred retirement; 22 pre-existing assertions passed. Vite-backed view cases also reported the known sandbox-only esbuild ancestor-read denial, which is environmental rather than a product assertion.
 - Focused transaction/store/coordinator GREEN was **25/25**, including prepare/commit, expected-current drift, write/dashboard/publish compensation, coordinator lifetime, and old-asset lease retirement.
-- Fresh exact accepted command: `node --test tests/contentReplacementTransaction.test.js tests/staticSourceSchema.test.js tests/staticPanelTransaction.test.js tests/imageChartView.test.js tests/qmdMediaView.test.js tests/browserAuthoredAssetStore.test.js` — **40 passed / 0 failed / 0 skipped / 0 todo**, 2.639 s. This includes a shared-physical-old-asset case proving its manifest and bytes remain owned by the other logical media item.
+- Fresh exact accepted command after T8-R01–R05 correction: `node --test tests/contentReplacementTransaction.test.js tests/staticSourceSchema.test.js tests/staticPanelTransaction.test.js tests/imageChartView.test.js tests/qmdMediaView.test.js tests/browserAuthoredAssetStore.test.js` — **42 passed / 0 failed / 0 skipped / 0 todo**, 2.922 s.
+- Correction RED/GREEN: transaction cases moved from **7/9** to **9/9** for live metadata rebase and same-revision source-hash drift; the two mounted lifecycle regressions each failed before the fix and the combined mounted/dialog gate is now **8/8**. Deferred prepare leaves no late state/bytes/retainer, and committing unmount performs no draft discard.
 - The replacement plan is immutable and retains old/new asset IDs plus media ID through `beginTransaction`. Completion happens only after dashboard persistence and byte publication; failure compensates dashboard, store snapshot, session state, and retainers. Expected-current revision/identity drift rejects before durable writes.
 - Browser-authored byte retirement is lease-aware: removing the superseded asset marks it retired, keeps active object URLs/bytes readable, and deletes/revokes only after the final release.
 
 ### Named Journey B checkpoint
 
-- Corrected command, with no literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-media.spec.js --project=chromium --grep "Journey B — global media replacement preserves placement state"` — **1/1 passing**, 47.3 s test time and 49.8 s total.
-- Build 1440×900 created one reusable media identity with distinct QMD and Image contextual state, set Image zoom to 1.5×, rejected an invalid candidate without mutation, and confirmed one scoped Replace library file everywhere action.
+- Corrected command, with no literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-media.spec.js --project=chromium --grep "Journey B — global media replacement preserves placement state"` — **1/1 passing**, 48.2 s test time and 51.3 s total.
+- Build 1440×900 created one reusable media identity with distinct QMD and Image contextual state, set Image zoom to 1.5×, proved valid-file Cancel and Escape return exact dashboard/store/session inventories with no retainer and focus returned, rejected an invalid candidate without mutation, and confirmed one scoped replacement.
 - Exact before/after correspondence retained mediaId, Image alt/decorative/crop/rotation/fit, QMD alt/caption/width/align/frame/flow, and 1.5× viewer zoom while revision advanced 1→2 and hash/render changed for both uses.
 - The replacement dialog gave initial focus to file selection, reported invalid input in the dialog, committed only after explicit confirmation, returned focus to the trigger, and exposed no global Undo/Redo affordance.
-- View and fullscreen rendered revision 2 for both QMD and Image from the same logical media identity. Exhaustive write/dashboard/publish rollback and lease timing remain deterministic-test owners; the real browser owns representative validation, all-use update, focus, and surface continuity.
+- The committed manifest hash and fetched rendered-Image blob SHA-256 both equal the uploaded JPEG fixture. View and fullscreen inspect revision 2 Image and QMD from the same logical media identity; the QMD assertion is identity/revision/visibility rather than a second fetch of its already-rendered blob URL. Exhaustive rollback and lease timing remain deterministic-test owners.
 
 ### Row and boundary disposition
 

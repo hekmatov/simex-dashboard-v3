@@ -53,7 +53,7 @@ export async function prepareMediaReplacement({ dashboard, mediaId, candidate = 
       kind: "media-replacement",
       mediaId: id,
       expectedRevision: previous.revision,
-      expectedIdentity: mediaIdentity(previous),
+      expectedCurrent: currentAuthority(previous, previousDashboard.assets),
       oldAssetId,
       newAssetId: staged.assetId,
       newManifest: structuredClone(staged.manifestEntry),
@@ -118,11 +118,20 @@ export async function commitMediaReplacement(plan, {
 
 function replacementCandidate(plan, currentDashboard) {
   const current = currentDashboard?.contentLibrary?.mediaItems?.[plan.mediaId];
-  if (!current || current.revision !== plan.expectedRevision || mediaIdentity(current) !== plan.expectedIdentity) {
+  if (!current || !sameCurrentAuthority(plan.expectedCurrent, currentAuthority(current, currentDashboard?.assets))) {
     throw new Error("Media replacement plan is stale; the current media authority changed.");
   }
   const next = structuredClone(currentDashboard);
-  next.contentLibrary.mediaItems[plan.mediaId] = structuredClone(plan.nextMediaItem);
+  next.contentLibrary.mediaItems[plan.mediaId] = {
+    ...structuredClone(current),
+    revision: current.revision + 1,
+    current: structuredClone(plan.nextMediaItem.current),
+    origin: plan.nextMediaItem.origin,
+    health: plan.nextMediaItem.health,
+    dimensions: structuredClone(plan.nextMediaItem.dimensions),
+    byteLength: plan.nextMediaItem.byteLength,
+    mediaType: plan.nextMediaItem.mediaType,
+  };
   next.assets ??= {};
   const alreadyDurable = Object.hasOwn(next.assets, plan.newAssetId);
   next.assets[plan.newAssetId] = {
@@ -148,8 +157,19 @@ function replacementCandidate(plan, currentDashboard) {
   };
 }
 
-function mediaIdentity(item) {
-  return JSON.stringify({ mediaId: item.mediaId, revision: item.revision, current: item.current });
+function currentAuthority(item, assets = {}) {
+  const current = structuredClone(item.current);
+  return {
+    revision: item.revision,
+    current,
+    sha256: current.kind === "asset" ? assets?.[current.assetId]?.sha256 ?? null : null,
+  };
+}
+
+function sameCurrentAuthority(expected, actual) {
+  return expected?.revision === actual?.revision
+    && expected?.sha256 === actual?.sha256
+    && JSON.stringify(expected?.current) === JSON.stringify(actual?.current);
 }
 
 function replacementValidationError(validation) {

@@ -115,6 +115,41 @@ test("expected-current drift rejects before durable writes and leaves the newer 
   assert.equal(readSessionImageAssetBytes(plan.newAssetId), null);
 });
 
+test("commit rebases replacement fields onto concurrent live metadata edits", async () => {
+  const harness = replacementHarness();
+  const plan = await preparePlan(harness.dashboard);
+  harness.dashboard.contentLibrary.mediaItems[plan.mediaId].displayName = "Renamed while replacement was open";
+  harness.dashboard.contentLibrary.mediaItems[plan.mediaId].defaultDescription = "New concurrent default";
+
+  await commitMediaReplacement(plan, {
+    contentDraftCoordinator: harness.coordinator,
+    retireAsset: (assetId) => harness.assetStore.remove(assetId),
+  });
+
+  const committed = harness.dashboard.contentLibrary.mediaItems[plan.mediaId];
+  assert.equal(committed.displayName, "Renamed while replacement was open");
+  assert.equal(committed.defaultDescription, "New concurrent default");
+  assert.equal(committed.revision, 4);
+  assert.equal(committed.current.assetId, plan.newAssetId);
+});
+
+test("same-revision current manifest hash drift rejects before durable writes", async () => {
+  const harness = replacementHarness();
+  const plan = await preparePlan(harness.dashboard);
+  harness.dashboard.assets["asset-map"].sha256 = "b".repeat(64);
+  const before = structuredClone(harness.dashboard);
+
+  await assert.rejects(commitMediaReplacement(plan, {
+    contentDraftCoordinator: harness.coordinator,
+    retireAsset: (assetId) => harness.assetStore.remove(assetId),
+  }), /stale|authority changed/i);
+
+  assert.deepEqual(harness.dashboard, before);
+  assert.deepEqual(harness.commits, []);
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+  assert.equal(readSessionImageAssetBytes(plan.newAssetId), null);
+});
+
 for (const failure of ["write", "dashboard", "publish"]) {
   test(`${failure} failure compensates dashboard, bytes, session state, and replacement retainers`, async () => {
     const harness = replacementHarness({ failure });
