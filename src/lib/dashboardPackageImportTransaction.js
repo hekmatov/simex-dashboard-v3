@@ -26,17 +26,18 @@ export async function commitDashboardPackageImport({
   if (payloadEntries.length > 1 && typeof commitAssets !== "function") {
     throw new Error("Dashboard package import requires an atomic authored asset commit boundary.");
   }
+  if (typeof snapshotDashboard !== "function" || typeof restoreDashboard !== "function") {
+    throw new Error("Dashboard package import requires a compensatable dashboard boundary.");
+  }
   if (payloadEntries.length > 0 && (
     typeof snapshotAssets !== "function"
     || typeof restoreAssets !== "function"
-    || typeof snapshotDashboard !== "function"
-    || typeof restoreDashboard !== "function"
   )) {
-    throw new Error("Dashboard package import requires compensatable asset and dashboard boundaries.");
+    throw new Error("Dashboard package import requires a compensatable authored asset boundary.");
   }
   const assetIds = payloadEntries.map(([assetId]) => assetId);
   const assetSnapshot = payloadEntries.length > 0 ? await snapshotAssets(assetIds) : null;
-  const previousDashboard = payloadEntries.length > 0 ? await snapshotDashboard() : null;
+  const previousDashboard = await snapshotDashboard();
   const stagedAssetIds = [];
   try {
     for (const [assetId, payload] of payloadEntries) {
@@ -77,11 +78,13 @@ export async function commitDashboardPackageImport({
   }
 
   try {
-    if (typeof commitAssets === "function") {
-      await commitAssets(stagedAssetIds, { transactionId });
-    } else {
-      for (const assetId of stagedAssetIds) {
-        await commitAsset(assetId, { transactionId });
+    if (stagedAssetIds.length > 0) {
+      if (typeof commitAssets === "function") {
+        await commitAssets(stagedAssetIds, { transactionId });
+      } else {
+        for (const assetId of stagedAssetIds) {
+          await commitAsset(assetId, { transactionId });
+        }
       }
     }
   } catch (error) {
@@ -102,25 +105,25 @@ export async function commitDashboardPackageImport({
     rebase(committed);
   } catch (error) {
     const restorationFailures = [];
+    try {
+      const restored = await restoreDashboard(previousDashboard);
+      if (committed !== undefined) rebase(restored ?? previousDashboard);
+    } catch (restoreError) {
+      restorationFailures.push(restoreError);
+    }
     if (payloadEntries.length > 0) {
       try {
-        const restored = await restoreDashboard(previousDashboard);
-        if (committed !== undefined) rebase(restored ?? previousDashboard);
+        await compensateAssetsOrThrow({
+          error,
+          stagedAssetIds,
+          rollbackAsset,
+          restoreAssets,
+          assetSnapshot,
+          transactionId,
+        });
       } catch (restoreError) {
         restorationFailures.push(restoreError);
       }
-    }
-    try {
-      await compensateAssetsOrThrow({
-        error,
-        stagedAssetIds,
-        rollbackAsset,
-        restoreAssets,
-        assetSnapshot,
-        transactionId,
-      });
-    } catch (restoreError) {
-      restorationFailures.push(restoreError);
     }
     if (restorationFailures.length > 0) {
       throw new AggregateError(

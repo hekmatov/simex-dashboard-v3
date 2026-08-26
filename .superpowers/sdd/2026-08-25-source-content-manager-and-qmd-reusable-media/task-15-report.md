@@ -54,3 +54,10 @@ The focused contract failed on the absent `contentPackageValidation.js`. The new
 - Focused raster/package RED rejected neither a PNG self-declared as JPEG nor forged 8×6 metadata and lacked the exported inspector. GREEN is **20/20**, including the existing valid PNG/JPEG/WebP fixture loop plus both new rejection cases.
 - Final corrected nine-file selection: **53/54**, with PS-04 the sole failure after successfully launching the copied package; no fail/skip/todo exists in the 53 live-source/product cases. No build or `dist` edit was made.
 - Final corrected Journey G: **1/1 passing**, 1.3 m test / 1.4 m total, retaining the same bounded online-load→offline acceptance and zero subsequent HTTP requests.
+
+## Final affected-boundary correction
+
+- Dashboard snapshot/restore is now required and applied for every package import, including packages with zero asset payloads. Asset snapshot, commit, rollback, and restore remain conditional on actual payloads.
+- Focused RED reproduced an asset-free valid V5 replacement whose injected renderer rebase failure left the imported dashboard current. Focused GREEN is **11/11**: the exact prior dashboard is restored and no asset adapter mutates.
+- Final nine-file selection is **54/55**, with all 54 live-source/product checks passing and only the unchanged PS-04 stale generated-client case failing after launch on the missing Biomedical surface. No build or `dist` edit was made.
+- Journey G was not repeated because this correction affects only an injected asset-free post-replacement rebase-failure compensation branch, not its previously passing successful live import path.

@@ -61,6 +61,7 @@ test("package replacement drains delayed authored edits before commit and rebase
 
   await commitDashboardPackageImport({
     candidate: { config: imported },
+    ...compensationBoundary(),
     prepare: async () => {
       events.push("prepare");
       await pendingEdits.flush();
@@ -93,6 +94,57 @@ test("package replacement drains delayed authored edits before commit and rebase
   });
 });
 
+test("asset-free V5 import restores the exact prior dashboard when renderer rebase fails", async () => {
+  const prior = dashboard({
+    programLabel: "Prior program",
+    pageTitle: "Prior page",
+    sectionTitle: "Prior section",
+  });
+  const imported = {
+    ...dashboard({
+      programLabel: "Imported program",
+      pageTitle: "Imported page",
+      sectionTitle: "Imported section",
+    }),
+    configVersion: 5,
+    dataSources: {},
+    assets: {},
+    contentLibrary: { mediaItems: {}, sourceEntries: {} },
+  };
+  let current = structuredClone(prior);
+  const assetMutations = [];
+
+  await assert.rejects(commitDashboardPackageImport({
+    candidate: { config: imported, assetPayloads: {} },
+    prepare: async () => {},
+    snapshotAssets: async () => {
+      assetMutations.push("snapshot-assets");
+      return new Map();
+    },
+    restoreAssets: async () => { assetMutations.push("restore-assets"); },
+    snapshotDashboard: async () => structuredClone(current),
+    restoreDashboard: async (dashboardValue) => {
+      current = structuredClone(dashboardValue);
+      return current;
+    },
+    stageAsset: async () => { assetMutations.push("stage-asset"); },
+    commitAssets: async () => { assetMutations.push("commit-assets"); },
+    rollbackAsset: async () => { assetMutations.push("rollback-asset"); },
+    replace: async (config) => {
+      current = structuredClone(config);
+      return current;
+    },
+    rebase: (dashboardValue) => {
+      if (dashboardValue.programLabel === "Imported program") {
+        throw new Error("injected asset-free rebase failure");
+      }
+    },
+  }), /asset-free rebase failure/);
+
+  assert.deepEqual(current, prior);
+  assert.deepEqual(assetMutations, []);
+});
+
 test("preparation and replacement failures preserve the candidate and current renderer drafts", async () => {
   const candidate = { config: dashboard({ programLabel: "Imported" }) };
   const rendererDrafts = {
@@ -116,6 +168,7 @@ test("preparation and replacement failures preserve the candidate and current re
 
   await assert.rejects(commitDashboardPackageImport({
     candidate,
+    ...compensationBoundary(),
     prepare: async () => {},
     replace: async () => {
       replacements += 1;
