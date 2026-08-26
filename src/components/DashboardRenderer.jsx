@@ -833,9 +833,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   function addBuildPage() {
     if (moderatorOperationGateRef.current.isActive()) return;
     const label = "New page";
-    const pageId = uniquePageId(workingDashboard, label);
+    const currentDraft = buildLayoutDraftRef.current
+      ?? buildLayoutDraft
+      ?? createBuildLayoutDraft(dashboard);
+    const pageId = uniquePageId(currentDraft.value, label);
     const nextDraft = addBuildLayoutPage(
-      buildLayoutDraftRef.current ?? buildLayoutDraft ?? createBuildLayoutDraft(dashboard),
+      currentDraft,
       {
         id: pageId,
         label,
