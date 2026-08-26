@@ -31,6 +31,24 @@ test("detail routes media and CSV to type-appropriate passive shells", () => {
   assert.doesNotMatch(csv, /GeoJSON preview|Delete|Replace/);
 });
 
+test("External media detail alone exposes manager-owned Import as local media", () => {
+  const external = makeMediaItem({
+    mediaId: "external-map", current: { kind: "url", url: "https://example.test/map.png" },
+    origin: "external", health: "external",
+  });
+  const externalHtml = renderToStaticMarkup(React.createElement(ContentDetail, {
+    item: { id: external.mediaId, kind: "media", record: external, usageCount: 0 },
+    dashboard: { assets: {}, contentLibrary: { mediaItems: { [external.mediaId]: external } } },
+    onContentDraftStage: () => {}, onContentDraftCommit: () => {}, onContentDraftDiscard: () => {},
+  }));
+  assert.match(externalHtml, /Import as local media/);
+
+  const storedHtml = renderToStaticMarkup(React.createElement(ContentDetail, {
+    item: { id: "stored", kind: "media", record: makeMediaItem({ mediaId: "stored" }), usageCount: 0 },
+  }));
+  assert.doesNotMatch(storedHtml, /Import as local media/);
+});
+
 test("rename draft stages exact manager ownership before one candidate commit", () => {
   const dashboard = {
     contentLibrary: { mediaItems: { "media-map": makeMediaItem({ mediaId: "media-map" }) }, sourceEntries: {} },

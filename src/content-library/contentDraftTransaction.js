@@ -1,5 +1,6 @@
 import { isFinalizedWizardResult } from "../charting/forms/wizardDraft.js";
 import { isFinalizedStaticContentResult } from "../static-content/forms/staticContentDraft.js";
+import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
 
 export function createDeferredCoordinatorDisposal({ schedule = queueMicrotask } = {}) {
   if (typeof schedule !== "function") throw new TypeError("Content draft disposal scheduler is required.");
@@ -37,6 +38,57 @@ export function discardContentDraft(draft, { reason = "discarded" } = {}) {
   const normalized = normalizeExistingDraft(draft);
   requiredText(reason, "Content draft discard reason");
   return freezeRecord({ ...normalized, status: "discarded", reason: reason.trim() });
+}
+
+export function buildStaticPanelContentDraftCandidate({
+  dashboard,
+  draft,
+  operation = "create",
+  panelId,
+  pendingMediaItems = {},
+  pendingAssets = {},
+} = {}) {
+  record(dashboard, "Static content draft dashboard");
+  record(draft, "Static content coordinator draft");
+  const payload = draft.payload;
+  record(payload, "Finalized static content payload");
+  const base = structuredClone(dashboard);
+  base.contentLibrary = base.contentLibrary ?? { mediaItems: {}, sourceEntries: {} };
+  base.contentLibrary.mediaItems = {
+    ...(base.contentLibrary.mediaItems ?? {}),
+    ...structuredClone(pendingMediaItems),
+  };
+  base.assets = {
+    ...(base.assets ?? {}),
+    ...structuredClone(pendingAssets),
+  };
+  const prepared = prepareStaticPanelTransaction({
+    dashboard: base,
+    operation,
+    panelId,
+    destination: payload.destination,
+    panel: payload.panel,
+    placement: payload.placement,
+    mediaItem: payload.placement?.kind === "staticImage" ? payload.mediaItem : null,
+    assets: payload.placement?.kind === "staticImage" ? payload.assets : {},
+    stagedAssetIds: payload.placement?.kind === "staticImage" ? payload.stagedAssetIds : [],
+  });
+  const commitAssetIds = uniqueSorted([
+    ...(payload.stagedAssetIds ?? []),
+    ...Object.values(pendingMediaItems)
+      .map((item) => item?.current?.kind === "asset" ? item.current.assetId : null)
+      .filter(Boolean),
+  ]);
+  return freezeRecord({
+    dashboard: prepared.candidateDashboard,
+    commitAssetIds,
+    discardAssetIds: [],
+    itemIds: uniqueSorted([
+      ...Object.keys(pendingMediaItems),
+      payload.mediaItem?.mediaId,
+      payload.panel?.id,
+    ].filter(Boolean)),
+  });
 }
 
 export function createContentDraftCoordinator({
@@ -357,7 +409,7 @@ function assertDraftReadyForCommit(draft, finalizedDraftIds) {
 
 function isAuthoringPayloadFinalized(owner, payload) {
   if (owner === "chart") return isFinalizedWizardResult(payload);
-  if (owner === "image" || owner === "qmd") return isFinalizedStaticContentResult(payload);
+  if (owner === "image" || owner === "qmd" || owner === "qmd-panel") return isFinalizedStaticContentResult(payload);
   return false;
 }
 

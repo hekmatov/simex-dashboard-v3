@@ -11,14 +11,41 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: DashboardModeWorkspace }, { default: FullscreenDisplay }, { PlaybackProvider }] = await Promise.all([
+const [
+  { default: DashboardModeWorkspace },
+  { default: FullscreenDisplay },
+  { PlaybackProvider },
+  { ImageSourceEditor },
+  { createStaticContentDraft, reduceStaticContentDraft },
+] = await Promise.all([
   vite.ssrLoadModule("/src/components/dashboard/DashboardModeWorkspace.jsx"),
   vite.ssrLoadModule("/src/components/FullscreenDisplay.jsx"),
   vite.ssrLoadModule("/src/components/playback/PlaybackProvider.jsx"),
+  vite.ssrLoadModule("/src/components/static-content/ImageSourceEditor.jsx"),
+  vite.ssrLoadModule("/src/static-content/forms/staticContentDraft.js"),
 ]);
 await vite.close();
 
 const dashboard = staticDashboard();
+
+test("active Image replacement exposes Restore previous image and no global undo label", () => {
+  const draft = createStaticContentDraft({
+    mode: "edit", destination: { pageId: "overview", sectionId: "response" },
+    panel: dashboard.pages[0].sections[0].panels.find(({ chart }) => chart.typeId === "image").chart,
+    placement: dashboard.dataSources["image-source"],
+    mediaItem: dashboard.contentLibrary.mediaItems["media-image-source"],
+    assets: dashboard.assets,
+  });
+  const replaced = reduceStaticContentDraft(draft, {
+    type: "selectMediaItem",
+    mediaItem: { ...dashboard.contentLibrary.mediaItems["media-image-source"], mediaId: "media-other" },
+  });
+  const html = renderToStaticMarkup(React.createElement(ImageSourceEditor, {
+    source: { ...replaced.source, origin: replaced.mediaItem.current }, imageEditing: replaced.imageEditing,
+  }));
+  assert.match(html, /Restore previous image/);
+  assert.doesNotMatch(html, />Undo replacement</);
+});
 
 test("Build and View route one saved Image model through equal content and footprint owners", () => {
   const build = renderWorkspace("build", { buildStaticAuthoringOpen: true });

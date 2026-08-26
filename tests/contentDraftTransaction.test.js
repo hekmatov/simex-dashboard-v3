@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildStaticPanelContentDraftCandidate,
   createContentDraftCoordinator,
   discardContentDraft,
   finalizeContentDraft,
@@ -126,6 +127,34 @@ test("manager Add publishes one immutable candidate and deliberately keeps an un
   assert.deepEqual(previous, makeDashboardV5());
   assert.equal(harness.sessionAssets.has("asset-new"), false);
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+});
+
+test("QMD panel draft publishes its new local media and panel in one coordinator candidate", async () => {
+  const dashboard = makeDashboardV5();
+  let state = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "overview", sectionId: "response" },
+    contentTypeId: "freeText",
+    panel: { ...dashboard.pages[0].sections[0].panels[0].chart, id: "qmd-local", typeId: "freeText", title: "Local media note", sourceId: "qmd-local-source" },
+    placement: { kind: "staticText", qmd: "![Local map](simex-media:media-local)" },
+  });
+  state = reduceStaticContentDraft(state, { type: "setStage", stage: "preview-and-add" });
+  const payload = finalizeStaticContentDraft(state);
+  const localItem = makeMediaItem({
+    mediaId: "media-local", revision: 1, current: { kind: "asset", assetId: "asset-local" },
+    origin: "uploaded", health: "ready", dimensions: { width: 1, height: 1 }, byteLength: 1,
+  });
+  const manifestEntry = manifest();
+  const result = buildStaticPanelContentDraftCandidate({
+    dashboard,
+    draft: { owner: "qmd-panel", payload },
+    pendingMediaItems: { "media-local": localItem },
+    pendingAssets: { "asset-local": manifestEntry },
+  });
+  assert.equal(result.dashboard.contentLibrary.mediaItems["media-local"].mediaId, "media-local");
+  assert.equal(result.dashboard.dataSources["qmd-local-source"].qmd.includes("media-local"), true);
+  assert.deepEqual(result.commitAssetIds, ["asset-local"]);
+  assert.deepEqual(result.itemIds, ["media-local", "qmd-local"]);
 });
 
 test("authoring owners cannot publish until their existing finalizer result is staged", async () => {

@@ -2,6 +2,7 @@ import React from "react";
 
 import FreeTextChartView from "../charts/FreeTextChartView.jsx";
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
+import MediaPicker from "../source-content/MediaPicker.jsx";
 
 const NARROW_EDITOR_QUERY = "(max-width: 860px)";
 
@@ -10,8 +11,12 @@ export function FreeTextSourceEditor({
   value = "",
   panelId = "static-text-preview",
   disabled = false,
+  mediaItems = {},
+  assets = {},
   onChange,
   onValidationChange,
+  onMediaSelect,
+  onMediaCreate,
 } = {}) {
   const initial = React.useMemo(() => analyze(value, panelId), []);
   const [analysis, setAnalysis] = React.useState(initial);
@@ -19,6 +24,7 @@ export function FreeTextSourceEditor({
   const [pending, setPending] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("source");
   const [narrow, setNarrow] = React.useState(false);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const evaluatedSource = React.useRef(value);
   const observedSource = React.useRef(value);
   const pendingChange = React.useRef(null);
@@ -200,6 +206,17 @@ export function FreeTextSourceEditor({
             onChange={(event) => changeSource(event.target.value)}
           />
           <small id={`${id}-help`}>Portable QMD v1 renders locally. Unknown syntax is shown as text; code never executes.</small>
+          <button type="button" className="secondary" disabled={disabled} onClick={() => setPickerOpen(true)}>Insert image</button>
+          {pickerOpen && (
+            <MediaPicker
+              mediaItems={mediaItems}
+              assets={assets}
+              mode="qmd"
+              onSelect={(item) => { onMediaSelect?.(item); setPickerOpen(false); }}
+              onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }}
+              onCancel={() => setPickerOpen(false)}
+            />
+          )}
           {!pending && analysis.errors.length > 0 && (
             <div className="free-text-validation-errors" aria-labelledby={`${id}-errors-title`}>
               <h3 id={`${id}-errors-title`}>Fix before continuing</h3>

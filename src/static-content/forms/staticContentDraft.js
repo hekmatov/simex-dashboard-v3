@@ -3,7 +3,7 @@ import {
   validateStaticSource,
 } from "../staticSourceSchema.js";
 import { createChartDraft } from "../../charting/config/chartConfigV3.js";
-import { parsePortableQmdWithMedia } from "../qmd/portableQmdMedia.js";
+import { parsePortableQmdWithMedia, serializePortableMediaReference } from "../qmd/portableQmdMedia.js";
 import {
   normalizeImageTransform,
   resetImageTransform,
@@ -48,6 +48,7 @@ export function createStaticContentDraft(options = {}) {
     placement: clone(placement),
     mediaItem: clone(mediaItem),
     assets: clone(options.assets ?? {}),
+    pendingMediaItems: {},
   };
   const restoration = normalizeRestoration(options.restoration, baselineStage);
   return {
@@ -64,6 +65,7 @@ export function createStaticContentDraft(options = {}) {
     mediaItem,
     imageEditing,
     assets: clone(options.assets ?? {}),
+    pendingMediaItems: {},
     draftRevision: Number.isInteger(options.draftRevision) && options.draftRevision >= 0
       ? options.draftRevision
       : 0,
@@ -116,6 +118,7 @@ export function reduceStaticContentDraft(state, action = {}) {
         source,
         placement: source,
         mediaItem,
+        pendingMediaItems: {},
         imageEditing: createImageEditing(source),
         status: "editing",
       });
@@ -171,6 +174,69 @@ export function reduceStaticContentDraft(state, action = {}) {
         }),
         placement: normalizeStaticSource({ ...state.source, decorative, alt: decorative ? "" : preservedAlt }),
         imageEditing: { ...state.imageEditing, preservedAlt },
+        status: "editing",
+      });
+    }
+    case "selectMediaItem": {
+      requireImageContentStage(state);
+      const mediaItem = clone(action.mediaItem);
+      const assets = action.manifestEntry
+        ? { ...state.assets, [mediaItem.current?.assetId]: clone(action.manifestEntry) }
+        : state.assets;
+      validateMediaItem(mediaItem, { assets });
+      const isNewPlacement = state.mode === "create"
+        && (!state.baseline?.mediaItem || state.baseline.mediaItem.health === "needs-relink");
+      const preservedAlt = isNewPlacement
+        ? mediaItem.defaultDescription
+        : state.source.decorative ? "" : state.source.alt;
+      const placement = normalizeStaticSource({
+        ...state.source,
+        mediaId: mediaItem.mediaId,
+        alt: state.source.decorative ? "" : preservedAlt,
+        ...(isNewPlacement ? {} : resetImageTransform()),
+      });
+      return authored(state, {
+        source: placement,
+        placement,
+        mediaItem,
+        assets,
+        imageEditing: {
+          ...state.imageEditing,
+          preservedAlt,
+          altReviewRequired: !isNewPlacement,
+          replacementUndo: isNewPlacement ? null : {
+            source: clone(state.source),
+            mediaItem: clone(state.mediaItem),
+            assets: clone(state.assets),
+          },
+        },
+        status: "editing",
+      });
+    }
+    case "insertQmdMedia": {
+      requireContentStage(state);
+      if (state.source?.kind !== "staticText") throw new Error("QMD media insertion requires Free text content.");
+      const mediaItem = clone(action.mediaItem);
+      const assets = action.manifestEntry
+        ? { ...state.assets, [mediaItem.current?.assetId]: clone(action.manifestEntry) }
+        : state.assets;
+      validateMediaItem(mediaItem, { assets });
+      if (!["asset", "package"].includes(mediaItem.current.kind) || mediaItem.health !== "ready") {
+        throw new Error("QMD can insert only ready stored or packaged media.");
+      }
+      const reference = serializePortableMediaReference({
+        mediaId: mediaItem.mediaId,
+        alt: mediaItem.defaultDescription,
+      });
+      const separator = state.source.qmd.trim() ? "\n\n" : "";
+      const source = normalizeStaticSource({ ...state.source, qmd: `${state.source.qmd}${separator}${reference}` });
+      return authored(state, {
+        source,
+        placement: source,
+        assets,
+        pendingMediaItems: action.manifestEntry
+          ? { ...state.pendingMediaItems, [mediaItem.mediaId]: mediaItem }
+          : state.pendingMediaItems,
         status: "editing",
       });
     }
@@ -297,6 +363,7 @@ export function reduceStaticContentDraft(state, action = {}) {
         mediaItem: clone(state.baseline.mediaItem),
         imageEditing: createImageEditing(state.baseline.placement),
         assets: clone(state.baseline.assets),
+        pendingMediaItems: clone(state.baseline.pendingMediaItems ?? {}),
         stage: state.mode === "edit" ? "content" : "destination",
         status: "discarded",
         confirmation: null,
@@ -364,6 +431,7 @@ export function isStaticContentDraftDirty(state) {
     placement: state.placement,
     mediaItem: state.mediaItem,
     assets: state.assets,
+    pendingMediaItems: state.pendingMediaItems,
   };
   return JSON.stringify(current) !== JSON.stringify(state.baseline);
 }

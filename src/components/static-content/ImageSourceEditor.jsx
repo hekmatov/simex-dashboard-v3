@@ -7,14 +7,18 @@ import {
   stageSessionImageAsset,
   validateImageOrigin,
 } from "../../static-content/image/imageAssetValidation.js";
+import MediaPicker from "../source-content/MediaPicker.jsx";
 
 export function ImageSourceEditor({
   source = {},
   assets = {},
   imageEditing = {},
+  mediaItems = {},
   onOriginChange,
   onReplace,
-  onUndoReplacement,
+  onRestorePreviousImage,
+  onMediaSelect,
+  onMediaCreate,
   onAltChange,
   onDecorativeChange,
 } = {}) {
@@ -22,6 +26,7 @@ export function ImageSourceEditor({
   const mountedRef = React.useRef(true);
   const intakeRevisionRef = React.useRef(0);
   const acceptedAssetIdRef = React.useRef(null);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const origin = source.origin ?? { kind: "replacementRequired", reason: "Choose an image." };
   const [originKind, setSelectedOriginKind] = React.useState(
     ["url", "package"].includes(origin.kind) ? origin.kind : "asset",
@@ -84,6 +89,17 @@ export function ImageSourceEditor({
         <div>
           <h3 id="image-source-heading">Choose image</h3>
           <p>Upload is recommended. Linked images need a network; packaged paths must belong to this dashboard.</p>
+          <button type="button" className="secondary" onClick={() => setPickerOpen(true)}>Choose from media</button>
+          {pickerOpen && (
+            <MediaPicker
+              mediaItems={mediaItems}
+              assets={assets}
+              mode="image"
+              onSelect={(item) => { onMediaSelect?.(item); setPickerOpen(false); }}
+              onCreateLocal={async (candidate, context) => { await onMediaCreate?.(candidate, context); setPickerOpen(false); }}
+              onCancel={() => setPickerOpen(false)}
+            />
+          )}
           <label htmlFor="static-image-origin-kind">Image origin</label>
           <select
             id="static-image-origin-kind"
@@ -144,7 +160,10 @@ export function ImageSourceEditor({
             </p>
           ))}
           {imageEditing.replacementUndo && (
-            <button type="button" className="secondary" onClick={onUndoReplacement}>Undo replacement</button>
+            <div role="status">
+              <p>Replacement selected. Save, discard, or restore the previous image.</p>
+              <button type="button" className="secondary" onClick={onRestorePreviousImage}>Restore previous image</button>
+            </div>
           )}
         </div>
       </section>

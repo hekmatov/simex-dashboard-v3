@@ -26,6 +26,24 @@ export default function SourceContentWorkspace({
   const { tab, queries, filters: filterState, selections, tabletDetailOpen } = browseState;
   const pendingDraftIds = React.useRef(new Set());
 
+  const stageDraft = React.useCallback((input) => {
+    const staged = onContentDraftStage?.(input);
+    const draftId = staged?.draftId ?? input.draftId;
+    if (draftId) pendingDraftIds.current.add(draftId);
+    return staged;
+  }, [onContentDraftStage]);
+  const commitDraft = React.useCallback(async (draftId, buildCandidate) => {
+    try {
+      return await onContentDraftCommit?.(draftId, buildCandidate);
+    } finally {
+      pendingDraftIds.current.delete(draftId);
+    }
+  }, [onContentDraftCommit]);
+  const discardDraft = React.useCallback((draftId, reason) => {
+    pendingDraftIds.current.delete(draftId);
+    return onContentDraftDiscard?.(draftId, reason);
+  }, [onContentDraftDiscard]);
+
   const updateViewState = (updater) => {
     const next = createSourceContentViewState(
       typeof updater === "function" ? updater(browseState) : updater,
@@ -56,11 +74,11 @@ export default function SourceContentWorkspace({
   const rename = async (values) => {
     if (!selected || !onContentDraftStage || !onContentDraftCommit) return;
     const { buildCandidate, ...draftInput } = buildContentRenameDraft({ dashboard, item: selected, ...values });
-    const staged = onContentDraftStage(draftInput);
+    const staged = stageDraft(draftInput);
     const draftId = staged?.draftId ?? draftInput.draftId;
     pendingDraftIds.current.add(draftId);
     try {
-      await onContentDraftCommit(draftId, buildCandidate);
+      await commitDraft(draftId, buildCandidate);
       pendingDraftIds.current.delete(draftId);
     } catch (error) {
       throw error;
@@ -69,6 +87,7 @@ export default function SourceContentWorkspace({
 
   if (layout === "unsupported") return <p>Build is not available at this viewport width.</p>;
   const catalogueProps = {
+    dashboard,
     items,
     query: queries[tab],
     filters: filterState[tab],
@@ -79,12 +98,23 @@ export default function SourceContentWorkspace({
       filters: { ...current.filters, [tab]: { ...current.filters[tab], [name]: value } },
     })),
     onSelect: selectItem,
+    onContentDraftStage: stageDraft,
+    onContentDraftCommit: commitDraft,
+    onContentDraftDiscard: discardDraft,
   };
   const catalogue = tab === "media" ? <MediaCatalogue {...catalogueProps} /> : <DataSourceCatalogue {...catalogueProps} />;
   const detail = (
     <section className="source-content-detail" aria-label="Content detail">
       {layout === "tablet" && <button type="button" className="secondary source-content-back" onClick={() => updateViewState((current) => ({ ...current, tabletDetailOpen: false }))}>Back</button>}
-      <ContentDetail item={selected} datasetProfile={dashboard.datasetProfiles?.[selected?.id]} onRename={rename} />
+      <ContentDetail
+        item={selected}
+        dashboard={dashboard}
+        datasetProfile={dashboard.datasetProfiles?.[selected?.id]}
+        onRename={rename}
+        onContentDraftStage={stageDraft}
+        onContentDraftCommit={commitDraft}
+        onContentDraftDiscard={discardDraft}
+      />
     </section>
   );
   return (

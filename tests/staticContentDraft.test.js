@@ -105,6 +105,52 @@ test("Free-text remains permissive and inert with the same atomic payload keys",
   assert.equal(result.mediaItem, null);
 });
 
+test("media selection prefills only a new Image placement and preserves existing placement alt", () => {
+  const selected = mediaItem();
+  let created = createStaticContentDraft({
+    mode: "create", stage: "content", destination: { pageId: "page-a", sectionId: "section-a" },
+    contentTypeId: "image", panel: panel(), assets: {},
+  });
+  created = reduceStaticContentDraft(created, { type: "selectMediaItem", mediaItem: selected });
+  assert.equal(created.source.mediaId, selected.mediaId);
+  assert.equal(created.source.alt, selected.defaultDescription);
+
+  let edited = createStaticContentDraft({
+    mode: "edit", destination: { pageId: "page-a", sectionId: "section-a" },
+    panel: panel(), placement: placement({ alt: "Placement-owned description" }), mediaItem: mediaItem(), assets: {},
+  });
+  const replacement = { ...selected, mediaId: "media-other", defaultDescription: "Changed library default" };
+  edited = reduceStaticContentDraft(edited, { type: "selectMediaItem", mediaItem: replacement });
+  assert.equal(edited.source.mediaId, "media-other");
+  assert.equal(edited.source.alt, "Placement-owned description");
+  assert.ok(edited.imageEditing.replacementUndo);
+  edited = reduceStaticContentDraft(edited, { type: "undoImageReplacement" });
+  assert.equal(edited.source.mediaId, "media-map");
+  assert.equal(edited.source.alt, "Placement-owned description");
+});
+
+test("QMD draft media stays draft-owned without changing the exact finalized payload", () => {
+  let draft = createStaticContentDraft({
+    stage: "content",
+    destination: { pageId: "page-a", sectionId: "section-a" }, contentTypeId: "freeText",
+    panel: { ...panel(), typeId: "freeText", sourceId: "text-source", title: "Situation" },
+    placement: { kind: "staticText", qmd: "Situation" },
+  });
+  const local = {
+    ...makeLocalMediaItem(),
+    defaultDescription: "Local response map",
+  };
+  draft = reduceStaticContentDraft(draft, {
+    type: "insertQmdMedia", mediaItem: local, manifestEntry: assetManifest("staged"),
+  });
+  assert.match(draft.source.qmd, /!\[Local response map\]\(simex-media:media-local\)/);
+  assert.equal(draft.pendingMediaItems["media-local"].mediaId, "media-local");
+  draft = reduceStaticContentDraft(draft, { type: "setStage", stage: "preview-and-add" });
+  const result = finalizeStaticContentDraft(draft);
+  assert.deepEqual(Object.keys(result), ["destination", "panel", "placement", "mediaItem", "assets", "stagedAssetIds"]);
+  assert.equal(result.mediaItem, null);
+});
+
 function imageDraft() {
   return createStaticContentDraft({
     mode: "create", stage: "content", destination: { pageId: "page-a", sectionId: "section-a" },
@@ -129,4 +175,12 @@ function mediaItem() {
 
 function assetManifest(storageState) {
   return { mediaType: "image/png", byteLength: 20, width: 4, height: 5, sha256: "a".repeat(64), storageState };
+}
+
+function makeLocalMediaItem() {
+  return {
+    mediaId: "media-local", revision: 1, current: { kind: "asset", assetId: "asset-local" },
+    displayName: "Local map", defaultDescription: "", origin: "uploaded", health: "ready",
+    dimensions: { width: 4, height: 5 }, byteLength: 20, mediaType: "image/png",
+  };
 }

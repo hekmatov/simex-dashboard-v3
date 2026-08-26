@@ -21,6 +21,7 @@ import {
   discardUnreferencedSessionImageAssets,
   resolveSessionImageAsset,
 } from "../../static-content/image/imageAssetValidation.js";
+import { buildStaticPanelContentDraftCandidate } from "../../content-library/contentDraftTransaction.js";
 
 export function StaticContentWizard({
   open = false,
@@ -51,6 +52,9 @@ export function StaticContentWizard({
   );
   const [submitError, setSubmitError] = React.useState("");
   const [freeTextValidation, setFreeTextValidation] = React.useState(null);
+  const contentDraftIdRef = React.useRef(null);
+  const retainedAssetIdsRef = React.useRef(new Set());
+  const retainedMediaIdsRef = React.useRef(new Set());
   const dirty = isStaticContentDraftDirty(draft);
   const freeTextRequiresValidation = draft.contentTypeId === "freeText"
     && (draft.stage === "content" || draft.stage === "preview-and-add");
@@ -60,12 +64,44 @@ export function StaticContentWizard({
     );
   React.useEffect(() => { onDraftChange?.(draft); }, [draft, onDraftChange]);
   React.useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  React.useEffect(() => () => {
+    if (contentDraftIdRef.current) onContentDraftDiscard?.(contentDraftIdRef.current, "static-content-unmount");
+    contentDraftIdRef.current = null;
+  }, [onContentDraftDiscard]);
   if (!open) return null;
 
   const stageIndex = STATIC_CONTENT_STAGES.indexOf(draft.stage);
+  const discardActiveContentDraft = async (reason) => {
+    const draftId = contentDraftIdRef.current;
+    contentDraftIdRef.current = null;
+    retainedAssetIdsRef.current.clear();
+    retainedMediaIdsRef.current.clear();
+    if (draftId) await onContentDraftDiscard?.(draftId, reason);
+  };
+  const retainMedia = async ({ mediaItem, assetId = null, owner, replace = false }) => {
+    if (!mediaItem || !onContentDraftStage) return;
+    if (replace && contentDraftIdRef.current) await discardActiveContentDraft("static-media-selection-replaced");
+    retainedMediaIdsRef.current.add(mediaItem.mediaId);
+    if (assetId) retainedAssetIdsRef.current.add(assetId);
+    const input = {
+      draftId: contentDraftIdRef.current ?? `${owner}-${draft.draftIdentity.panelId}`,
+      owner,
+      kind: owner === "qmd-panel" ? "qmd-panel-media" : "image-panel-media",
+      payload: {},
+      assetIds: [...retainedAssetIdsRef.current],
+      mediaIds: [...retainedMediaIdsRef.current],
+      sourceIds: [],
+    };
+    if (contentDraftIdRef.current && contentDraftCoordinator?.updateDraft) {
+      contentDraftCoordinator.updateDraft(contentDraftIdRef.current, input);
+      return;
+    }
+    const staged = onContentDraftStage(input);
+    contentDraftIdRef.current = staged?.draftId ?? input.draftId;
+  };
   const requestClose = () => {
     if (!dirty) {
-      onClose?.({ discarded: false, draft });
+      void discardActiveContentDraft("static-content-close").finally(() => onClose?.({ discarded: false, draft }));
       return;
     }
     dispatch({ type: "requestCancel", restoration: focusRestoration(draft.stage) });
@@ -73,6 +109,7 @@ export function StaticContentWizard({
   const submit = async (event) => {
     event.preventDefault();
     setSubmitError("");
+    let committingDraftId = null;
     try {
       if (draft.stage !== "preview-and-add") {
         if (freeTextInvalid) throw new Error("Wait for the Free-text preview to finish validating before continuing.");
@@ -81,10 +118,43 @@ export function StaticContentWizard({
       }
       validateCompiledFreeText(draft);
       const result = finalizeStaticContentDraft(draft);
-      await onCreate?.(result);
+      if (contentDraftIdRef.current && contentDraftCoordinator?.updateDraft && onContentDraftCommit) {
+        const draftId = contentDraftIdRef.current;
+        committingDraftId = draftId;
+        contentDraftCoordinator.updateDraft(draftId, {
+          payload: result,
+          assetIds: [...retainedAssetIdsRef.current],
+          mediaIds: [...retainedMediaIdsRef.current],
+        });
+        const pendingMediaItems = structuredClone(draft.pendingMediaItems ?? {});
+        const pendingAssets = Object.fromEntries(Object.values(pendingMediaItems)
+          .filter((item) => item.current?.kind === "asset")
+          .map((item) => [item.current.assetId, structuredClone(draft.assets[item.current.assetId])]));
+        await onContentDraftCommit(draftId, ({ dashboard: currentDashboard, draft: coordinatorDraft }) => (
+          buildStaticPanelContentDraftCandidate({
+            dashboard: currentDashboard,
+            draft: coordinatorDraft,
+            operation: editor ? "update" : "create",
+            panelId: editor ? result.panel.id : undefined,
+            pendingMediaItems,
+            pendingAssets,
+          })
+        ));
+        contentDraftIdRef.current = null;
+        retainedAssetIdsRef.current.clear();
+        retainedMediaIdsRef.current.clear();
+        onClose?.({ committed: true, draft, result });
+      } else {
+        await onCreate?.(result);
+      }
       cleanupImageDraftAssets(draft, dashboard, result);
       dispatch({ type: "committed" });
     } catch (error) {
+      if (committingDraftId) {
+        contentDraftIdRef.current = null;
+        retainedAssetIdsRef.current.clear();
+        retainedMediaIdsRef.current.clear();
+      }
       setSubmitError(error?.message ?? "Static content could not be saved.");
     }
   };
@@ -132,7 +202,16 @@ export function StaticContentWizard({
         <section className="static-content-dialog__body" data-static-content-stage={draft.stage}>
           {draft.stage === "destination" && <DestinationFields dashboard={dashboard} draft={draft} dispatch={dispatch} />}
           {draft.stage === "content-type" && <ContentTypeFields draft={draft} dispatch={dispatch} />}
-          {draft.stage === "content" && <StaticContentFields draft={draft} dispatch={dispatch} onFreeTextValidation={setFreeTextValidation} />}
+          {draft.stage === "content" && (
+            <StaticContentFields
+              draft={draft}
+              dashboard={dashboard}
+              dispatch={dispatch}
+              onFreeTextValidation={setFreeTextValidation}
+              onRetainMedia={retainMedia}
+              onRestorePreviousImage={() => void discardActiveContentDraft("restore-previous-image")}
+            />
+          )}
           {draft.stage === "preview-and-add" && <StaticPreview draft={draft} />}
         </section>
 
@@ -152,8 +231,9 @@ export function StaticContentWizard({
         cancelLabel="Keep editing"
         confirmLabel="Discard"
         onCancel={() => dispatch({ type: "keepEditing" })}
-        onConfirm={() => {
+        onConfirm={async () => {
           cleanupImageDraftAssets(draft, dashboard);
+          await discardActiveContentDraft("static-content-explicit-discard");
           dispatch({ type: "discard" });
           onClose?.({ discarded: true, draft });
         }}
@@ -215,7 +295,7 @@ function ContentTypeFields({ draft, dispatch }) {
   );
 }
 
-export function StaticContentFields({ draft, dispatch, onFreeTextValidation }) {
+export function StaticContentFields({ draft, dashboard = {}, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage }) {
   return (
     <div>
       <label htmlFor="static-panel-title">Panel title</label>
@@ -226,25 +306,35 @@ export function StaticContentFields({ draft, dispatch, onFreeTextValidation }) {
         onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
       />
       {draft.contentTypeId === "freeText"
-        ? <FreeTextFields draft={draft} dispatch={dispatch} onValidationChange={onFreeTextValidation} />
-        : <ImageFields draft={draft} dispatch={dispatch} />}
+        ? <FreeTextFields draft={draft} dashboard={dashboard} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} />
+        : <ImageFields draft={draft} dashboard={dashboard} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
     </div>
   );
 }
 
-function FreeTextFields({ draft, dispatch, onValidationChange }) {
+function FreeTextFields({ draft, dashboard, dispatch, onValidationChange, onRetainMedia }) {
   return (
     <FreeTextSourceEditor
       id="static-qmd-source"
       value={draft.source?.qmd ?? ""}
       panelId={draft.panel?.id ?? "static-text-preview"}
+      mediaItems={dashboard.contentLibrary?.mediaItems ?? {}}
+      assets={draft.assets}
       onChange={(qmd) => dispatch({ type: "updateSource", updates: { qmd } })}
       onValidationChange={onValidationChange}
+      onMediaSelect={(mediaItem) => {
+        dispatch({ type: "insertQmdMedia", mediaItem });
+        void onRetainMedia?.({ mediaItem, owner: "qmd-panel" });
+      }}
+      onMediaCreate={(candidate) => {
+        dispatch({ type: "insertQmdMedia", mediaItem: candidate.mediaItem, manifestEntry: candidate.assets[candidate.assetId] });
+        return onRetainMedia?.({ mediaItem: candidate.mediaItem, assetId: candidate.assetId, owner: "qmd-panel" });
+      }}
     />
   );
 }
 
-function ImageFields({ draft, dispatch }) {
+function ImageFields({ draft, dashboard, dispatch, onRetainMedia, onRestorePreviousImage }) {
   const source = draft.source ?? {};
   const mediaItem = draft.mediaItem;
   const editorSource = { ...source, origin: mediaItem?.current };
@@ -252,13 +342,28 @@ function ImageFields({ draft, dispatch }) {
     <ImageSourceEditor
       source={editorSource}
       assets={draft.assets}
+      mediaItems={dashboard.contentLibrary?.mediaItems ?? {}}
       imageEditing={draft.imageEditing}
       onOriginChange={(current) => dispatch({ type: "setMediaCurrent", current })}
-      onReplace={({ origin, manifestEntry }) => dispatch({ type: "replaceImage", current: origin, origin, manifestEntry })}
-      onUndoReplacement={() => {
+      onReplace={({ origin, manifestEntry }) => {
+        const action = { type: "replaceImage", current: origin, origin, manifestEntry };
+        const next = reduceStaticContentDraft(draft, action);
+        dispatch(action);
+        void onRetainMedia?.({ mediaItem: next.mediaItem, assetId: origin.assetId, owner: "image", replace: true });
+      }}
+      onMediaSelect={(selected) => {
+        dispatch({ type: "selectMediaItem", mediaItem: selected });
+        void onRetainMedia?.({ mediaItem: selected, owner: "image", replace: true });
+      }}
+      onMediaCreate={(candidate) => {
+        dispatch({ type: "selectMediaItem", mediaItem: candidate.mediaItem, manifestEntry: candidate.assets[candidate.assetId] });
+        return onRetainMedia?.({ mediaItem: candidate.mediaItem, assetId: candidate.assetId, owner: "image", replace: true });
+      }}
+      onRestorePreviousImage={() => {
         const retained = Object.keys(draft.imageEditing?.replacementUndo?.assets ?? {});
         discardUnreferencedSessionImageAssets(Object.keys(draft.assets ?? {}), retained);
         dispatch({ type: "undoImageReplacement" });
+        onRestorePreviousImage?.();
       }}
       onAltChange={(alt) => dispatch({ type: "setImageAlt", alt })}
       onDecorativeChange={(decorative) => dispatch({ type: "setImageDecorative", decorative })}

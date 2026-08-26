@@ -1,7 +1,15 @@
 import React from "react";
 import DependencyList from "./DependencyList.jsx";
+import { ManagerMediaIntake } from "./MediaCatalogue.jsx";
 
-export default function MediaDetail({ item, onRename }) {
+export default function MediaDetail({
+  item,
+  dashboard,
+  onRename,
+  onContentDraftStage,
+  onContentDraftCommit,
+  onContentDraftDiscard,
+}) {
   const [displayName, setDisplayName] = React.useState(item.record.displayName);
   const [defaultDescription, setDefaultDescription] = React.useState(item.record.defaultDescription);
   React.useEffect(() => {
@@ -22,6 +30,15 @@ export default function MediaDetail({ item, onRename }) {
           <div><dt>Portability</dt><dd>{item.record.current.kind === "url" ? "Network required" : "Portable"}</dd></div>
         </dl>
         <p className="source-content-placeholder">Media preview is added with the media management flow.</p>
+        {item.record.current.kind === "url" && item.record.origin === "external" && (
+          <ManagerMediaIntake
+            dashboard={dashboard}
+            externalItem={item.record}
+            onContentDraftStage={onContentDraftStage}
+            onContentDraftCommit={onContentDraftCommit}
+            onContentDraftDiscard={onContentDraftDiscard}
+          />
+        )}
       </section>
       <form className="source-content-rename" onSubmit={(event) => { event.preventDefault(); onRename?.({ displayName, defaultDescription }); }}>
         <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required /></label>
