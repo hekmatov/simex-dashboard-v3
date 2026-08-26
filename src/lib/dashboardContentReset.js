@@ -10,6 +10,8 @@ export function createBlankDashboardContent(dashboard = {}) {
   blank.pages = [];
   blank.dataSources = {};
   blank.datasetProfiles = {};
+  blank.contentLibrary = { mediaItems: {}, sourceEntries: {} };
+  blank.assets = {};
   blank.chronoGroups = [];
   blank.scenes = [];
   for (const key of RUNTIME_CONTENT_KEYS) delete blank[key];

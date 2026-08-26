@@ -196,10 +196,17 @@ test("chart activation acknowledges the canonical reveal before mounting Unit Or
 test("an untouched chart editor closes transactionally when tree navigation changes target", async ({ page }) => {
   await openBuildStructure(page);
   const tree = page.getByRole("tree");
-  await tree.getByRole("treeitem", { name: "Risk perception over time", exact: true }).click();
+  const chartItem = tree.getByRole("treeitem", { name: "Risk perception over time", exact: true });
+  await chartItem.click();
   await expect(page.locator(".unit-orbit")).toBeVisible();
 
-  await treeItemLabel(tree, "Public response and policy signals").click();
+  await chartItem.press("ArrowLeft");
+  const sectionItem = tree.getByRole("treeitem", {
+    name: "Public response and policy signals",
+    exact: true,
+  });
+  await expect(sectionItem).toBeFocused();
+  await sectionItem.press("Enter");
   await expect(page.locator('[data-canonical-section-id="public_response"]')).toBeInViewport();
   await expect(page.locator(".unit-orbit")).toHaveCount(0);
   await expect(page.getByText(
@@ -207,7 +214,7 @@ test("an untouched chart editor closes transactionally when tree navigation chan
   )).toHaveCount(0);
 });
 
-test("a rejected delayed Page rename retains the inline value for retry", async ({ page }) => {
+test("a storage-rejected delayed Page rename falls back to session state", async ({ page }) => {
   await page.addInitScript(() => {
     const setItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function rejectTask3Rename(key, value) {
@@ -224,8 +231,11 @@ test("a rejected delayed Page rename retains the inline value for retry", async 
   await rename.fill("Rejected rename");
   await rename.press("Enter");
 
-  await expect(rename).toBeVisible();
-  await expect(rename).toHaveValue("Rejected rename");
+  await expect(tree.getByRole("treeitem", { name: "Rejected rename", exact: true })).toBeVisible();
+  await expect(page.getByText(
+    "Browser storage is full. Dashboard changes remain available for this session only.",
+    { exact: true },
+  )).toBeVisible();
 });
 
 test("package import skips cosmetic warnings and reviews the manifest before atomic load", async ({ page }) => {
@@ -297,6 +307,12 @@ test("package export resolves drafts and round-trips a self-contained source", a
   fixtureConfig.datasetProfiles = fixtureConfig.datasetProfiles?.[fixtureChart.sourceId]
     ? { [fixtureChart.sourceId]: fixtureConfig.datasetProfiles[fixtureChart.sourceId] }
     : {};
+  fixtureConfig.contentLibrary = {
+    ...fixtureConfig.contentLibrary,
+    sourceEntries: fixtureConfig.contentLibrary?.sourceEntries?.[fixtureChart.sourceId]
+      ? { [fixtureChart.sourceId]: fixtureConfig.contentLibrary.sourceEntries[fixtureChart.sourceId] }
+      : {},
+  };
   const compactFixture = serializeDashboardBundle(fixtureConfig, {
     now: "2026-08-21T09:10:11.000Z",
   });
@@ -392,7 +408,8 @@ test("cancelling the authored-content import warning preserves inline rename sta
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Pending package-safe rename");
 
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true })
+    .evaluate((element) => element.click());
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
   await expect(warning.getByText(
     "Unsaved changes to this dashboard will be lost.", { exact: true },
@@ -423,7 +440,8 @@ test("successful same-ID import resets dirty rename state and disposes delayed t
   const rename = tree.getByRole("textbox", { name: "Rename page Socio-economic" });
   await rename.fill("Stale local Page name");
 
-  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true }).click();
+  await page.getByRole("button", { name: "Upload Dashboard Package", exact: true })
+    .evaluate((element) => element.click());
   const warning = page.getByRole("dialog", { name: "Discard unsaved dashboard changes?" });
   const chooserPromise = page.waitForEvent("filechooser");
   await warning.getByRole("button", { name: "Choose package", exact: true }).click();

@@ -21,6 +21,11 @@ test("blanking dashboard content removes every authored and source-owned collect
     pages: [{ id: "overview", sections: [{ id: "signals", panels: [{ id: "chart-placement" }] }] }],
     dataSources: { cases: { kind: "dataset", type: "uploadedCsv", csvText: "x,y\n1,2\n" } },
     datasetProfiles: { cases: { columns: [{ name: "x", type: "number" }] } },
+    contentLibrary: {
+      mediaItems: { "media-a": { mediaId: "media-a", assetId: "asset-a" } },
+      sourceEntries: { cases: { sourceId: "cases", kind: "dataset" } },
+    },
+    assets: { "asset-a": { assetId: "asset-a", mimeType: "image/png" } },
     chronoGroups: [{ id: "response", members: [{ chartId: "chart-placement" }] }],
     scenes: [{ id: "briefing", members: [{ chartId: "chart-placement" }] }],
     loadedData: { cases: [{ x: 1, y: 2 }] },
@@ -33,6 +38,8 @@ test("blanking dashboard content removes every authored and source-owned collect
   assert.deepEqual(blank.pages, []);
   assert.deepEqual(blank.dataSources, {});
   assert.deepEqual(blank.datasetProfiles, {});
+  assert.deepEqual(blank.contentLibrary, { mediaItems: {}, sourceEntries: {} });
+  assert.deepEqual(blank.assets, {});
   assert.deepEqual(blank.chronoGroups, []);
   assert.deepEqual(blank.scenes, []);
   assert.equal(Object.hasOwn(blank, "loadedData"), false);

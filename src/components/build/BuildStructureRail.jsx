@@ -83,6 +83,7 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
     const expanded = expandedKeys.has(node.key);
     const isRenaming = renameKey === node.key;
     const keyDown = (event) => {
+      if (event.target.closest('[role="treeitem"]') !== event.currentTarget) return;
       if (disabled) return;
       if (event.key === "ArrowDown" && nodes[index + 1]) { event.preventDefault(); focus(nodes[index + 1].key); }
       if (event.key === "ArrowUp" && nodes[index - 1]) { event.preventDefault(); focus(nodes[index - 1].key); }
