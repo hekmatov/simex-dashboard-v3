@@ -481,16 +481,21 @@ test("timer-owned pending edit uses the bounded session fallback", async ({ page
     .toBeGreaterThan(0);
 });
 
-test("cancelled panel baseline fire-and-forget failure uses the application fallback", async ({ page }) => {
+test("cancelled panel baseline uses the bounded session fallback", async ({ page }) => {
   await openFirstChartEditor(page);
+  const durableBefore = await storedDashboard(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_NON_QUOTA__ = true; });
   await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
 
   await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  await expect(page.getByRole("status").filter({
+    hasText: "Dashboard changes are applied for this session but cannot be retained after reload.",
+  })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Dashboard configuration error" }))
-    .toBeVisible();
-  await expect(page.locator(".status-panel-error p"))
-    .toContainText("Dashboard persistence is temporarily unavailable.");
+    .toHaveCount(0);
+  expect(await storedDashboard(page)).toEqual(durableBefore);
+  expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
+    .toBeGreaterThan(0);
 });
 
 test("removal followed by another editor cancel does not resurrect the chart", async ({ page }) => {
@@ -530,66 +535,68 @@ test("removal followed by another editor cancel does not resurrect the chart", a
   await expect(page.locator(`[data-panel-id="${removedPanelId}"]`)).toHaveCount(0);
 });
 
-test("failed reset reports inside its confirmation and preserves the draft for save", async ({ page }) => {
+test("reset completes with session fallback when browser storage is full", async ({ page }) => {
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
+  const baselineTitle = (await page.locator(".dashboard-brand-block h1").textContent()).trim();
+  const durableBefore = await storedDashboard(page);
   const editedLabel = "Draft retained after reset failure";
-  await page.getByLabel("Program label").fill(editedLabel);
-  await page.getByRole("button", { name: "Reset edits", exact: true }).click();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  const pageTitleInput = map.getByLabel("Page title", { exact: true });
+  await pageTitleInput.fill(editedLabel);
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
   await expect(confirmation).toBeVisible();
-  await confirmation.getByRole("button", { name: "Reset edits" })
+  await confirmation.getByRole("button", { name: "Reset", exact: true })
     .evaluate((button) => {
       globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
       button.click();
     });
 
-  await expect(confirmation).toBeVisible();
-  await expect(confirmation.getByRole("alert"))
-    .toContainText("Browser storage is full");
-  await expect(page.getByLabel("Program label")).toHaveValue(editedLabel);
-  await confirmation.getByRole("button", { name: "Keep editing" }).click();
   await expect(confirmation).toBeHidden();
-  await expect(page.locator(".edit-operation-error")).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Save edits" }).click();
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
-  await page.reload();
-  await expect(page.locator(".dashboard-brand-block .eyebrow")).toHaveText(
-    editedLabel,
-    { timeout: 60_000 },
-  );
+  await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
+    .toBeVisible();
+  await expect(page.getByRole("button", { name: "View", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baselineTitle);
+  expect(await storedDashboard(page)).toEqual(durableBefore);
 });
 
 test("successful reset clears renderer drafts and chart baseline", async ({ page }) => {
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
-  const programInput = page.getByLabel("Program label");
-  const pageTitleInput = page.getByLabel("Page title");
-  const sectionTitleInput = page.locator(".section-edit-field input").first();
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  const pageTitleInput = map.getByLabel("Page title", { exact: true });
+  const pageTitle = await pageTitleInput.inputValue();
+  await pageTitleInput.fill("Reset-only page draft");
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  await page.getByRole("button", { name: /^Edit Section title:/ }).first().click();
+  const sectionTitleInput = page.getByLabel("Section title", { exact: true }).first();
   const baseline = {
-    program: await programInput.inputValue(),
-    pageTitle: await pageTitleInput.inputValue(),
+    pageTitle,
     sectionTitle: await sectionTitleInput.inputValue(),
   };
-  await programInput.fill("Reset-only program draft");
-  await pageTitleInput.fill("Reset-only page draft");
   await sectionTitleInput.fill("Reset-only section draft");
   await page.locator(".chart-panel").first()
     .getByRole("button", { name: "Edit chart" }).click();
+  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
+  await expect(page.locator(".chart-editor-v3")).toBeHidden();
 
-  await page.getByRole("button", { name: "Reset edits", exact: true })
-    .evaluate((button) => button.click());
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   await page.getByRole("dialog", { name: "Discard these edits?" })
-    .getByRole("button", { name: "Reset edits" }).click();
+    .getByRole("button", { name: "Reset", exact: true }).click();
   await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText(baseline.pageTitle);
+  await expect(page.getByRole("heading", { name: baseline.sectionTitle, exact: true }))
+    .toBeVisible();
 
   await page.getByRole("button", { name: "Build" }).click();
-  await expect(page.getByLabel("Program label")).toHaveValue(baseline.program);
-  await expect(page.getByLabel("Page title")).toHaveValue(baseline.pageTitle);
-  await expect(page.locator(".section-edit-field input").first())
-    .toHaveValue(baseline.sectionTitle);
-
   const attemptsBeforeCancel = await page.evaluate(() => (
     globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0
   ));
@@ -601,11 +608,13 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
   )), { timeout: 60_000 }).toBeGreaterThan(attemptsBeforeCancel);
 
   await page.reload();
-  await expect(page.locator(".dashboard-brand-block .eyebrow")).toHaveText(baseline.program);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await expect(page.getByRole("heading", { name: baseline.pageTitle, exact: true }))
     .toBeVisible();
-  await expect(page.getByRole("heading", { name: baseline.sectionTitle, exact: true }))
+  await expect(page.getByRole("button", {
+    name: `Edit Section title: ${baseline.sectionTitle}`,
+    exact: true,
+  }))
     .toBeVisible();
 });
 
@@ -653,42 +662,50 @@ test("wizard create transaction coalesces, locks dismissal, and preserves sessio
     .toBe(false);
 });
 
-test("failed edit-session save and reset keep edit mode available for retry", async ({ page }) => {
+test("edit-session save and reset use session fallback when storage is full", async ({ page }) => {
   await openDashboardEditMode(page);
-  await page.getByLabel("Program label").fill("Unsaved exercise label");
-  await page.getByRole("button", { name: "Save edits" }).evaluate((button) => {
-    globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
-    button.click();
-  });
-  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
-  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+  const sessionTitle = "Unsaved exercise label";
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  await map.getByLabel("Page title", { exact: true }).fill(sessionTitle);
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
+  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
+    .toBeVisible();
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText(sessionTitle);
 
-  await page.getByRole("button", { name: "Reset edits" }).click();
+  await page.getByRole("button", { name: "Build", exact: true }).click();
+  const sectionTitleTrigger = page.getByRole("button", { name: /^Edit Section title:/ }).first();
+  const sectionTitle = (await sectionTitleTrigger.textContent()).trim();
+  await sectionTitleTrigger.click();
+  await page.getByLabel("Section title", { exact: true }).first()
+    .fill("Reset-only pending title");
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
-  await confirmation.getByRole("button", { name: "Reset edits" }).evaluate((button) => {
-    globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true;
-    button.click();
-  });
-  await expect(confirmation).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
-
-  await confirmation.getByRole("button", { name: "Reset edits" }).click();
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
+  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_ONCE__ = true; });
+  await confirmation.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(page.getByRole("button", { name: "View", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".dashboard-brand-block h1")).toHaveText(sessionTitle);
+  await expect(page.getByRole("heading", { name: sectionTitle, exact: true }))
+    .toBeVisible();
 });
 
-test("failed final edit-session commit keeps the chart edit context available", async ({ page }) => {
+test("final Build remains locked until chart edit context closes", async ({ page }) => {
   await openFirstChartEditor(page);
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await page.getByRole("button", { name: "Save edits" }).evaluate((button) => button.click());
-  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
-  await expect(page.locator(".chart-editor-v3")).toBeVisible();
-  await expect(page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" })).toBeVisible();
-  await expect(page.locator(".edit-operation-error")).toContainText("Browser storage is full");
+  const editor = page.locator(".chart-editor-v3");
+  const finishBuild = page.getByRole("button", { name: "Finish Build", exact: true });
+  await expect(finishBuild).toBeDisabled();
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Cancel" })).toBeVisible();
 
-  const failedSaveAttempts = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__);
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Cancel" }).click();
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
+  const attemptsBeforeCancel = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
+  await editor.getByRole("button", { name: "Cancel" }).click();
+  await expect(editor).toBeHidden();
+  await expect(finishBuild).toBeEnabled();
   await expect.poll(() => page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__), { timeout: 5_000 })
-    .toBe(failedSaveAttempts + 1);
+    .toBe(attemptsBeforeCancel + 1);
 });
