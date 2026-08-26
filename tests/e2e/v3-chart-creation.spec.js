@@ -37,7 +37,7 @@ test("six-stage chart creation suspends and commits exactly once", async ({ page
   await page.getByRole("button", { name: "Resume chart draft" }).click();
   wizard = page.getByRole("dialog");
 
-  await wizard.getByLabel("Dashboard data source").selectOption("bio_cases");
+  await wizard.getByLabel("Managed data source").selectOption("bio_cases");
   await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
   await wizard.getByRole("button", { name: "Add measurement" }).click();
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
