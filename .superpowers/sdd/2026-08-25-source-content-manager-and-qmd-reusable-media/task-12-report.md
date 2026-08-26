@@ -23,7 +23,7 @@ The exact thirteen-file selection initially reported **51 tests: 40 pass, 11 fai
 
 ## GREEN and real use
 
-- Exact thirteen planned files plus the authorized dialog test: **110/110 pass**, zero fail/skip/todo.
+- Exact thirteen planned files plus the authorized dialog test: **112/112 pass**, zero fail/skip/todo after T12-R01.
 - Named Journey F Chromium selection: **1/1 pass** (52.1 s test, 54.1 s total).
 - Inspected Build/Present 1440×900 checkpoints: exact warning reason and impact labels; no-op cancel and focus return; stable sourceId/new observations after confirmation; group/Scene `needs-review`; Scene-present `degraded`; visible Build/Present warnings with continued render; valid group/Scene saves clear their marks; captured presentation messages contain no `temporalReview`.
 
@@ -33,3 +33,10 @@ The exact thirteen-file selection initially reported **51 tests: 40 pass, 11 fai
 - **UI implemented:** yes — mounted warning/impact/confirm flow, Build findings, and passive Present warning.
 - **Fidelity verified:** yes for SCM-S10, SCM-R06, and the CSV temporal branch of SCM-C08 through named Journey F. SCM-C08 remains Partial overall because relink and GeoJSON branches belong to later tasks.
 - **Blockers:** none. Task 13 was not implemented.
+
+## T12-R01 correction
+
+- **RED:** the focused graph/transaction selection reported **15/17 passing**. Both failures returned an empty impact list when a saved wrapper placement ID differed from its nested `chart.id`; the dependency breadcrumb correctly retained the placement ID.
+- **Minimal fix:** `buildContentDependencyGraph` now builds a separate internal chart-id → primary-CSV map while leaving direct-use IDs and breadcrumb panel IDs unchanged. Chrono Group, Scene, and Scene-present matching consumes only this chart-identity map.
+- **GREEN:** focused graph/transaction selection **17/17 passing**; exact Task 12 deterministic selection **112/112 passing**, zero fail/skip/todo.
+- **Browser scope:** named Journey F was not rerun because this correction changes only engine identity matching for the previously uncovered distinct-wrapper case; the prior inspected 1/1 journey remains retained.

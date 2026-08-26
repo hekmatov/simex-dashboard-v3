@@ -178,6 +178,31 @@ test("changed temporal observations expose exact impacts, cancel exactly, and co
   assert.equal(Object.hasOwn(harness.dashboard.chronoGroups.find(({ id }) => id === "unrelated-playback"), "temporalReview"), false);
 });
 
+test("wrapped placement identity preserves exact temporal impacts and durable marks by chart id", async () => {
+  const harness = replacementHarness({ wrappedPlacement: true });
+  const plan = await preparePlan(harness.dashboard, CHANGED_TEMPORAL_ROWS);
+
+  assert.deepEqual(plan.impactContexts.map(({ kind, id }) => ({ kind, id })), [
+    { kind: "chrono-group", id: "cases-playback" },
+    { kind: "scene", id: "cases-scene" },
+    { kind: "scene-presentation", id: "cases-scene" },
+  ]);
+  harness.coordinator.stageDraft(plan.draft);
+  await commitCsvReplacement(plan, {
+    confirmTemporalReview: true,
+    contentDraftCoordinator: harness.coordinator,
+  });
+  assert.deepEqual(harness.dashboard.chronoGroups.find(({ id }) => id === "cases-playback").temporalReview, {
+    status: "needs-review", sourceIds: ["cases"],
+  });
+  assert.deepEqual(harness.dashboard.scenes.find(({ id }) => id === "cases-scene").temporalReview, {
+    status: "needs-review", sourceIds: ["cases"],
+  });
+  assert.deepEqual(harness.dashboard.scenes.find(({ id }) => id === "cases-scene").present.temporalReview, {
+    status: "degraded", sourceIds: ["cases"],
+  });
+});
+
 test("field-only observation bindings inherit temporal authority from the current profile", async () => {
   const harness = replacementHarness({ implicitTemporalObservation: true });
   const before = structuredClone(harness.dashboard);
@@ -247,7 +272,7 @@ async function preparePlan(dashboard, rows) {
   });
 }
 
-function replacementDashboard({ implicitTemporalObservation = false } = {}) {
+function replacementDashboard({ implicitTemporalObservation = false, wrappedPlacement = false } = {}) {
   const profile = profileDataset(ORIGINAL_ROWS);
   const line = createChartDraft("line", {
     id: "cases-trend", title: "Cases trend", sourceId: "cases",
@@ -293,12 +318,15 @@ function replacementDashboard({ implicitTemporalObservation = false } = {}) {
       chartIds: ["cases-trend"], frames: { mode: "source", chartId: "cases-trend", selection: "all" },
       present: { chartIds: ["cases-trend"], layout: "single" },
     }],
-    pages: [{ id: "overview", title: "Overview", sections: [{ id: "response", title: "Response", panels: [line, map] }] }],
+    pages: [{ id: "overview", title: "Overview", sections: [{
+      id: "response", title: "Response",
+      panels: [wrappedPlacement ? { id: "cases-trend-placement", title: "Cases trend placement", chart: line } : line, map],
+    }] }],
   });
 }
 
-function replacementHarness({ failCommit = false, implicitTemporalObservation = false } = {}) {
-  let dashboard = replacementDashboard({ implicitTemporalObservation });
+function replacementHarness({ failCommit = false, implicitTemporalObservation = false, wrappedPlacement = false } = {}) {
+  let dashboard = replacementDashboard({ implicitTemporalObservation, wrappedPlacement });
   let failed = false;
   const commits = [];
   const coordinator = createContentDraftCoordinator({

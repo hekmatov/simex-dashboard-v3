@@ -105,3 +105,20 @@ test("temporal and presentation contexts never add saved dependency edges", () =
   ]);
   assert.deepEqual(temporalImpactContexts(runtime, "boundaries"), []);
 });
+
+test("wrapped placements keep placement breadcrumbs while temporal impacts match the chart identity", () => {
+  const wrapped = structuredClone(dashboard);
+  wrapped.pages[0].sections[0].panels[2].id = "map-placement";
+  const graph = buildContentDependencyGraph({ dashboard: wrapped });
+
+  assert.deepEqual(csvDependencies(graph, "cases").map(({ panelId, panelLabel }) => ({ panelId, panelLabel })), [
+    { panelId: "map-placement", panelLabel: "Map panel" },
+  ]);
+  assert.deepEqual(temporalImpactContexts(graph, "cases").map(({ kind, id }) => ({ kind, id })), [
+    { kind: "chrono-group", id: "chrono-a" },
+    { kind: "scene", id: "scene-a" },
+    { kind: "scene-presentation", id: "scene-a" },
+  ]);
+  assert.equal(csvDependencies(graph, "cases").some(({ panelId }) => panelId === "map-panel"), false);
+  assert.equal(graph.directUses.some(({ kind }) => kind.includes("impact")), false);
+});

@@ -6,6 +6,7 @@ import { classifyManagedSource } from "./sourceEntrySchema.js";
 
 export function buildContentDependencyGraph({ dashboard = {}, activeRetainers = null } = {}) {
   const directUses = [];
+  const csvChartSources = new Map();
   const mediaItems = dashboard.contentLibrary?.mediaItems ?? {};
   const sourceEntries = dashboard.contentLibrary?.sourceEntries ?? {};
   for (const page of dashboard.pages ?? []) {
@@ -28,6 +29,8 @@ export function buildContentDependencyGraph({ dashboard = {}, activeRetainers = 
         }
         if (sourceEntries[primarySourceId] && classifyManagedSource(primarySourceId, primarySource)?.kind === "csv") {
           pushDirectUse(directUses, { ...breadcrumb, kind: "primary-csv", itemKind: "csv", itemId: primarySourceId });
+          const chartId = text(panel.id);
+          if (chartId) csvChartSources.set(chartId, primarySourceId);
         }
         const geoSourceId = text(panel.presentation?.map?.geoSource);
         if (sourceEntries[geoSourceId] && classifyManagedSource(geoSourceId, dashboard.dataSources?.[geoSourceId])?.kind === "geojson") {
@@ -40,7 +43,7 @@ export function buildContentDependencyGraph({ dashboard = {}, activeRetainers = 
   return deepFreeze({
     directUses: directUses.sort(compareEdge),
     retainers,
-    impacts: buildCsvImpacts(dashboard, directUses),
+    impacts: buildCsvImpacts(dashboard, csvChartSources),
   });
 }
 
@@ -87,8 +90,7 @@ function normalizedRetainers(snapshot) {
   })).sort((left, right) => left.ownerId.localeCompare(right.ownerId));
 }
 
-function buildCsvImpacts(dashboard, directUses) {
-  const chartSources = new Map(directUses.filter(({ itemKind }) => itemKind === "csv").map(({ panelId, itemId }) => [panelId, itemId]));
+function buildCsvImpacts(dashboard, chartSources) {
   const impacts = [];
   for (const group of dashboard.chronoGroups ?? []) addContexts(impacts, chartSources, chartIdsFor(group), "chrono-group", group.id, group.name ?? group.title);
   for (const scene of dashboard.scenes ?? []) {
