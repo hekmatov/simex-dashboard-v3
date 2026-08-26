@@ -25,7 +25,7 @@ test("Quorum chart display remains available when the dashboard starts on showca
       name: "From complex exercise data to shared situational awareness",
     }),
   ).toBeVisible();
-  await expectCompanionConnected(page);
+  await expectCompanionConnected(page, request);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
@@ -42,7 +42,7 @@ test("operator-authorized display and immersive Exit share actual browser state"
   request,
 }) => {
   await page.goto("/");
-  await expectCompanionConnected(page);
+  await expectCompanionConnected(page, request);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART, SECOND_CHART],
@@ -69,7 +69,7 @@ test("manual single, multi-open, and reorder use the same display state", async 
 }) => {
   test.setTimeout(60_000);
   await page.goto("/");
-  await expectCompanionConnected(page);
+  await expectCompanionConnected(page, request);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
 
   const firstPanel = page.locator(`[data-panel-id="${FIRST_CHART}"]`);
@@ -171,7 +171,7 @@ test("stale revisions and invalid chart IDs are rejected promptly", async ({
   request,
 }) => {
   await page.goto("/");
-  await expectCompanionConnected(page);
+  await expectCompanionConnected(page, request);
 
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
@@ -198,7 +198,7 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
   request,
 }) => {
   await page.goto("/");
-  await expectCompanionConnected(page);
+  await expectCompanionConnected(page, request);
   await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
     expected_display_revision: 0,
@@ -290,10 +290,11 @@ async function control(request, action, data) {
   expect(response.ok()).toBeTruthy();
 }
 
-async function expectCompanionConnected(page) {
-  await expect(page.getByText("Companion connected")).toBeVisible({
-    timeout: 30_000,
-  });
+async function expectCompanionConnected(page, request) {
+  await expect.poll(
+    async () => (await events(request)).some(({ type }) => type === "dashboard_hello"),
+    { timeout: 30_000 },
+  ).toBe(true);
   expect(browserErrors.get(page)).toEqual([]);
 }
 

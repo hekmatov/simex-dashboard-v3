@@ -118,7 +118,7 @@ export function canonicalCatalogueBytes(catalogue) {
 export function canonicalDashboardSemanticsBytes(dashboard, aliasConfig) {
   const context = buildDashboardContext(dashboard);
   const semantics = {
-    dashboard: cloneJson(dashboard),
+    dashboard: cloneJson(context.dashboard),
   };
   if (aliasConfig !== undefined) {
     validateAliasConfig(context, aliasConfig);
@@ -377,6 +377,7 @@ function buildDashboardContext(dashboard) {
   );
 
   return {
+    dashboard: root,
     catalogueRevision,
     dataSources,
     chronoGroups,

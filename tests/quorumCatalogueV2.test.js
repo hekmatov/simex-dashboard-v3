@@ -15,6 +15,7 @@ import {
 import {
   getChartFormSectionDefinition,
 } from "../src/charting/schemas/schemaTypes.js";
+import { normalizeDashboardSource } from "../src/lib/loadDashboard.js";
 
 const catalogueModule = await import("../src/lib/quorumCatalogue.js");
 
@@ -344,6 +345,27 @@ test("generation and canonical digests are deterministic and match the persisted
     digest,
   );
   assert.deepEqual(persisted, snapshot);
+});
+
+test("equivalent raw V3 and normalized V5 dashboards produce one catalogue identity", async () => {
+  const { dashboard, aliases } = await trackedInputs();
+  const profiles = await readJson("public/config/dataset-profiles.json");
+  const normalized = normalizeDashboardSource(dashboard, profiles);
+
+  const rawSnapshot = await catalogueModule.buildChartCatalogueSnapshot(
+    dashboard,
+    aliases,
+    nodeSha256,
+  );
+  const normalizedSnapshot = await catalogueModule.buildChartCatalogueSnapshot(
+    normalized,
+    aliases,
+    nodeSha256,
+  );
+
+  assert.equal(dashboard.configVersion, 3);
+  assert.equal(normalized.configVersion, 5);
+  assert.deepEqual(normalizedSnapshot, rawSnapshot);
 });
 
 test("dashboard semantic digest includes all packaged semantics and rejects runtime state", async () => {
