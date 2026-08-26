@@ -150,8 +150,12 @@ test("edit-mode panel drag reorders through the memoized chart boundary", async 
   )))).toEqual([initial[1], initial[0]]);
 });
 
-async function armPendingMutationSurfaceObservation(page, pendingLabel) {
-  await page.evaluate((label) => {
+async function armPendingMutationSurfaceObservation(
+  page,
+  pendingLabel,
+  { requireDisabled = false } = {},
+) {
+  await page.evaluate(({ label, requireDisabled: disabledOnly }) => {
     globalThis.__SIMEX_PENDING_OBSERVATION__ = new Promise((resolve, reject) => {
       const timeoutId = setTimeout(
         () => reject(new Error(`Pending label "${label}" was not rendered.`)),
@@ -163,7 +167,7 @@ async function armPendingMutationSurfaceObservation(page, pendingLabel) {
             button.getAttribute("aria-label") === label
             || button.textContent?.trim() === label
           ));
-        if (!pending) return;
+        if (!pending || (disabledOnly && !pending.matches(":disabled"))) return;
         clearTimeout(timeoutId);
         observer.disconnect();
         const controls = [...document.querySelectorAll([
@@ -197,7 +201,7 @@ async function armPendingMutationSurfaceObservation(page, pendingLabel) {
       });
       inspect();
     });
-  }, pendingLabel);
+  }, { label: pendingLabel, requireDisabled });
 }
 
 async function readPendingMutationSurfaceObservation(page) {
@@ -283,16 +287,17 @@ async function armWizardPendingObservation(page) {
 async function preparePieWizard(page, title) {
   await page.getByRole("button", { name: "Add chart" }).first().click();
   const wizard = page.locator(".chart-wizard-backdrop");
+  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
   await wizard.getByLabel("Search chart types").fill("pie");
   await wizard.getByRole("button", { name: /^Pie\b/i }).click();
-  await wizard.getByRole("button", { name: "Data source" }).click();
-  await wizard.getByLabel("Dashboard data source").selectOption("bio_mortality");
-  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await wizard.getByLabel("Managed data source").selectOption("bio_mortality");
+  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
   await wizard.locator('[data-field-id="category"] select').selectOption("Age group");
   await wizard.locator('[data-field-id="value"] select').selectOption("deaths");
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
   await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
   await wizard.getByLabel("Chart title").fill(title);
+  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
   await expect(wizard.getByRole("button", { name: "Create chart" })).toBeEnabled();
   return wizard;
 }
@@ -332,14 +337,12 @@ test("pending final save locks the edit mutation surface", async ({ page }) => {
   test.setTimeout(90_000);
   await openDashboardEditMode(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await armPendingMutationSurfaceObservation(page, "Saving edits");
-  await page.getByRole("button", { name: "Save edits" }).click();
+  await armPendingMutationSurfaceObservation(page, "Finish Build", { requireDisabled: true });
+  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
   const observed = await readPendingMutationSurfaceObservation(page);
 
-  await expect(page.getByRole("button", { name: "Save edits" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await page.getByRole("button", { name: "Save edits" }).click();
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
   expect(observed.pendingDisabled).toBe(true);
   expect(observed.controlCount).toBeGreaterThan(20);
   expect(observed.enabledControls).toEqual([]);
@@ -349,33 +352,39 @@ test("pending final save locks the edit mutation surface", async ({ page }) => {
 test("pending reset locks the edit mutation surface", async ({ page }) => {
   test.setTimeout(90_000);
   await openDashboardEditMode(page);
-  await page.getByRole("button", { name: "Reset edits" }).click();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   const confirmation = page.getByRole("dialog", { name: "Discard these edits?" });
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
   await armPendingMutationSurfaceObservation(page, "Resetting...");
-  await confirmation.getByRole("button", { name: "Reset edits" }).click();
+  await confirmation.getByRole("button", { name: "Reset", exact: true }).click();
   const observed = await readPendingMutationSurfaceObservation(page);
 
-  await expect(confirmation).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await confirmation.getByRole("button", { name: "Reset edits" }).click();
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
   expect(observed.pendingDisabled).toBe(true);
   expect(observed.controlCount).toBeGreaterThan(20);
   expect(observed.enabledControls).toEqual([]);
   expect(observed.draggablePanelIds).toEqual([]);
 });
 
-test("failed chart save keeps the editor and draft open for retry", async ({ page }) => {
+test("chart save preserves session work when browser storage is full", async ({ page }) => {
   await openFirstChartEditor(page);
+  const title = "Session fallback chart title";
+  const editor = page.locator(".chart-editor-v3");
+  await editor.getByRole("button", { name: "Appearance", exact: true }).click();
+  await editor.getByLabel("Chart title").fill(title);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = true; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.locator(".chart-editor-v3")).toBeVisible();
-  await expect(page.locator(".chart-editor-error")).toContainText("Browser storage is full");
+  await editor.getByRole("button", { name: "Save changes" }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
+    .toBeVisible();
+  await expect(page.getByLabel(`${title} actions`)).toBeVisible();
+  const durable = await storedDashboard(page);
+  expect((durable?.pages ?? []).flatMap(({ sections }) => sections)
+    .flatMap(({ panels }) => panels)
+    .some((panel) => panel.title === title)).toBe(false);
 
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await page.locator(".chart-editor-v3").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.locator(".chart-editor-v3")).toBeHidden();
 });
 
 for (const dismissal of ["Escape", "backdrop"]) {
@@ -582,12 +591,12 @@ test("successful reset clears renderer drafts and chart baseline", async ({ page
     .toBeVisible();
 });
 
-test("wizard create transaction coalesces, locks dismissal, retains mappings, and retries", async ({ page }) => {
+test("wizard create transaction coalesces, locks dismissal, and preserves session work when storage is full", async ({ page }) => {
   test.setTimeout(240_000);
   await openDashboardEditMode(page);
   const title = "Retried transaction chart";
   const wizard = await preparePieWizard(page, title);
-  await wizard.getByRole("button", { name: "Close" }).click();
+  await wizard.getByRole("button", { name: "Discard chart draft" }).click();
   const discard = page.getByRole("dialog", { name: "Discard chart?" });
   await expect(discard).toBeVisible();
 
@@ -606,7 +615,8 @@ test("wizard create transaction coalesces, locks dismissal, retains mappings, an
     }));
   });
   const pending = await page.evaluate(() => globalThis.__SIMEX_WIZARD_PENDING_OBSERVATION__);
-  await expect(wizard.getByRole("alert")).toContainText("Browser storage is full");
+  await expect(page.getByRole("status").filter({ hasText: "Browser storage is full" }))
+    .toBeVisible();
   expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0)).toBe(1);
   expect(pending).toEqual({
     creatingDisabled: true,
@@ -615,26 +625,14 @@ test("wizard create transaction coalesces, locks dismissal, retains mappings, an
     discardButtonsDisabled: true,
   });
 
-  if (await discard.isVisible().catch(() => false)) {
-    await discard.getByRole("button", { name: "Continue editing" }).click();
-  }
-  await wizard.getByRole("button", { name: "Data roles" })
-    .evaluate((button) => button.click());
-  await expect(wizard.locator('[data-field-id="category"] select')).toBeVisible();
-  await expect(wizard.locator('[data-field-id="category"] select')).toHaveValue("Age group");
-  await expect(wizard.locator('[data-field-id="value"] select')).toHaveValue("deaths");
-  await wizard.getByRole("button", { name: "Style and layout" })
-    .evaluate((button) => button.click());
-  await expect(wizard.getByLabel("Chart title")).toHaveValue(title);
-
-  await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE__ = false; });
-  await wizard.getByRole("button", { name: "Create chart" }).click();
   await expect(wizard).toBeHidden();
-  const saved = await storedDashboard(page);
-  expect(saved.pages.flatMap(({ sections }) => sections)
+  await expect(discard).toHaveCount(0);
+  await expect(page.getByLabel(`${title} actions`)).toBeVisible();
+  const durable = await storedDashboard(page);
+  expect((durable?.pages ?? []).flatMap(({ sections }) => sections)
     .flatMap(({ panels }) => panels)
     .some((panel) => panel.title === title && panel.typeId === "pie"))
-    .toBe(true);
+    .toBe(false);
 });
 
 test("failed edit-session save and reset keep edit mode available for retry", async ({ page }) => {
