@@ -213,3 +213,28 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - The master explicitly authorized only `SourceContentWorkspace.jsx::visibleManagerItems/contentItem` for the post-validation transient carrier. Its exact zero-use state is now known-unused rather than unknown, without extending durable records.
 - Final planned Chromium selection **2/2 passing**, 40.4 s, at 1440×900 and 1024×768. Each viewport proves blocked used-source Delete opens no dialog; eligible retained external media opens the correctly named confirmation, Cancel owns initial focus, exact saved configuration is unchanged, and focus returns to Delete. The tablet detail pane is bounded and scrollable so the action remains reachable.
 - SCM-S07 and the SCM-C08 delete branch are Passing on this mounted evidence. C08 remains Partial for later replace/relink; no Task 7+ journey is promoted.
+
+## Task 7 — Media creation, picker import, and Journey A
+
+**Implementation state:** SCM-S03 and SCM-R01 are Passing for the accepted media Journey A. The Task 7 manager/QMD/Image branches of SCM-S13, SCM-C04, and SCM-C05 are Passing; those cross-kind composition/lifecycle rows remain Partial for later chart/CSV/GeoJSON selector and browser owners. Task 8 global replacement/relink and Task 9 QMD inspector behavior remain unimplemented and unpromoted.
+
+### Correction RED and deterministic evidence
+
+- Initial Task 7 commit `6f0d09a` reached **40/40** on the accepted selection and **1/1** on the original named Journey A, but review found T7-R01–R05.
+- Picker/retainer correction RED was **5/7**, with unhealthy Image identities selectable and duplicate radio changes not updating the live retainer. Focused GREEN was **7/7**.
+- Mounted authoring-preview RED was **0/2** because both previews omitted the real render context. Focused GREEN was **2/2**, with exact acquire/release on unmount through the existing authored-asset resolver.
+- Fresh accepted six-file command is **43/43 passing**, zero failed/skipped/todo. It covers exact selection negatives, immediate Reuse/Separate retainer movement, staged-to-durable content commit, cancellation/failure inventories, placement-owned alt behavior, Build Reset, and contextual Restore.
+
+### Named Journey A checkpoint
+
+- Corrected command, with no literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-media.spec.js --project=chromium --grep "Journey A — media create reuse default external import restore dependencies delete"` — **1/1 passing**, 1.8 min.
+- Build 1440×900: manager Cancel, Escape, Close, mode departure, unmount, invalid-raster rejection, Add/reuse/separate, durable metadata/default edit, QMD local-upload cancel, failed direct External fetch followed by local upload, Image/QMD selection, Restore Save/Discard, dependency breadcrumb, disabled no-dialog, and eligible deletion were materially exercised. Cancelled inventories and page-error inventory were empty.
+- Exact correspondence showed two requested logical IDs over one physical asset, whose assetId equals `asset-<manifest.sha256>` and whose manifest dimensions/type/byte length match both media records. External import preserved the original External identity/use and created a distinct local item.
+- Build 1024×768 retained the tablet manager list/detail/Back composition after reload. QMD View 390×844 rendered the original placement-owned alt after the manager default changed; a later Image placement used the new default.
+- Semantic injection, not browser labels, owns exhaustive persistence-failure compensation and exact manager Close/Escape/mode-departure/unmount/disposal inventories. Mounted component tests own pre-commit resolver acquisition/release. The real browser owns representative cancellation, import, focus, continuity, and viewport fidelity.
+
+### Security/deviation boundary
+
+- QMD selects only healthy stored/packaged identities. Image additionally selects only valid External HTTPS identities. Unhealthy identities remain explanatory, noninteractive inventory.
+- Import performs only explicit browser CORS fetch or user local upload through the existing raster validation path. No proxy, elevated fetch, second resolver, raw-QMD URL conversion, dependency, or network service was introduced.
+- The filename fallback supplies initial contextual alt only for a new local QMD upload with no External default. QMD source remains the placement owner and existing alt is never rewritten.

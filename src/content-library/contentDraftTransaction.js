@@ -177,8 +177,12 @@ export function createContentDraftCoordinator({
           if (staged?.assetId !== assetId) throw new Error(`Staged content asset "${assetId}" identity changed.`);
           stagedAssetIds.push(assetId);
         }
+        const durableCandidateDashboard = promoteCommittedAssetManifests(
+          candidateResult.dashboard,
+          candidateResult.commitAssetIds,
+        );
         const committedDashboard = await commitDashboard(
-          structuredClone(candidateResult.dashboard),
+          durableCandidateDashboard,
           { transactionId },
         );
         try {
@@ -208,7 +212,7 @@ export function createContentDraftCoordinator({
         }
         const cleanup = clearCompleted(draft, transactionId, candidateResult);
         return freezeRecord({
-          dashboard: structuredClone(committedDashboard ?? candidateResult.dashboard),
+          dashboard: structuredClone(committedDashboard ?? durableCandidateDashboard),
           itemIds: candidateResult.itemIds,
           cleanup,
         });
@@ -491,6 +495,16 @@ function record(value, description) {
 function requiredText(value, description) {
   if (typeof value !== "string" || value.trim() === "") throw new Error(`${description} is required.`);
   return value.trim();
+}
+
+function promoteCommittedAssetManifests(dashboard, assetIds) {
+  const candidate = structuredClone(dashboard);
+  for (const assetId of assetIds) {
+    if (candidate.assets?.[assetId]) {
+      candidate.assets[assetId] = { ...candidate.assets[assetId], storageState: "durable" };
+    }
+  }
+  return candidate;
 }
 
 function freezeRecord(value) {

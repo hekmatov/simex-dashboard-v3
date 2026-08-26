@@ -115,7 +115,7 @@ test("manager Add publishes one immutable candidate and deliberately keeps an un
   const result = await harness.coordinator.commitDraft("manager-add", {
     buildCandidate({ dashboard, draft }) {
       const candidate = structuredClone(dashboard);
-      candidate.assets["asset-new"] = manifest();
+      candidate.assets["asset-new"] = { ...manifest(), storageState: "staged" };
       candidate.contentLibrary.mediaItems["media-unused"] = draft.payload.mediaItem;
       return { dashboard: candidate, commitAssetIds: ["asset-new"], discardAssetIds: [], itemIds: ["media-unused"] };
     },
@@ -123,6 +123,8 @@ test("manager Add publishes one immutable candidate and deliberately keeps an un
 
   assert.deepEqual(harness.commits.map(({ options }) => options.transactionId), ["content-draft:manager-add"]);
   assert.equal(harness.dashboard.contentLibrary.mediaItems["media-unused"].mediaId, "media-unused");
+  assert.equal(harness.dashboard.assets["asset-new"].storageState, "durable");
+  assert.equal(result.dashboard.assets["asset-new"].storageState, "durable");
   assert.deepEqual(result.itemIds, ["media-unused"]);
   assert.deepEqual(previous, makeDashboardV5());
   assert.equal(harness.sessionAssets.has("asset-new"), false);
@@ -285,6 +287,39 @@ test("explicit Cancel, owner departure, and dispose remove only session drafts",
   await harness.coordinator.discardDraft("qmd-a", { reason: "explicit-cancel" });
   await harness.coordinator.discardOwner("chart", { reason: "mode-departure" });
   assert.deepEqual(harness.coordinator.getActiveRetainers().records.map(({ ownerId }) => ownerId), ["manager-a"]);
+  await harness.coordinator.dispose();
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+  assert.deepEqual([...harness.sessionAssets], []);
+  assert.deepEqual(harness.dashboard, makeDashboardV5());
+});
+
+test("manager Close, Escape, mode departure, unmount, and disposal leave exact empty inventories", async () => {
+  const harness = coordinatorHarness();
+  const stageManager = (suffix) => {
+    const assetId = `asset-manager-${suffix}`;
+    harness.sessionAssets.set(assetId, sessionAsset(assetId));
+    harness.coordinator.stageDraft({
+      draftId: `manager-${suffix}`, owner: "manager", kind: "media-add", payload: {},
+      assetIds: [assetId], mediaIds: [`media-manager-${suffix}`], sourceIds: [],
+    });
+    return { assetId, draftId: `manager-${suffix}` };
+  };
+
+  for (const context of ["close", "escape", "unmount"]) {
+    const { draftId } = stageManager(context);
+    await harness.coordinator.discardDraft(draftId, { reason: `manager-${context}` });
+    assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+    assert.deepEqual([...harness.sessionAssets], []);
+    assert.deepEqual(harness.dashboard, makeDashboardV5());
+  }
+
+  stageManager("mode-departure");
+  await harness.coordinator.discardOwner("manager", { reason: "mode-departure" });
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+  assert.deepEqual([...harness.sessionAssets], []);
+  assert.deepEqual(harness.dashboard, makeDashboardV5());
+
+  stageManager("dispose");
   await harness.coordinator.dispose();
   assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
   assert.deepEqual([...harness.sessionAssets], []);

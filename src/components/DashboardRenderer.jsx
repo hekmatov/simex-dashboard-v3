@@ -140,6 +140,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [staticWizardTarget, setStaticWizardTarget] = React.useState(null);
   const [staticContentDraft, setStaticContentDraft] = React.useState(null);
   const [staticContentDirty, setStaticContentDirty] = React.useState(false);
+  const staticWizardInvokerRef = React.useRef(null);
   const [localAuthoringDrafts, setLocalAuthoringDrafts] = React.useState({});
   const [contentDraftRetainers, setContentDraftRetainers] = React.useState(() => (
     contentDraftCoordinator?.getActiveRetainers?.() ?? null
@@ -172,7 +173,12 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [contentDraftCoordinator],
   );
   const onContentDraftDiscard = React.useCallback(
-    (draftId, reason) => contentDraftCoordinator?.discardDraft(draftId, { reason }),
+    (draftId, reason) => {
+      if (!contentDraftCoordinator) return undefined;
+      const active = contentDraftCoordinator.getActiveRetainers().records
+        .some((record) => record.ownerId === draftId && record.status !== "active");
+      return active ? contentDraftCoordinator.discardDraft(draftId, { reason }) : false;
+    },
     [contentDraftCoordinator],
   );
   const [pendingBuildSelection, setPendingBuildSelection] = React.useState(null);
@@ -1232,7 +1238,21 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       ? activePage?.sections?.find(({ id }) => id === buildSelection.sectionId)
       : activePage?.sections?.[0];
     if (!activePage || !section) return;
+    staticWizardInvokerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     setStaticWizardTarget({ pageId: activePage.id, sectionId: section.id });
+  }
+
+  function restoreStaticWizardFocus() {
+    const invoker = staticWizardInvokerRef.current;
+    staticWizardInvokerRef.current = null;
+    window.requestAnimationFrame(() => {
+      const target = invoker?.isConnected
+        ? invoker
+        : document.getElementById("add-static-content-command");
+      target?.focus({ preventScroll: true });
+    });
   }
 
   function recoverEmptySectionInBuild(sectionId) {
@@ -1676,6 +1696,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       {staticWizardTarget && <StaticContentWizard
         open
         contentDraftCoordinator={contentDraftCoordinator}
+        contentRenderContext={contentRenderContext}
         dashboard={workingDashboard}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
@@ -1689,6 +1710,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setStaticWizardTarget(null);
           setStaticContentDraft(null);
           setStaticContentDirty(false);
+          restoreStaticWizardFocus();
         }}
         onCreate={async ({ destination, panel, placement, mediaItem, assets, stagedAssetIds }) => {
           await pendingEdits.flush();
@@ -1706,6 +1728,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           setStaticWizardTarget(null);
           setStaticContentDraft(null);
           setStaticContentDirty(false);
+          restoreStaticWizardFocus();
         }}
       />}
       <input

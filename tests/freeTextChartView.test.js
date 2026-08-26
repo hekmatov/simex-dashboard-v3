@@ -131,6 +131,97 @@ test("Free text portals replace and unmount without orphan media or duplicate le
   assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready", "release:asset-ready"]);
 });
 
+test("Free-text source preview leases staged simex media through the authored asset resolver and releases on unmount", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "source-editor-draft-preview";
+    const mediaItem = {
+      mediaId: "draft-local", revision: 1,
+      current: { kind: "asset", assetId: "asset-draft-local" },
+      displayName: "Draft local map", defaultDescription: "Draft local map", origin: "uploaded", health: "ready",
+      dimensions: { width: 8, height: 6 }, byteLength: 32, mediaType: "image/png",
+    };
+    window.__draftPreviewCalls = [];
+    window.__draftPreviewRoot = ReactDOMClient.createRoot(target);
+    window.__draftPreviewRoot.render(React.createElement(FreeTextSourceEditor, {
+      value: "![Draft local map](simex-media:draft-local)",
+      panelId: "draft-preview-panel",
+      mediaItems: { "draft-local": mediaItem },
+      assets: { "asset-draft-local": { assetId: "asset-draft-local" } },
+      contentRenderContext: {
+        mediaItems: {}, assets: {},
+        resolveAsset: async (assetId) => {
+          window.__draftPreviewCalls.push(`acquire:${assetId}`);
+          return { url: `blob:https://simex.test/${assetId}`, release: () => window.__draftPreviewCalls.push(`release:${assetId}`) };
+        },
+        requestRepair: () => window.__draftPreviewCalls.push("repair"),
+      },
+    }));
+  });
+
+  await page.locator("#source-editor-draft-preview [data-qmd-media-host] img").waitFor();
+  assert.deepEqual(await page.evaluate(() => window.__draftPreviewCalls), ["acquire:asset-draft-local"]);
+  await page.evaluate(() => window.__draftPreviewRoot.unmount());
+  assert.deepEqual(await page.evaluate(() => window.__draftPreviewCalls), ["acquire:asset-draft-local", "release:asset-draft-local"]);
+});
+
+test("Preview and Add leases pending QMD media through the same authored resolver and releases on close", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: StaticContentWizard } = await import("/src/components/static-content/StaticContentWizard.jsx");
+    const { createStaticContentDraft } = await import("/src/static-content/forms/staticContentDraft.js");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "wizard-draft-preview";
+    const mediaItem = {
+      mediaId: "draft-import", revision: 1,
+      current: { kind: "asset", assetId: "asset-draft-import" },
+      displayName: "Imported draft map", defaultDescription: "Imported draft map", origin: "external-import", health: "ready",
+      dimensions: { width: 8, height: 6 }, byteLength: 32, mediaType: "image/png",
+    };
+    const manifestEntry = {
+      assetId: "asset-draft-import", mediaType: "image/png", byteLength: 32,
+      width: 8, height: 6, sha256: "a".repeat(64), storageState: "staged",
+    };
+    const initial = createStaticContentDraft({
+      mode: "create",
+      destination: { pageId: "overview", sectionId: "response" },
+      contentTypeId: "freeText",
+      panel: { id: "draft-wizard-panel", typeId: "freeText", title: "Draft preview", sourceId: "draft-wizard-source" },
+      source: {
+        kind: "staticText", sourceVersion: 1, revision: 1, renderingPolicy: "portable-qmd-v1",
+        qmd: "![Imported draft map](simex-media:draft-import)",
+      },
+      assets: { "asset-draft-import": manifestEntry },
+    });
+    initial.stage = "preview-and-add";
+    initial.pendingMediaItems = { "draft-import": mediaItem };
+    window.__wizardPreviewCalls = [];
+    window.__wizardPreviewRoot = ReactDOMClient.createRoot(target);
+    window.__wizardPreviewRoot.render(React.createElement(StaticContentWizard, {
+      open: true,
+      dashboard: { pages: [], contentLibrary: { mediaItems: {} }, assets: {} },
+      initialDraft: initial,
+      contentRenderContext: {
+        mediaItems: {}, assets: {},
+        resolveAsset: async (assetId) => {
+          window.__wizardPreviewCalls.push(`acquire:${assetId}`);
+          return { url: `blob:https://simex.test/${assetId}`, release: () => window.__wizardPreviewCalls.push(`release:${assetId}`) };
+        },
+        requestRepair: () => window.__wizardPreviewCalls.push("repair"),
+      },
+    }));
+  });
+
+  await page.locator("#wizard-draft-preview [data-qmd-media-host] img").waitFor();
+  assert.deepEqual(await page.evaluate(() => window.__wizardPreviewCalls), ["acquire:asset-draft-import"]);
+  await page.evaluate(() => window.__wizardPreviewRoot.unmount());
+  assert.deepEqual(await page.evaluate(() => window.__wizardPreviewCalls), ["acquire:asset-draft-import", "release:asset-draft-import"]);
+});
+
 test("mounted Build, View, and fullscreen Free text keep local health authority and unsafe text inert", async () => {
   const remoteRequests = [];
   page.on("request", (request) => {

@@ -711,6 +711,7 @@ export default function BuildWorkspace({
               {renderedAuxiliary === "source-content" && (
                 <SourceContentWorkspace
                   dashboard={dashboard}
+                  contentDraftCoordinator={contentDraftCoordinator}
                   viewState={sourceContentViewState}
                   onViewStateChange={setSourceContentViewState}
                   onContentDraftStage={onContentDraftStage}

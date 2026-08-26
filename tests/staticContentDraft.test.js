@@ -114,6 +114,14 @@ test("media selection prefills only a new Image placement and preserves existing
   created = reduceStaticContentDraft(created, { type: "selectMediaItem", mediaItem: selected });
   assert.equal(created.source.mediaId, selected.mediaId);
   assert.equal(created.source.alt, selected.defaultDescription);
+  const renamedDefault = { ...selected, defaultDescription: "Future placement description" };
+  assert.equal(created.source.alt, "Response map");
+  let futurePlacement = createStaticContentDraft({
+    mode: "create", stage: "content", destination: { pageId: "page-a", sectionId: "section-a" },
+    contentTypeId: "image", panel: panel(), assets: {},
+  });
+  futurePlacement = reduceStaticContentDraft(futurePlacement, { type: "selectMediaItem", mediaItem: renamedDefault });
+  assert.equal(futurePlacement.source.alt, "Future placement description");
 
   let edited = createStaticContentDraft({
     mode: "edit", destination: { pageId: "page-a", sectionId: "section-a" },
@@ -124,6 +132,14 @@ test("media selection prefills only a new Image placement and preserves existing
   assert.equal(edited.source.mediaId, "media-other");
   assert.equal(edited.source.alt, "Placement-owned description");
   assert.ok(edited.imageEditing.replacementUndo);
+  edited = reduceStaticContentDraft(edited, { type: "setImageTransform", crop: { x: 100, y: 100, width: 700, height: 700 }, rotation: 90, fit: "cover" });
+  edited = reduceStaticContentDraft(edited, { type: "resetImage" });
+  assert.equal(edited.source.mediaId, "media-other");
+  assert.equal(edited.source.alt, "Placement-owned description");
+  assert.equal(edited.imageEditing.replacementUndo.source.mediaId, "media-map");
+  assert.deepEqual({ crop: edited.source.crop, rotation: edited.source.rotation, fit: edited.source.fit }, {
+    crop: { x: 0, y: 0, width: 1000, height: 1000 }, rotation: 0, fit: "contain",
+  });
   edited = reduceStaticContentDraft(edited, { type: "undoImageReplacement" });
   assert.equal(edited.source.mediaId, "media-map");
   assert.equal(edited.source.alt, "Placement-owned description");

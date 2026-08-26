@@ -5,6 +5,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 
 import { makeDashboardV5, makeMediaItem } from "./helpers/contentLibraryFixtures.js";
+import { createContentDraftCoordinator } from "../src/content-library/contentDraftTransaction.js";
+import { buildContentDependencyGraph } from "../src/content-library/contentDependencyGraph.js";
+import { prepareContentDeletion } from "../src/content-library/contentDeletionTransaction.js";
 
 const vite = await createServer({
   root: process.cwd(), appType: "custom", logLevel: "silent", server: { middlewareMode: true },
@@ -19,7 +22,7 @@ const {
   importExternalMediaFile,
   partitionMediaPickerItems,
 } = pickerModule;
-const { buildManagerMediaDraft } = catalogueModule;
+const { buildManagerMediaDraft, updateManagerMediaChoice } = catalogueModule;
 
 const mediaItems = {
   stored: makeMediaItem({ mediaId: "stored", current: { kind: "asset", assetId: "asset-stored" } }),
@@ -51,6 +54,35 @@ test("Image picker may select the original external identity", () => {
   assert.match(html, /value="external"/);
 });
 
+test("Image picker excludes every unhealthy or invalid identity and explains why it is unavailable", () => {
+  const inventory = {
+    ...mediaItems,
+    missing: makeMediaItem({ mediaId: "missing", displayName: "Missing", health: "missing" }),
+    corrupt: makeMediaItem({ mediaId: "corrupt", displayName: "Corrupt", health: "corrupt" }),
+    relink: makeMediaItem({ mediaId: "relink", displayName: "Relink", health: "needs-relink" }),
+    review: makeMediaItem({ mediaId: "review", displayName: "Review", health: "needs-review" }),
+    "invalid-external": {
+      ...mediaItems.external,
+      mediaId: "invalid-external",
+      displayName: "Invalid external",
+      current: { kind: "url", url: "http://example.test/unsafe.png" },
+    },
+  };
+  const image = partitionMediaPickerItems(inventory, { mode: "image" });
+  assert.deepEqual(image.selectable.map(({ mediaId }) => mediaId), ["external", "packaged", "stored"]);
+  assert.deepEqual(image.unavailable.map(({ item }) => item.mediaId), ["corrupt", "invalid-external", "missing", "relink", "review"]);
+  const qmd = partitionMediaPickerItems(inventory, { mode: "qmd" });
+  assert.deepEqual(qmd.selectable.map(({ mediaId }) => mediaId), ["packaged", "stored"]);
+
+  const html = renderToStaticMarkup(React.createElement(MediaPicker, { mediaItems: inventory, mode: "image" }));
+  for (const id of ["missing", "corrupt", "relink", "review", "invalid-external"]) {
+    assert.doesNotMatch(html, new RegExp(`value="${id}"`));
+  }
+  assert.match(html, /Unavailable media/);
+  assert.match(html, /Missing.*Missing media cannot be selected/s);
+  assert.match(html, /Invalid external.*valid External HTTPS/s);
+});
+
 test("validated local candidate carries one new logical identity over the staged physical hash", () => {
   const candidate = createLocalMediaCandidate({
     mediaId: "media-local", displayName: "Local map", defaultDescription: "Response area",
@@ -64,7 +96,9 @@ test("validated local candidate carries one new logical identity over the staged
 
 test("manager duplicate choice physically dedupes both ways but collapses logical identity only for Reuse existing", () => {
   const dashboard = makeDashboardV5();
-  const existing = dashboard.contentLibrary.mediaItems["media-image-source"];
+  const used = dashboard.contentLibrary.mediaItems["media-image-source"];
+  const existing = makeMediaItem({ mediaId: "media-unused-duplicate", current: structuredClone(used.current) });
+  dashboard.contentLibrary.mediaItems[existing.mediaId] = existing;
   const staged = createLocalMediaCandidate({
     mediaId: "media-separate", displayName: "Separate map", defaultDescription: "Separate alt",
     assetId: existing.current.assetId, manifestEntry: dashboard.assets[existing.current.assetId],
@@ -78,6 +112,47 @@ test("manager duplicate choice physically dedupes both ways but collapses logica
   assert.deepEqual(separateCandidate.itemIds, ["media-separate"]);
   assert.equal(separateCandidate.dashboard.contentLibrary.mediaItems["media-separate"].current.assetId, existing.current.assetId);
   assert.equal(Object.keys(separateCandidate.dashboard.assets).length, Object.keys(dashboard.assets).length);
+  assert.equal(separateCandidate.dashboard.assets[existing.current.assetId].storageState, "durable");
+});
+
+test("manager duplicate radio changes immediately move the real coordinator retainer and deletion block", () => {
+  const dashboard = makeDashboardV5();
+  const used = dashboard.contentLibrary.mediaItems["media-image-source"];
+  const existing = {
+    ...structuredClone(used),
+    mediaId: "media-unused-duplicate",
+    displayName: "Unused duplicate",
+  };
+  dashboard.contentLibrary.mediaItems[existing.mediaId] = existing;
+  const candidate = createLocalMediaCandidate({
+    mediaId: "media-separate", displayName: "Separate map", defaultDescription: "Separate alt",
+    assetId: existing.current.assetId, manifestEntry: dashboard.assets[existing.current.assetId],
+  });
+  const coordinator = createContentDraftCoordinator({
+    getDashboard: () => dashboard,
+    commitDashboard: async (value) => value,
+    assetStore: {},
+  });
+  const initial = buildManagerMediaDraft({ dashboard, candidate, duplicate: existing, choice: "separate" });
+  const { buildCandidate: _buildCandidate, ...staged } = initial;
+  coordinator.stageDraft(staged);
+
+  updateManagerMediaChoice({ contentDraftCoordinator: coordinator, draftId: staged.draftId, dashboard, candidate, duplicate: existing, choice: "reuse" });
+  let snapshot = coordinator.getActiveRetainers();
+  assert.deepEqual(snapshot.mediaIds, [existing.mediaId]);
+  assert.deepEqual(snapshot.assetIds, [candidate.assetId]);
+  let graph = buildContentDependencyGraph({ dashboard, activeRetainers: snapshot });
+  assert.equal(prepareContentDeletion({ dashboard, graph, item: { kind: "media", id: existing.mediaId } }).status, "blocked");
+
+  updateManagerMediaChoice({ contentDraftCoordinator: coordinator, draftId: staged.draftId, dashboard, candidate, duplicate: existing, choice: "separate" });
+  snapshot = coordinator.getActiveRetainers();
+  assert.deepEqual(snapshot.mediaIds, [candidate.mediaItem.mediaId]);
+  assert.deepEqual(snapshot.assetIds, [candidate.assetId]);
+  graph = buildContentDependencyGraph({ dashboard, activeRetainers: snapshot });
+  const separatePlan = prepareContentDeletion({ dashboard, graph, item: { kind: "media", id: existing.mediaId } });
+  assert.deepEqual(separatePlan.directUses, []);
+  assert.deepEqual(separatePlan.retainers, []);
+  assert.equal(separatePlan.status, "ready");
 });
 
 test("external import uses only an explicit browser fetch and reports local-upload fallback", async () => {

@@ -31,6 +31,7 @@ export function StaticContentWizard({
   editor = false,
   disabled = false,
   contentDraftCoordinator = null,
+  contentRenderContext = {},
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
@@ -206,13 +207,14 @@ export function StaticContentWizard({
             <StaticContentFields
               draft={draft}
               dashboard={dashboard}
+              contentRenderContext={contentRenderContext}
               dispatch={dispatch}
               onFreeTextValidation={setFreeTextValidation}
               onRetainMedia={retainMedia}
               onRestorePreviousImage={() => void discardActiveContentDraft("restore-previous-image")}
             />
           )}
-          {draft.stage === "preview-and-add" && <StaticPreview draft={draft} />}
+          {draft.stage === "preview-and-add" && <StaticPreview draft={draft} contentRenderContext={contentRenderContext} />}
         </section>
 
         {submitError && <p className="form-error" role="alert">{submitError}</p>}
@@ -295,7 +297,7 @@ function ContentTypeFields({ draft, dispatch }) {
   );
 }
 
-export function StaticContentFields({ draft, dashboard = {}, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage }) {
+export function StaticContentFields({ draft, dashboard = {}, contentRenderContext = {}, dispatch, onFreeTextValidation, onRetainMedia, onRestorePreviousImage }) {
   return (
     <div>
       <label htmlFor="static-panel-title">Panel title</label>
@@ -306,20 +308,21 @@ export function StaticContentFields({ draft, dashboard = {}, dispatch, onFreeTex
         onChange={(event) => dispatch({ type: "setPanel", updates: { title: event.target.value } })}
       />
       {draft.contentTypeId === "freeText"
-        ? <FreeTextFields draft={draft} dashboard={dashboard} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} />
+        ? <FreeTextFields draft={draft} dashboard={dashboard} contentRenderContext={contentRenderContext} dispatch={dispatch} onValidationChange={onFreeTextValidation} onRetainMedia={onRetainMedia} />
         : <ImageFields draft={draft} dashboard={dashboard} dispatch={dispatch} onRetainMedia={onRetainMedia} onRestorePreviousImage={onRestorePreviousImage} />}
     </div>
   );
 }
 
-function FreeTextFields({ draft, dashboard, dispatch, onValidationChange, onRetainMedia }) {
+function FreeTextFields({ draft, dashboard, contentRenderContext, dispatch, onValidationChange, onRetainMedia }) {
   return (
     <FreeTextSourceEditor
       id="static-qmd-source"
       value={draft.source?.qmd ?? ""}
       panelId={draft.panel?.id ?? "static-text-preview"}
-      mediaItems={dashboard.contentLibrary?.mediaItems ?? {}}
+      mediaItems={{ ...(dashboard.contentLibrary?.mediaItems ?? {}), ...(draft.pendingMediaItems ?? {}) }}
       assets={draft.assets}
+      contentRenderContext={contentRenderContext}
       onChange={(qmd) => dispatch({ type: "updateSource", updates: { qmd } })}
       onValidationChange={onValidationChange}
       onMediaSelect={(mediaItem) => {
@@ -383,8 +386,18 @@ function ImageFields({ draft, dashboard, dispatch, onRetainMedia, onRestorePrevi
   );
 }
 
-function StaticPreview({ draft }) {
+function StaticPreview({ draft, contentRenderContext = {} }) {
   const sourceId = draft.panel?.sourceId;
+  const draftMediaItems = {
+    ...(draft.pendingMediaItems ?? {}),
+    ...(draft.mediaItem ? { [draft.mediaItem.mediaId]: draft.mediaItem } : {}),
+  };
+  const renderContext = {
+    ...contentRenderContext,
+    sources: { ...(contentRenderContext.sources ?? {}), [sourceId]: draft.source },
+    mediaItems: { ...(contentRenderContext.mediaItems ?? {}), ...draftMediaItems },
+    assets: { ...(contentRenderContext.assets ?? {}), ...(draft.assets ?? {}) },
+  };
   return (
     <section aria-label="Canonical static content preview">
       <h3>Preview &amp; add</h3>
@@ -393,7 +406,7 @@ function StaticPreview({ draft }) {
           <div data-static-preview-type="freeText">
             <ChartView
               chart={draft.panel}
-              renderContext={{ sources: { [sourceId]: draft.source } }}
+              renderContext={renderContext}
               interactionMode="active"
             />
           </div>
@@ -401,11 +414,7 @@ function StaticPreview({ draft }) {
           <div data-static-preview-type="image">
             <ChartView
               chart={draft.panel}
-              renderContext={{
-                sources: { [sourceId]: draft.source },
-                mediaItems: draft.mediaItem ? { [draft.mediaItem.mediaId]: draft.mediaItem } : {},
-                assets: draft.assets,
-              }}
+              renderContext={renderContext}
               interactionMode="passive"
               surface="build"
             />

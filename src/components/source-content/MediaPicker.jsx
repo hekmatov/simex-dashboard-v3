@@ -1,6 +1,6 @@
 import React from "react";
 
-import { createMediaItem } from "../../content-library/mediaItems.js";
+import { createMediaItem, validateMediaItem } from "../../content-library/mediaItems.js";
 import {
   authoredAssetManifestBytes,
   decodeBrowserImageAsset,
@@ -34,7 +34,7 @@ export default function MediaPicker({
         file,
         assets,
         displayName: file.name || externalItem?.displayName || "Imported media",
-        defaultDescription: externalItem?.defaultDescription ?? "",
+        defaultDescription: externalItem?.defaultDescription || file.name || "Imported media",
       });
       await onCreateLocal?.(candidate, { externalItem });
       setStatus(`${candidate.mediaItem.displayName} is ready in this panel draft.`);
@@ -125,6 +125,17 @@ export default function MediaPicker({
           </ul>
         </section>
       )}
+      {groups.unavailable.length > 0 && (
+        <section aria-labelledby="unavailable-media-heading">
+          <h4 id="unavailable-media-heading">Unavailable media</h4>
+          <p>These identities remain visible for repair, but cannot be selected in this picker.</p>
+          <ul>
+            {groups.unavailable.map(({ item, reason }) => (
+              <li key={item.mediaId}><strong>{item.displayName}</strong> — {reason}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {status && <p role="status" aria-live="polite">{status}</p>}
       {error && <p role="alert">{error}</p>}
       {onCancel && <button type="button" className="secondary" onClick={onCancel}>Close media picker</button>}
@@ -137,17 +148,46 @@ export function partitionMediaPickerItems(mediaItems = {}, { mode = "qmd" } = {}
     .filter((item) => item && typeof item === "object")
     .sort((left, right) => left.mediaId.localeCompare(right.mediaId));
   const local = all.filter(isQmdEligibleMedia);
-  const external = all.filter((item) => item.current?.kind === "url" && item.origin === "external");
+  const external = all.filter(isValidExternalHttpsMedia);
+  const selectable = mode === "image"
+    ? all.filter((item) => isQmdEligibleMedia(item) || isValidExternalHttpsMedia(item))
+    : local;
+  const selectableIds = new Set([...selectable, ...external].map(({ mediaId }) => mediaId));
+  const unavailable = all
+    .filter((item) => !selectableIds.has(item.mediaId))
+    .map((item) => Object.freeze({ item, reason: unavailableReason(item) }));
   return Object.freeze({
     local,
     external,
-    selectable: mode === "image" ? all : local,
+    selectable,
+    unavailable,
   });
 }
 
 export function isQmdEligibleMedia(item) {
   return ["asset", "package"].includes(item?.current?.kind)
     && item.health === "ready";
+}
+
+export function isValidExternalHttpsMedia(item) {
+  if (item?.current?.kind !== "url" || item.origin !== "external" || item.health !== "external") return false;
+  try {
+    validateMediaItem(item);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function unavailableReason(item) {
+  if (item?.current?.kind === "url") return "Only a valid External HTTPS image can be selected.";
+  const labels = {
+    missing: "Missing media cannot be selected until it is repaired.",
+    corrupt: "Corrupt media cannot be selected until it is repaired.",
+    "needs-relink": "Media that needs relinking cannot be selected.",
+    "needs-review": "Media that needs review cannot be selected.",
+  };
+  return labels[item?.health] ?? "This media is not ready for selection.";
 }
 
 export async function stageLocalMediaFile({

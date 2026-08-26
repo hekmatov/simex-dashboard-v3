@@ -13,6 +13,7 @@ export function FreeTextSourceEditor({
   disabled = false,
   mediaItems = {},
   assets = {},
+  contentRenderContext = {},
   onChange,
   onValidationChange,
   onMediaSelect,
@@ -34,6 +35,11 @@ export function FreeTextSourceEditor({
   const sourcePaneRef = React.useRef(null);
   const previewPaneRef = React.useRef(null);
   const lastFocused = React.useRef({ source: null, preview: null });
+  const previewRenderContext = React.useMemo(() => ({
+    ...contentRenderContext,
+    mediaItems: { ...(contentRenderContext.mediaItems ?? {}), ...mediaItems },
+    assets: { ...(contentRenderContext.assets ?? {}), ...assets },
+  }), [assets, contentRenderContext, mediaItems]);
 
   React.useEffect(() => {
     onValidationChange?.({
@@ -263,6 +269,7 @@ export function FreeTextSourceEditor({
             <FreeTextChartView
               model={{ qmd: lastValidSource, sourceId: `${panelId}-source`, revision: lastValidRevision.current ?? 1 }}
               chart={{ id: panelId, title: "Preview" }}
+              contentRenderContext={previewRenderContext}
             />
           ) : (
             <p className="static-content-state static-content-state--error">Enter valid portable QMD to create a preview.</p>

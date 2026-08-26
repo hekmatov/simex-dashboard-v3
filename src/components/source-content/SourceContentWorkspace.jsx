@@ -8,6 +8,7 @@ const EMPTY_FILTERS = Object.freeze({ origin: "all", status: "all", usage: "all"
 
 export default function SourceContentWorkspace({
   dashboard,
+  contentDraftCoordinator = null,
   viewportWidth,
   initialSelectedId = null,
   viewState = null,
@@ -88,6 +89,7 @@ export default function SourceContentWorkspace({
   if (layout === "unsupported") return <p>Build is not available at this viewport width.</p>;
   const catalogueProps = {
     dashboard,
+    contentDraftCoordinator,
     items,
     query: queries[tab],
     filters: filterState[tab],
@@ -109,6 +111,7 @@ export default function SourceContentWorkspace({
       <ContentDetail
         item={selected}
         dashboard={dashboard}
+        contentDraftCoordinator={contentDraftCoordinator}
         datasetProfile={dashboard.datasetProfiles?.[selected?.id]}
         onRename={rename}
         onContentDraftStage={stageDraft}

@@ -5,6 +5,7 @@ import { ManagerMediaIntake } from "./MediaCatalogue.jsx";
 export default function MediaDetail({
   item,
   dashboard,
+  contentDraftCoordinator,
   onRename,
   onContentDraftStage,
   onContentDraftCommit,
@@ -33,6 +34,7 @@ export default function MediaDetail({
         {item.record.current.kind === "url" && item.record.origin === "external" && (
           <ManagerMediaIntake
             dashboard={dashboard}
+            contentDraftCoordinator={contentDraftCoordinator}
             externalItem={item.record}
             onContentDraftStage={onContentDraftStage}
             onContentDraftCommit={onContentDraftCommit}

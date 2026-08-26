@@ -6,11 +6,12 @@ import {
   stageLocalMediaFile,
 } from "./MediaPicker.jsx";
 
-export default function MediaCatalogue({ dashboard, onContentDraftStage, onContentDraftCommit, onContentDraftDiscard, ...props }) {
+export default function MediaCatalogue({ dashboard, contentDraftCoordinator, onContentDraftStage, onContentDraftCommit, onContentDraftDiscard, ...props }) {
   return (
     <div>
       <ManagerMediaIntake
         dashboard={dashboard}
+        contentDraftCoordinator={contentDraftCoordinator}
         onContentDraftStage={onContentDraftStage}
         onContentDraftCommit={onContentDraftCommit}
         onContentDraftDiscard={onContentDraftDiscard}
@@ -23,6 +24,7 @@ export default function MediaCatalogue({ dashboard, onContentDraftStage, onConte
 export function ManagerMediaIntake({
   dashboard = {},
   externalItem = null,
+  contentDraftCoordinator,
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
@@ -121,6 +123,18 @@ export function ManagerMediaIntake({
       setBusy(false);
     }
   };
+  const changeChoice = (nextChoice) => {
+    if (!candidate || !duplicate || !draftIdRef.current) return;
+    updateManagerMediaChoice({
+      contentDraftCoordinator,
+      draftId: draftIdRef.current,
+      dashboard,
+      candidate,
+      duplicate,
+      choice: nextChoice,
+    });
+    setChoice(nextChoice);
+  };
 
   return (
     <section aria-label={externalItem ? `Import ${externalItem.displayName} as local media` : "Add media to dashboard"}>
@@ -150,8 +164,8 @@ export function ManagerMediaIntake({
                 <fieldset>
                   <legend>Identical image already exists</legend>
                   <p>The stored bytes match {duplicate.displayName}. Choose whether to reuse its logical identity or create a separate item.</p>
-                  <label><input type="radio" name={`duplicate-${candidate.mediaItem.mediaId}`} checked={choice === "reuse"} onChange={() => setChoice("reuse")} /> Reuse existing</label>
-                  <label><input type="radio" name={`duplicate-${candidate.mediaItem.mediaId}`} checked={choice === "separate"} onChange={() => setChoice("separate")} /> Create separate item</label>
+                  <label><input type="radio" name={`duplicate-${candidate.mediaItem.mediaId}`} checked={choice === "reuse"} onChange={() => changeChoice("reuse")} /> Reuse existing</label>
+                  <label><input type="radio" name={`duplicate-${candidate.mediaItem.mediaId}`} checked={choice === "separate"} onChange={() => changeChoice("separate")} /> Create separate item</label>
                 </fieldset>
               )}
               <button type="button" disabled={busy || !displayName.trim() || !choice} onClick={() => void add()}>Add to dashboard</button>
@@ -201,6 +215,14 @@ export function buildManagerMediaDraft({ dashboard = {}, candidate, duplicate = 
     sourceIds: [],
     buildCandidate,
   };
+}
+
+export function updateManagerMediaChoice({ contentDraftCoordinator, draftId, dashboard, candidate, duplicate, choice } = {}) {
+  if (!contentDraftCoordinator || typeof contentDraftCoordinator.updateDraft !== "function") {
+    throw new TypeError("Manager media choice requires the content draft coordinator.");
+  }
+  const { buildCandidate: _buildCandidate, ...patch } = buildManagerMediaDraft({ dashboard, candidate, duplicate, choice });
+  return contentDraftCoordinator.updateDraft(draftId, patch);
 }
 
 function findDuplicateMedia(dashboard, assetId) {

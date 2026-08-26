@@ -40,7 +40,7 @@ export default function BuildCommandHeader({
             <button type="button" className="secondary" disabled={locked} onClick={onAddChart}>
               {chartDraftAvailable ? "Resume chart draft" : "Add chart"}
             </button>
-            <button type="button" className="secondary" disabled={locked} onClick={onAddStaticContent}>
+            <button id="add-static-content-command" type="button" className="secondary" disabled={locked} onClick={onAddStaticContent}>
               {staticDraftAvailable ? "Resume static content draft" : "Add static content"}
             </button>
             <button
