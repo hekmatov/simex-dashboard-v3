@@ -51,6 +51,7 @@ export const IconControl = React.memo(function IconControl({
   const {
     "aria-label": ariaLabelProp,
     "aria-pressed": ariaPressedProp,
+    "aria-describedby": ariaDescribedByProp,
     ...forwardedButtonProps
   } = buttonProps;
   const isPlanned = interaction.status === "planned";
@@ -59,6 +60,10 @@ export const IconControl = React.memo(function IconControl({
   const resolvedLabel = ariaLabelProp ?? ariaLabel ?? interaction.label;
   const resolvedTooltip = tooltip ?? interaction.tooltip ?? resolvedLabel;
   const tooltipState = useIconTooltip(resolvedTooltip, tooltipPlacement);
+  const describedBy = [
+    ariaDescribedByProp,
+    tooltipState.open ? tooltipState.id : null,
+  ].filter(Boolean).join(" ") || undefined;
   const {
     onMouseEnter,
     onMouseLeave,
@@ -82,7 +87,7 @@ export const IconControl = React.memo(function IconControl({
         "aria-disabled": isDisabled || undefined,
         "aria-label": resolvedLabel,
         "aria-pressed": isPressed,
-        "aria-describedby": tooltipState.open ? tooltipState.id : undefined,
+        "aria-describedby": describedBy,
         "data-icon-control": interaction.id,
         "data-icon-tooltip": resolvedTooltip,
         "data-icon-tooltip-placement": tooltipPlacement === "below" ? "below" : "above",
