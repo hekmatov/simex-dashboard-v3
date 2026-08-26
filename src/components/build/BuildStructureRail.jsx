@@ -129,7 +129,6 @@ export default function BuildStructureRail({ dashboard = {}, selection, disabled
             aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
             tabIndex={-1}
             disabled={disabled}
-            aria-expanded={expanded}
             onMouseDown={(event) => event.preventDefault()}
             onClick={(event) => {
               event.stopPropagation();
