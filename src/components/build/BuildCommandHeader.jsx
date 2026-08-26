@@ -6,6 +6,7 @@ export default function BuildCommandHeader({
   auxiliaryLocked = false,
   chartDraftAvailable = false,
   staticDraftAvailable = false,
+  accessibilityEnabled = false,
   operationError = "",
   chronoGroupDraftSuspended = false,
   sceneDraftSuspended = false,
@@ -18,6 +19,7 @@ export default function BuildCommandHeader({
   onDiscardLayout,
   onAddChart,
   onAddStaticContent,
+  onAccessibilityChange,
   onUploadPackage,
   onDownloadPackage,
   packageDownloadDisabled = locked,
@@ -54,6 +56,18 @@ export default function BuildCommandHeader({
             >
               Source content
             </button>
+            <label className="accessibility-edit-toggle">
+              <input
+                type="checkbox"
+                disabled={locked}
+                checked={accessibilityEnabled}
+                onChange={(event) => onAccessibilityChange?.(event.target.checked)}
+              />
+              <span>
+                Chart accessibility
+                <small>Generate screen-reader chart descriptions</small>
+              </span>
+            </label>
           </div>
         </section>
 

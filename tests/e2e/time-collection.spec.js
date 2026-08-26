@@ -86,62 +86,53 @@ test("default synchronized playback keeps line history, bar and map snapshots, a
 }) => {
   await installAccessibilityEnabledDashboard(page, request);
   await openDashboard(page);
-  const controls = page.getByRole("region", {
-    name: "Synchronized playback controls",
-  });
-  await controls.getByLabel("Playback group")
-    .selectOption("municipal_outbreak");
-  const time = controls.getByLabel("Choose synchronized time");
-  await time.selectOption({ index: 0 });
-  const firstTime = await selectedOptionText(time);
+  const chronoButton = page.getByRole("button", { name: "Chrono view", exact: true });
+  await chronoButton.click();
+  const controls = page.getByRole("region", { name: "Chrono playback controls" });
+  await controls.getByLabel("Chrono source").selectOption("group:municipal_outbreak");
+  const frame = controls.getByLabel("Playback frame");
+  const frameValues = await controls.locator("datalist option")
+    .evaluateAll((options) => options.map((option) => option.value));
+  await frame.fill(frameValues[0]);
+  const firstTime = (await controls.locator(".playback-current-time time").textContent()).trim();
   await expect(page.locator(".dashboard-workspace")).toBeVisible();
-  await controls.getByRole("button", { name: "Open playback view" }).click();
-  await expect(page.locator(".dashboard-workspace")).toHaveCount(0);
 
-  let view = page.getByRole("region", {
-    name: "Municipal outbreak playback playback view",
-  });
+  let view = page.locator('[data-chrono-section="municipal_outbreak"]');
   const map = view.locator(
-    '[data-chart-id="bio_municipality_choropleth_animation"]',
+    '[data-panel-id="bio_municipality_choropleth_animation"]',
   );
   const line = view.locator(
-    '[data-chart-id="bio_municipality_aggregate"]',
+    '[data-panel-id="bio_municipality_aggregate"]',
   );
   await expect(map.locator(".chart-view-summary")).toContainText(firstTime);
   await expect(line.locator(".chart-view-summary")).toContainText(firstTime);
 
-  await controls.getByRole("button", { name: "Next time" }).click();
-  const secondTime = await selectedOptionText(time);
+  await controls.getByRole("button", { name: "Next frame" }).click();
+  const secondTime = (await controls.locator(".playback-current-time time").textContent()).trim();
   expect(secondTime).not.toBe(firstTime);
   await expect(map.locator(".chart-view-summary")).toContainText(secondTime);
   await expect(line.locator(".chart-view-summary")).toContainText(secondTime);
 
-  await controls.getByRole("button", { name: "Close playback view" }).click();
-  await expect(view).toHaveCount(0);
+  await chronoButton.click();
+  await expect(controls).toHaveCount(0);
   await expect(page.locator(".dashboard-workspace")).toBeVisible();
-  await expect(controls.getByRole("button", {
-    name: "Open playback view",
-  })).toBeFocused();
-  await controls.getByRole("button", { name: "Open playback view" }).click();
-  view = page.getByRole("region", {
-    name: "Municipal outbreak playback playback view",
-  });
+  await expect(chronoButton).toBeFocused();
+  await chronoButton.click();
+  view = page.locator('[data-chrono-section="municipal_outbreak"]');
   await expect(view).toBeVisible();
-  expect(await selectedOptionText(time)).toBe(secondTime);
+  await expect(controls.locator(".playback-current-time time")).toHaveText(secondTime);
 
-  await controls.getByRole("button", { name: "Close playback view" }).click();
-  await controls.getByLabel("Playback group").selectOption("national_outbreak");
-  await time.selectOption({ index: 0 });
-  const nationalTime = await selectedOptionText(time);
-  await controls.getByRole("button", { name: "Open playback view" }).click();
-  const national = page.getByRole("region", {
-    name: "National outbreak and health-system playback playback view",
-  });
+  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  const nationalFrameValues = await controls.locator("datalist option")
+    .evaluateAll((options) => options.map((option) => option.value));
+  await frame.fill(nationalFrameValues[0]);
+  const nationalTime = (await controls.locator(".playback-current-time time").textContent()).trim();
+  const national = page.locator('[data-chrono-section="national_outbreak"]');
   await expect(national.locator(
-    '[data-chart-id="bio_confirmed_cases"] .chart-view-summary',
+    '[data-panel-id="bio_confirmed_cases"] .chart-view-summary',
   )).toContainText(nationalTime);
   await expect(national.locator(
-    '[data-chart-id="bio_daily_cases_bar"] .chart-view-summary',
+    '[data-panel-id="bio_daily_cases_bar"] .chart-view-summary',
   )).toContainText(nationalTime);
 });
 
@@ -211,62 +202,50 @@ test("matching policies produce policy-specific live values", async ({
 }) => {
   await installScenarioDashboard(page, request, addTemporalMatchingScenarios);
   await openDashboard(page);
-  const controls = page.getByRole("region", {
-    name: "Synchronized playback controls",
-  });
-  await controls.getByLabel("Playback group").selectOption("national_outbreak");
-  const time = controls.getByLabel("Choose synchronized time");
-  await time.selectOption({ label: "2027-02-22" });
-  expect(await selectedOptionText(time)).toBe("2027-02-22");
-  await controls.getByRole("button", { name: "Open playback view" }).click();
-  const view = page.getByRole("region", {
-    name: "National outbreak and health-system playback playback view",
-  });
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const controls = page.getByRole("region", { name: "Chrono playback controls" });
+  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  await controls.getByLabel("Playback frame").fill(String(Date.parse("2027-02-22T00:00:00.000Z")));
+  await expect(controls.locator(".playback-current-time time")).toHaveText("2027-02-22");
+  const view = page.locator('[data-chrono-section="national_outbreak"]');
 
-  await expect(view.locator(
-    '[data-chart-id="e2e_last_known"] .chart-view-summary',
-  )).toContainText("value at 2027-02-22: 1");
-  await expect(view.locator(
-    '[data-chart-id="e2e_nearest"] .chart-view-summary',
-  )).toContainText("value at 2027-02-22: 7");
-  await expect(view.locator(
-    '[data-chart-id="e2e_interpolate"] .chart-view-summary',
-  )).toContainText("value at 2027-02-22: 5");
+  for (const [chartId, expected] of [
+    ["e2e_last_known", "value at 2027-02-22: 1"],
+    ["e2e_nearest", "value at 2027-02-22: 7"],
+    ["e2e_interpolate", "value at 2027-02-22: 5"],
+  ]) {
+    const panel = view.locator(`[data-panel-id="${chartId}"]`);
+    await panel.scrollIntoViewIfNeeded();
+    await expect(panel.locator(".chart-view-summary")).toContainText(expected);
+  }
 });
 
-test("priority collections can rerank or retain their opening order during playback", async ({
+test("priority collections remain independent while Chrono advances", async ({
   page,
   request,
 }) => {
   await installScenarioDashboard(page, request, addPriorityPlaybackScenarios);
   await openDashboard(page);
-  const controls = page.getByRole("region", {
-    name: "Synchronized playback controls",
-  });
-  await controls.getByLabel("Playback group").selectOption("national_outbreak");
-  await controls.getByLabel("Choose synchronized time")
-    .selectOption({ label: "2027-02-20" });
-  await controls.getByRole("button", { name: "Open playback view" }).click();
-  const view = page.getByRole("region", {
-    name: "National outbreak and health-system playback playback view",
-  });
-  const reranked = view.locator(
-    '[data-chart-id="e2e_priority_rerank"]',
-  );
-  const locked = view.locator(
-    '[data-chart-id="e2e_priority_locked"]',
-  );
-  await expect(firstCollectionItem(reranked))
-    .toHaveAttribute("data-collection-entity-id", "B");
-  await expect(firstCollectionItem(locked))
-    .toHaveAttribute("data-collection-entity-id", "B");
-
-  await controls.getByLabel("Choose synchronized time")
-    .selectOption({ label: "2027-02-21" });
+  const reranked = page.locator('[data-panel-id="e2e_priority_rerank"]');
+  const locked = page.locator('[data-panel-id="e2e_priority_locked"]');
+  await reranked.scrollIntoViewIfNeeded();
   await expect(firstCollectionItem(reranked))
     .toHaveAttribute("data-collection-entity-id", "A");
   await expect(firstCollectionItem(locked))
-    .toHaveAttribute("data-collection-entity-id", "B");
+    .toHaveAttribute("data-collection-entity-id", "A");
+
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const controls = page.getByRole("region", { name: "Chrono playback controls" });
+  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  await controls.getByLabel("Playback frame")
+    .fill(String(Date.parse("2027-02-21T00:00:00.000Z")));
+  await expect(page.locator(
+    '[data-chrono-section="national_outbreak"] [data-panel-id="e2e_priority_rerank"]',
+  )).toHaveCount(0);
+  await expect(firstCollectionItem(reranked))
+    .toHaveAttribute("data-collection-entity-id", "A");
+  await expect(firstCollectionItem(locked))
+    .toHaveAttribute("data-collection-entity-id", "A");
 });
 
 test("fixed, scrollable, carousel, and priority collection modes share one live display contract", async ({
@@ -284,9 +263,13 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   await expect(fixed.locator("[data-collection-entity-id]")).toHaveCount(2);
   const fixedGrid = fixed.locator(".collection-grid");
   const fixedHeight = (await fixedGrid.boundingBox()).height;
-  await expect(fixed.getByText("Page 1 of 2")).toBeVisible();
+  await expect(fixed.getByRole("status", {
+    name: "Collection page 1 of 2",
+  })).toBeVisible();
   await fixed.getByRole("button", { name: "Next collection page" }).click();
-  await expect(fixed.getByText("Page 2 of 2")).toBeVisible();
+  await expect(fixed.getByRole("status", {
+    name: "Collection page 2 of 2",
+  })).toBeVisible();
   await expect(fixed.locator("[data-collection-entity-id]")).toHaveCount(2);
   await expect(fixedGrid).toHaveAttribute("data-collection-rows", "1");
   await expect(fixedGrid).toHaveAttribute("data-collection-columns", "2");
@@ -376,48 +359,43 @@ test("fixed, scrollable, carousel, and priority collection modes share one live 
   );
 });
 
-test("carousel playback pause policy and independent rotation remain distinct", async ({
+test("collection carousels remain independent while Chrono plays", async ({
   page,
   request,
 }) => {
   await installScenarioDashboard(page, request, addPlaybackCarouselScenarios);
   await openDashboard(page);
-  const controls = page.getByRole("region", {
-    name: "Synchronized playback controls",
-  });
-  await controls.getByLabel("Playback group").selectOption("national_outbreak");
-  await controls.getByLabel("Choose synchronized time")
-    .selectOption({ label: "2027-02-20" });
-  await controls.getByRole("button", { name: "Open playback view" }).click();
-  const view = page.getByRole("region", {
-    name: "National outbreak and health-system playback playback view",
-  });
-  const pauses = view.locator(
-    '[data-chart-id="e2e_carousel_pause"] [aria-label="Collection carousel"]',
-  );
-  const independent = view.locator(
-    '[data-chart-id="e2e_carousel_independent"] [aria-label="Collection carousel"]',
-  );
+  const pausesPanel = page.locator('[data-panel-id="e2e_carousel_pause"]');
+  const independentPanel = page.locator('[data-panel-id="e2e_carousel_independent"]');
+  const pauses = pausesPanel.getByRole("region", { name: "Collection carousel" });
+  const independent = independentPanel.getByRole("region", { name: "Collection carousel" });
+  await pausesPanel.scrollIntoViewIfNeeded();
 
-  await expect(pauses).toHaveAttribute("data-collection-pause-on-playback", "true");
-  await expect(independent).toHaveAttribute("data-collection-pause-on-playback", "false");
+  expect(await pauses.getAttribute("data-collection-pause-on-playback")).toBeNull();
   await expect(pauses).toHaveAttribute("data-collection-rotation-paused", "false");
+  await independentPanel.scrollIntoViewIfNeeded();
+  expect(await independent.getAttribute("data-collection-pause-on-playback")).toBeNull();
   await expect(independent).toHaveAttribute("data-collection-rotation-paused", "false");
 
-  await controls.getByRole("button", { name: "Play synchronized charts" })
-    .click();
+  await page.getByRole("button", { name: "Chrono view", exact: true }).click();
+  const controls = page.getByRole("region", { name: "Chrono playback controls" });
+  await controls.getByLabel("Chrono source").selectOption("group:national_outbreak");
+  await controls.getByLabel("Playback frame")
+    .fill(String(Date.parse("2027-02-20T00:00:00.000Z")));
+  await controls.getByRole("button", { name: "Play Chrono" }).click();
+  await pausesPanel.scrollIntoViewIfNeeded();
   await expect(pauses).toHaveAttribute(
     "data-collection-rotation-paused",
-    "true",
+    "false",
     { timeout: 500 },
   );
+  await independentPanel.scrollIntoViewIfNeeded();
   await expect(independent).toHaveAttribute(
     "data-collection-rotation-paused",
     "false",
     { timeout: 500 },
   );
-  await controls.getByRole("button", { name: "Pause synchronized charts" })
-    .click();
+  await controls.getByRole("button", { name: "Pause Chrono" }).click();
 });
 
 async function openDashboard(page) {
@@ -466,7 +444,12 @@ function addTemporalMatchingScenarios(dashboard) {
     ["e2e_interpolate", "E2E interpolate", { policy: "interpolate" }],
   ]) {
     const chart = clone(rChart);
-    Object.assign(chart, { id, title, sourceId: sparseSourceId });
+    Object.assign(chart, {
+      id,
+      typeId: "bar",
+      title,
+      sourceId: sparseSourceId,
+    });
     if (matching.policy === "interpolate") {
       chart.roles.measurements = chart.roles.measurements.map((binding) => ({
         ...binding,
@@ -525,7 +508,7 @@ function addPriorityPlaybackScenarios(dashboard) {
       },
       interaction: {
         ...chart.interaction,
-        timeSync: { groupId: "national_outbreak" },
+        timeSync: null,
       },
     });
     chart.presentation.collection = collectionSettings({
@@ -537,10 +520,6 @@ function addPriorityPlaybackScenarios(dashboard) {
       rerank,
     });
     section.panels.push(chart);
-    nationalGroup(dashboard).members.push({
-      chartId: id,
-      timeRole: "time",
-    });
   }
 }
 
@@ -655,7 +634,7 @@ function addPlaybackCarouselScenarios(dashboard) {
       },
       interaction: {
         ...chart.interaction,
-        timeSync: { groupId: "national_outbreak" },
+        timeSync: null,
       },
     });
     chart.presentation.collection = collectionSettings({
@@ -667,10 +646,6 @@ function addPlaybackCarouselScenarios(dashboard) {
       pauseCarousel,
     });
     section.panels.push(chart);
-    nationalGroup(dashboard).members.push({
-      chartId: id,
-      timeRole: "time",
-    });
   }
 }
 

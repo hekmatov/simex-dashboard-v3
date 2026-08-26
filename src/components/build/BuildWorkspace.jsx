@@ -86,6 +86,7 @@ export default function BuildWorkspace({
   chartDraftOpen = false,
   chartDraftDirty = false,
   mutationsDisabled = false,
+  accessibilityEnabled = false,
   deviceLayout,
   focusLabelKey,
   operationError = "",
@@ -98,6 +99,7 @@ export default function BuildWorkspace({
   treeResetGeneration = 0,
   onRevealComplete,
   onDashboardChange,
+  onAccessibilityChange,
   onStructureCommit,
   onPageChange,
   onPageRemove,
@@ -675,6 +677,7 @@ export default function BuildWorkspace({
             auxiliaryLocked={auxiliaryLocked}
             chartDraftAvailable={chartDraftAvailable}
             staticDraftAvailable={staticDraftAvailable}
+            accessibilityEnabled={accessibilityEnabled}
             operationError={operationError}
             chronoGroupDraftSuspended={chronoGroupDraftSuspended}
             sceneDraftSuspended={sceneDraftSuspended}
@@ -690,6 +693,7 @@ export default function BuildWorkspace({
             }}
             onAddChart={() => onAddChart?.()}
             onAddStaticContent={() => onAddStaticContent?.()}
+            onAccessibilityChange={onAccessibilityChange}
             onUploadPackage={onUploadPackage}
             onDownloadPackage={onDownloadPackage}
             packageDownloadDisabled={mutationsDisabled}
