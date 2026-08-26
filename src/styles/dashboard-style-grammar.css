@@ -811,7 +811,7 @@
 
 /* Build authoring controls inherit the active dashboard grammar and profile. */
 .app-frame .canonical-dashboard-frame .build-section-move-button,
-.app-frame .dashboard-map-panel .accessibility-edit-toggle {
+.app-frame :is(.dashboard-map-panel, .build-command-header) .accessibility-edit-toggle {
   background: var(--simex-surface-panel-alt) !important;
   border: 1px solid var(--simex-border-subtle) !important;
   border-radius: var(--simex-style-control-radius, var(--simex-component-control-radius)) !important;
@@ -819,13 +819,13 @@
 }
 
 .app-frame .canonical-dashboard-frame .build-section-move-button:hover:not(:disabled),
-.app-frame .dashboard-map-panel .accessibility-edit-toggle:hover {
+.app-frame :is(.dashboard-map-panel, .build-command-header) .accessibility-edit-toggle:hover {
   background: var(--simex-selected-soft) !important;
   border-color: var(--simex-selected) !important;
 }
 
 .app-frame .canonical-dashboard-frame .build-section-move-button:focus-visible,
-.app-frame .dashboard-map-panel .accessibility-edit-toggle:focus-within {
+.app-frame :is(.dashboard-map-panel, .build-command-header) .accessibility-edit-toggle:focus-within {
   outline: var(--simex-component-focus-width, 3px) solid var(--simex-component-focus, var(--simex-focus));
   outline-offset: 2px;
 }
@@ -849,16 +849,17 @@
   transform-origin: center;
 }
 
-.app-frame .dashboard-map-panel .accessibility-edit-toggle span {
+.app-frame :is(.dashboard-map-panel, .build-command-header) .accessibility-edit-toggle span {
   color: var(--simex-text-strong);
 }
 
-.app-frame .dashboard-map-panel .accessibility-edit-toggle small {
+.app-frame :is(.dashboard-map-panel, .build-command-header) .accessibility-edit-toggle small {
   color: var(--simex-text-muted);
 }
 
-.app-frame .dashboard-map-panel .accessibility-edit-toggle input {
+.app-frame :is(.dashboard-map-panel, .build-command-header) .accessibility-edit-toggle input {
   accent-color: var(--simex-selected);
+  color: var(--simex-text-strong);
 }
 
 /* Carbon-style branch guides align beneath the parent caret and stop at the
