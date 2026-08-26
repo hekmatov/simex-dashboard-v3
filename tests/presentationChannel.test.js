@@ -19,7 +19,7 @@ const presentableItemIndex = new Map([
     descriptor: {
       kind: "image",
       panel_id: "image-a",
-      source_id: "image-source-a",
+      media_id: "media-image-a",
       revision: 7,
     },
   }],
@@ -43,7 +43,7 @@ const secondScene = {
   ...firstScene,
   items: [
     { kind: "chart", chart_id: "chart-a" },
-    { kind: "image", panel_id: "image-a", source_id: "image-source-a", revision: 7 },
+    { kind: "image", panel_id: "image-a", media_id: "media-image-a", revision: 7 },
   ],
   layout: "sideBySide",
   blackout: true,
@@ -206,7 +206,7 @@ test("reconnect replays the exact trusted Image identity and revision snapshot",
   assert.deepEqual(replayed[0].items[1], {
     kind: "image",
     panel_id: "image-a",
-    source_id: "image-source-a",
+    media_id: "media-image-a",
     revision: 7,
   });
 
@@ -229,7 +229,7 @@ test("reconnect refuses a snapshot after its Image revision becomes stale", () =
     descriptor: {
       kind: "image",
       panel_id: "image-a",
-      source_id: "image-source-a",
+      media_id: "media-image-a",
       revision: 8,
     },
   });
