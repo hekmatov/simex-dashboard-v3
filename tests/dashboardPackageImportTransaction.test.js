@@ -323,6 +323,52 @@ test("a multi-asset import refuses a non-atomic commit boundary before replaceme
   assert.deepEqual(events, ["prepare"]);
 });
 
+test("V5 cross-layer package validation runs before import preparation or mutation", async () => {
+  const events = [];
+  const candidate = {
+    config: {
+      configVersion: 5,
+      contentLibrary: {
+        mediaItems: {
+          missing: {
+            mediaId: "missing",
+            revision: 1,
+            current: { kind: "asset", assetId: "asset-missing" },
+            displayName: "Missing",
+            defaultDescription: "Missing",
+            origin: "uploaded",
+            health: "ready",
+            dimensions: { width: 8, height: 6 },
+            byteLength: 4,
+            mediaType: "image/png",
+          },
+        },
+        sourceEntries: {},
+      },
+      dataSources: {},
+      assets: {
+        "asset-missing": {
+          mediaType: "image/png",
+          byteLength: 4,
+          width: 8,
+          height: 6,
+          sha256: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
+          storageState: "durable",
+        },
+      },
+    },
+    assetPayloads: {},
+  };
+
+  await assert.rejects(commitDashboardPackageImport({
+    candidate,
+    prepare: async () => { events.push("prepare"); },
+    replace: async () => { events.push("replace"); },
+    rebase: () => { events.push("rebase"); },
+  }), /missing authored asset payload/i);
+  assert.deepEqual(events, []);
+});
+
 function importCandidate() {
   return {
     config: {

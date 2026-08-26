@@ -9,18 +9,19 @@ import {
   assertWithinPublicDirectory,
   preparePromotedDashboard,
 } from "../scripts/promote-dashboard-bundle.mjs";
-import { sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
+import { encodeAssetBase64, sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
 import { buildPortableData } from "../scripts/build-portable-data.mjs";
+import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
 test("bundle promotion materializes authored Images under hashed contained package paths", () => {
-  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const bytes = imageFixtureBytes("image/png");
   const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
   const bundle = serializeDashboardBundle(portableDashboard({ assetId, sha256 }), {
     now: null,
     assetPayloads: {
       [assetId]: {
-        base64: "AQIDBA==",
+        base64: encodeAssetBase64(bytes),
         byteLength: bytes.byteLength,
         mediaType: "image/png",
         sha256,
@@ -40,7 +41,7 @@ test("bundle promotion materializes authored Images under hashed contained packa
 });
 
 test("bundle promotion emits one physical file for two logical media items sharing one asset", () => {
-  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const bytes = imageFixtureBytes("image/png");
   const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
   const dashboard = portableDashboard({ assetId, sha256 });
@@ -49,15 +50,15 @@ test("bundle promotion emits one physical file for two logical media items shari
     current: { kind: "asset", assetId },
     origin: "uploaded",
     health: "ready",
-    dimensions: { width: 8, height: 6 },
-    byteLength: 4,
+    dimensions: { width: 2, height: 3 },
+    byteLength: bytes.byteLength,
     mediaType: "image/png",
   });
   const bundle = serializeDashboardBundle(dashboard, {
     now: null,
     assetPayloads: {
       [assetId]: {
-        base64: "AQIDBA==", byteLength: 4, mediaType: "image/png", sha256,
+        base64: encodeAssetBase64(bytes), byteLength: bytes.byteLength, mediaType: "image/png", sha256,
       },
     },
   });
@@ -131,8 +132,8 @@ function portableDashboard({ assetId, sha256 }) {
           current: { kind: "asset", assetId },
           origin: "uploaded",
           health: "ready",
-          dimensions: { width: 8, height: 6 },
-          byteLength: 4,
+          dimensions: { width: 2, height: 3 },
+          byteLength: imageFixtureBytes("image/png").byteLength,
           mediaType: "image/png",
         }),
         "media-linked": mediaItem({
@@ -148,9 +149,9 @@ function portableDashboard({ assetId, sha256 }) {
     assets: {
       [assetId]: {
         mediaType: "image/png",
-        byteLength: 4,
-        width: 8,
-        height: 6,
+        byteLength: imageFixtureBytes("image/png").byteLength,
+        width: 2,
+        height: 3,
         sha256,
         storageState: "durable",
       },

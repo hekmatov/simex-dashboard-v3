@@ -1,4 +1,5 @@
 import { decodeAssetBase64 } from "../static-content/assets/assetPayloadEnvelope.js";
+import { validateContentPackage } from "../content-library/contentPackageValidation.js";
 
 export async function commitDashboardPackageImport({
   candidate,
@@ -13,6 +14,9 @@ export async function commitDashboardPackageImport({
   rebase,
   transactionId = createImportTransactionId(),
 }) {
+  if (candidate?.config?.configVersion === 5) {
+    validateContentPackage(candidate);
+  }
   await prepare();
   const payloadEntries = Object.entries(candidate.assetPayloads ?? {}).sort();
   if (payloadEntries.length > 1 && typeof commitAssets !== "function") {

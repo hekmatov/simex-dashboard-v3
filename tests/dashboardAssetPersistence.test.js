@@ -193,10 +193,16 @@ test("legacy embedded image references hydrate before deterministic replacement-
     getItem: () => JSON.stringify(prepared.storageConfig),
   }, key, { assets: persistence });
 
-  assert.equal(restored.configVersion, 4);
+  assert.equal(restored.configVersion, 5);
   assert.equal(restored.dataSources.briefing.kind, "staticImage");
-  assert.equal(restored.dataSources.briefing.origin.kind, "replacementRequired");
+  assert.equal(restored.dataSources.briefing.sourceVersion, 2);
+  assert.equal(restored.dataSources.briefing.mediaId, "media-briefing");
   assert.equal(Object.hasOwn(restored.dataSources.briefing, "rows"), false);
+  assert.deepEqual(restored.contentLibrary.mediaItems["media-briefing"].current, {
+    kind: "asset",
+    assetId: "missing-briefing",
+  });
+  assert.equal(restored.contentLibrary.mediaItems["media-briefing"].health, "needs-relink");
 });
 
 test("a browser asset id is the stable data-service identity across dashboard reloads", () => {

@@ -20,6 +20,7 @@ import {
 import { migrateDashboardV3ToV4 } from "./migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../../content-library/migrateDashboardV4ToV5.js";
 import { validateContentLibrary } from "../../content-library/contentLibrarySchema.js";
+import { validateContentPackage } from "../../content-library/contentPackageValidation.js";
 import {
   validateDashboardChartReferences,
 } from "./dashboardSemanticReferences.js";
@@ -669,6 +670,7 @@ export function serializeDashboardBundle(config, { now = null, assetPayloads = {
   validateDashboardConfig(serializable);
   if (now !== null && !validCanonicalInstant(now)) throw new Error("Bundle export time must be a valid canonical ISO-8601 timestamp or null.");
   const verifiedPayloads = validateAssetPayloadEnvelope(serializable, assetPayloads);
+  validateContentPackage({ config: serializable, assetPayloads: verifiedPayloads });
   return {
     bundleType: DASHBOARD_BUNDLE_TYPE,
     version: DASHBOARD_BUNDLE_VERSION,
@@ -692,6 +694,7 @@ export function parseDashboardBundle(text, { includeEnvelope = false } = {}) {
   const config = normalizeDashboardBoundary(structuredClone(bundle.config));
   validateDashboardConfig(config);
   const assetPayloads = validateAssetPayloadEnvelope(config, bundle.assetPayloads ?? {});
+  validateContentPackage({ config, assetPayloads });
   const metadataEntries = plainDataEntries(bundle.metadata, "Dashboard bundle metadata");
   rejectUnknownEntries(metadataEntries, BUNDLE_METADATA_KEYS, "dashboard bundle metadata");
   const exportedAt = entryValue(metadataEntries, "exportedAt");

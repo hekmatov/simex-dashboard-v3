@@ -366,3 +366,32 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - `src/components/source-content/DataSourceDetail.jsx` was verified and authorized as the existing mounted replacement lifecycle carrier omitted from the Task 14 owner list. The implementation reuses its coordinator/modal/navigation contracts; no parallel lifecycle exists.
 - The existing geography adapter, ECharts registration, and dependency breadcrumb owners already consume the committed payload and remap targets, so no changes were required there.
 - No Task 15 persistence/package, Task 16 recovery/cleanup, hidden metric, global undo, or parent progress update is included.
+
+## Task 15 — V5 persistence, package, and offline retention
+
+**Implementation state:** SCM-S01, SCM-S02, SCM-S12, and SCM-R07 are Passing for the live-source package and online-load→offline-retention boundary. Cold copied/generated-client launch remains the previously accepted PS-04 pre-merge residual and is not claimed here.
+
+### RED and deterministic evidence
+
+- The one owner/fixture preflight confirmed the existing live export→candidate→transactional-import chain and browser asset persistence owners. Only `src/content-library/contentPackageValidation.js`, `tests/contentPackageValidation.test.js`, and Journey G were absent.
+- Focused RED failed on the missing validation module. Focused GREEN covered complete used/unused retention, corrupt/missing/animated asset rejection, logical source/profile correspondence, lean GeoJSON facts, and inert unknown QMD media.
+- The exact nine-file selection produced **49/51 passing** before one stale V4 assertion was aligned with the authoritative V5 storage boundary; that focused file is now **10/10 passing**. The resulting live-source/product boundary is **50/50 green**.
+- The remaining exact-selection case is PS-04 only: outside the sandbox the copied package launches, then the tracked pre-Task-1 generated client cannot find the accepted Biomedical surface. Per the existing ruling, no build or `dist` edit was performed; the aggregate is recorded truthfully as **50/51**, not fully green, until Task 17's authorized pre-merge refresh.
+
+### Package boundary
+
+- `validateContentPackage` runs at V5 serialize/parse and immediately before V5 import preparation. It validates the canonical content library, builder-managed SourceEntry correspondence, CSV payload/profile separation, lean GeoJSON validation facts, QMD media readiness, durable local manifests, decoded payload byte length/MIME/SHA, raster signature, single-frame policy, and complete authored-payload reachability.
+- Validation occurs before dashboard/store mutation. Missing, corrupt, mismatched, animated, unreachable, or incomplete content is rejected before import preparation; the existing staged-asset transaction continues to own compensation after validation.
+- Logical MediaItems remain separate from physical assets: Journey G retained used revision 7 and unused revision 2 MediaItems pointing to one SHA-addressed asset and one physical payload.
+
+### Named Journey G checkpoint
+
+- Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-portability.spec.js --project=chromium --grep "Journey G — V5 offline round trip and V4 migration retain library"` — **1/1 passing**, 1.5 m test / 1.6 m total on the final live-source candidate.
+- Build 1440×900 imported a controlled V4 dashboard as canonical V5 while every retained chart stayed config V3 and obsolete temporal-review metadata stayed absent.
+- The V5 round trip retained exact logical IDs/revisions/hash, used and unused media, one deduped physical payload, managed CSV plus its profile, managed GeoJSON with no profile, and the original `simex-media` QMD reference. A fresh context rendered Image, QMD, and map content.
+- View 390×844 went offline after the fresh live-source load, then retained Image/QMD/map surfaces, zero horizontal overflow, and QMD fullscreen with **zero subsequent HTTP requests**. This is deliberately not a cold-start/service-worker claim.
+
+### Scope boundary
+
+- No Task 16 health, repair, cleanup, new hardening, build, generated `dist`, full suite, or release suite is included.
+- The sole residual is the already-recorded PS-04 cold generated-client condition assigned to Task 17 pre-merge reporting.

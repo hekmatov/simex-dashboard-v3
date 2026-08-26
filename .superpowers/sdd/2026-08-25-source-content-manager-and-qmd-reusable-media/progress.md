@@ -139,6 +139,7 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Task 1: BASE `3bc143f858ae96a66275462b587bd2bc506cf781`
 - Brief: `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/task-1-brief.md`
 - Implementer model: `gpt-5.6-sol`, high reasoning; fresh context; no subagents.
+
 - Controller prerequisite ruling: the exact RED exposed retained V5 semantic-boundary drift. The smallest cycle-safe bundle rejection, Quorum V3/V4→V5 migration, accessor-safe descriptor dispatch, and equally strong V5/tracked-data expectations landed separately as `454f6e9` (`fix(content): reconcile V5 semantic boundary consumers`). Focused evidence: `tests/dashboardSemanticBoundary.test.js` 73/73 and the four previously failing dataset/accessor selections 4/4.
 - Task 2 RED: exact command reported 72 pass / 11 fail. Two failures were the intended missing `geoJsonValidation.js` and `geoJsonSourceEntry.js` authorities; the remaining node-reported failures were the ruled prerequisite drift (including one failing parent suite).
 - Task 2 GREEN: exact command `node --test tests/geoJsonValidation.test.js tests/geoJsonSourceEntry.test.js tests/progressiveDashboardLoad.test.js tests/chartSourceProfile.test.js tests/dashboardSemanticBoundary.test.js tests/datasetProfilesV3.test.js tests/dataServiceFoundation.test.js` passed 124/124, zero skipped/todo.
@@ -206,6 +207,23 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Task 13 scoped review: CHANGES_REQUIRED on T13-R01 staged GeoJSON survived suspended Close/Escape; T13-R02 missing explicit deferred activation and visible slots 3–4 warning; T13-R03 chart picker admitted dashboard-owned generated GeoJSON.
 - Task 13 correction commit: `9a2d8609f3dc18ef6943432d519527fcc0d0be0d` (`fix(content): close GeoJSON authoring and map-budget gaps`); focused RED 3/6 → GREEN 6/6, exact 120/120, Journey I 1/1 with real IntersectionObserver visibility.
 - Task 13 final review: APPROVED. SCM-S04/S05/S07/S15, C05/C09, and R09 Passing; GeoJSON detail/dependency branch of C04 Passing and row overall Partial for Task 14. Task 13 complete at `9a2d8609f3dc18ef6943432d519527fcc0d0be0d`.
+- Task 14: BASE `1c56364863326bbcdca7194c16674d9c60018daa`; brief `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/task-14-brief.md`; fresh implementer owns GeoJSON replacement/relink and Journeys J/K.
+- Task 14 ruling: authorized `DataSourceDetail` as the verified mounted manager transaction/modal/focus/navigation carrier for GeoJSON replace/relink; no parallel lifecycle introduced.
+- Task 14 implementation commit: `a8a887f7369a0a722d9791fbfde2538cb28d046f` (`feat(content): validate GeoJSON replacement outcomes`); exact GREEN 58/58, Journey J 1/1, Journey K 1/1.
+- Task 14 scoped review: CHANGES_REQUIRED on linked relink durability, browser import-as-new origin, and complete geometry-type-count mix warnings.
+- Task 14 correction commit: `748b9d685025feb360c04d15a80b8460f8393a35` (`fix(content): make GeoJSON relink and warnings durable`); focused RED 5/8 → GREEN 8/8, exact 60/60, Journeys J/K each 1/1.
+- Task 14 final review: APPROVED. SCM-S16/R10/R11 Passing; GeoJSON replacement branch of SCM-C08 Passing and overall row now complete for replacement/relink behaviors. Task 14 complete at `748b9d685025feb360c04d15a80b8460f8393a35`.
+- Proportional-execution ruling for Tasks 15–17: one short owner/fixture preflight; nearest implementation tests; one final task-specific deterministic selection; browser only after GREEN; isolate fixture after two setup failures; one scoped review; no optional closure commits/evidence infrastructure; Task 17 verification-only.
+- Task 15: BASE `748b9d685025feb360c04d15a80b8460f8393a35`; brief `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/task-15-brief.md`; fresh implementer owns V5 persistence/package/offline portability and Journey G.
+
+## Task 15 implementation candidate
+
+- Short preflight confirmed the live export→candidate→transactional-import and browser asset-persistence owners; only the planned content-package validator/tests and Journey G fixture were absent.
+- Focused RED on the absent package validator reached GREEN across content validation 5/5, bundle boundary 9/9, import transaction 9/9, package/portable boundary 17/17, and corrected storage boundary 10/10.
+- Exact nine-file result is recorded proportionally: live source/product **50/50 green**; aggregate **50/51** because the sole PS-04 copied-package case launches the deliberately unrebuilt tracked generated client and misses the accepted Biomedical surface. No build or `dist` edit; residual remains assigned to Task 17 pre-merge.
+- Named Journey G final live-source result: **1/1 passing** at Build 1440×900 and offline View 390×844/fullscreen. V4 migrated to V5, charts remained V3, exact used/unused media revisions and shared hash/payload survived V5 export/fresh import, CSV/GeoJSON/QMD/Image/map rendered, and zero HTTP requests occurred after going offline.
+- Journey G claims online load→offline retention only; it makes no cold-start/service-worker claim. SCM-S01/S02/S12/R07 and SCM-SP13/SP14/D02/D08 are promoted for that exact live-source boundary, with PS-04 still non-green for Task 17.
+- Candidate subject: `feat(content): package the complete V5 content library`; Task 16 not started.
 - Implementer agent: `/root/task_1_implementer`.
 - Initial implementation commit: `c07dbacd4d049849debbfd33d58b766679249d62`.
 - Ruling: do not run the explicitly conditional full build merely to refresh tracked `dist`; treat the sole PS-04 stale-generated-client failure as an exact pre-merge/build residual while retaining its 259/260 result and the passing live-source/package/portable boundary evidence — the plan explicitly assigns full build/generated-client refresh to the later master-authorized pre-merge gate — if wrong, a V5 portable-client integration defect remains hidden until that required gate, so Task 17 must keep PS-04 non-green and cannot claim complete targeted verification before the authorized build rerun.

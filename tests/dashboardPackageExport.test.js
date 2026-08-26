@@ -14,6 +14,7 @@ import {
   encodeAssetBase64,
   sha256HexSync,
 } from "../src/static-content/assets/assetPayloadEnvelope.js";
+import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 
 test("package preparation embeds tracked, generated, geographic, and image source material", async () => {
   const dashboard = packageDashboard();
@@ -85,7 +86,7 @@ test("package preparation embeds tracked, generated, geographic, and image sourc
   });
 });
 
-test("a self-contained package round-trips tabular sources and isolates legacy embedded Images", async () => {
+test("a complete package blocks needs-relink legacy Images and round-trips tabular sources once removed", async () => {
   const geoJson = {
     type: "FeatureCollection",
     features: [{
@@ -104,6 +105,15 @@ test("a self-contained package round-trips tabular sources and isolates legacy e
     readImageDataUrl: async () => "data:image/png;base64,aW1hZ2U=",
   });
 
+  assert.throws(
+    () => serializeDashboardBundle(prepared.config, {
+      now: "2026-08-24T12:00:00.000Z",
+    }),
+    /needs-relink|complete package/i,
+  );
+  delete prepared.config.dataSources.image;
+  prepared.config.pages[0].sections[0].panels = [];
+
   const bundle = serializeDashboardBundle(prepared.config, {
     now: "2026-08-24T12:00:00.000Z",
   });
@@ -112,12 +122,7 @@ test("a self-contained package round-trips tabular sources and isolates legacy e
   assert.equal(imported.dataSources.cases.csvText, "date,cases\n2026-08-21,4\n");
   assert.equal(imported.dataSources.generated.csvText, "date,total\n2026-08-21,4\n");
   assert.deepEqual(imported.dataSources.boundaries.geoJson, geoJson);
-  assert.equal(imported.dataSources.image.kind, "staticImage");
-  assert.equal(imported.dataSources.image.sourceVersion, 2);
-  assert.equal(
-    imported.contentLibrary.mediaItems[imported.dataSources.image.mediaId].health,
-    "needs-relink",
-  );
+  assert.equal(Object.hasOwn(imported.dataSources, "image"), false);
 });
 
 test("package preparation strips browser-only asset references", async () => {
@@ -180,6 +185,8 @@ test("an imported self-contained package hydrates without tracked source request
     readJson: async () => geoJson,
     readImageDataUrl: async () => "data:image/png;base64,aW1hZ2U=",
   });
+  delete prepared.config.dataSources.image;
+  prepared.config.pages[0].sections[0].panels = [];
   const imported = parseDashboardBundle(JSON.stringify(
     serializeDashboardBundle(prepared.config, { now: null }),
   ));
@@ -218,7 +225,7 @@ test("export readiness reports every unfinished draft with its recovery action",
 });
 
 test("package preparation preflights local authored bytes and discloses linked network dependencies", async () => {
-  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const bytes = imageFixtureBytes("image/png");
   const sha256 = sha256HexSync(bytes);
   const assetId = `asset-${sha256}`;
   const dashboard = authoredImageDashboard({ assetId, sha256 });
@@ -230,8 +237,8 @@ test("package preparation preflights local authored bytes and discloses linked n
         assetId,
         mediaType: "image/png",
         byteLength: bytes.byteLength,
-        width: 8,
-        height: 6,
+        width: 2,
+        height: 3,
         sha256,
         bytes,
       };
@@ -256,7 +263,7 @@ test("package preparation preflights local authored bytes and discloses linked n
 });
 
 test("package preparation rejects missing or corrupt local authored bytes before export", async () => {
-  const expectedBytes = new Uint8Array([1, 2, 3, 4]);
+  const expectedBytes = imageFixtureBytes("image/png");
   const sha256 = sha256HexSync(expectedBytes);
   const assetId = `asset-${sha256}`;
   const dashboard = authoredImageDashboard({ assetId, sha256 });
@@ -274,9 +281,9 @@ test("package preparation rejects missing or corrupt local authored bytes before
       readAuthoredAsset: async () => ({
         assetId,
         mediaType: "image/png",
-        byteLength: 4,
-        width: 8,
-        height: 6,
+        byteLength: expectedBytes.byteLength,
+        width: 2,
+        height: 3,
         sha256,
         bytes: new Uint8Array([9, 9, 9, 9]),
       }),
@@ -302,8 +309,8 @@ function authoredImageDashboard({ assetId, sha256 }) {
           current: { kind: "asset", assetId },
           origin: "uploaded",
           health: "ready",
-          dimensions: { width: 8, height: 6 },
-          byteLength: 4,
+          dimensions: { width: 2, height: 3 },
+          byteLength: imageFixtureBytes("image/png").byteLength,
           mediaType: "image/png",
         }),
         "media-linked-image": mediaItem({
@@ -319,9 +326,9 @@ function authoredImageDashboard({ assetId, sha256 }) {
     assets: {
       [assetId]: {
         mediaType: "image/png",
-        byteLength: 4,
-        width: 8,
-        height: 6,
+        byteLength: imageFixtureBytes("image/png").byteLength,
+        width: 2,
+        height: 3,
         sha256,
         storageState: "durable",
       },

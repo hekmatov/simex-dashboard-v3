@@ -10,20 +10,24 @@ import {
 import { createChartDraft } from "../src/charting/config/chartConfigV3.js";
 import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { migrateDashboardV4ToV5 } from "../src/content-library/migrateDashboardV4ToV5.js";
-import { encodeAssetBase64 } from "../src/static-content/assets/assetPayloadEnvelope.js";
+import { encodeAssetBase64, sha256HexSync } from "../src/static-content/assets/assetPayloadEnvelope.js";
+import { imageFixtureBytes } from "./fixtures/imageFixtureBytes.js";
 import { makeDashboardV4, makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
 
 test("dashboard and bundle boundaries emit V5 while retaining chart configuration V3", () => {
   const dashboard = makeDashboardV5();
-  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const bytes = imageFixtureBytes("image/png");
   dashboard.assets["asset-map"] = {
     ...dashboard.assets["asset-map"],
     byteLength: bytes.byteLength,
-    sha256: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
+    width: 2,
+    height: 3,
+    sha256: sha256HexSync(bytes),
   };
   dashboard.contentLibrary.mediaItems["media-image-source"] = {
     ...dashboard.contentLibrary.mediaItems["media-image-source"],
     byteLength: bytes.byteLength,
+    dimensions: { width: 2, height: 3 },
   };
   const bundle = serializeDashboardBundle(dashboard, {
     assetPayloads: {
@@ -94,14 +98,16 @@ test("V5 bundle round-trips exact Chrono, Scene, and Scene Present temporal revi
   dashboard.chronoGroups[0].temporalReview = { status: "needs-review", sourceIds: ["cases"] };
   dashboard.scenes[0].temporalReview = { status: "needs-review", sourceIds: ["cases"] };
   dashboard.scenes[0].present.temporalReview = { status: "degraded", sourceIds: ["cases"] };
-  const bytes = new Uint8Array([1, 2, 3, 4]);
+  const bytes = imageFixtureBytes("image/png");
   dashboard.assets["asset-map"] = {
-    ...dashboard.assets["asset-map"], byteLength: 4,
-    sha256: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
+    ...dashboard.assets["asset-map"], byteLength: bytes.byteLength,
+    width: 2, height: 3,
+    sha256: sha256HexSync(bytes),
   };
-  dashboard.contentLibrary.mediaItems["media-image-source"].byteLength = 4;
+  dashboard.contentLibrary.mediaItems["media-image-source"].byteLength = bytes.byteLength;
+  dashboard.contentLibrary.mediaItems["media-image-source"].dimensions = { width: 2, height: 3 };
   const bundle = serializeDashboardBundle(dashboard, { assetPayloads: {
-    "asset-map": { base64: encodeAssetBase64(bytes), byteLength: 4, mediaType: "image/png", sha256: dashboard.assets["asset-map"].sha256 },
+    "asset-map": { base64: encodeAssetBase64(bytes), byteLength: bytes.byteLength, mediaType: "image/png", sha256: dashboard.assets["asset-map"].sha256 },
   } });
   const parsed = parseDashboardBundle(JSON.stringify(bundle));
   assert.deepEqual(parsed.chronoGroups[0].temporalReview, { status: "needs-review", sourceIds: ["cases"] });
@@ -111,4 +117,42 @@ test("V5 bundle round-trips exact Chrono, Scene, and Scene Present temporal revi
   const malformed = structuredClone(dashboard);
   malformed.scenes[0].present.temporalReview = { status: "needs-review", sourceIds: ["cases"] };
   assert.throws(() => serializeDashboardBundle(malformed, { assetPayloads: bundle.assetPayloads }), /degraded|status/i);
+});
+
+test("V5 bundle publication rejects a builder-managed source without its retained logical record", () => {
+  const bytes = imageFixtureBytes("image/png");
+  const dashboard = makeDashboardV5({
+    dataSources: {
+      cases: {
+        kind: "dataset",
+        type: "uploadedCsv",
+        fileName: "cases.csv",
+        csvText: "municipality,cases\nA,4\n",
+        provenance: { label: "Cases" },
+      },
+    },
+  });
+  dashboard.assets["asset-map"] = {
+    ...dashboard.assets["asset-map"],
+    byteLength: bytes.byteLength,
+    width: 2,
+    height: 3,
+    sha256: sha256HexSync(bytes),
+  };
+  dashboard.contentLibrary.mediaItems["media-image-source"].byteLength = bytes.byteLength;
+  dashboard.contentLibrary.mediaItems["media-image-source"].dimensions = { width: 2, height: 3 };
+
+  assert.throws(
+    () => serializeDashboardBundle(dashboard, {
+      assetPayloads: {
+        "asset-map": {
+          base64: encodeAssetBase64(bytes),
+          byteLength: bytes.byteLength,
+          mediaType: "image/png",
+          sha256: dashboard.assets["asset-map"].sha256,
+        },
+      },
+    }),
+    /cases.*source.?entry|source.?entry.*cases/i,
+  );
 });
