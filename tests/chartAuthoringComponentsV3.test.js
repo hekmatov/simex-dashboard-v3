@@ -18,8 +18,14 @@ import { profileDataset } from "../src/charting/data/profileDataset.js";
 import { validateChronoGroups } from "../src/charting/time/chronoGroupModel.js";
 import {
   createWizardState,
+  finalizeWizardDraft,
   reduceWizardState,
 } from "../src/charting/forms/wizardDraft.js";
+import {
+  buildCsvContentDraft,
+  createContentDraftCoordinator,
+} from "../src/content-library/contentDraftTransaction.js";
+import { makeDashboardV5 } from "./helpers/contentLibraryFixtures.js";
 import {
   buildEditorFormModel,
   buildWizardFormModel,
@@ -122,6 +128,7 @@ const {
 const {
   default: ChartWizardV3,
   applyWizardMembership,
+  createChartCsvDraftLifecycle,
   createChartWizardState,
   createWizardCloseHandlers,
   createWizardPreparation,
@@ -1298,6 +1305,98 @@ test("data-source picker lists only managed builder CSV and keeps upload chart-d
   assert.match(html, /Upload a new CSV/);
   assert.match(html, /data-draft-owner="chart"/);
   assert.deepEqual(calls, []);
+});
+
+test("uploaded CSV keeps its active draft when existing or uploaded source changes are cancelled", async () => {
+  const harness = chartCsvLifecycleHarness();
+  const active = chartCsvInput("upload-active", "active.csv", [{ date: "2026-01-01", value: 4 }]);
+  const pending = chartCsvInput("upload-pending", "pending.csv", [{ date: "2026-01-02", value: 7 }]);
+
+  await harness.lifecycle.stagePendingUpload(active, chartCsvCandidate(active));
+  await harness.lifecycle.adoptPending("initial-upload");
+  await harness.lifecycle.setPendingNonUpload("existing-managed");
+  assert.deepEqual(harness.lifecycle.snapshot(), {
+    activeDraftId: active.draftId,
+    activeSourceId: "upload-active",
+    pendingDraftId: null,
+    pendingSourceId: null,
+    pendingKind: "existing-managed",
+  });
+  assert.deepEqual(harness.coordinator.getActiveRetainers().sourceIds, ["upload-active"]);
+  await harness.lifecycle.keepCurrent("existing-cancelled");
+  assert.equal(harness.lifecycle.activeCandidate("upload-active").source.fileName, "active.csv");
+
+  await harness.lifecycle.stagePendingUpload(pending, chartCsvCandidate(pending));
+  assert.deepEqual(harness.coordinator.getActiveRetainers().sourceIds, ["upload-active", "upload-pending"]);
+  await harness.lifecycle.keepCurrent("upload-cancelled");
+  assert.equal(harness.lifecycle.activeCandidate("upload-active").source.fileName, "active.csv");
+  assert.deepEqual(harness.coordinator.getActiveRetainers().sourceIds, ["upload-active"]);
+});
+
+test("confirmed uploaded CSV replacement adopts only the pending authority and cleanup removes both slots", async () => {
+  const harness = chartCsvLifecycleHarness();
+  const active = chartCsvInput("upload-active", "active.csv", [{ date: "2026-01-01", value: 4 }]);
+  const pending = chartCsvInput("upload-pending", "pending.csv", [{ date: "2026-01-02", value: 7 }]);
+
+  await harness.lifecycle.stagePendingUpload(active, chartCsvCandidate(active));
+  await harness.lifecycle.adoptPending("initial-upload");
+  await harness.lifecycle.stagePendingUpload(pending, chartCsvCandidate(pending));
+  await harness.lifecycle.adoptPending("confirmed-replacement");
+  assert.throws(() => harness.lifecycle.activeCandidate("upload-active"), /does not match/);
+  assert.equal(harness.lifecycle.activeCandidate("upload-pending").source.fileName, "pending.csv");
+  assert.deepEqual(harness.coordinator.getActiveRetainers().sourceIds, ["upload-pending"]);
+
+  await harness.lifecycle.stagePendingUpload(active, chartCsvCandidate(active));
+  await harness.lifecycle.dispose("unmount");
+  assert.deepEqual(harness.lifecycle.snapshot(), {
+    activeDraftId: null,
+    activeSourceId: null,
+    pendingDraftId: null,
+    pendingSourceId: null,
+    pendingKind: null,
+  });
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
+  await assert.rejects(
+    harness.lifecycle.stagePendingUpload(pending, chartCsvCandidate(pending)),
+    /disposed/,
+  );
+});
+
+test("chart CSV completion commits the selected source profile entry and chart from one active slot", async () => {
+  const harness = chartCsvLifecycleHarness();
+  const staged = chartCsvInput("upload-complete", "complete.csv", [{ date: "2026-01-01", value: 9 }]);
+  await harness.lifecycle.stagePendingUpload(staged, chartCsvCandidate(staged));
+  await harness.lifecycle.adoptPending("initial-upload");
+  const finalized = finalizeWizardDraft(createWizardState({
+    draft: createChartDraft("line", {
+      id: "chart-csv-complete",
+      title: "CSV completion",
+      sourceId: "upload-complete",
+      roles: {
+        measurements: [{ field: "value", axis: "primary" }],
+        observation: { field: "date", interpretation: "temporal", format: "YYYY-MM-DD" },
+      },
+    }),
+    loadedData: { "upload-complete": [{ date: "2026-01-01", value: 9 }] },
+    profiles: { "upload-complete": staged.profile },
+    chronoGroups: [],
+  }));
+  const complete = buildCsvContentDraft({
+    owner: "chart",
+    sourceId: staged.entry.sourceId,
+    source: staged.source,
+    profile: staged.profile,
+    displayName: "Complete",
+    finalized,
+    destination: { pageId: "overview", sectionId: "response", relation: "append" },
+  });
+
+  await harness.lifecycle.completeActive("upload-complete", complete);
+  assert.equal(harness.dashboard.dataSources["upload-complete"].fileName, "complete.csv");
+  assert.equal(harness.dashboard.datasetProfiles["upload-complete"].fingerprint, staged.profile.fingerprint);
+  assert.equal(harness.dashboard.contentLibrary.sourceEntries["upload-complete"].ownership, "builder");
+  assert.equal(harness.dashboard.pages[0].sections[0].panels.at(-1).sourceId, "upload-complete");
+  assert.deepEqual(harness.coordinator.getActiveRetainers().records, []);
 });
 
 test("local CSV upload rejects oversized files before reading them", async () => {
@@ -3429,6 +3528,58 @@ function buttonMarkupById(html, id) {
   const end = html.indexOf("</button>", markerIndex);
   assert.ok(start >= 0 && end >= markerIndex, `Malformed button ${id}`);
   return html.slice(start, end + "</button>".length);
+}
+
+function chartCsvLifecycleHarness() {
+  let dashboard = makeDashboardV5();
+  const coordinator = createContentDraftCoordinator({
+    getDashboard: () => dashboard,
+    async commitDashboard(candidate) {
+      dashboard = structuredClone(candidate);
+      return dashboard;
+    },
+    assetStore: {
+      async snapshot() { return new Map(); },
+      async commitMany() {},
+      async restore() {},
+    },
+  });
+  const lifecycle = createChartCsvDraftLifecycle({
+    stageDraft(draft) { return coordinator.stageDraft(draft); },
+    updateDraft(draftId, patch) { return coordinator.updateDraft(draftId, patch); },
+    commitDraft(draftId, buildCandidate) {
+      return coordinator.commitDraft(draftId, { buildCandidate });
+    },
+    discardDraft(draftId, reason) {
+      return coordinator.discardDraft(draftId, { reason });
+    },
+  });
+  return {
+    coordinator,
+    lifecycle,
+    get dashboard() { return dashboard; },
+  };
+}
+
+function chartCsvInput(sourceId, fileName, rows) {
+  const columns = Object.keys(rows[0]);
+  const csvText = [columns.join(","), ...rows.map((row) => columns.map((column) => row[column]).join(","))].join("\n");
+  return buildCsvContentDraft({
+    owner: "chart",
+    sourceId,
+    source: { kind: "dataset", type: "uploadedCsv", fileName, csvText },
+    profile: profileDataset(rows, { date: { interpretation: "temporal" } }),
+    displayName: fileName.replace(/\.csv$/i, ""),
+  });
+}
+
+function chartCsvCandidate(input) {
+  return {
+    sourceId: input.entry.sourceId,
+    source: input.source,
+    profile: input.profile,
+    rows: parseCsvText(input.source.csvText),
+  };
 }
 
 function validLineChart(overrides = {}) {

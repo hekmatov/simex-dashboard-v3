@@ -303,11 +303,17 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Fresh exact accepted command: `node --test tests/sourceEntrySchema.test.js tests/contentDraftTransaction.test.js tests/contentDetail.test.js tests/sourceViewer.test.js tests/sourceViewerSort.test.js tests/wizardDraftV3.test.js tests/chartAuthoringComponentsV3.test.js` — **116 passed / 0 failed / 0 skipped / 0 todo**, 2.763 s.
 - Deterministic cases prove one atomic manager descriptor/profile/SourceEntry candidate, one atomic chart registration/finalized-chart candidate, unused-source retention, matching-content separate identity, read-only search/download, generated-source exclusion, and exhaustive validation/persistence/owner-exit rollback inventories.
 
+### T10-R01 active/pending source-authority correction
+
+- Focused lifecycle RED was **68/71 passing**, followed by a disposal RED of **70/71**. Focused GREEN is **71/71** and the fresh exact Task 10 selection is **119/119 passing**, zero failed/skipped/todo, 2.524 s.
+- The chart wizard keeps the current upload's staged draft/candidate/retainer authoritative while an existing, manual, or uploaded replacement awaits confirmation. Cancel discards only pending authority; confirmation discards current authority before adoption; close/unmount/reset/failure cleans both; completion requires and commits one identity-matched active source/profile/SourceEntry draft with the finalized chart.
+- The corrected named Journey D is **1/1 passing**, 41.8 s test time and 43.8 s total. Before the upload branch, the mounted six-stage wizard selects the manager-created existing CSV and observes its profiled `capacity` column while the exact durable CSV inventory remains unchanged.
+
 ### Named Journey D checkpoint
 
 - Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-csv.spec.js --project=chromium --grep "Journey D — CSV upload through six stages then catalogue management"` — **1/1 passing**, 39.1 s test time and 41.9 s total.
 - Build 1440×900 proved manager Cancel/no-publication, explicit Add of an unused source, descriptor/profile/entry identity correspondence, reload survival, and a matching-fingerprint warning without dedupe.
-- A chart upload remained absent from durable inventory until completion; explicit discard retained the exact prior inventory. A fresh upload preserved the exact six stages and atomically published one source/profile/entry with one completed chart.
+- A mounted existing managed CSV was selectable in the exact six-stage flow without changing inventory. A chart upload then remained absent from durable inventory until completion; explicit discard retained the exact prior inventory. A fresh upload preserved the exact six stages and atomically published one source/profile/entry with one completed chart.
 - Reopened detail exposed origin/health, three-row profile, the named chart dependency, read-only preview search, original-filename download, and focus return on Close.
 - Build 1024×768 after reload proved bounded manager geometry, reachable detail, tablet Back, and exact committed inventory retention.
 

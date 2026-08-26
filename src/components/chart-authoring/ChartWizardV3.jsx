@@ -54,6 +54,126 @@ import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
+
+export function createChartCsvDraftLifecycle({
+  stageDraft,
+  updateDraft,
+  commitDraft,
+  discardDraft,
+} = {}) {
+  if (typeof stageDraft !== "function" || typeof updateDraft !== "function"
+    || typeof commitDraft !== "function" || typeof discardDraft !== "function") {
+    throw new TypeError("Chart CSV draft lifecycle requires stage, update, commit, and discard authorities.");
+  }
+  let active = null;
+  let pending = null;
+  let disposed = false;
+  let queue = Promise.resolve();
+  const run = (operation) => {
+    const result = queue.then(operation, operation);
+    queue = result.catch(() => undefined);
+    return result;
+  };
+  const discardSlot = async (slot, reason) => {
+    if (slot?.kind === "upload") await discardDraft(slot.draftId, reason);
+  };
+  const assertNotDisposed = () => {
+    if (disposed) throw new Error("Chart CSV draft lifecycle is disposed.");
+  };
+  const discardSlots = async (reason) => {
+    await discardSlot(pending, reason);
+    pending = null;
+    await discardSlot(active, reason);
+    active = null;
+    return snapshot();
+  };
+  const snapshot = () => Object.freeze({
+    activeDraftId: active?.draftId ?? null,
+    activeSourceId: active?.candidate?.sourceId ?? null,
+    pendingDraftId: pending?.draftId ?? null,
+    pendingSourceId: pending?.candidate?.sourceId ?? null,
+    pendingKind: pending?.kind ?? null,
+  });
+  return Object.freeze({
+    snapshot,
+    stagePendingUpload(input, candidate) {
+      return run(async () => {
+        assertNotDisposed();
+        if (!input?.draftId || candidate?.sourceId !== input?.entry?.sourceId) {
+          throw new Error("Pending chart CSV authority must match its staged source identity.");
+        }
+        await discardSlot(pending, "chart-csv-pending-replaced");
+        pending = null;
+        const { buildCandidate: _buildCandidate, entry: _entry, source: _source, profile: _profile, ...draft } = input;
+        const staged = stageDraft(draft);
+        pending = {
+          kind: "upload",
+          draftId: staged?.draftId ?? draft.draftId,
+          candidate: structuredClone(candidate),
+        };
+        return snapshot();
+      });
+    },
+    setPendingNonUpload(kind = "non-upload") {
+      return run(async () => {
+        assertNotDisposed();
+        await discardSlot(pending, "chart-csv-pending-replaced");
+        pending = null;
+        pending = { kind: String(kind || "non-upload"), draftId: null, candidate: null };
+        return snapshot();
+      });
+    },
+    adoptPending(reason = "chart-csv-source-confirmed") {
+      return run(async () => {
+        assertNotDisposed();
+        if (!pending) throw new Error("A pending chart source authority is required.");
+        await discardSlot(active, reason);
+        active = pending.kind === "upload" ? pending : null;
+        pending = null;
+        return snapshot();
+      });
+    },
+    keepCurrent(reason = "chart-csv-source-cancelled") {
+      return run(async () => {
+        await discardSlot(pending, reason);
+        pending = null;
+        return snapshot();
+      });
+    },
+    activeCandidate(sourceId) {
+      if (!active?.candidate || active.candidate.sourceId !== sourceId) {
+        throw new Error(`Active chart CSV authority does not match selected source "${String(sourceId)}".`);
+      }
+      return structuredClone(active.candidate);
+    },
+    completeActive(sourceId, input) {
+      return run(async () => {
+        assertNotDisposed();
+        if (pending) throw new Error("A pending source change must be resolved before chart creation.");
+        if (!active?.candidate || active.candidate.sourceId !== sourceId
+          || input?.draftId !== active.draftId || input?.entry?.sourceId !== sourceId) {
+          throw new Error(`Active chart CSV authority does not match selected source "${String(sourceId)}".`);
+        }
+        updateDraft(active.draftId, { payload: input.payload, sourceIds: input.sourceIds });
+        try {
+          const result = await commitDraft(active.draftId, input.buildCandidate);
+          active = null;
+          return result;
+        } catch (error) {
+          active = null;
+          throw error;
+        }
+      });
+    },
+    discardAll(reason = "chart-csv-discarded") {
+      return run(() => discardSlots(reason));
+    },
+    dispose(reason = "chart-csv-unmount") {
+      disposed = true;
+      return run(() => discardSlots(reason));
+    },
+  });
+}
 const noop = () => {};
 const ChartFootprintPicker = React.lazy(() => import("./ChartFootprintPicker.jsx"));
 
@@ -159,8 +279,40 @@ export default function ChartWizardV3({
   const [uploadError, setUploadError] = React.useState("");
   const [submissionError, setSubmissionError] = React.useState("");
   const transactionIdRef = React.useRef(null);
-  const csvDraftIdRef = React.useRef(null);
-  const csvCandidateRef = React.useRef(null);
+  const csvDraftAuthoritiesRef = React.useRef(null);
+  csvDraftAuthoritiesRef.current = {
+    stageDraft: onContentDraftStage,
+    updateDraft: contentDraftCoordinator?.updateDraft,
+    commitDraft: onContentDraftCommit,
+    discardDraft: onContentDraftDiscard,
+  };
+  const csvDraftLifecycleRef = React.useRef(null);
+  if (csvDraftLifecycleRef.current === null) {
+    csvDraftLifecycleRef.current = createChartCsvDraftLifecycle({
+      stageDraft(draft) {
+        const authority = csvDraftAuthoritiesRef.current?.stageDraft;
+        if (typeof authority !== "function") throw new Error("Chart CSV staging authority is unavailable.");
+        return authority(draft);
+      },
+      updateDraft(draftId, patch) {
+        const authority = csvDraftAuthoritiesRef.current?.updateDraft;
+        if (typeof authority !== "function") throw new Error("Chart CSV update authority is unavailable.");
+        return authority(draftId, patch);
+      },
+      commitDraft(draftId, buildCandidate) {
+        const authority = csvDraftAuthoritiesRef.current?.commitDraft;
+        if (typeof authority !== "function") throw new Error("Chart CSV commit authority is unavailable.");
+        return authority(draftId, buildCandidate);
+      },
+      discardDraft(draftId, reason) {
+        const authority = csvDraftAuthoritiesRef.current?.discardDraft;
+        if (typeof authority !== "function") throw new Error("Chart CSV discard authority is unavailable.");
+        return authority(draftId, reason);
+      },
+    });
+  }
+  const csvDraftLifecycle = csvDraftLifecycleRef.current;
+  const csvDraftLifecycleGenerationRef = React.useRef(0);
   const submissionGateRef = React.useRef(null);
   if (submissionGateRef.current === null) {
     submissionGateRef.current = createSubmissionGate();
@@ -186,11 +338,14 @@ export default function ChartWizardV3({
 
   function requestClose() {
     if (operationLocked()) return false;
-    void discardCsvDraft("chart-csv-close");
+    void csvDraftLifecycle.discardAll("chart-csv-close");
     const closingWizard = sourceKind === "upload"
       ? clearSelectedSource(wizard)
-      : wizard;
+      : wizard.confirmation === "changeSource"
+        ? reduceWizardState(wizard, { type: "cancelConfirmation" })
+        : wizard;
     if (sourceKind === "upload") clearUploadedCsvUi(wizard.draft?.sourceId);
+    else setPendingSourceUi(null);
     const suspended = reduceWizardState(closingWizard, {
       type: "suspend",
       restoration: {
@@ -237,18 +392,14 @@ export default function ChartWizardV3({
   React.useEffect(() => (
     () => onDirtyChange(false)
   ), [onDirtyChange]);
-  React.useEffect(() => () => {
-    if (csvDraftIdRef.current) onContentDraftDiscard?.(csvDraftIdRef.current, "chart-csv-unmount");
-    csvDraftIdRef.current = null;
-    csvCandidateRef.current = null;
-  }, [onContentDraftDiscard]);
-
-  async function discardCsvDraft(reason) {
-    const draftId = csvDraftIdRef.current;
-    csvDraftIdRef.current = null;
-    csvCandidateRef.current = null;
-    if (draftId) await onContentDraftDiscard?.(draftId, reason);
-  }
+  React.useEffect(() => {
+    const generation = ++csvDraftLifecycleGenerationRef.current;
+    return () => queueMicrotask(() => {
+      if (csvDraftLifecycleGenerationRef.current === generation) {
+        void csvDraftLifecycle.dispose("chart-csv-unmount");
+      }
+    });
+  }, [csvDraftLifecycle]);
 
   function clearUploadedCsvUi(sourceId) {
     setSourceKind("");
@@ -504,7 +655,12 @@ export default function ChartWizardV3({
       }));
     }
   };
-  const requestSourceSelection = (action, nextUi) => {
+  const requestSourceSelection = async (action, nextUi, upload = null) => {
+    if (upload) {
+      await csvDraftLifecycle.stagePendingUpload(upload.input, upload.candidate);
+    } else {
+      await csvDraftLifecycle.setPendingNonUpload(nextUi.kind);
+    }
     let next = reduceWizardState(syncedWizard, {
       type: "requestSourceChange",
       ...action,
@@ -519,35 +675,39 @@ export default function ChartWizardV3({
           nextUi.manualColumns,
         );
       }
+      await csvDraftLifecycle.adoptPending("chart-csv-source-changed");
       applySourceUi(nextUi);
       setPendingSourceUi(null);
     }
     setWizard(next);
     setSubmissionError("");
   };
-  const selectExisting = (sourceId) => {
+  const selectExisting = async (sourceId) => {
     if (!sourceId) return;
-    void discardCsvDraft("chart-csv-source-changed");
     const rows = readEntry(safeLoadedData, sourceId) ?? [];
     const sourceMetadata = readEntry(safeDataSources, sourceId);
-    requestSourceSelection({
-      sourceId,
-      source: null,
-      rows,
-      profile: profileDataset(
+    try {
+      await requestSourceSelection({
+        sourceId,
+        source: null,
         rows,
-        sourceMetadata?.parsingMetadata ?? {},
-      ),
-    }, {
-      kind: "existing",
-      manualTable: null,
-      manualErrors: [],
-    });
+        profile: profileDataset(
+          rows,
+          sourceMetadata?.parsingMetadata ?? {},
+        ),
+      }, {
+        kind: "existing",
+        manualTable: null,
+        manualErrors: [],
+      });
+    } catch (error) {
+      await csvDraftLifecycle.keepCurrent("chart-csv-existing-selection-failed");
+      setSubmissionError(safeMessage(error));
+    }
   };
   const uploadCsv = async (file) => {
     if (!file) return;
     try {
-      await discardCsvDraft("chart-csv-replaced");
       const parsed = await parseUploadedCsvFile(file, {
         ...safeDataSources,
         ...localRows,
@@ -559,13 +719,7 @@ export default function ChartWizardV3({
         profile: parsed.profile,
         displayName: uploadedCsvDisplayName(parsed.source.fileName),
       });
-      if (typeof onContentDraftStage === "function") {
-        const { buildCandidate: _buildCandidate, entry: _entry, source: _source, profile: _profile, ...draft } = input;
-        const staged = onContentDraftStage(draft);
-        csvDraftIdRef.current = staged?.draftId ?? draft.draftId;
-        csvCandidateRef.current = parsed;
-      }
-      requestSourceSelection({
+      await requestSourceSelection({
         sourceId: parsed.sourceId,
         source: parsed.source,
         rows: parsed.rows,
@@ -576,12 +730,13 @@ export default function ChartWizardV3({
         manualErrors: [],
         localSourceId: parsed.sourceId,
         localRows: parsed.rows,
-      });
+      }, { input, candidate: parsed });
     } catch (error) {
+      await csvDraftLifecycle.keepCurrent("chart-csv-upload-selection-failed");
       setUploadError(safeMessage(error));
     }
   };
-  const updateManual = (table, {
+  const updateManual = async (table, {
     schema = wizard.draft ? getChartSchema(wizard.draft.typeId) : null,
     currentWizard = wizard,
   } = {}) => {
@@ -594,7 +749,7 @@ export default function ChartWizardV3({
       manualRows,
       manualParsingMetadata(table),
     );
-    requestSourceSelection({
+    await requestSourceSelection({
       sourceId,
       source: inlineSource,
       rows: manualRows,
@@ -608,14 +763,62 @@ export default function ChartWizardV3({
       localRows: manualRows,
     });
   };
-  const selectManual = () => {
+  const selectManual = async () => {
     if (!wizard.draft) return;
-    void discardCsvDraft("chart-csv-source-changed");
     const schema = getChartSchema(wizard.draft.typeId);
-    updateManual(createManualDataTemplate(schema), {
-      schema,
-      currentWizard: wizard,
-    });
+    try {
+      await updateManual(createManualDataTemplate(schema), {
+        schema,
+        currentWizard: wizard,
+      });
+    } catch (error) {
+      await csvDraftLifecycle.keepCurrent("chart-csv-manual-selection-failed");
+      setSubmissionError(safeMessage(error));
+    }
+  };
+  const confirmPendingSource = async () => {
+    if (operationLocked()) return;
+    try {
+      await csvDraftLifecycle.adoptPending("chart-csv-source-confirmed");
+      let next = reduceWizardState(wizard, {
+        type: "confirmSourceChange",
+      });
+      if (Array.isArray(pendingSourceUi?.manualColumns)) {
+        next = assignManualRoles(
+          next,
+          getChartSchema(next.draft.typeId),
+          pendingSourceUi.manualColumns,
+        );
+      }
+      setWizard(next);
+      if (pendingSourceUi) applySourceUi(pendingSourceUi);
+      setPendingSourceUi(null);
+      setSubmissionError("");
+    } catch (error) {
+      setSubmissionError(safeMessage(error));
+    }
+  };
+  const keepCurrentSource = async () => {
+    if (operationLocked()) return;
+    try {
+      await csvDraftLifecycle.keepCurrent("chart-csv-source-cancelled");
+      dispatch({ type: "cancelConfirmation" });
+      setPendingSourceUi(null);
+      setSubmissionError("");
+    } catch (error) {
+      setSubmissionError(safeMessage(error));
+    }
+  };
+  const resetCurrentSource = async () => {
+    if (operationLocked()) return;
+    try {
+      await csvDraftLifecycle.discardAll("chart-csv-source-reset");
+      dispatch({ type: "confirmClearSource" });
+      clearUploadedCsvUi(wizard.draft?.sourceId);
+      setSubmissionError("");
+    } catch (error) {
+      setSubmissionError(safeMessage(error));
+    }
   };
   const changeMembership = (groupId, selected) => {
     if (!wizard.draft) return;
@@ -697,8 +900,8 @@ export default function ChartWizardV3({
         }));
         const result = await executeChartCreate(snapshot, {
           persist: async (payload, reviewedPlacement) => {
-            if (sourceKind === "upload" && csvDraftIdRef.current && csvCandidateRef.current) {
-              const candidate = csvCandidateRef.current;
+            if (sourceKind === "upload") {
+              const candidate = csvDraftLifecycle.activeCandidate(finalized.chart.sourceId);
               const input = buildCsvContentDraft({
                 owner: "chart",
                 sourceId: candidate.sourceId,
@@ -708,16 +911,7 @@ export default function ChartWizardV3({
                 finalized,
                 destination: reviewedPlacement,
               });
-              if (!contentDraftCoordinator || typeof contentDraftCoordinator.updateDraft !== "function") {
-                throw new Error("Chart CSV publication requires the content draft coordinator.");
-              }
-              contentDraftCoordinator.updateDraft(csvDraftIdRef.current, {
-                payload: input.payload,
-                sourceIds: input.sourceIds,
-              });
-              await onContentDraftCommit?.(csvDraftIdRef.current, input.buildCandidate);
-              csvDraftIdRef.current = null;
-              csvCandidateRef.current = null;
+              await csvDraftLifecycle.completeActive(finalized.chart.sourceId, input);
               return { dashboardRevision: dashboardRevision ?? "session-current" };
             }
             if (typeof onCreate !== "function") {
@@ -750,7 +944,7 @@ export default function ChartWizardV3({
         }
       } catch (error) {
         if (sourceKind === "upload") {
-          await discardCsvDraft("chart-csv-validation-or-persistence-failure");
+          await csvDraftLifecycle.discardAll("chart-csv-validation-or-persistence-failure");
           setWizard((current) => clearSelectedSource(current));
           clearUploadedCsvUi(wizard.draft?.sourceId);
         }
@@ -762,7 +956,7 @@ export default function ChartWizardV3({
   };
   function confirmClose() {
     if (operationLocked()) return;
-    void discardCsvDraft("chart-csv-cancel");
+    void csvDraftLifecycle.discardAll("chart-csv-cancel");
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
     onDraftStateChange(closed);
@@ -1155,13 +1349,7 @@ export default function ChartWizardV3({
       message: "This clears the current selection and assigned data roles. It does not delete the CSV from the dashboard.",
       confirmLabel: "Reset selection",
       cancelLabel: "Keep selection",
-      onConfirm: () => {
-        if (operationLocked()) return;
-        dispatch({ type: "confirmClearSource" });
-        setSourceKind("");
-        setManualTable(null);
-        setManualErrors([]);
-      },
+      onConfirm: () => void resetCurrentSource(),
       onCancel: () => {
         if (!operationLocked()) dispatch({ type: "cancelConfirmation" });
       },
@@ -1174,27 +1362,8 @@ export default function ChartWizardV3({
         ?? "The current data mappings are not compatible with this source.",
       confirmLabel: "Change source",
       cancelLabel: "Keep current source",
-      onConfirm: () => {
-        if (operationLocked()) return;
-        let next = reduceWizardState(wizard, {
-          type: "confirmSourceChange",
-        });
-        if (Array.isArray(pendingSourceUi?.manualColumns)) {
-          next = assignManualRoles(
-            next,
-            getChartSchema(next.draft.typeId),
-            pendingSourceUi.manualColumns,
-          );
-        }
-        setWizard(next);
-        if (pendingSourceUi) applySourceUi(pendingSourceUi);
-        setPendingSourceUi(null);
-      },
-      onCancel: () => {
-        if (operationLocked()) return;
-        dispatch({ type: "cancelConfirmation" });
-        setPendingSourceUi(null);
-      },
+      onConfirm: () => void confirmPendingSource(),
+      onCancel: () => void keepCurrentSource(),
       disabled: disabled || submitting,
     }),
   );

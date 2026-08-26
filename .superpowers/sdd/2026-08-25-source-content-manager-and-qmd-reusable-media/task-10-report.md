@@ -11,6 +11,14 @@ DONE for the accepted Task 10 slice. Builder-owned CSV Add, chart-draft CSV regi
 - Fresh exact deterministic command: `node --test tests/sourceEntrySchema.test.js tests/contentDraftTransaction.test.js tests/contentDetail.test.js tests/sourceViewer.test.js tests/sourceViewerSort.test.js tests/wizardDraftV3.test.js tests/chartAuthoringComponentsV3.test.js` — **116 passed / 0 failed / 0 skipped / 0 todo**, 2.763 s.
 - Exact named command, without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-csv.spec.js --project=chromium --grep "Journey D — CSV upload through six stages then catalogue management"` — **1 passed**, 39.1 s test time and 41.9 s total.
 
+### T10-R01 source-change lifecycle correction
+
+- Focused RED was **68/71 passing**: three new cases failed on the absent active/pending CSV draft lifecycle. A follow-up cleanup RED was **70/71 passing** until final disposal was implemented.
+- Focused GREEN is **71/71**. The exact seven-file deterministic selection is **119/119 passing**, zero failed/skipped/todo, 2.524 s.
+- An uploaded current source now retains its exact staged draft, candidate, and retainer while an existing, manual, or second upload candidate is pending confirmation. **Keep current** discards only the pending candidate; **Change source** discards the current candidate before adopting the pending authority; close, unmount, reset, validation failure, and persistence failure clean both slots.
+- Chart completion accepts only the active candidate whose source identity matches the finalized chart, updates and commits that same draft, and therefore cannot publish a chart without its source/profile/SourceEntry or combine a stale selected source with a newer draft reference.
+- Fresh named Journey D is **1/1 passing**, 41.8 s test time and 43.8 s total. Its mounted six-stage flow now first selects the manager-created existing CSV, observes its profiled `capacity` column without changing durable inventory, discards that chart, and then completes the retained upload/discard/commit catalogue journey.
+
 ## Implemented boundary
 
 - Manager Add parses with the existing Papa owner, profiles with the existing dataset profiler, previews five rows, permits an editable display label, warns on matching fingerprints without deduplication, and publishes only after explicit **Add to dashboard**.
