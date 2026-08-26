@@ -714,6 +714,7 @@ export default function BuildWorkspace({
                   contentDraftCoordinator={contentDraftCoordinator}
                   viewState={sourceContentViewState}
                   onViewStateChange={setSourceContentViewState}
+                  onRequestClose={closeAuxiliary}
                   onContentDraftStage={onContentDraftStage}
                   onContentDraftCommit={onContentDraftCommit}
                   onContentDraftDiscard={onContentDraftDiscard}

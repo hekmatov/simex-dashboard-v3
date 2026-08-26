@@ -7,7 +7,7 @@ import DataSourceDetail from "./DataSourceDetail.jsx";
 export default function ContentDetail({ item, contentDraftCoordinator, datasetProfile, onRename, ...managerProps }) {
   if (!item) return <p className="source-content-empty">Select an item to inspect its details.</p>;
   if (item.kind === "media") return <MediaDetail item={item} contentDraftCoordinator={contentDraftCoordinator} onRename={onRename} {...managerProps} />;
-  return <DataSourceDetail item={item} datasetProfile={datasetProfile} onRename={onRename} {...managerProps} />;
+  return <DataSourceDetail item={item} contentDraftCoordinator={contentDraftCoordinator} datasetProfile={datasetProfile} onRename={onRename} {...managerProps} />;
 }
 
 export function buildContentRenameDraft({ dashboard, item, displayName, defaultDescription = "" }) {

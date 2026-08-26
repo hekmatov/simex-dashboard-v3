@@ -10,10 +10,59 @@ export default function ContentActionDialog({
   error = "",
   replacementReady = false,
   replacementLabel = "",
+  replacementStatus = "",
+  replacementReason = null,
+  canImportAsNew = false,
+  remapTargets = [],
+  importedSourceLabel = "",
   onReplacementFile,
+  onImportAsNew,
+  onNavigate,
   onConfirm,
   onCancel,
 } = {}) {
+  if (action === "replace-csv") {
+    if (!open) return null;
+    const id = `replace-csv-${safeId(itemLabel)}`;
+    const blocked = replacementStatus === "blocked";
+    return (
+      <ModalFocusScope
+        as="div"
+        open
+        initialFocusSelector={'[data-modal-initial-focus="true"]'}
+        onEscape={busy ? undefined : onCancel}
+        className="confirm-dialog-backdrop"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-message`}
+        tabIndex={-1}
+      >
+        <section className="confirm-dialog">
+          <h2 id={`${id}-title`}>Replace {itemLabel} file?</h2>
+          <p id={`${id}-message`}>Choose a CSV file. The current source identity is retained only when every directly dependent chart remains structurally valid.</p>
+          <label><span>Replacement CSV</span><input data-modal-initial-focus="true" type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onReplacementFile?.(event.target.files?.[0] ?? null)} /></label>
+          {replacementLabel && <p role="status">Prepared: {replacementLabel}</p>}
+          {blocked && replacementReason && <p className="confirm-dialog-error" role="alert" data-replacement-reason={replacementReason.code}>{replacementReason.message}</p>}
+          {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
+          {remapTargets.length > 0 && (
+            <section aria-label="Affected panels">
+              <h3>Affected panels</h3>
+              <ul>{remapTargets.map((target) => <li key={target.id}>
+                {typeof onNavigate === "function" ? <button type="button" className="source-content-breadcrumb" onClick={() => onNavigate(target)}><RemapBreadcrumb target={target} /></button> : <span><RemapBreadcrumb target={target} /></span>}
+              </li>)}</ul>
+            </section>
+          )}
+          {importedSourceLabel && <p role="status">Imported as {importedSourceLabel}. Choose an affected panel to remap it.</p>}
+          <div className="confirm-dialog-actions">
+            <button type="button" className="secondary" disabled={busy} onClick={onCancel}>Cancel</button>
+            {canImportAsNew && <button type="button" className="secondary" disabled={busy} onClick={onImportAsNew}>Import as new source</button>}
+            <button type="button" disabled={busy || !replacementReady || blocked} onClick={onConfirm}>{busy ? "Replacing…" : "Replace file"}</button>
+          </div>
+        </section>
+      </ModalFocusScope>
+    );
+  }
   if (action === "replace") {
     if (!open) return null;
     const id = `replace-${safeId(itemLabel)}`;
@@ -67,6 +116,10 @@ export default function ContentActionDialog({
       onCancel={onCancel}
     />
   );
+}
+
+function RemapBreadcrumb({ target }) {
+  return <>{target.pageLabel ?? target.pageId} <span aria-hidden="true">›</span> {target.sectionLabel ?? target.sectionId} <span aria-hidden="true">›</span> {target.panelLabel ?? target.panelId}</>;
 }
 
 function safeId(value) {

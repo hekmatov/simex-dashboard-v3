@@ -59,6 +59,25 @@ test("media replacement renders only the focused non-destructive replacement act
   assert.doesNotMatch(html, /Delete|Relink|Undo|Redo/);
 });
 
+test("blocked CSV replacement exposes a typed reason, import-as-new, and guided remap targets", () => {
+  const html = renderToStaticMarkup(React.createElement(ContentActionDialog, {
+    open: true,
+    action: "replace-csv",
+    itemLabel: "Cases",
+    replacementLabel: "candidate.csv",
+    replacementStatus: "blocked",
+    replacementReason: { code: "missing-encoding-column", message: 'Configured column "municipality" is missing from the replacement CSV.' },
+    canImportAsNew: true,
+    remapTargets: [{ id: "map", pageLabel: "Overview", sectionLabel: "Response", panelLabel: "Cases map" }],
+  }));
+  assert.match(html, /Replace Cases file\?/);
+  assert.match(html, /Configured column &quot;municipality&quot; is missing/);
+  assert.match(html, /data-replacement-reason="missing-encoding-column"/);
+  assert.match(html, />Import as new source</);
+  assert.match(html, /Overview[\s\S]*Response[\s\S]*Cases map/);
+  assert.doesNotMatch(html, />Delete</);
+});
+
 test("manager dependency collections carry retainer and deletion state through the passive detail boundary", () => {
   const uses = [];
   uses.activeRetainers = [{ ownerId: "draft-a", kind: "image-draft" }];

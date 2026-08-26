@@ -105,6 +105,49 @@ export function prepareChartData(input = {}) {
   }, transformed, schema);
 }
 
+export function validateChartDataCompatibility({ chart, rows = [], datasetProfile, geoData } = {}) {
+  const columns = new Set((datasetProfile?.columns ?? []).map(({ name }) => name));
+  const referenced = configuredDataFields(chart);
+  const missingColumns = [...referenced].filter((field) => !columns.has(field)).sort();
+  if (missingColumns.length > 0) {
+    return cloneAndFreeze({
+      ok: false,
+      missingColumns,
+      errors: missingColumns.map((field) => ({
+        code: "missing-encoding-column",
+        field,
+        message: `Configured column "${field}" is missing from the replacement CSV.`,
+      })),
+      prepared: null,
+    });
+  }
+  const prepared = prepareChartData({ chart, rows, datasetProfile, geoData });
+  const errors = (prepared.diagnostics ?? [])
+    .filter(({ severity }) => severity === "error")
+    .map((diagnostic) => ({ code: diagnostic.code ?? "chart-data-invalid", message: diagnostic.message }));
+  return cloneAndFreeze({ ok: errors.length === 0, missingColumns: [], errors, prepared });
+}
+
+function configuredDataFields(value) {
+  const fields = new Set();
+  const stack = [value?.roles, value?.transformations];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== "object") continue;
+    if (Array.isArray(current)) {
+      for (const child of current) stack.push(child);
+      continue;
+    }
+    for (const [key, child] of Object.entries(current)) {
+      if (key === "field" && typeof child === "string" && child.trim()) fields.add(child.trim());
+      else if (key === "fields" && Array.isArray(child)) {
+        for (const field of child) if (typeof field === "string" && field.trim()) fields.add(field.trim());
+      } else stack.push(child);
+    }
+  }
+  return fields;
+}
+
 function prepareGeographyBinding(schema, chart, rows, geoData) {
   if (schema.dataFamily !== "geography") {
     return { chart, diagnostics: [] };

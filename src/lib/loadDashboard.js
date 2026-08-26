@@ -751,6 +751,31 @@ export function validateGeoJson(value, description = "GeoJSON source") {
   return value;
 }
 
+export function validateCsvReplacementCandidate(sourceId, source, profile, rows) {
+  validateSourceId(sourceId);
+  if (validateDataSourceDescriptor(sourceId, source) !== "uploadedCsv") {
+    throw new Error("CSV replacement requires an uploaded CSV descriptor.");
+  }
+  if (!Array.isArray(rows)) throw new Error("CSV replacement rows are required.");
+  if (!isRecord(profile) || !Number.isSafeInteger(profile.rowCount) || profile.rowCount !== rows.length) {
+    throw new Error("CSV replacement profile row count does not match its parsed rows.");
+  }
+  if (!Array.isArray(profile.columns) || profile.columns.length === 0) {
+    throw new Error("CSV replacement profile columns are required.");
+  }
+  const names = new Set();
+  for (const column of profile.columns) {
+    if (!isRecord(column) || typeof column.name !== "string" || !column.name.trim() || names.has(column.name)) {
+      throw new Error("CSV replacement profile columns are invalid.");
+    }
+    names.add(column.name);
+  }
+  if (!/^[a-f0-9]{64}$/.test(profile.fingerprint ?? "")) {
+    throw new Error("CSV replacement profile fingerprint is invalid.");
+  }
+  return true;
+}
+
 function validateDatasetProfile(sourceId, source, profile) {
   const entries = plainDataEntries(
     profile,

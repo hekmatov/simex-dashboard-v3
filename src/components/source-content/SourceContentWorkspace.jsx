@@ -13,6 +13,7 @@ export default function SourceContentWorkspace({
   initialSelectedId = null,
   viewState = null,
   onViewStateChange,
+  onRequestClose,
   onContentDraftStage,
   onContentDraftCommit,
   onContentDraftDiscard,
@@ -114,6 +115,7 @@ export default function SourceContentWorkspace({
         contentDraftCoordinator={contentDraftCoordinator}
         datasetProfile={dashboard.datasetProfiles?.[selected?.id]}
         onRename={rename}
+        onRequestClose={onRequestClose}
         onContentDraftStage={stageDraft}
         onContentDraftCommit={commitDraft}
         onContentDraftDiscard={discardDraft}
