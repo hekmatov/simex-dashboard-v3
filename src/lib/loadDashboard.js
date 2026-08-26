@@ -3,6 +3,7 @@ import { profileDataset } from "../charting/data/profileDataset.js";
 import { validateDashboardStructure } from "../charting/config/dashboardConfigStructure.js";
 import { migrateDashboardV3ToV4 } from "../charting/config/migrateDashboardV3ToV4.js";
 import { migrateDashboardV4ToV5 } from "../content-library/migrateDashboardV4ToV5.js";
+import { deriveContentHealth } from "../content-library/contentHealth.js";
 import { stripLegacyVantaBackground } from "../charting/config/dashboardPresentationV3.js";
 import {
   normalizeDashboardTemporalConfig,
@@ -266,10 +267,13 @@ export async function loadDashboardConfig(
       dataService.evict(request);
     }
   }
-  const {
-    loadedData,
-    profiles: hydratedProfiles,
-  } = await dataService.hydrateAll({ purpose: "compatibility" });
+  const { loadedData, profiles: hydratedProfiles, states: tabularSourceStates } = await hydrateManagedSources({
+    dataService,
+    sourceIds: Object.keys(tabularDataSources),
+    profiles: reusableProfiles,
+    sourceEntries: dashboard.contentLibrary?.sourceEntries ?? {},
+    purpose: "compatibility",
+  });
   const staticSourceStates = await resolveStaticSourceStates(
     dataSources,
     dashboard.assets ?? {},
@@ -277,9 +281,7 @@ export async function loadDashboardConfig(
     { readAuthoredAsset },
   );
   const dataSourceStates = {
-    ...Object.fromEntries(
-      Object.keys(tabularDataSources).map((sourceId) => [sourceId, { status: "ready" }]),
-    ),
+    ...tabularSourceStates,
     ...staticSourceStates,
   };
 
@@ -296,6 +298,12 @@ export async function loadDashboardConfig(
     datasetProfiles: hydratedProfiles,
     loadedData,
     dataSourceStates,
+    runtimeContentHealth: runtimeContentHealth({
+      mediaItems: dashboard.contentLibrary?.mediaItems,
+      sourceEntries: dashboard.contentLibrary?.sourceEntries,
+      dataSources,
+      dataSourceStates,
+    }),
   };
 }
 
@@ -414,12 +422,12 @@ export async function loadDashboardConfigProgressively(
       loadedData[sourceId] = snapshot.data;
       if (snapshot.profile) hydratedProfiles[sourceId] = snapshot.profile;
       dataSourceStates[sourceId] = { status: "ready" };
-    } catch {
+    } catch (error) {
       const snapshot = dataService.getSnapshot(request);
       if (snapshot.data !== null && snapshot.data !== undefined) {
         loadedData[sourceId] = snapshot.data;
       }
-      dataSourceStates[sourceId] = { status: "error" };
+      dataSourceStates[sourceId] = { status: "error", code: sourceLoadErrorCode(error) };
     }
     latest = publishProgressiveDashboard();
   }));
@@ -446,6 +454,12 @@ export async function loadDashboardConfigProgressively(
           { ...state },
         ]),
       ),
+      runtimeContentHealth: runtimeContentHealth({
+        mediaItems: dashboard.contentLibrary?.mediaItems,
+        sourceEntries: dashboard.contentLibrary?.sourceEntries,
+        dataSources,
+        dataSourceStates,
+      }),
     };
     onUpdate(runtimeDashboard);
     return runtimeDashboard;
@@ -522,6 +536,59 @@ async function resolveStaticSourceStates(
     }
   }
   return states;
+}
+
+async function hydrateManagedSources({ dataService, sourceIds, profiles, sourceEntries, purpose }) {
+  const loadedData = {};
+  const hydratedProfiles = { ...profiles };
+  const states = {};
+  for (const sourceId of sourceIds) {
+    try {
+      const snapshot = await dataService.load({ sourceId, purpose });
+      loadedData[sourceId] = snapshot.data;
+      if (snapshot.profile) hydratedProfiles[sourceId] = snapshot.profile;
+      states[sourceId] = { status: "ready" };
+    } catch (error) {
+      if (!sourceEntries?.[sourceId]) throw error;
+      states[sourceId] = { status: "error", code: sourceLoadErrorCode(error) };
+    }
+  }
+  return { loadedData, profiles: hydratedProfiles, states };
+}
+
+function runtimeContentHealth({ mediaItems = {}, sourceEntries = {}, dataSources = {}, dataSourceStates = {} } = {}) {
+  const media = {};
+  for (const [sourceId, source] of plainDataEntries(dataSources, "Dashboard dataSources")) {
+    if (source?.kind !== "staticImage") continue;
+    const item = mediaItems?.[source.mediaId];
+    const state = dataSourceStates[sourceId];
+    if (!item || state?.status !== "error") continue;
+    media[source.mediaId] = healthSummary(deriveContentHealth({
+      item,
+      asset: state.code === "authored-asset-missing" ? null : undefined,
+      failure: state.code === "authored-asset-corrupt" ? { code: state.code } : null,
+      requiresRelink: state.code === "replacement-required",
+    }));
+  }
+  const sources = {};
+  for (const [sourceId, item] of plainDataEntries(sourceEntries, "Content source entries")) {
+    const state = dataSourceStates[sourceId];
+    if (state?.status !== "error") continue;
+    sources[sourceId] = healthSummary(deriveContentHealth({
+      item,
+      requiresRelink: item.origin === "linked-project",
+      failure: item.origin === "linked-project" ? null : { code: state.code ?? "source-load-failed" },
+    }));
+  }
+  return Object.freeze({ mediaItems: Object.freeze(media), sourceEntries: Object.freeze(sources) });
+}
+
+function healthSummary({ health, repair }) {
+  return Object.freeze({ health, repair });
+}
+
+function sourceLoadErrorCode(error) {
+  return error?.code === "AUTHORED_ASSET_CORRUPT" ? "source-corrupt" : "source-load-failed";
 }
 
 export function profilesForConfiguredCsvSources(

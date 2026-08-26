@@ -1,6 +1,7 @@
 const RUNTIME_KEYS = [
   "chartDataStates",
   "dataSourceStates",
+  "runtimeContentHealth",
   "loadedData",
 ];
 

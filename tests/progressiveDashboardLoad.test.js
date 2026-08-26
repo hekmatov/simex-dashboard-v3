@@ -20,7 +20,7 @@ test("progressive dashboard loading publishes chart-local source states without 
     ...profileDataset(failingRows),
   };
   const dashboard = {
-    configVersion: 3,
+    configVersion: 5,
     id: "progressive-loader-fixture",
     title: "Progressive loader fixture",
     dataSources: {
@@ -30,6 +30,19 @@ test("progressive dashboard loading publishes chart-local source states without 
         provenance: { label: "Ready fixture" },
       },
       progressive_failure: failingSource,
+    },
+    contentLibrary: {
+      mediaItems: {},
+      sourceEntries: {
+        progressive_failure: {
+          sourceId: "progressive_failure",
+          origin: "linked-project",
+          ownership: "builder",
+          displayName: "Unavailable fixture",
+          provenance: { fileName: "progressive-failure.csv" },
+          health: "ready",
+        },
+      },
     },
     pages: [{
       id: "runtime",
@@ -56,6 +69,13 @@ test("progressive dashboard loading publishes chart-local source states without 
     assert.equal(loaded.dataSourceStates.progressive_ready.status, "ready");
     assert.equal(loaded.dataSourceStates.progressive_failure.status, "error");
     assert.equal(Object.hasOwn(loaded.loadedData, "progressive_failure"), false);
+    assert.equal(loaded.contentLibrary.sourceEntries.progressive_failure.health, "ready");
+    assert.deepEqual(loaded.runtimeContentHealth.sourceEntries.progressive_failure, {
+      health: "needs-relink",
+      repair: { action: "relink" },
+    });
+    assert.deepEqual(loaded.dataSources.progressive_failure, failingSource);
+    assert.deepEqual(loaded.datasetProfiles.progressive_failure, failingProfile);
     assert.ok(updates.length >= 3);
     assert.notStrictEqual(updates[0].dataSourceStates, loaded.dataSourceStates);
   } finally {

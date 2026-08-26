@@ -208,6 +208,11 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
     status: "error",
     code: "authored-asset-missing",
   });
+  assert.equal(missing.contentLibrary.mediaItems["media-briefing"].health, "ready");
+  assert.deepEqual(missing.runtimeContentHealth.mediaItems["media-briefing"], {
+    health: "missing",
+    repair: { action: "replace" },
+  });
 
   dashboard.assets[assetId].storageState = "durable";
   const corrupt = await loadDashboardConfig(dashboard, {}, null, {
@@ -218,6 +223,11 @@ test("dashboard loading exposes missing and corrupt local Image bytes as source-
   assert.deepEqual(corrupt.dataSourceStates.briefing, {
     status: "error",
     code: "authored-asset-corrupt",
+  });
+  assert.equal(corrupt.contentLibrary.mediaItems["media-briefing"].health, "ready");
+  assert.deepEqual(corrupt.runtimeContentHealth.mediaItems["media-briefing"], {
+    health: "corrupt",
+    repair: { action: "replace" },
   });
 });
 

@@ -1,5 +1,6 @@
 ﻿import React from "react";
 
+import { overlayRuntimeContentHealth } from "../content-library/contentHealth.js";
 import ChartEditorV3 from "./chart-authoring/ChartEditorV3.jsx";
 import ChartWizardV3 from "./chart-authoring/ChartWizardV3.jsx";
 import StaticContentEditor from "./static-content/StaticContentEditor.jsx";
@@ -1423,8 +1424,20 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     return nextDashboard;
   }
 
+  const runtimeMediaItems = React.useMemo(() => overlayRuntimeContentHealth(
+    workingDashboard.contentLibrary?.mediaItems,
+    workingDashboard.runtimeContentHealth?.mediaItems,
+  ), [workingDashboard.contentLibrary?.mediaItems, workingDashboard.runtimeContentHealth?.mediaItems]);
+  const runtimeContentLibrary = React.useMemo(() => ({
+    ...(workingDashboard.contentLibrary ?? {}),
+    mediaItems: runtimeMediaItems,
+    sourceEntries: overlayRuntimeContentHealth(
+      workingDashboard.contentLibrary?.sourceEntries,
+      workingDashboard.runtimeContentHealth?.sourceEntries,
+    ),
+  }), [workingDashboard.contentLibrary, workingDashboard.runtimeContentHealth?.sourceEntries, runtimeMediaItems]);
   const contentRenderContext = {
-    mediaItems: workingDashboard.contentLibrary?.mediaItems ?? {},
+    mediaItems: runtimeMediaItems,
     assets: workingDashboard.assets ?? {},
     resolveAsset: resolveBrowserAuthoredAsset,
     requestRepair: ({ panelId }) => panelId && openPanelEditor(panelId),
@@ -1443,7 +1456,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
       }));
   }, [onDashboardChange, pendingEdits]);
   const managerDashboard = React.useMemo(() => editMode ? projectContentManagerDependencies({
-    dashboard: workingDashboard,
+    dashboard: { ...workingDashboard, contentLibrary: runtimeContentLibrary },
     activeRetainers: contentDraftRetainers,
     onNavigate: navigateContentDependency,
     onDelete: deleteManagedContent,
@@ -1452,6 +1465,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     deleteManagedContent,
     editMode,
     navigateContentDependency,
+    runtimeContentLibrary,
     workingDashboard,
   ]);
 

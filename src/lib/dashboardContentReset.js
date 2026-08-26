@@ -1,6 +1,7 @@
 const RUNTIME_CONTENT_KEYS = Object.freeze([
   "loadedData",
   "dataSourceStates",
+  "runtimeContentHealth",
   "chartDataStates",
 ]);
 

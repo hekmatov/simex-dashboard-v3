@@ -47,6 +47,7 @@ export const DASHBOARD_BUNDLE_TYPE = "simex-dashboard-bundle";
 const RUNTIME_CONFIGURATION_KEYS = new Set([
   "chartDataStates",
   "dataSourceStates",
+  "runtimeContentHealth",
   "loadedData",
   "loadedRows",
   "runtimeRows",

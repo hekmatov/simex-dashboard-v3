@@ -77,6 +77,13 @@ export function contentHealthMessage(health) {
   return "This saved content is unavailable.";
 }
 
+export function overlayRuntimeContentHealth(records = {}, healthById = {}) {
+  return Object.freeze(Object.fromEntries(Object.entries(records ?? {}).map(([id, record]) => {
+    const health = healthById?.[id]?.health;
+    return [id, Object.freeze({ ...record, ...(health ? { health } : {}) })];
+  })));
+}
+
 function recoveryFor(health) {
   if (health === "missing" || health === "corrupt") return Object.freeze({ action: "replace" });
   if (health === "needs-relink") return Object.freeze({ action: "relink" });

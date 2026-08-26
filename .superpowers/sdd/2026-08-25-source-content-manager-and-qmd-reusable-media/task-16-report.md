@@ -38,3 +38,9 @@ At Build 1440×900, missing QMD retained its media identity and health, emitted 
 - No Task 17 work, full/release suite, build, or generated `dist` changes.
 - PS-04 remains the separately recorded pre-merge generated-client residual.
 - The Journey H component fixture verifies the required QMD surface state; its CSV/GeoJSON last-good recovery remains deterministically covered through the existing replacement transaction failures in the exact selection.
+
+## Review correction — runtime health overlay
+
+- **RED:** `tests/staticPanelPersistence.test.js` and `tests/progressiveDashboardLoad.test.js` first failed because `runtimeContentHealth` was absent. They reproduce missing/corrupt authored bytes and a failed linked CSV load while asserting the persisted MediaItem/SourceEntry remains `ready`, descriptor/profile remain exact, and only the runtime overlay becomes missing/corrupt/needs-relink.
+- **GREEN:** `loadDashboardConfig` and `loadDashboardConfigProgressively` now derive `runtimeContentHealth` from their existing static/data-source state boundaries. `DashboardRenderer` overlays that non-serialized state for rendering and manager detail only; all persistence/package/reset/commit paths strip it.
+- **Focused verification:** `node --test tests/staticPanelPersistence.test.js tests/progressiveDashboardLoad.test.js tests/contentHealth.test.js tests/dashboardAppV3.test.js` — **36/36 passing**. Journey H was not rerun because its fixture provides an explicit missing record and does not exercise loader-derived state.

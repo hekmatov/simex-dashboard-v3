@@ -1491,6 +1491,7 @@ export function configurationForStorage(dashboard, fallbackProfiles = {}) {
   const {
     chartDataStates: _chartDataStates,
     dataSourceStates: _dataSourceStates,
+    runtimeContentHealth: _runtimeContentHealth,
     loadedData: _runtimeData,
     ...portableDashboard
   } = dashboard;
@@ -1526,6 +1527,7 @@ function configurationForSemanticUse(dashboard) {
   const {
     chartDataStates: _chartDataStates,
     dataSourceStates: _dataSourceStates,
+    runtimeContentHealth: _runtimeContentHealth,
     loadedData: _runtimeData,
     datasetProfiles: _runtimeProfiles,
     ...semanticDashboard
@@ -1537,6 +1539,7 @@ function configurationForPortableUse(dashboard) {
   const {
     chartDataStates: _chartDataStates,
     dataSourceStates: _dataSourceStates,
+    runtimeContentHealth: _runtimeContentHealth,
     loadedData: _runtimeData,
     ...portableDashboard
   } = dashboard;

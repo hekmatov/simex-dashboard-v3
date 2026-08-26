@@ -333,6 +333,7 @@ function portablePreparedDashboard(value) {
   const dashboard = cloneDashboard(value);
   delete dashboard.chartDataStates;
   delete dashboard.dataSourceStates;
+  delete dashboard.runtimeContentHealth;
   delete dashboard.loadedData;
   return dashboard;
 }
