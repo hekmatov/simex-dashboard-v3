@@ -103,6 +103,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   };
   const replacement = {
     ...structuredClone(dashboard),
+    configVersion: 4,
     id: "replacement-dashboard",
     programLabel: "Imported replacement",
     dataSources: {
@@ -112,6 +113,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
       external_cases: profile,
     },
     chronoGroups: [],
+    scenes: [],
     pages: [{
       ...structuredClone(sourcePage),
       id: "replacement",
@@ -126,12 +128,13 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
   };
   const bundle = {
     bundleType: "simex-dashboard-bundle",
-    version: 3,
+    version: 4,
     metadata: {
       exportedAt: null,
       sourceFingerprints: {
         external_cases: null,
       },
+      networkDependencies: [],
     },
     config: replacement,
   };
@@ -144,25 +147,27 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(bundle)),
     });
-  await expect(page.getByLabel("Program label")).toHaveValue(
-    "Imported replacement",
-  );
+  const review = page.getByRole("dialog", { name: "Review package contents" });
+  await review.getByRole("button", { name: "Load package", exact: true }).click();
+  await expect(review).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Replacement", exact: true })).toBeVisible();
   await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
 
-  await page.getByLabel("Program label").fill("Imported profile retained");
-  await page.getByRole("button", { name: "Save edits" }).click();
+  const inspector = await openPageInspector(page, "Biomedical");
+  await inspector.getByLabel("Page title", { exact: true }).fill("Imported profile retained");
+  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
     return {
       profileIds: Object.keys(stored.datasetProfiles ?? {}),
       sourceIds: Object.keys(stored.dataSources ?? {}),
-      programLabel: stored.programLabel,
+      pageTitle: stored.pages.find(({ id }) => id === "replacement")?.title,
     };
   }, STORAGE_KEY)).toEqual({
     profileIds: ["external_cases"],
     sourceIds: ["external_cases"],
-    programLabel: "Imported profile retained",
+    pageTitle: "Imported profile retained",
   });
 
   await page.reload();
@@ -170,7 +175,7 @@ test("replacement bundle profiles survive import, edit, save, and reload", async
     name: "Dashboard configuration error",
   })).toHaveCount(0);
   await expect(page.getByRole("heading", {
-    name: "Replacement",
+    name: "Imported profile retained",
     exact: true,
   })).toBeVisible();
   await expect(page.locator('[data-panel-id="external_cases_chart"]')).toBeVisible();
@@ -203,8 +208,9 @@ test("additive imported tracked profiles survive an edit and browser reload", as
 
   await openDashboard(page);
   await page.getByRole("button", { name: "Build" }).click();
-  await page.getByLabel("Program label").fill("Imported profile retained");
-  await page.getByRole("button", { name: "Save edits" }).click();
+  const inspector = await openPageInspector(page, "Biomedical");
+  await inspector.getByLabel("Page title", { exact: true }).fill("Imported profile retained");
+  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
   await expect.poll(() => page.evaluate((key) => {
     const stored = JSON.parse(localStorage.getItem(key));
@@ -285,4 +291,12 @@ async function openDashboard(page) {
   await page.getByRole("button", {
     name: "Explore the live dashboard",
   }).click();
+}
+
+async function openPageInspector(page, pageLabel) {
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("treeitem", { name: pageLabel, exact: true }).click();
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  return map;
 }

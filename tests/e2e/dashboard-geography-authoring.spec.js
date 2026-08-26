@@ -22,21 +22,22 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
   await page.getByRole("button", { name: "Add chart" }).first().click();
   const wizard = page.getByRole("dialog");
 
+  await wizard.getByRole("button", { name: /^Chart type\./ }).click();
   await wizard.getByLabel("Search chart types").fill(
     "chronological choropleth",
   );
   await wizard.getByRole("button", {
     name: /Chronological choropleth/i,
   }).click();
-  await wizard.getByRole("button", { name: "Data source" }).click();
-  await wizard.getByLabel("Dashboard data source").selectOption(
-    "bio_municipal_infections_harmonized_2021",
+  await wizard.getByRole("button", { name: /^Data source\./ }).click();
+  await wizard.getByLabel("Managed data source").selectOption(
+    "bio_municipal_map_timeline",
   );
   await wizard.getByLabel("GeoJSON source").selectOption(
     "geo_netherlands_municipalities_2021",
   );
 
-  await wizard.getByRole("button", { name: "Data roles" }).click();
+  await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
   await wizard.locator('[data-field-id="geography"] select').selectOption(
     "MunicipalityCode",
   );
@@ -48,7 +49,7 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
   await expect(
     wizard.locator('[data-field-id="geoSource"]'),
   ).toHaveCount(1);
-  await wizard.getByRole("button", { name: "Style and layout" }).click();
+  await wizard.getByRole("button", { name: /^Configure chart\./ }).click();
   await expect(
     wizard.locator(".chart-authoring-preview-ready"),
   ).toBeVisible();
@@ -59,6 +60,7 @@ test("a fresh chronological choropleth reaches preview through the early GeoJSON
   await expect(
     wizard.locator('[data-field-id="geoSource"]'),
   ).toHaveCount(0);
+  await wizard.getByRole("button", { name: /^Review and create\./ }).click();
   await expect(
     wizard.getByRole("button", { name: "Create chart" }),
   ).toBeEnabled();
