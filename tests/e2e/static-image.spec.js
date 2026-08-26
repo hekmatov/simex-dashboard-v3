@@ -93,7 +93,7 @@ for (const viewport of VIEWPORTS) {
     await expect(editor.getByLabel("Crop x")).toHaveValue("0");
     await expect(editor.getByText(/Review alternative text after replacement/)).toBeVisible();
     expect(await sessionAssetIds(page)).toHaveLength(1);
-    await editor.getByRole("button", { name: "Undo replacement" }).click();
+    await editor.getByRole("button", { name: "Restore previous image" }).click();
     await expect(editor.getByLabel("Crop x")).toHaveValue("200");
     await expect(editor.getByText(/Review alternative text after replacement/)).toHaveCount(0);
     await expect.poll(() => sessionAssetIds(page)).toEqual([]);
@@ -200,6 +200,7 @@ for (const viewport of VIEWPORTS) {
       mimeType: "image/png",
       buffer: REPLACEMENT_PNG,
     });
+    await expect(editor.getByText(/cancelled-replacement\.png is ready/)).toBeVisible();
     expect(await sessionAssetIds(page)).toHaveLength(1);
     await editor.getByRole("button", { name: "Cancel", exact: true }).click();
     confirmation = page.getByRole("dialog", { name: "Discard static content changes?" });
@@ -790,7 +791,7 @@ async function createAndEditOrdinaryChart(page, title, imageTitle) {
   ]);
   await wizard.getByRole("button", { name: /^Chart type\./ }).click();
   await wizard.getByRole("button", { name: /^Line\./ }).click();
-  await wizard.getByLabel("Dashboard data source").selectOption("bio_cases");
+  await wizard.getByLabel("Managed data source").selectOption("bio_cases");
   await wizard.getByRole("button", { name: /^Map and prepare data\./ }).click();
   await wizard.getByRole("button", { name: "Add measurement" }).click();
   await wizard.getByLabel("Observation / X-axis").selectOption("date");
