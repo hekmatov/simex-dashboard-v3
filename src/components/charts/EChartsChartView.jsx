@@ -5,6 +5,7 @@ import { describeAccessibilityCompanion } from "../../charting/rendering/accessi
 import { resolveChartSurfaceBackground } from "../../charting/presentation/chartSurfaceBackground.js";
 import { titleContainerProps } from "./chartViewPresentation.js";
 import { chartDescriptionVisible } from "./chartViewPresentation.js";
+import { useBuildMapBudgetSlot } from "../build/BuildMapBudgetContext.jsx";
 
 const MAX_RUNTIME_ERROR_LENGTH = 240;
 const DEFAULT_CHART_TEXT_THEME = Object.freeze({
@@ -31,6 +32,7 @@ export default function EChartsChartView({
   zoomEnabled = false,
   accessibilityEnabled = false,
   runtimeError: suppliedRuntimeError = null,
+  mapBudgetRequest = null,
 }) {
   const hostRef = React.useRef(null);
   const lifecycleRef = React.useRef(null);
@@ -47,6 +49,13 @@ export default function EChartsChartView({
   );
   const summary = accessibilityEnabled ? summaryFor(presentedModel, chart) : null;
   const activeError = suppliedRuntimeError ?? runtimeError;
+  const mapBudget = useBuildMapBudgetSlot({
+    ownerId: mapBudgetRequest?.ownerId ?? `unbudgeted:${chart.id ?? "chart"}`,
+    kind: mapBudgetRequest?.kind ?? "dashboard",
+    visible: mapBudgetRequest?.visible === true,
+    active: Boolean(model?.mapRegistration) && mapBudgetRequest?.active === true,
+  });
+  const mapAllocated = !model?.mapRegistration || !mapBudgetRequest || mapBudget.allocated;
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -75,7 +84,7 @@ export default function EChartsChartView({
 
   React.useEffect(() => {
     const host = hostRef.current;
-    if (!host || typeof window === "undefined" || typeof document === "undefined") return undefined;
+    if (!mapAllocated || !host || typeof window === "undefined" || typeof document === "undefined") return undefined;
     const lifecycle = createEChartsLifecycle({
       onError(error) {
         setRuntimeError(boundedRuntimeError(error));
@@ -87,12 +96,12 @@ export default function EChartsChartView({
       lifecycle.dispose();
       if (lifecycleRef.current === lifecycle) lifecycleRef.current = null;
     };
-  }, []);
+  }, [mapAllocated]);
 
   React.useEffect(() => {
-    if (!lifecycleRef.current) return;
+    if (!mapAllocated || !lifecycleRef.current) return;
     lifecycleRef.current.update(presentedModel);
-  }, [presentedModel]);
+  }, [mapAllocated, presentedModel]);
 
   if (activeError) {
     return React.createElement("div", {
@@ -103,8 +112,17 @@ export default function EChartsChartView({
     }, boundedRuntimeError(activeError));
   }
 
+  if (!mapAllocated) {
+    return React.createElement("div", {
+      className: "chart-deferred-placeholder",
+      role: "status",
+      "data-map-budget-status": mapBudget.status,
+    }, "Map preview waits for an available rendering slot.");
+  }
+
   return React.createElement("section", {
     className: "chart-echarts-view",
+    "data-map-budget-status": mapBudgetRequest ? mapBudget.status : undefined,
     ...(accessibilityEnabled
       ? {
           role: "img",

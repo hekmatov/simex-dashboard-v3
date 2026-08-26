@@ -9,6 +9,7 @@ const EMPTY_FILTERS = Object.freeze({ origin: "all", status: "all", usage: "all"
 export default function SourceContentWorkspace({
   dashboard,
   contentDraftCoordinator = null,
+  geoDataSources = {},
   viewportWidth,
   initialSelectedId = null,
   viewState = null,
@@ -114,6 +115,7 @@ export default function SourceContentWorkspace({
         dashboard={dashboard}
         contentDraftCoordinator={contentDraftCoordinator}
         datasetProfile={dashboard.datasetProfiles?.[selected?.id]}
+        geoData={geoDataSources[selected?.id] ?? dashboard.loadedData?.[selected?.id]}
         onRename={rename}
         onRequestClose={onRequestClose}
         onContentDraftStage={stageDraft}

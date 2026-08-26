@@ -15,12 +15,14 @@ export default function DataSourceStep({
   manualTable = null,
   manualErrors = [],
   uploadError = "",
+  geoUploadError = "",
   geographyRequired = false,
   geoSources = [],
   selectedGeoSourceId = "",
   prerequisites = [],
   onSelectExisting = noop,
   onUploadCsv = noop,
+  onUploadGeoJson = noop,
   onSelectManual = noop,
   onManualTableChange = noop,
   onGeoSourceChange = noop,
@@ -117,6 +119,20 @@ export default function DataSourceStep({
             { id: "chart-wizard-geo-source-help" },
             "Choose the validated boundary or point file used to locate the selected geographic identifiers.",
           ),
+          React.createElement(
+            "label",
+            null,
+            "Upload GeoJSON",
+            React.createElement("input", {
+              type: "file",
+              accept: ".geojson,application/geo+json,application/json",
+              disabled: blocked,
+              onChange: (event) => onUploadGeoJson(event.target.files?.[0] ?? null),
+            }),
+          ),
+          geoUploadError
+            ? React.createElement("p", { className: "wizard-error", role: "alert" }, geoUploadError)
+            : null,
         )
       : null,
     selectedSourceId

@@ -8,6 +8,7 @@ import { sceneNavigationPageId } from "../view/ViewShell.jsx";
 import CanonicalDashboardFrame, { CanonicalDashboardFooter } from "./CanonicalDashboardFrame.jsx";
 import DashboardCanvas from "./DashboardCanvas.jsx";
 import DashboardHeader from "./DashboardHeader.jsx";
+import { BuildMapBudgetProvider } from "../build/BuildMapBudgetContext.jsx";
 
 export default function DashboardModeWorkspace({
   mode,
@@ -107,7 +108,7 @@ export default function DashboardModeWorkspace({
     </>
   );
 
-  return (
+  const frame = (
     <div className={buildMode ? "build-mode-shell" : "view-mode-shell"} style={iconLanguageStyles}>
       <CanonicalDashboardFrame
         mode={mode}
@@ -151,4 +152,5 @@ export default function DashboardModeWorkspace({
       />
     </div>
   );
+  return buildMode ? <BuildMapBudgetProvider>{frame}</BuildMapBudgetProvider> : frame;
 }

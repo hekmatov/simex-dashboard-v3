@@ -6,7 +6,7 @@
 
 **Starting HEAD:** `3bc143f858ae96a66275462b587bd2bc506cf781`
 
-**Status:** Implementation authorized and in progress. Bounded Tasks 1–9 provide the row-level evidence recorded below; Task 10+ journeys and complete amendment fidelity remain pending.
+**Status:** Implementation authorized and in progress. Bounded Tasks 1–13 provide the row-level evidence recorded below; Tasks 14+ and complete amendment fidelity remain pending.
 
 ## Pre-implementation browser-edit baseline gate
 
@@ -321,3 +321,26 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 
 - Papa Parse, dataset profiling, and source viewer/filter remain the single existing authorities. The manager and chart flows add no second CSV parser/profile/cache owner.
 - No CSV replacement/relink, temporal warning, GeoJSON manager, cell editing, derivative mutation, generated-output ownership, or parent progress update is introduced.
+
+## Task 13 — GeoJSON manager, selector, and shared Build map budget
+
+**Implementation state:** SCM-S04, SCM-S05, SCM-S07, SCM-S15, SCM-C05, SCM-C09, and SCM-R09 are Passing for the Task 13 GeoJSON slice. The GeoJSON detail/dependency branch of SCM-C04 is Passing; SCM-C04 remains Partial because replacement/relink belongs to Task 14.
+
+### RED and deterministic evidence
+
+- Focused RED was **3/5 passing** in `tests/geoJsonContentManager.test.js`: the current selector excluded `type:'uploadedGeoJson'`, and no manager Add transaction existed.
+- The first exact eleven-file selection was **114/119 passing**, exposing only the absent manager UI/map-budget behavior and its mounted transport.
+- Fresh exact GREEN is **119/119 passing**, zero failed/skipped/todo. It covers the four-gate authority, canonical lean summary, high-property/nested-property non-blocking behavior, atomic Add/cancel/failure inventories, eligible tracked/dataset GeoJSON, exact six-stage chart authoring, direct dependencies/blocked deletion, common-ancestor budget allocation/release/priority, and live chart transport.
+
+### Named Journey I checkpoint
+
+- Exact command without a literal separator: `pnpm.cmd test:e2e tests/e2e/source-content-geojson.spec.js --project=chromium --grep "Journey I — GeoJSON upload select preview dependency and blocked delete"` — **1/1 passing**, 48.7 s test time and 50.7 s total.
+- Build 1440×900 and 1024×768 inspected explicit manager Cancel and Add inventories, reload survival of an unused source, canonical summary fields, bounded preview plus textual fallback, and zero manager horizontal overflow. Tablet list/detail/Back remained reachable.
+- The real unchanged six-stage chart workflow selected an existing managed CSV and the uploaded GeoJSON, completed a Map scatter chart, then exposed the direct dependency breadcrumb `HeV-A26 Dashboard: Epidemiological overview › Outbreak dynamics › Journey I managed map`. Referenced Delete remained disabled and opened no dialog.
+- Five mounted map uses shared one provider: no more than four were allocated, no more than two were normal, excess work was deferred, and source admission/deletion was unchanged.
+
+### Rulings and scope boundary
+
+- Live inspection established `src/components/chart-authoring/ChartWizardV3.jsx` as the existing owner of the six-stage draft/commit boundary. The Task 13 cost is limited to staged GeoJSON selection and atomic publication through `contentDraftTransaction`; stage count/order remains exact.
+- Proposed edits to `geoJsonSourceEntry.js` and `sourceEntrySchema.js` were removed because planned transaction/schema authorities already carried the acceptance contract.
+- Exactly four admission gates remain authoritative. Concentration diagnostics and nested properties do not hard-block, and map concurrency is runtime scheduling only. No Task 14 replacement/relink behavior is included.

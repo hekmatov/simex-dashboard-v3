@@ -1,0 +1,259 @@
+import { expect, test } from "@playwright/test";
+
+const CONTROL_URL = "http://127.0.0.1:4174";
+const APP_URL = "http://127.0.0.1:4175/";
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+const SOURCE_NAME = "Journey I boundaries";
+const GEOJSON_FILE = {
+  name: "journey-i-boundaries.geojson",
+  mimeType: "application/geo+json",
+  buffer: Buffer.from(JSON.stringify({
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { id: "3", province: "Drenthe", label: "Journey I" },
+      geometry: { type: "Polygon", coordinates: [[[4, 51], [6, 51], [6, 53], [4, 51]]] },
+    }],
+  })),
+};
+
+test.beforeEach(async ({ page, request }) => {
+  await request.post(`${CONTROL_URL}/__test__/reset`);
+  await request.post(`${CONTROL_URL}/__test__/catalogue-mode`, { data: { mode: "absent" } });
+  await page.goto(APP_URL);
+  await page.evaluate((key) => {
+    localStorage.removeItem(key);
+    localStorage.removeItem("simex-dashboard-mode-v3");
+  }, STORAGE_KEY);
+  await page.reload();
+});
+
+test("Journey I — GeoJSON upload select preview dependency and blocked delete", async ({ page }) => {
+  test.setTimeout(180_000);
+  await openBuild(page, { width: 1440, height: 900 });
+  const before = await geoJsonInventory(page);
+
+  let manager = await openDataSourceManager(page);
+  let intake = manager.getByRole("region", { name: "Add GeoJSON to dashboard" });
+  await intake.getByRole("button", { name: "Add GeoJSON", exact: true }).click();
+  await intake.getByLabel("GeoJSON file").setInputFiles(GEOJSON_FILE);
+  await expect(intake.getByLabel("Display name")).toHaveValue("journey i boundaries");
+  await expect(intake).toContainText("1 feature");
+  await expect(intake).toContainText("Polygon 1");
+  await expect(intake).toContainText("Renderable fragments");
+  await expect(intake.getByLabel("GeoJSON preview summary")).toContainText("Bounds 4, 51, 6, 53");
+  await intake.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await geoJsonInventory(page)).toEqual(before);
+
+  await intake.getByRole("button", { name: "Add GeoJSON", exact: true }).click();
+  await intake.getByLabel("GeoJSON file").setInputFiles(GEOJSON_FILE);
+  await intake.getByLabel("Display name").fill(SOURCE_NAME);
+  await intake.getByRole("button", { name: "Add to dashboard", exact: true }).click();
+  await expect(manager.locator(".source-content-row").filter({ hasText: SOURCE_NAME }).first()).toBeVisible();
+  const added = await geoJsonInventory(page);
+  expect(added.sourceIds).toHaveLength(before.sourceIds.length + 1);
+  expect(added.profileIds).toEqual([]);
+  expect(added.unusedNames).toContain(SOURCE_NAME);
+
+  await closeManager(page);
+  await page.reload();
+  await openBuild(page, { width: 1440, height: 900 });
+  manager = await openDataSourceManager(page);
+  await selectSourceRow(manager, SOURCE_NAME);
+  let detail = manager.getByRole("region", { name: "Content detail" });
+  await expect(detail).toContainText("1 feature");
+  await expect(detail.getByLabel("GeoJSON preview summary")).toBeVisible();
+  await expect(detail.getByLabel("Search property keys")).toBeVisible();
+  await expect(detail).toContainText("id");
+  expect(await managerOverflow(manager)).toBe(false);
+  await closeManager(page);
+
+  await seedPackagedSource(page);
+  await page.reload();
+  await openBuild(page, { width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Add chart", exact: true }).click();
+  const wizard = page.getByRole("dialog", { name: "Add new chart" });
+  await expectExactSixStages(wizard);
+  await wizard.getByLabel("Destination page").selectOption("biomedical");
+  await wizard.getByLabel("Destination section").selectOption("outbreak_dynamics");
+  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Chart type\./ }).click();
+  await wizard.getByLabel("Search chart types").fill("map scatter");
+  await wizard.getByRole("button", { name: /Map scatter/i }).click();
+  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Data source\./ }).click();
+  const geoOptions = await wizard.getByLabel("GeoJSON source").locator("option").allTextContents();
+  expect(geoOptions).toContain(SOURCE_NAME);
+  expect(geoOptions).toContain("Journey I packaged boundaries");
+  expect(geoOptions.some((label) => /Netherlands|municipalit|province/i.test(label))).toBe(true);
+  await expect(wizard.getByLabel("Upload GeoJSON")).toBeVisible();
+  await wizard.getByLabel("Managed data source").selectOption("bio_wastewater_latest");
+  await wizard.getByLabel("GeoJSON source").selectOption({ label: SOURCE_NAME });
+  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Map and prepare data\./ }).click();
+  await wizard.locator('[data-field-id="geography"] select').selectOption("province");
+  await wizard.locator('[data-field-id="value"] select').selectOption("virus_particles");
+  await wizard.locator('[data-field-id="time"] select').selectOption("date");
+  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Configure chart\./ }).click();
+  await expect(wizard.locator(".chart-authoring-preview-ready")).toBeVisible();
+  await wizard.getByLabel("Chart title").fill("Journey I managed map");
+  await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button", { name: /^Review and create\./ }).click();
+  await wizard.getByRole("button", { name: "Create chart", exact: true }).click();
+  await expect(wizard).toHaveCount(0);
+
+  await seedMapBudgetCopies(page);
+  await page.reload();
+  await openBuild(page, { width: 1440, height: 900 });
+  manager = await openDataSourceManager(page);
+  await manager.getByLabel("Filter by usage").selectOption("used");
+  await selectSourceRow(manager, SOURCE_NAME);
+  detail = manager.getByRole("region", { name: "Content detail" });
+  await expect(detail).toContainText("HeV-A26 Dashboard: Epidemiological overview › Outbreak dynamics › Journey I managed map");
+  await expect(detail.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
+  await expect(page.getByRole("dialog", { name: /Delete/ })).toHaveCount(0);
+  const desktopBudget = await mapBudgetSnapshot(page);
+  expect(desktopBudget.allocated).toBeLessThanOrEqual(4);
+  expect(desktopBudget.normal).toBeLessThanOrEqual(2);
+  expect(desktopBudget.total).toBeGreaterThan(0);
+  expect(await managerOverflow(manager)).toBe(false);
+  await closeManager(page);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.reload();
+  await openBuild(page, { width: 1024, height: 768 });
+  manager = await openDataSourceManager(page);
+  expect(await manager.getAttribute("data-manager-layout")).toBe("tablet");
+  await manager.getByLabel("Filter by usage").selectOption("used");
+  await selectSourceRow(manager, SOURCE_NAME);
+  await expect(manager.getByRole("button", { name: "Back", exact: true })).toBeVisible();
+  detail = manager.getByRole("region", { name: "Content detail" });
+  await expect(detail).toContainText("HeV-A26 Dashboard: Epidemiological overview › Outbreak dynamics › Journey I managed map");
+  await expect(detail.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
+  await expect(detail.getByLabel("GeoJSON preview summary")).toBeVisible();
+  expect(await managerOverflow(manager)).toBe(false);
+
+  const tabletBeforeCancel = await geoJsonInventory(page);
+  await manager.getByRole("button", { name: "Back", exact: true }).click();
+  intake = manager.getByRole("region", { name: "Add GeoJSON to dashboard" });
+  await intake.getByRole("button", { name: "Add GeoJSON", exact: true }).click();
+  await intake.getByLabel("GeoJSON file").setInputFiles({ ...GEOJSON_FILE, name: "journey-i-tablet-cancel.geojson" });
+  await intake.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await geoJsonInventory(page)).toEqual(tabletBeforeCancel);
+});
+
+async function openBuild(page, viewport) {
+  await page.setViewportSize(viewport);
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "View", exact: true }).click();
+  const home = page.locator(".dashboard-command-page-scroller").getByRole("button", { name: "Home", exact: true });
+  if (await home.count()) await home.click();
+  await page.getByLabel("Dashboard mode").getByRole("button", { name: "Build", exact: true }).click();
+  await expect(page.locator('[data-canonical-mode="build"]')).toBeVisible();
+}
+
+async function openDataSourceManager(page) {
+  await page.getByRole("button", { name: "Source content", exact: true }).click();
+  const manager = page.locator(".source-content-workspace");
+  await expect(manager).toBeVisible();
+  await manager.getByRole("tab", { name: "Data sources", exact: true }).click();
+  return manager;
+}
+
+async function closeManager(page) {
+  const host = page.getByRole("complementary", { name: "Source content authoring" });
+  await host.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(host).toHaveCount(0);
+}
+
+async function selectSourceRow(manager, name) {
+  await manager.getByLabel("Search data sources").fill(name);
+  const row = manager.locator(".source-content-row").filter({ hasText: name }).first();
+  await expect(row).toBeVisible();
+  await row.click();
+}
+
+async function expectExactSixStages(wizard) {
+  const labels = await wizard.getByRole("navigation", { name: "Chart creation steps" }).getByRole("button").allTextContents();
+  expect(labels.map((label) => label.replace(
+    /(Complete|In progress|Not started|Waiting on prerequisite|Needs attention)$/u,
+    "",
+  ))).toEqual(["Destination", "Chart type", "Data source", "Map and prepare data", "Configure chart", "Review and create"]);
+}
+
+async function geoJsonInventory(page) {
+  return page.evaluate((key) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    if (!dashboard) return { sourceIds: [], profileIds: [], unusedNames: [] };
+    const entries = dashboard.contentLibrary?.sourceEntries ?? {};
+    const sourceIds = Object.keys(dashboard.dataSources ?? {}).filter((id) => (
+      dashboard.dataSources[id]?.kind === "dataset"
+      && dashboard.dataSources[id]?.type === "uploadedGeoJson"
+      && entries[id]
+    )).sort();
+    const used = new Set(dashboard.pages.flatMap(({ sections }) => sections)
+      .flatMap(({ panels }) => panels)
+      .map((placement) => placement.chart ?? placement)
+      .map((chart) => chart.presentation?.map?.geoSource).filter(Boolean));
+    return {
+      sourceIds,
+      profileIds: sourceIds.filter((id) => dashboard.datasetProfiles?.[id]).sort(),
+      unusedNames: sourceIds.filter((id) => !used.has(id)).map((id) => entries[id].displayName).sort(),
+    };
+  }, STORAGE_KEY);
+}
+
+async function seedPackagedSource(page) {
+  await page.evaluate(async ({ key, sourceName }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const sourceId = Object.keys(dashboard.contentLibrary.sourceEntries)
+      .find((id) => dashboard.contentLibrary.sourceEntries[id].displayName === sourceName);
+    const packagedId = "journey-i-packaged";
+    dashboard.dataSources[packagedId] = {
+      ...structuredClone(dashboard.dataSources[sourceId]),
+      provenance: { label: "Journey I packaged boundaries" },
+    };
+    if (dashboard.loadedData?.[sourceId]) {
+      dashboard.loadedData[packagedId] = structuredClone(dashboard.loadedData[sourceId]);
+    }
+    dashboard.contentLibrary.sourceEntries[packagedId] = {
+      sourceId: packagedId,
+      origin: "packaged",
+      ownership: "builder",
+      displayName: "Journey I packaged boundaries",
+      provenance: { fileName: "journey-i-packaged.geojson" },
+      health: "ready",
+    };
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY, sourceName: SOURCE_NAME });
+}
+
+async function seedMapBudgetCopies(page) {
+  await page.evaluate(({ key }) => {
+    const dashboard = JSON.parse(localStorage.getItem(key));
+    const section = dashboard.pages.flatMap(({ sections }) => sections)
+      .find(({ panels }) => panels.some((panel) => (panel.chart ?? panel).title === "Journey I managed map"));
+    const template = section.panels.map((panel) => panel.chart ?? panel)
+      .find((chart) => chart.title === "Journey I managed map");
+    section.panels = section.panels.filter((panel) => !(panel.chart ?? panel).id.startsWith("journey-i-map-"));
+    for (let index = 2; index <= 5; index += 1) {
+      const chart = structuredClone(template);
+      chart.id = `journey-i-map-${index}`;
+      chart.title = `Journey I map ${index}`;
+      chart.layout = { ...chart.layout, size: "standard", width: 6, height: 3 };
+      section.panels.push(chart);
+    }
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY });
+}
+
+async function managerOverflow(manager) {
+  return manager.evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+}
+
+async function mapBudgetSnapshot(page) {
+  return page.locator("[data-map-budget-status]").evaluateAll((nodes) => {
+    const statuses = nodes.map((node) => node.getAttribute("data-map-budget-status"));
+    return {
+      total: statuses.length,
+      normal: statuses.filter((status) => status === "normal").length,
+      allocated: statuses.filter((status) => status === "normal" || status === "degraded").length,
+      deferred: statuses.filter((status) => status === "deferred").length,
+    };
+  });
+}

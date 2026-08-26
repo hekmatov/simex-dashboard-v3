@@ -2,6 +2,7 @@ import React from "react";
 import { commitCsvReplacement, prepareCsvReplacement } from "../../content-library/csvReplacementTransaction.js";
 import { parseUploadedCsvFile } from "../chart-authoring/ChartWizardV3.jsx";
 import CsvDetail from "./CsvDetail.jsx";
+import GeoJsonDetail from "./GeoJsonDetail.jsx";
 import ContentActionDialog from "./ContentActionDialog.jsx";
 import DependencyList from "./DependencyList.jsx";
 
@@ -10,6 +11,7 @@ export default function DataSourceDetail({
   dashboard = {},
   contentDraftCoordinator,
   datasetProfile,
+  geoData,
   onRename,
   onRequestClose,
   onContentDraftStage,
@@ -112,7 +114,9 @@ export default function DataSourceDetail({
 
   return (
     <article className="source-content-detail-card">
-      {item.kind === "csv" ? <CsvDetail item={item} source={dashboard.dataSources?.[item.id]} datasetProfile={datasetProfile} /> : <GeoJsonShell item={item} />}
+      {item.kind === "csv"
+        ? <CsvDetail item={item} source={dashboard.dataSources?.[item.id]} datasetProfile={datasetProfile} />
+        : <GeoJsonDetail item={item} source={dashboard.dataSources?.[item.id]} geoData={geoData ?? dashboard.loadedData?.[item.id]} />}
       {item.kind === "csv" && <button type="button" className="secondary" disabled={!contentDraftCoordinator} onClick={() => { setReplacementError(""); setReplaceOpen(true); }}>{item.record.origin === "linked-project" ? "Relink" : "Replace file"}</button>}
       <RenameSource item={item} onRename={onRename} />
       <DependencyList uses={item.uses} activeRetainers={item.activeRetainers} usageKnown={item.usageKnown} />
@@ -141,20 +145,6 @@ export default function DataSourceDetail({
         onCancel={() => void cancelReplacement()}
       />
     </article>
-  );
-}
-
-function GeoJsonShell({ item }) {
-  return (
-    <section aria-labelledby="geojson-detail-heading">
-      <h3 id="geojson-detail-heading">GeoJSON details</h3>
-      <dl className="source-content-facts">
-        <div><dt>Name</dt><dd>{item.record.displayName}</dd></div>
-        <div><dt>Origin</dt><dd>{item.record.origin}</dd></div>
-        <div><dt>Health</dt><dd>{item.record.health}</dd></div>
-      </dl>
-      <p className="source-content-placeholder">The canonical GeoJSON summary and map preview are added with the GeoJSON management flow.</p>
-    </section>
   );
 }
 

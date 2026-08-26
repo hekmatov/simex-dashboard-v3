@@ -191,6 +191,12 @@ function ChartPanel({
           accessibilityEnabled={accessibilityEnabled}
           canonicalPlotId={canonicalPlotId}
           renderContext={renderContext}
+          mapBudgetRequest={chart.presentation?.map?.geoSource ? {
+            ownerId: `dashboard:${chart.id}`,
+            kind: "dashboard",
+            visible: chartVisible,
+            active: shouldRenderChart,
+          } : null}
           interactionMode="active"
           surface={editMode ? "build" : "view"}
           onImageReplace={requestEdit}

@@ -1,7 +1,67 @@
 import { isFinalizedWizardResult } from "../charting/forms/wizardDraft.js";
 import { isFinalizedStaticContentResult } from "../static-content/forms/staticContentDraft.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
+import { summarizeGeoJsonSource } from "./geoJsonSourceEntry.js";
 export { buildCsvContentDraft } from "./sourceEntrySchema.js";
+
+export function buildGeoJsonContentDraft({
+  owner, sourceId, fileName, geoJson, validation, displayName,
+  finalized = null, destination = null,
+} = {}) {
+  if (!new Set(["manager", "chart"]).has(owner)) throw new Error('GeoJSON draft owner must be "manager" or "chart".');
+  const id = requiredText(sourceId, "GeoJSON source id");
+  const name = requiredText(fileName, "GeoJSON file name");
+  const label = requiredText(displayName, "GeoJSON display name");
+  const summary = summarizeGeoJsonSource(validation);
+  const source = { kind: "dataset", type: "uploadedGeoJson", fileName: name, geoJson: structuredClone(geoJson), provenance: { label } };
+  const entry = { sourceId: id, origin: "uploaded", ownership: "builder", displayName: label, provenance: { fileName: name }, health: "ready" };
+  const payload = {
+    sourceId: id, source, geoJson: structuredClone(geoJson), entry,
+    ...(owner === "chart" ? { finalized: structuredClone(finalized), destination: structuredClone(destination) } : {}),
+  };
+  return {
+    draftId: `${owner}-geojson-${id}`,
+    owner,
+    kind: owner === "manager" ? "manager-geojson-add" : "chart-geojson-add",
+    payload,
+    assetIds: [], mediaIds: [], sourceIds: [id], source, entry, summary,
+    buildCandidate({ dashboard, draft }) {
+      const current = draft?.payload ?? payload;
+      const next = structuredClone(dashboard);
+      next.dataSources ??= {};
+      next.loadedData ??= {};
+      next.contentLibrary ??= { mediaItems: {}, sourceEntries: {} };
+      next.contentLibrary.sourceEntries ??= {};
+      if (Object.hasOwn(next.dataSources, id) || Object.hasOwn(next.contentLibrary.sourceEntries, id)) {
+        throw new Error(`Data source "${id}" already exists.`);
+      }
+      next.dataSources[id] = structuredClone(current.source);
+      next.loadedData[id] = structuredClone(current.geoJson);
+      next.contentLibrary.sourceEntries[id] = structuredClone(current.entry);
+      const candidate = owner === "chart" ? integrateChartCandidate(next, current.finalized, current.destination) : next;
+      return { dashboard: candidate, commitAssetIds: [], discardAssetIds: [], itemIds: [id] };
+    },
+  };
+}
+
+function integrateChartCandidate(dashboard, finalized, destination) {
+  record(finalized?.chart, "Finalized chart GeoJSON content");
+  record(destination, "Chart GeoJSON destination");
+  const page = dashboard.pages?.find(({ id }) => id === destination.pageId);
+  const section = page?.sections?.find(({ id }) => id === destination.sectionId);
+  if (!section) throw new Error("The selected chart destination no longer exists.");
+  const relation = destination.placement?.relation ?? destination.relation ?? "append";
+  const chart = structuredClone(finalized.chart);
+  if (relation === "append") section.panels.push(chart);
+  else if (relation === "before" || relation === "after") {
+    const anchorId = destination.placement?.anchorId ?? destination.anchorId;
+    const anchorIndex = section.panels.findIndex((panel) => (panel.chart ?? panel).id === anchorId);
+    if (anchorIndex < 0) throw new Error("The reviewed chart placement anchor no longer exists.");
+    section.panels.splice(relation === "before" ? anchorIndex : anchorIndex + 1, 0, chart);
+  } else throw new Error(`Unsupported chart placement relation "${String(relation)}".`);
+  if (finalized.chronoGroups !== undefined) dashboard.chronoGroups = structuredClone(finalized.chronoGroups);
+  return dashboard;
+}
 
 export function createDeferredCoordinatorDisposal({ schedule = queueMicrotask } = {}) {
   if (typeof schedule !== "function") throw new TypeError("Content draft disposal scheduler is required.");

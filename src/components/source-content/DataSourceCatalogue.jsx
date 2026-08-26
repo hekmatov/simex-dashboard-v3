@@ -1,7 +1,9 @@
 import React from "react";
 import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js";
-import { parseUploadedCsvFile } from "../chart-authoring/ChartWizardV3.jsx";
+import { buildGeoJsonContentDraft } from "../../content-library/contentDraftTransaction.js";
+import { parseUploadedCsvFile, parseUploadedGeoJsonFile } from "../chart-authoring/ChartWizardV3.jsx";
 import ContentCatalogue from "./ContentCatalogue.jsx";
+import GeoJsonDetail from "./GeoJsonDetail.jsx";
 
 export default function DataSourceCatalogue({
   dashboard = {}, contentDraftCoordinator, onContentDraftStage,
@@ -17,8 +19,114 @@ export default function DataSourceCatalogue({
         onContentDraftDiscard={onContentDraftDiscard}
         onAdded={onSelect}
       />
+      <ManagerGeoJsonIntake
+        dashboard={dashboard}
+        contentDraftCoordinator={contentDraftCoordinator}
+        onContentDraftStage={onContentDraftStage}
+        onContentDraftCommit={onContentDraftCommit}
+        onContentDraftDiscard={onContentDraftDiscard}
+        onAdded={onSelect}
+      />
       <ContentCatalogue {...props} onSelect={onSelect} label="Data source catalogue" searchLabel="Search data sources" addLabel="Catalogue" kindOptions={["csv", "geojson"]} />
     </div>
+  );
+}
+
+export function ManagerGeoJsonIntake({
+  dashboard = {}, contentDraftCoordinator, onContentDraftStage,
+  onContentDraftCommit, onContentDraftDiscard, onAdded,
+} = {}) {
+  const [open, setOpen] = React.useState(false);
+  const [candidate, setCandidate] = React.useState(null);
+  const [displayName, setDisplayName] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const draftIdRef = React.useRef(null);
+
+  React.useEffect(() => () => {
+    if (draftIdRef.current) onContentDraftDiscard?.(draftIdRef.current, "manager-geojson-unmount");
+    draftIdRef.current = null;
+  }, [onContentDraftDiscard]);
+
+  const discardCurrent = async (reason) => {
+    if (draftIdRef.current) await onContentDraftDiscard?.(draftIdRef.current, reason);
+    draftIdRef.current = null;
+  };
+  const stageFile = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    setError("");
+    try {
+      await discardCurrent("manager-geojson-replaced");
+      const parsed = await parseUploadedGeoJsonFile(file, dashboard.dataSources ?? {});
+      const label = labelFromGeoJsonFileName(parsed.source.fileName);
+      const input = buildGeoJsonContentDraft({
+        owner: "manager", sourceId: parsed.sourceId, fileName: parsed.source.fileName,
+        geoJson: parsed.geoJson, validation: parsed.validation, displayName: label,
+      });
+      const staged = onContentDraftStage?.(input);
+      draftIdRef.current = staged?.draftId ?? input.draftId;
+      setCandidate({ ...parsed, input });
+      setDisplayName(label);
+    } catch (caught) {
+      setCandidate(null);
+      setError(caught?.message ?? "The GeoJSON could not be prepared.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const cancel = async (reason = "manager-geojson-cancel") => {
+    await discardCurrent(reason);
+    setCandidate(null);
+    setDisplayName("");
+    setError("");
+    setOpen(false);
+  };
+  const add = async () => {
+    if (!candidate || !draftIdRef.current || !displayName.trim()) return;
+    setBusy(true);
+    setError("");
+    const draftId = draftIdRef.current;
+    try {
+      const input = buildGeoJsonContentDraft({
+        owner: "manager", sourceId: candidate.sourceId, fileName: candidate.source.fileName,
+        geoJson: candidate.geoJson, validation: candidate.validation, displayName,
+      });
+      contentDraftCoordinator?.updateDraft?.(draftId, { payload: input.payload, sourceIds: input.sourceIds });
+      const result = await onContentDraftCommit?.(draftId, input.buildCandidate);
+      draftIdRef.current = null;
+      setCandidate(null);
+      setOpen(false);
+      onAdded?.(result?.itemIds?.[0] ?? candidate.sourceId);
+    } catch (caught) {
+      try {
+        await onContentDraftDiscard?.(draftId, "manager-geojson-persistence-failure");
+      } catch {
+        // Preserve the original persistence failure for the user.
+      }
+      draftIdRef.current = null;
+      setError(caught?.message ?? "The GeoJSON could not be added to the dashboard.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section aria-label="Add GeoJSON to dashboard" data-draft-owner="manager">
+      {!open && <button type="button" className="secondary" onClick={() => setOpen(true)}>Add GeoJSON</button>}
+      {open && <div>
+        <h3>Add GeoJSON</h3>
+        <label><span>GeoJSON file</span><input type="file" accept=".geojson,application/geo+json,application/json" disabled={busy} onChange={(event) => void stageFile(event.target.files?.[0] ?? null)} /></label>
+        {candidate && <>
+          <label><span>Display name</span><input value={displayName} required onChange={(event) => setDisplayName(event.target.value)} /></label>
+          <GeoJsonDetail item={{ id: candidate.sourceId, record: { displayName, origin: "uploaded", health: "ready" } }} source={candidate.source} geoData={candidate.geoJson} summary={candidate.validation.summary} />
+          {candidate.validation.admission.status === "warning" && <p role="status">This source is within the measured warning range and may be added.</p>}
+          <button type="button" disabled={busy || !displayName.trim()} onClick={() => void add()}>Add to dashboard</button>
+        </>}
+        {error && <p role="alert">{error}</p>}
+        <button type="button" className="secondary" disabled={busy} onClick={() => void cancel()}>Cancel</button>
+      </div>}
+    </section>
   );
 }
 
@@ -138,4 +246,8 @@ function matchingCsv(dashboard, fingerprint) {
 
 function labelFromFileName(fileName) {
   return String(fileName ?? "Uploaded CSV").replace(/\.csv$/i, "").replace(/[-_]+/g, " ").trim() || "Uploaded CSV";
+}
+
+function labelFromGeoJsonFileName(fileName) {
+  return String(fileName ?? "Uploaded GeoJSON").replace(/\.geojson$/i, "").replace(/[-_]+/g, " ").trim() || "Uploaded GeoJSON";
 }

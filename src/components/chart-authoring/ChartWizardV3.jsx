@@ -51,9 +51,30 @@ import {
   resolveChartFootprint,
 } from "../chartPanelLayout.js";
 import { buildCsvContentDraft } from "../../content-library/sourceEntrySchema.js";
+import { buildGeoJsonContentDraft } from "../../content-library/contentDraftTransaction.js";
+import { validateGeoJson as validateManagedGeoJson } from "../../lib/geoJsonValidation.js";
 
 export const MAX_UPLOADED_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_UPLOADED_CSV_ROWS = 50_000;
+
+export async function parseUploadedGeoJsonFile(file, existingSources = {}) {
+  if (!file || typeof file.text !== "function") throw new TypeError("Choose a GeoJSON file to upload.");
+  const fileName = typeof file.name === "string" && file.name.trim() ? file.name.trim() : "uploaded.geojson";
+  const text = await file.text();
+  const validation = validateManagedGeoJson(text, { includeDiagnostics: true });
+  if (validation.schema.ok !== true) throw new Error(validation.schema.errors[0]?.message ?? "GeoJSON could not be validated.");
+  if (validation.admission.status === "rejected") {
+    throw new Error(`GeoJSON exceeds the ${validation.admission.violations.join(", ")} admission limit.`);
+  }
+  const geoJson = JSON.parse(text);
+  const sourceId = uniqueSourceId(fileName, isRecord(existingSources) ? existingSources : {});
+  return {
+    sourceId,
+    source: { kind: "dataset", type: "uploadedGeoJson", fileName, geoJson, provenance: { label: uploadedGeoJsonDisplayName(fileName) } },
+    geoJson,
+    validation,
+  };
+}
 
 export function createChartCsvDraftLifecycle({
   stageDraft,
@@ -255,10 +276,6 @@ export default function ChartWizardV3({
   const safeLoadedData = collectionOrEmpty(loadedData);
   const safeDatasetProfiles = collectionOrEmpty(datasetProfiles);
   const safeGeoDataSources = collectionOrEmpty(geoDataSources);
-  const geoSources = validatedGeoSourceOptions(
-    safeDataSources,
-    safeGeoDataSources,
-  );
   const safeGroups = Array.isArray(chronoGroups) ? chronoGroups : [];
   const safeExistingCharts = Array.isArray(existingCharts)
     ? existingCharts
@@ -277,6 +294,13 @@ export default function ChartWizardV3({
   const [manualTable, setManualTable] = React.useState(null);
   const [manualErrors, setManualErrors] = React.useState([]);
   const [uploadError, setUploadError] = React.useState("");
+  const [geoUploadError, setGeoUploadError] = React.useState("");
+  const [localGeoData, setLocalGeoData] = React.useState({});
+  const [localGeoDescriptors, setLocalGeoDescriptors] = React.useState({});
+  const geoDraftRef = React.useRef(null);
+  const effectiveGeoDataSources = mergeCollections(safeGeoDataSources, localGeoData);
+  const effectiveDataSources = mergeCollections(safeDataSources, localGeoDescriptors);
+  const geoSources = validatedGeoSourceOptions(effectiveDataSources, effectiveGeoDataSources);
   const [submissionError, setSubmissionError] = React.useState("");
   const transactionIdRef = React.useRef(null);
   const csvDraftAuthoritiesRef = React.useRef(null);
@@ -400,6 +424,11 @@ export default function ChartWizardV3({
       }
     });
   }, [csvDraftLifecycle]);
+  React.useEffect(() => () => {
+    const draftId = geoDraftRef.current?.draftId;
+    geoDraftRef.current = null;
+    if (draftId) void onContentDraftDiscard?.(draftId, "chart-geojson-unmount");
+  }, [onContentDraftDiscard]);
 
   function clearUploadedCsvUi(sourceId) {
     setSourceKind("");
@@ -429,9 +458,9 @@ export default function ChartWizardV3({
   );
   const rows = readEntry(runtimeLoadedData, wizard.draft?.sourceId) ?? [];
   const source = wizard.source
-    ?? readEntry(safeDataSources, wizard.draft?.sourceId);
+    ?? readEntry(effectiveDataSources, wizard.draft?.sourceId);
   const geoData = readEntry(
-    safeGeoDataSources,
+    effectiveGeoDataSources,
     wizard.draft?.presentation?.map?.geoSource,
   );
   const geoJoinFields = geoJoinFieldOptions(geoData);
@@ -588,7 +617,7 @@ export default function ChartWizardV3({
       try {
         const selected = applyGeographySourceSelection(wizard.draft, {
           sourceId: value,
-          geoData: readEntry(safeGeoDataSources, value),
+          geoData: readEntry(effectiveGeoDataSources, value),
           rows,
         });
         updatePath(["presentation", "map"], selected.presentation.map);
@@ -633,7 +662,7 @@ export default function ChartWizardV3({
         return {
           ...updated,
           draft: applyGeographyRoleSelection(updated.draft, {
-            geoData: readEntry(safeGeoDataSources, sourceId),
+            geoData: readEntry(effectiveGeoDataSources, sourceId),
             rows,
           }),
         };
@@ -776,6 +805,50 @@ export default function ChartWizardV3({
       setSubmissionError(safeMessage(error));
     }
   };
+  const discardGeoDraft = async (reason) => {
+    const draftId = geoDraftRef.current?.draftId;
+    geoDraftRef.current = null;
+    if (draftId) await onContentDraftDiscard?.(draftId, reason);
+  };
+  const uploadGeoJson = async (file) => {
+    if (!file) return;
+    setGeoUploadError("");
+    try {
+      await discardGeoDraft("chart-geojson-replaced");
+      const parsed = await parseUploadedGeoJsonFile(file, effectiveDataSources);
+      const input = buildGeoJsonContentDraft({
+        owner: "chart", sourceId: parsed.sourceId, fileName: parsed.source.fileName,
+        geoJson: parsed.geoJson, validation: parsed.validation,
+        displayName: uploadedGeoJsonDisplayName(parsed.source.fileName),
+      });
+      const staged = onContentDraftStage?.(input);
+      if (!staged && typeof onContentDraftStage !== "function") throw new Error("Chart GeoJSON staging authority is unavailable.");
+      geoDraftRef.current = { draftId: staged?.draftId ?? input.draftId, candidate: parsed };
+      setLocalGeoData((current) => ({ ...current, [parsed.sourceId]: parsed.geoJson }));
+      setLocalGeoDescriptors((current) => ({ ...current, [parsed.sourceId]: parsed.source }));
+      updateAuthoringPath(["presentation", "map", "geoSource"], parsed.sourceId);
+    } catch (error) {
+      await discardGeoDraft("chart-geojson-upload-failed");
+      setGeoUploadError(safeMessage(error));
+    }
+  };
+  const selectGeoSource = async (value) => {
+    const stagedSourceId = geoDraftRef.current?.candidate?.sourceId;
+    if (stagedSourceId && stagedSourceId !== value) {
+      await discardGeoDraft("chart-geojson-selection-changed");
+      setLocalGeoData((current) => {
+        const next = { ...current };
+        delete next[stagedSourceId];
+        return next;
+      });
+      setLocalGeoDescriptors((current) => {
+        const next = { ...current };
+        delete next[stagedSourceId];
+        return next;
+      });
+    }
+    updateAuthoringPath(["presentation", "map", "geoSource"], value);
+  };
   const confirmPendingSource = async () => {
     if (operationLocked()) return;
     try {
@@ -861,7 +934,7 @@ export default function ChartWizardV3({
           source: finalized.source ?? source ?? { id: finalized.chart.sourceId },
           profile: runtime.profile,
           geoSource: readEntry(
-            safeDataSources,
+            effectiveDataSources,
             finalized.chart.presentation?.map?.geoSource,
           ),
           chronoGroups: finalized.chronoGroups ?? wizard.chronoGroups,
@@ -894,12 +967,56 @@ export default function ChartWizardV3({
           placementProof,
           priorScrollAnchor: wizardDialogRef.current?.scrollTop ?? 0,
         });
+        let committedManagedGeoJson = false;
         setWizard((current) => reduceWizardState(current, {
           type: "commitStarted",
           transactionId: transactionIdRef.current,
         }));
         const result = await executeChartCreate(snapshot, {
           persist: async (payload, reviewedPlacement) => {
+            const activeGeoDraft = geoDraftRef.current;
+            const selectedGeoSourceId = finalized.chart.presentation?.map?.geoSource;
+            if (activeGeoDraft?.candidate?.sourceId === selectedGeoSourceId) {
+              if (typeof onContentDraftCommit !== "function") {
+                throw new Error("Chart GeoJSON commit authority is unavailable.");
+              }
+              const geoInput = buildGeoJsonContentDraft({
+                owner: "chart",
+                sourceId: activeGeoDraft.candidate.sourceId,
+                fileName: activeGeoDraft.candidate.source.fileName,
+                geoJson: activeGeoDraft.candidate.geoJson,
+                validation: activeGeoDraft.candidate.validation,
+                displayName: uploadedGeoJsonDisplayName(activeGeoDraft.candidate.source.fileName),
+                finalized,
+                destination: reviewedPlacement,
+              });
+              contentDraftCoordinator?.updateDraft?.(activeGeoDraft.draftId, {
+                payload: geoInput.payload,
+                sourceIds: geoInput.sourceIds,
+              });
+              let buildCandidate = geoInput.buildCandidate;
+              if (sourceKind === "upload") {
+                const csvCandidate = csvDraftLifecycle.activeCandidate(finalized.chart.sourceId);
+                const csvInput = buildCsvContentDraft({
+                  owner: "manager",
+                  sourceId: csvCandidate.sourceId,
+                  source: csvCandidate.source,
+                  profile: csvCandidate.profile,
+                  displayName: uploadedCsvDisplayName(csvCandidate.source.fileName),
+                });
+                buildCandidate = ({ dashboard: currentDashboard, draft }) => {
+                  const withCsv = csvInput.buildCandidate({ dashboard: currentDashboard }).dashboard;
+                  return geoInput.buildCandidate({ dashboard: withCsv, draft });
+                };
+              }
+              await onContentDraftCommit(activeGeoDraft.draftId, buildCandidate);
+              geoDraftRef.current = null;
+              committedManagedGeoJson = true;
+              if (sourceKind === "upload") {
+                await csvDraftLifecycle.discardAll("chart-csv-committed-with-geojson");
+              }
+              return { dashboardRevision: dashboardRevision ?? "session-current" };
+            }
             if (sourceKind === "upload") {
               const candidate = csvDraftLifecycle.activeCandidate(finalized.chart.sourceId);
               const input = buildCsvContentDraft({
@@ -935,7 +1052,7 @@ export default function ChartWizardV3({
           if (result.status === "committed") {
             setSubmissionError("");
             onSuspendedChange(false);
-            if (sourceKind === "upload") onClose?.();
+            if (sourceKind === "upload" || committedManagedGeoJson) onClose?.();
           } else if (result.status === "ambiguous") {
             setSubmissionError("Creation outcome is uncertain. Reconcile this transaction before retrying.");
           } else {
@@ -948,6 +1065,7 @@ export default function ChartWizardV3({
           setWizard((current) => clearSelectedSource(current));
           clearUploadedCsvUi(wizard.draft?.sourceId);
         }
+        await discardGeoDraft("chart-geojson-validation-or-persistence-failure");
         setSubmissionError(safeMessage(error));
       } finally {
         setSubmitting(false);
@@ -957,6 +1075,7 @@ export default function ChartWizardV3({
   function confirmClose() {
     if (operationLocked()) return;
     void csvDraftLifecycle.discardAll("chart-csv-cancel");
+    void discardGeoDraft("chart-geojson-cancel");
     const closed = reduceWizardState(wizard, { type: "confirmClose" });
     setWizard(closed);
     onDraftStateChange(closed);
@@ -1178,7 +1297,7 @@ export default function ChartWizardV3({
         wizard.stage === "data-source"
           ? React.createElement(DataSourceStep, {
               dashboard,
-              dataSources: safeDataSources,
+              dataSources: effectiveDataSources,
               loadedData: safeLoadedData,
               selectedSourceId: wizard.draft?.sourceId ?? "",
               selectedSource: source,
@@ -1190,6 +1309,7 @@ export default function ChartWizardV3({
               manualTable,
               manualErrors,
               uploadError,
+              geoUploadError,
               geographyRequired: wizard.draft
                 ? getChartSchema(wizard.draft.typeId).dataFamily === "geography"
                 : false,
@@ -1199,12 +1319,10 @@ export default function ChartWizardV3({
               prerequisites: active.prerequisites,
               onSelectExisting: selectExisting,
               onUploadCsv: uploadCsv,
+              onUploadGeoJson: uploadGeoJson,
               onSelectManual: selectManual,
               onManualTableChange: updateManual,
-              onGeoSourceChange: (value) => updateAuthoringPath(
-                ["presentation", "map", "geoSource"],
-                value,
-              ),
+              onGeoSourceChange: (value) => void selectGeoSource(value),
               onRequestClear: () => dispatch({ type: "requestClearSource" }),
             })
           : null,
@@ -1856,6 +1974,13 @@ function uploadedCsvDisplayName(fileName) {
     .replace(/\.csv$/i, "")
     .replace(/[-_]+/g, " ")
     .trim() || "Uploaded CSV";
+}
+
+function uploadedGeoJsonDisplayName(fileName) {
+  return String(fileName ?? "Uploaded GeoJSON")
+    .replace(/\.geojson$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim() || "Uploaded GeoJSON";
 }
 
 function clearSelectedSource(wizard) {

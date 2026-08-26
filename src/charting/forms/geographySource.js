@@ -17,8 +17,7 @@ export function validatedGeoSourceOptions(dataSources, geoDataSources) {
   return sources.flatMap(([sourceId, source]) => {
     const geoData = readEntry(geoDataSources, sourceId);
     if (
-      source?.kind
-        !== GEOGRAPHY_BINDING_CONTRACT.data_source.descriptor_kind
+      !isEligibleGeoJsonDescriptor(source)
       || geoData?.type !== "FeatureCollection"
       || !Array.isArray(geoData.features)
       || geoData.features.length === 0
@@ -33,6 +32,11 @@ export function validatedGeoSourceOptions(dataSources, geoDataSources) {
         : sourceId,
     }];
   });
+}
+
+function isEligibleGeoJsonDescriptor(source) {
+  return source?.kind === GEOGRAPHY_BINDING_CONTRACT.data_source.descriptor_kind
+    || (source?.kind === "dataset" && source?.type === "uploadedGeoJson");
 }
 
 export function applyGeographySourceSelection(chart, {

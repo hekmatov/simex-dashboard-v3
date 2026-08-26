@@ -716,6 +716,7 @@ export default function BuildWorkspace({
               {renderedAuxiliary === "source-content" && (
                 <SourceContentWorkspace
                   dashboard={dashboard}
+                  geoDataSources={geoDataSources}
                   contentDraftCoordinator={contentDraftCoordinator}
                   viewState={sourceContentViewState}
                   onViewStateChange={setSourceContentViewState}
