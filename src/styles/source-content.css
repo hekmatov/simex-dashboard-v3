@@ -34,3 +34,37 @@
   .source-content-back { margin-bottom: 12px; }
 }
 @media (max-width: 767px) { .source-content-workspace { display: none; } }
+.qmd-media-host {
+  display: contents;
+}
+
+.qmd-media-view {
+  display: block;
+  box-sizing: border-box;
+  inline-size: min(var(--qmd-media-width, 100%), 100%);
+  max-inline-size: 100%;
+  margin-block: 0.75rem;
+}
+
+.qmd-media-view--align-start { margin-inline: 0 auto; }
+.qmd-media-view--align-center { margin-inline: 0.75rem auto; }
+.qmd-media-view--align-end { margin-inline: 0 0; }
+.qmd-media-view--flow-wrap-start,
+.qmd-media-view--flow-wrap-end { max-inline-size: 50%; }
+.qmd-media-view--flow-wrap-start { float: inline-start; margin-inline-end: 1rem; }
+.qmd-media-view--flow-wrap-end { float: inline-end; margin-inline-start: 1rem; }
+.qmd-media-view--frame-outline { border: 1px solid var(--simex-border, #c9d0d8); padding: 0.25rem; }
+.qmd-media-view--frame-card { border: 1px solid var(--simex-border, #c9d0d8); border-radius: 0.5rem; padding: 0.5rem; background: var(--simex-surface, #fff); }
+.qmd-media-view img { display: block; inline-size: 100%; block-size: auto; max-inline-size: 100%; }
+.qmd-media-view__caption { display: block; margin-block-start: 0.375rem; }
+.qmd-media-view__fallback { display: block; min-block-size: 4rem; padding: 0.75rem; border: 1px dashed var(--simex-border, #c9d0d8); }
+.qmd-media-view__fallback button { display: block; margin-block-start: 0.5rem; }
+
+@container (max-width: 30rem) {
+  .qmd-media-view--flow-wrap-start,
+  .qmd-media-view--flow-wrap-end {
+    float: none;
+    max-inline-size: 100%;
+    margin-inline: auto;
+  }
+}

@@ -75,6 +75,156 @@ test("canonical ChartView routes typed Free text without rows or playback projec
   assert.equal(await active.locator(".free-text-chart-view__content").innerHTML(), await passive.locator(".free-text-chart-view__content").innerHTML());
 });
 
+test("Free text portals replace and unmount without orphan media or duplicate leases", async () => {
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { createRoot } = ReactDOMClient;
+    const { default: FreeTextChartView } = await import("/src/components/charts/FreeTextChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "qmd-portal-target";
+    window.__qmdPortalRoot = createRoot(target);
+    window.__qmdLeaseCalls = [];
+    window.__renderQmdMedia = (qmd) => window.__qmdPortalRoot.render(React.createElement(FreeTextChartView, {
+      model: { sourceId: "text-source", revision: 1, qmd },
+      chart: { id: "portal-panel", title: "Portal panel" },
+      contentRenderContext: {
+        mediaItems: {
+          ready: {
+            mediaId: "ready", revision: 1,
+            current: { kind: "asset", assetId: "asset-ready" },
+            displayName: "Ready map", defaultDescription: "Ready map",
+            origin: "uploaded", health: "ready",
+            dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+          },
+        },
+        assets: { "asset-ready": { assetId: "asset-ready" } },
+        resolveAsset: async (assetId) => {
+          window.__qmdLeaseCalls.push(`acquire:${assetId}`);
+          let released = false;
+          return {
+            url: `blob:https://simex.test/${assetId}`,
+            release() {
+              if (released) return false;
+              released = true;
+              window.__qmdLeaseCalls.push(`release:${assetId}`);
+              return true;
+            },
+          };
+        },
+        requestRepair: () => {},
+      },
+    }));
+    window.__renderQmdMedia("![Ready](simex-media:ready)");
+  });
+  await page.locator('#qmd-portal-target [data-qmd-media-host] img').waitFor();
+  assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready"]);
+
+  await page.evaluate(() => window.__renderQmdMedia("Unsafe ![Remote](https://example.test/map.png)"));
+  await page.waitForFunction(() => document.querySelector("#qmd-portal-target")?.textContent.includes("Remote"));
+  assert.equal(await page.locator('#qmd-portal-target [data-qmd-media-host]').count(), 0);
+  assert.equal(await page.locator('#qmd-portal-target img').count(), 0);
+  assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready", "release:asset-ready"]);
+
+  await page.evaluate(() => window.__qmdPortalRoot.unmount());
+  assert.equal(await page.locator('#qmd-portal-target img').count(), 0);
+  assert.deepEqual(await page.evaluate(() => window.__qmdLeaseCalls), ["acquire:asset-ready", "release:asset-ready"]);
+});
+
+test("mounted Build, View, and fullscreen Free text keep local health authority and unsafe text inert", async () => {
+  const remoteRequests = [];
+  page.on("request", (request) => {
+    if (request.url().startsWith("https://example.test/")) remoteRequests.push(request.url());
+  });
+  await page.evaluate(async () => {
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: ChartView } = await import("/src/components/charts/ChartView.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "qmd-surface-checkpoint";
+    window.__qmdSurfaceRoot = ReactDOMClient.createRoot(target);
+    window.__qmdSurfaceCalls = [];
+    const qmd = [
+      "![Ready](simex-media:ready)",
+      "![Missing](simex-media:missing)",
+      "![Corrupt](simex-media:corrupt)",
+      "![External](simex-media:external)",
+      "![Unsafe](https://example.test/unsafe.png)",
+    ].join("\n\n");
+    const source = { kind: "staticText", sourceVersion: 1, revision: 1, renderingPolicy: "portable-qmd-v1", qmd };
+    const item = (mediaId, health, assetId) => ({
+      mediaId, revision: 1, current: { kind: "asset", assetId },
+      displayName: `${mediaId} map`, defaultDescription: `${mediaId} map`, origin: "uploaded", health,
+      dimensions: { width: 800, height: 400 }, byteLength: 100, mediaType: "image/png",
+    });
+    const renderContext = {
+      sources: { narrative: source },
+      mediaItems: {
+        ready: item("ready", "ready", "asset-ready"),
+        missing: item("missing", "missing", "asset-missing"),
+        corrupt: item("corrupt", "corrupt", "asset-corrupt"),
+        external: {
+          mediaId: "external", revision: 1, current: { kind: "url", url: "https://example.test/external.png" },
+          displayName: "external map", defaultDescription: "external map", origin: "external", health: "external",
+        },
+      },
+      assets: { "asset-ready": { assetId: "asset-ready" }, "asset-corrupt": { assetId: "asset-corrupt" } },
+      resolveAsset: async (assetId) => {
+        window.__qmdSurfaceCalls.push(`acquire:${assetId}`);
+        let released = false;
+        return { url: `blob:https://simex.test/${assetId}`, release() {
+          if (released) return false;
+          released = true;
+          window.__qmdSurfaceCalls.push(`release:${assetId}`);
+          return true;
+        } };
+      },
+      requestRepair: ({ mediaId, surface }) => window.__qmdSurfaceCalls.push(`repair:${surface}:${mediaId}`),
+    };
+    const chart = {
+      id: "qmd-surface-panel", typeId: "freeText", title: "Surface checkpoint", sourceId: "narrative", roles: {},
+      transformations: { filters: [], grouping: null, aggregation: null, duplicates: null, missingValues: "gap" },
+      presentation: { title: { align: "left" }, background: { transparent: true } },
+      interaction: { zoom: { enabled: false } },
+    };
+    window.__qmdSurfaceRoot.render(React.createElement("div", null,
+      ...["build", "view", "fullscreen"].map((surface) => React.createElement("section", { key: surface, "data-surface": surface },
+        React.createElement(ChartView, { chart, renderContext, surface, interactionMode: surface === "build" ? "active" : "passive" }),
+      )),
+    ));
+  });
+  await page.waitForFunction(() => document.querySelectorAll("#qmd-surface-checkpoint img").length === 3);
+  const checkpoint = await page.evaluate(() => ({
+    hosts: document.querySelectorAll("#qmd-surface-checkpoint [data-qmd-media-host]").length,
+    images: document.querySelectorAll("#qmd-surface-checkpoint img").length,
+    buildRepair: document.querySelectorAll('#qmd-surface-checkpoint [data-surface="build"] button').length,
+    passiveRepair: document.querySelectorAll('#qmd-surface-checkpoint [data-surface="view"] button, #qmd-surface-checkpoint [data-surface="fullscreen"] button').length,
+    missingFallbacks: document.querySelectorAll('#qmd-surface-checkpoint .qmd-media-view[data-qmd-media-health="missing"]').length,
+    corruptFallbacks: document.querySelectorAll('#qmd-surface-checkpoint .qmd-media-view[data-qmd-media-health="corrupt"]').length,
+    inertVisible: [...document.querySelectorAll("#qmd-surface-checkpoint section")]
+      .every((section) => section.textContent.includes("External") && section.textContent.includes("Unsafe")),
+    calls: [...window.__qmdSurfaceCalls],
+  }));
+  assert.deepEqual(checkpoint, {
+    hosts: 9,
+    images: 3,
+    buildRepair: 2,
+    passiveRepair: 0,
+    missingFallbacks: 3,
+    corruptFallbacks: 3,
+    inertVisible: true,
+    calls: ["acquire:asset-ready", "acquire:asset-ready", "acquire:asset-ready"],
+  });
+  assert.deepEqual(remoteRequests, []);
+
+  await page.evaluate(() => window.__qmdSurfaceRoot.unmount());
+  assert.equal(await page.locator("#qmd-surface-checkpoint img, #qmd-surface-checkpoint [data-qmd-media-host]").count(), 0);
+  assert.deepEqual(await page.evaluate(() => window.__qmdSurfaceCalls), [
+    "acquire:asset-ready", "acquire:asset-ready", "acquire:asset-ready",
+    "release:asset-ready", "release:asset-ready", "release:asset-ready",
+  ]);
+});
+
 test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {
   const initial = "# Situation\n\nInitial valid preview.";
   await page.evaluate((source) => window.mountFreeTextEditor(source), initial);

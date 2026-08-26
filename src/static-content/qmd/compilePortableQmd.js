@@ -1,4 +1,4 @@
-import { parsePortableQmd } from "./parsePortableQmd.js";
+import { parsePortableQmdWithMedia } from "./portableQmdMedia.js";
 import { PORTABLE_QMD_POLICY } from "./portableQmdPolicy.js";
 import { renderPortableQmd } from "./renderPortableQmd.js";
 
@@ -16,7 +16,7 @@ export class PortableQmdRenderedNodeLimitError extends Error {
 }
 
 export function compilePortableQmd(source, options = {}) {
-  const parsed = parsePortableQmd(source);
+  const parsed = parsePortableQmdWithMedia(source);
   if (!parsed.ok) {
     return Object.freeze({
       ok: false,

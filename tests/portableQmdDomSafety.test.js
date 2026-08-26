@@ -96,6 +96,61 @@ test("arbitrary authored markup compiles into inert visible DOM without active e
   assert.deepEqual(remoteRequests, []);
 });
 
+test("QMD media compiler emits hosts only for known local records and leaves every unsafe destination request-free", async () => {
+  const remoteRequests = [];
+  page.on("request", (request) => {
+    if (request.url().startsWith("https://example.test/")) remoteRequests.push(request.url());
+  });
+  await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
+  const result = await page.evaluate(async () => {
+    const { compilePortableQmd } = await import("/src/static-content/qmd/compilePortableQmd.js");
+    const source = [
+      "![Ready](simex-media:ready){width=50% align=center flow=block frame=outline decorative=false}",
+      "![Missing](simex-media:missing)",
+      "![External](simex-media:external)",
+      "![Unknown](simex-media:unknown)",
+      "![HTTPS](https://example.test/map.png)",
+      "![Data](data:image/png;base64,AAAA)",
+      "![Blob](blob:https://example.test/id)",
+      "![File](file:///tmp/map.png)",
+      "![Malformed](simex-media:../bad)",
+    ].join("\n\n");
+    const mediaItems = {
+      ready: { mediaId: "ready", current: { kind: "asset", assetId: "asset-ready" }, health: "ready" },
+      missing: { mediaId: "missing", current: { kind: "asset", assetId: "asset-missing" }, health: "missing" },
+      external: { mediaId: "external", current: { kind: "url", url: "https://example.test/external.png" }, health: "external" },
+    };
+    const compiled = compilePortableQmd(source, { panelId: "media-safety", mediaItems });
+    const target = document.querySelector("#target");
+    target.replaceChildren(compiled.fragment);
+    return {
+      hosts: [...target.querySelectorAll("[data-qmd-media-host]")].map((node) => ({
+        key: node.dataset.qmdMediaKey,
+        mediaId: node.dataset.qmdMediaId,
+        width: node.dataset.qmdMediaWidth,
+      })),
+      text: target.textContent,
+      resources: target.querySelectorAll("img,source,picture,video,audio,object,embed").length,
+      resourceAttributes: [...target.querySelectorAll("*")].flatMap((node) => [...node.attributes])
+        .filter(({ name }) => ["src", "srcset", "poster"].includes(name)).length,
+      authoredAuthority: target.querySelectorAll("[style],[onclick],[class~='hero']").length,
+    };
+  });
+  await page.waitForTimeout(100);
+
+  assert.deepEqual(result.hosts, [
+    { key: "ready:1", mediaId: "ready", width: "50%" },
+    { key: "missing:2", mediaId: "missing", width: "100%" },
+  ]);
+  for (const visible of ["External", "Unknown", "HTTPS", "Data", "Blob", "File", "Malformed"]) {
+    assert.match(result.text, new RegExp(visible));
+  }
+  assert.equal(result.resources, 0);
+  assert.equal(result.resourceAttributes, 0);
+  assert.equal(result.authoredAuthority, 0);
+  assert.deepEqual(remoteRequests, []);
+});
+
 test("safe DOM renderer preserves supported semantic Markdown without HTML parsing", async () => {
   await page.goto(`${baseURL}/tests/fixtures/portable-qmd-browser.html`);
   const result = await page.evaluate(async () => {

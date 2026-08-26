@@ -93,6 +93,8 @@ export function renderChartContent(props, interactionMode) {
     else if (model.kind === "freeText") view = React.createElement(FreeTextChartView, {
       model,
       chart: props.chart,
+      contentRenderContext: props.renderContext,
+      surface: props.surface,
     });
     else return React.createElement(ChartStatus, {
       message: resolved.message ?? model.message,

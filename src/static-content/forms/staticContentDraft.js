@@ -3,7 +3,7 @@ import {
   validateStaticSource,
 } from "../staticSourceSchema.js";
 import { createChartDraft } from "../../charting/config/chartConfigV3.js";
-import { parsePortableQmd } from "../qmd/parsePortableQmd.js";
+import { parsePortableQmdWithMedia } from "../qmd/portableQmdMedia.js";
 import {
   normalizeImageTransform,
   resetImageTransform,
@@ -500,7 +500,7 @@ function draftMediaRevision(state) {
 
 function validateFreeTextContent(source) {
   if (source?.kind !== "staticText") return;
-  const parsed = parsePortableQmd(source.qmd);
+  const parsed = parsePortableQmdWithMedia(source.qmd);
   if (parsed.ok) return;
   const first = parsed.errors[0];
   throw new Error(`${first.message} Line ${first.location.line}, column ${first.location.column}. ${first.guidance}`);

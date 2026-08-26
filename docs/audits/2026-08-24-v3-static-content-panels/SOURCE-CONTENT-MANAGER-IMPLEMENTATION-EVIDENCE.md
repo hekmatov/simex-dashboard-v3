@@ -141,3 +141,34 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Build owns only serializable browse state. Conditional manager unmount still discards unresolved rename drafts; no hidden workspace, local catalogue overlay, or persistence bypass exists.
 - Direct-use graph scanning and enabled breadcrumb navigation were removed from Task 4. Only supplied committed usage metadata renders, as passive text unless a future owner supplies navigation.
 - C01–C03 are Passing on these corrected facts. C04 remains Partial; passive breadcrumbs are present only for supplied metadata and Task 6 dependency computation/navigation remains deferred.
+
+## Task 5 — QMD grammar, safe hosts, and portal runtime
+
+**Implementation state:** SCM-S11 engine and mounted renderer/request-authority slice implemented. SCM-C07 fallback/aspect-token foundation implemented but remains Partial pending Task 9 exhaustive responsive/RTL geometry. SCM-C06 and SCM-R03 remain unimplemented/unpromoted.
+
+### RED and deterministic evidence
+
+- The first sandboxed exact command produced **38 passes / 7 file-level failures**; six were inherited linked-worktree Vite/esbuild access-denied setup errors. The missing portable-media module was the intended product RED.
+- The usable exact RED outside that restriction produced **80 passes / 5 failures / 0 skipped / 0 todo** on missing grammar/annotation, hosts, QMD view, and portal lifecycle.
+- Focused grammar, lease/fallback, and portal/surface selections reached **6/6**, **2/2**, and **11/11** respectively.
+- Exact Task 5 selection reached **90/90** before the final mounted-checkpoint test addition and **91/91** in the fresh final run, with zero skipped/todo.
+
+### Implemented runtime boundary
+
+- One cycle-free grammar owner annotates the primitive QMD AST and consumes only one fully allowlisted immediate suffix. Compile and later dependency extraction consume that same annotated AST contract.
+- Only known local asset/package identities receive production-owned hosts. Unsafe, unknown, malformed, external-only, HTTP/HTTPS, data, blob, and file destinations remain visible inert text and produce zero requests.
+- Known missing/corrupt identity persists through a bounded fallback. Build receives repair navigation; View/fullscreen remain passive.
+- Healthy authored media owns one resolve/release lease per mounted QMD view. Portals are tied to the committed compiled fragment and clear on recompile/unmount without stale re-acquisition.
+- The existing DashboardRenderer → DashboardModeWorkspace → DashboardCanvas → ChartPanel transport now reaches FreeText through ChartView's `renderContext` handoff.
+
+### Mounted Build/View/fullscreen checkpoint
+
+- One real `ChartView` QMD document mounted at Build, View, and fullscreen with healthy, missing, corrupt, External, and raw HTTPS nodes.
+- Observed: 9 logical local hosts; 3 healthy images; three missing and three corrupt fallbacks; two Build-only repair controls; no passive repair controls.
+- External/raw HTTPS text remained visible on all surfaces; monitored external requests were zero.
+- Lifecycle log contained exactly three acquires and three releases; unmount left zero hosts/images.
+
+### Deferred truth
+
+- Task 6 dependency/delete, Task 7 picker/import, Task 8 replacement, Task 9 inspector controls and exhaustive width/wrap/RTL/narrow-collapse geometry, and complete Journey C fidelity remain pending.
+- No sanitizer, manager/picker action, replacement behavior, dependency graph, generated output, full build, full suite, or parent progress update was introduced.

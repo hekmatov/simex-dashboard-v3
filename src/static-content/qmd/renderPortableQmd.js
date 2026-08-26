@@ -45,6 +45,8 @@ export function renderPortableQmd(ast, options = {}) {
     footnoteNumbers: new Map((ast.footnotes ?? []).map((footnote, index) => [footnote.id, index + 1])),
     footnoteReferenceCounts: new Map(),
     calloutSequence: 0,
+    mediaItems: options.mediaItems ?? {},
+    mediaNodes: ast.mediaNodes ?? [],
   };
   const fragment = document.createDocumentFragment();
   renderTokens(ast.tokens, fragment, environment);
@@ -201,12 +203,10 @@ function renderInlineTokens(tokens, root, environment) {
       if (!frame.href && frame.rawHref) current().append(environment.document.createTextNode(` (${frame.rawHref})`));
       close();
     } else if (token.type === "image") {
-      const source = String(token.attrGet?.("src") ?? "");
-      const title = token.attrGet?.("title");
-      const suffix = title ? ` "${title}"` : "";
-      const inert = createElement(environment.document, "span", "portable-qmd-inert-embed");
-      inert.textContent = `![${token.content ?? ""}](${source}${suffix})`;
-      current().append(inert);
+      const mediaNode = environment.mediaNodes[token.meta?.portableMediaNodeIndex];
+      const mediaItem = valueForId(environment.mediaItems, mediaNode?.mediaId);
+      if (mediaNode && isLocalMediaItem(mediaItem)) current().append(renderMediaHost(mediaNode, mediaItem, environment));
+      else current().append(renderInertImage(token, mediaNode, environment));
     } else if (token.type === "math_inline") {
       current().append(renderMath(token.content, false, environment));
     } else if (token.type === "footnote_ref") {
@@ -217,6 +217,42 @@ function renderInlineTokens(tokens, root, environment) {
       current().append(environment.document.createTextNode(token.content || token.markup));
     }
   }
+}
+
+function renderMediaHost(mediaNode, mediaItem, environment) {
+  const host = createElement(environment.document, "span", "qmd-media-host");
+  const ordinal = environment.mediaNodes.indexOf(mediaNode) + 1;
+  host.dataset.qmdMediaHost = "";
+  host.dataset.qmdMediaKey = `${mediaNode.mediaId}:${ordinal}`;
+  host.dataset.qmdMediaId = mediaNode.mediaId;
+  host.dataset.qmdMediaAlt = mediaNode.alt;
+  host.dataset.qmdMediaWidth = mediaNode.attributes.width;
+  host.dataset.qmdMediaAlign = mediaNode.attributes.align;
+  host.dataset.qmdMediaFlow = mediaNode.attributes.flow;
+  host.dataset.qmdMediaFrame = mediaNode.attributes.frame;
+  host.dataset.qmdMediaCaption = mediaNode.attributes.caption;
+  host.dataset.qmdMediaDecorative = String(mediaNode.attributes.decorative);
+  host.dataset.qmdMediaHealth = mediaItem.health;
+  return host;
+}
+
+function renderInertImage(token, mediaNode, environment) {
+  const source = String(token.attrGet?.("src") ?? "");
+  const title = token.attrGet?.("title");
+  const suffix = title ? ` "${title}"` : "";
+  const inert = createElement(environment.document, "span", "portable-qmd-inert-embed");
+  inert.textContent = mediaNode?.sourceText ?? `![${token.content ?? ""}](${source}${suffix})`;
+  return inert;
+}
+
+function isLocalMediaItem(mediaItem) {
+  return mediaItem?.current?.kind === "asset" || mediaItem?.current?.kind === "package";
+}
+
+function valueForId(collection, id) {
+  if (collection instanceof Map) return collection.get(id);
+  if (Array.isArray(collection)) return collection.find((entry) => entry?.mediaId === id);
+  return collection?.[id];
 }
 
 function renderCodeBlock(token, environment) {

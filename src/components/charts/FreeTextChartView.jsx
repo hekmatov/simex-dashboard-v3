@@ -1,19 +1,45 @@
 import React from "react";
+import { createPortal } from "react-dom";
 
 import { compilePortableQmd } from "../../static-content/qmd/compilePortableQmd.js";
+import QmdMediaView from "./QmdMediaView.jsx";
 
-export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
+export function FreeTextChartView({ model, chart, contentRenderContext = {}, hostHeadingLevel = 2, surface = "view" } = {}) {
   const panelId = normalizePanelId(chart?.id ?? model?.sourceId);
   const titleId = `${panelId}-title`;
   const contentRef = React.useRef(null);
+  const [portalEntries, setPortalEntries] = React.useState([]);
   const prepared = React.useMemo(() => compilePortableQmd(model?.qmd ?? "", {
     panelId,
     hostHeadingLevel,
-  }), [hostHeadingLevel, model?.qmd, panelId]);
+    mediaItems: contentRenderContext.mediaItems,
+  }), [contentRenderContext.mediaItems, hostHeadingLevel, model?.qmd, panelId]);
 
   React.useLayoutEffect(() => {
-    if (!prepared.ok || !contentRef.current) return;
-    contentRef.current.replaceChildren(prepared.fragment.cloneNode(true));
+    if (!prepared.ok || !contentRef.current) {
+      setPortalEntries([]);
+      return undefined;
+    }
+    const fragment = prepared.fragment.cloneNode(true);
+    const sink = contentRef.current;
+    sink.replaceChildren(fragment);
+    const entries = [...sink.querySelectorAll("[data-qmd-media-host]")].map((host) => ({
+      key: host.dataset.qmdMediaKey,
+      prepared,
+      host,
+      mediaItem: valueForId(contentRenderContext.mediaItems, host.dataset.qmdMediaId),
+      attributes: {
+        alt: host.dataset.qmdMediaAlt ?? "",
+        width: host.dataset.qmdMediaWidth,
+        align: host.dataset.qmdMediaAlign,
+        flow: host.dataset.qmdMediaFlow,
+        frame: host.dataset.qmdMediaFrame,
+        caption: host.dataset.qmdMediaCaption ?? "",
+        decorative: host.dataset.qmdMediaDecorative === "true",
+      },
+    }));
+    setPortalEntries(entries);
+    return () => sink.replaceChildren();
   }, [prepared]);
 
   if (!prepared.ok) {
@@ -25,7 +51,7 @@ export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
     );
   }
 
-  return (
+  return <>
     <section
       className="free-text-chart-view"
       aria-labelledby={titleId}
@@ -43,7 +69,16 @@ export function FreeTextChartView({ model, chart, hostHeadingLevel = 2 } = {}) {
         data-portable-qmd-sink="safe-dom"
       />
     </section>
-  );
+    {portalEntries.filter((entry) => entry.prepared === prepared).map((entry) => createPortal(<QmdMediaView
+      mediaItem={entry.mediaItem}
+      attributes={entry.attributes}
+      assets={contentRenderContext.assets}
+      resolveAsset={contentRenderContext.resolveAsset}
+      onRepair={surface === "build" && typeof contentRenderContext.requestRepair === "function"
+        ? () => contentRenderContext.requestRepair({ mediaId: entry.mediaItem?.mediaId, panelId: chart?.id, surface })
+        : undefined}
+    />, entry.host, entry.key))}
+  </>;
 }
 
 function formatFirstError(prepared) {
@@ -59,6 +94,12 @@ function normalizePanelId(value) {
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return normalized || "static-text";
+}
+
+function valueForId(collection, id) {
+  if (collection instanceof Map) return collection.get(id);
+  if (Array.isArray(collection)) return collection.find((entry) => entry?.mediaId === id);
+  return collection?.[id];
 }
 
 export default FreeTextChartView;
