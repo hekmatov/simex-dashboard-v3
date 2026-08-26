@@ -460,16 +460,25 @@ test("non-quota chart removal preserves session work with a bounded fallback", a
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_NON_QUOTA__ = false; });
 });
 
-test("timer-owned fire-and-forget persistence failure uses the application fallback", async ({ page }) => {
+test("timer-owned pending edit uses the bounded session fallback", async ({ page }) => {
   await openDashboardEditMode(page);
   await page.evaluate(() => { globalThis.__SIMEX_FAIL_SAVE_LONG__ = true; });
-  await page.getByLabel("Program label").fill("Timer-owned failed edit");
+  await page.getByRole("button", { name: "Dashboard map", exact: true }).click();
+  const map = page.getByRole("complementary", { name: "Dashboard map" });
+  await map.getByRole("treeitem", { name: "Biomedical", exact: true }).click();
+  await map.getByRole("button", { name: "Inspector", exact: true }).click();
+  await map.getByLabel("Page title", { exact: true }).fill("Timer-owned failed edit");
 
-  await expect(page.getByRole("heading", { name: "Dashboard configuration error" }))
+  const status = page.getByRole("status").filter({
+    hasText: "Dashboard changes are applied for this session but cannot be retained after reload.",
+  });
+  await expect(status).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Timer-owned failed edit", exact: true }))
     .toBeVisible();
-  const message = await page.locator(".status-panel-error p").textContent();
-  expect(message).toContain("Dashboard persistence is unavailable:");
+  const message = await status.textContent();
   expect(message.length).toBeLessThanOrEqual(240);
+  expect(await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0))
+    .toBeGreaterThan(0);
 });
 
 test("cancelled panel baseline fire-and-forget failure uses the application fallback", async ({ page }) => {
