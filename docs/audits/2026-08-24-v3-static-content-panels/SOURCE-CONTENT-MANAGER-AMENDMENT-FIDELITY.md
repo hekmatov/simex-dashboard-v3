@@ -73,6 +73,11 @@ This overlay supersedes only the implementation-status/evidence cells for the na
 | SCM-S07 | Passing for bounded delete slice | Blocked plans cannot commit or open a dialog; eligible plans are revision-checked, no-cascade, and compensating. Broader recovery journeys remain pending. |
 | SCM-C08 | Partial overall; delete branch Passing | Blocked inline guidance/navigation and eligible destructive confirmation are wired through the mounted manager carrier. Replacement/relink modals remain Tasks 8+ and are not promoted. |
 
+### T6-R04 mounted correction
+
+- Fresh planned desktop/tablet selection: **2/2 passing**, 40.4 s. Both mounted layouts prove blocked Delete has inline guidance and no dialog, while an eligible retained external MediaItem opens the exact destructive dialog, initially focuses Cancel, preserves byte-for-byte localStorage equality on Cancel, and returns focus to Delete.
+- The tablet detail pane is bounded and scrollable, keeping the action reachable inside the existing 1024×768 auxiliary surface. SCM-S07 and the delete branch of SCM-C08 remain Passing; C08 overall remains Partial because replacement/relink is deferred.
+
 ## Promotion gate
 
 - All 36 proposed rows are initially Proposed / unimplemented / not verified.

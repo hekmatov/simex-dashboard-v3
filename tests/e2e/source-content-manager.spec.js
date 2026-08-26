@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const STORAGE_KEY = "simex-dashboard-config-v3-three-mode-v1";
+
 test.beforeEach(async ({ page, request }) => {
   await request.post("/__test__/catalogue-mode", { data: { mode: "absent" } });
   await page.goto("http://127.0.0.1:4175/");
@@ -60,6 +62,7 @@ test("non-modal manager restores canvas selection scroll and focus", async ({ pa
 });
 
 test("desktop composition keeps canvas and catalogue state without overflow", async ({ page }) => {
+  test.setTimeout(90_000);
   await openBuild(page, { width: 1440, height: 900 });
   await page.getByRole("button", { name: "Source content", exact: true }).click();
   const host = page.getByRole("complementary", { name: "Source content authoring" });
@@ -112,6 +115,8 @@ test("desktop composition keeps canvas and catalogue state without overflow", as
   await manager.getByLabel("Filter by usage").selectOption("all");
   await expect(manager.locator('.source-content-row[aria-pressed="true"]')).toContainText(`${originalName} managed`);
 
+  await assertMountedDeleteCheckpoint(page, manager, { width: 1440, height: 900 });
+
   const geometry = await page.evaluate(() => {
     const host = document.querySelector('.build-authoring-auxiliary[data-authoring-surface="source-content"]');
     const workspace = host?.querySelector(".source-content-workspace")?.getBoundingClientRect();
@@ -140,6 +145,7 @@ test("desktop composition keeps canvas and catalogue state without overflow", as
 });
 
 test("tablet composition navigates list to detail with Back and preserves filters", async ({ page }) => {
+  test.setTimeout(90_000);
   await openBuild(page, { width: 1024, height: 768 });
   const canvas = page.locator("[data-canonical-canvas-instance]");
   const canvasInstance = await canvas.getAttribute("data-canonical-canvas-instance");
@@ -167,6 +173,7 @@ test("tablet composition navigates list to detail with Back and preserves filter
   await expect(manager.getByLabel("Search data sources")).toHaveValue("");
   await expect(manager.getByLabel("Filter by kind")).toHaveValue("all");
   await expect(firstItem).toHaveAttribute("aria-pressed", "true");
+  await assertMountedDeleteCheckpoint(page, manager, { width: 1024, height: 768 });
   const geometry = await page.evaluate(() => {
     const host = document.querySelector('.build-authoring-auxiliary[data-authoring-surface="source-content"]');
     const workspace = host?.querySelector(".source-content-workspace")?.getBoundingClientRect();
@@ -198,4 +205,64 @@ async function openBuild(page, viewport) {
   await page.setViewportSize(viewport);
   await page.getByRole("button", { name: "Build", exact: true }).click();
   await expect(page.locator('[data-canonical-mode="build"]')).toBeVisible();
+}
+
+async function assertMountedDeleteCheckpoint(page, manager, viewport) {
+  await page.evaluate(async ({ key }) => {
+    const stored = localStorage.getItem(key);
+    const input = stored === null
+      ? await fetch("/config/dashboard.json").then((response) => response.json())
+      : JSON.parse(stored);
+    const configuredProfiles = await fetch("/config/dataset-profiles.json").then((response) => response.json());
+    const { normalizeDashboardSource } = await import("/src/lib/loadDashboard.js");
+    const dashboard = normalizeDashboardSource(input, configuredProfiles);
+    dashboard.contentLibrary.mediaItems["task6-unused-media"] = {
+      mediaId: "task6-unused-media",
+      revision: 1,
+      current: { kind: "url", url: "https://example.test/task6-unused.png" },
+      displayName: "Task 6 unused media",
+      defaultDescription: "",
+      origin: "external",
+      health: "external",
+    };
+    const { validateConfigurationForPersistence } = await import("/src/lib/dashboardPersistenceValidation.js");
+    validateConfigurationForPersistence(dashboard, configuredProfiles);
+    localStorage.setItem(key, JSON.stringify(dashboard));
+  }, { key: STORAGE_KEY });
+  await page.reload();
+  await openBuild(page, viewport);
+  await page.getByRole("button", { name: "Source content", exact: true }).click();
+  await manager.getByRole("tab", { name: "Data sources" }).click();
+  await manager.getByLabel("Search data sources").fill("");
+  await manager.getByLabel("Filter by kind").selectOption("all");
+  await manager.getByLabel("Filter by usage").selectOption("used");
+  const blockedRow = manager.locator(".source-content-row").first();
+  await expect(blockedRow).toBeVisible();
+  await blockedRow.click();
+  const blockedDelete = manager.getByRole("button", { name: "Delete", exact: true });
+  await expect(blockedDelete).toBeDisabled();
+  await expect(manager).toContainText("Remove or replace the direct use before deleting");
+  await expect(page.getByRole("dialog", { name: /Delete/ })).toHaveCount(0);
+
+  if (viewport.width < 1200) await manager.getByRole("button", { name: "Back", exact: true }).click();
+  await manager.getByRole("tab", { name: "Media" }).click();
+  await manager.getByLabel("Filter by usage").selectOption("unused");
+  await manager.getByLabel("Search media").fill("Task 6 unused media");
+  const eligibleRow = manager.locator(".source-content-row").first();
+  await expect(eligibleRow).toBeVisible();
+  const eligibleName = await eligibleRow.locator(".source-content-row__name").textContent();
+  await eligibleRow.click();
+  const eligibleDelete = manager.getByRole("button", { name: "Delete", exact: true });
+  await expect(eligibleDelete).toBeEnabled();
+  const prior = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+  await eligibleDelete.click();
+  const dialog = page.getByRole("dialog", { name: `Delete ${eligibleName}?` });
+  await expect(dialog).toBeVisible();
+  const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+  await expect(cancel).toBeFocused();
+  await cancel.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(eligibleDelete).toBeFocused();
+  await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(prior);
+  if (viewport.width < 1200) await manager.getByRole("button", { name: "Back", exact: true }).click();
 }

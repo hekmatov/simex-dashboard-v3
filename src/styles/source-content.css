@@ -29,7 +29,8 @@
 .source-content-workspace :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 @media (max-width: 1199px) {
   .source-content-workspace { width: 100%; }
-  .source-content-composition { display: block; }
+  .source-content-composition { display: block; height: 100%; }
+  .source-content-catalogue, .source-content-detail { box-sizing: border-box; height: 100%; }
   .source-content-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .source-content-back { margin-bottom: 12px; }
 }

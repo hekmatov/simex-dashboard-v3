@@ -66,7 +66,7 @@ test("source dependency state attaches after durable SourceEntry validation", ()
         },
       },
     },
-    dataSources: { cases: { kind: "csv", origin: "linked-project" } },
+    dataSources: { cases: { kind: "dataset", type: "uploadedCsv", origin: "linked-project", csvText: "value\n1\n" } },
     datasetProfiles: {},
     pages: [],
   };
@@ -77,4 +77,32 @@ test("source dependency state attaches after durable SourceEntry validation", ()
   assert.equal(typeof item.uses.onDelete, "function");
   assert.equal(Object.hasOwn(projected.contentLibrary.sourceEntries.cases, "uses"), false);
   assert.equal(Object.keys(projected).includes("contentDependencyState"), false);
+});
+
+test("projected zero-use media is known unused and remains eligible in the manager", () => {
+  const dashboard = {
+    contentLibrary: {
+      mediaItems: {
+        unused: {
+          mediaId: "unused",
+          revision: 1,
+          current: { kind: "url", url: "https://example.test/unused.png" },
+          displayName: "Unused media",
+          defaultDescription: "",
+          origin: "external",
+          health: "external",
+        },
+      },
+      sourceEntries: {},
+    },
+    dataSources: {},
+    datasetProfiles: {},
+    pages: [],
+  };
+  const projected = projectContentManagerDependencies({ dashboard, onDelete() {} });
+  const [item] = visibleManagerItems(projected, "media", { usage: "unused" });
+  assert.equal(item.id, "unused");
+  assert.equal(item.usageKnown, true);
+  assert.equal(item.usageCount, 0);
+  assert.equal(item.uses.deletion.status, "ready");
 });

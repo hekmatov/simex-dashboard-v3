@@ -150,12 +150,13 @@ export function visibleManagerItems(dashboard = {}, tab = "media", filters = {})
 }
 
 function contentItem(dashboard, id, kind, record, dependencyState = null) {
-  const uses = Array.isArray(dependencyState?.uses)
+  const hasDependencyState = Array.isArray(dependencyState?.uses);
+  const uses = hasDependencyState
     ? dependencyState.uses
     : Array.isArray(record.uses) ? record.uses : [];
   const usageCount = Number.isSafeInteger(record.usageCount) && record.usageCount >= 0
     ? record.usageCount
-    : uses.length > 0 ? uses.length : null;
+    : hasDependencyState ? uses.length : uses.length > 0 ? uses.length : null;
   return {
     id,
     kind,

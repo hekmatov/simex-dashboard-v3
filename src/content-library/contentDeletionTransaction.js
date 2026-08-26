@@ -1,4 +1,6 @@
 import { activeRetentions, csvDependencies, geoJsonDependencies, mediaDependencies } from "./contentDependencyGraph.js";
+import { stableSerialize } from "../charting/runtime/chartPreparationIdentity.js";
+import { buildAssetReferenceGraph } from "../static-content/assets/assetReferenceGraph.js";
 
 export function prepareContentDeletion({ dashboard, graph, item } = {}) {
   const kind = normalizedKind(item?.kind);
@@ -11,8 +13,12 @@ export function prepareContentDeletion({ dashboard, graph, item } = {}) {
     status: directUses.length > 0 || retainers.length > 0 ? "blocked" : "ready",
     item: { kind, id: itemId },
     directUses: [...directUses], retainers: [...retainers],
-    expectedIdentity: identityFor(kind, itemId, record),
-    expectedRevision: revisionFor(record),
+    ...(kind === "media" ? {
+      expectedIdentity: identityFor(kind, itemId, record),
+      expectedRevision: revisionFor(record),
+    } : {
+      expectedAuthorityIdentity: sourceAuthorityIdentity(dashboard, kind, itemId),
+    }),
   });
 }
 
@@ -28,7 +34,7 @@ export async function commitContentDeletion(plan, adapters = {}) {
   try {
     await adapters.commitDashboard(candidate, { transactionId });
     wroteDashboard = true;
-    await adapters.deleteAuthority?.(plan, { dashboard: candidate, transactionId });
+    await adapters.deleteAuthority?.(plan, { dashboard: candidate, transactionId, authoritySnapshot });
     return deepFreeze({ status: "committed", item: plan.item, dashboard: candidate });
   } catch (error) {
     const rollbackErrors = [];
@@ -42,6 +48,34 @@ export async function commitContentDeletion(plan, adapters = {}) {
     if (rollbackErrors.length > 0) throw new AggregateError([error, ...rollbackErrors], "Content deletion failed and rollback did not complete.");
     throw error;
   }
+}
+
+export function createContentDeletionAdapters({ getDashboard, commitDashboard, assetStore } = {}) {
+  if (typeof getDashboard !== "function" || typeof commitDashboard !== "function") {
+    throw new TypeError("Deletion adapters require getDashboard and commitDashboard.");
+  }
+  if (!assetStore || typeof assetStore.snapshot !== "function" || typeof assetStore.remove !== "function" || typeof assetStore.restore !== "function") {
+    throw new TypeError("Deletion adapters require an authored asset store with snapshot, remove, and restore.");
+  }
+  return Object.freeze({
+    getDashboard,
+    commitDashboard,
+    async snapshotAuthority(plan, dashboard) {
+      const assetId = authoredAssetId(dashboard, plan?.item);
+      if (!assetId) return null;
+      return Object.freeze({ assetIds: Object.freeze([assetId]), records: await assetStore.snapshot([assetId]) });
+    },
+    async deleteAuthority(_plan, { dashboard, authoritySnapshot } = {}) {
+      if (!authoritySnapshot) return;
+      const referenced = new Set(buildAssetReferenceGraph({ dashboard }).referencedAssetIds);
+      for (const assetId of authoritySnapshot.assetIds) {
+        if (!referenced.has(assetId)) await assetStore.remove(assetId);
+      }
+    },
+    async restoreAuthority(snapshot) {
+      if (snapshot?.records) await assetStore.restore(snapshot.records);
+    },
+  });
 }
 
 function deleteCandidate(dashboard, item) {
@@ -61,11 +95,26 @@ function deleteCandidate(dashboard, item) {
 
 function assertCurrent(plan, dashboard) {
   const record = recordFor(dashboard, plan.item.kind, plan.item.id);
-  if (!record || identityFor(plan.item.kind, plan.item.id, record) !== plan.expectedIdentity || revisionFor(record) !== plan.expectedRevision) throw new Error("Content deletion plan is stale; the item identity or revision changed.");
+  const stale = plan.item.kind === "media"
+    ? !record || identityFor(plan.item.kind, plan.item.id, record) !== plan.expectedIdentity || revisionFor(record) !== plan.expectedRevision
+    : !record || sourceAuthorityIdentity(dashboard, plan.item.kind, plan.item.id) !== plan.expectedAuthorityIdentity;
+  if (stale) throw new Error("Content deletion plan is stale; the item authority changed.");
 }
 function recordFor(dashboard, kind, id) { return kind === "media" ? dashboard?.contentLibrary?.mediaItems?.[id] : dashboard?.contentLibrary?.sourceEntries?.[id]; }
 function identityFor(kind, id, record) { return `${kind}:${id}:${String(kind === "media" ? record.mediaId ?? "" : record.sourceId ?? "")}:${JSON.stringify(record.current ?? null)}`; }
 function revisionFor(record) { return Number.isSafeInteger(record?.revision) ? record.revision : null; }
+function sourceAuthorityIdentity(dashboard, kind, id) {
+  return stableSerialize({
+    sourceEntry: dashboard?.contentLibrary?.sourceEntries?.[id],
+    dataSource: dashboard?.dataSources?.[id],
+    datasetProfile: kind === "csv" ? dashboard?.datasetProfiles?.[id] : null,
+  });
+}
+function authoredAssetId(dashboard, item) {
+  if (item?.kind !== "media") return null;
+  const current = dashboard?.contentLibrary?.mediaItems?.[item.id]?.current;
+  return current?.kind === "asset" ? current.assetId : null;
+}
 function normalizedKind(value) { const kind = String(value ?? "").toLocaleLowerCase(); if (!["media", "csv", "geojson"].includes(kind)) throw new TypeError("Content item kind must be media, csv, or geojson."); return kind; }
 function requiredText(value, description) { if (typeof value !== "string" || !value.trim()) throw new TypeError(`${description} is required.`); return value.trim(); }
 function deepFreeze(value) { if (!value || typeof value !== "object") return value; for (const child of Object.values(value)) deepFreeze(child); return Object.freeze(value); }

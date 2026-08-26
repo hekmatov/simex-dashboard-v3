@@ -74,9 +74,10 @@ import { installChartDraftUnloadGuard } from "../charting/forms/chartDraftUnload
 import { isGeoJsonDescriptor } from "../data/sourceRequest.js";
 import { getChartSchema } from "../charting/schemas/chartSchemaRegistry.js";
 import { prepareStaticPanelTransaction } from "../static-content/staticPanelTransaction.js";
-import { resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
+import { browserAuthoredAssetStore, resolveBrowserAuthoredAsset } from "../static-content/assets/browserAuthoredAssetRuntime.js";
 import { buildContentDependencyGraph } from "../content-library/contentDependencyGraph.js";
-import { prepareContentDeletion, commitContentDeletion } from "../content-library/contentDeletionTransaction.js";
+import { prepareContentDeletion, commitContentDeletion, createContentDeletionAdapters } from "../content-library/contentDeletionTransaction.js";
+import { classifyManagedSource } from "../content-library/sourceEntrySchema.js";
 
 const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   dashboard,
@@ -1415,10 +1416,11 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   }, []);
   const deleteManagedContent = React.useCallback(async (plan) => {
       await pendingEdits.flush();
-      return commitContentDeletion(plan, {
+      return commitContentDeletion(plan, createContentDeletionAdapters({
         getDashboard: () => dashboardStateRef.current,
         commitDashboard: async (candidate) => onDashboardChange(candidate),
-      });
+        assetStore: browserAuthoredAssetStore,
+      }));
   }, [onDashboardChange, pendingEdits]);
   const managerDashboard = React.useMemo(() => editMode ? projectContentManagerDependencies({
     dashboard: workingDashboard,
@@ -2236,8 +2238,8 @@ export function projectContentManagerDependencies({ dashboard, activeRetainers, 
     contentDependencyState[`media:${mediaId}`] = createManagerDependencyState({ dashboard, graph, record, kind: "media", id: mediaId, onNavigate, onDelete });
   }
   for (const [sourceId, record] of Object.entries(projected.contentLibrary?.sourceEntries ?? {})) {
-    const kind = String(record.kind ?? projected.dataSources?.[sourceId]?.kind ?? "").toLocaleLowerCase();
-    if (kind === "csv" || kind === "geojson") contentDependencyState[`${kind}:${sourceId}`] = createManagerDependencyState({ dashboard, graph, record, kind, id: sourceId, onNavigate, onDelete });
+    const kind = classifyManagedSource(sourceId, projected.dataSources?.[sourceId])?.kind;
+    if (kind) contentDependencyState[`${kind}:${sourceId}`] = createManagerDependencyState({ dashboard, graph, record, kind, id: sourceId, onNavigate, onDelete });
   }
   Object.defineProperty(projected, "contentDependencyState", { value: Object.freeze(contentDependencyState) });
   return projected;

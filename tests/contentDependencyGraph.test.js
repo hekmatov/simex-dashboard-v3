@@ -9,6 +9,7 @@ import {
   activeRetentions,
   temporalImpactContexts,
 } from "../src/content-library/contentDependencyGraph.js";
+import { makeSourceEntry } from "./helpers/contentLibraryFixtures.js";
 
 const dashboard = {
   contentLibrary: {
@@ -17,15 +18,15 @@ const dashboard = {
       "media-qmd": { mediaId: "media-qmd", revision: 1, current: { kind: "asset", assetId: "asset-qmd" }, health: "ready" },
     },
     sourceEntries: {
-      cases: { sourceId: "cases", kind: "csv", revision: 4 },
-      boundaries: { sourceId: "boundaries", kind: "geojson", revision: 3 },
+      cases: makeSourceEntry("csv", { sourceId: "cases" }),
+      boundaries: makeSourceEntry("geojson", { sourceId: "boundaries" }),
     },
   },
   dataSources: {
     image: { kind: "staticImage", sourceVersion: 2, mediaId: "media-image" },
     notes: { kind: "staticText", qmd: "![Map](simex-media:media-qmd){width=50% align=center flow=block frame=none caption=\"\" decorative=false}" },
-    cases: { kind: "csv", rows: [] },
-    boundaries: { kind: "geojson", featureCollection: { type: "FeatureCollection", features: [] } },
+    cases: { kind: "dataset", type: "uploadedCsv", csvText: "value\n1\n" },
+    boundaries: { kind: "dataset", type: "uploadedGeoJson", geoJson: { type: "FeatureCollection", features: [] } },
   },
   pages: [{
     id: "operations",

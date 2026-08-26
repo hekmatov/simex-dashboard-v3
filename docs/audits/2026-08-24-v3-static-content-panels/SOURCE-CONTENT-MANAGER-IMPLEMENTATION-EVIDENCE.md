@@ -204,3 +204,12 @@ The corrected parser scopes only `## Final Step 7S controlling 36-row dispositio
 - Planned Chromium selection, with no literal `--` separator: `pnpm.cmd exec playwright test tests/e2e/source-content-manager.spec.js --project=chromium --grep "desktop composition|tablet composition"` — **2/2 passing**, 24.6 s, at 1440×900 and 1024×768.
 - The authorized DashboardRenderer → BuildWorkspace → SourceContentWorkspace carrier remained mounted without regressing the canonical canvas, durable rename, desktop split, or tablet list/detail/Back composition.
 - The bounded viewport cases do not separately click an eligible deletion; no broader delete/recovery Journey A/I browser promotion is claimed. Task 7 picker/import, Task 8 replacement/relink, later preview/recovery flows, full build, and full suite remain pending.
+
+### Validated T6-R01–R04 correction
+
+- BASE `109b3ca1f7f03099e4783e77b6aa6545d9792f81`; final exact Task 6 selection **26/26 passing**, zero skipped/todo, 3.546 s.
+- One canonical source-kind helper covers tracked and uploaded-dataset CSV/GeoJSON forms in both graph and manager projection. Source plans freeze and recheck SourceEntry plus authoritative descriptor and CSV-profile identity without adding a SourceEntry revision; unrelated dashboard drift remains allowed.
+- Mounted adapters snapshot authored bytes, publish the candidate dashboard, retain shared physical dedupe through the candidate asset-reference graph, remove unique bytes, and compensate dashboard plus bytes for injected publication or byte-delete failure.
+- The master explicitly authorized only `SourceContentWorkspace.jsx::visibleManagerItems/contentItem` for the post-validation transient carrier. Its exact zero-use state is now known-unused rather than unknown, without extending durable records.
+- Final planned Chromium selection **2/2 passing**, 40.4 s, at 1440×900 and 1024×768. Each viewport proves blocked used-source Delete opens no dialog; eligible retained external media opens the correctly named confirmation, Cancel owns initial focus, exact saved configuration is unchanged, and focus returns to Delete. The tablet detail pane is bounded and scrollable so the action remains reachable.
+- SCM-S07 and the SCM-C08 delete branch are Passing on this mounted evidence. C08 remains Partial for later replace/relink; no Task 7+ journey is promoted.

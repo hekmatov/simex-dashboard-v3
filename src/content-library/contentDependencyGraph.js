@@ -2,6 +2,7 @@ import {
   parsePortableQmdWithMedia,
   extractPortableMediaNodes,
 } from "../static-content/qmd/portableQmdMedia.js";
+import { classifyManagedSource } from "./sourceEntrySchema.js";
 
 export function buildContentDependencyGraph({ dashboard = {}, activeRetainers = null } = {}) {
   const directUses = [];
@@ -25,11 +26,11 @@ export function buildContentDependencyGraph({ dashboard = {}, activeRetainers = 
             }
           }
         }
-        if (primarySourceId && managedSourceKind(sourceEntries[primarySourceId], primarySource) === "csv") {
+        if (sourceEntries[primarySourceId] && classifyManagedSource(primarySourceId, primarySource)?.kind === "csv") {
           pushDirectUse(directUses, { ...breadcrumb, kind: "primary-csv", itemKind: "csv", itemId: primarySourceId });
         }
         const geoSourceId = text(panel.presentation?.map?.geoSource);
-        if (geoSourceId && managedSourceKind(sourceEntries[geoSourceId], dashboard.dataSources?.[geoSourceId]) === "geojson") {
+        if (sourceEntries[geoSourceId] && classifyManagedSource(geoSourceId, dashboard.dataSources?.[geoSourceId])?.kind === "geojson") {
           pushDirectUse(directUses, { ...breadcrumb, kind: "map-geojson", itemKind: "geojson", itemId: geoSourceId });
         }
       }
@@ -75,11 +76,6 @@ function pushDirectUse(target, use) {
   if (!use.itemId || !use.pageId || !use.sectionId || !use.panelId) return;
   const id = `${use.itemKind}:${use.itemId}:${use.pageId}:${use.sectionId}:${use.panelId}`;
   if (!target.some((current) => current.id === id)) target.push({ id, ...use });
-}
-
-function managedSourceKind(entry, descriptor) {
-  const value = String(entry?.kind ?? descriptor?.kind ?? "").toLocaleLowerCase();
-  return value === "csv" || value === "geojson" ? value : null;
 }
 
 function normalizedRetainers(snapshot) {
