@@ -185,6 +185,8 @@ export default function DashboardCanvas({
                             placementId={placement.id}
                             editDisabled={Boolean(buildState?.disabled)}
                             editControlDisabled={Boolean(buildState?.disabled) && !selected}
+                            isDragging={buildState?.draggingPanelId === placement.id}
+                            isDragTarget={buildState?.dragOverPanelId === placement.id}
                             isSelected={selected}
                             editPageId={buildState ? activePage.id : undefined}
                             editSectionId={buildState ? section.id : undefined}
@@ -192,6 +194,16 @@ export default function DashboardCanvas({
                             onRemove={buildState
                               ? () => buildState.onRemovePanel?.(placement.id)
                               : undefined}
+                            onDragStart={buildState
+                              ? (event) => buildState.onPanelDragStart?.(event, placement.id)
+                              : undefined}
+                            onDragOver={buildState
+                              ? (event) => buildState.onPanelDragOver?.(event, placement.id)
+                              : undefined}
+                            onDrop={buildState
+                              ? (event) => buildState.onPanelDrop?.(event, placement.id)
+                              : undefined}
+                            onDragEnd={buildState?.onPanelDragEnd}
                             onDisplayAction={onDisplayAction}
                             multiSelectMode={multiSelectMode}
                             isMultiSelected={multiPanelIds.includes(chart.id)}

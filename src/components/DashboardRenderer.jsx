@@ -213,6 +213,10 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
   const [pageDrafts, setPageDrafts] = React.useState({});
   const [sectionDrafts, setSectionDrafts] = React.useState({});
   const [buildLayoutDraft, setBuildLayoutDraft] = React.useState(null);
+  const buildLayoutDraftRef = React.useRef(null);
+  React.useEffect(() => {
+    buildLayoutDraftRef.current = buildLayoutDraft;
+  }, [buildLayoutDraft]);
   const pendingEditCallbacksRef = React.useRef(null);
   pendingEditCallbacksRef.current = {
     onApplyPendingEdits,
@@ -448,6 +452,33 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         }
         if (suspended === undefined && chartWizardControllerRef.current === null) {
           setChartWizardTarget(null);
+        }
+      }
+      const pendingLayoutDraft = buildLayoutDraftRef.current;
+      if (["dirty", "error", "suspended"].includes(pendingLayoutDraft?.status)) {
+        const saving = beginBuildLayoutSave(pendingLayoutDraft);
+        buildLayoutDraftRef.current = saving;
+        setBuildLayoutDraft(saving);
+        try {
+          await onStructureChange?.({
+            pages: saving.value.pages,
+            chronoGroups: saving.value.chronoGroups ?? dashboard.chronoGroups ?? [],
+            scenes: saving.value.scenes ?? dashboard.scenes ?? [],
+          });
+          buildLayoutDraftRef.current = null;
+          setBuildLayoutDraft(null);
+        } catch (error) {
+          const failed = failBuildLayoutSave(saving, {
+            code: error?.name === "QuotaExceededError" ? "QUOTA_EXHAUSTED" : "LAYOUT_SAVE_FAILED",
+            message: error?.message ?? "Layout changes could not be saved.",
+            retryable: true,
+          });
+          buildLayoutDraftRef.current = failed;
+          setBuildLayoutDraft(failed);
+          return {
+            ok: false,
+            reason: failed.error?.message ?? "Layout changes could not be saved.",
+          };
         }
       }
       await pendingEdits.flush();
@@ -803,8 +834,8 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     if (moderatorOperationGateRef.current.isActive()) return;
     const label = "New page";
     const pageId = uniquePageId(workingDashboard, label);
-    setBuildLayoutDraft((current) => addBuildLayoutPage(
-      current ?? createBuildLayoutDraft(dashboard),
+    const nextDraft = addBuildLayoutPage(
+      buildLayoutDraftRef.current ?? buildLayoutDraft ?? createBuildLayoutDraft(dashboard),
       {
         id: pageId,
         label,
@@ -819,7 +850,9 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
           },
         ],
       },
-    ));
+    );
+    buildLayoutDraftRef.current = nextDraft;
+    setBuildLayoutDraft(nextDraft);
     onActivePageChange(pageId);
     setBuildSelection({ kind: "page", pageId });
     setFocusInspectorLabelKey((current) => current + 1);
@@ -1641,11 +1674,17 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         buildStaticAuthoringOpen={Boolean(editMode && selectedPanelIsStatic && chartEditorVisible)}
         buildState={editMode ? {
           selection: buildSelection,
-          disabled: moderatorMutationLocked || buildDraftLocked,
-          sectionDrafts,
-          onSelect: activateBuildCanvasSelection,
-          onRemovePanel: removePanel,
-          onReorderSection: reorderBuildSection,
+           disabled: moderatorMutationLocked || buildDraftLocked,
+           sectionDrafts,
+           draggingPanelId,
+           dragOverPanelId,
+           onSelect: activateBuildCanvasSelection,
+           onRemovePanel: removePanel,
+           onPanelDragStart: handlePanelDragStart,
+           onPanelDragOver: handlePanelDragOver,
+           onPanelDrop: handlePanelDrop,
+           onPanelDragEnd: clearDragState,
+           onReorderSection: reorderBuildSection,
           onStructureCommand: applyBuildStructureCommand,
           onAddPage: addBuildPage,
           onAddSection: addSection,

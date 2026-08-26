@@ -155,6 +155,7 @@ export function removeBuildLayoutPage(draft, pageId, { disposition, targetPageId
     return failCommand(draft, "PAGE_DISPOSITION_REQUIRED", "Choose what happens to the Page content.");
   }
   next.value.pages.splice(index, 1);
+  repairLandingRoutes(next.value);
   return markDirty(next, pageId);
 }
 
@@ -210,6 +211,25 @@ export function discardBuildLayoutDraft(draft) {
   };
 }
 
+function repairLandingRoutes(dashboard) {
+  const remainingPageIds = new Set(dashboard.pages.map(({ id }) => id));
+  for (const page of dashboard.pages) {
+    if (!page.landing) continue;
+    const previousRoutes = page.landing.domainRoutes ?? [];
+    const retainedRoutes = previousRoutes.filter(
+      ({ pageId }) => remainingPageIds.has(pageId),
+    );
+    if (retainedRoutes.length === 0) {
+      const fallbackTarget = dashboard.pages.find(({ id }) => id !== page.id)?.id ?? page.id;
+      retainedRoutes.push({ ...(previousRoutes[0] ?? {}), pageId: fallbackTarget });
+    }
+    page.landing.domainRoutes = retainedRoutes;
+    if (!remainingPageIds.has(page.landing.hero?.primaryAction?.pageId)) {
+      page.landing.hero.primaryAction.pageId = retainedRoutes[0].pageId;
+    }
+  }
+}
+
 function cloneDraft(draft) {
   return { ...draft, value: structuredClone(draft.value), error: null };
 }
@@ -247,10 +267,11 @@ function removePageScopedSceneChartReferences(dashboard, pageId, chartIds) {
 
 function removeChartReferences(dashboard, chartIds) {
   const removed = new Set(chartIds);
-  for (const group of dashboard?.chronoGroups ?? []) {
+  dashboard.chronoGroups = (dashboard?.chronoGroups ?? []).flatMap((group) => {
     group.members = (group.members ?? []).filter(({ chartId }) => !removed.has(chartId));
     if (Array.isArray(group.chartIds)) group.chartIds = group.chartIds.filter((id) => !removed.has(id));
-  }
+    return group.members.length > 0 ? [group] : [];
+  });
   for (const scene of dashboard?.scenes ?? []) removeSceneChartReferences(scene, chartIds);
 }
 

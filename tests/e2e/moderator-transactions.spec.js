@@ -135,31 +135,15 @@ test("edit-mode panel drag reorders through the memoized chart boundary", async 
     item.getAttribute("data-panel-id")
   )));
 
-  await panels.evaluateAll((items) => {
-    const source = items[1];
-    const target = items[0];
-    const dataTransfer = new DataTransfer();
-    source.dispatchEvent(new DragEvent("dragstart", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-    target.dispatchEvent(new DragEvent("dragover", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-    target.dispatchEvent(new DragEvent("drop", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-    source.dispatchEvent(new DragEvent("dragend", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer,
-    }));
-  });
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await panels.nth(1).dispatchEvent("dragstart", { dataTransfer });
+  expect(await dataTransfer.evaluate((transfer) => transfer.getData("text/plain")))
+    .not.toBe("");
+  await expect(panels.nth(1)).toHaveClass(/\bdragging\b/);
+  await panels.nth(0).dispatchEvent("dragover", { dataTransfer });
+  await expect(panels.nth(0)).toHaveClass(/\bdrag-target\b/);
+  await panels.nth(0).dispatchEvent("drop", { dataTransfer });
+  await panels.nth(1).dispatchEvent("dragend", { dataTransfer });
 
   await expect.poll(() => panels.evaluateAll((items) => items.slice(0, 2).map((item) => (
     item.getAttribute("data-panel-id")
@@ -317,41 +301,30 @@ test("queued dashboard mutation survives final edit-session save", async ({ page
   test.setTimeout(120_000);
   await openDashboardEditMode(page);
   const actionState = await page.evaluate(() => {
-    const addTab = document.querySelector('button[aria-label="Add tab"]');
-    const save = document.querySelector('[aria-label="Save edits"]');
-    const prompt = window.prompt;
-    let promptCalls = 0;
-    window.prompt = () => {
-      promptCalls += 1;
-      return "Queued response tab";
+    const buttons = [...document.querySelectorAll("button")];
+    const addPage = buttons.find((button) => button.textContent?.trim() === "Add page");
+    const finish = buttons.find((button) => button.textContent?.trim() === "Finish Build");
+    addPage.click();
+    finish.click();
+    return {
+      addDisabled: addPage.matches(":disabled"),
+      finishDisabled: finish.matches(":disabled"),
     };
-    try {
-      addTab.click();
-      save.click();
-      return {
-        addDisabled: addTab.matches(":disabled"),
-        promptCalls,
-        saveDisabled: save.matches(":disabled"),
-      };
-    } finally {
-      window.prompt = prompt;
-    }
   });
-  await expect(page.getByRole("button", { name: "Build" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Build", exact: true })).toBeEnabled();
 
   const saved = await storedDashboard(page);
   const attempts = await page.evaluate(() => globalThis.__SIMEX_SAVE_ATTEMPTS__ ?? 0);
   expect({ actionState, attempts }).toEqual({
     actionState: {
       addDisabled: false,
-      promptCalls: 1,
-      saveDisabled: false,
+      finishDisabled: false,
     },
-    attempts: 2,
+    attempts: 1,
   });
-  expect(saved.pages.map(({ label }) => label)).toContain("Queued response tab");
+  expect(saved.pages.map(({ label }) => label)).toContain("New page");
   await page.reload();
-  await expect(page.getByRole("button", { name: "Queued response tab", exact: true }))
+  await expect(page.getByRole("button", { name: "New page", exact: true }))
     .toBeVisible();
 });
 

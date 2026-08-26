@@ -222,12 +222,26 @@ test("additive imported tracked profiles survive an edit and browser reload", as
 
 test("removing a page also removes its synchronized chart memberships", async ({
   page,
+  request,
 }) => {
+  await installDashboard(page, await fetchJson(request, "/config/dashboard.json"));
   await openDashboard(page);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await page.getByRole("button", { name: "Build" }).click();
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Remove tab" }).click();
+  const navigation = page.locator('[data-build-page-navigation="anchored"]');
+  await navigation.getByRole("button", {
+    name: "Page actions for Biomedical",
+    exact: true,
+  }).click();
+  await navigation.getByRole("button", { name: "Edit Page Biomedical" }).click();
+  const orbit = page.getByLabel("Page Orbit for Biomedical");
+  await orbit.getByRole("button", { name: "Remove Page", exact: true }).click();
+  await orbit.getByLabel("I understand these named consequences.").check();
+  await orbit.getByRole("button", { name: "Confirm", exact: true }).click();
+  const saveLayout = page.getByRole("button", { name: "Save Layout Changes", exact: true });
+  await saveLayout.click();
+  await expect(saveLayout).toBeDisabled();
+  await page.getByRole("button", { name: "Finish Build", exact: true }).click();
 
   await expect(page.getByRole("heading", {
     name: "Dashboard configuration error",
