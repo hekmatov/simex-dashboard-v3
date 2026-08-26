@@ -224,6 +224,9 @@ function renderMediaHost(mediaNode, mediaItem, environment) {
   const ordinal = environment.mediaNodes.indexOf(mediaNode) + 1;
   host.dataset.qmdMediaHost = "";
   host.dataset.qmdMediaKey = `${mediaNode.mediaId}:${ordinal}`;
+  host.dataset.qmdMediaNodeIndex = String(ordinal - 1);
+  host.dataset.qmdMediaSourceStart = String(mediaNode.sourceStart);
+  host.dataset.qmdMediaSourceEnd = String(mediaNode.sourceEnd);
   host.dataset.qmdMediaId = mediaNode.mediaId;
   host.dataset.qmdMediaAlt = mediaNode.alt;
   host.dataset.qmdMediaWidth = mediaNode.attributes.width;

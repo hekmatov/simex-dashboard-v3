@@ -452,12 +452,27 @@ test("authoring preview selects one media placement and changes only its seriali
     await new Promise((resolve) => setTimeout(resolve, 250));
     target.querySelector('[aria-label="More image options"]')?.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    const changeTrigger = target.querySelector('[data-qmd-media-action="change"]');
+    changeTrigger?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const focusOnOpen = document.activeElement?.value;
+    target.querySelector('[aria-label="Media picker"]')?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    const pickerClosedOnEscape = target.querySelector('[aria-label="Media picker"]') === null;
+    const focusAfterEscape = document.activeElement === changeTrigger;
+    changeTrigger?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('[aria-label="Media picker"] button')?.click();
+    for (let index = 0; index < 50 && target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const focusAfterClose = document.activeElement === changeTrigger;
+    changeTrigger?.click();
     for (let index = 0; index < 50 && !target.querySelector('[aria-label="Media picker"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     const changePickerHasIntake = target.querySelector('[aria-label="Media picker"] input[type="file"], [aria-label="Media picker"] button[data-import-media]') !== null
       || target.querySelector('[aria-label="Media picker"]')?.textContent.includes("Import as local media");
     target.querySelector('input[value="second"]')?.click();
     await new Promise((resolve) => setTimeout(resolve, 250));
+    const focusAfterSelection = document.activeElement === changeTrigger;
     target.querySelector("[data-qmd-media-select]")?.click();
     for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-action="open"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
     target.querySelector('[data-qmd-media-action="open"]')?.click();
@@ -467,6 +482,11 @@ test("authoring preview selects one media placement and changes only its seriali
       libraryUnchanged: JSON.stringify(mediaItems) === JSON.stringify(originalLibrary),
       images: target.querySelectorAll("img").length,
       changePickerHasIntake,
+      focusOnOpen,
+      pickerClosedOnEscape,
+      focusAfterEscape,
+      focusAfterClose,
+      focusAfterSelection,
     };
     root.unmount();
     return value;
@@ -478,6 +498,67 @@ test("authoring preview selects one media placement and changes only its seriali
   assert.equal(result.libraryUnchanged, true);
   assert.equal(result.images, 0);
   assert.equal(result.changePickerHasIntake, false);
+  assert.equal(result.focusOnOpen, "second");
+  assert.equal(result.pickerClosedOnEscape, true);
+  assert.equal(result.focusAfterEscape, true);
+  assert.equal(result.focusAfterClose, true);
+  assert.equal(result.focusAfterSelection, true);
+});
+
+test("authoring edits exact parser-owned placements when inert and duplicate literals precede the selection", async () => {
+  const result = await page.evaluate(async () => {
+    await import("/src/styles/source-content.css");
+    const { default: React } = await import("/node_modules/.vite/deps/react.js");
+    const { default: ReactDOMClient } = await import("/node_modules/.vite/deps/react-dom_client.js");
+    const { default: FreeTextSourceEditor } = await import("/src/components/static-content/FreeTextSourceEditor.jsx");
+    const target = document.body.appendChild(document.createElement("div"));
+    target.id = "qmd-exact-placement-contract";
+    const inert = '`![Duplicate](simex-media:first){width=25% align=start flow=block frame=none decorative=false}`';
+    const angle = '![Duplicate](<simex-media:first>){width=33% align=center flow=block frame=outline decorative=false}';
+    const duplicate = '![Duplicate](simex-media:first){width=66% align=end flow=wrap-start frame=card caption="Second" decorative=false}';
+    const mediaItems = {
+      first: { mediaId: "first", revision: 1, current: { kind: "asset", assetId: "asset-first" }, displayName: "Duplicate", defaultDescription: "Duplicate", origin: "uploaded", health: "missing" },
+      second: { mediaId: "second", revision: 1, current: { kind: "asset", assetId: "asset-second" }, displayName: "Replacement", defaultDescription: "Replacement", origin: "uploaded", health: "ready" },
+    };
+    let latestSource = "";
+    function Harness() {
+      const [source, setSource] = React.useState([inert, angle, duplicate].join("\n\n"));
+      latestSource = source;
+      return React.createElement(FreeTextSourceEditor, { id: "exact-qmd", value: source, panelId: "exact-panel", mediaItems, assets: {}, onChange: setSource });
+    }
+    const root = ReactDOMClient.createRoot(target);
+    root.render(React.createElement(Harness));
+    for (let index = 0; index < 50 && target.querySelectorAll("[data-qmd-media-select]").length !== 2; index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelectorAll("[data-qmd-media-select]")[0]?.click();
+    for (let index = 0; index < 50 && !target.querySelector('[data-qmd-media-inspector]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[name="qmd-media-width"][value="50%"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const afterAngleEdit = latestSource;
+    target.querySelectorAll("[data-qmd-media-select]")[1]?.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    target.querySelector('input[name="qmd-media-width"][value="75%"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const afterDuplicateEdit = latestSource;
+    target.querySelector('[aria-label="More image options"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    target.querySelector('[data-qmd-media-action="change"]')?.click();
+    for (let index = 0; index < 50 && !target.querySelector('input[value="second"]'); index += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+    target.querySelector('input[value="second"]')?.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const afterChange = latestSource;
+    root.unmount();
+    return { inert, afterAngleEdit, afterDuplicateEdit, afterChange };
+  });
+
+  assert.equal(result.afterAngleEdit.startsWith(result.inert), true);
+  assert.match(result.afterAngleEdit, /\n\n!\[Duplicate\]\(simex-media:first\)\{width=50% align=center/);
+  assert.match(result.afterAngleEdit, /\n\n!\[Duplicate\]\(simex-media:first\)\{width=66% align=end/);
+  assert.equal(result.afterDuplicateEdit.startsWith(result.inert), true);
+  assert.match(result.afterDuplicateEdit, /\n\n!\[Duplicate\]\(simex-media:first\)\{width=50% align=center/);
+  assert.match(result.afterDuplicateEdit, /\n\n!\[Duplicate\]\(simex-media:first\)\{width=75% align=end/);
+  assert.equal(result.afterChange.startsWith(result.inert), true);
+  assert.match(result.afterChange, /\n\n!\[Duplicate\]\(simex-media:first\)\{width=50% align=center/);
+  assert.match(result.afterChange, /\n\n!\[Duplicate\]\(simex-media:second\)\{width=75% align=end/);
 });
 
 test("editor debounces parsing, keeps the last valid preview stale on a complexity error, and recovers without losing source", async () => {

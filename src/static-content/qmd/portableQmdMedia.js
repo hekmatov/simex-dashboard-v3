@@ -83,14 +83,19 @@ export function annotatePortableMediaTokens(ast) {
 
   const mediaNodes = [];
   const annotations = [];
+  const lineOffsets = sourceLineOffsets(ast.source);
   let tokenIndex = 0;
-  const annotateChildren = (children) => {
+  const annotateChildren = (children, sourceSpans = []) => {
     const cloned = children.map(cloneToken);
+    let imageSpanIndex = 0;
     for (let index = 0; index < cloned.length; index += 1) {
       const token = cloned[index];
       const currentTokenIndex = tokenIndex;
       tokenIndex += 1;
-      if (token.type !== "image" || token.attrGet?.("title")) continue;
+      if (token.type !== "image") continue;
+      const sourceSpan = sourceSpans[imageSpanIndex] ?? null;
+      imageSpanIndex += 1;
+      if (token.attrGet?.("title")) continue;
       const reference = parsePortableMediaReference(String(token.attrGet?.("src") ?? ""));
       if (!reference) continue;
 
@@ -99,7 +104,8 @@ export function annotatePortableMediaTokens(ast) {
       let sourceSuffix = "";
       const following = cloned[index + 1];
       if (following?.type === "text" && following.content.startsWith("{")) {
-        const suffix = leadingAttributeSuffix(following.content);
+        const rawFollowing = sourceSpan ? ast.source.slice(sourceSpan.end) : following.content;
+        const suffix = leadingAttributeSuffix(rawFollowing);
         const validated = suffix ? validatePortableMediaAttributes(suffix) : { ok: false };
         if (validated.ok) {
           attributes = Object.freeze({ ...DEFAULT_ATTRIBUTES, ...validated.attributes });
@@ -109,24 +115,38 @@ export function annotatePortableMediaTokens(ast) {
         }
       }
       const alt = String(token.content ?? "");
+      const sourceStart = sourceSpan?.start ?? null;
+      const sourceEnd = sourceSpan ? sourceSpan.end + sourceSuffix.length : null;
       const mediaNode = Object.freeze({
         tokenIndex: currentTokenIndex,
         mediaId: reference.mediaId,
         alt,
         attributes,
-        sourceText: `![${escapeMarkdownLabel(alt)}](simex-media:${reference.mediaId})${sourceSuffix}`,
+        sourceText: sourceSpan
+          ? ast.source.slice(sourceStart, sourceEnd)
+          : `![${escapeMarkdownLabel(alt)}](simex-media:${reference.mediaId})${sourceSuffix}`,
+        sourceStart,
+        sourceEnd,
       });
       const mediaNodeIndex = mediaNodes.length;
       mediaNodes.push(mediaNode);
-      annotations.push(Object.freeze({ tokenIndex: currentTokenIndex, suffixTokenIndex }));
-      token.meta = { ...(token.meta ?? {}), portableMediaNodeIndex: mediaNodeIndex };
+      annotations.push(Object.freeze({ tokenIndex: currentTokenIndex, suffixTokenIndex, sourceStart, sourceEnd }));
+      token.meta = {
+        ...(token.meta ?? {}),
+        portableMediaNodeIndex: mediaNodeIndex,
+        portableMediaSourceStart: sourceStart,
+        portableMediaSourceEnd: sourceEnd,
+      };
     }
     return cloned;
   };
 
   const tokens = ast.tokens.map((token) => {
     const cloned = cloneToken(token);
-    if (Array.isArray(token.children)) cloned.children = annotateChildren(token.children);
+    if (Array.isArray(token.children)) {
+      const [start, end] = sourceRangeForToken(token, lineOffsets, ast.source.length);
+      cloned.children = annotateChildren(token.children, scanMarkdownImageSpans(ast.source, start, end));
+    }
     return cloned;
   });
   const footnotes = ast.footnotes.map((footnote) => ({
@@ -134,7 +154,13 @@ export function annotatePortableMediaTokens(ast) {
     tokens: Array.isArray(footnote.tokens)
       ? footnote.tokens.map((token) => {
           const cloned = cloneToken(token);
-          if (Array.isArray(token.children)) cloned.children = annotateChildren(token.children);
+          if (Array.isArray(token.children)) {
+            const start = Number.isInteger(footnote.sourceStart) ? footnote.sourceStart : 0;
+            cloned.children = annotateChildren(
+              token.children,
+              scanMarkdownImageSpans(ast.source, start, start + footnote.content.length),
+            );
+          }
           return cloned;
         })
       : footnote.tokens,
@@ -197,6 +223,73 @@ function leadingAttributeSuffix(text) {
     else if (character === "}" && !quoted) return text.slice(0, index + 1);
   }
   return null;
+}
+
+function sourceLineOffsets(source) {
+  const offsets = [0];
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] === "\n") offsets.push(index + 1);
+  }
+  return offsets;
+}
+
+function sourceRangeForToken(token, lineOffsets, sourceLength) {
+  if (!Array.isArray(token.map)) return [0, sourceLength];
+  const start = lineOffsets[token.map[0]] ?? sourceLength;
+  const end = lineOffsets[token.map[1]] ?? sourceLength;
+  return [start, end];
+}
+
+function scanMarkdownImageSpans(source, start, end) {
+  const spans = [];
+  let index = start;
+  while (index < end) {
+    if (source[index] === "\\") {
+      index += 2;
+      continue;
+    }
+    if (source[index] === "`") {
+      let runEnd = index + 1;
+      while (source[runEnd] === "`") runEnd += 1;
+      const marker = source.slice(index, runEnd);
+      const close = source.indexOf(marker, runEnd);
+      index = close < 0 || close >= end ? runEnd : close + marker.length;
+      continue;
+    }
+    if (source[index] !== "!" || source[index + 1] !== "[") {
+      index += 1;
+      continue;
+    }
+    const labelEnd = matchingDelimiter(source, index + 1, "[", "]", end);
+    if (labelEnd < 0 || source[labelEnd + 1] !== "(") {
+      index += 1;
+      continue;
+    }
+    const destinationEnd = matchingDelimiter(source, labelEnd + 1, "(", ")", end);
+    if (destinationEnd < 0) {
+      index += 1;
+      continue;
+    }
+    spans.push(Object.freeze({ start: index, end: destinationEnd + 1 }));
+    index = destinationEnd + 1;
+  }
+  return spans;
+}
+
+function matchingDelimiter(source, start, open, close, end) {
+  let depth = 0;
+  for (let index = start; index < end; index += 1) {
+    if (source[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (source[index] === open) depth += 1;
+    else if (source[index] === close) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
 }
 
 function parseAttributeSuffix(value) {

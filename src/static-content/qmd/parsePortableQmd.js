@@ -60,13 +60,24 @@ function extractFootnotes(source) {
   const lines = source.split("\n");
   const footnotes = [];
   const seen = new Set();
+  let lineStart = 0;
   const sanitized = lines.map((line, index) => {
-    const match = /^\s*\[\^([a-z][a-z0-9._:-]*)\]:\s+(.+)$/i.exec(line);
-    if (!match) return line;
+    const match = /^\s*\[\^([a-z][a-z0-9._:-]*)\]:\s+(.+)$/id.exec(line);
+    const nextLineStart = lineStart + line.length + 1;
+    if (!match) {
+      lineStart = nextLineStart;
+      return line;
+    }
     if (!seen.has(match[1])) {
       seen.add(match[1]);
-      footnotes.push({ id: match[1], content: match[2], line: index + 1 });
+      footnotes.push({
+        id: match[1],
+        content: match[2],
+        line: index + 1,
+        sourceStart: lineStart + match.indices[2][0],
+      });
     }
+    lineStart = nextLineStart;
     return "";
   });
   return { source: sanitized.join("\n"), footnotes };

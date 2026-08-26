@@ -168,7 +168,7 @@ export default function QmdMediaInspector({
             Decorative image
           </label>
           <div className="qmd-media-inspector__actions">
-            <button type="button" className="secondary" data-qmd-media-action="change" disabled={disabled} onClick={() => onChangeImage?.(placement.mediaId)}>
+            <button type="button" className="secondary" data-qmd-media-action="change" disabled={disabled} onClick={(event) => onChangeImage?.(placement.mediaId, { trigger: event.currentTarget })}>
               Change image
             </button>
             <button type="button" className="secondary" data-qmd-media-action="open" disabled={!placement.mediaId} onClick={() => onOpenMediaItem?.(placement.mediaId)}>

@@ -25,6 +25,9 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
     sink.replaceChildren(fragment);
     const entries = [...sink.querySelectorAll("[data-qmd-media-host]")].map((host) => ({
       key: host.dataset.qmdMediaKey,
+      mediaNodeIndex: Number(host.dataset.qmdMediaNodeIndex),
+      sourceStart: Number(host.dataset.qmdMediaSourceStart),
+      sourceEnd: Number(host.dataset.qmdMediaSourceEnd),
       prepared,
       host,
       mediaItem: valueForId(contentRenderContext.mediaItems, host.dataset.qmdMediaId),
@@ -78,7 +81,14 @@ export function FreeTextChartView({ model, chart, contentRenderContext = {}, hos
         ? () => contentRenderContext.requestRepair({ mediaId: entry.mediaItem?.mediaId, panelId: chart?.id, surface })
         : undefined}
       onActivate={typeof onMediaActivate === "function"
-        ? () => onMediaActivate({ key: entry.key, mediaItem: entry.mediaItem, attributes: entry.attributes })
+        ? () => onMediaActivate({
+            key: entry.key,
+            mediaNodeIndex: entry.mediaNodeIndex,
+            sourceStart: entry.sourceStart,
+            sourceEnd: entry.sourceEnd,
+            mediaItem: entry.mediaItem,
+            attributes: entry.attributes,
+          })
         : undefined}
     />, entry.host, entry.key))}
   </>;

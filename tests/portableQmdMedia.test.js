@@ -72,6 +72,8 @@ test("reference and attribute grammar accepts only the portable local allowlist"
 
 test("one annotation pass consumes one fully allowlisted immediate suffix and preserves remaining text", () => {
   const source = 'Before ![Response map](simex-media:stored-map){width=50% align=center flow=block frame=outline caption="Current" decorative=false} after {width=25%}.';
+  const rawPlacement = '![Response map](simex-media:stored-map){width=50% align=center flow=block frame=outline caption="Current" decorative=false}';
+  const sourceStart = source.indexOf(rawPlacement);
   const parsed = parsePortableQmdWithMedia(source);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.ast.type, "root");
@@ -91,14 +93,55 @@ test("one annotation pass consumes one fully allowlisted immediate suffix and pr
       caption: "Current",
       decorative: false,
     },
-    sourceText: '![Response map](simex-media:stored-map){width=50% align=center flow=block frame=outline caption="Current" decorative=false}',
+    sourceText: rawPlacement,
+    sourceStart,
+    sourceEnd: sourceStart + rawPlacement.length,
   }]);
-  assert.deepEqual(parsed.ast.annotations, [{ tokenIndex: 1, suffixTokenIndex: 2 }]);
+  assert.deepEqual(parsed.ast.annotations, [{
+    tokenIndex: 1,
+    suffixTokenIndex: 2,
+    sourceStart,
+    sourceEnd: sourceStart + rawPlacement.length,
+  }]);
+  assert.equal(parsed.ast.tokens[1].children[1].meta.portableMediaSourceStart, sourceStart);
+  assert.equal(parsed.ast.tokens[1].children[1].meta.portableMediaSourceEnd, sourceStart + rawPlacement.length);
   assert.equal(parsed.ast.tokens[1].children[2].content, " after {width=25%}.");
 
   const repeated = annotatePortableMediaTokens(parsed.ast);
   assert.deepEqual(repeated.mediaNodes, parsed.ast.mediaNodes);
   assert.equal(repeated.tokens[1].children[2].content, " after {width=25%}.");
+});
+
+test("annotation owns exact original spans across inert code, angle destinations, and duplicate real placements", () => {
+  const inert = '`![Same](simex-media:same){width=25% align=start flow=block frame=none decorative=false}`';
+  const first = '![Same](<simex-media:same>){width=33% align=center flow=block frame=outline decorative=false}';
+  const second = '![Same](simex-media:same){width=66% align=end flow=wrap-start frame=card caption="Second" decorative=false}';
+  const source = [inert, first, second].join("\n\n");
+  const parsed = parsePortableQmdWithMedia(source);
+
+  assert.equal(parsed.ast.mediaNodes.length, 2);
+  assert.deepEqual(parsed.ast.mediaNodes.map(({ sourceText, sourceStart, sourceEnd }) => ({
+    sourceText,
+    sourceStart,
+    sourceEnd,
+    exactSlice: source.slice(sourceStart, sourceEnd),
+  })), [first, second].map((sourceText) => {
+    const sourceStart = source.indexOf(sourceText);
+    return { sourceText, sourceStart, sourceEnd: sourceStart + sourceText.length, exactSlice: sourceText };
+  }));
+  assert.equal(parsed.ast.mediaNodes[0].sourceStart > source.indexOf(inert), true);
+});
+
+test("annotation extends the parser-owned image span through one validated immediate suffix only", () => {
+  const placement = '![Map](simex-media:map){width=50% align=center flow=block frame=none decorative=false}';
+  const source = `${placement}{width=25%} tail`;
+  const parsed = parsePortableQmdWithMedia(source);
+
+  assert.equal(parsed.ast.mediaNodes[0].sourceText, placement);
+  assert.equal(parsed.ast.mediaNodes[0].sourceStart, 0);
+  assert.equal(parsed.ast.mediaNodes[0].sourceEnd, placement.length);
+  assert.equal(parsed.ast.tokens[1].children[1].content, "{width=25%} tail");
+  assert.equal(source.slice(parsed.ast.mediaNodes[0].sourceEnd), "{width=25%} tail");
 });
 
 test("invalid suffix stays visible while the local image keeps default token attributes", () => {
