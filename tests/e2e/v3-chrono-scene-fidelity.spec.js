@@ -100,8 +100,9 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
 
   await auxiliary.getByRole("button", { name: "Close", exact: true }).click();
   await expect(auxiliary).toBeHidden();
-  const buildPanel = page.locator("#dashboard-map-panel");
-  await expect(buildPanel.getByText("Unfinished Chrono Group draft", { exact: true })).toBeVisible();
+  const pausedWork = page.getByRole("navigation", { name: "Paused Build work" });
+  const resumeDraft = pausedWork.getByRole("button", { name: "Resume Chrono Group draft", exact: true });
+  await expect(resumeDraft).toBeVisible();
 
   const pageNavigation = page.locator(".dashboard-command-page-scroller");
   const socioEconomic = pageNavigation.getByRole("button", { name: "Socio-economic", exact: true });
@@ -109,7 +110,7 @@ test("005-chrono-group-suspension: closing an unfinished create draft exposes Re
   await socioEconomic.click();
   await expect(socioEconomic).toHaveAttribute("aria-current", "page");
 
-  await buildPanel.getByRole("button", { name: "Resume Chrono Group draft", exact: true }).click();
+  await resumeDraft.click();
   await expect(auxiliary).toBeVisible();
   await expect(auxiliary.getByRole("textbox", { name: "Chrono Group name" })).toHaveValue("Unfinished response group");
 });
@@ -207,6 +208,8 @@ test("006-scene-authoring amendment: three full-width stages and Unit Orbit are 
   await boards.nth(1).locator(".scene-chart-title").last().click();
   await orbit.getByRole("button", { name: "Move first" }).click();
   await boards.nth(1).locator("select").selectOption("horizontal-divider");
+  await orbit.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(orbitShell).toBeHidden();
   await expect(auxiliary.locator(".scene-draft-panel")).toHaveCount(0);
 
   await page.setViewportSize({ width: 1600, height: 900 });
