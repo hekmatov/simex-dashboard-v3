@@ -138,6 +138,7 @@ test("comparison selection caps at four charts and Escape cancels selection", as
   }).dispatchEvent("pointerdown");
   await expect(page.getByRole("button", {
     name: "Compare",
+    exact: true,
   })).toBeVisible();
 
   for (let index = 1; index < 4; index += 1) {
@@ -160,6 +161,7 @@ test("comparison selection caps at four charts and Escape cancels selection", as
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", {
     name: "Compare",
+    exact: true,
   })).toHaveCount(0);
   await expect(page.locator(
     '.chart-panel-icon-button[aria-pressed="true"]',
@@ -207,9 +209,10 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
 
   await control(request, "disconnect");
-  await expect(page.getByText("Companion connected")).toBeVisible({
-    timeout: 5_000,
-  });
+  await expect.poll(
+    async () => (await events(request)).filter(({ type }) => type === "dashboard_hello").length,
+    { timeout: 5_000 },
+  ).toBeGreaterThanOrEqual(2);
   await expect
     .poll(async () => (await events(request)).findLast((event) => event.type === "dashboard_snapshot"))
     .toMatchObject({
@@ -223,13 +226,17 @@ test("reconnect snapshot wins without silently reopening a closed chart", async 
 
 test("stale catalogue disables companion commands", async ({ page, request }) => {
   await control(request, "catalogue-mode", { mode: "stale" });
+  const bootstrapResponse = page.waitForResponse((response) => (
+    response.url().endsWith("/companion/bootstrap")
+  ));
   await page.goto("/");
 
-  await expect(page.getByText("Companion unavailable")).toBeVisible();
-  await control(request, "display-set", {
+  expect((await bootstrapResponse).ok()).toBe(true);
+  const result = await control(request, "display-set", {
     chart_ids: [FIRST_CHART],
     expected_display_revision: 0,
   });
+  expect(result).toEqual({ recipients: 0 });
   await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
 });
 
@@ -253,18 +260,27 @@ test("runtime chart-definition drift disables companion commands", async ({
     );
   }, config);
 
+  let bootstrapRequests = 0;
+  page.on("request", (outgoing) => {
+    if (outgoing.url().endsWith("/companion/bootstrap")) bootstrapRequests += 1;
+  });
+  const catalogueResponse = page.waitForResponse((response) => (
+    response.url().endsWith("/integration/quorum-chart-catalogue.json")
+  ));
   await page.goto("/");
 
-  await expect(page.getByText("Companion unavailable")).toBeVisible({
-    timeout: 20_000,
+  expect((await catalogueResponse).ok()).toBe(true);
+  await expect(page.getByRole("heading", {
+    name: "From complex exercise data to shared situational awareness",
+  })).toBeVisible();
+  const result = await control(request, "display-set", {
+    chart_ids: [FIRST_CHART],
+    expected_display_revision: 0,
   });
-  await expect
-    .poll(async () =>
-      (await events(request)).some(
-        (event) => event.type === "dashboard_hello",
-      ),
-    )
-    .toBe(false);
+  expect(result).toEqual({ recipients: 0 });
+  expect(bootstrapRequests).toBe(0);
+  expect((await events(request)).some(({ type }) => type === "dashboard_hello")).toBe(false);
+  await expect(page.locator(".multi-fullscreen-cell")).toHaveCount(0);
 });
 
 test("missing bootstrap preserves standalone dashboard behavior", async ({
@@ -272,9 +288,12 @@ test("missing bootstrap preserves standalone dashboard behavior", async ({
   request,
 }) => {
   await control(request, "catalogue-mode", { mode: "absent" });
+  const bootstrapResponse = page.waitForResponse((response) => (
+    response.url().endsWith("/companion/bootstrap")
+  ));
   await page.goto("/");
 
-  await expect(page.getByText("Standalone")).toBeVisible();
+  expect((await bootstrapResponse).status()).toBe(404);
   await page.getByRole("button", { name: "Biomedical", exact: true }).click();
   await page
     .locator(`[data-panel-id="${FIRST_CHART}"]`)
@@ -288,6 +307,7 @@ async function control(request, action, data) {
     data,
   });
   expect(response.ok()).toBeTruthy();
+  return response.json();
 }
 
 async function expectCompanionConnected(page, request) {
