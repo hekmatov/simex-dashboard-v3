@@ -8,6 +8,8 @@ import usePresentationRuntime from "/src/components/presentation/usePresentation
 
 const NativeBroadcastChannel = window.BroadcastChannel;
 window.__presentChannelStartThrows = false;
+window.__presentPublishEndedThrows = false;
+window.__presentTeardownCalls = [];
 window.BroadcastChannel = class ObservedBroadcastChannel extends NativeBroadcastChannel {
   constructor(name) {
     super(name);
@@ -19,12 +21,21 @@ window.BroadcastChannel = class ObservedBroadcastChannel extends NativeBroadcast
 
   postMessage(message) {
     if (message?.type === "ended") {
+      window.__presentTeardownCalls.push("publish");
       const publishCurrent = window.__presentPlaybackRuntime?.publishCurrent;
       window.__presentReentrantPublishResult = typeof publishCurrent === "function"
         ? publishCurrent()
         : "runtime-unavailable";
+      if (window.__presentPublishEndedThrows) throw new Error("ended publish failed");
     }
     return super.postMessage(message);
+  }
+
+  close() {
+    if (window.__presentTrackTeardown && this.name.startsWith("simex-presentation-")) {
+      window.__presentTeardownCalls.push("dispose");
+    }
+    return super.close();
   }
 };
 
@@ -66,7 +77,10 @@ const presentableItemIndex = new Map([
 
 window.__presentAudienceWindow = {
   closed: false,
-  close() { this.closed = true; },
+  close() {
+    if (window.__presentTrackTeardown) window.__presentTeardownCalls.push("close");
+    this.closed = true;
+  },
 };
 window.__presentOpenMode = "opened";
 window.open = (url, name) => {
@@ -185,4 +199,6 @@ function RuntimeProbe() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<Harness />);
+const root = createRoot(document.getElementById("root"));
+root.render(<Harness />);
+window.__unmountPresentPlaybackHarness = () => root.unmount();

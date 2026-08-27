@@ -155,6 +155,31 @@ test("popup-blocked Open retains one retryable session and Reopen uses its ident
   }
 });
 
+test("runtime unmount terminalizes before throwing publish and still closes and disposes", async () => {
+  const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
+  try {
+    await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
+    await page.waitForFunction(() => window.__presentPlaybackHarnessReady === true);
+    await page.locator('[data-presentation-control-id="open-new-session"]').click();
+    await page.waitForFunction(() => Boolean(window.__presentPlaybackSafety?.sessionId));
+    await page.evaluate(() => {
+      window.__presentTeardownCalls = [];
+      window.__presentReentrantPublishResult = "not-called";
+      window.__presentPublishEndedThrows = true;
+      window.__presentTrackTeardown = true;
+      window.__unmountPresentPlaybackHarness();
+    });
+
+    assert.equal(await page.evaluate(() => window.__presentReentrantPublishResult), null);
+    assert.deepEqual(
+      await page.evaluate(() => window.__presentTeardownCalls),
+      ["publish", "close", "dispose"],
+    );
+  } finally {
+    await page.close();
+  }
+});
+
 async function openConnectedSafetyHarness(page) {
   await page.goto(`${baseURL}/tests/fixtures/present-playback-safety-harness.html`);
   await page.waitForFunction(() => window.__presentPlaybackHarnessReady === true);

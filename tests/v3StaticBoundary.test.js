@@ -17,6 +17,23 @@ test("static-build verifier is available", () => {
   assert.equal(typeof verifierModule?.verifyV3StaticBuild, "function");
 });
 
+test("both Cloudflare production build paths finalize the verified runtime manifest", async () => {
+  const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+  const scripts = packageJson.scripts;
+  const finalizer = "node scripts/verify-v3-static-build.mjs --finalize";
+
+  assert.equal(scripts["build:cloudflare"].split(/\s*&&\s*/).at(-1), finalizer);
+  assert.equal(scripts["build:cloudflare:linux"].split(/\s*&&\s*/).at(-1), finalizer);
+  assert.match(
+    scripts["build:cloudflare"],
+    /^set SIMEX_EMBED_PORTABLE_DATA=0&& set VITE_SHOW_COMPATIBILITY_REPORTS=false&&/,
+  );
+  assert.match(
+    scripts["build:cloudflare:linux"],
+    /^SIMEX_EMBED_PORTABLE_DATA=0 VITE_SHOW_COMPATIBILITY_REPORTS=false /,
+  );
+});
+
 test("accepts a relative, fully local V3 build with hashed runtime assets", async (t) => {
   assert.ok(verifierModule);
   const fixture = await staticFixture(t);

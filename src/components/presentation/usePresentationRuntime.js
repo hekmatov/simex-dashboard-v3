@@ -223,10 +223,37 @@ export default function usePresentationRuntime(presentableItemIndex, {
   }, [reduceSession, synchronizePlayback]);
 
   React.useEffect(() => () => {
-    controllerRef.current?.publishEnded?.();
-    controllerRef.current?.dispose();
-    requestAudienceWindowClose(audienceWindowRef.current);
-  }, []);
+    const controller = controllerRef.current;
+    const audienceWindow = audienceWindowRef.current;
+    let next = sessionStateRef.current;
+    if (next.lifecycle !== "ended") {
+      next = reduceSession(next, { type: "END" });
+      sessionStateRef.current = next;
+    }
+    if (next.effects.length > 0) {
+      const actions = executePresentationEndEffects(next, {
+        publishEnded: () => controller?.publishEnded?.(),
+        requestClose: () => requestAudienceWindowClose(audienceWindow),
+        terminateChannel: () => controller?.dispose?.(),
+      });
+      for (const action of actions) next = reduceSession(next, action);
+    } else {
+      let closeOutcome;
+      try {
+        closeOutcome = requestAudienceWindowClose(audienceWindow);
+      } finally {
+        try {
+          controller?.dispose?.();
+        } catch {
+          // Unmount remains terminal even if final resource disposal fails.
+        }
+      }
+      if (closeOutcome?.outcome === "succeeded") audienceWindowRef.current = null;
+    }
+    controllerRef.current = null;
+    if (next.closeOutcome === "succeeded") audienceWindowRef.current = null;
+    sessionStateRef.current = next;
+  }, [reduceSession]);
 
   return {
     displayState, onDisplayAction, sessionState,
