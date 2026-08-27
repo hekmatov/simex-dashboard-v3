@@ -119,6 +119,8 @@ const GEOGRAPHIC_HINTS = new Set([
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const SOURCE_ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
+export const DASHBOARD_PROFILE_VERSION_MISMATCH = "DASHBOARD_PROFILE_VERSION_MISMATCH";
+
 export function normalizeDashboardSource(dashboard, suppliedProfiles = {}) {
   preflightDashboardInput(dashboard);
   const v4 = dashboard?.configVersion === 5
@@ -789,7 +791,7 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
   const profileIds = [...profilesById.keys()].sort();
   const missing = csvIds.filter((sourceId) => !profilesById.has(sourceId));
   if (missing.length > 0) {
-    throw new Error(`Missing dataset profile for source "${missing[0]}".`);
+    throw datasetProfileVersionMismatch(`Missing dataset profile for source "${missing[0]}".`);
   }
   const runtimeTabularIds = sourceEntries
     .filter(([, source]) => (
@@ -800,7 +802,7 @@ export function validateDatasetProfiles(dataSources, datasetProfiles) {
     !csvIds.includes(sourceId) && !runtimeTabularIds.includes(sourceId)
   ));
   if (unexpected.length > 0) {
-    throw new Error(
+    throw datasetProfileVersionMismatch(
       `Unexpected dataset profile for source "${unexpected[0]}".`,
     );
   }
@@ -859,13 +861,13 @@ function validateDatasetProfile(sourceId, source, profile) {
   );
   rejectUnknownEntries(entries, PROFILE_KEYS, `dataset profile "${sourceId}"`);
   if (entryValue(entries, "sourceId") !== sourceId) {
-    throw new Error(`Dataset profile "${sourceId}" sourceId does not match.`);
+    throw datasetProfileVersionMismatch(`Dataset profile "${sourceId}" sourceId does not match.`);
   }
   if (entryValue(entries, "kind") !== "csv") {
-    throw new Error(`Dataset profile "${sourceId}" kind must be "csv".`);
+    throw datasetProfileVersionMismatch(`Dataset profile "${sourceId}" kind must be "csv".`);
   }
   if (entryValue(entries, "path") !== source.path) {
-    throw new Error(`Dataset profile "${sourceId}" profile path does not match.`);
+    throw datasetProfileVersionMismatch(`Dataset profile "${sourceId}" profile path does not match.`);
   }
   validateProvenance(
     entryValue(entries, "provenance"),
@@ -875,7 +877,7 @@ function validateDatasetProfile(sourceId, source, profile) {
     stableStringify(entryValue(entries, "provenance"))
     !== stableStringify(source.provenance)
   ) {
-    throw new Error(
+    throw datasetProfileVersionMismatch(
       `Dataset profile "${sourceId}" provenance does not match its source.`,
     );
   }
@@ -900,6 +902,12 @@ function validateDatasetProfile(sourceId, source, profile) {
   for (const [index, column] of columns.entries()) {
     validateProfileColumn(sourceId, column, index, rowCount, columnNames);
   }
+}
+
+function datasetProfileVersionMismatch(message) {
+  const error = new Error(message);
+  error.code = DASHBOARD_PROFILE_VERSION_MISMATCH;
+  return error;
 }
 
 function validateProfileColumn(

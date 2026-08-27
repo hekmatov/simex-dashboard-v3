@@ -5,6 +5,7 @@ import ModalFocusScope from "../common/ModalFocusScope.jsx";
 export default function ApplicationRecovery({
   busy = false,
   error = "",
+  profileVersionMismatch = false,
   candidate = null,
   themeProjection = {},
   onReload,
@@ -33,7 +34,12 @@ export default function ApplicationRecovery({
       <section className="application-recovery-panel">
         <p className="eyebrow">SimEx Dashboard</p>
         <h1 id="application-recovery-title">Dashboard couldn’t load. No valid scenario is available.</h1>
-        <p>Reload the configured dashboard source or choose a current version 3 dashboard package.</p>
+        <p>Reload the latest dashboard source or choose a current version 3 dashboard package.</p>
+        {profileVersionMismatch && (
+          <p className="application-recovery-advice">
+            The dashboard configuration and dataset profiles appear to come from different versions. Reload the dashboard first. If the problem continues, try a hard refresh with <kbd>Ctrl+Shift+R</kbd> on Windows or Linux, or <kbd>Cmd+Shift+R</kbd> on macOS.
+          </p>
+        )}
         {error && <p className="application-recovery-error" role="alert">{error}</p>}
         <div className="application-recovery-actions">
           <button type="button" disabled={busy} onClick={onReload}>

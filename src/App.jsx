@@ -49,6 +49,7 @@ import {
 
 import {
   hydrateConfigurationBeforeStorageWrite,
+  isDashboardProfileVersionMismatch,
   recoveryPackageError,
   recoveryPackageSummary,
 } from "./lib/applicationRecovery.js";
@@ -1277,6 +1278,7 @@ export default function App() {
       <ApplicationRecovery
         busy={recoveryBusy}
         error={recoveryError}
+        profileVersionMismatch={isDashboardProfileVersionMismatch(error)}
         candidate={recoveryImportCandidate}
         themeProjection={dashboardThemeProjection}
         onReload={reloadDashboardFromSource}

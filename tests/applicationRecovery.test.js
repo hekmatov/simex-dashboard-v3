@@ -10,9 +10,15 @@ const vite = await createServer({
   logLevel: "silent",
   server: { middlewareMode: true },
 });
-const [{ default: ApplicationRecovery }, recoveryModel, { default: BuildWorkspace }] = await Promise.all([
+const [
+  { default: ApplicationRecovery },
+  recoveryModel,
+  loadDashboardModel,
+  { default: BuildWorkspace },
+] = await Promise.all([
   vite.ssrLoadModule("/src/components/app-shell/ApplicationRecovery.jsx"),
   vite.ssrLoadModule("/src/lib/applicationRecovery.js"),
+  vite.ssrLoadModule("/src/lib/loadDashboard.js"),
   vite.ssrLoadModule("/src/components/build/BuildWorkspace.jsx"),
 ]);
 await vite.close();
@@ -29,6 +35,29 @@ test("application recovery exposes only the two approved root actions", () => {
   assert.match(html, /aria-label="Choose Dashboard Package"/);
   assert.match(html, /accept="application\/json,\.json"/);
   assert.doesNotMatch(html, /Dashboard mode|Dashboard pages|Build workspace/);
+});
+
+test("profile/cache pairing failures receive targeted reload guidance only", () => {
+  const html = renderToStaticMarkup(React.createElement(ApplicationRecovery, {
+    profileVersionMismatch: true,
+    onReload: () => {},
+    onChoosePackage: () => {},
+  }));
+  assert.match(html, /configuration and dataset profiles appear to come from different versions/i);
+  assert.match(html, /hard refresh/i);
+  assert.match(html, /Ctrl\+Shift\+R/);
+  assert.match(html, /Cmd\+Shift\+R/);
+
+  let mismatch;
+  try {
+    loadDashboardModel.validateDatasetProfiles({
+      cases: { kind: "csv", path: "data/cases.csv", provenance: { label: "Cases" } },
+    }, {});
+  } catch (error) {
+    mismatch = error;
+  }
+  assert.equal(recoveryModel.isDashboardProfileVersionMismatch(mismatch), true);
+  assert.equal(recoveryModel.isDashboardProfileVersionMismatch(new Error("Could not load dashboard config")), false);
 });
 
 test("recovery hydration completes before storage changes", async () => {

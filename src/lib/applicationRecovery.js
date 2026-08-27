@@ -1,3 +1,9 @@
+import { DASHBOARD_PROFILE_VERSION_MISMATCH } from "./loadDashboard.js";
+
+export function isDashboardProfileVersionMismatch(error) {
+  return error?.code === DASHBOARD_PROFILE_VERSION_MISMATCH;
+}
+
 export async function hydrateConfigurationBeforeStorageWrite({
   candidate,
   hydrate,
