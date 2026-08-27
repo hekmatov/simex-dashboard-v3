@@ -115,6 +115,7 @@ function setup({
   FakeBroadcastChannel.reset();
   const scheduler = new FakeScheduler();
   const states = [];
+  const ended = [];
   const rejections = [];
   const statuses = [];
   const controller = createPresentationControllerChannel({
@@ -131,10 +132,11 @@ function setup({
     scheduler,
     getPresentableItemIndex,
     onStateChange: (next) => states.push(next),
+    onEnded: (terminalMessage) => ended.push(terminalMessage),
     onConnectionChange: (status) => statuses.push(`audience:${status}`),
     onMessageRejected: (reason, lastValidSnapshot) => rejections.push({ reason, lastValidSnapshot }),
   });
-  return { audience, controller, scheduler, states, rejections, statuses };
+  return { audience, controller, scheduler, states, ended, rejections, statuses };
 }
 
 function audienceTransport() {
@@ -268,7 +270,7 @@ test("ordinary duplicate and out-of-order heartbeats remain rejected after a fre
 });
 
 test("a validated ended message is terminal even when its sequence follows a gap", () => {
-  const { audience, controller, scheduler, states, rejections, statuses } = setup();
+  const { audience, controller, scheduler, states, ended, rejections, statuses } = setup();
   controller.start();
   audience.start();
   const first = presentationState();
@@ -278,8 +280,36 @@ test("a validated ended message is terminal even when its sequence follows a gap
   controller.end();
 
   assert.deepEqual(states, [first]);
+  assert.equal(ended.length, 1);
+  assert.equal(ended[0].type, "ended");
+  assert.equal(ended[0].session_id, "session-001");
   assert.equal(rejections.some(({ reason }) => reason.code === "sequence_gap"), false);
-  assert.ok(statuses.includes("audience:waiting"));
+  assert.ok(statuses.includes("audience:ended"));
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
+  assert.equal(scheduler.activeTimerCount, 0);
+});
+
+test("ordered ended emits a clone-safe terminal signal without clearing last-valid state", () => {
+  const { audience, controller, scheduler, states, ended, statuses } = setup();
+  controller.start();
+  audience.start();
+  const first = presentationState();
+  controller.publish(first);
+  controller.end();
+
+  assert.equal(ended.length, 1);
+  assert.deepEqual(ended[0], {
+    protocol_version: 3,
+    session_id: "session-001",
+    sequence: 2,
+    type: "ended",
+    payload: null,
+  });
+  assert.ok(statuses.includes("audience:ended"));
+  assert.deepEqual(states, [first]);
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
+  ended[0].type = "state";
+  assert.deepEqual(audience.getLastValidSnapshot(), first);
   assert.equal(scheduler.activeTimerCount, 0);
 });
 

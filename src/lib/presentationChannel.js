@@ -166,6 +166,7 @@ export function createPresentationAudienceChannel({
   presentableItemIndex,
   getPresentableItemIndex = () => presentableItemIndex,
   onStateChange = () => {},
+  onEnded = () => {},
   onConnectionChange = () => {},
   onMessageRejected = () => {},
 } = {}) {
@@ -255,7 +256,8 @@ export function createPresentationAudienceChannel({
         return;
       }
       lastControllerSequence = message.sequence;
-      setStatus("waiting");
+      onEnded(snapshot(message));
+      setStatus("ended");
       dispose();
       return;
     }
