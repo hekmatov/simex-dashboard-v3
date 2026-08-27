@@ -32,6 +32,12 @@ function event(state, type, overrides = {}) {
   };
 }
 
+function consumeEffects(state) {
+  return reducePresentationSession(state, event(state, "EFFECTS_CONSUMED", {
+    effectsVersion: state.effectsVersion,
+  }));
+}
+
 function presentationState(overrides = {}) {
   return {
     dashboard_revision: "dashboard-1",
@@ -154,7 +160,9 @@ test("OPEN_NEW_SESSION cannot replace a waiting or live session", () => {
 });
 
 test("a new session must use distinct runtime identity and a newer generation", () => {
-  const ended = reducePresentationSession(openSession(), { type: "END" });
+  const ended = consumeEffects(
+    reducePresentationSession(openSession(), { type: "END" }),
+  );
   for (const action of [
     {
       type: "OPEN_NEW_SESSION",
@@ -189,16 +197,18 @@ test("a new session must use distinct runtime identity and a newer generation", 
 
 test("later sessions cannot reuse any earlier channel or denied-close surface name", () => {
   const firstEnded = reducePresentationSession(openSession(), { type: "END" });
-  const firstDenied = reducePresentationSession(
+  const firstDenied = consumeEffects(reducePresentationSession(
     firstEnded,
     event(firstEnded, "AUDIENCE_CLOSE_DENIED", { surfaceRemains: true }),
-  );
+  ));
   const second = reducePresentationSession(firstDenied, {
     type: "OPEN_NEW_SESSION",
     sessionId: "session-002",
     requestedWindowName: "simex-audience-session-002",
   });
-  const secondEnded = reducePresentationSession(second, { type: "END" });
+  const secondEnded = consumeEffects(
+    reducePresentationSession(second, { type: "END" }),
+  );
 
   assert.throws(() => reducePresentationSession(secondEnded, {
     type: "OPEN_NEW_SESSION",
@@ -327,11 +337,11 @@ test("playback actions pause for safety and TICK stops at the endpoint without l
   state = reducePresentationSession(state, event(state, "TICK"));
   assert.equal(state.frameIndex, 1);
   assert.equal(state.playback, "playing");
-  assert.equal(state.sourcePositions["scene:scene-001"], 1);
+  assert.equal(state.sourcePositions["scene:scene-001"], 0);
   state = reducePresentationSession(state, event(state, "TICK"));
   assert.equal(state.frameIndex, 2);
   assert.equal(state.playback, "at-end");
-  assert.equal(state.sourcePositions["scene:scene-001"], 2);
+  assert.equal(state.sourcePositions["scene:scene-001"], 0);
   state = reducePresentationSession(state, event(state, "TICK"));
   assert.equal(state.frameIndex, 2);
   assert.equal(state.playback, "at-end");
@@ -375,8 +385,18 @@ test("PLAY on a one-frame ledger is immediately at-end", () => {
 test("source cursor memory is frozen and included when returning to a source", () => {
   let state = liveSession();
   state = reducePresentationSession(state, { type: "SEEK", frameIndex: 2 });
-  assert.equal(state.sourcePositions["scene:scene-001"], 2);
+  assert.equal(state.sourcePositions["scene:scene-001"], 0);
   assert.equal(Object.isFrozen(state.sourcePositions), true);
+  state = reducePresentationSession(
+    state,
+    event(state, "SNAPSHOT_ACCEPTED", {
+      message: acceptedMessage(state, presentationState({
+        timeline: { ...presentationState().timeline, frame_index: 2 },
+      })),
+    }),
+    validationContext,
+  );
+  assert.equal(state.sourcePositions["scene:scene-001"], 2);
 
   state = reducePresentationSession(state, {
     type: "SELECT_CHRONO_GROUP",
@@ -399,7 +419,7 @@ test("source cursor memory is frozen and included when returning to a source", (
   );
   assert.equal(state.sourcePositions["group:group-002"], 1);
   state = reducePresentationSession(state, { type: "PREVIOUS" });
-  assert.equal(state.sourcePositions["group:group-002"], 0);
+  assert.equal(state.sourcePositions["group:group-002"], 1);
   state = reducePresentationSession(state, { type: "NEXT" });
   assert.equal(state.sourcePositions["group:group-002"], 1);
   state = reducePresentationSession(state, { type: "PREVIOUS" });
@@ -420,8 +440,61 @@ test("source cursor memory is frozen and included when returning to a source", (
   assert.deepEqual(returnToGroup.pendingRequest, {
     type: "SELECT_CHRONO_GROUP",
     groupId: "group-002",
-    frameIndex: 0,
+    frameIndex: 1,
   });
+});
+
+test("rejected seek restores accepted state and cannot become remembered cursor", () => {
+  const accepted = liveSession();
+  const sought = reducePresentationSession(accepted, {
+    type: "SEEK",
+    frameIndex: 2,
+  });
+  assert.equal(sought.frameIndex, 2);
+  assert.equal(sought.sourcePositions["scene:scene-001"], 0);
+
+  const rejected = reducePresentationSession(sought, event(sought, "SNAPSHOT_REJECTED", {
+    reason: {
+      code: "seek_rejected",
+      message: "The requested frame could not be published.",
+    },
+  }));
+  assert.equal(rejected.frameIndex, 0);
+  assert.equal(rejected.traceMode, "reveal");
+  assert.equal(rejected.output, "active");
+  assert.equal(rejected.source.scene_id, "scene-001");
+  assert.equal(rejected.sourcePositions["scene:scene-001"], 0);
+  assert.equal(rejected.pendingRequest, null);
+  assert.equal(rejected.rejectionReason.code, "seek_rejected");
+
+  const other = reducePresentationSession(rejected, {
+    type: "SELECT_CHRONO_GROUP",
+    groupId: "group-002",
+  });
+  const returned = reducePresentationSession(other, {
+    type: "SELECT_SCENE",
+    sceneId: "scene-001",
+  });
+  assert.equal(returned.pendingRequest.frameIndex, 0);
+});
+
+test("rejected timer tick restores accepted frame and leaves cursor memory unchanged", () => {
+  const accepted = liveSession();
+  const playing = reducePresentationSession(accepted, { type: "PLAY" });
+  const ticked = reducePresentationSession(playing, event(playing, "TICK"));
+  assert.equal(ticked.frameIndex, 1);
+  assert.equal(ticked.sourcePositions["scene:scene-001"], 0);
+
+  const rejected = reducePresentationSession(ticked, event(ticked, "SNAPSHOT_REJECTED", {
+    reason: {
+      code: "tick_rejected",
+      message: "The timer frame could not be published.",
+    },
+  }));
+  assert.equal(rejected.frameIndex, 0);
+  assert.equal(rejected.playback, "paused");
+  assert.equal(rejected.sourcePositions["scene:scene-001"], 0);
+  assert.equal(rejected.pendingRequest, null);
 });
 
 test("blackout restores the prior deliberate output and never autoplays", () => {
@@ -552,6 +625,18 @@ test("END makes the generation terminal before ordered effects and close outcome
 
 test("END effects are one-shot, guarded, and close outcomes do not create a new batch", () => {
   const ended = reducePresentationSession(liveSession(), { type: "END" });
+  const prematureOpen = {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-002",
+    requestedWindowName: "simex-audience-session-002",
+  };
+  assert.equal(reducePresentationSession(ended, prematureOpen), ended);
+  const closeReported = reducePresentationSession(
+    ended,
+    event(ended, "AUDIENCE_CLOSE_SUCCEEDED"),
+  );
+  assert.equal(reducePresentationSession(closeReported, prematureOpen), closeReported);
+
   const staleAcknowledgement = reducePresentationSession(ended, event(
     ended,
     "EFFECTS_CONSUMED",

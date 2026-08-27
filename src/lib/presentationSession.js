@@ -59,7 +59,7 @@ export function reducePresentationSession(state, action, context = {}) {
   assertRecord(action, "Presentation session action");
 
   if (action.type === "OPEN_NEW_SESSION") {
-    return state.lifecycle === "ended" ? openNewSession(state, action) : state;
+    return canOpenNewSession(state) ? openNewSession(state, action) : state;
   }
 
   if (GUARDED_SESSION_EVENTS.has(action.type) && !matchesActiveGeneration(state, action)) {
@@ -110,10 +110,7 @@ export function reducePresentationSession(state, action, context = {}) {
     case "SNAPSHOT_ACCEPTED":
       return acceptSnapshot(state, action.message, context);
     case "SNAPSHOT_REJECTED":
-      return pause(state, {
-        pendingRequest: null,
-        rejectionReason: normalizeRejectionReason(action.reason),
-      });
+      return rejectSnapshot(state, action.reason);
     case "PLAY":
       return play(state);
     case "PAUSE":
@@ -334,11 +331,6 @@ function tick(state) {
     frameIndex,
     playback: frameIndex === frameCount - 1 ? "at-end" : "playing",
     pendingRequest: { type: "TICK", frameIndex },
-    sourcePositions: rememberSourcePosition(
-      state.sourcePositions,
-      state.source,
-      frameIndex,
-    ),
   });
 }
 
@@ -351,11 +343,6 @@ function seek(state, frameIndex) {
     frameIndex,
     pendingRequest: { type: "SEEK", frameIndex },
     rejectionReason: null,
-    sourcePositions: rememberSourcePosition(
-      state.sourcePositions,
-      state.source,
-      frameIndex,
-    ),
   });
 }
 
@@ -366,11 +353,6 @@ function moveFrame(state, offset, type) {
   return pause(state, {
     frameIndex,
     pendingRequest: { type, frameIndex },
-    sourcePositions: rememberSourcePosition(
-      state.sourcePositions,
-      state.source,
-      frameIndex,
-    ),
   });
 }
 
@@ -402,6 +384,29 @@ function matchesActiveGeneration(state, action) {
     action.sessionId === state.sessionId
     && action.channelGeneration === state.channelGeneration
   );
+}
+
+function canOpenNewSession(state) {
+  return (
+    state.lifecycle === "ended"
+    && state.effects.length === 0
+    && state.effectsConsumedVersion === state.effectsVersion
+  );
+}
+
+function rejectSnapshot(state, reason) {
+  const snapshot = state.lastValidSnapshot;
+  return pause(state, {
+    pendingRequest: null,
+    rejectionReason: normalizeRejectionReason(reason),
+    ...(snapshot ? {
+      frameIndex: snapshot.timeline?.frame_index ?? 0,
+      traceMode: snapshot.timeline?.trace_mode ?? state.traceMode,
+      output: snapshot.output_mode,
+      source: deepFreeze(structuredClone(snapshot.source)),
+      preBlackoutOutput: snapshot.output_mode,
+    } : {}),
+  });
 }
 
 function requestWithRememberedFrame(state, request, sourceKey) {
