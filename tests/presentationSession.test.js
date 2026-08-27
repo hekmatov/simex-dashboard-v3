@@ -1,0 +1,419 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  createInitialPresentationSession,
+  reducePresentationSession,
+} from "../src/lib/presentationSession.js";
+
+function openSession(state = createInitialPresentationSession(), overrides = {}) {
+  return reducePresentationSession(state, {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-001",
+    requestedWindowName: "simex-audience-session-001",
+    ...overrides,
+  });
+}
+
+function event(state, type, overrides = {}) {
+  return {
+    type,
+    sessionId: state.sessionId,
+    channelGeneration: state.channelGeneration,
+    ...overrides,
+  };
+}
+
+function presentationState(overrides = {}) {
+  return {
+    dashboard_revision: "dashboard-1",
+    source: {
+      kind: "scene",
+      scene_id: "scene-001",
+      chrono_group_id: "group-001",
+    },
+    composition: {
+      active_page_id: "page-001",
+      displayed_chart_ids: ["chart-001"],
+      layout: "solo",
+    },
+    timeline: {
+      frame_epochs: [1_000, 2_000, 3_000],
+      frame_index: 0,
+      period: { start: 1_000, end: 3_000 },
+      trace_mode: "reveal",
+      seconds_per_frame: 2,
+    },
+    matching: { use_authored_settings: true },
+    output_mode: "active",
+    blackout: false,
+    audience: {
+      date_position: {
+        x_permille: 700,
+        y_permille: 50,
+        width_permille: 250,
+      },
+    },
+    payload: {
+      items: [{ kind: "chart", chart_id: "chart-001" }],
+      audience_facts: {
+        dashboard_name: true,
+        page: true,
+        parent_chrono_group: true,
+        scene_name: true,
+        scene_date: true,
+      },
+    },
+    ...overrides,
+  };
+}
+
+function acceptedMessage(state, payload = presentationState()) {
+  return {
+    protocol_version: 3,
+    session_id: state.sessionId,
+    sequence: 1,
+    type: "state",
+    payload,
+  };
+}
+
+function liveSession() {
+  const connected = reducePresentationSession(
+    openSession(),
+    event(openSession(), "CONNECTED"),
+  );
+  return reducePresentationSession(connected, event(connected, "SNAPSHOT_ACCEPTED", {
+    message: acceptedMessage(connected),
+  }));
+}
+
+test("OPEN_NEW_SESSION is the allocation transition and requires runtime identity", () => {
+  const initial = createInitialPresentationSession();
+  assert.equal(initial.sessionId, null);
+  assert.equal(initial.channelGeneration, 0);
+  assert.equal(initial.acceptsSessionEvents, false);
+
+  assert.throws(
+    () => reducePresentationSession(initial, {
+      type: "OPEN_NEW_SESSION",
+      requestedWindowName: "audience-1",
+    }),
+    /sessionId/,
+  );
+
+  const opened = openSession(initial);
+  assert.deepEqual(
+    {
+      sessionId: opened.sessionId,
+      requestedWindowName: opened.requestedWindowName,
+      channelGeneration: opened.channelGeneration,
+      lifecycle: opened.lifecycle,
+      window: opened.window,
+      closeOutcome: opened.closeOutcome,
+      connection: opened.connection,
+      output: opened.output,
+      playback: opened.playback,
+      blackout: opened.blackout,
+      acceptsSessionEvents: opened.acceptsSessionEvents,
+    },
+    {
+      sessionId: "session-001",
+      requestedWindowName: "simex-audience-session-001",
+      channelGeneration: 1,
+      lifecycle: "waiting",
+      window: "opening",
+      closeOutcome: "not-requested",
+      connection: "connecting",
+      output: "holding",
+      playback: "paused",
+      blackout: false,
+      acceptsSessionEvents: true,
+    },
+  );
+});
+
+test("a new session must use distinct runtime identity and a newer generation", () => {
+  const ended = reducePresentationSession(openSession(), { type: "END" });
+  for (const action of [
+    {
+      type: "OPEN_NEW_SESSION",
+      sessionId: ended.sessionId,
+      requestedWindowName: "simex-audience-session-002",
+    },
+    {
+      type: "OPEN_NEW_SESSION",
+      sessionId: "session-002",
+      requestedWindowName: ended.requestedWindowName,
+    },
+    {
+      type: "OPEN_NEW_SESSION",
+      sessionId: "session-002",
+      requestedWindowName: "simex-audience-session-002",
+      channelGeneration: ended.channelGeneration,
+    },
+  ]) {
+    assert.throws(() => reducePresentationSession(ended, action));
+  }
+
+  const reopened = reducePresentationSession(ended, {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-002",
+    requestedWindowName: "simex-audience-session-002",
+    channelGeneration: 7,
+  });
+  assert.equal(reopened.lifecycle, "waiting");
+  assert.equal(reopened.channelGeneration, 7);
+  assert.equal(reopened.lastValidSnapshot, null);
+});
+
+test("later sessions cannot reuse any earlier channel or denied-close surface name", () => {
+  const firstEnded = reducePresentationSession(openSession(), { type: "END" });
+  const firstDenied = reducePresentationSession(
+    firstEnded,
+    event(firstEnded, "AUDIENCE_CLOSE_DENIED", { surfaceRemains: true }),
+  );
+  const second = reducePresentationSession(firstDenied, {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-002",
+    requestedWindowName: "simex-audience-session-002",
+  });
+  const secondEnded = reducePresentationSession(second, { type: "END" });
+
+  assert.throws(() => reducePresentationSession(secondEnded, {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-001",
+    requestedWindowName: "simex-audience-session-003",
+  }), /sessionId/);
+  assert.throws(() => reducePresentationSession(secondEnded, {
+    type: "OPEN_NEW_SESSION",
+    sessionId: "session-003",
+    requestedWindowName: "simex-audience-session-001",
+  }), /requestedWindowName/);
+});
+
+test("waiting connection and deliberate output transitions retain accepted output", () => {
+  const opened = openSession();
+  const connected = reducePresentationSession(opened, event(opened, "CONNECTED"));
+  assert.equal(connected.window, "open");
+  assert.equal(connected.connection, "connected");
+  assert.equal(connected.lifecycle, "waiting");
+
+  const blank = reducePresentationSession(connected, { type: "SET_OUTPUT_MODE", mode: "blank" });
+  assert.equal(blank.output, "blank");
+  assert.equal(blank.playback, "paused");
+  assert.equal(blank.lastValidSnapshot, null);
+});
+
+test("source selection is a paused request and only a valid accepted snapshot enters live", () => {
+  const opened = openSession();
+  const requested = reducePresentationSession(opened, {
+    type: "SELECT_SCENE",
+    sceneId: "scene-001",
+  });
+  assert.equal(requested.lifecycle, "waiting");
+  assert.equal(requested.output, "holding");
+  assert.equal(requested.source, null);
+  assert.deepEqual(requested.pendingRequest, {
+    type: "SELECT_SCENE",
+    sceneId: "scene-001",
+  });
+
+  const invalid = reducePresentationSession(requested, event(requested, "SNAPSHOT_ACCEPTED", {
+    message: { session_id: requested.sessionId, type: "state", payload: {} },
+  }));
+  assert.equal(invalid.lifecycle, "waiting");
+  assert.equal(invalid.lastValidSnapshot, null);
+  assert.equal(invalid.playback, "paused");
+
+  const payload = presentationState();
+  const live = reducePresentationSession(invalid, event(invalid, "SNAPSHOT_ACCEPTED", {
+    message: acceptedMessage(invalid, payload),
+  }));
+  payload.source.scene_id = "mutated-after-dispatch";
+  assert.equal(live.lifecycle, "live");
+  assert.equal(live.output, "active");
+  assert.equal(live.playback, "paused");
+  assert.equal(live.source.scene_id, "scene-001");
+  assert.equal(live.lastValidSnapshot.source.scene_id, "scene-001");
+});
+
+test("rejected snapshots and invalid selections pause while retaining visible output", () => {
+  const playing = reducePresentationSession(liveSession(), { type: "PLAY" });
+  const rejected = reducePresentationSession(playing, event(playing, "SNAPSHOT_REJECTED", {
+    reason: "scene-needs-attention",
+  }));
+  assert.equal(rejected.output, "active");
+  assert.equal(rejected.playback, "paused");
+  assert.equal(rejected.rejectionReason, "scene-needs-attention");
+  assert.deepEqual(rejected.lastValidSnapshot, playing.lastValidSnapshot);
+});
+
+test("playback actions pause for safety and TICK stops at the endpoint without looping", () => {
+  let state = liveSession();
+  state = reducePresentationSession(state, { type: "PLAY" });
+  assert.equal(state.playback, "playing");
+  state = reducePresentationSession(state, { type: "TICK" });
+  assert.equal(state.frameIndex, 1);
+  assert.equal(state.playback, "playing");
+  state = reducePresentationSession(state, { type: "TICK" });
+  assert.equal(state.frameIndex, 2);
+  assert.equal(state.playback, "at-end");
+  state = reducePresentationSession(state, { type: "TICK" });
+  assert.equal(state.frameIndex, 2);
+  assert.equal(state.playback, "at-end");
+
+  for (const action of [
+    { type: "SEEK", frameIndex: 1 },
+    { type: "PREVIOUS" },
+    { type: "NEXT" },
+    { type: "SELECT_CHRONO_GROUP", groupId: "group-002" },
+    { type: "SET_TRACE_MODE", mode: "full" },
+    { type: "SET_COMPOSITION", composition: { displayed_chart_ids: ["chart-001"] } },
+    { type: "DOCUMENT_HIDDEN" },
+    { type: "MODE_EXIT" },
+  ]) {
+    const playing = reducePresentationSession(liveSession(), { type: "PLAY" });
+    assert.equal(reducePresentationSession(playing, action).playback, "paused", action.type);
+  }
+});
+
+test("blackout restores the prior deliberate output and never autoplays", () => {
+  const holding = reducePresentationSession(liveSession(), {
+    type: "SET_OUTPUT_MODE",
+    mode: "holding",
+  });
+  const playing = reducePresentationSession(holding, { type: "PLAY" });
+  const blackedOut = reducePresentationSession(playing, {
+    type: "SET_BLACKOUT",
+    active: true,
+  });
+  assert.equal(blackedOut.blackout, true);
+  assert.equal(blackedOut.output, "holding");
+  assert.equal(blackedOut.playback, "paused");
+
+  const restored = reducePresentationSession(blackedOut, {
+    type: "SET_BLACKOUT",
+    active: false,
+  });
+  assert.equal(restored.blackout, false);
+  assert.equal(restored.output, "holding");
+  assert.equal(restored.playback, "paused");
+});
+
+test("connection and window safety transitions retain output and require both session guards", () => {
+  const playing = reducePresentationSession(liveSession(), { type: "PLAY" });
+  const wrongSession = reducePresentationSession(playing, event(playing, "CONNECTION_LOST", {
+    sessionId: "session-other",
+  }));
+  const wrongGeneration = reducePresentationSession(playing, event(playing, "CONNECTION_LOST", {
+    channelGeneration: playing.channelGeneration + 1,
+  }));
+  assert.equal(wrongSession, playing);
+  assert.equal(wrongGeneration, playing);
+
+  const lost = reducePresentationSession(playing, event(playing, "CONNECTION_LOST"));
+  assert.equal(lost.connection, "disconnected");
+  assert.equal(lost.output, "active");
+  assert.equal(lost.playback, "paused");
+
+  const reconnecting = reducePresentationSession(lost, event(lost, "RECONNECTING"));
+  assert.equal(reconnecting.connection, "reconnecting");
+  assert.equal(reconnecting.window, "open");
+  const reconnected = reducePresentationSession(reconnecting, event(reconnecting, "CONNECTED"));
+  assert.equal(reconnected.connection, "connected");
+  assert.equal(reconnected.playback, "paused");
+  assert.equal(reconnected.pendingRequest.type, "RESEND_ACCEPTED_SNAPSHOT");
+
+  const closed = reducePresentationSession(reconnected, event(reconnected, "WINDOW_CLOSED"));
+  assert.equal(closed.window, "closed");
+  assert.equal(closed.connection, "disconnected");
+  assert.equal(closed.output, "active");
+});
+
+test("END makes the generation terminal before ordered effects and close outcomes cannot revive it", () => {
+  const live = liveSession();
+  const ended = reducePresentationSession(live, { type: "END" });
+  assert.deepEqual(
+    {
+      lifecycle: ended.lifecycle,
+      window: ended.window,
+      closeOutcome: ended.closeOutcome,
+      connection: ended.connection,
+      output: ended.output,
+      playback: ended.playback,
+      blackout: ended.blackout,
+      acceptsSessionEvents: ended.acceptsSessionEvents,
+      effects: ended.effects,
+    },
+    {
+      lifecycle: "ended",
+      window: "closing",
+      closeOutcome: "requested",
+      connection: "terminated",
+      output: "ended",
+      playback: "paused",
+      blackout: false,
+      acceptsSessionEvents: false,
+      effects: ["PUBLISH_ENDED", "REQUEST_AUDIENCE_CLOSE", "TERMINATE_CHANNEL"],
+    },
+  );
+
+  const succeeded = reducePresentationSession(ended, event(ended, "AUDIENCE_CLOSE_SUCCEEDED"));
+  assert.equal(succeeded.window, "closed");
+  assert.equal(succeeded.closeOutcome, "succeeded");
+  assert.equal(succeeded.lifecycle, "ended");
+  assert.equal(succeeded.connection, "terminated");
+  assert.equal(succeeded.acceptsSessionEvents, false);
+
+  const denied = reducePresentationSession(ended, event(ended, "AUDIENCE_CLOSE_DENIED", {
+    surfaceRemains: true,
+  }));
+  assert.equal(denied.window, "open");
+  assert.equal(denied.closeOutcome, "denied-surface-remains");
+  assert.equal(denied.lifecycle, "ended");
+  assert.equal(denied.connection, "terminated");
+  assert.equal(denied.output, "ended");
+  assert.equal(denied.blackout, false);
+});
+
+test("every old-session event is ignored after either END close outcome", () => {
+  const ended = reducePresentationSession(liveSession(), { type: "END" });
+  const outcomes = [
+    reducePresentationSession(ended, event(ended, "AUDIENCE_CLOSE_SUCCEEDED")),
+    reducePresentationSession(ended, event(ended, "AUDIENCE_CLOSE_DENIED", {
+      surfaceRemains: true,
+    })),
+  ];
+  const oldEvents = [
+    event(ended, "WINDOW_OPENED"),
+    event(ended, "WINDOW_CLOSED"),
+    event(ended, "CONNECTING"),
+    event(ended, "CONNECTED"),
+    event(ended, "CONNECTION_LOST"),
+    event(ended, "RECONNECTING"),
+    event(ended, "SNAPSHOT_ACCEPTED", { message: acceptedMessage(ended) }),
+    event(ended, "SNAPSHOT_REJECTED", { reason: "late" }),
+    { type: "PLAY" },
+    { type: "PAUSE" },
+    { type: "TICK" },
+    { type: "SEEK", frameIndex: 1 },
+    { type: "PREVIOUS" },
+    { type: "NEXT" },
+    { type: "SELECT_SCENE", sceneId: "scene-002" },
+    { type: "SELECT_CHRONO_GROUP", groupId: "group-002" },
+    { type: "SET_TRACE_MODE", mode: "full" },
+    { type: "SET_OUTPUT_MODE", mode: "blank" },
+    { type: "SET_COMPOSITION", composition: {} },
+    { type: "SET_BLACKOUT", active: true },
+    { type: "DOCUMENT_HIDDEN" },
+    { type: "MODE_EXIT" },
+    { type: "END" },
+  ];
+
+  for (const outcome of outcomes) {
+    for (const action of oldEvents) {
+      assert.equal(reducePresentationSession(outcome, action), outcome, action.type);
+    }
+  }
+});
