@@ -8,6 +8,7 @@ import {
   LIVE_APP_URL,
   openAudienceSession,
   sendLateOldGenerationMessage,
+  sendLateOldSessionState,
 } from "./support/present-audience-workflow.js";
 
 test.beforeEach(async ({ page }) => {
@@ -46,7 +47,7 @@ test("Audience remains passive and last-valid through invalid output and reconne
     await expect(session.popup.locator(`[data-displayed-chart-id="${cssEscape(chartId)}"]`)).toBeVisible();
   }
   await expect(audience.locator("button, nav, a")).toHaveCount(0);
-  await injectIncompleteNextAudienceState(session.popup, session.channelId);
+  await injectIncompleteNextAudienceState(session.popup);
   await expect(audience).toHaveAttribute("data-connection-status", "resync-required");
   await expect(audience).toHaveCSS("opacity", "1");
   await expect(audience.getByText("Audience display ready", { exact: true })).toHaveCount(0);
@@ -64,6 +65,7 @@ test("Audience remains passive and last-valid through invalid output and reconne
 
 test("Audience surface remaining after denied close shows neutral Ended projection and rejects old events", async ({ context, page }) => {
   test.setTimeout(120_000);
+  await installAudienceFaultInstrumentation(context);
   await context.addInitScript(() => {
     window.__presentationCloseDeniedByPlatform = true;
     window.close = () => {};
@@ -83,9 +85,10 @@ test("Audience surface remaining after denied close shows neutral Ended projecti
   await expect(first.popup.locator("[data-displayed-chart-id], button, nav, a")).toHaveCount(0);
   await expect(first.popup.locator(".audience-ended")).not.toContainText(/reconnect|disconnect|channel|session/i);
   expect(first.popup.isClosed()).toBe(false);
-  await sendLateOldGenerationMessage(first.popup, first.channelId);
+  await sendLateOldSessionState(first.popup);
   await expect(first.popup.locator(".audience-display")).toHaveAttribute("data-connection-status", "ended");
   await expect(first.popup.locator(".audience-ended h1")).toHaveText("Presentation ended");
+  await expect(first.popup.getByText("Waiting for the next scene.", { exact: true })).toHaveCount(0);
 
   const second = await openAudienceSession(page);
   expect(second.channelId).not.toBe(first.channelId);

@@ -9,12 +9,20 @@ export async function installAudienceFaultInstrumentation(context) {
     window.BroadcastChannel = class ObservedBroadcastChannel extends NativeBroadcastChannel {
       constructor(name) {
         super(name);
+        window.__audienceTestTransport = {
+          ...(window.__audienceTestTransport ?? {}),
+          channelName: name,
+        };
         this.addEventListener("message", ({ data }) => {
           if (data?.protocol_version === 3 && ["state", "ended"].includes(data.type)) {
-            window.__audienceTestLastControllerMessage = structuredClone(data);
+            window.__audienceTestTransport.lastControllerMessage = structuredClone(data);
+            if (data.type === "state") {
+              window.__audienceTestTransport.lastStateMessage = structuredClone(data);
+            }
           }
         });
       }
+
     };
   });
 }
@@ -79,24 +87,38 @@ export async function sendLateOldGenerationMessage(page, channelId) {
   }, channelId);
 }
 
-export async function injectIncompleteNextAudienceState(popup, channelId) {
+export async function injectIncompleteNextAudienceState(popup) {
   await expect.poll(() => popup.evaluate(() => (
-    window.__audienceTestLastControllerMessage?.type === "state"
-      ? window.__audienceTestLastControllerMessage.sequence
+    window.__audienceTestTransport?.lastControllerMessage?.type === "state"
+      ? window.__audienceTestTransport.lastControllerMessage.sequence
       : null
   ))).not.toBeNull();
-  await popup.evaluate((sessionId) => {
-    const last = window.__audienceTestLastControllerMessage;
-    const channel = new BroadcastChannel(`simex-presentation-${sessionId}`);
+  await popup.evaluate(() => {
+    const transport = window.__audienceTestTransport;
+    const last = transport.lastControllerMessage;
+    const channel = new BroadcastChannel(transport.channelName);
     channel.postMessage({
       protocol_version: 3,
-      session_id: sessionId,
+      session_id: last.session_id,
       sequence: last.sequence + 1,
       type: "state",
       payload: null,
     });
     channel.close();
-  }, channelId);
+  });
+}
+
+export async function sendLateOldSessionState(popup) {
+  await popup.evaluate(() => {
+    const transport = window.__audienceTestTransport;
+    const message = structuredClone(transport.lastStateMessage);
+    message.sequence = transport.lastControllerMessage.sequence + 1;
+    message.payload.output_mode = "holding";
+    message.payload.blackout = false;
+    const channel = new BroadcastChannel(transport.channelName);
+    channel.postMessage(message);
+    channel.close();
+  });
 }
 
 async function readSceneIds(page) {

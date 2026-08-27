@@ -266,6 +266,13 @@ export function createPresentationAudienceChannel({
         ));
         return;
       }
+      if (message.sequence !== lastControllerSequence + 1) {
+        requestResync(reason(
+          "sequence_gap",
+          "controller message sequence is incomplete",
+        ), message.sequence);
+        return;
+      }
       lastControllerSequence = message.sequence;
       onMessageAccepted(snapshot(message));
       onEnded(snapshot(message));

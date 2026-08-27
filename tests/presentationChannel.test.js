@@ -319,23 +319,26 @@ test("ordinary duplicate and out-of-order heartbeats remain rejected after a fre
   controller.dispose();
 });
 
-test("a validated ended message is terminal even when its sequence follows a gap", () => {
+test("a gapped ended message is rejected and cannot replace last-valid before a fresh snapshot", () => {
   const { audience, controller, scheduler, states, ended, rejections, statuses } = setup();
   controller.start();
   audience.start();
   const first = presentationState();
   controller.publish(first);
   audienceTransport().dropNext = 1;
-  controller.publish({ ...first, output_mode: "blank" });
+  const fresh = { ...first, output_mode: "blank" };
+  controller.publish(fresh);
   controller.end();
 
-  assert.deepEqual(states, [first]);
-  assert.equal(ended.length, 1);
-  assert.equal(ended[0].type, "ended");
-  assert.equal(ended[0].session_id, "session-001");
-  assert.equal(rejections.some(({ reason }) => reason.code === "sequence_gap"), false);
-  assert.ok(statuses.includes("audience:ended"));
-  assert.deepEqual(audience.getLastValidSnapshot(), first);
+  assert.equal(rejections.at(-1).reason.code, "sequence_gap");
+  assert.deepEqual(rejections.at(-1).lastValidSnapshot, first);
+  assert.deepEqual(states, [first, fresh]);
+  assert.equal(ended.length, 0);
+  assert.ok(statuses.includes("audience:resync-required"));
+  assert.ok(statuses.includes("audience:connected"));
+  assert.equal(statuses.includes("audience:ended"), false);
+  assert.deepEqual(audience.getLastValidSnapshot(), fresh);
+  audience.dispose();
   assert.equal(scheduler.activeTimerCount, 0);
 });
 
