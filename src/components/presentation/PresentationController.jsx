@@ -11,7 +11,17 @@ const DEFAULT_AUDIENCE = Object.freeze({
   }),
 });
 
-export function presentationSourceEligibility(scene) {
+export function presentationSourceEligibility(scene, { compositionReady = true } = {}) {
+  if (scene && compositionReady !== true) {
+    return {
+      status: "invalid",
+      reason: {
+        code: "scene_composition_transition_pending",
+        message: "The saved Scene composition is still being applied.",
+        sourceId: scene.id,
+      },
+    };
+  }
   if (scene?.present?.temporalReview?.status !== "degraded") {
     return { status: "valid", reason: null };
   }
@@ -60,10 +70,7 @@ export function buildPresentationState({
           Math.max(0, playback.activeIndex ?? 0),
           Math.max(0, clock.length - 1),
         ),
-        period: {
-          start: clock[0],
-          end: clock.at(-1),
-        },
+        period: authoredInclusivePeriod(scene?.period ?? group?.period),
         trace_mode: playback.traceMode === "full" ? "full" : "reveal",
         seconds_per_frame: scene?.secondsPerFrame
           ?? playback.speed
@@ -97,6 +104,23 @@ export function buildPresentationState({
       audience_facts: { ...audienceFacts },
     },
   };
+}
+
+function authoredInclusivePeriod(period) {
+  return {
+    start: authoredPeriodBoundary(period?.startEpochMs ?? period?.start, "start"),
+    end: authoredPeriodBoundary(period?.endEpochMs ?? period?.end, "end"),
+  };
+}
+
+function authoredPeriodBoundary(value, edge) {
+  if (Number.isSafeInteger(value)) return value;
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  const canonical = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T${edge === "end" ? "23:59:59.999" : "00:00:00.000"}Z`
+    : value;
+  const epochMs = Date.parse(canonical);
+  return Number.isSafeInteger(epochMs) ? epochMs : undefined;
 }
 
 export function executePresentationEndEffects(session, adapters) {

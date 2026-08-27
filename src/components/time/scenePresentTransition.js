@@ -1,5 +1,13 @@
 import { scenePresentLayoutToDisplayLayout } from "./scenePresentLayout.js";
 
+export function presentationSceneTransitionReady(previousSignature, scene, {
+  enabled = true,
+} = {}) {
+  if (!scene || !enabled) return true;
+  const transition = resolveScenePresentTransition(previousSignature, scene);
+  return transition.error === null && transition.signature === previousSignature;
+}
+
 export function resolveScenePresentTransition(
   previousSignature,
   scene,

@@ -26,6 +26,7 @@ const scene = {
   name: "Response scene",
   chronoGroupId: "group-a",
   secondsPerFrame: 2,
+  period: { start: "1970-01-01T00:00:00.500Z", end: "1970-01-01T00:00:03.500Z" },
   audience: {
     datePosition: { xPermille: 640, yPermille: 70, widthPermille: 300 },
   },
@@ -82,7 +83,7 @@ test("strict state projection uses authored matching and explicit Scene Audience
   assert.deepEqual(projected.timeline, {
     frame_epochs: [1_000, 2_000, 3_000],
     frame_index: 1,
-    period: { start: 1_000, end: 3_000 },
+    period: { start: 500, end: 3_500 },
     trace_mode: "reveal",
     seconds_per_frame: 2,
   });
@@ -115,6 +116,52 @@ test("source eligibility distinguishes valid authored sources from Needs-attenti
       sourceId: "scene-a",
     },
   });
+});
+
+test("Scene publication waits for DashboardRenderer to land the saved composition", () => {
+  assert.deepEqual(controllerModule.presentationSourceEligibility(scene, {
+    compositionReady: false,
+  }), {
+    status: "invalid",
+    reason: {
+      code: "scene_composition_transition_pending",
+      message: "The saved Scene composition is still being applied.",
+      sourceId: "scene-a",
+    },
+  });
+  assert.deepEqual(controllerModule.presentationSourceEligibility(scene, {
+    compositionReady: true,
+  }), { status: "valid", reason: null });
+});
+
+test("Chrono Group projection uses its authored inclusive period rather than observed endpoints", () => {
+  const projected = controllerModule.buildPresentationState({
+    dashboard: { id: "dashboard-a", configVersion: 3, lastUpdated: "2026-08-27" },
+    activePageId: "biomedical",
+    displayedChartIds: ["chart-a"],
+    layout: "solo",
+    playback: {
+      ...playback,
+      activeScene: null,
+      activeSceneId: null,
+      activeGroup: {
+        ...group,
+        period: { start: "1970-01-01", end: "1970-01-01" },
+      },
+      activeIndex: 0,
+    },
+    presentableItemIndex,
+    audienceFacts: {
+      dashboard_name: true,
+      page: false,
+      parent_chrono_group: true,
+      scene_name: false,
+      scene_date: true,
+    },
+    outputMode: "active",
+    blackout: false,
+  });
+  assert.deepEqual(projected.timeline.period, { start: 0, end: 86_399_999 });
 });
 
 test("END effects execute once in order and report truthful close outcomes", () => {

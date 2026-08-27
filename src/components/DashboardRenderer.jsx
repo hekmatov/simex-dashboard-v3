@@ -47,7 +47,10 @@ import PlaybackSurface from "./playback/PlaybackSurface.jsx";
 import { usePlayback } from "./playback/PlaybackProvider.jsx";
 import PresentWorkspace from "./presentation/PresentWorkspace.jsx";
 import usePresentationRuntime from "./presentation/usePresentationRuntime.js";
-import { resolveScenePresentTransition } from "./time/scenePresentTransition.js";
+import {
+  presentationSceneTransitionReady,
+  resolveScenePresentTransition,
+} from "./time/scenePresentTransition.js";
 import DashboardModeWorkspace from "./dashboard/DashboardModeWorkspace.jsx";
 import {
   configuredCharts,
@@ -273,12 +276,18 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
     [dashboard],
   );
   const presentationRuntime = usePresentationRuntime(presentableItemIndex);
+  const presentationCompositionReady = presentationSceneTransitionReady(
+    appliedScenePresentSignatureRef.current,
+    playback.activeScene,
+    { enabled: mode === "present" },
+  );
   React.useEffect(() => {
     const transition = resolveScenePresentTransition(
       appliedScenePresentSignatureRef.current,
       playback.activeScene,
       { enabled: mode === "present" },
     );
+    if (transition.error) return;
     appliedScenePresentSignatureRef.current = transition.signature;
     if (transition.action) presentationRuntime.onDisplayAction(transition.action);
   }, [mode, playback.activeScene, presentationRuntime.onDisplayAction]);
@@ -1515,6 +1524,7 @@ const DashboardRenderer = React.forwardRef(function DashboardRenderer({
         onModeRequest={onModeRequest}
         onOpenDashboardLook={onOpenDashboardLook}
         runtime={presentationRuntime}
+        compositionReady={presentationCompositionReady}
         presentableItemIndex={presentableItemIndex}
         accessibilityEnabled={accessibilityEnabled}
         themeProjection={themeProjection}

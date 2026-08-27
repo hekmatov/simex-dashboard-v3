@@ -15,6 +15,7 @@ export default function PresentWorkspace({
   onModeRequest,
   onOpenDashboardLook,
   runtime,
+  compositionReady = true,
   presentableItemIndex: suppliedPresentableItemIndex,
   accessibilityEnabled,
   themeProjection,
@@ -84,8 +85,8 @@ export default function PresentWorkspace({
     : null;
 
   const sourceEligibility = React.useMemo(
-    () => presentationSourceEligibility(playback.activeScene),
-    [playback.activeScene],
+    () => presentationSourceEligibility(playback.activeScene, { compositionReady }),
+    [compositionReady, playback.activeScene],
   );
   const presentationState = React.useMemo(() => buildPresentationState({
     dashboard,

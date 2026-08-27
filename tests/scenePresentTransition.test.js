@@ -26,6 +26,23 @@ test("a newly active Scene produces one atomic Present composition action", () =
   assert.ok(transition.signature);
 });
 
+test("publication becomes eligible only after DashboardRenderer records the Scene transition", () => {
+  assert.equal(
+    transitionModule.presentationSceneTransitionReady(null, scene),
+    false,
+  );
+  const transition = transitionModule.resolveScenePresentTransition(null, scene);
+  assert.equal(
+    transitionModule.presentationSceneTransitionReady(transition.signature, scene),
+    true,
+  );
+  const otherScene = { ...scene, id: "scene-b" };
+  assert.equal(
+    transitionModule.presentationSceneTransitionReady(transition.signature, otherScene),
+    false,
+  );
+});
+
 test("degraded review metadata stays durable on the Scene and never enters the Present action", () => {
   const degraded = {
     ...scene,
