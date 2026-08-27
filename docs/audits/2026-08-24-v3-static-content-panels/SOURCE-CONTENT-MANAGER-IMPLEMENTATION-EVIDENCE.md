@@ -429,3 +429,11 @@ This is an evidence-recording task only. It added no production or test changes,
 - The final Journey D/I regressions were corrected at production owners: the Content group again contains exactly Add chart, Add static content, and Source content, while accessibility settings occupy a separate group; suspended chart authoring retains complete staged CSV/GeoJSON authority. Focused Journey D and I reruns are **1/1** each.
 - Final build: **925 modules, GREEN, 9.73 s**. Final current-client PS-04: **1/1 GREEN** with copied launch, PNG MIME, traversal 403, offline Audience at 1366×768, shutdown, and cleanup.
 - Final scoped review verdict: **APPROVED**. This evidence supports master submission but does not itself accept or merge the amendment.
+
+## Master review correction evidence — 2026-08-27
+
+- Submission `d825e50` was rejected after the exact structure owner reproduced **2/4 passing**: an absent landing hero/primary action crashed removal, and deleting a final Chrono member discarded the group identity. Existing assertions supplied both RED cases.
+- A focused merge regression added three analytical Pages and proved the generic fallback selected an unrelated survivor. The corrected merge remaps source→target for every landing route and hero action, deduplicates target routes, and retains unrelated routes.
+- Final owner command: `node --test tests/structureCommandModel.test.js` — **4/4 passing**, zero fail/skip/todo. No mounted journey was necessary because the changed behavior is wholly represented by the pure saved-draft result; no build or broad gate was rerun.
+- The affected-boundary review range is `d825e504034e64c3b4083a63ad0e56f4fd474833..HEAD`, recorded in `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/beta-pre-release-closure-report.md`.
+- Fidelity status is corrected to **35/36 Passing** with SCM-C08 Partial for missing independent mounted linked-CSV Relink evidence. The four-title historical unit uncertainty remains unchanged and explicitly unreconstructed.

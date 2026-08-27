@@ -112,3 +112,13 @@ This section supersedes the pending gate result above while preserving it as his
 The final authorized build is **GREEN** at 925 modules (9.73 s). Current-generated-client PS-04 is **1/1 GREEN** for copied launch, declared PNG MIME, traversal rejection, offline Audience at 1366×768, process shutdown, and cleanup. The exact Step 7S controlling parser remains the retained **36/36 Passing** result and was not redundantly rerun. The final scoped branch review is **APPROVED** after the Content-command boundary correction (`305c1e3`) and staged-source suspension correction (`2b0821d`).
 
 The Source Content Manager/QMD reusable-media amendment is therefore **submitted for V3 Design master acceptance**, distinguishing engine implementation, mounted UI implementation, and inspected fidelity evidence. It is not self-accepted. The branch remains retained and unmerged; merge, push, deployment, main-branch changes, worktree deletion, and automatic acceptance remain unauthorized.
+
+## Master review correction submission — 2026-08-27
+
+Master review returned **CHANGES REQUIRED** on `d825e504034e64c3b4083a63ad0e56f4fd474833`. The bounded correction range is `d825e504034e64c3b4083a63ad0e56f4fd474833..HEAD`; its exact review record is `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/beta-pre-release-closure-report.md`.
+
+The structure-command owner now preserves landings without hero/primaryAction, retains zero-member Chrono Group identity, and explicitly remaps merged-source landing routes/hero actions to the chosen target while deduplicating target routes and preserving unrelated valid routes. RED was 2/4 for the original findings and then 3/4 for the three-analytical-page merge-intent regression; final exact verification is **4/4 passing** with no broader gate rerun.
+
+The controlling package no longer claims amendment-wide fidelity completion. SCM-S06, SCM-S13, and SCM-C04 are reconciled to Passing from their retained implementation/browser evidence. SCM-C08 remains Partial because the implemented linked-CSV Relink branch lacks an independently retained mounted checkpoint. Current disposition is therefore **35/36 amendment rows Passing, 1/36 Partial**. Engine and UI implementation are present for the partial branch, but its real-use fidelity is not promoted.
+
+The cumulative browser result remains 186/186 and the final build/PS-04 results remain green; those established facts were not redundantly rerun. The four exact unit titles lost to the earlier truncated reporter remain disclosed rather than reconstructed. This is a revised submission for master review, not acceptance.

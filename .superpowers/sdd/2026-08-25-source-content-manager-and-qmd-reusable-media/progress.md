@@ -280,6 +280,13 @@ Paths are relative to the worktree. `P` = production, `T` = test, `D` = document
 - Final build: **GREEN**, 925 modules, 9.73 s. Final current-generated-client PS-04: **1/1 GREEN**. Step 7S historical parser result remains **36/36 Passing** and was reused without a redundant rerun.
 - Final scoped branch review: **APPROVED**. Submission to the master is authorized; master acceptance, merge, push, deployment, main edits, and worktree deletion remain outside scope.
 
+## 2026-08-27 master review correction
+
+- Master rejected `d825e50`. The bounded range `d825e504034e64c3b4083a63ad0e56f4fd474833..HEAD` corrects optional landing repair, zero-member Chrono Group retention, and source→target landing-route intent during Page merge.
+- Exact structure owner progressed **2/4 RED → 3/4 RED for the three-analytical-page intent case → 4/4 GREEN**. No browser/build/broad gate rerun was decision-relevant.
+- Final review record: `.superpowers/sdd/2026-08-25-source-content-manager-and-qmd-reusable-media/beta-pre-release-closure-report.md`.
+- Package reconciliation retracts amendment-wide completion: **35/36 Passing**, SCM-C08 Partial for missing retained mounted linked-CSV Relink evidence. Four unrecoverable historical unit titles remain disclosed and unreconstructed.
+
 ## Task 2
 
 - Task 2: BASE `f81239ba288816603f3c6db14fc6b4a00141d5b9`.

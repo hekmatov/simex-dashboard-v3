@@ -84,9 +84,33 @@ test("Page and Section creation extend the visible collections inside the same l
 
 test("Page merge and Page removal require eligible destinations and preserve source ordering", () => {
   const saved = fixture();
-  const merged = mergeBuildLayoutPage(createBuildLayoutDraft(saved), "operations", "biomedical");
+  const mergeSaved = fixture();
+  mergeSaved.pages[0].landing = {
+    domainRoutes: [{ pageId: "operations" }],
+    hero: { primaryAction: { pageId: "operations" } },
+  };
+  const merged = mergeBuildLayoutPage(createBuildLayoutDraft(mergeSaved), "operations", "biomedical");
   assert.deepEqual(merged.value.pages.map(({ id }) => id), ["landing", "biomedical"]);
   assert.deepEqual(merged.value.pages[1].sections.map(({ id }) => id), ["pressure", "surveillance", "briefing"]);
+  assert.equal(merged.value.pages[0].landing.hero.primaryAction.pageId, "biomedical");
+  assert.deepEqual(merged.value.pages[0].landing.domainRoutes, [{ pageId: "biomedical" }]);
+
+  const routed = fixture();
+  routed.pages.push({ id: "community", label: "Community", sections: [] });
+  routed.pages[0].landing = {
+    domainRoutes: [
+      { pageId: "operations", label: "Operational route" },
+      { pageId: "community", label: "Community route" },
+      { pageId: "biomedical", label: "Existing target route" },
+    ],
+    hero: { primaryAction: { pageId: "operations" } },
+  };
+  const routedMerge = mergeBuildLayoutPage(createBuildLayoutDraft(routed), "operations", "biomedical");
+  assert.equal(routedMerge.value.pages[0].landing.hero.primaryAction.pageId, "biomedical");
+  assert.deepEqual(routedMerge.value.pages[0].landing.domainRoutes, [
+    { pageId: "biomedical", label: "Operational route" },
+    { pageId: "community", label: "Community route" },
+  ]);
 
   const moved = removeBuildLayoutPage(
     createBuildLayoutDraft(saved),

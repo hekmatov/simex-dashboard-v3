@@ -135,6 +135,7 @@ export function mergeBuildLayoutPage(draft, pageId, targetPageId) {
   target.sections.push(...source.sections);
   next.value.pages.splice(sourceIndex, 1);
   reassignPageScopedScenes(next.value, pageId, targetPageId);
+  repairLandingRoutes(next.value, pageId, targetPageId);
   return markDirty(next, targetPageId);
 }
 
@@ -211,11 +212,13 @@ export function discardBuildLayoutDraft(draft) {
   };
 }
 
-function repairLandingRoutes(dashboard) {
+function repairLandingRoutes(dashboard, mergedPageId, mergeTargetPageId) {
   const remainingPageIds = new Set(dashboard.pages.map(({ id }) => id));
   for (const page of dashboard.pages) {
     if (!page.landing) continue;
-    const previousRoutes = page.landing.domainRoutes ?? [];
+    const previousRoutes = (page.landing.domainRoutes ?? [])
+      .map((route) => route.pageId === mergedPageId ? { ...route, pageId: mergeTargetPageId } : route)
+      .filter((route, index, routes) => routes.findIndex(({ pageId }) => pageId === route.pageId) === index);
     const retainedRoutes = previousRoutes.filter(
       ({ pageId }) => remainingPageIds.has(pageId),
     );
@@ -224,8 +227,10 @@ function repairLandingRoutes(dashboard) {
       retainedRoutes.push({ ...(previousRoutes[0] ?? {}), pageId: fallbackTarget });
     }
     page.landing.domainRoutes = retainedRoutes;
-    if (!remainingPageIds.has(page.landing.hero?.primaryAction?.pageId)) {
-      page.landing.hero.primaryAction.pageId = retainedRoutes[0].pageId;
+    const primaryAction = page.landing.hero?.primaryAction;
+    if (primaryAction && primaryAction.pageId === mergedPageId) primaryAction.pageId = mergeTargetPageId;
+    if (primaryAction && !remainingPageIds.has(primaryAction.pageId)) {
+      primaryAction.pageId = retainedRoutes[0].pageId;
     }
   }
 }
@@ -267,10 +272,10 @@ function removePageScopedSceneChartReferences(dashboard, pageId, chartIds) {
 
 function removeChartReferences(dashboard, chartIds) {
   const removed = new Set(chartIds);
-  dashboard.chronoGroups = (dashboard?.chronoGroups ?? []).flatMap((group) => {
+  dashboard.chronoGroups = (dashboard?.chronoGroups ?? []).map((group) => {
     group.members = (group.members ?? []).filter(({ chartId }) => !removed.has(chartId));
     if (Array.isArray(group.chartIds)) group.chartIds = group.chartIds.filter((id) => !removed.has(id));
-    return group.members.length > 0 ? [group] : [];
+    return group;
   });
   for (const scene of dashboard?.scenes ?? []) removeSceneChartReferences(scene, chartIds);
 }

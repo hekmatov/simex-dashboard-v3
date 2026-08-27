@@ -87,3 +87,12 @@ The four established corrections, bounded deterministic assertion repair, explic
 - The final authorized production build is **GREEN**, 925 modules in 9.73 s, with only the accepted bundle warnings. Final current-client PS-04 is **1/1 GREEN**, including copied launch, PNG MIME, traversal 403, offline Audience at 1366×768, process shutdown, and temporary-directory cleanup.
 - Scoped final review of the current branch is **APPROVED**. The retained Step 7S controlling result remains **36/36 Passing** and was not redundantly rerun.
 - This is a review submission, not master acceptance. No merge, push, deployment, main-branch edit, worktree deletion, or automatic Step 7S acceptance occurred.
+
+## Master review correction — 2026-08-27
+
+- Master review rejected submission `d825e504034e64c3b4083a63ad0e56f4fd474833`. The affected-boundary review range is `d825e504034e64c3b4083a63ad0e56f4fd474833..HEAD`; this file is the final review record for that range.
+- Focused RED was **2/4** in `tests/structureCommandModel.test.js`: removing a valid landing without a hero/primary action threw, and deleting the final Chrono member removed the group identity. The correction preserves an absent action and retains an empty group.
+- Merge-specific RED then proved that generic fallback could choose an unrelated surviving Page. Merge now remaps every source-Page landing route and hero action to the selected target, deduplicates target routes while preserving unrelated valid routes, and leaves generic deletion fallback unchanged.
+- Final exact verification is **4/4 passing** for `node --test tests/structureCommandModel.test.js`. The pure draft owner establishes the changed boundary completely, so no browser, build, broad unit, or pre-release rerun was added.
+- Fidelity reconciliation is truthful at **35/36 Passing**: SCM-S06, SCM-S13, and SCM-C04 are fully Passing; SCM-C08 remains Partial because no independent mounted linked-CSV Relink checkpoint was retained. The prior amendment-wide completion claim is retracted.
+- The historical reporter still lacks four exact unit titles. They remain disclosed and unreconstructed; no ledger was invented.
