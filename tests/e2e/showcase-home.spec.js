@@ -48,6 +48,64 @@ test("Home exposes the exact public beta orientation contract", async ({ page })
   await expect(page.getByRole("link", { name: LANDING_CONTRACT.repositoryLink })).toHaveAttribute("href", "https://github.com/hekmatov/simex-dashboard-v3");
 });
 
+test("Home inherits Dashboard Look semantic tokens and exposes repository Issues feedback", async ({ page }) => {
+  await openLanding(page);
+  const before = await readLandingTheme(page);
+
+  await page.getByRole("button", { name: "Dashboard look", exact: true }).click();
+  const look = page.getByRole("dialog", { name: "Dashboard look" });
+  await look.getByLabel("Signal + Instrument", { exact: true }).check();
+  await look.locator('[data-profile-option="signal-instrument/calibrated-steel"] input').check();
+  await look.getByLabel("Dark", { exact: true }).check();
+  await page.keyboard.press("Escape");
+
+  const after = await readLandingTheme(page);
+  expect(after.metadata).toEqual({
+    style: "signal-instrument",
+    profile: "signal-instrument/calibrated-steel",
+    appearance: "dark",
+  });
+  expect(after.root).toMatchObject({
+    background: after.tokens.canvas,
+    color: after.tokens.textStrong,
+    borderColor: after.tokens.border,
+    borderRadius: after.tokens.surfaceRadius,
+    fontFamily: after.tokens.bodyFont,
+  });
+  expect(after.heading).toMatchObject({
+    color: after.tokens.onAccent,
+    fontFamily: after.tokens.headingFont,
+  });
+  expect(after.card).toEqual({
+    background: after.tokens.panel,
+    color: after.tokens.textStrong,
+    borderColor: after.tokens.border,
+    borderRadius: after.tokens.controlRadius,
+  });
+  expect(after.cta).toEqual({
+    background: after.tokens.onAccent,
+    color: after.tokens.accent,
+    borderRadius: after.tokens.controlRadius,
+  });
+  expect(after.faq).toEqual({
+    background: after.tokens.panelAlt,
+    color: after.tokens.textStrong,
+    borderColor: after.tokens.border,
+    borderRadius: after.tokens.controlRadius,
+    outlineColor: after.tokens.focus,
+  });
+  expect(after.tokens).not.toEqual(before.tokens);
+  expect(after.root).not.toEqual(before.root);
+  expect(after.cta).not.toEqual(before.cta);
+  expect(after.faq).not.toEqual(before.faq);
+  await expect(page.getByRole("link", { name: "Report a bug / request a feature" }))
+    .toHaveAttribute("href", "https://github.com/hekmatov/simex-dashboard-v3/issues");
+  await expect(page.getByRole("link", { name: "Report a bug / request a feature" }))
+    .toHaveAttribute("target", "_blank");
+  await expect(page.getByRole("link", { name: "Report a bug / request a feature" }))
+    .toHaveAttribute("rel", "noreferrer");
+});
+
 test("saved v3 configuration preserves Home and authored dashboard changes", async ({ page, request }) => {
   const response = await request.get("http://127.0.0.1:4173/config/dashboard.json");
   const savedV3 = await response.json();
@@ -130,11 +188,96 @@ test("Vanta startup failure leaves the dashboard usable", async ({ page }) => {
   ).toBeVisible({ timeout: 10_000 });
 });
 
-test("builder FAQ keeps summary and answer text legible", async ({ page }) => {
+test("builder FAQ uses the active semantic text paint", async ({ page }) => {
   await openLanding(page);
   await expectLandingReady(page);
   const firstFaq = page.locator(".showcase-faq details").first();
-  await expect(firstFaq.locator("summary")).toHaveCSS("color", "rgb(18, 59, 98)");
   await firstFaq.locator("summary").click();
-  await expect(firstFaq.locator("p")).toHaveCSS("color", "rgb(78, 103, 125)");
+  const paints = await firstFaq.evaluate((node) => {
+    const root = document.querySelector(".showcase-landing");
+    const probe = (variable) => {
+      const element = document.createElement("span");
+      element.style.color = `var(${variable})`;
+      root.append(element);
+      const value = getComputedStyle(element).color;
+      element.remove();
+      return value;
+    };
+    return {
+      summary: getComputedStyle(node.querySelector("summary")).color,
+      answer: getComputedStyle(node.querySelector("p")).color,
+      textStrong: probe("--simex-text-strong"),
+      textMuted: probe("--simex-text-muted"),
+    };
+  });
+  expect(paints.summary).toBe(paints.textStrong);
+  expect(paints.answer).toBe(paints.textMuted);
 });
+
+async function readLandingTheme(page) {
+  return page.evaluate(() => {
+    const root = document.querySelector(".showcase-landing");
+    const app = document.querySelector(".app-frame");
+    const card = root.querySelector(".showcase-capability-grid article");
+    const cta = root.querySelector(".showcase-actions button");
+    const summary = root.querySelector(".showcase-faq summary");
+    const details = root.querySelector(".showcase-faq details");
+    summary.focus();
+    const probe = (variable, property) => {
+      const element = document.createElement("span");
+      element.style[property] = `var(${variable})`;
+      root.append(element);
+      const value = getComputedStyle(element)[property];
+      element.remove();
+      return value;
+    };
+    const read = (element) => {
+      const style = getComputedStyle(element);
+      return {
+        background: style.backgroundColor,
+        color: style.color,
+        borderColor: style.borderTopColor,
+        borderRadius: style.borderRadius,
+      };
+    };
+    return {
+      metadata: {
+        style: app.dataset.dashboardStyle,
+        profile: app.dataset.dashboardColorProfile,
+        appearance: app.dataset.resolvedAppearance,
+      },
+      tokens: {
+        canvas: probe("--simex-surface-canvas", "backgroundColor"),
+        panel: probe("--simex-surface-panel", "backgroundColor"),
+        panelAlt: probe("--simex-surface-panel-alt", "backgroundColor"),
+        textStrong: probe("--simex-text-strong", "color"),
+        border: probe("--simex-border-subtle", "borderTopColor"),
+        accent: probe("--simex-accent", "backgroundColor"),
+        onAccent: probe("--simex-on-accent", "color"),
+        focus: probe("--simex-focus", "outlineColor"),
+        surfaceRadius: getComputedStyle(root).getPropertyValue("--simex-style-surface-radius").trim(),
+        controlRadius: getComputedStyle(root).getPropertyValue("--simex-style-control-radius").trim(),
+        bodyFont: probe("--simex-style-body-font", "fontFamily"),
+        headingFont: probe("--simex-style-heading-font", "fontFamily"),
+      },
+      root: { ...read(root), fontFamily: getComputedStyle(root).fontFamily },
+      heading: { color: getComputedStyle(root.querySelector("h1")).color, fontFamily: getComputedStyle(root.querySelector("h1")).fontFamily },
+      card: read(card),
+      cta: (() => {
+        const style = getComputedStyle(cta);
+        return { background: style.backgroundColor, color: style.color, borderRadius: style.borderRadius };
+      })(),
+      faq: (() => {
+        const style = getComputedStyle(details);
+        const summaryStyle = getComputedStyle(summary);
+        return {
+          background: style.backgroundColor,
+          color: summaryStyle.color,
+          borderColor: style.borderTopColor,
+          borderRadius: style.borderRadius,
+          outlineColor: summaryStyle.outlineColor,
+        };
+      })(),
+    };
+  });
+}

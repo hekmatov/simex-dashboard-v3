@@ -33,7 +33,7 @@ export default function CanonicalDashboardFrame({
 }
 
 export function CanonicalDashboardFooter({ dashboard }) {
-  const feedbackUrl = dashboard.feedbackUrl || feedbackMailtoUrl(dashboard.contactEmail);
+  const feedbackUrl = feedbackUrlForDashboard(dashboard);
   const contactUrl = dashboard.contactEmail ? `mailto:${dashboard.contactEmail}` : null;
   return (
     <footer className="dashboard-footer" aria-label="Dashboard information and feedback">
@@ -45,6 +45,22 @@ export function CanonicalDashboardFooter({ dashboard }) {
       </nav>
     </footer>
   );
+}
+
+export function feedbackUrlForDashboard(dashboard) {
+  const destination = dashboard?.pages
+    ?.find((page) => page?.landing?.resources?.repository?.destination)
+    ?.landing?.resources?.repository?.destination;
+  try {
+    const repository = new URL(destination);
+    if (!["http:", "https:"].includes(repository.protocol)) throw new TypeError();
+    repository.pathname = `${repository.pathname.replace(/\/+$/, "")}/issues`;
+    repository.search = "";
+    repository.hash = "";
+    return repository.href;
+  } catch {
+    return feedbackMailtoUrl(dashboard?.contactEmail);
+  }
 }
 
 function feedbackMailtoUrl(contactEmail) {
